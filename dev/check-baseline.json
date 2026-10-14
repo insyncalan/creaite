@@ -221,9 +221,9 @@
   "Combobox": 12,
   "Dialog": 0,
   "FilterBar": 4,
-  "Menu": 1,
+  "Menu": 8,
   "Peek": 3,
-  "Picker": 57,
+  "Picker": 62,
   "StatusDot": 0,
   "Tabs": 0,
   "Toast": 0
