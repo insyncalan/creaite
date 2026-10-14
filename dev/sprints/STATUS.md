@@ -61,7 +61,7 @@ v1.9.0, v1.9.1 and v1.9.2 are published (14-10-2026; tags v1.9.0 `d689f89`, v1.9
 | v1.9.4 | BL-09 archive and restore whole projects, BL-304 changes appear at once, BL-326 ask creaite shows the ask and the outcome (moved from v1.9.5), BL-327 fast saves, BL-328 the sweep lock, BL-329 one server, BL-330 a remembered chat that's gone. `release-194` (WIP: `test_fast_save`). Team Cap fixes and integrates, Team Stark cuts. Plan: `dev/sprints/v194-release.md` |
 | v1.9.5 | BL-324 UI fixes, BL-325 one design scale, BL-333 no scroll past the bottom, BL-334 alerts read the conversation, BL-10 and BL-03 archiving, BL-331 move back an archived report, BL-316 the consistency audit (split by screen between the teams). Team Stark integrates and cuts. Plan: `dev/sprints/v195-release.md` |
 | v2.0.0 | BL-301 Notes: A, B, D, E and the Notes server on `v20-base`; C on `v20-capture`; left: D wired into Notes, B's margin ticks, the notes guard change, the `review` snapshot fix, the real-data gate. Plan: `dev/sprints/v200-notes-release.md` |
-| v2.1.0 | BL-335 the weekly report redesigned and built in creaite |
+| v2.1.0 | Reporting (Priority High): BL-335 the weekly report, BL-336 the client report, BL-337 the reporting space and the Reports page, BL-338 the minutes editor, BL-339 retire the meeting hub. Plan: `dev/sprints/v210-reporting.md` |
 
 ## Not scheduled
 
@@ -174,7 +174,7 @@ Approved: the sprints below, plus BL-252 and insight's screenshots. BL-231 moves
 
 **v2.0.0: Notes (Alan, 13-10-2026).** BL-301 alone, all five parts. On laptop 2: the Tiptap groundwork is merged (`dev-notes-tiptap`, dev only); the server side is built and **parked** on `v20-notes-server` until v2.0.0 (Alan) (BL-125 A moved to v1.9.0; BL-304 back to the backlog; Alan, 13-10-2026). BL-301 (Alan): A, the one editor (Tiptap, with its beta Markdown extension pinned and the byte-for-byte round-trip gate on every Current state); B, Notes on the project page (`08 Notes`); C, the capture drawer (⌘⇧N), which replaces Quick capture (FR-71); D, AI on selected text in every editor; E, Find updates from a note. Waves, after v1.9.0 ships: (1) A alone, because every editor changes and Tiptap is bundled (vendored JavaScript, pinned); (2) B and C in parallel; (3) D and E. Server-side parts of B, C and E (the `08 Notes` folder, search indexing, notes-sent.json, the rules text) can start early on branches, as v1.9.0's did.
 
-**v2.1.0 (Alan, 13-10-2026).** BL-335 the weekly report, redesigned and built in creaite (L; Alan, 14-10-2026; needs v2.0.0's one editor). BL-313 went on hold (Alan, 14-10-2026).
+**v2.1.0 (Alan, 13-10-2026): Reporting, Priority High (Alan, 14 and 15-10-2026).** BL-335 the weekly report (L), BL-336 the client report (L), BL-337 the reporting space and the Reports page (M–L), BL-338 the minutes editor, replacing today's minutes (XL), BL-339 retire the meeting hub (S). Team 1, after v2.0.0. Plan: `dev/sprints/v210-reporting.md`; phase 1 (data, file format, exports, server) can start now, phase 2 (screens) needs v2.0.0's one editor. BL-313 went on hold (Alan, 14-10-2026).
 
 **v1.9.0: Meeting prep (Alan, 13-10-2026).** BL-286 is the headline, with BL-287, BL-285, BL-264, BL-255, BL-256, BL-293 (Today: move between the calendar's days) BL-295 (Close the day, a guided shutdown), BL-297 (Smarter updates), BL-298 (Draft chase from the peek), and BL-125 A moved in from v2.0.0, all 13-10 by Alan (18 items with BL-305, BL-306, BL-308 and BL-309; BL-304 back to the backlog, Alan, 13-10-2026). BL-125 A stays parked on `v19-promises-data`. The plan:
 
