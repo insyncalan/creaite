@@ -632,7 +632,7 @@ The routes and data the page reads; the page itself is the next section. Notes: 
 
 ## Archive folders and Health (BL-09, part 1)
 
-- **One name, `_Archive`:** every archive folder creaite knows of (`paths.ARCHIVE`); `paths.ALWAYS_NEVER_INDEX` also skips the old `zz Archive` (`paths.OLD_ARCHIVE`) for one release. `projects/_Archive` (or `<projects root>/_Archive`) is never a project folder.
+- **One name, `_Archive`:** every archive folder creaite knows of (`paths.ARCHIVE`); `paths.skipped_names()` also skips the old `zz Archive` (`paths.OLD_ARCHIVE`) for one release. `projects/_Archive` (or `<projects root>/_Archive`) is never a project folder.
 - **Health lines (doctor checks):** `old_archive_folders` (warn) names the folders still called `zz Archive` in the projects root and each engagement or project folder; `skeleton_archive` (warn) says the project skeleton still holds one (a folder listing; creaite never writes in `_Templates`).
 - **Fix it for `old_archive_folders`** (`health_fixes.FIXES["old_archive"]`, `card: True`): `POST /api/health/fix/old_archive` (empty body) runs `propose.py old-archives`, which only prints the spec (a `move` per folder, file block `archive: "rename"`); the live server puts it on the change card (`server_edit_card`, the BL-258 card) and answers `{ok, card: true}`; the page opens ask creaite on that card (`pendingEdit`). **Approve** stages and applies it through `tracker.py apply`; Undo moves the folders back.
 
