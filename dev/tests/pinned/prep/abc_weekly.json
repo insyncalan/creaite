@@ -1,0 +1,201 @@
+exit 0
+{
+ "carried": [],
+ "day": "2026-10-09",
+ "due_soon_days": 7,
+ "items": [
+  {
+   "due": "2026-09-29",
+   "id": "ABC-A-010",
+   "milestone": "",
+   "owner": "Alan Carter",
+   "p": "ABC",
+   "priority": "Medium",
+   "status": "Open",
+   "table": "actions",
+   "text": "Overdue ten days",
+   "type": "Action",
+   "why": "",
+   "workstream": ""
+  },
+  {
+   "due": "2026-10-06",
+   "id": "ABC-A-001",
+   "milestone": "UAT start",
+   "owner": "Alan Carter",
+   "p": "ABC",
+   "priority": "Urgent",
+   "status": "Open",
+   "table": "actions",
+   "text": "Escalate data access to the client CIO",
+   "type": "Action",
+   "why": "",
+   "workstream": ""
+  },
+  {
+   "due": "2026-10-06",
+   "id": "ABC-D-006",
+   "milestone": "",
+   "owner": "Sara Example",
+   "p": "ABC",
+   "priority": "",
+   "status": "Pending",
+   "table": "decisions",
+   "text": "Extend the pilot by two weeks",
+   "type": "Decision needed",
+   "why": "Sara Example is invited; invite mentions “pilot”",
+   "workstream": ""
+  },
+  {
+   "due": "2026-10-08",
+   "id": "ABC-D-008",
+   "milestone": "",
+   "owner": "Jane Doe",
+   "p": "ABC",
+   "priority": "",
+   "status": "Made",
+   "table": "decisions",
+   "text": "Use masked data for UAT",
+   "type": "Decision to revisit",
+   "why": "Jane Doe is invited",
+   "workstream": ""
+  },
+  {
+   "due": "2026-10-12",
+   "id": "ABC-A-002",
+   "milestone": "UAT start",
+   "owner": "Sara Example",
+   "p": "ABC",
+   "priority": "Medium",
+   "status": "Open",
+   "table": "actions",
+   "text": "Book UAT environment",
+   "type": "Action",
+   "why": "Sara Example is invited",
+   "workstream": ""
+  },
+  {
+   "due": "2026-10-14",
+   "id": "ABC-A-011",
+   "milestone": "",
+   "owner": "Alan Carter",
+   "p": "ABC",
+   "priority": "Medium",
+   "status": "Open",
+   "table": "actions",
+   "text": "Due in five days",
+   "type": "Action",
+   "why": "",
+   "workstream": ""
+  },
+  {
+   "due": "",
+   "id": "ABC-003",
+   "milestone": "",
+   "owner": "TBC",
+   "p": "ABC",
+   "priority": "Urgent",
+   "status": "Open",
+   "table": "raid",
+   "text": "Data access delayed → UAT slips",
+   "type": "Risk",
+   "why": "",
+   "workstream": ""
+  },
+  {
+   "due": "",
+   "id": "ABC-A-013",
+   "milestone": "",
+   "owner": "Alan Carter",
+   "p": "ABC",
+   "priority": "Urgent",
+   "status": "Open",
+   "table": "actions",
+   "text": "Urgent, no date",
+   "type": "Action",
+   "why": "",
+   "workstream": ""
+  }
+ ],
+ "key": "09:00|ABC weekly",
+ "last": null,
+ "meeting": {
+  "attachments": [],
+  "attendees": [
+   {
+    "name": "Sara Example",
+    "response": "accepted",
+    "type": "required"
+   }
+  ],
+  "body": "Agenda: pilot extension; UAT venue",
+  "confidential": false,
+  "end": "10:00",
+  "organiser": "Jane Doe",
+  "start": "09:00",
+  "title": "ABC weekly",
+  "where": "Teams"
+ },
+ "not_listed": 4,
+ "project": "ABC",
+ "project_name": "Example Programme",
+ "reporting": [
+  {
+   "current_state": "Build is two weeks behind because data access is late. Escalation is planned for 2026-10-11.\n\nUAT preparation continues on masked data.\n\n![Delivery plan](images/plan.png)\n\n![Missing](images/none.png)",
+   "health": "Off track",
+   "health_reason": "UAT start slipped 14 days",
+   "name": "Example Programme",
+   "project": "ABC",
+   "update": {
+    "health": "At risk",
+    "summary": "Data access late",
+    "week_ending": "2026-10-02"
+   },
+   "weekly_report": {
+    "date": "2026-10-09",
+    "name": "2026-10-09 Weekly report - Example Programme.docx",
+    "path": "projects/ABC Example Programme/reports/2026-10-09 Weekly report - Example Programme.docx"
+   }
+  }
+ ],
+ "reports": [
+  {
+   "date": "2026-10-09",
+   "kind": "Weekly report",
+   "name": "2026-10-09 Weekly report - Example Programme.docx",
+   "online": false,
+   "p": "ABC",
+   "path": "projects/ABC Example Programme/reports/2026-10-09 Weekly report - Example Programme.docx"
+  },
+  {
+   "date": "2026-10-01",
+   "kind": "Client report",
+   "name": "2026-10-01 Client report - Example Programme.docx",
+   "online": false,
+   "p": "ABC",
+   "path": "projects/ABC Example Programme/reports/2026-10-01 Client report - Example Programme.docx"
+  },
+  {
+   "date": "2026-09-30",
+   "kind": "Steerco one-pager",
+   "name": "2026-09-30 Example Programme Steerco one-pager.docx",
+   "online": false,
+   "p": "ABC",
+   "path": "projects/ABC Example Programme/reports/Steerco/2026-09-30 Example Programme Steerco one-pager.docx"
+  }
+ ],
+ "research": {
+  "codes": [
+   "ABC"
+  ],
+  "documents": [
+   "projects/ABC Example Programme/documents"
+  ],
+  "mail_and_teams_days": 14,
+  "minutes_and_transcripts": [
+   "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx",
+   "projects/ABC Example Programme/transcripts/2026-10-04 Steering.vtt"
+  ]
+ },
+ "since": "2026-10-02"
+}

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Trust, forecast and waiting-on mockup</title>
+<style>
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#8A949D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --new:#6B3FA0; --new-soft:#EFE7F8;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340;}}
+:root[data-theme="dark"]{
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button{font:inherit;color:inherit}
+.page{max-width:1180px;margin:0 auto;padding:24px 16px 72px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600}
+.lede{color:var(--muted);margin:0 0 14px;max-width:840px}
+.hint{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;vertical-align:1px}
+.tag.new{background:var(--new-soft);color:var(--new)} .tag.keep{background:var(--sunk);color:var(--muted)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.ok{background:var(--ok-soft);color:var(--ok)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.tg{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:34px;padding:0 15px;cursor:pointer;font-size:13px}
+.tg[aria-pressed="true"],.tg[aria-selected="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+:is(button,a,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.spacer{flex:1}
+
+.shell{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:18px 20px 22px;min-height:560px}
+.apph{display:flex;align-items:baseline;gap:12px;margin:0 0 2px} .apph h2{margin:0;font-size:18px;font-weight:600}
+.sub{color:var(--muted);margin:0 0 14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h3{margin:0 0 2px;font-size:14px;font-weight:600}
+.card .cap{color:var(--muted);font-size:12px;margin:0 0 10px}
+.grid{display:grid;gap:12px}
+.g4{grid-template-columns:repeat(4,1fr)} .g2{grid-template-columns:1.25fr 1fr} .g2e{grid-template-columns:1fr 1fr}
+@media (max-width:860px){.g4{grid-template-columns:repeat(2,1fr)}.g2,.g2e{grid-template-columns:1fr}}
+.kpi .n{font-size:26px;font-weight:600;line-height:1.1} .kpi .l{color:var(--muted);font-size:12px;margin-top:2px}
+.kpi .d{font-size:12px;margin-top:6px;color:var(--muted)}
+.bar{height:8px;border-radius:99px;background:var(--sunk);overflow:hidden;display:flex}
+.bar i{display:block;height:100%} .bar .a{background:var(--accent)} .bar .e{background:var(--warn)} .bar .r{background:var(--bad)}
+.leg{display:flex;gap:12px;color:var(--muted);font-size:12px;margin:0 0 8px;flex-wrap:wrap}
+.leg b{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:6px 10px 6px 0;border-bottom:1px solid var(--line)}
+.tbl td{padding:9px 10px 9px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:30px;padding:0 12px;cursor:pointer;font-size:13px}
+.btn:hover{background:var(--sunk)} .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)} .btn.pri:hover{filter:brightness(1.08)}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.switch{appearance:none;width:34px;height:20px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;border:0;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:left .12s}
+.switch[aria-checked="true"]{background:var(--accent)} .switch[aria-checked="true"]::after{left:16px}
+@media (prefers-reduced-motion:reduce){.switch::after{transition:none}}
+.pat{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)} .pat:last-child{border-bottom:0}
+.pat .tx{flex:1} .pat .tx b{font-weight:500} .pat .tx span{display:block;color:var(--muted);font-size:12px}
+.quote{border-left:3px solid var(--line);padding:6px 12px;background:var(--sunk);border-radius:0 8px 8px 0;margin:8px 0 10px;font-size:13px}
+.quote small{display:block;color:var(--muted);margin-top:4px}
+
+/* forecast */
+.ms{padding:10px 0;border-bottom:1px solid var(--line)} .ms:last-child{border-bottom:0}
+.ms .row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ms .row1 .nm{font-weight:500} .ms .row1 .id{color:var(--muted);font-size:12px}
+.ms .ev{color:var(--muted);font-size:12px;margin-top:3px}
+svg.tl text{font:13px var(--font);fill:var(--muted)}
+.dots{display:flex;gap:6px;align-items:flex-end;margin:6px 0 4px}
+.dot{width:26px;text-align:center;font-size:10px;color:var(--muted)}
+.dot .m{width:22px;height:22px;border-radius:50%;margin:0 auto 3px;display:grid;place-items:center;font-size:11px;font-weight:700}
+.dot .m.G{background:var(--ok-soft);color:var(--ok)} .dot .m.A{background:var(--warn-soft);color:var(--warn)} .dot .m.R{background:var(--bad-soft);color:var(--bad)}
+.dot .m.hit{outline:2px solid var(--bad);outline-offset:1px}
+.verdict{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--warn);background:var(--warn-soft);border-radius:10px;padding:12px 14px;margin:0 0 12px}
+.verdict ul{margin:6px 0 8px;padding-left:18px;color:var(--ink)}
+.verdict .sub2{color:var(--muted);font-size:12px}
+
+/* waiting on */
+.col h3{display:flex;align-items:center;gap:8px}
+.cnt{background:var(--sunk);color:var(--muted);border-radius:99px;font-size:12px;padding:0 8px;font-weight:500}
+.pr{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:11px 0;border-bottom:1px solid var(--line)} .pr:last-child{border-bottom:0}
+.pr .w{font-weight:500} .pr .m{color:var(--muted);font-size:12px;grid-column:1}
+.pr .acts{grid-column:2;grid-row:1/3;display:flex;gap:6px;align-items:center}
+.src{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);background:var(--sunk);border-radius:6px;padding:0 6px}
+.late{color:var(--bad);font-weight:500} .quiet{color:var(--warn);font-weight:500}
+.empty{color:var(--muted);padding:14px 0;text-align:center}
+.snack{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--surface);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:9;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.snack[hidden]{display:none} .snack button{background:none;border:0;color:var(--accent);font-weight:600;cursor:pointer;filter:brightness(1.5)}
+.note{margin:14px 0 0;color:var(--muted);font-size:12px;max-width:860px}
+.why{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:var(--accent-soft);color:var(--ink);font-size:13px}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="t">Three ideas from the research <span class="tag new">Mockup</span></h1>
+  <p class="lede">Fictional data (Example Programme). Each tab is one idea in creaite's current look. Click around: the toggles, buttons and the spot-check all work. Nothing here is saved or built.</p>
+  <div class="ctl" role="tablist" aria-label="Ideas">
+    <button class="tg" role="tab" id="t1" aria-selected="true" data-t="p1">1 · Extraction quality</button>
+    <button class="tg" role="tab" id="t2" aria-selected="false" data-t="p2">2 · Forecast and calibration</button>
+    <button class="tg" role="tab" id="t3" aria-selected="false" data-t="p3">3 · You owe / Waiting on</button>
+    <span class="spacer"></span>
+    <button class="tg" id="theme" aria-pressed="false">Dark</button>
+  </div>
+
+  <!-- ===== 1 ===== -->
+  <section class="shell" id="p1" role="tabpanel" aria-labelledby="t1">
+    <div class="apph"><h2>Extraction quality</h2><span class="tag keep">Activity › new tab</span></div>
+    <p class="sub">What happened to the 144 items creaite proposed, 11-09-2026 to 11-10-2026. The source rows and the type rows each add up to 144.</p>
+    <div class="grid g4">
+      <div class="card kpi"><div class="n">67%</div><div class="l">Accepted as proposed</div><div class="d">96 of 144 proposals</div></div>
+      <div class="card kpi"><div class="n">19%</div><div class="l">Edited, then approved</div><div class="d">28 items, mostly owner and due date</div></div>
+      <div class="card kpi"><div class="n">14%</div><div class="l">Rejected</div><div class="d">20 items, 13 from Teams chats</div></div>
+      <div class="card kpi"><div class="n">6 of 8</div><div class="l">Spot-checks: nothing missed</div><div class="d">Recall estimate about 75%</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:12px">
+      <div class="card">
+        <h3>By source and type</h3>
+        <p class="cap">Where the noise is. Teams chats are the weakest source.</p>
+        <div class="leg"><span><b style="background:var(--accent)"></b>Accepted</span><span><b style="background:var(--warn)"></b>Edited</span><span><b style="background:var(--bad)"></b>Rejected</span></div>
+        <table class="tbl">
+          <thead><tr><th>Source / type</th><th style="width:48%">Outcome</th><th>Proposals</th></tr></thead>
+          <tbody id="qrows"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Learned from your rejections</h3>
+        <p class="cap">Patterns in what you reject. Switch one on and cx-minutes and cx-sweep use it as a "do not propose" example.</p>
+        <div class="pat"><div class="tx"><b>Vague intentions with no object</b><span>"I'll have a think", "let me check". 7 rejected, 0 accepted.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Use pattern: vague intentions"></button></div>
+        <div class="pat"><div class="tx"><b>Scheduling chatter as actions</b><span>"Can we move this to 3pm?" 5 rejected, 1 accepted.</span></div><button class="switch" role="switch" aria-checked="true" aria-label="Use pattern: scheduling chatter"></button></div>
+        <div class="pat"><div class="tx"><b>Client-side actions given to you</b><span>Owner corrected on 9 of 11 edits. Suggest: owner = who said "we will".</span></div><button class="switch" role="switch" aria-checked="false" aria-label="Use pattern: owner correction"></button></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Recall spot-check <span class="tag new">New</span></h3>
+      <p class="cap">One passage creaite did not turn into an item. Takes five seconds; it is how creaite learns what it misses.</p>
+      <div id="spot">
+        <div class="quote">"…Omar, once the vendor confirms the sandbox is ready, we should loop in security before anyone touches production data."<small>Source: 08-10-2026 Example Programme steering (transcript, 31:40)</small></div>
+        <span class="hint" style="margin-right:8px">Should this have been an item?</span>
+        <button class="btn sm" data-spot="Yes, as a risk">Yes, a risk</button>
+        <button class="btn sm" data-spot="Yes, as an action">Yes, an action</button>
+        <button class="btn sm" data-spot="No">No</button>
+      </div>
+    </div>
+    <p class="why"><b>Why it matters:</b> the review step already produces labelled data. Today only a hash of each rejection is kept, so nothing can be measured or learned.</p>
+  </section>
+
+  <!-- ===== 2 ===== -->
+  <section class="shell" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+    <div class="apph"><h2>Example Programme</h2><span class="tag keep">Project cockpit</span></div>
+    <p class="sub">Health is On track. Evidence disagrees.</p>
+    <div class="verdict" role="status">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="flex:none;color:var(--warn);margin-top:2px"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18v.01"/></svg>
+      <div>
+        <b>You said On track. The evidence says At risk.</b>
+        <ul>
+          <li>Pilot go-live has slipped twice in six weeks (+8 and +9 days)</li>
+          <li>3 actions are more than 7 days overdue</li>
+          <li>ABC-004 (vendor sandbox) has had no response for 14 days</li>
+        </ul>
+        <button class="btn sm pri" data-flash="Health changed to At risk. Undo is in Activity.">Change to At risk</button>
+        <button class="btn sm" data-flash="Kept On track. A reason is required, so the edit form would open here.">Keep On track, add a reason</button>
+        <div class="sub2" style="margin-top:6px">Rules come from Settings › Health and warnings. Nothing changes until you choose.</div>
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Milestones: plan, forecast and likely range</h3>
+        <p class="cap">The range comes from how your own milestones have slipped before, not from the plan.</p>
+        <div class="ctl" style="margin:0 0 6px"><button class="tg" id="p80" aria-pressed="true" style="height:28px;font-size:12px">Show likely range (P50 to P80)</button></div>
+        <svg class="tl" id="tl" width="100%" viewBox="0 0 700 170" role="img" aria-label="Timeline of three milestones with baseline, forecast and likely range"></svg>
+        <div id="msl"></div>
+        <div class="hint" style="margin-top:8px"><span class="tag warn">Thin evidence</span> Built from 5 slips across 3 projects. Treat it as a range, not a date. It tightens as more milestones close.</div>
+      </div>
+      <div class="card">
+        <h3>Your health calls, scored</h3>
+        <p class="cap">Last 12 weeks. A ringed green went red within three weeks.</p>
+        <div class="dots" id="dots"></div>
+        <div class="kpi" style="margin-top:10px"><div class="n" id="calN">-</div><div class="l" id="calL"></div></div>
+        <p class="hint" style="margin:10px 0 0">Private to you. It is never in a report. Weeks with fewer than three weeks of later data are not scored.</p>
+      </div>
+    </div>
+    <p class="why"><b>Why it matters:</b> a colour is a forecast with the uncertainty removed. This shows the uncertainty, and checks the colour against what happened.</p>
+  </section>
+
+  <!-- ===== 3 ===== -->
+  <section class="shell" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+    <div class="apph"><h2>Sunday 11th October</h2><span class="tag keep">Today › commitments</span></div>
+    <p class="sub">Promises made in passing, kept apart from formal actions. Silence is flagged.</p>
+    <div class="grid g2e">
+      <div class="card col">
+        <h3>You owe <span class="cnt" id="c-owe">3</span></h3>
+        <p class="cap">Found in your Sent Items and Teams.</p>
+        <div id="owe"></div>
+      </div>
+      <div class="card col">
+        <h3>Waiting on <span class="cnt" id="c-wait">4</span></h3>
+        <p class="cap">Promised to you, in mail, chats or meetings.</p>
+        <div id="wait"></div>
+      </div>
+    </div>
+    <p class="why"><b>Why it matters:</b> meeting tools see what was said in the room. Only creaite also sees what you wrote in Sent Items, so it can catch the "I'll send that by Friday" nobody logged.</p>
+  </section>
+  <p class="note">Rules respected: colour only for exceptions and always with words; dates as DD-MM-YYYY (Today writes them out); items cite their source; every change goes through Review or is undoable; the model never computes the figures, the facts engine does.</p>
+</div>
+
+<div class="snack" id="snack" hidden role="status"><span id="snackt"></span><button id="undo" hidden>Undo</button></div>
+
+<script>
+(function(){
+  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
+  var st; function snack(t,undo){var s=$('#snack');$('#snackt').textContent=t;var u=$('#undo');u.hidden=!undo;u.onclick=function(){undo&&undo();s.hidden=true};s.hidden=false;clearTimeout(st);st=setTimeout(function(){s.hidden=true},5000)}
+
+  // tabs
+  $$('[data-t]').forEach(function(b){b.onclick=function(){
+    $$('[data-t]').forEach(function(x){x.setAttribute('aria-selected',x===b)});
+    ['p1','p2','p3'].forEach(function(id){$('#'+id).hidden=(id!==b.dataset.t)});
+  }});
+  $('#theme').onclick=function(){var d=document.documentElement,on=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',on);d.setAttribute('data-theme',on?'dark':'light');this.textContent=on?'Light':'Dark'};
+  $$('[data-flash]').forEach(function(b){b.onclick=function(){snack(b.dataset.flash)}});
+
+  // 1 quality
+  var q=[['Transcripts',55,14,3],['Outlook mail',24,10,4],['Teams chats',17,4,13],['Actions',62,18,5],['Risks and issues',20,6,7],['Decisions',14,4,8]];
+  var h='';q.forEach(function(r,i){var n=r[1]+r[2]+r[3];
+    if(i===3)h+='<tr><td colspan="3" class="hint" style="padding-top:12px">By item type</td></tr>';
+    h+='<tr><td>'+r[0]+'</td><td><div class="bar" role="img" aria-label="'+Math.round(r[1]/n*100)+'% accepted, '+Math.round(r[2]/n*100)+'% edited, '+Math.round(r[3]/n*100)+'% rejected"><i class="a" style="width:'+r[1]/n*100+'%"></i><i class="e" style="width:'+r[2]/n*100+'%"></i><i class="r" style="width:'+r[3]/n*100+'%"></i></div></td><td>'+n+(r[3]/n>0.3?' <span class="tag bad">Noisy</span>':'')+'</td></tr>'});
+  $('#qrows').innerHTML=h;
+  $$('.switch').forEach(function(s){s.onclick=function(){var on=s.getAttribute('aria-checked')!=='true';s.setAttribute('aria-checked',on);snack(on?'Pattern on: used as an example in the next run.':'Pattern off.')}});
+  $$('[data-spot]').forEach(function(b){b.onclick=function(){$('#spot').innerHTML='<div class="quote">Thanks: <b>'+b.dataset.spot+'</b>. Logged against the 08-10-2026 steering transcript'+(b.dataset.spot==='No'?'':', and a proposal is now in Review')+'.<small>Recall estimate updated to 7 of 9.</small></div>'}});
+
+  // 2 forecast
+  function d(s){var p=s.split('-');return new Date(Date.UTC(+p[2],+p[1]-1,+p[0]))}
+  function f(dt){var x=new Date(dt);return ('0'+x.getUTCDate()).slice(-2)+'-'+('0'+(x.getUTCMonth()+1)).slice(-2)+'-'+x.getUTCFullYear()}
+  var D0=d('01-11-2026'),DAYS=76,X0=20,W=660;
+  function x(dt){return X0+(dt-D0)/864e5/DAYS*W}
+  var ms=[
+   {id:'ABC-M-001',n:'Design sign-off',b:'30-09-2026',f:'30-09-2026',done:true,ev:'Done on time.'},
+   {id:'ABC-M-002',n:'Pilot go-live',b:'03-11-2026',f:'20-11-2026',p50:'27-11-2026',p80:'11-12-2026',ev:'Slipped twice (+8 and +9 days). In your history, milestones that slipped twice landed a median 3 weeks late.'},
+   {id:'ABC-M-003',n:'UAT complete',b:'18-12-2026',f:'18-12-2026',p50:'22-12-2026',p80:'08-01-2027',ev:'Not slipped yet, but it depends on go-live (ABC-M-002).'}];
+  function draw(){
+    var show=$('#p80').getAttribute('aria-pressed')==='true',s='';
+    var ticks=['01-11-2026','01-12-2026','01-01-2027'];
+    ticks.forEach(function(t){var X=x(d(t));s+='<line x1="'+X+'" x2="'+X+'" y1="16" y2="140" stroke="var(--line)"/><text x="'+(X+4)+'" y="13">'+t.slice(0,5)+'</text>'});
+    var T=x(d('11-10-2026'));
+    var row=0;
+    ms.forEach(function(m){if(m.done)return;var y=44+row*50;row++;
+      s+='<text x="'+X0+'" y="'+(y-14)+'">'+m.n+'</text>';
+      if(show&&m.p50){var a=x(d(m.f)),b=x(d(m.p80)),c=x(d(m.p50));
+        s+='<rect x="'+a+'" y="'+(y-6)+'" width="'+(b-a)+'" height="12" rx="6" fill="var(--warn-soft)" stroke="var(--warn)"/>';
+        s+='<line x1="'+c+'" x2="'+c+'" y1="'+(y-9)+'" y2="'+(y+9)+'" stroke="var(--warn)" stroke-width="2"/>'}
+      s+='<path d="M'+x(d(m.b))+' '+(y-7)+'l6 7-6 7-6-7z" fill="none" stroke="var(--muted)" stroke-width="1.5"><title>Baseline '+m.b+'</title></path>';
+      s+='<circle cx="'+x(d(m.f))+'" cy="'+y+'" r="5" fill="var(--accent)"><title>Forecast '+m.f+'</title></circle>'});
+    s+='<text x="20" y="164">◇ baseline   ● forecast   '+(show?'▮ P50   ▬ P50 to P80 range':'')+'</text>';
+    $('#tl').innerHTML=s;
+    var l='';ms.forEach(function(m){if(m.done){l+='<div class="ms"><div class="row1"><span class="nm">'+m.n+'</span><span class="id">'+m.id+'</span><span class="tag ok">✓ Done</span></div><div class="ev">'+m.ev+'</div></div>';return}
+      l+='<div class="ms"><div class="row1"><span class="nm">'+m.n+'</span><span class="id">'+m.id+'</span>'+(show?'<span class="tag warn">Likely '+f(d(m.p50))+' to '+f(d(m.p80))+'</span>':'')+'<span class="hint">Forecast '+m.f+' · baseline '+m.b+'</span></div><div class="ev">'+m.ev+'</div></div>'});
+    $('#msl').innerHTML=l}
+  $('#p80').onclick=function(){this.setAttribute('aria-pressed',this.getAttribute('aria-pressed')!=='true');draw()};
+  draw();
+  var hw='GGGGAGGGRAAG'.split(''),n=0,hit=0,dd='';
+  hw.forEach(function(c,i){var scored=(c==='G'&&i+3<hw.length),red=scored&&hw.slice(i+1,i+4).indexOf('R')>-1;if(scored){n++;if(red)hit++}
+    dd+='<div class="dot"><div class="m '+c+(red?' hit':'')+'" title="Week '+(i+1)+': '+c+'">'+c+'</div>'+('0'+(i+1)).slice(-2)+'</div>'});
+  $('#dots').innerHTML=dd;$('#calN').textContent=hit+' of '+n;
+  $('#calL').textContent='green calls went red within three weeks ('+Math.round(hit/n*100)+'%).';
+
+  // 3 promises
+  var owe=[
+   {w:'Send the SOW amendment to Sara Khan',m:'Promised in Sent Items, 06-10-2026 · due Friday 09-10-2026',s:'Outlook',st:'late',l:'2 days overdue',p:'ABC'},
+   {w:'Share the steering pack with Mia Hale',m:'Promised in Teams chat, 08-10-2026 · due Monday 12-10-2026',s:'Teams',st:'soon',l:'Due tomorrow',p:'ABC'},
+   {w:'Confirm budget line with finance',m:'Promised in the 08-10-2026 steering minutes · no date given',s:'Minutes',st:'',l:'',p:'ABC'}];
+  var wait=[
+   {w:'Omar Haddad: vendor sandbox access',m:'Promised in mail, 29-09-2026 · due 05-10-2026 · no reply since',s:'Outlook',st:'quiet',l:'Quiet for 13 days, 6 days late',p:'ABC'},
+   {w:'Sara Khan: signed NDA',m:'Promised in Teams chat, 30-09-2026 · due 09-10-2026',s:'Teams',st:'late',l:'2 days overdue',p:'ABC'},
+   {w:'Mia Hale: user list for UAT',m:'Promised in the 01-10-2026 workshop · due 16-10-2026',s:'Minutes',st:'',l:'',p:'ABC'},
+   {w:'Finance: PO number',m:'Promised in mail, 07-10-2026 · due 14-10-2026',s:'Outlook',st:'',l:'',p:'ABC'}];
+  var removed=[];
+  function render(){
+    [['owe',owe,'c-owe'],['wait',wait,'c-wait']].forEach(function(g){
+      var h='';g[1].forEach(function(p,i){
+        var fl=p.st==='late'?'<span class="late">⚠ '+p.l+'</span> · ':p.st==='quiet'?'<span class="quiet">◔ '+p.l+'</span> · ':p.st==='soon'?'<span class="quiet">'+p.l+'</span> · ':'';
+        h+='<div class="pr"><div class="w">'+p.w+'</div><div class="m">'+fl+p.m+' <span class="src">'+p.s+'</span></div><div class="acts">'+
+          (g[0]==='wait'?'<button class="btn sm" data-a="chase" data-g="'+g[0]+'" data-i="'+i+'">Draft chase</button>':'')+
+          '<button class="btn sm" data-a="act" data-g="'+g[0]+'" data-i="'+i+'">Make action</button>'+
+          '<button class="btn sm" data-a="done" data-g="'+g[0]+'" data-i="'+i+'" aria-label="Mark done">✓</button></div></div>'});
+      $('#'+g[0]).innerHTML=h||'<div class="empty">Nothing outstanding.</div>';$('#'+g[2]).textContent=g[1].length});
+    $$('#p3 [data-a]').forEach(function(b){b.onclick=function(){
+      var arr=b.dataset.g==='owe'?owe:wait,i=+b.dataset.i,it=arr[i];
+      if(b.dataset.a==='chase'){snack('Draft email to '+it.w.split(':')[0]+' opened in Outlook (nothing sent).');return}
+      if(b.dataset.a==='act'){snack('Proposal added to Review: new action with the same source and people.');return}
+      arr.splice(i,1);render();snack('Marked done.',function(){arr.splice(i,0,it);render()})}})}
+  render();
+})();
+</script>
+</body>
+</html>

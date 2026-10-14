@@ -1,0 +1,55 @@
+#!/bin/sh
+# ===== BL-237 (sprint-portability): one interpreter for every creaite script =====
+# Usage (from the vault root):   system/scripts/run <script>.py [arguments]
+#
+# Picks the newest Python 3.9 or later on PATH, once, and runs one creaite script from this folder with it, so nothing else
+# has to choose between python and python3. It runs nothing else: the first word must be the bare name of a script in
+# system/scripts/ (lower-case letters, digits and _, ending .py): no -c, no -m, no path, no other program. Then reach.py
+# checks the arguments against the never list (BL-141) before the script starts. Every refusal and every failure exits 2,
+# so a hook run through this wrapper fails closed. POSIX sh only (macOS and Linux); on Windows run python <script> directly.
+set -f                                                   # no filename expansion anywhere (PATH is split by hand)
+refuse() {
+    echo "creaite: system/scripts/run $1" >&2
+    exit 2
+}
+case $0 in */*) here=${0%/*} ;; *) here=. ;; esac        # no dirname: the wrapper needs nothing but sh
+here=$(CDPATH= cd -- "$here" 2>/dev/null && pwd -P) || refuse "can't find its own folder"
+name=${1-}
+case $name in
+    '') refuse "needs a creaite script's name, e.g. system/scripts/run doctor.py" ;;
+    *[!a-z0-9_.]*|.*|*..*) refuse "runs only a creaite script in system/scripts/, by its bare name: no -c, -m, path or other program" ;;
+    *.py) ;;
+    *) refuse "runs only a creaite script in system/scripts/ (a .py file), nothing else" ;;
+esac
+[ -f "$here/$name" ] || refuse "found no system/scripts/$name"
+[ -f "$here/reach.py" ] || refuse "can't check the call: system/scripts/reach.py is missing"
+
+py=
+# ===== BL-248 (sprint-portability): the live server names its own Python in CREAITE_PYTHON; use it first when it is usable =====
+# (an absolute path to an executable Python 3.9 or later), so a run started from creaite.app's bare PATH, or under Rosetta,
+# never falls through to Apple's /usr/bin/python3 stub. Otherwise search PATH as before.
+case ${CREAITE_PYTHON-} in
+    /*) if [ -f "$CREAITE_PYTHON" ] && [ -x "$CREAITE_PYTHON" ] && \
+           "$CREAITE_PYTHON" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
+            py=$CREAITE_PYTHON
+        fi ;;
+esac
+# ===== end BL-248 =====
+[ -n "$py" ] || for c in python3.30 python3.29 python3.28 python3.27 python3.26 python3.25 python3.24 python3.23 python3.22 python3.21 \
+         python3.20 python3.19 python3.18 python3.17 python3.16 python3.15 python3.14 python3.13 python3.12 python3.11 \
+         python3.10 python3.9 python3 python; do                  # newest first: the first that answers 3.9 or later wins
+    oldifs=$IFS; IFS=:
+    for d in $PATH; do
+        IFS=$oldifs
+        case $d in /*) ;; *) continue ;; esac          # only absolute PATH folders: never '.', '' or a relative one
+        p=$d/$c
+        if [ -f "$p" ] && [ -x "$p" ] && "$p" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
+            py=$p
+            break 2
+        fi
+    done
+    IFS=$oldifs
+done
+[ -n "$py" ] || refuse "found no Python 3.9 or later (CREAITE_PYTHON and PATH): a creaite start-up fault, not a fault on this Mac. Start creaite from Terminal with system/scripts/run live_server.py and see Settings › Diagnostics; nothing needs sudo or xcode-select"
+
+exec "$py" -E -s "$here/reach.py" wrap "$@"

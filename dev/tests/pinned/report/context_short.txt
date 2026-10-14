@@ -1,0 +1,135 @@
+exit 0
+Project: ABC Example Programme. Period: 02-10-2026 to 09-10-2026.
+Health now: At risk — Data access is late and UAT may start later.
+
+## Writing guide (follow it)
+# The executive voice
+
+How every creaite status sounds: the Current state, the weekly report, the client report, the steering one-pager and the draft email. The reader is senior, has thirty seconds, and wants to know what to do. Write the position, the reason, what it means and what is needed.
+
+## The shape
+
+1. **Headline (one or two sentences, in bold).** The position in a word the reader knows (on track, at risk, off track) and the one thing that matters most, with the date or number. Example: "**On track for the 20-11-2026 go-live; the one thing to watch is UAT data, due from the client by 16-10-2026.**"
+2. **Why (two or three points).** Each point is a fact and its "so what": what changed since the last status, progress against plan or target, and what it means for the date, cost or outcome. In a short status these are bullets that begin with a bold lead-in (**Why.**).
+3. **Risks that matter (at most two).** What could happen, how likely, what is being done, who owns it. Never a list of every risk.
+4. **Asks and decisions.** Each says who, by when, and what happens if it waits. Example: "We need Sara Khan to confirm the pilot extension by 16-10-2026; later than 23-10-2026 moves go-live a week."
+5. **Next period (two or three).** Outcomes to be reached, not tasks to be done.
+
+Leave out a part that has nothing to say. Say "Nothing has changed since the last status" when that is the news. Never pad.
+
+## The rules
+
+- **Bottom line first.** The first two sentences carry everything a reader who stops there needs.
+- **Say what matters and drop the rest.** Ten things happened and two matter: write the two. A page is the norm; cut a draft by a third before sending it.
+- **Quantify.** Dates, percentages and comparisons with target or plan, not adjectives. "Two days late" beats "slightly delayed".
+- **Names and dates.** "Sara Khan by 16-10-2026", not "the team soon".
+- **Outcomes before activities.** "UAT signed off" is an outcome; "UAT meetings held" is an activity.
+- **No tracker language.** No item IDs (ABC-A-003), no "action", "RAID" or "register" in the prose. The sources are listed after the draft, not inside it.
+- **Plain words.** Short sentences. No filler, no hedging ("it seems", "may potentially"), no jargon the reader doesn't use.
+- **Never claim what the material doesn't support.** If the facts are thin, say so in one short sentence.
+- British English; dates as DD-MM-YYYY; the formats the editor allows only (bold, italic, "- " bullets, "### " sub-headings, quotes, links; no tables).
+
+## Audience
+
+- **Internal:** candid. Say what is wrong and who owns it. Use the internal view of every item.
+- **Client-safe:** the same shape, plainer, with no internal remarks. Only items marked client-visible, in their client wording. Nothing about internal disagreement, cost to us, staffing or people's performance.
+
+## Length
+
+- **Short:** the headline and one line, about 40 words.
+- **Standard:** the shape above in 120 to 150 words.
+- **Fuller:** up to about 250 words; still headline first, still no more than two risks.
+
+## Example (fictional)
+
+**The item-by-item draft this replaces:**
+
+> ABC-A-004 (UAT test data) is overdue by 6 days and is owned by Priya Nair. ABC-A-007 (security review sign-off) is due 14-10. ABC-R-002 (data quality) is open with High priority and ABC-R-005 (resource availability) is open with Medium priority. Minutes of 06-10 record that the pilot ran for two weeks. ABC-D-003 (extend pilot) was made on 02-10. Handling time was discussed.
+
+**The executive version:**
+
+> **At risk for the 20-11-2026 go-live: UAT data is six days late, and without it testing cannot start.**
+>
+> - **Why.** The two-week pilot finished with handling time down 11% against an 8% target, so the case for go-live holds. UAT data was due from the client on 03-10-2026 and has not arrived; every further week moves go-live a week. Security sign-off is on track for 14-10-2026.
+> - **Risk.** Data quality in the client's extract is the main exposure: if it fails validation, testing restarts. Priya Nair is checking the first file on 12-10-2026.
+> - **Ask.** We need Sara Khan to release the UAT data by 16-10-2026; after 23-10-2026 go-live moves to 27-11-2026.
+> - **Next.** UAT starts by 19-10-2026; security sign-off by 14-10-2026.
+
+## Audience and length
+Audience: internal. Be candid; lines marked `Client-safe: no` may be used.
+Length: Short, about 40 words.
+
+## Facts (ranked; write the status from these)
+Facts for ABC Example Programme, 02-10-2026 to 09-10-2026, internal audience.
+Ranked by what matters most. Write the status from these; any other material is reference only.
+
+## Position
+- [F1] Health now: At risk — Data access is late and UAT may start later.
+- [F2] The evidence behind it: open Urgent risk or issue; UAT start moved 14 days. [src: ABC-007]
+- [F3] Unchanged since the last status (week ending 02-10-2026: At risk).
+
+## Movement
+- [F4] Milestone moved: UAT start, from 26-10-2026 to 02-11-2026. [src: ABC-M-002]
+- [F5] Next milestone: UAT start, forecast 02-11-2026, baseline 19-10-2026 (+14 days); slipped. [src: ABC-M-002]
+- [F6] In the period (02-10-2026 to 09-10-2026): 1 action closed, 1 risk or issue raised, 2 decisions made.
+- [F7] Raised and notable: Data access delayed so UAT slips (priority Urgent). [src: ABC-007]
+- [F8] Closed and notable: Send the revised SOW (priority Medium). [src: ABC-A-001]
+- [F9] Decision made on 05-10-2026: Go-live moves two weeks. [src: ABC-D-013]
+- [F10] Decision made on 07-10-2026: Drop the pricing option from the proposal. [src: ABC-D-014]
+
+## Exposure
+- [F11] Risk, Urgent: Data access delayed so UAT slips. Owner Omar Ali. Response: Escalating to the client CIO. [src: ABC-007]
+- [F12] Issue, High: Test licences not ordered. Owner Sara Example. No response recorded yet. [src: ABC-008]
+- [F13] 1 action is overdue.
+- [F14] Overdue by 2 days (due 07-10-2026): Escalate data access to the client CIO. Owner Alan Carter. [src: ABC-A-002]
+- [F15] Blocker: Data feed from the client (owner Sara Example (Example Client Ltd), due 08-11-2026) holds UAT start, forecast 02-11-2026 — the dependency is due after the milestone. [src: ABC-009, ABC-M-002]
+- [F16] Early warning: — Decision needed from Sara Example by 06-10-2026: 3 days late. [src: ABC-D-010]
+
+## Asks
+- [F17] Decision needed from Sara Example: Extend the pilot by two weeks. Needed by 06-10-2026, 3 days overdue. [src: ABC-D-010]
+- [F18] Decision for Alan: Choose the UAT venue. Needed by 14-10-2026. [src: ABC-D-011]
+- [F19] Decision needed from Jane Doe: Share the pilot plan with the client. Needed by 16-10-2026. [src: ABC-D-012]
+- [F20] 3 further open actions with other owners, not named here.
+
+## Trend
+- [F21] 0 opened, 1 closed; 1 overdue, up from 0; the oldest open action is 8 days old
+
+## Reference material (the facts above come first; use these only to explain a fact, never to report item by item)
+
+## Current state now: the left pane (the part you draft)
+Lotem Ipsum
+
+## Current state now: the right pane (Alan's own writing; read it as part of what is already said)
+Lorem Ipsum
+
+## Tracker changes in the period
+- 04-10-2026 ABC-M-002 forecast_date: 2026-10-26 → 2026-11-02
+
+## Open actions
+- ABC-A-002 Escalate data access to the client CIO — Alan Carter, due 07-10-2026 (overdue)
+- ABC-A-006 Renegotiate the licence price with the vendor — Alan Carter, due 12-10-2026
+- ABC-A-003 Book the UAT environment — Sara Example, due 14-10-2026
+- ABC-A-005 Agree the pilot success criteria — Sara Example (Example Client Ltd), due 15-10-2026
+- ABC-A-004 Plan the go-live weekend — Omar Ali, due 18-11-2026
+
+## Open risks, issues, assumptions and dependencies
+- ABC-007 Risk, Urgent: Data access delayed so UAT slips — response: Escalating to the client CIO
+- ABC-008 Issue, High: Test licences not ordered — no response yet
+- ABC-009 Dependency, priority not set: Data feed from the client — no response yet
+
+## Milestones
+- Build complete: forecast 09-09-2026, baseline 09-09-2026, Achieved
+- UAT start: forecast 02-11-2026, baseline 19-10-2026, Slipped
+- Go-live: forecast 08-12-2026, baseline 08-12-2026, On track
+
+## Files to read (paths in the vault)
+- none in the period
+
+## Weekly updates
+- week ending 02-10-2026, At risk: x
+- week ending 09-10-2026, At risk: x
+
+## Items already swept from mail and Teams
+- none
+
+Last mail and Teams sweep: never.

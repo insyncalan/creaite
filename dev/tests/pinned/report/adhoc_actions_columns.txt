@@ -1,0 +1,2 @@
+exit 1
+tracker query: actions has no column i, d, ,, d, e, s, c, r, i, p, t, i, o, n, ,, o, w, n, e, r (use id, project, description, owner, due_date, priority, status, workstream, latest_update, raised, closed)

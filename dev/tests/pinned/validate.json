@@ -1,0 +1,388 @@
+{
+ "after": {
+  "actions": [],
+  "applies": [],
+  "change_log": [],
+  "decisions": [],
+  "documents": {},
+  "files": [
+   "CLAUDE.md",
+   "projects/ABC Example Programme/CLAUDE.md",
+   "projects/ABC Example Programme/documents/.gitkeep",
+   "projects/ABC Example Programme/minutes/.gitkeep",
+   "projects/ABC Example Programme/reports/.gitkeep",
+   "projects/ABC Example Programme/transcripts/.gitkeep",
+   "projects/_portfolio/PORTFOLIO.md",
+   "projects/_portfolio/minutes/.gitkeep",
+   "projects/_portfolio/people-register.md",
+   "projects/_portfolio/project-register.md",
+   "projects/_portfolio/transcripts/.gitkeep",
+   "system/creaite-rules.md",
+   "system/processed.txt"
+  ],
+  "item_labels": [],
+  "labels": [
+   {
+    "behaviour": "warn",
+    "builtin": 1,
+    "colour": "red",
+    "default_choice": "exclude",
+    "name": "Sensitive",
+    "note": "Commercially or client sensitive"
+   }
+  ],
+  "links": [],
+  "milestones": [],
+  "processed": "",
+  "projects": [
+   {
+    "active": 1,
+    "code": "ABC",
+    "health": null,
+    "health_reason": null,
+    "milestone_date": null,
+    "name": "Example Programme",
+    "next_milestone": null,
+    "phase": null,
+    "sponsor": null,
+    "updated_at": "<TS>"
+   }
+  ],
+  "promises": [],
+  "proposals": {
+   "proposed-dry.json": {
+    "created": "<TS>",
+    "files": [],
+    "items": [
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 1,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Send revised SOW to client",
+       "due_date": "2030-06-14",
+       "owner": "Alan Carter",
+       "priority": "High",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 2,
+      "op": "new",
+      "table": "raid",
+      "values": {
+       "description": "Vendor may slip",
+       "impact": "High",
+       "likelihood": "Medium",
+       "owner": "Sara Khan",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "type": "Risk"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 3,
+      "op": "new",
+      "table": "raid",
+      "values": {
+       "description": "Test data is late",
+       "impact": "Medium",
+       "owner": "Omar Haddad",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "type": "Issue"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 4,
+      "op": "new",
+      "table": "decisions",
+      "values": {
+       "date": "2026-10-01",
+       "decision": "Go with vendor A",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "status": "Made"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 5,
+      "op": "new",
+      "table": "decisions",
+      "values": {
+       "decision": "Choose the pilot site",
+       "needed_by": "2030-06-14",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "status": "Pending"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 6,
+      "op": "new",
+      "table": "promises",
+      "values": {
+       "description": "Share the plan",
+       "due_date": "2030-06-14",
+       "project": "ABC",
+       "promised_by": "Alan Carter",
+       "promised_to": "Sara Khan",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 7,
+      "op": "new",
+      "table": "milestones",
+      "values": {
+       "baseline_date": "2030-06-14",
+       "forecast_date": "2030-06-14",
+       "name": "Go-live",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 8,
+      "op": "new",
+      "table": "workstreams",
+      "values": {
+       "created": "2026-10-01",
+       "name": "Data",
+       "project": "ABC",
+       "source": "Alan (cx-edit)"
+      }
+     }
+    ],
+    "source_run": "cx-edit"
+   }
+  },
+  "raid": [],
+  "rejected": [],
+  "updates": [],
+  "workstreams": []
+ },
+ "before": {
+  "actions": [],
+  "applies": [],
+  "change_log": [],
+  "decisions": [],
+  "documents": {},
+  "files": [
+   "CLAUDE.md",
+   "projects/ABC Example Programme/CLAUDE.md",
+   "projects/ABC Example Programme/documents/.gitkeep",
+   "projects/ABC Example Programme/minutes/.gitkeep",
+   "projects/ABC Example Programme/reports/.gitkeep",
+   "projects/ABC Example Programme/transcripts/.gitkeep",
+   "projects/_portfolio/PORTFOLIO.md",
+   "projects/_portfolio/minutes/.gitkeep",
+   "projects/_portfolio/people-register.md",
+   "projects/_portfolio/project-register.md",
+   "projects/_portfolio/transcripts/.gitkeep",
+   "system/creaite-rules.md",
+   "system/processed.txt"
+  ],
+  "item_labels": [],
+  "labels": [
+   {
+    "behaviour": "warn",
+    "builtin": 1,
+    "colour": "red",
+    "default_choice": "exclude",
+    "name": "Sensitive",
+    "note": "Commercially or client sensitive"
+   }
+  ],
+  "links": [],
+  "milestones": [],
+  "processed": "",
+  "projects": [
+   {
+    "active": 1,
+    "code": "ABC",
+    "health": null,
+    "health_reason": null,
+    "milestone_date": null,
+    "name": "Example Programme",
+    "next_milestone": null,
+    "phase": null,
+    "sponsor": null,
+    "updated_at": "<TS>"
+   }
+  ],
+  "promises": [],
+  "proposals": {
+   "proposed-dry.json": {
+    "created": "<TS>",
+    "files": [],
+    "items": [
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 1,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Send revised SOW to client",
+       "due_date": "2030-06-14",
+       "owner": "Alan Carter",
+       "priority": "High",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 2,
+      "op": "new",
+      "table": "raid",
+      "values": {
+       "description": "Vendor may slip",
+       "impact": "High",
+       "likelihood": "Medium",
+       "owner": "Sara Khan",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "type": "Risk"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 3,
+      "op": "new",
+      "table": "raid",
+      "values": {
+       "description": "Test data is late",
+       "impact": "Medium",
+       "owner": "Omar Haddad",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "type": "Issue"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 4,
+      "op": "new",
+      "table": "decisions",
+      "values": {
+       "date": "2026-10-01",
+       "decision": "Go with vendor A",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "status": "Made"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 5,
+      "op": "new",
+      "table": "decisions",
+      "values": {
+       "decision": "Choose the pilot site",
+       "needed_by": "2030-06-14",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+       "status": "Pending"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 6,
+      "op": "new",
+      "table": "promises",
+      "values": {
+       "description": "Share the plan",
+       "due_date": "2030-06-14",
+       "project": "ABC",
+       "promised_by": "Alan Carter",
+       "promised_to": "Sara Khan",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 7,
+      "op": "new",
+      "table": "milestones",
+      "values": {
+       "baseline_date": "2030-06-14",
+       "forecast_date": "2030-06-14",
+       "name": "Go-live",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+      }
+     },
+     {
+      "decision": "approved",
+      "flags": [],
+      "match": "strong",
+      "n": 8,
+      "op": "new",
+      "table": "workstreams",
+      "values": {
+       "created": "2026-10-01",
+       "name": "Data",
+       "project": "ABC",
+       "source": "Alan (cx-edit)"
+      }
+     }
+    ],
+    "source_run": "cx-edit"
+   }
+  },
+  "raid": [],
+  "rejected": [],
+  "updates": [],
+  "workstreams": []
+ },
+ "exit": 0,
+ "stdout": "system/staging/proposed-dry.json: 8 items, 0 problem(s)\n"
+}

@@ -1,0 +1,176 @@
+<section class="view" id="v-milestones">
+<div class="wrapmax">
+<nav class="crumb" aria-label="Breadcrumb">
+<a href="#" data-go="projects">Projects</a>
+<span aria-hidden="true">›</span>
+<a href="#" data-proj="ABC">Example Programme</a>
+<span aria-hidden="true">›</span>
+<span aria-current="page">Milestones</span>
+</nav>
+<div class="mv-pageh">
+<h1>Milestones: Plan and Movement</h1>
+<span class="sp">
+</span>
+<div class="pswitch">
+<button class="iconbtn" data-mvpsw="-1" aria-label="Previous project" title="Previous project">‹</button>
+<select id="mvProjSw" aria-label="Switch project">
+<option value="ABC" selected="">Example Programme</option>
+<option value="DEF">Digital Enablement</option>
+</select>
+<button class="iconbtn" data-mvpsw="1" aria-label="Next project" title="Next project">›</button>
+</div>
+<button type="button" class="mv-btn pri" id="mvAdd" data-mvadd="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="plus">
+<path d="M12 5v14M5 12h14">
+</path>
+</svg>Add milestone</button>
+</div>
+<div class="mv-ctl">
+<div class="mv-seg" role="group" aria-label="Milestone view">
+<button type="button" id="mvVPlan" data-mvview="plan" aria-pressed="true">Plan</button>
+<button type="button" id="mvVMove" data-mvview="move" aria-pressed="false">Movement <span class="mv-tag">Internal</span>
+</button>
+</div>
+<div class="mv-seg" role="group" aria-label="Audience">
+<button type="button" id="mvAInt" data-mvaud="int" aria-pressed="true">Internal view</button>
+<button type="button" id="mvACli" data-mvaud="cli" aria-pressed="false">Client view</button>
+</div>
+</div>
+<div class="mv-card internal" id="mvPlanCard">
+<div class="mv-head">
+<h2>Plan</h2>
+<span class="mv-pill int">
+<svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="eyeoff">
+<path d="M17.9 17.9A10 10 0 0 1 12 19C5.5 19 2 12 2 12a17 17 0 0 1 4.1-5M9.9 5.2A9 9 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M3 3l18 18">
+</path>
+</svg> Internal view</span>
+</div>
+<div class="mv-banner">Internal view includes internal-only milestones and a note where a state differs from what the dates suggest. Switch to Client view to see what a client sees.</div>
+<p class="mv-answer">
+<b>UAT start</b> is agreed for 19-10-2026 and now expected 02-11-2026. 1 achieved, 1 to come.</p>
+<p class="mv-cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>
+<div class="mv-stripbar">
+<button type="button" class="ib mv-ib" aria-label="Scroll the plan line left" data-tip="Scroll the plan line left" data-mvact="sl">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevleft">
+<path d="M15 6l-6 6 6 6">
+</path>
+</svg>
+</button>
+<button type="button" class="ib mv-ib" aria-label="Scroll the plan line right" data-tip="Scroll the plan line right" data-mvact="sr">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevright">
+<path d="M9 6l6 6-6 6">
+</path>
+</svg>
+</button>
+<button type="button" class="mv-btn sm" data-mvact="st">Today</button>
+<span class="mv-hint">Sep 2026 to Dec 2026</span>
+</div>
+<div class="mv-stripwrap" tabindex="0" data-mvscroll="page" data-today="304" aria-label="Milestone plan line, scrolls sideways">
+<div class="mv-strip" style="width:#px;height:#px">
+<div class="ax">
+</div>
+<div class="mon" style="left:#px">Sep 2026</div>
+<div class="mon" style="left:#px">Oct</div>
+<div class="mon" style="left:#px">Nov</div>
+<div class="mon" style="left:#px">Dec</div>
+<div class="mv-lead" style="left:#px;top:#px;height:#px">
+</div>
+<button type="button" class="mv-mk achieved" data-mvedit="ABC-M-002" style="left:#px" aria-label="Build complete, Achieved, achieved 19-09-2026" data-tip="Build complete, Achieved, achieved 19-09-2026">
+<svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
+<circle cx="8" cy="8" r="7" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.5">
+</circle>
+<path d="M4.6 8.2l2.3 2.3 4.5-4.7" fill="none" stroke="var(--ok)" stroke-width="1.8">
+</path>
+</svg>
+</button>
+<button type="button" class="mv-lab ok" data-mvedit="ABC-M-002" tabindex="-1" style="left:#px;top:#px;width:#px" title="Build complete">
+<b>Build complete</b>
+<span>19-09-2026</span>
+</button>
+<div class="mv-lead" style="left:#px;top:#px;height:#px">
+</div>
+<button type="button" class="mv-mk slipped" data-mvedit="ABC-M-001" style="left:#px" aria-label="UAT start, Slipped, agreed 19-10-2026" data-tip="UAT start, Slipped, agreed 19-10-2026">
+<svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
+<path d="M8 1 15 8 8 15 1 8z" fill="var(--bad-soft)" stroke="var(--bad)" stroke-width="1.5" stroke-linejoin="round">
+</path>
+</svg>
+</button>
+<button type="button" class="mv-lab" data-mvedit="ABC-M-001" tabindex="-1" style="left:#px;top:#px;width:#px" title="UAT start">
+<b>UAT start</b>
+<span>19-10-2026</span>
+</button>
+<div class="mv-lead" style="left:#px;top:#px;height:#px">
+</div>
+<div class="mv-gconn" style="left:#px;width:#px">
+</div>
+<div class="mv-ghost" style="left:#px" title="UAT start now expected 02-11-2026">
+</div>
+<button type="button" class="mv-lab gl" data-mvedit="ABC-M-001" style="left:#px;top:#px;width:#px" aria-label="UAT start now expected 02-11-2026">
+<b>Expected 02-11-2026</b>
+<span>UAT start</span>
+</button>
+<div class="tday" style="left:#px;height:#px">
+<span>Today</span>
+</div>
+</div>
+</div>
+<div class="mv-detog">
+<button type="button" data-mvact="det" aria-expanded="true" aria-controls="mvRows-page">
+<svg viewBox="0 0 10 10" aria-hidden="true">
+<path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6">
+</path>
+</svg>Hide milestone details</button>
+</div>
+<div class="mv-rows" id="mvRows-page">
+<div class="mv-prow" role="button" tabindex="0" data-mvedit="ABC-M-002" aria-label="Edit Build complete">
+<div>
+<div class="nm">Build complete <span class="mv-tag">Internal only</span>
+</div>
+</div>
+<div>
+<div class="mv-lbl">State</div>
+<span class="mv-st achieved">
+<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+<circle cx="8" cy="8" r="7" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.5">
+</circle>
+<path d="M4.6 8.2l2.3 2.3 4.5-4.7" fill="none" stroke="var(--ok)" stroke-width="1.8">
+</path>
+</svg>Achieved</span>
+</div>
+<div>
+<div class="mv-lbl">Achieved</div>
+<div class="dt" style="color:var(--ok)">19-09-2026</div>
+<div class="mv-hint">Agreed 19-09-2026 · on the agreed date</div>
+</div>
+<div>
+<div class="mv-lbl">Progress</div>
+<div class="mv-pct">Not set</div>
+</div>
+</div>
+<div class="mv-prow" role="button" tabindex="0" data-mvedit="ABC-M-001" aria-label="Edit UAT start">
+<div>
+<div class="nm">UAT start <span class="mv-tag">Internal only</span>
+</div>
+</div>
+<div>
+<div class="mv-lbl">State</div>
+<span class="mv-st slipped">
+<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+<path d="M8 1 15 8 8 15 1 8z" fill="var(--bad-soft)" stroke="var(--bad)" stroke-width="1.5" stroke-linejoin="round">
+</path>
+</svg>Slipped</span>
+</div>
+<div>
+<div class="mv-lbl">Agreed date</div>
+<div class="dt">19-10-2026</div>
+<div class="exp">Expected 02-11-2026 (14 days later)</div>
+</div>
+<div>
+<div class="mv-lbl">Progress</div>
+<div class="mv-pct">Not set</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>

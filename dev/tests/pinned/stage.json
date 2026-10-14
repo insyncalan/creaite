@@ -1,0 +1,468 @@
+{
+ "mentions": [
+  {
+   "at": "2026-10-01",
+   "id": "ABC-A-001",
+   "run": "cx-minutes",
+   "source": "fp:2026-10-01|abc steering committee|b82547f958d4"
+  },
+  {
+   "at": "2026-10-01",
+   "id": "ABC-003",
+   "run": "cx-minutes",
+   "source": "fp:2026-10-01|abc steering committee|b82547f958d4"
+  },
+  {
+   "at": "2026-10-01",
+   "id": "ABC-A-001",
+   "run": "cx-minutes",
+   "source": "fp:2026-10-01|abc steering committee|b82547f958d4"
+  },
+  {
+   "at": "2026-10-01",
+   "id": "ABC-D-002",
+   "run": "cx-minutes",
+   "source": "fp:2026-10-01|abc steering committee|b82547f958d4"
+  }
+ ],
+ "steps": [
+  {
+   "err": "",
+   "exit": 0,
+   "out": "system/staging/proposed-<STAMP>.json: 9 items, 0 problem(s)\nStaged system/staging/proposed-<STAMP>.json — ABC Steering committee, 01-10-2026 · Example Programme, Digital Enablement\nDraft minutes: system/staging/drafts/2026-10-01 ABC Steering committee.docx\n# · Project · Type · Description · Owner · Due · Flags\n1 · ABC · Action · Book the UAT environment · Sara Example · 20-06-2030 · date-from-file\n2 · ABC · Action · Find a venue for the workshop ·  ·  · no-owner, no-due-date, date-from-file\n3 · ABC · Decision · Go with vendor A ·  ·  · date-from-file\n4 · ABC · Decision · Agree the cut-over weekend ·  ·  · date-from-file\n5 · ABC · Risk · Vendor may slip · Sara Example ·  · date-from-file\n6 · DEF · Action · Plan the DEF demo · Alan Carter ·  · no-due-date, date-from-file\n7 · ABC · Action · Write the test plan · Omar Haddad ·  · no-due-date, date-from-file\n8 · ABC · Update · ABC-A-001: due_date → 01-07-2030; status → Delayed (the client is away · Raised again in ABC Steering committee) · · · \n9 · ABC · Update · ABC-D-002: status → Made; date → 01-10-2026 (Raised again in ABC Steering committee) · · · \nStatus signal: The client is happy with progress\nNote: skipped (XYZ): not one of this meeting's projects — {'project': 'XYZ', 'description': \"Not this meeting's project\", 'owner': 'Alan Carter'}\nNote: rejected update: ABC-A-099 isn't in the tracker\nNote: rejected update: ABC-003: owner can't be changed from minutes (a raid update may change status, response_action, due_date); use cx-edit or Review\nNote: no change to ABC-003 (already as the meeting left it); logged as discussed\nNote: already in the tracker as ABC-A-001, so staged as an update to it (due_date): Send revised SOW to client\nNote: skipped (rejected before): Book a team dinner\nNote: already in the tracker as ABC-D-002, so staged as an update to it (status, date): Choose the pilot site\nRemoved draft input: meeting.json\nBuilt dashboard.html: 2 projects, 1 actions, 1 RAID, 1 decisions, 10 to review, 1 files. Snapshot system/history/dashboard-<DAY>.html.\n",
+   "proposal": {
+    "files": [
+     "system/staging/drafts/2026-10-01 ABC Steering committee.docx",
+     "inbox/Recording 2026-10-01.vtt"
+    ],
+    "items": [
+     {
+      "decision": "pending",
+      "flags": [
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 1,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Book the UAT environment",
+       "due_date": "2030-06-20",
+       "owner": "Sara Example",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Actions"
+      }
+     },
+     {
+      "decision": "pending",
+      "flags": [
+       "no-owner",
+       "no-due-date",
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 2,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Find a venue for the workshop",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Actions"
+      }
+     },
+     {
+      "decision": "pending",
+      "flags": [
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 3,
+      "op": "new",
+      "table": "decisions",
+      "values": {
+       "date": "2026-10-01",
+       "decision": "Go with vendor A",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Decisions",
+       "status": "Made"
+      }
+     },
+     {
+      "decision": "pending",
+      "flags": [
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 4,
+      "op": "new",
+      "table": "decisions",
+      "values": {
+       "decision": "Agree the cut-over weekend",
+       "project": "ABC",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Decisions",
+       "status": "Pending"
+      }
+     },
+     {
+      "decision": "pending",
+      "flags": [
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 5,
+      "op": "new",
+      "table": "raid",
+      "values": {
+       "description": "Vendor may slip",
+       "impact": "High",
+       "likelihood": "Medium",
+       "owner": "Sara Example",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Risks",
+       "type": "Risk"
+      }
+     },
+     {
+      "decision": "pending",
+      "flags": [
+       "no-due-date",
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 6,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Plan the DEF demo",
+       "owner": "Alan Carter",
+       "project": "DEF",
+       "raised": "2026-10-01",
+       "source": "projects/DEF Digital Enablement/minutes/2026-10-01 ABC Steering committee.docx — Actions"
+      }
+     },
+     {
+      "decision": "pending",
+      "flags": [
+       "no-due-date",
+       "date-from-file"
+      ],
+      "match": "strong",
+      "n": 7,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Write the test plan",
+       "owner": "Omar Haddad",
+       "project": "ABC",
+       "raised": "2026-10-01",
+       "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Actions"
+      }
+     },
+     {
+      "based_on": "<TS>",
+      "changes": {
+       "due_date": "2030-07-01",
+       "status": "Delayed"
+      },
+      "decision": "pending",
+      "flags": [],
+      "id": "ABC-A-001",
+      "match": "strong",
+      "n": 8,
+      "op": "update",
+      "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Updates",
+      "table": "actions",
+      "why": "the client is away · Raised again in ABC Steering committee"
+     },
+     {
+      "based_on": "<TS>",
+      "changes": {
+       "date": "2026-10-01",
+       "status": "Made"
+      },
+      "decision": "pending",
+      "flags": [],
+      "id": "ABC-D-002",
+      "match": "strong",
+      "n": 9,
+      "op": "update",
+      "source": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx — Decisions",
+      "table": "decisions",
+      "why": "Raised again in ABC Steering committee"
+     }
+    ],
+    "meeting": {
+     "date": "2026-10-01",
+     "date_from_file": true,
+     "draft": "system/staging/drafts/2026-10-01 ABC Steering committee.docx",
+     "file_ops": [
+      {
+       "from": "draft",
+       "op": "copy",
+       "to": "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx"
+      },
+      {
+       "from": "transcript",
+       "op": "copy",
+       "to": "projects/ABC Example Programme/transcripts/2026-10-01 ABC Steering committee.vtt"
+      },
+      {
+       "from": "draft",
+       "op": "copy",
+       "to": "projects/DEF Digital Enablement/minutes/2026-10-01 ABC Steering committee.docx"
+      },
+      {
+       "from": "transcript",
+       "op": "copy",
+       "to": "projects/DEF Digital Enablement/transcripts/2026-10-01 ABC Steering committee.vtt"
+      },
+      {
+       "op": "remove",
+       "path": "inbox/Recording 2026-10-01.vtt"
+      },
+      {
+       "op": "remove",
+       "path": "system/staging/drafts/2026-10-01 ABC Steering committee.docx"
+      }
+     ],
+     "key": "fp:2026-10-01|abc steering committee|b82547f958d4",
+     "minutes_decision": "pending",
+     "projects": [
+      "ABC",
+      "DEF"
+     ],
+     "source_map": {
+      "projects/ABC Example Programme/minutes/2026-10-01 ABC Steering committee.docx": "projects/ABC Example Programme/transcripts/2026-10-01 ABC Steering committee.vtt",
+      "projects/DEF Digital Enablement/minutes/2026-10-01 ABC Steering committee.docx": "projects/DEF Digital Enablement/transcripts/2026-10-01 ABC Steering committee.vtt"
+     },
+     "title": "ABC Steering committee",
+     "transcript": "inbox/Recording 2026-10-01.vtt"
+    },
+    "source_run": "cx-minutes",
+    "status_signals": [
+     "The client is happy with progress"
+    ]
+   },
+   "spec": "meeting"
+  },
+  {
+   "err": "",
+   "exit": 3,
+   "out": "Already processed on 02-10-2026: ABC Checkpoint. Nothing staged.\n",
+   "proposal": null,
+   "spec": "processed"
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "system/staging/proposed-<STAMP>.json: 1 items, 0 problem(s)\nStaged system/staging/proposed-<STAMP>.json — Quick note - catch-up, 03-10-2026 · Example Programme\n# · Project · Type · Description · Owner · Due · Flags\n1 · ABC · Action · Send the plan · Sara Example · 10-06-2030 · \nRemoved draft input: quick note.json\nBuilt dashboard.html: 2 projects, 1 actions, 1 RAID, 1 decisions, 1 to review, 3 files. Snapshot system/history/dashboard-<DAY>.html.\n",
+   "proposal": {
+    "files": [],
+    "items": [
+     {
+      "decision": "pending",
+      "flags": [],
+      "inferred": [
+       {
+        "field": "description",
+        "why": "Vague title (under four words): Sharpen offers a clearer one"
+       }
+      ],
+      "match": "strong",
+      "n": 1,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Send the plan",
+       "due_date": "2030-06-10",
+       "owner": "Sara Example",
+       "project": "ABC",
+       "raised": "2026-10-03",
+       "source": "projects/ABC Example Programme/minutes/2026-10-03 Quick note - catch-up.md — Actions"
+      }
+     }
+    ],
+    "meeting": {
+     "date": "2026-10-03",
+     "draft": null,
+     "file_ops": [],
+     "key": "fp:2026-10-03|quick note catch up|cd3f83fce70b",
+     "kind": "quick note",
+     "minutes_decision": "approved",
+     "note": "projects/ABC Example Programme/minutes/2026-10-03 Quick note - catch-up.md",
+     "projects": [
+      "ABC"
+     ],
+     "source_map": {},
+     "title": "Quick note - catch-up",
+     "transcript": null
+    },
+    "source_run": "cx-minutes",
+    "status_signals": []
+   },
+   "spec": "quick note"
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "A quick note is staged on its own: give \"note\" without \"draft\" or \"transcript\".\n",
+   "proposal": null,
+   "spec": "note with a draft"
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "No draft minutes: run step 3 (docx_tools.py fill) first, then stage again. Nothing staged.\n",
+   "proposal": null,
+   "spec": "transcript without a draft"
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "No project matched: leave the file in inbox/ and flag it as Project? with the candidates.\n",
+   "proposal": null,
+   "spec": "no project"
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "system/staging/proposed-<STAMP>.json: 1 items, 0 problem(s)\nStaged system/staging/proposed-<STAMP>.json — ABC Design review, 06-10-2026 · Example Programme\nDraft minutes: system/staging/drafts/design.docx\n# · Project · Type · Description · Owner · Due · Flags\n1 · ABC · Action · Share the design · Omar Haddad · 11-06-2030 · \nRemoved draft input: transcript in place.json\nBuilt dashboard.html: 2 projects, 1 actions, 1 RAID, 1 decisions, 2 to review, 6 files. Snapshot system/history/dashboard-<DAY>.html.\n",
+   "proposal": {
+    "files": [
+     "system/staging/drafts/design.docx",
+     "projects/ABC Example Programme/transcripts/2026-10-06 ABC Design review.vtt"
+    ],
+    "items": [
+     {
+      "decision": "pending",
+      "flags": [],
+      "inferred": [
+       {
+        "field": "description",
+        "why": "Vague title (under four words): Sharpen offers a clearer one"
+       }
+      ],
+      "match": "strong",
+      "n": 1,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Share the design",
+       "due_date": "2030-06-11",
+       "owner": "Omar Haddad",
+       "project": "ABC",
+       "raised": "2026-10-06",
+       "source": "projects/ABC Example Programme/minutes/2026-10-06 ABC Design review.docx — Actions"
+      }
+     }
+    ],
+    "meeting": {
+     "date": "2026-10-06",
+     "draft": "system/staging/drafts/design.docx",
+     "file_ops": [
+      {
+       "from": "draft",
+       "op": "copy",
+       "to": "projects/ABC Example Programme/minutes/2026-10-06 ABC Design review.docx"
+      },
+      {
+       "op": "remove",
+       "path": "system/staging/drafts/design.docx"
+      }
+     ],
+     "key": "fp:2026-10-06|abc design review|b82547f958d4",
+     "minutes_decision": "pending",
+     "projects": [
+      "ABC"
+     ],
+     "source_map": {
+      "projects/ABC Example Programme/minutes/2026-10-06 ABC Design review.docx": "projects/ABC Example Programme/transcripts/2026-10-06 ABC Design review.vtt"
+     },
+     "title": "ABC Design review",
+     "transcript": "projects/ABC Example Programme/transcripts/2026-10-06 ABC Design review.vtt"
+    },
+    "source_run": "cx-minutes",
+    "status_signals": []
+   },
+   "spec": "transcript in place"
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "system/staging/proposed-<STAMP>.json: 1 items, 0 problem(s)\nStaged system/staging/proposed-<STAMP>.json — ABC Sync, 07-10-2026 · Example Programme\nDraft minutes: system/staging/drafts/nodate.docx\n# · Project · Type · Description · Owner · Due · Flags\n1 · ABC · Action · Chase the vendor · Alan Carter · 12-06-2030 · date-from-file\nRemoved draft input: transcript with no date.json\nBuilt dashboard.html: 2 projects, 1 actions, 1 RAID, 1 decisions, 2 to review, 7 files. Snapshot system/history/dashboard-<DAY>.html.\n",
+   "proposal": {
+    "files": [
+     "system/staging/drafts/nodate.docx",
+     "inbox/Recording.vtt"
+    ],
+    "items": [
+     {
+      "decision": "pending",
+      "flags": [
+       "date-from-file"
+      ],
+      "inferred": [
+       {
+        "field": "description",
+        "why": "Vague title (under four words): Sharpen offers a clearer one"
+       }
+      ],
+      "match": "strong",
+      "n": 1,
+      "op": "new",
+      "table": "actions",
+      "values": {
+       "description": "Chase the vendor",
+       "due_date": "2030-06-12",
+       "owner": "Alan Carter",
+       "project": "ABC",
+       "raised": "2026-10-07",
+       "source": "projects/ABC Example Programme/minutes/2026-10-07 ABC Sync.docx — Actions"
+      }
+     }
+    ],
+    "meeting": {
+     "date": "2026-10-07",
+     "date_from_file": true,
+     "draft": "system/staging/drafts/nodate.docx",
+     "file_ops": [
+      {
+       "from": "draft",
+       "op": "copy",
+       "to": "projects/ABC Example Programme/minutes/2026-10-07 ABC Sync.docx"
+      },
+      {
+       "from": "transcript",
+       "op": "copy",
+       "to": "projects/ABC Example Programme/transcripts/2026-10-07 ABC Sync.vtt"
+      },
+      {
+       "op": "remove",
+       "path": "inbox/Recording.vtt"
+      },
+      {
+       "op": "remove",
+       "path": "system/staging/drafts/nodate.docx"
+      }
+     ],
+     "key": "fp:2026-10-07|abc sync|b82547f958d4",
+     "minutes_decision": "pending",
+     "projects": [
+      "ABC"
+     ],
+     "source_map": {
+      "projects/ABC Example Programme/minutes/2026-10-07 ABC Sync.docx": "projects/ABC Example Programme/transcripts/2026-10-07 ABC Sync.vtt"
+     },
+     "title": "ABC Sync",
+     "transcript": "inbox/Recording.vtt"
+    },
+    "source_run": "cx-minutes",
+    "status_signals": []
+   },
+   "spec": "transcript with no date"
+  }
+ ]
+}

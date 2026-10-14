@@ -1,0 +1,3198 @@
+{
+ "bash": {
+  "": "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py",
+  "cat ~/.ssh/id_rsa": "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py",
+  "ls": "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py",
+  "python system/scripts/tracker.py read ABC": null,
+  "python3 system/scripts/filechange.py edit system/config/settings.json --from x --why y": null,
+  "python3 system/scripts/launch.py": "launch.py starts the live server or the app, which ask creaite never does",
+  "python3 system/scripts/live_server.py": "live_server.py starts the live server or the app, which ask creaite never does",
+  "python3 system/scripts/nosuch.py": "system/scripts/nosuch.py doesn't exist",
+  "python3 system/scripts/permissions.py check x": "permissions.py is never run by the panel",
+  "python3 system/scripts/propose.py retire-settings": "settings are changed on the approval card: put the new settings.json in system/staging/drafts/ and run python3 system/scripts/filechange.py edit system/config/settings.json --from <that file> --why \"…\"",
+  "python3 system/scripts/propose.py setting sweep.due_from 06:30": "settings are changed on the approval card: put the new settings.json in system/staging/drafts/ and run python3 system/scripts/filechange.py edit system/config/settings.json --from <that file> --why \"…\"",
+  "python3 system/scripts/report.py weekly-data ABC --week-ending 2026-10-09": null,
+  "python3 system/scripts/tracker.py read \"ABC $HOME\"": "the command has $ or a back-quote, which the shell would expand: run the script on its own",
+  "python3 system/scripts/tracker.py read $(whoami)": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read 'ABC $HOME'": null,
+  "python3 system/scripts/tracker.py read 'unclosed": "the command has an unclosed quote",
+  "python3 system/scripts/tracker.py read ABC": null,
+  "python3 system/scripts/tracker.py read ABC\nrm x": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read ABC &": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read ABC > /tmp/x": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read ABC | head": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read ABC; rm -rf x": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read ABC\\": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "python3 system/scripts/tracker.py read `id`": "the command has shell characters (; & | < > $ brackets, a back-quote or a new line): run the script on its own. To keep a script's output, use its --out <name>.json (propose.py new-project and close-project) or read what it printed and save it with the Write tool in system/staging/drafts/; never a redirect or /tmp",
+  "rm -rf projects": "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py",
+  "system/scripts/run tracker.py read ABC": null
+ },
+ "classify": {
+  ".claude/settings.json | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  ".claude/settings.local.json | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".claude/settings.local.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  ".claude/skills/cx-edit/SKILL.md | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  ".claude/skills/cx-edit/SKILL.md | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | change | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  ".claude/skills/cx-edit/SKILL.md | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  ".claude/skills/cx-edit/SKILL.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  ".git/config | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  ".git/config | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  ".mcp.json | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  ".mcp.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "/System/Library/x | change | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | change | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | change | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | create | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | create | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | create | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | delete | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | delete | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | delete | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | move | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | move | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | move | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/System/Library/x | read | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | change | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | change | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | change | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | create | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | create | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | create | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | delete | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | delete | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | delete | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | move | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | move | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | move | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/etc/hosts | read | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/tmp/x.txt | change | marked=False | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | change | marked=False | count=11": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | change | marked=True | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | create | marked=False | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | create | marked=False | count=11": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | create | marked=True | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | delete | marked=False | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | delete | marked=False | count=11": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | delete | marked=True | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | move | marked=False | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | move | marked=False | count=11": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | move | marked=True | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/tmp/x.txt | read | marked=False | count=0": [
+   "never",
+   "it is outside the vault, the projects folder and your home folder"
+  ],
+  "/usr/bin/python3 | change | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | change | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | change | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | create | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | create | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | create | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | delete | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | delete | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | delete | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | move | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | move | marked=False | count=11": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | move | marked=True | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "/usr/bin/python3 | read | marked=False | count=0": [
+   "never",
+   "it is part of the operating system"
+  ],
+  "<HOME>/.aws/credentials | change | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | change | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | change | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | create | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | create | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | create | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | delete | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | delete | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | delete | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | move | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | move | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | move | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.aws/credentials | read | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.bash_profile | change | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | change | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | change | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | create | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | create | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | create | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | delete | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | delete | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | delete | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | move | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | move | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | move | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.bash_profile | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "<HOME>/.claude/settings.json | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "<HOME>/.claude/settings.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "<HOME>/.config/gh/hosts.yml | change | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | change | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | change | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | create | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | create | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | create | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | delete | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | delete | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | delete | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | move | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | move | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | move | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.config/gh/hosts.yml | read | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | change | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | change | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | change | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | create | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | create | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | create | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | delete | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | delete | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | delete | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | move | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | move | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | move | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.ssh/id_rsa | read | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/.zshrc | change | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | change | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | change | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | create | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | create | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | create | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | delete | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | delete | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | delete | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | move | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | move | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | move | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/.zshrc | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "<HOME>/Documents/new.txt | change | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | change | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | change | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | create | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | create | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | create | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | delete | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | delete | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | delete | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | move | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | move | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | move | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/new.txt | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "<HOME>/Documents/notes.txt | change | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | change | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | change | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | create | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | create | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | create | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | delete | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | delete | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | delete | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | move | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | move | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | move | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "<HOME>/Documents/notes.txt | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | change | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | change | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | change | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | create | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | create | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | create | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | delete | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | delete | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | delete | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | move | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | move | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | move | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Application Support/Google/Chrome/Default/Login Data | read | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | change | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | change | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | change | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | create | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | create | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | create | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | delete | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | delete | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | delete | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | move | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | move | marked=False | count=11": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | move | marked=True | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/Keychains/login.keychain-db | read | marked=False | count=0": [
+   "never",
+   "it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | change | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | change | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | change | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | create | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | create | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | create | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | delete | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | delete | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | delete | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | move | marked=False | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | move | marked=False | count=11": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | move | marked=True | count=0": [
+   "never",
+   "it runs commands when you log in or open Terminal"
+  ],
+  "<HOME>/Library/LaunchAgents/x.plist | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "CLAUDE.md | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "CLAUDE.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "VERSION | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "VERSION | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "dashboard.html | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "dashboard.html | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "inbox/forward.txt | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "inbox/forward.txt | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "inbox/forward.txt | change | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "inbox/forward.txt | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "inbox/forward.txt | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "inbox/forward.txt | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "inbox/forward.txt | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "inbox/forward.txt | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "inbox/forward.txt | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "inbox/forward.txt | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "inbox/forward.txt | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "inbox/forward.txt | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "inbox/forward.txt | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/../system/tracker.db | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "projects/../system/tracker.db | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a project's memory file)"
+  ],
+  "projects/ABC Example Programme/CLAUDE.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | change | marked=False | count=0": [
+   "sensitive",
+   "it is a document that may be another person's (a client's or a shared file)"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | change | marked=True | count=0": [
+   "sensitive",
+   "it is a document that may be another person's (a client's or a shared file)"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/SOW.docx | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/documents/plan.md | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/documents/plan.md | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | change | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/documents/plan.md | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/documents/plan.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | change | marked=False | count=0": [
+   "sensitive",
+   "it is a meeting record or a report that may have been sent, or another person's words"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | change | marked=True | count=0": [
+   "sensitive",
+   "it is a meeting record or a report that may have been sent, or another person's words"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/new-note.md | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/new-note.md | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/new-note.md | change | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/new-note.md | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/new-note.md | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/new-note.md | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/new-note.md | delete | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/new-note.md | delete | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/new-note.md | delete | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/new-note.md | move | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/new-note.md | move | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/new-note.md | move | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/new-note.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/notes.md | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/notes.md | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/notes.md | change | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/notes.md | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/notes.md | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/notes.md | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/notes.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/notes.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/notes.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/notes.md | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/notes.md | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/notes.md | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/notes.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | change | marked=False | count=0": [
+   "sensitive",
+   "it is a meeting record or a report that may have been sent, or another person's words"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | change | marked=True | count=0": [
+   "sensitive",
+   "it is a meeting record or a report that may have been sent, or another person's words"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/_portfolio/PORTFOLIO.md | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/_portfolio/PORTFOLIO.md | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | change | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "projects/_portfolio/PORTFOLIO.md | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | create | marked=True | count=0": [
+   "sensitive",
+   "this request has read outside content (mail, Teams, a transcript, a document or a web page)"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "projects/_portfolio/PORTFOLIO.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/backups/x.db | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/backups/x.db | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/config/settings-log.jsonl | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/config/settings-log.jsonl | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/config/settings.json | change | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | change | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | change | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | create | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | create | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | create | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | delete | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | delete | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | delete | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | move | marked=False | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | move | marked=False | count=11": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | move | marked=True | count=0": [
+   "sensitive",
+   "it changes what ask creaite may do (a permission, settings or memory file)"
+  ],
+  "system/config/settings.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/creaite-rules.md | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/creaite-rules.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/guard/run.json | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/guard/run.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/releases/creaite-1.0.0.zip | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/releases/creaite-1.0.0.zip | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/scripts/new.py | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/new.py | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/scripts/tracker.py | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/scripts/tracker.py | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/../tracker.db | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/staging/../tracker.db | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "system/staging/changes/r.json | change | marked=True | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "system/staging/changes/r.json | create | marked=True | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | delete | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | delete | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "system/staging/changes/r.json | delete | marked=True | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | move | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | move | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "system/staging/changes/r.json | move | marked=True | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/changes/r.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/drafts/new.md | change | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/drafts/new.md | change | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "system/staging/drafts/new.md | change | marked=True | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/drafts/new.md | create | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/drafts/new.md | create | marked=False | count=11": [
+   "sensitive",
+   "this request has already changed 11 files (more than 10 need approval)"
+  ],
+  "system/staging/drafts/new.md | create | marked=True | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/drafts/new.md | delete | marked=False | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "system/staging/drafts/new.md | delete | marked=False | count=11": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "system/staging/drafts/new.md | delete | marked=True | count=0": [
+   "sensitive",
+   "it deletes or moves a file that exists"
+  ],
+  "system/staging/drafts/new.md | move | marked=False | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "system/staging/drafts/new.md | move | marked=False | count=11": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "system/staging/drafts/new.md | move | marked=True | count=0": [
+   "sensitive",
+   "it moves or renames a file that exists"
+  ],
+  "system/staging/drafts/new.md | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/staging/proposed-x.json | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "system/staging/proposed-x.json | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "system/tracker.db | change | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | change | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | change | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | create | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | create | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | create | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | delete | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | delete | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | delete | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | move | marked=False | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | move | marked=False | count=11": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | move | marked=True | count=0": [
+   "never",
+   "the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "system/tracker.db | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "tracker-view.xlsx | change | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | change | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | change | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | create | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | create | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | create | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | delete | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | delete | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | delete | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | move | marked=False | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | move | marked=False | count=11": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | move | marked=True | count=0": [
+   "never",
+   "it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "tracker-view.xlsx | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ],
+  "~/Documents/notes.txt | change | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | change | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | change | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | create | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | create | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | create | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | delete | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | delete | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | delete | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | move | marked=False | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | move | marked=False | count=11": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | move | marked=True | count=0": [
+   "sensitive",
+   "it is outside the vault and the projects folder"
+  ],
+  "~/Documents/notes.txt | read | marked=False | count=0": [
+   "ordinary",
+   ""
+  ]
+ },
+ "hook": {
+  "ask | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "ask | Bash | {\"command\": \"python3 system/scripts/tracker.py read ABC\"}": [
+   true,
+   ""
+  ],
+  "ask | Bash | {\"command\": \"rm -rf projects\"}": [
+   false,
+   "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
+  ],
+  "ask | Edit | {\"file_path\": \".claude/settings.json\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   false,
+   ".claude/settings.json: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/drafts/ and run python3 system/scripts/filechange.py"
+  ],
+  "ask | Edit | {\"file_path\": \"system/staging/drafts/new.md\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   true,
+   ""
+  ],
+  "ask | Glob | {\"path\": \"<HOME>\", \"pattern\": \"**/*.md\"}": [
+   false,
+   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+  ],
+  "ask | Glob | {\"path\": \"projects/ABC Example Programme\", \"pattern\": \"*.md\"}": [
+   true,
+   ""
+  ],
+  "ask | Grep | {\"path\": \"<HOME>/Documents\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "ask | LS | {\"path\": \"<HOME>\"}": [
+   false,
+   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+  ],
+  "ask | MultiEdit | {\"edits\": [], \"file_path\": \"system/scripts/tracker.py\"}": [
+   false,
+   "system/scripts/tracker.py: the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "ask | NotebookEdit | {\"notebook_path\": \"projects/ABC Example Programme/x.ipynb\"}": [
+   false,
+   "projects/ABC Example Programme/x.ipynb: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/drafts/ and run python3 system/scripts/filechange.py"
+  ],
+  "ask | Read | {\"file_path\": \"/etc/hosts\"}": [
+   false,
+   "/etc/hosts: it is part of the operating system"
+  ],
+  "ask | Read | {\"file_path\": \"<HOME>/.ssh/id_rsa\"}": [
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "ask | Read | {\"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   true,
+   ""
+  ],
+  "ask | Read | {\"file_path\": \"system/tracker.db\"}": [
+   true,
+   ""
+  ],
+  "ask | WebFetch | {\"url\": \"https://example.com\"}": [
+   true,
+   ""
+  ],
+  "ask | Write | {\"content\": \"x\", \"file_path\": \"<HOME>/.zshrc\"}": [
+   false,
+   "<HOME>/.zshrc: it runs commands when you log in or open Terminal"
+  ],
+  "ask | Write | {\"content\": \"x\", \"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   false,
+   "projects/ABC Example Programme/notes.md: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/drafts/ and run python3 system/scripts/filechange.py"
+  ],
+  "ask | Write | {\"content\": \"x\", \"file_path\": \"system/staging/drafts/new.md\"}": [
+   true,
+   ""
+  ],
+  "ask | Write | {\"content\": \"x\", \"file_path\": \"system/staging/proposed-x.json\"}": [
+   false,
+   "system/staging/proposed-x.json: it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "ask | mcp__claude_ai_Microsoft_365__outlook_email_search | {\"query\": \"x\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "confirmed | Bash | {\"command\": \"python3 system/scripts/tracker.py read ABC\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Bash | {\"command\": \"rm -rf projects\"}": [
+   false,
+   "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
+  ],
+  "confirmed | Edit | {\"file_path\": \".claude/settings.json\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   false,
+   ".claude/settings.json: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/ and run python3 system/scripts/filechange.py"
+  ],
+  "confirmed | Edit | {\"file_path\": \"system/staging/drafts/new.md\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Glob | {\"path\": \"<HOME>\", \"pattern\": \"**/*.md\"}": [
+   false,
+   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+  ],
+  "confirmed | Glob | {\"path\": \"projects/ABC Example Programme\", \"pattern\": \"*.md\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Grep | {\"path\": \"<HOME>/Documents\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "confirmed | LS | {\"path\": \"<HOME>\"}": [
+   false,
+   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+  ],
+  "confirmed | MultiEdit | {\"edits\": [], \"file_path\": \"system/scripts/tracker.py\"}": [
+   false,
+   "system/scripts/tracker.py: the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "confirmed | NotebookEdit | {\"notebook_path\": \"projects/ABC Example Programme/x.ipynb\"}": [
+   false,
+   "projects/ABC Example Programme/x.ipynb: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/ and run python3 system/scripts/filechange.py"
+  ],
+  "confirmed | Read | {\"file_path\": \"/etc/hosts\"}": [
+   false,
+   "/etc/hosts: it is part of the operating system"
+  ],
+  "confirmed | Read | {\"file_path\": \"<HOME>/.ssh/id_rsa\"}": [
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "confirmed | Read | {\"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Read | {\"file_path\": \"system/tracker.db\"}": [
+   true,
+   ""
+  ],
+  "confirmed | WebFetch | {\"url\": \"https://example.com\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Write | {\"content\": \"x\", \"file_path\": \"<HOME>/.zshrc\"}": [
+   false,
+   "<HOME>/.zshrc: it runs commands when you log in or open Terminal"
+  ],
+  "confirmed | Write | {\"content\": \"x\", \"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   false,
+   "projects/ABC Example Programme/notes.md: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/ and run python3 system/scripts/filechange.py"
+  ],
+  "confirmed | Write | {\"content\": \"x\", \"file_path\": \"system/staging/drafts/new.md\"}": [
+   true,
+   ""
+  ],
+  "confirmed | Write | {\"content\": \"x\", \"file_path\": \"system/staging/proposed-x.json\"}": [
+   false,
+   "system/staging/proposed-x.json: it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "confirmed | mcp__claude_ai_Microsoft_365__outlook_email_search | {\"query\": \"x\"}": [
+   true,
+   ""
+  ]
+ },
+ "preview_list": {
+  "local add allow Edit(inbox/**)": {
+   "after": [
+    "Edit(inbox/**)"
+   ],
+   "before": [],
+   "ok": true,
+   "reason": "",
+   "summary": "Add Edit(inbox/**) to .claude/settings.local.json › permissions.allow"
+  },
+  "local remove allow Nothing(x)": {
+   "ok": false,
+   "reason": "Nothing(x) isn't in .claude/settings.local.json › permissions.allow"
+  },
+  "settings add allow Bash(*)": {
+   "ok": false,
+   "reason": "Bash on its own runs any command: creaite never adds it"
+  },
+  "settings add allow Bash(python3 system/scripts/report.py *)": {
+   "ok": false,
+   "reason": "Bash(python3 system/scripts/report.py *) is already in .claude/settings.json › permissions.allow"
+  },
+  "settings add allow Bash(python3 system/scripts/tracker.py *)": {
+   "ok": false,
+   "reason": "Bash(python3 system/scripts/tracker.py *) is already in .claude/settings.json › permissions.allow"
+  },
+  "settings add allow WebFetch(domain:example.com)": {
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)"
+  },
+  "settings add deny Bash(rm *)": {
+   "after": [
+    "Edit(system/tracker.db)",
+    "Edit(system/scripts/schema.sql)",
+    "Edit(system/scripts/paths.py)",
+    "WebFetch",
+    "Bash(curl *)",
+    "Bash(git push *)",
+    "Edit(.claude/settings.json)",
+    "Edit(.claude/settings.local.json)",
+    "Bash(python system/scripts/permissions.py *)",
+    "Bash(python3 system/scripts/permissions.py *)",
+    "Bash(system/scripts/run permissions.py *)",
+    "Bash(rm *)"
+   ],
+   "before": [
+    "Edit(system/tracker.db)",
+    "Edit(system/scripts/schema.sql)",
+    "Edit(system/scripts/paths.py)",
+    "WebFetch",
+    "Bash(curl *)",
+    "Bash(git push *)",
+    "Edit(.claude/settings.json)",
+    "Edit(.claude/settings.local.json)",
+    "Bash(python system/scripts/permissions.py *)",
+    "Bash(python3 system/scripts/permissions.py *)",
+    "Bash(system/scripts/run permissions.py *)"
+   ],
+   "ok": true,
+   "reason": "",
+   "summary": "Add Bash(rm *) to .claude/settings.json › permissions.deny"
+  },
+  "settings add dir /": {
+   "ok": false,
+   "reason": "the only folder outside the vault creaite adds is the projects root (locations.projects_root)"
+  },
+  "settings add dir ~/Documents": {
+   "ok": false,
+   "reason": "the only folder outside the vault creaite adds is the projects root (locations.projects_root)"
+  },
+  "settings remove allow Read(**)": {
+   "after": [
+    "Edit(inbox/**)",
+    "Edit(projects/**)",
+    "Edit(system/staging/**)",
+    "Edit(system/history/**)",
+    "Edit(system/backups/**)",
+    "Edit(system/processed.txt)",
+    "Edit(dashboard.html)",
+    "Edit(system/config/settings.json)",
+    "Edit(system/config/settings-log.jsonl)",
+    "Bash(python3 system/scripts/tracker.py *)",
+    "Bash(system/scripts/run tracker.py *)",
+    "Bash(python3 system/scripts/excel_sync.py *)",
+    "Bash(system/scripts/run excel_sync.py *)",
+    "Bash(python3 system/scripts/build_dashboard.py *)",
+    "Bash(system/scripts/run build_dashboard.py *)",
+    "Bash(python3 system/scripts/doctor.py *)",
+    "Bash(system/scripts/run doctor.py *)",
+    "Bash(python3 system/scripts/docx_tools.py *)",
+    "Bash(system/scripts/run docx_tools.py *)",
+    "Bash(python3 system/scripts/minutes.py *)",
+    "Bash(system/scripts/run minutes.py *)",
+    "Bash(python3 system/scripts/review.py *)",
+    "Bash(system/scripts/run review.py *)",
+    "Bash(python3 system/scripts/live_server.py *)",
+    "Bash(system/scripts/run live_server.py *)",
+    "Bash(python3 system/scripts/sweep.py *)",
+    "Bash(system/scripts/run sweep.py *)",
+    "Bash(python3 system/scripts/session.py *)",
+    "Bash(system/scripts/run session.py *)",
+    "Bash(python3 system/scripts/propose.py *)",
+    "Bash(system/scripts/run propose.py *)",
+    "Bash(python3 system/scripts/report.py *)",
+    "Bash(system/scripts/run report.py *)",
+    "Bash(python3 system/scripts/update.py version)",
+    "Bash(system/scripts/run update.py version)",
+    "Bash(python3 system/scripts/update.py find)",
+    "Bash(system/scripts/run update.py find)",
+    "Bash(python3 system/scripts/update.py inspect *)",
+    "Bash(system/scripts/run update.py inspect *)",
+    "Bash(python3 system/scripts/update.py fetch*)",
+    "Bash(system/scripts/run update.py fetch*)",
+    "Bash(python3 system/scripts/search.py *)",
+    "Bash(system/scripts/run search.py *)",
+    "Bash(python3 system/scripts/filechange.py *)",
+    "Bash(system/scripts/run filechange.py *)",
+    "mcp__claude_ai_Microsoft_365__chat_message_search",
+    "mcp__claude_ai_Microsoft_365__find_meeting_availability",
+    "mcp__claude_ai_Microsoft_365__get_granted_scopes",
+    "mcp__claude_ai_Microsoft_365__get_me",
+    "mcp__claude_ai_Microsoft_365__outlook_calendar_search",
+    "mcp__claude_ai_Microsoft_365__outlook_email_search",
+    "mcp__claude_ai_Microsoft_365__outlook_find_available_time",
+    "mcp__claude_ai_Microsoft_365__read_resource",
+    "mcp__claude_ai_Microsoft_365__search_people",
+    "mcp__claude_ai_Microsoft_365__sharepoint_folder_search",
+    "mcp__claude_ai_Microsoft_365__sharepoint_search",
+    "mcp__claude_ai_Microsoft_365__teams_list_channel_messages",
+    "mcp__claude_ai_Microsoft_365__teams_list_channels",
+    "mcp__claude_ai_Microsoft_365__teams_list_chats",
+    "mcp__claude_ai_Microsoft_365__teams_list_teams"
+   ],
+   "before": [
+    "Read(**)",
+    "Edit(inbox/**)",
+    "Edit(projects/**)",
+    "Edit(system/staging/**)",
+    "Edit(system/history/**)",
+    "Edit(system/backups/**)",
+    "Edit(system/processed.txt)",
+    "Edit(dashboard.html)",
+    "Edit(system/config/settings.json)",
+    "Edit(system/config/settings-log.jsonl)",
+    "Bash(python3 system/scripts/tracker.py *)",
+    "Bash(system/scripts/run tracker.py *)",
+    "Bash(python3 system/scripts/excel_sync.py *)",
+    "Bash(system/scripts/run excel_sync.py *)",
+    "Bash(python3 system/scripts/build_dashboard.py *)",
+    "Bash(system/scripts/run build_dashboard.py *)",
+    "Bash(python3 system/scripts/doctor.py *)",
+    "Bash(system/scripts/run doctor.py *)",
+    "Bash(python3 system/scripts/docx_tools.py *)",
+    "Bash(system/scripts/run docx_tools.py *)",
+    "Bash(python3 system/scripts/minutes.py *)",
+    "Bash(system/scripts/run minutes.py *)",
+    "Bash(python3 system/scripts/review.py *)",
+    "Bash(system/scripts/run review.py *)",
+    "Bash(python3 system/scripts/live_server.py *)",
+    "Bash(system/scripts/run live_server.py *)",
+    "Bash(python3 system/scripts/sweep.py *)",
+    "Bash(system/scripts/run sweep.py *)",
+    "Bash(python3 system/scripts/session.py *)",
+    "Bash(system/scripts/run session.py *)",
+    "Bash(python3 system/scripts/propose.py *)",
+    "Bash(system/scripts/run propose.py *)",
+    "Bash(python3 system/scripts/report.py *)",
+    "Bash(system/scripts/run report.py *)",
+    "Bash(python3 system/scripts/update.py version)",
+    "Bash(system/scripts/run update.py version)",
+    "Bash(python3 system/scripts/update.py find)",
+    "Bash(system/scripts/run update.py find)",
+    "Bash(python3 system/scripts/update.py inspect *)",
+    "Bash(system/scripts/run update.py inspect *)",
+    "Bash(python3 system/scripts/update.py fetch*)",
+    "Bash(system/scripts/run update.py fetch*)",
+    "Bash(python3 system/scripts/search.py *)",
+    "Bash(system/scripts/run search.py *)",
+    "Bash(python3 system/scripts/filechange.py *)",
+    "Bash(system/scripts/run filechange.py *)",
+    "mcp__claude_ai_Microsoft_365__chat_message_search",
+    "mcp__claude_ai_Microsoft_365__find_meeting_availability",
+    "mcp__claude_ai_Microsoft_365__get_granted_scopes",
+    "mcp__claude_ai_Microsoft_365__get_me",
+    "mcp__claude_ai_Microsoft_365__outlook_calendar_search",
+    "mcp__claude_ai_Microsoft_365__outlook_email_search",
+    "mcp__claude_ai_Microsoft_365__outlook_find_available_time",
+    "mcp__claude_ai_Microsoft_365__read_resource",
+    "mcp__claude_ai_Microsoft_365__search_people",
+    "mcp__claude_ai_Microsoft_365__sharepoint_folder_search",
+    "mcp__claude_ai_Microsoft_365__sharepoint_search",
+    "mcp__claude_ai_Microsoft_365__teams_list_channel_messages",
+    "mcp__claude_ai_Microsoft_365__teams_list_channels",
+    "mcp__claude_ai_Microsoft_365__teams_list_chats",
+    "mcp__claude_ai_Microsoft_365__teams_list_teams"
+   ],
+   "ok": true,
+   "reason": "",
+   "summary": "Remove Read(**) from .claude/settings.json › permissions.allow"
+  },
+  "settings remove deny Edit(.claude/settings.json)": {
+   "ok": false,
+   "reason": "that deny entry keeps the panel out of the permission files and the database: edit it yourself in Terminal if you really mean to"
+  }
+ },
+ "rules": {
+  "": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "",
+   "state": "refused"
+  },
+  "Bash": {
+   "covered": null,
+   "ok": false,
+   "reason": "Bash on its own runs any command: creaite never adds it",
+   "rule": "Bash",
+   "state": "out_of_bounds"
+  },
+  "Bash(*)": {
+   "covered": null,
+   "ok": false,
+   "reason": "Bash on its own runs any command: creaite never adds it",
+   "rule": "Bash(*)",
+   "state": "out_of_bounds"
+  },
+  "Bash(curl *)": {
+   "covered": null,
+   "ok": false,
+   "reason": "curl * is not a creaite script: a Bash rule must run one creaite script, like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "Bash(curl *)",
+   "state": "refused"
+  },
+  "Bash(git push *)": {
+   "covered": null,
+   "ok": false,
+   "reason": "git push * is not a creaite script: a Bash rule must run one creaite script, like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "Bash(git push *)",
+   "state": "refused"
+  },
+  "Bash(node build.js)": {
+   "covered": null,
+   "ok": false,
+   "reason": "node build.js is not a creaite script: a Bash rule must run one creaite script, like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "Bash(node build.js)",
+   "state": "refused"
+  },
+  "Bash(python3 *)": {
+   "covered": null,
+   "ok": false,
+   "reason": "python3 with a wildcard is an interpreter or shell, which runs anything: creaite never adds it",
+   "rule": "Bash(python3 *)",
+   "state": "out_of_bounds"
+  },
+  "Bash(python3 system/scripts/permissions.py *)": {
+   "covered": null,
+   "ok": false,
+   "reason": "permissions.py is never allowed to the panel",
+   "rule": "Bash(python3 system/scripts/permissions.py *)",
+   "state": "out_of_bounds"
+  },
+  "Bash(python3 system/scripts/report.py *)": {
+   "covered": "Bash(python3 system/scripts/report.py *)",
+   "ok": false,
+   "reason": "already allowed",
+   "rule": "Bash(python3 system/scripts/report.py *)",
+   "state": "allowed"
+  },
+  "Bash(python3 system/scripts/tracker.py *)": {
+   "covered": "Bash(python3 system/scripts/tracker.py *)",
+   "ok": false,
+   "reason": "already allowed",
+   "rule": "Bash(python3 system/scripts/tracker.py *)",
+   "state": "allowed"
+  },
+  "Bash(python3 system/scripts/tracker.py apply)": {
+   "covered": "Bash(python3 system/scripts/tracker.py *)",
+   "ok": false,
+   "reason": "already allowed",
+   "rule": "Bash(python3 system/scripts/tracker.py apply)",
+   "state": "allowed"
+  },
+  "Bash(python3 system/scripts/tracker.py:*)": {
+   "covered": "Bash(python3 system/scripts/tracker.py *)",
+   "ok": false,
+   "reason": "already allowed",
+   "rule": "Bash(python3 system/scripts/tracker.py *)",
+   "state": "allowed"
+  },
+  "Bash(rm *)": {
+   "covered": null,
+   "ok": false,
+   "reason": "rm * is not a creaite script: a Bash rule must run one creaite script, like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "Bash(rm *)",
+   "state": "refused"
+  },
+  "Bash(sudo *)": {
+   "covered": null,
+   "ok": false,
+   "reason": "sudo with a wildcard is an interpreter or shell, which runs anything: creaite never adds it",
+   "rule": "Bash(sudo *)",
+   "state": "out_of_bounds"
+  },
+  "Bash(system/scripts/run tracker.py *)": {
+   "covered": "Bash(system/scripts/run tracker.py *)",
+   "ok": false,
+   "reason": "already allowed",
+   "rule": "Bash(system/scripts/run tracker.py *)",
+   "state": "allowed"
+  },
+  "Edit(**)": {
+   "covered": null,
+   "ok": false,
+   "reason": "Edit rules are only for projects/, inbox/, system/staging/, system/search/, system/history/",
+   "rule": "Edit(**)",
+   "state": "refused"
+  },
+  "Edit(.claude/settings.json)": {
+   "covered": null,
+   "ok": false,
+   "reason": "Edit rules are only for projects/, inbox/, system/staging/, system/search/, system/history/",
+   "rule": "Edit(.claude/settings.json)",
+   "state": "out_of_bounds"
+  },
+  "Edit(inbox/**)": {
+   "covered": "Edit(inbox/**)",
+   "ok": false,
+   "reason": "already allowed",
+   "rule": "Edit(inbox/**)",
+   "state": "allowed"
+  },
+  "Read(**)": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "Read(**)",
+   "state": "refused"
+  },
+  "WebFetch": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "WebFetch",
+   "state": "refused"
+  },
+  "WebFetch(domain:example.com)": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "WebFetch(domain:example.com)",
+   "state": "refused"
+  },
+  "WebSearch": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "WebSearch",
+   "state": "refused"
+  },
+  "Write(*)": {
+   "covered": null,
+   "ok": false,
+   "reason": "Write rules are only for projects/, inbox/, system/staging/, system/search/, system/history/",
+   "rule": "Write(*)",
+   "state": "refused"
+  },
+  "Write(system/scripts/x.py)": {
+   "covered": null,
+   "ok": false,
+   "reason": "Write rules are only for projects/, inbox/, system/staging/, system/search/, system/history/",
+   "rule": "Write(system/scripts/x.py)",
+   "state": "out_of_bounds"
+  },
+  "mcp__claude_ai_Microsoft_365": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "mcp__claude_ai_Microsoft_365",
+   "state": "refused"
+  },
+  "mcp__claude_ai_Microsoft_365__outlook_email_search": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "mcp__claude_ai_Microsoft_365__outlook_email_search",
+   "state": "refused"
+  },
+  "mcp__claude_ai_Microsoft_365__outlook_send_mail": {
+   "covered": null,
+   "ok": false,
+   "reason": "creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *)",
+   "rule": "mcp__claude_ai_Microsoft_365__outlook_send_mail",
+   "state": "refused"
+  }
+ },
+ "settings_problem": {
+  "claude | add Bash(*)": "the new rule Bash(*) is refused: Bash on its own runs any command",
+  "claude | add a dangerous mode": "defaultMode can skip permissions",
+  "claude | add a script": null,
+  "claude | add hooks": "creaite changes only the permission rules in this file; hooks can run commands or change how Claude Code runs, so it is changed only by hand",
+  "claude | an extra directory": "the new folder / is the whole disk",
+  "claude | env added": "creaite changes only the permission rules in this file; env can run commands or change how Claude Code runs, so it is changed only by hand",
+  "claude | not an object": "the file is no longer a JSON object",
+  "claude | remove a safety deny": "it removes the safety entry Edit(.claude/settings.json)",
+  "claude | skip in a key": "creaite changes only the permission rules in this file; dangerouslySkipPermissions can run commands or change how Claude Code runs, so it is changed only by hand",
+  "claude | unchanged": null,
+  "config | add Bash(*)": "system/config/settings.json carries no permissions section",
+  "config | add a dangerous mode": "system/config/settings.json carries no permissions section",
+  "config | add a script": "system/config/settings.json carries no permissions section",
+  "config | add hooks": null,
+  "config | an extra directory": "system/config/settings.json carries no permissions section",
+  "config | env added": null,
+  "config | not an object": "the file is no longer a JSON object",
+  "config | remove a safety deny": "system/config/settings.json carries no permissions section",
+  "config | skip in a key": null,
+  "config | unchanged": null,
+  "json | add Bash(*)": null,
+  "json | add a dangerous mode": null,
+  "json | add a script": null,
+  "json | add hooks": null,
+  "json | an extra directory": null,
+  "json | env added": null,
+  "json | not an object": "the file is no longer a JSON object",
+  "json | remove a safety deny": null,
+  "json | skip in a key": null,
+  "json | unchanged": null,
+  "mcp | add Bash(*)": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | add a dangerous mode": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | add a script": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | add hooks": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | an extra directory": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | env added": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | not an object": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | remove a safety deny": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | skip in a key": "MCP servers run commands, so .mcp.json is changed only by hand",
+  "mcp | unchanged": "MCP servers run commands, so .mcp.json is changed only by hand"
+ },
+ "tier": {
+  ".claude/settings.json | change | {\"permissions\": {\"allow\": [\"Read(**)\"], \"deny\": []}} | {\"permissions\": {\"allow\": [\"Read(**)\", \"Bash(python3 system/ | None": [
+   "high",
+   "it is one of ask creaite's permission files (adds permissions.allow: Bash(python3 system/scripts/report.py *))"
+  ],
+  "<HOME>/.claude/settings.json | change | {} | {} | None": [
+   "high",
+   "it is one of ask creaite's permission files"
+  ],
+  "projects/ABC Example Programme/notes.md | change | a | b | None": [
+   "sensitive",
+   "it needs your approval"
+  ],
+  "projects/ABC Example Programme/notes.md | delete | None | None | None": [
+   "sensitive",
+   "it needs your approval"
+  ],
+  "projects/ABC Example Programme/notes.md | move | None | None | .claude/settings.json": [
+   "high",
+   "it is one of ask creaite's permission files"
+  ],
+  "system/config/settings.json | change | {} | {\"permissions\": {\"allow\": [\"Read(**)\", \"Bash(python3 system/ | None": [
+   "high",
+   "it changes a permission rule (adds permissions.allow: Read(**); adds permissions.allow: Bash(python3 system/scripts/report.py *))"
+  ],
+  "system/config/settings.json | change | {} | {\"sweep\": {\"due_from\": \"06:30\"}} | None": [
+   "sensitive",
+   "it needs your approval"
+  ]
+ },
+ "validate_edit": {
+  "config | add Bash(*)": "system/config/settings.json carries no permissions section",
+  "config | add a dangerous mode": "system/config/settings.json carries no permissions section",
+  "config | add a script": "system/config/settings.json carries no permissions section",
+  "config | add hooks": null,
+  "config | an extra directory": "system/config/settings.json carries no permissions section",
+  "config | env added": null,
+  "config | not an object": "the file is no longer a JSON object",
+  "config | remove a safety deny": "system/config/settings.json carries no permissions section",
+  "config | skip in a key": null,
+  "config | unchanged": null,
+  "local | add Bash(*)": "the new rule Bash(*) is refused: Bash for everything is a blanket rule",
+  "local | add a dangerous mode": "defaultMode bypassPermissions skips permissions",
+  "local | add a script": null,
+  "local | add hooks": null,
+  "local | an extra directory": "the new folder / is the whole disk or your home folder",
+  "local | env added": null,
+  "local | not an object": "the file is no longer a JSON object",
+  "local | remove a safety deny": "the deny entry Edit(.claude/settings.json) keeps the panel out of the permission files and the database, so it can't be removed this way",
+  "local | skip in a key": null,
+  "local | unchanged": null,
+  "settings | add Bash(*)": "the new rule Bash(*) is refused: Bash for everything is a blanket rule",
+  "settings | add a dangerous mode": "defaultMode bypassPermissions skips permissions",
+  "settings | add a script": null,
+  "settings | add hooks": null,
+  "settings | an extra directory": "the new folder / is the whole disk or your home folder",
+  "settings | env added": null,
+  "settings | not an object": "the file is no longer a JSON object",
+  "settings | remove a safety deny": "the deny entry Edit(.claude/settings.json) keeps the panel out of the permission files and the database, so it can't be removed this way",
+  "settings | skip in a key": null,
+  "settings | unchanged": null
+ }
+}

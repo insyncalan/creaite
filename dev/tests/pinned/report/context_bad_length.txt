@@ -1,0 +1,2 @@
+exit 1
+length must be one of short, standard, fuller

@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Meeting prep: chosen options</title>
+<style>
+:root{
+  --bg:#F3F6F7; --surface:#FFFFFF; --sunk:#EAF0F2; --ink:#14212A; --muted:#4D5C66; --faint:#6F7D86; --line:#D7DFE3;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --ai:#6B3FA0; --ai-soft:#EFE7F8; --inverse:#14212A; --inverse-ink:#E4EAED; --stage-dot:#F0C66B;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#7C8990; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --ai:#C9A8F0; --ai-soft:#2E2340; --inverse:#E4EAED; --inverse-ink:#171E22;}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button,input,textarea,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1440px;margin:0 auto;padding:24px 16px 64px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600}
+.lede{color:var(--muted);margin:0 0 14px;max-width:900px}
+.sub{color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:4px 0 14px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:14px 0 0;font-size:13px}
+.notes h4{margin:0 0 4px;font-size:13px} .notes ul{margin:4px 0;padding-left:18px} .notes li{margin:2px 0}
+.ico{width:16px;height:16px;flex:none;vertical-align:-3px}
+
+/* atoms */
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ai{border-color:var(--ai);color:var(--ai)} .btn.ai.fill{background:var(--ai);color:#fff}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn.ghost{border-color:transparent;background:none}
+.chip{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:12px;white-space:nowrap}
+.chip.sel{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.chip.btnlike{cursor:pointer}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;vertical-align:1px;white-space:nowrap}
+.tag.ai{background:var(--ai-soft);color:var(--ai)} .tag.mute{background:var(--sunk);color:var(--muted)} .tag.int{background:var(--ink);color:var(--surface)}
+.av{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--sunk);color:var(--muted);font-size:10px;font-weight:700;border:2px solid var(--surface);margin-left:-6px}
+.av:first-child{margin-left:0}
+.why{display:block;font-size:12px;color:var(--accent)} .why::before{content:"↑ "}
+.late{color:var(--bad)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.card>h3,.sec>h3{font-size:13px;font-weight:600;margin:0 0 6px;display:flex;align-items:center;gap:6px}
+.card>h3 .sub,.sec>h3 .sub{font-weight:400}
+.srclink{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid var(--line);text-decoration:none;color:var(--ink)}
+.srclink:first-of-type{border-top:0}
+.srclink:hover .nm{text-decoration:underline;color:var(--accent)}
+.srclink .nm{display:block;font-size:13px} .srclink .sub{display:block}
+.srclink .go{margin-left:auto;color:var(--faint);font-size:12px;white-space:nowrap}
+.cite{font-size:11px;color:var(--ai);white-space:nowrap;text-decoration:none;border-bottom:1px dotted var(--ai)}
+
+/* the Draft agenda menu: the same pattern as Work's New decision menu */
+.dd{position:relative;display:inline-block}
+.dd .chev{width:14px;height:14px;margin-left:2px;opacity:.8}
+.ddm{position:absolute;right:0;top:38px;z-index:30;width:320px;padding:4px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.ddm[hidden]{display:none}
+.ddm.left{left:0;right:auto}
+.ddm button{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:8px 10px;border-radius:7px;cursor:pointer;color:var(--ink)}
+.ddm button:hover,.ddm button:focus-visible{background:var(--sunk);outline:0}
+.ddm svg{margin-top:2px;color:var(--accent);width:18px;height:18px;flex:none}
+.ddm b{font-weight:500;display:flex;gap:6px;align-items:center} .ddm small{display:block;color:var(--muted);font-size:12px;line-height:16px}
+.ddm .last{font-size:11px;color:var(--faint);font-weight:400}
+.ddm hr{border:0;border-top:1px solid var(--line);margin:4px 6px}
+
+/* the mock app window */
+.shell{position:relative;height:780px;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--bg);display:flex}
+.rail{width:64px;flex:none;background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 0}
+.rail span{width:36px;height:36px;border-radius:8px;background:var(--sunk);display:block} .rail span.on{background:var(--accent-soft);outline:2px solid var(--accent)}
+.appbody{flex:1;min-width:0;overflow:auto;position:relative}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.28);display:flex;align-items:flex-start;justify-content:center;padding:28px 16px;overflow:auto}
+.fake{padding:20px;opacity:.6} .fake .bar{height:12px;background:var(--line);border-radius:6px;margin:10px 0}
+
+/* dialog */
+.dlg{width:min(960px,100%);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.dh{padding:16px 20px 12px;border-bottom:1px solid var(--line)}
+.dh .top{display:flex;gap:10px;align-items:flex-start}
+.dh h2{font-size:19px;line-height:25px;margin:2px 0 8px;font-weight:600}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--line);background:var(--bg)}
+.tb .sp{flex:1}
+.db{padding:14px 20px 20px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px}
+.sec{min-width:0}
+.wl>div{padding:6px 8px;margin:0 -8px;border-radius:6px;cursor:pointer} .wl>div:hover{background:var(--sunk)}
+.wl .sub{display:block}
+.wl>div.sel{background:var(--accent-soft)}
+.idc{font-size:11px;color:var(--faint);margin-right:6px}
+details.it{margin-top:8px;font-size:13px} details.it summary{cursor:pointer;color:var(--accent);font-size:12px}
+details.it p{margin:6px 0 0;padding:8px 10px;background:var(--sunk);border-radius:8px}
+
+/* shape (B) */
+.focus{border:1px solid var(--ai);border-radius:12px;padding:14px 16px;margin:0 0 14px}
+.focus h3{margin:0 0 6px;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--ai)}
+textarea.grow{display:block;width:100%;min-height:84px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--surface);line-height:1.5}
+textarea.grow:focus{border-color:var(--ai);outline:2px solid color-mix(in srgb,var(--ai) 25%,transparent);outline-offset:0}
+.focus .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.focus .row .sp{flex:1}
+.readas{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--sunk);font-size:13px}
+.readas .rl{display:grid;grid-template-columns:70px 1fr;gap:6px 10px;align-items:center}
+.readas .rl>span:nth-child(odd){color:var(--muted);font-size:12px}
+.draft{border:1px dashed var(--ai);border-radius:10px;padding:12px 14px;background:var(--ai-soft);margin-top:12px}
+.draft h4{margin:12px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)} .draft h4:first-of-type{margin-top:6px}
+.ed{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 9px;min-height:34px;outline:none;resize:vertical;overflow:auto}
+.ed:focus{border-color:var(--ai)}
+.ed ul{margin:0;padding-left:18px} .ed li{margin:2px 0}
+.scope{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:14px;align-items:start}
+.srow{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.srow:first-of-type{border-top:0}
+.srow input{margin-top:3px} .srow.off{opacity:.45} .srow .sub,.srow .why{display:block}
+.srow .t{flex:1;cursor:pointer;border-radius:6px} .srow .t:hover{background:var(--sunk)}
+.thinking{display:none;align-items:center;gap:8px;color:var(--ai);font-size:13px;margin-top:10px}
+.dots{display:inline-flex;gap:3px} .dots i{width:6px;height:6px;border-radius:50%;background:var(--ai);animation:b 1s infinite} .dots i:nth-child(2){animation-delay:.15s} .dots i:nth-child(3){animation-delay:.3s}
+@keyframes b{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.dots i{animation:none}}
+
+/* prep page (Briefing) */
+.pph{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 0}
+.crumb{font-size:12px;color:var(--muted)} .crumb a{text-decoration:none}
+.pph h1{font-size:22px;margin:4px 0 6px;font-weight:600}
+.pph .acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 12px}
+.pph .acts .sp{flex:1}
+.pptabs{display:flex;gap:2px} .pptabs span{padding:8px 12px;font-size:13px;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer} .pptabs span.on{color:var(--ink);border-color:var(--accent);font-weight:500}
+.ppb{padding:18px 24px 40px;display:grid;gap:18px;grid-template-columns:190px minmax(0,1fr) 320px}
+.outline{position:sticky;top:12px;align-self:start;font-size:13px}
+.outline a{display:block;padding:5px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none} .outline a.on{border-color:var(--accent);color:var(--ink);font-weight:500}
+.outline .sub{margin:14px 0 4px;padding-left:10px;text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+.pc{padding:14px 16px} .pc+.pc{margin-top:14px}
+.rail2{display:grid;gap:14px;align-content:start}
+.focusband{border-left:4px solid var(--ai);background:var(--ai-soft);border-radius:10px;padding:12px 16px}
+.focusband h3{margin:0 0 6px;font-size:14px;color:var(--ai);display:flex;gap:6px;align-items:center}
+.focusband .ed{min-height:96px;height:120px}
+table.wi{width:100%;border-collapse:collapse;font-size:13px}
+.wi th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.wi td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.wi tr:last-child td{border-bottom:0}
+.wi tr.r{cursor:pointer} .wi tr.r:hover{background:var(--sunk)} .wi tr.r.sel{background:var(--accent-soft)}
+.wi .id{color:var(--muted);font-size:12px;white-space:nowrap}
+.rep .hl{font-size:14px;margin:6px 0} .rep ul{margin:4px 0 8px;padding-left:18px} .rep li{margin:2px 0}
+.rephead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.hb{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn)}
+.tl{position:relative;padding-left:18px}
+.tl::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl .ev{position:relative;padding:4px 0 10px}
+.tl .ev::before{content:"";position:absolute;left:-17px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--accent)}
+.tl .ev.next::before{background:var(--accent)}
+.tl .ev b{font-size:13px} .tl .ev .sub{display:block} .tl .ev a{font-size:12px}
+.qa li{margin:4px 0}
+.edit[contenteditable]{border-radius:6px;padding:2px 4px;margin:-2px -4px} .edit[contenteditable]:hover{background:var(--sunk)} .edit[contenteditable]:focus{outline:2px solid var(--ai);background:var(--surface)}
+
+/* the full peek, as in Work (BL-176) */
+.peek{position:absolute;top:0;right:0;bottom:0;width:min(max(520px,50%),100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:-14px 0 32px rgba(0,0,0,.16);transform:translateX(105%);transition:transform .2s ease;display:flex;flex-direction:column;z-index:20}
+.peek.on{transform:none}
+.peek.wide{width:100%}
+@media (prefers-reduced-motion:reduce){.peek{transition:none}}
+.pk-bar{display:flex;align-items:center;gap:2px;padding:10px 12px;min-height:52px;flex:none}
+.pk-bar .sp{flex:1} .pk-sep{width:1px;height:20px;background:var(--line);margin:0 6px}
+.ib{width:34px;height:34px;border:0;background:none;border-radius:8px;display:inline-grid;place-items:center;cursor:pointer;color:var(--ink)} .ib:hover{background:var(--sunk)}
+.ib svg{width:18px;height:18px}
+.pk-scroll{flex:1;overflow:auto;padding:0 26px 80px;min-height:0}
+.pk-id{display:flex;align-items:center;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:13px;margin-top:2px}
+.pk-type{display:inline-flex;align-items:center;gap:2px;border:0;background:var(--sunk);color:var(--ink);border-radius:999px;padding:1px 8px 1px 10px;font-size:12px;font-weight:500;cursor:pointer}
+.pked{border-radius:8px;outline:0;cursor:text;min-height:1.4em}
+.pked:hover{background:color-mix(in srgb,var(--sunk) 55%,transparent)} .pked:focus{background:var(--sunk)}
+.pked:empty::before{content:attr(data-ph);color:var(--faint)}
+.pk-title{font-size:22px;line-height:30px;font-weight:600;margin:6px 0 6px -8px;padding:4px 8px}
+.pk-props{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));margin:10px 0 4px}
+.pk-prop{min-width:0;position:relative} .pk-prop+.pk-prop{border-left:1px solid var(--line)}
+.pk-chip{display:flex;align-items:center;gap:8px;width:100%;min-height:42px;padding:8px 10px;line-height:20px;border:0;background:none;border-radius:8px;cursor:pointer;text-align:left;font-size:14px}
+.pk-chip:hover{background:var(--sunk)} .pk-chip svg{width:18px;height:18px;flex:none;color:var(--muted)}
+.pk-chip.empty{color:var(--faint)} .pk-chip.late>span{color:var(--bad)}
+.pk-chip em{font-style:normal;font-size:11px;font-weight:600;background:var(--bad-soft);color:var(--bad);border-radius:999px;padding:0 7px;margin-left:2px}
+.pk-chip .lbl{display:block;font-size:11px;color:var(--faint);line-height:14px}
+.pk-dl{font-size:12px;font-weight:500;color:var(--muted);margin:16px 0 2px;display:flex;align-items:center;gap:8px}
+.pk-desc{padding:8px;margin:0 0 0 -8px;font-size:15px;line-height:23px;white-space:pre-wrap}
+.pk-links a{display:flex;gap:8px;align-items:center;padding:6px 8px;margin:0 -8px;border-radius:6px;text-decoration:none;color:var(--ink);font-size:13px} .pk-links a:hover{background:var(--sunk)}
+.pk-links .rel{color:var(--muted);font-size:12px;width:96px;flex:none}
+.pk-dethead{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;padding:12px 0 8px;font-weight:600;font-size:14px;cursor:pointer;border-top:1px solid var(--line);margin-top:14px;text-align:left}
+.pk-det{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px} .pk-det>span:nth-child(odd){color:var(--muted)}
+.feed{font-size:13px} .feed div{display:flex;gap:10px;padding:6px 0} .feed .d{color:var(--faint);font-size:12px;width:84px;flex:none}
+.pkpop{position:absolute;top:44px;left:0;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;min-width:200px}
+.pkopt{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:7px 10px;border-radius:6px;cursor:pointer;text-align:left}
+.pkopt:hover{background:var(--sunk)}
+.pkstage{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:40;background:var(--inverse);color:var(--inverse-ink);border-radius:999px;padding:6px 8px 6px 16px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px;white-space:nowrap}
+.pkstage[hidden]{display:none}
+.pkstage .dot{width:8px;height:8px;border-radius:50%;background:var(--stage-dot)}
+.pkbtn{height:30px;border:0;border-radius:999px;padding:0 14px;cursor:pointer;font-weight:500;font-size:13px;background:color-mix(in srgb,var(--inverse-ink) 16%,transparent);color:inherit}
+.pkbtn.go{background:var(--accent);color:var(--accent-ink)}
+
+.hide{display:none!important}
+@media (max-width:1000px){
+  .grid2,.scope{grid-template-columns:1fr}
+  .ppb{grid-template-columns:minmax(0,1fr)} .outline{display:none}
+}
+@media (max-width:640px){ .shell{height:auto;min-height:780px} .rail{display:none} .pph,.ppb{padding-left:14px;padding-right:14px} .peek{width:100%} }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="spark" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.2 6.6L21 11l-6.8 2.4L12 20l-2.2-6.6L3 11l6.8-2.4z"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="up" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="expand" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></symbol>
+  <symbol id="more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="doc" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M7 3h7l5 5v13H7zM14 3v5h5"/></symbol>
+  <symbol id="list" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="para" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h10"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M3 6h18v12H3zM3 7l9 6 9-6"/></symbol>
+  <symbol id="chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 5h16v11H9l-5 4z"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 6h16v14H4zM4 10h16M8 3v5M16 3v5"/></symbol>
+  <symbol id="rep" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M5 20V10M12 20V4M19 20v-7"/></symbol>
+  <symbol id="db" viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/></symbol>
+  <symbol id="ext" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></symbol>
+  <symbol id="rec" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4"/></symbol>
+  <symbol id="user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path fill="none" stroke="currentColor" stroke-width="1.8" d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+  <symbol id="circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="flag" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M5 21V4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="link" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/></symbol>
+</svg>
+
+<div class="page">
+  <h1 class="t">Meeting prep: the chosen options</h1>
+  <p class="lede">Popup A, shaping B and the Briefing page, with your changes: Draft agenda is a dropdown like Work's New decision, the focus notes are multi-line and can be dragged larger (bottom-right corner), and every work item, in every view, opens the full Work peek. Try clicking an item, then a chip in the peek (Status, Owner, Priority).</p>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" data-tab="t1">1 · The popup</button>
+    <button role="tab" aria-selected="false" data-tab="t2">2 · Shape the meeting</button>
+    <button role="tab" aria-selected="false" data-tab="t3">3 · Prep page (Briefing)</button>
+  </div>
+
+  <!-- ========== 1 · POPUP (A) ========== -->
+  <section id="t1">
+    <div class="shell"><div class="rail"><span></span><span class="on"></span><span></span><span></span></div>
+      <div class="appbody"><div class="fake"><div class="bar" style="width:40%"></div><div class="bar"></div><div class="bar" style="width:70%"></div></div>
+        <div class="dim"><div class="dlg">
+          <div class="dh">
+            <div class="top"><div style="flex:1">
+              <div class="sub">Tomorrow · Wednesday 14th October · 10:00 – 10:45 · Microsoft Teams</div>
+              <h2>Meridian core team check-in</h2>
+              <div class="meta">
+                <span class="chip btnlike" title="Change project (remembered for this series)">● Meridian Contact Centre AI <svg class="ico" style="width:12px"><use href="#chev"/></svg></span>
+                <span class="chip"><svg class="ico"><use href="#rec"/></svg>Every 2 weeks · 6th meeting · last 29-09-2026</span>
+                <span class="chip"><span class="av">SE</span><span class="av">OA</span><span class="av">JD</span><span class="av">+4</span>&nbsp;7 invited</span>
+              </div>
+            </div><button class="btn ghost" aria-label="Close"><svg class="ico"><use href="#x"/></svg></button></div>
+          </div>
+          <div class="tb">
+            <button class="btn ai fill" data-goto="t2"><svg class="ico"><use href="#spark"/></svg>Shape this meeting</button>
+            <button class="btn primary" data-goto="t3">Open prep page</button>
+            <span class="sp"></span>
+            <span class="dd" data-agenda></span>
+          </div>
+          <div class="db">
+            <p style="margin:0 0 10px"><b>Since the last meeting (29-09-2026):</b> 3 decisions, 1 new risk, 2 actions now overdue. <span class="sub">2 items the invite points to are shown first.</span></p>
+            <details class="it"><summary>Invite: organised by Sara Example · 7 invited (Priya Nair, Omar Ali, Tom Wells, Jane Doe, Ken Morita, Lucy Hart) · invite text</summary><p>Bi-weekly check-in for the core project team on Meridian. This week: UAT exit criteria and the latency findings from the vendor.</p></details>
+            <div class="grid2" style="margin-top:14px">
+              <div class="sec"><h3>Open actions <span class="sub">· 9</span></h3><div class="wl">
+                <div data-peek="MER-A-012" tabindex="0"><span class="idc">MER-A-012</span>Agree UAT exit criteria with the client<span class="sub late">2 days overdue · Sara Example</span><span class="why">named in the invite</span></div>
+                <div data-peek="MER-A-015" tabindex="0"><span class="idc">MER-A-015</span>Share vendor latency test results<span class="sub">due Friday · Tom Wells</span><span class="why">named in the invite</span></div>
+                <div data-peek="MER-A-009" tabindex="0"><span class="idc">MER-A-009</span>Book the go-live comms review<span class="sub late">5 days overdue · Omar Ali</span></div>
+                <a href="#" class="sub">+6 more — see all ›</a></div></div>
+              <div class="sec"><h3>Risks and issues with no response <span class="sub">· 2</span></h3><div class="wl">
+                <div data-peek="MER-R-004" tabindex="0"><span class="idc">MER-R-004</span>Speech-to-text latency above 800 ms at peak<span class="sub">High risk · Tom Wells</span></div>
+                <div data-peek="MER-I-002" tabindex="0"><span class="idc">MER-I-002</span>Test data refresh blocked by access request<span class="sub">Medium issue · Priya Nair</span></div></div></div>
+              <div class="sec"><h3>Decisions since 29-09-2026 <span class="sub">· 2</span></h3><div class="wl">
+                <div data-peek="MER-D-007" tabindex="0"><span class="idc">MER-D-007</span>Pilot limited to the billing queue<span class="sub">06-10-2026 · Steering</span></div>
+                <div data-peek="MER-D-008" tabindex="0"><span class="idc">MER-D-008</span>Weekly vendor checkpoint until go-live<span class="sub">08-10-2026 · Sara Example</span></div></div></div>
+              <div class="sec"><h3>Latest reporting</h3>
+                <a class="srclink" href="#"><svg class="ico"><use href="#rep"/></svg><span><span class="nm">Weekly report · week ending 09-10-2026</span><span class="sub">▲ At risk · latency and UAT timing</span></span><span class="go">Open ↗</span></a>
+                <a class="srclink" href="#"><svg class="ico"><use href="#doc"/></svg><span><span class="nm">Client report · 02-10-2026</span><span class="sub">For the client</span></span><span class="go">Open ↗</span></a></div>
+            </div>
+          </div>
+        </div></div>
+        <aside class="peek" aria-label="Item peek"></aside><div class="pkstage" hidden></div>
+      </div>
+    </div>
+    <div class="notes"><h4>In this view</h4><ul>
+      <li><b>Draft agenda ▾</b> (top right of the toolbar) opens a menu like Work's New decision: <b>POAD</b> or <b>POAD lite</b>, each with a line saying what you get. Your last choice is marked, and the separate POAD / Lighter chips are gone.</li>
+      <li>Any item opens the <b>full Work peek</b> over the popup. Edits are staged, and the staged pill at the bottom lets you apply them, the same as in Work.</li></ul></div>
+  </section>
+
+  <!-- ========== 2 · SHAPE (B) ========== -->
+  <section id="t2" class="hide">
+    <div class="shell" style="height:900px"><div class="rail"><span></span><span class="on"></span><span></span><span></span></div>
+      <div class="appbody"><div class="dim"><div class="dlg">
+        <div class="dh"><div class="top"><div style="flex:1"><div class="sub">Tomorrow · 10:00 – 10:45 · Every 2 weeks</div><h2 style="margin-bottom:0">Meridian core team check-in</h2></div><button class="btn ghost" aria-label="Close"><svg class="ico"><use href="#x"/></svg></button></div></div>
+        <div class="db">
+          <div class="focus">
+            <h3><svg class="ico"><use href="#spark"/></svg>Tell creaite how you want to run this meeting</h3>
+            <label class="sub" for="shapeTxt">Your focus and aim. Write as much as you like; drag the corner to make the box bigger.</label>
+            <textarea id="shapeTxt" class="grow" rows="4" style="margin-top:6px">Focus on the latency risk only.
+I want Tom to commit to a date for the caching fix, and Jane to accept running the pilot outside peak hours if he can't.
+Also close off who approves the load test plan; it was dropped last time.</textarea>
+            <div class="row"><span class="sub">Suggestions:</span>
+              <button class="chip btnlike" data-add="MER-A-012 UAT exit criteria">+ MER-A-012 · UAT exit criteria</button>
+              <button class="chip btnlike" data-add="Pilot go-live milestone (06-11-2026)">+ Pilot go-live 06-11-2026</button>
+              <span class="sp"></span>
+              <button class="btn ai fill" id="shapeBtn"><svg class="ico"><use href="#spark"/></svg>Shape</button></div>
+            <div class="thinking" id="thinking"><span class="dots"><i></i><i></i><i></i></span>Reading 5 items, 4 documents, the last two minutes and Teams…</div>
+            <div class="readas"><div class="sub" style="margin-bottom:6px">creaite read this as <a href="#" style="margin-left:6px">change</a></div>
+              <div class="rl"><span>Focus</span><span><span class="chip sel">MER-R-004 · Speech-to-text latency</span> <span class="chip">+ carried over: load test approver</span></span>
+                <span>Aim</span><span>A date from Tom Wells; if not, Jane Doe accepts a non-peak pilot</span>
+                <span>Show</span><span>Only items and documents linked to the focus · <a href="#">show everything instead</a></span></div></div>
+          </div>
+
+          <div class="draft" id="draft">
+            <div style="display:flex;align-items:center;gap:8px"><span class="tag ai">Draft from creaite</span><span class="sub">Edit anything; every box can be dragged larger. Nothing is saved until you accept.</span><span style="flex:1"></span><button class="btn sm">Regenerate</button><button class="btn sm primary">Accept</button></div>
+            <h4>Objective</h4>
+            <div class="ed" contenteditable="true" style="height:58px">Leave with a committed date for the latency fix (MER-R-004), or an agreed fallback: run the pilot outside peak hours.</div>
+            <h4>Talking points</h4>
+            <div class="ed" contenteditable="true" style="height:96px"><ul>
+              <li>Vendor results show 840 ms at peak against an 800 ms target <a class="cite" href="#">Teams · Tom Wells, 10-10</a></li>
+              <li>UAT exit criteria (MER-A-012) depend on this; now 2 days overdue <a class="cite" href="#">tracker</a></li>
+              <li>Steering limited the pilot to billing (MER-D-007), which lowers peak load <a class="cite" href="#">decision 06-10</a></li></ul></div>
+            <h4>Ask</h4>
+            <div class="ed" contenteditable="true" style="height:70px"><ul><li>Tom: a date for the caching change, and who at the vendor owns it.</li><li>Jane: is a non-peak pilot acceptable to the client if the date slips?</li></ul></div>
+            <h4>Carried over</h4>
+            <div class="ed" contenteditable="true" style="height:46px"><ul><li>Who approves the load test plan <a class="cite" href="#">minutes 29-09</a></li></ul></div>
+          </div>
+
+          <div class="scope">
+            <div class="card pc"><h3>Work items in focus <span class="sub">· 4 of 23</span></h3><div id="scopeItems"></div></div>
+            <div class="card pc"><h3>Documents and sources in focus <span class="sub">· 4 of 41</span></h3><div id="scopeDocs"></div></div>
+          </div>
+        </div>
+      </div></div>
+      <aside class="peek" aria-label="Item peek"></aside><div class="pkstage" hidden></div></div>
+    </div>
+    <div class="notes"><h4>In this view</h4><ul>
+      <li><b>The instruction box is a multi-line textarea</b> that grows by dragging its corner. Each of the draft notes (objective, talking points, ask, carried over) can be dragged larger too.</li>
+      <li><b>"creaite read this as"</b> shows the focus, the aim and what will be shown, so a misreading is corrected before the notes are drafted. Suggestion chips add an item to the text.</li>
+      <li>Work items in focus open the <b>full peek</b>; the tick box takes an item out of the prep page.</li></ul></div>
+  </section>
+
+  <!-- ========== 3 · PREP PAGE (Briefing) ========== -->
+  <section id="t3" class="hide">
+    <div class="shell" style="height:980px"><div class="rail"><span></span><span class="on"></span><span></span><span></span></div>
+      <div class="appbody">
+        <div class="pph">
+          <div class="crumb"><a href="#">Today</a> › <a href="#">Meetings</a> › Prep</div>
+          <h1>Meridian core team check-in</h1>
+          <div class="meta"><span class="tag int">Internal</span><span class="chip"><svg class="ico"><use href="#cal"/></svg>Wednesday 14th October · 10:00 – 10:45</span><span class="chip">● Meridian Contact Centre AI</span><span class="chip"><svg class="ico"><use href="#rec"/></svg>Every 2 weeks · 6th</span><span class="chip"><span class="av">SE</span><span class="av">TW</span><span class="av">JD</span><span class="av">+4</span>&nbsp;7 invited</span></div>
+          <div class="acts"><button class="btn ai" data-goto="t2"><svg class="ico"><use href="#spark"/></svg>Change focus</button><button class="btn">Refresh research</button><span class="dd" data-agenda data-left></span><span class="sp"></span><span class="sub">Saved to Agendas · 13-10-2026 16:42</span><button class="btn">Open the file ↗</button><button class="btn">Print</button></div>
+          <div class="pptabs"><span class="on">Prep</span><span>Invite</span><span>History (5)</span></div>
+        </div>
+        <div class="ppb">
+          <nav class="outline" aria-label="On this page"><a class="on" href="#">Focus and notes</a><a href="#">Work items</a><a href="#">Researched notes</a><a href="#">Questions and asks</a><a href="#">Latest reporting</a><a href="#">Sources</a><div class="sub">This series</div><a href="#">29-09-2026</a><a href="#">15-09-2026</a><a href="#">01-09-2026</a></nav>
+          <div>
+            <div class="focusband"><h3><svg class="ico"><use href="#spark"/></svg>Focus: MER-R-004 · Speech-to-text latency</h3>
+              <div class="ed" contenteditable="true"><b>Objective:</b> a committed date for the latency fix, or an agreed fallback (pilot outside peak hours).<br><b>Ask:</b> Tom for a date and an owner at the vendor; Jane whether a non-peak pilot is acceptable.<br><b>Carried over:</b> who approves the load test plan.</div>
+              <p class="sub" style="margin:6px 0 0">Your notes, accepted 13-10-2026 16:40 · edit here; drag the corner to make the box bigger</p></div>
+            <div class="card pc" style="margin-top:14px"><h3>Work items in focus <span class="sub">· 4 of 23 · <a href="#">show all</a></span></h3><table class="wi" id="wiTbl"></table></div>
+            <div class="card pc"><h3>Researched notes</h3><ul style="margin:0;padding-left:18px">
+              <li>Vendor's caching change is "in test", no date given. <a class="cite" href="#">Teams · Tom Wells, 10-10-2026</a></li>
+              <li>Client's contact centre peak is 08:00 – 10:00 and 16:00 – 18:00. <a class="cite" href="#">Operating model v3.docx</a></li>
+              <li>Load test plan has no named approver. <a class="cite" href="#">Minutes 29-09-2026</a></li></ul></div>
+            <div class="card pc"><h3>Questions and asks</h3><ol class="qa" style="margin:0;padding-left:20px"><li class="edit" contenteditable="true">Tom: what date can the vendor commit to for the caching change?</li><li class="edit" contenteditable="true">Jane: is a non-peak pilot acceptable to the client?</li><li class="edit" contenteditable="true">Who approves the load test plan?</li></ol></div>
+          </div>
+          <div class="rail2">
+            <div class="card pc" id="repCard"></div>
+            <div class="card pc" id="histCard"></div>
+            <div class="card pc" id="srcCard"></div>
+          </div>
+        </div>
+        <aside class="peek" aria-label="Item peek"></aside><div class="pkstage" hidden></div>
+      </div>
+    </div>
+    <div class="notes"><h4>In this view</h4><ul>
+      <li><b>Briefing layout:</b> an outline on the left, the focus and work in the middle, and the context on the right (dated reporting, the series history and clickable sources).</li>
+      <li><b>The focus notes are editable in place and can be dragged larger.</b> Draft agenda uses the same dropdown as the popup.</li>
+      <li>Rows open the <b>full peek</b>. Expand (⤢) widens it to the whole page, ↑ ↓ step through the list, and edits stage and apply as in Work, after which the page refreshes.</li></ul></div>
+  </section>
+</div>
+
+<script>
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const ic=n=>`<svg class="ico"><use href="#${n}"/></svg>`;
+const ITEMS={
+  "MER-R-004":{t:"Speech-to-text latency above 800 ms at peak",k:"Risk",st:"Open",o:"Tom Wells",due:"",pr:"High",ws:"Platform",ms:"Pilot go-live",desc:"At peak load the vendor's speech-to-text adds 840 ms per turn against an 800 ms target. Agents notice the pause and callers talk over the bot.",resp:"",links:[["blocks","MER-A-012","Agree UAT exit criteria"],["mitigated by","MER-A-015","Share vendor latency test results"]],src:"Minutes · 15-09-2026",why:"the focus"},
+  "MER-A-015":{t:"Share vendor latency test results",k:"Action",st:"Open",o:"Tom Wells",due:"16-10-2026",pr:"High",ws:"Platform",ms:"Pilot go-live",desc:"Send the peak and off-peak latency runs to the core team, with the vendor's view of the caching change.",links:[["mitigates","MER-R-004","Speech-to-text latency"]],src:"Teams · Tom Wells, 10-10-2026",why:"mitigates MER-R-004"},
+  "MER-A-012":{t:"Agree UAT exit criteria with the client",k:"Action",st:"Open",o:"Sara Example",due:"11-10-2026",late:2,pr:"Urgent",ws:"Testing",ms:"UAT complete",desc:"Exit criteria for UAT, including the latency threshold, agreed and signed by the client's delivery lead.",links:[["blocked by","MER-R-004","Speech-to-text latency"]],src:"Minutes · 29-09-2026",why:"blocked by MER-R-004"},
+  "MER-D-007":{t:"Pilot limited to the billing queue",k:"Decision",st:"Made",o:"Steering",due:"06-10-2026",pr:"",ws:"",ms:"Pilot go-live",desc:"The pilot runs on the billing queue only, to keep volumes and risk down.",links:[],src:"Steering · 06-10-2026",why:"lowers peak load"},
+  "MER-D-008":{t:"Weekly vendor checkpoint until go-live",k:"Decision",st:"Made",o:"Sara Example",due:"08-10-2026",pr:"",ws:"",ms:"",desc:"",links:[],src:"Mail · Sara Example, 08-10-2026"},
+  "MER-A-009":{t:"Book the go-live comms review",k:"Action",st:"Open",o:"Omar Ali",due:"08-10-2026",late:5,pr:"Medium",ws:"Change",ms:"Pilot go-live",desc:"",links:[],src:"Minutes · 29-09-2026"},
+  "MER-I-002":{t:"Test data refresh blocked by access request",k:"Issue",st:"Open",o:"Priya Nair",due:"",pr:"Medium",ws:"Testing",ms:"UAT complete",desc:"",resp:"",links:[],src:"Teams · Priya Nair, 07-10-2026"}};
+const FOCUS=["MER-R-004","MER-A-015","MER-A-012","MER-D-007"];
+const PEOPLE=["Tom Wells","Sara Example","Omar Ali","Priya Nair","Jane Doe"];
+
+/* tabs */
+function tab(id){ $$(".tabs button").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===id)); ["t1","t2","t3"].forEach(t=>$("#"+t).classList.toggle("hide",t!==id)); }
+$$(".tabs button").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+document.addEventListener("click",e=>{ const g=e.target.closest("[data-goto]"); if(g){ tab(g.dataset.goto); scrollTo(0,0); } });
+{ const [h,...o]=location.hash.slice(1).split("&"); if(["t1","t2","t3"].includes(h)) tab(h);   /* #t3&peek=ID or #t1&menu: open on load (for screenshots) */
+  addEventListener("load",()=>{ o.forEach(x=>{ const [k,v]=x.split("="); const sec=$("#"+(h||"t1")); if(k==="peek"){ const el=$(`[data-peek="${v}"]`,sec); if(el) openPeek(el); } if(k==="menu") $("[data-agenda]>.btn",sec).click(); }); }); }
+
+/* Draft agenda: one dropdown, like Work's New decision */
+let AGLAST="poad";
+$$("[data-agenda]").forEach(h=>{ h.innerHTML=`<button class="btn" aria-haspopup="menu" aria-expanded="false">${ic("spark")}Draft agenda<svg class="chev"><use href="#chev"/></svg></button><div class="ddm ${h.hasAttribute("data-left")?"left":""}" role="menu" hidden></div>`; });
+function drawAg(m){ m.innerHTML=`<button role="menuitem" data-ag="poad">${ic("list")}<span><b>POAD ${AGLAST==="poad"?'<span class="last">· last used</span>':""}</b><small>Purpose, objectives, approach, deliverables. The full structure, for a decision meeting or a workshop.</small></span></button><button role="menuitem" data-ag="lite">${ic("para")}<span><b>POAD lite ${AGLAST==="lite"?'<span class="last">· last used</span>':""}</b><small>A short, friendly paragraph, with a bulleted agenda only when the meeting has distinct steps.</small></span></button><hr><button role="menuitem" data-ag="att">${ic("user")}<span><b>Include who's invited</b><small>Adds the attendee list to the invite text.</small></span></button>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-agenda]>.btn"), m=b&&b.nextElementSibling;
+  $$(".ddm").forEach(x=>{ if(x!==m){ x.hidden=true; x.previousElementSibling.setAttribute("aria-expanded","false"); } });
+  if(m){ drawAg(m); m.hidden=!m.hidden; b.setAttribute("aria-expanded",String(!m.hidden)); return; }
+  const it=e.target.closest("[data-ag]"); if(it){ if(it.dataset.ag!=="att") AGLAST=it.dataset.ag; it.closest(".ddm").hidden=true; } });
+
+/* shaping */
+$("#shapeBtn").onclick=()=>{ const d=$("#draft"), t=$("#thinking"); d.style.opacity=.3; t.style.display="flex"; setTimeout(()=>{ d.style.opacity=1; t.style.display="none"; },1400); };
+$$("[data-add]").forEach(b=>b.onclick=()=>{ const ta=$("#shapeTxt"); ta.value+=`\nAlso cover ${b.dataset.add}.`; b.remove(); });
+const DOCS=[["doc","Latency test results.xlsx","Documents · 09-10-2026"],["chat","Teams · Tom Wells: caching change in test","10-10-2026"],["doc","Operating model v3.docx","Documents · 02-09-2026"],["doc","Minutes · 29-09-2026","This series"]];
+$("#scopeItems").innerHTML=FOCUS.map(id=>{ const x=ITEMS[id]; return `<div class="srow"><input type="checkbox" checked aria-label="Include ${id}" onchange="this.parentNode.classList.toggle('off',!this.checked)"><span class="t" data-peek="${id}" tabindex="0"><span class="idc">${id}</span>${x.t}<span class="sub ${x.late?"late":""}">${x.k} · ${x.o}${x.due?" · "+x.due:""}</span><span class="why">${x.why}</span></span></div>`; }).join("");
+$("#scopeDocs").innerHTML=DOCS.map(([i,n,s])=>`<div class="srow"><input type="checkbox" checked aria-label="Include ${n}" onchange="this.parentNode.classList.toggle('off',!this.checked)">${ic(i)}<span style="flex:1"><a href="#">${n}</a><span class="sub">${s}</span></span></div>`).join("");
+
+/* prep page */
+$("#wiTbl").innerHTML=`<thead><tr><th>ID</th><th>Item</th><th>Owner</th><th>Due</th><th>Why it's here</th></tr></thead><tbody>${FOCUS.map(id=>{ const x=ITEMS[id]; return `<tr class="r" data-peek="${id}" tabindex="0"><td class="id">${id}</td><td>${x.t}<div class="sub">${x.k}${x.pr?" · "+x.pr:""}</div></td><td>${x.o}</td><td class="${x.late?"late":""}" style="white-space:nowrap">${x.due||"—"}${x.late?"<div class='sub late'>overdue</div>":""}</td><td><span class="why">${x.why}</span></td></tr>`; }).join("")}</tbody>`;
+$("#repCard").innerHTML=`<h3>${ic("rep")}Latest reporting</h3><div class="rep"><div class="rephead"><b>Weekly report</b><span class="sub">week ending 09-10-2026</span><span class="hb">▲ At risk</span></div>
+  <p class="hl">Latency at peak and a slipping UAT exit put the pilot date under pressure.</p>
+  <ul><li>Vendor latency 840 ms at peak (target 800 ms)</li><li>UAT exit criteria not yet agreed</li><li>Billing-only pilot agreed at steering</li></ul>
+  <a class="srclink" href="#">${ic("doc")}<span><span class="nm">Weekly report · w/e 09-10-2026</span><span class="sub">Reports folder</span></span><span class="go">Open ↗</span></a>
+  <a class="srclink" href="#">${ic("doc")}<span><span class="nm">Client report · 02-10-2026</span><span class="sub">For the client · ✔ On track</span></span><span class="go">Open ↗</span></a></div>`;
+$("#histCard").innerHTML=`<h3>${ic("rec")}This series <span class="sub">· every 2 weeks</span></h3><div class="tl">
+  <div class="ev next"><b>14-10-2026 · this one</b><span class="sub">Focus: latency</span></div>
+  <div class="ev"><b>29-09-2026</b><span class="sub">4 actions, 1 decision · 1 not covered</span><a href="#">Minutes ↗</a> · <a href="#">Prep page ↗</a></div>
+  <div class="ev"><b>15-09-2026</b><span class="sub">3 actions · MER-R-004 raised</span><a href="#">Minutes ↗</a></div>
+  <div class="ev"><b>01-09-2026</b><span class="sub">2 actions, 2 decisions</span><a href="#">Minutes ↗</a></div>
+  <a href="#" class="sub">2 earlier ›</a></div>`;
+$("#srcCard").innerHTML=`<h3>${ic("ext")}Sources <span class="sub">· click to open</span></h3>${[["doc","Weekly report · w/e 09-10-2026.docx","Reports · opens in Word"],["doc","Latency test results.xlsx","Documents · opens in Excel"],["chat","Teams · Tom Wells, 10-10-2026","Opens in Teams"],["mail","Mail · Jane Doe, 07-10-2026","Opens in Outlook"],["doc","Minutes · 29-09-2026.docx","Minutes · opens in Word"],["db","Tracker: 4 items, 1 decision","Opens in Work"]].map(([i,n,s])=>`<a class="srclink" href="#">${ic(i)}<span><span class="nm">${n}</span><span class="sub">${s}</span></span><span class="go">↗</span></a>`).join("")}`;
+
+/* the full peek, as in Work */
+let STAGED=0, CUR=null;
+function listOf(el){ return [...el.closest(".shell").querySelectorAll("[data-peek]")].map(x=>x.dataset.peek).filter((v,i,a)=>a.indexOf(v)===i); }
+function openPeek(el){ const id=el.dataset.peek, sh=el.closest(".shell"); CUR={id,sh,list:listOf(el)}; drawPeek(); }
+function drawPeek(){ const {id,sh,list}=CUR, x=ITEMS[id], pk=$(".peek",sh);
+  $$("[data-peek]",sh).forEach(r=>r.classList.toggle("sel",r.dataset.peek===id));
+  const chip=(f,label,icon,val,cls="")=>`<div class="pk-prop"><button class="pk-chip ${val?"":"empty"} ${cls}" data-f="${f}"><svg><use href="#${icon}"/></svg><span><span class="lbl">${label}</span>${val||"Add"}</span></button></div>`;
+  const isRisk=x.k==="Risk"||x.k==="Issue";
+  pk.innerHTML=`<div class="pk-bar">
+    <button class="ib" data-nav="-1" aria-label="Previous"><svg><use href="#up"/></svg></button><button class="ib" data-nav="1" aria-label="Next"><svg style="transform:rotate(180deg)"><use href="#up"/></svg></button>
+    <span class="sub" style="margin-left:6px">${list.indexOf(id)+1} of ${list.length}</span><span class="sp"></span>
+    <button class="ib" data-wide aria-label="Expand"><svg><use href="#expand"/></svg></button><button class="ib" aria-label="Open in Work"><svg><use href="#ext"/></svg></button><button class="ib" aria-label="More"><svg><use href="#more"/></svg></button><span class="pk-sep"></span><button class="ib" data-pkclose aria-label="Close"><svg><use href="#x"/></svg></button></div>
+  <div class="pk-scroll">
+    <div class="pk-id"><span>${id}</span><button class="pk-type">${x.k}<svg class="ico" style="width:14px"><use href="#chev"/></svg></button><span>· Meridian Contact Centre AI</span></div>
+    <div class="pked pk-title" contenteditable="true">${x.t}</div>
+    <div class="pk-props">${chip("st","Status","circle",x.st)}${chip("o",x.k==="Decision"?"Decided by":"Owner","user",x.o)}${chip("due",x.k==="Decision"?"Date":"Due","cal",x.due?x.due+(x.late?` <em>${x.late}d late</em>`:""):"",x.late?"late":"")}${x.k==="Decision"?"":chip("pr","Priority","flag",x.pr)}</div>
+    <div class="pk-props" style="margin-top:0">${chip("ws","Workstream","list",x.ws)}${chip("ms","Milestone","flag",x.ms)}${chip("lb","Labels","link","")}</div>
+    <div class="pk-dl">Description</div><div class="pked pk-desc" contenteditable="true" data-ph="Add a description…">${x.desc||""}</div>
+    ${isRisk?`<div class="pk-dl">Response</div><div class="pked pk-desc" contenteditable="true" data-ph="No response yet. Add one…">${x.resp||""}</div>`:""}
+    <div class="pk-dl">Links</div><div class="pk-links">${x.links.length?x.links.map(([r,lid,lt])=>`<a href="#" data-jump="${lid}"><span class="rel">${r}</span><span class="idc">${lid}</span>${lt}</a>`).join(""):'<span class="sub">No links. <a href="#">Add a link</a></span>'}</div>
+    <div class="pk-dl">Source</div><a href="#" style="font-size:13px">${x.src} ↗</a>
+    <button class="pk-dethead">${ic("chev")}Details</button>
+    <div class="pk-det"><span>Client-visible</span><span>No</span><span>Created</span><span>15-09-2026 from minutes</span><span>Last updated</span><span>10-10-2026</span></div>
+    <button class="pk-dethead">${ic("chev")}Activity</button>
+    <div class="feed"><div><span class="d">10-10-2026</span><span>Due moved from 09-10 to 16-10 · sweep</span></div><div><span class="d">29-09-2026</span><span>Discussed: not resolved · minutes</span></div><div><span class="d">15-09-2026</span><span>Created by Alan from minutes</span></div></div>
+  </div>`;
+  pk.classList.add("on"); }
+function stage(sh){ STAGED++; const s=$(".pkstage",sh); s.hidden=false; s.innerHTML=`<span class="dot"></span><span>${STAGED} change${STAGED>1?"s":""} staged</span><small>applies to the tracker when you say so</small><button class="pkbtn" data-discard>Discard</button><button class="pkbtn go" data-apply>Apply</button>`; }
+const OPTS={st:["Open","Delayed","Done","Cancelled"],o:PEOPLE,pr:["Urgent","High","Medium","Low"]};
+document.addEventListener("click",e=>{
+  const c=e.target.closest(".pk-chip");
+  if(c){ $$(".pkpop").forEach(p=>p.remove()); const f=c.dataset.f; if(!OPTS[f]) return;
+    c.parentNode.insertAdjacentHTML("beforeend",`<div class="pkpop">${OPTS[f].map(o=>`<button class="pkopt" data-pick="${o}">${o}</button>`).join("")}</div>`); return; }
+  const p=e.target.closest("[data-pick]");
+  if(p){ const chipb=p.closest(".pk-prop").querySelector(".pk-chip"), f=chipb.dataset.f; ITEMS[CUR.id][f]=p.dataset.pick; stage(CUR.sh); drawPeek(); return; }
+  $$(".pkpop").forEach(x=>x.remove());
+  const t=e.target.closest("[data-peek]"); if(t&&!e.target.matches("input")){ e.preventDefault(); openPeek(t); return; }
+  const j=e.target.closest("[data-jump]"); if(j&&ITEMS[j.dataset.jump]){ e.preventDefault(); CUR.id=j.dataset.jump; drawPeek(); return; }
+  const n=e.target.closest("[data-nav]"); if(n){ const i=CUR.list.indexOf(CUR.id), k=(i+ +n.dataset.nav+CUR.list.length)%CUR.list.length; CUR.id=CUR.list[k]; drawPeek(); return; }
+  if(e.target.closest("[data-wide]")){ e.target.closest(".peek").classList.toggle("wide"); return; }
+  if(e.target.closest("[data-pkclose]")){ closePeeks(); return; }
+  if(e.target.closest("[data-discard],[data-apply]")){ STAGED=0; e.target.closest(".pkstage").hidden=true; }
+});
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ $$(".ddm").forEach(m=>m.hidden=true); closePeeks(); } if(e.key==="Enter"&&e.target.matches("[data-peek]")) openPeek(e.target); });
+function closePeeks(){ $$(".peek").forEach(p=>p.classList.remove("on","wide")); $$("[data-peek].sel").forEach(r=>r.classList.remove("sel")); }
+</script>
+</body>
+</html>

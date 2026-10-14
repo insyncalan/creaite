@@ -1,0 +1,75 @@
+# Run the tests on GitHub's runners without making a release (the release workflow runs them too, before it builds the zip).
+# Actions › Tests › Run workflow; "files" names test files (space-separated, e.g. "test_motion.py test_cell_edit.py") or is left
+# empty for the whole suite.
+#
+# ===== BL-242 (sprint-portability): the matrix =====
+# Python 3.9 (the floor creaite promises) and 3.14 on Ubuntu, both required; macOS (the primary platform) on 3.14 with
+# continue-on-error, so a macOS runner that fails to start, or a flaky Chrome there, never blocks anything. The repository is
+# public, so these runners cost nothing; the remaining costs are run time and flaky Chrome starts.
+#
+# Public-repository safety, in place for when the automatic triggers are switched on: `pull_request`, never
+# `pull_request_target` (a fork's code never runs with this repository's token or secrets); read-only permissions; no secrets
+# in the job; one run per branch or pull request at a time (a newer run cancels the older); documents-only changes skipped
+# (paths-ignore).
+#
+# BL-234 is parked (Alan): this runs only by hand. To run it on pull requests and pushes to main as well, swap the active
+# `on:` line below for the commented one under it. That one line is the whole change.
+# on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}}
+on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
+# ===== end BL-242 =====
+
+name: Tests
+
+permissions:
+  contents: read
+
+concurrency:
+  # One automatic run per pull request or branch: a newer one cancels the older. Manual runs each get their own group (run_id),
+  # so a second hand-started run (say, one test file) never cancels the first.
+  group: tests-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.optional }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      # The macOS job runs only on pushes to main (Alan, 12-10-2026): it needs about 2 hours and GitHub runs only five macOS
+      # jobs at once, so on every branch run it held the run open and queued the others. Branch and pull-request runs use Linux.
+      matrix:
+        include: ${{ fromJSON(github.event_name == 'push' && github.ref == 'refs/heads/main' && '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4},{"os":"macos-latest","python":"3.14","optional":true,"jobs":3}]' || '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4}]') }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Find Chrome
+        # The browser tests find Chrome through dev/tools/cdp.py chrome_path(): CREAITE_CHROME, then the PATH, then macOS.
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          MAC="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          if [ -z "$CHROME" ] && [ -x "$MAC" ]; then CHROME="$MAC"; fi
+          test -n "$CHROME" || { echo "No Chrome on this runner"; exit 1; }
+          echo "CREAITE_CHROME=$CHROME" >> "$GITHUB_ENV"
+          "$CHROME" --version
+          python3 --version
+
+      - name: Tests
+        env:
+          FILES: ${{ github.event.inputs.files }}
+          JOBS: ${{ matrix.jobs }}
+        run: |
+          if [ -n "$FILES" ]; then
+            fail=0
+            for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
+            exit $fail
+          else
+            python3 dev/tools/run_tests.py -j "$JOBS"
+          fi

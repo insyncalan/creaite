@@ -1,0 +1,11 @@
+# ===== BL-240 (sprint-portability): development tools only =====
+# The tools used to build, test and release creaite on a Mac. creaite itself never needs any of them: a vault runs with
+# Python 3.9 or later and nothing else (NFR-12). This file lives in dev/, so it is never in a release zip.
+#
+#   brew bundle --file=dev/Brewfile          install what is missing (Homebrew in ~/homebrew needs no admin rights)
+#   brew bundle check --file=dev/Brewfile    say whether everything is there
+#
+# The Python is pinned to the newest one CI tests (3.14); CI also tests the 3.9 floor (BL-242).
+brew "gh"           # GitHub CLI: releases, and "update creaite" fetching a release (BL-238)
+brew "git"
+brew "python@3.14"  # the Python the tests run on here

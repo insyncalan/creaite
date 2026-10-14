@@ -1,0 +1,511 @@
+<section class="view" id="v-activity">
+<div class="wrapmax">
+<h1>Activity</h1>
+<p class="sub" style="margin:#px 0 #px">Every change, newest first. Undo any of them.</p>
+<div class="acttabs" role="tablist" aria-label="Activity">
+<button type="button" role="tab" id="actTabCh" aria-selected="true" aria-controls="actTbl">Changes</button>
+<button type="button" role="tab" id="actTabQ" aria-selected="false" aria-controls="actQuality" tabindex="-1">Quality</button>
+</div>
+<!-- BL-233 (sprint-drafts-extraction) -->
+<div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden="">
+<p class="sub" id="qPeriod">
+</p>
+<p class="qmoved" id="qMoved">
+</p>
+<p class="sub qnote">Each figure is a count out of its total. Nothing is rated until a group has 10. These count extraction and drafts only, never a person, and stay internal: no report or export reads them.</p>
+<h2>By source</h2>
+<div class="tbl">
+<table class="qtab">
+<thead>
+<tr>
+<th scope="col">Source</th>
+<th scope="col">Approved as proposed</th>
+<th scope="col">Approved after an edit</th>
+<th scope="col">Rejected</th>
+<th scope="col">Waiting</th>
+</tr>
+</thead>
+<tbody id="qSrc">
+</tbody>
+</table>
+</div>
+<h2>By type</h2>
+<div class="tbl">
+<table class="qtab">
+<thead>
+<tr>
+<th scope="col">Type</th>
+<th scope="col">Approved as proposed</th>
+<th scope="col">Approved after an edit</th>
+<th scope="col">Rejected</th>
+<th scope="col">Waiting</th>
+</tr>
+</thead>
+<tbody id="qType">
+</tbody>
+</table>
+</div>
+<h2>Why proposals were rejected</h2>
+<div class="tbl">
+<table class="qtab">
+<thead>
+<tr>
+<th scope="col">Reason</th>
+<th scope="col">Rejections</th>
+</tr>
+</thead>
+<tbody id="qWhy">
+</tbody>
+</table>
+</div>
+<p class="sub" id="qDup">
+</p>
+<h2 id="qRejectsH">What you rejected</h2>
+<p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p>
+<div id="qRejects" aria-labelledby="qRejectsH">
+</div>
+<h2>Fields changed most</h2>
+<div class="tbl">
+<table class="qtab">
+<thead>
+<tr>
+<th scope="col">Field</th>
+<th scope="col">Edited proposals</th>
+<th scope="col">Where</th>
+</tr>
+</thead>
+<tbody id="qFields">
+</tbody>
+</table>
+</div>
+<p class="sub" id="qUnknown">
+</p>
+<h2>AI drafts</h2>
+<div class="tbl">
+<table class="qtab">
+<thead>
+<tr>
+<th scope="col">Feature</th>
+<th scope="col">Offered</th>
+<th scope="col">Used as drafted</th>
+<th scope="col">Used after an edit</th>
+<th scope="col">Rejected</th>
+</tr>
+</thead>
+<tbody id="qDrafts">
+</tbody>
+</table>
+</div>
+</div>
+<div id="actTools">
+<div class="acttools">
+<label class="actsearch">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="search">
+<circle cx="11" cy="11" r="6.5">
+</circle>
+<path d="m16 16 4.5 4.5">
+</path>
+</svg>
+<input type="search" id="actQ" placeholder="Search Activity: ID, words, project, person, date" aria-label="Search Activity" autocomplete="off">
+<kbd aria-hidden="true">/</kbd>
+</label>
+<span id="actCount" aria-live="polite">12 of 12</span>
+<button type="button" class="linkbtn" id="actClear" data-actclear="" hidden="">Clear</button>
+<span class="actdates">
+<label for="actFrom">From</label>
+<input type="text" id="actFrom" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off">
+<label for="actTo">to</label>
+<input type="text" id="actTo" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off">
+</span>
+<div id="actTypes" role="group" aria-label="Show only these types">
+<button type="button" class="vchip" data-acttype="action" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="action">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>Action</button>
+<button type="button" class="vchip" data-acttype="Risk" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="risk">
+<path d="M12 3 2.5 20h19z">
+</path>
+<path d="M12 10v4M12 17v.5">
+</path>
+</svg>Risk</button>
+<button type="button" class="vchip" data-acttype="Issue" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="issue">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7.5v5.5M12 16.2v.4">
+</path>
+</svg>Issue</button>
+<button type="button" class="vchip" data-acttype="decision" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="decision">
+<path d="m13.5 3.5 7 7-3 3-7-7z">
+</path>
+<path d="m11.5 8.5-8 8 4 4 8-8">
+</path>
+</svg>Decision</button>
+<button type="button" class="vchip" data-acttype="milestone" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="milestone">
+<path d="M5 21V4h11l-2 4 2 4H5">
+</path>
+</svg>Milestone</button>
+<button type="button" class="vchip" data-acttype="project" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="projects">
+<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z">
+</path>
+</svg>Project</button>
+<button type="button" class="vchip" data-acttype="update" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>Weekly update</button>
+</div>
+</div>
+</div>
+<div class="wbulk" id="actBar" hidden="">
+</div>
+<div class="tbl" id="actTbl">
+<table>
+<thead>
+<tr>
+<th class="actck">
+<span class="actvh">Select</span>
+</th>
+<th>When</th>
+<th>Change</th>
+<th>By</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr data-row="r116">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC health reason: — → UAT start slipped 14 days">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Project" data-tip="Project">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="projects">
+<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z">
+</path>
+</svg>
+</span>
+<a href="#" class="hlink" data-proj="ABC">Example Programme</a> — health reason: — → UAT start slipped 14 days</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r115">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC health: — → Off track">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Project" data-tip="Project">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="projects">
+<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z">
+</path>
+</svg>
+</span>
+<a href="#" class="hlink" data-proj="ABC">Example Programme</a> — health: — → Off track</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr>
+<td class="actck">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Weekly update" data-tip="Weekly update">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</span>
+<a href="#" class="hlink" data-proj="ABC">Example Programme</a> · weekly update, week ending 02-10-2026 — created</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r101">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-D-005 created">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Decision" data-tip="Decision">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="decision">
+<path d="m13.5 3.5 7 7-3 3-7-7z">
+</path>
+<path d="m11.5 8.5-8 8 4 4 8-8">
+</path>
+</svg>
+</span>
+<a href="#work=decisions&amp;p=ABC&amp;item=ABC-D-005" class="hlink" data-open="decisions:ABC-D-005">ABC-D-005</a> · <span title="Go-live moves two weeks">Go-live moves two weeks</span> — created</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r87">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-004 created (Issue, High)">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Issue" data-tip="Issue">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="issue">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7.5v5.5M12 16.2v.4">
+</path>
+</svg>
+</span>
+<a href="#work=raid&amp;p=ABC&amp;item=ABC-004" class="hlink" data-open="raid:ABC-004">ABC-004</a> · <span title="Test licences not ordered">Test licences not ordered</span> — created (Issue, High)</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r73">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-003 created (Risk, Urgent)">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Risk" data-tip="Risk">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="risk">
+<path d="M12 3 2.5 20h19z">
+</path>
+<path d="M12 10v4M12 17v.5">
+</path>
+</svg>
+</span>
+<a href="#work=raid&amp;p=ABC&amp;item=ABC-003" class="hlink" data-open="raid:ABC-003">ABC-003</a> · <span title="Data access delayed → UAT slips">Data access delayed → UAT slips</span> — created (Risk, Urgent)</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r61">
+<td class="actck">
+<input type="checkbox" aria-label="Select: DEF-A-001 created (owner Omar Ali, due 14-10-2026)">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:01</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Action" data-tip="Action">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="action">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>
+<a href="#work=actions&amp;p=DEF&amp;item=DEF-A-001" class="hlink" data-open="actions:DEF-A-001">DEF-A-001</a> · <span title="Agree pilot success criteria">Agree pilot success criteria</span> — created (owner Omar Ali, due 14-10-2026)</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r48">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-A-002 created (owner Sara Example, due 12-10-2026)">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:00</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Action" data-tip="Action">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="action">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>
+<a href="#work=actions&amp;p=ABC&amp;item=ABC-A-002" class="hlink" data-open="actions:ABC-A-002">ABC-A-002</a> · <span title="Book UAT environment">Book UAT environment</span> — created (owner Sara Example, due 12-10-2026)</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r35">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-A-001 created (owner Alan Carter, due 06-10-2026)">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:00</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Action" data-tip="Action">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="action">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>
+<a href="#work=actions&amp;p=ABC&amp;item=ABC-A-001" class="hlink" data-open="actions:ABC-A-001">ABC-A-001</a> · <span title="Escalate data access to the client CIO">Escalate data access to the client CIO</span> — created (owner Alan Carter, due 06-10-2026)</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r24">
+<td class="actck">
+<input type="checkbox" aria-label="Select: DEF-M-001 created">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:00</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Milestone" data-tip="Milestone">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="milestone">
+<path d="M5 21V4h11l-2 4 2 4H5">
+</path>
+</svg>
+</span>
+<a href="#cockpit=DEF" class="hlink" data-ms="DEF-M-001">DEF-M-001</a> · <span title="Pilot live">Pilot live</span> — created</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r12">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-M-002 created">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:00</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Milestone" data-tip="Milestone">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="milestone">
+<path d="M5 21V4h11l-2 4 2 4H5">
+</path>
+</svg>
+</span>
+<a href="#cockpit=ABC" class="hlink" data-ms="ABC-M-002">ABC-M-002</a> · <span title="Build complete">Build complete</span> — created</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-row="r1">
+<td class="actck">
+<input type="checkbox" aria-label="Select: ABC-M-001 created">
+</td>
+<td class="actwhen" style="white-space:nowrap">09-10-2026 08:00</td>
+<td class="actchg">
+<span class="acticon" role="img" aria-label="Milestone" data-tip="Milestone">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="milestone">
+<path d="M5 21V4h11l-2 4 2 4H5">
+</path>
+</svg>
+</span>
+<a href="#cockpit=ABC" class="hlink" data-ms="ABC-M-001">ABC-M-001</a> · <span title="UAT start">UAT start</span> — created</td>
+<td class="x">You, via cx-edit</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Undo this apply" data-tip="Undo this apply" data-undoapply="1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="undo">
+<path d="M3 7v6h6">
+</path>
+<path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="sub" id="actCap" hidden="" style="margin:#px #px">These are the newest 2,000 changes (search and filters look at these). Older ones are kept in the tracker's change log.</p>
+</div>
+<div id="achg">
+<h2 style="margin:#px 0 #px">What ask creaite changed</h2>
+<p class="sub" style="margin:0 0 #px">Files ask creaite created, changed, moved or deleted, today and the last seven days. Each was backed up first.</p>
+<div class="tbl" id="achgTbl">
+<div class="empty">ask creaite hasn’t changed any files in the last seven days.</div>
+</div>
+</div>
+</div>
+</section>

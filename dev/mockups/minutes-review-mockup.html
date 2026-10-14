@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minutes in Review mockup</title>
+<style>
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#8A949D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --new:#6B3FA0; --new-soft:#EFE7F8; --mark:#FFE58A;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340; --mark:#5A4A12;}}
+:root[data-theme="dark"]{
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340; --mark:#5A4A12;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button,input,select{font:inherit;color:inherit}
+.page{max-width:1280px;margin:0 auto;padding:24px 16px 72px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600}
+.lede{color:var(--muted);margin:0 0 14px;max-width:880px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:999px;vertical-align:1px}
+.tag.new{background:var(--new-soft);color:var(--new)} .tag.keep{background:var(--sunk);color:var(--muted)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.ok{background:var(--ok-soft);color:var(--ok)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.tg{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:34px;padding:0 15px;cursor:pointer;font-size:13px}
+.tg[aria-pressed="true"],.tg[aria-selected="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+:is(button,a,input,select,[tabindex],[contenteditable]):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.spacer{flex:1}
+.shell{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:0 0 22px;min-height:620px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:32px;padding:0 12px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:var(--sunk)} .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.quiet{border-color:transparent;background:none;color:var(--accent)} .btn.quiet:hover{background:var(--accent-soft)}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:default}
+.note{margin:14px 16px 0;color:var(--muted);font-size:12px;max-width:880px}
+.snack{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--surface);border-radius:10px;padding:10px 14px;z-index:9;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:90vw}
+.snack[hidden]{display:none}
+
+/* review header */
+.rh{position:sticky;top:0;z-index:3;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-radius:12px 12px 0 0}
+.rh .crumb{color:var(--muted);font-size:13px} .rh .crumb b{color:var(--ink);font-weight:600}
+.saved{color:var(--muted);font-size:12px;display:inline-flex;gap:6px;align-items:center}
+.saved .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)} .saved.busy .dot{background:var(--warn)}
+.rtb{position:sticky;top:57px;z-index:2;display:flex;gap:2px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px;margin:0 0 10px;box-shadow:0 2px 10px rgba(0,0,0,.06);width:max-content;max-width:100%;flex-wrap:wrap}
+.rtb[hidden]{display:none}
+.rtb button{border:0;background:none;border-radius:6px;min-width:30px;height:28px;padding:0 7px;cursor:pointer;font-size:13px}
+.rtb button:hover{background:var(--sunk)} .rtb .sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.body{display:grid;grid-template-columns:1fr;gap:0}
+.body.withpane{grid-template-columns:minmax(0,1fr) 380px}
+@media (max-width:980px){.body.withpane{grid-template-columns:1fr}}
+.docwrap{padding:18px 28px}
+/* the minutes page: no frame */
+.doc{max-width:780px}
+.doc h1{font-size:22px;margin:0 0 4px;font-weight:600}
+.doc .meta{color:var(--muted);font-size:13px;margin:0 0 4px}
+.doc h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:22px 0 6px;font-weight:600}
+.doc h3{font-size:14px;margin:12px 0 4px;font-weight:600}
+.att{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}
+.att span{background:var(--sunk);border-radius:999px;padding:1px 9px;font-size:12px}
+[contenteditable]{border-radius:6px;padding:2px 6px;margin:0 -6px;outline:1px solid transparent;transition:outline-color .1s}
+[contenteditable]:hover{outline-color:var(--line)} [contenteditable]:focus{outline:1px solid var(--accent);background:var(--surface)}
+@media (prefers-reduced-motion:reduce){[contenteditable]{transition:none}}
+.doc ul{margin:4px 0;padding-left:20px} .doc li{margin:3px 0}
+.srcbtn{border:0;background:none;color:var(--faint);cursor:pointer;font-size:11px;padding:0 4px;border-radius:4px;vertical-align:1px}
+.srcbtn:hover{color:var(--accent);background:var(--accent-soft)}
+.linked{background:color-mix(in srgb,var(--accent) 10%,transparent);border-radius:6px}
+/* item rows */
+.items{width:100%;border-collapse:collapse;font-size:13px;margin:2px 0}
+.items th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:6px 6px 6px 0;border-bottom:1px solid var(--line)}
+.items td{padding:5px 6px 5px 0;border-bottom:1px solid var(--line);vertical-align:middle}
+.items .id{color:var(--muted);font-size:12px;white-space:nowrap}
+.items .cell{min-width:180px}
+.items input,.items select{height:28px;border:1px solid transparent;background:transparent;border-radius:6px;padding:0 6px;max-width:150px}
+.items input:hover,.items select:hover{border-color:var(--line)} .items input:focus,.items select:focus{border-color:var(--accent);background:var(--surface)}
+.items tr.ok td:first-child{box-shadow:inset 3px 0 0 var(--ok)} .items tr.no{opacity:.5} .items tr.no .cell{text-decoration:line-through}
+.dec{display:flex;gap:4px;justify-content:flex-end}
+.dec button{width:28px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:6px;cursor:pointer;font-size:13px}
+.dec button[aria-pressed="true"].y{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.dec button[aria-pressed="true"].n{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.add{margin:4px 0 0}
+/* transcript pane */
+.pane{border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;max-height:calc(100vh - 40px);position:sticky;top:57px;align-self:start}
+.pane[hidden]{display:none}
+.pane .ph{display:flex;gap:8px;align-items:center;padding:12px 14px 8px}
+.pane .ph b{flex:1;font-size:13px}
+.pane .ph .x{border:0;background:none;cursor:pointer;width:28px;height:28px;border-radius:6px;font-size:16px;color:var(--muted)} .pane .ph .x:hover{background:var(--sunk)}
+.pane .ps{padding:0 14px 8px;display:flex;gap:8px;align-items:center}
+.pane .ps input{flex:1;height:30px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--surface)}
+.pane .ps span{color:var(--muted);font-size:12px;white-space:nowrap}
+.pane .src{padding:0 14px 6px;color:var(--muted);font-size:12px}
+.turns{overflow:auto;padding:4px 8px 14px;flex:1}
+.turn{padding:6px 8px;border-radius:8px;margin:2px 0;scroll-margin:60px}
+.turn .sp{font-weight:600;font-size:12px} .turn .tm{color:var(--faint);font-size:11px;margin-left:6px}
+.turn p{margin:2px 0 0}
+.turn.hl{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+mark{background:var(--mark);color:inherit;border-radius:2px}
+.nosrc{padding:14px;color:var(--muted)}
+.nosrc blockquote{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--line);background:var(--sunk);border-radius:0 8px 8px 0;color:var(--ink);white-space:pre-wrap}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:18px 20px;max-width:520px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.3)}
+dialog h3{margin:0 0 8px;font-size:16px} dialog ul{padding-left:18px;margin:6px 0} dialog .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+code{font-size:12px;background:var(--sunk);padding:0 4px;border-radius:4px}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="t">Minutes edited in Review, with the transcript beside them <span class="tag new">Mockup · BL-59, BL-60</span></h1>
+  <p class="lede">Fictional data (Falcon Data Platform steering committee, 08-10-2026). Click into any text to edit it (the toolbar appears); change an owner, date or priority; tick or cross a row. Press <b>↗</b> beside a line, or click a row, to see where it came from in the transcript. Changes “save” as you go, with Undo. Nothing is saved for real.</p>
+  <div class="ctl" role="group" aria-label="Which meeting">
+    <button class="tg" aria-pressed="true" data-rec="fal">Steering committee (with transcript)</button>
+    <button class="tg" aria-pressed="false" data-rec="orx">Quick note (no transcript)</button>
+    <span class="spacer"></span>
+    <button class="tg" id="theme" aria-pressed="false">Dark</button>
+  </div>
+
+  <section class="shell" aria-label="Review, minutes">
+    <div class="rh">
+      <button class="btn quiet" id="back">← Review</button>
+      <span class="crumb" id="crumb"></span>
+      <span class="saved" id="saved" role="status"><span class="dot"></span><span id="savedTx">All changes saved</span></span>
+      <button class="btn quiet" id="undo" disabled>Undo</button>
+      <span class="spacer"></span>
+      <button class="btn" id="paneBtn" aria-pressed="true" aria-controls="pane">Transcript</button>
+      <button class="btn" id="word">Open in Word</button>
+      <button class="btn" id="reext">Re-extract</button>
+      <button class="btn" id="rejm">Reject minutes</button>
+      <button class="btn pri" id="appm">Approve minutes</button>
+    </div>
+    <div class="body withpane" id="body">
+      <div class="docwrap">
+        <div class="rtb" id="rtb" role="toolbar" aria-label="Formatting" hidden>
+          <button data-c="bold" title="Bold (⌘B)"><b>B</b></button><button data-c="italic" title="Italic (⌘I)"><i>I</i></button><span class="sep"></span>
+          <button data-c="insertUnorderedList" title="Bulleted list">• List</button><button data-c="insertOrderedList" title="Numbered list">1. List</button><span class="sep"></span>
+          <button data-c="createLink" title="Add a link (⌘K)">Link</button><button data-c="removeFormat" title="Clear formatting">Clear</button><span class="sep"></span>
+          <button data-c="undo" title="Undo (⌘Z)">↶</button><button data-c="redo" title="Redo (⌘⇧Z)">↷</button>
+        </div>
+        <article class="doc" id="doc"></article>
+      </div>
+      <aside class="pane" id="pane" aria-label="Transcript"></aside>
+    </div>
+  </section>
+  <p class="note">The record (title, date, attendees, summary, updates, questions, and the proposed items by ID) is the master; it extends today’s <code>meeting.json</code>. Each row is the proposal itself, so there is nothing to reconcile. <b>Approve minutes</b> fills <code>minutes-template.docx</code> from the record and files it. Minutes are always approved on their own.</p>
+</div>
+
+<dialog id="dlgApprove"><h3>Approve these minutes?</h3><div id="apBody"></div><div class="acts"><button class="btn" value="cancel" data-close>Cancel</button><button class="btn pri" id="apGo">Approve minutes</button></div></dialog>
+<dialog id="dlgWord"><h3>Open in Word</h3><p>The Word draft becomes the master for this meeting: editing here pauses until you close it in Word, and creaite then checks it against the items as today. Use this for an edit Review can’t do, or to send a draft with tracked changes.</p><div class="acts"><button class="btn" data-close>Cancel</button><button class="btn pri" id="wordGo">Open in Word</button></div></dialog>
+<div class="snack" id="snack" hidden role="status"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const PEOPLE=["Alan Carter","Rashid Al Suwaidi","Lena Fischer","Sara Khan","James Okafor","Mei Tan","Dev Patel","TBC"];
+const PRI=["Urgent","High","Medium","Low"], WS={fal:["Data","Build","Governance","Commercial"],orx:["Testing","Release"]};
+const REC={
+ fal:{proj:"Falcon Data Platform",title:"Steering committee",when:"Thursday 8th October 2026, 10:00 – 11:00 · Microsoft Teams",file:"2026-10-08 Steering committee",
+  att:["Alan Carter","Rashid Al Suwaidi (Northgate)","Lena Fischer"],
+  summary:["Production data access is still blocked at the Northgate CIO office, so Alan will escalate directly this week. Build is complete for two of three domains, and the committee agreed to move go-live to 19-12-2026.","t2 t3 t7 t9"],
+  updates:[["Data access",[["The access request was re-submitted with the security sign-off; the Northgate CIO office has not approved it yet.","t2"],["Alan will escalate to the CIO directly this week; Rashid will arrange the call.","t3 t4"]]],
+   ["Build",[["Domains 1 and 2 are complete; domain 3 is about 60% through on masked data.","t5"],["The security review of the ingestion pipeline is due to finish by 17-10-2026.","t6"]]],
+   ["Governance",[["28-11-2026 can no longer be held; the revised plan puts go-live at 19-12-2026 with three weeks’ contingency.","t7 t8"]]]],
+  decisions:[{id:"FAL-D-002",t:"Go-live moves to 19-12-2026",by:"Steering committee",src:"t9 t10",d:null}],
+  actions:[{id:"FAL-A-001",t:"Escalate production data access to Northgate CIO",o:"Alan Carter",due:"15-10-2026",pr:"Urgent",ws:"Data",src:"t3 t4",d:null},
+   {id:"FAL-A-007",t:"Arrange the CIO call",o:"Rashid Al Suwaidi",due:"13-10-2026",pr:"High",ws:"Data",src:"t4",d:null},
+   {id:"FAL-A-008",t:"Send the revised go-live plan to Rashid in writing",o:"Alan Carter",due:"09-10-2026",pr:"High",ws:"Governance",src:"t13 t14",d:null}],
+  risks:[{id:"FAL-R-005",t:"Risk: masked data hides quality issues found only on production data",o:"Lena Fischer",due:"",pr:"Medium",ws:"Data",src:"t11 t12",d:null}],
+  questions:[["Does the extra masked-data sprint need new funding? Alan to confirm the commercial position.","t15 t16"]],
+  transcript:"2026-10-08 Steering committee.vtt",
+  turns:[["t1","Alan Carter","00:00:12","Thanks, all. The main item today is production data access and what it means for go-live."],
+   ["t2","Rashid Al Suwaidi","00:00:41","The access request went back in on Tuesday with the security sign-off attached. Our CIO office hasn’t approved it yet."],
+   ["t3","Alan Carter","00:01:30","Every week we wait costs us a week at the end. I’d like to escalate to the CIO directly this week."],
+   ["t4","Rashid Al Suwaidi","00:01:52","Fine by me. I’ll set up the call; you lead it, Alan."],
+   ["t5","Lena Fischer","00:02:40","On build: domains one and two are complete. Domain three is running on masked data, about sixty percent through."],
+   ["t6","Lena Fischer","00:03:15","The security review of the ingestion pipeline is booked; I expect to finish by the seventeenth."],
+   ["t7","Alan Carter","00:04:02","Given the access delay we can’t hold 28 November. The plan we’ve worked through puts go-live at 19 December."],
+   ["t8","Rashid Al Suwaidi","00:04:40","The board will want a firm date. If 19 December holds with three weeks’ contingency, we can accept it."],
+   ["t9","Alan Carter","00:05:05","So we’re agreed: go-live moves to 19 December. I’ll record it as a steering decision."],
+   ["t10","Rashid Al Suwaidi","00:05:30","Agreed."],
+   ["t11","Lena Fischer","00:06:10","One risk: masked data won’t show every quality issue. We may only find problems when production data arrives."],
+   ["t12","Alan Carter","00:06:44","Let’s log that, with a data quality check in the first week of access."],
+   ["t13","Rashid Al Suwaidi","00:07:20","Can you send me the revised plan in writing, so I can brief the sponsor group?"],
+   ["t14","Alan Carter","00:07:35","Yes, by Friday."],
+   ["t15","Rashid Al Suwaidi","00:08:02","An open question from our side: does the extra masked-data sprint need new funding?"],
+   ["t16","Alan Carter","00:08:30","Let me check the commercial position and come back to you on that."]]},
+ orx:{proj:"Orbit Customer App",title:"Call with James Okafor",when:"Friday 9th October 2026 · quick note",file:"2026-10-09 Call with James Okafor",
+  att:["Alan Carter","James Okafor (Orbit)"],
+  summary:["James expects the payment-provider sandbox credentials to be approved on Tuesday. A partial UAT test data pack is coming this week.",""],
+  updates:[["UAT readiness",[["Sandbox credentials are with Orbit’s security team; approval expected Tuesday.",""],["The UAT test data pack will arrive in part this week.",""]]]],
+  decisions:[], risks:[],
+  actions:[{id:"ORX-A-003",t:"Send UAT entry criteria to client",o:"Alan Carter",due:"12-10-2026",pr:"High",ws:"Testing",src:"",d:null}],
+  questions:[],
+  note:"Call w/ James: sandbox creds with their security team, expect Tues.\nAsked re UAT data pack: partial this week.\nNeed to send UAT entry criteria Monday."}
+};
+let KEY="fal", R=JSON.parse(JSON.stringify(REC.fal)), UNDO=[], PANE=true;
+
+const src=s=>s?` <button class="srcbtn" data-src="${s}" title="Show where this came from in the transcript" aria-label="Show the source in the transcript">↗</button>`:"";
+const ed=(path,html,tag="div")=>`<${tag} contenteditable="true" data-path="${path}" role="textbox" aria-label="${path}">${html}</${tag}>`;
+function rows(kind,list,cols){
+  if(!list.length) return '<p class="meta">None proposed.</p>';
+  return `<table class="items"><thead><tr><th>ID</th><th>${kind==="decisions"?"Decision":kind==="risks"?"Risk or issue":"Action"}</th>${cols.includes("o")?"<th>Owner</th>":"<th>Made by</th>"}${cols.includes("due")?"<th>Due</th>":""}${cols.includes("pr")?"<th>Priority</th><th>Workstream</th>":""}<th style="text-align:right">Approve</th></tr></thead><tbody>${list.map((x,i)=>`<tr class="${x.d==="y"?"ok":x.d==="n"?"no":""}" data-k="${kind}" data-i="${i}" data-src-row="${x.src}">
+   <td class="id">${x.id}</td><td class="cell">${ed(`${kind}.${i}.t`,esc(x.t))}</td>
+   ${cols.includes("o")?`<td><select data-f="o" aria-label="Owner">${PEOPLE.map(p=>`<option${p===x.o?" selected":""}>${p}</option>`).join("")}</select></td>`:`<td>${esc(x.by)}</td>`}
+   ${cols.includes("due")?`<td><input data-f="due" value="${x.due}" placeholder="date or words" aria-label="Due" size="11"></td>`:""}
+   ${cols.includes("pr")?`<td><select data-f="pr" aria-label="Priority">${PRI.map(p=>`<option${p===x.pr?" selected":""}>${p}</option>`).join("")}</select></td><td><select data-f="ws" aria-label="Workstream">${WS[KEY].map(p=>`<option${p===x.ws?" selected":""}>${p}</option>`).join("")}</select></td>`:""}
+   <td><div class="dec"><button class="y" data-d="y" aria-pressed="${x.d==="y"}" title="Approve">✓</button><button class="n" data-d="n" aria-pressed="${x.d==="n"}" title="Reject">✕</button></div></td></tr>`).join("")}</tbody></table>`;
+}
+function draw(pane=true){
+  $("#crumb").innerHTML=`<b>${R.proj}</b> · ${R.title} <span class="tag keep">Minutes</span>`;
+  $("#doc").innerHTML=`${ed("title",esc(R.title),"h1")}<p class="meta">${R.when}</p><div class="att">${R.att.map(a=>`<span>${a}</span>`).join("")}</div>
+   <h2>Summary</h2><p>${ed("summary",esc(R.summary[0]),"span")}${src(R.summary[1])}</p>
+   <h2>Updates</h2>${R.updates.map((u,i)=>`<h3>${u[0]}</h3><ul>${u[1].map((l,j)=>`<li>${ed(`updates.${i}.${j}`,esc(l[0]),"span")}${src(l[1])}</li>`).join("")}</ul>`).join("")}
+   <h2>Decisions</h2>${rows("decisions",R.decisions,["by"])}
+   <h2>Actions</h2>${rows("actions",R.actions,["o","due","pr"])}<button class="btn quiet add" data-add="actions">+ Add action</button>
+   <h2>Risks and issues</h2>${rows("risks",R.risks,["o","pr"])}<button class="btn quiet add" data-add="risks">+ Add risk or issue</button> <button class="btn quiet add" data-add="decisions">+ Add decision</button>
+   <h2>Open questions</h2>${R.questions.length?`<ul>${R.questions.map((q,i)=>`<li>${ed(`questions.${i}`,esc(q[0]),"span")}${src(q[1])}</li>`).join("")}</ul>`:'<p class="meta">None.</p>'}`;
+  if(pane) drawPane();
+}
+function drawPane(q){
+  const p=$("#pane"); p.hidden=!PANE; $("#body").classList.toggle("withpane",PANE); $("#paneBtn").setAttribute("aria-pressed",String(PANE));
+  if(!PANE) return;
+  if(!R.turns){ p.innerHTML=`<div class="ph"><b>Source</b><button class="x" id="paneX" aria-label="Close the pane">×</button></div><div class="nosrc">No transcript: these minutes came from a quick note (BL-54). Lines can’t point to a passage, so the note is shown whole.<blockquote>${esc(R.note)}</blockquote></div>`; return; }
+  const term=(q||"").trim().toLowerCase();
+  const turns=R.turns.map(([id,sp,tm,tx])=>{ let h=esc(tx); if(term){ h=h.replace(new RegExp("("+term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>"); } return `<div class="turn" id="${id}"><span class="sp">${sp}</span><span class="tm">${tm}</span><p>${h}</p></div>`; });
+  const n=term?R.turns.filter(t=>t[3].toLowerCase().includes(term)).length:0;
+  if(q===undefined) p.innerHTML=`<div class="ph"><b>Transcript</b><button class="x" id="paneX" aria-label="Close the transcript">×</button></div><div class="src">${R.transcript} · read only</div><div class="ps"><input type="search" id="pq" placeholder="Search the transcript" aria-label="Search the transcript"><span id="pn"></span></div><div class="turns" id="turns">${turns.join("")}</div>`;
+  else { $("#turns").innerHTML=turns.join(""); $("#pn").textContent=term?`${n} match${n===1?"":"es"}`:""; }
+}
+function linkTo(ids,el){
+  $$(".linked").forEach(x=>x.classList.remove("linked")); $$(".turn.hl").forEach(x=>x.classList.remove("hl"));
+  if(el) el.classList.add("linked");
+  if(!R.turns){ if(!PANE){ PANE=true; drawPane(); } snack("No transcript for this meeting: the pane shows the note."); return; }
+  if(!ids){ snack("No source recorded for this line (added by hand)."); return; }
+  if(!PANE){ PANE=true; drawPane(); }
+  const list=ids.split(" "); list.forEach(id=>{ const t=document.getElementById(id); if(t) t.classList.add("hl"); });
+  const first=document.getElementById(list[0]); if(first) first.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});
+}
+
+/* ---- saving and undo ---- */
+function saving(label){ const s=$("#saved"); s.classList.add("busy"); $("#savedTx").textContent="Saving…"; clearTimeout(saving.t);
+  saving.t=setTimeout(()=>{ s.classList.remove("busy"); $("#savedTx").textContent=`Saved to staging · ${label}`; },350); $("#undo").disabled=!UNDO.length; }
+function snapshot(){ return JSON.stringify(R); }
+let focusBefore=null;
+document.addEventListener("focusin",e=>{ const c=e.target.closest("[contenteditable]"); $("#rtb").hidden=!c; if(c) focusBefore={path:c.dataset.path,html:c.innerHTML,snap:snapshot()}; });
+document.addEventListener("focusout",e=>{ const c=e.target.closest("[contenteditable]"); if(!c||!focusBefore) return;
+  setTimeout(()=>{ if(!document.activeElement||!document.activeElement.closest("#rtb,[contenteditable]")) $("#rtb").hidden=true; },0);
+  if(c.innerHTML!==focusBefore.html){ setPath(c.dataset.path,c.innerText.trim()); UNDO.push(focusBefore.snap); saving("text edited"); } focusBefore=null; });
+function setPath(path,val){ const p=path.split("."); if(p[0]==="title") R.title=val; else if(p[0]==="summary") R.summary[0]=val;
+  else if(p[0]==="updates") R.updates[+p[1]][1][+p[2]][0]=val; else if(p[0]==="questions") R.questions[+p[1]][0]=val; else R[p[0]][+p[1]].t=val; }
+$("#rtb").addEventListener("mousedown",e=>e.preventDefault());
+$("#rtb").addEventListener("click",e=>{ const b=e.target.closest("[data-c]"); if(!b) return; const c=b.dataset.c;
+  if(c==="createLink"){ const u=prompt("Link address"); if(u) document.execCommand(c,false,u); } else document.execCommand(c); });
+$("#undo").onclick=()=>{ if(!UNDO.length) return; R=JSON.parse(UNDO.pop()); draw(false); saving("undone"); };
+
+/* ---- rows ---- */
+$("#doc").addEventListener("change",e=>{ const f=e.target.dataset.f; if(!f) return; const tr=e.target.closest("tr"), x=R[tr.dataset.k][+tr.dataset.i];
+  const before=snapshot(); let v=e.target.value;
+  if(f==="due"){ const w=v.trim().toLowerCase(); const map={today:"12-10-2026",tomorrow:"13-10-2026","friday":"16-10-2026","next week":"19-10-2026"}; if(map[w]) v=e.target.value=map[w]; }
+  x[f]=v; UNDO.push(before); saving(`${x.id} ${f==="o"?"owner":f==="pr"?"priority":f==="ws"?"workstream":"due date"} changed`); });
+$("#doc").addEventListener("click",e=>{
+  const s=e.target.closest(".srcbtn"); if(s){ linkTo(s.dataset.src,s.previousElementSibling); return; }
+  const d=e.target.closest("[data-d]"); if(d){ const tr=d.closest("tr"), x=R[tr.dataset.k][+tr.dataset.i]; UNDO.push(snapshot()); x.d=x.d===d.dataset.d?null:d.dataset.d; draw(false); saving(`${x.id} ${x.d==="y"?"approved":x.d==="n"?"rejected":"undecided"}`); return; }
+  const a=e.target.closest("[data-add]"); if(a){ const k=a.dataset.add, pre=KEY==="fal"?"FAL":"ORX", n=R[k].length+(k==="actions"?9:k==="risks"?6:3); UNDO.push(snapshot());
+    R[k].push(k==="decisions"?{id:`${pre}-D-00${n}`,t:"New decision",by:"Alan Carter",src:"",d:"y"}:{id:`${pre}-${k==="actions"?"A":"R"}-0${String(n).padStart(2,"0")}`,t:k==="actions"?"New action":"New risk",o:"TBC",due:"",pr:"Medium",ws:WS[KEY][0],src:"",d:"y"});
+    draw(false); saving("row added"); const cells=$$(`tr[data-k="${k}"] [contenteditable]`); const c=cells[cells.length-1]; if(c){ c.focus(); document.execCommand("selectAll"); } return; }
+  const tr=e.target.closest("tr[data-src-row]"); if(tr&&!e.target.closest("select,input,[contenteditable],button")) linkTo(tr.dataset.srcRow,tr);
+});
+document.addEventListener("keydown",e=>{ if((e.metaKey||e.ctrlKey)&&e.key==="z"&&!e.target.closest("[contenteditable]")&&UNDO.length){ e.preventDefault(); $("#undo").click(); } });
+
+/* ---- pane ---- */
+$("#pane").addEventListener("input",e=>{ if(e.target.id==="pq") drawPane(e.target.value); });
+$("#pane").addEventListener("click",e=>{ if(e.target.closest("#paneX")){ PANE=false; drawPane(); $("#paneBtn").focus(); } });
+$("#paneBtn").onclick=()=>{ PANE=!PANE; drawPane(); };
+
+/* ---- header actions ---- */
+function counts(){ const all=[...R.decisions,...R.actions,...R.risks]; return {y:all.filter(x=>x.d==="y").length,n:all.filter(x=>x.d==="n").length,u:all.filter(x=>!x.d).length}; }
+$("#appm").onclick=()=>{ const c=counts();
+  $("#apBody").innerHTML=`<ul><li>A Word copy is made from this record (<code>minutes-template.docx</code>) and filed as <code>projects/${R.proj.startsWith("Falcon")?"FAL":"ORX"} ${R.proj}/minutes/${R.file}.docx</code>.</li><li>The meeting is recorded in <code>processed.txt</code>; the record is kept beside the Word copy, searchable.</li><li>${c.y} item${c.y===1?"":"s"} approved and ${c.n} rejected go to the next apply.${c.u?` <b>${c.u} undecided</b> stay in Review.`:""}</li></ul><p class="meta" style="color:var(--muted);font-size:12px">Minutes are always approved on their own: “Approve routine” never covers them.</p>`;
+  $("#dlgApprove").showModal(); };
+$("#apGo").onclick=()=>{ $("#dlgApprove").close(); snack(`Approved. ${R.file}.docx filed in minutes; items wait for Apply.`); };
+$("#word").onclick=()=>$("#dlgWord").showModal();
+$("#wordGo").onclick=()=>{ $("#dlgWord").close(); snack("Opened in Word. Editing here is paused until you close it."); };
+$("#reext").onclick=()=>{ const c=counts(); snack(R.turns?`Re-extract re-reads the transcript and proposes again, keeping the ${c.y+c.n} item${c.y+c.n===1?"":"s"} you’ve decided.`:"Re-extract re-reads the note and proposes again, keeping what you’ve decided."); };
+$("#rejm").onclick=()=>snack("Rejecting asks for a reason; the meeting goes back to Intake and nothing is filed.");
+$("#back").onclick=()=>snack("Back to the Review list.");
+$$("[data-close]").forEach(b=>b.onclick=()=>b.closest("dialog").close());
+$$("[data-rec]").forEach(b=>b.onclick=()=>{ KEY=b.dataset.rec; R=JSON.parse(JSON.stringify(REC[KEY])); UNDO=[]; $$("[data-rec]").forEach(x=>x.setAttribute("aria-pressed",String(x===b))); $("#paneBtn").textContent=R.turns?"Transcript":"Source"; draw(); $("#undo").disabled=true; $("#savedTx").textContent="All changes saved"; });
+
+function snack(t){ const s=$("#snack"); s.textContent=t; s.hidden=false; clearTimeout(snack.t); snack.t=setTimeout(()=>s.hidden=true,3200); }
+$("#theme").onclick=e=>{ const dark=document.documentElement.dataset.theme!=="dark"; document.documentElement.dataset.theme=dark?"dark":"light"; e.target.setAttribute("aria-pressed",String(dark)); e.target.textContent=dark?"Light":"Dark"; };
+draw();
+</script>
+</body>
+</html>

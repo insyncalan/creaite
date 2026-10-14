@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>creaite — folder access test</title>
+<style>
+  :root{--bg:#EEF1F4;--surface:#fff;--ink:#17212B;--muted:#5A6672;--line:#D6DCE2;--ok:#2F7D4F;--okbg:#E4F2E9;--bad:#B42318;--badbg:#FBE4E1;--warn:#A86B12;--warnbg:#FBEFD9;--accent:#145C7A}
+  @media (prefers-color-scheme:dark){:root{--bg:#0F151B;--surface:#172029;--ink:#E4E9EE;--muted:#9AA7B3;--line:#2A3641;--ok:#5CC08A;--okbg:#173226;--bad:#F07467;--badbg:#3D1D1A;--warn:#E3A84A;--warnbg:#3A2C14;--accent:#5FB3D3}}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+  main{max-width:760px;margin:0 auto;padding:28px 20px 48px}
+  h1{font-size:24px;margin:0 0 4px} p.sub{color:var(--muted);margin:0 0 20px}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center}
+  .step h2{font-size:15px;margin:0} .step p{margin:0;color:var(--muted);font-size:13px;grid-column:1}
+  button{font:inherit;border:1px solid var(--accent);background:var(--surface);color:var(--accent);border-radius:999px;padding:6px 14px;cursor:pointer;font-weight:600}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .res{grid-column:1/-1;font-size:13px;padding:6px 10px;border-radius:6px;display:none}
+  .res.ok{display:block;background:var(--okbg);color:var(--ok)} .res.bad{display:block;background:var(--badbg);color:var(--bad)} .res.warn{display:block;background:var(--warnbg);color:var(--warn)}
+  pre{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;white-space:pre-wrap;font-size:13px}
+  .warnbox{background:var(--warnbg);border:1px solid var(--warn);border-radius:8px;padding:10px 12px;font-size:13px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Folder access test</h1>
+  <p class="sub">Checks whether this browser lets a local page read and write files in a folder you choose. This is option B for creaite's interactive dashboard (backlog BL-01).</p>
+  <div class="warnbox">When asked to pick a folder, choose an <b>empty test folder</b> (for example <code>Desktop\creaite-test</code>), never the creaite vault. The test only creates and then deletes one small file, <code>creaite-test.txt</code>.</div>
+
+  <div class="step"><div><h2>1. Is the feature available?</h2><p>Checks the browser, the page context and the folder-access feature.</p></div><button id="b1">Run</button><div class="res" id="r1"></div></div>
+  <div class="step"><div><h2>2. Pick a test folder</h2><p>The browser will ask for permission. Note any company policy message.</p></div><button id="b2" disabled>Pick folder</button><div class="res" id="r2"></div></div>
+  <div class="step"><div><h2>3. List the folder</h2><p>Reads the file names in the chosen folder.</p></div><button id="b3" disabled>List</button><div class="res" id="r3"></div></div>
+  <div class="step"><div><h2>4. Write a test file</h2><p>Creates <code>creaite-test.txt</code>. The browser may ask for edit permission.</p></div><button id="b4" disabled>Write</button><div class="res" id="r4"></div></div>
+  <div class="step"><div><h2>5. Read it back, then delete it</h2><p>Confirms the content, then removes the test file.</p></div><button id="b5" disabled>Read and delete</button><div class="res" id="r5"></div></div>
+  <div class="step"><div><h2>6. Does permission survive a reload?</h2><p>Reload this page (F5), then run this step. It checks whether the browser remembers the folder without asking again.</p></div><button id="b6">Check</button><div class="res" id="r6"></div></div>
+
+  <h2 style="font-size:15px;margin:22px 0 8px">Summary for IT</h2>
+  <pre id="summary">Run the steps above; the summary appears here.</pre>
+  <button id="copy">Copy summary</button>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const results={};
+let dir=null;
+function set(n,cls,msg){const r=$("r"+n); r.className="res "+cls; r.textContent=msg; results[n]=(cls==="ok"?"PASS":cls==="warn"?"PARTIAL":"FAIL")+" — "+msg; summary();}
+function summary(){
+  const ua=navigator.userAgent, br=/Edg\//.test(ua)?"Microsoft Edge":/Chrome\//.test(ua)?"Google Chrome":"Other browser";
+  const v=(ua.match(/(Edg|Chrome)\/([\d.]+)/)||[])[2]||"unknown";
+  let t=`creaite folder access test — ${new Date().toISOString().slice(0,10)}\nBrowser: ${br} ${v}\nPage opened from: ${location.protocol==="file:"?"local file (as the dashboard will be)":location.protocol}\n`;
+  ["1. Feature available","2. Pick folder","3. List folder","4. Write file","5. Read and delete","6. Permission after reload"].forEach((l,i)=>t+=`${l}: ${results[i+1]||"not run"}\n`);
+  $("summary").textContent=t;
+}
+// IndexedDB to remember the folder handle across reloads
+function idb(){return new Promise((res,rej)=>{const q=indexedDB.open("creaite-test",1);q.onupgradeneeded=()=>q.result.createObjectStore("h");q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+async function saveHandle(h){try{const db=await idb();db.transaction("h","readwrite").objectStore("h").put(h,"dir");}catch(e){}}
+async function loadHandle(){try{const db=await idb();return await new Promise(r=>{const g=db.transaction("h").objectStore("h").get("dir");g.onsuccess=()=>r(g.result);g.onerror=()=>r(null);});}catch(e){return null;}}
+
+$("b1").onclick=()=>{
+  const secure=window.isSecureContext, has="showDirectoryPicker" in window;
+  if(has&&secure){set(1,"ok",`Available (secure context: yes, opened from ${location.protocol}).`); $("b2").disabled=false;}
+  else set(1,"bad",`Not available. Secure context: ${secure?"yes":"no"}; folder-access feature: ${has?"present":"missing"}. Try the latest Edge or Chrome; Firefox and Safari don't support it.`);
+};
+$("b2").onclick=async()=>{
+  try{ dir=await window.showDirectoryPicker({id:"creaite-test",mode:"readwrite"}); await saveHandle(dir);
+    set(2,"ok",`Folder chosen: "${dir.name}".`); $("b3").disabled=false; $("b4").disabled=false; }
+  catch(e){ set(2, e.name==="AbortError"?"warn":"bad", e.name==="AbortError"?"Cancelled. Run again and choose a test folder.":`Blocked: ${e.name}: ${e.message}. This usually means a browser policy forbids it.`); }
+};
+$("b3").onclick=async()=>{
+  try{ const names=[]; for await (const [n,h] of dir.entries()){ names.push((h.kind==="directory"?"[folder] ":"")+n); if(names.length>=10) break; }
+    set(3,"ok",names.length?`Read ${names.length} item(s): ${names.join(", ")}`:"Folder read successfully (it's empty)."); }
+  catch(e){ set(3,"bad",`Couldn't read: ${e.name}: ${e.message}`); }
+};
+$("b4").onclick=async()=>{
+  try{ if(await dir.queryPermission({mode:"readwrite"})!=="granted"){ const p=await dir.requestPermission({mode:"readwrite"}); if(p!=="granted") throw new DOMException("Edit permission not granted","NotAllowedError"); }
+    const fh=await dir.getFileHandle("creaite-test.txt",{create:true}); const w=await fh.createWritable();
+    await w.write(`creaite folder access test ${new Date().toISOString()}`); await w.close();
+    set(4,"ok","Wrote creaite-test.txt."); $("b5").disabled=false; }
+  catch(e){ set(4,"bad",`Couldn't write: ${e.name}: ${e.message}. Reading may be allowed but writing blocked by policy.`); }
+};
+$("b5").onclick=async()=>{
+  try{ const fh=await dir.getFileHandle("creaite-test.txt"); const txt=await (await fh.getFile()).text();
+    await dir.removeEntry("creaite-test.txt");
+    set(5,"ok",`Read back "${txt.slice(0,40)}…" and deleted the test file.`); }
+  catch(e){ set(5,"bad",`Couldn't read or delete: ${e.name}: ${e.message}`); }
+};
+$("b6").onclick=async()=>{
+  const h=await loadHandle();
+  if(!h){ set(6,"warn","No saved folder found. Run step 2 first, reload the page, then run this step."); return; }
+  try{ const p=await h.queryPermission({mode:"readwrite"});
+    if(p==="granted"){ set(6,"ok",`Remembered "${h.name}" with no prompt. The dashboard could reconnect silently.`); }
+    else { const r=await h.requestPermission({mode:"readwrite"});
+      set(6, r==="granted"?"warn":"bad", r==="granted"?`Remembered "${h.name}", but asked again (one click per session). Workable.`:"Permission refused after reload."); } }
+  catch(e){ set(6,"bad",`Couldn't check: ${e.name}: ${e.message}`); }
+};
+$("copy").onclick=()=>{ navigator.clipboard.writeText($("summary").textContent).then(()=>{$("copy").textContent="Copied";setTimeout(()=>$("copy").textContent="Copy summary",1500);},()=>{}); };
+summary();
+</script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+# ── creaite development repository ──
+# This repo holds the ENGINE and SAMPLE data only. Real vault data never goes to GitHub.
+
+# Database, exports, backups, history
+system/tracker.db
+system/tracker.db-*
+*.db
+*.sqlite
+tracker-view.xlsx
+~$*
+system/backups/*
+system/history/*
+system/processed.txt
+system/search/
+system/config/settings-log.jsonl
+system/logs/*
+system/guard/
+
+# Staging (proposals, drafts, run logs)
+system/staging/*
+!system/staging/.gitkeep
+
+# Real inbox and real projects (only the fictional example and portfolio templates are tracked)
+inbox/*
+!inbox/.gitkeep
+projects/*
+!projects/_portfolio/
+!projects/ABC Example Programme/
+
+# Never commit meeting recordings or secrets
+*.vtt
+*.mp4
+*.m4a
+.env
+*.key
+
+# OS / tooling
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+
+# Branding source files (corporate decks, guidelines, real sample minutes): local only.
+# creaite's own templates in system/templates/ are built from them and committed.
+system/branding/
+
+# Generated dashboard (holds vault data)
+/dashboard.html
+
+# Local test builds of release zips (BL-36); real releases are attached to GitHub releases
+dev/releases/
+
+# Installed release zips in a vault (BL-36)
+system/releases/*
+!system/releases/.gitkeep
+
+# Personal Claude Code overrides (dev repo only)
+.claude/settings.local.json
+dev/tests/.durations
+
+# Runtime logs (filechange.py), never committed
+system/config/files-log.jsonl
+dev/tests/.flaky.jsonl
+dev/tests/snapshots/actual/
+
+# Pinned esbuild binary (BL-231, dev/tools/esbuild.py), downloaded on demand
+dev/.cache/
+
+# BL-231 phase 1: the dashboard cut into pieces by split_dashboard.py and for typecheck.py (scratch, development only)
+dev/scratch-split/

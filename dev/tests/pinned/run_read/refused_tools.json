@@ -1,0 +1,41 @@
+{
+ "denied": [
+  "Bash {\"command\": \"rm -rf projects/old\"}",
+  "Write {\"file_path\": \"/etc/hosts\", \"content\": \"x\"}"
+ ],
+ "events": [
+  {
+   "plain": [
+    {
+     "line": "I tried to run rm, which isn't one of creaite's scripts. Only creaite's own scripts run here, so I'll do it with one of them.",
+     "raw": "Bash: rm -rf projects/old",
+     "recovered": false
+    },
+    {
+     "line": "I tried to change hosts directly. Files change only through creaite's file-change script, so I'll use that or ask you on a card.",
+     "raw": "Write: /etc/hosts",
+     "recovered": false
+    }
+   ],
+   "shapes": [
+    "a command that isn't a creaite script (rm)",
+    "Write was refused"
+   ],
+   "tools": [
+    "Bash {\"command\": \"rm -rf projects/old\"}",
+    "Write {\"file_path\": \"/etc/hosts\", \"content\": \"x\"}"
+   ],
+   "type": "denied"
+  },
+  {
+   "chat": "s-1",
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": "s-1",
+   "type": "done"
+  }
+ ],
+ "said": [],
+ "session": "s-1",
+ "steps": []
+}

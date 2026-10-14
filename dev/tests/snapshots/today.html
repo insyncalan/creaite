@@ -1,0 +1,581 @@
+<section class="view" id="v-today">
+<div class="dayband">
+<div class="bandin">
+<div class="brief">
+<div class="dd" id="todayDate">Friday 9th October</div>
+<h1 id="dayHead">Good morning, Alan.</h1>
+<p id="briefText">
+<b>4 proposals</b> need your decision, <a href="#" class="cntl" data-nav="actions:overdue::o=%40me" data-n="1" aria-label="1 overdue action of yours, open in Work">
+<b>1 of your actions</b>
+</a> is overdue, and <b>Example Programme</b> is off track.</p>
+</div>
+<div class="dayline" id="dayLine" hidden="">
+</div>
+<div id="dayMeets">
+<div class="daynone">
+<span>No calendar yet</span>
+<button type="button" class="btn" data-refcal="">Refresh calendar</button>
+</div>
+</div>
+</div>
+<button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-label="Close the day" data-tip="Close the day">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="door">
+<path d="M13 4h3a2 2 0 0 1 2 2v14">
+</path>
+<path d="M2 20h3M13 20h9M10 12v.01">
+</path>
+<path d="M13 4.6v16.2a.5.5 0 0 1-.6.5L5 20V5.6a1 1 0 0 1 .8-1L12.4 3a.5.5 0 0 1 .6.5z">
+</path>
+</svg>
+<span class="dcdot" aria-hidden="true">
+</span>
+</button>
+</div>
+<!-- BL-270 -->
+<div class="thome tbrief" id="tBrief">
+<section class="tsec setupsec" id="setupList" aria-labelledby="hSetup">
+<h2 class="th" id="hSetup">Getting started <span class="cnt">2 of 5</span>
+<button type="button" class="linkbtn setupx" data-setup="dismiss">Dismiss</button>
+</h2>
+<ol class="bl setupbl">
+<li class="">
+<span class="n" aria-hidden="true">1</span>
+<div class="tb">
+<span class="t">Connect Microsoft 365</span>
+<p>Connected in Claude itself, so the page can’t: connect it there, then say “setup: check Microsoft 365” in Claude Code. The first sweep confirms it</p>
+</div>
+<span class="rmgo">
+<button type="button" class="mini" data-sucopy="m365">Copy</button>
+<button type="button" class="mini" data-sucheck="m365">Check again</button>
+<button type="button" class="linkbtn" data-setup="help">How</button>
+</span>
+</li>
+<li class="done">
+<span class="n" aria-hidden="true">✓</span>
+<div class="tb">
+<span class="t">Add a project</span>
+<span class="vh">(done)</span>
+<p>2 projects</p>
+</div>
+</li>
+<li class="done">
+<span class="n" aria-hidden="true">✓</span>
+<div class="tb">
+<span class="t">Add people</span>
+<span class="vh">(done)</span>
+<p>3 in the people register</p>
+</div>
+</li>
+<li class="">
+<span class="n" aria-hidden="true">4</span>
+<div class="tb">
+<span class="t">Run the first sweep</span>
+<p>Reads mail, Teams and the calendar since the look-back days</p>
+</div>
+<span class="rmgo">
+<button type="button" class="btn " data-setup="sweep">Run the first sweep</button>
+</span>
+</li>
+<li class="">
+<span class="n" aria-hidden="true">5</span>
+<div class="tb">
+<span class="t">Open Review</span>
+<p>Approve what's right; nothing reaches the tracker until you do</p>
+</div>
+<span class="rmgo">
+<button type="button" class="btn " data-setup="review">Open Review</button>
+</span>
+</li>
+</ol>
+<p class="sub" id="suMore">The health check and the launcher are in <a href="#" data-setopen="setup">Settings › System › Set-up</a>.</p>
+</section>
+<!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
+<section class="tsec tdsec" id="tdSec" aria-labelledby="hTd">
+<h2 class="th" id="hTd">To decide <span class="cnt" id="nTd">4</span>
+</h2>
+<div id="tdBody">
+<ol class="bl tdlist" id="tdList" aria-labelledby="hTd">
+<li class="tdrow td-review" data-td="rv2">
+<span class="tag tdtag acc">Minutes</span>
+<div class="tb">
+<a class="t" href="#">Minutes: ABC Steering</a>
+<p>Example Programme · minutes · approved on its own, in Review</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Open in Review: Minutes: ABC Steering" data-tip="Open in Review" data-tdact="review">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
+<path d="M4 5h16v11H8l-4 4z">
+</path>
+<path d="m9 10.5 2 2 4-4">
+</path>
+</svg>
+</button>
+</span>
+</li>
+<li class="tdrow td-review" data-td="rv4">
+<span class="tag tdtag acc">Action</span>
+<div class="tb">
+<a class="t" href="#">Chase legal on the SOW</a>
+<p>Example Programme · minutes</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Approve and save: Chase legal on the SOW" data-tip="Approve and save" data-tdact="approve">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="check">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Reject, with a reason: Chase legal on the SOW" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+</li>
+<li class="tdrow td-review" data-td="rv3">
+<span class="tag tdtag acc">Risk</span>
+<div class="tb">
+<a class="t" href="#">Vendor exits the market</a>
+<p>Example Programme · minutes · approved on its own, in Review</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Open in Review: Vendor exits the market" data-tip="Open in Review" data-tdact="review">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
+<path d="M4 5h16v11H8l-4 4z">
+</path>
+<path d="m9 10.5 2 2 4-4">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Reject, with a reason: Vendor exits the market" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+</li>
+<li class="tdrow td-review" data-td="rv1">
+<span class="tag tdtag acc">Action</span>
+<div class="tb">
+<a class="t" href="#">Confirm data owner</a>
+<p>minutes · needs a project</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Open in Review: Confirm data owner" data-tip="Open in Review" data-tdact="review">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="review">
+<path d="M4 5h16v11H8l-4 4z">
+</path>
+<path d="m9 10.5 2 2 4-4">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Reject, with a reason: Confirm data owner" data-tip="Reject, with a reason" aria-haspopup="menu" data-tdact="reject">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+</li>
+</ol>
+<div class="moreline tdfoot">
+<a href="#" class="s" id="tdReview">Open Review (4)</a>
+</div>
+</div>
+</section>
+<!-- BL-319: first after the band -->
+<section class="tsec" id="ftSec" aria-labelledby="hFt" hidden="">
+<h2 class="th" id="hFt">First thing <span class="cnt" id="nFt">
+</span>
+</h2>
+<ol class="bl" id="ftList">
+</ol>
+</section>
+<!-- BL-295: from the last Close the day -->
+<section class="tsec" id="dnSec" aria-labelledby="hDn" hidden="">
+<h2 class="th" id="hDn">Decisions needed <span class="cnt" id="nDn">
+</span>
+</h2>
+<ol class="bl" id="dnList">
+</ol>
+<div class="moreline" id="dnMore">
+</div>
+</section>
+<!-- BL-210 -->
+<section class="tsec" id="attnSec" aria-labelledby="hAttn">
+<h2 class="th" id="hAttn">Needs attention <span class="cnt" id="nAttn">5</span>
+</h2>
+<ol class="bl" id="attnList">
+<li class="rem" data-id="weekly:2026-10-02:ABC">
+<span class="n">1</span>
+<div class="tb">
+<a class="t" href="#" data-go="projects">Example Programme weekly report for week ending Friday 2nd October is due</a>
+</div>
+<span class="rmgo tacts">
+<button type="button" class="ib sm pri" aria-label="Draft weekly report: Example Programme weekly report for week ending 02-10-2026 is due" data-tip="Draft weekly report" data-d="run">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</button>
+</span>
+<span class="rm">
+<button class="dots" aria-label="Options: Example Programme weekly report for week ending 02-10-2026 is due" aria-haspopup="menu">…</button>
+<span class="dmenu" role="menu">
+<button data-d="run">Run report now</button>
+<button data-d="s">Dismiss for this session</button>
+<button data-d="f">Dismiss forever</button>
+</span>
+</span>
+</li>
+<li class="rem" data-id="weekly:2026-10-02:DEF">
+<span class="n">2</span>
+<div class="tb">
+<a class="t" href="#" data-go="projects">Digital Enablement weekly report for week ending Friday 2nd October is due</a>
+</div>
+<span class="rmgo tacts">
+<button type="button" class="ib sm pri" aria-label="Draft weekly report: Digital Enablement weekly report for week ending 02-10-2026 is due" data-tip="Draft weekly report" data-d="run">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</button>
+</span>
+<span class="rm">
+<button class="dots" aria-label="Options: Digital Enablement weekly report for week ending 02-10-2026 is due" aria-haspopup="menu">…</button>
+<span class="dmenu" role="menu">
+<button data-d="run">Run report now</button>
+<button data-d="s">Dismiss for this session</button>
+<button data-d="f">Dismiss forever</button>
+</span>
+</span>
+</li>
+<li class="rem" data-id="client:ABC:2026-09-24">
+<span class="n">3</span>
+<div class="tb">
+<a class="t" href="#" data-cock="ABC">Example Programme client report is due (last: Thursday 24th September)</a>
+</div>
+<span class="rmgo tacts">
+<button type="button" class="ib sm pri" aria-label="Draft client report: Example Programme client report is due (last: 24-09-2026)" data-tip="Draft client report" data-d="run">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</button>
+</span>
+<span class="rm">
+<button class="dots" aria-label="Options: Example Programme client report is due (last: 24-09-2026)" aria-haspopup="menu">…</button>
+<span class="dmenu" role="menu">
+<button data-d="run">Run report now</button>
+<button data-d="s">Dismiss for this session</button>
+<button data-d="f">Dismiss forever</button>
+</span>
+</span>
+</li>
+<li class="rem" data-id="client:DEF:never">
+<span class="n">4</span>
+<div class="tb">
+<a class="t" href="#" data-cock="DEF">Digital Enablement client report is due (last: none yet)</a>
+</div>
+<span class="rmgo tacts">
+<button type="button" class="ib sm pri" aria-label="Draft client report: Digital Enablement client report is due (last: none yet)" data-tip="Draft client report" data-d="run">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</button>
+</span>
+<span class="rm">
+<button class="dots" aria-label="Options: Digital Enablement client report is due (last: none yet)" aria-haspopup="menu">…</button>
+<span class="dmenu" role="menu">
+<button data-d="run">Run report now</button>
+<button data-d="s">Dismiss for this session</button>
+<button data-d="f">Dismiss forever</button>
+</span>
+</span>
+</li>
+<li>
+<span class="n">5</span>
+<div class="tb">
+<a class="t" href="#" data-gap="|actions">2 work items are missing an owner or a due date</a>
+<p>
+<a class="s" href="#" data-cock="ABC">Example Programme</a>: <a class="s" href="#" data-gap="ABC|raid">2 risks and issues</a> with no owner.</p>
+</div>
+</li>
+</ol>
+<div class="moreline" id="attnMore">
+</div>
+</section>
+<section class="tsec" id="mineSec" aria-labelledby="hMine">
+<h2 class="th" id="hMine">Your commitments <span class="cnt" id="nMine">
+<a href="#" class="cntl" data-nav="actions:open::st=Open,Delayed&amp;due=overdue,soon&amp;o=%40me" data-n="1" aria-label="1 action of yours due or overdue, open in Work">1</a>
+</span>
+<a href="#" data-go="mine">All mine</a>
+</h2>
+<ol class="bl" id="mineList">
+<li>
+<span class="n">1</span>
+<div class="tb">
+<a class="t" href="#" data-open="actions:ABC-A-#1">Escalate data access to the client CIO</a>
+<p>
+<span class="late">3 days late</span> on <a class="s" href="#" data-cock="ABC">Example Programme</a>, marked Urgent.</p>
+</div>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Mark done: Escalate data access to the client CIO" data-tip="Mark done" data-tdo="done" data-k="actions" data-id="ABC-A-#1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="done">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M8 12l3 3 5-6">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Move the date: Escalate data access to the client CIO" data-tip="Move the date" data-tdo="move" data-k="actions" data-id="ABC-A-#1" aria-haspopup="dialog">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calmove">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4">
+</path>
+</svg>
+</button>
+</span>
+</li>
+</ol>
+<div class="moreline" id="mineMore">
+</div>
+<div class="tsub" id="tOwe" hidden="">
+<h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe">
+</span>
+</h3>
+<ol class="bl" id="oweList">
+</ol>
+<div class="moreline" id="oweMore">
+</div>
+</div>
+<div class="tsub" id="tWait" hidden="">
+<h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait">
+</span>
+<a href="#" data-nav="all:chase:">Chase view</a>
+</h3>
+<ol class="bl" id="waitList">
+</ol>
+<div class="moreline" id="waitMore">
+</div>
+</div>
+</section>
+<!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
+<section class="tsec" id="weekSec" aria-labelledby="hWeek">
+<h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo">to Monday 12th October</span>
+</h2>
+<div id="weekList">
+<p class="wknote">Work of every priority, every milestone and decision, and meetings</p>
+<div class="wkday" data-day="wkund">
+<h3 class="wkdh" id="wkd-wkund">Urgent, with no date</h3>
+<ol class="bl wklist" aria-labelledby="wkd-wkund">
+<li class="wkrow wk-raid" data-wk="u0ABC-003">
+<span class="tag wktag bad">Risk · Urgent</span>
+<div class="tb">
+<a class="t" href="#" data-open="raid:ABC-#1">Data access delayed → UAT slips</a>
+<span class="wkwho"> — TBC, <a class="s" href="#" data-cock="ABC">Example Programme</a>
+</span>
+</div>
+<span class="wkwhy">no date set</span>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Write an update: Data access delayed → UAT slips" data-tip="Write an update" data-wkact="update" data-k="raid" data-id="ABC-#1">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+</span>
+</li>
+</ol>
+</div>
+<div class="wkday" data-day="wk2026-10-12">
+<h3 class="wkdh" id="wkd-wk2026-10-12">Monday 12th October</h3>
+<ol class="bl wklist" aria-labelledby="wkd-wk2026-10-12">
+<li class="wkrow wk-actions" data-wk="2026-10-12actionsABC-A-002">
+<span class="tag wktag">Action</span>
+<div class="tb">
+<a class="t" href="#" data-open="actions:ABC-A-#2">Book UAT environment</a>
+<span class="wkwho"> — Sara Example, <a class="s" href="#" data-cock="ABC">Example Programme</a>
+</span>
+</div>
+<span class="wkwhy">due</span>
+<span class="tacts">
+<button type="button" class="ib sm pri" aria-label="Draft a chase to Sara Example: Book UAT environment" data-tip="Draft a chase" data-wkact="chase" data-k="actions" data-id="ABC-A-#2">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chasemail">
+<rect x="3" y="5" width="14" height="11" rx="2">
+</rect>
+<path d="M3.5 6.5 10 11l6.5-4.5M15 19h6M18.5 16.5 21 19l-2.5 2.5">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Move the date: Book UAT environment" data-tip="Move the date" data-wkact="move" data-k="actions" data-id="ABC-A-#2">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calmove">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4M12 13v4M10 15h4">
+</path>
+</svg>
+</button>
+</span>
+</li>
+</ol>
+</div>
+</div>
+</section>
+<section class="tsec tres" id="resSec" aria-labelledby="hRes">
+<details id="resFold">
+<summary>
+<h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle">0 since 8th October 2026</span>
+</h2>
+</summary>
+<ol class="bl" id="chgList">
+<li>
+<span class="n">
+</span>
+<div class="tb">
+<span class="none">Nothing has been resolved since 8th October 2026.</span>
+</div>
+</li>
+</ol>
+<div class="moreline" id="chgMore">
+<a class="s" href="#" data-go="activity">See all activity</a>
+</div>
+</details>
+</section>
+<!-- BL-319: folded to one line -->
+<section class="tsec" id="pfSec" aria-labelledby="hPort">
+<h2 class="th" id="hPort">Portfolio</h2>
+<div class="tbl" id="pfTbl">
+<table>
+<thead>
+<tr>
+<th data-col="project">Project<span class="colrz" tabindex="0" role="separator" aria-label="Resize Project column">
+</span>
+</th>
+<th data-col="health">Health<span class="colrz" tabindex="0" role="separator" aria-label="Resize Health column">
+</span>
+</th>
+<th data-col="evidence">Evidence<span class="colrz" tabindex="0" role="separator" aria-label="Resize Evidence column">
+</span>
+</th>
+<th data-col="trend">8 weeks<span class="colrz" tabindex="0" role="separator" aria-label="Resize 8 weeks column">
+</span>
+</th>
+<th data-col="next">Next milestone<span class="colrz" tabindex="0" role="separator" aria-label="Resize Next milestone column">
+</span>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr class="click" data-cock="ABC">
+<td>
+<button type="button" class="pfname" data-tip="Example Client Ltd" aria-describedby="pfd-ABC">Example Programme</button>
+<span class="vh" id="pfd-ABC">Example Client Ltd</span>
+</td>
+<td>
+<span class="health h-bad">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7.5v5.5M12 16.2v.4">
+</path>
+</svg>Off track</span>
+<div class="sub" style="max-width:36ch">UAT start slipped 14 days</div>
+</td>
+<td>
+<span class="ev">
+<a href="#" class="cntl" data-nav="actions:overdue:ABC" data-n="1" aria-label="1 overdue action in Example Programme, open in Work">Overdue <b class="bad">1</b>
+</a> · <a href="#" class="cntl" data-cockjump="ABC|undated" aria-label="2 open items with no due date in Example Programme, show on the project page">No date <b>2</b>
+</a> · <a href="#" class="cntl" data-nav="raid:urgentonly:ABC" data-n="1" aria-label="1 urgent open RAID item in Example Programme, open in Work">Urgent risks <b class="bad">1</b>
+</a> · <a href="#" class="cntl" data-cockjump="ABC|ms" aria-label="Milestone slip of 14 days in Example Programme, show on the project page">Slip <b class="bad">14 days</b>
+</a> · Warnings <b class="">0</b>
+</span>
+</td>
+<td>
+<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-warn">
+</i>
+<i class="s-">
+</i>
+</span>
+</td>
+<td>UAT start<div class="sub late">Monday 2nd November (In 24 days)</div>
+</td>
+</tr>
+<tr class="click" data-cock="DEF">
+<td>
+<button type="button" class="pfname">Digital Enablement</button>
+</td>
+<td>
+<span class="health h-none">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M8 12h8">
+</path>
+</svg>Not set</span>
+<div class="sub" style="max-width:36ch">
+</div>
+</td>
+<td>
+<span class="ev">Overdue <b class="">0</b> · No date <b>0</b> · Urgent risks <b class="">0</b> · Slip <b class="">none</b> · Warnings <b class="">0</b>
+</span>
+</td>
+<td>
+<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+</span>
+</td>
+<td>Pilot live<div class="sub ">Sunday 8th November (In 30 days)</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<p class="calfoot" id="calFoot" hidden="">
+</p>
+<!-- BL-270: "Calendar as read on …", at the page's foot -->
+</section>

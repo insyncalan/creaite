@@ -1,0 +1,2 @@
+This file marks the DEVELOPMENT repository. It must not exist in a live vault.
+While it exists, Claude skips the session-start rules (backup, sweep, reminders) and follows dev/BUILD.md.

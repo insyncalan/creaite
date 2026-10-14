@@ -1,0 +1,381 @@
+<section class="view" id="v-work">
+<div class="wrapmax">
+<nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden="">
+</nav>
+<h1>Work</h1>
+<div class="tabs" role="tablist" id="wtabs">
+<button role="tab" data-t="actions" aria-selected="true">Actions</button>
+<button role="tab" data-t="raid" aria-selected="false">RAID</button>
+<button role="tab" data-t="decisions" aria-selected="false">Decisions</button>
+<button role="tab" data-t="all" aria-selected="false">All items</button>
+</div>
+<div class="toolbar">
+<input id="workQ" type="search" placeholder="Search this list" aria-label="Search this list" autocomplete="off">
+<span class="wfilters" id="wfilters">
+<span class="dd">
+<button class="btn fbtn on" id="stBtn" data-open-fk="st" aria-haspopup="true">Status: Open</button>
+<div class="ddmenu left" id="stMenu">
+</div>
+</span>
+<span class="dd">
+<button class="btn fbtn " id="dueBtn" data-open-fk="due" aria-haspopup="true">Due</button>
+<div class="ddmenu left" id="dueMenu">
+</div>
+</span>
+<span class="dd">
+<button class="btn fbtn " id="ownBtn" data-open-fk="o" aria-haspopup="true">All owners</button>
+<div class="ddmenu left" id="ownMenu">
+</div>
+</span>
+<span class="dd">
+<button class="btn fbtn " id="projBtn" data-open-fk="p" aria-haspopup="true">All projects</button>
+<div class="ddmenu left" id="projMenu">
+</div>
+</span>
+<span class="dd">
+<button class="btn fbtn " id="priBtn" data-open-fk="pr" aria-haspopup="true">All priorities</button>
+<div class="ddmenu left" id="priMenu">
+</div>
+</span>
+<span class="dd">
+<button class="ib bd fbtn " id="moreBtn" aria-haspopup="dialog" aria-label="Add a filter: 1 on" data-tip="Add a filter: 1 on" data-key="F">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel">
+<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
+</path>
+</svg>
+<span class="dot" aria-hidden="true">1</span>
+</button>
+<div class="ddmenu left fpmenu" id="moreMenu" role="dialog" aria-label="Add a filter">
+</div>
+</span>
+</span>
+<span class="seg ico" id="wlay" role="group" aria-label="Layout">
+<button type="button" data-lay="list" aria-pressed="true" aria-label="List" data-tip="List">
+<svg data-ic="list" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="list" aria-hidden="true">
+<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01">
+</path>
+</svg>
+</button>
+<button type="button" data-lay="board" aria-pressed="false" aria-label="Board" data-tip="Board">
+<svg data-ic="board" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="board" aria-hidden="true">
+<rect x="3" y="3" width="18" height="18" rx="2">
+</rect>
+<path d="M8 7v7M12 7v4M16 7v9">
+</path>
+</svg>
+</button>
+</span>
+<!-- BL-159 (sprint-icons): List and Board as a two-icon switch -->
+<span class="dd ddisp">
+<button class="ib bd" id="dispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dispMenu" aria-label="Display: grouping, order and properties" data-tip="Display: grouping, order and properties" data-key="D">
+<svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="sliders" aria-hidden="true">
+<path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4">
+</path>
+</svg>
+</button>
+<div class="ddmenu dispmenu" id="dispMenu" role="dialog" aria-label="Display" hidden="">
+<div>
+<h3>
+<label for="wgrp">Group by</label>
+</h3>
+<div class="dline">
+<select id="wgrp">
+<option value="none" selected="">None</option>
+<option value="due">Due</option>
+<option value="status">Status</option>
+<option value="owner">Owner</option>
+<option value="milestone">Milestone</option>
+<option value="project">Project</option>
+<option value="priority">Priority</option>
+<option value="workstream">Workstream</option>
+</select>
+</div>
+</div>
+<div hidden="">
+<h3>
+<label for="wsub">Sub-group</label>
+</h3>
+<div class="dline">
+<select id="wsub">
+<option value="none">None</option>
+<option value="due">Due</option>
+<option value="status">Status</option>
+<option value="owner">Owner</option>
+<option value="milestone">Milestone</option>
+<option value="project">Project</option>
+<option value="priority">Priority</option>
+<option value="workstream">Workstream</option>
+</select>
+</div>
+</div>
+<h3>
+<label for="wbsort">Order by</label>
+</h3>
+<div class="dline">
+<select id="wbsort">
+<option value="" selected="">Default order</option>
+<option value="due">Due date</option>
+<option value="pr">Priority</option>
+<option value="st">Status</option>
+<option value="o">Owner</option>
+<option value="t">Title</option>
+<option value="upd">Last updated</option>
+<option value="raised">Raised</option>
+<option value="id">ID</option>
+</select>
+<button type="button" class="btn" id="wordRev" aria-pressed="false" aria-label="Reverse the order" title="Reverse the order">⇅</button>
+</div>
+<h3>Properties</h3>
+<div class="dprops">
+<label>
+<input type="checkbox" data-prop="" id="dprop-t" value="t" checked="" disabled="">Action<span class="colmv">
+<button type="button" data-mv="t" data-d="-1" aria-label="Move Action earlier" disabled="">↑</button>
+<button type="button" data-mv="t" data-d="1" aria-label="Move Action later">↓</button>
+</span>
+</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-o" value="o" checked="">Owner<span class="colmv">
+<button type="button" data-mv="o" data-d="-1" aria-label="Move Owner earlier">↑</button>
+<button type="button" data-mv="o" data-d="1" aria-label="Move Owner later">↓</button>
+</span>
+</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-due" value="due" checked="">Due<span class="colmv">
+<button type="button" data-mv="due" data-d="-1" aria-label="Move Due earlier">↑</button>
+<button type="button" data-mv="due" data-d="1" aria-label="Move Due later">↓</button>
+</span>
+</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-pr" value="pr" checked="">Priority<span class="colmv">
+<button type="button" data-mv="pr" data-d="-1" aria-label="Move Priority earlier">↑</button>
+<button type="button" data-mv="pr" data-d="1" aria-label="Move Priority later">↓</button>
+</span>
+</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-st" value="st" checked="">Status<span class="colmv">
+<button type="button" data-mv="st" data-d="-1" aria-label="Move Status earlier">↑</button>
+<button type="button" data-mv="st" data-d="1" aria-label="Move Status later" disabled="">↓</button>
+</span>
+</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-id" value="id">ID</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-ws" value="ws">Workstream</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-ms" value="ms">Milestone</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-src" value="src">Source</label>
+<label>
+<input type="checkbox" data-prop="" id="dprop-upd" value="upd">Last updated</label>
+</div>
+<h3>Show</h3>
+<div class="dline" hidden="">
+<label class="dchk">
+<input type="checkbox" id="wshowempty" checked=""> Empty groups</label>
+</div>
+<div class="dline sub">Closed items: use the Status filter.</div>
+<div class="dfoot">
+<button type="button" class="linkbtn" id="dispReset">Reset to this tab’s default</button>
+<span class="sp">
+</span>
+<button type="button" class="btn primary" id="dispDone">Done</button>
+</div>
+</div>
+</span>
+<!-- BL-128 (sprint-work-views): one Display menu -->
+<span class="sp">
+</span>
+<span class="dd newdd">
+<button type="button" class="newb" id="newBtn" aria-label="New action" data-tip="New action">
+<svg data-ic="plus" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="plus" aria-hidden="true">
+<path d="M12 5v14M5 12h14">
+</path>
+</svg>
+<span class="w">New action</span>
+<svg data-ic="chevdown" class="i nch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="chevdown" aria-hidden="true">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<div class="ddmenu newmenu" id="newMenu" role="menu" aria-label="New decision" hidden="">
+<button type="button" role="menuitem" data-newd="made" tabindex="-1">
+<svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="check" aria-hidden="true">
+<path d="M20 6 9 17l-5-5">
+</path>
+</svg>
+<span>
+<b>Record a decision</b>
+<small>Already taken. Opens as Made, dated today.</small>
+</span>
+</button>
+<button type="button" role="menuitem" data-newd="needed" tabindex="-1">
+<svg data-ic="flag" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="flag" aria-hidden="true">
+<path d="M4 22V4M4 4h13l-2 4 2 4H4">
+</path>
+</svg>
+<span>
+<b>Ask for a decision</b>
+<small>Waiting on someone. Opens as Pending, with a needed-by date.</small>
+</span>
+</button>
+</div>
+</span>
+<!-- BL-159: the New tile; on Decisions, a menu -->
+</div>
+<div class="views" id="wviews" aria-label="Views">
+<span class="vwrap">
+<button class="vchip" data-wv="open" aria-pressed="true">All open</button>
+</span>
+<span class="vwrap">
+<button class="vchip" data-wv="mine" aria-pressed="false">Mine</button>
+</span>
+<span class="vwrap">
+<button class="vchip" data-wv="soon" aria-pressed="false">Due soon</button>
+</span>
+<span class="vwrap">
+<button class="vchip" data-wv="chase" aria-pressed="false">Chase</button>
+</span>
+<span class="vwrap">
+<button class="vchip" data-wv="delayed" aria-pressed="false">Delayed</button>
+</span>
+<span class="vwrap">
+<button class="vchip" data-wv="closed" aria-pressed="false">Closed</button>
+</span>
+<span class="dd vmorewrap">
+<button class="vchip" type="button" id="vmore" aria-haspopup="menu" aria-expanded="false">More views (1) ▾</button>
+<div class="ddmenu left" id="vmoreMenu" role="menu">
+<button type="button" role="menuitem" class="vmitem" data-wv="overdue">Overdue</button>
+</div>
+</span>
+</div>
+<div class="wapplied" id="wapplied">
+<span class="fchip">Status: Open<button data-clr="st" aria-label="Remove the status filter" data-tip="Remove the status filter">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</span>
+<button class="linkbtn" id="clearF">Clear all</button>
+<span class="sp">
+</span>
+<span class="sub">
+<span id="wcount">Showing 3 of 3</span>
+<span id="whidden">
+</span>
+</span>
+</div>
+<div class="vh" id="wlive" role="status" aria-live="polite">Showing 3 of 3</div>
+<!-- BL-132: one announcement per change -->
+<div class="wbulk" id="wbulk" role="region" aria-label="Change the selected items" hidden="">
+</div>
+<div class="tbl list" id="workWrap">
+<table id="workTbl" role="grid" aria-multiselectable="true">
+<thead>
+<tr>
+<th data-col="t" draggable="true" aria-sort="none" title="Sort by action">Action<span class="colrz" tabindex="0" role="separator" aria-label="Resize Action column">
+</span>
+</th>
+<th data-col="o" draggable="true" aria-sort="none" title="Sort by owner">Owner<span class="colrz" tabindex="0" role="separator" aria-label="Resize Owner column">
+</span>
+</th>
+<th data-col="due" draggable="true" aria-sort="none" title="Sort by due">Due<span class="colrz" tabindex="0" role="separator" aria-label="Resize Due column">
+</span>
+</th>
+<th data-col="pr" draggable="true" aria-sort="none" title="Sort by priority">Priority<span class="colrz" tabindex="0" role="separator" aria-label="Resize Priority column">
+</span>
+</th>
+<th data-col="st" draggable="true" aria-sort="none" title="Sort by status">Status<span class="colrz" tabindex="0" role="separator" aria-label="Resize Status column">
+</span>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr class="click" data-row="ABC-A-001" aria-selected="false">
+<td class="title" data-f="t">
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>Escalate data access to the client CIO<div class="x">
+<a href="#" class="rowid" data-rid="ABC-A-001" title="Open ABC-A-001">ABC-A-001</a> · <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</div>
+</td>
+<td data-f="o" class="ce">
+<a href="#" class="plink2" data-person="Alan Carter" title="Open My work">You</a>
+<button type="button" class="cebtn" data-ce="o" tabindex="-1" aria-haspopup="listbox" aria-label="Change the owner of ABC-A-001" title="Change the owner">▾</button>
+</td>
+<td data-f="due" class="late ce" style="white-space:nowrap">06-10-2026<button type="button" class="cebtn" data-ce="due" tabindex="-1" aria-haspopup="listbox" aria-label="Change the due date of ABC-A-001" title="Change the due date">▾</button>
+<div class="x">3 days late</div>
+</td>
+<td data-f="pr" class="prio-urgent ce">Urgent<button type="button" class="cebtn" data-ce="pr" tabindex="-1" aria-haspopup="listbox" aria-label="Change the priority of ABC-A-001" title="Change the priority">▾</button>
+</td>
+<td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of ABC-A-001" title="Change the status">▾</button>
+</td>
+</tr>
+<tr class="click" data-row="ABC-A-002" aria-selected="false">
+<td class="title" data-f="t">
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>Book UAT environment<div class="x">
+<a href="#" class="rowid" data-rid="ABC-A-002" title="Open ABC-A-002">ABC-A-002</a> · <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</div>
+</td>
+<td data-f="o" class="ce">
+<a href="#" class="plink2" data-person="Sara Example" title="Open Sara Example’s page">Sara Example</a>
+<button type="button" class="cebtn" data-ce="o" tabindex="-1" aria-haspopup="listbox" aria-label="Change the owner of ABC-A-002" title="Change the owner">▾</button>
+</td>
+<td data-f="due" class="ce" style="white-space:nowrap">12-10-2026<button type="button" class="cebtn" data-ce="due" tabindex="-1" aria-haspopup="listbox" aria-label="Change the due date of ABC-A-002" title="Change the due date">▾</button>
+<div class="x">In 3 days</div>
+</td>
+<td data-f="pr" class="ce">Medium<button type="button" class="cebtn" data-ce="pr" tabindex="-1" aria-haspopup="listbox" aria-label="Change the priority of ABC-A-002" title="Change the priority">▾</button>
+</td>
+<td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of ABC-A-002" title="Change the status">▾</button>
+</td>
+</tr>
+<tr class="click" data-row="DEF-A-001" aria-selected="false">
+<td class="title" data-f="t">
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>Agree pilot success criteria<div class="x">
+<a href="#" class="rowid" data-rid="DEF-A-001" title="Open DEF-A-001">DEF-A-001</a> · <span class="pcode plink" data-proj="DEF" role="link" tabindex="0" title="Open Digital Enablement">Digital Enablement</span>
+</div>
+</td>
+<td data-f="o" class="ce">
+<a href="#" class="plink2" data-person="Omar Ali" title="Open Omar Ali’s page">Omar Ali</a>
+<button type="button" class="cebtn" data-ce="o" tabindex="-1" aria-haspopup="listbox" aria-label="Change the owner of DEF-A-001" title="Change the owner">▾</button>
+</td>
+<td data-f="due" class="ce" style="white-space:nowrap">14-10-2026<button type="button" class="cebtn" data-ce="due" tabindex="-1" aria-haspopup="listbox" aria-label="Change the due date of DEF-A-001" title="Change the due date">▾</button>
+<div class="x">In 5 days</div>
+</td>
+<td data-f="pr" class="ce">Medium<button type="button" class="cebtn" data-ce="pr" tabindex="-1" aria-haspopup="listbox" aria-label="Change the priority of DEF-A-001" title="Change the priority">▾</button>
+</td>
+<td data-f="st" class="ce">Open<button type="button" class="cebtn" data-ce="st" tabindex="-1" aria-haspopup="listbox" aria-label="Change the status of DEF-A-001" title="Change the status">▾</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="board" id="workBoard" hidden="" role="group" aria-label="Board">
+</div>
+<div class="kbdhint" id="whintList">
+<span class="kbd">J</span>
+<span class="kbd">K</span> move · <span class="kbd">Space</span> select · click a value to change it · <span class="kbd">Enter</span> or the ID opens · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear · click a heading to sort · drag a column edge to resize</div>
+<div class="kbdhint" id="whintBoard" hidden="">
+<span class="kbd">J</span>
+<span class="kbd">K</span> step through the cards · <span class="kbd">Space</span> select · <span class="kbd">Enter</span> or the ID opens · drag a card, or use its <b>Move to…</b> menu, to change it · <span class="kbd">D</span> display · <span class="kbd">F</span> filters · <span class="kbd">Esc</span> clear</div>
+</div>
+</section>

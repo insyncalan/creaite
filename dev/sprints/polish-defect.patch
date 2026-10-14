@@ -1,0 +1,38 @@
+diff --git a/dev/tests/test_propose.py b/dev/tests/test_propose.py
+index c050607..06874a8 100644
+--- a/dev/tests/test_propose.py
++++ b/dev/tests/test_propose.py
+@@ -73,6 +73,20 @@ class ProposeTests(unittest.TestCase):
+                                                                         "previous": "something else"}]}})
+         self.assertIn("the file changed since", self.p("preview", stale, ok=False).stdout)
+ 
++    def test_write_already_made_does_not_block_apply(self):
++        # two proposals made from the same text: the first applies, and the second (same result) must not fail the apply
++        path = f"{ABC}/CLAUDE.md"
++        old = (self.v.root / path).read_text()
++        new = old + "- Sponsor prefers one-page updates.\n"
++        for n in ("one.json", "two.json"):
++            self.p("stage", self.spec({"file_changes": {"title": n, "file_ops": [{"op": "write", "path": path, "content": new}]}}, n))
++        self.assertEqual(len(self.staged()), 2)
++        self.v.run("apply")
++        self.assertEqual((self.v.root / path).read_text(), new)
++        self.assertEqual(self.staged(), [])
++        self.v.run("undo")
++        self.assertEqual((self.v.root / path).read_text(), old)
++
+     def test_new_project_and_undo(self):
+         register = (self.v.root / "projects/_portfolio/project-register.md").read_text()
+         out = self.p("new-project", "--code", "DEF", "--name", "Digital Enablement", "--sponsor", "Omar Ali",
+diff --git a/system/scripts/tracker.py b/system/scripts/tracker.py
+index 2b82c03..9ec7b80 100644
+--- a/system/scripts/tracker.py
++++ b/system/scripts/tracker.py
+@@ -958,6 +958,8 @@ def run_file_ops(apply_id, blk, field, ops, done):
+             p = safe_path(fop["path"], "write")
+             previous = fop.get("previous")
+             current = p.read_text(encoding="utf-8") if p.exists() else None
++            if current is not None and current == fop["content"]:
++                continue    # already as proposed (an earlier proposal made the same change): nothing to write or undo, and it must not block the apply
+             if previous is None and current is not None:
+                 raise Invalid(f"write: {paths.rel(p)} already exists")
+             if previous is not None and current != previous:

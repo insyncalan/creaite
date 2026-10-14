@@ -1,0 +1,558 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Published: https://claude.ai/artifact/QbzSkBfoboShMi7JnuTAAg -->
+</head>
+<body>
+<!-- Sneak peek (Alan, 14-10-2026): change the open work item in words from the peek; scope agreed 14-10-2026, all points decided. -->
+<title>Sneak peek</title>
+<style>
+
+/* Layout: the Work page behind, the peek on the right with its icon bar; the chase pane opens inside the peek; notes beside it. */
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#7A848D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --mail-bg:#FFFFFF; --mail-ink:#1E1F1E; --mail-muted:#5C5D60; --mail-head:#F1F3F4; --mail-rule:#D9D9E0; --mail-red:#B3261E;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  --mail:Calibri,Carlito,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C;
+  --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C;
+  --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font);margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 14px;max-width:900px}
+.sub{color:var(--muted);font-size:12px}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.tg{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:32px;padding:0 14px;cursor:pointer;font-size:13px}
+.tg[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 470px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg);min-height:640px}
+@media (max-width:820px){.stage{grid-template-columns:1fr}.work{display:none}}
+.work{padding:14px;opacity:.55;min-width:0}
+.work .row{display:grid;grid-template-columns:96px 1fr 120px 86px;gap:10px;padding:9px 10px;border-bottom:1px solid var(--line);font-size:13px;background:var(--surface)}
+.work .row.sel{outline:2px solid var(--accent);outline-offset:-2px;opacity:1}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:13px;min-width:0}
+.notes h3{margin:12px 0 4px;font-size:13px} .notes h3:first-child{margin-top:0}
+.notes ul{margin:4px 0;padding-left:18px} .notes li{margin:3px 0}
+
+/* the peek */
+.peek{background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.pk-bar{display:flex;align-items:center;gap:2px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.pk-bar .sp{flex:1}
+.ib{width:32px;height:32px;display:grid;place-items:center;border:0;background:none;border-radius:7px;cursor:pointer;color:var(--muted);position:relative}
+.ib:hover{background:var(--sunk);color:var(--ink)}
+.ib[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.ib svg{width:18px;height:18px}
+.ib.new::after{content:"New";position:absolute;top:-6px;right:-10px;font-size:9.5px;font-weight:600;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 5px}
+.sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.pk-body{padding:16px 18px;display:grid;gap:12px;overflow:auto}
+.pk-id{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pk-title{font-size:18px;font-weight:600;margin:0;text-wrap:balance}
+.fld{display:grid;grid-template-columns:110px 1fr;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.fld .k{color:var(--muted)}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;background:var(--sunk);color:var(--muted);font-size:11.5px;font-weight:500;white-space:nowrap}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.acc{background:var(--accent-soft);color:var(--accent)}
+
+/* the chase pane */
+.chase{display:grid;gap:12px}
+.chase h2{margin:0;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.mode{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--sunk);font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.mode b{font-weight:600}
+.f{display:grid;gap:4px}
+.f label{font-size:12px;color:var(--muted);font-weight:500}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--line);border-radius:8px;padding:5px 6px;background:var(--surface);min-height:36px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:500}
+.chip button{border:0;background:none;color:inherit;cursor:pointer;width:18px;height:18px;border-radius:50%}
+.sugg{display:flex;gap:6px;flex-wrap:wrap}
+.sugg button{border:1px dashed var(--line);background:none;border-radius:999px;height:26px;padding:0 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.sugg button small{color:var(--faint)}
+input[type=text],input[type=date],textarea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface);width:100%}
+textarea{min-height:56px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);height:30px;padding:0 10px;font-size:12px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.acts .left{margin-right:auto;font-size:12px;color:var(--muted)}
+.snack{font-size:12.5px;color:var(--ok)}
+
+/* the email preview: as Outlook will show it (fixed light colours, like the Draft email's own) */
+.mailwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.mailhead{background:var(--sunk);padding:7px 10px;font-size:12px;display:grid;gap:2px}
+.mailhead span{color:var(--muted)}
+.mail{background:var(--mail-bg);color:var(--mail-ink);font:11pt/1.4 var(--mail);padding:14px 16px}
+.mail p{margin:0 0 11px}
+.mail table{border-collapse:collapse;width:100%;font:10.5pt/1.35 var(--mail);margin:2px 0 12px}
+.mail th{background:var(--mail-head);text-align:left;padding:5px 7px;border-bottom:1px solid var(--mail-rule)}
+.mail td{padding:5px 7px;border-bottom:1px solid var(--mail-rule);vertical-align:top}
+.mail .m{color:var(--mail-muted)} .mail .r{color:var(--mail-red);font-weight:bold}
+.mail .ask{background:#F7F3E3;border-left:3px solid #C9A227;padding:6px 9px;margin:0 0 11px}
+
+/* additions: Sneak peek */
+:root{ --shadow-pop:0 10px 32px rgba(20,33,42,.16),0 2px 6px rgba(20,33,42,.08); --flash:#FFF6D6; }
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){ --shadow-pop:0 10px 32px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.35); --flash:#3A3214; }}
+:root[data-theme="dark"]{ --shadow-pop:0 10px 32px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.35); --flash:#3A3214; }
+.stage{min-height:700px}
+.peek{position:relative}
+.pk-body{padding-bottom:64px}
+.peek.sp-open .pk-body{padding-bottom:260px}
+.fld{transition:background-color .6s ease}
+.fld.chg{background:var(--flash)}
+.fld .v{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+kbd{font:600 11px/1 var(--font);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:2px 5px;background:var(--surface);color:var(--muted)}
+.sp-hint{position:absolute;left:0;right:0;bottom:0;padding:10px 18px;border-top:1px solid var(--line);background:var(--surface);font-size:12px;color:var(--faint);display:flex;gap:6px;align-items:center}
+.sp-hint button{border:0;background:none;color:var(--muted);cursor:pointer;padding:0;display:flex;gap:6px;align-items:center;font-size:12px}
+.sp-hint button:hover{color:var(--ink)}
+.sp-box{position:absolute;left:12px;right:12px;bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-pop);display:grid;overflow:hidden}
+.sp-box[hidden]{display:none}
+@media (prefers-reduced-motion:no-preference){.sp-box{animation:rise .16s ease-out}}
+@keyframes rise{from{transform:translateY(8px);opacity:.4}to{transform:none;opacity:1}}
+.sp-out{display:grid;gap:8px;padding:10px 12px 0;max-height:300px;overflow:auto}
+.sp-out:empty{display:none}
+.sp-in{display:flex;align-items:center;gap:8px;padding:8px 10px}
+.sp-in svg{width:16px;height:16px;color:var(--accent);flex:none}
+.sp-in input{flex:1;min-width:0;border:0;background:none;padding:6px 2px;font-size:14px;outline:none}
+.sp-in .esc{font-size:11.5px;color:var(--faint);white-space:nowrap}
+.sp-in:focus-within{box-shadow:inset 0 -2px 0 var(--accent)}
+.sp-card{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:7px;background:var(--bg);font-size:13px}
+.sp-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sp-head b{font-weight:600}
+.sp-head .by{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.chgrow{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:baseline}
+.chgrow .k{color:var(--muted);font-size:12px}
+.chgrow s{color:var(--faint)}
+.chgrow .to{font-weight:600}
+.sp-acts{display:flex;gap:8px;justify-content:flex-end;align-items:center;flex-wrap:wrap}
+.sp-acts .sub{margin-right:auto}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px}
+.sp-done{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ok);flex-wrap:wrap}
+.sp-done button{border:0;background:none;color:var(--accent);cursor:pointer;font-weight:500;padding:0;text-decoration:underline}
+.sp-msg{font-size:12.5px;color:var(--muted);display:grid;gap:6px}
+.sp-msg .pick{display:flex;gap:6px;flex-wrap:wrap}
+.tryrow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.try{border:1px dashed var(--line);background:var(--surface);border-radius:999px;height:28px;padding:0 11px;font-size:12.5px;cursor:pointer;color:var(--ink)}
+.try:hover{border-style:solid;border-color:var(--accent)}
+.notes code{font-size:12px}
+.askstub{position:absolute;right:12px;bottom:56px;background:var(--ink);color:var(--surface);border-radius:10px;padding:9px 12px;font-size:12.5px;box-shadow:var(--shadow-pop)}
+.askstub kbd{background:none;color:inherit;border-color:currentColor}
+.ideas{display:grid;gap:8px;margin-top:6px}
+.idea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px}
+.idea b{display:block;font-size:12.5px}
+.idea .src{color:var(--faint);font-size:11.5px}
+.q{background:var(--sunk);border-radius:8px;padding:8px 10px;margin-top:10px}
+.q ol{margin:4px 0 0;padding-left:18px}
+</style>
+<style>
+.sp-card.warn{border-color:var(--warn);background:var(--warn-soft)}
+.sp-card.warn .need{font-size:12px;color:var(--warn);font-weight:500}
+.sp-card .old{color:var(--faint);text-decoration:line-through}
+.newitem{border:1px dashed var(--accent);border-radius:8px;padding:6px 9px;display:grid;gap:3px;background:var(--surface)}
+.newitem .sub b{color:var(--ink)}
+.work .row.new{background:var(--accent-soft);opacity:1}
+.ans{font-size:13px;display:grid;gap:4px}
+.ans .k{color:var(--muted);font-size:12px}
+.scope{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}
+.scope th,.scope td{text-align:left;padding:4px 5px;border-bottom:1px solid var(--line);vertical-align:top}
+.scope th{color:var(--muted);font-weight:500}
+.v-y,.v-c,.v-n,.v-o{display:inline-block;border-radius:999px;padding:0 6px;font-size:11px;font-weight:600;white-space:nowrap}
+.v-y{background:var(--ok-soft);color:var(--ok)} .v-c{background:var(--warn-soft);color:var(--warn)} .v-n{background:var(--sunk);color:var(--muted)} .v-o{background:var(--accent-soft);color:var(--accent)}
+.scopewrap{overflow-x:auto}
+</style>
+
+<div class="page">
+  <h1 class="t">Sneak peek</h1>
+  <p class="lede">Change the open work item by typing what you want. With an item open in the peek, type <kbd>/</kbd><kbd>/</kbd>; one <kbd>/</kbd> still opens ask creaite, as now. The change shows as you type. <kbd>Enter</kbd> makes it, with Undo straight after. The few that need a confirm are marked in amber and take <kbd>⌘</kbd><kbd>⏎</kbd> or a click. With the scope you agreed on 14-10-2026, on four kinds of item. The sparkle in the peek's top bar opens it too.</p>
+
+  <div class="decide">
+    <div class="ctl" role="group" aria-label="Item">
+      <span class="opt">Item</span>
+      <button class="tg" type="button" data-kind="action" aria-pressed="true">Action</button>
+      <button class="tg" type="button" data-kind="risk" aria-pressed="false">Risk</button>
+      <button class="tg" type="button" data-kind="decision" aria-pressed="false">Decision</button>
+      <button class="tg" type="button" data-kind="milestone" aria-pressed="false">Milestone</button>
+    </div>
+    <div class="tryrow" id="tryRow" aria-label="Try an instruction" style="margin:0"></div>
+  </div>
+
+  <div class="grid">
+    <div class="stage">
+      <div class="work" aria-hidden="true" id="workList"></div>
+
+      <div class="peek" id="peek" aria-label="Work item">
+        <div class="pk-bar">
+          <button class="ib" type="button" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="ib" type="button" aria-label="Expand to full width"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></button>
+          <span class="sep" aria-hidden="true"></span>
+          <button class="ib" type="button" aria-label="Previous item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+          <button class="ib" type="button" aria-label="Next item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+          <span class="sp"></span>
+          <button class="ib" type="button" id="spIcon" aria-label="Sneak peek" title="Sneak peek: change this item in words (//)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></button>
+          <button class="ib" type="button" aria-label="Draft chase" title="Draft chase (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="11" rx="2"/><path d="M3.5 6.5 10 11l6.5-4.5"/><path d="M15 19h6M18.5 16.5 21 19l-2.5 2.5"/></svg></button>
+          <button class="ib" type="button" aria-label="Copy link" title="Copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>
+        </div>
+        <div class="pk-body" id="pkBody"></div>
+
+        <div class="sp-hint" id="spHint"><button type="button" id="spHintBtn"><kbd>/</kbd><kbd>/</kbd> Change this item in words</button></div>
+        <div class="askstub" id="askStub" hidden role="status"><b>ask creaite</b> opens here, as now (one <kbd>/</kbd>).</div>
+
+        <div class="sp-box" id="spBox" role="dialog" aria-label="Sneak peek: change this item" hidden>
+          <div class="sp-out" id="spOut" aria-live="polite"></div>
+          <div class="sp-in">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>
+            <label for="spIn" style="position:absolute;left:-9999px">Change this item</label>
+            <input id="spIn" type="text" autocomplete="off">
+            <span class="esc"><kbd>Esc</kbd> close</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="notes">
+      <h3>Agreed scope (Alan, 14-10-2026)</h3>
+      <div class="scopewrap"><table class="scope">
+        <tr><th>Field</th><th>Applies to</th><th></th></tr>
+        <tr><td>Owner, decision maker</td><td>all</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Due, target, needed by, forecast</td><td>all</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Priority</td><td>actions</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Impact, likelihood (priority recalculated)</td><td>RAID</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Open, delayed, reopen, closed, done</td><td>all</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Add an update, response action</td><td>all, RAID</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Workstream, milestone</td><td>actions, RAID</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Add a label; client-visible off</td><td>all</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Description, decision wording</td><td>all</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Cancel, withdraw</td><td>all</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Decision made</td><td>decisions</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Client-visible on (message must be complete)</td><td>all</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Remove Sensitive</td><td>all</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Milestone state, with its reason</td><td>milestones</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Risk → issue ("this has happened")</td><td>risks</td><td><span class="v-c">Confirm</span></td></tr>
+        <tr><td>Revisit (a date or a condition)</td><td>decisions</td><td><span class="v-y">Enter</span></td></tr>
+        <tr><td>Reasoning, options (Claude drafts only)</td><td>decisions</td><td><span class="v-y">Use this</span></td></tr>
+        <tr><td>Baseline date, project, ID, source, raised, delete</td><td>all</td><td><span class="v-n">Never</span></td></tr>
+      </table></div>
+      <h3>Tasks</h3>
+      <ul>
+        <li><span class="v-y">Yes</span> <b>Link it:</b> "blocked by FAL-012", "this blocks FAL-M-003".</li>
+        <li><span class="v-y">Yes</span> <b>Draft the wording:</b> "write a client message", "tidy the update". Claude's version is shown beside yours.</li>
+        <li><span class="v-y">Yes</span> <b>Quick facts, read only:</b> "when was this last chased?", "where did this come from?", "what does this block?"</li>
+        <li><span class="v-y">Yes</span> <b>Go somewhere:</b> "open the source", "show the milestone", "open the project".</li>
+        <li><span class="v-y">Yes</span> <b>A follow-on action:</b> "add an action for Leo to confirm the test dates, due Friday", linked to this item.</li>
+        <li><span class="v-y">Yes</span> <b>A risk from an action:</b> "raise a risk that Northgate's test dates slip","I promised Tom the Northgate terms by Friday","chase Tom, firmer", linked back.</li>
+        <li><span class="v-y">Yes</span> <b>A promise:</b> "I promised Tom the Northgate terms by Friday", linked to this item.</li>
+        <li><span class="v-y">Yes</span> <b>Chase, with the tone set:</b> "chase Tom, firmer" opens Draft chase ready to copy. Nothing is sent.</li>
+        <li><span class="v-n">Never</span> Sending mail or Teams; more than one existing item; health, project details, settings, the people register.</li>
+      </ul>
+      <div class="q"><b>All points decided (Alan, 14-10-2026).</b> The name stays "Sneak peek", and the sparkle in the peek's top bar opens it too, beside <kbd>/</kbd><kbd>/</kbd>.</div>
+      <h3>Ideas from similar tools</h3>
+      <ul>
+        <li><b>Mark what it understood as you type</b> (Todoist's Quick Add), and click a word to take it back out.</li>
+        <li><b>@ for people</b> (Linear, Jira), so a clash of names never reaches the card.</li>
+        <li><b>The form's own checks</b>, never round them (Jira's Rovo has skipped required fields, ROVO-985).</li>
+        <li><b>↑ brings back the last instruction</b>, to run it on the next item.</li>
+      </ul>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  const D=(y,m,d)=>new Date(y,m-1,d), TODAY=D(2026,10,14);
+  const PEOPLE=[["Alan Carter","Brightwater"],["Tom Reid","Kestrel Group"],["Leo Marsh","Kestrel Group"],["Dana Okoye","Northgate"],["Sam Patel","Brightwater"],["Sam Okafor","Kestrel Group"],["Chris Dunn","Larkspur"]].map(([n,org])=>({n,org}));
+  const WS={FAL:{active:["Northgate integration","Testing","Commercials"],closed:["Discovery"]}};
+  const MS={"Northgate UAT complete":"FAL-M-003","go-live":"FAL-M-004","Northgate go-live":"FAL-M-004"};
+  const KNOWN={"FAL-012":"Dependency: Northgate contract signed","FAL-M-003":"Milestone: Northgate UAT complete","FAL-M-004":"Milestone: Northgate go-live","FAL-A-006":"Confirm FDS sign-off for the remaining workflows","FAL-004":"Risk: Northgate's test environment isn't ready for UAT","FAL-A-009":"Share the Northgate UAT plan","MER-M-001":"Milestone: Phase 2 proposal submitted"};
+  const CM0="What it is: \nWhat it means for you: \nWhat is being done: ";
+  const START={
+    action:{kind:"action",label:"Action",code:"FAL",proj:"Kestrel Energy AI",id:"FAL-A-009",title:"Share the Northgate UAT plan",owner:"Tom Reid",due:D(2026,10,9),dueLabel:"Due",pr:"High",status:"Open",ws:"Northgate integration",ms:"",
+      upd:"Tom: plan in draft, waiting on Northgate's test environment dates (08-10-2026)",cv:false,cm:CM0,labels:[],links:[],src:"Alan x Tom Catch up on Northgate, 12-10-2026",raised:"12-10-2026",chased:"Not chased yet."},
+    risk:{kind:"risk",label:"Risk",code:"FAL",proj:"Kestrel Energy AI",id:"FAL-004",title:"Northgate's test environment isn't ready for UAT",owner:"Tom Reid",due:D(2026,10,23),dueLabel:"Target",impact:"High",like:"Medium",status:"Open",ws:"Testing",ms:"Northgate UAT complete",
+      resp:"Agree the environment dates with Northgate at Thursday's call",upd:"",cv:false,cm:CM0,labels:[],links:["Blocks FAL-M-003"],src:"FAL weekly with Northgate, 07-10-2026",raised:"07-10-2026",chased:"Not chased yet."},
+    decision:{kind:"decision",label:"Decision",code:"MER",proj:"Larkspur Phase 2",id:"MER-D-002",title:"Which use cases go into the Phase 2 proposal",owner:"Chris Dunn",due:D(2026,10,15),dueLabel:"Needed by",status:"Pending",made:"",revisit:"",reasoning:"",options:"",
+      upd:"Sam: shortlist of six use cases shared (08-10-2026)",cv:false,cm:"",labels:[],links:["Blocks MER-M-001"],src:"Larkspur Phase II - Use Case & Proposal, 06-10-2026",raised:"06-10-2026",chased:"Chased once, on 08-10-2026, by a decision request."},
+    milestone:{kind:"milestone",label:"Milestone",code:"FAL",proj:"Kestrel Energy AI",id:"FAL-M-003",title:"Northgate UAT complete",owner:"Tom Reid",baseline:D(2026,10,30),due:D(2026,11,6),dueLabel:"Forecast",status:"Planned",state:"Slipped",stateSet:false,stateReason:"",
+      upd:"",cv:false,cm:"",labels:[],links:["Blocked by FAL-004"],src:"FAL plan v3, 01-10-2026",raised:"01-10-2026",chased:"Not chased yet."}
+  };
+  const TRY={
+    action:["change the owner to Alan","change the due date to Friday","close it","cancel it","make it urgent and due next Tuesday","owner to Sam","workstream to Testing","blocked by FAL-012","add an action for Leo to confirm the test dates, due Friday","raise a risk that Northgate's test dates slip","write a client message","rename to Share the Northgate UAT plan and test schedule","when was this last chased?","open the source","email Tom about this","close all of Tom's overdue"],
+    risk:["this has happened","impact low","likelihood high","mitigation: Escalate to Northgate's programme lead if dates aren't confirmed by Friday","target next Wednesday","add an update: Northgate confirmed the environment for 21-10","label it sensitive","make it client-visible","what does this block?","close it","push it out a week because Northgate's test dates slipped"],
+    decision:["Chris decided use cases 1, 2 and 4","needed by Friday","decision maker to Sam","withdraw it","revisit on 30-11","revisit if adoption falls below 60%","draft the reasoning","draft the options","reword to Which four use cases go into the Phase 2 proposal","where did this come from?","when was this last chased?","show the milestone"],
+    milestone:["forecast to 13-11","state at risk because Northgate's environment is late","state on track","mark it done","owner to Dana","baseline to 06-11","what does this block?"]
+  };
+  let KIND="action", IT=structuredClone(START.action), CREATED=[], NEXT={a:16,r:14,p:5}, PLAN=null, LAST=null, CHANGED=[];
+  const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const cap=s=>s.replace(/^./,c=>c.toUpperCase());
+  const DAYS=["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+  const dmy=d=>`${String(d.getDate()).padStart(2,"0")}-${String(d.getMonth()+1).padStart(2,"0")}-${d.getFullYear()}`;
+  const long=d=>d.toLocaleDateString("en-GB",{weekday:"long"})+" "+dmy(d);
+  const add=(d,n)=>{ const x=new Date(d); x.setDate(x.getDate()+n); return x; };
+  const words=d=>{ const n=Math.round((d-TODAY)/864e5); return n<0?`${-n} day${n===-1?"":"s"} overdue`:n===0?"due today":`in ${n} day${n===1?"":"s"}`; };
+  const PR={"High|High":"Urgent","High|Medium":"High","Medium|High":"High","High|Low":"Medium","Low|High":"Medium","Medium|Medium":"Medium","Medium|Low":"Low","Low|Medium":"Low","Low|Low":"Low"};
+  const prio=it=>PR[it.impact+"|"+it.like];
+  const isOpen=it=>["Open","Delayed","Pending","Planned"].includes(it.status);
+  const cmDone=cm=>cm.split("\n").every(l=>l.replace(/^[^:]*:\s*/,"").trim().length>0);
+
+  /* ---------- the item and Work ---------- */
+  function fields(it){
+    const F=[["owner",it.kind==="decision"?"Decision maker":"Owner",esc(it.owner)],["due",it.dueLabel,dmy(it.due)]];
+    if(it.kind==="milestone") F.push(["baseline","Baseline",dmy(it.baseline)],["state","State",esc(it.state)+(it.stateReason?` <span class="sub">(${esc(it.stateReason)})</span>`:it.stateSet?"":` <span class="sub">suggested from the dates</span>`)]);
+    if(it.kind==="action") F.push(["pr","Priority",it.pr]);
+    if(it.kind==="risk") F.push(["il","Impact × likelihood",`${it.impact} × ${it.like} → <b>${prio(it)}</b>`],["resp","Response",esc(it.resp)]);
+    if(it.kind==="decision") F.push(["revisit","Revisit",esc(it.revisit||"Not set")],["reasoning","Reasoning",esc(it.reasoning||"Not written yet").replace(/\n/g,"<br>")],["options","Options",esc(it.options||"Not written yet").replace(/\n/g,"<br>")]);
+    F.push(["status","Status",it.status+(it.kind==="decision"&&it.made?` <span class="sub">on ${esc(it.made)}</span>`:"")]);
+    if(it.kind==="action"||it.kind==="risk") F.push(["ws","Workstream",esc(it.ws)],["ms","Milestone",esc(it.ms||"None")]);
+    F.push(["upd","Latest update",esc(it.upd||"None yet")],["links","Links",it.links.length?it.links.map(esc).join("<br>"):"None"],["labels","Labels",it.labels.length?it.labels.map(l=>`<span class="tag ${l==="Sensitive"?"bad":""}">${esc(l)}</span>`).join(" "):"None"],
+      ["cv","Client-visible",it.cv?"Yes":"No"],["src","Source",esc(it.src)]);
+    return F; }
+  function drawItem(){
+    const it=IT, tag=isOpen(it)?(it.due<TODAY?`<span class="tag bad">${words(it.due)}</span>`:`<span class="tag warn">${words(it.due)}</span>`):`<span class="tag ok">${it.status}</span>`;
+    $("pkBody").innerHTML=`<div class="pk-id"><span>${it.id}</span><span class="tag">${it.kind==="risk"?it.type:it.label}</span><span class="tag acc">${esc(it.proj)}</span>${tag}</div>
+      <h2 class="pk-title" id="f-title">${esc(it.title)}</h2>
+      ${fields(it).map(([k,l,v])=>`<div class="fld" id="f-${k}"><span class="k">${l}</span><span class="v">${v}</span></div>`).join("")}`;
+    CHANGED.forEach(f=>{ const el=$("f-"+f); if(el){ el.classList.add("chg"); setTimeout(()=>el.classList.remove("chg"),1600); } }); CHANGED=[];
+    const rows=[["FAL-A-006","Confirm FDS sign-off for the remaining workflows","Tom Reid","17-10-2026"],["FAL-A-013","Install creaite v1.7.0 and do the hand checks","Alan Carter","13-10-2026"],["ORX-A-011","Draft the rollout plan for Ben Ito","Alan Carter","16-10-2026"]];
+    $("workList").innerHTML=CREATED.map(c=>`<div class="row new"><span>${c.id}</span><span>${esc(c.title)}</span><span>${esc(c.owner)}</span><span>${c.due?dmy(c.due):"—"}</span></div>`).join("")
+      +`<div class="row sel"><span>${it.id}</span><span>${esc(it.title)}</span><span>${esc(it.owner)}</span><span>${dmy(it.due)}</span></div>`
+      +rows.map(r=>`<div class="row">${r.map(c=>`<span>${c}</span>`).join("")}</div>`).join(""); }
+
+  /* ---------- reading the words (plain code first) ---------- */
+  function day(s){
+    s=s.trim().replace(/[.!]+$/,"").replace(/^(on|to|for|by|is)\s+/,"").replace(/^the\s+/,"");
+    if(s==="today") return TODAY; if(s==="tomorrow") return add(TODAY,1);
+    let m=s.match(/^(next\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/);
+    if(m){ if(m[1]){ const mon=add(TODAY,((8-TODAY.getDay())%7)||7); return add(mon,(DAYS.indexOf(m[2])+6)%7); } return add(TODAY,(DAYS.indexOf(m[2])-TODAY.getDay()+7)%7||7); }
+    if(s==="next week") return add(TODAY,7);
+    if(/^end of (the )?month$/.test(s)) return new Date(TODAY.getFullYear(),TODAY.getMonth()+1,0);
+    m=s.match(/^in\s+(\d+)\s+days?$/); if(m) return add(TODAY,+m[1]);
+    m=s.match(/^(\d{1,2})[-\/.](\d{1,2})(?:[-\/.](\d{2,4}))?$/); if(m){ const y=m[3]?(m[3].length===2?2000+ +m[3]:+m[3]):TODAY.getFullYear(); return new Date(y,+m[2]-1,+m[1]); }
+    return null; }
+  function who(s){ s=s.trim().replace(/^(to|is|as)\s+/,"").replace(/[.!]$/,"").toLowerCase();
+    if(/^(me|myself|alan|alan carter)$/.test(s)) return [PEOPLE[0]];
+    return PEOPLE.filter(p=>{ const n=p.n.toLowerCase(); return n===s||n.split(" ")[0]===s; }); }
+  const op=(f,k,from,to,apply,o={})=>Object.assign({f,k,from,to,apply},o);
+
+  function read(text){
+    const raw=text.trim().replace(/[.!]+$/,""), low=raw.toLowerCase(), it=IT, P={ops:[],creates:[],by:"code",unknown:[]};
+    /* a promise */
+    let pm=raw.match(/^i(?:'ve)?\s+promised\s+([A-Za-z]+)\s+(?:that\s+)?(?:i'd\s+|i\s+would\s+)?(.+?)(?:\s+by\s+([^,]+))?$/i);
+    if(pm&&!who(pm[1]).length){ const w=pm[2].split(" "); if(who(pm[1]+" "+w[0]).length){ pm[1]=pm[1]+" "+w[0]; pm[2]=w.slice(1).join(" "); } }
+    if(pm){ const p=who(pm[1]); if(p.length!==1) return p.length?{pick:{name:pm[1],people:p,text:raw.replace(pm[1],"@@")}}:{nobody:pm[1]};
+      const d=pm[3]?day(pm[3].toLowerCase()):null, id=`${it.code}-P-${String(NEXT.p).padStart(3,"0")}`;
+      P.creates.push({id,kind:"Promise",title:cap(pm[2]),owner:"Alan Carter",to:p[0].n,due:d,link:`Linked to ${it.id}`}); return P; }
+    /* chase, with the tone set: opens Draft chase */
+    let ch=low.match(/^chase\s+([a-z]+)(?:[,\s]+(?:a\s+|the\s+)?(first|second|firmer|firm|gentle|polite)(?:\s+(?:one|reminder|tone))?)?$/);
+    if(ch){ const p=who(ch[1]); if(!p.length) return {nobody:ch[1]};
+      const t={first:"First",gentle:"First",polite:"First",second:"Second",firmer:"Firmer",firm:"Firmer"}[ch[2]]||"the tone from how often it was chased";
+      return {msg:`Opens Draft chase for ${it.id}, to ${esc(p[0].n)}, in the ${t} tone, ready to copy. Nothing is sent.`,btn:["Open Draft chase","C"]}; }
+    /* never in this box */
+    if(/\b(all|every|each)\b.*\b(items?|actions?|overdue|risks?)\b/.test(low)) return {msg:"This box changes the one item that's open. For several items at once, ask creaite (one <kbd>/</kbd>) or say it in Claude Code (cx-edit)."};
+    if(/\b(email|e-mail|teams|send|message|chase|remind|nudge)\b/.test(low)&&!/client message/.test(low)) return {msg:"Nothing is ever sent from here. Draft chase writes the email for you to send.",btn:["Open Draft chase","C"]};
+    if(/\b(health|settings?|project details|people register)\b/.test(low)) return {msg:"That isn't part of this item. Health and project details are on the project page; settings and people are in Settings."};
+    /* go somewhere */
+    let m=low.match(/^(?:open|show|go to)\s+(?:me\s+)?(?:the\s+)?(source|milestone|project)/);
+    if(m){ const t=m[1]==="source"?esc(it.src):m[1]==="project"?`${esc(it.proj)}'s project page`:(it.ms?`${esc(it.ms)}`:it.links.find(l=>/-M-/.test(l))?esc(it.links.find(l=>/-M-/.test(l)).split(" ").pop()):"");
+      return t?{go:`Opens ${t}.`}:{msg:"This item has no milestone. Say \"milestone to Northgate UAT complete\" to set one."}; }
+    /* quick facts, read only */
+    if(/chased/.test(low)) return {fact:["Last chased",esc(it.chased)]};
+    if(/where did (this|it) come from|what('s| is) the source|who raised/.test(low)) return {fact:["Source",`${esc(it.src)}; raised ${it.raised}`]};
+    if(/what does (this|it) block|what('s| is) (blocking|this blocked by)|blocked by\?|what is it linked to|links\?/.test(low)) return {fact:["Links",it.links.length?it.links.map(l=>{ const id=l.split(" ").pop(); return `${esc(l)}: ${esc((KNOWN[id]||"").replace(/^[A-Za-z]+: /,""))}`; }).join("<br>"):"Nothing links to this item."]};
+    if(/\?$/.test(text.trim())||/^(what|why|who|how|when|is|are|does|did|has|can|should)\b/.test(low)) return {ask:true};
+    /* a follow-on action */
+    m=raw.match(/^(?:add|create|raise)\s+(?:a|an)\s+(?:follow-?on\s+)?action\s+for\s+([A-Za-z]+(?:\s[A-Za-z]+)?)\s+to\s+(.+?)(?:,?\s+due\s+(.+))?$/i);
+    if(m){ const p=who(m[1]); if(p.length!==1) return p.length?{pick:{name:m[1],people:p,text:raw.replace(m[1],"@@")}}:{nobody:m[1]};
+      const d=m[3]?day(m[3].toLowerCase()):null, id=`${it.code}-A-${String(NEXT.a).padStart(3,"0")}`;
+      P.creates.push({id,kind:"Action",title:cap(m[2]),owner:p[0].n,due:d,link:`Blocks ${it.id}`}); return P; }
+    /* a risk from an action */
+    m=raw.match(/^(?:raise|add|log)\s+a\s+risk\s+(?:that\s+)?(.+)$/i);
+    if(m){ if(it.kind!=="action") return {msg:"A new risk can be raised from an action. On this item, add an update or a link instead."};
+      const id=`${it.code}-${String(NEXT.r).padStart(3,"0")}`;
+      P.creates.push({id,kind:"Risk",title:cap(m[1]),owner:"Alan Carter",due:null,impact:"Medium",like:"Medium",link:`Raised from ${it.id}`}); return P; }
+    /* link it */
+    m=low.match(/^(?:this |it )?(?:is |'s )?(blocked by|blocks)\s+([a-z0-9]+-(?:[am]-)?\d{3})$/);
+    if(m){ const id=m[2].toUpperCase(); if(!KNOWN[id]||id===it.id) return {msg:`There's no item ${esc(id)} in the tracker. Check the ID.`};
+      const l=(m[1]==="blocks"?"Blocks ":"Blocked by ")+id; P.ops.push(op("links","Link",null,`${l}: ${KNOWN[id].replace(/^[A-Za-z]+: /,"")}`,x=>x.links.push(l))); return P; }
+    /* draft the wording (Claude) */
+    if(/^(?:write|draft)\s+(?:a\s+|the\s+)?client message/.test(low)){
+      const dr=it.kind==="risk"?"What it is: Northgate's test environment may not be ready when UAT is due to start.\nWhat it means for you: UAT could move by up to a week.\nWhat is being done: We are agreeing the environment dates with Northgate this Thursday."
+        :"What it is: The plan for testing with Northgate (UAT).\nWhat it means for you: Testing can start once Northgate confirm their environment dates.\nWhat is being done: Tom is finishing the plan, due "+dmy(it.due)+".";
+      return {draft:{k:"Client message",was:it.cm,to:dr,apply:x=>{x.cm=dr;}}}; }
+    m=low.match(/^(?:write|draft)\s+(?:the\s+|a\s+)?(reasoning|options)/);
+    if(m){ if(it.kind!=="decision") return {msg:"Only decisions have reasoning and options."};
+      const dr=m[1]==="reasoning"?"Use cases 1, 2 and 4 have the clearest value for Larkspur and data already available; 3, 5 and 6 depend on systems not yet in scope.":"1. All six use cases (largest proposal, longest timeline).\n2. Use cases 1, 2 and 4 (data ready; fits the Phase 2 budget).\n3. Use case 1 only (fastest, smallest).";
+      const f=m[1]; return {draft:{k:cap(f),was:it[f],to:dr,apply:x=>{x[f]=dr;}}}; }
+    if(/^(?:tidy|sharpen|improve|tighten)\s+(?:up\s+)?(?:the\s+)?update/.test(low)){ if(!it.upd) return {msg:"There's no update to tidy yet."};
+      const dr=it.kind==="decision"?"Sam: six use cases shortlisted and shared with Chris on 08-10-2026.":"Tom: the plan is drafted; it waits on Northgate confirming their test environment dates (08-10-2026).";
+      return {draft:{k:"Latest update",was:it.upd,to:dr,apply:x=>{x.upd=dr;}}}; }
+    /* decision made / withdrawn */
+    if(it.kind==="decision"){
+      m=raw.match(/^(?:decision\s+made|decided|made)\s*[:,-]?\s*(.*)$/i)||raw.match(/^([A-Za-z]+)\s+(?:has\s+)?decided\s+(?:on\s+|to\s+(?:go\s+with\s+)?)?(.+)$/i);
+      if(m){ let by=it.owner, what=m[m.length-1]; if(m.length===3){ const p=who(m[1]); if(p.length===1) by=p[0].n; }
+        P.ops.push(op("status","Status",it.status,"Made",x=>{x.status="Made";x.made=dmy(TODAY);},{confirm:true}),op("owner","Made by",null,by,x=>{x.owner=by;}),op("made","Date",null,dmy(TODAY),()=>{}));
+        if(what) P.ops.push(op("title","Decision",it.title,cap(what),x=>{x.title=cap(what);}));
+        return P; }
+      if(/^withdraw(?: it)?$/.test(low)){ P.ops.push(op("status","Status",it.status,"Withdrawn",x=>{x.status="Withdrawn";},{confirm:true})); return P; }
+    }
+    /* wording */
+    m=raw.match(/^(?:change\s+|set\s+)?(?:the\s+)?(?:description|title|wording|name|decision)\s+(?:to|as)\s+(.+)$/i)||raw.match(/^re(?:word|name)(?:\s+it)?\s+(?:to|as)\s+(.+)$/i);
+    if(m){ P.ops.push(op("title",it.kind==="decision"?"Decision":it.kind==="milestone"?"Name":"Description",it.title,cap(m[1]),x=>{x.title=cap(m[1]);},{confirm:true})); return P; }
+    /* tails: an update, a response, a reason */
+    let rest=raw;
+    m=rest.match(/(?:^|\s)(?:add (?:an? )?(?:update|note)|note)\s*(?::|saying|that)?\s+(.+)$/i);
+    if(m){ const t=cap(m[1]); P.ops.push(op("upd","Add update",null,"Alan: "+t+` (${dmy(TODAY)})`,x=>{x.upd="Alan: "+t+` (${dmy(TODAY)})`;})); rest=rest.slice(0,m.index).trim(); }
+    m=rest.match(/^(?:mitigation|response|resolution|response action)\s*(?::|to|is)\s*(.+)$/i);
+    if(m){ if(it.kind!=="risk") return {msg:"Only risks, issues, assumptions and dependencies have a response action."};
+      P.ops.push(op("resp","Response",it.resp,cap(m[1]),x=>{x.resp=cap(m[1]);})); rest=""; }
+    m=rest.match(/^state\s+(?:to\s+)?(achieved|on track|at risk|slipped|overdue)(?:\s+because\s+(.+))?$/i);
+    if(m){ if(it.kind!=="milestone") return {msg:"Only milestones have a state."};
+      const st=cap(m[1].toLowerCase()), better=["Achieved","On track","At risk","Slipped","Overdue"].indexOf(st)<["Achieved","On track","At risk","Slipped","Overdue"].indexOf(it.state);
+      if(better&&!m[2]) return {need:`"${st}" is better than the dates suggest (${it.state}), so it needs a reason. Try: state ${m[1].toLowerCase()} because …`};
+      P.ops.push(op("state","State",it.state,st+(m[2]?` (${m[2]})`:""),x=>{x.state=st;x.stateSet=true;x.stateReason=m[2]||"";},{confirm:true})); rest=""; }
+    m=rest.toLowerCase().match(/push (?:it )?(?:out|back)\s+(?:by\s+)?(a|one|two|three|\d+)\s+(day|week)s?(?:\s+because\s+(.+))?$/);
+    if(m){ const n={a:1,one:1,two:2,three:3}[m[1]]??+m[1], d=add(it.due,n*(m[2]==="week"?7:1));
+      P.ops.push(op("due",it.dueLabel,dmy(it.due),long(d),x=>{x.due=d;}));
+      if(m[3]){ P.by="claude"; const r=cap(rest.slice(rest.toLowerCase().indexOf("because")+8));
+        P.ops.push(op("upd","Add update",null,`Alan: ${it.dueLabel} moved to ${dmy(d)}: ${r}. (${dmy(TODAY)})`,x=>{x.upd=`Alan: ${it.dueLabel} moved to ${dmy(d)}: ${r}. (${dmy(TODAY)})`;})); }
+      rest=rest.slice(0,m.index).trim(); }
+    /* the rest, clause by clause */
+    rest.split(/\s*(?:,|;|\band\b|\balso\b)\s*/).map(s=>s.trim()).filter(Boolean).forEach(c0=>{
+      let c=c0.toLowerCase().replace(/^(please|can you|could you)\s+/,"").replace(/^(change|set|update|make|move)\s+(it\s+)?/,"").replace(/^the\s+/,""), mm;
+      if((mm=c.match(/^(?:owner|assignee|decision maker)\s+(?:to|is|as)?\s*(.+)$/)||c.match(/^(?:re)?assign(?:\s+it)?\s+to\s+(.+)$/)||c.match(/^give\s+(?:it\s+)?to\s+(.+)$/))){
+        const p=who(mm[1]); if(p.length===1) P.ops.push(op("owner",it.kind==="decision"?"Decision maker":"Owner",it.owner,p[0].n,x=>{x.owner=p[0].n;}));
+        else if(p.length>1) P.pick={name:mm[1],people:p,text:raw.replace(new RegExp(mm[1],"i"),"@@")}; else P.nobody=mm[1]; return; }
+      if((mm=c.match(/^baseline/))){ P.msg="The baseline (agreed) date changes only in the milestone form, because a rebaseline also records a decision."; return; }
+      if((mm=c.match(/^(?:due(?:\s+date)?|deadline|date|target(?:\s+date)?|needed\s+by|forecast(?:\s+date)?)\s+(?:to|is|for|on|by)?\s*(.+)$/))){
+        const d=day(mm[1]); if(d) P.ops.push(op("due",it.dueLabel,dmy(it.due),long(d),x=>{x.due=d;})); else P.unknown.push(c0); return; }
+      if((mm=c.match(/^(?:status\s+(?:to|is|as)?\s*|mark\s+(?:it\s+)?(?:as\s+)?)?(closed|close it|close|done|complete(?:d)?|achieved|cancel(?:led)?|cancel it|delayed|open|re-?open(?: it)?)$/))){
+        const w=mm[1], s=it.kind==="milestone"?(/cancel/.test(w)?"Cancelled":/open/.test(w)?"Planned":"Done"):it.kind==="decision"?null:/clos|done|complet|achiev/.test(w)?"Closed":/cancel/.test(w)?"Cancelled":/delay/.test(w)?"Delayed":"Open";
+        if(!s){ P.msg="A decision is made or withdrawn. Try \"Chris decided …\" or \"withdraw it\"."; return; }
+        P.ops.push(op("status","Status",it.status,s,x=>{x.status=s; if(x.kind==="milestone"&&s==="Done") x.state="Achieved";},{confirm:s==="Cancelled",closing:/Closed|Done|Cancelled/.test(s)})); return; }
+      if((mm=c.match(/^(?:priority\s+(?:to|is|as)?\s*)?(urgent|high|medium|low)(?:\s+priority)?$/))&&!/impact|likelihood/.test(c)){
+        if(it.kind!=="action"){ P.msg=it.kind==="risk"?"A risk's priority comes from its impact and likelihood. Try \"impact low\" or \"likelihood high\".":"Only actions have a priority."; return; }
+        const v=cap(mm[1]); P.ops.push(op("pr","Priority",it.pr,v,x=>{x.pr=v;})); return; }
+      if((mm=c.match(/^(impact|likelihood)\s+(?:to\s+|is\s+)?(high|medium|low)$/))){
+        if(it.kind!=="risk"){ P.msg="Only risks, issues, assumptions and dependencies have impact and likelihood."; return; }
+        const f=mm[1]==="impact"?"impact":"like", v=cap(mm[2]), nx={...it,[f]:v};
+        P.ops.push(op("il",cap(mm[1]),it[f],`${v} (priority ${prio(it)} → ${prio(nx)})`,x=>{x[f]=v;})); return; }
+      if((mm=c.match(/^workstream\s+(?:to\s+|is\s+)?(.+)$/))){
+        if(!(it.kind==="action"||it.kind==="risk")){ P.msg="Only actions and RAID items have a workstream."; return; }
+        const w=(WS[it.code]?.active||[]).find(x=>x.toLowerCase()===mm[1]); const cl=(WS[it.code]?.closed||[]).find(x=>x.toLowerCase()===mm[1]);
+        if(w) P.ops.push(op("ws","Workstream",it.ws,w,x=>{x.ws=w;})); else P.msg=cl?`${cl} is a closed workstream, so it can't take new items.`:`${esc(it.proj)} has no workstream called "${esc(mm[1])}". It has: ${WS[it.code].active.join(", ")}.`; return; }
+      if((mm=c.match(/^milestone\s+(?:to\s+|is\s+)?(.+)$/))){
+        const k=Object.keys(MS).find(x=>x.toLowerCase()===mm[1]); if(k) P.ops.push(op("ms","Milestone",it.ms||"None",k,x=>{x.ms=k;})); else P.unknown.push(c0); return; }
+      if((mm=c.match(/^(?:make\s+it\s+|it'?s\s+)?(client[- ]visible|not client[- ]visible|internal(?: only)?)$/))||(mm=c.match(/^(client[- ]visible)\s+(on|off)$/))){
+        const on=/^client/.test(mm[1])&&mm[2]!=="off";
+        if(!on){ P.ops.push(op("cv","Client-visible","Yes","No",x=>{x.cv=false;})); return; }
+        if(it.kind!=="milestone"&&!cmDone(it.cm||"")){ P.cvblock=true; return; }
+        P.ops.push(op("cv","Client-visible","No","Yes",x=>{x.cv=true;},{confirm:true})); return; }
+      if((mm=c.match(/^(?:label|tag|mark)\s+(?:it\s+)?(?:as\s+)?(sensitive|commercial|escalated)$/))){ const l=cap(mm[1]); P.ops.push(op("labels","Add label",null,l,x=>{ if(!x.labels.includes(l)) x.labels.push(l); })); return; }
+      if((mm=c.match(/^(?:remove|take off|drop)\s+(?:the\s+)?(sensitive|commercial|escalated)(?:\s+label)?$/))){ const l=cap(mm[1]); P.ops.push(op("labels","Remove label",l,"—",x=>{x.labels=x.labels.filter(y=>y!==l);},{confirm:l==="Sensitive"})); return; }
+      if(/^(?:make it an issue|an issue|it has happened|this has happened|it's happened|turn (?:it )?into an issue)$/.test(c)){
+        if(it.kind!=="risk"||it.type!=="Risk"){ P.msg="Only a risk can become an issue."; return; }
+        P.ops.push(op("type","Type","Risk","Issue (the response becomes its resolution)",x=>{x.type="Issue";},{confirm:true})); return; }
+      if((mm=c0.match(/^revisit\s+(?:on\s+|to\s+|at\s+|by\s+)?(.+)$/i))){
+        if(it.kind!=="decision"){ P.msg="Only decisions have a revisit."; return; }
+        const d=day(mm[1].toLowerCase()), v=d?long(d):cap(mm[1]); P.ops.push(op("revisit","Revisit",it.revisit||"Not set",v,x=>{x.revisit=v;})); return; }
+      if(/^(?:reasoning|options)\b/.test(c)){ P.msg="Reasoning and options are drafted by Claude for you to check. Try \"draft the reasoning\"."; return; }
+      P.unknown.push(c0); });
+    return P; }
+
+  /* ---------- the box ---------- */
+  const sparkle='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>';
+  const card=(h,cls="")=>`<div class="sp-card ${cls}">${h}</div>`;
+  function show(h){ $("spOut").innerHTML=h; wire(); }
+  function openBox(){ $("spBox").hidden=false; $("spHint").hidden=true; $("peek").classList.add("sp-open"); $("spIn").placeholder=`Change ${IT.id}… e.g. due Friday, owner to Leo`; $("spIn").focus(); }
+  function closeBox(){ $("spBox").hidden=true; $("spHint").hidden=false; $("peek").classList.remove("sp-open"); PLAN=null; show(""); $("spIn").value=""; }
+
+  function run(text,live){
+    PLAN=null; if(!text.trim()) return show("");
+    const r=read(text);
+    if(r.msg&&!(r.ops||[]).length) return show(card(`<div class="sp-msg">${r.msg}${r.btn?`<div class="sp-acts"><button class="btn sm primary" type="button" data-go="${esc(r.btn[0])}">${r.btn[0]} <kbd>${r.btn[1]}</kbd></button></div>`:""}</div>`));
+    if(r.ask) return show(live?`<div class="sp-msg" style="padding-bottom:4px">A question: press Enter to ask creaite.</div>`:card(`<div class="sp-msg">That needs more than this item's own facts. ask creaite can answer it, with ${IT.id} attached.<div class="sp-acts"><button class="btn sm primary" type="button" data-go="ask creaite with ${IT.id}">Ask creaite <kbd>/</kbd></button></div></div>`));
+    if(r.fact) return show(card(`<div class="ans"><span class="k">${r.fact[0]} · read only</span><span>${r.fact[1]}</span></div>`));
+    if(r.go) return show(card(`<div class="sp-msg">${r.go} <span class="sub">(in the app it goes there now)</span></div>`));
+    if(r.need) return show(card(`<div class="sp-msg">${esc(r.need)}</div>`,"warn"));
+    if(r.draft){ PLAN={draft:r.draft};
+      return show(card(`<div class="sp-head">${sparkle}<b>${r.draft.k}, drafted</b><span class="by">Written by Claude (AI drafts)</span></div>
+        <div class="cmp"><div><span class="lab">Yours</span>${esc(r.draft.was.trim()?r.draft.was:"Empty").replace(/\n/g,"<br>")}</div><div class="new"><span class="lab">Drafted</span>${esc(r.draft.to).replace(/\n/g,"<br>")}</div></div>
+        <div class="sp-acts"><span class="sub">Nothing changes until you choose.</span><button class="btn sm" type="button" data-act="cancel">Keep mine</button><button class="btn sm primary" type="button" data-act="ok">Use this <kbd>⏎</kbd></button></div>`)); }
+    if(r.pick) return show(card(`<div class="sp-msg">There are ${r.pick.people.length} people called ${esc(cap(r.pick.name))} in the people register. Which one?<div class="pick">${r.pick.people.map(p=>`<button class="btn sm" type="button" data-pick="${esc(r.pick.text.replace("@@",p.n))}">${esc(p.n)} <span class="sub">${esc(p.org)}</span></button>`).join("")}</div></div>`));
+    if(r.nobody) return show(card(`<div class="sp-msg">Nobody called "${esc(r.nobody)}" is in the people register, so nothing has changed. Check the name, or add them in Settings › People.</div>`));
+    if(r.cvblock) return show(card(`<div class="sp-msg">${IT.id} can't be client-visible until its client message is complete (What it is, What it means for you, What is being done).<div class="sp-acts"><button class="btn sm primary" type="button" data-run="write a client message">${sparkle} Draft the client message</button></div></div>`,"warn"));
+    if(!r.ops.length&&!r.creates.length){ if(live) return show(""); return show(card(`<div class="sp-msg">I couldn't match that to this item. Try "due Friday", "owner to Leo", "close it", "add an update: …", "blocked by FAL-012" or "what does this block?".</div>`)); }
+    PLAN=r; const conf=r.ops.some(o=>o.confirm), closing=r.ops.some(o=>o.closing);
+    const okText=conf?(r.ops.find(o=>o.confirm).to==="Cancelled"?`Cancel ${IT.id}`:r.ops.find(o=>o.confirm).to==="Withdrawn"?`Withdraw ${IT.id}`:r.ops.find(o=>o.confirm).f==="type"?"Make it an issue":"Confirm the change"):r.creates.length?`Create ${r.creates[0].kind.toLowerCase()}`:"Make the change";
+    show(card(`<div class="sp-head">${sparkle}<b>${r.creates.length?`New ${r.creates[0].kind.toLowerCase()} from ${IT.id}`:`Change ${IT.id}`}</b><span class="by">${r.by==="claude"?"Read by Claude":"Understood in plain code"}</span></div>
+      ${r.ops.map(o=>`<div class="chgrow"><span class="k">${o.k}</span><span>${o.from!==null&&o.from!==undefined?`<span class="old">${esc(o.from)}</span> → `:""}<span class="to">${esc(o.to)}</span></span></div>`).join("")}
+      ${r.creates.map(c=>`<div class="newitem"><span class="sub"><b>${c.id}</b> · ${c.kind} · ${esc(IT.proj)}</span><span class="to">${esc(c.title)}</span><span class="sub">${c.kind==="Risk"?`Owner ${esc(c.owner)} · impact ${c.impact} × likelihood ${c.like} (change them after)`:c.kind==="Promise"?`Promised by ${esc(c.owner)} to ${esc(c.to)} · by ${c.due?long(c.due):"no date"}`:`Owner ${esc(c.owner)} · due ${c.due?long(c.due):"not set"}`} · ${esc(c.link)}</span></div>`).join("")}
+      ${closing?`<div class="chgrow"><span class="k">Closing update</span><input type="text" id="spClose" placeholder="Optional"></div>`:""}
+      ${r.unknown.length?`<div class="sub">Not understood, so left alone: "${esc(r.unknown.join('", "'))}"</div>`:""}
+      ${r.msg?`<div class="sub">${r.msg}</div>`:""}
+      <div class="sp-acts">${conf?`<span class="need">Needs a confirm: <kbd>⌘</kbd><kbd>⏎</kbd> or click</span>`:`<span class="sub">${closing?"Closed items leave Work and Today. ":""}You can undo it.</span>`}<button class="btn sm" type="button" data-act="cancel">Not now</button><button class="btn sm primary" type="button" data-act="ok">${okText} <kbd>${conf?"⌘⏎":"⏎"}</kbd></button></div>`,conf?"warn":""));
+  }
+  function commit(){
+    const r=PLAN; if(!r) return; PLAN=null;
+    LAST={it:structuredClone(IT),created:CREATED.slice(),next:{...NEXT}};
+    if(r.draft){ r.draft.apply(IT); CHANGED.push(r.draft.k==="Latest update"?"upd":r.draft.k==="Reasoning"?"reasoning":r.draft.k==="Options"?"options":"cv"); drawItem(); $("spIn").value=""; return show(`<div class="sp-done">✓ ${r.draft.k} replaced with Claude's draft. <button type="button" data-act="undo">Undo</button></div>`); }
+    const note=$("spClose")?$("spClose").value.trim():"";
+    r.ops.forEach(o=>{ o.apply(IT); CHANGED.push(o.f==="made"?"status":o.f); });
+    r.creates.forEach(c=>{ CREATED.unshift(c); if(c.kind==="Action") NEXT.a++; else if(c.kind==="Promise") NEXT.p++; else NEXT.r++; IT.links.push(`${c.kind==="Risk"?"Risk raised":c.kind==="Promise"?"Promise":"Blocked by"} ${c.id}`); CHANGED.push("links"); });
+    if(note){ IT.upd=`Alan: ${note} (${dmy(TODAY)})`; CHANGED.push("upd"); }
+    drawItem(); $("spIn").value="";
+    const said=r.creates.length?`Created ${r.creates.map(c=>c.id).join(", ")}, linked to ${IT.id}`:`Changed ${r.ops.filter(o=>o.f!=="made").map(o=>o.k.toLowerCase()).join(", ").replace(/, ([^,]*)$/," and $1")}`;
+    show(`<div class="sp-done">✓ ${esc(said)}. <button type="button" data-act="undo">Undo</button></div>`); }
+  function undo(){ if(!LAST) return; IT=LAST.it; CREATED=LAST.created; NEXT=LAST.next; LAST=null; CHANGED=["owner","due","pr","status","upd","links","labels","cv","il","resp","ws","ms","state","title","revisit","reasoning","options"]; drawItem(); show(`<div class="sp-done">Undone. ${IT.id} is back as it was.</div>`); }
+  function wire(){
+    $("spOut").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const a=b.dataset.act; if(a==="ok") commit(); else if(a==="undo") undo(); else { PLAN=null; show(""); $("spIn").focus(); } });
+    $("spOut").querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ $("spIn").value=b.dataset.pick; run(b.dataset.pick); $("spIn").focus(); });
+    $("spOut").querySelectorAll("[data-run]").forEach(b=>b.onclick=()=>{ $("spIn").value=b.dataset.run; run(b.dataset.run); });
+    $("spOut").querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>show(`<div class="sp-done" style="color:var(--muted)">In the app this opens ${esc(b.dataset.go)}.</div>`)); }
+
+  let liveT=null, HIST=[];
+  $("spIn").addEventListener("input",()=>{ clearTimeout(liveT); liveT=setTimeout(()=>{ const v=$("spIn").value; if(v.trim().length>3) run(v,true); else { PLAN=null; show(""); } },160); });
+  $("spIn").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); clearTimeout(liveT); const v=$("spIn").value.trim(); if(v) HIST.unshift(v);
+      if(!PLAN) run(v); if(!PLAN) return;
+      const conf=PLAN.ops&&PLAN.ops.some(o=>o.confirm);
+      if(conf&&!(e.metaKey||e.ctrlKey)){ const n=$("spOut").querySelector(".need"); if(n){ n.style.textDecoration="underline"; setTimeout(()=>n.style.textDecoration="",700); } return; }
+      commit(); }
+    if(e.key==="ArrowUp"&&!$("spIn").value&&HIST.length){ e.preventDefault(); $("spIn").value=HIST[0]; run(HIST[0],true); }
+    if(e.key==="Escape"){ e.preventDefault(); if(PLAN){ PLAN=null; show(""); } else closeBox(); } });
+  $("spOut").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.id==="spClose"){ e.preventDefault(); commit(); } });
+  let slashT=null;
+  document.addEventListener("keydown",e=>{
+    if(e.target.closest("input,textarea,[contenteditable]")) return;
+    if(e.key==="/"){ e.preventDefault();
+      if(slashT){ clearTimeout(slashT); slashT=null; $("askStub").hidden=true; openBox(); }
+      else slashT=setTimeout(()=>{ slashT=null; closeBox(); $("askStub").hidden=false; setTimeout(()=>$("askStub").hidden=true,2600); },350); }
+    if(e.key==="Escape"&&!$("spBox").hidden) closeBox(); });
+  $("spHintBtn").onclick=openBox; $("spIcon").onclick=()=>$("spBox").hidden?openBox():closeBox();
+
+  function setKind(k){ KIND=k; IT=structuredClone(START[k]); CREATED=[]; LAST=null; PLAN=null;
+    document.querySelectorAll("[data-kind]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.kind===k));
+    $("tryRow").innerHTML=`<span class="opt">Try</span>`+TRY[k].map(t=>`<button class="try" type="button">${esc(t)}</button>`).join("");
+    $("tryRow").querySelectorAll(".try").forEach(b=>b.onclick=()=>{ openBox(); $("spIn").value=b.textContent; run(b.textContent); });
+    drawItem(); show(""); $("spIn").value=""; if(!$("spBox").hidden) $("spIn").placeholder=`Change ${IT.id}… e.g. due Friday, owner to Leo`; }
+  document.querySelectorAll("[data-kind]").forEach(b=>b.onclick=()=>setKind(b.dataset.kind));
+
+  setKind("action"); openBox(); $("spIn").value="change the due date to Friday"; run("change the due date to Friday"); $("spIn").blur();
+})();
+</script>
+
+</body>
+</html>

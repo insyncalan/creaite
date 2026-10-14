@@ -1,0 +1,39 @@
+exit 0
+{
+ "table": "milestones",
+ "count": 3,
+ "columns": [
+  "ID",
+  "Milestone",
+  "Baseline",
+  "Forecast",
+  "% complete",
+  "Status"
+ ],
+ "rows": [
+  [
+   "ABC-M-001",
+   "Build complete",
+   "09-09-2026",
+   "09-09-2026",
+   "—",
+   "Done"
+  ],
+  [
+   "ABC-M-002",
+   "UAT start",
+   "19-10-2026",
+   "02-11-2026",
+   "—",
+   "Planned"
+  ],
+  [
+   "ABC-M-003",
+   "Go-live",
+   "08-12-2026",
+   "08-12-2026",
+   "—",
+   "Planned"
+  ]
+ ]
+}

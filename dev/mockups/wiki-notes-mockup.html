@@ -1,0 +1,659 @@
+<title>creaite Notes</title>
+<style>
+/* Layout: creaite's own tokens (palette "creaite"); one tab per option, each option drawn as the real app frame (rail + page). */
+:root{
+  --bg:#F3F6F7; --surface:#FFFFFF; --sunk:#EAF0F2; --ink:#14212A; --muted:#4D5C66; --faint:#6F7D86; --line:#D7DFE3;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --ai:#6B3FA0; --ai-soft:#EFE7F8; --inverse:#14212A; --inverse-ink:#E4EAED;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#7C8990; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --ai:#C9A8F0; --ai-soft:#2E2340; --inverse:#E4EAED; --inverse-ink:#171E22;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#7C8990; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --ai:#C9A8F0; --ai-soft:#2E2340; --inverse:#E4EAED; --inverse-ink:#171E22;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 var(--font)}
+button,input{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1.t{font-size:22px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 14px;max-width:72ch}
+.sub{color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:4px 0 18px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.rec{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:var(--ok-soft);color:var(--ok);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+
+/* feedback */
+.fb{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+.prose{max-width:72ch}
+.prose h2{font-size:16px;margin:24px 0 6px;font-weight:600}
+.prose h2:first-child{margin-top:0}
+.prose p,.prose li{color:var(--ink)}
+.prose ul{padding-left:20px;margin:6px 0}
+.prose li{margin:4px 0}
+.verdict{background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:14px 16px;margin-bottom:18px}
+.verdict b{display:block;font-size:15px;margin-bottom:4px}
+table.cmp{border-collapse:collapse;width:100%;font-size:13px;background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.cmpwrap{overflow-x:auto;margin:8px 0}
+table.cmp th,table.cmp td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+table.cmp th{background:var(--sunk);font-weight:600;font-size:12px}
+table.cmp tr:last-child td{border-bottom:0}
+table.cmp tr.pick td{background:var(--accent-soft)}
+.side{display:flex;flex-direction:column;gap:14px;position:sticky;top:16px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px}
+.box h4{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.box ol,.box ul{margin:0;padding-left:18px}.box li{margin:4px 0}
+code{font-family:var(--mono);font-size:12px;background:var(--sunk);padding:1px 4px;border-radius:3px}
+.tree-f{font-family:var(--mono);font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre;overflow-x:auto;line-height:1.6}
+
+/* app frame */
+.frame{display:grid;grid-template-columns:56px minmax(0,1fr);border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg);min-height:620px}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0}
+.rail span{width:40px;height:36px;border-radius:8px;display:grid;place-items:center;color:var(--muted);font-size:10px;font-weight:500;text-align:center;line-height:1.1}
+.rail span.on{background:var(--accent-soft);color:var(--accent)}
+.rail span.new{outline:1px dashed var(--accent)}
+.main{padding:16px 20px;min-width:0}
+.crumb{font-size:12px;color:var(--muted);margin-bottom:4px}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.ph h2{margin:0;font-size:20px;font-weight:600}
+.health{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn)}
+.ptabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:14px;overflow-x:auto}
+.ptabs span{padding:7px 12px;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;font-size:13px}
+.ptabs span.on{color:var(--ink);border-color:var(--accent)}
+.ptabs .n{font-size:11px;background:var(--sunk);border-radius:999px;padding:0 6px;margin-left:4px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;border:1px solid var(--line);background:var(--surface);border-radius:8px;font-size:13px;white-space:nowrap;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ai{border-color:var(--ai);color:var(--ai)}
+.btn.sm{height:26px;padding:0 8px;font-size:12px}
+.sp{flex:1}
+.search{height:30px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 10px;min-width:0;width:240px;max-width:100%}
+
+/* notes list + note */
+.split{display:grid;grid-template-columns:260px minmax(0,1fr) 230px;gap:16px;align-items:start;transition:grid-template-columns .18s ease}
+.split.collapsed{grid-template-columns:34px minmax(0,1fr) 230px}
+.lhead{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.lhead b{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.ib{width:28px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:7px;display:grid;place-items:center;cursor:pointer;color:var(--muted);flex:none;padding:0}
+.ib:hover{background:var(--sunk);color:var(--ink)}
+.split.collapsed .list>*:not(.lhead){display:none}
+.split.collapsed .lhead{flex-direction:column}
+.split.collapsed .lhead b,.split.collapsed .lhead .sp{display:none}
+.vlabel{display:none;writing-mode:vertical-rl;font-size:11px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;margin-top:8px}
+.split.collapsed .vlabel{display:block}
+@media (prefers-reduced-motion:reduce){.split{transition:none}}
+/* AI on a selection */
+.sel{background:var(--accent-soft);box-shadow:0 0 0 1px var(--accent);border-radius:2px}
+.bubble{display:inline-flex;gap:2px;align-items:center;background:var(--inverse);color:var(--inverse-ink);border-radius:8px;padding:3px;font-size:12px}
+.bubble span{padding:4px 8px;border-radius:5px}
+.bubble span.on{background:var(--ai);color:#fff}
+.bubble i{width:1px;height:16px;background:currentColor;opacity:.3;margin:0 2px}
+.aimenu{border:1px solid var(--ai);border-radius:8px;background:var(--surface);width:280px;max-width:100%;font-size:13px;overflow:hidden;margin-top:6px}
+.aimenu .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
+.aimenu .r{display:flex;gap:8px;align-items:center;padding:5px 10px}
+.aimenu .r.on{background:var(--ai-soft)}
+.aimenu .r small{margin-left:auto;color:var(--faint);font-size:11px}
+.aimenu input{width:calc(100% - 16px);margin:6px 8px 8px;height:28px;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--surface)}
+.sugg{border:1px solid var(--ai);border-radius:8px;overflow:hidden;background:var(--surface)}
+.sugg .hd{display:flex;gap:8px;align-items:center;background:var(--ai-soft);padding:6px 10px;font-size:12px;color:var(--ai);flex-wrap:wrap}
+.sugg .bd{padding:10px 12px}
+.sugg del{color:var(--bad);background:var(--bad-soft);text-decoration:line-through}
+.sugg ins{color:var(--ok);background:var(--ok-soft);text-decoration:none}
+.sugg .ft{display:flex;gap:6px;align-items:center;padding:8px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
+.kept{font-size:12px;color:var(--warn);background:var(--warn-soft);border-radius:6px;padding:6px 8px;margin:8px 0 0}
+/* from note to review */
+.act{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:16px;align-items:start}
+.mk{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--ai);color:#fff;font-size:10px;font-weight:600;margin-right:4px;vertical-align:1px;font-variant-numeric:tabular-nums}
+.hl{background:var(--ai-soft);border-radius:3px;padding:0 2px}
+.fp{background:var(--surface);border:1px solid var(--ai);border-radius:10px;overflow:hidden}
+.fp .hd{background:var(--ai-soft);padding:10px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.fp .hd b{color:var(--ai)}
+.fp .g{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:10px 12px 2px}
+.pr{display:grid;grid-template-columns:18px 22px minmax(0,1fr);gap:6px;padding:7px 12px;border-top:1px solid var(--line);font-size:13px;align-items:start}
+.pr input{margin:2px 0 0}
+.pr .ty{font-size:11px;color:var(--muted)}
+.pr .q{font-size:12px;color:var(--faint);font-style:italic;margin-top:2px}
+.pr .ch{font-variant-numeric:tabular-nums}
+.pr .ch s{color:var(--muted)}
+.flag{font-size:11px;border-radius:4px;padding:0 5px;margin-left:4px;white-space:nowrap}
+.flag.one{background:var(--warn-soft);color:var(--warn)}
+.flag.soft{background:var(--sunk);color:var(--muted)}
+.fp .ft{display:flex;gap:6px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);flex-wrap:wrap}
+.margin{color:var(--ok);font-size:11px;margin-left:6px;white-space:nowrap}
+@media (max-width:1100px){.act{grid-template-columns:1fr}}
+.agreed{display:inline-block;font-size:11px;font-weight:600;background:var(--ok-soft);color:var(--ok);border-radius:4px;padding:1px 6px;margin-left:6px}
+.list{display:flex;flex-direction:column;gap:2px}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin:10px 4px 4px}
+.grp:first-child{margin-top:0}
+.ni{padding:7px 9px;border-radius:7px;cursor:default;display:grid;gap:1px}
+.ni b{font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ni small{color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums}
+.ni.on{background:var(--surface);box-shadow:0 0 0 1px var(--line)}
+.pin{color:var(--accent);font-size:11px}
+.doc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0}
+.doc h3{font-size:20px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+.meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-bottom:14px}
+.tag{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:0 8px;height:20px;display:inline-flex;align-items:center;color:var(--muted)}
+.tag.int{border-color:var(--warn);color:var(--warn)}
+.body{max-width:68ch}
+.body h4{font-size:14px;margin:16px 0 4px}
+.body p{margin:6px 0}
+.body ul{margin:6px 0;padding-left:20px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:0 6px;background:var(--sunk);font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--bad)}
+.chip .dot.w{background:var(--warn)} .chip .dot.o{background:var(--ok)}
+.chip small{color:var(--muted)}
+.wl{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
+.wl.missing{color:var(--bad)}
+.per{background:var(--accent-soft);color:var(--accent);border-radius:4px;padding:0 4px}
+.task{list-style:none;margin-left:-20px}
+.task::before{content:"";display:inline-block;width:12px;height:12px;border:1.5px solid var(--muted);border-radius:3px;margin-right:8px;vertical-align:-1px}
+.task.done{color:var(--muted);text-decoration:line-through}
+.task.done::before{background:var(--accent);border-color:var(--accent)}
+.ctx{display:flex;flex-direction:column;gap:12px}
+.ctx .box{padding:10px 12px}
+.ctx .box div{font-size:12px;margin:4px 0}
+.callout{background:var(--ai-soft);border:1px solid var(--ai);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink)}
+.callout b{color:var(--ai)}
+
+/* editor */
+.rtebar{display:flex;gap:2px;flex-wrap:wrap;align-items:center;border:1px solid var(--line);border-radius:8px;padding:3px;background:var(--surface);margin-bottom:10px;position:sticky;top:0}
+.rtebar span{min-width:28px;height:26px;display:grid;place-items:center;border-radius:5px;font-size:12px;color:var(--muted);padding:0 5px}
+.rtebar span.on{background:var(--accent-soft);color:var(--accent)}
+.rtebar i{width:1px;height:18px;background:var(--line);margin:0 3px}
+.ed{position:relative}
+.caret{display:inline-block;width:1.5px;height:16px;background:var(--ink);vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+.pop{position:absolute;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);width:290px;font-size:13px;z-index:2;overflow:hidden}
+.pop .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
+.pop .r{display:flex;gap:8px;align-items:center;padding:6px 10px}
+.pop .r.on{background:var(--accent-soft)}
+.pop .r small{color:var(--faint);margin-left:auto;font-size:11px}
+.pop .k{width:22px;height:22px;border-radius:5px;background:var(--sunk);display:grid;place-items:center;font-size:11px;color:var(--muted);flex:none}
+.savebar{display:flex;align-items:center;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
+
+/* option B */
+.wiki{display:grid;grid-template-columns:230px minmax(0,1fr) 240px;gap:0;min-height:580px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.wiki>.col{padding:12px;border-right:1px solid var(--line);min-width:0}
+.wiki>.col:last-child{border-right:0;background:var(--bg)}
+.tr{font-size:13px;padding:4px 6px;border-radius:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr.d1{padding-left:20px}.tr.d2{padding-left:34px}
+.tr.on{background:var(--accent-soft);color:var(--accent)}
+.tr .c{color:var(--faint);font-size:11px;margin-left:4px}
+
+/* option C */
+.cwrap{position:relative}
+.dim{opacity:.45;pointer-events:none}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:420px;max-width:100%;background:var(--surface);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:10px}
+.drawer h3{margin:0;font-size:15px}
+.cap{flex:1;border:1px solid var(--accent);border-radius:8px;padding:10px 12px;font-size:13px;min-height:200px}
+.where{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg span{padding:4px 10px;font-size:12px;border-right:1px solid var(--line)}
+.seg span:last-child{border-right:0}
+.seg span.on{background:var(--accent);color:var(--accent-ink)}
+.recent{border-top:1px solid var(--line);padding-top:8px;font-size:12px}
+.recent div{display:flex;gap:8px;padding:4px 0;color:var(--muted)}
+.recent b{color:var(--ink);font-weight:500}
+
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-top:16px;font-size:13px}
+.notes h4{margin:0 0 6px;font-size:13px}
+.notes ul{margin:4px 0;padding-left:18px}.notes li{margin:3px 0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+@media (max-width:1100px){
+  .fb{grid-template-columns:1fr}.side{position:static}
+  .split{grid-template-columns:200px minmax(0,1fr)}.split .ctx{display:none}
+  .wiki{grid-template-columns:200px minmax(0,1fr)}.wiki>.col:last-child{display:none}
+}
+@media (max-width:700px){
+  .frame{grid-template-columns:1fr}.rail{display:none}
+  .split,.wiki{grid-template-columns:1fr}.split .list,.wiki>.col:first-child{display:none}
+  .two{grid-template-columns:1fr}
+  .pop{position:static;width:auto;margin:8px 0}
+}
+</style>
+
+<div class="page">
+  <h1 class="t">creaite Notes: a light wiki</h1>
+  <p class="lede">Research, feedback and three ways to place it. Sample projects and people from the development vault. Mockup only, 13-10-2026.</p>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" aria-selected="true" data-t="fb" id="t-fb">Feedback and research</button>
+    <button role="tab" aria-selected="false" data-t="a" id="t-a">A · Notes in the project<span class="rec">Recommended</span></button>
+    <button role="tab" aria-selected="false" data-t="b" id="t-b">B · Notes as a page</button>
+    <button role="tab" aria-selected="false" data-t="c" id="t-c">C · Capture drawer<span class="rec">With A</span></button>
+    <button role="tab" aria-selected="false" data-t="e" id="t-e">The editor</button>
+    <button role="tab" aria-selected="false" data-t="f" id="t-f">From note to Review</button>
+  </div>
+
+  <!-- ============ FEEDBACK ============ -->
+  <section data-p="fb">
+    <div class="fb">
+      <div class="prose">
+        <div class="verdict"><b>Worth doing, if notes stay small, passive and linked to the record.</b>Build it as <em>Notes</em> (not "Wiki") inside each project, with a capture drawer that works from any page. Replace the hand-built Current state editor with Tiptap at the same time, so the wiki and Current state share one editor and one Markdown format.</div>
+
+        <h2>What it solves</h2>
+        <p>Today Alan's ad hoc thinking has nowhere good to go. Project memory (<code>CLAUDE.md</code>) is meant to stay at about one page and changes only by proposal. Quick capture (FR-71) is a different job: it sends a note into cx-minutes for extraction. Stakeholder observations, negotiation positions, "how this client works" and lessons learned end up in OneDrive or nowhere, so search and ask creaite can't find them.</p>
+
+        <h2>Where it could go wrong</h2>
+        <ul>
+          <li><strong>A second record.</strong> The biggest risk. If someone writes "Omar owes the SOW by Friday" in a note, it's an action that the tracker doesn't know about. Rule: notes never hold actions, risks or decisions. They point at them with live item chips (<span class="chip"><span class="dot"></span>FAL-R-004</span>), and a <em>Make this an action</em> option on a selected line turns it into a proposal.</li>
+          <li><strong>Overlap with project memory.</strong> Keep the split clear. Memory is the short brief that Claude reads every run. Notes are Alan's longer working material, which Claude reads when a question needs them. Later, an "Add to memory" button could propose a trimmed line.</li>
+          <li><strong>Another place to file things.</strong> A new rail item and a folder tree add filing decisions. Placing notes inside the project, with one Unfiled list, keeps the choice to "which project?", which creaite can usually guess.</li>
+          <li><strong>Notes left behind.</strong> Personal wikis rot when nobody reads them. Surface notes where work happens: Prep pages, the item peek ("2 notes mention this"), search and ask creaite's answers.</li>
+          <li><strong>Confidential material.</strong> Notes are internal by default and never go in a client report, like documents (BL-93).</li>
+        </ul>
+
+        <h2>Wiki practice that fits creaite</h2>
+        <ul>
+          <li><strong>Capture first, organise later.</strong> Practitioners agree on a single inbox, sorted later. Here that means the drawer saves to the project it guesses, or to Unfiled, in one keystroke.</li>
+          <li><strong>One topic per note, linked.</strong> Short notes about one subject, joined by <code>[[links]]</code>, search better than long logs.</li>
+          <li><strong>Backlinks matter more than folders.</strong> "Mentioned in" on every note, person and work item does more than a deep tree. Allow at most one level of grouping.</li>
+          <li><strong>Templates only where structure has proved itself.</strong> Start with four: Blank, Stakeholder, Lessons learned, Working session. Add more later.</li>
+          <li><strong>Add an index once there are many notes.</strong> Show pinned notes at the top of the list rather than build a contents page.</li>
+          <li><strong>Plain files.</strong> Markdown with a small front-matter header, so notes are readable in Finder, OneDrive and git, and still work if creaite is gone.</li>
+        </ul>
+
+        <h2>Rich text editor: the options</h2>
+        <p>Constraints: Chrome only, Markdown stored, bundled locally in <code>system/templates/vendor/</code> (no CDN, nothing built at run time), MIT-style licence, and it must handle <code>[[link]]</code>, <code>@person</code> and item-ID pickers.</p>
+        <div class="cmpwrap"><table class="cmp">
+          <thead><tr><th>Option</th><th>For</th><th>Against</th></tr></thead>
+          <tbody>
+            <tr class="pick"><td><strong>Tiptap 3 + <code>@tiptap/markdown</code></strong><br><span class="sub">ProseMirror underneath. MIT core.</span></td><td>Headless, so creaite's own toolbar and tokens stay. Suggestion plugin covers <code>[[</code>, <code>@</code>, <code>/</code> and item IDs. Task lists, tables, mentions and images are all core extensions. Official bidirectional Markdown since 3.7. Largest community.</td><td>The Markdown extension is still labelled beta, so pin the version and test round-trips. Paid add-ons (collaboration, AI) aren't needed. Needs one prebuilt ESM bundle in <code>vendor/</code> (about 150–250 KB min), built in dev and committed.</td></tr>
+            <tr><td><strong>Milkdown (Crepe)</strong></td><td>Markdown-first by design, so the cleanest round-trip. Also ProseMirror. Crepe comes with a slash menu and blocks.</td><td>Smaller community. No official no-build bundle. Crepe's opinionated UI would fight creaite's look.</td></tr>
+            <tr><td><strong>Lexical</strong> (Meta)</td><td>Fast, well funded.</td><td>Built around React. Markdown is a converter rather than native. A framework-free dashboard gets the least out of it.</td></tr>
+            <tr><td><strong>Keep the BL-47 editor</strong><br><span class="sub">contenteditable + execCommand</span></td><td>No dependency. Already handles Markdown, images and the evidence marks (BL-207).</td><td><code>execCommand</code> is deprecated. Pickers, task lists, tables and reliable undo would all be hand-built. Every new place that needs editing adds to the debt.</td></tr>
+          </tbody>
+        </table></div>
+        <p class="sub">BlockNote (Notion-style blocks on Tiptap) was also looked at. It's aimed at React and its block model is heavier than Markdown needs.</p>
+
+        <h2>What the shared editor would replace</h2>
+        <p>Current state (BL-47, FR-63), the minutes review text sections (BL-56), Prep focus notes (BL-286), the Draft email preview (BL-224), item descriptions in the peek, and the new Notes. One <code>creaiteEditor(el, {markdown, pickers})</code> wrapper keeps creaite's toolbar, paste cleaning, "Discard changes?" guard and the BL-207 claim marks, which would become a ProseMirror mark instead of DOM spans.</p>
+      </div>
+
+      <aside class="side">
+        <div class="box"><h4>Storage <span class="agreed">With the project</span></h4>
+          <div class="tree-f">Engagements/Larkspur Phase 2/
+  00 Admin … 07 Growth
+  08 Notes/
+    Data access.md
+    Jane Doe – working style.md
+    _images/2026-10-13-sandbox.png
+Engagements/_Portfolio/
+  08 Notes/
+    Ideas for portfolio reporting.md</div>
+          <p class="sub" style="margin:8px 0 0">A new top-level <code>08 Notes</code> beside your numbered folders, flat, one file per note, named by its title. The default vault layout uses <code>notes/</code>. Mapped by <code>locations.folders.notes</code> (BL-85), so you can move it in Settings. Added to <code>_Templates/_Skeleton</code> for new projects; existing projects get the folder on their first note. Left out of the Documents list (as Agendas are). Front matter: <code>title, created, updated, tags, pinned, confidential</code>. Changes go through <code>filechange.py</code>: backed up, logged and undoable.</p>
+        </div>
+        <div class="box"><h4>Search and Claude</h4>
+          <ul>
+            <li>Indexed in <code>vault_search</code> as kind <code>note</code>, refreshed on save.</li>
+            <li>Passive until you ask: never extracted by the sweep. <em>Find updates</em> turns a note into proposals for Review.</li>
+            <li>ask creaite reads notes and cites them.</li>
+            <li>Never in client reports.</li>
+          </ul>
+        </div>
+        <div class="box"><h4>Alan's decisions, 13-10-2026</h4>
+          <ol>
+            <li>Name: <strong>Notes</strong></li>
+            <li>Placement: <strong>A + C</strong>, with the notes list collapsible</li>
+            <li><strong>Tiptap for every editor</strong></li>
+            <li>Stored <strong>with the project</strong> (OneDrive)</li>
+            <li>Portfolio notes in the <strong>portfolio folder</strong> (<code>_Portfolio/08 Notes</code>)</li>
+            <li>AI options on selected text: <strong>yes</strong> (see The editor)</li>
+          </ol>
+          <p class="sub" style="margin:8px 0 0">Folder: <strong><code>08 Notes</code></strong>, agreed. Still open: quick capture merges into Notes (see From note to Review).</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============ OPTION A ============ -->
+  <section data-p="a" hidden>
+    <div class="frame">
+      <nav class="rail" aria-label="Mock rail"><span>Today</span><span>Work</span><span class="on">Proj</span><span>Review</span><span>Files</span><span>Act.</span></nav>
+      <div class="main">
+        <div class="crumb">Projects › Falcon Data Platform</div>
+        <div class="ph"><h2>Falcon Data Platform</h2><span class="health">At risk</span><span class="sp"></span><button class="btn">Prep</button><button class="btn primary">+ New note</button></div>
+        <div class="ptabs"><span>Overview</span><span>Work<span class="n">23</span></span><span>Milestones</span><span>Meetings</span><span class="on">Notes<span class="n">7</span></span><span>Files</span></div>
+        <div class="split" id="aSplit">
+          <div class="list" id="aList">
+            <div class="lhead"><b>Notes</b><span class="sp"></span><button class="ib" id="aCollapse" type="button" aria-expanded="true" aria-controls="aList" title="Hide the notes list (⌘\)" aria-label="Hide the notes list">«</button><span class="vlabel">7 notes</span></div>
+            <input class="search" id="a-q" placeholder="Search Falcon notes" aria-label="Search notes" style="width:100%;margin-bottom:8px">
+            <div class="grp">Pinned</div>
+            <div class="ni"><b><span class="pin">◆</span> How this client works</b><small>Updated 02-10-2026</small></div>
+            <div class="grp">Recent</div>
+            <div class="ni on"><b>Data access: what's really going on</b><small>Today, 09:42 · 3 links</small></div>
+            <div class="ni"><b>Jane Doe: working style</b><small>11-10-2026 · Stakeholder</small></div>
+            <div class="ni"><b>Option papers for the extract tool</b><small>08-10-2026</small></div>
+            <div class="ni"><b>Lessons from the September cut-over</b><small>30-09-2026 · Lessons learned</small></div>
+            <div class="ni"><b>Workshop scratch: target data model</b><small>24-09-2026</small></div>
+            <div class="ni"><b>Commercial: change request thinking</b><small>19-09-2026 · <span style="color:var(--warn)">Confidential</span></small></div>
+          </div>
+
+          <article class="doc">
+            <h3>Data access: what's really going on</h3>
+            <div class="meta"><span>Alan · created 13-10-2026 09:20 · saved 09:42</span><span class="tag">data</span><span class="tag">stakeholders</span><span class="tag int">Internal</span><span class="sp"></span><span class="sub">Saved</span><button class="btn sm" aria-label="More: pin, move, template, history">⋯</button></div>
+            <div class="body">
+              <p>The blocker isn't technical. Security sign-off sits with <span class="per">@Sara Example</span>, and she won't sign until the data-classification paper is agreed. See <span class="wl">[[Option papers for the extract tool]]</span>.</p>
+              <h4>Where we are</h4>
+              <ul>
+                <li>Risk <span class="chip"><span class="dot"></span>FAL-R-004 <small>Data access delay · Urgent</small></span> is still open; nothing has moved since 06-10.</li>
+                <li>Action <span class="chip"><span class="dot w"></span>FAL-A-017 <small>Omar · due 15-10</small></span> covers the paper.</li>
+                <li><span class="per">@Jane Doe</span> will escalate if asked, but she prefers it to come through the steering. See <span class="wl">[[Jane Doe: working style]]</span>.</li>
+              </ul>
+              <h4>Options</h4>
+              <ul>
+                <li class="task done">Ask for a read-only sandbox in the meantime</li>
+                <li class="task">Raise at Thursday's steering as a decision, not an update</li>
+                <li class="task">Check whether <span class="wl missing">[[Tide access model]]</span> can be reused</li>
+              </ul>
+            </div>
+          </article>
+
+          <aside class="ctx">
+            <div class="box"><h4>Mentioned in</h4><div>Lessons from the September cut-over</div><div>Prep: FAL steering, 16-10</div></div>
+            <div class="box"><h4>Linked work</h4><div><span class="chip"><span class="dot"></span>FAL-R-004</span> Open</div><div><span class="chip"><span class="dot w"></span>FAL-A-017</span> Due 15-10</div></div>
+            <div class="box"><h4>People</h4><div>Sara Example · Delivery lead</div><div>Jane Doe · Sponsor</div></div>
+            <div class="callout"><b>Possible action.</b> "Raise at Thursday's steering as a decision" reads like an action for you. <a href="#">Propose it</a> · <a href="#">Leave as a note</a></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+    <div class="notes two">
+      <div><h4>Why this is the recommendation</h4><ul><li><strong>Collapsible list:</strong> « hides it to a slim strip and » brings it back (⌘\ too). The choice is remembered per browser, and the note widens to fill the space.</li><li>No new rail item. Notes sit next to the work they explain.</li><li>The only filing choice is the project, and creaite can usually guess it.</li><li>An open note is editable. Click and type; the toolbar appears while the cursor is in the note. It saves by itself a second after you stop typing ("Saved" in the header), and ⌘Z and the file history undo any change. There is no Edit, Save or Cancel.</li><li>The right column ties the note to the record: backlinks, live item states and people.</li></ul></div>
+      <div><h4>Trade-offs</h4><ul><li>Notes that cover several projects need a home: <em>Portfolio › Notes</em>, plus an Unfiled list that Today nudges about.</li><li>There is no one place to browse every note. Search (⌘K) does that job, with a Notes filter.</li><li>The "possible action" hint needs plain-code rules (BL-221's vague-action check could be reused). It must never stage anything without Alan's say-so.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ============ OPTION B ============ -->
+  <section data-p="b" hidden>
+    <div class="frame">
+      <nav class="rail" aria-label="Mock rail"><span>Today</span><span>Work</span><span>Proj</span><span>Review</span><span class="on new">Notes</span><span>Files</span></nav>
+      <div class="main" style="padding:12px">
+        <div class="wiki">
+          <div class="col">
+            <input class="search" id="b-q" placeholder="Search all notes" aria-label="Search all notes" style="width:100%;margin-bottom:10px">
+            <div class="grp">Spaces</div>
+            <div class="tr">▸ Unfiled <span class="c">3</span></div>
+            <div class="tr">▸ Portfolio <span class="c">5</span></div>
+            <div class="tr">▾ Falcon Data Platform <span class="c">7</span></div>
+            <div class="tr d1">▾ Stakeholders</div>
+            <div class="tr d2">Jane Doe: working style</div>
+            <div class="tr d2">Sara Example</div>
+            <div class="tr d1 on">Data access: what's really going on</div>
+            <div class="tr d1">Option papers for the extract tool</div>
+            <div class="tr d1">Lessons from the September cut-over</div>
+            <div class="tr">▸ Meridian Contact Centre AI <span class="c">4</span></div>
+            <div class="tr">▸ Orbit Customer App <span class="c">2</span></div>
+            <div class="tr">▸ Tide Billing Migration <span class="c">6</span></div>
+            <div class="grp">Tags</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap"><span class="tag">stakeholders</span><span class="tag">lessons</span><span class="tag">commercial</span><span class="tag">data</span></div>
+          </div>
+          <div class="col" style="padding:18px 28px">
+            <div class="crumb">Falcon Data Platform › Data access</div>
+            <h3 style="font-size:22px;margin:0 0 6px">Data access: what's really going on</h3>
+            <div class="meta"><span>Saved 09:42</span><span class="tag">data</span><span class="tag int">Internal</span></div>
+            <div class="body">
+              <p>The blocker isn't technical. Security sign-off sits with <span class="per">@Sara Example</span>, and she won't sign until the data-classification paper is agreed.</p>
+              <p>Risk <span class="chip"><span class="dot"></span>FAL-R-004</span> is still open. <span class="chip"><span class="dot w"></span>FAL-A-017</span> covers the paper.</p>
+              <p class="sub">… same note as option A …</p>
+            </div>
+          </div>
+          <div class="col">
+            <div class="grp">On this page</div>
+            <div class="tr">Where we are</div><div class="tr">Options</div>
+            <div class="grp">Mentioned in</div>
+            <div class="tr">Lessons from the September cut-over</div>
+            <div class="tr">Tide: access model</div>
+            <div class="grp">Linked work</div>
+            <div class="tr">FAL-R-004 · FAL-A-017</div>
+            <div class="grp">Graph</div>
+            <svg viewBox="0 0 200 110" width="100%" role="img" aria-label="Five notes linked around this one">
+              <g stroke="var(--line)" stroke-width="1.2"><line x1="100" y1="55" x2="40" y2="25"/><line x1="100" y1="55" x2="165" y2="22"/><line x1="100" y1="55" x2="35" y2="90"/><line x1="100" y1="55" x2="160" y2="92"/><line x1="40" y1="25" x2="35" y2="90"/></g>
+              <g fill="var(--faint)"><circle cx="40" cy="25" r="5"/><circle cx="165" cy="22" r="5"/><circle cx="35" cy="90" r="5"/><circle cx="160" cy="92" r="5"/></g>
+              <circle cx="100" cy="55" r="8" fill="var(--accent)"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes two">
+      <div><h4>Strengths</h4><ul><li>A proper wiki: one place to browse every note across projects.</li><li>Portfolio and Unfiled notes are equal to project ones.</li><li>The outline and backlinks scale to hundreds of notes.</li></ul></div>
+      <div><h4>Why not first</h4><ul><li>It adds a seventh rail item and a folder tree, so filing becomes a chore.</li><li>Notes sit away from the project page where Alan reads status.</li><li>The graph looks good but rarely helps at under 100 notes. Leave it out.</li><li>Upgrade path: A's data model is the same, so B can be added later as a "All notes" view.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ============ OPTION C ============ -->
+  <section data-p="c" hidden>
+    <div class="frame cwrap">
+      <nav class="rail" aria-label="Mock rail"><span class="on">Today</span><span>Work</span><span>Proj</span><span>Review</span><span>Files</span><span>Act.</span></nav>
+      <div class="main">
+        <div class="dim">
+          <div class="crumb">Today</div>
+          <div class="ph"><h2>Tuesday 13th October</h2></div>
+          <div class="box" style="margin-bottom:10px">09:00 Meridian stand-up · 10:30 FAL data workshop · 14:00 Tide steering</div>
+          <div class="box" style="margin-bottom:10px">Needs your decision · 4</div>
+          <div class="box">Your commitments · 6</div>
+        </div>
+        <div class="drawer" role="dialog" aria-label="New note">
+          <div style="display:flex;align-items:center;gap:8px"><h3>New note</h3><span class="sub">⌘⇧N from any page</span><span class="sp"></span><button class="btn sm" aria-label="Close">✕</button></div>
+          <div class="where"><span class="sub">Project</span><span class="chip" style="background:var(--accent-soft);border-color:var(--accent)">Falcon Data Platform ▾</span><span class="sub">guessed from "Sara" and "extract tool"</span></div>
+          <div class="cap">
+            <b>Sara on the extract tool</b><br><br>
+            Sara thinks the classification paper can go to the security board on 21-10 if <span class="per">@Omar Ali</span> sends the draft by Friday. She'd accept a read-only sandbox first.<br><br>
+            Link to <span class="wl">[[Data access: what's really going on]]</span><span class="caret"></span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="sub">Saved as you type</span><span class="sp"></span><button class="btn">Open full note</button><button class="btn ai">✦ Done and find updates</button><button class="btn primary">Done</button></div>
+          <div class="recent"><div class="grp" style="margin:0 0 4px">Recent notes</div>
+            <div><b>Data access: what's really going on</b><span class="sp"></span>Falcon · 09:42</div>
+            <div><b>Tide steering: things not to say</b><span class="sp"></span>Tide · yesterday</div>
+            <div><b>Ideas for portfolio reporting</b><span class="sp"></span>Unfiled · 10-10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes two">
+      <div><h4>What it adds</h4><ul><li>Capture in under two seconds, from any page, without losing your place.</li><li>One drawer, two endings: <em>Done</em> keeps the note; <em>Done and find updates</em> also opens the panel, where you apply the changes (see From note to Review). Quick capture (FR-71) becomes this, and its notes are saved in <code>08 Notes</code> rather than <code>minutes/</code>.</li><li>The project is guessed from the project register's signals. If it can't be guessed, the note goes to Unfiled.</li></ul></div>
+      <div><h4>Points to settle</h4><ul><li>Shortcut: ⌘K is search and quick capture today. ⌘⇧N for a note avoids the clash.</li><li>Drafts autosave to <code>system/staging/drafts/</code>. The note file is written on Done, through <code>filechange.py</code>.</li><li>Use the same drawer from a meeting in Today ("Note for this meeting"), which links the note to the meeting's date and title.</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ============ EDITOR ============ -->
+  <section data-p="e" hidden>
+    <div class="two" style="align-items:start">
+      <div class="doc">
+        <div class="sub" style="margin-bottom:8px">Editing · Tiptap with creaite's own toolbar</div>
+        <div class="rtebar" role="toolbar" aria-label="Mock formatting"><span>¶ ▾</span><i></i><span class="on"><b>B</b></span><span><em>I</em></span><span><s>S</s></span><span>&lt;/&gt;</span><i></i><span>•</span><span>1.</span><span>☑</span><span>❝</span><i></i><span>Link</span><span>[[ ]]</span><span>@</span><span>#ID</span><span>Image</span><span>Table</span><i></i><span>↶</span><span>↷</span></div>
+        <div class="ed body">
+          <h4 style="margin-top:0">Options</h4>
+          <ul><li class="task done">Ask for a read-only sandbox in the meantime</li><li class="task">Raise at Thursday's steering as a decision, not an update</li></ul>
+          <p>See also [[Tid<span class="caret"></span></p>
+          <div class="pop" style="left:70px;top:118px" role="listbox" aria-label="Link to a note">
+            <div class="h">Link to a note</div>
+            <div class="r on"><span class="k">≡</span>Tide: access model<small>Tide</small></div>
+            <div class="r"><span class="k">≡</span>Tide steering: things not to say<small>Tide</small></div>
+            <div class="r"><span class="k">+</span>Create "Tid…" in Falcon<small>new</small></div>
+          </div>
+          <div style="height:120px"></div>
+        </div>
+        <div class="savebar"><span>In Notes: saved as you type. In Current state and the minutes review, where a save makes a proposal: ⌘↵ saves · Esc cancels</span><span class="sp"></span><button class="btn">Cancel</button><button class="btn primary">Save</button></div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="doc">
+          <div class="sub" style="margin-bottom:8px">Typing <code>/</code> on an empty line</div>
+          <div class="pop" style="position:static;width:auto;box-shadow:none" role="listbox" aria-label="Insert">
+            <div class="h">Insert</div>
+            <div class="r on"><span class="k">H</span>Sub-heading</div>
+            <div class="r"><span class="k">☑</span>Checklist</div>
+            <div class="r"><span class="k">#</span>Work item<small>FAL-A-…</small></div>
+            <div class="r"><span class="k">@</span>Person<small>people register</small></div>
+            <div class="r"><span class="k">▦</span>Table</div>
+            <div class="r"><span class="k">◇</span>Template<small>Stakeholder, Lessons…</small></div>
+          </div>
+        </div>
+        <div class="doc">
+          <div class="sub" style="margin-bottom:8px">What's saved: plain Markdown</div>
+<pre class="tree-f" style="margin:0">---
+title: Data access: what's really going on
+created: 2026-10-13T09:20
+tags: [data, stakeholders]
+links: [FAL-R-004, FAL-A-017]
+---
+Risk [FAL-R-004](creaite:item/FAL-R-004) is still open.
+- [x] Ask for a read-only sandbox
+- [ ] Raise at Thursday's steering
+Owner: @[Sara Example](creaite:person/sara)
+See [[Option papers for the extract tool]]</pre>
+        </div>
+      </div>
+    </div>
+    <h2 style="font-size:16px;margin:24px 0 4px">AI on selected text</h2>
+    <p class="sub" style="margin:0 0 12px;max-width:72ch">Select text and a small bar appears with an AI menu. Select all (⌘A) and the same menu works on the whole note. Every option gives a suggestion to accept or discard, and never replaces your text by itself.</p>
+    <div class="two" style="align-items:start">
+      <div class="doc">
+        <div class="sub" style="margin-bottom:8px">1 · Select, then AI ▾</div>
+        <div class="bubble" role="toolbar" aria-label="Mock selection bar"><span><b>B</b></span><span><em>I</em></span><span>Link</span><span>[[ ]]</span><i></i><span class="on">✦ AI ▾</span></div>
+        <div class="aimenu" role="menu" aria-label="AI options">
+          <div class="h">Change the selection</div>
+          <div class="r on">Rewrite clearly</div>
+          <div class="r">Shorter</div>
+          <div class="r">Longer<small>adds no facts</small></div>
+          <div class="r">Make it executive<small>BL-106 voice</small></div>
+          <div class="r">Fix spelling and grammar<small>British English</small></div>
+          <div class="h">Shape it</div>
+          <div class="r">Format nicely<small>headings, lists</small></div>
+          <div class="r">Turn into a checklist</div>
+          <div class="r">Summarise at the top</div>
+          <input id="ai-ask" placeholder="Or say what you want…" aria-label="Ask AI to change the selection">
+        </div>
+        <div class="body" style="margin-top:12px">
+          <p><span class="sel">sara says sign off wont happen till the classification paper is agreed, omar is drafting it and it should be done by friday hopefully. jane can escalate but prefers steering. might reuse tide approach</span></p>
+        </div>
+      </div>
+      <div class="sugg">
+        <div class="hd">✦ Format nicely <span class="sp"></span><span>Suggestion · nothing changed yet</span></div>
+        <div class="bd body">
+          <h4 style="margin-top:0">Security sign-off</h4>
+          <ul>
+            <li><span class="per">@Sara Example</span> won't sign off until the classification paper is agreed.</li>
+            <li><span class="per">@Omar Ali</span> is drafting it, hoped for by Friday 16-10. <span class="chip"><span class="dot w"></span>FAL-A-017</span></li>
+            <li><span class="per">@Jane Doe</span> can escalate, but prefers it to go through the steering.</li>
+            <li>Option: reuse the <span class="wl">[[Tide access model]]</span>.</li>
+          </ul>
+          <div class="kept">Check: "by Friday" became <b>Friday 16-10</b>. The date was added from today's date. FAL-A-017 was linked because it matches "classification paper".</div>
+        </div>
+        <div class="ft"><button class="btn primary sm">Accept</button><button class="btn sm">Discard</button><button class="btn sm">Try again</button><button class="btn sm">Show changes</button><span class="sp"></span><span class="sub">⌘Z undoes after Accept</span></div>
+      </div>
+    </div>
+    <div class="notes">
+      <h4>AI rules</h4>
+      <ul>
+        <li>One route on the live server, <code>/api/edit/ai</code>, with the existing "Make it executive" as one of its options. Claude runs headless with <strong>no tools</strong>: it sees only the selected text, the option and the project's name, people and open item IDs (to make chips). It can't read files or mail, and can't write anything.</li>
+        <li>Same plain-code fact check as BL-106's rewrite: any date, number, name or item ID that was lost or added is flagged under the suggestion.</li>
+        <li>Available in every editor. Each place picks its options: Current state keeps the executive voice first; Draft email adds "More formal" and "Warmer".</li>
+        <li>A note marked Confidential asks once before it sends text to Claude.</li>
+        <li>Counts only (offered, accepted, discarded) go to <code>draft-stats.json</code>, never the text.</li>
+      </ul>
+    </div>
+
+    <div class="notes">
+      <h4>Editor rules, shared everywhere</h4>
+      <ul>
+        <li>The same toolbar and keys as today's Current state editor, so nothing has to be relearnt. The pickers (<code>[[</code>, <code>@</code>, <code>#</code>, <code>/</code>) are the new parts.</li>
+        <li>Each place turns on only the features it needs. Current state: no tables or checklists, because Word reports can't take them yet. Draft email: no wiki links.</li>
+        <li>Item chips always show live state from the tracker. The Markdown holds only the ID, so a note never goes out of date.</li>
+        <li>Paste is cleaned to the Markdown subset. A pasted link to a Teams message or mail becomes a source link.</li>
+        <li>Round-trip tests: every existing <code>CLAUDE.md</code> Current state must load and save back byte for byte before the switch.</li>
+      </ul>
+    </div>
+  </section>
+  <!-- ============ FROM NOTE TO REVIEW ============ -->
+  <section data-p="f" hidden>
+    <p class="lede">A note from a conversation becomes changes to the tracker: new items, updates to existing ones, milestone moves and project information. The panel is the review. You tick, edit and apply in one place, and Undo is there afterwards. Save for later sends them to Review instead.</p>
+    <div class="frame">
+      <nav class="rail" aria-label="Mock rail"><span>Today</span><span>Work</span><span class="on">Proj</span><span>Review</span><span>Files</span><span>Act.</span></nav>
+      <div class="main">
+        <div class="crumb">Projects › Falcon Data Platform › Notes</div>
+        <div class="act">
+          <article class="doc">
+            <h3>Catch-up with Omar</h3>
+            <div class="meta"><span>Working session · 13-10-2026 · with <span class="per">@Omar Ali</span></span><span class="tag int">Internal</span><span class="sp"></span><button class="btn sm ai">✦ Find updates</button><button class="btn sm" aria-label="More">⋯</button></div>
+            <div class="body">
+              <ul>
+                <li><span class="mk">1</span><span class="hl">Paper draft slipping to Tuesday 20-10.</span> Sara's board is 21-10, so still OK.</li>
+                <li class="task"><span class="mk">2</span><span class="hl"><span class="per">@Omar Ali</span> to book a 30-minute review of the paper with Sara before 20-10</span></li>
+                <li><span class="mk">3</span><span class="hl">Sandbox access granted yesterday.</span></li>
+                <li><span class="mk">4</span><span class="hl">Phase 1 go-live probably moves two weeks, to 13-11.</span> Omar to confirm with Jane.</li>
+                <li><span class="mk">5</span><span class="hl">Test data refresh needs the same security sign-off.</span> If the paper slips again, testing slips with it.</li>
+                <li><span class="mk">6</span><span class="hl">Omar now reports to Rania Haddad, the new delivery director.</span></li>
+                <li>Omar's team is tired after the cut-over. Worth a thank-you at the steering.</li>
+              </ul>
+              <p class="sub">The last line found nothing, which is expected. Not every line needs to become an item.</p>
+            </div>
+          </article>
+
+          <aside class="fp" aria-label="Found in this note">
+            <div class="hd"><b>✦ Found in this note</b><span class="sub">8 found · 5 ticked · 1 line left as a note · click a row to edit it</span></div>
+            <div class="g">New</div>
+            <div class="pr"><input type="checkbox" checked aria-label="Include"><span class="mk">2</span><div><div class="ty">Action · Omar Ali · due 19-10-2026</div>Book a 30-minute review of the classification paper with Sara<div class="q">"before 20-10" → due the working day before</div></div></div>
+            <div class="pr"><input type="checkbox" aria-label="Include"><span class="mk">5</span><div><div class="ty">Risk · new <span class="flag one">Tick to include</span></div>Test data refresh depends on the same security sign-off<div class="q">Linked to FAL-R-004</div></div></div>
+            <div class="g">Updates to existing items</div>
+            <div class="pr"><input type="checkbox" checked aria-label="Include"><span class="mk">1</span><div><div class="ty">FAL-A-017 · Classification paper</div><span class="ch">Due <s>16-10</s> → 20-10</span></div></div>
+            <div class="pr"><input type="checkbox" checked aria-label="Include"><span class="mk">3</span><div><div class="ty">FAL-A-012 · Request read-only sandbox <span class="flag soft">Probably done</span></div><span class="ch">Open → Done</span><div class="q">Evidence: "granted yesterday" (12-10)</div></div></div>
+            <div class="g">Milestones</div>
+            <div class="pr"><input type="checkbox" aria-label="Include"><span class="mk">4</span><div><div class="ty">FAL-M-03 · Phase 1 go-live <span class="flag one">Tentative</span></div><span class="ch">30-10 → 13-11</span><div class="q">"probably", "to confirm": left unticked. Proposed instead ↓</div></div></div>
+            <div class="pr"><input type="checkbox" checked aria-label="Include"><span class="mk">4</span><div><div class="ty">Action · Omar Ali · due 16-10-2026</div>Confirm the phase 1 go-live date with Jane<div class="q">Shows as an early warning on FAL-M-03 until it's done</div></div></div>
+            <div class="g">Project information</div>
+            <div class="pr"><input type="checkbox" checked aria-label="Include"><span class="mk">6</span><div><div class="ty">People register · new person</div>Rania Haddad · Delivery director · Enable</div></div>
+            <div class="pr"><input type="checkbox" aria-label="Include"><span class="mk">6</span><div><div class="ty">Project memory · People</div>"Omar Ali reports to Rania Haddad from October 2026."</div></div>
+            <div class="ft"><button class="btn primary">Apply 5 changes</button><button class="btn">Save for later</button><span class="sp"></span><span class="sub">Save for later puts them in Review</span></div>
+            <div class="ft" style="background:var(--inverse);color:var(--inverse-ink);font-size:12px">After Apply: "5 changes applied to Falcon Data Platform" <span class="sp"></span><b>Undo</b></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes two">
+      <div><h4>Three ways in</h4><ul>
+        <li><strong>✦ Find updates</strong> on any note: reads the whole note and fills the panel above. Lines already sent are skipped, so you can run it again after adding to the note.</li>
+        <li><strong>One line:</strong> select it, then AI ▾ › <em>Make this an action</em> (or a risk, decision or update). The same panel opens with just that line.</li>
+        <li><strong>While typing:</strong> a checklist line with an <code>@person</code> and a date gets a faint dotted underline, meaning "this looks like an action". Clicking it proposes the action. It never stages anything on its own.</li>
+        <li><strong>From the capture drawer:</strong> <em>Done</em> keeps the note; <em>Done and find updates</em> also opens the panel. This replaces the Note / Quick capture switch.</li>
+      </ul></div>
+      <div><h4>How it works underneath</h4><ul>
+        <li>The same engine as quick capture (FR-71, cx-minutes) and cx-edit, given a note as the source. The existing checks run at staging: repeats of existing items (BL-221), probably-done evidence (BL-218) and vague actions (BL-221).</li>
+        <li>Hedged words ("probably", "might", "to confirm") never move a milestone or change health. They become a confirm action and an early warning instead.</li>
+        <li>Each proposal's source is the note and the paragraph, e.g. <code>projects/…/08 Notes/Catch-up with Omar.md#p4</code>. In Review, the source link opens the note at that line, highlighted.</li>
+        <li>What was sent is recorded beside the note, not in it: <code>system/staging/notes-sent.json</code> (path, paragraph fingerprint, item IDs). The note text stays as you wrote it, and a margin tick (<span class="margin">✓ FAL-A-024</span>) shows lines that became items.</li>
+        <li><strong>Apply, not Send to Review.</strong> Ticking a row is your approval. Apply writes the ticked rows as already-approved proposals (<code>source_run: "note"</code>, as dashboard edits are today) and runs <code>tracker.py apply</code> through the live server. It's one apply, so Undo reverses all of it. Unticked rows are dropped and never staged.</li>
+        <li><strong>The bulk rule still holds.</strong> New risks, new decisions, milestone moves and health changes always start unticked and must be ticked one at a time. Routine updates (due dates, done, owner, a new action) start ticked.</li>
+        <li><strong>Click a row to edit it</strong> in the same peek layout as Review (BL-177): owner, date, wording, workstream. Every row passes the same schema validation; a row that fails shows why and stays unticked.</li>
+        <li><strong>Save for later</strong> puts the ticked rows in Review instead, for when you want to think it over. If the live server isn't running, Apply does the same and says so.</li>
+        <li>A note marked Confidential marks its items Sensitive.</li>
+        <li>It runs only when you press it. It never runs unattended or from the sweep.</li>
+      </ul></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const tabs=[...document.querySelectorAll('.tabs button')];
+function show(t){tabs.forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));document.querySelectorAll('section[data-p]').forEach(s=>s.hidden=s.dataset.p!==t);}
+tabs.forEach(b=>b.addEventListener('click',()=>show(b.dataset.t)));
+const aSplit=document.getElementById('aSplit'),aBtn=document.getElementById('aCollapse');
+function setList(open){aSplit.classList.toggle('collapsed',!open);aBtn.textContent=open?'«':'»';aBtn.setAttribute('aria-expanded',open);const l=open?'Hide the notes list':'Show the notes list';aBtn.setAttribute('aria-label',l);aBtn.title=l+' (⌘\\)';try{localStorage.setItem('notes-list-open',open?'1':'0')}catch(e){}}
+aBtn.addEventListener('click',()=>setList(aSplit.classList.contains('collapsed')));
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='\\'){e.preventDefault();setList(aSplit.classList.contains('collapsed'));}});
+try{if(localStorage.getItem('notes-list-open')==='0')setList(false)}catch(e){}
+document.querySelector('.tabs').addEventListener('keydown',e=>{const i=tabs.findIndex(b=>b===document.activeElement);if(i<0)return;let j=e.key==='ArrowRight'?i+1:e.key==='ArrowLeft'?i-1:null;if(j===null)return;j=(j+tabs.length)%tabs.length;tabs[j].focus();show(tabs[j].dataset.t);});
+</script>

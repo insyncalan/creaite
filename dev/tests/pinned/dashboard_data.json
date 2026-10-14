@@ -1,0 +1,2263 @@
+Note: current-state image not found or not an image: projects/ABC Example Programme/images/none.png
+{
+ "flow": {
+  "ABC": {
+   "ageing": {
+    "buckets": [
+     2,
+     3,
+     0,
+     0
+    ],
+    "labels": [
+     "0 to 7 days",
+     "8 to 14 days",
+     "15 to 30 days",
+     "Over 30 days"
+    ],
+    "oldest": [
+     {
+      "days": 10,
+      "id": "ABC-003",
+      "k": "raid",
+      "t": "Data access delayed → UAT slips"
+     },
+     {
+      "days": 8,
+      "id": "ABC-A-001",
+      "k": "actions",
+      "t": "Escalate data access to the client CIO"
+     },
+     {
+      "days": 8,
+      "id": "ABC-A-002",
+      "k": "actions",
+      "t": "Book UAT environment"
+     }
+    ],
+    "open": 5
+   },
+   "milestones": {
+    "by": [
+     {
+      "days": 0,
+      "id": "ABC-M-001",
+      "moves": 2,
+      "name": "UAT start"
+     }
+    ],
+    "days": 0,
+    "moves": 2
+   },
+   "overdue": {
+    "last_week": 1,
+    "now": 1
+   },
+   "period": 8,
+   "risks": {
+    "cancelled": 0,
+    "closed": 1,
+    "mix": {
+     "High": 1,
+     "Low": 0,
+     "Medium": 0,
+     "Urgent": 0
+    },
+    "opened": 2
+   },
+   "summary": "3 opened, 2 closed; 1 overdue, the same as last week; the oldest open action is 8 days old",
+   "weeks": [
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-08-23",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-08-17"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-08-30",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-08-24"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-06",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-08-31"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-13",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-07"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-20",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-14"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 1,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-27",
+     "from_snapshot": true,
+     "opened": 1,
+     "overdue": 7,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-21"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 3,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-10-04",
+     "from_snapshot": false,
+     "opened": 4,
+     "overdue": 1,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 1,
+     "start": "2026-09-28"
+    },
+    {
+     "a_cancelled": 1,
+     "a_closed": 1,
+     "a_opened": 2,
+     "cancelled": 1,
+     "closed": 2,
+     "end": "2026-10-09",
+     "from_snapshot": false,
+     "opened": 3,
+     "overdue": 1,
+     "r_cancelled": 0,
+     "r_closed": 1,
+     "r_opened": 1,
+     "start": "2026-10-05"
+    }
+   ]
+  },
+  "DEF": {
+   "ageing": {
+    "buckets": [
+     0,
+     1,
+     0,
+     0
+    ],
+    "labels": [
+     "0 to 7 days",
+     "8 to 14 days",
+     "15 to 30 days",
+     "Over 30 days"
+    ],
+    "oldest": [
+     {
+      "days": 8,
+      "id": "DEF-A-001",
+      "k": "actions",
+      "t": "Agree pilot success criteria"
+     }
+    ],
+    "open": 1
+   },
+   "milestones": {
+    "by": [],
+    "days": 0,
+    "moves": 0
+   },
+   "overdue": {
+    "last_week": 0,
+    "now": 0
+   },
+   "period": 8,
+   "risks": {
+    "cancelled": 0,
+    "closed": 0,
+    "mix": {
+     "High": 0,
+     "Low": 0,
+     "Medium": 0,
+     "Urgent": 0
+    },
+    "opened": 0
+   },
+   "summary": "0 opened, 0 closed; none overdue; the oldest open action is 8 days old",
+   "weeks": [
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-08-23",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-08-17"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-08-30",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-08-24"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-06",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-08-31"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-13",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-07"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-20",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-14"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-09-27",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-21"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 1,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-10-04",
+     "from_snapshot": false,
+     "opened": 1,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-09-28"
+    },
+    {
+     "a_cancelled": 0,
+     "a_closed": 0,
+     "a_opened": 0,
+     "cancelled": 0,
+     "closed": 0,
+     "end": "2026-10-09",
+     "from_snapshot": false,
+     "opened": 0,
+     "overdue": 0,
+     "r_cancelled": 0,
+     "r_closed": 0,
+     "r_opened": 0,
+     "start": "2026-10-05"
+    }
+   ]
+  }
+ },
+ "hub": {
+  "0e54b1b829": {
+   "counts": {
+    "items": 2,
+    "pending": 0,
+    "rejected": 1,
+    "updates": 1
+   },
+   "coverage": [],
+   "day": "2026-10-06",
+   "draft": null,
+   "due": [
+    "ABC-A-008"
+   ],
+   "eid": "e10",
+   "end": "11:00",
+   "filed": [
+    "projects/ABC Example Programme/minutes/2026-10-06 ABC Kick-off.docx"
+   ],
+   "files": [
+    "projects/ABC Example Programme/minutes/2026-10-06 ABC Kick-off.docx"
+   ],
+   "items": [
+    {
+     "id": "ABC-003",
+     "k": "raid",
+     "state": "applied",
+     "t": "Update: impact",
+     "upd": true,
+     "you": false
+    },
+    {
+     "due": "2026-10-11",
+     "id": "ABC-A-008",
+     "k": "actions",
+     "o": "Sara Example (Example Co)",
+     "state": "Open",
+     "t": "Send the kick-off pack",
+     "you": false
+    },
+    {
+     "due": "2026-10-29",
+     "id": "ABC-A-009",
+     "k": "actions",
+     "o": "Alan Carter",
+     "state": "Open",
+     "t": "Book the next kick-off",
+     "you": false
+    },
+    {
+     "due": null,
+     "k": "actions",
+     "n": 3,
+     "o": "",
+     "state": "rejected",
+     "t": "Order pizza",
+     "you": false
+    }
+   ],
+   "key": "calendar:e10",
+   "minutes": "approved",
+   "next": {
+    "act": "work",
+    "label": "See the 1 action due"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": "2026-10-09",
+   "promised": [
+    "ABC-A-008"
+   ],
+   "quick": false,
+   "start": "10:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 10:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "done",
+     "Processed"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Drafted"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "skip",
+     "No agenda, so not checked"
+    ],
+    [
+     "review",
+     "Review",
+     "done",
+     "Approved and filed"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "current",
+     "1 action due soon"
+    ]
+   ],
+   "title": "ABC Kick-off"
+  },
+  "13fbd79c3d": {
+   "counts": {
+    "items": 3,
+    "pending": 4,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "",
+   "draft": "system/staging/drafts/Draft minutes.docx",
+   "due": [],
+   "eid": null,
+   "end": "",
+   "filed": [],
+   "files": [],
+   "items": [
+    {
+     "due": null,
+     "k": "actions",
+     "n": 1,
+     "o": "Alan Carter",
+     "state": "pending",
+     "t": "Chase legal on the SOW",
+     "you": true
+    },
+    {
+     "due": null,
+     "k": "raid",
+     "n": 2,
+     "o": "",
+     "state": "pending",
+     "t": "Vendor exits the market",
+     "you": true
+    },
+    {
+     "due": null,
+     "k": "actions",
+     "n": 3,
+     "o": "",
+     "state": "pending",
+     "t": "Confirm data owner",
+     "you": true
+    }
+   ],
+   "key": "k",
+   "minutes": "pending",
+   "next": {
+    "act": "review",
+    "label": "Review the minutes and 3 items"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "skip",
+     "No calendar entry"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "done",
+     "Processed"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Drafted"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "skip",
+     "No agenda, so not checked"
+    ],
+    [
+     "review",
+     "Review",
+     "current",
+     "4 waiting for you"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC Steering"
+  },
+  "169efe2a5a": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-08",
+   "draft": null,
+   "due": [],
+   "eid": "e2",
+   "end": "15:00",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "calendar:e2",
+   "minutes": null,
+   "next": {
+    "act": "intake",
+    "label": "Process the transcript"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "14:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 14:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "skip",
+     "Not transcribed"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "current",
+     "Not drafted yet"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "todo",
+     "After the minutes, when there is an agenda"
+    ],
+    [
+     "review",
+     "Review",
+     "todo",
+     "Nothing to review yet"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC Vendor sync"
+  },
+  "1702ea160f": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-09",
+   "draft": null,
+   "due": [],
+   "eid": "e4",
+   "end": "12:00",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "calendar:e4",
+   "minutes": null,
+   "next": null,
+   "p": [
+    "DEF"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "11:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 11:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "todo",
+     "After the meeting"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "todo",
+     "Not drafted yet"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "todo",
+     "After the minutes, when there is an agenda"
+    ],
+    [
+     "review",
+     "Review",
+     "todo",
+     "Nothing to review yet"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "DEF pilot check-in"
+  },
+  "39590aebdd": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-09",
+   "draft": null,
+   "due": [],
+   "eid": "e6",
+   "end": "16:00",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "calendar:e6",
+   "minutes": null,
+   "next": {
+    "act": "prep",
+    "label": "Make the prep page"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "15:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 15:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "current",
+     "Not made yet"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "todo",
+     "After the meeting"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "todo",
+     "Not drafted yet"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "todo",
+     "After the minutes, when there is an agenda"
+    ],
+    [
+     "review",
+     "Review",
+     "todo",
+     "Nothing to review yet"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC Steering committee"
+  },
+  "6bd8cb5a22": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-07",
+   "draft": null,
+   "due": [],
+   "eid": "e9",
+   "end": "17:00",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "calendar:e9",
+   "minutes": null,
+   "next": {
+    "act": "intake",
+    "label": "Process the transcript"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "16:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 16:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "skip",
+     "No access to the transcript"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "current",
+     "Not drafted yet"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "todo",
+     "After the minutes, when there is an agenda"
+    ],
+    [
+     "review",
+     "Review",
+     "todo",
+     "Nothing to review yet"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC Data call"
+  },
+  "77600f7e23": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-09",
+   "draft": null,
+   "due": [],
+   "eid": "e1",
+   "end": "10:00",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "calendar:e1",
+   "minutes": null,
+   "next": {
+    "act": "intake",
+    "label": "Open Intake"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": "projects/ABC Example Programme/agendas/2026-10-09 Prep - ABC weekly.html",
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "09:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 09:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "done",
+     "Prep page made"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "current",
+     "Not checked yet"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "todo",
+     "Not drafted yet"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "todo",
+     "After the minutes, when there is an agenda"
+    ],
+    [
+     "review",
+     "Review",
+     "todo",
+     "Nothing to review yet"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC weekly"
+  },
+  "aadc46ba3c": {
+   "counts": {
+    "items": 1,
+    "pending": 2,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [
+    {
+     "carried": false,
+     "point": "Design sign-off",
+     "verdict": "Discussed"
+    },
+    {
+     "carried": true,
+     "point": "Budget",
+     "verdict": "Not discussed"
+    }
+   ],
+   "day": "2026-10-08",
+   "draft": "system/staging/drafts/Design minutes.docx",
+   "due": [],
+   "eid": "e5",
+   "end": "11:00",
+   "filed": [],
+   "files": [
+    "projects/ABC Example Programme/minutes/2026-10-08 ABC Design review.docx"
+   ],
+   "items": [
+    {
+     "due": "2026-10-13",
+     "k": "actions",
+     "n": 1,
+     "o": "Omar Haddad",
+     "state": "pending",
+     "t": "Share the design pack",
+     "you": true
+    }
+   ],
+   "key": "calendar:e5",
+   "minutes": "pending",
+   "next": {
+    "act": "review",
+    "label": "Review the minutes and 1 item"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "10:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 10:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "done",
+     "Processed"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Drafted"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "done",
+     "1 of 2 not discussed"
+    ],
+    [
+     "review",
+     "Review",
+     "current",
+     "2 waiting for you"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC Design review"
+  },
+  "c5f18f62ff": {
+   "counts": {
+    "items": 0,
+    "pending": 1,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-07",
+   "draft": "system/staging/drafts/Not there.docx",
+   "due": [],
+   "eid": null,
+   "end": "",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "fp:gone",
+   "minutes": "pending",
+   "next": {
+    "act": "review",
+    "label": "Review the minutes"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "skip",
+     "No calendar entry"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "done",
+     "Processed"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Drafted"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "skip",
+     "No agenda, so not checked"
+    ],
+    [
+     "review",
+     "Review",
+     "current",
+     "1 waiting for you"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "ABC Lost minutes"
+  },
+  "cf798a6273": {
+   "counts": {
+    "items": 1,
+    "pending": 1,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-08",
+   "draft": null,
+   "due": [],
+   "eid": null,
+   "end": "",
+   "filed": [],
+   "files": [
+    "projects/ABC Example Programme/minutes/2026-10-08 Quick note - catch-up.md"
+   ],
+   "items": [
+    {
+     "due": null,
+     "k": "actions",
+     "n": 1,
+     "o": "Sara Example",
+     "state": "pending",
+     "t": "Send the note",
+     "you": true
+    }
+   ],
+   "key": "fp:quick note - catch-up",
+   "minutes": "approved",
+   "next": {
+    "act": "review",
+    "label": "Review the 1 item"
+   },
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": true,
+   "start": "",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "skip",
+     "No invite: a quick note"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "skip",
+     "A quick note: no transcript"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Quick note filed"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "skip",
+     "No agenda, so not checked"
+    ],
+    [
+     "review",
+     "Review",
+     "current",
+     "1 waiting for you"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "Quick note - catch-up"
+  },
+  "e79559009a": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-07",
+   "draft": null,
+   "due": [],
+   "eid": "e3",
+   "end": "09:30",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "calendar:e3",
+   "minutes": null,
+   "next": {
+    "act": "intake",
+    "label": "Load the transcript"
+   },
+   "p": [
+    "DEF"
+   ],
+   "prep": null,
+   "processed": null,
+   "promised": [],
+   "quick": false,
+   "start": "09:00",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "done",
+     "In your calendar, 09:00"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "current",
+     "Ready to load"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "todo",
+     "Not drafted yet"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "todo",
+     "After the minutes, when there is an agenda"
+    ],
+    [
+     "review",
+     "Review",
+     "todo",
+     "Nothing to review yet"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "todo",
+     "After review"
+    ]
+   ],
+   "title": "DEF stand-up"
+  },
+  "e9d8f48a40": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "2026-10-03",
+   "draft": null,
+   "due": [],
+   "eid": null,
+   "end": "",
+   "filed": [
+    "projects/ABC Example Programme/minutes/2026-10-03 ABC Older sync.docx",
+    "projects/ABC Example Programme/transcripts/2026-10-03 ABC Older sync.vtt"
+   ],
+   "files": [
+    "projects/ABC Example Programme/minutes/2026-10-03 ABC Older sync.docx",
+    "projects/ABC Example Programme/transcripts/2026-10-03 ABC Older sync.vtt"
+   ],
+   "items": [],
+   "key": "fp:older",
+   "minutes": null,
+   "next": null,
+   "p": [
+    "ABC"
+   ],
+   "prep": null,
+   "processed": "2026-10-03",
+   "promised": [],
+   "quick": false,
+   "start": "",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "skip",
+     "No calendar entry"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "done",
+     "Processed"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Drafted"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "skip",
+     "No agenda, so not checked"
+    ],
+    [
+     "review",
+     "Review",
+     "done",
+     "Approved and filed"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "done",
+     "Nothing due soon"
+    ]
+   ],
+   "title": "ABC Older sync"
+  },
+  "f4ddf275bc": {
+   "counts": {
+    "items": 0,
+    "pending": 0,
+    "rejected": 0,
+    "updates": 0
+   },
+   "coverage": [],
+   "day": "",
+   "draft": null,
+   "due": [],
+   "eid": null,
+   "end": "",
+   "filed": [],
+   "files": [],
+   "items": [],
+   "key": "fp:quick note - stand-in",
+   "minutes": null,
+   "next": null,
+   "p": [],
+   "prep": null,
+   "processed": "2026-10-05",
+   "promised": [],
+   "quick": true,
+   "start": "",
+   "steps": [
+    [
+     "invite",
+     "Invite",
+     "skip",
+     "No invite: a quick note"
+    ],
+    [
+     "prep",
+     "Prep page",
+     "skip",
+     "No prep page"
+    ],
+    [
+     "transcript",
+     "Transcript",
+     "skip",
+     "A quick note: no transcript"
+    ],
+    [
+     "draft",
+     "Draft minutes",
+     "done",
+     "Quick note filed"
+    ],
+    [
+     "coverage",
+     "Coverage",
+     "skip",
+     "No agenda, so not checked"
+    ],
+    [
+     "review",
+     "Review",
+     "done",
+     "Approved and filed"
+    ],
+    [
+     "follow",
+     "Follow-up",
+     "done",
+     "Nothing due soon"
+    ]
+   ],
+   "title": "Meeting"
+  }
+ },
+ "review": [
+  {
+   "age": "<AGE>",
+   "cov": [
+    {
+     "point": "Design sign-off",
+     "verdict": "Discussed"
+    },
+    {
+     "point": "Budget",
+     "verdict": "Not discussed"
+    }
+   ],
+   "file": "proposed-design.json",
+   "indiv": true,
+   "kind": "draft",
+   "mt": "aadc46ba3c",
+   "n": 6,
+   "p": "ABC",
+   "projects": [
+    "ABC"
+   ],
+   "rec": {
+    "t": "Minutes: ABC Design review"
+   },
+   "ref": "meeting",
+   "src": "system/staging/drafts/Design minutes.docx",
+   "stale": "<STALE>",
+   "why": "Draft minutes"
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-design.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 7,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": "2026-10-13",
+    "ms": null,
+    "o": "Omar Haddad",
+    "pr": "Medium",
+    "raised": "2026-10-08",
+    "st": "Open",
+    "t": "Share the design pack",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 1,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "file": "proposed-files.json",
+   "indiv": true,
+   "kind": "files",
+   "n": 4,
+   "p": "ABC",
+   "projects": [
+    "ABC"
+   ],
+   "rec": {
+    "t": "File change: Add to ABC memory"
+   },
+   "ref": "file_changes",
+   "src": "",
+   "stale": "<STALE>",
+   "why": "File change"
+  },
+  {
+   "age": "<AGE>",
+   "cov": [],
+   "file": "proposed-gone.json",
+   "indiv": true,
+   "kind": "draft",
+   "mt": "c5f18f62ff",
+   "n": 8,
+   "nodraft": true,
+   "p": "ABC",
+   "projects": [
+    "ABC"
+   ],
+   "rec": {
+    "t": "Minutes: ABC Lost minutes"
+   },
+   "ref": "meeting",
+   "src": "system/staging/drafts/Not there.docx",
+   "stale": "<STALE>",
+   "tsrc": "inbox/Recording.vtt",
+   "why": "Draft minutes"
+  },
+  {
+   "age": "<AGE>",
+   "dup": {
+    "id": "ABC-A-002",
+    "same": true,
+    "score": 0.75,
+    "state": "open",
+    "strength": "Very likely",
+    "t": "Book UAT environment"
+   },
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 17,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": true,
+    "closed": null,
+    "cm": "We are booking UAT",
+    "due": "2026-10-15",
+    "ms": null,
+    "o": "Sara Example",
+    "pr": "High",
+    "raised": "2026-10-04",
+    "st": "Open",
+    "t": "Book the UAT environment for the client",
+    "upd": "",
+    "ws": "Build"
+   },
+   "ref": 1,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "raid",
+   "mf": null,
+   "n": 18,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": "2026-10-17",
+    "imp": "High",
+    "lik": "Medium",
+    "ms": null,
+    "o": "Omar Haddad",
+    "raised": "2026-10-04",
+    "resp": "Ask the client",
+    "st": "Open",
+    "t": "Masked data incomplete",
+    "type": "Issue",
+    "ws": ""
+   },
+   "ref": 2,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [
+    "conflict"
+   ],
+   "indiv": true,
+   "kind": "update",
+   "mf": null,
+   "n": 12,
+   "op": "update",
+   "p": "ABC",
+   "rec": {
+    "changes": [
+     {
+      "field": "owner",
+      "from": "Sara Example",
+      "to": "Omar Haddad"
+     }
+    ],
+    "field": "owner",
+    "from": "Sara Example",
+    "t": "ABC-A-002: owner → Omar Haddad",
+    "target": "ABC-A-002",
+    "to": "Omar Haddad"
+   },
+   "ref": 5,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Owner change",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": true,
+   "kind": "update",
+   "mf": null,
+   "n": 13,
+   "op": "update",
+   "p": "ABC",
+   "rec": {
+    "changes": [
+     {
+      "field": "status",
+      "from": "Open",
+      "to": "Delayed"
+     },
+     {
+      "field": "latest update",
+      "from": null,
+      "to": "CIO away"
+     }
+    ],
+    "field": "status",
+    "from": "Open",
+    "t": "ABC-A-001 Escalate data access to the client CIO",
+    "target": "ABC-A-001",
+    "to": "Delayed",
+    "why": "the CIO is away"
+   },
+   "ref": 6,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Status change",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": true,
+   "kind": "update",
+   "mf": null,
+   "n": 14,
+   "op": "update",
+   "p": "ABC",
+   "rec": {
+    "changes": [
+     {
+      "field": "health",
+      "from": "Off track",
+      "to": "At risk"
+     },
+     {
+      "field": "health reason",
+      "from": "UAT start slipped 14 days",
+      "to": "UAT"
+     }
+    ],
+    "field": "health",
+    "from": "Off track",
+    "t": "ABC: health → At risk, health_reason → UAT",
+    "target": "ABC",
+    "to": "At risk"
+   },
+   "ref": 7,
+   "signals": [],
+   "src": "",
+   "stale": "<STALE>",
+   "why": "Health change",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "update",
+   "mf": null,
+   "n": 19,
+   "op": "update",
+   "p": "ABC",
+   "rec": {
+    "changes": [
+     {
+      "field": "forecast",
+      "from": "2026-11-02",
+      "to": "2026-11-09"
+     }
+    ],
+    "field": "forecast_date",
+    "from": "2026-11-02",
+    "t": "ABC-M-001: forecast_date → 09-11-2026",
+    "target": "ABC-M-001",
+    "to": "2026-11-09"
+   },
+   "ref": 8,
+   "signals": [],
+   "src": "",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": true,
+   "kind": "update",
+   "mf": null,
+   "n": 15,
+   "op": "update",
+   "p": "ABC",
+   "rec": {
+    "changes": [
+     {
+      "field": "client messaging",
+      "from": "",
+      "to": "We moved go-live"
+     }
+    ],
+    "field": "client_message",
+    "from": "",
+    "t": "ABC-D-005: client_message → We moved go-live",
+    "target": "ABC-D-005",
+    "to": "We moved go-live"
+   },
+   "ref": 9,
+   "signals": [],
+   "src": "",
+   "stale": "<STALE>",
+   "why": "Client wording",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 1,
+   "op": "new",
+   "p": null,
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "TBC",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Find a venue",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 10,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Needs a project",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [
+    "no-owner",
+    "no-due-date"
+   ],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 25,
+   "op": "new",
+   "p": "DEF",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "TBC",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Confirm the pilot users",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 11,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "No owner yet",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [
+    "date-from-file"
+   ],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 20,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "Alan Carter",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Print the plan",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 12,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Meeting date taken from the file",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [
+    "new-workstream"
+   ],
+   "indiv": true,
+   "kind": "raid",
+   "mf": null,
+   "n": 16,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "imp": null,
+    "lik": null,
+    "ms": null,
+    "o": "TBC",
+    "raised": "2026-10-09",
+    "resp": "",
+    "st": "Open",
+    "t": "Vendor capacity",
+    "type": "Risk",
+    "ws": "Vendors"
+   },
+   "ref": 13,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "New risk",
+   "ws_suggest": {
+    "keywords": [
+     "vendor"
+    ],
+    "name": "Vendors"
+   }
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 2,
+   "op": "new",
+   "p": null,
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "Omar Ali",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Send the pilot pack",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 14,
+   "signals": [
+    {
+     "code": "",
+     "column": "Email domains",
+     "kind": "domain",
+     "needs_shared": true,
+     "ok": false,
+     "owners": [
+      "DEF"
+     ],
+     "reason": "already a signal for DEF; it can go under Shared instead",
+     "shared": false,
+     "value": "def.example"
+    }
+   ],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Possible match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "inferred": [],
+   "kind": "actions",
+   "mf": "proposed-pending.json",
+   "n": 21,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "Omar Haddad",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Draft the test plan",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 15,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": {
+    "id": "ABC-A-001",
+    "same": true,
+    "score": 0.83,
+    "state": "open",
+    "strength": "Very likely",
+    "t": "Escalate data access to the client CIO"
+   },
+   "file": "proposed-mixed.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 22,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "Alan Carter",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Escalate data access to the client CIO now",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 16,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-note.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 23,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "Sara Example",
+    "pr": "Medium",
+    "raised": "2026-10-08",
+    "st": "Open",
+    "t": "Send the note",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 1,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "cov": [],
+   "file": "proposed-pending.json",
+   "indiv": true,
+   "kind": "draft",
+   "mt": "13fbd79c3d",
+   "n": 9,
+   "p": "ABC",
+   "projects": [
+    "ABC"
+   ],
+   "rec": {
+    "t": "Minutes: ABC Steering"
+   },
+   "ref": "meeting",
+   "src": "system/staging/drafts/Draft minutes.docx",
+   "stale": "<STALE>",
+   "why": "Draft minutes"
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-pending.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 11,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "Alan Carter",
+    "pr": "Medium",
+    "raised": "2026-10-01",
+    "st": "Open",
+    "t": "Chase legal on the SOW",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 1,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-pending.json",
+   "flags": [],
+   "indiv": true,
+   "kind": "raid",
+   "mf": null,
+   "n": 10,
+   "op": "new",
+   "p": "ABC",
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "imp": null,
+    "lik": null,
+    "ms": null,
+    "o": "TBC",
+    "raised": "2026-10-09",
+    "resp": "",
+    "st": "Open",
+    "t": "Vendor exits the market",
+    "type": "Risk",
+    "ws": ""
+   },
+   "ref": 2,
+   "signals": [],
+   "src": "projects/ABC Example Programme/minutes/2026-10-04 Steering.docx — Actions",
+   "stale": "<STALE>",
+   "why": "New risk",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-pending.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "actions",
+   "mf": null,
+   "n": 3,
+   "op": "new",
+   "p": null,
+   "rec": {
+    "client": false,
+    "closed": null,
+    "cm": "",
+    "due": null,
+    "ms": null,
+    "o": "TBC",
+    "pr": "Medium",
+    "raised": "2026-10-09",
+    "st": "Open",
+    "t": "Confirm data owner",
+    "upd": "",
+    "ws": ""
+   },
+   "ref": 3,
+   "signals": [],
+   "src": "Teams · Chat: Omar",
+   "stale": "<STALE>",
+   "why": "Possible match",
+   "ws_suggest": null
+  },
+  {
+   "age": "<AGE>",
+   "file": "proposed-report.json",
+   "indiv": true,
+   "kind": "draft",
+   "n": 5,
+   "p": "ABC",
+   "projects": [
+    "ABC"
+   ],
+   "rec": {
+    "t": "Report: Weekly report"
+   },
+   "ref": "report",
+   "src": "system/staging/drafts/Weekly report.docx",
+   "stale": "<STALE>",
+   "why": "Draft report"
+  },
+  {
+   "age": "<AGE>",
+   "dup": null,
+   "file": "proposed-undone.json",
+   "flags": [],
+   "indiv": false,
+   "kind": "update",
+   "mf": null,
+   "n": 24,
+   "op": "update",
+   "p": "ABC",
+   "rec": {
+    "changes": [
+     {
+      "field": "due date",
+      "from": "2026-10-06",
+      "to": "2026-11-08"
+     }
+    ],
+    "field": "due_date",
+    "from": "2026-10-06",
+    "t": "ABC-A-001: due_date → 08-11-2026",
+    "target": "ABC-A-001",
+    "to": "2026-11-08"
+   },
+   "ref": 1,
+   "signals": [],
+   "src": "",
+   "stale": "<STALE>",
+   "why": "Strong match",
+   "ws_suggest": null
+  }
+ ]
+}

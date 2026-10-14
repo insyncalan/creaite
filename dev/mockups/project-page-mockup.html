@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Published: https://claude.ai/artifact/Xk2SGW7fz6AJGCr45bPjfL -->
+</head>
+<body>
+<!-- BL-317 Reports you live in (Alan, 14-10-2026): a living Status page per project. Builds on option A of "creaite, calmer", tab 8. -->
+<title>Living status page</title>
+<style>
+/* Layout: creaite's window (rail + project page, Status tab) on the left; notes and decisions on the right. */
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#7A848D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --rail:#EEF1F3; --amber:#E0A12E; --flash:#FFF6D6; --client:#EAF3FF; --client-ink:#1F4E8C;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  --serif:"Iowan Old Style","Charter","Georgia","Cambria",serif;
+  --mono:"IBM Plex Mono",Menlo,monospace;
+  --shadow:0 10px 30px rgba(20,33,42,.14),0 2px 6px rgba(20,33,42,.08);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --rail:#131A1E; --flash:#3A3214; --client:#15263A; --client-ink:#A9C8F0; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --rail:#131A1E; --flash:#3A3214; --client:#15263A; --client-ink:#A9C8F0; --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font);margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 16px;max-width:920px}
+.sub{color:var(--muted);font-size:12px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+.tag{display:inline-flex;align-items:center;gap:4px;height:20px;padding:0 7px;border-radius:999px;background:var(--sunk);color:var(--muted);font-size:11.5px;font-weight:500;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.acc{background:var(--accent-soft);color:var(--accent)} .tag.cl{background:var(--client);color:var(--client-ink)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;font-size:13px;white-space:nowrap}
+.btn.sm{height:28px;padding:0 10px;font-size:12.5px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--client);color:var(--client-ink);border-color:var(--client-ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* the creaite window */
+.win{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);display:grid;grid-template-columns:160px minmax(0,1fr);min-width:0}
+@media (max-width:700px){.win{grid-template-columns:1fr}.rail{display:none}}
+.rail{background:var(--rail);border-right:1px solid var(--line);padding:10px 8px;display:grid;gap:2px;align-content:start;font-size:13px}
+.rail .wm{font:600 15px/1 var(--mono);padding:4px 8px 12px}
+.rail .wm i{display:block;width:26px;height:4px;background:#F2B544;margin-top:4px;border-radius:1px}
+.rail .r{padding:6px 8px;border-radius:7px;color:var(--muted)}
+.rail .r.on{background:var(--surface);color:var(--ink);font-weight:500;box-shadow:0 0 0 1px var(--line)}
+.main{min-width:0;display:grid;align-content:start}
+.phead{padding:14px 18px 0;display:grid;gap:8px;border-bottom:1px solid var(--line)}
+.phead .crumb{font-size:12px;color:var(--muted)}
+.phead h2{margin:0;font-size:20px;font-weight:600}
+.ptabs{display:flex;gap:2px;overflow-x:auto}
+.ptabs button{padding:8px 12px;color:var(--muted);border:0;border-bottom:2px solid transparent;background:none;font-size:13px;white-space:nowrap;cursor:pointer}
+.ptabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent);font-weight:500}
+.ptabs button .tag{margin-left:4px;height:17px;font-size:10.5px}
+/* the other tabs */
+.tabpane{padding:16px 18px 22px;display:grid;gap:18px;font-size:13.5px}
+.tabpane h3{margin:0 0 8px;font:600 13px/1.2 var(--font);letter-spacing:.02em;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 16px}
+.facts div{display:grid;gap:1px}
+.facts .k{font-size:11.5px;color:var(--muted)}
+.nums{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.num{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:2px;background:var(--surface)}
+.num b{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.num .bad{color:var(--bad)}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:800px){.two{grid-template-columns:1fr}}
+.list{display:grid}
+.list .li{display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap}
+.list .li:last-child{border-bottom:0}
+.list .li .g{flex:1;min-width:180px}
+.list .li .id{font-size:11.5px;color:var(--faint);min-width:90px}
+.trend{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.trend .w{display:grid;gap:3px;justify-items:center;font-size:11px;color:var(--muted)}
+.trend .w .dot{width:14px;height:14px}
+.tl{width:100%;height:auto;display:block}
+.tlwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--surface)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t tr:last-child td{border-bottom:0}
+table.t .num-c{font-variant-numeric:tabular-nums;white-space:nowrap}
+.tblwrap{overflow-x:auto}
+.od{color:var(--bad);font-weight:600}
+.subtabs{display:flex;gap:4px;flex-wrap:wrap}
+.subtabs button,.fchip{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:28px;padding:0 11px;font-size:12.5px;cursor:pointer}
+.subtabs button[aria-pressed="true"],.fchip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:500}
+.wsh{font-size:12px;font-weight:600;color:var(--muted);padding:10px 0 2px;display:flex;gap:6px}
+.wrow{display:grid;grid-template-columns:110px minmax(0,1fr) 150px 110px 70px;gap:10px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer;border-radius:6px}
+.wrow:hover{background:var(--sunk)}
+@media (max-width:760px){.wrow{grid-template-columns:90px minmax(0,1fr) 90px}.wrow .own,.wrow .pr{display:none}}
+.fgrid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:14px}
+@media (max-width:760px){.fgrid{grid-template-columns:1fr}}
+.tree{display:grid;gap:1px;align-content:start;border:1px solid var(--line);border-radius:10px;padding:6px;background:var(--surface)}
+.tree .grp{font-size:11px;color:var(--faint);font-weight:600;padding:8px 8px 2px;letter-spacing:.03em}
+.tree button{display:flex;gap:6px;align-items:center;border:0;background:none;text-align:left;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:13px}
+.tree button .c{margin-left:auto;font-size:11.5px;color:var(--muted)}
+.tree button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.tree button.arch{color:var(--faint)}
+.callout{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--bg);display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:13px}
+.callout .g{flex:1;min-width:220px}
+.msframe{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:12px;position:relative}
+.msframe.internal{border:2px solid var(--ink);padding-top:22px}
+.ipill{position:absolute;top:-11px;left:12px;background:var(--ink);color:var(--surface);font:600 11px/1 var(--font);letter-spacing:.06em;padding:5px 9px;border-radius:999px}
+.onstatus{border:1px dashed var(--accent);border-radius:10px;padding:10px 12px;background:var(--accent-soft)}
+.onstatus h3{color:var(--accent)}
+.pbar{height:6px;background:var(--sunk);border-radius:999px;overflow:hidden;width:80px}
+.pbar i{display:block;height:100%;background:var(--accent)}
+.linkish{border:0;background:none;padding:0;cursor:pointer;color:var(--accent);text-align:left;font:inherit}
+.linkish b{color:var(--ink)}
+.subtabs button:disabled{opacity:.45;cursor:not-allowed}
+.note{width:100%;min-height:70px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface);resize:vertical}
+.tabpane{position:relative}
+.medit{position:absolute;top:0;right:0;bottom:0;width:min(360px,100%);background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);padding:14px;display:grid;gap:9px;align-content:start;overflow:auto;z-index:4}
+.mehead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.mehead b{font-size:15px}.mehead .sub{flex:1}
+.ib2{border:0;background:none;cursor:pointer;width:28px;height:28px;border-radius:6px;color:var(--muted)}
+.fl{display:grid;gap:3px;font-size:12px;color:var(--muted);font-weight:500}
+.fl input,.fl select,.fl textarea{border:1px solid var(--line);border-radius:8px;padding:6px 8px;background:var(--surface);color:var(--ink);font-size:13px;width:100%}
+.fl textarea{min-height:56px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chk{display:flex;gap:6px;align-items:center;font-size:13px}
+.acts2{display:flex;gap:8px;justify-content:flex-end}
+.rebase{border:1px solid var(--line);border-radius:8px;padding:8px;display:grid;gap:6px;background:var(--bg)}
+.hist{margin:6px 0 0;font-size:13px}
+
+.sbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:2}
+.weeks{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.weeks button{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:26px;padding:0 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.weeks button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:500}
+.sbar .sp{flex:1}
+.mode{font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.clientband{display:none;background:var(--client);color:var(--client-ink);padding:7px 18px;font-size:12.5px}
+.isclient .clientband{display:block}
+.pastband{display:none;background:var(--sunk);color:var(--muted);padding:7px 18px;font-size:12.5px}
+.ispast .pastband{display:block}
+
+.doc{padding:16px 18px 22px;display:grid;gap:18px;font-size:13.5px;max-width:860px}
+.doc h3{margin:0 0 6px;font:600 13px/1.2 var(--font);letter-spacing:.02em;color:var(--muted);display:flex;gap:8px;align-items:center}
+.doc h3 .n{font-weight:400}
+.hl{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.health{position:relative}
+.hbtn{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:600}
+.hbtn .dot{width:10px;height:10px;border-radius:50%}
+.dot.g{background:var(--ok)} .dot.a{background:var(--amber)} .dot.r{background:var(--bad)}
+.hmenu{position:absolute;top:40px;left:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:8px;display:grid;gap:6px;width:300px;z-index:5}
+.hmenu[hidden]{display:none}
+.hmenu .opts{display:flex;gap:6px}
+.hmenu .opts button{flex:1;height:30px;border:1px solid var(--line);border-radius:7px;background:var(--surface);cursor:pointer;font-size:12.5px;display:flex;gap:6px;align-items:center;justify-content:center}
+.hmenu .opts button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.hmenu textarea{min-height:52px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--surface);resize:vertical;width:100%}
+.hreason{flex:1;min-width:240px;color:var(--ink)}
+.hreason .was{font-size:12px;color:var(--muted)}
+.prose{font-family:var(--serif);font-size:16px;line-height:1.55;outline:none;border-radius:8px;padding:6px 8px;margin:-6px -8px;max-width:72ch}
+.prose:hover{background:var(--sunk)} .prose:focus{background:var(--surface);box-shadow:0 0 0 2px var(--accent-soft)}
+.ispast .prose:hover{background:none}
+.prose p{margin:0 0 8px}
+.ev{font:500 11px/1 var(--font);color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:3px 6px;margin-left:3px;white-space:nowrap;cursor:help;vertical-align:2px;user-select:none}
+.new{background:var(--flash);border-radius:4px;box-shadow:0 0 0 2px var(--flash)}
+.chg{font:500 11px/1 var(--font);color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:3px 6px;margin-left:4px;vertical-align:2px;white-space:nowrap}
+.isclient .chg,.isclient .int{display:none}
+.sugg{border:1px dashed var(--line);border-radius:10px;padding:9px 11px;display:grid;gap:6px;background:var(--bg)}
+.sugg .row{display:flex;gap:8px;align-items:center;font-size:13px;flex-wrap:wrap}
+.sugg .row .g{flex:1;min-width:200px}
+.isclient .sugg,.ispast .sugg{display:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.card{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:5px;font-size:13px;min-width:0;background:var(--surface)}
+.card .top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.card .top b{flex:1;min-width:0}
+.card .id{font-size:11.5px;color:var(--faint)}
+.card .m{font-size:12px;color:var(--muted)}
+.risk{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;border-bottom:1px solid var(--line);padding:8px 0;font-size:13px}
+.risk:last-child{border-bottom:0}
+.risk .p{font-size:11px;font-weight:600}
+.risk .cm{grid-column:2;font-size:12.5px;color:var(--muted);display:none}
+.isclient .risk .cm{display:block}
+.isclient .risk .desc-int{display:none}
+.hidden-client{display:contents}
+.isclient .hidden-client{display:none}
+.moved{display:grid;gap:4px}
+.moved .row{display:flex;gap:8px;align-items:center;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.moved .row:last-child{border-bottom:0}
+.moved .row .g{flex:1;min-width:200px}
+.isclient .moved-sec{display:none}
+.help{border-left:3px solid var(--accent);padding:6px 10px;background:var(--accent-soft);border-radius:0 8px 8px 0}
+.overlay{position:absolute;inset:0;background:rgba(15,21,24,.35);display:grid;place-items:center;z-index:10;padding:16px}
+.overlay[hidden]{display:none}
+.dlg{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);padding:16px;display:grid;gap:12px;width:min(460px,100%)}
+.dlg h4{margin:0;font-size:15px}
+.dlg .opt{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:3px;cursor:pointer;text-align:left;background:var(--surface)}
+.dlg .opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end}
+.wrapwin{position:relative}
+.snack{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:var(--surface);border-radius:10px;padding:9px 14px;font-size:13px;box-shadow:var(--shadow);max-width:90%;z-index:11}
+.snack[hidden]{display:none}
+
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:13px;min-width:0}
+.notes h3{margin:12px 0 4px;font-size:13px} .notes h3:first-child{margin-top:0}
+.notes ul{margin:4px 0;padding-left:18px} .notes li{margin:3px 0}
+.q{background:var(--sunk);border-radius:8px;padding:8px 10px;margin-top:12px}
+.q ol{margin:4px 0 0;padding-left:18px} .q li{margin:4px 0}
+.q .rec{color:var(--accent);font-weight:500}
+@media (prefers-reduced-motion:no-preference){.new{transition:background-color .8s ease}}
+</style>
+
+<div class="page">
+  <h1 class="t">Reports you live in: the project page</h1>
+  <p class="lede">BL-317: one <b>Status</b> page per project, always current and edited in place. Every sentence keeps its evidence. Each Friday the page becomes that week's snapshot, and the Word weekly and client reports are made from it, so a report is never written from scratch. Built from option A of "creaite, calmer". Sample data from your portfolio.</p>
+
+  <div class="grid">
+    <div class="wrapwin">
+    <div class="win" id="win">
+      <nav class="rail" aria-label="Rail"><div class="wm">creaite<i></i></div>
+        <div class="r">Today</div><div class="r">Work</div><div class="r on">Projects</div><div class="r">People</div><div class="r">Review</div><div class="r">Files</div><div class="r">Settings</div></nav>
+      <div class="main" id="main">
+        <div class="phead">
+          <div class="crumb">Projects ›</div>
+          <h2>Kestrel Energy AI</h2>
+          <div class="ptabs" role="tablist" aria-label="Project" id="ptabs">
+            <button type="button" role="tab" data-tab="status" aria-selected="true">Status <span class="tag acc">new</span></button>
+            <button type="button" role="tab" data-tab="overview" aria-selected="false">Overview</button>
+            <button type="button" role="tab" data-tab="milestones" aria-selected="false">Milestones</button>
+            <button type="button" role="tab" data-tab="work" aria-selected="false">Work <span class="tag">14</span></button>
+            <button type="button" role="tab" data-tab="files" aria-selected="false">Files</button>
+            <button type="button" role="tab" data-tab="reports" aria-selected="false">Reports</button>
+          </div>
+        </div>
+        <div id="statusOnly">
+        <div class="sbar">
+          <div class="weeks" role="group" aria-label="Week" id="weeks">
+            <button type="button" data-week="w1" aria-pressed="false">02-10</button>
+            <button type="button" data-week="w2" aria-pressed="false">09-10</button>
+            <button type="button" data-week="w3" aria-pressed="true">16-10 · this week</button>
+          </div>
+          <span class="mode" id="modeLine">Saved 14:02 · this week's draft</span>
+          <span class="sp"></span>
+          <button class="btn sm" type="button" id="clientBtn" aria-pressed="false">Client view</button>
+          <button class="btn sm" type="button" id="exportBtn">Export to Word</button>
+          <button class="btn sm primary" type="button" id="closeWeek">Close the week</button>
+        </div>
+        <div class="clientband">Client view: what Kestrel Group sees. <b>2 items hidden:</b> 1 marked Sensitive, 1 not client-visible. Risks show their client wording. Nothing here changes the record.</div>
+        <div class="pastband" id="pastBand"></div>
+        <div class="doc" id="doc"></div>
+        </div>
+        <div class="tabpane" id="pane" hidden></div>
+      </div>
+    </div>
+    <div class="overlay" id="ov" hidden><div class="dlg" role="dialog" aria-label="Export to Word" id="dlg"></div></div>
+    <div class="snack" id="snack" hidden role="status"></div>
+    </div>
+
+    <aside class="notes">
+      <h3>What it is</h3>
+      <ul><li>A <b>Status</b> tab on each project, first of its tabs: health with its reason, Current state, help needed, milestones, top risks and the week's decisions. It reads the tracker live; you only write the words.</li>
+      <li><b>Edit in place.</b> Click any sentence and type. Evidence chips (like <span class="ev">FAL-A-007</span>) keep each claim tied to its source (BL-207). Health changes need a reason, as today.</li>
+      <li><b>What moved this week</b> lists what changed in the tracker since last Friday. <b>Add</b> writes a suggested sentence, with its evidence, into Current state. creaite never writes there on its own.</li></ul>
+      <h3>Weeks</h3>
+      <ul><li>The page is always "this week". <b>Close the week</b> on Friday freezes it as that week's snapshot and starts next week from it.</li>
+      <li>Past weeks open read-only, and the page marks what changed since then.</li></ul>
+      <h3>Reports</h3>
+      <ul><li><b>Client view</b> shows exactly what a client report would: client-visible items only, nothing Sensitive, risks in their client wording.</li>
+      <li><b>Export to Word</b> builds the branded weekly or client report from the page, as a draft for Review. Nothing is sent, and the Word templates stay in the Brightwater brand.</li>
+      <li>cx-weekly-report and cx-client-report take this page as their source, so Friday's report is a check, not a write.</li></ul>
+      <div class="q"><b>For you to decide</b><ol>
+        <li><b>Where it lives:</b> a Status tab on the project page, first (as drawn), or its own place in the rail. <span class="rec">Recommended: the tab.</span></li>
+        <li><b>Closing the week:</b> one button that freezes the snapshot and drafts the weekly report for Review (as drawn), or the snapshot taken by itself every Friday at 17:00. <span class="rec">Recommended: the button, with the Friday reminder pointing to it.</span></li>
+        <li><b>The weekly report skill:</b> builds only from this page (as drawn), or can still draft from scratch when the page is empty. <span class="rec">Recommended: from the page; an empty page starts from last week's.</span></li>
+        <li><b>Client report:</b> one Client view for all clients of the project, or its own client wording per report. <span class="rec">Recommended: one view, from the client-visible flags and client messages you already keep.</span></li>
+      </ol></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id), esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const ev=(t,tip)=>`<span class="ev" title="${esc(tip)}">${esc(t)}</span>`;
+  const H={g:["On track","g","ok"],a:["At risk","a","warn"],r:["Off track","r","bad"]};
+  const WEEKS={
+    w1:{label:"Week ending 02-10-2026",health:"g",reason:"Conversational AI pilot on plan; Northgate design reviews started.",
+        state:[`Conversational AI pilot running with 1,200 users ${ev("FAL-M-002","Milestone, forecast 30-09-2026")}.`,`Northgate functional design reviews started: 6 of 16 workflows signed off ${ev("FAL-006","FDS tracker, 01-10-2026")}.`],
+        help:"None this week."},
+    w2:{label:"Week ending 09-10-2026",health:"g",reason:"Conversational AI live; Northgate functional design on track.",
+        state:[`Conversational AI is live with 4,500 users ${ev("FAL-M-002","Achieved 30-09-2026")}.`,`Northgate's functional design is 11 of 16 workflows signed off ${ev("FAL-006","FDS tracker, 08-10-2026")}.`],
+        help:"None this week."}
+  };
+  const NOW={week:"w3",health:"a",reason:"Northgate's test environment dates aren't confirmed, so UAT complete has slipped a week, and the back-to-back commercials need Northgate's sign-off.",
+    was:"g",
+    state:[`Conversational AI is live with 6,000 users ${ev("2 sources","FAL-M-002; Alan x Tom Catch up on Northgate, 12-10-2026")}.`,
+           `Northgate's functional design is 14 of 16 workflows signed off ${ev("2 sources","FAL-006; Kate Lowe, Signed UC1.2 FDS Document, 13-10-2026")}<span class="chg">changed since 09-10</span>.`,
+           `UAT complete has moved from 30-10 to 06-11 while Northgate confirms its test environment ${ev("FAL-M-003","Forecast moved 13-10-2026; FAL-004")}<span class="chg">new since 09-10</span>.`],
+    help:`Back-to-back commercials with Northgate need Dana Okoye's confirmation by Monday 19-10 ${ev("FAL-A-007","Action, owner Alan Carter, due 19-10-2026")}.`};
+  const SUGG=[
+    {id:"s1",t:"Tom's Northgate UAT plan is five days late, waiting on Northgate's environment dates.",ev:["FAL-A-009","Action, owner Tom Reid, due 09-10-2026, 5 days overdue"],int:true},
+    {id:"s2",t:"We agreed UAT will run on Northgate's own environment.",ev:["FAL-D-004","Decision made 13-10-2026 by Leo Marsh"]},
+    {id:"s3",t:"A new risk on data residency for the Northgate integration is being assessed.",ev:["FAL-011","Risk raised 13-10-2026, Sensitive"],int:true}
+  ];
+  const MILES=[
+    {id:"FAL-M-002",n:"Conversational AI live",st:["Achieved","ok"],d:"Achieved 30-09-2026",cv:true},
+    {id:"FAL-M-003",n:"Northgate UAT complete",st:["Slipped","warn"],d:"Forecast 06-11-2026 · agreed 30-10-2026 (+7 days)",cv:true,chg:true},
+    {id:"FAL-M-004",n:"Northgate go-live",st:["At risk","warn"],d:"Forecast 27-11-2026 · agreed 27-11-2026",cv:true}
+  ];
+  const RISKS=[
+    {id:"FAL-004",p:["High","bad"],t:"Northgate's test environment isn't ready for UAT",own:"Tom Reid",cm:"UAT could start up to a week later than planned. We are agreeing the environment dates with Northgate this Thursday.",cv:true},
+    {id:"FAL-008",p:["High","bad"],t:"Back-to-back commercials with Northgate not agreed before UAT",own:"Alan Carter",cm:"Commercial terms with Northgate need to be agreed before testing. Brightwater is confirming them by 19-10.",cv:true},
+    {id:"FAL-011",p:["Medium","warn"],t:"Data residency of Northgate's integration logs unclear",own:"Leo Marsh",cm:"",cv:false,sens:true}
+  ];
+  const DECS=[{id:"FAL-D-004",t:"UAT runs on Northgate's own test environment, not Brightwater's",d:"Made 13-10-2026 by Leo Marsh",cv:true}];
+  const MOVED=[
+    ["FAL-M-003","Forecast moved 30-10 → 06-11 (Slipped)","13-10"],
+    ["FAL-006","FDS: 14 of 16 workflows signed off (was 11)","13-10"],
+    ["FAL-D-004","Decision made: UAT on Northgate's environment","13-10"],
+    ["FAL-011","Risk raised: data residency (Sensitive)","13-10"],
+    ["FAL-A-009","Now 5 days overdue (Tom)","14-10"]];
+  let WEEK="w3", CLIENT=false, CLOSED=false, ADDED=new Set();
+
+  function healthHtml(w,past){ const h=H[w.health];
+    return `<div class="hl"><div class="health"><button class="hbtn" type="button" id="hBtn"${past?" disabled":""} aria-haspopup="true"><span class="dot ${h[1]}"></span>${h[0]}${past?"":` <span class="sub">▾</span>`}</button>
+      <div class="hmenu" id="hMenu" hidden role="dialog" aria-label="Change health"><div class="opts">${Object.entries(H).map(([k,v])=>`<button type="button" data-h="${k}" aria-pressed="${k===w.health}"><span class="dot ${v[1]}"></span>${v[0]}</button>`).join("")}</div>
+      <label class="sub" for="hWhy">Why (required)</label><textarea id="hWhy">${esc(w.reason)}</textarea><div style="display:flex;gap:6px;justify-content:flex-end"><button class="btn sm" type="button" data-hx="cancel">Cancel</button><button class="btn sm primary" type="button" data-hx="ok">Save</button></div></div></div>
+      <div class="hreason"><div class="prose" style="font-size:14.5px"${past?"":' contenteditable="true"'} aria-label="Health reason">${esc(w.reason)}</div>${!past&&w.was&&w.was!==w.health?`<div class="was int">Was ${H[w.was][0]} last week <span class="chg">changed since 09-10</span></div>`:""}</div></div>`; }
+
+  function draw(){
+    const past=WEEK!=="w3"||CLOSED&&WEEK==="w3x", w=WEEK==="w3"?NOW:WEEKS[WEEK];
+    $("main").classList.toggle("isclient",CLIENT); $("main").classList.toggle("ispast",WEEK!=="w3");
+    $("pastBand").textContent=WEEK!=="w3"?`${w.label}: a snapshot, read-only. "This week" shows what has changed since.`:"";
+    $("modeLine").textContent=WEEK!=="w3"?w.label+" · snapshot":CLOSED?"Week ending 16-10-2026 closed · snapshot saved":"Saved 14:02 · this week's draft";
+    $("closeWeek").disabled=WEEK!=="w3"||CLOSED; $("closeWeek").textContent=CLOSED?"Week closed":"Close the week";
+    const state=(WEEK==="w3"?w.state:w.state.map(s=>s)).map(s=>`<p>${s}</p>`).join("")+[...ADDED].map(id=>{ const g=SUGG.find(x=>x.id===id); return `<p class="${g.int?"int":""}"><span class="new">${esc(g.t)}</span> ${ev(g.ev[0],g.ev[1])}</p>`; }).join("");
+    const live=WEEK==="w3";
+    $("doc").innerHTML=`
+      <section><h3>Health</h3>${healthHtml(w,!live)}</section>
+      <section><h3>Current state <span class="n sub">${live?"click to edit · every sentence keeps its evidence":""}</span></h3>
+        <div class="prose"${live?' contenteditable="true"':""} aria-label="Current state">${state}</div></section>
+      ${live?`<section class="sugg" aria-label="Suggested from this week"><div class="sub"><b>Suggested from this week</b>: what moved in the tracker. Add puts a sentence and its evidence into Current state; nothing is added on its own.</div>
+        ${SUGG.filter(g=>!ADDED.has(g.id)).map(g=>`<div class="row"><span class="g">${esc(g.t)} ${ev(g.ev[0],g.ev[1])}${g.int?' <span class="tag">internal</span>':""}</span><button class="btn sm" type="button" data-add="${g.id}">Add</button></div>`).join("")||'<div class="sub">All added.</div>'}</section>`:""}
+      <section><h3>Help needed</h3><div class="help prose" style="font-size:15px"${live?' contenteditable="true"':""}>${w.help}</div></section>
+      ${live?`${statusMilestones()}
+      <section><h3>Top risks <span class="n sub">by priority</span></h3>${RISKS.map(r=>`<div class="${r.cv&&!r.sens?"":"hidden-client"}"><div class="risk"><span class="p tag ${r.p[1]}">${r.p[0]}</span><span><span class="desc-int">${esc(r.t)}</span>${r.cm?`<span class="cm">${esc(r.cm)}</span>`:""} <span class="sub int">· ${esc(r.own)} · ${r.id}${r.sens?' · <span class="tag bad">Sensitive</span>':""}${!r.cv?' · <span class="tag">not client-visible</span>':""}</span></span></div></div>`).join("")}</section>
+      <section><h3>Decisions this week</h3>${DECS.map(d=>`<div class="risk"><span class="tag acc">Made</span><span>${esc(d.t)} <span class="sub">· ${esc(d.d)} · ${d.id}</span></span></div>`).join("")}</section>
+      <section class="moved-sec"><h3>What moved this week <span class="n sub">since Friday 09-10 · internal</span></h3><div class="moved">${MOVED.map(m=>`<div class="row"><span class="tag">${m[2]}</span><span class="g">${esc(m[1])}</span><span class="sub">${m[0]}</span></div>`).join("")}</div></section>`
+      :`<section><h3>Milestones, risks and decisions</h3><div class="sub">Kept with the snapshot as they stood on ${w.label.slice(-10)}.</div></section>`}`;
+    wire(); }
+  function wire(){
+    const hb=$("hBtn"), hm=$("hMenu");
+    if(hb&&!hb.disabled) hb.onclick=()=>{ hm.hidden=!hm.hidden; };
+    if(hm){ hm.querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>hm.querySelectorAll("[data-h]").forEach(x=>x.setAttribute("aria-pressed",x===b)));
+      hm.querySelector('[data-hx="cancel"]').onclick=()=>hm.hidden=true;
+      hm.querySelector('[data-hx="ok"]').onclick=()=>{ const k=hm.querySelector('[aria-pressed="true"]').dataset.h, why=$("hWhy").value.trim();
+        if(!why){ $("hWhy").focus(); say("A health change needs its reason."); return; }
+        NOW.health=k; NOW.reason=why; draw(); say(`Health saved: ${H[k][0]}. Logged, and you can undo it.`); }; }
+    document.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{ ADDED.add(b.dataset.add); draw(); say("Added to Current state, with its evidence. Undo"); });
+  }
+  let st=null; function say(t){ $("snack").textContent=t; $("snack").hidden=false; clearTimeout(st); st=setTimeout(()=>$("snack").hidden=true,3200); }
+  $("weeks").querySelectorAll("[data-week]").forEach(b=>b.onclick=()=>{ WEEK=b.dataset.week; $("weeks").querySelectorAll("[data-week]").forEach(x=>x.setAttribute("aria-pressed",x===b)); draw(); });
+  $("clientBtn").onclick=()=>{ CLIENT=!CLIENT; $("clientBtn").setAttribute("aria-pressed",CLIENT); draw(); };
+  let KIND="weekly";
+  function dlg(){ $("dlg").innerHTML=`<h4>Export to Word</h4>
+      <button class="opt" type="button" data-k="weekly" aria-pressed="${KIND==="weekly"}"><b>Weekly report</b><span class="sub">Internal: everything on the page, Sensitive items marked. Brightwater template.</span></button>
+      <button class="opt" type="button" data-k="client" aria-pressed="${KIND==="client"}"><b>Client report</b><span class="sub">The Client view: client-visible items only, nothing Sensitive, client wording.</span></button>
+      <div class="sub">Drafted to Review as <b>2026-10-16 Kestrel Energy AI ${KIND==="client"?"client report (client)":"weekly report"}.docx</b>. On approval it's filed in 04 Reporting/Weekly. Nothing is sent.</div>
+      <div class="acts"><button class="btn" type="button" data-x="cancel">Cancel</button><button class="btn primary" type="button" data-x="ok">Draft the report</button></div>`;
+    $("dlg").querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{ KIND=b.dataset.k; dlg(); });
+    $("dlg").querySelector('[data-x="cancel"]').onclick=()=>$("ov").hidden=true;
+    $("dlg").querySelector('[data-x="ok"]').onclick=()=>{ $("ov").hidden=true; say(`${KIND==="client"?"Client":"Weekly"} report drafted from this page. It's waiting in Review.`); }; }
+  $("exportBtn").onclick=()=>{ dlg(); $("ov").hidden=false; };
+  $("ov").addEventListener("click",e=>{ if(e.target===$("ov")) $("ov").hidden=true; });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ $("ov").hidden=true; const hm=$("hMenu"); if(hm) hm.hidden=true; } });
+  $("closeWeek").onclick=()=>{ CLOSED=true; draw(); say("Week ending 16-10-2026 closed: snapshot saved, weekly report drafted for Review. Next week starts from this page."); };
+
+  /* ================= the other tabs ================= */
+  const dot=k=>`<span class="dot ${k}" style="display:inline-block"></span>`;
+  function overview(){ return `
+    <section><h3>About the project</h3><div class="facts">
+      <div><span class="k">Code</span><span>FAL</span></div><div><span class="k">Client</span><span>Kestrel Group</span></div>
+      <div><span class="k">Sponsor</span><span>Leo Marsh</span></div><div><span class="k">Phase</span><span>Delivery: Northgate integration</span></div>
+      <div><span class="k">Started</span><span>01-07-2026</span></div><div><span class="k">Client report</span><span>Fortnightly · next due 16-10</span></div>
+      <div><span class="k">Folder</span><span>Engagements › Kestrel Energy AI</span></div><div><span class="k">Next milestone</span><span>Northgate UAT complete · 06-11</span></div></div></section>
+    <section><h3>Health, last six weeks</h3><div class="trend">${["g","g","g","g","g","a"].map((k,i)=>`<div class="w">${dot(k)}<span>${["11-09","18-09","25-09","02-10","09-10","16-10"][i]}</span></div>`).join("")}<span class="sub" style="margin-left:8px">At risk since this week. The reason is on the Status tab.</span></div></section>
+    <section><div class="nums">
+      <div class="num"><span class="sub">Open actions</span><b>9</b><span class="sub"><span class="od">2 overdue</span> · 3 yours</span></div>
+      <div class="num"><span class="sub">Open risks and issues</span><b>5</b><span class="sub">2 High · 1 issue</span></div>
+      <div class="num"><span class="sub">Decisions needed</span><b>1</b><span class="sub">FAL-D-005, needed by 23-10</span></div>
+      <div class="num"><span class="sub">Promises</span><b>5</b><span class="sub">you owe 2 · waiting on 3</span></div></div></section>
+    <div class="two">
+      <section><h3>Early warnings</h3><div class="list">
+        <div class="li"><span class="tag warn">Raised again</span><span class="g">The Northgate UAT plan came up again in Thursday's call (second time)</span><span class="sub">FAL-A-009</span></div>
+        <div class="li"><span class="tag warn">Moving</span><span class="g">Northgate UAT complete has moved twice in three weeks</span><span class="sub">FAL-M-003</span></div>
+        <div class="li"><span class="tag">Quiet</span><span class="g">No update from Dana Okoye in 9 days on the commercials</span><span class="sub">FAL-A-007</span></div></div></section>
+      <section><h3>Dependencies</h3><div class="list">
+        <div class="li"><span class="g"><b>Northgate contract signed</b> (FAL-012, open) blocks <b>Northgate go-live</b></span><span class="sub">FAL-M-004</span></div>
+        <div class="li"><span class="g"><b>Northgate test environment</b> (FAL-004, risk) blocks <b>Northgate UAT complete</b></span><span class="sub">FAL-M-003</span></div></div></section>
+    </div>
+    <div class="two">
+      <section><h3>Workstreams</h3><div class="list">
+        <div class="li"><span class="g"><b>Northgate integration</b> · Tom Reid</span><span class="sub">5 open · 1 overdue</span></div>
+        <div class="li"><span class="g"><b>Testing</b> · Tom Reid</span><span class="sub">3 open</span></div>
+        <div class="li"><span class="g"><b>Commercials</b> · Alan Carter</span><span class="sub">2 open · 1 overdue</span></div></div></section>
+      <section><h3>People</h3><div class="list">
+        <div class="li"><span class="g"><b>Leo Marsh</b> · Kestrel Group · sponsor</span><span class="sub">2 open</span></div>
+        <div class="li"><span class="g"><b>Tom Reid</b> · Kestrel Group · delivery lead</span><span class="sub">6 open · 1 overdue</span></div>
+        <div class="li"><span class="g"><b>Dana Okoye</b> · Northgate · commercials</span><span class="sub">waiting on 1</span></div>
+        <div class="li"><span class="g"><b>Kate Lowe</b> · Kestrel Group · design sign-off</span><span class="sub">1 open</span></div></div></section>
+    </div>
+    <section><h3>Coming up</h3><div class="list">
+      <div class="li"><span class="tag">Thu 15-10 10:00</span><span class="g">FAL weekly with Northgate</span><button class="btn sm" type="button">Prep</button></div>
+      <div class="li"><span class="tag">Mon 19-10 14:00</span><span class="g">FAL steering committee</span><button class="btn sm" type="button">Prep</button><button class="btn sm" type="button">Draft the one-pager</button></div></div></section>`; }
+
+  /* ================= Milestones: everything the Plan and Movement page does today, plus what Status shows ================= */
+  const TODAY_D=new Date(2026,9,14);
+  const D_=s=>{ const [d,m,y]=s.split("-").map(Number); return new Date(y,m-1,d); };
+  const STATES={"Achieved":["ok","●","Achieved"],"On track":["ok","◆","On plan"],"At risk":["warn","▲","At risk"],"Slipped":["warn","◐","Expected later"],"Overdue":["bad","■","Late"]};
+  const ORDER=["Achieved","On track","At risk","Slipped","Overdue"];
+  let MS=[
+    {id:"FAL-M-001",name:"Discovery complete",owner:"Alan Carter",orig:"15-08-2026",agreed:"15-08-2026",fc:"15-08-2026",done:"14-08-2026",state:"Achieved",set:false,reason:"",pc:100,cv:true,cw:"Discovery complete",desc:"Current-state assessment and use-case shortlist signed off by Kestrel Group.",note:"",links:3},
+    {id:"FAL-M-002",name:"Conversational AI live",owner:"Tom Reid",orig:"30-09-2026",agreed:"30-09-2026",fc:"30-09-2026",done:"30-09-2026",state:"Achieved",set:false,reason:"",pc:100,cv:true,cw:"Conversational AI live for Kestrel Group staff",desc:"Production launch to the first 6,000 users.",note:"",links:6},
+    {id:"FAL-M-003",name:"Northgate UAT complete",owner:"Tom Reid",orig:"23-10-2026",agreed:"30-10-2026",fc:"06-11-2026",done:"",state:"Slipped",set:false,reason:"",pc:40,pcAuto:true,cv:true,cw:"User testing with Northgate complete",desc:"All 16 Northgate workflows pass UAT on Northgate's own environment.",note:"If Northgate hasn't confirmed the environment by 16-10, take it to the steering on 19-10.",links:5,revised:"23-10-2026",range:"06-11 to 13-11"},
+    {id:"FAL-M-004",name:"Northgate go-live",owner:"Leo Marsh",orig:"27-11-2026",agreed:"27-11-2026",fc:"27-11-2026",done:"",state:"At risk",set:true,reason:"",pc:10,cv:true,cw:"Go-live with Northgate",desc:"Northgate integration live in production.",note:"Depends on the Northgate contract (FAL-012).",links:4,range:"27-11 to 04-12"},
+    {id:"FAL-M-005",name:"Hypercare ends",owner:"Alan Carter",orig:"18-12-2026",agreed:"18-12-2026",fc:"18-12-2026",done:"",state:"On track",set:false,reason:"",pc:0,cv:false,cw:"",desc:"Four weeks of hypercare after go-live, then handover to Kestrel Group support.",note:"",links:1,range:"on time"}];
+  const MOVES=[["13-10-2026","FAL-M-003","Forecast 30-10 → 06-11","Northgate's test environment dates not confirmed","Alan x Tom Catch up on Northgate, 12-10-2026"],
+               ["29-09-2026","FAL-M-003","Rebaselined 23-10 → 30-10","Agreed by Leo Marsh: FDS sign-off took two weeks longer (decision FAL-D-003)","FAL steering committee, 29-09-2026"],
+               ["06-10-2026","FAL-M-004","State set to At risk","Alan: the Northgate contract isn't signed","—"]];
+  let MVIEW="internal", MSUB="plan", SMODE="tiles", PINS=new Set(["FAL-M-003","FAL-M-004","FAL-M-005"]), EDIT=null, LASTMS=null;
+  const gap=m=>Math.round((D_(m.fc)-D_(m.agreed))/864e5);
+  const sTag=(m,client)=>{ const s=STATES[m.state]; return `<span class="tag ${s[0]}"><span aria-hidden="true">${s[1]}</span> ${client?s[2]:m.state}</span>`; };
+  const visible=client=>MS.filter(m=>!client||(m.cv&&m.cw));
+  function planSvg(client,compact){
+    const list=visible(client), x0=new Date(2026,7,1), x1=new Date(2026,11,31), W=compact?640:800, L=20, R=W-20;
+    const X=d=>L+(D_(d)-x0)/(x1-x0)*(R-L), H=compact?96:122, axis=compact?54:66;
+    let out=`<svg class="tl" viewBox="0 0 ${W} ${H}" role="img" aria-label="Milestone plan, August to December 2026">`;
+    ["Aug","Sep","Oct","Nov","Dec"].forEach((mo,i)=>{ const xx=X(`01-${String(8+i).padStart(2,"0")}-2026`); out+=`<line x1="${xx}" y1="${axis-6}" x2="${xx}" y2="${axis+6}" stroke="var(--line)"/><text x="${xx+3}" y="${axis+18}" font-size="10.5" fill="var(--muted)">${mo}</text>`; });
+    out+=`<line x1="${L}" y1="${axis}" x2="${R}" y2="${axis}" stroke="var(--line)" stroke-width="2"/>`;
+    const tx=X("14-10-2026"); out+=`<line x1="${tx}" y1="${axis-26}" x2="${tx}" y2="${axis+8}" stroke="var(--accent)" stroke-dasharray="3 3"/><text x="${tx+3}" y="${axis-28}" font-size="10" fill="var(--accent)">Today</text>`;
+    list.forEach((m,i)=>{ const up=i%2===0, d=m.done||m.agreed, xx=X(d), ly=up?axis-14:axis+34, nm=client?m.cw:m.name;
+      const col=m.state==="Achieved"?"var(--ok)":m.state==="On track"?"var(--accent)":m.state==="Overdue"?"var(--bad)":"var(--warn)";
+      out+=`<circle cx="${xx}" cy="${axis}" r="6" fill="${m.state==="Achieved"?"var(--ok)":"var(--surface)"}" stroke="${col}" stroke-width="2"/>`;
+      if(!m.done&&m.fc!==m.agreed){ const fx=X(m.fc); out+=`<line x1="${xx+6}" y1="${axis}" x2="${fx-7}" y2="${axis}" stroke="var(--bad)" stroke-width="2"/><circle cx="${fx}" cy="${axis}" r="7" fill="none" stroke="var(--bad)" stroke-width="2" stroke-dasharray="3 2"/><text x="${fx}" y="${up?axis+22:axis-12}" font-size="10" text-anchor="middle" fill="var(--bad)">${m.fc.slice(0,5)}</text>`; }
+      out+=`<text x="${xx}" y="${ly}" font-size="11" text-anchor="middle" fill="var(--ink)">${esc(nm.length>22?nm.slice(0,21)+"…":nm)}</text>`; });
+    return out+"</svg>"; }
+
+  function statusMilestones(){
+    const client=CLIENT, list=visible(client);
+    if(SMODE==="full") return `<section><h3>Milestones <span class="n sub">full picture · chosen on the Milestones tab</span></h3><div class="tlwrap">${planSvg(client,true)}</div>
+      <div class="list">${list.map(m=>`<div class="li"><span class="g">${esc(client?m.cw:m.name)}</span>${sTag(m,client)}<span class="sub num-c">${m.done?"Achieved "+m.done.slice(0,5):"Expected "+m.fc.slice(0,5)}</span></div>`).join("")}</div></section>`;
+    const tiles=list.filter(m=>PINS.has(m.id));
+    return `<section><h3>Milestones <span class="n sub">${tiles.length} chosen on the Milestones tab</span></h3><div class="cards">${tiles.map(m=>`<div class="card"><div class="top"><b>${esc(client?m.cw:m.name)}</b>${sTag(m,client)}</div><span class="m">${m.done?"Achieved "+m.done:`Expected ${m.fc}`}${!client&&!m.done&&gap(m)>0?` · agreed ${m.agreed} (+${gap(m)} days)`:""}</span><span class="id">${m.id}${client?"":` · ${m.pc}%`}</span></div>`).join("")||'<div class="sub">No tiles chosen.</div>'}</div>${client&&[...PINS].some(id=>!visible(true).find(m=>m.id===id))?'<div class="sub">One chosen tile is internal, so the Client view leaves it out.</div>':""}</section>`; }
+
+  function milestones(){
+    const client=MVIEW==="client", list=visible(client), hidden=MS.filter(m=>!(m.cv&&m.cw));
+    const head=`<section><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="subtabs" role="group" aria-label="Page">${[["plan","Plan"],["movement","Movement"]].map(([k,l])=>`<button type="button" data-msub="${k}" aria-pressed="${k===MSUB}"${k==="movement"&&client?" disabled title='Movement is internal only'":""}>${l}</button>`).join("")}</div>
+        <div class="subtabs" role="group" aria-label="View">${[["client","Client view"],["internal","Internal view"]].map(([k,l])=>`<button type="button" data-mview="${k}" aria-pressed="${k===MVIEW}">${l}</button>`).join("")}</div>
+        <span style="flex:1"></span><button class="btn sm primary" type="button" data-medit="new">Add milestone</button></div></section>
+      <section class="onstatus"><h3>On the Status tab</h3><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <div class="subtabs" role="group" aria-label="What Status shows">${[["full","Full picture"],["tiles","Tiles"]].map(([k,l])=>`<button type="button" data-smode="${k}" aria-pressed="${k===SMODE}">${l}</button>`).join("")}</div>
+        <span class="sub">${SMODE==="full"?"Status shows the Plan line and every milestone, as in Plan below.":`Status shows the ${PINS.size} tiles you've chosen (3 or 4): pick them with <b>On Status</b> below.`}</span>
+        <button class="btn sm" type="button" data-go="status">See it on Status</button></div></section>`;
+    const frame=client?"msframe":"msframe internal";
+    let body;
+    if(MSUB==="plan"||client){
+      body=`<section class="${frame}">${client?"":`<span class="ipill">◉ INTERNAL VIEW</span>`}<div class="tlwrap" style="border:0;padding:0">${planSvg(client,false)}</div>
+        <div class="tblwrap"><table class="t"><thead><tr>${SMODE==="tiles"?"<th>On Status</th>":""}<th></th><th>Milestone</th><th>State</th><th>${client?"Date":"Agreed or achieved"}</th><th>Expected</th>${client?"":"<th>Gap</th>"}<th>Progress</th></tr></thead><tbody>
+        ${list.map(m=>`<tr>${SMODE==="tiles"?`<td><input type="checkbox" data-pin="${m.id}" ${PINS.has(m.id)?"checked":""} aria-label="Show ${esc(m.name)} on Status"></td>`:""}<td class="sub" style="cursor:grab" title="Drag to reorder">⋮⋮</td>
+          <td><button class="linkish" type="button" data-medit="${m.id}"><b>${esc(client?m.cw:m.name)}</b></button><div class="sub">${m.id}${client?"":" · "+esc(m.owner)}${!client&&m.revised?` · Revised from ${m.revised.slice(0,5)}`:""}</div></td>
+          <td>${sTag(m,client)}${!client&&m.set?' <span class="sub">set by you</span>':""}</td><td class="num-c">${m.done||m.agreed}</td><td class="num-c">${m.done?"—":m.fc}</td>${client?"":`<td class="num-c ${gap(m)>0?"od":""}">${m.done?"—":gap(m)>0?"+"+gap(m)+" days":"0"}</td>`}
+          <td><div class="pbar"><i style="width:${m.pc}%"></i></div><span class="sub">${m.pc}%${!client&&m.pcAuto?" (linked actions)":""}</span></td></tr>`).join("")}</tbody></table></div>
+        ${client?`<div class="sub">Hidden in the Client view: ${hidden.map(m=>esc(m.name)).join(", ")||"nothing"} (not client-visible, or no client wording); Movement, gaps, owners, notes and likely ranges. States use the client's words.</div>`:""}</section>
+        <section><h3>Suggested</h3><div class="callout"><span class="g"><b>Northgate commercials signed</b>: FAL-A-007 and FAL-008 point to a date the go-live depends on.</span><button class="btn sm" type="button" data-medit="new">Add milestone</button><button class="btn sm" type="button" data-dismiss>Not now</button></div></section>`;
+    } else {
+      const open=MS.filter(m=>!m.done);
+      const ax0=new Date(2026,9,1), ax1=new Date(2026,11,31), AX=d=>40+(D_(d)-ax0)/(ax1-ax0)*700;
+      body=`<section class="${frame}"><span class="ipill">◉ INTERNAL VIEW</span>
+        <h3>Each open milestone: original ○, agreed ◇, forecast ◆</h3>
+        <div class="tlwrap" style="border:0;padding:0"><svg class="tl" viewBox="0 0 780 ${30+open.length*40}" role="img" aria-label="Original, agreed and forecast dates of each open milestone">
+          ${["Oct","Nov","Dec"].map((mo,i)=>`<text x="${AX(`01-${10+i}-2026`)+3}" y="12" font-size="10.5" fill="var(--muted)">${mo}</text><line x1="${AX(`01-${10+i}-2026`)}" y1="16" x2="${AX(`01-${10+i}-2026`)}" y2="${20+open.length*40}" stroke="var(--line)"/>`).join("")}
+          ${open.map((m,i)=>{ const y=36+i*40; return `<text x="40" y="${y-12}" font-size="11.5" fill="var(--ink)">${esc(m.name)} <tspan fill="var(--muted)">· ${gap(m)>0?"+"+gap(m)+" days":"no variance"} · likely ${m.range}</tspan></text>
+            <line x1="${AX(m.orig)}" y1="${y}" x2="${AX(m.fc)}" y2="${y}" stroke="var(--line)" stroke-width="2"/>
+            <circle cx="${AX(m.orig)}" cy="${y}" r="5" fill="var(--surface)" stroke="var(--muted)" stroke-width="1.5"/>
+            <path d="M${AX(m.agreed)} ${y-6}l6 6-6 6-6-6z" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.6"/>
+            <path d="M${AX(m.fc)} ${y-6}l6 6-6 6-6-6z" fill="${gap(m)>0?"var(--bad)":"var(--accent)"}"/>`; }).join("")}</svg></div>
+        <div class="two"><div><h3>Forecast and agreed by reporting week · Northgate UAT complete</h3><svg class="tl" viewBox="0 0 320 120" role="img" aria-label="Forecast moved from 23-10 to 06-11 over five weeks; agreed moved from 23-10 to 30-10">
+          ${["18-09","25-09","02-10","09-10","16-10"].map((w,i)=>`<text x="${30+i*65}" y="114" font-size="10" fill="var(--muted)" text-anchor="middle">${w}</text>`).join("")}
+          ${[["06-11",20],["30-10",50],["23-10",80]].map(([d,y])=>`<text x="2" y="${y+3}" font-size="10" fill="var(--muted)">${d}</text><line x1="40" y1="${y}" x2="310" y2="${y}" stroke="var(--line)"/>`).join("")}
+          <polyline points="30,80 95,80 160,50 225,50 290,20" fill="none" stroke="var(--bad)" stroke-width="2"/><polyline points="30,80 95,80 160,50 225,50 290,50" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/>
+          <text x="292" y="16" font-size="10" fill="var(--bad)">forecast</text><text x="250" y="44" font-size="10" fill="var(--accent)">agreed</text></svg></div>
+          <div><h3>What changed</h3><div class="list">${MOVES.map(v=>`<div class="li"><span class="tag">${v[0].slice(0,5)}</span><span class="g"><b>${esc(MS.find(m=>m.id===v[1]).name)}</b>: ${esc(v[2])}. ${esc(v[3])}<br><span class="sub">Source: ${esc(v[4])}</span></span></div>`).join("")}</div></div></div>
+        <div class="two"><div><h3>Internal note · Northgate UAT complete</h3><textarea class="note" id="msNote" aria-label="Internal note">${esc(MS[2].note)}</textarea><div class="sub">Never in any client output.</div></div>
+          <div><h3>Decide what to do · Northgate UAT complete</h3><div style="display:flex;gap:6px;flex-wrap:wrap">${["Hold","Rebaseline","Add recovery action","Escalate to steering"].map(a=>`<button class="btn sm" type="button" data-decide="${a}">${a}</button>`).join("")}</div><div class="sub" style="margin-top:6px">Each is staged for Review. A rebaseline records a decision: who agreed, why and the source.</div></div></div></section>`;
+    }
+    return head+body+(EDIT?editor():""); }
+
+  function editor(){
+    const m=EDIT==="new"?{id:"New milestone",name:"",owner:"",agreed:"",fc:"",done:"",state:"On track",reason:"",pc:0,cv:false,cw:"",desc:"",orig:""}:MS.find(x=>x.id===EDIT), isNew=EDIT==="new";
+    const iso=s=>s?s.split("-").reverse().join("-"):"";
+    return `<aside class="medit" role="dialog" aria-label="Milestone editor"><div class="mehead"><b>${isNew?"Add milestone":esc(m.id)}</b><span class="sub">${isNew?"nothing is saved until Create":"each change saves on its own, with Undo"}</span><button class="ib2" type="button" data-mclose aria-label="Close">✕</button></div>
+      <label class="fl">Name<input type="text" id="meName" value="${esc(m.name)}" placeholder="e.g. Northgate commercials signed"></label>
+      <label class="fl">State<select id="meState">${ORDER.map(s=>`<option ${s===m.state?"selected":""}>${s}</option>`).join("")}</select></label>
+      <div class="sub" id="meStateHint">${isNew?"":"The dates suggest "+(m.done?"Achieved":gap(m)>0?"Slipped":"On track")+". A better state than the dates needs a reason."}</div>
+      <label class="fl" id="meReasonL" hidden>Reason (required)<input type="text" id="meReason"></label>
+      <div class="row2"><label class="fl">Agreed<input type="date" id="meAgreed" value="${iso(m.agreed)}"${isNew?"":" disabled"}></label><label class="fl">Forecast<input type="date" id="meFc" value="${iso(m.fc)}"></label></div>
+      ${isNew?"":`<div class="sub">Original ${m.orig}${m.revised?` · revised from ${m.revised}`:""} · <button class="linkish" type="button" data-rebase>Rebaseline…</button></div><div id="rebase" hidden class="rebase"><label class="fl">New agreed date<input type="date" value="2026-11-06"></label><label class="fl">Who agreed<input type="text" value="Leo Marsh"></label><label class="fl">Why<input type="text" placeholder="One line"></label><label class="fl">Source<input type="text" placeholder="Meeting, mail or document"></label><button class="btn sm primary" type="button" data-rebase-ok>Stage the rebaseline and its decision</button></div>`}
+      <div class="row2"><label class="fl">Achieved on<input type="date" value="${iso(m.done)}"></label><label class="fl">Progress %<input type="number" min="0" max="100" value="${m.pc}"></label></div>
+      <label class="fl">Owner<select>${["Alan Carter","Tom Reid","Leo Marsh","Dana Okoye"].map(o=>`<option ${o===m.owner?"selected":""}>${o}</option>`).join("")}</select></label>
+      <label class="fl">Description<textarea>${esc(m.desc)}</textarea></label>
+      <label class="chk"><input type="checkbox" id="meCv" ${m.cv?"checked":""}> Visible to the client</label>
+      <label class="fl" id="meCwL" ${m.cv?"":"hidden"}>Client wording (required)<input type="text" id="meCw" value="${esc(m.cw)}"></label>
+      ${isNew?`<div class="acts2"><button class="btn sm" type="button" data-mclose>Cancel</button><button class="btn sm primary" type="button" data-mcreate>Create milestone</button></div>`
+      :`<div class="sub">Linked: ${m.links} actions and RAID items · <button class="linkish" type="button">show</button></div>
+        <div class="acts2"><button class="btn sm" type="button" data-mcancel>Cancel the milestone</button></div>
+        <h4 class="hist">History <span class="sub">internal only</span></h4><div class="subtabs" style="margin-bottom:6px"><button type="button" aria-pressed="true">All</button><button type="button">Activity</button><button type="button">Updates</button><button type="button">Source</button></div>
+        <div class="list">${MOVES.filter(v=>v[1]===m.id).map(v=>`<div class="li"><span class="tag">${v[0].slice(0,5)}</span><span class="g">${esc(v[2])}<br><span class="sub">${esc(v[3])}</span></span></div>`).join("")||'<div class="sub">Created from the plan, '+m.orig+'.</div>'}</div>`}
+    </aside>`; }
+
+  function wireMs(){
+    const P=$("pane"), re=()=>tab("milestones");
+    P.querySelectorAll("[data-msub]").forEach(b=>b.onclick=()=>{ MSUB=b.dataset.msub; re(); });
+    P.querySelectorAll("[data-mview]").forEach(b=>b.onclick=()=>{ MVIEW=b.dataset.mview; if(MVIEW==="client") MSUB="plan"; re(); });
+    P.querySelectorAll("[data-smode]").forEach(b=>b.onclick=()=>{ SMODE=b.dataset.smode; re(); say(SMODE==="full"?"Status now shows the full milestone picture.":"Status now shows your chosen tiles."); });
+    P.querySelectorAll("[data-pin]").forEach(c=>c.onchange=()=>{ const id=c.dataset.pin;
+      if(c.checked){ if(PINS.size>=4){ c.checked=false; say("Up to 4 tiles: untick one first."); return; } PINS.add(id); }
+      else { if(PINS.size<=3){ c.checked=true; say("Status shows 3 or 4 tiles: tick another first, or choose Full picture."); return; } PINS.delete(id); }
+      re(); say(`On Status: ${PINS.size} tiles.`); });
+    P.querySelectorAll("[data-medit]").forEach(b=>b.onclick=()=>{ EDIT=b.dataset.medit; re(); });
+    P.querySelectorAll("[data-mclose]").forEach(b=>b.onclick=()=>{ EDIT=null; re(); });
+    P.querySelectorAll("[data-decide]").forEach(b=>b.onclick=()=>say(`${b.dataset.decide}: staged for Review.`));
+    P.querySelectorAll("[data-dismiss]").forEach(b=>b.onclick=()=>{ b.closest("section").remove(); say("Suggestion set aside."); });
+    const st=$("meState");
+    if(st&&EDIT!=="new"){ const m=MS.find(x=>x.id===EDIT), sug=m.done?"Achieved":gap(m)>0?"Slipped":"On track";
+      st.onchange=()=>{ const better=ORDER.indexOf(st.value)<ORDER.indexOf(sug); $("meReasonL").hidden=!better;
+        if(!better){ LASTMS=JSON.stringify(MS); m.state=st.value; m.set=true; say(`State saved: ${st.value}. Undo`); } };
+      $("meReason").onchange=()=>{ if($("meReason").value.trim()){ m.state=st.value; m.set=true; m.reason=$("meReason").value; say(`State saved with its reason: ${st.value}. Undo`); } }; }
+    const cv=$("meCv"); if(cv) cv.onchange=()=>{ $("meCwL").hidden=!cv.checked; if(EDIT!=="new"){ const m=MS.find(x=>x.id===EDIT); if(cv.checked&&!m.cw){ $("meCw").focus(); say("Add the client wording to make it visible."); } else { m.cv=cv.checked; say(cv.checked?"Visible to the client. Undo":"Hidden from the client. Undo"); } } };
+    const cw=$("meCw"); if(cw&&EDIT!=="new") cw.onchange=()=>{ const m=MS.find(x=>x.id===EDIT); m.cw=cw.value.trim(); if(m.cw&&cv.checked) m.cv=true; say("Client wording saved. Undo"); };
+    const rb=P.querySelector("[data-rebase]"); if(rb) rb.onclick=()=>$("rebase").hidden=!$("rebase").hidden;
+    const rbo=P.querySelector("[data-rebase-ok]"); if(rbo) rbo.onclick=()=>{ $("rebase").hidden=true; say("Rebaseline and its decision staged for Review."); };
+    const mc=P.querySelector("[data-mcancel]"); if(mc) mc.onclick=()=>say("Cancelling a milestone removes its links; it's never deleted. Confirm on the card.");
+    const cr=P.querySelector("[data-mcreate]"); if(cr) cr.onclick=()=>{ if(!$("meName").value.trim()){ $("meName").focus(); say("A milestone needs a name."); return; } EDIT=null; re(); say("Milestone staged: FAL-M-006. Undo"); };
+  }
+
+  let WTAB="actions", WF="open";
+  function work(){
+    const A=[["Northgate integration",[["FAL-A-009","Share the Northgate UAT plan","Tom Reid","09-10-2026",true,"High"],["FAL-A-006","Confirm FDS sign-off for the remaining workflows","Tom Reid","17-10-2026",false,"High"],["FAL-A-011","Map Northgate's error codes to the incident runbook","Tom Reid","23-10-2026",false,"Medium"]]],
+             ["Commercials",[["FAL-A-007","Reach out to Dana on back-to-back commercials","Alan Carter","19-10-2026",false,"Medium"],["FAL-A-010","Send the revised rate card to Leo","Alan Carter","12-10-2026",true,"High"]]],
+             ["Testing",[["FAL-A-012","Agree UAT entry criteria with Northgate","Tom Reid","22-10-2026",false,"Medium"]]]];
+    const R=[["Testing",[["FAL-004","Risk · Northgate's test environment isn't ready for UAT","Tom Reid","23-10-2026",false,"High"]]],["Commercials",[["FAL-008","Risk · Back-to-back commercials not agreed before UAT","Alan Carter","19-10-2026",false,"High"]]],["Northgate integration",[["FAL-011","Risk · Data residency of Northgate's integration logs unclear","Leo Marsh","30-10-2026",false,"Medium"],["FAL-012","Dependency · Northgate contract signed","Leo Marsh","06-11-2026",false,"High"]]]];
+    const Dd=[["Decisions",[["FAL-D-005","Pending · Who signs off UAT on Kestrel Group's side","Leo Marsh","23-10-2026",false,"—"],["FAL-D-004","Made · UAT runs on Northgate's own test environment","Leo Marsh","13-10-2026",false,"—"]]]];
+    const Pp=[["Promises",[["FAL-P-003","You → Tom: the Northgate terms by Friday","Alan Carter","16-10-2026",false,"—"],["FAL-P-004","Dana → you: confirmation of the rate card","Dana Okoye","15-10-2026",false,"—"]]]];
+    const data={actions:A,raid:R,decisions:Dd,promises:Pp}[WTAB];
+    const keep=r=>WF==="open"?true:WF==="overdue"?r[4]:WF==="mine"?r[2]==="Alan Carter":r[2]!=="Alan Carter";
+    return `<section><div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div class="subtabs" role="group" aria-label="Kind">${[["actions","Actions 6"],["raid","RAID 4"],["decisions","Decisions 2"],["promises","Promises 2"]].map(([k,l])=>`<button type="button" data-wt="${k}" aria-pressed="${k===WTAB}">${l}</button>`).join("")}</div>
+      <span class="sp" style="flex:1"></span>
+      <div class="subtabs" role="group" aria-label="Show">${[["open","Open"],["overdue","Overdue"],["mine","Mine"],["others","Waiting on others"]].map(([k,l])=>`<button type="button" class="fchip" data-wf="${k}" aria-pressed="${k===WF}">${l}</button>`).join("")}</div></div></section>
+      <section>${data.map(([ws,rows])=>{ const rr=rows.filter(keep); return rr.length?`<div class="wsh">${esc(ws)} <span class="sub">${rr.length}</span></div>`+rr.map(r=>`<div class="wrow" title="Opens in the peek; // to change it in words"><span class="sub">${r[0]}</span><span>${esc(r[1])}</span><span class="own sub">${esc(r[2])}</span><span class="num-c ${r[4]?"od":""}">${r[3]}${r[4]?"":""}</span><span class="pr"><span class="tag ${r[5]==="High"?"bad":r[5]==="Medium"?"warn":""}">${r[5]}</span></span></div>`).join(""):""; }).join("")||'<div class="sub">Nothing here with this filter.</div>'}</section>
+      <section class="sub">Each row opens in the peek, where <kbd style="font:600 11px var(--font);border:1px solid var(--line);border-radius:4px;padding:1px 4px">//</kbd> changes it in words (BL-322). The full Work page has every project.</section>`; }
+
+  let FOLD="minutes";
+  const FILES={
+    transcripts:[["14-10-2026","Alan x Tom Catch up on Northgate.vtt","Processed"],["13-10-2026","FAL weekly with Northgate.vtt","Waiting for you"],["06-10-2026","FAL weekly with Northgate.vtt","Processed"]],
+    minutes:[["13-10-2026","FAL weekly with Northgate minutes.docx","Sent"],["06-10-2026","FAL weekly with Northgate minutes.docx","Sent"],["29-09-2026","FAL steering committee minutes.docx","Sent"]],
+    agendas:[["19-10-2026","FAL steering committee prep.html","creaite"],["15-10-2026","FAL weekly with Northgate prep.html","creaite"]],
+    weekly:[["09-10-2026","Kestrel Energy AI weekly report.docx","Filed"],["02-10-2026","Kestrel Energy AI weekly report.docx","Filed"],["02-10-2026","Kestrel Energy AI client report (client).docx","Filed"]],
+    steerco:[["29-09-2026","Kestrel Energy AI Steerco one-pager.docx","Filed"]],
+    adhoc:[["08-10-2026","FAL actions register.docx","Filed"]],
+    contract:[["01-07-2026","Kestrel Energy AI SOW v3.docx","Document"],["15-06-2026","Rate card 2026.xlsx","Document"]],
+    design:[["13-10-2026","UC1.2 FDS signed.pdf","Document"],["02-10-2026","Northgate integration architecture.pptx","Online only"]],
+    archive:[["14-03-2026","Old discovery notes.docx","Not searched"]]};
+  function files(){
+    const T=[["Meetings",[["transcripts","Transcripts",3],["minutes","Minutes",3],["agendas","Agendas",2]]],["Reporting",[["weekly","Weekly and client",3],["steerco","Steerco",1],["adhoc","Ad hoc",1]]],["Documents",[["contract","01 Contract",2],["design","03 Design",2]]]];
+    const st=s=>s==="Waiting for you"?"warn":s==="Online only"?"bad":s==="Not searched"?"":s==="Processed"||s==="Sent"||s==="Filed"?"ok":"acc";
+    return `<section><div class="fgrid"><nav class="tree" aria-label="Folders">${T.map(([g,fs])=>`<div class="grp">${g}</div>`+fs.map(([k,l,c])=>`<button type="button" data-fold="${k}" aria-pressed="${k===FOLD}">${l}<span class="c">${c}</span></button>`).join("")).join("")}
+        <div class="grp">Archive</div><button type="button" class="arch" data-fold="archive" aria-pressed="${FOLD==="archive"}">_Archive<span class="c">1</span></button></nav>
+      <div style="display:grid;gap:10px;align-content:start">
+        ${FOLD==="archive"?`<div class="callout"><span class="g">Archived files stay in OneDrive and can be opened, but they aren't searched and ask creaite can't read them (BL-09, BL-03).</span></div>`:""}
+        ${FOLD==="transcripts"?`<div class="callout"><span class="g"><b>1 transcript is waiting:</b> FAL weekly with Northgate, 13-10-2026.</span><button class="btn sm primary" type="button">Process</button></div>`:""}
+        ${FOLD==="design"?`<div class="callout"><span class="g"><b>1 file is online only</b> in OneDrive, so creaite can't read it. Set the folder to "Always keep on this device".</span></div>`:""}
+        <div class="tblwrap"><table class="t"><thead><tr><th>Date</th><th>File</th><th>State</th></tr></thead><tbody>${FILES[FOLD].map(f=>`<tr><td class="num-c">${f[0]}</td><td>${esc(f[1])}</td><td><span class="tag ${st(f[2])}">${f[2]}</span></td></tr>`).join("")}</tbody></table></div>
+        <div class="sub">Folders follow your engagement template (Settings › Locations). Documents are read when you ask, never extracted.</div></div></div></section>`; }
+
+  function reports(){ return `
+    <section><div class="callout"><span class="g"><b>This week</b> (ending 16-10-2026): the Status page is a draft. Close the week on Friday to snapshot it and draft the weekly report.</span><button class="btn sm" type="button" data-go="status">Open Status</button><button class="btn sm primary" type="button" data-go="status">Close the week</button></div></section>
+    <section><h3>Weekly reports <span class="sub">made from each week's Status snapshot</span></h3><div class="tblwrap"><table class="t"><thead><tr><th>Week ending</th><th>Health</th><th>Made from</th><th>Report</th><th>State</th></tr></thead><tbody>
+      <tr><td class="num-c">16-10-2026</td><td>${dot("a")} At risk</td><td>Status, this week (draft)</td><td class="sub">not drafted yet</td><td><span class="tag">Open</span></td></tr>
+      <tr><td class="num-c">09-10-2026</td><td>${dot("g")} On track</td><td>Status snapshot 09-10</td><td>2026-10-09 Kestrel Energy AI weekly report.docx</td><td><span class="tag ok">Filed</span></td></tr>
+      <tr><td class="num-c">02-10-2026</td><td>${dot("g")} On track</td><td>Status snapshot 02-10</td><td>2026-10-02 Kestrel Energy AI weekly report.docx</td><td><span class="tag ok">Filed</span></td></tr></tbody></table></div></section>
+    <div class="two">
+      <section><h3>Client reports <span class="sub">fortnightly · next due Friday 16-10</span></h3><div class="list">
+        <div class="li"><span class="tag warn">Due 16-10</span><span class="g">From this week's Client view</span><button class="btn sm" type="button">Draft client report</button></div>
+        <div class="li"><span class="tag ok">Filed</span><span class="g">2026-10-02 Kestrel Energy AI client report (client).docx</span></div>
+        <div class="li"><span class="tag ok">Filed</span><span class="g">2026-09-18 Kestrel Energy AI client report (client).docx</span></div></div></section>
+      <section><h3>Steerco one-pagers <span class="sub">next steering Mon 19-10</span></h3><div class="list">
+        <div class="li"><span class="tag">For 19-10</span><span class="g">Internal, or client-safe</span><button class="btn sm" type="button">Draft the one-pager</button></div>
+        <div class="li"><span class="tag ok">Filed</span><span class="g">2026-09-29 Kestrel Energy AI Steerco one-pager.docx</span></div></div></section>
+    </div>
+    <section class="sub">Every report is drafted to Review and filed in the project's folders on your approval. Nothing is ever sent.</section>`; }
+
+  const NOTES={
+    status:null,
+    overview:`<h3>Overview</h3><ul><li>The project's facts, its health over six weeks, the four numbers that matter, early warnings, dependencies, workstreams, people and the next meetings with Prep.</li><li>Gathers what today's project page spreads down one long column; the Current state moves to <b>Status</b>.</li><li>Read only: each line opens its item, person or meeting.</li></ul>`,
+    milestones:`<h3>Milestones</h3><ul><li><b>Everything the Plan and Movement page does today</b>, now a tab: Plan (the line, the list, progress, Revised from), Movement (original, agreed and forecast; the weekly chart; What changed; the internal note; Decide what to do; the likely range), Client and Internal views, Add milestone, the editor with every field, rebaseline with its decision, cancel, reorder and the history.</li><li><b>New: On the Status tab.</b> Choose <b>Full picture</b> (the Plan line and every milestone) or <b>Tiles</b>, ticking 3 or 4 milestones. Status's Client view follows the same client filter, so an internal tile is left out there.</li><li>The Client view and the client report use one filter (visible with wording) and the client's words: On plan, At risk, Expected later, Late, Achieved.</li></ul>`,
+    work:`<h3>Work</h3><ul><li>The Work page filtered to this project: Actions, RAID, Decisions and Promises, grouped by workstream, with Open, Overdue, Mine and Waiting on others.</li><li>Rows open in the peek, so Draft chase (C) and Sneak peek (//) work here too.</li></ul>`,
+    files:`<h3>Files</h3><ul><li>The engagement's folders as your template maps them: Meetings, Reporting and Documents, plus <b>_Archive</b> once BL-09 is in.</li><li>Each file says where it stands: processed, waiting for you, sent, filed, online only or not searched.</li><li>A transcript waiting gets its <b>Process</b> button here.</li></ul>`,
+    reports:`<h3>Reports</h3><ul><li>Every weekly, client and Steerco report for the project, and what each was made from. Weekly reports are made from that week's Status snapshot.</li><li>Shows what's due (the client rhythm, the next steering) with its Draft button. Drafts go to Review; nothing is sent.</li></ul>`};
+  const MAP=`<h3>Where today's cockpit goes</h3><div class="tblwrap"><table class="t" style="font-size:12px"><thead><tr><th>Today's cockpit</th><th>Now</th></tr></thead><tbody>
+    <tr><td>Health with reason and evidence</td><td>Status</td></tr>
+    <tr><td>Current state (two panes)</td><td>Status, the page you write</td></tr>
+    <tr><td>Status metrics: Overdue, Urgent risks, Slip, Due Nd</td><td>Overview (the four numbers)</td></tr>
+    <tr><td>Early warnings, Dependencies</td><td>Overview</td></tr>
+    <tr><td>Health trend, Flow chart</td><td>Overview</td></tr>
+    <tr><td>Milestone card; Plan and Movement page; the editor</td><td>Milestones tab, unchanged in what it does; it also chooses what Status shows</td></tr>
+    <tr><td>Actions due, No due date card</td><td>Work, filtered (No due date as a filter)</td></tr>
+    <tr><td>Top 3 risks with responses</td><td>Status (top risks) and Work › RAID</td></tr>
+    <tr><td>Recent decisions, Decisions needed</td><td>Status (this week) and Overview (needed)</td></tr>
+    <tr><td>Client messaging card</td><td>Status › Client view</td></tr>
+    <tr><td>Draft weekly, client report, one-pager</td><td>Reports, and Close the week</td></tr>
+    <tr><td>The project's files (in Files)</td><td>Files tab</td></tr></tbody></table></div>`;
+  document.querySelector(".notes .q").insertAdjacentHTML("beforebegin",MAP);
+  const statusNotes=document.querySelector(".notes").innerHTML;
+  let TAB="status";
+  function tab(t){ TAB=t; document.querySelectorAll("#ptabs [data-tab]").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+    $("statusOnly").hidden=t!=="status"; $("pane").hidden=t==="status";
+    const q=document.querySelector(".notes .q").outerHTML;
+    document.querySelector(".notes").innerHTML=t==="status"?statusNotes:NOTES[t]+`<h3>Status stays first</h3><ul><li>Every tab reads the same tracker; only Status holds your words.</li></ul>`+MAP+q;
+    if(t==="status"){ draw(); return; }
+    $("pane").innerHTML={overview,milestones,work,files,reports}[t]();
+    $("pane").querySelectorAll("[data-wt]").forEach(b=>b.onclick=()=>{ WTAB=b.dataset.wt; tab("work"); });
+    $("pane").querySelectorAll("[data-wf]").forEach(b=>b.onclick=()=>{ WF=b.dataset.wf; tab("work"); });
+    $("pane").querySelectorAll("[data-fold]").forEach(b=>b.onclick=()=>{ FOLD=b.dataset.fold; tab("files"); });
+    $("pane").querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>tab(b.dataset.go));
+    $("pane").querySelectorAll(".wrow").forEach(r=>r.onclick=()=>say("In the app this opens the item in the peek."));
+    if(t==="milestones") wireMs();
+  }
+  document.querySelectorAll("#ptabs [data-tab]").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+  draw();
+})();
+</script>
+
+</body>
+</html>

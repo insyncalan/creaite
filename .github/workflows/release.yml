@@ -1,0 +1,52 @@
+# creaite release zip (BL-36). Publishing a release on GitHub (tag vX.Y.Z, matching VERSION) runs the tests,
+# builds creaite-X.Y.Z.zip with dev/tools/build_release.py and attaches it to the release.
+# If anything fails, no zip is attached and this run shows why (Actions tab).
+name: Release zip
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest      # GitHub's macOS runners failed to start twice for v1.1.0
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+      NOTES: ${{ github.event.release.body }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tag matches VERSION
+        run: |
+          test "$TAG" = "v$(tr -d '[:space:]' < VERSION)" || { echo "Tag $TAG doesn't match VERSION $(cat VERSION)"; exit 1; }
+
+      - name: Find Chrome
+        # The browser tests find Chrome through dev/tools/cdp.py chrome_path(): CREAITE_CHROME, then the PATH, then macOS.
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME" || { echo "No Chrome on this runner"; exit 1; }
+          echo "CREAITE_CHROME=$CHROME" >> "$GITHUB_ENV"
+          "$CHROME" --version
+
+      - name: Tests
+        # All test files, several at once (dev/tools/run_tests.py): each prints OK or FAIL with its time, and a failing
+        # file's output is printed at the end. Each file uses its own throwaway vault, Chrome profile and port.
+        run: python3 dev/tools/run_tests.py -j 4
+
+      - name: Build the zip
+        run: |
+          printf '%s\n' "$NOTES" > "$RUNNER_TEMP/notes.md"
+          python3 dev/tools/build_release.py --tag "$TAG" --notes "$RUNNER_TEMP/notes.md" --out "$RUNNER_TEMP/dist"
+
+      - name: Attach it to the release
+        run: gh release upload "$TAG" "$RUNNER_TEMP"/dist/creaite-*.zip --clobber

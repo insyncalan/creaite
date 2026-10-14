@@ -1,0 +1,20 @@
+{
+ "denied": [],
+ "events": [
+  {
+   "body": "They go to ABC and need your yes",
+   "title": "Apply 3 items",
+   "type": "confirm"
+  },
+  {
+   "chat": "s-1",
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": "s-1",
+   "type": "done"
+  }
+ ],
+ "said": [],
+ "session": "s-1",
+ "steps": []
+}

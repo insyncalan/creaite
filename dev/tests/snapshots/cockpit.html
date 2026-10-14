@@ -1,0 +1,704 @@
+<section class="view" id="v-cockpit">
+<div class="wrapmax">
+<nav class="crumb" aria-label="Breadcrumb">
+<a href="#" data-go="projects">Projects</a>
+<span aria-hidden="true">›</span>
+<span aria-current="page">Example Programme</span>
+</nav>
+<div class="hhead">
+<div style="flex:1">
+<h1>Example Programme</h1>
+<div class="sub">Example Client Ltd · client reports fortnightly</div>
+</div>
+<div class="pswitch">
+<button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )">‹</button>
+<select id="projSw" aria-label="Switch project">
+<option value="ABC" selected="">Example Programme</option>
+<option value="DEF">Digital Enablement</option>
+</select>
+<button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )">›</button>
+</div>
+</div>
+<div class="card curcard edt" style="margin-bottom:#px" aria-labelledby="csHead">
+<h2 class="cshead" id="csHead">
+<button type="button" class="cstbtn" data-cst="ABC" data-tip="Rename this title">Current state<svg class="i csp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+</h2>
+<div class="genstatus" id="genStatus" hidden="">
+</div>
+<button class="pencil second" data-gen="ABC" aria-label="Generate current state" data-tip="Generate current state">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z">
+</path>
+<path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z">
+</path>
+</svg>
+</button>
+<button class="pencil" data-edcur="ABC" aria-label="Edit current state" data-tip="Edit current state">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<div id="curText" class="curtext">
+<div class="curpanes read solo" style="--split:62">
+<div class="curpane" data-pane="1">
+<div class="curin">
+<p>Build is two weeks behind because data access is late. Escalation is planned for 11-10-2026.</p>
+<p>UAT preparation continues on masked data.</p>
+<figure class="cimg" data-ref="images/plan.png">
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPAAAAB4CAIAAABD1OhwAAABXElEQVR4nO3SwQkAIBDAsPu7qyu4uksIQglkgD46ax/ImO8F8JChSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NiaFIMTYqhSTE0KYYmxdCkGJoUQ5NyAb4bAmQNK+U+AAAAAElFTkSuQmCC" alt="Delivery plan">
+<figcaption>Delivery plan</figcaption>
+</figure>
+<figure class="cimg" data-ref="images/none.png">
+<div class="sub">Image not found: images/none.png</div>
+<figcaption>Missing</figcaption>
+</figure>
+</div>
+</div>
+<span class="curgap" aria-hidden="true">
+</span>
+<div class="curpane" data-pane="2" aria-hidden="true">
+</div>
+</div>
+</div>
+</div>
+<div class="cock">
+<div style="display:grid;gap:#px">
+<div class="card edt">
+<div style="display:flex;align-items:center;gap:#px;flex-wrap:wrap">
+<span style="font-size:#px">
+<span class="health h-bad">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7.5v5.5M12 16.2v.4">
+</path>
+</svg>Off track</span>
+</span>
+<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-">
+</i>
+<i class="s-warn">
+</i>
+<i class="s-">
+</i>
+</span>
+<span class="sub">UAT start slipped 14 days</span>
+</div>
+<button class="pencil" data-edproj="ABC" aria-label="Edit health and project details" data-tip="Edit health and project details">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<div class="evrow" style="margin-top:#px">
+<div class="evbox click alert" data-nav="actions:overdue:ABC" role="link" tabindex="0" title="Open in Work">
+<div class="v bad">1</div>
+<div class="l">
+<svg class=" evi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="alert">
+<path d="M12 8v5M12 17h.01M10.3 4l-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z">
+</path>
+</svg>Overdue actions</div>
+</div>
+<div class="evbox click alert" data-nav="raid:urgentonly:ABC" role="link" tabindex="0" title="Open in Work">
+<div class="v bad">1</div>
+<div class="l">
+<svg class=" evi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="alert">
+<path d="M12 8v5M12 17h.01M10.3 4l-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z">
+</path>
+</svg>Urgent risks</div>
+</div>
+<div class="evbox click alert" data-msjump="" role="link" tabindex="0" title="Open milestones: Movement" aria-label="Milestone slip 14d, open milestones: Movement">
+<div class="v bad">14d</div>
+<div class="l">
+<svg class=" evi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="alert">
+<path d="M12 8v5M12 17h.01M10.3 4l-8 14a2 2 0 0 0 1.7 3h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0z">
+</path>
+</svg>Milestone slip</div>
+</div>
+<div class="evbox click" data-nav="actions:soon:ABC:st=Open,Delayed" role="link" tabindex="0" title="Open in Work">
+<div class="v ">1</div>
+<div class="l">Due 7d</div>
+</div>
+<div class="evbox">
+<div class="v ">0</div>
+<div class="l">Early warnings</div>
+</div>
+</div>
+</div>
+<div class="mv-card card client mv-compact" id="mvCard">
+<div class="mv-head">
+<h2>Milestones</h2>
+<span class="sp">
+</span>
+<button type="button" class="mv-ib" id="mvSwap" data-mvact="aud" aria-pressed="true" aria-label="Switch to internal view" data-tip="Switch to internal view">
+<svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="swap">
+<path d="M7 7h12l-3-3M17 17H5l3 3">
+</path>
+</svg>
+</button>
+<button type="button" class="mv-ib" id="mvPencil" data-mvpage="ABC" aria-label="Open milestones: Plan and Movement" data-tip="Open milestones: Plan and Movement">
+<svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+</div>
+<div class="mv-stripbar">
+<button type="button" class="ib mv-ib" aria-label="Scroll the plan line left" data-tip="Scroll the plan line left" data-mvact="sl">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevleft">
+<path d="M15 6l-6 6 6 6">
+</path>
+</svg>
+</button>
+<button type="button" class="ib mv-ib" aria-label="Scroll the plan line right" data-tip="Scroll the plan line right" data-mvact="sr">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevright">
+<path d="M9 6l6 6-6 6">
+</path>
+</svg>
+</button>
+<button type="button" class="mv-btn sm" data-mvact="st">Today</button>
+<span class="mv-hint">Sep 2026 to Nov 2026</span>
+</div>
+<div class="mv-stripwrap" tabindex="0" data-mvscroll="card" data-today="304" aria-label="Milestone plan line, scrolls sideways">
+<div class="mv-strip" style="width:#px;height:#px">
+<div class="ax">
+</div>
+<div class="mon" style="left:#px">Sep 2026</div>
+<div class="mon" style="left:#px">Oct</div>
+<div class="mon" style="left:#px">Nov</div>
+<div class="tday" style="left:#px;height:#px">
+<span>Today</span>
+</div>
+</div>
+</div>
+<div class="mv-detog">
+<button type="button" data-mvact="det" aria-expanded="true" aria-controls="mvRows-card">
+<svg viewBox="0 0 10 10" aria-hidden="true">
+<path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6">
+</path>
+</svg>Hide milestone details</button>
+</div>
+<div class="mv-rows" id="mvRows-card">
+</div>
+</div>
+<div class="card">
+<h2>
+<a href="#" class="hlink" data-nav="actions:dueor:ABC">Actions due or overdue</a>
+<span class="sub">· 2</span>
+</h2>
+<div class="mini-list">
+<div data-open="actions:ABC-A-001" style="cursor:pointer">
+<span class="late" style="display:inline-block;width:#px">3 days late</span>
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>Escalate data access to the client CIO <span class="sub">— You</span>
+</div>
+<div data-open="actions:ABC-A-002" style="cursor:pointer">
+<span class="" style="display:inline-block;width:#px">In 3 days</span>
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>Book UAT environment <span class="sub">— Sara Example</span>
+</div>
+</div>
+<a href="#" class="seeall" data-nav="actions:open:ABC">All 2 Example Programme open actions ›</a>
+<a href="#" class="seeall" data-allitems="1" data-nav="all:open:ABC" title="Actions, RAID items and decisions together">All items (4 open) ›</a>
+</div>
+<div class="card" id="undatedCard">
+<h2>No due date <span class="sub">· 2</span>
+</h2>
+<div class="mini-list">
+<div class="undrow" data-open="raid:ABC-003" style="cursor:pointer">
+<span class="sub undid">ABC-003</span>
+<span class="ki" title="Risk" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 3 2.5 20h19z">
+</path>
+<path d="M12 10v4M12 17v.5">
+</path>
+</svg>
+</span>
+<span class="undt">Data access delayed → UAT slips</span>
+<span class="sub">— TBC · Urgent</span>
+<span class="dwrap undset">
+<input type="text" id="und-ABC-#1" data-pick="1" data-date="1" data-und="raid:ABC-003" placeholder="Set date" autocomplete="off" aria-label="Set the due date of ABC-003" title="Set the due date of ABC-003 here: type DD-MM-YYYY or choose from the calendar">
+<button type="button" class="dbtn" data-cal="und-ABC-#1" aria-label="Choose the due date of ABC-003" data-tip="Choose the due date of ABC-003">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calendar">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+</button>
+</span>
+</div>
+<div class="undrow" data-open="raid:ABC-004" style="cursor:pointer">
+<span class="sub undid">ABC-004</span>
+<span class="ki" title="Issue" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7.5v5.5M12 16.2v.4">
+</path>
+</svg>
+</span>
+<span class="undt">Test licences not ordered</span>
+<span class="sub">— TBC · High</span>
+<span class="dwrap undset">
+<input type="text" id="und-ABC-#2" data-pick="1" data-date="1" data-und="raid:ABC-004" placeholder="Set date" autocomplete="off" aria-label="Set the due date of ABC-004" title="Set the due date of ABC-004 here: type DD-MM-YYYY or choose from the calendar">
+<button type="button" class="dbtn" data-cal="und-ABC-#2" aria-label="Choose the due date of ABC-004" data-tip="Choose the due date of ABC-004">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calendar">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+</button>
+</span>
+</div>
+</div>
+<a href="#" class="seeall" data-nav="raid:undated:ABC">All 2 Example Programme undated RAID items ›</a>
+</div>
+</div>
+<div style="display:grid;gap:#px;align-content:start">
+<div class="card">
+<h2>
+<a href="#" class="hlink" data-nav="raid:open:ABC">Top risks and issues</a>
+</h2>
+<div class="mini-list">
+<div class="rkrow" data-open="raid:ABC-003" tabindex="0" style="cursor:pointer">
+<span class="ki" title="Risk" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 3 2.5 20h19z">
+</path>
+<path d="M12 10v4M12 17v.5">
+</path>
+</svg>
+</span>
+<span class="prio-urgent">Urgent</span>
+<span class="sub">Risk</span> Data access delayed → UAT slips<div class="sub rk-txt">No response yet</div>
+</div>
+<div class="rkrow" data-open="raid:ABC-004" tabindex="0" style="cursor:pointer">
+<span class="ki" title="Issue" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7.5v5.5M12 16.2v.4">
+</path>
+</svg>
+</span>
+<span class="tag">High</span>
+<span class="sub">Issue</span> Test licences not ordered<div class="sub rk-txt">No response yet</div>
+</div>
+</div>
+<a href="#" class="seeall" data-nav="raid:open:ABC">All 2 Example Programme open RAID items ›</a>
+</div>
+<div class="card">
+<h2>
+<a href="#" class="hlink" data-nav="decisions:all:ABC">Recent decisions</a>
+</h2>
+<div class="mini-list">
+<div data-open="decisions:ABC-D-005" style="cursor:pointer">
+<span class="ki" title="Decision" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="m13.5 3.5 7 7-3 3-7-7z">
+</path>
+<path d="m11.5 8.5-8 8 4 4 8-8">
+</path>
+</svg>
+</span>Go-live moves two weeks<div class="sub">04-10-2026 — Jane Doe</div>
+</div>
+</div>
+<a href="#" class="seeall" data-nav="decisions:all:ABC">All 1 Example Programme decision ›</a>
+</div>
+</div>
+</div>
+<div class="card flowcard" id="flowCard">
+<h2>Flow <span class="sub">· last 8 weeks · counts only</span>
+</h2>
+<p class="flsum" id="flowSummary">This week: 1 opened, 0 closed; 1 overdue, up from 0; the oldest open action is 8 days old.</p>
+<div class="flgrid">
+<figure class="flc">
+<figcaption>Actions opened and closed, by week</figcaption>
+<svg viewBox="0 0 360 150" role="group" aria-label="Actions opened and closed in each of the last 8 weeks">
+<rect class="fl-op" x="30" y="3" width="9" height="9">
+</rect>
+<text class="fl-t" x="43" y="11">opened</text>
+<rect class="fl-cl" x="148" y="3" width="9" height="9">
+</rect>
+<rect class="fl-hatch" x="148" y="3" width="9" height="9" fill="url(#flh#1)">
+</rect>
+<text class="fl-t" x="161" y="11">closed</text>
+<defs>
+<pattern id="flh#1" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+<rect class="fl-hp" width="1.6" height="4">
+</rect>
+</pattern>
+</defs>
+<line class="fl-ax" x1="30" y1="120" x2="352" y2="120">
+</line>
+<text class="fl-m" x="26" y="26" text-anchor="end">2</text>
+<text class="fl-m" x="26" y="120" text-anchor="end">0</text>
+<rect class="fl-op" data-v="0" data-wk="2026-08-23" x="34.8" y="120.00" width="14.3" height="0.00">
+<title>Week of 17-08-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-08-23" x="50.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 17-08-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="50.1" y="132" text-anchor="middle">21-08</text>
+<rect class="fl-op" data-v="0" data-wk="2026-08-30" x="75.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 24-08-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-08-30" x="90.4" y="120.00" width="14.3" height="0.00">
+<title>Week of 24-08-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="90.4" y="132" text-anchor="middle">28-08</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-06" x="115.3" y="120.00" width="14.3" height="0.00">
+<title>Week of 31-08-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-06" x="130.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 31-08-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="130.6" y="132" text-anchor="middle">04-09</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-13" x="155.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 07-09-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-13" x="170.9" y="120.00" width="14.3" height="0.00">
+<title>Week of 07-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="170.9" y="132" text-anchor="middle">11-09</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-20" x="195.8" y="120.00" width="14.3" height="0.00">
+<title>Week of 14-09-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-20" x="211.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 14-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="211.1" y="132" text-anchor="middle">18-09</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-27" x="236.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 21-09-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-27" x="251.4" y="120.00" width="14.3" height="0.00">
+<title>Week of 21-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="251.4" y="132" text-anchor="middle">25-09</text>
+<g class="flk" role="link" tabindex="0" data-nav="actions:open:ABC:st=&amp;rr=2026-09-28,2026-10-04" data-n="2" aria-label="2 actions opened in Example Programme in the week of 28-09-2026, open in Work">
+<rect class="fl-op" data-v="2" data-wk="2026-10-04" x="276.3" y="22.00" width="14.3" height="98.00">
+<title>Week of 28-09-2026: 2 opened</title>
+</rect>
+<text class="fl-t" x="283.5" y="19.0" text-anchor="middle">2</text>
+</g>
+<rect class="fl-cl" data-v="0" data-wk="2026-10-04" x="291.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 28-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="291.6" y="132" text-anchor="middle">02-10</text>
+<rect class="fl-op" data-v="0" data-wk="2026-10-09" x="316.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 05-10-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-10-09" x="331.9" y="120.00" width="14.3" height="0.00">
+<title>Week of 05-10-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="331.9" y="132" text-anchor="middle">09-10</text>
+</svg>
+</figure>
+<figure class="flc">
+<figcaption>Risks and issues opened and closed, by week</figcaption>
+<svg viewBox="0 0 360 150" role="group" aria-label="Risks and issues opened and closed in each of the last 8 weeks">
+<rect class="fl-op" x="30" y="3" width="9" height="9">
+</rect>
+<text class="fl-t" x="43" y="11">opened</text>
+<rect class="fl-cl" x="148" y="3" width="9" height="9">
+</rect>
+<rect class="fl-hatch" x="148" y="3" width="9" height="9" fill="url(#flh#2)">
+</rect>
+<text class="fl-t" x="161" y="11">closed</text>
+<defs>
+<pattern id="flh#2" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+<rect class="fl-hp" width="1.6" height="4">
+</rect>
+</pattern>
+</defs>
+<line class="fl-ax" x1="30" y1="120" x2="352" y2="120">
+</line>
+<text class="fl-m" x="26" y="26" text-anchor="end">1</text>
+<text class="fl-m" x="26" y="120" text-anchor="end">0</text>
+<rect class="fl-op" data-v="0" data-wk="2026-08-23" x="34.8" y="120.00" width="14.3" height="0.00">
+<title>Week of 17-08-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-08-23" x="50.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 17-08-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="50.1" y="132" text-anchor="middle">21-08</text>
+<rect class="fl-op" data-v="0" data-wk="2026-08-30" x="75.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 24-08-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-08-30" x="90.4" y="120.00" width="14.3" height="0.00">
+<title>Week of 24-08-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="90.4" y="132" text-anchor="middle">28-08</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-06" x="115.3" y="120.00" width="14.3" height="0.00">
+<title>Week of 31-08-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-06" x="130.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 31-08-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="130.6" y="132" text-anchor="middle">04-09</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-13" x="155.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 07-09-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-13" x="170.9" y="120.00" width="14.3" height="0.00">
+<title>Week of 07-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="170.9" y="132" text-anchor="middle">11-09</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-20" x="195.8" y="120.00" width="14.3" height="0.00">
+<title>Week of 14-09-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-20" x="211.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 14-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="211.1" y="132" text-anchor="middle">18-09</text>
+<rect class="fl-op" data-v="0" data-wk="2026-09-27" x="236.1" y="120.00" width="14.3" height="0.00">
+<title>Week of 21-09-2026: 0 opened</title>
+</rect>
+<rect class="fl-cl" data-v="0" data-wk="2026-09-27" x="251.4" y="120.00" width="14.3" height="0.00">
+<title>Week of 21-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="251.4" y="132" text-anchor="middle">25-09</text>
+<g class="flk" role="link" tabindex="0" data-nav="raid:open:ABC:st=&amp;ty=Risk,Issue&amp;rr=2026-09-28,2026-10-04" data-n="1" aria-label="1 risk or issue opened in Example Programme in the week of 28-09-2026, open in Work">
+<rect class="fl-op" data-v="1" data-wk="2026-10-04" x="276.3" y="22.00" width="14.3" height="98.00">
+<title>Week of 28-09-2026: 1 opened</title>
+</rect>
+<text class="fl-t" x="283.5" y="19.0" text-anchor="middle">1</text>
+</g>
+<rect class="fl-cl" data-v="0" data-wk="2026-10-04" x="291.6" y="120.00" width="14.3" height="0.00">
+<title>Week of 28-09-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="291.6" y="132" text-anchor="middle">02-10</text>
+<g class="flk" role="link" tabindex="0" data-nav="raid:open:ABC:st=&amp;ty=Risk,Issue&amp;rr=2026-10-05,2026-10-09" data-n="1" aria-label="1 risk or issue opened in Example Programme in the week of 05-10-2026, open in Work">
+<rect class="fl-op" data-v="1" data-wk="2026-10-09" x="316.6" y="22.00" width="14.3" height="98.00">
+<title>Week of 05-10-2026: 1 opened</title>
+</rect>
+<text class="fl-t" x="323.7" y="19.0" text-anchor="middle">1</text>
+</g>
+<rect class="fl-cl" data-v="0" data-wk="2026-10-09" x="331.9" y="120.00" width="14.3" height="0.00">
+<title>Week of 05-10-2026: 0 closed</title>
+</rect>
+<text class="fl-m" x="331.9" y="132" text-anchor="middle">09-10</text>
+</svg>
+</figure>
+<figure class="flc">
+<figcaption>Overdue at the end of each week: 1 now, up from 0 last week</figcaption>
+<svg viewBox="0 0 360 150" role="img" aria-label="Overdue items at the end of each of the last 8 weeks">
+<rect class="fl-od" x="30" y="3" width="9" height="9">
+</rect>
+<text class="fl-t" x="43" y="11">overdue</text>
+<defs>
+<pattern id="flh#3" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+<rect class="fl-hp" width="1.6" height="4">
+</rect>
+</pattern>
+</defs>
+<line class="fl-ax" x1="30" y1="120" x2="352" y2="120">
+</line>
+<text class="fl-m" x="26" y="26" text-anchor="end">1</text>
+<text class="fl-m" x="26" y="120" text-anchor="end">0</text>
+<rect class="fl-od" data-v="0" data-wk="2026-08-23" x="42.5" y="120.00" width="14.3" height="0.00">
+<title>Week of 17-08-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="50.1" y="132" text-anchor="middle">21-08</text>
+<rect class="fl-od" data-v="0" data-wk="2026-08-30" x="82.7" y="120.00" width="14.3" height="0.00">
+<title>Week of 24-08-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="90.4" y="132" text-anchor="middle">28-08</text>
+<rect class="fl-od" data-v="0" data-wk="2026-09-06" x="123.0" y="120.00" width="14.3" height="0.00">
+<title>Week of 31-08-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="130.6" y="132" text-anchor="middle">04-09</text>
+<rect class="fl-od" data-v="0" data-wk="2026-09-13" x="163.2" y="120.00" width="14.3" height="0.00">
+<title>Week of 07-09-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="170.9" y="132" text-anchor="middle">11-09</text>
+<rect class="fl-od" data-v="0" data-wk="2026-09-20" x="203.5" y="120.00" width="14.3" height="0.00">
+<title>Week of 14-09-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="211.1" y="132" text-anchor="middle">18-09</text>
+<rect class="fl-od" data-v="0" data-wk="2026-09-27" x="243.7" y="120.00" width="14.3" height="0.00">
+<title>Week of 21-09-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="251.4" y="132" text-anchor="middle">25-09</text>
+<rect class="fl-od" data-v="0" data-wk="2026-10-04" x="284.0" y="120.00" width="14.3" height="0.00">
+<title>Week of 28-09-2026: 0 overdue</title>
+</rect>
+<text class="fl-m" x="291.6" y="132" text-anchor="middle">02-10</text>
+<rect class="fl-od" data-v="1" data-wk="2026-10-09" x="324.2" y="22.00" width="14.3" height="98.00">
+<title>Week of 05-10-2026: 1 overdue</title>
+</rect>
+<text class="fl-t" x="331.4" y="19.0" text-anchor="middle">1</text>
+<text class="fl-m" x="331.9" y="132" text-anchor="middle">09-10</text>
+</svg>
+</figure>
+<figure class="flc">
+<figcaption>How long the 4 open items have been open</figcaption>
+<svg viewBox="0 0 360 112" role="group" aria-label="Open items by how long they have been open: 0 to 7 days 1, 8 to 14 days 3, 15 to 30 days 0, Over 30 days 0">
+<g class="flk" role="link" tabindex="0" data-nav="all:open:ABC:st=Open&amp;ty=Action,Risk,Issue,Assumption,Dependency&amp;rr=2026-10-02,2026-10-09" data-n="1" aria-label="1 open item in Example Programme open 0 to 7 days, open in Work">
+<text class="fl-t" x="0" y="18">0 to 7 days</text>
+<rect class="fl-a0" data-v="1" x="96" y="7" width="74.67" height="16">
+<title>0 to 7 days: 1</title>
+</rect>
+<text class="fl-t" x="175.7" y="19">1</text>
+</g>
+<g class="flk" role="link" tabindex="0" data-nav="all:open:ABC:st=Open&amp;ty=Action,Risk,Issue,Assumption,Dependency&amp;rr=2026-09-25,2026-10-01" data-n="3" aria-label="3 open items in Example Programme open 8 to 14 days, open in Work">
+<text class="fl-t" x="0" y="44">8 to 14 days</text>
+<rect class="fl-a1" data-v="3" x="96" y="33" width="224.00" height="16">
+<title>8 to 14 days: 3</title>
+</rect>
+<text class="fl-t" x="325.0" y="45">3</text>
+</g>
+<text class="fl-t" x="0" y="70">15 to 30 days</text>
+<rect class="fl-a2" data-v="0" x="96" y="59" width="0.00" height="16">
+<title>15 to 30 days: 0</title>
+</rect>
+<text class="fl-t" x="101.0" y="71">0</text>
+<text class="fl-t" x="0" y="96">Over 30 days</text>
+<rect class="fl-a3" data-v="0" x="96" y="85" width="0.00" height="16">
+<title>Over 30 days: 0</title>
+</rect>
+<text class="fl-t" x="101.0" y="97">0</text>
+</svg>
+</figure>
+<figure class="flc">
+<figcaption>Open risks and issues by priority</figcaption>
+<svg viewBox="0 0 360 54" role="group" aria-label="Open risks and issues by priority: Urgent 1, High 1, Medium 0, Low 0">
+<g class="flk" role="link" tabindex="0" data-nav="raid:open:ABC:st=Open&amp;ty=Risk,Issue&amp;pr=Urgent" data-n="1" aria-label="1 open Urgent risk or issue in Example Programme, open in Work">
+<rect class="fl-pU" data-v="1" x="4.0" y="6" width="176.00" height="22">
+<title>Urgent: 1</title>
+</rect>
+<text class="fl-t fl-on" x="92.0" y="21" text-anchor="middle">1</text>
+</g>
+<g class="flk" role="link" tabindex="0" data-nav="raid:open:ABC:st=Open&amp;ty=Risk,Issue&amp;pr=High" data-n="1" aria-label="1 open High risk or issue in Example Programme, open in Work">
+<rect class="fl-pH" data-v="1" x="180.0" y="6" width="176.00" height="22">
+<title>High: 1</title>
+</rect>
+<text class="fl-t fl-on" x="268.0" y="21" text-anchor="middle">1</text>
+</g>
+<rect class="fl-pU" x="4" y="38" width="9" height="9">
+</rect>
+<text class="fl-t" x="17" y="46">Urgent 1</text>
+<rect class="fl-pH" x="92" y="38" width="9" height="9">
+</rect>
+<text class="fl-t" x="105" y="46">High 1</text>
+<rect class="fl-pM" x="180" y="38" width="9" height="9">
+</rect>
+<text class="fl-t" x="193" y="46">Medium 0</text>
+<rect class="fl-pL" x="268" y="38" width="9" height="9">
+</rect>
+<text class="fl-t" x="281" y="46">Low 0</text>
+</svg>
+</figure>
+</div>
+<div class="flfoot">
+<div>
+<b>Oldest open</b>
+<div class="mini-list">
+<div data-open="raid:ABC-003" style="cursor:pointer">
+<span class="ki" title="Risk" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 3 2.5 20h19z">
+</path>
+<path d="M12 10v4M12 17v.5">
+</path>
+</svg>
+</span>
+<span class="sub">ABC-003</span> Data access delayed → UAT slips <span class="sub">— 10 days</span>
+</div>
+</div>
+<div class="mini-list">
+<div data-open="actions:ABC-A-001" style="cursor:pointer">
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>
+<span class="sub">ABC-A-001</span> Escalate data access to the client CIO <span class="sub">— 8 days</span>
+</div>
+</div>
+<div class="mini-list">
+<div data-open="actions:ABC-A-002" style="cursor:pointer">
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>
+<span class="sub">ABC-A-002</span> Book UAT environment <span class="sub">— 8 days</span>
+</div>
+</div>
+</div>
+<div>
+<b>Risks and issues</b>
+<div class="sub">2 opened, 0 closed in 8 weeks</div>
+<b style="margin-top:#px;display:block">Milestone movement</b>
+<div class="sub">No forecast has moved.</div>
+</div>
+</div>
+</div>
+<div class="cockfoot">
+<button class="btn" data-ask="weekly report ABC" aria-label="Draft weekly report" data-tip="Draft the weekly report with ask creaite">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>Weekly report</button>
+<button class="btn" data-ask="client report ABC" aria-label="Draft client report" data-tip="Draft a client-safe report with ask creaite">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>Client report</button>
+<button type="button" class="ib bd" aria-label="Browse files" data-tip="Browse files" data-files="ABC">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folder">
+<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z">
+</path>
+</svg>
+</button>
+</div>
+</div>
+</section>

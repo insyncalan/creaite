@@ -1,0 +1,2082 @@
+[
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Labelled",
+     "due_date": null,
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "Medium",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": null
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Labelled",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "Medium",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "Sensitive",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "cx-edit",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "client names",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json"
+   ],
+   "item_labels": [
+    {
+     "added_at": "<TS>",
+     "added_by": "cx-edit",
+     "item_id": "ABC-A-001",
+     "label": "Sensitive",
+     "reason": "client names",
+     "suggested": 0
+    }
+   ],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Labelled",
+        "label_reason": "client names",
+        "label_suggested": 0,
+        "labels": [
+         "Sensitive"
+        ],
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 1: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "step": "labelled"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Labelled",
+     "due_date": null,
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "Medium",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": null
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Labelled",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "Medium",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "Sensitive",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "cx-edit",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "client names",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "op": "update",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Labelled",
+        "label_reason": "client names",
+        "label_suggested": 0,
+        "labels": [
+         "Sensitive"
+        ],
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "applied/proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 2,
+       "changes": {
+        "labels": []
+       },
+       "decision": "approved",
+       "flags": [],
+       "id": "ABC-A-001",
+       "label_reason": "cleared",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "result_id": "ABC-A-001",
+       "table": "actions"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "step": "relabel"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Labelled",
+     "due_date": null,
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "Medium",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": null
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Labelled",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "Medium",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "Sensitive",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "cx-edit",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "client names",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "op": "update",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "old_value": null,
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [
+    {
+     "added_at": "<TS>",
+     "added_by": "cx-edit",
+     "item_id": "ABC-A-001",
+     "label": "Sensitive",
+     "reason": "client names",
+     "suggested": 0
+    }
+   ],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Labelled",
+        "label_reason": "client names",
+        "label_suggested": 0,
+        "labels": [
+         "Sensitive"
+        ],
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "labels": []
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-A-001",
+       "label_reason": "cleared",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "actions"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 2: 1 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Labelled",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "Medium",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "Sensitive",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "cx-edit",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "client names",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "op": "update",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "old_value": null,
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "Sensitive",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "cx-edit",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "client names",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Labelled",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Medium",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Labelled",
+        "label_reason": "client names",
+        "label_suggested": 0,
+        "labels": [
+         "Sensitive"
+        ],
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "labels": []
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-A-001",
+       "label_reason": "cleared",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "actions"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 1: 2 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Labelled",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "Medium",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "Sensitive",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "cx-edit",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "client names",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "op": "update",
+     "tbl": "item_labels",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "(removed)",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": "{\"item_id\": \"ABC-A-001\", \"label\": \"Sensitive\", \"added_by\": \"cx-edit\", \"added_at\": \"<TS>\", \"reason\": \"client names\", \"suggested\": 0}",
+     "old_value": null,
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "item_id",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "label",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "Sensitive",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_by",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "cx-edit",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "added_at",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "reason",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "client names",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "suggested",
+     "item_id": "ABC-A-001|Sensitive",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "item_labels",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Labelled",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Medium",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Labelled",
+        "label_reason": "client names",
+        "label_suggested": 0,
+        "labels": [
+         "Sensitive"
+        ],
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "labels": []
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-A-001",
+       "label_reason": "cleared",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "actions"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Nothing to undo.\n",
+  "step": "undo"
+ }
+]

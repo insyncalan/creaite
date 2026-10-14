@@ -1,0 +1,14 @@
+#!/bin/sh
+# Blocks commits that would put real vault data into the repository.
+bad=$(git diff --cached --name-only | grep -E '(\.db$|\.sqlite$|tracker-view\.xlsx$|^system/(backups|history|staging)/[^.]|^inbox/[^.]|^system/branding/|\.vtt$|settings-log\.jsonl$)')
+if [ -n "$bad" ]; then
+  echo "creaite: refusing to commit vault data:"; echo "$bad"; echo "Remove it from the commit (git restore --staged <file>)."; exit 1
+fi
+
+# Advisory only (agreed with the Scrum Master, 11-10-2026): the static check reports and never blocks a commit.
+# It is fast (about 3 seconds without the Chrome compile). Run it in full with: python3 dev/tools/check.py
+if [ -f dev/tools/check.py ]; then
+  python3 dev/tools/check.py --no-js 2>&1 | tail -n 12 | sed 's/^/creaite check: /' >&2
+  echo "creaite check: advisory, the commit goes ahead. Fix new problems, or lower the baseline with check.py --update-baseline." >&2
+fi
+exit 0

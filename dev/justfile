@@ -1,0 +1,109 @@
+# creaite development commands (development only; dev/ is never in a release zip).
+#
+# Run from anywhere in the repo:  just -f dev/justfile <recipe>   (or from dev/: just <recipe>)
+# Tip: alias j='just -f "$(git rev-parse --show-toplevel)/dev/justfile"'   then: j test, j check, j watch
+# `just -f dev/justfile` with no recipe lists them all.
+#
+# Tools: just, watchexec (brew); ruff, vulture, coverage, pyright, sqlite-utils (uv tool); biome (brew).
+# None of them is needed to run creaite. Test runs stay at -j 3: other sprints test on this machine too.
+
+set working-directory := ".."
+
+jobs := "3"
+
+# List the recipes
+default:
+    @just -f dev/justfile --list
+
+# ---------- tests ----------
+
+# The whole suite
+test:
+    python3 dev/tools/run_tests.py -j {{jobs}}
+
+# Only the quick tier: the test files that never start Chrome
+test-quick:
+    python3 dev/tools/run_tests.py -j {{jobs}} --quick
+
+# Only the test files whose name contains NAME (e.g. just test-only people)
+test-only +names:
+    python3 dev/tools/run_tests.py -j {{jobs}} {{names}}
+
+# Only the test files that can reach what changed since BASE (default main)
+test-changed base="main":
+    python3 dev/tools/run_tests.py -j {{jobs}} --changed {{base}}
+
+# Show which test files --changed would run, without running them
+test-list base="main":
+    python3 dev/tools/run_tests.py --changed {{base}} --list
+
+# Stop orphaned test servers and Chromes, remove stale test folders (every run does this first)
+clean:
+    python3 dev/tools/run_tests.py --clean
+
+# Record the screen snapshots' goldens again (all, or the screens named); say why in the commit
+snapshots-update *screens:
+    python3 dev/tools/run_tests.py --update-snapshots {{screens}}
+
+# Files that failed under load and passed alone, most often first
+flaky:
+    python3 dev/tools/run_tests.py --flaky
+
+# ---------- static checks ----------
+
+# The full static check: stdlib checks, ratchet, Chrome compile, and ruff/Biome/vulture when installed
+check:
+    python3 dev/tools/check.py
+
+# The fast check (no Chrome, no Biome): about 3 seconds
+check-fast:
+    python3 dev/tools/check.py --no-js
+
+# The check plus the ten most complex functions
+report:
+    python3 dev/tools/check.py --report
+
+# Record improvements in the baseline (refuses to raise any number)
+baseline:
+    python3 dev/tools/check.py --update-baseline
+
+# Rerun the fast check whenever a Python file or the dashboard template changes
+watch:
+    watchexec -c -e py,html -w system/scripts -w system/templates -w dev/tools -w dev/tests -- python3 dev/tools/check.py --no-js
+
+# Type check the scripts with pyright (basic mode, Python 3.9, vendor/ left out); advisory, not in the ratchet yet
+types:
+    pyright -p dev/pyrightconfig.json
+
+# ruff on the Python files with the rules the ratchet holds, every finding listed
+ruff:
+    ruff check --isolated --no-cache --target-version py312 --extend-exclude system/scripts/vendor --select F,E9,B006,B007,B008,B023,B904 system/scripts dev/tools dev/tests
+
+# Unused code vulture is at least 80% sure of
+dead:
+    vulture system/scripts dev/tools --exclude '*/vendor/*' --min-confidence 80
+
+# ---------- the app ----------
+
+# Rebuild dashboard.html from the tracker
+dashboard:
+    python3 system/scripts/build_dashboard.py
+
+# Start the live server (stop with Ctrl+C)
+serve:
+    python3 system/scripts/live_server.py
+
+# creaite's own health check
+doctor:
+    python3 system/scripts/doctor.py
+
+# ---------- the database (sample data only in this repo) ----------
+
+# The tracker's tables with their row counts (a worktree has no database: pass DB, e.g. ../creaite/system/tracker.db)
+db db="system/tracker.db":
+    sqlite-utils tables "{{db}}" --counts --table
+
+# Read-only query (the database is opened read-only: only tracker.py apply ever writes to it)
+# e.g. just db-query "select id, owner, due from actions where status='Open' limit 10"
+db-query sql db="system/tracker.db":
+    sqlite3 -readonly -header -column "{{db}}" "{{sql}}"

@@ -1,0 +1,233 @@
+<section class="view" id="v-files">
+<div class="wrapmax">
+<h1>Files</h1>
+<!-- ===== Search (BL-07) ===== -->
+<div class="vsearch" id="vsearch" role="search">
+<div class="vscol">
+<div class="vsbar">
+<input id="vsInput" type="search" placeholder="Search the vault" aria-label="Search the vault" autocomplete="off">
+<span class="askwrap">
+<button type="button" class="askbtn" id="vsAskBtn" data-state="idle" aria-disabled="true" title="ask creaite: an answer with a link to the source for every point.">
+<svg class="spark" viewBox="320 210 92 92" aria-hidden="true">
+<path d="M366 214Q366 256 408 256Q366 256 366 298Q366 256 324 256Q366 256 366 214Z" fill="currentColor">
+</path>
+</svg>
+<span class="asklab">ask creaite</span>
+<span class="askret" aria-hidden="true">↵</span>
+</button>
+<button type="button" class="askstop" id="vsAskStop" hidden="">Stop</button>
+</span>
+</div>
+<div class="vshint sub" id="vsHint" data-codeok="">For example: risks ABC last month, or what did Sara say about UAT?</div>
+<div class="vschips" id="vsChips" aria-live="polite">
+</div>
+<div class="sub" id="vsNote" aria-live="polite">
+</div>
+<div id="vsAnswer" hidden="">
+</div>
+<div id="vsResults" hidden="">
+</div>
+</div>
+</div>
+<div class="files" style="margin-top:#px">
+<div class="tree" id="tree">
+<button data-p="All" data-f="All" aria-pressed="true">All files<span class="n">6</span>
+</button>
+<button class="l1" data-p="inbox" data-f="All" aria-pressed="false">Intake<span class="n">3</span>
+</button>
+<button class="l1" data-p="_portfolio" data-f="All" aria-pressed="false">projects/_portfolio<span class="n">0</span>
+</button>
+<button class="l1" data-p="ABC" data-f="All" data-toggle="ABC" aria-expanded="false" aria-pressed="false">
+<span class="chev">
+<svg class="i chev turn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</span>
+<span title="ABC Example Programme">Example Programme</span>
+<span class="n">3</span>
+</button>
+<button class="l1" data-p="DEF" data-f="All" data-toggle="DEF" aria-expanded="false" aria-pressed="false">
+<span class="chev">
+<svg class="i chev turn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</span>
+<span title="DEF Digital Enablement">Digital Enablement</span>
+<span class="n">0</span>
+</button>
+</div>
+<div>
+<div class="views" id="fquick" style="margin-bottom:#px">
+<button class="vchip" data-q="all" aria-pressed="true">All files</button>
+<button class="vchip" data-q="latest" aria-pressed="false">Latest reports</button>
+<button class="vchip" data-q="week" aria-pressed="false">This week's meetings</button>
+<button class="vchip" data-q="inbox" aria-pressed="false">Intake</button>
+<button class="vchip" data-rep="Weekly" aria-pressed="false" title="Reports filed in the Weekly folder">Weekly</button>
+<button class="vchip" data-rep="Adhoc" aria-pressed="false" title="Reports filed in the Adhoc folder">Adhoc</button>
+<button class="vchip" data-rep="Steerco" aria-pressed="false" title="Reports filed in the Steerco folder">Steerco</button>
+</div>
+<div class="toolbar" style="margin-top:0">
+<!-- BL-214 (sprint-ui-audit): each filter has a name -->
+<input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:#px;border:#px solid var(--line);border-radius:#px;padding:0 #px;min-width:#px;background:var(--surface)">
+<select id="fsType" aria-label="File type" style="height:#px;border:#px solid var(--line);border-radius:#px;background:var(--surface)">
+<option value="All">All types</option>
+<option>docx</option>
+<option>pdf</option>
+<option>vtt</option>
+<option>xlsx</option>
+</select>
+<label class="sub" for="fsFrom">From</label>
+<span class="dwrap" style="width:#px">
+<input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:#px;border:#px solid var(--line);border-radius:#px;padding:0 #px;width:#%;background:var(--surface)">
+<button class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date">
+<svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="calendar" aria-hidden="true">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+</button>
+</span>
+<label class="sub" for="fsTo">To</label>
+<span class="dwrap" style="width:#px">
+<input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:#px;border:#px solid var(--line);border-radius:#px;padding:0 #px;width:#%;background:var(--surface)">
+<button class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date">
+<svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="calendar" aria-hidden="true">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+</button>
+</span>
+<span style="flex:1">
+</span>
+<span class="sub" id="filesCount" aria-live="polite">6 of 6 files</span>
+<button class="btn" id="filesRefresh">Refresh</button>
+</div>
+<div class="tbl" id="filesTbl">
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Location</th>
+<th>Date</th>
+<th>Size</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr data-fp="projects/ABC Example Programme/minutes/2026-10-04 Steering.docx" class="">
+<td>
+<span class="ftype">docx</span>
+<a href="#" data-openfile="projects/ABC Example Programme/minutes/2026-10-04 Steering.docx">2026-10-04 Steering.docx</a>
+</td>
+<td class="x">Example Programme › minutes</td>
+<td style="white-space:nowrap">04-10-2026</td>
+<td class="x">1 KB</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Open folder" data-tip="Open folder" data-openfile="projects/ABC Example Programme/minutes/">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folderopen">
+<path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6a2 2 0 0 1-1.9 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-fp="projects/ABC Example Programme/transcripts/2026-10-04 Steering.vtt" class="">
+<td>
+<span class="ftype">vtt</span>
+<a href="#" data-openfile="projects/ABC Example Programme/transcripts/2026-10-04 Steering.vtt">2026-10-04 Steering.vtt</a>
+</td>
+<td class="x">Example Programme › transcripts</td>
+<td style="white-space:nowrap">04-10-2026</td>
+<td class="x">1 KB</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Open folder" data-tip="Open folder" data-openfile="projects/ABC Example Programme/transcripts/">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folderopen">
+<path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6a2 2 0 0 1-1.9 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-fp="projects/ABC Example Programme/reports/2026-09-24 Client report.docx" class="">
+<td>
+<span class="ftype">docx</span>
+<a href="#" data-openfile="projects/ABC Example Programme/reports/2026-09-24 Client report.docx">2026-09-24 Client report.docx</a>
+</td>
+<td class="x">Example Programme › reports › Weekly</td>
+<td style="white-space:nowrap">24-09-2026</td>
+<td class="x">1 KB</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Open folder" data-tip="Open folder" data-openfile="projects/ABC Example Programme/reports/">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folderopen">
+<path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6a2 2 0 0 1-1.9 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-fp="inbox/ABC weekly sync.vtt" class="">
+<td>
+<span class="ftype">vtt</span>
+<a href="#" data-openfile="inbox/ABC weekly sync.vtt">ABC weekly sync.vtt</a>
+</td>
+<td class="x">Intake</td>
+<td style="white-space:nowrap">—</td>
+<td class="x">1 KB</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Open folder" data-tip="Open folder" data-openfile="inbox/">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folderopen">
+<path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6a2 2 0 0 1-1.9 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-fp="inbox/Copy of filed.vtt" class="">
+<td>
+<span class="ftype">vtt</span>
+<a href="#" data-openfile="inbox/Copy of filed.vtt">Copy of filed.vtt</a>
+</td>
+<td class="x">Intake</td>
+<td style="white-space:nowrap">—</td>
+<td class="x">1 KB</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Open folder" data-tip="Open folder" data-openfile="inbox/">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folderopen">
+<path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6a2 2 0 0 1-1.9 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-fp="inbox/Recording.vtt" class="">
+<td>
+<span class="ftype">vtt</span>
+<a href="#" data-openfile="inbox/Recording.vtt">Recording.vtt</a>
+</td>
+<td class="x">Intake</td>
+<td style="white-space:nowrap">—</td>
+<td class="x">1 KB</td>
+<td style="text-align:right">
+<button type="button" class="ib sm" aria-label="Open folder" data-tip="Open folder" data-openfile="inbox/">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="folderopen">
+<path d="m6 14 1.5-2.9A2 2 0 0 1 9.2 10H20a2 2 0 0 1 1.9 2.5l-1.5 6a2 2 0 0 1-1.9 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.7.9l.8 1.2a2 2 0 0 0 1.7.9H18a2 2 0 0 1 2 2v2">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="sub">
+<span id="filesAt">Updated 09:00.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p>
+</div>
+</div>
+</div>
+</section>

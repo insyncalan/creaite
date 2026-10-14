@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>creaite — dashboard reference (single source of design truth)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#8A949D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --edit:#FFF8E6; --focus:#0B6E7F; --inverse:#2C3134; --inverse-ink:#EDF1F4;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --edit:#2E2A1C; --inverse:#E3E7EA; --inverse-ink:#181D21;}}
+:root[data-theme="dark"]{--bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; --edit:#2E2A1C; --inverse:#E3E7EA; --inverse-ink:#181D21;}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/20px var(--font);font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px;border-radius:4px}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+.shell{display:grid;grid-template-columns:72px 1fr;height:100vh}
+.rail{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:2px}
+.logo{font:700 15px/1 var(--font);color:var(--accent);margin:4px 0 14px}
+.rail button{width:60px;border:0;background:none;border-radius:10px;padding:6px 0 5px;display:flex;flex-direction:column;align-items:center;gap:3px;font:500 11px/14px var(--font);color:var(--muted);cursor:pointer;position:relative}
+.rail button svg{width:22px;height:22px}
+.rail button:hover{background:var(--sunk);color:var(--ink)}
+.rail button[aria-current="page"]{color:var(--ink)} .rail button[aria-current="page"] svg{color:var(--accent)}
+.rail button[aria-current="page"]::before{content:"";position:absolute;left:-6px;top:10px;bottom:10px;width:3px;border-radius:2px;background:var(--accent)}
+.rail .badge{position:absolute;top:2px;right:10px;min-width:16px;height:16px;border-radius:8px;background:var(--bad);color:#fff;font:500 10px/16px var(--font);padding:0 4px}
+.rail .grow{flex:1}
+.main{display:grid;grid-template-rows:auto auto 1fr;min-width:0;min-height:0}
+.bar{display:flex;align-items:center;gap:12px;padding:8px 20px;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.search{flex:1;min-width:200px;max-width:520px;height:36px;display:flex;align-items:center;gap:10px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--muted);cursor:text}
+.kbd,.search kbd{font:500 11px/16px var(--font);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--muted);background:var(--surface)}
+.search kbd{margin-left:auto}
+.status{font:400 12px/16px var(--font);color:var(--muted);display:flex;gap:14px;align-items:center;white-space:nowrap;margin-left:auto}
+.status .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;vertical-align:1px}
+.status .dot.off{background:var(--bad)}
+.status .pend{color:var(--warn);font-weight:500}
+.livealert{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:var(--bad-soft);color:var(--bad);padding:8px 20px;font-size:13px;border-bottom:1px solid var(--line)}
+.livealert.on{display:flex} .livealert code{background:rgba(0,0,0,.06);padding:1px 6px;border-radius:4px}
+.btn{height:32px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 12px;cursor:pointer;font:500 13px/18px var(--font);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:var(--faint)} .btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.quiet{border-color:transparent;background:none;color:var(--accent)} .btn.quiet:hover{background:var(--accent-soft)}
+.btn svg{width:16px;height:16px}
+.iconbtn{width:32px;height:32px;border:0;background:none;border-radius:50%;cursor:pointer;color:var(--muted);display:grid;place-items:center}
+.iconbtn:hover{background:var(--sunk)} .iconbtn svg{width:18px;height:18px}
+.content{display:grid;grid-template-columns:1fr auto;min-height:0}
+.view{overflow:auto;padding:20px 24px 40px;min-width:0}
+.view[hidden]{display:none}
+.wrapmax{max-width:1500px}
+h1{font:500 22px/28px var(--font);margin:0}
+h2{font:500 15px/20px var(--font);margin:0}
+.sub{color:var(--muted);font-size:13px}
+.brief{margin:2px 0 14px} .brief h1{font-size:26px;line-height:32px} .brief p{margin:6px 0 0;font-size:16px;line-height:24px;max-width:72ch}
+.brief p b{font-weight:500}
+.notes{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+.note{position:relative;display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 4px 0 12px;border-radius:15px;background:var(--sunk);font-size:13px}
+.note>button{border:0;background:none;width:24px;height:24px;border-radius:50%;cursor:pointer;color:var(--muted)} .note>button:hover{background:var(--line)}
+.dmenu{display:none;position:absolute;right:0;top:34px;z-index:30;min-width:210px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);padding:4px 0}
+.dmenu.on{display:block} .dmenu button{display:block;width:100%;text-align:left;border:0;background:none;padding:8px 14px;cursor:pointer;font-size:13px} .dmenu button:hover{background:var(--sunk)}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-width:0}
+.colh{display:flex;align-items:baseline;gap:8px;padding:12px 14px 8px}
+.colh .n{color:var(--muted);font-size:13px} .colh a{margin-left:auto;font-size:13px;text-decoration:none}
+.li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 14px;border-top:1px solid var(--line);cursor:pointer}
+.li:hover{background:var(--bg)} .li .m{grid-column:1/-1;color:var(--muted);font-size:12px} .li .acts{display:flex;gap:4px;align-self:center}
+.mini{height:26px;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:0 8px;font:500 12px/16px var(--font);cursor:pointer;white-space:nowrap}
+.mini:hover{border-color:var(--faint)} .mini.ok{color:var(--ok)} .mini.no{color:var(--bad)}
+.late{color:var(--bad);font-weight:500}
+.chg{display:flex;gap:10px;padding:9px 14px;border-top:1px solid var(--line);font-size:13px} .chg .w{color:var(--muted);white-space:nowrap;width:70px;flex:none} .chg b{font-weight:500}
+table{width:100%;border-collapse:collapse}
+th{font:500 12px/16px var(--font);color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface);position:sticky;top:0;z-index:2}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto}
+.tbl.list{overflow:visible} .tbl.list.capped,.tbl.list.hscroll{overflow:auto}
+.tbl.list thead th{top:0}
+tr.click{cursor:pointer} tr.click:hover td{background:var(--bg)}
+tr.sel td{background:var(--accent-soft)!important}
+.health{display:inline-flex;align-items:center;gap:6px;font-weight:500;white-space:nowrap} .health svg{width:16px;height:16px}
+.h-ok{color:var(--ok)} .h-warn{color:var(--warn)} .h-bad{color:var(--bad)}
+.ev{color:var(--muted);font-size:12px;white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
+.spark{display:inline-flex;gap:2px;align-items:flex-end;height:16px;vertical-align:middle}
+.spark i{display:block;width:6px;border-radius:1px} .spark .s-ok{height:6px;background:var(--faint);opacity:.55} .spark .s-warn{height:11px;background:var(--warn)} .spark .s-bad{height:16px;background:var(--bad)}
+.pcode{color:var(--muted);font-size:12px;margin-right:6px}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 12px} .toolbar .sp{flex:1}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-top:10px}
+.tabs button{border:0;background:none;padding:8px 12px;border-bottom:2px solid transparent;color:var(--muted);font-weight:500;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.views{display:flex;gap:6px;flex-wrap:wrap}
+.vchip{height:28px;border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:0 12px;font-size:13px;cursor:pointer}
+.vchip[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.tag{font-size:12px;color:var(--muted)} .tag.bad{color:var(--bad);font-weight:500} .tag.warn{color:var(--warn);font-weight:500}
+.prio-urgent{color:var(--bad);font-weight:500}
+td.title{min-width:260px} td.title .x,.x{color:var(--muted);font-size:12px}
+.kbdhint{color:var(--muted);font-size:12px;margin-top:8px}
+.dd{position:relative;display:inline-block}
+.ddmenu{display:none;position:absolute;top:36px;right:0;z-index:25;min-width:240px;max-height:360px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.14);padding:6px 0}
+.ddmenu.left{left:0;right:auto} .ddmenu.on{display:block}
+.ddmenu label{display:flex;align-items:center;gap:10px;padding:6px 14px;cursor:pointer;font-size:13px} .ddmenu label:hover{background:var(--sunk)}
+.ddmenu small{margin-left:auto;color:var(--muted)} .ddmenu .acts{display:flex;gap:4px;padding:2px 10px 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.ddmenu input[type=search]{width:calc(100% - 20px);margin:4px 10px 6px;height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:var(--bg)}
+.panel{width:0;overflow:hidden;border-left:1px solid var(--line);background:var(--surface);transition:width .15s}
+.panel.on{width:420px}
+.pin{width:420px;height:100%;display:flex;flex-direction:column}
+.ph{display:flex;align-items:flex-start;gap:8px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
+.ph .id{color:var(--muted);font-size:12px} .ph h2{font-size:16px;line-height:22px}
+.pb{flex:1;overflow:auto;padding:12px 16px}
+.pb.editing{background:var(--edit)}
+.editbanner{display:none;font-size:12px;color:var(--warn);font-weight:500;margin-bottom:8px} .pb.editing .editbanner{display:block}
+.fgrid{display:grid;grid-template-columns:118px 1fr;gap:8px 12px;align-items:start;font-size:13px}
+.fgrid dt{color:var(--muted);padding-top:2px} .fgrid dd{margin:0;white-space:pre-wrap;min-width:0}
+.fgrid input[type=text],.fgrid select,.fgrid textarea{width:100%;border:1px solid var(--faint);border-radius:6px;padding:5px 8px;background:var(--surface);font-size:13px}
+.fgrid textarea{min-height:56px;resize:vertical;line-height:18px}
+.fgrid .bad{border-color:var(--bad)!important;outline:1px solid var(--bad)}
+.fsec{grid-column:1/-1;font:500 12px/16px var(--font);color:var(--muted);margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.ferr{color:var(--bad);font-size:12px;margin:0 16px 0;min-height:0}
+.cmnote{grid-column:1/-1;background:var(--accent-soft);border-radius:6px;padding:8px 10px;font-size:12px}
+.pf{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);align-items:center} .pf .sp{flex:1}
+.srcbox a,.srclink{font-weight:500}
+.srcmeta{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0} .srcmeta dt{color:var(--muted)} .srcmeta dd{margin:0}
+.dwrap{display:flex;gap:6px;position:relative} .dwrap input{flex:1}
+.dbtn{border:1px solid var(--faint);background:var(--surface);border-radius:6px;width:32px;cursor:pointer;display:grid;place-items:center;color:var(--muted)} .dbtn svg{width:16px;height:16px}
+.cal{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:10px;width:252px}
+.cal .ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-weight:500}
+.cal .ch button{border:0;background:none;cursor:pointer;font-size:16px;padding:2px 8px;border-radius:6px} .cal .ch button:hover{background:var(--sunk)}
+.cal .cg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:12px} .cal .cg span{color:var(--muted)}
+.cal .cg button{border:0;background:none;border-radius:50%;height:32px;cursor:pointer;font-size:13px} .cal .cg button:hover{background:var(--accent-soft)}
+.cal .cg button.today{outline:1px solid var(--accent)} .cal .cg button.sel{background:var(--accent);color:var(--accent-ink)}
+.cal .cf{display:flex;justify-content:space-between;margin-top:6px} .cal .cf button{border:0;background:none;color:var(--accent);cursor:pointer}
+.combo{position:relative}
+.combo-list{display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:240px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.16);padding:4px 0}
+.combo.open .combo-list{display:block}
+.copt{display:flex;align-items:center;gap:8px;min-height:34px;padding:0 6px 0 12px;cursor:pointer;font-size:13px} .copt span{flex:1} .copt small{color:var(--muted)}
+.copt.act,.copt:hover{background:var(--accent-soft)} .copt.new{color:var(--accent);font-weight:500}
+.cdel{border:0;background:none;width:24px;height:24px;border-radius:50%;cursor:pointer;color:var(--muted)} .cdel:hover{background:var(--bad-soft);color:var(--bad)}
+.rgroup{margin:16px 0 6px;display:flex;align-items:center;gap:10px} .rgroup h2{font-size:14px}
+.why{font-size:12px;color:var(--muted)} .indiv{font-size:12px;color:var(--warn)}
+.cock{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px} .card h2{margin-bottom:8px}
+.hhead{display:flex;flex-wrap:wrap;align-items:center;gap:16px;margin:6px 0 16px}
+.evrow{display:flex;gap:18px;flex-wrap:wrap} .evbox{min-width:120px} .evbox .v{font:500 20px/26px var(--font)} .evbox .v.bad{color:var(--bad)} .evbox .l{font-size:12px;color:var(--muted)}
+.tl{position:relative;height:64px;margin:10px 4px 0} .tl .axis{position:absolute;left:0;right:0;top:28px;height:2px;background:var(--line)}
+.tl .ms{position:absolute;top:20px;transform:translateX(-50%);text-align:center;font-size:11px;color:var(--muted);white-space:nowrap}
+.tl .ms i{display:block;width:12px;height:12px;border-radius:50%;margin:0 auto 4px;background:var(--surface);border:2px solid var(--faint)}
+.tl .ms.slip i{border-color:var(--bad);background:var(--bad-soft)} .tl .ms.done i{background:var(--faint);border-color:var(--faint)}
+.tl .today{position:absolute;top:8px;bottom:0;width:1px;background:var(--accent)} .tl .today span{position:absolute;top:-8px;left:4px;font-size:11px;color:var(--accent)}
+.mini-list>div{padding:6px 0;border-top:1px solid var(--line);font-size:13px} .mini-list>div:first-child{border-top:0}
+.files{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+.tree{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px;font-size:13px;position:sticky;top:0}
+.tree button{display:flex;gap:6px;width:100%;text-align:left;border:0;background:none;padding:5px 8px;border-radius:6px;cursor:pointer;align-items:flex-start}
+.tree button:hover{background:var(--sunk)} .tree button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.tree .l1{font-weight:500;margin-top:4px} .tree .l2{padding-left:26px;color:var(--muted)} .tree .l3{padding-left:40px;color:var(--muted);font-size:12px}
+.tree .n{margin-left:auto;color:var(--muted);font-size:12px;font-weight:400} .tree .chev{width:12px;flex:none;color:var(--muted)}
+.ftype{display:inline-block;min-width:36px;text-align:center;font-size:11px;font-weight:500;border-radius:4px;padding:0 5px;margin-right:8px;background:var(--sunk);color:var(--muted)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:16px}
+.srow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.srow:first-of-type{border-top:0} .srow small{display:block;color:var(--muted);font-size:12px}
+.srow input[type=text],.srow input[type=number],.srow select{border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--surface);min-width:110px}
+.switch{appearance:none;width:40px;height:22px;border-radius:11px;background:var(--line);position:relative;cursor:pointer;transition:background .15s}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--surface);transition:left .15s}
+.switch:checked{background:var(--accent)} .switch:checked::after{left:21px}
+.wide{grid-column:1/-1}
+table.mgr td,table.mgr th{padding:7px 10px} table.mgr .num{text-align:right;width:70px} table.mgr tr.off td{color:var(--muted)}
+.mgract{white-space:nowrap;text-align:right} .mgsel{height:28px;border:1px solid var(--line);border-radius:6px;background:var(--surface);font-size:12px;margin:0 4px}
+.helpidx{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin:12px 0 18px}
+.helpidx a{padding:8px 12px;border-radius:8px;background:var(--surface);border:1px solid var(--line);text-decoration:none;color:var(--ink);font-size:13px} .helpidx a:hover{border-color:var(--accent)}
+.hsec{margin-bottom:22px} .hsec h2{font-size:18px;margin-bottom:8px} .hsec.hidden{display:none}
+.hsec td:first-child{width:36%} .hsec p,.hsec li{max-width:80ch}
+#chat{position:fixed;top:0;right:0;height:100vh;width:min(420px,100vw);background:var(--surface);border-left:1px solid var(--line);display:none;flex-direction:column;z-index:45;box-shadow:-4px 0 16px rgba(0,0,0,.1)}
+#chat.on{display:flex}
+.chh{display:flex;align-items:center;gap:8px;padding:14px 12px 6px 18px} .chh h2{flex:1;font-size:18px}
+.chs{padding:0 18px 8px;font-size:12px;color:var(--muted)} .chs .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px} .chs .dot.off{background:var(--bad)}
+.chq{display:flex;flex-wrap:wrap;gap:6px;padding:0 18px 10px;border-bottom:1px solid var(--line)}
+.chlog{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.msg{max-width:88%;padding:8px 12px;border-radius:12px;font-size:13px;white-space:pre-wrap}
+.msg.u{align-self:flex-end;background:var(--accent-soft)} .msg.a{align-self:flex-start;background:var(--sunk)}
+.msg .acts{display:flex;gap:6px;margin-top:6px}
+.step{align-self:flex-start;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.spin{width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .8s linear infinite} @keyframes sp{to{transform:rotate(360deg)}}
+.confirm{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface);font-size:13px} .confirm b{display:block;margin-bottom:4px} .confirm .acts{display:flex;gap:6px;justify-content:flex-end;margin-top:8px}
+.chin{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)} .chin textarea{flex:1;resize:none;min-height:40px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;background:var(--bg)}
+dialog#cmdk{margin:72px auto auto;width:min(640px,94vw);padding:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink)}
+dialog#cmdk::backdrop{background:rgba(0,0,0,.25)}
+#cmdkIn{width:100%;height:52px;border:0;border-bottom:1px solid var(--line);padding:0 18px;background:none;outline:0;font-size:15px}
+#cmdkList{max-height:60vh;overflow:auto;padding:6px 0} #cmdkList .grp{font-size:12px;color:var(--muted);padding:8px 18px 2px}
+#cmdkList button{display:flex;width:100%;border:0;background:none;padding:8px 18px;text-align:left;cursor:pointer;font-size:13px;gap:10px} #cmdkList button small{margin-left:auto;color:var(--muted)}
+#cmdkList button[aria-selected="true"],#cmdkList button:hover{background:var(--accent-soft)}
+.snack{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--inverse);color:var(--inverse-ink);border-radius:8px;padding:8px 8px 8px 14px;display:none;align-items:center;gap:12px;font-size:13px;z-index:70;max-width:90vw}
+.snack.on{display:flex} .snack button{border:0;background:none;color:var(--accent-soft);font-weight:500;cursor:pointer;padding:4px 8px}
+.empty{padding:24px 14px;color:var(--muted);font-size:13px;text-align:center}
+.colrz{position:absolute;top:0;right:0;width:8px;height:100%;cursor:col-resize;z-index:3} th{position:sticky} th .colrz::after{content:"";position:absolute;right:2px;top:25%;height:50%;width:2px;background:var(--line);opacity:0} th:hover .colrz::after{opacity:1;background:var(--accent)}
+body.resizing{cursor:col-resize;user-select:none}
+.cmdbox{display:flex;align-items:center;gap:8px;margin:6px 0;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:6px 6px 6px 10px} .cmdbox code{flex:1;font:500 13px/18px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:nowrap}
+.livealert code{font-family:ui-monospace,Menlo,monospace}
+.sample{font-size:12px;color:var(--muted);margin-bottom:8px}
+@media (max-width:1100px){.cols{grid-template-columns:1fr}.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.files{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.panel{transition:none}.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Main">
+    <div class="logo">creaite</div>
+    <button data-v="today" title="Today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>Today</button>
+    <button data-v="projects" title="Projects"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z"/></svg>Projects</button>
+    <button data-v="work" title="Work"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h12M8 12h12M8 18h12"/><path d="m3 6 1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2"/></svg>Work</button>
+    <button data-v="review" title="Review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H8l-4 4z"/><path d="m9 10.5 2 2 4-4"/></svg>Review<span class="badge" id="revBadge"></span></button>
+    <button data-v="files" title="Files"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Files</button>
+    <span class="grow"></span>
+    <button data-v="activity" title="Activity"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="8.5"/></svg>Activity</button>
+    <button data-v="settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.2 6.5l2.6 1.5M17.2 16l2.6 1.5M4.2 17.5 6.8 16M17.2 8l2.6-1.5"/></svg>Settings</button>
+  </nav>
+  <div class="main">
+    <header class="bar">
+      <div class="search" id="searchBtn" role="button" tabindex="0" aria-label="Search or jump to"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
+      <div class="status" id="status"></div>
+      <button class="btn" id="askBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v11H9l-5 4z"/></svg>Ask creaite <span class="kbd">/</span></button>
+      <button class="iconbtn" id="themeBtn" aria-label="Switch light or dark theme" title="Theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></button>
+    </header>
+    <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
+    <div class="content">
+      <section class="view" id="v-today"><div class="wrapmax">
+        <p class="sample" id="sampleNote">Sample data. The real dashboard is generated from <code>system/tracker.db</code> and served by the live server.</p>
+        <div class="brief"><h1 id="todayDate"></h1><p id="briefText"></p></div>
+        <div class="notes" id="notes"></div>
+        <div class="cols">
+          <div class="col"><div class="colh"><h2>Needs your decision</h2><span class="n" id="nDecide"></span><a href="#" data-go="review">Open review</a></div><div id="decideList"></div></div>
+          <div class="col"><div class="colh"><h2>Your commitments</h2><span class="n" id="nMine"></span><a href="#" data-go="mine">All mine</a></div><div id="mineList"></div></div>
+          <div class="col"><div class="colh"><h2 id="chgTitle">Changed since your last visit</h2></div><div id="chgList"></div></div>
+        </div>
+        <h2 style="margin-bottom:8px">Portfolio</h2>
+        <div class="tbl" id="pfTbl"></div>
+      </div></section>
+      <section class="view" id="v-projects" hidden><div class="wrapmax"><h1>Projects</h1><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
+      <section class="view" id="v-cockpit" hidden></section>
+      <section class="view" id="v-work" hidden><div class="wrapmax">
+        <h1>Work</h1>
+        <div class="tabs" role="tablist" id="wtabs"><button role="tab" data-t="actions">Actions</button><button role="tab" data-t="raid">RAID</button><button role="tab" data-t="decisions">Decisions</button></div>
+        <div class="toolbar">
+          <div class="views" id="wviews"></div>
+          <span class="dd"><button class="btn" id="ownBtn" aria-haspopup="true">All owners</button><div class="ddmenu left" id="ownMenu"></div></span>
+          <span class="sp"></span>
+          <span class="dd"><button class="btn" id="colBtn" aria-haspopup="true">Columns</button><div class="ddmenu" id="colMenu"></div></span>
+          <button class="btn primary" id="newBtn">New action</button>
+        </div>
+        <div class="tbl list" id="workWrap"><table id="workTbl"></table></div>
+        <div class="kbdhint"><span class="kbd">J</span> <span class="kbd">K</span> move · click to open details · <span class="kbd">E</span> or double-click a cell to edit · <span class="kbd">Esc</span> close · drag a column edge to resize</div>
+      </div></section>
+      <section class="view" id="v-review" hidden><div class="wrapmax">
+        <h1>Review</h1><p class="sub" style="margin:4px 0 0">Claude's proposals, grouped by project. <span class="kbd">J</span>/<span class="kbd">K</span> move · <span class="kbd">A</span> approve · <span class="kbd">R</span> reject · <span class="kbd">E</span> edit · <span class="kbd">X</span> select</p>
+        <div class="toolbar"><button class="btn" id="bulkApprove" disabled>Approve selected</button><button class="btn" id="bulkReject" disabled>Reject selected</button><span class="sp"></span><button class="btn" id="routineBtn">Approve all routine</button></div>
+        <div id="reviewBody"></div>
+      </div></section>
+      <section class="view" id="v-files" hidden><div class="wrapmax">
+        <h1>Files</h1>
+        <div class="files" style="margin-top:14px"><div class="tree" id="tree"></div>
+          <div><div class="views" id="fquick" style="margin-bottom:10px"></div>
+            <div class="toolbar" style="margin-top:0"><input id="fsName" type="search" placeholder="Search file names" style="height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;min-width:220px;background:var(--surface)">
+              <select id="fsType" style="height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface)"><option value="All">All types</option><option>docx</option><option>pdf</option><option>vtt</option><option>xlsx</option></select>
+              <span class="sub">From</span><span class="dwrap" style="width:150px"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:32px;border:1px solid var(--line);border-radius:8px;padding:0 8px;width:100%;background:var(--surface)"><button class="dbtn" data-cal="fsFrom" aria-label="Choose from date">📅</button></span>
+              <span class="sub">To</span><span class="dwrap" style="width:150px"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:32px;border:1px solid var(--line);border-radius:8px;padding:0 8px;width:100%;background:var(--surface)"><button class="dbtn" data-cal="fsTo" aria-label="Choose to date">📅</button></span></div>
+            <div class="tbl" id="filesTbl"></div><p class="sub">File list as of the last build. Word files open in Word; Open folder shows the file's folder.</p></div></div>
+      </div></section>
+      <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="tbl" id="actTbl"></div></div></section>
+      <section class="view" id="v-settings" hidden><div class="wrapmax">
+        <h1>Settings</h1>
+        <div class="tabs" id="stabs"><button data-st="prefs" aria-selected="true">Preferences</button><button data-st="admin" aria-selected="false">Data admin</button></div>
+        <div id="settingsBody"></div>
+        <div class="card" style="margin-top:18px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
+        <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+      </div></section>
+      <section class="view" id="v-help" hidden><div class="wrapmax"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><h1>Help</h1><input id="helpQ" type="search" placeholder="Search help" style="height:34px;border:1px solid var(--line);border-radius:17px;padding:0 14px;min-width:240px;background:var(--surface)"></div><nav class="helpidx" id="helpIdx"></nav><div id="helpBody"></div></div></section>
+      <aside class="panel" id="panel" aria-label="Details"><div class="pin">
+        <div class="ph"><div style="flex:1"><div class="id" id="pId"></div><h2 id="pTitle"></h2></div><button class="btn quiet" id="pClose">Close</button></div>
+        <div class="pb" id="pBody"><div class="editbanner" id="editBanner">Editing — changes apply when you save</div><dl class="fgrid" id="pFields"></dl></div>
+        <div class="ferr" id="pErr"></div>
+        <div class="pf" id="pFoot"></div>
+      </div></aside>
+    </div>
+  </div>
+</div>
+<aside id="chat" aria-label="Ask creaite">
+  <div class="chh"><h2>Ask creaite</h2><button class="iconbtn" id="chatClose" aria-label="Close">✕</button></div>
+  <div class="chs" id="chSub"></div>
+  <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Sweep</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
+  <div class="chlog" id="chLog" aria-live="polite"></div>
+  <div class="chin"><textarea id="chIn" rows="1" placeholder="Ask a question or give an instruction…" aria-label="Message"></textarea><button class="btn primary" id="chSend">Send</button></div>
+</aside>
+<dialog id="cmdk" aria-label="Search or jump to"><input id="cmdkIn" placeholder="Search projects, items, commands…" autocomplete="off"><div id="cmdkList"></div></dialog>
+<div class="snack" id="snack" role="status"><span id="snackT"></span><button id="snackU">Undo</button></div>
+<script>
+/* ======================= core ======================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const TODAY="2026-10-04", DATE=/^\d{4}-\d{2}-\d{2}$/, DDATE=/^\d{2}-\d{2}-\d{4}$/;
+/* storage and file names: YYYY-MM-DD. Everything shown or typed: DD-MM-YYYY */
+const fd=iso=>iso&&DATE.test(iso.slice(0,10))?`${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}${iso.length>10?iso.slice(10):""}`:(iso||"");
+const toIso=dd=>DDATE.test(dd)?`${dd.slice(6,10)}-${dd.slice(3,5)}-${dd.slice(0,2)}`:dd;
+const fdText=s=>String(s??"").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g,"$3-$2-$1");
+const MAC=/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent), MOD=MAC?"⌘":"Ctrl";
+const days=d=>Math.round((new Date(d)-new Date(TODAY))/864e5);
+const rel=d=>{ if(!d) return "No date"; const n=days(d); return n===0?"Today":n===1?"Tomorrow":n===-1?"Yesterday":n<0?`${-n} days late`:`In ${n} days`; };
+const nowStamp=()=>{ const d=new Date(), z=n=>String(n).padStart(2,"0"); return `${TODAY} ${z(d.getHours())}:${z(d.getMinutes())}`; };
+const HI={ok:'<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/>',warn:'<path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/>',bad:'<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.4"/>'};
+const hk=h=>h==="On track"?"ok":h==="At risk"?"warn":"bad";
+const health=h=>`<span class="health h-${hk(h)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">${HI[hk(h)]}</svg>${h}</span>`;
+const store={get:(k,d)=>{ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }, set:(k,v)=>{ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }};
+const CMT="What it is: \nWhat it means for you: \nWhat is being done: ";
+const CMH=["What it is:","What it means for you:","What is being done:"];
+const cmHeads=t=>CMH.every(h=>(t||"").split("\n").some(l=>l.trim().startsWith(h)));
+const cmdOK=t=>(t||"").replace(/[^\p{L}\p{N}]/gu,"").length>=5;
+const cmOK=t=>CMH.every(h=>{ const l=(t||"").split("\n").find(x=>x.trim().startsWith(h)); const r=l&&l.trim().slice(h.length).trim(); return !!r&&r.replace(/[^\p{L}\p{N}]/gu,"").length>=5; });
+const prio=(i,l)=>i==="High"&&l==="High"?"Urgent":(i==="High"||l==="High")?"High":(i==="Low"&&l==="Low")?"Low":"Medium";
+const OPENST=s=>s==="Open"||s==="Delayed";
+/* the real build writes the vault's actual path here */
+const VAULT_PATH="~/creaite", START_CMD=`cd ${VAULT_PATH} && python3 system/scripts/live_server.py`;
+const cmdBox=()=>`<div class="cmdbox"><code>${esc(START_CMD)}</code><button class="mini" data-copycmd>Copy</button></div>`;
+
+/* ======================= settings ======================= */
+const S=Object.assign({me:"Alan Carter",short:"Alan, AC",defPriority:"Medium",defActionView:"open",defRaidView:"open",autoApply:true,theme:"System",remindersOn:true,weeklyDay:"Friday",weeklyTime:"12:00",sweepDue:"07:00",lookback:14,srcInbox:true,srcSent:true,srcChats:true,srcChannels:true,possible:true,staleDays:7,overdueDays:7,slipAtRisk:2,slipOff:2,urgentOff:2,dueSoon:7,dailyBackup:true,port:8765},store.get("creaite-settings",{}));
+const saveS=()=>store.set("creaite-settings",S);
+const meNames=()=>[S.me,...S.short.split(",").map(x=>x.trim()).filter(Boolean)].map(x=>x.toLowerCase());
+const isMe=o=>meNames().includes((o||"").toLowerCase());
+const who=o=>isMe(o)?"You":o;
+function applyTheme(){ const r=document.documentElement; if(S.theme==="System") delete r.dataset.theme; else r.dataset.theme=S.theme.toLowerCase(); }
+applyTheme();
+
+/* ======================= data ======================= */
+const P=[
+ {code:"FAL",name:"Falcon Data Platform",client:"Northgate Energy",health:"Off track",reason:"Go-live moved 3 weeks after the data access delay",trail:["ok","ok","warn","warn","warn","bad","bad","bad"],slip:21,rhythm:"Weekly",ms:[["Build complete","2026-09-12","done"],["UAT start","2026-11-02",""],["Go-live","2026-12-11","slip"]],current:"Build is complete for two of three data domains. Production data access from Northgate is three weeks late, so go-live has moved to 2026-12-11. Sponsor escalation is set for 2026-10-07."},
+ {code:"ORX",name:"Orbit Customer App",client:"Orbit Retail",health:"At risk",reason:"Two client actions more than 7 days overdue; UAT window under pressure",trail:["ok","ok","ok","ok","ok","warn","ok","warn"],slip:0,rhythm:"Fortnightly",ms:[["Feature freeze","2026-09-30","done"],["UAT start","2026-10-12",""],["UAT sign-off","2026-10-23",""]],current:"Feature build is on plan. UAT starts 2026-10-12, but test data and two client approvals are overdue."},
+ {code:"MER",name:"Meridian Contact Centre AI",client:"Meridian Telecom",health:"On track",reason:"No overdue actions; pilot metrics ahead of target",trail:["warn","ok","ok","ok","ok","ok","ok","ok"],slip:0,rhythm:"Weekly",ms:[["Pilot live","2026-09-01","done"],["Pilot review","2026-10-29",""]],current:"Pilot is live with 40 agents. Average handling time is down 11% against an 8% target."},
+ {code:"TID",name:"Tide Billing Migration",client:"Internal",health:"On track",reason:"Cut-over rehearsal 2 passed",trail:["ok","ok","ok","ok","ok","ok","ok","ok"],slip:0,rhythm:"Off",ms:[["Rehearsal 2","2026-09-26","done"],["Final rehearsal","2026-10-25",""],["Cut-over","2026-11-15",""]],current:"Second cut-over rehearsal passed with no Sev-1 defects."}];
+const pName=c=>(P.find(p=>p.code===c)||{}).name||c;
+const M="projects/FAL Falcon Data Platform/minutes/";
+const A=[
+ {id:"FAL-A-014",p:"FAL",t:"Escalate production data access to Northgate CIO",ws:"Data",o:"Alan Carter",pr:"Urgent",due:"2026-10-07",st:"Open",raised:"2026-10-01",closed:null,upd:"2026-10-02: CIO meeting requested",client:false,cm:CMT,src:M+"2026-10-01 Steering committee.docx — Actions",upd_at:"2026-10-02 18:10"},
+ {id:"FAL-A-012",p:"FAL",t:"Confirm revised go-live plan with sponsor",ws:"Governance",o:"Alan Carter",pr:"High",due:"2026-10-02",st:"Open",raised:"2026-09-24",closed:null,upd:"",client:false,cm:CMT,src:M+"2026-09-24 Weekly delivery.docx — Actions",upd_at:"2026-09-24 17:00"},
+ {id:"FAL-A-011",p:"FAL",t:"Provide masked sample datasets for domain 3",ws:"Data",o:"Rashid Al Suwaidi (Northgate)",pr:"High",due:"2026-09-22",st:"Open",raised:"2026-09-15",closed:null,upd:"2026-09-30: chased; promised by 2026-10-06",client:true,cm:CMT,src:"Email · From: Rashid Al Suwaidi <rashid@northgate.example> · Subject: [FAL] Domain 3 data · Sent: 2026-09-15 10:20",upd_at:"2026-09-30 12:00"},
+ {id:"FAL-A-009",p:"FAL",t:"Complete security review of ingestion pipeline",ws:"Build",o:"Lena Fischer",pr:"Medium",due:"2026-10-10",st:"Open",raised:"2026-09-17",closed:null,upd:"",client:false,cm:CMT,src:M+"2026-09-17 Weekly delivery.docx — Actions",upd_at:"2026-09-17 16:00"},
+ {id:"ORX-A-021",p:"ORX",t:"Deliver UAT test data pack",ws:"Testing",o:"Mei Tan (Orbit)",pr:"High",due:"2026-09-24",st:"Open",raised:"2026-09-22",closed:null,upd:"2026-10-01: partial pack this week",client:true,cm:"What it is: The UAT test data pack from your team.\nWhat it means for you: UAT can't start on 2026-10-12 without it.\nWhat is being done: We will use synthetic data for week 1 if needed.",src:"Email · From: James Okafor <james.okafor@orbitretail.example> · Subject: [ORX] UAT readiness · Sent: 2026-09-22 16:48",upd_at:"2026-10-01 09:00"},
+ {id:"ORX-A-019",p:"ORX",t:"Approve payment-provider sandbox credentials",ws:"Release",o:"James Okafor (Orbit)",pr:"High",due:"2026-09-23",st:"Open",raised:"2026-09-22",closed:null,upd:"",client:false,cm:CMT,src:"Email · From: James Okafor <james.okafor@orbitretail.example> · Subject: [ORX] UAT readiness · Sent: 2026-09-22 16:48",upd_at:"2026-09-22 17:00"},
+ {id:"ORX-A-017",p:"ORX",t:"Send UAT entry criteria to client",ws:"Testing",o:"Alan Carter",pr:"High",due:"2026-10-05",st:"Open",raised:"2026-09-29",closed:null,upd:"",client:false,cm:CMT,src:"projects/ORX Orbit Customer App/minutes/2026-09-29 Project board.docx — Actions",upd_at:"2026-09-29 15:00"},
+ {id:"ORX-A-018",p:"ORX",t:"Book UAT testers and rooms",ws:"Testing",o:"Sara Khan",pr:"Medium",due:"2026-10-08",st:"Open",raised:"2026-09-29",closed:null,upd:"",client:false,cm:CMT,src:"projects/ORX Orbit Customer App/minutes/2026-09-29 Project board.docx — Actions",upd_at:"2026-10-03 17:22"},
+ {id:"MER-A-008",p:"MER",t:"Share week-4 pilot metrics pack",ws:"Adoption",o:"Dev Patel",pr:"Medium",due:"2026-10-06",st:"Open",raised:"2026-09-29",closed:null,upd:"",client:true,cm:CMT,src:"Teams · Channel: MER pilot · From: Dev Patel · Sent: 2026-09-29 11:20",upd_at:"2026-10-03 16:05"},
+ {id:"MER-A-007",p:"MER",t:"Draft roll-out options paper for the pilot review",ws:"Adoption",o:"Alan Carter",pr:"Medium",due:"2026-10-20",st:"Open",raised:"2026-09-17",closed:null,upd:"",client:false,cm:CMT,src:"Teams · Channel: MER pilot · From: Priya Nair · Sent: 2026-09-17 13:31",upd_at:"2026-09-17 14:00"},
+ {id:"MER-A-005",p:"MER",t:"Agree pilot success criteria with Meridian",ws:"Adoption",o:"Priya Nair (Meridian)",pr:"Medium",due:"2026-09-15",st:"Closed",raised:"2026-09-01",closed:"2026-09-14",upd:"",client:true,cm:"What it is: Pilot success criteria.\nWhat it means for you: Clear measures for the pilot review.\nWhat is being done: Agreed and signed off on 2026-09-14.",src:"Teams · Channel: MER pilot · From: Priya Nair · Sent: 2026-09-01 10:00",upd_at:"2026-09-14 12:00"},
+ {id:"TID-A-006",p:"TID",t:"Schedule final cut-over rehearsal",ws:"Cut-over",o:"Omar Haddad",pr:"High",due:"2026-10-09",st:"Delayed",raised:"2026-09-26",closed:null,upd:"",client:false,cm:CMT,src:"projects/TID Tide Billing Migration/minutes/2026-09-26 Cut-over rehearsal review.docx — Actions",upd_at:"2026-09-26 16:00"},
+ {id:"TID-A-005",p:"TID",t:"Update rollback runbook after rehearsal 2",ws:"Cut-over",o:"TBC",pr:"Medium",due:null,st:"Open",raised:"2026-09-26",closed:null,upd:"",client:false,cm:CMT,src:"projects/TID Tide Billing Migration/minutes/2026-09-26 Cut-over rehearsal review.docx — Actions",upd_at:"2026-09-26 16:00"}];
+const R=[
+ {id:"FAL-004",p:"FAL",type:"Risk",t:"Further access delay pushes go-live into Q1",ws:"Data",o:"Alan Carter",resp:"Escalate to Northgate CIO on 2026-10-07; weekly sponsor call; continue on masked data",due:"2026-10-07",imp:"High",lik:"High",st:"Open",raised:"2026-09-11",closed:null,client:true,cm:"What it is: Production data access is still pending from Northgate.\nWhat it means for you: If access is not granted by 2026-10-20, go-live moves into Q1.\nWhat is being done: We have escalated to your CIO and continue on masked data.",src:M+"2026-09-17 Weekly delivery.docx — Risks",upd_at:"2026-10-02 09:12"},
+ {id:"FAL-002",p:"FAL",type:"Issue",t:"Production data access not granted",ws:"Data",o:"Rashid Al Suwaidi (Northgate)",resp:"Access request re-submitted with security sign-off attached",due:"2026-10-01",imp:"High",lik:"High",st:"Open",raised:"2026-09-12",closed:null,client:true,cm:CMT,src:M+"2026-09-17 Weekly delivery.docx — Issues",upd_at:"2026-10-01 10:00"},
+ {id:"FAL-003",p:"FAL",type:"Risk",t:"Domain 3 schema changes arrive late and cause rework",ws:"Build",o:"Lena Fischer",resp:"",due:null,imp:"Medium",lik:"Medium",st:"Open",raised:"2026-09-13",closed:null,client:false,cm:CMT,src:M+"2026-09-17 Weekly delivery.docx — Risks",upd_at:"2026-09-17 16:00"},
+ {id:"ORX-006",p:"ORX",type:"Risk",t:"Late UAT data slips sign-off",ws:"Testing",o:"Sara Khan",resp:"Use synthetic data for UAT week 1 if the client pack is late",due:"2026-10-09",imp:"High",lik:"Medium",st:"Open",raised:"2026-09-22",closed:null,client:true,cm:CMT,src:"Email · From: James Okafor <james.okafor@orbitretail.example> · Subject: [ORX] UAT readiness · Sent: 2026-09-22 16:48",upd_at:"2026-09-22 17:00"},
+ {id:"ORX-005",p:"ORX",type:"Risk",t:"App store review takes longer than 5 days",ws:"Release",o:"Sara Khan",resp:"",due:null,imp:"Medium",lik:"Low",st:"Open",raised:"2026-09-15",closed:null,client:false,cm:CMT,src:"projects/ORX Orbit Customer App/minutes/2026-09-15 Project board.docx — Risks",upd_at:"2026-09-15 15:00"},
+ {id:"MER-002",p:"MER",type:"Risk",t:"Agent adoption drops after pilot novelty",ws:"Adoption",o:"Dev Patel",resp:"",due:null,imp:"Medium",lik:"Medium",st:"Open",raised:"2026-09-17",closed:null,client:false,cm:CMT,src:"Teams · Channel: MER pilot · From: Priya Nair · Sent: 2026-09-17 13:31",upd_at:"2026-09-17 14:00"},
+ {id:"TID-003",p:"TID",type:"Risk",t:"Legacy billing freeze window too short",ws:"Cut-over",o:"Omar Haddad",resp:"Agree an extended freeze window with Finance by 2026-10-15",due:"2026-10-15",imp:"High",lik:"Low",st:"Open",raised:"2026-09-26",closed:null,client:false,cm:CMT,src:"projects/TID Tide Billing Migration/minutes/2026-09-26 Cut-over rehearsal review.docx — Risks",upd_at:"2026-09-26 16:00"},
+ {id:"TID-001",p:"TID",type:"Assumption",t:"Finance accepts a 2-day reconciliation lag",ws:"Cut-over",o:"Omar Haddad",resp:"",due:null,imp:"Low",lik:"Low",st:"Open",raised:"2026-09-10",closed:null,client:false,cm:CMT,src:"Email · From: Omar Haddad <omar.haddad@example.com> · Subject: [TID] Reconciliation · Sent: 2026-09-10 08:55",upd_at:"2026-09-10 09:00"}];
+R.forEach(r=>r.pr=prio(r.imp,r.lik));
+const DEC=[
+ {id:"FAL-D-007",p:"FAL",t:"Go-live moves to 2026-12-11",by:"Steering committee",date:"2026-10-01",client:true,cmd:"Go-live is now 2026-12-11, three weeks later than planned, because production data access was delayed.",src:M+"2026-10-01 Steering committee.docx — Decisions",upd_at:"2026-10-03 11:40"},
+ {id:"FAL-D-006",p:"FAL",t:"Domain 3 delivered with masked data until access is granted",by:"Alan Carter",date:"2026-09-24",client:false,src:"Email · From: Alan Carter <alan.carter@example.com> · Subject: [FAL] Domain 3 approach · Sent: 2026-09-24 18:02",upd_at:"2026-09-24 18:10"},
+ {id:"ORX-D-004",p:"ORX",t:"UAT runs 2026-10-12 to 2026-10-23",by:"Project board",date:"2026-09-29",client:true,cmd:"",src:"projects/ORX Orbit Customer App/minutes/2026-09-29 Project board.docx — Decisions",upd_at:"2026-09-29 15:00"},
+ {id:"MER-D-003",p:"MER",t:"Pilot extended to 40 agents",by:"Priya Nair",date:"2026-09-17",client:true,cmd:"The pilot now covers 40 agents so results are more reliable.",src:"Teams · Channel: MER pilot · From: Priya Nair · Sent: 2026-09-17 13:31",upd_at:"2026-09-17 14:00"},
+ {id:"TID-D-002",p:"TID",t:"Cut-over date fixed at 2026-11-15",by:"Omar Haddad",date:"2026-09-10",client:false,src:"Email · From: Omar Haddad <omar.haddad@example.com> · Subject: [TID] Cut-over date confirmed · Sent: 2026-09-10 08:55",upd_at:"2026-09-10 09:00"}];
+const REV=[
+ {n:1,p:null,kind:"actions",why:"Possible: FAL or ORX",indiv:false,rec:{t:"Send revised data-sharing agreement",ws:"Commercial",o:"Rashid Al Suwaidi (Northgate)",pr:"High",due:"2026-10-10",st:"Open",client:false,cm:CMT,upd:""},src:"Email · From: Northgate Legal <legal@northgate.example> · Subject: Data sharing agreement — revised draft · Sent: 2026-10-02 14:37"},
+ {n:2,p:"FAL",kind:"draft",why:"Draft minutes",indiv:true,rec:{t:"Minutes: 2026-10-01 Steering committee"},src:"system/staging/drafts/2026-10-01 Steering committee.docx"},
+ {n:3,p:"FAL",kind:"raid",why:"New risk",indiv:true,rec:{type:"Risk",t:"Northgate December change freeze narrows the cut-over window",ws:"Cut-over",o:"Alan Carter",resp:"",due:null,imp:"High",lik:"Medium",st:"Open",client:false,cm:CMT},src:M+"2026-10-01 Steering committee.docx — Risks"},
+ {n:4,p:"FAL",kind:"decisions",why:"New decision",indiv:true,rec:{t:"Weekly sponsor call until go-live",by:"Steering committee",date:"2026-10-01",client:true},src:M+"2026-10-01 Steering committee.docx — Decisions"},
+ {n:5,p:"FAL",kind:"actions",why:"No owner yet",indiv:false,rec:{t:"Share masked domain-3 extract with QA",ws:"Data",o:"TBC",pr:"Medium",due:null,st:"Open",client:false,cm:CMT,upd:""},src:M+"2026-10-01 Steering committee.docx — Actions"},
+ {n:6,p:"ORX",kind:"update",why:"From email",indiv:false,rec:{t:"ORX-A-019 status: Open → Closed",target:"ORX-A-019",field:"st",from:"Open",to:"Closed"},src:"Email · From: James Okafor <james.okafor@orbitretail.example> · Subject: [ORX] Sandbox credentials approved · Sent: 2026-09-24 09:12"},
+ {n:7,p:"ORX",kind:"actions",why:"Strong match",indiv:false,rec:{t:"Confirm tester access to staging",ws:"Testing",o:"Sara Khan",pr:"Medium",due:"2026-10-09",st:"Open",client:false,cm:CMT,upd:""},src:"Teams · Channel: ORX UAT · From: Sara Khan · Sent: 2026-10-02 10:05"},
+ {n:8,p:"TID",kind:"actions",why:"Strong match",indiv:false,rec:{t:"Brief finance on the reconciliation lag",ws:"Cut-over",o:"Alan Carter",pr:"Medium",due:"2026-10-12",st:"Open",client:false,cm:CMT,upd:""},src:"projects/TID Tide Billing Migration/minutes/2026-09-26 Cut-over rehearsal review.docx — Actions"}];
+let ACT=[
+ {at:"2026-10-04 08:41",what:"FAL health: At risk → Off track",by:"Weekly report (approved)"},
+ {at:"2026-10-04 07:05",what:"Sweep proposed 6 items (4 actions, 1 risk, 1 update)",by:"Claude (cx-sweep)"},
+ {at:"2026-10-03 17:22",what:"ORX-A-018 due date: 2026-10-06 → 2026-10-08",by:"You, in the dashboard"},
+ {at:"2026-10-03 16:05",what:"MER-A-008 priority: Low → Medium",by:"You, in the dashboard"},
+ {at:"2026-10-03 11:40",what:"FAL-D-007 created",by:"Minutes approved"}];
+const LASTVISIT="2026-10-03 18:10";
+const FILES=[];
+(()=>{ const F=(p,f,n,kb,sub)=>FILES.push({p,f,n,kb,sub:sub||"",type:n.split(".").pop(),date:(n.match(/^\d{4}-\d{2}-\d{2}/)||[""])[0]});
+ F("FAL","minutes","2026-10-01 Steering committee.docx",48);F("FAL","minutes","2026-09-24 Weekly delivery.docx",41);F("FAL","transcripts","2026-10-01 Steering committee.vtt",212);F("FAL","reports","2026-10-02 Weekly report.docx",36);F("FAL","reports","2026-09-25 Client report.docx",44);F("FAL","documents","2026-08-12 SOW v2.pdf",612,"Commercial");F("FAL","documents","2026-08-20 Budget.xlsx",88,"Commercial");F("FAL","documents","2026-08-28 Delivery plan v3.docx",140,"Plans");
+ F("ORX","minutes","2026-09-29 Project board.docx",52);F("ORX","transcripts","2026-09-29 Project board.vtt",230);F("ORX","reports","2026-10-02 Weekly report.docx",33);F("ORX","reports","2026-09-26 Client report.docx",41);F("ORX","documents","2026-09-10 UAT strategy.docx",96,"Testing");
+ F("MER","minutes","2026-09-30 Pilot check-in.docx",37);F("MER","reports","2026-10-02 Client report.docx",42);F("MER","documents","2026-05-20 Pilot charter.pdf",310,"Governance");
+ F("TID","minutes","2026-09-26 Cut-over rehearsal review.docx",45);F("TID","reports","2026-10-02 Weekly report.docx",30);
+ F("_portfolio","minutes","2026-09-30 Portfolio governance.docx",40);F("inbox","","Recording 2026-10-02 ORX design review.vtt",198);F("inbox","","Meeting notes - vendor call.docx",22); })();
+const PEOPLE=store.get("creaite-people",{added:[],hidden:[]}), WSL=store.get("creaite-ws",{added:[],hidden:[]});
+const savePeople=()=>store.set("creaite-people",PEOPLE), saveWs=()=>store.set("creaite-ws",WSL);
+const peopleAll=()=>{ const s=new Set([...A.map(a=>a.o),...R.map(r=>r.o),...PEOPLE.added]); s.delete("TBC"); return [...s].filter(n=>!PEOPLE.hidden.includes(n)).sort((a,b)=>isMe(a)?-1:isMe(b)?1:a.localeCompare(b)); };
+const useCount=n=>A.filter(a=>a.o===n).length+R.filter(r=>r.o===n).length;
+const wsUsed=()=>[...new Set([...A,...R].map(x=>x.ws).filter(Boolean))];
+const wsAll=()=>[...new Set([...wsUsed(),...WSL.added])].filter(w=>!WSL.hidden.includes(w)).sort();
+const open=x=>OPENST(x.st), overdue=x=>open(x)&&x.due&&x.due<TODAY, soon=x=>open(x)&&x.due&&x.due>=TODAY&&days(x.due)<=S.dueSoon;
+
+/* sample prose was written with ISO dates: show it in DD-MM-YYYY (file names untouched) */
+(()=>{ const conv=o=>["t","upd","resp","cm","cmd","reason","current"].forEach(k=>{ if(typeof o[k]==="string") o[k]=fdText(o[k]); });
+  [...A,...R,...DEC,...P].forEach(conv); P.forEach(p=>p.ms.forEach(m=>m[0]=fdText(m[0]))); REV.forEach(r=>{ conv(r.rec); if(r.rec.t) r.rec.t=fdText(r.rec.t); });
+  ACT.forEach(a=>a.what=fdText(a.what)); })();
+/* ======================= live, apply, undo, snackbar ======================= */
+let LIVE=true, HELD=[], DATA_AT="2026-10-04 08:41";
+let UNDO=null, ST=null;
+function snack(msg,undo){ $("#snackT").textContent=msg; UNDO=undo||null; $("#snackU").style.display=undo?"":"none"; $("#snack").classList.add("on"); clearTimeout(ST); ST=setTimeout(()=>$("#snack").classList.remove("on"),undo?6000:3000); }
+$("#snackU").onclick=()=>{ if(UNDO) UNDO(); $("#snack").classList.remove("on"); };
+function status(){ $("#status").innerHTML=`<span><span class="dot ${LIVE?"":"off"}"></span>${LIVE?"Live":"Server stopped"}</span><span>Swept 07:05</span><span>Data ${DATA_AT.slice(11)}</span>${HELD.length?`<span class="pend">${HELD.length} held</span>`:""}`;
+  $("#liveAlert").classList.toggle("on",!LIVE); $("#chSub").innerHTML=LIVE?'<span class="dot"></span>Claude Code on this laptop, working in your vault':'<span class="dot off"></span>Live server not running — commands will be copied instead'; }
+function setLive(on){ LIVE=on; if(on&&HELD.length){ const n=HELD.length; HELD.forEach(h=>h()); HELD=[]; DATA_AT=nowStamp(); snack(`Live server back — applied ${n} held change${n===1?"":"s"}`); } status(); }
+$("#checkLive").onclick=()=>setLive(true);
+/* every write goes through apply(): logs to Activity, applies now (or holds), offers Undo */
+function apply(what,doIt,undoIt,by="You, in the dashboard"){
+  doIt(); const entry={at:nowStamp(),what,by,undo:undoIt};
+  const commit=()=>{ ACT.unshift(entry); DATA_AT=entry.at; };
+  if(!S.autoApply){ PENDING.push({what,commit,undo:undoIt}); refreshAll(); snack(`${what} — saved; press Apply to write it`,()=>{ undoIt(); PENDING.pop(); refreshAll(); }); return; }
+  if(LIVE) commit(); else HELD.push(commit);
+  refreshAll(); snack(LIVE?`${what} — saved and applied`:`${what} — saved; applies when the server is back`,()=>{ undoIt(); const i=ACT.indexOf(entry); if(i>=0) ACT.splice(i,1); refreshAll(); });
+}
+let PENDING=[];
+function applyPending(){ const n=PENDING.length; PENDING.forEach(p=>p.commit()); PENDING=[]; refreshAll(); snack(`Applied ${n} change${n===1?"":"s"}`); }
+function refreshAll(){ status(); renderBadge(); if(VIEW==="today") renderToday(); if(VIEW==="work"||VIEW==="mine") renderWork(); if(VIEW==="review") renderReview(); if(VIEW==="activity") renderActivity(); if(VIEW==="cockpit") renderCockpit(COCK); if(VIEW==="projects") renderProjects(); if(CUR&&!EDITING) drawPanel(); }
+function renderBadge(){ const n=REV.filter(r=>!r.done).length; $("#revBadge").textContent=n; $("#revBadge").style.display=n?"":"none"; }
+
+/* ======================= navigation ======================= */
+let VIEW="today", COCK=null;
+function go(v,arg){ closePanel(); VIEW=v; $$(".view").forEach(s=>s.hidden=true);
+  const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
+  const railKey={cockpit:"projects",mine:"work",help:"settings"}[v]||v;
+  $$(".rail button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===railKey?"page":"false"));
+  if(v==="mine"){ WT="actions"; WVIEW="mine"; } if(v==="work"&&!arg) {} if(v==="cockpit") COCK=arg;
+  ({today:renderToday,projects:renderProjects,cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,files:renderFiles,activity:renderActivity,settings:renderSettings,help:renderHelp}[v]||(()=>{}))(); }
+$$(".rail button").forEach(b=>b.onclick=()=>go(b.dataset.v));
+document.addEventListener("click",e=>{ const a=e.target.closest("[data-go]"); if(a){ e.preventDefault(); go(a.dataset.go); } });
+
+/* ======================= Today ======================= */
+const REMINDERS=[{id:"weekly:2026-10-02",text:"Weekly report for week ending 02-10-2026 is due"},{id:"client:FAL:2026-09-25",text:"FAL client report is due (last: 25-09-2026)"}];
+const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
+function renderToday(){
+  const d=new Date(TODAY); $("#todayDate").textContent=d.toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+  const pend=REV.filter(r=>!r.done), mineOver=A.filter(x=>isMe(x.o)&&overdue(x)), mineSoon=A.filter(x=>isMe(x.o)&&soon(x)), off=P.filter(p=>p.health==="Off track");
+  $("#briefText").innerHTML=`<b>${pend.length} proposal${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, <b>${mineOver.length} of your actions</b> ${mineOver.length===1?"is":"are"} overdue${off.length?`, and <b>${off.map(p=>p.code).join(", ")}</b> ${off.length===1?"is":"are"} off track`:""}.`;
+  const hide=[...dismissedF(),...dismissedS()];
+  $("#notes").innerHTML=S.remindersOn?REMINDERS.filter(r=>!hide.includes(r.id)).map(r=>`<span class="note" data-id="${r.id}">${esc(r.text)}<button aria-label="Dismiss" aria-haspopup="menu">×</button><span class="dmenu" role="menu"><button data-d="s">Dismiss for this session</button><button data-d="f">Dismiss forever</button></span></span>`).join(""):"";
+  $("#nDecide").textContent=pend.length;
+  $("#decideList").innerHTML=pend.slice(0,5).map(r=>`<div class="li" data-revopen="${r.n}"><div class="t"><span class="pcode">${r.p||"No project"}</span>${esc(r.rec.t)}</div><div class="acts">${!r.indiv&&r.p?`<button class="mini ok" data-appr="${r.n}">Approve</button>`:`<button class="mini" data-revopen="${r.n}">Open</button>`}</div><div class="m">${kindLabel(r)} · ${esc(r.why)}</div></div>`).join("")+(pend.length>5?`<div class="li" data-go="review"><div class="t sub">${pend.length-5} more in Review</div></div>`:"")||`<div class="empty">Nothing waiting for you.</div>`;
+  const mine=[...mineOver,...mineSoon].sort((a,b)=>a.due.localeCompare(b.due));
+  $("#nMine").textContent=mine.length;
+  $("#mineList").innerHTML=mine.map(x=>`<div class="li" data-open="actions:${x.id}"><div class="t"><span class="pcode">${x.p}</span>${esc(x.t)}</div><div class="m ${overdue(x)?"late":""}">${rel(x.due)}${x.pr==="Urgent"?" · Urgent":""}</div></div>`).join("")||`<div class="empty">Nothing due from you this week.</div>`;
+  $("#chgTitle").textContent=`Changed since ${fd(LASTVISIT)}`;
+  const ch=ACT.filter(a=>a.at>LASTVISIT).slice(0,6);
+  $("#chgList").innerHTML=ch.map(c=>`<div class="chg"><span class="w">${c.at.slice(0,10)===TODAY?c.at.slice(11):fd(c.at.slice(0,10)).slice(0,5)}</span><span>${esc(c.what)} <span class="sub">— ${esc(c.by)}</span></span></div>`).join("")||`<div class="empty">No changes since your last visit.</div>`;
+  $("#pfTbl").innerHTML=portfolioTable();
+}
+const kindLabel=r=>({actions:"Action",raid:r.rec.type||"Risk",decisions:"Decision",update:"Update",draft:"Draft"}[r.kind]);
+$("#notes").addEventListener("click",e=>{ const n=e.target.closest(".note"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
+  if(!b.dataset.d){ n.querySelector(".dmenu").classList.toggle("on"); return; }
+  const id=n.dataset.id; if(b.dataset.d==="s"){ const a=dismissedS(); a.push(id); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(a)); } else { const a=dismissedF(); a.push(id); store.set("creaite-dismiss",a); }
+  renderToday(); snack(b.dataset.d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); });
+document.addEventListener("click",e=>{ if(!e.target.closest(".note")) $$(".dmenu.on").forEach(m=>m.classList.remove("on")); });
+function evidence(p){ const ov=A.filter(x=>x.p===p.code&&overdue(x)).length, urg=R.filter(r=>r.p===p.code&&r.st==="Open"&&r.pr==="Urgent").length;
+  return `<span class="ev">Overdue <b class="${ov?"bad":""}">${ov}</b> · Urgent risks <b class="${urg?"bad":""}">${urg}</b> · Slip <b class="${p.slip?"bad":""}">${p.slip?p.slip+" days":"none"}</b></span>`; }
+const spark=p=>`<span class="spark" title="Health, last 8 weeks (oldest first)" aria-label="Health trend">${p.trail.map(t=>`<i class="s-${t}"></i>`).join("")}</span>`;
+function portfolioTable(){ return `<table><thead><tr><th>Project</th><th>Health</th><th>Evidence</th><th>8 weeks</th><th>Next milestone</th></tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1];
+  return `<tr class="click" data-cock="${p.code}"><td><span class="pcode">${p.code}</span>${esc(p.name)}<div class="sub">${esc(p.client)}</div></td><td>${health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}<div class="sub ${nm[2]==="slip"?"late":""}">${fd(nm[1])} (${rel(nm[1])})</div></td></tr>`; }).join("")}</tbody></table>`; }
+document.addEventListener("click",e=>{ const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });
+
+/* ======================= Projects + cockpit ======================= */
+function renderProjects(){ $("#projTbl").innerHTML=portfolioTable(); }
+function renderCockpit(code){ const p=P.find(x=>x.code===code); if(!p) return;
+  const acts=A.filter(x=>x.p===code&&open(x)&&(overdue(x)||soon(x))).sort((a,b)=>(a.due||"9").localeCompare(b.due||"9"));
+  const order=["Urgent","High","Medium","Low"]; const risks=R.filter(r=>r.p===code&&r.st==="Open").sort((a,b)=>order.indexOf(a.pr)-order.indexOf(b.pr)).slice(0,3);
+  const dec=DEC.filter(d=>d.p===code).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3);
+  const all=p.ms.map(m=>m[1]).concat(TODAY).sort(); const t0=new Date(all[0]).getTime()-12*864e5, t1=new Date(all[all.length-1]).getTime()+12*864e5; const pos=d=>((new Date(d).getTime()-t0)/(t1-t0)*100).toFixed(1)+"%";
+  const cv=R.filter(r=>r.p===code&&r.client&&!cmOK(r.cm)).length+A.filter(a=>a.p===code&&a.client&&!cmOK(a.cm)).length+DEC.filter(d=>d.p===code&&d.client&&!cmdOK(d.cmd)).length;
+  $("#v-cockpit").innerHTML=`<div class="wrapmax"><a href="#" data-go="projects" class="sub" style="text-decoration:none">Projects</a>
+   <div class="hhead"><div><h1><span class="pcode" style="font-size:16px">${p.code}</span>${esc(p.name)}</h1><div class="sub">${esc(p.client)} · client reports ${esc(p.rhythm.toLowerCase())}</div></div><span style="flex:1"></span><button class="btn" data-ask="weekly report ${p.code}">Draft weekly report</button><button class="btn" data-ask="client report ${p.code}">Draft client report</button><button class="btn" data-files="${p.code}">Files</button></div>
+   <div class="cock"><div style="display:grid;gap:16px">
+     <div class="card"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${health(p.health)}</span>${spark(p)}<span class="sub">${esc(p.reason)}</span><span style="flex:1"></span><button class="mini" data-edproj="${p.code}">Edit health</button></div>
+       <div class="evrow" style="margin-top:12px">${[["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1],["Milestone slip",p.slip?p.slip+" days":"None",p.slip],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0]].map(([l,v,b])=>`<div class="evbox"><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join("")}</div></div>
+     <div class="card"><h2>Milestones</h2><div class="tl"><div class="axis"></div><div class="today" style="left:${pos(TODAY)}"><span>Today</span></div>${p.ms.map(m=>`<div class="ms ${m[2]}" style="left:${pos(m[1])}"><i></i>${esc(m[0])}<br>${fd(m[1])}</div>`).join("")}</div></div>
+     <div class="card"><h2>Actions due or overdue</h2><div class="mini-list">${acts.map(x=>`<div data-open="actions:${x.id}" style="cursor:pointer"><span class="${overdue(x)?"late":""}" style="display:inline-block;width:110px">${rel(x.due)}</span>${esc(x.t)} <span class="sub">— ${esc(who(x.o))}</span></div>`).join("")||'<div class="sub">Nothing due in the next '+S.dueSoon+' days.</div>'}</div></div>
+   </div><div style="display:grid;gap:16px">
+     <div class="card"><div style="display:flex;align-items:center"><h2 style="flex:1">Current state</h2><button class="mini" data-edcur="${p.code}">Edit</button></div><p style="margin:0" id="curText">${esc(p.current)}</p></div>
+     <div class="card"><h2>Top risks</h2><div class="mini-list">${risks.map(r=>`<div data-open="raid:${r.id}" style="cursor:pointer"><span class="${r.pr==="Urgent"?"prio-urgent":"tag"}">${r.pr}</span> ${esc(r.t)}<div class="sub">${r.resp?esc(r.resp):"No response yet"}</div></div>`).join("")||'<div class="sub">No open risks.</div>'}</div></div>
+     <div class="card"><h2>Recent decisions</h2><div class="mini-list">${dec.map(d=>`<div data-open="decisions:${d.id}" style="cursor:pointer">${esc(d.t)}<div class="sub">${fd(d.date)} — ${esc(d.by)}</div></div>`).join("")||'<div class="sub">None yet.</div>'}</div></div>
+     ${cv?`<div class="card"><h2>Client messaging</h2><div class="sub">${cv} client-visible item${cv===1?"":"s"} still need client messaging before the next client report.</div></div>`:""}
+   </div></div></div>`; }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-edcur]"); if(b){ openProject(b.dataset.edcur,"current"); } const h=e.target.closest("[data-edproj]"); if(h) openProject(h.dataset.edproj,"health"); const f=e.target.closest("[data-files]"); if(f){ FSEL={p:f.dataset.files,f:"All",sub:"",quick:"all"}; FOPEN.add(f.dataset.files); go("files"); } const a=e.target.closest("[data-ask]"); if(a){ openChat(); send(a.dataset.ask); } });
+/* ======================= Work ======================= */
+let WT="actions", WVIEW=null, SEL=null; const OWN=new Set();
+const VIEWS={actions:[["open","All open"],["mine","Mine"],["soon","Due soon"],["overdue","Overdue"],["delayed","Delayed"],["closed","Closed"]],raid:[["open","All open"],["urgent","Urgent and high"],["nomit","No response yet"],["soon","Due soon"],["mine","Mine"],["closed","Closed"]],decisions:[["all","All"],["recent","Last 14 days"],["client","Client-visible"]]};
+const COLS={actions:[["id","ID"],["t","Action"],["o","Owner"],["due","Due"],["pr","Priority"],["st","Status"],["ws","Workstream"],["src","Source"]],raid:[["id","ID"],["t","Risk or issue"],["type","Type"],["o","Owner"],["due","Due"],["pr","Priority"],["resp","Response"],["st","Status"],["ws","Workstream"],["src","Source"]],decisions:[["id","ID"],["t","Decision"],["by","Made by"],["date","Date"],["src","Source"]]};
+let COLVIS=store.get("creaite-cols",{actions:["t","o","due","pr","st"],raid:["t","o","due","pr","resp"],decisions:["t","by","date","src"]});
+function rows(){ const ownOK=x=>!OWN.size||OWN.has(x.o||x.by);
+  if(WT==="actions"){ let L=A.filter(ownOK); const f={open:open,mine:x=>isMe(x.o)&&open(x),soon:soon,overdue:overdue,delayed:x=>x.st==="Delayed",closed:x=>!open(x)}[WVIEW]; return L.filter(f).sort((a,b)=>(overdue(b)-overdue(a))||(a.due||"9").localeCompare(b.due||"9")); }
+  if(WT==="raid"){ let L=R.filter(ownOK); const o=["Urgent","High","Medium","Low"]; const f={open:x=>x.st==="Open",urgent:x=>x.st==="Open"&&(x.pr==="Urgent"||x.pr==="High"),nomit:x=>x.st==="Open"&&!x.resp,soon:x=>x.st==="Open"&&x.due&&x.due>=TODAY&&days(x.due)<=S.dueSoon,mine:x=>x.st==="Open"&&isMe(x.o),closed:x=>x.st!=="Open"}[WVIEW]; return L.filter(f).sort((a,b)=>o.indexOf(a.pr)-o.indexOf(b.pr)); }
+  let L=DEC.filter(ownOK); if(WVIEW==="recent") L=L.filter(d=>days(d.date)>=-14); if(WVIEW==="client") L=L.filter(d=>d.client); return L.sort((a,b)=>b.date.localeCompare(a.date)); }
+const cmTag=x=>x.client&&!("cmd" in x?cmdOK(x.cmd):cmOK(x.cm))?' <span class="tag warn">· client messaging to complete</span>':"";
+function cell(k,x){ if(k==="t"){ const sub=WT==="actions"?`${x.ws?esc(x.ws):""}${x.upd?` · ${esc(x.upd)}`:""}`:WT==="raid"?`${x.type}${x.ws?" · "+esc(x.ws):""}`:""; return `<td class="title" data-f="t">${esc(x.t)}${cmTag(x)}<div class="x"><span class="pcode">${x.p}</span>${sub}</div></td>`; }
+  if(k==="o") return `<td data-f="o">${esc(who(x.o))}</td>`;
+  if(k==="due") return `<td data-f="due" class="${(WT==="actions"?overdue(x):x.st==="Open"&&x.due&&x.due<TODAY)?"late":""}" style="white-space:nowrap">${x.due?fd(x.due):"—"}<div class="x">${x.due&&OPENST(x.st)?rel(x.due):""}</div></td>`;
+  if(k==="pr") return `<td data-f="${WT==="raid"?"imp":"pr"}" class="${x.pr==="Urgent"?"prio-urgent":""}">${x.pr}</td>`;
+  if(k==="st") return `<td data-f="st">${x.st}</td>`;
+  if(k==="ws") return `<td data-f="ws">${esc(x.ws||"—")}</td>`;
+  if(k==="resp") return `<td data-f="resp" class="x">${x.resp?esc(x.resp):'<span class="tag bad">None yet</span>'}</td>`;
+  if(k==="by") return `<td data-f="by">${esc(x.by)}</td>`;
+  if(k==="date") return `<td data-f="date" style="white-space:nowrap">${fd(x.date)}</td>`;
+  if(k==="id") return `<td class="x" style="white-space:nowrap">${x.id}</td>`;
+  if(k==="type") return `<td data-f="type">${x.type}</td>`;
+  if(k==="src") return `<td class="x">${esc(fdText(srcShort(x.src)))}</td>`; return "<td></td>"; }
+function renderWork(){ if(!WVIEW||!VIEWS[WT].some(v=>v[0]===WVIEW)) WVIEW=WT==="actions"?S.defActionView:WT==="raid"?S.defRaidView:"all"; if(!VIEWS[WT].some(v=>v[0]===WVIEW)) WVIEW=VIEWS[WT][0][0];
+  $$("#wtabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===WT));
+  $("#wviews").innerHTML=VIEWS[WT].map(v=>`<button class="vchip" data-wv="${v[0]}" aria-pressed="${v[0]===WVIEW}">${v[1]}</button>`).join("");
+  $("#newBtn").textContent=WT==="actions"?"New action":WT==="raid"?"New RAID item":"New decision";
+  $("#ownBtn").textContent=!OWN.size?(WT==="decisions"?"Anyone":"All owners"):OWN.size===1?who([...OWN][0]):`${OWN.size} owners`;
+  const C=COLS[WT].filter(c=>COLVIS[WT].includes(c[0])||c[0]==="t"); const L=rows();
+  $("#workTbl").innerHTML=`<thead><tr>${C.map(c=>`<th data-col="${c[0]}">${c[1]}</th>`).join("")}</tr></thead><tbody>${L.map(x=>`<tr class="click ${SEL===x.id?"sel":""}" data-row="${x.id}">${C.map(c=>cell(c[0],x)).join("")}</tr>`).join("")||`<tr><td colspan="${C.length}"><div class="empty">Nothing in this view.</div></td></tr>`}</tbody>`;
+  rzApply(); sizeList(); }
+$("#wtabs").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; WT=b.dataset.t; WVIEW=null; OWN.clear(); SEL=null; closePanel(); renderWork(); };
+$("#wviews").onclick=e=>{ const b=e.target.closest("[data-wv]"); if(!b) return; WVIEW=b.dataset.wv; renderWork(); };
+$("#newBtn").onclick=()=>openNew(WT);
+/* owner multi-select */
+function drawOwn(q=""){ const names=[...new Set((WT==="decisions"?DEC.map(d=>d.by):(WT==="actions"?A:R).map(x=>x.o)))].filter(n=>n.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>isMe(a)?-1:isMe(b)?1:a.localeCompare(b));
+  $("#ownMenu").innerHTML=`<input type="search" id="ownQ" placeholder="Search names" value="${esc(q)}"><div class="acts"><button class="mini" data-oa="me">Only me</button><button class="mini" data-oa="all">Select all</button><button class="mini" data-oa="clear">Clear</button></div>`+names.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${OWN.has(n)?"checked":""}>${esc(who(n))}</label>`).join(""); }
+$("#ownBtn").onclick=e=>{ e.stopPropagation(); const m=$("#ownMenu"); m.classList.toggle("on"); if(m.classList.contains("on")){ drawOwn(); $("#ownQ").focus(); } };
+$("#ownMenu").addEventListener("click",e=>{ e.stopPropagation(); const b=e.target.closest("[data-oa]"); if(!b) return; const all=[...$$("#ownMenu input[type=checkbox]")].map(i=>i.value);
+  if(b.dataset.oa==="me"){ OWN.clear(); all.filter(isMe).forEach(n=>OWN.add(n)); } if(b.dataset.oa==="all") all.forEach(n=>OWN.add(n)); if(b.dataset.oa==="clear") OWN.clear(); drawOwn($("#ownQ").value); renderWork(); });
+$("#ownMenu").addEventListener("input",e=>{ if(e.target.id==="ownQ"){ const q=e.target.value; drawOwn(q); const i=$("#ownQ"); i.focus(); i.setSelectionRange(q.length,q.length); } });
+$("#ownMenu").addEventListener("change",e=>{ if(e.target.type==="checkbox"){ e.target.checked?OWN.add(e.target.value):OWN.delete(e.target.value); renderWork(); } });
+/* column chooser */
+$("#colBtn").onclick=e=>{ e.stopPropagation(); const m=$("#colMenu"); m.innerHTML=COLS[WT].map(c=>`<label><input type="checkbox" value="${c[0]}" ${COLVIS[WT].includes(c[0])||c[0]==="t"?"checked":""} ${c[0]==="t"?"disabled":""}>${c[1]}</label>`).join("")+`<div class="sub" style="padding:6px 14px">Drag a column edge to resize; double-click it to reset.</div>`; m.classList.toggle("on"); };
+$("#colMenu").addEventListener("click",e=>e.stopPropagation());
+$("#colMenu").addEventListener("change",e=>{ const v=e.target.value; const L=COLVIS[WT]; e.target.checked?L.push(v):L.splice(L.indexOf(v),1); store.set("creaite-cols",COLVIS); renderWork(); });
+document.addEventListener("click",()=>{ $("#ownMenu").classList.remove("on"); $("#colMenu").classList.remove("on"); });
+/* resize columns (remembered) */
+let RZ=store.get("creaite-colwidths",{});
+function rzApply(){ $$("#workTbl th").forEach(th=>{ const k=WT+"|"+th.dataset.col; if(RZ[k]){ th.style.width=RZ[k]+"px"; th.style.minWidth=RZ[k]+"px"; }
+  const h=document.createElement("span"); h.className="colrz"; h.tabIndex=0; h.setAttribute("role","separator"); h.setAttribute("aria-label","Resize "+th.textContent+" column");
+  h.addEventListener("click",e=>e.stopPropagation());
+  h.addEventListener("pointerdown",e=>{ e.preventDefault(); const x0=e.clientX,w0=th.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
+    const mv=ev=>{ const w=Math.max(60,Math.min(900,w0+ev.clientX-x0)); th.style.width=w+"px"; th.style.minWidth=w+"px"; RZ[k]=Math.round(w); };
+    const up=()=>{ h.removeEventListener("pointermove",mv); h.removeEventListener("pointerup",up); document.body.classList.remove("resizing"); store.set("creaite-colwidths",RZ); sizeList(); };
+    h.addEventListener("pointermove",mv); h.addEventListener("pointerup",up); });
+  h.addEventListener("dblclick",e=>{ e.stopPropagation(); delete RZ[k]; th.style.width=""; th.style.minWidth=""; store.set("creaite-colwidths",RZ); snack("Column width reset"); });
+  h.addEventListener("keydown",e=>{ if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight") return; e.preventDefault(); const w=Math.max(60,th.getBoundingClientRect().width+(e.key==="ArrowRight"?16:-16)); th.style.width=w+"px"; th.style.minWidth=w+"px"; RZ[k]=Math.round(w); store.set("creaite-colwidths",RZ); });
+  th.appendChild(h); }); }
+/* frame holds 50 rows, then scrolls inside; never overhangs */
+function sizeList(){ const w=$("#workWrap"), t=$("#workTbl"); if(!w.offsetParent) return; w.classList.toggle("hscroll",t.scrollWidth>w.clientWidth+1);
+  const rs=[...t.tBodies[0].rows]; if(rs.length>50){ w.classList.add("capped"); w.style.maxHeight=(t.tHead.offsetHeight+rs.slice(0,50).reduce((a,r)=>a+r.getBoundingClientRect().height,0)+4)+"px"; } else { w.classList.remove("capped"); w.style.maxHeight=""; } }
+window.addEventListener("resize",sizeList);
+$("#workTbl").addEventListener("click",e=>{ if(e.target.closest(".colrz")) return; const tr=e.target.closest("tr[data-row]"); if(tr) openRecord(WT,tr.dataset.row); });
+$("#workTbl").addEventListener("dblclick",e=>{ const td=e.target.closest("td[data-f]"), tr=e.target.closest("tr[data-row]"); if(!td||!tr) return; openRecord(WT,tr.dataset.row,td.dataset.f); });
+document.addEventListener("click",e=>{ const o=e.target.closest("[data-open]"); if(!o) return; const [k,id]=o.dataset.open.split(":"); openRecord(k,id); });
+/* ======================= sources ======================= */
+function srcParse(x){ if(!x) return null; if(/^(Email|Teams) · /.test(x)){ const parts=x.split(" · "), o={type:parts[0]}; parts.slice(1).forEach(p=>{ const i=p.indexOf(": "); if(i>0) o[p.slice(0,i)]=p.slice(i+2); }); return o; }
+  const m=x.match(/^((?:projects|system)\/.+?\.(docx|pdf|vtt|xlsx|txt|md))(?: — (.+))?$/); if(m) return {type:"File",path:m[1],section:m[3]||"",name:m[1].split("/").pop()}; return {type:"Text",text:x}; }
+const srcShort=x=>{ const o=srcParse(x); if(!o) return "—"; if(o.type==="File") return o.name.replace(/\.[a-z]+$/,""); if(o.type==="Email") return "Email · "+(o.Subject||""); if(o.type==="Teams") return "Teams · "+(o.Channel||o.Chat||""); return o.text; };
+function srcHTML(x){ const o=srcParse(x); if(!o) return "—";
+  if(o.type==="File") return `<a href="#" class="srclink" data-openfile="${esc(o.name)}">${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>`;
+  if(o.type==="Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Subject</dt><dd>${esc(o.Subject||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl><a href="#" class="srclink" data-openmsg="Outlook">Open in Outlook</a>`;
+  if(o.type==="Teams") return `<dl class="srcmeta"><dt>${o.Channel?"Channel":"Chat"}</dt><dd>${esc(o.Channel||o.Chat)}</dd><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl><a href="#" class="srclink" data-openmsg="Teams">Open in Teams</a>`;
+  return esc(o.text); }
+document.addEventListener("click",e=>{ const f=e.target.closest("[data-openfile]"); if(f){ e.preventDefault(); snack(`Opens ${f.dataset.openfile} (sample)`); } const m=e.target.closest("[data-openmsg]"); if(m){ e.preventDefault(); snack(`Opens the message in ${m.dataset.openmsg} (sample)`); } });
+
+/* ======================= calendar picker ======================= */
+let CAL=null;
+const CALI='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 6.5h12M5.5 1.8v2.6M10.5 1.8v2.6"/></svg>';
+function closeCal(){ if(CAL){ CAL.remove(); CAL=null; } }
+function openCal(inp,btn){ closeCal(); const cur=DDATE.test(inp.value)?toIso(inp.value):TODAY; let y=+cur.slice(0,4), m=+cur.slice(5,7)-1; const box=document.createElement("div"); box.className="cal"; document.body.appendChild(box); CAL=box;
+  const r=btn.getBoundingClientRect(); box.style.left=Math.max(8,Math.min(r.right-252,innerWidth-262))+"px"; box.style.top=(r.bottom+310>innerHeight?Math.max(8,r.top-310):r.bottom+4)+"px";
+  const pad=n=>String(n).padStart(2,"0");
+  const draw=()=>{ const f=new Date(y,m,1), st=(f.getDay()+6)%7, dn=new Date(y,m+1,0).getDate(); let g=["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>`<span>${d}</span>`).join("")+"<span></span>".repeat(st);
+    for(let d=1;d<=dn;d++){ const v=`${y}-${pad(m+1)}-${pad(d)}`; g+=`<button data-v="${fd(v)}" class="${v===TODAY?"today":""} ${v===toIso(inp.value)?"sel":""}">${d}</button>`; }
+    box.innerHTML=`<div class="ch"><button data-n="-1" aria-label="Previous month">‹</button><span>${f.toLocaleString("en-GB",{month:"long"})} ${y}</span><button data-n="1" aria-label="Next month">›</button></div><div class="cg">${g}</div><div class="cf"><button data-v="${fd(TODAY)}">Today</button><button data-v="">Clear</button></div>`; };
+  draw(); box.addEventListener("click",e=>{ e.stopPropagation(); const b=e.target.closest("button"); if(!b) return; if(b.dataset.n){ m+=+b.dataset.n; if(m<0){m=11;y--;} if(m>11){m=0;y++;} draw(); return; } if("v" in b.dataset){ inp.value=b.dataset.v; inp.dispatchEvent(new Event("input",{bubbles:true})); closeCal(); inp.focus(); } }); }
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-cal]"); if(b){ e.stopPropagation(); openCal(document.getElementById(b.dataset.cal),b); return; } if(CAL&&!e.target.closest(".cal")) closeCal(); });
+
+/* ======================= owner combobox ======================= */
+let COMBO=null, CI=0;
+function comboDraw(box){ const inp=box.querySelector("input"), q=box.dataset.typed==="1"?inp.value.trim():"", ql=q.toLowerCase();
+  const L=peopleAll().filter(n=>!q||n.toLowerCase().includes(ql)), exact=peopleAll().some(n=>n.toLowerCase()===ql); const items=L.map(n=>({n,t:"pick"})); if(q&&!exact) items.push({n:q,t:"new"});
+  if(box.dataset.typed!=="1"){ const i=items.findIndex(it=>it.n===inp.value.trim()); if(i>=0&&CI===0) CI=i; } CI=Math.min(CI,Math.max(0,items.length-1));
+  box.querySelector(".combo-list").innerHTML=items.map((it,i)=>it.t==="new"?`<div class="copt new ${i===CI?"act":""}" data-n="${esc(it.n)}" data-t="new">＋ Add “${esc(it.n)}” as a new owner</div>`:`<div class="copt ${i===CI?"act":""}" data-n="${esc(it.n)}" data-t="pick"><span>${esc(it.n)}${isMe(it.n)?" <small>(you)</small>":""}</span><small>${useCount(it.n)}</small><button type="button" class="cdel" data-del="${esc(it.n)}" aria-label="Remove ${esc(it.n)} from the list">×</button></div>`).join("")||'<div class="copt">Type a name to add it.</div>';
+  box.classList.add("open"); COMBO=box; }
+function comboClose(){ if(COMBO){ COMBO.classList.remove("open"); COMBO=null; } }
+document.addEventListener("focusin",e=>{ const box=e.target.closest&&e.target.closest(".combo"); if(box&&e.target.tagName==="INPUT"){ box.dataset.typed="0"; CI=0; comboDraw(box); } });
+document.addEventListener("input",e=>{ const box=e.target.closest&&e.target.closest(".combo"); if(box){ box.dataset.typed="1"; CI=0; comboDraw(box); } });
+document.addEventListener("mousedown",e=>{ const d=e.target.closest(".cdel"); if(d){ e.preventDefault(); const n=d.dataset.del; PEOPLE.hidden.push(n); savePeople(); comboDraw(d.closest(".combo")); snack(`Removed “${n}” from the owner list (items keep it)`,()=>{ PEOPLE.hidden=PEOPLE.hidden.filter(x=>x!==n); savePeople(); }); return; }
+  const o=e.target.closest(".copt[data-n]"); if(o){ e.preventDefault(); const box=o.closest(".combo"); box.querySelector("input").value=o.dataset.n; if(o.dataset.t==="new"){ PEOPLE.added.push(o.dataset.n); savePeople(); } comboClose(); return; }
+  if(COMBO&&!e.target.closest(".combo")) comboClose(); });
+document.addEventListener("keydown",e=>{ if(!COMBO||!COMBO.contains(document.activeElement)) return; const opts=[...COMBO.querySelectorAll(".copt[data-n]")];
+  if(e.key==="ArrowDown"){ e.preventDefault(); CI=Math.min(CI+1,opts.length-1); comboDraw(COMBO); } else if(e.key==="ArrowUp"){ e.preventDefault(); CI=Math.max(CI-1,0); comboDraw(COMBO); }
+  else if(e.key==="Enter"&&opts[CI]){ e.preventDefault(); e.stopPropagation(); COMBO.querySelector("input").value=opts[CI].dataset.n; if(opts[CI].dataset.t==="new"){ PEOPLE.added.push(opts[CI].dataset.n); savePeople(); } comboClose(); }
+  else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); comboClose(); } },true);
+
+/* ======================= detail panel ======================= */
+let CUR=null, EDITING=false;
+const REC=(k,id)=>(k==="actions"?A:k==="raid"?R:DEC).find(x=>x.id===id);
+const RESPL=t=>t==="Issue"?"Resolution action":t==="Assumption"?"Validation action":t==="Dependency"?"Management action":"Mitigation action";
+function fieldsFor(k,x){ const projOpts=P.map(p=>p.code);
+  if(k==="actions") return [["t","Action","area"],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["pr","Priority","sel",["Urgent","High","Medium","Low"]],["due","Due date","date"],["st","Status","sel",["Open","Delayed","Closed","Cancelled"]],["raised","Raised","date"],["closed","Closed","date"],["upd","Latest update","area"],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
+  if(k==="raid") return [["t","Description","area"],["type","Type","sel",["Risk","Issue","Assumption","Dependency"]],["p","Project","sel",projOpts],["ws","Workstream","ws"],["o","Owner","owner"],["resp",RESPL(x.type),"area"],["imp","Impact","sel",["High","Medium","Low"]],["lik","Likelihood","sel",["High","Medium","Low"]],["pr","Priority","calc"],["due","Due date","date"],["st","Status","sel",["Open","Closed","Cancelled"]],["raised","Raised","date"],["closed","Date closed","date"],["#","Client messaging"],["client","Client-visible","check"],["cm","Client messaging","cm"]];
+  if(k==="decisions") return [["t","Decision","area"],["p","Project","sel",projOpts],["by","Made by","text"],["date","Date","date"],...(CUR&&CUR.mode==="new"?[["srcIn","Source (where it was decided)","area"]]:[]),["#","Client messaging"],["client","Client-visible","check"],["cmd","Client messaging","cmd"]];
+  if(k==="update") return [["target","Item","ro"],["from","Current value","ro"],["to","Proposed value","sel",["Open","Delayed","Closed","Cancelled"]]];
+  if(k==="project") return [["health","Health","sel",["On track","At risk","Off track"]],["reason","Health reason","area"]];
+  if(k==="current") return [["current","Current state","area"]];
+  return []; }
+function viewVal(n,t,v,x){ if(t==="check") return v?"Yes":"No"; if(t==="date") return v?fd(v):'<span class="sub">—</span>'; if(t==="cmd") return x.client||v?(v?esc(v):'<span class="tag warn">To write</span>'):'<span class="sub">Only needed if client-visible</span>'; if(n==="o") return esc(who(v)); if(t==="cm"){ if(!x.client&&!cmOK(v)) return '<span class="sub">Only needed if client-visible</span>'; return esc(v); } if(t==="calc") return esc(prio(x.imp,x.lik)); return v?esc(v):'<span class="sub">—</span>'; }
+function editCtl(n,t,v,opts){ const id="f_"+n;
+  if(t==="sel") return `<select name="${n}" id="${id}">${(opts||[]).map(o=>`<option ${o===v?"selected":""}>${o}</option>`).join("")}</select>`;
+  if(t==="area") return `<textarea name="${n}" id="${id}">${esc(v)}</textarea>`;
+  if(t==="cm") return `<textarea name="${n}" id="${id}" rows="4">${esc(v||CMT)}</textarea>`;
+  if(t==="cmd") return `<textarea name="${n}" id="${id}" rows="3" placeholder="Plain wording for the client — no fixed headings">${esc(v||"")}</textarea>`;
+  if(t==="date") return `<span class="dwrap"><input type="text" name="${n}" id="${id}" value="${esc(v?fd(v):"")}" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1"><button type="button" class="dbtn" data-cal="${id}" aria-label="Choose date">${CALI}</button></span>`;
+  if(t==="owner") return `<div class="combo"><input type="text" name="${n}" id="${id}" value="${esc(v&&v!=="TBC"?v:"")}" placeholder="Choose or type a name" autocomplete="off"><div class="combo-list"></div></div>`;
+  if(t==="ws") return `<input type="text" name="${n}" id="${id}" list="wslist" value="${esc(v||"")}" placeholder="e.g. Data, Testing"><datalist id="wslist">${wsAll().map(w=>`<option value="${esc(w)}">`).join("")}</datalist>`;
+  if(t==="check") return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="${n}" id="${id}" ${v?"checked":""}> Include in client reports</label>`;
+  if(t==="calc") return `<span id="f_prcalc">${esc(v)}</span>`;
+  if(t==="ro") return esc(v);
+  return `<input type="text" name="${n}" id="${id}" value="${esc(v||"")}">`; }
+function markSel(){ $$("#workTbl tr[data-row]").forEach(tr=>tr.classList.toggle("sel",tr.dataset.row===SEL)); }
+function openRecord(k,id,focusField){ const x=REC(k,id); if(!x) return; CUR={mode:"record",k,id}; SEL=id; EDITING=!!focusField; if(VIEW==="work"||VIEW==="mine") markSel(); drawPanel(focusField); $("#panel").classList.add("on"); }
+function openNew(k){ const blank=k==="actions"?{t:"",p:P[0].code,ws:"",o:S.me,pr:S.defPriority,due:"",st:"Open",raised:TODAY,closed:null,upd:"",client:false,cm:CMT}:k==="raid"?{type:"Risk",t:"",p:P[0].code,ws:"",o:S.me,resp:"",imp:"Medium",lik:"Medium",due:"",st:"Open",raised:TODAY,closed:null,client:false,cm:CMT}:{t:"",p:P[0].code,by:S.me,date:TODAY,client:false,srcIn:"",cmd:""};
+  CUR={mode:"new",k,draft:blank}; SEL=null; EDITING=true; drawPanel("t"); $("#panel").classList.add("on"); }
+function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if(r.kind==="draft"){ snack("Opens the draft in Word; approve it here when you're done"); return; }
+  CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+function openProject(code,what){ const p=P.find(x=>x.code===code); CUR={mode:what,k:what==="current"?"current":"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+function curObj(){ return CUR.mode==="record"?REC(CUR.k,CUR.id):CUR.draft; }
+function drawPanel(focusField){ const x=curObj(), k=CUR.k, F=fieldsFor(k,x); $("#pErr").textContent="";
+  const title={record:x.t,new:k==="actions"?"New action":k==="raid"?"New RAID item":"New decision",proposal:`Proposal: ${x.t}`,health:`${CUR.code} health`,current:`${CUR.code} current state`}[CUR.mode];
+  $("#pId").textContent=CUR.mode==="record"?`${CUR.id} · ${pName(x.p)}`:CUR.mode==="proposal"?`Review #${CUR.n} · ${x.p?pName(x.p):"needs a project"}`:CUR.mode==="new"?"Not yet saved":pName(CUR.code);
+  $("#pTitle").textContent=title||"";
+  $("#pBody").classList.toggle("editing",EDITING); $("#editBanner").textContent=CUR.mode==="proposal"?"Editing a proposal — nothing reaches the tracker until it's approved":"Editing — changes apply when you save";
+  let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=x[n];
+    h+=`<dt>${l}</dt><dd>${EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }
+  if(CUR.mode==="proposal"&&!x.p) h=`<div class="cmnote">Choose a project before saving.</div>`+h;
+  if(CUR.mode==="record"||CUR.mode==="proposal"){ const src=CUR.mode==="record"?x.src:REV.find(r=>r.n===CUR.n).src; h+=`<div class="fsec">Record</div>${CUR.mode==="record"?`<dt>ID</dt><dd>${CUR.id}</dd>`:""}<dt>Source</dt><dd>${srcHTML(src)}</dd>${CUR.mode==="record"?`<dt>Last updated</dt><dd>${x.upd_at?fd(x.upd_at):"—"}</dd>`:""}`; }
+  $("#pFields").innerHTML=h;
+  const foot={record:EDITING?`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Save</button>`:`<button class="btn" id="pEdit">Edit <span class="kbd">E</span></button><span class="sp"></span><span class="sub">The list stays visible</span>`,
+    new:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Create</button>`,
+    proposal:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn" id="pSave">Save</button><button class="btn primary" id="pSaveA">Save and approve</button>`,
+    health:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Save</button>`,current:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Save</button>`}[CUR.mode];
+  $("#pFoot").innerHTML=foot;
+  if($("#pEdit")) $("#pEdit").onclick=()=>{ EDITING=true; drawPanel("t"); };
+  if($("#pCancel")) $("#pCancel").onclick=()=>{ if(CUR.mode==="record"){ EDITING=false; drawPanel(); } else closePanel(); };
+  if($("#pSave")) $("#pSave").onclick=()=>savePanel(false); if($("#pSaveA")) $("#pSaveA").onclick=()=>savePanel(true);
+  const imp=$("#f_imp"), lik=$("#f_lik"); if(imp&&lik){ const u=()=>$("#f_prcalc").textContent=prio(imp.value,lik.value); imp.onchange=u; lik.onchange=u; }
+  const st=$("#f_st"), cl=$("#f_closed"); if(st&&cl) st.onchange=()=>{ if(!OPENST(st.value)&&!cl.value) cl.value=TODAY; if(OPENST(st.value)) cl.value=""; };
+  const cb=$("#f_client"), cm=$("#f_cm")||$("#f_cmd"); if(cb&&cm) cb.onchange=()=>{ const ok=cm.id==="f_cmd"?cmdOK(cm.value):cmOK(cm.value); if(cb.checked&&!ok){ cm.focus(); $("#pErr").textContent=cm.id==="f_cmd"?"Write client messaging (a short plain explanation) to make this client-visible.":"Complete client messaging (a few words after each heading) to make this client-visible."; } };
+  if(EDITING){ const f=focusField&&$("#f_"+(focusField==="imp"?"imp":focusField)); (f||$("#pFields [name]"))?.focus(); } }
+function readForm(){ const o={}; $$("#pFields [name]").forEach(el=>{ o[el.name]=el.type==="checkbox"?el.checked:el.value.trim(); if(el.dataset.date&&o[el.name]){ o[el.name]=DDATE.test(o[el.name])?toIso(o[el.name]):"BAD:"+o[el.name]; } }); return o; }
+function validate(k,f,isNew,orig){ $$("#pFields .bad").forEach(e=>e.classList.remove("bad")); const bad=(n,msg)=>{ const el=$("#f_"+n); if(el) el.classList.add("bad"); return msg; };
+  if("t" in f&&!f.t) return bad("t","Description is required.");
+  for(const n of ["due","raised","closed","date"]) if(f[n]&&!DATE.test(f[n])) return bad(n,"Dates must be DD-MM-YYYY.");
+  if(f.closed&&f.raised&&f.closed<f.raised) return bad("closed","Closed can't be before Raised.");
+  if("cm" in f&&!cmHeads(f.cm)) return bad("cm","Keep the three client messaging headings.");
+  if(f.client&&"cm" in f&&!cmOK(f.cm)&&(!orig||!orig.client||f.cm!==orig.cm)) return bad("cm","Client-visible items need complete client messaging: a few words after each heading.");
+  if(k==="decisions"&&f.client&&!cmdOK(f.cmd)&&(!orig||!orig.client||f.cmd!==orig.cmd)) return bad("cmd","Client-visible decisions need client messaging: a short plain explanation.");
+  if(k==="decisions"&&isNew&&!f.srcIn) return bad("srcIn","Record where the decision was made (meeting, email or document).");
+  if("reason" in f&&!f.reason) return bad("reason","Give a reason for the health rating.");
+  if("p" in f&&!f.p) return "Choose a project."; return null; }
+function norm(k,f){ if("o" in f){ f.o=f.o||"TBC"; if(f.o!=="TBC"&&!peopleAll().includes(f.o)){ PEOPLE.added.push(f.o); PEOPLE.hidden=PEOPLE.hidden.filter(x=>x!==f.o); savePeople(); } }
+  if("st" in f){ if(!OPENST(f.st)&&!f.closed) f.closed=TODAY; if(OPENST(f.st)) f.closed=null; } ["due","closed"].forEach(n=>{ if(n in f&&!f[n]) f[n]=null; });
+  if(k==="raid") f.pr=prio(f.imp,f.lik); return f; }
+function nextId(k,p){ const arr=k==="actions"?A:k==="raid"?R:DEC, pre=k==="actions"?`${p}-A-`:k==="raid"?`${p}-`:`${p}-D-`; const n=Math.max(0,...arr.filter(x=>x.id.startsWith(pre)&&/\d{3}$/.test(x.id)).map(x=>+x.id.slice(-3)))+1; return pre+String(n).padStart(3,"0"); }
+function savePanel(approve){ const f=readForm(), k=CUR.k; const err=validate(k,f,CUR.mode==="new",CUR.mode==="record"?REC(k,CUR.id):null); if(err){ $("#pErr").textContent=err; return; } $("#pErr").textContent=""; norm(k,f);
+  if(CUR.mode==="record"){ const x=REC(k,CUR.id), before={...x}; const ch=Object.keys(f).filter(n=>(x[n]??"")!==(f[n]??"")); if(!ch.length){ EDITING=false; drawPanel(); return; }
+    const FN={t:"description",o:"owner",st:"status",pr:"priority",due:"due date",ws:"workstream",upd:"latest update",client:"client-visible",cm:"client messaging",cmd:"client messaging",by:"made by",date:"date",resp:"response",imp:"impact",lik:"likelihood",raised:"raised",closed:"closed date",type:"type",p:"project"}; const label=`${CUR.id} ${[...new Set(ch.filter(n=>n!=="pr"||k!=="raid").map(n=>FN[n]||n))].join(", ")} updated`;
+    EDITING=false; apply(label,()=>{ Object.assign(x,f,{upd_at:nowStamp()}); },()=>{ Object.keys(x).forEach(n=>delete x[n]); Object.assign(x,before); }); $("#pTitle").textContent=x.t; return; }
+  if(CUR.mode==="new"){ const id=nextId(k,f.p); const rec=Object.assign({id,upd_at:nowStamp()},f); if(k==="decisions"){ rec.src=`${f.srcIn} (recorded by ${S.me} in the dashboard, ${fd(TODAY)})`; delete rec.srcIn; } else rec.src=`${S.me} (dashboard), ${fd(TODAY)}`;
+    const arr=k==="actions"?A:k==="raid"?R:DEC; closePanel(); apply(`${id} created`,()=>arr.push(rec),()=>{ const i=arr.indexOf(rec); if(i>=0) arr.splice(i,1); }); return; }
+  if(CUR.mode==="proposal"){ const r=REV.find(x=>x.n===CUR.n); const before=JSON.parse(JSON.stringify(r)); if(k==="update") r.rec.to=f.to, r.rec.t=`${r.rec.target} status: ${r.rec.from} → ${f.to}`; else { Object.assign(r.rec,f); if(f.p){ r.p=f.p; } } r.edited=true;
+    closePanel(); if(approve) decide(r.n,"approved"); else { refreshAll(); snack(`Proposal #${r.n} updated — still waiting for review`,()=>{ Object.assign(r,before); refreshAll(); }); } return; }
+  if(CUR.mode==="health"||CUR.mode==="current"){ const mode=CUR.mode, p=P.find(x=>x.code===CUR.code), before={health:p.health,reason:p.reason,current:p.current}; closePanel();
+    apply(mode==="health"?`${p.code} health: ${before.health} → ${f.health}`:`${p.code} current state updated`,()=>Object.assign(p,f),()=>Object.assign(p,before)); } }
+function closePanel(){ $("#panel").classList.remove("on"); CUR=null; EDITING=false; closeCal(); comboClose(); if(SEL){ SEL=null; markSel(); } }
+$("#pClose").onclick=closePanel;
+/* ======================= Review ======================= */
+let RSEL=0; const CHK=new Set();
+function applyProposal(r){ if(r.kind==="actions"){ const rec=Object.assign({id:nextId("actions",r.p),p:r.p,raised:TODAY,closed:null,src:r.src,upd_at:nowStamp()},r.rec); A.push(rec); return ()=>A.splice(A.indexOf(rec),1); }
+  if(r.kind==="raid"){ const rec=Object.assign({id:nextId("raid",r.p),p:r.p,raised:TODAY,closed:null,src:r.src,upd_at:nowStamp()},r.rec); rec.pr=prio(rec.imp,rec.lik); R.push(rec); return ()=>R.splice(R.indexOf(rec),1); }
+  if(r.kind==="decisions"){ const rec=Object.assign({id:nextId("decisions",r.p),p:r.p,src:r.src,upd_at:nowStamp()},r.rec); DEC.push(rec); return ()=>DEC.splice(DEC.indexOf(rec),1); }
+  if(r.kind==="update"){ const x=REC("actions",r.rec.target), b={...x}; x.st=r.rec.to; if(!OPENST(x.st)) x.closed=TODAY; return ()=>Object.assign(x,b); } return ()=>{}; }
+function decide(n,v){ const r=REV.find(x=>x.n===n); if(!r||r.done) return; if(v==="approved"&&!r.p){ snack("Choose a project first — open the item to set it"); openProposal(n); return; }
+  let undoRec=()=>{}; CHK.delete(n);
+  apply(`#${n} ${v==="approved"?"approved":"rejected"}: ${r.rec.t}`,()=>{ r.done=v; if(v==="approved") undoRec=applyProposal(r); },()=>{ delete r.done; undoRec(); },"You, in Review"); }
+function renderReview(){ const live=REV.filter(r=>!r.done), groups=[...new Set(REV.map(r=>r.p||"?"))].sort((a,b)=>a==="?"?-1:b==="?"?1:0); let i=0;
+  $("#reviewBody").innerHTML=groups.map(g=>`<div class="rgroup"><h2>${g==="?"?"Needs a project":`<span class="pcode">${g}</span>${esc(pName(g))}`}</h2></div><div class="tbl"><table><tbody>${REV.filter(r=>(r.p||"?")===g).map(r=>{ const idx=i++; return `<tr class="click ${idx===RSEL?"sel":""}" data-ri="${idx}" data-n="${r.n}"><td style="width:32px"><input type="checkbox" aria-label="Select" ${CHK.has(r.n)?"checked":""} ${r.done?"disabled":""}></td><td class="title">${esc(r.rec.t)}${r.edited?' <span class="tag">· edited</span>':""}<div class="why">${kindLabel(r)} · ${esc(r.why)}${r.indiv?' · <span class="indiv">approve individually</span>':""}</div><div class="why">${esc(fdText(srcShort(r.src)))}</div></td><td style="white-space:nowrap;text-align:right">${r.done?`<span class="${r.done==="approved"?"h-ok":"h-bad"}" style="font-weight:500">${r.done==="approved"?"Approved":"Rejected"}</span>`:`<button class="mini" data-act="e">${r.kind==="draft"?"Open draft":"Edit"}</button> <button class="mini ok" data-act="a">Approve</button> <button class="mini no" data-act="r">Reject</button>`}</td></tr>`; }).join("")}</tbody></table></div>`).join("")||'<div class="empty">Nothing to review.</div>';
+  const sel=[...CHK].map(n=>REV.find(r=>r.n===n)); $("#bulkApprove").disabled=$("#bulkReject").disabled=!CHK.size; renderBadge(); }
+$("#reviewBody").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-n]"); if(!tr) return; const n=+tr.dataset.n; RSEL=+tr.dataset.ri;
+  if(e.target.type==="checkbox"){ const r=REV.find(x=>x.n===n); if(r.indiv&&e.target.checked){ e.target.checked=false; snack("This one needs individual approval"); return; } e.target.checked?CHK.add(n):CHK.delete(n); $("#bulkApprove").disabled=$("#bulkReject").disabled=!CHK.size; return; }
+  const b=e.target.closest("[data-act]"); if(b){ if(b.dataset.act==="a") decide(n,"approved"); else if(b.dataset.act==="r") decide(n,"rejected"); else openProposal(n); return; } openProposal(n); renderReview(); });
+$("#bulkApprove").onclick=()=>{ [...CHK].forEach(n=>decide(n,"approved")); CHK.clear(); renderReview(); };
+$("#bulkReject").onclick=()=>{ [...CHK].forEach(n=>decide(n,"rejected")); CHK.clear(); renderReview(); };
+$("#routineBtn").onclick=()=>{ const L=REV.filter(r=>!r.done&&!r.indiv&&r.p); L.forEach(r=>decide(r.n,"approved")); snack(`Approved ${L.length} routine item${L.length===1?"":"s"}; ${REV.filter(r=>!r.done&&r.indiv).length} left for you to approve individually`); };
+document.addEventListener("click",e=>{ const a=e.target.closest("[data-appr]"); if(a){ e.stopPropagation(); decide(+a.dataset.appr,"approved"); return; } const o=e.target.closest("[data-revopen]"); if(o&&!e.target.closest("[data-appr]")){ go("review"); openProposal(+o.dataset.revopen); } });
+
+/* ======================= Files ======================= */
+let FSEL={p:"All",f:"All",sub:"",quick:"all"}; const FOPEN=new Set(store.get("creaite-files-open",[]));
+const FNAME={FAL:"FAL Falcon Data Platform",ORX:"ORX Orbit Customer App",MER:"MER Meridian Contact Centre AI",TID:"TID Tide Billing Migration",_portfolio:"projects/_portfolio",inbox:"inbox"};
+function renderFiles(){ const cnt=f=>FILES.filter(f).length; const pr=(b)=>b?"true":"false";
+  let h=`<button data-p="All" data-f="All" aria-pressed="${pr(FSEL.p==="All")}">All files<span class="n">${FILES.length}</span></button><button class="l1" data-p="inbox" data-f="All" aria-pressed="${pr(FSEL.p==="inbox")}">inbox<span class="n">${cnt(x=>x.p==="inbox")}</span></button><button class="l1" data-p="_portfolio" data-f="All" aria-pressed="${pr(FSEL.p==="_portfolio")}">projects/_portfolio<span class="n">${cnt(x=>x.p==="_portfolio")}</span></button>`;
+  P.forEach(p=>{ const c=p.code, op=FOPEN.has(c); h+=`<button class="l1" data-p="${c}" data-f="All" data-toggle="${c}" aria-expanded="${op}" aria-pressed="${pr(FSEL.p===c&&FSEL.f==="All")}"><span class="chev">${op?"▾":"▸"}</span>${esc(FNAME[c])}<span class="n">${cnt(x=>x.p===c)}</span></button>`;
+    if(op) ["minutes","transcripts","documents","reports"].forEach(fd=>{ h+=`<button class="l2" data-p="${c}" data-f="${fd}" aria-pressed="${pr(FSEL.p===c&&FSEL.f===fd&&!FSEL.sub)}">${fd}<span class="n">${cnt(x=>x.p===c&&x.f===fd)}</span></button>`;
+      if(fd==="documents") [...new Set(FILES.filter(x=>x.p===c&&x.sub).map(x=>x.sub))].forEach(s=>h+=`<button class="l3" data-p="${c}" data-f="documents" data-s="${s}" aria-pressed="${pr(FSEL.sub===s&&FSEL.p===c)}">${esc(s)}<span class="n">${cnt(x=>x.p===c&&x.sub===s)}</span></button>`); }); });
+  $("#tree").innerHTML=h;
+  $("#fquick").innerHTML=[["all","All files"],["latest","Latest reports"],["week","This week's meetings"],["inbox","Inbox"]].map(q=>`<button class="vchip" data-q="${q[0]}" aria-pressed="${FSEL.quick===q[0]}">${q[1]}</button>`).join("");
+  const q=$("#fsName").value.toLowerCase(), t=$("#fsType").value, fr=DDATE.test($("#fsFrom").value)?toIso($("#fsFrom").value):"", to=DDATE.test($("#fsTo").value)?toIso($("#fsTo").value):"";
+  let L=FILES.filter(x=>(FSEL.p==="All"||x.p===FSEL.p)&&(FSEL.f==="All"||x.f===FSEL.f)&&(!FSEL.sub||x.sub===FSEL.sub));
+  if(FSEL.quick==="latest"){ L=[]; P.forEach(p=>["Weekly report","Client report"].forEach(k=>{ const r=FILES.filter(f=>f.p===p.code&&f.n.includes(k)).sort((a,b)=>b.date.localeCompare(a.date))[0]; if(r) L.push(r); })); }
+  if(FSEL.quick==="week") L=FILES.filter(f=>(f.f==="minutes"||f.f==="transcripts")&&f.date>="2026-09-28");
+  if(FSEL.quick==="inbox") L=FILES.filter(f=>f.p==="inbox");
+  L=L.filter(f=>(!q||f.n.toLowerCase().includes(q))&&(t==="All"||f.type===t)&&(!fr||f.date>=fr)&&(!to||f.date<=to)).sort((a,b)=>(b.date||"0").localeCompare(a.date||"0"));
+  $("#filesTbl").innerHTML=`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L.map(f=>`<tr><td><span class="ftype">${f.type}</span><a href="#" data-openfile="${esc(f.n)}">${esc(f.n)}</a></td><td class="x">${f.p==="inbox"?"inbox":`${f.p} › ${f.f}${f.sub?" › "+f.sub:""}`}</td><td style="white-space:nowrap">${f.date?fd(f.date):"—"}</td><td class="x">${f.kb>=1000?(f.kb/1000).toFixed(1)+" MB":f.kb+" KB"}</td><td style="text-align:right"><button class="mini" data-openfile="folder of ${esc(f.n)}">Open folder</button></td></tr>`).join("")||`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`; }
+$("#tree").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; if(b.dataset.toggle){ const c=b.dataset.toggle; if(FOPEN.has(c)&&FSEL.p===c&&FSEL.f==="All") FOPEN.delete(c); else FOPEN.add(c); store.set("creaite-files-open",[...FOPEN]); } FSEL={p:b.dataset.p,f:b.dataset.f,sub:b.dataset.s||"",quick:b.dataset.p==="inbox"?"inbox":"all"}; renderFiles(); });
+$("#fquick").addEventListener("click",e=>{ const b=e.target.closest("[data-q]"); if(!b) return; FSEL={p:"All",f:"All",sub:"",quick:b.dataset.q}; renderFiles(); });
+["#fsName","#fsType","#fsFrom","#fsTo"].forEach(s=>$(s).addEventListener("input",renderFiles));
+
+/* ======================= Activity ======================= */
+function renderActivity(){ $("#actTbl").innerHTML=`<table><thead><tr><th>When</th><th>Change</th><th>By</th><th></th></tr></thead><tbody>${ACT.map((a,i)=>`<tr><td style="white-space:nowrap">${fd(a.at)}</td><td>${esc(a.what)}</td><td class="x">${esc(a.by)}</td><td style="text-align:right">${a.undo?`<button class="mini" data-undoact="${i}">Undo</button>`:'<span class="x">Use “undo last apply”</span>'}</td></tr>`).join("")}</tbody></table>`; }
+$("#actTbl").addEventListener("click",e=>{ const b=e.target.closest("[data-undoact]"); if(!b) return; const a=ACT[+b.dataset.undoact]; a.undo(); ACT.splice(+b.dataset.undoact,1); ACT.unshift({at:nowStamp(),what:`Undone: ${a.what}`,by:"You, in Activity"}); refreshAll(); snack("Change reversed"); });
+/* ======================= Settings ======================= */
+let STAB="prefs";
+const sw=(k)=>`<input type="checkbox" class="switch" data-k="${k}" ${S[k]?"checked":""} aria-label="${k}">`;
+const tx=(k,ph)=>`<input type="text" data-k="${k}" value="${esc(S[k])}" placeholder="${ph||""}">`;
+const nm=(k)=>`<input type="number" data-k="${k}" value="${S[k]}" min="0" style="width:80px">`;
+const sl=(k,opts)=>`<select data-k="${k}">${opts.map(o=>Array.isArray(o)?`<option value="${o[0]}" ${S[k]===o[0]?"selected":""}>${o[1]}</option>`:`<option ${S[k]===o?"selected":""}>${o}</option>`).join("")}</select>`;
+const row=(l,c,h)=>`<div class="srow"><div>${l}${h?`<small>${h}</small>`:""}</div><div>${c}</div></div>`;
+function renderSettings(){ $$("#stabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.st===STAB));
+  if(STAB==="prefs") $("#settingsBody").innerHTML=`<div class="sgrid">
+   <div class="card"><h2>You</h2>${row("Your name",tx("me","Full name"),"Owner for your items; Mine views and “You”")}${row("Short forms",tx("short","Alan, AC"),"Comma-separated; also matched as you")}</div>
+   <div class="card"><h2>Defaults</h2>${row("New action priority",sl("defPriority",["Urgent","High","Medium","Low"]))}${row("Actions open with",sl("defActionView",VIEWS.actions))}${row("RAID opens with",sl("defRaidView",VIEWS.raid))}${row("Due soon means within (days)",nm("dueSoon"))}</div>
+   <div class="card"><h2>Applying changes</h2>${row("Apply edits automatically",sw("autoApply"),"Every save is written straight away, with Undo")}${!S.autoApply?row(`${PENDING.length} change${PENDING.length===1?"":"s"} waiting`,`<button class="btn primary" id="applyNow" ${PENDING.length?"":"disabled"}>Apply</button>`):""}${row("Theme",sl("theme",["System","Light","Dark"]))}${row("Column widths",`<button class="btn" id="rzReset">Reset</button>`,"Drag a column edge in Work to resize")}</div>
+   <div class="card"><h2>Reminders</h2>${row("Reminders on",sw("remindersOn"))}${row("Weekly report day",sl("weeklyDay",["Thursday","Friday"]))}${row("Weekly report from",tx("weeklyTime","HH:MM"))}${P.map(p=>row(`${p.code} client report`,`<select data-rhythm="${p.code}">${["Weekly","Fortnightly","Monthly","Off"].map(o=>`<option ${p.rhythm===o?"selected":""}>${o}</option>`).join("")}</select>`)).join("")}${row("Dismissed reminders",`<button class="btn" id="remRestore">Restore</button>`,"Brings back reminders dismissed forever")}</div>
+   <div class="card"><h2>Sweep</h2>${row("Daily sweep due from",tx("sweepDue","HH:MM"),"Runs at the first session after this time")}${row("First-run look-back (days)",nm("lookback"))}${row("Inbox",sw("srcInbox"))}${row("Sent Items",sw("srcSent"))}${row("Teams chats",sw("srcChats"))}${row("Teams channels",sw("srcChannels"))}${row("Show possible matches",sw("possible"))}</div>
+   <div class="card"><h2>Review and health</h2>${row("Stale after (days)",nm("staleDays"))}${row("At risk: action overdue more than (days)",nm("overdueDays"))}${row("At risk: milestone slip up to (weeks)",nm("slipAtRisk"))}${row("Off track: slip more than (weeks)",nm("slipOff"))}${row("Off track: Urgent risks at least",nm("urgentOff"))}</div>
+   <div class="card"><h2>Live server and backups</h2>${row("Status",LIVE?'<span class="h-ok">Running</span>':'<span class="h-bad">Stopped</span>',"127.0.0.1, required")}${row("Port",nm("port"))}${row("Daily database backup",sw("dailyBackup"))}<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn" id="liveCheck">Check now</button><button class="btn quiet" id="liveSim">Simulate server stopped</button></div></div></div>`;
+  else $("#settingsBody").innerHTML=`<div class="sgrid"><div class="card wide" id="peopleMgr"></div><div class="card wide" id="wsMgr"></div><div class="card wide"><h2>Projects and register</h2><p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in Ask creaite (for example “add project DEF…”, “add client.com to ABC's domains”).</p></div></div>`, renderMgr("people"), renderMgr("ws");
+  const b=id=>document.getElementById(id);
+  if(b("rzReset")) b("rzReset").onclick=()=>{ RZ={}; store.set("creaite-colwidths",RZ); snack("Column widths reset"); };
+  if(b("remRestore")) b("remRestore").onclick=()=>{ store.set("creaite-dismiss",[]); sessionStorage.removeItem("creaite-dismiss-s"); snack("Dismissed reminders restored"); };
+  if(b("liveCheck")) b("liveCheck").onclick=()=>{ setLive(true); renderSettings(); };
+  if(b("liveSim")) b("liveSim").onclick=()=>{ setLive(false); renderSettings(); snack("Simulated: live server stopped"); };
+  if(b("applyNow")) b("applyNow").onclick=()=>{ applyPending(); renderSettings(); }; }
+$("#stabs").onclick=e=>{ const t=e.target.closest("[data-st]"); if(t){ STAB=t.dataset.st; renderSettings(); } };
+$("#settingsBody").addEventListener("change",e=>{ const el=e.target; if(el.dataset.rhythm){ P.find(p=>p.code===el.dataset.rhythm).rhythm=el.value; snack("Saved"); return; } const k=el.dataset.k; if(!k) return;
+  let v=el.type==="checkbox"?el.checked:el.type==="number"?Number(el.value):el.value; if((k==="sweepDue"||k==="weeklyTime")&&!/^\d{2}:\d{2}$/.test(v)){ snack("Use 24-hour HH:MM"); el.value=S[k]; return; }
+  S[k]=v; saveS(); if(k==="theme") applyTheme(); if(k==="autoApply") renderSettings(); status(); snack("Saved to settings.json"); });
+function renderMgr(kind){ const isP=kind==="people", L=isP?PEOPLE:WSL; const names=isP?[...new Set([...A.map(a=>a.o),...R.map(r=>r.o),...L.added,...L.hidden])].filter(n=>n&&n!=="TBC"):[...new Set([...wsUsed(),...L.added,...L.hidden])];
+  const active=isP?peopleAll():wsAll(); const cA=n=>isP?A.filter(a=>a.o===n).length:A.filter(a=>a.ws===n).length, cR=n=>isP?R.filter(r=>r.o===n).length:R.filter(r=>r.ws===n).length;
+  $(isP?"#peopleMgr":"#wsMgr").innerHTML=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">${isP?"People (owners)":"Workstreams"}</h2><input id="${kind}Add" type="text" placeholder="${isP?"Add a person":"Add a workstream"}" style="height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px"><button class="btn" data-mg="add" data-kind="${kind}">Add</button></div>
+   <p class="sub" style="margin:4px 0 8px">${isP?"Rename or merge to fix spellings across every item (applied with Undo). Removing hides a name from the owner picker; items keep it.":"Rename or merge to tidy workstreams across every item. Retiring hides it from suggestions; items keep it."}</p>
+   <div class="tbl"><table class="mgr"><thead><tr><th>${isP?"Name":"Workstream"}</th><th class="num">Actions</th><th class="num">RAID</th><th></th></tr></thead><tbody>${names.sort().map(n=>{ const off=L.hidden.includes(n), me=isP&&isMe(n);
+    return `<tr class="${off?"off":""}"><td>${esc(n)}${me?' <span class="tag">(you)</span>':""}${off?` <span class="tag warn">${isP?"removed from list":"retired"}</span>`:""}</td><td class="num">${cA(n)}</td><td class="num">${cR(n)}</td><td class="mgract">${me?'<span class="x">Change in Preferences › You</span>':`<button class="mini" data-mg="ren" data-kind="${kind}" data-n="${esc(n)}">Rename</button><select class="mgsel" data-kind="${kind}" data-n="${esc(n)}"><option value="">Merge into…</option>${active.filter(x=>x!==n).map(x=>`<option>${esc(x)}</option>`).join("")}</select>${off?`<button class="mini" data-mg="restore" data-kind="${kind}" data-n="${esc(n)}">Restore</button>`:`<button class="mini no" data-mg="hide" data-kind="${kind}" data-n="${esc(n)}">${isP?"Remove from list":"Retire"}</button>`}`}</td></tr>`; }).join("")}</tbody></table></div>`; }
+function renameAll(kind,from,to){ to=(to||"").trim(); if(!to||to===from) return; const isP=kind==="people"; const touched=[]; const merge=(isP?peopleAll():wsAll()).includes(to);
+  apply(`${merge?"Merged":"Renamed"} ${isP?"owner":"workstream"} “${from}” ${merge?"into":"to"} “${to}”`,()=>{ [...A,...R].forEach(x=>{ if(isP&&x.o===from){ x.o=to; touched.push(x); } if(!isP&&x.ws===from){ x.ws=to; touched.push(x); } }); const L=isP?PEOPLE:WSL; if(!L.added.includes(to)) L.added.push(to); isP?savePeople():saveWs(); },
+    ()=>{ touched.forEach(x=>{ if(isP) x.o=from; else x.ws=from; }); }); renderSettings(); }
+$("#settingsBody").addEventListener("click",e=>{ const b=e.target.closest("[data-mg]"); if(!b) return; const kind=b.dataset.kind, isP=kind==="people", L=isP?PEOPLE:WSL, save=isP?savePeople:saveWs, n=b.dataset.n;
+  if(b.dataset.mg==="add"){ const v=$("#"+kind+"Add").value.trim(); if(!v) return; L.added.push(v); L.hidden=L.hidden.filter(x=>x!==v); save(); renderSettings(); snack(`Added “${v}”`); }
+  if(b.dataset.mg==="hide"){ L.hidden.push(n); save(); renderSettings(); snack(isP?`Removed “${n}” from the owner list`:`Retired “${n}”`,()=>{ L.hidden=L.hidden.filter(x=>x!==n); save(); renderSettings(); }); }
+  if(b.dataset.mg==="restore"){ L.hidden=L.hidden.filter(x=>x!==n); save(); renderSettings(); }
+  if(b.dataset.mg==="ren"){ const td=b.closest("tr").cells[0]; td.innerHTML=`<span style="display:flex;gap:6px"><input type="text" value="${esc(n)}" style="height:30px;border:1px solid var(--faint);border-radius:6px;padding:0 8px"><button class="mini ok">Save</button><button class="mini">Cancel</button></span>`; const inp=td.querySelector("input"); inp.focus(); inp.select(); const [ok,cn]=td.querySelectorAll("button");
+    ok.onclick=()=>renameAll(kind,n,inp.value); cn.onclick=()=>renderSettings(); inp.onkeydown=ev=>{ if(ev.key==="Enter") renameAll(kind,n,inp.value); if(ev.key==="Escape"){ ev.stopPropagation(); renderSettings(); } }; } });
+$("#settingsBody").addEventListener("change",e=>{ const s=e.target.closest("select.mgsel"); if(s&&s.value){ e.stopPropagation(); renameAll(s.dataset.kind,s.dataset.n,s.value); } },true);
+
+/* ======================= Help ======================= */
+const K=(...k)=>k.map(x=>`<span class="kbd">${x}</span>`).join(" + "); const HR=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
+const HELP=[
+ ["Keyboard shortcuts",`<div class="tbl"><table><tbody>${HR(K(MOD,"K"),"Search or jump to anything: views, projects, item IDs, commands")}${HR(`${K("/")} or ${K(MOD,"J")}`,"Ask creaite")}${HR(K("?"),"This help")}${HR(K("Esc"),"Close the top thing: picker or calendar, edit mode, detail panel, Ask creaite, palette")}${HR(`${K("J")} ${K("K")}`,"Next or previous row in Work and Review")}${HR(K("E"),"Edit the open item (the panel turns tinted)")}${HR(`${K("A")} ${K("R")} ${K("X")}`,"Review: approve, reject, select")}</tbody></table></div>`],
+ ["Working with lists",`<ul><li>Click a row to open its details beside the list. The list stays visible.</li><li>Press E, select Edit, or double-click a cell to edit. Save applies immediately, with Undo in the message.</li><li>Saved views (Mine, Due soon, Overdue…), the owner filter and Columns sit above each list. Drag a column edge to resize; double-click it to reset.</li></ul>`],
+ ["Today",`<ul><li>The briefing, then what needs your decision, your commitments, and what changed since your last visit.</li><li>Reminders appear here only; dismiss them for the session or forever.</li><li>The portfolio shows each project's health with its evidence and an 8-week trend. Select a project to open its cockpit.</li></ul>`],
+ ["Review",`<ul><li>Claude's proposals wait here until you decide. Edit any field first, or Save and approve.</li><li>Approve all routine never covers draft minutes, reports, health changes, new decisions or new risks.</li><li>Items without a project need one before approval.</li></ul>`],
+ ["Client messaging",`<ul><li>Actions and RAID items use three headings: What it is, What it means for you, What is being done.</li><li>Decisions use plain wording, with no fixed headings.</li><li>Only needed when the item is client-visible, and checked when you make it client-visible or edit the messaging. You write it; Claude never does.</li></ul>`],
+ ["Dates",`<ul><li>Dates are shown and typed as DD-MM-YYYY. File names keep YYYY-MM-DD so they sort in order.</li></ul>`],
+ ["Sources",`<ul><li>Minutes and document names open the file. Emails show From, Subject and Sent with Open in Outlook; Teams messages show channel, From and Sent with Open in Teams.</li></ul>`],
+ ["Commands for Claude",`<p>In Ask creaite or Claude Code: <code>sweep</code>, <code>process new minutes</code>, <code>review</code>, <code>apply</code>, <code>undo last apply</code>, <code>weekly report</code>, <code>client report ABC</code>, <code>mark ABC-A-003 closed</code>, <code>move ABC-A-003 to 20-11-2026</code>, <code>set sweep time to 06:30</code>, <code>import excel</code>, <code>setup</code>, <code>health check</code>.</p>`],
+ ["Live server and backups",`<p>The dashboard runs from the live server on this Mac. Start it in Terminal with:</p>${cmdBox()}<ul><li>Leave the Terminal window open while you work; close it (or press Ctrl+C) to stop the server.</li><li>If the server stops, a red alert appears at the top; saves are held and applied when it's back.</li><li>The database is backed up at the first session of each day and before every apply, in <code>system/backups/</code>.</li></ul>`],
+ ["Troubleshooting",`<ul><li>Red alert at the top: start the live server (see Live server and backups). Saves are held until it's back.</li><li>Something changed by mistake: Undo in the message, or in Activity.</li><li>Anything else: say <code>health check</code>.</li></ul>`]];
+function renderHelp(){ $("#helpIdx").innerHTML=HELP.map((h,i)=>`<a href="#h${i}" data-hjump="${i}">${h[0]}</a>`).join(""); $("#helpBody").innerHTML=HELP.map((h,i)=>`<section class="hsec" id="h${i}"><h2>${h[0]}</h2>${h[1]}</section>`).join(""); }
+$("#helpIdx").addEventListener("click",e=>{ const a=e.target.closest("[data-hjump]"); if(a){ e.preventDefault(); document.getElementById("h"+a.dataset.hjump).scrollIntoView({behavior:"smooth"}); } });
+$("#helpQ").addEventListener("input",()=>{ const q=$("#helpQ").value.toLowerCase(); $$(".hsec").forEach(s=>s.classList.toggle("hidden",!!q&&!s.textContent.toLowerCase().includes(q))); });
+/* ======================= Ask creaite ======================= */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms)); let BUSY=false;
+function openChat(){ $("#chat").classList.add("on"); if(!$("#chLog").children.length) say("Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first."); setTimeout(()=>$("#chIn").focus(),40); }
+function closeChat(){ $("#chat").classList.remove("on"); if($("#chat").contains(document.activeElement)) document.activeElement.blur(); }
+$("#askBtn").onclick=openChat; $("#chatClose").onclick=closeChat;
+function addEl(cls,html){ const d=document.createElement("div"); d.className=cls; d.innerHTML=html; $("#chLog").appendChild(d); $("#chLog").scrollTop=1e9; return d; }
+async function say(t,acts){ const d=addEl("msg a",""); for(let i=0;i<t.length;i+=4){ d.textContent=t.slice(0,i+4); await sleep(8); } if(acts){ const a=document.createElement("div"); a.className="acts"; a.innerHTML=acts; d.appendChild(a); } $("#chLog").scrollTop=1e9; }
+async function step(l,ms=600){ const d=addEl("step",`<span class="spin"></span>${esc(l)}`); await sleep(ms); d.innerHTML=`✓ ${esc(l)}`; }
+function confirmCard(title,body,ok){ return new Promise(res=>{ const d=addEl("confirm",`<b>${esc(title)}</b>${esc(body)}<div class="acts"><button class="btn">Cancel</button><button class="btn primary">${esc(ok)}</button></div>`); const [c,o]=d.querySelectorAll("button"); c.onclick=()=>{ d.querySelector(".acts").innerHTML="<span class='sub'>Cancelled</span>"; res(false); }; o.onclick=()=>{ d.querySelector(".acts").innerHTML="<span class='sub'>Confirmed</span>"; res(true); }; }); }
+async function handle(q){ const t=q.toLowerCase();
+  if(!LIVE){ await say("The live server isn't running, so I can't run this here. Copy it into Claude Code, or start the server and try again.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
+  if(/sweep/.test(t)){ await step("Running cx-sweep: Inbox, Sent Items, Teams",900); await step("Matching to projects",500); await say("Sweep done: 2 new proposals are in Review.",'<button class="mini" data-go="review">Open Review</button>'); return; }
+  if(/minute|transcript/.test(t)){ await step("Running cx-minutes on 1 transcript in inbox/",900); await step("Drafted minutes from your template",700); await say("Draft minutes for 2026-10-02 ORX design review are in Review, with 4 proposed items.",'<button class="mini" data-go="review">Open Review</button>'); return; }
+  if(/weekly|client report/.test(t)){ if(await confirmCard("Draft the report?","The draft is held for your review; nothing is filed yet.","Draft")){ await step("Running the report skill",900); await say("The draft is waiting in Review.",'<button class="mini" data-go="review">Open Review</button>'); } else await say("OK, not drafted."); return; }
+  if(/overdue/.test(t)){ const od=A.filter(overdue).sort((a,b)=>a.due.localeCompare(b.due)); await say(od.length?`${od.length} overdue actions:\n`+od.map(a=>`• ${a.id} — ${a.t} (${who(a.o)}, due ${fd(a.due)})`).join("\n"):"Nothing is overdue.",'<button class="mini" data-gowork="overdue">Open in Work</button>'); return; }
+  await step("Searching the tracker and vault",700); await say(`(Sample) In the real build, Claude Code answers “${q}” from your tracker, memory and documents, with sources, and asks before any write.`); }
+async function send(text){ text=(text??$("#chIn").value).trim(); if(!text||BUSY) return; BUSY=true; $("#chIn").value=""; addEl("msg u",esc(text)); try{ await handle(text); } finally{ BUSY=false; } }
+$("#chSend").onclick=()=>send(); $("#chIn").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
+$("#chQuick").onclick=e=>{ const b=e.target.closest("[data-q]"); if(b) send(b.dataset.q); };
+document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]"); if(g){ WT="actions"; WVIEW=g.dataset.gowork; go("work"); } });
+
+/* ======================= command palette ======================= */
+let CK=[], CKI=0;
+function ckItems(q){ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn)=>{ if(!q||(l+" "+h).toLowerCase().includes(q)) out.push({g,l,h,fn}); };
+  [["today","Today"],["projects","Projects"],["work","Work"],["review","Review"],["files","Files"],["activity","Activity"],["settings","Settings"],["help","Help"]].forEach(([v,l])=>add("Go to",l,"",()=>go(v)));
+  P.forEach(p=>add("Projects",`${p.code} ${p.name}`,p.health,()=>go("cockpit",p.code)));
+  add("Actions","New action","",()=>{ WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ WT="decisions"; go("work"); openNew("decisions"); });
+  add("Actions","Ask creaite","/",openChat); add("Actions","Switch theme","",()=>$("#themeBtn").click());
+  if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
+  return out.slice(0,40); }
+function drawCk(){ let g="",h=""; CK.forEach((it,i)=>{ if(it.g!==g){ g=it.g; h+=`<div class="grp">${g}</div>`; } h+=`<button data-i="${i}" aria-selected="${i===CKI}">${esc(it.l)}<small>${esc(it.h)}</small></button>`; }); $("#cmdkList").innerHTML=h||'<div class="grp">No matches.</div>'; $("#cmdkList [aria-selected=true]")?.scrollIntoView({block:"nearest"}); }
+function openCk(){ $("#cmdkIn").value=""; CK=ckItems(""); CKI=0; drawCk(); $("#cmdk").showModal(); $("#cmdkIn").focus(); }
+function runCk(i){ const it=CK[i]; if(!it) return; $("#cmdk").close(); it.fn(); }
+$("#searchBtn").onclick=openCk; $("#searchBtn").onkeydown=e=>{ if(e.key==="Enter") openCk(); };
+$("#cmdkIn").addEventListener("input",()=>{ CK=ckItems($("#cmdkIn").value); CKI=0; drawCk(); });
+$("#cmdkIn").addEventListener("keydown",e=>{ if(e.key==="ArrowDown"){ e.preventDefault(); CKI=Math.min(CKI+1,CK.length-1); drawCk(); } else if(e.key==="ArrowUp"){ e.preventDefault(); CKI=Math.max(CKI-1,0); drawCk(); } else if(e.key==="Enter"){ e.preventDefault(); runCk(CKI); } });
+$("#cmdkList").onclick=e=>{ const b=e.target.closest("[data-i]"); if(b) runCk(+b.dataset.i); };
+$("#themeBtn").onclick=()=>{ const dark=document.documentElement.dataset.theme?document.documentElement.dataset.theme==="dark":matchMedia("(prefers-color-scheme: dark)").matches; S.theme=dark?"Light":"Dark"; saveS(); applyTheme(); };
+
+/* copy the start command */
+document.addEventListener("click",e=>{ const b=e.target.closest("[data-copycmd]"); if(!b) return; e.preventDefault();
+  const done=()=>{ b.textContent="Copied"; setTimeout(()=>b.textContent="Copy",1500); snack("Command copied — paste it into Terminal"); };
+  if(navigator.clipboard) navigator.clipboard.writeText(START_CMD).then(done,()=>prompt("Copy this command:",START_CMD)); else prompt("Copy this command:",START_CMD); });
+$("#alertCmd").textContent=START_CMD;
+/* click outside closes Ask creaite and the detail panel — never while editing */
+const OPENERS="[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],#newBtn,[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg]";
+document.addEventListener("mousedown",e=>{
+  if(e.target.closest(".snack,.cal,dialog")) return;
+  if($("#chat").classList.contains("on")&&!e.target.closest("#chat")&&!e.target.closest("#askBtn,[data-ask]")) closeChat();
+  if($("#panel").classList.contains("on")&&!e.target.closest("#panel")&&!e.target.closest(OPENERS)){
+    if(EDITING){ snack(CUR&&CUR.mode==="record"?"You're editing — save or cancel first":"Finish or cancel this first"); $("#pFoot").animate([{transform:"translateX(0)"},{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"translateX(0)"}],{duration:220}); return; }
+    closePanel(); } },true);
+
+/* ======================= keyboard ======================= */
+const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable); };
+document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
+  if(e.key==="Escape"){ if($("#cmdk").open) return; if(CAL){ closeCal(); return; } if(EDITING&&CUR&&CUR.mode==="record"){ EDITING=false; drawPanel(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
+  if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
+  if(e.key==="/"){ e.preventDefault(); openChat(); return; }
+  if(e.key==="?"){ e.preventDefault(); go("help"); return; }
+  if(VIEW==="work"||VIEW==="mine"){ const L=rows(); let i=L.findIndex(x=>x.id===SEL);
+    if(e.key==="j"&&L.length){ openRecord(WT,L[Math.min(i+1,L.length-1)].id); } else if(e.key==="k"&&L.length){ openRecord(WT,L[Math.max(i-1,0)].id); }
+    else if(e.key==="e"&&CUR&&CUR.mode==="record"){ e.preventDefault(); EDITING=true; drawPanel("t"); } }
+  if(VIEW==="review"){ const trs=$$("#reviewBody tr[data-n]"); if(!trs.length) return; if(e.key==="j"){ RSEL=Math.min(RSEL+1,trs.length-1); renderReview(); } else if(e.key==="k"){ RSEL=Math.max(RSEL-1,0); renderReview(); }
+    else if(["a","r","x","e"].includes(e.key)){ const n=+trs[RSEL].dataset.n, r=REV.find(x=>x.n===n); if(e.key==="e"){ e.preventDefault(); openProposal(n); return; } if(r.done) return; if(e.key==="a") decide(n,"approved"); if(e.key==="r") decide(n,"rejected"); if(e.key==="x"){ if(r.indiv){ snack("This one needs individual approval"); return; } CHK.has(n)?CHK.delete(n):CHK.add(n); renderReview(); } } }
+});
+if(!MAC) $("#kK").textContent="Ctrl K";
+
+/* ======================= start ======================= */
+status(); renderBadge(); go("today");
+</script>
+</body>
+</html>

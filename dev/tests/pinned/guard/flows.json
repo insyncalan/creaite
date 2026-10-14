@@ -1,0 +1,1108 @@
+{
+ "approved": [
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/keep.md",
+    "to": "projects/ABC Example Programme/archive/keep.md",
+    "why": "file it"
+   },
+   "code": 3,
+   "msg": "Needs approval: it moves or renames a file that exists.",
+   "token": false
+  },
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/keep.md",
+    "to": "projects/ABC Example Programme/archive/keep.md",
+    "why": "file it"
+   },
+   "code": 3,
+   "msg": "Needs approval: it moves or renames a file that exists.",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/keep.md",
+    "to": "projects/ABC Example Programme/archive/keep.md",
+    "why": "file it"
+   },
+   "code": 3,
+   "msg": "Needs approval: it moves or renames a file that exists.",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/keep.md",
+    "to": "projects/ABC Example Programme/archive/keep.md",
+    "why": "file it"
+   },
+   "code": 0,
+   "msg": "Moved projects/ABC Example Programme/keep.md to projects/ABC Example Programme/archive/keep.md (change 5). Undo it with: python3 system/scripts/filechange.py undo",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/archive/keep.md",
+    "to": "projects/ABC Example Programme/keep.md",
+    "why": "back"
+   },
+   "code": 3,
+   "msg": "Needs approval: it moves or renames a file that exists.",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "delete",
+    "path": "projects/ABC Example Programme/keep.md",
+    "why": "tidy"
+   },
+   "code": 0,
+   "msg": "Deleted projects/ABC Example Programme/keep.md (change 7; a copy is system/backups/files/changes/0007/keep.md). Undo it with: python3 system/scripts/filechange.py undo",
+   "token": true
+  },
+  {
+   "change": {
+    "data": "<data>",
+    "op": "edit",
+    "path": "system/config/settings.json",
+    "why": "earlier"
+   },
+   "code": 0,
+   "msg": "Changed system/config/settings.json (change 9; the earlier version is system/backups/files/changes/0009/settings.json). Undo it with: python3 system/scripts/filechange.py undo",
+   "token": true
+  },
+  {
+   "change": {
+    "data": "<data>",
+    "op": "edit",
+    "path": "system/config/settings.json",
+    "why": "permissions"
+   },
+   "code": 1,
+   "msg": "Not changed: system/config/settings.json carries no permissions section. The file is as it was.",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "delete",
+    "path": ".claude/settings.json",
+    "why": "x"
+   },
+   "code": 1,
+   "msg": "Not changed: a permission or settings file is changed, never deleted or moved (its safety entries would go).",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "rename",
+    "path": "projects/ABC Example Programme/keep.md",
+    "why": "x"
+   },
+   "code": 1,
+   "msg": "Not changed: rename isn't a change filechange makes.",
+   "token": false
+  },
+  {
+   "change": {
+    "data": "<data>",
+    "op": "edit",
+    "path": "projects/ABC Example Programme/keep.md",
+    "why": ""
+   },
+   "code": 1,
+   "msg": "Not changed: say why, in up to 300 characters (--why).",
+   "token": false
+  },
+  {
+   "change": {
+    "data": "<data>",
+    "op": "edit",
+    "path": "projects/ABC Example Programme/missing.md",
+    "why": "x"
+   },
+   "code": 1,
+   "msg": "Not changed: there is no such file.",
+   "token": false
+  },
+  {
+   "change": {
+    "op": "delete",
+    "path": "projects/ABC Example Programme/missing.md",
+    "why": "x"
+   },
+   "code": 1,
+   "msg": "Not deleted: there is no such file.",
+   "token": false
+  },
+  {
+   "change": {
+    "data": "<data>",
+    "op": "create",
+    "path": "projects/ABC Example Programme/documents"
+   },
+   "code": 1,
+   "msg": "Not created: that is a folder.",
+   "token": false
+  },
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/a.md",
+    "to": "projects/ABC Example Programme/b.md",
+    "why": "x"
+   },
+   "code": 1,
+   "msg": "Not moved: projects/ABC Example Programme/b.md already exists, and creaite never overwrites.",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "move",
+    "path": "projects/ABC Example Programme/a.md",
+    "to": "projects/ABC Example Programme/c.md",
+    "why": "rename"
+   },
+   "code": 0,
+   "msg": "Moved projects/ABC Example Programme/a.md to projects/ABC Example Programme/c.md (change 12). Undo it with: python3 system/scripts/filechange.py undo",
+   "token": true
+  },
+  {
+   "change": {
+    "op": "delete",
+    "path": "projects/ABC Example Programme/b.md",
+    "why": "tidy"
+   },
+   "code": 0,
+   "msg": "Deleted projects/ABC Example Programme/b.md (change 13; a copy is system/backups/files/changes/0013/b.md). Undo it with: python3 system/scripts/filechange.py undo",
+   "token": true
+  }
+ ],
+ "files_log": [
+  {
+   "after": "<HEX>",
+   "at": "<TS>",
+   "id": 1,
+   "made_dirs": [],
+   "op": "create",
+   "path": "projects/ABC Example Programme/fresh.md",
+   "tier": "ordinary",
+   "via": "cli",
+   "why": "a new note"
+  },
+  {
+   "after": "<HEX>",
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0002/notes.md",
+   "before": "<HEX>",
+   "id": 2,
+   "op": "edit",
+   "path": "projects/ABC Example Programme/notes.md",
+   "tier": "ordinary",
+   "via": "cli",
+   "why": "rewrite"
+  },
+  {
+   "at": "<TS>",
+   "id": 3,
+   "op": "undo",
+   "path": "projects/ABC Example Programme/notes.md",
+   "undoes": 2
+  },
+  {
+   "at": "<TS>",
+   "id": 4,
+   "op": "undo",
+   "path": "projects/ABC Example Programme/fresh.md",
+   "undoes": 1
+  },
+  {
+   "after": "<HEX>",
+   "approved": true,
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0005/keep.md",
+   "id": 5,
+   "made_dirs": [
+    "projects/ABC Example Programme/archive"
+   ],
+   "op": "move",
+   "path": "projects/ABC Example Programme/keep.md",
+   "tier": "sensitive",
+   "to": "projects/ABC Example Programme/archive/keep.md",
+   "via": "dashboard",
+   "why": "file it"
+  },
+  {
+   "at": "<TS>",
+   "id": 6,
+   "op": "undo",
+   "path": "projects/ABC Example Programme/keep.md",
+   "undoes": 5
+  },
+  {
+   "approved": true,
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0007/keep.md",
+   "before": "<HEX>",
+   "id": 7,
+   "op": "delete",
+   "path": "projects/ABC Example Programme/keep.md",
+   "tier": "sensitive",
+   "via": "dashboard",
+   "why": "tidy"
+  },
+  {
+   "at": "<TS>",
+   "id": 8,
+   "op": "undo",
+   "path": "projects/ABC Example Programme/keep.md",
+   "undoes": 7
+  },
+  {
+   "after": "<HEX>",
+   "approved": true,
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0009/settings.json",
+   "before": "<HEX>",
+   "id": 9,
+   "op": "edit",
+   "path": "system/config/settings.json",
+   "tier": "sensitive",
+   "via": "dashboard",
+   "why": "earlier"
+  },
+  {
+   "after": "<HEX>",
+   "at": "<TS>",
+   "id": 10,
+   "made_dirs": [],
+   "op": "create",
+   "path": "projects/ABC Example Programme/made.md",
+   "tier": "ordinary",
+   "via": "cli",
+   "why": "made"
+  },
+  {
+   "after": "<HEX>",
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0011/a.md",
+   "before": "<HEX>",
+   "id": 11,
+   "op": "edit",
+   "path": "projects/ABC Example Programme/a.md",
+   "tier": "ordinary",
+   "via": "cli",
+   "why": "rewrite"
+  },
+  {
+   "after": "<HEX>",
+   "approved": true,
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0012/a.md",
+   "id": 12,
+   "made_dirs": [],
+   "op": "move",
+   "path": "projects/ABC Example Programme/a.md",
+   "tier": "sensitive",
+   "to": "projects/ABC Example Programme/c.md",
+   "via": "dashboard",
+   "why": "rename"
+  },
+  {
+   "approved": true,
+   "at": "<TS>",
+   "backup": "system/backups/files/changes/0013/b.md",
+   "before": "<HEX>",
+   "id": 13,
+   "op": "delete",
+   "path": "projects/ABC Example Programme/b.md",
+   "tier": "sensitive",
+   "via": "dashboard",
+   "why": "tidy"
+  }
+ ],
+ "finish_file_edit": [
+  {
+   "allow_after": [
+    "Read(**)",
+    "Edit(inbox/**)",
+    "Edit(projects/**)",
+    "Edit(system/staging/**)",
+    "Edit(system/history/**)",
+    "Edit(system/backups/**)",
+    "Edit(system/processed.txt)",
+    "Edit(dashboard.html)",
+    "Edit(system/config/settings.json)",
+    "Edit(system/config/settings-log.jsonl)",
+    "Bash(python3 system/scripts/tracker.py *)",
+    "Bash(system/scripts/run tracker.py *)",
+    "Bash(python3 system/scripts/excel_sync.py *)",
+    "Bash(system/scripts/run excel_sync.py *)",
+    "Bash(python3 system/scripts/build_dashboard.py *)",
+    "Bash(system/scripts/run build_dashboard.py *)",
+    "Bash(python3 system/scripts/doctor.py *)",
+    "Bash(system/scripts/run doctor.py *)",
+    "Bash(python3 system/scripts/docx_tools.py *)",
+    "Bash(system/scripts/run docx_tools.py *)",
+    "Bash(python3 system/scripts/minutes.py *)",
+    "Bash(system/scripts/run minutes.py *)",
+    "Bash(python3 system/scripts/review.py *)",
+    "Bash(system/scripts/run review.py *)",
+    "Bash(python3 system/scripts/live_server.py *)",
+    "Bash(system/scripts/run live_server.py *)",
+    "Bash(python3 system/scripts/sweep.py *)",
+    "Bash(system/scripts/run sweep.py *)",
+    "Bash(python3 system/scripts/session.py *)",
+    "Bash(system/scripts/run session.py *)",
+    "Bash(python3 system/scripts/propose.py *)",
+    "Bash(system/scripts/run propose.py *)",
+    "Bash(python3 system/scripts/report.py *)",
+    "Bash(system/scripts/run report.py *)",
+    "Bash(python3 system/scripts/update.py version)",
+    "Bash(system/scripts/run update.py version)",
+    "Bash(python3 system/scripts/update.py find)",
+    "Bash(system/scripts/run update.py find)",
+    "Bash(python3 system/scripts/update.py inspect *)",
+    "Bash(system/scripts/run update.py inspect *)",
+    "Bash(python3 system/scripts/update.py fetch*)",
+    "Bash(system/scripts/run update.py fetch*)",
+    "Bash(python3 system/scripts/search.py *)",
+    "Bash(system/scripts/run search.py *)",
+    "Bash(python3 system/scripts/filechange.py *)",
+    "Bash(system/scripts/run filechange.py *)",
+    "mcp__claude_ai_Microsoft_365__chat_message_search",
+    "mcp__claude_ai_Microsoft_365__find_meeting_availability",
+    "mcp__claude_ai_Microsoft_365__get_granted_scopes",
+    "mcp__claude_ai_Microsoft_365__get_me",
+    "mcp__claude_ai_Microsoft_365__outlook_calendar_search",
+    "mcp__claude_ai_Microsoft_365__outlook_email_search",
+    "mcp__claude_ai_Microsoft_365__outlook_find_available_time",
+    "mcp__claude_ai_Microsoft_365__read_resource",
+    "mcp__claude_ai_Microsoft_365__search_people",
+    "mcp__claude_ai_Microsoft_365__sharepoint_folder_search",
+    "mcp__claude_ai_Microsoft_365__sharepoint_search",
+    "mcp__claude_ai_Microsoft_365__teams_list_channel_messages",
+    "mcp__claude_ai_Microsoft_365__teams_list_channels",
+    "mcp__claude_ai_Microsoft_365__teams_list_chats",
+    "mcp__claude_ai_Microsoft_365__teams_list_teams"
+   ],
+   "case": "no change",
+   "msg": "No change was made to .claude/settings.json.",
+   "ok": true
+  },
+  {
+   "allow_after": [
+    "Read(**)",
+    "Edit(inbox/**)",
+    "Edit(projects/**)",
+    "Edit(system/staging/**)",
+    "Edit(system/history/**)",
+    "Edit(system/backups/**)",
+    "Edit(system/processed.txt)",
+    "Edit(dashboard.html)",
+    "Edit(system/config/settings.json)",
+    "Edit(system/config/settings-log.jsonl)",
+    "Bash(python3 system/scripts/tracker.py *)",
+    "Bash(system/scripts/run tracker.py *)",
+    "Bash(python3 system/scripts/excel_sync.py *)",
+    "Bash(system/scripts/run excel_sync.py *)",
+    "Bash(python3 system/scripts/build_dashboard.py *)",
+    "Bash(system/scripts/run build_dashboard.py *)",
+    "Bash(python3 system/scripts/doctor.py *)",
+    "Bash(system/scripts/run doctor.py *)",
+    "Bash(python3 system/scripts/docx_tools.py *)",
+    "Bash(system/scripts/run docx_tools.py *)",
+    "Bash(python3 system/scripts/minutes.py *)",
+    "Bash(system/scripts/run minutes.py *)",
+    "Bash(python3 system/scripts/review.py *)",
+    "Bash(system/scripts/run review.py *)",
+    "Bash(python3 system/scripts/live_server.py *)",
+    "Bash(system/scripts/run live_server.py *)",
+    "Bash(python3 system/scripts/sweep.py *)",
+    "Bash(system/scripts/run sweep.py *)",
+    "Bash(python3 system/scripts/session.py *)",
+    "Bash(system/scripts/run session.py *)",
+    "Bash(python3 system/scripts/propose.py *)",
+    "Bash(system/scripts/run propose.py *)",
+    "Bash(python3 system/scripts/report.py *)",
+    "Bash(system/scripts/run report.py *)",
+    "Bash(python3 system/scripts/update.py version)",
+    "Bash(system/scripts/run update.py version)",
+    "Bash(python3 system/scripts/update.py find)",
+    "Bash(system/scripts/run update.py find)",
+    "Bash(python3 system/scripts/update.py inspect *)",
+    "Bash(system/scripts/run update.py inspect *)",
+    "Bash(python3 system/scripts/update.py fetch*)",
+    "Bash(system/scripts/run update.py fetch*)",
+    "Bash(python3 system/scripts/search.py *)",
+    "Bash(system/scripts/run search.py *)",
+    "Bash(python3 system/scripts/filechange.py *)",
+    "Bash(system/scripts/run filechange.py *)",
+    "mcp__claude_ai_Microsoft_365__chat_message_search",
+    "mcp__claude_ai_Microsoft_365__find_meeting_availability",
+    "mcp__claude_ai_Microsoft_365__get_granted_scopes",
+    "mcp__claude_ai_Microsoft_365__get_me",
+    "mcp__claude_ai_Microsoft_365__outlook_calendar_search",
+    "mcp__claude_ai_Microsoft_365__outlook_email_search",
+    "mcp__claude_ai_Microsoft_365__outlook_find_available_time",
+    "mcp__claude_ai_Microsoft_365__read_resource",
+    "mcp__claude_ai_Microsoft_365__search_people",
+    "mcp__claude_ai_Microsoft_365__sharepoint_folder_search",
+    "mcp__claude_ai_Microsoft_365__sharepoint_search",
+    "mcp__claude_ai_Microsoft_365__teams_list_channel_messages",
+    "mcp__claude_ai_Microsoft_365__teams_list_channels",
+    "mcp__claude_ai_Microsoft_365__teams_list_chats",
+    "mcp__claude_ai_Microsoft_365__teams_list_teams"
+   ],
+   "case": "add a script",
+   "msg": "No change was made to .claude/settings.json. Bash(python3 system/scripts/report.py *) is already listed.",
+   "ok": true
+  },
+  {
+   "allow_after": [
+    "Read(**)",
+    "Edit(inbox/**)",
+    "Edit(projects/**)",
+    "Edit(system/staging/**)",
+    "Edit(system/history/**)",
+    "Edit(system/backups/**)",
+    "Edit(system/processed.txt)",
+    "Edit(dashboard.html)",
+    "Edit(system/config/settings.json)",
+    "Edit(system/config/settings-log.jsonl)",
+    "Bash(python3 system/scripts/tracker.py *)",
+    "Bash(system/scripts/run tracker.py *)",
+    "Bash(python3 system/scripts/excel_sync.py *)",
+    "Bash(system/scripts/run excel_sync.py *)",
+    "Bash(python3 system/scripts/build_dashboard.py *)",
+    "Bash(system/scripts/run build_dashboard.py *)",
+    "Bash(python3 system/scripts/doctor.py *)",
+    "Bash(system/scripts/run doctor.py *)",
+    "Bash(python3 system/scripts/docx_tools.py *)",
+    "Bash(system/scripts/run docx_tools.py *)",
+    "Bash(python3 system/scripts/minutes.py *)",
+    "Bash(system/scripts/run minutes.py *)",
+    "Bash(python3 system/scripts/review.py *)",
+    "Bash(system/scripts/run review.py *)",
+    "Bash(python3 system/scripts/live_server.py *)",
+    "Bash(system/scripts/run live_server.py *)",
+    "Bash(python3 system/scripts/sweep.py *)",
+    "Bash(system/scripts/run sweep.py *)",
+    "Bash(python3 system/scripts/session.py *)",
+    "Bash(system/scripts/run session.py *)",
+    "Bash(python3 system/scripts/propose.py *)",
+    "Bash(system/scripts/run propose.py *)",
+    "Bash(python3 system/scripts/report.py *)",
+    "Bash(system/scripts/run report.py *)",
+    "Bash(python3 system/scripts/update.py version)",
+    "Bash(system/scripts/run update.py version)",
+    "Bash(python3 system/scripts/update.py find)",
+    "Bash(system/scripts/run update.py find)",
+    "Bash(python3 system/scripts/update.py inspect *)",
+    "Bash(system/scripts/run update.py inspect *)",
+    "Bash(python3 system/scripts/update.py fetch*)",
+    "Bash(system/scripts/run update.py fetch*)",
+    "Bash(python3 system/scripts/search.py *)",
+    "Bash(system/scripts/run search.py *)",
+    "Bash(python3 system/scripts/filechange.py *)",
+    "Bash(system/scripts/run filechange.py *)",
+    "mcp__claude_ai_Microsoft_365__chat_message_search",
+    "mcp__claude_ai_Microsoft_365__find_meeting_availability",
+    "mcp__claude_ai_Microsoft_365__get_granted_scopes",
+    "mcp__claude_ai_Microsoft_365__get_me",
+    "mcp__claude_ai_Microsoft_365__outlook_calendar_search",
+    "mcp__claude_ai_Microsoft_365__outlook_email_search",
+    "mcp__claude_ai_Microsoft_365__outlook_find_available_time",
+    "mcp__claude_ai_Microsoft_365__read_resource",
+    "mcp__claude_ai_Microsoft_365__search_people",
+    "mcp__claude_ai_Microsoft_365__sharepoint_folder_search",
+    "mcp__claude_ai_Microsoft_365__sharepoint_search",
+    "mcp__claude_ai_Microsoft_365__teams_list_channel_messages",
+    "mcp__claude_ai_Microsoft_365__teams_list_channels",
+    "mcp__claude_ai_Microsoft_365__teams_list_chats",
+    "mcp__claude_ai_Microsoft_365__teams_list_teams"
+   ],
+   "case": "add Bash(*)",
+   "msg": "Not changed: the new rule Bash(*) is refused: Bash for everything is a blanket rule. .claude/settings.json is as it was.",
+   "ok": false
+  },
+  {
+   "allow_after": [
+    "Read(**)",
+    "Edit(inbox/**)",
+    "Edit(projects/**)",
+    "Edit(system/staging/**)",
+    "Edit(system/history/**)",
+    "Edit(system/backups/**)",
+    "Edit(system/processed.txt)",
+    "Edit(dashboard.html)",
+    "Edit(system/config/settings.json)",
+    "Edit(system/config/settings-log.jsonl)",
+    "Bash(python3 system/scripts/tracker.py *)",
+    "Bash(system/scripts/run tracker.py *)",
+    "Bash(python3 system/scripts/excel_sync.py *)",
+    "Bash(system/scripts/run excel_sync.py *)",
+    "Bash(python3 system/scripts/build_dashboard.py *)",
+    "Bash(system/scripts/run build_dashboard.py *)",
+    "Bash(python3 system/scripts/doctor.py *)",
+    "Bash(system/scripts/run doctor.py *)",
+    "Bash(python3 system/scripts/docx_tools.py *)",
+    "Bash(system/scripts/run docx_tools.py *)",
+    "Bash(python3 system/scripts/minutes.py *)",
+    "Bash(system/scripts/run minutes.py *)",
+    "Bash(python3 system/scripts/review.py *)",
+    "Bash(system/scripts/run review.py *)",
+    "Bash(python3 system/scripts/live_server.py *)",
+    "Bash(system/scripts/run live_server.py *)",
+    "Bash(python3 system/scripts/sweep.py *)",
+    "Bash(system/scripts/run sweep.py *)",
+    "Bash(python3 system/scripts/session.py *)",
+    "Bash(system/scripts/run session.py *)",
+    "Bash(python3 system/scripts/propose.py *)",
+    "Bash(system/scripts/run propose.py *)",
+    "Bash(python3 system/scripts/report.py *)",
+    "Bash(system/scripts/run report.py *)",
+    "Bash(python3 system/scripts/update.py version)",
+    "Bash(system/scripts/run update.py version)",
+    "Bash(python3 system/scripts/update.py find)",
+    "Bash(system/scripts/run update.py find)",
+    "Bash(python3 system/scripts/update.py inspect *)",
+    "Bash(system/scripts/run update.py inspect *)",
+    "Bash(python3 system/scripts/update.py fetch*)",
+    "Bash(system/scripts/run update.py fetch*)",
+    "Bash(python3 system/scripts/search.py *)",
+    "Bash(system/scripts/run search.py *)",
+    "Bash(python3 system/scripts/filechange.py *)",
+    "Bash(system/scripts/run filechange.py *)",
+    "mcp__claude_ai_Microsoft_365__chat_message_search",
+    "mcp__claude_ai_Microsoft_365__find_meeting_availability",
+    "mcp__claude_ai_Microsoft_365__get_granted_scopes",
+    "mcp__claude_ai_Microsoft_365__get_me",
+    "mcp__claude_ai_Microsoft_365__outlook_calendar_search",
+    "mcp__claude_ai_Microsoft_365__outlook_email_search",
+    "mcp__claude_ai_Microsoft_365__outlook_find_available_time",
+    "mcp__claude_ai_Microsoft_365__read_resource",
+    "mcp__claude_ai_Microsoft_365__search_people",
+    "mcp__claude_ai_Microsoft_365__sharepoint_folder_search",
+    "mcp__claude_ai_Microsoft_365__sharepoint_search",
+    "mcp__claude_ai_Microsoft_365__teams_list_channel_messages",
+    "mcp__claude_ai_Microsoft_365__teams_list_channels",
+    "mcp__claude_ai_Microsoft_365__teams_list_chats",
+    "mcp__claude_ai_Microsoft_365__teams_list_teams"
+   ],
+   "case": "broken file",
+   "msg": "Not changed: .claude/settings.json is no longer valid JSON. .claude/settings.json is as it was.",
+   "ok": false
+  },
+  {
+   "case": "a new Edit rule kept",
+   "msg": "Changed .claude/settings.json (change 5; the file before is system/backups/permfile-settings-<STAMP>.json).",
+   "ok": true
+  },
+  {
+   "case": "edited, then changed again by hand",
+   "msg": "Changed .claude/settings.json (change 7; the file before is system/backups/permfile-settings-<STAMP>.json).",
+   "ok": true
+  }
+ ],
+ "home_documents": [
+  "notes.txt"
+ ],
+ "project_files": [
+  "projects/ABC Example Programme/CLAUDE.md",
+  "projects/ABC Example Programme/a.md",
+  "projects/ABC Example Programme/b.md",
+  "projects/ABC Example Programme/c.md",
+  "projects/ABC Example Programme/documents/.gitkeep",
+  "projects/ABC Example Programme/documents/SOW.docx",
+  "projects/ABC Example Programme/documents/plan.md",
+  "projects/ABC Example Programme/keep.md",
+  "projects/ABC Example Programme/made.md",
+  "projects/ABC Example Programme/minutes/.gitkeep",
+  "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx",
+  "projects/ABC Example Programme/notes.md",
+  "projects/ABC Example Programme/reports/.gitkeep",
+  "projects/ABC Example Programme/transcripts/.gitkeep",
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt"
+ ],
+ "requests": [],
+ "steps": [
+  {
+   "err": "",
+   "exit": 0,
+   "out": "{\"ok\": true, \"kind\": \"ordinary\", \"reason\": \"\", \"path\": \"projects/ABC Example Programme/notes.md\", \"exists\": true}",
+   "run": [
+    "filechange.py",
+    "check",
+    "projects/ABC Example Programme/notes.md"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "{\"ok\": true, \"kind\": \"ordinary\", \"reason\": \"\", \"path\": \"projects/ABC Example Programme/notes.md\", \"exists\": true}",
+   "run": [
+    "filechange.py",
+    "check",
+    "projects/ABC Example Programme/notes.md",
+    "--edit"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Created projects/ABC Example Programme/fresh.md (change 1).",
+   "run": [
+    "filechange.py",
+    "create",
+    "projects/ABC Example Programme/fresh.md",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "a new note"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Changed projects/ABC Example Programme/notes.md (change 2; the earlier version is system/backups/files/changes/0002/notes.md). Undo it with: python3 system/scripts/filechange.py undo",
+   "run": [
+    "filechange.py",
+    "edit",
+    "projects/ABC Example Programme/notes.md",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "rewrite"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 3,
+   "out": "Needs approval: it moves or renames a file that exists. ask creaite shows such a change on a card for approval; from Terminal, make it yourself.",
+   "run": [
+    "filechange.py",
+    "move",
+    "projects/ABC Example Programme/notes.md",
+    "projects/ABC Example Programme/notes-moved.md",
+    "--why",
+    "rename"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 3,
+   "out": "Needs approval: it deletes or moves a file that exists. ask creaite shows such a change on a card for approval; from Terminal, make it yourself.",
+   "run": [
+    "filechange.py",
+    "delete",
+    "projects/ABC Example Programme/fresh.md",
+    "--why",
+    "tidy"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 3,
+   "out": "Needs approval: it changes what ask creaite may do (a permission, settings or memory file). ask creaite shows such a change on a card for approval; from Terminal, make it yourself.",
+   "run": [
+    "filechange.py",
+    "edit",
+    "system/config/settings.json",
+    "--from",
+    "system/staging/drafts/settings.json",
+    "--why",
+    "earlier sweep"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 3,
+   "out": "Needs approval: it changes what ask creaite may do (a permission, settings or memory file). ask creaite shows such a change on a card for approval; from Terminal, make it yourself.",
+   "run": [
+    "filechange.py",
+    "edit",
+    ".claude/settings.json",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "widen"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 3,
+   "out": "Needs approval: it is outside the vault and the projects folder. ask creaite shows such a change on a card for approval; from Terminal, make it yourself.",
+   "run": [
+    "filechange.py",
+    "create",
+    "<HOME>/Documents/new.txt",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "outside"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not changed: it runs commands when you log in or open Terminal.",
+   "run": [
+    "filechange.py",
+    "edit",
+    "<HOME>/.zshrc",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "never"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not changed: the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update).",
+   "run": [
+    "filechange.py",
+    "edit",
+    "system/tracker.db",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "never"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "[\n  {\n    \"id\": 1,\n    \"at\": \"<TS>\",\n    \"why\": \"a new note\",\n    \"via\": \"cli\",\n    \"tier\": \"ordinary\",\n    \"op\": \"create\",\n    \"path\": \"projects/ABC Example Programme/fresh.md\",\n    \"after\": \"<HEX>\",\n    \"made_dirs\": [],\n    \"undone\": false\n  },\n  {\n    \"id\": 2,\n    \"at\": \"<TS>\",\n    \"why\": \"rewrite\",\n    \"via\": \"cli\",\n    \"tier\": \"ordinary\",\n    \"op\": \"edit\",\n    \"path\": \"projects/ABC Example Programme/notes.md\",\n    \"backup\": \"system/backups/files/changes/0002/notes.md\",\n    \"before\": \"<HEX>\",\n    \"after\": \"<HEX>\",\n    \"undone\": false\n  }\n]",
+   "run": [
+    "filechange.py",
+    "list",
+    "--json"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "projects/ABC Example Programme/notes.md put back (change 2 undone).",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "projects/ABC Example Programme/fresh.md removed (change 1 undone).",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "[\n  {\n    \"id\": 1,\n    \"at\": \"<TS>\",\n    \"why\": \"a new note\",\n    \"via\": \"cli\",\n    \"tier\": \"ordinary\",\n    \"op\": \"create\",\n    \"path\": \"projects/ABC Example Programme/fresh.md\",\n    \"after\": \"<HEX>\",\n    \"made_dirs\": [],\n    \"undone\": true\n  },\n  {\n    \"id\": 2,\n    \"at\": \"<TS>\",\n    \"why\": \"rewrite\",\n    \"via\": \"cli\",\n    \"tier\": \"ordinary\",\n    \"op\": \"edit\",\n    \"path\": \"projects/ABC Example Programme/notes.md\",\n    \"backup\": \"system/backups/files/changes/0002/notes.md\",\n    \"before\": \"<HEX>\",\n    \"after\": \"<HEX>\",\n    \"undone\": true\n  }\n]",
+   "run": [
+    "filechange.py",
+    "list",
+    "--json"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not changed: Bash(python3 system/scripts/report.py *) is already in .claude/settings.json › permissions.allow.",
+   "run": [
+    "permissions.py",
+    "edit",
+    "settings add allow Bash(python3 system/scripts/report.py *)",
+    "--why",
+    "reports"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not changed: Bash on its own runs any command: creaite never adds it.",
+   "run": [
+    "permissions.py",
+    "edit",
+    "settings add allow Bash(*)",
+    "--why",
+    "everything"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Add Edit(inbox/**) to .claude/settings.local.json › permissions.allow (change 1). Undo it with: python3 system/scripts/permissions.py undo",
+   "run": [
+    "permissions.py",
+    "edit",
+    "local add allow Edit(inbox/**)",
+    "--why",
+    "inbox notes"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not changed: creaite only adds Bash, Edit and Write rules, written like Bash(python3 system/scripts/report.py adhoc *).",
+   "run": [
+    "permissions.py",
+    "edit",
+    "settings add allow WebFetch(domain:example.com)",
+    "--why",
+    "the client's site"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Change sweep.due_from in system/config/settings.json: \"07:00\" → \"06:30\" (change 2; the file before is system/backups/settings-<STAMP>.json). Undo it with: python3 system/scripts/permissions.py undo",
+   "run": [
+    "permissions.py",
+    "edit",
+    "config set sweep.due_from \"06:30\"",
+    "--why",
+    "earlier sweep"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "61 allow rules, 11 deny rules.\n<TS>  Edit(inbox/**) — inbox notes [cli]\n<TS>  set sweep.due_from = \"06:30\" — earlier sweep [cli]",
+   "run": [
+    "permissions.py",
+    "list"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Put sweep.due_from back to \"07:00\".",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Removed Edit(inbox/**) from .claude/settings.local.json",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "61 allow rules, 11 deny rules.\n<TS>  (undone) Edit(inbox/**) — inbox notes [cli]\n<TS>  (undone) set sweep.due_from = \"06:30\" — earlier sweep [cli]",
+   "run": [
+    "permissions.py",
+    "list"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Put the earlier .claude/settings.json back.",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not undone: .claude/settings.json has been changed since, so it is left alone. The earlier version is system/backups/permfile-settings-<STAMP>.json.",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Add Edit(inbox/x/**) to .claude/settings.local.json › permissions.allow (change 8; the file before is system/backups/claude-settings-local-<STAMP>.json). Undo it with: python3 system/scripts/permissions.py undo",
+   "run": [
+    "permissions.py",
+    "edit",
+    "local add allow Edit(inbox/x/**)",
+    "--why",
+    "x"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Remove Edit(inbox/x/**) from .claude/settings.local.json › permissions.allow (change 9; the file before is system/backups/claude-settings-local-<STAMP>.json). Undo it with: python3 system/scripts/permissions.py undo",
+   "run": [
+    "permissions.py",
+    "edit",
+    "local remove allow Edit(inbox/x/**)",
+    "--why",
+    "not needed"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Put Edit(inbox/x/**) back in .claude/settings.local.json",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Change sweep.due_from in system/config/settings.json: \"07:00\" → \"05:30\" (change 11; the file before is system/backups/settings-<STAMP>.json). Undo it with: python3 system/scripts/permissions.py undo",
+   "run": [
+    "permissions.py",
+    "edit",
+    "config set sweep.due_from \"05:30\"",
+    "--why",
+    "earliest"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not undone: sweep.due_from has been changed since, so it is left alone.",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Replace system/scripts/permissions.py (2 lines added, 0 removed; it compiles and passes the self-test) (change 12; the file before is system/backups/permissions-py-<STAMP>.py). Undo it with: python3 system/scripts/permissions.py undo",
+   "run": [
+    "permissions.py",
+    "edit",
+    "script system/staging/drafts/permissions.py",
+    "--why",
+    "a script change"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Put the earlier permissions.py back.",
+   "run": [
+    "permissions.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "63 allow rules, 11 deny rules.\n<TS>  (undone) Edit(inbox/**) — inbox notes [cli]\n<TS>  (undone) set sweep.due_from = \"06:30\" — earlier sweep [cli]\n<TS>  (undone) file .claude/settings.json edited — inbox notes folder [dashboard]\n<TS>  file .claude/settings.json edited — another folder [dashboard]\n<TS>  Edit(inbox/x/**) — x [cli]\n<TS>  (undone) remove Edit(inbox/x/**) — not needed [cli]\n<TS>  set sweep.due_from = \"05:30\" — earliest [cli]\n<TS>  (undone) script system/scripts/permissions.py — a script change [cli]",
+   "run": [
+    "permissions.py",
+    "list"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "projects/ABC Example Programme/keep.md put back (change 5 undone).",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "projects/ABC Example Programme/keep.md restored (change 7 undone).",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Created projects/ABC Example Programme/made.md (change 10).",
+   "run": [
+    "filechange.py",
+    "create",
+    "projects/ABC Example Programme/made.md",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "made"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not undone: projects/ABC Example Programme/made.md has been changed since creaite made it, so it is left alone.",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Changed projects/ABC Example Programme/a.md (change 11; the earlier version is system/backups/files/changes/0011/a.md). Undo it with: python3 system/scripts/filechange.py undo",
+   "run": [
+    "filechange.py",
+    "edit",
+    "projects/ABC Example Programme/a.md",
+    "--from",
+    "system/staging/drafts/body.md",
+    "--why",
+    "rewrite"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not undone: projects/ABC Example Programme/a.md has been changed since, so it is left alone. The earlier version is system/backups/files/changes/0011/a.md.",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not undone: projects/ABC Example Programme/c.md has been changed since, or projects/ABC Example Programme/a.md is taken, so both are left alone.",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 1,
+   "out": "Not undone: projects/ABC Example Programme/b.md exists again, so it is left alone. The copy is system/backups/files/changes/0013/b.md.",
+   "run": [
+    "filechange.py",
+    "undo"
+   ]
+  },
+  {
+   "err": "",
+   "exit": 0,
+   "out": "Nothing to undo.",
+   "run": [
+    "filechange.py",
+    "undo",
+    "1"
+   ]
+  }
+ ],
+ "zshrc": "stand-in\n"
+}

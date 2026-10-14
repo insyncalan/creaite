@@ -1,0 +1,81 @@
+exit 0
+{
+ "code": "ABC",
+ "name": "Example Programme",
+ "week_ending": "2026-10-02",
+ "week_start": "2026-09-28",
+ "blocked": 0,
+ "already_filed": false,
+ "health": null,
+ "health_reason": null,
+ "suggested_health": "At risk",
+ "reasons": [
+  "open Urgent risk or issue (ABC-005)",
+  "UAT start moved 14 days"
+ ],
+ "check_blocking_issues": [
+  "ABC-006"
+ ],
+ "actions_opened": [],
+ "actions_closed": [],
+ "overdue": [
+  {
+   "id": "ABC-A-001",
+   "text": "Escalate data access to the client CIO",
+   "owner": "Alan Carter",
+   "due": "2026-09-25"
+  }
+ ],
+ "top_risks": [
+  {
+   "id": "ABC-005",
+   "type": "Risk",
+   "text": "Vendor exits the market before go-live",
+   "priority": "Urgent",
+   "owner": "TBC",
+   "response": null
+  },
+  {
+   "id": "ABC-006",
+   "type": "Issue",
+   "text": "Test licences not ordered",
+   "priority": "High",
+   "owner": "TBC",
+   "response": null
+  }
+ ],
+ "decisions": [],
+ "decisions_needed": [],
+ "decisions_to_revisit": [],
+ "milestones": [
+  {
+   "id": "ABC-M-001",
+   "name": "UAT start",
+   "forecast": "2026-11-03",
+   "baseline": "2026-10-20",
+   "status": "Planned",
+   "slip_days": 14,
+   "percent": null,
+   "state": "Slipped",
+   "likely": "No range yet: 0 of 8 closed milestones with history"
+  }
+ ],
+ "changes": [],
+ "status_signals": [],
+ "last_update": null,
+ "current_state": "Build is two weeks behind.\n\n![Delivery plan](images/plan.png)",
+ "images": [
+  "Delivery plan"
+ ],
+ "flow": "1 opened, 0 closed; 1 overdue, the same as last week; the oldest open action is 12 days old",
+ "quiet_week": true,
+ "early_warnings": [],
+ "vip": {
+  "owners": [],
+  "unseen_alerts": []
+ },
+ "promises": {
+  "you_owe": [],
+  "waiting_on": []
+ }
+}

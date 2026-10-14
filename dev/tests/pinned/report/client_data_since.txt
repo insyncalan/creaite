@@ -1,0 +1,55 @@
+exit 0
+{
+ "code": "ABC",
+ "name": "Example Programme",
+ "client": "Example Client Ltd",
+ "last_client_report": null,
+ "period_start": "2026-09-20",
+ "period_end": "2026-10-09",
+ "needs_start_date": false,
+ "blocked": 0,
+ "health": null,
+ "health_reason": null,
+ "milestones": [],
+ "client_actions": [
+  {
+   "id": "ABC-A-002",
+   "text": "The signed statement of work.",
+   "owner": "Jane Doe (Example Client Ltd)",
+   "due": "2026-10-16",
+   "status": "In progress"
+  }
+ ],
+ "our_commitments": [
+  {
+   "id": "ABC-A-003",
+   "text": "The revised delivery plan.",
+   "owner": "Alan Carter",
+   "due": "2026-10-14",
+   "status": "In progress"
+  }
+ ],
+ "decisions": [
+  {
+   "id": "ABC-D-007",
+   "text": "Go-live remains on 20 November.",
+   "date": "2026-10-06",
+   "status": "Made",
+   "needed_by": null
+  }
+ ],
+ "risks": [
+  {
+   "id": "ABC-006",
+   "type": "Issue",
+   "text": "Test licences are not yet ordered. Testing could start late. Purchase order raised this week."
+  }
+ ],
+ "needs_client_messaging": [],
+ "excluded_high_risks": [
+  "ABC-005 Risk: Vendor exits the market before go-live (Urgent)"
+ ],
+ "client_safe_no": [
+  "- Budget overrun on phase one is being absorbed (Client-safe: no)"
+ ]
+}

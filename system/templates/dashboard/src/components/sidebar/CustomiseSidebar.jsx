@@ -1,0 +1,135 @@
+// @ts-check
+/* CustomiseSidebar (BL-319 part 6): two lists, "In the sidebar" and "In More". A page moves by dragging its handle (within
+   a list or across to the other), by its arrow buttons (Move up, Move down, Move to More or Move to the sidebar), or
+   with Alt and an arrow key on its row (↑ ↓ within the list, ← → across). Today always comes first in the sidebar;
+   Settings can live in either. Icons only collapses the sidebar. Reset to default puts back the default lists.
+   Nothing is saved until Done (Cancel, Esc or a click outside with nothing changed leave it as it was); Done saves to
+   dashboard.rail through the page's one settings route. A modal <dialog> (dev/COMPONENTS.md's Dialog): named by its
+   heading, focus to the first control, Esc closes, focus goes back to where it was opened from. Each move is said
+   aloud (a polite live region). */
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { RAIL_DEF, railCfg, railCustOpen, railItem } from "../../stores/rail.js";
+import { RailIcon } from "./RailIcon.jsx";
+
+/** @typedef {import("../../stores/rail.js").RailCfg} RailCfg */
+/** @typedef {{onSave: (cfg: RailCfg) => void, onClose: () => void}} CustomiseSidebarProps */
+/** @typedef {{top: string[], more: string[], icons: boolean}} Draft */
+
+/** @param {RailCfg} c @returns {Draft} */
+const draftOf = c => ({ top: [...c.order], more: [...c.more], icons: c.display === "icons" });
+/** @param {Draft} a @param {Draft} b */
+const same = (a, b) => a.top.join() === b.top.join() && a.more.join() === b.more.join() && a.icons === b.icons;
+
+/** Move `id` to `zone` at `at` (Today stays first; nothing else may go above it).
+    @param {Draft} d @param {string} id @param {"top"|"more"} zone @param {number} at @returns {Draft} */
+function placed(d, id, zone, at) {
+  const top = d.top.filter(x => x !== id), more = d.more.filter(x => x !== id), L = zone === "top" ? top : more;
+  L.splice(Math.max(zone === "top" ? 1 : 0, Math.min(at, L.length)), 0, id);
+  return { ...d, top, more };
+}
+
+/** @param {CustomiseSidebarProps} props */
+export function CustomiseSidebar({ onSave, onClose }) {
+  const open = railCustOpen.value;
+  const dlg = useRef(/** @type {HTMLDialogElement | null} */ (null));
+  const zones = useRef(/** @type {Record<string, HTMLUListElement | null>} */ ({}));
+  const focusNext = useRef(/** @type {[string, string] | null} */ (null));
+  const [d, setD] = useState(() => draftOf(railCfg.value));
+  const [said, setSaid] = useState("");
+  const [drag, setDrag] = useState(/** @type {string | null} */ (null));
+  const dRef = useRef(d); dRef.current = d;
+
+  useEffect(() => {
+    const el = dlg.current; if (!el) return;
+    if (open && !el.open) { setD(draftOf(railCfg.value)); setSaid(""); el.showModal(); el.querySelector("button:not(:disabled)")?.focus(); }
+    else if (!open && el.open) el.close();
+  }, [open]);
+  useLayoutEffect(() => {          /* after a move, focus stays on the control used (or its row, when that control is now disabled) */
+    const f = focusNext.current; if (!f || !dlg.current) return; focusNext.current = null;
+    const li = /** @type {HTMLElement | null} */ (dlg.current.querySelector(`li[data-rid="${f[0]}"]`));
+    const b = /** @type {HTMLButtonElement | null} */ (li && li.querySelector(`[data-mv="${f[1]}"]`));
+    (b && !b.disabled ? b : li)?.focus();
+  });
+  useEffect(() => {                /* dragging a handle: the row follows the pointer, within a list or across to the other */
+    if (!drag) return;
+    /** @param {PointerEvent} e */
+    const move = e => {
+      /** @param {"top"|"more"} k */
+      const off = k => { const r = zones.current[k]?.getBoundingClientRect(); return r ? Math.abs(e.clientX - (r.left + r.width / 2)) : Infinity; };
+      const zone = off("top") <= off("more") ? "top" : "more";
+      const rows = [...(zones.current[zone]?.querySelectorAll("li[data-rid]") || [])].filter(li => /** @type {HTMLElement} */ (li).dataset.rid !== drag);
+      let at = rows.findIndex(li => { const r = li.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
+      if (at < 0) at = rows.length;
+      const next = placed(dRef.current, drag, zone, at);
+      if (!same(next, dRef.current)) setD(next);
+    };
+    const up = () => { const id = drag; setDrag(null); setSaid(`${railItem(id).title} moved`); };
+    document.addEventListener("pointermove", move); document.addEventListener("pointerup", up);
+    return () => { document.removeEventListener("pointermove", move); document.removeEventListener("pointerup", up); };
+  }, [drag]);
+
+  /** @param {string} id @param {"up"|"down"|"swap"} how */
+  const mv = (id, how) => {
+    const zone = d.top.includes(id) ? "top" : "more", L = zone === "top" ? d.top : d.more, i = L.indexOf(id);
+    if (id === "today") return;
+    if (how === "swap") { const to = zone === "top" ? "more" : "top"; setD(placed(d, id, to, (to === "top" ? d.top : d.more).length));
+      setSaid(`${railItem(id).title} moved to ${to === "top" ? "the sidebar" : "More"}`); }
+    else { const j = i + (how === "up" ? -1 : 1); if (j < (zone === "top" ? 1 : 0) || j >= L.length) return;
+      setD(placed(d, id, zone, j)); setSaid(`${railItem(id).title} moved ${how}, ${j + 1} of ${L.length}`); }
+    focusNext.current = [id, how];
+  };
+  /** @param {KeyboardEvent} e */
+  const rowKeys = e => {
+    const li = /** @type {HTMLElement | null} */ (/** @type {Element} */ (e.target).closest("li[data-rid]"));
+    if (!li || !e.altKey) return; const id = li.dataset.rid, inTop = d.top.includes(id);
+    const how = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: inTop ? null : "swap", ArrowRight: inTop ? "swap" : null }[e.key];
+    if (!how) return; e.preventDefault(); mv(id, /** @type {"up"|"down"|"swap"} */ (how));
+  };
+  const done = () => { onSave({ order: d.top, more: d.more, hidden: [], display: d.icons ? "icons" : "titles" }); dlg.current?.close(); };
+
+  /** @param {string} id @param {"top"|"more"} zone @param {number} i @param {number} n */
+  const row = (id, zone, i, n) => {
+    const it = railItem(id), fixed = id === "today", to = zone === "top" ? "More" : "the sidebar";
+    return (
+      <li key={id} data-rid={id} tabindex={-1} class={`rpi${drag === id ? " dragging" : ""}`} aria-label={it.title}>
+        <span class="grip" data-rgrip aria-hidden="true" hidden={fixed}
+          onPointerDown={e => { if (e.button !== 0) return; e.preventDefault(); try { /** @type {Element} */ (e.currentTarget).setPointerCapture(e.pointerId); } catch (x) { /* a synthetic pointer */ } setDrag(id); }}>
+          <RailIcon name="grip" />
+        </span>
+        <span class="rpn"><RailIcon name={it.icon} /><span class="rpt"><span>{it.title}</span>{fixed ? <span class="why">Always first</span> : null}</span></span>
+        {fixed ? null : <>
+          <button type="button" class="ib sm" data-mv="up" aria-label={`Move ${it.title} up`} data-tip={`Move ${it.title} up`}
+            disabled={i <= (zone === "top" ? 1 : 0)} onClick={() => mv(id, "up")}><RailIcon name="up" /></button>
+          <button type="button" class="ib sm" data-mv="down" aria-label={`Move ${it.title} down`} data-tip={`Move ${it.title} down`}
+            disabled={i >= n - 1} onClick={() => mv(id, "down")}><RailIcon name="down" /></button>
+          <button type="button" class="ib sm" data-mv="swap" aria-label={`Move ${it.title} to ${to}`} data-tip={`Move to ${to}`}
+            onClick={() => mv(id, "swap")}><RailIcon name={zone === "top" ? "right" : "left"} /></button>
+        </>}
+      </li>
+    );
+  };
+  return (
+    <dialog id="railCust" ref={dlg} aria-labelledby="railCustH" aria-describedby="railCustSub"
+      onClose={onClose} onClick={e => { if (e.target === dlg.current && same(d, draftOf(railCfg.value))) dlg.current.close(); }}>
+      <h2 id="railCustH">Customise sidebar</h2>
+      <p class="sub" id="railCustSub">Drag a handle between the two lists, or use the arrows (Alt with an arrow key on a row). Today always comes first; Settings can live in either.</p>
+      <div class="rccols" onKeyDown={rowKeys}>
+        <div><h3 id="railCustTop">In the sidebar</h3>
+          <ul aria-labelledby="railCustTop" data-zone="top" ref={el => { zones.current.top = el; }}>{d.top.map((id, i) => row(id, "top", i, d.top.length))}</ul></div>
+        <div><h3 id="railCustMore">In More</h3>
+          <ul aria-labelledby="railCustMore" data-zone="more" ref={el => { zones.current.more = el; }}>{d.more.map((id, i) => row(id, "more", i, d.more.length))}</ul>
+          {d.more.length ? null : <p class="sub rcempty">Empty: More is hidden.</p>}</div>
+      </div>
+      <label class="rcicons"><input type="checkbox" class="switch" role="switch" id="railCustIcons" checked={d.icons}
+        onChange={e => setD({ ...d, icons: /** @type {HTMLInputElement} */ (e.currentTarget).checked })} /> Icons only</label>
+      <p class="vh" aria-live="polite">{said}</p>
+      <div class="rcfoot">
+        <button type="button" class="btn quiet" id="railCustReset"
+          onClick={() => { setD(draftOf(RAIL_DEF)); setSaid("Back to the default sidebar"); }}>Reset to default</button>
+        <span class="grow"></span>
+        <button type="button" class="btn" id="railCustCancel" onClick={() => dlg.current?.close()}>Cancel</button>
+        <button type="button" class="btn primary" id="railCustDone" onClick={done}>Done</button>
+      </div>
+    </dialog>
+  );
+}

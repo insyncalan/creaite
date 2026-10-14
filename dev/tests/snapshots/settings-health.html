@@ -1,0 +1,297 @@
+<section class="view" id="v-settings">
+<div class="wrapmax">
+<h1>Settings</h1>
+<div class="setlayout">
+<div class="setside">
+<input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
+<label class="setchg">
+<input type="checkbox" id="setChanged"> Show changed only</label>
+<nav class="setcats" id="setcats" aria-label="Settings categories">
+<button data-scat="essentials" aria-selected="false">Essentials</button>
+<button data-scat="people" aria-selected="false">People and projects</button>
+<button data-scat="advanced" aria-selected="false">Advanced</button>
+<button data-scat="health" aria-selected="true">Health</button>
+</nav>
+<select id="setcatsel" class="setcatsel" aria-label="Settings category">
+<option value="essentials">Essentials</option>
+<option value="people">People and projects</option>
+<option value="advanced">Advanced</option>
+<option value="health" selected="">Health</option>
+</select>
+</div>
+<div id="settingsBody">
+<div class="setstack">
+<div class="setmount" id="set-health" data-sec="health" data-mount="">
+<div class="card wide" id="healthCard">
+<div class="hhead">
+<h2>Health</h2>
+<span class="sub" role="status">Checked 09-10-2026 09:00</span>
+<button type="button" class="btn" id="healthCheck">Check again</button>
+</div>
+<p class="sub hsum">1 thing needs you.</p>
+<ul class="hlist" aria-label="What needs you">
+<li class="hrow" data-check="offsite_backup">
+<span class="hico warn" aria-hidden="true">!</span>
+<div class="hbody">
+<div class="t">No copy of the backup in OneDrive yet <span class="tag warn">Worth a look</span>
+</div>
+<div class="d">Made after the next daily backup</div>
+</div>
+<div class="hact">
+<button type="button" class="btn" aria-expanded="false">How to fix</button>
+</div>
+</li>
+</ul>
+<details class="hfine">
+<summary>22 checks fine</summary>
+<p class="sub">Database, Backups</p>
+</details>
+<h3 class="hsub">If you need them</h3>
+<ul class="hlist" aria-label="Fixes no check can see">
+<li class="hrow" data-fix="m365">
+<span class="hico" aria-hidden="true">
+</span>
+<div class="hbody">
+<div class="t">Microsoft 365 isn't connected</div>
+<div class="d">Open Claude's connector settings, where you reconnect Microsoft 365 yourself.</div>
+</div>
+<div class="hact">
+<button type="button" class="btn primary" aria-label="Open connector settings: Microsoft 365 isn't connected">Open connector settings</button>
+</div>
+</li>
+</ul>
+<div class="hrestore" id="backupRestore">
+<h3 class="hsub">Restore from a backup</h3>
+<p class="sub">Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched.</p>
+<button type="button" class="btn" id="backupList">Choose a backup…</button>
+</div>
+<h3 class="hsub">After every update, creaite does this for you</h3>
+<ul class="hsteps">
+<li>Backs up first, and rolls back if a step fails</li>
+<li>Makes this vault's launcher again</li>
+<li>Asks Chrome to refresh its copy of the app's icon</li>
+<li>Restarts the live server on the new version, and runs the health check</li>
+</ul>
+</div>
+</div>
+<div class="card" id="liveCard" data-sec="live">
+<h2>Live server and backups</h2>
+<div class="srow">
+<div>
+<span id="sr#1">Status</span>
+<small id="sr#1h">127.0.0.1, required</small>
+</div>
+<div>
+<span class="h-ok">Running</span>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#2">Mail, Teams and data</span>
+</div>
+<div>Mail and Teams never swept · data as of 09-10-2026 08:01</div>
+</div>
+<div class="srow chg">
+<div>
+<span id="sr#3">Port</span>
+<span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
+</span>
+<small id="sr#3h">The creaite app belongs to this port: if you change it, install the app again and reconnect the vault</small>
+</div>
+<div>
+<input aria-labelledby="sr#3" aria-describedby="sr#3h" type="number" data-k="port" value="8766" min="0" style="width:#px">
+</div>
+</div>
+<div class="srow" style="display:block">
+<div>Start the live server<small>Paste into Terminal</small>
+</div>
+<div class="cmdbox">
+<code>cd <VAULT> &amp;&amp; python3 system/scripts/live_server.py</code>
+<button type="button" class="ib sm" aria-label="Copy the command" data-tip="Copy the command" data-copycmd="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="copy">
+<rect x="8" y="8" width="13" height="13" rx="2">
+</rect>
+<path d="M4 16V5a2 2 0 0 1 2-2h10">
+</path>
+</svg>
+</button>
+</div>
+</div>
+<div style="display:flex;gap:#px;margin-top:#px">
+<button type="button" class="ib bd" aria-label="Check now" data-tip="Check now" id="liveCheck">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="refresh">
+<path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8">
+</path>
+<path d="M21 3v5h-5">
+</path>
+</svg>
+</button>
+</div>
+</div>
+<div class="card" id="suCard" data-sec="setup">
+<h2>Set-up</h2>
+<p class="sub">The set-up steps the page can do, and the two it can’t. Each runs on your click; nothing here is a new permission.</p>
+<div class="srow">
+<div>
+<span id="sr#4">Health check</span>
+<small id="sr#4h">The same checks as “health check” in Claude Code (doctor.py): it only reads</small>
+</div>
+<div>
+<button type="button" class="btn" id="suHealth">Run the health check</button>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#5">Rebuild the dashboard and Excel view</span>
+<small id="sr#5h">From the tracker; nothing in the tracker changes</small>
+</div>
+<div>
+<button type="button" class="btn" id="suRebuild">Rebuild…</button>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#6">Microsoft 365</span>
+<small id="sr#6h">Connected in Claude itself, so the page can’t do it: connect Microsoft 365 there (Settings › Connectors), then say this in Claude Code. The first sweep confirms it</small>
+</div>
+<div>
+<span class="sub">Not confirmed yet</span>
+</div>
+</div>
+<div class="sucmd">
+<code>setup: check Microsoft 365</code>
+<button type="button" class="mini" data-sucopy="m365">Copy</button>
+<button type="button" class="mini" data-sucheck="m365">Check again</button>
+</div>
+<div class="srow">
+<div>
+<span id="sr#7">Launcher</span>
+<small id="sr#7h">A small app that opens creaite in its own window and starts the live server. It goes outside the vault, so the page can’t make it: paste this into Terminal</small>
+</div>
+<div>
+<span class="sub">Not made yet</span>
+</div>
+</div>
+<div class="sucmd">
+<code>cd <VAULT> &amp;&amp; python3 system/scripts/launch.py make-launcher</code>
+<button type="button" class="mini" data-sucopy="launch">Copy</button>
+<button type="button" class="mini" data-sucheck="launch">Check again</button>
+</div>
+<div class="srow">
+<div>
+<span id="sr#8">The rest of set-up</span>
+<small id="sr#8h">Your name and role, the projects folder, git and the optional schedules are a conversation: in Claude Code say</small>
+</div>
+<div>
+</div>
+</div>
+<div class="sucmd">
+<code>setup</code>
+<button type="button" class="mini" data-sucopy="setup">Copy</button>
+</div>
+</div>
+<div class="card" id="diagCard" data-sec="diag">
+<h2>Diagnostics</h2>
+<div class="srow">
+<div>
+<span id="sr#9">Log level</span>
+<small id="sr#9h">info keeps a line for what creaite did and for every error, for the last 7 days; debug adds detail while you chase a fault</small>
+</div>
+<div>
+<select aria-labelledby="sr#9" aria-describedby="sr#9h" id="diagLevel">
+<option value="info" selected="">info</option>
+<option value="debug">debug</option>
+</select>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#10">Log folder</span>
+<small id="sr#10h">2 days of log, in system/logs</small>
+</div>
+<div>
+<button class="btn" id="diagOpen">Open the folder</button>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#11">Report</span>
+<small id="sr#11h">The version, the health check, the safe settings and the last 200 log lines, for pasting into a chat: no names, addresses or paths</small>
+</div>
+<div>
+<button class="btn" id="diagCopy">Copy diagnostics</button>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#12">Refused commands</span>
+<small id="sr#12h">Commands ask creaite's guard refused in the last 7 days, by shape. Counts only, never the command. A rise means its instruction to run each script on its own isn't holding</small>
+</div>
+<div>
+<span id="diagRefused">None in the last 7 days</span>
+</div>
+</div>
+<div class="pph" style="margin-top:#px">Latest errors <span class="sub">· last 7 days</span>
+<button class="mini" id="diagRefresh">Refresh</button>
+</div>
+<div id="diagList">
+<div class="sub">No errors in the last 7 days.</div>
+</div>
+<div id="diagOut">
+</div>
+</div>
+<div class="card" id="updCard" data-sec="version">
+<h2>creaite version</h2>
+<div class="srow">
+<div>
+<span id="sr#13">Installed</span>
+</div>
+<div>Not set</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#14">Update</span>
+<small id="sr#14h">Save a creaite-X.Y.Z.zip from GitHub in system/releases</small>
+</div>
+<div>
+<span class="sub">Up to date</span>
+</div>
+</div>
+<div class="srow">
+<div>
+<span id="sr#15">Install from a file</span>
+<small id="sr#15h">The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”</small>
+</div>
+<div>
+<button class="btn" id="updFile">Choose zip…</button>
+<input aria-labelledby="sr#15" aria-describedby="sr#15h" type="file" id="updPick" accept=".zip" hidden="">
+</div>
+</div>
+<div id="updPlan">
+</div>
+</div>
+<div class="card" id="dangerCard" data-sec="danger">
+<h2>Stop the live server</h2>
+<div class="srow">
+<div>
+<span id="sr#16">Stop the live server</span>
+<small id="sr#16h">Open creaite again from its launcher or Terminal. Edits wait until it is running again</small>
+</div>
+<div>
+<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:#px;display:flex;align-items:center;gap:#px">
+<div style="flex:1">
+<h2>Help and documentation</h2>
+<div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div>
+</div>
+<button class="btn" data-go="help">Open help</button>
+</div>
+<p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+</div>
+</section>

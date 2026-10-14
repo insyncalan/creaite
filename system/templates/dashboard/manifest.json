@@ -1,0 +1,8 @@
+{
+ "about": "BL-231: the dashboard page's source. dev/tools/split_dashboard.py build puts shell.html, style.css and the app script together into system/templates/dashboard.html. The app script is src/main.js and every module it imports, bundled by the pinned esbuild (dev/tools/build_dashboard_js.py).",
+ "shell": "shell.html",
+ "css": "style.css",
+ "css_slot": "/*__SPLIT_CSS__*/",
+ "script_slot": "/*__SPLIT_SCRIPT__*/",
+ "entry": "src/main.js"
+}

@@ -1,0 +1,8 @@
+{
+  "include": ["../system/scripts"],
+  "exclude": ["../system/scripts/vendor", "../system/scripts/__pycache__"],
+  "extraPaths": ["../system/scripts", "../system/scripts/vendor"],
+  "pythonVersion": "3.9",
+  "typeCheckingMode": "basic",
+  "reportMissingModuleSource": "none"
+}

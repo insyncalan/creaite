@@ -1,0 +1,20 @@
+{
+ "source": "system/templates/dashboard.html",
+ "summary": {
+  "check_py_count": 0,
+  "wrappers": 0,
+  "chains": 0,
+  "not_wrappers": 0,
+  "missed_by_check_py": [],
+  "replacements": 0,
+  "early_references": 0,
+  "early_calls": 0,
+  "mid_chain_references": 0,
+  "other_assignments": 0,
+  "no_definition": [],
+  "defined_twice": []
+ },
+ "chains": [],
+ "not_wrappers": [],
+ "batches": []
+}

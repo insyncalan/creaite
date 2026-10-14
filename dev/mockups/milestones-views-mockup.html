@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Milestones: Plan and Movement views mockup</title>
+<style>
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#8A949D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --new:#6B3FA0; --new-soft:#EFE7F8;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340;}}
+:root[data-theme="dark"]{
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340;}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button,input,select,textarea{font:inherit;color:inherit}
+:is(button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1180px;margin:0 auto;padding:24px 16px 72px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600}
+.lede{color:var(--muted);margin:0 0 14px;max-width:880px}
+.hint{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;vertical-align:1px;white-space:nowrap}
+.tag.new{background:var(--new-soft);color:var(--new)} .tag.keep{background:var(--sunk);color:var(--muted)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.acc{background:var(--accent-soft);color:var(--accent)}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.spacer{flex:1}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;background:var(--surface);overflow:hidden}
+.seg button{border:0;background:none;height:34px;padding:0 16px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.tg{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:34px;padding:0 15px;cursor:pointer;font-size:13px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:32px;padding:0 13px;cursor:pointer;font-size:13px}
+.btn:hover{background:var(--sunk)} .btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)} .btn.pri:hover{filter:brightness(1.08)}
+.btn.sm{height:28px;padding:0 10px;font-size:12px} .btn.danger{color:var(--bad);border-color:var(--bad)}
+
+.shell{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:18px 20px 22px}
+.shell.clientmode{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card h3{margin:0 0 2px;font-size:14px;font-weight:600}
+.cap{color:var(--muted);font-size:12px;margin:0 0 10px}
+.apph{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 8px}
+.apph h2{margin:0;font-size:18px;font-weight:600}
+.answer{font-size:15px;margin:6px 0 14px;max-width:900px} .answer b{font-weight:600}
+.banner{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 14px;margin:0 0 12px;font-size:13px}
+.banner.int{border-color:var(--line);background:var(--sunk);color:var(--muted)}
+
+.st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;white-space:nowrap}
+.st svg{flex:none}
+.st.achieved{color:var(--ok)} .st.ontrack{color:var(--accent)} .st.atrisk{color:var(--warn)} .st.slipped{color:var(--bad)} .st.overdue{color:var(--bad)}
+
+/* the strip: names and dates on the milestones, placed so they never overlap */
+.strip{position:relative;margin:2px 4px 6px}
+.strip .ax{position:absolute;left:0;right:0;top:44px;height:2px;background:var(--line)}
+.strip .mon{position:absolute;top:0;font-size:11px;color:var(--faint);padding-left:4px;border-left:1px solid var(--line);height:44px}
+.strip .today{position:absolute;top:0;width:1px;background:var(--accent);bottom:0;z-index:0} .strip .today span{position:absolute;top:14px;left:4px;font-size:11px;color:var(--accent);background:var(--surface);padding:0 2px}
+.mk{position:absolute;top:34px;transform:translateX(-50%);width:22px;height:22px;display:grid;place-items:center;border:0;background:var(--surface);border-radius:50%;cursor:pointer;padding:0;z-index:2}
+.mk:hover{background:var(--sunk)}
+.ghost{position:absolute;top:38px;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;border:2px dashed var(--bad);z-index:1}
+.lead{position:absolute;width:1px;background:var(--line);z-index:0}
+.lab{position:absolute;text-align:center;border:0;background:none;cursor:pointer;padding:2px 4px;border-radius:6px;font-size:12px;line-height:1.3;white-space:nowrap;z-index:1}
+.lab:hover{background:var(--sunk)} .lab b{display:block;font-weight:600;font-size:12px;color:var(--ink)} .lab span{color:var(--muted)}
+.lab.late span{color:var(--bad);font-weight:600}
+
+.prow{display:grid;grid-template-columns:minmax(0,1.7fr) 130px 210px 210px;gap:12px;align-items:start;padding:12px 6px;border-top:1px solid var(--line);cursor:pointer;border-radius:6px}
+.prow:hover{background:var(--sunk)} .prow:first-of-type{border-top:0}
+.prow .nm{font-weight:600} .prow .done-when{color:var(--muted);font-size:12px;margin-top:2px}
+.prow .dt{font-size:15px;font-weight:600} .prow .exp{font-size:12px;color:var(--bad);font-weight:500;margin-top:2px}
+.pct{font-size:12px;color:var(--muted)} .pct .b{height:7px;border-radius:99px;background:var(--sunk);overflow:hidden;margin:4px 0 3px;max-width:190px} .pct .b i{display:block;height:100%;background:var(--accent)}
+.pct b{color:var(--ink);font-weight:600}
+.cw{font-size:12px;color:var(--muted);font-style:italic;margin-top:2px}
+.lbl{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}
+.achv{border-top:1px solid var(--line);padding:10px 6px}
+.achv summary{cursor:pointer;color:var(--muted);font-size:13px}
+.hintrow{color:var(--muted);font-size:12px;margin:8px 6px 0}
+@media (max-width:900px){.prow{grid-template-columns:1fr}}
+
+.lh,.lrow{display:grid;grid-template-columns:260px 1fr 190px;gap:14px;align-items:center}
+.lh{padding:0 8px 4px;color:var(--muted);font-size:11px}
+.lrow{padding:8px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+.lrow:hover{background:var(--sunk)} .lrow[aria-selected="true"]{background:var(--accent-soft);border-color:var(--accent)}
+.lrow .nm{font-weight:600} .lrow .sub{font-size:12px;color:var(--muted)}
+.track{position:relative;height:34px}
+.track .tm{position:absolute;top:0;bottom:0;width:1px;background:var(--line)}
+.track .td{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--accent);z-index:1}
+.track .conn{position:absolute;top:16px;height:3px;border-radius:2px;background:var(--bad);opacity:.55}
+.track .orig{position:absolute;top:12px;width:11px;height:11px;border:2px solid var(--faint);transform:translateX(-50%) rotate(45deg);background:var(--surface)}
+.track .agr{position:absolute;top:8px;width:3px;height:19px;background:var(--ink);transform:translateX(-50%);border-radius:2px}
+.track .fc{position:absolute;top:7px;transform:translateX(-50%);z-index:2}
+.chips{display:flex;flex-direction:column;gap:3px;align-items:flex-start;font-size:12px}
+.chips .v{font-weight:600} .chips .v.bad{color:var(--bad)} .chips .v.ok{color:var(--ok)}
+.hdrtrack{position:relative;height:16px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin:10px 8px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+@media (max-width:900px){.lh{display:none}.lrow{grid-template-columns:1fr}}
+
+.grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-top:12px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+.dchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
+.dchips span{background:var(--sunk);border-radius:8px;padding:3px 9px;font-size:12px;color:var(--muted)} .dchips b{color:var(--ink);font-weight:600}
+svg.tr text{font:11px var(--font);fill:var(--muted)}
+.log{list-style:none;margin:0;padding:0}
+.log li{padding:9px 0 9px 14px;border-left:2px solid var(--line);margin-left:4px;position:relative}
+.log li::before{content:"";position:absolute;left:-6px;top:14px;width:9px;height:9px;border-radius:50%;background:var(--surface);border:2px solid var(--faint)}
+.log li.rb::before{border-color:var(--accent);background:var(--accent)} .log li.mv::before{border-color:var(--bad)} .log li.rk::before{border-color:var(--warn)} .log li.dn::before{border-color:var(--ok);background:var(--ok)}
+.log .w{font-size:12px;color:var(--muted)} .log .c{font-weight:500}
+.adj{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 0}
+.form{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);display:grid;gap:10px;grid-template-columns:1fr 1fr}
+.form label,.fld{display:grid;gap:3px;font-size:12px;color:var(--muted)} .form .full{grid-column:1/-1}
+input[type=text],select,textarea,input[type=number]{border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 10px;height:34px;width:100%}
+textarea{height:auto;min-height:64px;padding:8px 10px;resize:vertical}
+.err{color:var(--bad);font-size:12px;min-height:1em}
+.form .err{grid-column:1/-1}
+.snack{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:var(--surface);border-radius:10px;padding:10px 14px;display:flex;gap:14px;align-items:center;z-index:30;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:92vw}
+.snack[hidden]{display:none} .snack button{background:none;border:0;font-weight:600;cursor:pointer;color:var(--accent);filter:brightness(1.6)}
+.notes{margin:16px 0 0;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:900px){.notes{grid-template-columns:1fr}}
+.notes .card{font-size:13px} .notes b{display:block;margin-bottom:3px}
+
+/* the peek: edits a milestone, each change saved on its own */
+.peek{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-14px 0 32px rgba(0,0,0,.18);z-index:20;display:flex;flex-direction:column}
+.peek[hidden]{display:none}
+.peek.shake{animation:shake .32s}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@media (prefers-reduced-motion:reduce){.peek.shake{animation:none}}
+.peek.enter{animation:slidein .16s ease-out}
+@keyframes slidein{from{transform:translateX(28px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.peek.enter{animation:none}}
+.pkbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+.pkbar .id{color:var(--muted);font-size:12px}
+.pkbody{flex:1;overflow:auto;padding:4px 22px 28px}
+.ttl{width:100%;border:0;background:none;font-size:20px;font-weight:600;padding:6px 0;height:auto;border-radius:6px}
+.pkbody .dchips{margin-top:8px}
+.ttl:hover{background:var(--sunk)} .ttl:focus{background:var(--sunk);outline:2px solid var(--accent)}
+.pksec{margin:18px 0 0;padding-top:14px;border-top:1px solid var(--line)}
+.pksec h4{margin:0 0 6px;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.explain{font-size:13px;background:var(--sunk);border-radius:8px;padding:8px 10px;margin:0 0 10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.inl{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:8px;padding:10px;background:var(--sunk);border-radius:8px}
+.inl .fld{flex:1;min-width:140px}
+.inl[hidden]{display:none}
+.sw{appearance:none;width:36px;height:20px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;border:0;flex:none;padding:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--surface)}
+.sw[aria-checked="true"]{background:var(--accent)} .sw[aria-checked="true"]::after{left:18px}
+.swrow{display:flex;gap:10px;align-items:center;margin:0 0 8px}
+.rng{display:flex;gap:12px;align-items:center} .rng input[type=range]{flex:1} .rng input[type=number]{width:84px}
+
+/* scrolling plan line */
+.stripbar{display:flex;gap:8px;align-items:center;margin:0 0 6px}
+.stripwrap{overflow-x:auto;overflow-y:hidden;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 0 4px;margin:0 0 12px}
+.strip{margin:0 10px}
+.mk.achieved{background:var(--ok-soft)}
+.lab.ok b{color:var(--ok)} .lab.ok span{color:var(--ok);font-weight:600}
+.strip .achline{position:absolute;top:44px;height:4px;background:var(--ok);opacity:.55;border-radius:2px;margin-top:-1px}
+/* state field */
+.stopts{display:flex;gap:6px;flex-wrap:wrap}
+.so{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;height:32px;padding:0 12px;cursor:pointer;font-size:13px;font-weight:500}
+.so:hover{background:var(--sunk)} .so.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.so.on svg{background:var(--surface);border-radius:50%}
+.explain.warn{border-left:3px solid var(--warn)}
+.explain button{margin-left:6px}
+.sugg{font-size:12px;color:var(--warn);margin-top:3px}
+/* date picker button and calendar */
+.dp{display:inline-flex;align-items:center;gap:8px;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 10px;cursor:pointer;font-size:14px;min-width:150px;justify-content:space-between}
+.dp:hover{background:var(--sunk)} .dp.chg{border-color:var(--accent);background:var(--accent-soft)}
+.cal{position:fixed;z-index:40;width:292px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.22);padding:10px}
+.cal[hidden],.pop[hidden]{display:none}
+.calh{display:flex;align-items:center;gap:6px;margin:0 0 6px} .calh b{flex:1;text-align:center;font-weight:600}
+.calh button,.caln{border:0;background:none;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:16px} .calh button:hover{background:var(--sunk)}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.calg .wd{font-size:11px;color:var(--faint);padding:4px 0}
+.calg button{border:0;background:none;height:34px;border-radius:8px;cursor:pointer;font-size:13px}
+.calg button:hover{background:var(--sunk)} .calg button.wk{color:var(--faint)}
+.calg button.td{box-shadow:inset 0 0 0 1px var(--accent)} .calg button.sel{background:var(--accent);color:var(--accent-ink)}
+.calf{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:var(--muted)}
+/* owner combobox */
+.cbbtn{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:34px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:0 10px;cursor:pointer;text-align:left}
+.cbbtn:hover{background:var(--sunk)} .cbbtn small{color:var(--muted)}
+.pop{position:fixed;z-index:40;width:300px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.22);padding:8px}
+.pop input[type=text]{margin:0 0 6px}
+.pop ul{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto}
+.pop li{padding:7px 9px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:13px} .pop li small{color:var(--muted)}
+.pop li[aria-selected="true"]{background:var(--accent-soft)} .pop li.add{color:var(--accent);font-weight:600}
+.pop .addf{display:grid;gap:8px;padding:8px 4px 4px}
+
+.detog{display:flex;justify-content:flex-start;margin:-6px 0 2px}
+.detog button{border:0;background:none;color:var(--faint);font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:2px 4px;border-radius:6px}
+.detog button:hover{color:var(--muted);background:var(--sunk)}
+.lab.gl b{color:var(--bad);font-weight:600} .lab.gl span{color:var(--muted)}
+.gconn{position:absolute;top:44px;height:0;border-top:2px dashed var(--bad);opacity:.7;z-index:0;margin-top:0}
+.chiprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;color:var(--ink)} .chip small{color:var(--muted)}
+.chip button{border:0;background:none;cursor:pointer;width:20px;height:20px;border-radius:50%;color:var(--muted);font-size:14px;line-height:1} .chip button:hover{background:var(--sunk)}
+.cbbtn.small{width:auto;display:inline-flex;height:28px;font-size:12px;border-radius:999px;color:var(--accent);font-weight:600}
+
+.crumb{font-size:12px;color:var(--muted);margin:0 0 6px} .crumb a{color:var(--accent);text-decoration:none} .crumb a:hover{text-decoration:underline}
+.h1{font-size:22px;margin:0;font-weight:600}
+.mcard{border-radius:12px;padding:14px 16px;background:var(--surface)}
+.mcard.internal{border:2px dashed var(--faint)}
+.mcard.client{border:2px solid var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.mhead{display:flex;align-items:center;gap:10px;margin:0 0 8px} .mhead h2{margin:0;font-size:16px;font-weight:600}
+.vpill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.vpill.int{background:var(--ink);color:var(--surface)} .vpill.cli{background:var(--accent);color:var(--accent-ink)}
+.iconb{border:0;background:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--faint);cursor:pointer;padding:0}
+.iconb:hover{background:var(--sunk);color:var(--ink)} .iconb[aria-pressed="true"]{color:var(--accent)}
+.hidenote{font-size:12px;color:var(--ink);background:var(--accent-soft);border-radius:8px;padding:5px 10px;margin:0 0 8px}
+.cock{display:grid;grid-template-columns:2fr 1fr;gap:14px;align-items:start}
+@media (max-width:900px){.cock{grid-template-columns:1fr}}
+.col{display:grid;gap:14px;min-width:0}
+.cock>*{min-width:0}
+.mcard,.stripwrap{min-width:0;max-width:100%}
+.shell{min-width:0}
+.evrow{display:flex;gap:30px;flex-wrap:wrap;margin-top:12px}
+.evbox{min-width:90px} .evbox .v{font-size:22px;font-weight:600;display:flex;align-items:center;gap:6px} .evbox .l{font-size:12px;color:var(--muted)}
+.evbox.click{cursor:pointer;border-radius:8px;padding:2px 6px;margin:-2px -6px} .evbox.click:hover{background:var(--sunk)}
+.evbox .v.bad{color:var(--bad)}
+.ph .row{padding:7px 0;border-top:1px solid var(--line);font-size:13px} .ph .row:first-of-type{border-top:0} .ph .row small{display:block;color:var(--muted);font-size:12px}
+.ph h3{margin:0 0 6px}
+.compact .prow{grid-template-columns:minmax(0,1.4fr) 112px 150px 130px;gap:8px;padding:10px 4px}
+.compact .prow .dt{font-size:13px}
+@media (max-width:900px){.compact .prow{grid-template-columns:1fr}}
+.pageh{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.seg button[aria-disabled="true"]{opacity:.45;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1 class="t">Milestones: Plan and Movement <span class="tag new">Mockup v6</span></h1>
+  <p class="lede">Falcon Data Platform, illustrative data (today is 11-10-2026). The mockup starts on the <b>cockpit</b>. Its Milestones card shows the <b>Plan</b> only, with a discreet switch icon (Internal view / Client view) and the pencil, which opens the full page <b>Milestones: Plan and Movement</b>. The breadcrumb returns. Click any milestone to edit it (a click outside the panel closes it). Your view choice and the details toggle are remembered in this browser.</p>
+  <div class="ctl">
+    <span class="hint">Try the switch icon, the pencil, and the Milestone slip metric.</span>
+    <span class="spacer"></span>
+    <button class="tg" id="reset">Reset data</button>
+    <button class="tg" id="theme" aria-pressed="false">Dark</button>
+  </div>
+  <section class="shell" id="shell"></section>
+
+  <div class="notes">
+    <div class="card"><b>Three dates, one actual</b>Original (first agreed), Agreed (the current baseline after any rebaseline) and Forecast (what you now expect). Achieved milestones stay on the plan line in green, at the date they were achieved.</div>
+    <div class="card"><b>State is yours to set</b>Pick any state. creaite shows what the dates suggest and asks for a one-line reason only if you pick something better than the dates support, as it does for project health. Leave it alone and it follows the dates.</div>
+    <div class="card"><b>Progress is yours too</b>A percentage you set by hand, never calculated from actions. The description (scope and needs) lives in the editor, not under the milestone.</div>
+  </div>
+</div>
+
+<aside class="peek" id="peek" hidden role="dialog" aria-label="Edit milestone"></aside>
+<div class="cal" id="cal" hidden role="dialog" aria-label="Choose a date"></div>
+<div class="pop" id="pop" hidden></div>
+<div class="snack" id="snack" hidden role="status"><span id="snackt"></span><button id="undo" hidden>Undo</button></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return [].slice.call((r||document).querySelectorAll(s))};
+function D(s){var p=s.split('-');return Date.UTC(+p[2],+p[1]-1,+p[0])}
+function F(t){var x=new Date(t);return ('0'+x.getUTCDate()).slice(-2)+'-'+('0'+(x.getUTCMonth()+1)).slice(-2)+'-'+x.getUTCFullYear()}
+function days(a,b){return Math.round((a-b)/864e5)}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var TODAYS='11-10-2026', TODAY=D(TODAYS);
+
+var PEOPLE0=[{n:'Alan Carter',o:'Brightwater'},{n:'Jo Banks',o:'Brightwater'},{n:'Lena Fischer',o:'Brightwater'},{n:'Noah Price',o:'Brightwater'},{n:'Ivo',o:'Brightwater'},
+  {n:'Rashid Al Suwaidi',o:'Northgate Energy'},{n:'Mia Hale',o:'Northgate Energy'},{n:'Sara Khan',o:'Northgate Energy'}];
+var PEOPLE=PEOPLE0.slice();
+
+/* state: stored on the milestone and edited by you; `suggest` is what the dates say */
+function seed(){return [
+ {id:'FAL-M-001',n:'Build complete',desc:'Build of the ingestion pipeline, curated store and reporting layer for domains 1 to 3, handed to test. Needs the environment ready and code frozen.',owner:'Jo Banks',orig:'13-09-2026',agr:'13-09-2026',fc:'13-09-2026',actual:'13-09-2026',state:'achieved',manual:false,client:true,cw:'The build finished on the agreed date.',pct:100,note:'',hist:[],
+  log:[{d:'13-09-2026',c:'Achieved on the agreed date',w:'Weekly report 18-09-2026',k:'dn'}]},
+ {id:'FAL-M-005',n:'Production data access granted',desc:'Production data for domains 1 to 3 made available to the platform in Northgate’s environment. Needs Northgate to grant access, with security sign-off attached to the request.',owner:'Rashid Al Suwaidi',orig:'01-10-2026',agr:'01-10-2026',fc:'16-10-2026',state:'overdue',manual:false,client:true,cw:'This is needed from Northgate before user acceptance testing can start.',pct:50,note:'Request re-submitted with security sign-off attached. Escalated to the sponsor.',
+  hist:[['04-09-2026','01-10-2026','01-10-2026'],['11-09-2026','01-10-2026','01-10-2026'],['18-09-2026','01-10-2026','01-10-2026'],['25-09-2026','01-10-2026','01-10-2026'],['02-10-2026','16-10-2026','01-10-2026'],['09-10-2026','16-10-2026','01-10-2026']],
+  log:[{d:'28-09-2026',c:'Forecast moved 01-10-2026 to 16-10-2026 (+15 days)',w:'Request re-submitted with security sign-off attached. Weekly report 02-10-2026',k:'mv'}]},
+ {id:'FAL-M-006',n:'Security review signed off',desc:'Security review of the ingestion pipeline and the new internal data store. Needs the pipeline design pack and a reviewer from Northgate security.',owner:'Lena Fischer',orig:'16-10-2026',agr:'16-10-2026',fc:'16-10-2026',state:'atrisk',manual:true,why:'Open 23 days against our usual 11.',client:false,cw:'',pct:60,note:'',hist:[],
+  log:[{d:'09-10-2026',c:'State changed On track to At risk',w:'Open 23 days against our usual 11.',k:'st'}]},
+ {id:'FAL-M-002',n:'UAT start',desc:'Northgate users start acceptance testing against production-like data. Needs production data access, an agreed test plan and named test users.',owner:'Jo Banks',orig:'03-11-2026',agr:'03-11-2026',fc:'03-11-2026',state:'atrisk',manual:true,why:'Cannot start until production data access is granted.',client:true,cw:'Start depends on production data access.',pct:30,note:'',hist:[],
+  log:[{d:'05-10-2026',c:'State changed On track to At risk',w:'Cannot start until production data access is granted.',k:'st'}]},
+ {id:'FAL-M-003',n:'Go-live',desc:'Platform live for Northgate users, with sponsor sign-off. Needs UAT exit, Design Authority approval of the architecture change and an agreed cutover plan.',owner:'Alan Carter',orig:'21-11-2026',agr:'12-12-2026',fc:'19-12-2026',state:'slipped',manual:false,client:true,cw:'Dates depend on production data access and the Design Authority review.',pct:0,note:'Sponsor call weekly until go-live (decided 04-10-2026).',
+  hist:[['04-09-2026','21-11-2026','21-11-2026'],['11-09-2026','21-11-2026','21-11-2026'],['18-09-2026','21-11-2026','21-11-2026'],['25-09-2026','05-12-2026','21-11-2026'],['02-10-2026','12-12-2026','12-12-2026'],['09-10-2026','19-12-2026','12-12-2026']],
+  log:[{d:'25-09-2026',c:'Forecast moved 21-11-2026 to 05-12-2026 (+14 days)',w:'Production data access not granted. Weekly report 25-09-2026',k:'mv'},
+       {d:'01-10-2026',c:'Rebaselined: agreed date 21-11-2026 to 12-12-2026',w:'Agreed with the Northgate steering committee. Decision FAL-D-003',k:'rb'},
+       {d:'09-10-2026',c:'Forecast moved 12-12-2026 to 19-12-2026 (+7 days against agreed)',w:'Security review still open 23 days; Design Authority submission pending. Weekly report 09-10-2026',k:'mv'}]},
+ {id:'FAL-M-004',n:'Hypercare complete',desc:'Four weeks of supported running after go-live, ending in handover to business as usual. Needs a support rota and an agreed list of known issues.',owner:'Ivo',orig:'30-01-2027',agr:'30-01-2027',fc:'06-02-2027',state:'slipped',manual:false,client:true,cw:'Follows go-live.',pct:0,note:'',
+  hist:[['04-09-2026','30-01-2027','30-01-2027'],['11-09-2026','30-01-2027','30-01-2027'],['18-09-2026','30-01-2027','30-01-2027'],['25-09-2026','30-01-2027','30-01-2027'],['02-10-2026','30-01-2027','30-01-2027'],['09-10-2026','06-02-2027','30-01-2027']],
+  log:[{d:'09-10-2026',c:'Forecast moved 30-01-2027 to 06-02-2027 (+7 days)',w:'Knock-on from Go-live. Weekly report 09-10-2026',k:'mv'}]}
+]}
+var PREF='creaite.cockpit.milestones.details';
+function loadPref(){try{var v=localStorage.getItem(PREF);return v===null?true:v==='1'}catch(e){return true}}
+function savePref(v){try{localStorage.setItem(PREF,v?'1':'0')}catch(e){}}
+var DETAILS=loadPref();
+var VPREF='creaite.cockpit.milestones.view';
+function loadView(){try{return localStorage.getItem(VPREF)==='cli'?'cli':'int'}catch(e){return 'int'}}
+function saveView(v){try{localStorage.setItem(VPREF,v)}catch(e){}}
+var M=seed(), route='cockpit', view='plan', aud=loadView(), sel='FAL-M-003', RB=null, peekId=null, peekOpener=null, FLOW=null, PEND=null, snackT, SCROLL=0;
+
+var WORD={achieved:'Achieved',ontrack:'On track',atrisk:'At risk',slipped:'Slipped',overdue:'Overdue'};
+var CWORD={achieved:'Achieved',ontrack:'On plan',atrisk:'At risk',slipped:'Expected later',overdue:'Late'};
+var RANK={achieved:0,ontrack:1,atrisk:2,slipped:3,overdue:4};
+function stateOf(m){return m.state}
+function suggest(m){ if(D(m.agr)<TODAY)return 'overdue'; if(D(m.fc)>D(m.agr))return 'slipped'; return 'ontrack'}
+function sugWhy(m){var s=suggest(m);return s==='overdue'?'the agreed date ('+m.agr+') has passed':s==='slipped'?'the forecast ('+m.fc+') is later than the agreed date ('+m.agr+')':'the forecast equals the agreed date'}
+function mismatch(m){return m.state!=='achieved'&&RANK[m.state]<RANK[suggest(m)]}
+function refollow(m){if(!m.manual&&m.state!=='achieved')m.state=suggest(m)}
+function shape(st,sz){sz=sz||16;
+  var p={achieved:'<circle cx="8" cy="8" r="7" fill="var(--ok-soft)" stroke="var(--ok)" stroke-width="1.5"/><path d="M4.6 8.2l2.3 2.3 4.5-4.7" fill="none" stroke="var(--ok)" stroke-width="1.8"/>',
+   ontrack:'<circle cx="8" cy="8" r="6" fill="var(--accent)"/>',
+   atrisk:'<path d="M8 1.5 15 14H1z" fill="var(--warn-soft)" stroke="var(--warn)" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6v4M8 11.6v.2" stroke="var(--warn)" stroke-width="1.6"/>',
+   slipped:'<path d="M8 1 15 8 8 15 1 8z" fill="var(--bad-soft)" stroke="var(--bad)" stroke-width="1.5" stroke-linejoin="round"/>',
+   overdue:'<circle cx="8" cy="8" r="7" fill="var(--bad)"/><path d="M5.3 5.3l5.4 5.4M10.7 5.3l-5.4 5.4" stroke="#fff" stroke-width="1.8"/>'}[st];
+  return '<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 16 16" aria-hidden="true">'+p+'</svg>'}
+function stTag(st,client){return '<span class="st '+st+'">'+shape(st)+(client?CWORD[st]:WORD[st])+'</span>'}
+
+/* the plan line starts early enough to keep achieved milestones on it; it scrolls sideways */
+var A0=D('01-09-2026'), A1=D('28-02-2027'), PXD=8, WIDTH=Math.round((A1-A0)/864e5*PXD);
+function px(t){return (t-A0)/864e5*PXD}
+function pos(t){return ((t-A0)/(A1-A0)*100).toFixed(2)+'%'}
+var MONTHS=['01-09-2026','01-10-2026','01-11-2026','01-12-2026','01-01-2027','01-02-2027'], MN=['Sep','Oct','Nov','Dec','Jan','Feb'];
+var LA0=D('28-09-2026'), LA1=D('20-02-2027'); function lpos(t){return ((t-LA0)/(LA1-LA0)*100).toFixed(2)+'%'}
+var LMONTHS=['01-10-2026','01-11-2026','01-12-2026','01-01-2027','01-02-2027'], LMN=['Oct','Nov','Dec','Jan','Feb'];
+
+function snack(t,undo){var s=$('#snack');$('#snackt').textContent=t;var u=$('#undo');u.hidden=!undo;u.onclick=function(){undo&&undo();s.hidden=true};s.hidden=false;clearTimeout(snackT);snackT=setTimeout(function(){s.hidden=true},6000)}
+function get(id){return M.filter(function(m){return m.id===id})[0]}
+function live(){return M.filter(function(m){return !m.cancelled})}
+function vis(){return live().filter(function(m){return aud==='int'||view==='move'||m.client})}
+function open(){return vis().filter(function(m){return m.state!=='achieved'}).sort(function(a,b){return D(a.agr)-D(b.agr)})}
+function when(m){return m.state==='achieved'?m.actual:m.agr}
+function moves(m){return m.log.filter(function(l){return l.k==='mv'||l.k==='rb'}).length}
+function commit(label,fn){var before=JSON.stringify(M),pe=JSON.stringify(PEOPLE);fn();draw();if(peekId)drawPeek();snack(label,function(){M=JSON.parse(before);PEOPLE=JSON.parse(pe);draw();if(peekId)drawPeek()})}
+
+/* ===== date picker: a button that opens a calendar ===== */
+var DPH={}, CAL={anchor:null,cb:null,view:{y:2026,m:9},sel:0,focus:0,id:null};
+var CALICO='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+function dpBtn(id,val,label,fn,chg){DPH[id]=fn;return '<button type="button" class="dp'+(chg?' chg':'')+'" id="'+id+'" data-dp="'+val+'" aria-haspopup="dialog" aria-label="'+esc(label)+', '+val+'"><span>'+val+'</span>'+CALICO+'</button>'}
+function calOpen(btn){popClose();CAL.anchor=btn;CAL.id=btn.id;CAL.cb=DPH[btn.id];var v=D(btn.dataset.dp),d=new Date(v);CAL.sel=v;CAL.focus=v;CAL.view={y:d.getUTCFullYear(),m:d.getUTCMonth()};calDraw(true);calPlace()}
+function calClose(refocus){var c=$('#cal');c.hidden=true;if(refocus&&CAL.id){var b=document.getElementById(CAL.id);b&&b.focus()}}
+var MNAME=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function calDraw(focus){
+  var c=$('#cal'),y=CAL.view.y,m=CAL.view.m,first=Date.UTC(y,m,1),off=(new Date(first).getUTCDay()+6)%7,n=new Date(Date.UTC(y,m+1,0)).getUTCDate(),h='';
+  h+='<div class="calh"><button type="button" data-cm="-1" aria-label="Previous month">‹</button><b aria-live="polite">'+MNAME[m]+' '+y+'</b><button type="button" data-cm="1" aria-label="Next month">›</button></div><div class="calg" role="grid">';
+  ['Mo','Tu','We','Th','Fr','Sa','Su'].forEach(function(w){h+='<div class="wd" aria-hidden="true">'+w+'</div>'});
+  for(var i=0;i<off;i++)h+='<span></span>';
+  for(var d=1;d<=n;d++){var t=Date.UTC(y,m,d),wd=(off+d-1)%7>=5;
+    h+='<button type="button" data-t="'+t+'" tabindex="'+(t===CAL.focus?0:-1)+'" class="'+(wd?'wk ':'')+(t===TODAY?'td ':'')+(t===CAL.sel?'sel':'')+'" aria-label="'+d+' '+MNAME[m]+' '+y+(wd?', weekend':'')+'"'+(t===CAL.sel?' aria-pressed="true"':'')+'>'+d+'</button>'}
+  h+='</div><div class="calf"><span>Weekends are muted</span><button type="button" class="btn sm" data-today="1">Today</button></div>';
+  c.innerHTML=h;c.hidden=false;
+  if(focus){var f=$('button[data-t="'+CAL.focus+'"]',c)||$('button[data-t]',c);f&&f.focus()}
+}
+function calPlace(){var c=$('#cal'),r=CAL.anchor.getBoundingClientRect(),h=c.offsetHeight,w=c.offsetWidth,top=r.bottom+6,left=r.left;
+  if(left+w>innerWidth-8)left=innerWidth-w-8;if(left<8)left=8;if(top+h>innerHeight-8)top=Math.max(8,r.top-h-6);c.style.top=top+'px';c.style.left=left+'px'}
+function calPick(t){var cb=CAL.cb,id=CAL.id;calClose(false);cb&&cb(F(+t));setTimeout(function(){var b=document.getElementById(id);b&&b.focus()},0)}
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('[data-dp]'); if(b){e.preventDefault();calOpen(b);return}
+  var c=$('#cal'); if(!c.hidden){
+    var cm=e.target.closest('[data-cm]'); if(cm){CAL.view.m+=+cm.dataset.cm;if(CAL.view.m<0){CAL.view.m=11;CAL.view.y--}if(CAL.view.m>11){CAL.view.m=0;CAL.view.y++}CAL.focus=Date.UTC(CAL.view.y,CAL.view.m,1);calDraw(false);calPlace();return}
+    var dd=e.target.closest('button[data-t]'); if(dd&&c.contains(dd)){calPick(dd.dataset.t);return}
+    if(e.target.closest('[data-today]')){calPick(TODAY);return}
+    if(!c.contains(e.target))calClose(false)}
+  var p=$('#pop'); if(!p.hidden&&!p.contains(e.target)&&!e.target.closest('.cbbtn'))popClose();
+});
+$('#cal').addEventListener('keydown',function(e){var k=e.key,step={ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7}[k];
+  if(k==='Escape'){e.preventDefault();e.stopPropagation();calClose(true);return}
+  if(step!==undefined){e.preventDefault();CAL.focus+=step*864e5;var d=new Date(CAL.focus);CAL.view={y:d.getUTCFullYear(),m:d.getUTCMonth()};calDraw(true);calPlace()}
+  else if(k==='PageUp'||k==='PageDown'){e.preventDefault();var d2=new Date(CAL.focus);CAL.focus=Date.UTC(d2.getUTCFullYear(),d2.getUTCMonth()+(k==='PageUp'?-1:1),d2.getUTCDate());var d3=new Date(CAL.focus);CAL.view={y:d3.getUTCFullYear(),m:d3.getUTCMonth()};calDraw(true);calPlace()}});
+
+/* ===== owner: pick from the people list, or add a new person ===== */
+var POP={cb:null,cur:'',q:'',idx:0,adding:false,anchorId:null};
+function ownerBtn(id,cur,fn){DPH[id]=fn;return '<button type="button" class="cbbtn" id="'+id+'" aria-haspopup="listbox" aria-label="Owner, '+esc(cur)+'"><span>'+esc(cur)+orgOf(cur)+'</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>'}
+function ownerBtnSmall(id,label,fn){DPH[id]=fn;return '<button type="button" class="cbbtn small" id="'+id+'" aria-haspopup="listbox" aria-label="'+esc(label)+'">+ '+esc(label)+'</button>'}
+function orgOf(n){var p=PEOPLE.filter(function(x){return x.n===n})[0];return p?' <small>'+esc(p.o)+'</small>':''}
+function popOpen(btn){calClose(false);POP.anchorId=btn.id;POP.cb=DPH[btn.id];POP.cur=btn.getAttribute('aria-label').replace(/^Owner, /,'');POP.q='';POP.idx=0;POP.adding=false;popDraw();popPlace();var q=$('#popQ');q&&q.focus()}
+function popClose(){var p=$('#pop');if(!p.hidden){p.hidden=true;var b=document.getElementById(POP.anchorId);b&&b.focus()}}
+function popItems(){var q=POP.q.trim().toLowerCase(),L=PEOPLE.filter(function(p){return !q||p.n.toLowerCase().indexOf(q)>-1||p.o.toLowerCase().indexOf(q)>-1});
+  var exact=PEOPLE.some(function(p){return p.n.toLowerCase()===q});if(q&&!exact)L=L.concat([{add:true,n:POP.q.trim()}]);return L}
+function popDraw(){var p=$('#pop'),L=popItems(),h;
+  if(POP.adding){h='<div class="addf"><b>Add a new person</b><label class="fld">Full name<input type="text" id="addN" value="'+esc(POP.q.trim())+'"></label><label class="fld">Organisation<input type="text" id="addO" placeholder="For example Northgate Energy"></label><div class="err" id="addE" role="alert"></div><div style="display:flex;gap:8px"><button type="button" class="btn pri" id="addGo">Add and use</button><button type="button" class="btn" id="addNo">Back</button></div></div>'}
+  else{h='<input type="text" id="popQ" placeholder="Search people, or type a new name" value="'+esc(POP.q)+'" aria-label="Search people" autocomplete="off"><ul role="listbox" id="popL" aria-label="People">'+
+    L.map(function(x,i){return x.add?'<li role="option" class="add" data-add="1" aria-selected="'+(i===POP.idx)+'">+ Add “'+esc(x.n)+'” as a new person</li>':'<li role="option" data-n="'+esc(x.n)+'" aria-selected="'+(i===POP.idx)+'"><span>'+esc(x.n)+(x.n===POP.cur?' ✓':'')+'</span><small>'+esc(x.o)+'</small></li>'}).join('')+'</ul>'}
+  p.innerHTML=h;p.hidden=false;
+  var q=$('#popQ');if(q){q.oninput=function(){POP.q=q.value;POP.idx=0;var pos=q.selectionStart;popDraw();var q2=$('#popQ');q2.focus();q2.setSelectionRange(pos,pos)};q.onkeydown=function(e){var n=popItems().length;
+      if(e.key==='ArrowDown'){e.preventDefault();POP.idx=(POP.idx+1)%n;popDraw();$('#popQ').focus()}else if(e.key==='ArrowUp'){e.preventDefault();POP.idx=(POP.idx-1+n)%n;popDraw();$('#popQ').focus()}
+      else if(e.key==='Enter'){e.preventDefault();popChoose(popItems()[POP.idx])}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();popClose()}}}
+  $$('#pop li').forEach(function(li,i){li.onclick=function(){popChoose(popItems()[i])}});
+  var go=$('#addGo');if(go){go.onclick=function(){var n=$('#addN').value.trim(),o=$('#addO').value.trim();if(!n){$('#addE').textContent='Give the person a name.';return}if(!o){$('#addE').textContent='Add their organisation.';$('#addO').focus();return}
+      var cb=POP.cb;PEOPLE.push({n:n,o:o});popClose();cb&&cb(n,true)};$('#addNo').onclick=function(){POP.adding=false;popDraw();$('#popQ').focus()};$('#addN').focus()}
+}
+function popChoose(x){if(!x)return;if(x.add){POP.q=x.n;POP.adding=true;popDraw();return}var cb=POP.cb;popClose();cb&&cb(x.n,false)}
+function popPlace(){var p=$('#pop'),r=document.getElementById(POP.anchorId).getBoundingClientRect(),h=p.offsetHeight,w=p.offsetWidth,top=r.bottom+6,left=r.left;
+  if(left+w>innerWidth-8)left=innerWidth-w-8;if(top+h>innerHeight-8)top=Math.max(8,r.top-h-6);p.style.top=top+'px';p.style.left=left+'px'}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.cbbtn');if(b){e.preventDefault();popOpen(b)}});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!$('#pop').hidden){popClose()}});
+
+function pctBlock(m){var p=m.pct==null?null:m.pct;
+  if(p==null)return '<div class="lbl">Progress</div><div class="pct">Not set</div>';
+  return '<div class="lbl">Progress</div><div class="pct"><b>'+p+'% complete</b><div class="b" role="img" aria-label="'+p+' percent complete"><i style="width:'+p+'%"></i></div></div>'}
+
+/* ===== PLAN: one component, used by the cockpit card and by the page ===== */
+var EYE='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+var EYEOFF='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M17.9 17.9A10 10 0 0 1 12 19C5.5 19 2 12 2 12a17 17 0 0 1 4.1-5M9.9 5.2A9 9 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M3 3l18 18"/></svg>';
+function vpill(cli){return cli?'<span class="vpill cli">'+EYE+' Client view</span>':'<span class="vpill int">'+EYEOFF+' Internal view</span>'}
+function hiddenCount(){return live().filter(function(m){return !m.client&&m.state!=='achieved'}).length}
+function planBody(cli){
+  var all=vis().sort(function(a,b){return D(when(a))-D(when(b))}), h='';
+  h+='<div class="stripbar"><button class="btn sm" id="sL" aria-label="Scroll left">‹</button><button class="btn sm" id="sR" aria-label="Scroll right">›</button><button class="btn sm" id="sT">Today</button><span class="hint">Sep 2026 to Feb 2027</span></div>'+
+     '<div class="stripwrap" id="sw" tabindex="0" aria-label="Milestone plan line, scrolls sideways"><div class="strip" id="strip" style="width:'+WIDTH+'px"></div></div>';
+  h+='<div class="detog"><button type="button" id="detog" aria-expanded="'+DETAILS+'" aria-controls="mrows"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" style="transform:rotate('+(DETAILS?0:-90)+'deg)"><path d="M1 3l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>'+(DETAILS?'Hide milestone details':'Show milestone details')+'</button></div>';
+  h+='<div id="mrows"'+(DETAILS?'':' hidden')+'>';
+  all.forEach(function(m){var st=stateOf(m),moved=m.state!=='achieved'&&D(m.fc)>D(m.agr),rb=m.orig!==m.agr;
+    h+='<div class="prow" role="button" tabindex="0" data-edit="'+m.id+'" aria-label="Edit '+esc(m.n)+'" title="'+esc(m.desc)+'">'+
+      '<div><div class="nm">'+esc(m.n)+(!m.client?' <span class="tag keep">Internal only</span>':'')+'</div>'+(cli&&m.cw?'<div class="cw">'+esc(m.cw)+'</div>':'')+'</div>'+
+      '<div><div class="lbl">State</div>'+stTag(st,cli)+(!cli&&mismatch(m)?'<div class="sugg">Dates suggest '+WORD[suggest(m)]+'</div>':'')+'</div>'+
+      '<div><div class="lbl">'+(m.state==='achieved'?'Achieved':'Agreed date')+'</div><div class="dt"'+(m.state==='achieved'?' style="color:var(--ok)"':'')+'>'+(m.state==='achieved'?m.actual:m.agr)+'</div>'+(m.state==='achieved'?'<div class="hint">Agreed '+m.agr+(m.actual===m.agr?' · on the agreed date':'')+'</div>':'')+(moved?'<div class="exp">Expected '+m.fc+' ('+days(D(m.fc),D(m.agr))+' days later)</div>':'')+(rb?'<div class="hint">Revised from '+m.orig+', agreed at steering 01-10-2026 (decision FAL-D-003)</div>':'')+'</div>'+
+      '<div>'+pctBlock(m)+'</div></div>'});
+  h+='</div>';
+  return h}
+function hideNote(){var n=hiddenCount();return '<div class="hidenote"><b>This is what a client sees.</b> '+n+' internal milestone'+(n===1?'':'s')+' hidden; no notes, no movement history.</div>'}
+
+/* ===== the cockpit (context is static; the milestone card is real) ===== */
+var WARN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" stroke-width="2.2" aria-hidden="true"><path d="M12 3 2.5 20h19z"/><path d="M12 10v4M12 17v.5"/></svg>';
+function maxSlip(){var v=0;open().forEach(function(m){v=Math.max(v,days(D(m.fc),D(m.agr)))});return v}
+function cockpit(){
+  var cli=aud==='cli', slip=maxSlip(), h='';
+  h+='<nav class="crumb" aria-label="Breadcrumb">Projects › <span aria-current="page">Falcon Data Platform</span></nav><div class="pageh"><h1 class="h1">Falcon Data Platform</h1><span class="hint">Northgate Energy · client reports weekly</span></div>';
+  h+='<div class="cock"><div class="col">';
+  h+='<div class="card"><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><b style="color:var(--bad);font-size:17px">Off track</b><span class="hint">Go-live moved 3 weeks after the data access delay</span></div><div class="evrow">'+
+     '<div class="evbox"><div class="v">0</div><div class="l">Overdue actions</div></div>'+
+     '<div class="evbox"><div class="v bad">'+WARN+' 1</div><div class="l">Urgent risks</div></div>'+
+     '<div class="evbox click" id="slip" role="link" tabindex="0" title="Open milestones: Movement"><div class="v '+(slip?'bad':'')+'">'+(slip?WARN+' '+slip+'d':'None')+'</div><div class="l">Milestone slip</div></div>'+
+     '<div class="evbox"><div class="v">1</div><div class="l">Due 7d</div></div></div></div>';
+  h+='<div class="mcard '+(cli?'client':'internal')+' compact" id="mcard"><div class="mhead"><h2>Milestones</h2>'+vpill(cli)+'<span class="spacer"></span>'+
+     '<button class="iconb" id="swv" aria-pressed="'+cli+'" title="'+(cli?'Switch to internal view':'Switch to client view')+'" aria-label="'+(cli?'Switch to internal view':'Switch to client view')+'"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 7h12l-3-3M17 17H5l3 3"/></svg></button>'+
+     '<button class="iconb" id="pencil" title="Open milestones: Plan and Movement" aria-label="Open milestones: Plan and Movement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/></svg></button></div>'+(cli?hideNote():'')+planBody(cli)+'</div>';
+  h+='<div class="card ph"><h3>Actions due or overdue <span class="hint">· 3</span></h3><div class="row">Yesterday · Locate original Falcon design authority submission for reuse<small>Noah Price</small></div><div class="row">In 6 days · Test next-phase ideas with Miguel and Ben<small>Ivo</small></div><div class="row">In 6 days · Complete first pass of Design Authority template<small>Jo Banks</small></div></div>';
+  h+='</div><div class="col"><div class="card ph"><h3>Top risks and issues</h3><div class="row"><b style="color:var(--bad)">Urgent</b> Issue · Production data access not granted<small>Access request re-submitted with security sign-off attached</small></div><div class="row"><b style="color:var(--bad)">Urgent</b> Risk · App creates a new internal data store<small>We will work the weekend and get the time back</small></div><div class="row"><b>Medium</b> Risk · Domain 3 schema changes arrive late<small>No response yet</small></div></div>'+
+     '<div class="card ph"><h3>Recent decisions</h3><div class="row">Weekly sponsor call until go-live<small>04-10-2026 · Steering committee</small></div><div class="row">Go-live moves to 12-12-2026<small>01-10-2026 · Steering committee</small></div></div></div></div>';
+  return h}
+
+/* ===== the full page: Milestones: Plan and Movement ===== */
+function pageView(){
+  var cli=aud==='cli', h='';
+  h+='<nav class="crumb" aria-label="Breadcrumb">Projects › <a href="#cockpit" id="crumbHome">Falcon Data Platform</a> › <span aria-current="page">Milestones</span></nav>';
+  h+='<div class="pageh"><h1 class="h1">Milestones: Plan and Movement</h1><span class="spacer"></span><button class="btn pri" id="addMs">+ Add milestone</button></div>';
+  h+='<div class="ctl"><div class="seg" role="group" aria-label="Milestone view"><button id="vPlan" aria-pressed="'+(view==='plan')+'">Plan</button><button id="vMove" aria-pressed="'+(view==='move')+'"'+(cli?' aria-disabled="true" title="Movement is internal only and is hidden in Client view"':'')+'>Movement <span class="tag keep">Internal</span></button></div>'+
+     '<div class="seg" role="group" aria-label="Audience"><button id="aInt" aria-pressed="'+(!cli)+'">Internal view</button><button id="aCli" aria-pressed="'+cli+'">Client view</button></div><span class="hint">Address: #milestones=FAL&amp;v='+(view==='move'?'movement':'plan')+'</span></div>';
+  if(view==='move'){
+    h+='<div class="mcard internal"><div class="mhead"><h2>Movement</h2>'+vpill(false)+'<span class="tag warn">Internal only: never in client output</span></div>'+movement()+'</div>';
+    return h}
+  var all=vis(), list=open(), doneN=all.length-list.length, late=list.filter(function(m){return stateOf(m)==='overdue'}), gl=get('FAL-M-003');
+  var ans=late.length?'<b>'+esc(late[0].n)+'</b> is late: agreed '+late[0].agr+', now expected '+late[0].fc+'. ':'';
+  ans+=gl&&gl.state!=='achieved'&&!gl.cancelled?'<b>Go-live</b> is agreed for '+gl.agr+(D(gl.fc)>D(gl.agr)?' and now expected '+gl.fc+'.':'.'):'';
+  h+='<div class="mcard '+(cli?'client':'internal')+'"><div class="mhead"><h2>Plan</h2>'+vpill(cli)+'</div>'+(cli?hideNote():'<div class="banner int">Internal view includes internal-only milestones and a note where a state differs from what the dates suggest. Switch to Client view to see what a client sees.</div>')+
+     '<p class="answer">'+ans+' '+doneN+' achieved, '+list.length+' to come.</p><p class="cap">Every milestone sits on the line, achieved ones in green; a dashed ring shows where we now expect a later one. Scroll sideways for the whole line. Select a milestone to edit it.</p>'+planBody(cli)+'</div>';
+  return h}
+
+/* place names and dates on the line so none overlap */
+function layoutStrip(){
+  var el=$('#strip'); if(!el)return; var cli=aud==='cli', list=vis().sort(function(a,b){return D(when(a))-D(when(b))}), w=WIDTH, h='', levels=[], LH=42, base=62, items=[];
+  h+='<div class="ax"></div>';
+  MONTHS.forEach(function(t,i){h+='<div class="mon" style="left:'+px(D(t))+'px">'+MN[i]+'</div>'});
+  h+='<div class="today" style="left:'+px(TODAY)+'px;height:'+(base-6)+'px"><span>Today</span></div>';
+  list.forEach(function(m){items.push({x:px(D(when(m))),m:m,g:false});
+    if(m.state!=='achieved'&&D(m.fc)>D(m.agr))items.push({x:px(D(m.fc)),m:m,g:true})});
+  items.sort(function(a,b){return a.x-b.x});
+  items.forEach(function(it){var m=it.m,st=stateOf(m),ach=st==='achieved',x=it.x,text=it.g?134:Math.max(m.n.length*6.4,76)+12,left=Math.min(Math.max(x-text/2,0),w-text),lv=0;
+    while(levels[lv]!==undefined&&left<levels[lv]+8)lv++; levels[lv]=left+text;
+    var top=base+lv*LH;
+    h+='<div class="lead" style="left:'+x+'px;top:56px;height:'+(top-56)+'px"></div>';
+    if(it.g){
+      var ax=px(D(m.agr));
+      h+='<div class="gconn" style="left:'+ax+'px;width:'+(x-ax)+'px"></div>';
+      h+='<div class="ghost" style="left:'+x+'px" title="'+esc(m.n)+' now expected '+m.fc+'"></div>';
+      h+='<button class="lab gl" data-edit="'+m.id+'" style="left:'+left+'px;top:'+top+'px;width:'+text+'px" aria-label="'+esc(m.n)+' now expected '+m.fc+'"><b>Expected '+m.fc+'</b><span>'+esc(m.n.length>20?m.n.slice(0,19)+'\u2026':m.n)+'</span></button>';
+    }else{
+      h+='<button class="mk '+st+'" data-edit="'+m.id+'" style="left:'+x+'px" aria-label="'+esc(m.n)+', '+WORD[st]+', '+(ach?'achieved '+m.actual:'agreed '+m.agr)+'">'+shape(st,20)+'</button>';
+      h+='<button class="lab'+(st==='overdue'?' late':'')+(ach?' ok':'')+'" data-edit="'+m.id+'" style="left:'+left+'px;top:'+top+'px;width:'+text+'px"><b>'+esc(m.n)+'</b><span>'+when(m)+'</span></button>'}});
+  el.style.height=(base+levels.length*LH+4)+'px'; el.innerHTML=h;
+  var sw=$('#sw'); sw.scrollLeft=SCROLL;
+  sw.onscroll=function(){SCROLL=sw.scrollLeft};
+  $('#sL').onclick=function(){sw.scrollBy({left:-320,behavior:'smooth'})}; $('#sR').onclick=function(){sw.scrollBy({left:320,behavior:'smooth'})};
+  $('#sT').onclick=function(){sw.scrollTo({left:Math.max(0,px(TODAY)-sw.clientWidth/3),behavior:'smooth'})};
+  bindEdit(el)}
+
+/* ===== MOVEMENT ===== */
+function movement(){
+  var list=open(), behind=list.filter(function(m){return D(m.fc)>D(m.agr)||D(m.agr)<TODAY}), gl=get('FAL-M-003');
+  var h='';
+  var over=list.filter(function(m){return stateOf(m)==='overdue'}).length;
+  h+='<p class="answer"><b>'+behind.length+' of '+list.length+'</b> open milestones are behind their agreed date; '+over+' overdue.'+(gl&&gl.state!=='achieved'&&!gl.cancelled?' Go-live is <b>'+days(D(gl.fc),D(gl.agr))+' days</b> behind the agreed date and <b>'+days(D(gl.fc),D(gl.orig))+' days</b> behind the original.':'')+'</p>';
+  h+='<div class="card"><h3>Original, agreed and forecast</h3><p class="cap">Open milestones. Select one to review how it moved and decide what to do.</p>';
+  h+='<div class="lh"><div>Milestone</div><div class="hdrtrack">'+LMONTHS.map(function(t,i){return '<span style="position:absolute;left:'+lpos(D(t))+';font-size:11px;color:var(--muted)">'+LMN[i]+'</span>'}).join('')+'</div><div>Variance</div></div>';
+  list.forEach(function(m){var st=stateOf(m),vs=days(D(m.fc),D(m.agr)),vo=days(D(m.fc),D(m.orig)),rb=m.orig!==m.agr;
+    var conn=D(m.fc)>D(m.agr)?'<div class="conn" style="left:'+lpos(D(m.agr))+';width:calc('+lpos(D(m.fc))+' - '+lpos(D(m.agr))+')"></div>':'';
+    var aria=m.n+', '+WORD[st]+(vs>0?', '+vs+' days behind agreed':'')+', agreed '+m.agr+', forecast '+m.fc;
+    h+='<div class="lrow" role="button" tabindex="0" data-id="'+m.id+'" aria-selected="'+(m.id===sel)+'" aria-label="'+esc(aria)+'">'+
+      '<div><div class="nm">'+esc(m.n)+'</div><div class="sub">'+stTag(st)+(m.client?'':' · internal')+'</div><div class="sub">Agreed '+m.agr+(m.fc!==m.agr?' · forecast '+m.fc:'')+'</div></div>'+
+      '<div class="track" aria-hidden="true">'+LMONTHS.map(function(t){return '<div class="tm" style="left:'+lpos(D(t))+'"></div>'}).join('')+'<div class="td" style="left:'+lpos(TODAY)+'"></div>'+conn+
+      (rb?'<div class="orig" style="left:'+lpos(D(m.orig))+'"></div>':'')+'<div class="agr" style="left:'+lpos(D(m.agr))+'"></div><div class="fc" style="left:'+lpos(D(m.fc))+'">'+shape(st,20)+'</div></div>'+
+      '<div class="chips"><span class="v '+(vs>0?'bad':'ok')+'">'+(vs>0?'+'+vs+' d':'0 d')+' <span style="font-weight:400;color:var(--muted)">vs agreed</span></span>'+(rb?'<span class="v bad">+'+vo+' d <span style="font-weight:400;color:var(--muted)">vs original</span></span>':'')+(moves(m)?'<span class="hint">Moved '+moves(m)+'×'+(rb?' · rebaselined':'')+'</span>':'<span class="hint">Not moved</span>')+'</div></div>'});
+  h+='<div class="legend"><span><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><rect x="3" y="3" width="8" height="8" transform="rotate(45 7 7)" fill="none" stroke="var(--faint)" stroke-width="2"/></svg>Original (if rebaselined)</span><span><svg width="6" height="16" aria-hidden="true"><rect width="3" height="16" x="1.5" fill="var(--ink)"/></svg>Agreed</span><span>Forecast, shaped by state</span><span><svg width="18" height="4" aria-hidden="true"><rect width="18" height="3" fill="var(--bad)" opacity=".55"/></svg>Distance past agreed</span><span><svg width="2" height="14" aria-hidden="true"><rect width="1" height="14" fill="var(--accent)"/></svg>Today</span></div></div>';
+  h+=detail();
+  return h}
+
+function trend(m){
+  if(!m.hist.length)return '<p class="hint">No movement recorded yet for this milestone.</p>';
+  var W=520,H=210,L=56,R=26,T=14,B=30, vals=[];m.hist.forEach(function(r){vals.push(D(r[1]),D(r[2]))});vals.push(D(m.orig));
+  var lo=Math.min.apply(null,vals)-4*864e5, hi=Math.max.apply(null,vals)+4*864e5, n=m.hist.length;
+  var X=function(i){return L+i*(W-L-R)/(n-1)}, Y=function(t){return T+(hi-t)/(hi-lo)*(H-T-B)};
+  var s='<svg class="tr" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Forecast and agreed date by reporting week for '+esc(m.n)+'">';
+  for(var g=0;g<4;g++){var t=lo+(hi-lo)*g/3, y=Y(t);s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+F(Math.round(t/864e5)*864e5).slice(0,5)+'</text>'}
+  m.hist.forEach(function(r,i){s+='<text x="'+X(i)+'" y="'+(H-10)+'" text-anchor="middle">'+r[0].slice(0,5)+'</text>'});
+  s+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(D(m.orig))+'" y2="'+Y(D(m.orig))+'" stroke="var(--faint)" stroke-dasharray="2 4"/><text x="'+(W-R)+'" y="'+(Y(D(m.orig))-4)+'" text-anchor="end">original '+m.orig.slice(0,5)+'</text>';
+  var ap='';m.hist.forEach(function(r,i){ap+=(i?'H'+X(i)+'V'+Y(D(r[2])):'M'+X(i)+' '+Y(D(r[2])))});
+  s+='<path d="'+ap+'" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="5 3"/>';
+  s+='<polyline fill="none" stroke="var(--bad)" stroke-width="2.5" points="'+m.hist.map(function(r,i){return X(i)+','+Y(D(r[1]))}).join(' ')+'"/>';
+  m.hist.forEach(function(r,i){var ch=i&&r[1]!==m.hist[i-1][1];s+='<circle cx="'+X(i)+'" cy="'+Y(D(r[1]))+'" r="'+(ch?5:3)+'" fill="'+(ch?'var(--bad)':'var(--surface)')+'" stroke="var(--bad)" stroke-width="2"><title>Week ending '+r[0]+': forecast '+r[1]+', agreed '+r[2]+'</title></circle>'});
+  s+='</svg><div class="legend" style="margin:2px 0 0"><span><svg width="22" height="4" aria-hidden="true"><rect width="22" height="3" fill="var(--bad)"/></svg>Forecast</span><span><svg width="22" height="4" aria-hidden="true"><rect width="22" height="2" fill="var(--ink)"/></svg>Agreed (steps on a rebaseline)</span><span>Across: reporting week ending</span></div>';
+  return s}
+
+function detail(){
+  var m=get(sel); if(!m||m.cancelled||m.state==='achieved'||!vis().some(function(x){return x.id===sel}))return '<div class="card" style="margin-top:12px"><span class="hint">Select an open milestone above to see how it moved.</span></div>';
+  var st=stateOf(m), vs=days(D(m.fc),D(m.agr)), rb=m.orig!==m.agr, h='';
+  h+='<div class="card" style="margin-top:12px"><div class="apph" style="margin:0"><h2 style="font-size:16px">'+esc(m.n)+'</h2><span class="hint">'+m.id+'</span>'+stTag(st)+'<span class="spacer"></span><button class="btn sm" data-edit="'+m.id+'">Edit milestone</button></div>';
+  h+='<div class="dchips"><span>Original <b>'+m.orig+'</b></span><span>Agreed <b>'+m.agr+'</b>'+(rb?' (rebaselined)':'')+'</span><span>Forecast <b>'+m.fc+'</b></span><span>Moved <b>'+moves(m)+'×</b></span><span>Progress <b>'+(m.pct==null?'not set':m.pct+'%')+'</b></span><span>Owner <b>'+esc(m.owner)+'</b></span></div>';
+  h+='<div class="grid2" style="margin-top:6px"><div><h3 style="margin:10px 0 4px">Movement by reporting week</h3>'+trend(m)+'</div><div><h3 style="margin:10px 0 2px">What changed</h3>'+(m.log.length?'<ul class="log">'+m.log.map(function(l){return '<li class="'+l.k+'"><div class="w">'+l.d+'</div><div class="c">'+esc(l.c)+'</div><div class="w">'+esc(l.w)+'</div></li>'}).join('')+'</ul>':'<p class="hint">Nothing has changed since it was first agreed.</p>')+'</div></div></div>';
+  h+='<div class="grid2"><div class="card"><h3>Decide what to do</h3><p class="cap">'+(vs>0||st==='overdue'?'Each choice is staged for Review; nothing changes until you approve.':'No variance to decide on.')+'</p><div class="adj">'+
+     '<button class="btn" data-adj="hold">Hold: keep forecast, agreed date unchanged</button><button class="btn pri" data-adj="rebase">Rebaseline</button><button class="btn" data-adj="recover">Add recovery action</button><button class="btn" data-adj="escalate">Escalate to steering</button></div>';
+  if(RB&&RB.id===m.id)h+='<div class="form"><div class="fld">New agreed date'+dpBtn('rbDate',RB.date,'New agreed date',function(v){RB.why=($('#fWhy')||{}).value||RB.why;RB.date=v;draw()},RB.date!==m.fc)+'</div><div class="fld full">Agreed with<div class="chiprow">'+(RB.with.length?RB.with.map(function(n){return '<span class="chip">'+esc(n)+orgOf(n)+'<button type="button" data-rmw="'+esc(n)+'" aria-label="Remove '+esc(n)+'">×</button></span>'}).join(''):'<span class="hint">Nobody chosen yet</span>')+ownerBtnSmall('rbAdd','Add person',function(n){RB.why=($('#fWhy')||{}).value||RB.why;if(RB.with.indexOf(n)<0)RB.with.push(n);draw();var b=document.getElementById('rbAdd');b&&b.focus()})+'</div></div><label class="full">Reason<input type="text" id="fWhy" value="'+esc(RB.why||'')+'" placeholder="Why the agreed date has to move"></label><div class="err" id="fErr" role="alert"></div><div class="full" style="display:flex;gap:8px"><button class="btn pri" id="fOk">Stage rebaseline and decision</button><button class="btn" id="fNo">Cancel</button></div></div>';
+  h+='</div><div class="card"><h3>Internal note</h3><p class="cap">Your own words. Never shown to the client.</p><textarea id="noteBox" aria-label="Internal note" placeholder="What is going on, what you are waiting for">'+esc(m.note)+'</textarea><div class="hint" style="margin-top:6px">Saves when you leave the box.</div></div></div>';
+  return h}
+
+/* ===== PEEK: edit a milestone ===== */
+function stateExplain(m){var st=stateOf(m),sug=suggest(m);
+  if(st==='achieved')return 'Achieved on '+m.actual+'. Pick another state to reopen it.';
+  if(mismatch(m))return '<b>You have set '+WORD[st]+'</b>'+(m.why?' ("'+esc(m.why.replace(/\.$/,''))+'")':'')+'. The dates suggest <b>'+WORD[sug]+'</b>: '+sugWhy(m)+'. <button class="btn sm" data-pk="usesug">Use '+WORD[sug]+'</button>';
+  if(st!==sug&&RANK[st]>RANK[sug])return '<b>You have set '+WORD[st]+'</b>'+(m.why?' ("'+esc(m.why.replace(/\.$/,''))+'")':'')+'. The dates alone would say '+WORD[sug]+'.';
+  return (m.manual?'Set by you. ':'Following the dates. ')+'The dates say '+WORD[sug]+': '+sugWhy(m)+'.'}
+function drawPeek(){
+  var m=get(peekId), p=$('#peek'); if(!m){p.hidden=true;return}
+  var st=stateOf(m), ach=st==='achieved', h='';
+  h+='<div class="pkbar"><span class="id">'+m.id+' · Falcon Data Platform</span><span class="spacer"></span><span class="hint">Each change saves on its own, with Undo</span><button class="btn sm" id="pkClose" aria-label="Close">Close</button></div><div class="pkbody">';
+  h+='<input class="ttl" id="pkName" type="text" value="'+esc(m.n)+'" aria-label="Milestone name">';
+  h+='<div class="dchips"><span>'+stTag(st)+'</span><span>'+(ach?'Achieved <b>'+m.actual+'</b>':'Agreed <b>'+m.agr+'</b>')+'</span>'+(ach?'':'<span>Forecast <b>'+m.fc+'</b></span>')+'<span>Progress <b>'+(m.pct==null?'not set':m.pct+'%')+'</b></span></div>';
+  /* state: an editable field */
+  h+='<div class="pksec"><h4>State</h4><div class="stopts" role="radiogroup" aria-label="State">'+['ontrack','atrisk','slipped','overdue','achieved'].map(function(s){return '<button type="button" class="so'+(st===s?' on':'')+'" role="radio" aria-checked="'+(st===s)+'" data-state="'+s+'">'+shape(s)+WORD[s]+'</button>'}).join('')+'</div><div class="explain'+(mismatch(m)?' warn':'')+'" style="margin-top:10px">'+stateExplain(m)+'</div>';
+  if(FLOW&&FLOW.id===m.id){
+    if(FLOW.to==='achieved')h+='<div class="inl"><div class="fld">Achieved on'+dpBtn('flDate',FLOW.date,'Achieved on',function(v){FLOW.date=v;drawPeek()},FLOW.date!==TODAYS)+'</div><button class="btn pri" data-pk="flok">Confirm achieved</button><button class="btn" data-pk="flno">Cancel</button></div>';
+    else h+='<div class="inl"><label class="fld">Why '+WORD[FLOW.to]+'?<input type="text" id="flWhy" value="'+esc(FLOW.why||'')+'" placeholder="One line, for the log"></label><button class="btn pri" data-pk="flok">Set '+WORD[FLOW.to]+'</button><button class="btn" data-pk="flno">Cancel</button><div class="err" id="flErr" role="alert" style="flex-basis:100%"></div></div>'}
+  h+='</div>';
+  /* dates, from a calendar */
+  if(ach)h+='<div class="pksec"><h4>Dates</h4><div class="row2"><div class="fld">Achieved on'+dpBtn('pkAch',m.actual,'Achieved on',function(v){if(v!==m.actual)commit('Achieved date set to '+v,function(){m.actual=v;m.log.push({d:TODAYS,c:'Achieved date set to '+v,w:'Edited',k:'dn'})})})+'</div><div class="fld">Agreed<b style="font-size:15px;color:var(--ink)">'+m.agr+'</b></div></div></div>';
+  else h+='<div class="pksec"><h4>Dates</h4><div class="row2"><div class="fld">Agreed (the baseline)<div style="display:flex;gap:8px;align-items:center"><b style="font-size:15px;color:var(--ink)">'+m.agr+'</b><button class="btn sm" data-pk="rebase">Rebaseline…</button></div><span class="hint">Original '+m.orig+'</span></div>'+
+     '<div class="fld">Forecast'+dpBtn('pkFc',PEND&&PEND.id===m.id?PEND.fc:m.fc,'Forecast',function(v){PEND=(v===m.fc)?null:{id:m.id,fc:v};drawPeek()},PEND&&PEND.id===m.id)+'</div></div>'+
+     (PEND&&PEND.id===m.id?'<div class="inl"><label class="fld">Why is the forecast moving to '+PEND.fc+'?<input type="text" id="pkFcReason" value="'+esc(PEND.why||'')+'" placeholder="One line, for the movement log"></label><button class="btn pri" data-pk="fcok">Save forecast</button><button class="btn" data-pk="fcno">Cancel</button></div>':'')+'<div class="err" id="pkErr" role="alert"></div></div>';
+  /* progress */
+  h+='<div class="pksec"><h4>Progress</h4><div class="rng"><input type="range" id="pkRng" min="0" max="100" step="5" value="'+(m.pct||0)+'" aria-label="Percent complete"><input type="number" id="pkNum" min="0" max="100" value="'+(m.pct==null?'':m.pct)+'" aria-label="Percent complete number" placeholder="%"></div><span class="hint">Set by hand. Not calculated from actions.</span></div>';
+  /* description and owner */
+  h+='<div class="pksec"><h4>Description</h4><label class="fld">Scope and needs<textarea id="pkDesc" style="min-height:96px">'+esc(m.desc)+'</textarea></label><div class="fld" style="margin-top:10px">Owner'+ownerBtn('pkOwner',m.owner,function(n,added){if(n!==m.owner||added)commit(added?n+' added to the people list and set as owner':'Owner set to '+n,function(){m.owner=n})})+'<span class="hint">From the people list, or add a new person.</span></div></div>';
+  h+='<div class="pksec"><h4>Client view</h4><div class="swrow"><button class="sw" id="pkCli" role="switch" aria-checked="'+m.client+'" aria-label="Visible to client"></button><span>Visible to client</span></div><label class="fld">Client wording<textarea id="pkCw" '+(m.client?'':'disabled')+' placeholder="Plain wording a client can read">'+esc(m.cw)+'</textarea></label>'+(m.client&&!m.cw.trim()?'<div class="err">Client wording is needed before this appears in a client report.</div>':'<span class="hint">Off by default. Only visible milestones appear in client output.</span>')+'</div>';
+  h+='<div class="pksec"><button class="btn danger" data-pk="cancel">Cancel this milestone</button> <span class="hint">Keeps its history; hides it from every view.</span></div></div>';
+  p.innerHTML=h; p.hidden=false;
+  $('#pkClose').onclick=function(){closePeek()};
+  var nm=$('#pkName'); nm.onchange=function(){var v=nm.value.trim();if(!v){nm.value=m.n;return}if(v!==m.n)commit('Renamed to '+v,function(){m.n=v})};
+  $$('[data-pk]',p).forEach(function(b){b.onclick=function(){peekAct(m,b.dataset.pk)}});
+  $$('[data-state]',p).forEach(function(b){b.onclick=function(){setState(m,b.dataset.state)}});
+  var fr=$('#pkFcReason');if(fr)fr.oninput=function(){PEND.why=fr.value};
+  var fw=$('#flWhy');if(fw)fw.oninput=function(){FLOW.why=fw.value};
+  var rg=$('#pkRng'), nu=$('#pkNum'), setPct=function(v){v=Math.max(0,Math.min(100,Math.round(+v)));if(v===m.pct)return;commit('Progress set to '+v+'%',function(){m.pct=v})};
+  rg.onchange=function(){setPct(rg.value)}; nu.onchange=function(){if(nu.value!=='')setPct(nu.value)};
+  var dn=$('#pkDesc'); dn.onchange=function(){var v=dn.value.trim();if(v!==m.desc)commit('Description updated',function(){m.desc=v})};
+  $('#pkCli').onclick=function(){commit(m.client?'Hidden from the client':'Visible to the client',function(){m.client=!m.client})};
+  var cw=$('#pkCw'); cw.onchange=function(){commit('Client wording saved',function(){m.cw=cw.value.trim()})};
+}
+function setState(m,to){
+  if(to===m.state){FLOW=null;drawPeek();return}
+  if(to==='achieved'){FLOW={id:m.id,to:'achieved',date:TODAYS};drawPeek();return}
+  if(to===suggest(m)){commit('State set to '+WORD[to]+' (following the dates)',function(){var from=m.state;m.state=to;m.manual=false;m.why='';if(from==='achieved'){m.actual=null;m.log.push({d:TODAYS,c:'Reopened as '+WORD[to],w:'Following the dates',k:'st'})}else m.log.push({d:TODAYS,c:'State changed '+WORD[from]+' to '+WORD[to],w:'Following the dates',k:'st'})});FLOW=null;return}
+  FLOW={id:m.id,to:to,why:''};drawPeek();var w=$('#flWhy');w&&w.focus()}
+function peekAct(m,k){
+  if(k==='flno'){FLOW=null;drawPeek();return}
+  if(k==='flok'){
+    if(FLOW.to==='achieved'){var v=FLOW.date,d=days(D(v),D(m.agr));commit(m.n+' marked achieved on '+v,function(){m.state='achieved';m.actual=v;m.pct=100;m.manual=false;m.why='';m.log.push({d:TODAYS,c:'Achieved on '+v+(d===0?' (the agreed date)':d>0?' ('+d+' days after agreed)':' ('+(-d)+' days early)'),w:'Marked by you',k:'dn'})});FLOW=null;return}
+    var why=($('#flWhy').value||'').trim();if(!why){$('#flErr').textContent='Say why, in one line.';$('#flWhy').focus();return}
+    var to=FLOW.to,from=m.state;commit('State set to '+WORD[to],function(){m.state=to;m.manual=true;m.why=why;if(from==='achieved')m.actual=null;m.log.push({d:TODAYS,c:(from==='achieved'?'Reopened as ':'State changed '+WORD[from]+' to ')+WORD[to],w:why,k:'st'})});FLOW=null;return}
+  if(k==='usesug'){var s=suggest(m);commit('State set to '+WORD[s]+' (following the dates)',function(){var f=m.state;m.state=s;m.manual=false;m.why='';m.log.push({d:TODAYS,c:'State changed '+WORD[f]+' to '+WORD[s],w:'Following the dates',k:'st'})});return}
+  if(k==='fcno'){PEND=null;drawPeek();return}
+  if(k==='fcok'){var r=($('#pkFcReason').value||'').trim();if(!r){$('#pkErr').textContent='Say why the forecast is moving.';$('#pkFcReason').focus();return}
+    var v2=PEND.fc,dd=days(D(v2),D(m.fc)),old=m.fc;PEND=null;
+    commit('Forecast moved to '+v2,function(){if(!m.hist.length)m.hist.push(['04-09-2026',m.orig,m.orig]);m.fc=v2;m.hist.push([TODAYS,v2,m.agr]);m.log.push({d:TODAYS,c:'Forecast moved '+old+' to '+v2+' ('+(dd>0?'+':'')+dd+' days)',w:r,k:'mv'});refollow(m)});return}
+  if(k==='rebase'){closePeek(true);if(aud==='cli'){aud='int';saveView('int');snack('Switched to Internal view: Movement is internal only.')}sel=m.id;RB={id:m.id,date:m.fc,why:'',with:[]};nav('milestones','move');var f=$('#fWhy');f&&f.focus();return}
+  if(k==='cancel'){commit(m.n+' cancelled',function(){m.cancelled=true});closePeek();return}
+}
+var POPWAS=false;
+document.addEventListener('mousedown',function(){POPWAS=!$('#cal').hidden||!$('#pop').hidden},true);
+function inPath(e,test){var P=(e.composedPath&&e.composedPath())||[];return P.some(function(n){return n&&n.nodeType===1&&test(n)})}
+var PEEKJUST=false;
+document.addEventListener('click',function(e){
+  if(!peekId||PEEKJUST)return;   /* the click that opened the panel is not an outside click */
+  if(inPath(e,function(n){return n.id==='peek'||n.id==='cal'||n.id==='pop'||n.id==='snack'||(n.dataset&&n.dataset.edit)}))return;
+  if(POPWAS)return;   /* the first outside click only closes an open calendar or list */
+  if(FLOW||PEND){var pk=$('#peek');pk.classList.remove('shake');void pk.offsetWidth;pk.classList.add('shake');snack('Finish or cancel the pending change first.');return}
+  closePeek(true);
+});
+function openPeek(id,from){PEEKJUST=true;setTimeout(function(){PEEKJUST=false},0);peekId=id;FLOW=null;PEND=null;peekOpener=from||document.activeElement;var p=$('#peek');p.classList.remove('enter');void p.offsetWidth;p.classList.add('enter');drawPeek();var n=$('#pkName');n&&n.focus()}
+function closePeek(noFocus){peekId=null;FLOW=null;PEND=null;calClose(false);$('#pop').hidden=true;$('#peek').hidden=true;if(!noFocus&&peekOpener&&document.body.contains(peekOpener))peekOpener.focus()}
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&peekId&&$('#cal').hidden&&$('#pop').hidden){var a=document.activeElement;if(a&&a.matches('input[type=text],textarea')&&a.value!==a.defaultValue){a.blur()}closePeek()}});
+
+/* ===== draw ===== */
+function bindEdit(root){$$('[data-edit]',root).forEach(function(r){var go=function(e){e&&e.stopPropagation();openPeek(r.dataset.edit,r)};r.onclick=go;if(r.getAttribute('role')==='button')r.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}})}
+function draw(){
+  var keep=$('#sw');if(keep)SCROLL=keep.scrollLeft;
+  if(aud==='cli'&&view==='move')view='plan';
+  var sh=$('#shell'); sh.className='shell';
+  sh.innerHTML=route==='cockpit'?cockpit():pageView();
+  if($('#strip'))layoutStrip();
+  bindEdit(sh);
+  var dt=$('#detog'); if(dt)dt.onclick=function(){DETAILS=!DETAILS;savePref(DETAILS);draw()};
+  var sv=$('#swv'); if(sv)sv.onclick=function(){setAud(aud==='cli'?'int':'cli')};
+  var pc=$('#pencil'); if(pc)pc.onclick=function(){nav('milestones','plan')};
+  var sl=$('#slip'); if(sl){var go=function(){if(aud==='cli'){aud='int';saveView('int')}nav('milestones','move')};sl.onclick=go;sl.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}}
+  var ch=$('#crumbHome'); if(ch)ch.onclick=function(e){e.preventDefault();nav('cockpit')};
+  var vp=$('#vPlan'); if(vp)vp.onclick=function(){nav('milestones','plan')};
+  var vm=$('#vMove'); if(vm)vm.onclick=function(){if(aud==='cli'){snack('Movement is internal only and is hidden in Client view.');return}nav('milestones','move')};
+  var ai=$('#aInt'); if(ai)ai.onclick=function(){setAud('int')};
+  var ac=$('#aCli'); if(ac)ac.onclick=function(){setAud('cli')};
+  var am=$('#addMs'); if(am)am.onclick=function(){var id='FAL-M-00'+(M.length+1);commit('Milestone added, staged as a proposal',function(){M.push({id:id,n:'New milestone',desc:'',owner:'Alan Carter',orig:'15-01-2027',agr:'15-01-2027',fc:'15-01-2027',state:'ontrack',manual:false,client:false,cw:'',pct:0,note:'',hist:[],log:[]})});openPeek(id,am);$('#pkName').select()};
+  $$('.lrow').forEach(function(r){var go=function(){sel=r.dataset.id;RB=null;draw();var x=$('.lrow[data-id="'+sel+'"]');x&&x.focus()};r.onclick=go;r.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
+  $$('[data-adj]').forEach(function(b){b.onclick=function(){var k=b.dataset.adj,m=get(sel);
+    if(k==='rebase'){RB={id:m.id,date:m.fc,why:'',with:[]};draw();$('#fWhy').focus();return}
+    snack({hold:'Staged: hold '+m.n+' (agreed '+m.agr+' stays, forecast '+m.fc+'). Review will ask for a one-line reason.',recover:'Staged: new action for '+m.n+', owner and date to set in Review.',escalate:'Added to the next steering ask list: '+m.n+' is '+days(D(m.fc),D(m.agr))+' days behind the agreed date.'}[k])}});
+  var nb=$('#noteBox'); if(nb)nb.onchange=function(){var m=get(sel);m.note=nb.value;snack('Note saved.')};
+  var ok=$('#fOk'); if(ok){ok.onclick=function(){var v=RB.date,why=$('#fWhy').value.trim(),e=$('#fErr');
+    if(!RB.with.length){e.textContent='Choose who agreed it.';return}
+    if(!why){e.textContent='Say why the agreed date moves.';return}
+    var m=get(sel), w=RB.with.join(RB.with.length>1?', ':'').replace(/, ([^,]*)$/,' and $1'), old=m.agr;
+    commit(m.n+' rebaselined to '+v+'. Staged with a decision record for Review.',function(){if(!m.hist.length)m.hist.push(['04-09-2026',m.orig,m.orig]);m.agr=v;if(D(m.fc)<D(v))m.fc=v;m.log.push({d:TODAYS,c:'Rebaselined: agreed date '+old+' to '+v,w:'Agreed with '+w+'. '+why+'. Decision staged (FAL-D-new)',k:'rb'});m.hist.push([TODAYS,m.fc,m.agr]);refollow(m);RB=null});
+    };
+    $('#fNo').onclick=function(){RB=null;draw()}}
+  $$('[data-rmw]').forEach(function(b){b.onclick=function(){RB.why=($('#fWhy')||{}).value||RB.why;RB.with=RB.with.filter(function(n){return n!==b.dataset.rmw});draw()}});
+}
+function setAud(a){aud=a;saveView(a);if(a==='cli'&&view==='move')view='plan';draw();var t=$(a==='cli'?'#aCli':'#aInt')||$('#swv');t&&t.focus()}
+/* routes: #cockpit and #milestones=FAL&v=plan|movement */
+var HASHSELF=null;
+function hashFor(r,v){return r==='cockpit'?'cockpit':'milestones=FAL&v='+(v==='move'?'movement':'plan')}
+function nav(r,v){closePeek(true);route=r;if(v)view=v;RB=(r==='milestones'&&v==='move')?RB:null;var h=hashFor(route,view);if(location.hash!=='#'+h){HASHSELF=h;location.hash=h}draw();window.scrollTo(0,0)}
+function readHash(){var h=location.hash.replace(/^#/,'');if(/^milestones/.test(h)){route='milestones';view=/v=movement/.test(h)?'move':'plan'}else route='cockpit'}
+window.addEventListener('hashchange',function(){if(HASHSELF!==null&&location.hash==='#'+HASHSELF){HASHSELF=null;return}closePeek(true);readHash();draw()});
+$('#reset').onclick=function(){M=seed();PEOPLE=PEOPLE0.slice();RB=null;closePeek(true);try{localStorage.removeItem(PREF);localStorage.removeItem(VPREF)}catch(e){}DETAILS=true;aud='int';route='cockpit';view='plan';HASHSELF='cockpit';location.hash='cockpit';draw();snack('Reset: back on the cockpit, Internal view, details shown.')};
+$('#theme').onclick=function(){var on=this.getAttribute('aria-pressed')!=='true';this.setAttribute('aria-pressed',on);document.documentElement.setAttribute('data-theme',on?'dark':'light');this.textContent=on?'Light':'Dark';draw()};
+readHash();draw();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>creaite</title>
+<link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#0B6E7F"><!-- BL-86: the installable app; theme-color follows the theme (see applyTheme) -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%2318181B'/%3E%3Crect x='87' y='87' width='225' height='225' rx='46' fill='%2352525B'/%3E%3Crect x='200' y='200' width='225' height='225' rx='46' fill='%23F2B544'/%3E%3C/svg%3E"><!-- the creaite icon, Stage at 32 px (dev/icon/creaite-icon-stage-small.svg, BL-272), inline: no network -->
+<!-- Built by system/scripts/build_dashboard.py from system/templates/dashboard.html (derived from dev/reference/dashboard-reference.html, v0.23). Self-contained: no network. -->
+<script type="application/json" id="data">/*__DATA__*/</script>
+<style>/*__SPLIT_CSS__*/</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="Main" aria-describedby="railHint"><span class="vh" id="railHint">Right-click the sidebar, or press Shift+F10 on a page in it, to customise it</span><!-- BL-191 -->
+    <!-- BL-273 (sprint-ui-sweep): the Stage wordmark, "creaite" in IBM Plex Mono 600 outlined as paths (dev/reference/logo/wordmark-paths.json,
+         SIL Open Font Licence, see system/templates/vendor/README.md): the word and the saffron bar (BL-308: the dashed draft copy is gone). Retro Arcade and Thermo Scan keep their lettering (.lt). -->
+    <div class="rhead"><span class="rtogbox" id="railTogBox"></span><!-- BL-319: the collapse toggle, before the wordmark, in the same place either way -->
+    <div class="logo"><svg class="wm" viewBox="7 25 306 60" role="img" aria-label="creaite"><defs><path id="wmD" d="M19.84 0.74Q16.18 0.74 13.27 -0.43Q10.35 -1.61 8.34 -3.78Q6.32 -5.95 5.24 -9.05Q4.15 -12.15 4.15 -16Q4.15 -19.84 5.24 -22.94Q6.32 -26.04 8.34 -28.21Q10.35 -30.38 13.24 -31.56Q16.12 -32.74 19.78 -32.74Q24.86 -32.74 27.96 -30.63Q31.06 -28.52 32.67 -25.05L26.54 -21.7Q25.67 -23.75 24.09 -25.02Q22.51 -26.29 19.78 -26.29Q16.24 -26.29 14.35 -24.24Q12.46 -22.2 12.46 -18.66V-13.33Q12.46 -9.86 14.35 -7.78Q16.24 -5.7 19.9 -5.7Q22.75 -5.7 24.46 -7.01Q26.16 -8.31 27.22 -10.48L33.17 -6.94Q31.56 -3.53 28.3 -1.4Q25.05 0.74 19.84 0.74Z M39.85 -6.26H47.79V-25.73H39.85V-31.99H55.72V-23.25H56.22Q56.65 -24.92 57.43 -26.5Q58.2 -28.09 59.41 -29.3Q60.62 -30.5 62.36 -31.25Q64.09 -31.99 66.51 -31.99H69.98V-24.55H63.41Q59.81 -24.55 57.77 -22.44Q55.72 -20.34 55.72 -17.05V-6.26H66.82V0H39.85Z M89.74 0.74Q85.9 0.74 82.92 -0.43Q79.95 -1.61 77.93 -3.78Q75.92 -5.95 74.86 -9.02Q73.81 -12.09 73.81 -15.93Q73.81 -19.84 74.9 -22.94Q75.98 -26.04 77.96 -28.21Q79.95 -30.38 82.77 -31.56Q85.59 -32.74 89.12 -32.74Q92.6 -32.74 95.39 -31.59Q98.18 -30.44 100.13 -28.33Q102.08 -26.23 103.14 -23.25Q104.19 -20.27 104.19 -16.68V-14.07H81.75V-13.27Q81.75 -9.8 83.92 -7.66Q86.09 -5.52 89.99 -5.52Q92.97 -5.52 95.11 -6.73Q97.25 -7.94 98.67 -9.92L103.2 -5.39Q101.46 -2.85 98.15 -1.05Q94.83 0.74 89.74 0.74ZM89.19 -26.91Q85.84 -26.91 83.79 -24.8Q81.75 -22.69 81.75 -19.22V-18.79H96.25V-19.34Q96.25 -22.82 94.36 -24.86Q92.47 -26.91 89.19 -26.91Z M135.98 0Q133.07 0 131.49 -1.46Q129.9 -2.91 129.59 -5.52H129.28Q128.42 -2.54 125.87 -0.9Q123.33 0.74 119.61 0.74Q114.78 0.74 111.92 -1.8Q109.07 -4.34 109.07 -8.87Q109.07 -18.54 123.27 -18.54H128.91V-20.65Q128.91 -23.68 127.42 -25.23Q125.94 -26.78 122.59 -26.78Q119.55 -26.78 117.69 -25.61Q115.83 -24.43 114.53 -22.57L110 -26.41Q111.49 -29.08 114.81 -30.91Q118.12 -32.74 123.39 -32.74Q129.72 -32.74 133.28 -29.79Q136.85 -26.85 136.85 -21.02V-5.95H140.63V0ZM122.28 -4.71Q125.13 -4.71 127.02 -6.04Q128.91 -7.38 128.91 -9.67V-13.95H123.46Q116.95 -13.95 116.95 -9.86V-8.62Q116.95 -6.7 118.37 -5.7Q119.8 -4.71 122.28 -4.71Z M161.38 -36.95Q158.59 -36.95 157.45 -38.13Q156.3 -39.31 156.3 -40.98V-42.47Q156.3 -44.14 157.45 -45.32Q158.59 -46.5 161.38 -46.5Q164.17 -46.5 165.32 -45.32Q166.47 -44.14 166.47 -42.47V-40.98Q166.47 -39.31 165.32 -38.13Q164.17 -36.95 161.38 -36.95ZM146.88 -6.26H157.42V-25.73H146.88V-31.99H165.35V-6.26H175.15V0H146.88Z M196.77 0Q192.18 0 190.01 -2.42Q187.84 -4.84 187.84 -8.68V-25.73H178.54V-31.99H184.87Q186.79 -31.99 187.59 -32.77Q188.4 -33.54 188.4 -35.53V-43.28H195.78V-31.99H208.8V-25.73H195.78V-6.26H208.8V0Z M230.54 0.74Q226.7 0.74 223.72 -0.43Q220.75 -1.61 218.73 -3.78Q216.72 -5.95 215.66 -9.02Q214.61 -12.09 214.61 -15.93Q214.61 -19.84 215.69 -22.94Q216.78 -26.04 218.76 -28.21Q220.75 -30.38 223.57 -31.56Q226.39 -32.74 229.92 -32.74Q233.4 -32.74 236.19 -31.59Q238.98 -30.44 240.93 -28.33Q242.88 -26.23 243.94 -23.25Q244.99 -20.27 244.99 -16.68V-14.07H222.55V-13.27Q222.55 -9.8 224.72 -7.66Q226.89 -5.52 230.79 -5.52Q233.77 -5.52 235.91 -6.73Q238.05 -7.94 239.47 -9.92L244 -5.39Q242.26 -2.85 238.94 -1.05Q235.63 0.74 230.54 0.74ZM229.99 -26.91Q226.64 -26.91 224.59 -24.8Q222.55 -22.69 222.55 -19.22V-18.79H237.05V-19.34Q237.05 -22.82 235.16 -24.86Q233.27 -26.91 229.99 -26.91Z"/></defs><use class="wmw" href="#wmD" x="4" y="74"/><rect class="wmb" x="268" y="76" width="44" height="7" rx="2"/></svg><span class="lt">creaite</span></div></div>
+    <div class="railgrp" id="railMain"></div>
+    <span class="grow"></span>
+    <div class="railgrp" id="railFoot"></div>
+  </nav>
+  <div class="main">
+    <header class="bar">
+      <div class="search" id="searchBtn" role="button" tabindex="0" aria-label="Search or jump to"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
+      <div class="status" id="status"></div>
+      <button class="newchip" id="newChip" type="button" aria-live="polite">New items arrived: refresh</button>
+      <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span></button>
+      <button class="iconbtn" id="themeBtn" aria-label="Switch to dark theme" data-tip="Switch to dark theme"><svg data-ic="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg></button>
+    </header>
+    <div class="livealert" id="liveAlert" role="alert"><b>Live server isn't running.</b> Saves are held and applied when it's back. Start it in Terminal: <code id="alertCmd"></code> <button class="mini" data-copycmd>Copy</button> <button class="mini" id="checkLive">Check again</button></div>
+    <div class="livealert stalealert" id="staleAlert" role="alert" hidden><b>This page is out of date.</b> <span id="staleMsg"></span> <button class="mini" id="staleReload">Reload</button></div><!-- BL-174 -->
+    <div class="errbanner" id="errBanner" role="status" aria-live="polite" hidden></div><!-- BL-180: under the other page banners, errors last -->
+    <div class="content">
+      <section class="view" id="v-today">
+        <div class="dayband"><div class="bandin">
+          <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
+          <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
+        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270 -->
+        <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
+          <section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden><h2 class="th" id="hTd">To decide <span class="cnt" id="nTd"></span></h2><div id="tdBody"></div></section><!-- BL-319: first after the band -->
+          <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
+          <section class="tsec" id="dnSec" aria-labelledby="hDn" hidden><h2 class="th" id="hDn">Decisions needed <span class="cnt" id="nDn"></span></h2><ol class="bl" id="dnList"></ol><div class="moreline" id="dnMore"></div></section><!-- BL-210 -->
+          <section class="tsec" id="attnSec" aria-labelledby="hAttn"><h2 class="th" id="hAttn">Needs attention <span class="cnt" id="nAttn"></span></h2><ol class="bl" id="attnList"></ol><div class="moreline" id="attnMore"></div></section>
+          <section class="tsec" id="mineSec" aria-labelledby="hMine"><h2 class="th" id="hMine">Your commitments <span class="cnt" id="nMine"></span><a href="#" data-go="mine">All mine</a></h2><ol class="bl" id="mineList"></ol><div class="moreline" id="mineMore"></div>
+            <div class="tsub" id="tOwe" hidden><h3 class="th th3" id="hOwe">You owe <span class="cnt" id="nOwe"></span></h3><ol class="bl" id="oweList"></ol><div class="moreline" id="oweMore"></div></div>
+            <div class="tsub" id="tWait" hidden><h3 class="th th3" id="hWait">Waiting on <span class="cnt" id="nWait"></span><a href="#" data-nav="all:chase:">Chase view</a></h3><ol class="bl" id="waitList"></ol><div class="moreline" id="waitMore"></div></div>
+          </section><!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
+          <section class="tsec" id="weekSec" aria-labelledby="hWeek"><h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo"></span></h2><div id="weekList"></div></section>
+          <section class="tsec tres" id="resSec" aria-labelledby="hRes"><details id="resFold"><summary><h2 class="th" id="hRes">Resolved <span class="cnt" id="chgTitle"></span></h2></summary><ol class="bl" id="chgList"></ol><div class="moreline" id="chgMore"></div></details></section><!-- BL-319: folded to one line -->
+          <section class="tsec" id="pfSec" aria-labelledby="hPort"><h2 class="th" id="hPort">Portfolio</h2><div class="tbl" id="pfTbl"></div></section>
+        </div>
+        <p class="calfoot" id="calFoot" hidden></p><!-- BL-270: "Calendar as read on …", at the page's foot -->
+      </section>
+      <section class="view" id="v-projects" hidden><div class="wrapmax"><h1>Projects</h1><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
+      <section class="view" id="v-cockpit" hidden></section>
+      <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
+      <!-- ===== People (BL-55, BL-56) ===== -->
+      <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
+      <section class="view" id="v-person" hidden></section>
+      <section class="view" id="v-meeting" hidden></section>
+      <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
+      <section class="view" id="v-work" hidden><div class="wrapmax">
+        <nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden></nav>
+        <h1>Work</h1>
+        <div class="tabs" role="tablist" id="wtabs"><button role="tab" data-t="actions">Actions</button><button role="tab" data-t="raid">RAID</button><button role="tab" data-t="decisions">Decisions</button><button role="tab" data-t="all">All items</button></div>
+        <div class="toolbar">
+          <input id="workQ" type="search" placeholder="Search this list" aria-label="Search this list" autocomplete="off">
+          <span class="wfilters" id="wfilters"></span>
+          <span class="seg ico" id="wlay" role="group" aria-label="Layout"><button type="button" data-lay="list" aria-pressed="true" aria-label="List" data-tip="List"><svg data-ic="list" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><button type="button" data-lay="board" aria-pressed="false" aria-label="Board" data-tip="Board"><svg data-ic="board" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span><!-- BL-159 (sprint-icons): List and Board as a two-icon switch -->
+          <span class="dd ddisp"><button class="ib bd" id="dispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dispMenu" aria-label="Display: grouping, order and properties" data-tip="Display: grouping, order and properties" data-key="D"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="dispMenu" role="dialog" aria-label="Display" hidden></div></span><!-- BL-128 (sprint-work-views): one Display menu -->
+          <span class="sp"></span>
+          <span class="dd newdd"><button type="button" class="newb" id="newBtn" aria-label="New action" data-tip="New action"><svg data-ic="plus" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg><span class="w">New action</span><svg data-ic="chevdown" class="i nch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu newmenu" id="newMenu" role="menu" aria-label="New decision" hidden><button type="button" role="menuitem" data-newd="made" tabindex="-1"><svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg><span><b>Record a decision</b><small>Already taken. Opens as Made, dated today.</small></span></button><button type="button" role="menuitem" data-newd="needed" tabindex="-1"><svg data-ic="flag" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg><span><b>Ask for a decision</b><small>Waiting on someone. Opens as Pending, with a needed-by date.</small></span></button></div></span><!-- BL-159: the New tile; on Decisions, a menu -->
+        </div>
+        <div class="views" id="wviews" aria-label="Views"></div>
+        <div class="wapplied" id="wapplied"></div><div class="vh" id="wlive" role="status" aria-live="polite"></div><!-- BL-132: one announcement per change -->
+        <div class="wbulk" id="wbulk" role="region" aria-label="Change the selected items" hidden></div>
+        <div class="tbl list" id="workWrap"><table id="workTbl"></table></div>
+        <div class="board" id="workBoard" hidden role="group" aria-label="Board"></div>
+        <div class="kbdhint" id="whintList"></div>
+        <div class="kbdhint" id="whintBoard" hidden></div>
+      </div></section>
+      <section class="view" id="v-review" hidden><div class="wrapmax">
+        <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
+        <!-- BL-133 (sprint-work-views): search, filters, Display and Approve all routine; the bar when anything is selected; the result line -->
+        <div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off"><span class="wfilters" id="rvfilters"></span><span class="sp"></span><span class="dd rvdisp"><button class="ib bd" id="rvDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="rvDispMenu" aria-label="Display: grouping and order" data-tip="Display: grouping and order"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="rvDispMenu" role="dialog" aria-label="Review display" hidden></div></span><button class="btn" id="routineBtn"><svg data-ic="checks" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve routine</button><!-- BL-160 (sprint-icons) --></div>
+        <div class="wapplied" id="rvapplied"></div>
+        <div class="wbulk rvbar" id="rvbar" role="region" aria-label="Decide the selected proposals" hidden><span class="bkn" id="rvCount" aria-live="polite"></span><span class="rvsplit" id="rvSplit"></span><button type="button" class="linkbtn" id="rvAll"></button><span class="sp"></span><button type="button" class="btn primary" id="bulkApprove" disabled><svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve</button><button type="button" class="btn" id="bulkReject" aria-haspopup="menu" aria-expanded="false" disabled><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Reject with a reason <span class="kbd" aria-hidden="true">R</span></button><span class="rvset" id="rvSet"></span><button type="button" class="ib sm" id="rvClear" aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
+        <div class="rvresult" id="rvresult" role="status" aria-live="polite"></div>
+        <div id="reviewBody"></div>
+        <div class="kbdhint" id="rvHint"></div>
+      </div></section>
+      <section class="view" id="v-inbox" hidden><div class="wrapmax">
+        <h1>Intake</h1><p class="sub" style="margin:4px 0 14px">Transcripts and minutes waiting to be processed. Files you add are saved to the inbox folder. Processing drafts the minutes and proposed items for Review; nothing is filed until you approve.</p>
+        <!-- ===== Intake sections (BL-73) ===== -->
+        <section class="card isec" id="isecCal" aria-labelledby="isecCalH"><header class="ish"><svg data-ic="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><h2 id="isecCalH">Calendar Import</h2></header>
+          <p class="sub ipurpose">Pick meetings from your calendar and load their transcripts.</p><div id="isecCalBody"></div></section>
+        <section class="card isec" id="isecUp" aria-labelledby="isecUpH"><header class="ish"><svg data-ic="upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><h2 id="isecUpH">Upload Files</h2></header>
+          <p class="sub ipurpose">Drop transcripts or minutes you already have.</p>
+        <div class="dropzone" id="inboxDrop" tabindex="0" role="button" aria-label="Add files to Intake">Drop transcripts or minutes here, or <button class="linkbtn" id="inboxPick" type="button">choose files</button><span class="sub"> · .vtt, .docx, .txt, .md or .pdf, up to 25 MB each</span><input type="file" id="inboxFile" multiple accept=".vtt,.docx,.txt,.md,.pdf" hidden></div>
+        <div class="toolbar" style="margin-top:12px"><button class="btn" id="inboxNew">Select new</button><span class="sp"></span><button class="btn primary" id="inboxGo" disabled>Process selected</button></div>
+        <div class="tbl"><table id="inboxTbl"></table></div>
+        </section>
+        <section class="card isec" id="isecQuick" aria-labelledby="isecQuickH"><header class="ish"><svg data-ic="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><h2 id="isecQuickH">Quick Capture</h2></header>
+          <p class="sub ipurpose">Type rough notes from a call or conversation that has no transcript.</p><div id="isecQuickBody"></div></section>
+      </div></section>
+      <section class="view" id="v-files" hidden><div class="wrapmax">
+        <h1>Files</h1>
+        <!-- ===== Search (BL-07) ===== -->
+        <div class="vsearch" id="vsearch" role="search"><div class="vscol">
+          <div class="vsbar"><input id="vsInput" type="search" placeholder="Search the vault" aria-label="Search the vault" autocomplete="off">
+            <span class="askwrap"><button type="button" class="askbtn" id="vsAskBtn" data-state="idle" aria-disabled="true" title="ask creaite: an answer with a link to the source for every point."><svg class="spark" viewBox="320 210 92 92" aria-hidden="true"><path d="M366 214Q366 256 408 256Q366 256 366 298Q366 256 324 256Q366 256 366 214Z" fill="currentColor"/></svg><span class="asklab">ask creaite</span><span class="askret" aria-hidden="true">↵</span></button><button type="button" class="askstop" id="vsAskStop" hidden>Stop</button></span></div>
+          <div class="vshint sub" id="vsHint" data-codeok>For example: risks ABC last month, or what did Sara say about UAT?</div>
+          <div class="vschips" id="vsChips" aria-live="polite"></div><div class="sub" id="vsNote" aria-live="polite"></div><div id="vsAnswer" hidden></div><div id="vsResults" hidden></div></div></div>
+        <div class="files" style="margin-top:14px"><div class="tree" id="tree"></div>
+          <div><div class="views" id="fquick" style="margin-bottom:10px"></div>
+            <div class="toolbar" style="margin-top:0"><!-- BL-214 (sprint-ui-audit): each filter has a name --><input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;min-width:220px;background:var(--surface)">
+              <select id="fsType" aria-label="File type" style="height:32px;border:1px solid var(--line);border-radius:8px;background:var(--surface)"><option value="All">All types</option><option>docx</option><option>pdf</option><option>vtt</option><option>xlsx</option></select>
+              <label class="sub" for="fsFrom">From</label><span class="dwrap" style="width:150px"><input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:32px;border:1px solid var(--line);border-radius:8px;padding:0 8px;width:100%;background:var(--surface)"><button class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span>
+              <label class="sub" for="fsTo">To</label><span class="dwrap" style="width:150px"><input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:32px;border:1px solid var(--line);border-radius:8px;padding:0 8px;width:100%;background:var(--surface)"><button class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span>
+              <span style="flex:1"></span><span class="sub" id="filesCount" aria-live="polite"></span><button class="btn" id="filesRefresh">Refresh</button></div>
+            <div class="tbl" id="filesTbl"></div><p class="sub"><span id="filesAt">File list as of the last build.</span> Word files open in Word; the folder icon (Open folder) shows the file's folder.</p></div></div>
+      </div></section>
+      <section class="view" id="v-activity" hidden><div class="wrapmax"><h1>Activity</h1><p class="sub" style="margin:4px 0 14px">Every change, newest first. Undo any of them.</p><div class="acttabs" role="tablist" aria-label="Activity"><button type="button" role="tab" id="actTabCh" aria-selected="true" aria-controls="actTbl">Changes</button><button type="button" role="tab" id="actTabQ" aria-selected="false" aria-controls="actQuality" tabindex="-1">Quality</button></div><!-- BL-233 (sprint-drafts-extraction) -->
+<div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden><p class="sub" id="qPeriod"></p><p class="qmoved" id="qMoved"></p><p class="sub qnote">Each figure is a count out of its total. Nothing is rated until a group has 10. These count extraction and drafts only, never a person, and stay internal: no report or export reads them.</p>
+<h2>By source</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Source</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qSrc"></tbody></table></div>
+<h2>By type</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Type</th><th scope="col">Approved as proposed</th><th scope="col">Approved after an edit</th><th scope="col">Rejected</th><th scope="col">Waiting</th></tr></thead><tbody id="qType"></tbody></table></div>
+<h2>Why proposals were rejected</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Reason</th><th scope="col">Rejections</th></tr></thead><tbody id="qWhy"></tbody></table></div><p class="sub" id="qDup"></p>
+<h2 id="qRejectsH">What you rejected</h2><p class="sub">The latest first. Change a reason from its chip, approve one instead, or put it back in Review.</p><div id="qRejects" aria-labelledby="qRejectsH"></div>
+<h2>Fields changed most</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Field</th><th scope="col">Edited proposals</th><th scope="col">Where</th></tr></thead><tbody id="qFields"></tbody></table></div><p class="sub" id="qUnknown"></p>
+<h2>AI drafts</h2><div class="tbl"><table class="qtab"><thead><tr><th scope="col">Feature</th><th scope="col">Offered</th><th scope="col">Used as drafted</th><th scope="col">Used after an edit</th><th scope="col">Rejected</th></tr></thead><tbody id="qDrafts"></tbody></table></div></div>
+<div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
+      <section class="view" id="v-settings" hidden><div class="wrapmax">
+        <h1>Settings</h1>
+        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><label class="setchg"><input type="checkbox" id="setChanged"> Show changed only</label><nav class="setcats" id="setcats" aria-label="Settings categories"></nav><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
+        <div id="settingsBody"></div></div>
+        <div class="card" style="margin-top:18px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
+        <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+      </div></section>
+      <section class="view" id="v-help" hidden><div class="hp-shell"><div class="tabs" id="helpTabs" role="tablist" aria-label="Help"></div><div id="helpPane" role="tabpanel"></div></div></section>
+      <aside class="panel" id="panel" aria-label="Details"><div class="pin">
+        <div class="ph"><div style="flex:1"><div class="id" id="pId"></div><h2 id="pTitle"></h2></div><button class="btn quiet" id="pClose">Close</button></div>
+        <div class="pb" id="pBody"><div class="editbanner" id="editBanner">Editing — changes apply when you save</div><dl class="fgrid" id="pFields"></dl></div>
+        <div class="ferr" id="pErr"></div><div class="pkeys" id="pKeys"></div>
+        <div class="pf" id="pFoot"></div>
+      </div></aside>
+    </div>
+  </div>
+</div>
+<aside id="chat" aria-label="ask creaite"><div class="chgrip" id="chGrip" role="separator" aria-orientation="vertical" aria-label="Resize ask creaite" tabindex="0" title="Drag to resize; double-click to reset"></div>
+  <div class="chh"><h2>ask creaite</h2><button class="iconbtn chbtn" id="chNew" title="New chat" aria-label="New chat"><svg data-ic="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button><span class="dd"><button class="iconbtn chbtn" id="chHist" title="History" aria-label="History" aria-haspopup="true" aria-expanded="false"><svg data-ic="history" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"></svg></button><div class="ddmenu chhist" id="chHistMenu" role="menu"></div></span><button class="iconbtn" id="chatClose" aria-label="Close" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
+  <div class="chs" id="chSub"></div>
+  <div class="chq" id="chQuick"><button class="mini" data-q="sweep mail">Sweep</button><button class="mini" data-q="process new minutes">Process minutes</button><button class="mini" data-q="weekly report">Weekly report</button><button class="mini" data-q="what's overdue?">What's overdue?</button></div>
+  <div class="chlogbox"><div class="chlog" id="chLog" aria-live="polite"></div><button type="button" class="btn primary chjump" id="chJump" hidden>↓ New activity</button></div>
+  <div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden></div>
+  <div class="chthumbs" id="chThumbs" hidden></div>
+  <div class="chin"><div class="acmenu" id="acMenu" role="listbox" aria-label="Suggestions" hidden></div><button class="iconbtn chbtn" id="chAttach" type="button" title="Attach an image (or paste or drop one)" aria-label="Attach an image"><svg data-ic="clip" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg></button><input type="file" id="chFile" accept="image/png,image/jpeg" multiple hidden><textarea id="chIn" aria-autocomplete="list" aria-controls="acMenu" rows="1" placeholder="Ask a question or give an instruction…" aria-label="Message"></textarea><button type="button" class="sendb" id="chSend" aria-label="Send" data-tip="Send" data-key="Enter"><svg data-ic="arrowup" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
+</aside>
+<dialog id="cmdk" aria-label="Search or jump to"><input id="cmdkIn" placeholder="Search projects, items, commands…" autocomplete="off"><div id="cmdkList"></div></dialog>
+<div class="runbadge" id="runBadge" role="status" aria-live="polite" hidden><button type="button" class="rbmain" id="rbMain" title="Open ask creaite"><span class="rbi" id="rbI" aria-hidden="true"></span><span class="rbt" id="rbT"></span><span class="rbl" id="rbL"></span><span class="rbe" id="rbE" aria-hidden="true"></span></button><button type="button" class="rbx" id="rbX" aria-label="Dismiss" title="Dismiss" hidden><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
+<dialog id="inPrev" aria-label="Preview"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><h2 id="inPrevName" style="flex:1;margin:0;font-size:16px"></h2><button class="btn" id="inPrevOpen" type="button">Open in its app</button><form method="dialog"><button class="btn primary">Close</button></form></div>
+  <pre id="inPrevText"></pre><div id="inPrevMd" hidden></div><div class="sub" id="inPrevCut" hidden>Only the start is shown; open it in its app for the rest.</div></dialog>
+<dialog id="searchPrev" aria-label="Meeting"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><h2 id="spName" style="flex:1;margin:0;font-size:16px"></h2><button class="btn" id="spOpen" type="button">Open in its app</button><form method="dialog"><button class="btn primary">Close</button></form></div>
+  <div id="spText"></div><div class="sub" id="spCut" hidden>Only the start is shown; open it in its app for the rest.</div></dialog>
+<dialog id="llDlg" class="rvdlg lldlg" aria-labelledby="llTitle"><h2 id="llTitle">Compare</h2><p class="sub">The proposal beside the item it looks like. Nothing changes until you choose.</p><table class="lltab"><thead><tr><th scope="col"><span class="vh">Field</span></th><th scope="col" id="llNew">Proposed</th><th scope="col" id="llOld">Existing</th></tr></thead><tbody id="llRows"></tbody></table><div class="row" style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><span class="sp" style="flex:1"></span><button type="button" class="btn" id="llClose">Close</button><button type="button" class="btn" id="llKeep">Keep as new</button><button type="button" class="btn primary" id="llMerge">Merge</button></div></dialog><!-- BL-221 (sprint-drafts-extraction): Compare a repeat -->
+<dialog id="rvDlg" class="bdlg rvdlg" aria-labelledby="rvDlgTitle"><div id="rvDlgBody"></div><div class="row" style="display:flex;gap:8px;margin-top:12px"><span class="sp" style="flex:1"></span><button type="button" class="btn" id="rvDlgCancel">Cancel</button><button type="button" class="btn primary" id="rvDlgOk">Approve</button></div></dialog><!-- BL-133: the preview before a large or global approval -->
+<dialog id="boardDlg" aria-label="Move a card"><div id="bdForm">
+  <h2 id="bdTitle" style="margin:0 0 4px;font-size:16px"></h2><div class="sub" id="bdHint" style="margin-bottom:10px"></div>
+  <div id="bdDateRow"><label class="sub" for="bdDate">Due date</label><span class="dwrap"><input type="text" id="bdDate" placeholder="DD-MM-YYYY" autocomplete="off" data-min="today" data-noclear><button type="button" class="dbtn" data-cal="bdDate" aria-label="Choose date" data-tip="Choose a date"><svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></span>
+    <div class="bdquick" id="bdQuick"><button type="button" class="vchip" data-q="fri">This Friday</button><button type="button" class="vchip" data-q="nfri">Next Friday</button><button type="button" class="vchip" data-q="2w">In two weeks</button></div><div class="sub" id="bdRange"></div></div>
+  <div class="perr" id="bdErr" role="alert" style="color:var(--bad);min-height:18px;font-size:13px"></div>
+  <div class="curacts"><span class="sp"></span><button class="btn" type="button" id="bdCancel">Cancel</button><button class="btn primary" type="button" id="bdOk">Move</button></div>
+</div></dialog>
+<dialog id="genDlg" aria-label="Generate current state"><form method="dialog" id="genForm">
+  <h2 style="margin:0 0 10px">Generate current state</h2>
+  <div class="sub" id="genWho"></div>
+  <fieldset><legend>Period</legend><div class="views" id="genDays"></div>
+    <div class="drange" id="genCustom" hidden><input type="text" id="genFrom" placeholder="DD-MM-YYYY" aria-label="From"><span>to</span><input type="text" id="genTo" placeholder="DD-MM-YYYY" aria-label="To"></div></fieldset>
+  <fieldset><legend>Form</legend><div class="views" id="genFormKind"></div><div class="sub" id="genFormNote"></div></fieldset>
+  <fieldset><legend>Audience</legend><div class="views" id="genAud"></div><div class="sub" id="genAudNote"></div></fieldset>
+  <fieldset><legend>Length</legend><div class="views" id="genLen"></div></fieldset>
+  <fieldset><legend>Draw on</legend><div id="genSrc"></div></fieldset>
+  <label class="sub" for="genNote">Steer it (optional)</label><textarea id="genNote" rows="2" placeholder="For example: focus on the pilot results"></textarea>
+  <div class="sub" id="genSweep"></div>
+  <div class="curacts"><span class="sp"></span><button class="btn" value="cancel" formnovalidate>Cancel</button><button class="btn primary" id="genGo" value="go">Generate</button></div>
+  <div id="genOut" class="fmout"></div>
+</form></dialog>
+<!-- ===== People (BL-55, BL-56) ===== -->
+<dialog id="personDlg" aria-label="Person"><form method="dialog" id="personForm">
+  <h2 id="pdTitle" style="margin:0 0 10px">New person</h2>
+  <div id="pdMatch" hidden></div>
+  <div id="pdFields"><label for="pd_name">Full name <span class="req">required</span></label><input id="pd_name" type="text" autocomplete="off">
+    <label for="pd_email">Email</label><input id="pd_email" type="text" autocomplete="off">
+    <label for="pd_aliases">Aliases</label><input id="pd_aliases" type="text" autocomplete="off" placeholder="Sara, Sara K, SK">
+    <label for="pd_org">Organisation</label><input id="pd_org" type="text" autocomplete="off">
+    <label for="pd_role">Role</label><input id="pd_role" type="text" autocomplete="off"></div>
+  <div class="sub" id="pdErr" role="alert" style="color:var(--bad)"></div>
+  <div class="curacts"><span class="sp"></span><button class="btn" value="cancel" formnovalidate>Cancel</button><button type="button" class="btn primary" id="pdSave">Save</button></div>
+</form></dialog>
+<div class="discardbar" id="discardBar" role="alertdialog" aria-label="Unsaved changes"><span>Discard your changes to current state?</span><button class="btn" data-dis="keep">Keep editing</button><button class="btn danger" data-dis="go">Discard</button></div>
+<div class="snack" id="snack" role="status"><span id="snackT"></span><button id="snackU">Undo</button></div>
+<script>/*__SPLIT_SCRIPT__*/</script>
+</body>
+</html>

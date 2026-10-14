@@ -1,0 +1,227 @@
+<section class="view" id="v-inbox">
+<div class="wrapmax">
+<h1>Intake</h1>
+<p class="sub" style="margin:#px 0 #px">Transcripts and minutes waiting to be processed. Files you add are saved to the inbox folder. Processing drafts the minutes and proposed items for Review; nothing is filed until you approve.</p>
+<!-- ===== Intake sections (BL-73) ===== -->
+<section class="card isec" id="isecCal" aria-labelledby="isecCalH">
+<header class="ish">
+<svg data-ic="calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calendar">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+<h2 id="isecCalH">Calendar Import</h2>
+</header>
+<p class="sub ipurpose">Pick meetings from your calendar and load their transcripts.</p>
+<div id="isecCalBody">
+<div class="mtgsec" id="mtgSec">
+<div class="mtghead">
+<span class="sub" id="mtgRead">
+</span>
+<span class="sp">
+</span>
+<button class="btn" id="mtgRefresh" title="">Refresh</button>
+<button class="btn" id="mtgNew" disabled="">Select new</button>
+<button class="btn" id="mtgTx" disabled="">Select with transcripts</button>
+<button class="btn" id="mtgLoad" disabled="" title="Tick meetings that have a transcript">Load into inbox</button>
+<button class="btn primary" id="mtgGo" disabled="" title="">Process selected</button>
+</div>
+<div class="mtgchips" id="mtgChips" role="group" aria-label="Show">
+</div>
+<div id="mtgBody">
+<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now.</div>
+</div>
+</div>
+</div>
+</section>
+<section class="card isec" id="isecUp" aria-labelledby="isecUpH">
+<header class="ish">
+<svg data-ic="upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="upload">
+<path d="M12 15V4M7.5 8.5 12 4l4.5 4.5">
+</path>
+<path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4">
+</path>
+</svg>
+<h2 id="isecUpH">Upload Files</h2>
+</header>
+<p class="sub ipurpose">Drop transcripts or minutes you already have.</p>
+<div class="dropzone" id="inboxDrop" tabindex="0" role="button" aria-label="Add files to Intake">Drop transcripts or minutes here, or <button class="linkbtn" id="inboxPick" type="button">choose files</button>
+<span class="sub"> · .vtt, .docx, .txt, .md or .pdf, up to 25 MB each</span>
+<input type="file" id="inboxFile" multiple="" accept=".vtt,.docx,.txt,.md,.pdf" hidden="">
+</div>
+<div class="toolbar" style="margin-top:#px">
+<button class="btn" id="inboxNew">Select new</button>
+<span class="sp">
+</span>
+<button class="btn primary" id="inboxGo" disabled="" title="">Process selected</button>
+</div>
+<div class="tbl">
+<table id="inboxTbl">
+<thead>
+<tr>
+<th style="width:#px">
+</th>
+<th>File</th>
+<th>Type</th>
+<th>Size</th>
+<th>Added</th>
+<th>Likely project</th>
+<th>State</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr data-inf="inbox/ABC weekly sync.vtt">
+<td>
+<input type="checkbox" aria-label="Select ABC weekly sync.vtt">
+</td>
+<td class="title">ABC weekly sync.vtt</td>
+<td>vtt</td>
+<td>1 KB</td>
+<td style="white-space:nowrap">09-10-2026</td>
+<td>
+<span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</td>
+<td>
+<span class="tag ">New</span>
+</td>
+<td style="white-space:nowrap;text-align:right">
+<button type="button" class="ib sm" aria-label="Preview" data-tip="Preview" data-inprev="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="eye">
+<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z">
+</path>
+<circle cx="12" cy="12" r="3">
+</circle>
+</svg>
+</button>
+<button type="button" class="ib sm no" aria-label="Remove from Intake" data-tip="Remove from Intake" data-inrm="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-inf="inbox/Copy of filed.vtt">
+<td>
+<input type="checkbox" aria-label="Select Copy of filed.vtt" disabled="">
+</td>
+<td class="title">Copy of filed.vtt</td>
+<td>vtt</td>
+<td>1 KB</td>
+<td style="white-space:nowrap">09-10-2026</td>
+<td>
+<span class="sub">Not sure</span>
+</td>
+<td>
+<span class="tag sub">Already processed</span>
+</td>
+<td style="white-space:nowrap;text-align:right">
+<button type="button" class="ib sm" aria-label="Preview" data-tip="Preview" data-inprev="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="eye">
+<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z">
+</path>
+<circle cx="12" cy="12" r="3">
+</circle>
+</svg>
+</button>
+<button type="button" class="ib sm no" aria-label="Remove from Intake" data-tip="Remove from Intake" data-inrm="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr data-inf="inbox/Recording.vtt">
+<td>
+<input type="checkbox" aria-label="Select Recording.vtt">
+</td>
+<td class="title">Recording.vtt</td>
+<td>vtt</td>
+<td>1 KB</td>
+<td style="white-space:nowrap">09-10-2026</td>
+<td>
+<span class="sub">Not sure</span>
+</td>
+<td>
+<span class="tag ">New</span>
+</td>
+<td style="white-space:nowrap;text-align:right">
+<button type="button" class="ib sm" aria-label="Preview" data-tip="Preview" data-inprev="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="eye">
+<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z">
+</path>
+<circle cx="12" cy="12" r="3">
+</circle>
+</svg>
+</button>
+<button type="button" class="ib sm no" aria-label="Remove from Intake" data-tip="Remove from Intake" data-inrm="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="card isec" id="isecQuick" aria-labelledby="isecQuickH">
+<header class="ish">
+<svg data-ic="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+<h2 id="isecQuickH">Quick Capture</h2>
+</header>
+<p class="sub ipurpose">Type rough notes from a call or conversation that has no transcript.</p>
+<div id="isecQuickBody">
+<div class="qcap" id="qcap">
+<label for="qcNotes" class="vh">Quick Capture notes</label>
+<textarea id="qcNotes" rows="2" placeholder="Notes from a call or a conversation: what was agreed, who will do what by when, any new risk…" data-ag="1" style="height: #px;" class="agfit">
+</textarea>
+<div id="qcChips" class="qcchips" role="group" aria-label="Suggested fields for this line">
+</div>
+<div class="qcrow" id="qcMore" hidden="">
+<label>Project <select id="qcProj">
+<option value="">Match from the note</option>
+<option value="ABC">Example Programme</option>
+<option value="DEF">Digital Enablement</option>
+</select>
+</label>
+<div class="qcf">
+<label for="qcDate">Date</label>
+<span class="dwrap qcdate">
+<input id="qcDate" type="text" data-max="today" data-noclear="" size="12" autocomplete="off" aria-describedby="qcMsg">
+<button type="button" class="dbtn" data-cal="qcDate" aria-label="Choose date" data-tip="Choose date">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calendar">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+</button>
+</span>
+</div>
+<label>Who was there <input id="qcWho" placeholder="Sara, Omar">
+</label>
+<label class="qct">Title <input id="qcTitle" placeholder="From the first line">
+</label>
+<span class="sp">
+</span>
+<button class="btn" id="qcCancel" type="button">Clear</button>
+<button class="btn primary" id="qcGo" type="button">Process</button>
+</div>
+<div class="sub" id="qcMsg" aria-live="polite">
+</div>
+</div>
+</div>
+</section>
+</div>
+</section>

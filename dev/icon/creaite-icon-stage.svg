@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="creaite">
+  <title>creaite</title>
+  <!-- Stage (Alan, 12-10-2026): a dashed draft behind, the solid record in front, the record carrying the c -->
+  <rect width="512" height="512" rx="112" fill="#18181B"/>
+  <!-- the draft: what creaite proposes -->
+  <rect x="87" y="87" width="225" height="225" rx="46" fill="none" stroke="#A1A1AA" stroke-width="18" stroke-dasharray="31 26"/>
+  <!-- the record: what you approved -->
+  <rect x="200" y="200" width="225" height="225" rx="46" fill="#F2B544"/>
+  <path d="M348 276A51 51 0 1 0 348 348" fill="none" stroke="#18181B" stroke-width="28" stroke-linecap="round"/>
+</svg>

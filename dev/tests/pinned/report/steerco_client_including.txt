@@ -1,0 +1,49 @@
+{
+ "blocked": 0,
+ "blockers": [
+  "The data feed is late. UAT may start later. We are chasing the client weekly.: waiting on this for UAT start"
+ ],
+ "changes": [
+  "Milestone moved: UAT start, 26-10-2026 → 02-11-2026",
+  "New risk: The data feed is late. UAT may start later. We are chasing the client weekly.",
+  "Decided: The go-live moves by two weeks to allow for the data feed.",
+  "Decided: The proposal no longer includes the pricing option."
+ ],
+ "code": "ABC",
+ "decisions_needed": [
+  "We would like your confirmation of the pilot plan. (by 16-10-2026)"
+ ],
+ "early_warnings": [],
+ "evidence": null,
+ "flow": "",
+ "health": "At risk",
+ "health_reason": "Data access is late and UAT may start later",
+ "labelled_but_excluded": [],
+ "last_steerco": null,
+ "milestones": [
+  {
+   "M_BASE": "19-10-2026",
+   "M_DATE": "19-10-2026; expected 02-11-2026",
+   "M_STATUS": "Expected later",
+   "M_TEXT": "UAT start"
+  }
+ ],
+ "name": "Example Programme",
+ "next_period": [
+  "Agree the success criteria for the pilot. — Sara Example (Example Client Ltd), due 15-10-2026"
+ ],
+ "omitted": [],
+ "risks": [
+  {
+   "R_ID": "—",
+   "R_OWNER": "—",
+   "R_PRIORITY": "—",
+   "R_TEXT": "Risk: The data feed is late. UAT may start later. We are chasing the client weekly."
+  }
+ ],
+ "sensitive": [],
+ "since": "2026-09-25",
+ "steerco_date": "2026-10-09",
+ "trend": "Over the last 4 weekly updates: On track (2) → At risk (2).",
+ "version": "client"
+}

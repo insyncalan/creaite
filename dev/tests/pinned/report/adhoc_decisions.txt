@@ -1,0 +1,55 @@
+exit 0
+{
+ "table": "decisions",
+ "count": 5,
+ "columns": [
+  "ID",
+  "Decision",
+  "Status",
+  "Made by",
+  "Needed by",
+  "Date"
+ ],
+ "rows": [
+  [
+   "ABC-D-014",
+   "Drop the pricing option from the proposal",
+   "Made",
+   "Alan Carter",
+   "",
+   "07-10-2026"
+  ],
+  [
+   "ABC-D-013",
+   "Go-live moves two weeks",
+   "Made",
+   "Jane Doe",
+   "",
+   "05-10-2026"
+  ],
+  [
+   "ABC-D-010",
+   "Extend the pilot by two weeks",
+   "Pending",
+   "Sara Example",
+   "06-10-2026",
+   ""
+  ],
+  [
+   "ABC-D-011",
+   "Choose the UAT venue",
+   "Pending",
+   "Alan Carter",
+   "14-10-2026",
+   ""
+  ],
+  [
+   "ABC-D-012",
+   "Share the pilot plan with the client",
+   "Pending",
+   "Jane Doe",
+   "16-10-2026",
+   ""
+  ]
+ ]
+}

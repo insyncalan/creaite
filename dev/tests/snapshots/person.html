@@ -1,0 +1,103 @@
+<section class="view" id="v-person">
+<div class="wrapmax">
+<nav class="crumb" aria-label="Breadcrumb">
+<a href="#" data-go="people">People</a>
+<span aria-hidden="true">›</span>
+<span aria-current="page">Sara Example</span>
+</nav>
+<div style="display:flex;align-items:flex-start;gap:#px;flex-wrap:wrap">
+<div style="flex:1;min-width:#px">
+<h1>Sara Example</h1>
+<p class="sub" style="margin:#px 0">Example Client Ltd · Delivery lead · <a href="mailto:sara.example@client.com">sara.example@client.com</a>
+</p>
+<p class="sub" style="margin:#px 0">Also written as Sara, Sara E</p>
+</div>
+<button class="btn" id="ppEmail" data-tip="Draft an email with their open items">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="mail">
+<rect x="2" y="4" width="20" height="16" rx="2">
+</rect>
+<path d="m22 7-9.1 5.7a2 2 0 0 1-2 0L2 7">
+</path>
+</svg>Draft email</button>
+<button class="btn" id="ppHand" data-tip="Hand their open items to someone else">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="handover">
+<path d="m15 14 5-5-5-5">
+</path>
+<path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5V20">
+</path>
+</svg>Hand over…</button>
+<button type="button" class="ib bd" aria-label="Edit details" data-tip="Edit details" id="ppEdit">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+</div>
+<div class="ppcounts" role="group" aria-label="Counts">
+<span>
+<a href="#" class="cntl" data-nav="actions:open::o=Sara%20Example" data-n="1" aria-label="1 open action owned by Sara Example, open in Work">
+<b>1</b> open action</a>
+</span>
+<span>
+<b>0</b> open risks and issues</span>
+<span class="">
+<b>0</b> overdue</span>
+<span>Projects <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</span>
+</div>
+<div class="card ppcard">
+<h2>Open work <span class="sub">· 1</span>
+</h2>
+<div class="pplinks">
+<a href="#" data-seeall="actions">See all actions in Work ›</a>
+</div>
+<div class="pph">
+<span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</div>
+<div class="pptype">Actions <span>· 1</span>
+</div>
+<div class="tbl">
+<table class="ptbl" data-t="actions">
+<thead>
+<tr>
+<th data-col="t" aria-sort="none" title="Sort by action">Action</th>
+<th data-col="due" aria-sort="none" title="Sort by due">Due</th>
+<th data-col="pr" aria-sort="none" title="Sort by priority">Priority</th>
+<th data-col="st" aria-sort="none" title="Sort by status">Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="click" data-row="ABC-A-002" data-k="actions" aria-selected="false">
+<td class="title" data-f="t">
+<span class="ki" title="Action" aria-hidden="true">
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="4" y="4" width="16" height="16" rx="3">
+</rect>
+<path d="m8 12.5 2.8 2.8L16.5 9.5">
+</path>
+</svg>
+</span>Book UAT environment<div class="x">
+<a href="#" class="rowid" data-rid="ABC-A-002" title="Open ABC-A-002">ABC-A-002</a> · <span class="pcode plink" data-proj="ABC" role="link" tabindex="0" title="Open Example Programme">Example Programme</span>
+</div>
+</td>
+<td data-f="due" class="" style="white-space:nowrap">12-10-2026<div class="x">In 3 days</div>
+</td>
+<td data-f="pr" class="">Medium</td>
+<td data-f="st">Open</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="card ppcard">
+<h2>Closed in the last 14 days</h2>
+<p class="sub">Nothing closed lately.</p>
+</div>
+<div class="card ppcard">
+<h2>Decisions made</h2>
+<p class="sub">None in the last 90 days.</p>
+</div>
+</div>
+</section>

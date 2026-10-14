@@ -1,0 +1,430 @@
+[
+ {
+  "name": "pane marker between panes",
+  "features": "current",
+  "text": "Left text.\n\n<!-- creaite: second pane -->\n\nRight text.",
+  "why": "BL-89's marker, if the editor ever holds both panes: an HTML comment, kept verbatim"
+ },
+ {
+  "name": "template comment quoting the marker",
+  "features": "current",
+  "text": "_Rewritten weekly._\n\n<!-- The dashboard can show Current state in two panes. They are one message: everything above the line `<!-- creaite: second pane -->` is the left pane and everything below it the right pane. Without that line the whole text is the left pane. Every reader (the weekly and client reports, Generate, search) reads the two as one continuous message; keep the marker and the right pane when you rewrite this section. -->",
+  "why": "the project template's guidance comment whole (BL-310 keeps it in one pane): it quotes the marker inside it"
+ },
+ {
+  "name": "template comment cut by the old splitter",
+  "features": "current",
+  "text": "<!-- The dashboard can show Current state in two panes. They are one message: everything above the line `",
+  "why": "main before BL-310 cuts the comment at the quoted marker: an HTML comment that never closes runs to the end"
+ },
+ {
+  "name": "comment inside a paragraph",
+  "features": "current",
+  "text": "Data access is late <!-- check with Omar --> and UAT moves.",
+  "why": "an inline HTML comment, kept where it stands"
+ },
+ {
+  "name": "comment over several lines",
+  "features": "current",
+  "text": "<!--\nA note to the next writer.\nKeep it short.\n-->\n\nText.",
+  "why": "a block comment with line ends inside"
+ },
+ {
+  "name": "pane that is only a comment",
+  "features": "current",
+  "text": "<!-- Guidance for the next writer: keep this pane to three sentences and name the one thing that matters. -->",
+  "why": "a pane holding nothing but a one-line HTML comment (~100 bytes): Team 1's real-data failure on main, where it came back empty"
+ },
+ {
+  "name": "pane that is only a comment, with a line end",
+  "features": "current",
+  "text": "<!-- Guidance for the next writer: keep this pane to three sentences and name the one thing that matters. -->\n",
+  "why": "the same, with a trailing line end (kept by the envelope)"
+ },
+ {
+  "name": "pane that is only a multi-line comment",
+  "features": "current",
+  "text": "<!--\nGuidance for the next writer: keep this pane to three sentences\nand name the one thing that matters.\n-->",
+  "why": "a comment over several lines, alone in the pane"
+ },
+ {
+  "name": "pane that is only a multi-line comment, with a line end",
+  "features": "current",
+  "text": "<!--\nGuidance for the next writer: keep this pane to three sentences\nand name the one thing that matters.\n-->\n",
+  "why": "the same, with a trailing line end"
+ },
+ {
+  "name": "empty pane then a comment",
+  "features": "current",
+  "text": "\n\n<!-- Guidance for the next writer: keep this pane to three sentences and name the one thing that matters. -->",
+  "why": "blank lines and then only a comment (kept by the envelope and the node)"
+ },
+ {
+  "name": "comment then the pane marker and an empty pane",
+  "features": "current",
+  "text": "<!-- Guidance for the next writer: keep this pane to three sentences and name the one thing that matters. -->\n\n<!-- creaite: second pane -->",
+  "why": "a comment-only left pane followed by the marker with nothing after it"
+ },
+ {
+  "name": "link text with brackets",
+  "features": "current",
+  "text": "See [the [1] plan](https://example.com/plan) for dates.",
+  "why": "balanced brackets inside a link's text"
+ },
+ {
+  "name": "link address with brackets",
+  "features": "current",
+  "text": "See [Foo](https://en.wikipedia.org/wiki/Foo_(bar)) and [Bar](https://example.com/a_b).",
+  "why": "balanced brackets and underscores inside a link's address"
+ },
+ {
+  "name": "link with a title",
+  "features": "current",
+  "text": "See the [plan](https://example.com/plan \"Delivery plan\") for dates.",
+  "why": "a link's title is kept"
+ },
+ {
+  "name": "square brackets that are not a link",
+  "features": "current",
+  "text": "Owner [TBC]; see [ABC-A-003] and [done].",
+  "why": "brackets in plain text are written as they are, not escaped"
+ },
+ {
+  "name": "angle-bracket link",
+  "features": "current",
+  "text": "Mail <mailto:sara@example.com> or see <https://example.com/plan>.",
+  "why": "an autolink in angle brackets keeps its brackets"
+ },
+ {
+  "name": "bare URL ending a sentence",
+  "features": "current",
+  "text": "The plan is at https://example.com/plan.",
+  "why": "GFM's bare URL, its full stop outside the link"
+ },
+ {
+  "name": "hard break with trailing spaces",
+  "features": "current",
+  "text": "Line one  \nLine two",
+  "why": "two trailing spaces: a hard line break, written back with its spaces"
+ },
+ {
+  "name": "hard break with a backslash",
+  "features": "current",
+  "text": "Line one\\\nLine two",
+  "why": "a backslash at the line end: the same break, written back as a backslash"
+ },
+ {
+  "name": "soft line break",
+  "features": "current",
+  "text": "Line one\nLine two",
+  "why": "a single line end inside a paragraph stays a line end"
+ },
+ {
+  "name": "Windows line ends",
+  "features": "current",
+  "text": "First paragraph.\r\n\r\n- Data access\r\n  - Production is late\r\n- UAT\r\n",
+  "why": "CRLF on every line: kept by the envelope around the document"
+ },
+ {
+  "name": "trailing newline and spaces",
+  "features": "current",
+  "text": "Text with a final line end.  \n\n",
+  "why": "what follows the last block (blank lines, spaces) is kept by the envelope"
+ },
+ {
+  "name": "leading blank line",
+  "features": "current",
+  "text": "\n\nText after a blank line.",
+  "why": "blank lines before the first block are kept by the envelope"
+ },
+ {
+  "name": "backslash escapes",
+  "features": "current",
+  "text": "Not \\*bold\\*, a\\_b, \\# not a heading and 1\\. not a list.",
+  "why": "escapes as written: the literal mark keeps each backslash"
+ },
+ {
+  "name": "HTML entities",
+  "features": "current",
+  "text": "Q&amp;A &copy; 2026 &#8212; R&D &lt;draft&gt;.",
+  "why": "entities as written: the literal mark keeps each one"
+ },
+ {
+  "name": "italic inside a word",
+  "features": "current",
+  "text": "Un*frigging*believable, and _this_ too.",
+  "why": "italic inside a word can only be *, and each italic keeps its own delimiter"
+ },
+ {
+  "name": "bold and italic nested",
+  "features": "current",
+  "text": "**Bold with _italic_ inside** and __underscored bold__.",
+  "why": "marks inside marks, and both bold forms"
+ },
+ {
+  "name": "strike, code and a backtick",
+  "features": "current",
+  "text": "~~old~~ `new_name` and `` a`b `` value.",
+  "why": "code spans are written raw, with enough backticks"
+ },
+ {
+  "name": "nested numbered and bullets",
+  "features": "current",
+  "text": "- Data\n  1. First\n  2. Second\n- UAT\n  - Masked data",
+  "why": "numbers inside bullets, 2-space nesting"
+ },
+ {
+  "name": "three levels",
+  "features": "current",
+  "text": "1. Escalate\n  1. Sponsor first\n    - With the plan\n2. Re-plan UAT",
+  "why": "md_normalise's deepest nesting, 2 spaces a level"
+ },
+ {
+  "name": "numbered list from 3",
+  "features": "current",
+  "text": "3. Third step\n4. Fourth step",
+  "why": "a list's start number is kept"
+ },
+ {
+  "name": "numbered list with brackets",
+  "features": "current",
+  "text": "1) First\n2) Second",
+  "why": "the ) delimiter is kept"
+ },
+ {
+  "name": "star bullets",
+  "features": "current",
+  "text": "* One\n* Two",
+  "why": "* bullets are kept"
+ },
+ {
+  "name": "quote over two paragraphs",
+  "features": "current",
+  "text": "> First.\n>\n> Second.",
+  "why": "a blockquote with two paragraphs"
+ },
+ {
+  "name": "headings",
+  "features": "current",
+  "text": "# Title\n\n## Section\n\n### Next steps",
+  "why": "every heading level, ATX form"
+ },
+ {
+  "name": "code block",
+  "features": "current",
+  "text": "```python\nprint('a_b *c*')\n```",
+  "why": "a fenced code block, raw inside"
+ },
+ {
+  "name": "horizontal rule",
+  "features": "current",
+  "text": "Above.\n\n---\n\nBelow.",
+  "why": "a thematic break"
+ },
+ {
+  "name": "empty paragraph",
+  "features": "current",
+  "text": "A\n\n\n\nB",
+  "why": "an extra blank line between blocks is an empty paragraph"
+ },
+ {
+  "name": "unicode",
+  "features": "current",
+  "text": "Café — naïve “quotes”, £40k → 10% ✓",
+  "why": "non-ASCII text as it is"
+ },
+ {
+  "name": "table padded and aligned",
+  "features": "notes",
+  "text": "| Name      |    Role |\n|:----------|--------:|\n| Sara Khan | Sponsor |",
+  "why": "a table written by another tool: the table keeps its source while its content is unchanged"
+ },
+ {
+  "name": "table without outer pipes",
+  "features": "notes",
+  "text": "Name | Role\n--- | ---\nSara Khan | Sponsor",
+  "why": "GFM's pipe-less table form"
+ },
+ {
+  "name": "table with an escaped pipe and marks",
+  "features": "notes",
+  "text": "| Item | Note |\n| --- | --- |\n| a \\| b | **bold** and [link](https://example.com) |",
+  "why": "\\| inside a cell, and marks in cells"
+ },
+ {
+  "name": "table between paragraphs",
+  "features": "notes",
+  "text": "Before.\n\n| A | B |\n| --- | --- |\n| 1 | 2 |\n\nAfter.",
+  "why": "no blank lines added around a table"
+ },
+ {
+  "name": "nested checklist",
+  "features": "notes",
+  "text": "- [ ] Send the SOW\n  - [x] Draft it\n- [x] Book UAT",
+  "why": "task items inside task items"
+ },
+ {
+  "name": "trailing spaces at a paragraph end",
+  "features": "current",
+  "text": "Para one.   \n\nPara two.",
+  "why": "spaces before a blank line: marked keeps them in the paragraph's text, so they come back"
+ },
+ {
+  "name": "inline HTML tags",
+  "features": "current",
+  "text": "Use <b>bold</b> sparingly; x<y and a <br> b.",
+  "why": "inline HTML the schema knows becomes marks; plain < stays text"
+ },
+ {
+  "name": "block HTML",
+  "features": "notes",
+  "text": "<div align=\"center\">\nCentred text.\n</div>\n\nAfter it.",
+  "why": "an HTML block other than a comment, kept verbatim"
+ },
+ {
+  "name": "email and www addresses",
+  "features": "current",
+  "text": "Mail sara@example.com or see www.example.com today.",
+  "why": "GFM's other bare links: written bare, as they were"
+ },
+ {
+  "name": "numbered item over two lines",
+  "features": "current",
+  "text": "1. First line  \n  continued here\n2. Second",
+  "why": "a hard break inside a numbered item: the next line indented 2 spaces, creaite's style"
+ },
+ {
+  "name": "numbered item with two paragraphs",
+  "features": "current",
+  "text": "1. First item\n\n  More about it.\n2. Second item",
+  "why": "a second paragraph in a numbered item, indented 2 spaces"
+ },
+ {
+  "name": "code span with spaces",
+  "features": "current",
+  "text": "Run ` a ` and `  b  ` here.",
+  "why": "spaces inside a code span"
+ },
+ {
+  "name": "plus signs",
+  "features": "current",
+  "text": "C++ and C++ teams; a+b+c.",
+  "why": "no underline syntax: ++ is text"
+ },
+ {
+  "name": "image with a title",
+  "features": "current",
+  "text": "![Delivery plan](images/plan.png \"Plan v2\")",
+  "why": "an image's title is kept"
+ },
+ {
+  "name": "list item with two paragraphs",
+  "features": "current",
+  "text": "- First item\n\n  More about it.\n- Second item",
+  "why": "a list item holding two paragraphs"
+ },
+ {
+  "name": "text after a list",
+  "features": "current",
+  "text": "- One\n- Two\n\nAfter the list.",
+  "why": "a paragraph after a list"
+ },
+ {
+  "name": "mixed line ends",
+  "features": "current",
+  "text": "One.\r\n\r\nTwo.\n\nThree.",
+  "expect": "One.\n\nTwo.\n\nThree.",
+  "why": "KNOWN LOSS: some lines CRLF, some LF; the document can't hold a line end per line, so the envelope keeps CRLF only when every line uses it"
+ },
+ {
+  "name": "setext heading",
+  "features": "notes",
+  "text": "Title\n=====\n\nText.",
+  "expect": "# Title\n\nText.",
+  "why": "KNOWN LOSS: the underlined heading form is written as ATX (#); creaite never writes it"
+ },
+ {
+  "name": "typed italic",
+  "features": "current",
+  "html": "<p>The date is <em>provisional</em> for now.</p>",
+  "expect": "The date is _provisional_ for now.",
+  "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "typed italic inside a word",
+  "features": "current",
+  "html": "<p>Un<em>frigging</em>believable</p>",
+  "expect": "Un*frigging*believable",
+  "why": "_ can't open or close inside a word, so the writer falls back to *"
+ },
+ {
+  "name": "typed bold, strike, code",
+  "features": "current",
+  "html": "<p><strong>Bold</strong>, <s>gone</s> and <code>doctor.py</code></p>",
+  "expect": "**Bold**, ~~gone~~ and `doctor.py`",
+  "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "typed bold with a trailing space",
+  "features": "current",
+  "html": "<p><strong>Bold </strong>text</p>",
+  "expect": "**Bold** text",
+  "why": "Markdown can't close a mark after a space: the space goes outside"
+ },
+ {
+  "name": "typed nested numbers",
+  "features": "current",
+  "html": "<ol><li><p>Escalate</p><ol><li><p>Sponsor first</p></li></ol></li><li><p>Re-plan</p></li></ol>",
+  "expect": "1. Escalate\n  1. Sponsor first\n2. Re-plan",
+  "why": "md_normalise's 2-space nesting"
+ },
+ {
+  "name": "typed bullets",
+  "features": "current",
+  "html": "<ul><li><p>Data</p><ul><li><p>Late</p></li></ul></li></ul>",
+  "expect": "- Data\n  - Late",
+  "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "typed link to itself",
+  "features": "current",
+  "html": "<p>See <a href=\"https://example.com/plan\">https://example.com/plan</a></p>",
+  "expect": "See https://example.com/plan",
+  "why": "a link whose text is its own address is written bare"
+ },
+ {
+  "name": "typed link",
+  "features": "current",
+  "html": "<p>See the <a href=\"https://example.com/plan\">plan</a></p>",
+  "expect": "See the [plan](https://example.com/plan)",
+  "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "typed text that looks like Markdown",
+  "features": "current",
+  "html": "<p>Not *bold*, a_b_c and [x](y) &amp; 1 &lt; 2</p>",
+  "expect": "Not \\*bold\\*, a_b_c and \\[x\\](y) & 1 < 2",
+  "why": "escaped only where it would otherwise read differently (a_b_c and & and < need nothing)"
+ },
+ {
+  "name": "typed heading and quote",
+  "features": "current",
+  "html": "<h3>Next steps</h3><blockquote><p>The sponsor asked.</p></blockquote>",
+  "expect": "### Next steps\n\n> The sponsor asked.",
+  "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "typed table",
+  "features": "notes",
+  "html": "<table><tr><th>Name</th><th>Role</th></tr><tr><td>Sara</td><td>Sponsor</td></tr></table>",
+  "expect": "| Name | Role |\n| --- | --- |\n| Sara | Sponsor |",
+  "why": "typed in the editor, no written form: creaite's style"
+ },
+ {
+  "name": "typed hard break",
+  "features": "current",
+  "html": "<p>Line one<br>Line two</p>",
+  "expect": "Line one  \nLine two",
+  "why": "typed in the editor, no written form: creaite's style"
+ }
+]

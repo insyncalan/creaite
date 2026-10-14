@@ -1,0 +1,23 @@
+exit 0
+{
+ "table": "actions",
+ "count": 1,
+ "columns": [
+  "ID",
+  "Action",
+  "Owner",
+  "Due",
+  "Priority",
+  "Status"
+ ],
+ "rows": [
+  [
+   "ABC-A-002",
+   "Escalate data access to the client CIO",
+   "Alan Carter",
+   "07-10-2026 · 2 days late",
+   "Urgent",
+   "Open"
+  ]
+ ]
+}

@@ -1,0 +1,247 @@
+{
+  "_about": "creaite settings. Single source of truth for tunable values. Edited in the dashboard's Settings tab (saved instantly, with a backup and a log entry) or with cx-edit. Read by CLAUDE.md rules, skills and scripts.",
+  "sweep": {
+    "due_from": "07:00",
+    "first_run_lookback_days": 14,
+    "sources": {
+      "inbox": true,
+      "sent_items": true,
+      "teams_chats": true,
+      "teams_channels": true,
+      "calendar": true
+    },
+    "show_possible_matches": true,
+    "ignore": [
+      {
+        "name": "Anything marked private",
+        "builtin": "private",
+        "where": [
+          "mail",
+          "teams",
+          "calendar"
+        ],
+        "on": true
+      },
+      {
+        "name": "ToDo invites",
+        "where": [
+          "mail",
+          "calendar"
+        ],
+        "field": "subject",
+        "how": "begins",
+        "text": "todo",
+        "on": true
+      },
+      {
+        "name": "humancapital",
+        "where": [
+          "mail"
+        ],
+        "field": "sender",
+        "how": "address",
+        "text": "hr@brightwater.example",
+        "on": true
+      },
+      {
+        "name": "Info: entries",
+        "where": [
+          "calendar"
+        ],
+        "field": "subject",
+        "how": "begins",
+        "text": "info:",
+        "on": true
+      },
+      {
+        "name": "FYI: entries",
+        "where": [
+          "calendar"
+        ],
+        "field": "subject",
+        "how": "begins",
+        "text": "fyi:",
+        "on": true
+      }
+    ]
+  },
+  "vip": {
+    "_about": "VIPs (BL-99): people marked VIP in the people register. Anything they send is alerted at the top of Today. check_minutes: how often the live server looks for VIP mail, Teams and invites while it runs (nothing is seen while creaite is closed; the next start catches up). notify: a browser notification as well as the Today block.",
+    "enabled": true,
+    "check_minutes": 30,
+    "notify": true
+  },
+  "reminders": {
+    "enabled": true,
+    "weekly_report_day": "Friday",
+    "weekly_report_from": "12:00",
+    "dismissed_forever": [
+      "client:ABC:never",
+      "weekly:2026-10-02:ABC",
+      "weekly:2026-10-02:FAL"
+    ]
+  },
+  "review": {
+    "stale_after_days": 7,
+    "due_soon_days": 7
+  },
+  "health": {
+    "at_risk_overdue_days": 7,
+    "at_risk_milestone_slip_weeks_max": 2,
+    "off_track_milestone_slip_weeks_over": 2,
+    "off_track_urgent_risks_min": 2
+  },
+  "dashboard": {
+    "default_tab": "Portfolio",
+    "theme": "Light",
+    "palette": "creaite",
+    "files_show_inbox": true,
+    "files_show_portfolio": true,
+    "files_show_documents": false,
+    "undated_grace_days": 3,
+    "flow_weeks": 8,
+    "auto_apply": true,
+    "project_list_cap": 10,
+    "generate_days": 7
+  },
+  "status": {
+    "headline_max_words": 30,
+    "max_risks": 2,
+    "max_overdue_named": 3,
+    "max_named_changes": 3,
+    "max_asks": 3,
+    "length_words": {
+      "short": 40,
+      "standard": 150,
+      "fuller": 250
+    }
+  },
+  "backups": {
+    "daily": true,
+    "daily_days": 30,
+    "weekly_days": 365,
+    "copy_days": 14,
+    "snapshot_days": 30,
+    "file_change_days": 90,
+    "releases_kept": 3,
+    "update_backups_kept": 3
+  },
+  "live_mode": {
+    "required": true,
+    "port": 8766,
+    "health_check_seconds": 30,
+    "script_policy": "report-only"
+  },
+  "assistant": {
+    "enabled": true,
+    "shortcut": "Cmd/Ctrl+J",
+    "confirm_writes": true,
+    "run_timeout_minutes": 30
+  },
+  "identity": {
+    "name": "Alan Carter",
+    "short_forms": [
+      "Alan",
+      "AC"
+    ],
+    "own_domains": [
+      "brightwater.example"
+    ]
+  },
+  "promises": {
+    "from_sweep": false,
+    "note": "BL-125 A: the sweep proposes promises only when from_sweep is true; promises from minutes and added by hand are unaffected"
+  },
+  "people": {
+    "added": [
+      "Noah Price (FAL)"
+    ],
+    "hidden": [],
+    "note": "renames and merges are applied to items and logged; not stored here"
+  },
+  "excel": {
+    "export": "immediate on every apply; pauses only while unimported workbook edits exist"
+  },
+  "defaults": {
+    "new_action_priority": "Medium",
+    "actions_status_filter": "Open",
+    "raid_status_filter": "Open",
+    "actions_sort": "Overdue first, then due date"
+  },
+  "workstreams": {
+    "added": [],
+    "hidden": []
+  },
+  "work": {
+    "board": {
+      "group": {
+        "actions": "due",
+        "raid": "owner",
+        "decisions": "status"
+      },
+      "closed_days": 14
+    },
+    "saved_views": {
+      "actions": [],
+      "raid": [],
+      "decisions": []
+    }
+  },
+  "warnings": {
+    "_about": "Early warnings (BL-51): flags worked out at build time from data already held; never stored as tracker rows. Switch each off or set its threshold in Settings.",
+    "redated": {
+      "on": true,
+      "times": 3
+    },
+    "repeat_risk": {
+      "on": true,
+      "mentions": 3
+    },
+    "milestone_slip": {
+      "on": true,
+      "weeks": 2
+    },
+    "long_open": {
+      "on": true,
+      "factor": 2,
+      "min_days": 14
+    },
+    "key_person": {
+      "on": true,
+      "share": 50,
+      "min_items": 6
+    },
+    "vip_overdue": {
+      "on": true,
+      "days": 1
+    },
+    "dependency": {
+      "on": true,
+      "near_days": 14
+    }
+  },
+  "prep": {
+    "_about": "Meeting prep (BL-49): the project chosen for each meeting series whose match was unsure; set from a meeting's Prep brief.",
+    "series": {
+      "team sync": "_portfolio"
+    }
+  },
+  "search": {
+    "debounce_ms": 150,
+    "ask_budget_chars": 40000,
+    "include_documents": true
+  },
+  "inbox": {
+    "_about": "The Inbox's Meetings (BL-42): the saved calendar goes back to Monday of this week (\"monday\"), or a number of days.",
+    "meetings_from": "monday"
+  },
+  "help": {
+    "_about": "Help (BL-84): start_seen is false until the dashboard has shown Help › Start here once, on its first visit; the dashboard then sets it to true.",
+    "start_seen": true
+  },
+  "logging": {
+    "level": "info",
+    "max_mb": 5,
+    "keep_days": 7
+  }
+}

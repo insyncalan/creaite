@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Close the day, reimagined: three options (Alan, 13-10-2026). Published: https://claude.ai/artifact/DxFdxDPCPDScJxKW2Gc1hw -->
+<title>Close the day, reimagined</title>
+<style>
+/* Layout: creaite's own tokens (the creaite palette, Today's warm day band); three options as tabs, each a working mock with its notes beside it. */
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#7A848D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --day-page:#FAF9F6; --day-band:#F3F1EC; --day-ink:#2A2724; --day-muted:#6B655E; --day-rule:#E4E0D8; --day-sun:#C2603F;
+  --scrim:rgba(20,24,28,.38);
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  --serif:"Iowan Old Style","Charter","Georgia","Cambria","Times New Roman",serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C;
+  --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322;
+  --day-page:#161513; --day-band:#1D1B18; --day-ink:#ECE7DF; --day-muted:#A69F95; --day-rule:#33302B; --day-sun:#E58E68;
+  --scrim:rgba(0,0,0,.55); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C;
+  --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322;
+  --day-page:#161513; --day-band:#1D1B18; --day-ink:#ECE7DF; --day-muted:#A69F95; --day-rule:#33302B; --day-sun:#E58E68;
+  --scrim:rgba(0,0,0,.55); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font);margin:0}
+button{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1280px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 16px;max-width:880px}
+.sub{color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:4px 0 16px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-color:var(--accent)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:980px){.grid{grid-template-columns:1fr}}
+.stage{background:var(--day-page);border:1px solid var(--line);border-radius:12px;padding:24px 16px;position:relative;min-width:0;display:grid;place-items:center;min-height:560px}
+.stage.scrimmed::before{content:"";position:absolute;inset:0;border-radius:12px;background:var(--scrim)}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:13px;min-width:0}
+.notes h3{margin:12px 0 4px;font-size:13px} .notes h3:first-child{margin-top:0}
+.notes ul{margin:4px 0;padding-left:18px} .notes li{margin:3px 0}
+.shared{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:0 0 16px;font-size:13px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px 24px}
+.shared h3{margin:0 0 4px;font-size:13px} .shared ul{margin:0;padding-left:18px} .shared li{margin:2px 0}
+
+/* creaite atoms */
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.quiet{border-color:transparent;background:none;color:var(--muted)}
+.mini{display:inline-flex;align-items:center;height:26px;padding:0 9px;border:1px solid var(--line);background:var(--surface);border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;background:var(--sunk);color:var(--muted);font-size:11.5px;font-weight:500;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.new{background:var(--accent-soft);color:var(--accent)}
+.pc{font-size:11.5px;color:var(--muted)}
+.i{width:16px;height:16px;flex:none}
+
+/* the card (the existing Close the day dialog, restyled only where an option needs it) */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.18);width:min(620px,100%);position:relative;z-index:1}
+.card header{padding:18px 22px 10px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.card h2{margin:0;font:600 19px/1.2 var(--serif);color:var(--day-ink)}
+.card .body{padding:0 22px 6px;display:grid;gap:14px;max-height:520px;overflow:auto}
+.card section h4{margin:0 0 4px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.card section p{margin:0}
+.card footer{display:flex;gap:8px;justify-content:flex-end;align-items:center;padding:12px 22px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.card footer .left{margin-right:auto;font-size:12px;color:var(--muted)}
+.dclist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.dclist li{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dclist li .grow{flex:1;min-width:0}
+
+/* the sweep strip */
+.sweep{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px;background:var(--sunk)}
+.sweep .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sweep .row .grow{flex:1;min-width:0}
+.bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s ease}
+.steps{display:flex;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.steps span.done{color:var(--ok)} .steps span.now{color:var(--ink);font-weight:500}
+.found{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.found li{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.found li .grow{flex:1;min-width:0}
+
+/* option B: stepper */
+.stepper{display:flex;gap:0;padding:0 22px 12px;list-style:none;margin:0}
+.stepper li{flex:1;display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.stepper li::before{content:"";height:3px;border-radius:2px;background:var(--line)}
+.stepper li.done::before,.stepper li.now::before{background:var(--accent)}
+.stepper li.now{color:var(--ink);font-weight:500}
+.stepper li + li{margin-left:6px}
+.choice{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.choice button{border:0;background:var(--surface);height:26px;padding:0 9px;font-size:12px;cursor:pointer;border-right:1px solid var(--line)}
+.choice button:last-child{border-right:0}
+.choice button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.done-screen{display:grid;gap:10px;justify-items:center;text-align:center;padding:28px 22px 18px}
+.done-screen .seal{width:56px;height:56px;border-radius:50%;background:var(--ok-soft);color:var(--ok);display:grid;place-items:center}
+.done-screen h3{margin:0;font:600 22px/1.2 var(--serif);color:var(--day-ink)}
+.done-screen p{margin:0;color:var(--muted);max-width:420px}
+
+/* option C: Today with the evening panel */
+.today{width:100%;max-width:980px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:760px){.today{grid-template-columns:1fr}}
+.band{background:var(--day-band);border:1px solid var(--day-rule);border-radius:12px;padding:18px 20px;color:var(--day-ink);min-width:0;display:grid;gap:12px}
+.band .dd{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--day-muted)}
+.band h3{margin:0;font:500 24px/1.15 var(--serif)}
+.band .meet{display:grid;grid-template-columns:96px 1fr;gap:8px;font-size:13px}
+.band .meet .tm{color:var(--day-muted);font-variant-numeric:tabular-nums}
+.band .meet.past{color:var(--day-muted)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.panel h4{margin:0;font:600 15px/1.2 var(--serif);color:var(--day-ink);display:flex;align-items:center;gap:8px}
+.check{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.check li{display:grid;grid-template-columns:20px 1fr auto;gap:8px;align-items:start;padding:7px 4px;border-radius:8px}
+.check li:hover{background:var(--sunk)}
+.check .dot{width:16px;height:16px;border-radius:50%;border:1.6px solid var(--faint);margin-top:2px;display:grid;place-items:center}
+.check li.ok .dot{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.check li.run .dot{border-color:var(--accent);border-top-color:transparent;animation:spin 1s linear infinite}
+.check .what{font-size:13px} .check .what small{display:block;color:var(--muted);font-size:12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.check li.run .dot{animation:none} .bar i{transition:none}}
+.evening-dot{width:8px;height:8px;border-radius:50%;background:var(--day-sun);display:inline-block}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <h1 class="t">Close the day, reimagined</h1>
+  <p class="lede">Three ways to offer a catch-up sweep of mail and Teams before you close the day, so nothing that came in this afternoon waits until tomorrow's sweep. Sample data from your portfolio; every option keeps the rule that a sweep only proposes, and nothing reaches the tracker until you approve it in Review.</p>
+
+  <div class="shared">
+    <div><h3>What the research says</h3><ul>
+      <li><b>Every open loop gets a home.</b> A shutdown works when each unfinished thing has a plan or a place you'll look again; planning an unfinished task is what quiets it (Newport's shutdown ritual; Baumeister's study as reported).</li>
+      <li><b>Short, same steps, same order.</b> Sunsama's shutdown is three steps: what you did, a reflection, what moves. Akiflow and Motion make "process the inbox" part of the evening routine.</li>
+      <li><b>A clear end.</b> A closing line ("Shutdown complete") marks that work thoughts can stop.</li>
+    </ul></div>
+    <div><h3>creaite rules every option keeps</h3><ul>
+      <li>The sweep is <b>offered, never forced</b>: Skip is always one click, and Close the day is never blocked by it.</li>
+      <li>The sweep <b>only stages proposals</b> for Review (approval before writes); it reads Microsoft 365 and changes nothing there.</li>
+      <li>It is cx-sweep through the run engine: progress, <b>Stop</b>, one run at a time; skipped automatically if a sweep ran in the last 30 minutes (a setting).</li>
+      <li>British English, DD-MM-YYYY, project names not codes, Today's warm band and serif.</li>
+    </ul></div>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Options">
+    <button role="tab" id="tA" aria-selected="true" aria-controls="pA">A · Catch up first</button>
+    <button role="tab" id="tB" aria-selected="false" aria-controls="pB">B · Guided shutdown</button>
+    <button role="tab" id="tC" aria-selected="false" aria-controls="pC">C · Evening panel on Today</button>
+  </div>
+
+  <!-- ================= OPTION A ================= -->
+  <section role="tabpanel" id="pA" aria-labelledby="tA">
+    <div class="grid">
+      <div class="stage scrimmed">
+        <div class="card" role="dialog" aria-labelledby="aH">
+          <header><h2 id="aH">Close the day</h2><span class="sub">Tuesday 13th October</span></header>
+          <div class="body">
+            <div class="sweep" id="aSweep">
+              <div class="row" id="aIdle">
+                <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 7h18M3 12h12M3 17h8"/><path d="M17 15l2 2 3-3"/></svg>
+                <div class="grow"><b>Catch up before you close?</b><div class="sub">Last sweep 11:24, about six hours ago. Checks Inbox, Sent Items and Teams since then. About a minute.</div></div>
+                <button class="btn quiet" type="button" id="aSkip">Skip</button>
+                <button class="btn primary" type="button" id="aGo">Sweep now</button>
+              </div>
+              <div id="aRun" hidden>
+                <div class="row"><div class="grow"><b>Catching up…</b> <span class="sub" id="aRunWhat">Reading Inbox</span></div><button class="mini" type="button" id="aStop">Stop</button></div>
+                <div class="bar" aria-hidden="true"><i id="aBar"></i></div>
+                <div class="steps"><span id="s1" class="now">Inbox</span>·<span id="s2">Sent Items</span>·<span id="s3">Teams chats</span>·<span id="s4">Teams channels</span></div>
+              </div>
+              <div id="aDone" hidden>
+                <div class="row"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><div class="grow"><b>Caught up at 17:52.</b> <span class="sub">3 new items are waiting in Review; 7 messages matched nothing.</span></div></div>
+                <ul class="found">
+                  <li><span class="tag new">Action</span><span class="grow">Tom to share the Northgate UAT plan by Thursday</span><span class="pc">Kestrel Energy AI</span></li>
+                  <li><span class="tag new">Update</span><span class="grow">FAL-A-007: Dana replied about back-to-back commercials</span><span class="pc">Kestrel Energy AI</span></li>
+                  <li><span class="tag new">Risk</span><span class="grow">Vendor team availability for Phase 2 workshops in November</span><span class="pc">Larkspur Phase 2</span></li>
+                </ul>
+                <div class="row"><span class="sub grow">They stay in Review until you decide. Tomorrow's brief will list them first.</span><button class="mini" type="button">Review them now</button></div>
+              </div>
+              <div id="aSkipped" hidden class="row"><span class="sub grow">Skipped. Tomorrow's 07:00 sweep will pick up anything new.</span><button class="mini" type="button" id="aUndoSkip">Sweep now</button></div>
+            </div>
+
+            <section><h4>Moved today</h4><p>2 actions closed · 1 decision recorded · 5 items changed</p></section>
+            <section><h4>You promised today</h4>
+              <ul class="dclist"><li><span class="grow">Send the rollout plan draft to Ben Ito <span class="sub">Larkspur Pilot · due 16-10-2026</span></span><button class="mini" type="button">Add it to your commitments</button></li></ul>
+            </section>
+            <section><h4>Still open</h4><p><a href="#">4 proposals in Review</a> · <a href="#">1 transcript ready in Intake</a></p></section>
+            <section><h4>Wednesday 14th October</h4>
+              <ul class="dclist">
+                <li><span class="grow">07:30 Felix x Alan Weekly 1:1</span><span class="tag">No prep page</span></li>
+                <li><span class="grow">13:00 Pilot Weekly Standup <span class="pc">Larkspur Pilot</span></span><span class="tag ok">Prep page made</span></li>
+              </ul>
+            </section>
+          </div>
+          <footer><span class="left" id="aFoot">The sweep only proposes; nothing is applied.</span><button class="btn" type="button">Not yet</button><button class="btn primary" type="button" id="aClose">Close the day</button></footer>
+        </div>
+      </div>
+      <aside class="notes">
+        <h3>How it behaves</h3>
+        <ul>
+          <li>Today's card, unchanged below, with one new strip at the top: <b>Catch up before you close?</b> with the time of the last sweep.</li>
+          <li><b>Sweep now</b> runs cx-sweep in place: which source it's reading, a progress bar and Stop. The rest of the card stays readable meanwhile.</li>
+          <li>When it finishes, the strip lists what it found (type, words, project) and refreshes "Still open" and "Moved today".</li>
+          <li><b>Close the day</b> while it runs closes when it finishes ("Closing when the sweep finishes"), so you can walk away.</li>
+          <li>Swept in the last 30 minutes: the strip just says "Caught up at 17:41" with a quiet "Sweep again".</li>
+        </ul>
+        <h3>Good for</h3><ul><li>The smallest change: one strip, the card you know.</li><li>A one-minute close.</li></ul>
+        <h3>Watch</h3><ul><li>The new items sit above the summary; a long sweep result pushes the rest down (capped at five, "and 3 more").</li></ul>
+        <h3>Try it</h3><ul><li>Press <b>Sweep now</b>, or Skip.</li></ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= OPTION B ================= -->
+  <section role="tabpanel" id="pB" aria-labelledby="tB" hidden>
+    <div class="grid">
+      <div class="stage scrimmed">
+        <div class="card" role="dialog" aria-labelledby="bH">
+          <header><h2 id="bH">Close the day</h2><span class="sub">Tuesday 13th October · about three minutes</span></header>
+          <ol class="stepper" id="bSteps">
+            <li class="now">Catch up</li><li>Today</li><li>Loose ends</li><li>Tomorrow</li>
+          </ol>
+          <div class="body" id="bBody"></div>
+          <footer id="bFoot"></footer>
+        </div>
+      </div>
+      <aside class="notes">
+        <h3>How it behaves</h3>
+        <ul>
+          <li>Four short steps, the same every evening, then a clear end. Back and Next with the arrow keys; Esc is "Not yet" and keeps your place.</li>
+          <li><b>1 Catch up:</b> the sweep starts as the card opens (if the last one is over 30 minutes old), so it runs while you read steps 2 and 3. Skip stops it.</li>
+          <li><b>2 Today:</b> what moved and what you promised, each promise one click from your commitments.</li>
+          <li><b>3 Loose ends:</b> everything still open, the sweep's new items included, gets a home: <b>Review now</b>, <b>First thing tomorrow</b> (top of tomorrow's brief) or <b>Leave</b>. Nothing is approved here; Review stays the only place that writes.</li>
+          <li><b>4 Tomorrow:</b> the next working day's meetings; a meeting without a prep page offers <b>Make prep page</b> (it runs after you close).</li>
+          <li><b>Close the day</b> ends on "Day closed at 18:04. Everything has a place." and Today shows it.</li>
+        </ul>
+        <h3>Good for</h3><ul><li>The research's strongest pattern: every open loop gets a decision, then a clear end.</li></ul>
+        <h3>Watch</h3><ul><li>Longest of the three; on a quiet day steps with nothing in them are skipped.</li><li>"First thing tomorrow" is new: a short list kept with the day's record, not a tracker change.</li></ul>
+        <h3>Try it</h3><ul><li>Next through the four steps.</li></ul>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ================= OPTION C ================= -->
+  <section role="tabpanel" id="pC" aria-labelledby="tC" hidden>
+    <div class="grid">
+      <div class="stage">
+        <div class="today">
+          <div class="band">
+            <div class="dd">Tuesday 13th October · 17:46</div>
+            <h3>Good evening, Alan</h3>
+            <div class="meet past"><span class="tm">10:00 – 10:30</span><span>INC x OAI Team Sync on Larkspur</span></div>
+            <div class="meet past"><span class="tm">14:00 – 14:45</span><span>Kestrel Energy AI delivery check-in</span></div>
+            <div class="sub" style="color:var(--day-muted)">No more meetings today.</div>
+          </div>
+          <div class="panel" aria-labelledby="cH">
+            <h4 id="cH"><span class="evening-dot" aria-hidden="true"></span>Closing the day</h4>
+            <ul class="check" id="cList">
+              <li class="run" id="c1"><span class="dot" aria-hidden="true"></span><span class="what">Catching up on mail and Teams<small id="c1s">Reading Teams chats… <a href="#" id="c1stop">Stop</a></small></span><span></span></li>
+              <li id="c2"><span class="dot" aria-hidden="true"></span><span class="what">Review<small>4 proposals waiting</small></span><button class="mini" type="button">Open</button></li>
+              <li id="c3"><span class="dot" aria-hidden="true"></span><span class="what">A promise to keep<small>Rollout plan draft to Ben Ito</small></span><button class="mini" type="button" data-tick="c3">Add</button></li>
+              <li id="c4"><span class="dot" aria-hidden="true"></span><span class="what">Tomorrow<small>07:30 Felix x Alan Weekly 1:1 has no prep page</small></span><button class="mini" type="button" data-tick="c4">Make it</button></li>
+              <li class="ok"><span class="dot" aria-hidden="true"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><span class="what">Intake<small>Clear</small></span><span></span></li>
+            </ul>
+            <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn quiet" type="button">Later</button><button class="btn primary" type="button">Close the day</button></div>
+            <div class="sub">Opened by the door icon, or by itself at 17:30 (your evening time). The sweep started when it opened.</div>
+          </div>
+        </div>
+      </div>
+      <aside class="notes">
+        <h3>How it behaves</h3>
+        <ul>
+          <li>No dialog: from your evening time (<code>day.close_from</code>) Today shows a small <b>Closing the day</b> panel beside the day band, also opened by the door icon (BL-270).</li>
+          <li>The panel is a checklist that ticks itself: the catch-up sweep runs as it appears (one click to stop), Review and Intake tick when empty, each promise and missing prep page has its one action.</li>
+          <li>Nothing is required to close: <b>Close the day</b> works at any point; what's unticked is listed in tomorrow's brief.</li>
+          <li>You keep working on the page while it runs; the panel stays put and updates.</li>
+        </ul>
+        <h3>Good for</h3><ul><li>The least interruption: closing is part of Today, not a pop-up.</li><li>Sees progress at a glance.</li></ul>
+        <h3>Watch</h3><ul><li>Starting the sweep by itself is the one "automatic" step; it can be set to ask first (one switch in Settings › Close the day).</li><li>Needs room beside the day band; on a narrow window it sits under it.</li></ul>
+        <h3>Try it</h3><ul><li>Wait for the sweep to tick, then Add and Make it.</li></ul>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<script>
+(function(){
+  /* tabs */
+  const tabs=[...document.querySelectorAll('[role="tab"]')];
+  tabs.forEach(t=>t.addEventListener("click",()=>{ tabs.forEach(x=>{ const on=x===t; x.setAttribute("aria-selected",on); document.getElementById(x.getAttribute("aria-controls")).hidden=!on; }); if(t.id==="tC") startC(); }));
+
+  /* option A: the sweep strip */
+  const $=id=>document.getElementById(id); let aT=null;
+  const show=(id)=>["aIdle","aRun","aDone","aSkipped"].forEach(x=>$(x).hidden=x!==id);
+  function runA(){ show("aRun"); $("aFoot").textContent="Close the day now and it closes when the sweep finishes."; let k=0; const what=["Reading Inbox","Reading Sent Items","Reading Teams chats","Reading Teams channels","Matching to projects"];
+    $("aBar").style.width="8%"; clearInterval(aT);
+    aT=setInterval(()=>{ k++; if(k>=5){ clearInterval(aT); show("aDone"); $("aFoot").textContent="The sweep only proposed; nothing was applied."; return; }
+      $("aRunWhat").textContent=what[k]; $("aBar").style.width=(k*22+8)+"%";
+      for(let i=1;i<=4;i++){ const s=$("s"+i); s.className=i<=k?"done":i===k+1?"now":""; } },900); }
+  $("aGo").onclick=runA; $("aUndoSkip").onclick=runA;
+  $("aSkip").onclick=()=>{ show("aSkipped"); };
+  $("aStop").onclick=()=>{ clearInterval(aT); show("aSkipped"); $("aSkipped").querySelector(".sub").textContent="Stopped. What it had read so far is in Review; tomorrow's sweep does the rest."; $("aFoot").textContent="The sweep only proposes; nothing is applied."; };
+
+  /* option B: four steps */
+  let step=0; const choice=(i)=>`<div class="choice" role="group" aria-label="What happens to it"><button type="button" aria-pressed="${i===0}">Review now</button><button type="button" aria-pressed="${i===1}">First thing tomorrow</button><button type="button" aria-pressed="${i===2}">Leave</button></div>`;
+  const B=[
+    ()=>`<div class="sweep"><div class="row"><div class="grow"><b>Caught up at 17:52</b><div class="sub">Swept Inbox, Sent Items and Teams since 11:24. 3 new items for Review; 7 messages matched nothing.</div></div><span class="tag ok">Done</span></div>
+         <ul class="found"><li><span class="tag new">Action</span><span class="grow">Tom to share the Northgate UAT plan by Thursday</span><span class="pc">Kestrel Energy AI</span></li><li><span class="tag new">Update</span><span class="grow">FAL-A-007: Dana replied about back-to-back commercials</span><span class="pc">Kestrel Energy AI</span></li><li><span class="tag new">Risk</span><span class="grow">Vendor team availability for Phase 2 workshops</span><span class="pc">Larkspur Phase 2</span></li></ul></div>
+         <p class="sub">The sweep started when you opened this. You'll decide where these go in Loose ends.</p>`,
+    ()=>`<section><h4>Moved today</h4><p>2 actions closed · 1 decision recorded · 5 items changed</p></section>
+         <section><h4>You promised today</h4><ul class="dclist"><li><span class="grow">Send the rollout plan draft to Ben Ito <span class="sub">Larkspur Pilot · due 16-10-2026</span></span><button class="mini" type="button">Add it to your commitments</button></li></ul></section>`,
+    ()=>`<section><h4>Give each a place</h4><ul class="dclist">
+         <li><span class="grow">Tom to share the Northgate UAT plan by Thursday <span class="tag new">New</span> <span class="pc">Kestrel Energy AI</span></span>${choice(0)}</li>
+         <li><span class="grow">FAL-A-007 update from Dana <span class="tag new">New</span> <span class="pc">Kestrel Energy AI</span></span>${choice(1)}</li>
+         <li><span class="grow">Vendor availability risk <span class="tag new">New</span> <span class="pc">Larkspur Phase 2</span></span>${choice(1)}</li>
+         <li><span class="grow">1 transcript ready in Intake <span class="pc">Alan x Tom Catch up on Northgate</span></span>${choice(1)}</li></ul></section>
+         <p class="sub">Nothing is approved here. "Review now" opens Review after you close; "First thing tomorrow" puts it at the top of tomorrow's brief.</p>`,
+    ()=>`<section><h4>Wednesday 14th October</h4><ul class="dclist"><li><span class="grow">07:30 Felix x Alan Weekly 1:1</span><button class="mini" type="button">Make prep page</button></li><li><span class="grow">13:00 Pilot Weekly Standup <span class="pc">Larkspur Pilot</span></span><span class="tag ok">Prep page made</span></li></ul></section>
+         <section><h4>First thing tomorrow</h4><p>FAL-A-007 update · Vendor availability risk · 1 transcript</p></section>`,
+    ()=>`<div class="done-screen"><div class="seal"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div><h3>Day closed at 18:04</h3><p>Everything has a place: 1 for Review now, 3 first thing tomorrow, 1 prep page making. See you at 07:30.</p></div>`
+  ];
+  function drawB(){ $("bBody").innerHTML=B[step](); const lis=[...$("bSteps").children]; lis.forEach((li,i)=>li.className=i<step?"done":i===step?"now":""); $("bSteps").hidden=step===4;
+    $("bFoot").innerHTML=step===4?`<button class="btn" type="button" id="bAgain">Look at the day again</button>`
+      :`<span class="left">${step+1} of 4</span>${step?'<button class="btn" type="button" id="bBack">Back</button>':'<button class="btn" type="button">Not yet</button>'}<button class="btn primary" type="button" id="bNext">${step===3?"Close the day":"Next"}</button>`;
+    const n=$("bNext"), b=$("bBack"), a=$("bAgain"); if(n) n.onclick=()=>{ step++; drawB(); }; if(b) b.onclick=()=>{ step--; drawB(); }; if(a) a.onclick=()=>{ step=0; drawB(); };
+    $("bBody").querySelectorAll(".choice").forEach(g=>g.addEventListener("click",e=>{ const t=e.target.closest("button"); if(!t) return; g.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===t)); })); }
+  drawB();
+
+  /* option C: the checklist ticks itself */
+  let cStarted=false, cT=null;
+  const tickSvg='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  function tick(id,txt){ const li=$(id); li.className="ok"; li.querySelector(".dot").innerHTML=tickSvg; if(txt) li.querySelector("small").textContent=txt; const b=li.querySelector("button"); if(b) b.remove(); }
+  function startC(){ if(cStarted) return; cStarted=true; cT=setTimeout(()=>{ tick("c1","Caught up at 17:52 · 3 new, now in Review"); $("c2").querySelector("small").textContent="7 proposals waiting (3 new)"; },2600); }
+  $("c1stop").onclick=e=>{ e.preventDefault(); clearTimeout(cT); const li=$("c1"); li.className=""; li.querySelector("small").textContent="Stopped. Tomorrow's 07:00 sweep will catch up."; };
+  document.addEventListener("click",e=>{ const b=e.target.closest("[data-tick]"); if(!b) return; tick(b.dataset.tick,b.dataset.tick==="c3"?"Added to your commitments":"Prep page is being made"); });
+})();
+</script>
+</body>
+</html>

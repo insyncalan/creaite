@@ -1,0 +1,543 @@
+"""creaite paths — the single place where folder locations are defined.
+
+Every script imports from here. Paths are relative to the vault root, which is
+found from this file's own location, so creaite works wherever the folder is copied.
+To reorganise folders, change this file (and the path table in CLAUDE.md), nothing else.
+"""
+from pathlib import Path
+import json
+import os
+import re
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]          # creaite/
+
+# Bundled libraries first (no pip installs)
+VENDOR = ROOT / "system" / "scripts" / "vendor"
+if str(VENDOR) not in sys.path:
+    sys.path.insert(0, str(VENDOR))
+
+# Daily-use files (root)
+DASHBOARD   = ROOT / "dashboard.html"
+EXCEL_VIEW  = ROOT / "tracker-view.xlsx"
+INBOX       = ROOT / "inbox"
+
+# Projects. Where they live is the `locations` setting (BL-85): by default the vault's own projects/ folder; with
+# `locations.projects_root` set, the engagement folders (and the portfolio folder) live there, e.g. in the company OneDrive.
+# PROJECTS, PORTFOLIO, REGISTER, PORTFOLIO_MEMORY and PEOPLE_REGISTER are therefore worked out on each use (see __getattr__ below).
+PROJECT_SUBFOLDERS = ("minutes", "transcripts", "documents", "reports")      # the default layout's subfolders
+EXTRACT_FROM = ("minutes", "transcripts")          # documents and reports are never extracted
+
+# System (engine; not edited by hand)
+SYSTEM      = ROOT / "system"
+DB          = SYSTEM / "tracker.db"
+SCHEMA      = SYSTEM / "scripts" / "schema.sql"
+PROCESSED   = SYSTEM / "processed.txt"
+STAGING     = SYSTEM / "staging"
+DAY_CLOSED  = STAGING / "day-closed.json"        # BL-206: the days closed with Close the day ({day: HH:MM}), written by the live server
+CARRIED     = STAGING / "carried.json"           # BL-209: agenda points carried to the next meeting of a series (Coverage)
+EVIDENCE    = STAGING / "evidence"               # BL-207: <code>-current.json, a saved Current state's sentence links (derived; rewritten on save)
+APPLIED     = STAGING / "applied"
+RUN_LOG     = STAGING / "run-log.txt"
+HISTORY     = SYSTEM / "history"                   # dashboard snapshots
+BACKUPS     = SYSTEM / "backups"                   # database backups
+TEMPLATES   = SYSTEM / "templates"
+SCHEDULES   = SYSTEM / "config" / "schedules.md"
+SETTINGS    = SYSTEM / "config" / "settings.json"     # tunable values; see load_settings()
+SETTINGS_LOG = SYSTEM / "config" / "settings-log.jsonl"
+CLAUDE_SETTINGS = ROOT / ".claude" / "settings.json"      # Claude Code's permission rules for this vault (BL-75: changed only by permissions.py)
+PERMISSIONS_LOG = SYSTEM / "config" / "permissions-log.jsonl"   # every rule added through permissions.py, and every undo
+SWEEP_STATE = STAGING / "last-sweep.txt"            # time of last successful sweep
+CALENDAR    = STAGING / "calendar.json"             # Alan's meetings, today and the week ahead (cx-sweep); Today's day view
+MENTIONS    = STAGING / "mentions.jsonl"            # open items raised again in a later meeting or sweep (BL-51 early warnings)
+INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intake's Calendar Import (BL-104 Clear day); never processed.txt
+TRANSCRIPTS = STAGING / "transcripts.json"       # each meeting's transcript status from the sweep (BL-42 phase 3): never text, a passcode or a PIN
+MINUTES_TEMPLATE = TEMPLATES / "minutes-template.docx"
+WEEKLY_TEMPLATE  = TEMPLATES / "weekly-report-template.docx"
+CLIENT_TEMPLATE  = TEMPLATES / "client-report-template.docx"
+STEERCO_TEMPLATE  = TEMPLATES / "steerco-template.docx"             # BL-92
+DRAFTS      = STAGING / "drafts"
+SEARCH_DIR  = SYSTEM / "search"                     # BL-07: the index's build stamp and each file's summary and tags (sidecars)
+LOGS        = SYSTEM / "logs"                       # BL-102: the debug log, one file a day, the last 7 days (log.py)
+GUARD       = SYSTEM / "guard"                      # BL-141: the ask creaite run in progress and its mark; written only by the live server
+ASK_CHATS   = STAGING / "ask"                        # ask creaite chat history, one JSON file per chat
+ASK_UPLOADS = STAGING / "uploads" / "ask"             # images attached to ask creaite messages (BL-100): kept with their chat, read only
+
+
+# Releases and updates (BL-36). Vault-relative paths with forward slashes; a folder covers everything in it.
+VERSION_FILE = ROOT / "VERSION"
+RULES       = SYSTEM / "creaite-rules.md"            # creaite's rules, imported by the root CLAUDE.md; replaced by updates
+RELEASES    = SYSTEM / "releases"                    # release zips: the installed one and every earlier one, kept
+RELEASE_MANIFEST = "creaite-release.json"            # inside each release zip
+ENGINE = ("VERSION", "system/creaite-rules.md", "system/scripts", "system/templates", ".claude/skills")  # replaced
+ENGINE_MERGED = (".claude/settings.json", "system/config/settings.json")      # new keys and rules added, values kept
+DATA = ("CLAUDE.md", "projects", "projects/_portfolio/people-register.md", "inbox", "system/tracker.db", "system/staging", "system/history", "system/backups",
+        "system/releases", "system/search", "system/branding", "system/processed.txt", "system/config", ".claude/settings.local.json",
+        "dashboard.html", "tracker-view.xlsx", ".creaite-dev")                 # never replaced or removed by an update
+
+
+def load_settings() -> dict:
+    """Read system/config/settings.json (the only place tunable values live)."""
+    import json
+    return json.loads(SETTINGS.read_text(encoding="utf-8"))
+
+
+def rel(p: Path) -> str:
+    """Path as stored anywhere (database, proposals, links): relative to ROOT, forward slashes."""
+    return Path(p).resolve().relative_to(ROOT).as_posix()
+
+
+# ===== BL-266 (fix-backup-names) =====
+def free_path(folder, stem: str, ext: str = "") -> Path:
+    """folder/<stem><ext>, or <stem>-2<ext>, -3 and so on when that is taken: backups are named to the second, and two in one
+    second must not overwrite the first."""
+    p, n = Path(folder) / f"{stem}{ext}", 2
+    while p.exists():
+        p, n = Path(folder) / f"{stem}-{n}{ext}", n + 1
+    return p
+# ===== end BL-266 =====
+
+
+# ── Where the projects are (BL-85) ────────────────────────────────────────────
+# Stored paths (the database's sources, proposals' file operations, links) are vault-relative with forward slashes. A path in a
+# project folder is `projects/<engagement folder>/<path inside it>`; `projects/` is a logical prefix that `resolve` maps to the
+# projects root, and `projects/_portfolio/` is always the portfolio folder, whatever it is called. So moving the root later is one
+# setting change, and rows made before the setting existed keep working.
+
+LOCATION_DEFAULTS = {"projects_root": "", "portfolio": "_Portfolio", "skeleton": "_Templates/_Skeleton",
+                     "folders": {"transcripts": "02 Meetings/Transcripts", "minutes": "02 Meetings/Minutes",
+                                 "weekly_reports": "04 Reporting/Weekly", "client_reports": "04 Reporting/Weekly",
+                                 "adhoc_documents": "04 Reporting/Adhoc", "images": "04 Reporting/Content",
+                                 "steerco": "04 Reporting/Steerco",       # BL-93, BL-87: listed in Files; creaite may file into it when asked
+                                 "agendas": "02 Meetings/Agendas"},                    # BL-98: meeting prep pages
+                     "never_index": ["zz Archive", "_Templates", "99 System"],     # BL-112: 99 System holds creaite's own files (the backup copies)
+                     "offsite_backup": "_Portfolio/99 System/creaite backups"}
+ALWAYS_NEVER_INDEX = ("zz Archive", "_Templates", "99 System")      # skipped whatever the saved list says (BL-112)
+DEFAULT_FOLDERS = {"minutes": "minutes", "transcripts": "transcripts", "weekly_reports": "reports", "client_reports": "reports",
+                   "adhoc_documents": "reports", "images": "images", "documents": "documents", "steerco": "reports/Steerco",
+                   "agendas": "agendas"}   # the default layout (Steerco its own folder so Files can label it; agendas: BL-98)
+LOGICAL = "projects"
+LOGICAL_PORTFOLIO = "projects/_portfolio"
+
+_cache = {}
+
+
+def _cached(path: Path, load):
+    """Parse a file again only when it has changed (a stale read is the worst a long-running server could do)."""
+    try:
+        key = path.stat().st_mtime_ns
+    except OSError:
+        return load(None)
+    hit = _cache.get(path)
+    if not hit or hit[0] != key:
+        hit = _cache[path] = (key, load(path))
+    return hit[1]
+
+
+def locations() -> dict:
+    """settings.json `locations`, each key filled from the defaults ({} values stay as the defaults say)."""
+    def load(p):
+        """The `locations` setting from one settings file, or {} when it is missing or unreadable."""
+        try:
+            return json.loads(p.read_text(encoding="utf-8")).get("locations") or {} if p else {}
+        except (OSError, ValueError):
+            return {}
+    given = _cached(SETTINGS, load)
+    out = {k: (dict(v) if isinstance(v, dict) else list(v) if isinstance(v, list) else v) for k, v in LOCATION_DEFAULTS.items()}
+    for k, v in given.items():
+        if isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k].update(v)
+        else:
+            out[k] = v
+    return out
+
+
+def external() -> bool:
+    """True when the projects live outside the vault's projects/ folder (locations.projects_root is set)."""
+    return bool(str(locations().get("projects_root") or "").strip())
+
+
+def projects_root() -> Path:
+    """Where the project folders live: the vault's projects/, or locations.projects_root (BL-85)."""
+    root = str(locations().get("projects_root") or "").strip()
+    if not root:
+        return ROOT / "projects"
+    p = Path(os.path.expanduser(root))               # stored with ~ so a new laptop with the same OneDrive works
+    return p if p.is_absolute() else ROOT / p
+
+
+def portfolio_dir() -> Path:
+    """The portfolio folder: projects/_portfolio in the vault, else the projects folder's _Portfolio (BL-85)."""
+    return projects_root() / str(locations().get("portfolio") or "_Portfolio") if external() else ROOT / "projects" / "_portfolio"
+
+
+def rel(p: Path) -> str:
+    """Path as stored anywhere (database, proposals, links): relative to ROOT with forward slashes; a path in the projects
+    root or the portfolio folder is stored under the logical prefix projects/ (BL-85)."""
+    p = Path(p).resolve()
+    if external():
+        for base, prefix in ((portfolio_dir(), LOGICAL_PORTFOLIO), (projects_root(), LOGICAL)):
+            try:
+                return (Path(prefix) / p.relative_to(base.resolve())).as_posix()
+            except ValueError:
+                continue
+    return p.relative_to(ROOT).as_posix()
+
+
+def resolve(stored) -> Path:
+    """The inverse of rel: a stored path as a real path. Not checked for safety; tracker.safe_path does that."""
+    s = str(stored).replace("\\", "/")
+    if Path(s).is_absolute():
+        return Path(s)
+    if external():
+        if s == LOGICAL_PORTFOLIO or s.startswith(LOGICAL_PORTFOLIO + "/"):
+            return portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/")
+        if s == LOGICAL or s.startswith(LOGICAL + "/"):
+            return projects_root() / s[len(LOGICAL):].lstrip("/")
+    return ROOT / s
+
+
+rel_project, resolve_project = rel, resolve         # the names the brief uses
+
+
+def allowed_roots() -> list:
+    """Where creaite may read and write project files: the vault and, if set, the projects root."""
+    return [ROOT.resolve()] + ([projects_root().resolve()] if external() else [])
+
+
+def __getattr__(name):
+    """PROJECTS and friends, worked out from the `locations` setting on each use (PEP 562)."""
+    if name == "PROJECTS":
+        return projects_root()
+    if name == "PORTFOLIO":
+        return portfolio_dir()
+    if name == "REGISTER":
+        return portfolio_dir() / "project-register.md"
+    if name == "PORTFOLIO_MEMORY":
+        return portfolio_dir() / "PORTFOLIO.md"
+    if name == "PEOPLE_REGISTER":
+        return portfolio_dir() / "people-register.md"        # BL-55: everyone who owns an item; read every run, edited through proposals
+    raise AttributeError(f"module 'paths' has no attribute {name!r}")
+
+
+def register_folders() -> dict:
+    """{code: folder name} from the register's "Folder under projects/" column."""
+    def load(p):
+        """{code: folder} from one register file's table, or {} when it can't be read."""
+        out = {}
+        if not p:
+            return out
+        try:
+            lines = p.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return out
+        cols = None
+        for ln in lines:
+            if not ln.startswith("|"):
+                if cols and out:
+                    break
+                continue
+            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if cols is None:
+                if cells and cells[0] == "Code" and any(c.lower().startswith("folder") for c in cells):
+                    cols = [i for i, c in enumerate(cells) if c.lower().startswith("folder")][0]
+                continue
+            if set("".join(cells)) <= set("-: "):
+                continue
+            if len(cells) > cols and re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", cells[0]) and cells[cols]:
+                out[cells[0]] = cells[cols]
+        return out
+    return _cached(REGISTER_PATH(), load)
+
+
+def REGISTER_PATH() -> Path:
+    """The project register: project-register.md in the portfolio folder."""
+    return portfolio_dir() / "project-register.md"
+
+
+def project_dir(code: str) -> Path:
+    """The folder for a project code: the register's "Folder under projects/", else (the default layout) the one folder whose name
+    starts with the code, e.g. 'ABC' -> projects/ABC Example Programme."""
+    root = projects_root()
+    named = register_folders().get(code)
+    if named and (root / named).is_dir():
+        return root / named
+    if external():
+        if named:
+            return root / named                    # registered, not created yet (a new project's folder)
+        raise LookupError(f"Project {code} has no folder in the register (Folder under projects/)")
+    matches = [d for d in root.iterdir() if d.is_dir() and d.name.split(" ", 1)[0] == code]
+    if len(matches) != 1:
+        raise LookupError(f"Expected one folder for project {code} under projects/, found {len(matches)}")
+    return matches[0]
+
+
+def project_folders() -> list:
+    """[(code, folder)] for every project, the portfolio folder last as '_portfolio'. With an outside projects root only registered
+    projects (the folder holds other things); in the default layout, every folder under projects/."""
+    out = []
+    if external():
+        for code, name in sorted(register_folders().items()):
+            if (projects_root() / name).is_dir():
+                out.append((code, projects_root() / name))
+    else:
+        for d in sorted(x for x in projects_root().iterdir() if x.is_dir()):
+            if d != portfolio_dir():
+                out.append((d.name.split(" ", 1)[0], d))
+    if portfolio_dir().is_dir():
+        out.append(("_portfolio", portfolio_dir()))
+    return out
+
+
+def folder_name(kind: str) -> str:
+    """The folder for a kind of file, relative to the engagement folder: transcripts, minutes, weekly_reports, client_reports,
+    adhoc_documents, images, agendas (documents has no folder of its own with an outside root: see document_files)."""
+    return (locations()["folders"] if external() else DEFAULT_FOLDERS).get(kind) or DEFAULT_FOLDERS[kind]
+
+
+def folder(code: str, kind: str) -> Path:
+    """The real folder of one kind (minutes, transcripts, agendas, reports...) for a project or _portfolio (BL-85)."""
+    return (portfolio_dir() if code == "_portfolio" else project_dir(code)) / folder_name(kind)
+
+
+def resolve_image(project_folder: Path, ref: str) -> Path:
+    """A Current-state image reference. In CLAUDE.md it is written `images/<name>` whichever folder holds the pictures; with an outside
+    projects root the `images` folder is the mapped one (locations.folders.images), so references never contain spaces."""
+    ref = str(ref)
+    if external() and ref.startswith("images/"):
+        return Path(project_folder) / folder_name("images") / ref[len("images/"):]
+    return Path(project_folder) / ref
+
+
+def extract_dirs(code: str) -> list:
+    """The only folders ever extracted from: minutes and transcripts."""
+    return [folder(code, "minutes"), folder(code, "transcripts")]
+
+
+def never_index() -> list:
+    """The folder names creaite never lists, indexes, reads or writes: the saved `never_index` plus the reserved ones, so a list saved
+    by an older release (or emptied by hand) never exposes 99 System, where the backup copies are (BL-112)."""
+    saved = [str(n) for n in locations().get("never_index") or []]
+    return saved + [n for n in ALWAYS_NEVER_INDEX if n not in saved]
+
+
+def _excluded_dirs(code: str) -> list:
+    base = portfolio_dir() if code == "_portfolio" else project_dir(code)
+    skip = [folder(code, k) for k in ("minutes", "transcripts", "weekly_reports", "client_reports", "adhoc_documents", "images", "steerco", "agendas")]   # BL-135: agendas are their own kind in Files
+    return skip, [base / n for n in never_index()]
+
+
+def document_roots(code: str) -> list:
+    """Where a project's documents are: its documents/ folder, or with an outside root the whole engagement folder (minus the
+    meeting and report folders, never_index and creaite's own images)."""
+    base = portfolio_dir() if code == "_portfolio" else project_dir(code)
+    return [base] if external() else [base / "documents"]
+
+
+def is_online_only(p: Path) -> bool:
+    """A OneDrive placeholder: a file whose content isn't on this device (macOS: a dataless file). Reading one would download it."""
+    try:
+        st = Path(p).stat()
+    except OSError:
+        return False
+    if getattr(st, "st_flags", 0) & 0x40000000:                 # SF_DATALESS
+        return True
+    return st.st_size > 0 and getattr(st, "st_blocks", 1) == 0
+
+
+def document_files(code: str, online: bool = False) -> list:
+    """Every document of a project, in a fixed order. Online-only files are left out unless `online` (they are listed by doctor)."""
+    base = portfolio_dir() if code == "_portfolio" else project_dir(code)
+    ok = lambda f: online or not is_online_only(f)      # noqa: E731
+    if not external():
+        d = base / "documents"
+        return [f for f in sorted(d.rglob("*")) if f.is_file() and not f.name.startswith((".", "~$")) and ok(f)] if d.is_dir() else []
+    skip, never = _excluded_dirs(code)
+    skip = [s.resolve() for s in skip + never]
+    out = []
+    for dirpath, dirnames, filenames in os.walk(base):
+        here = Path(dirpath).resolve()
+        dirnames[:] = sorted(n for n in dirnames if not n.startswith(".") and (here / n) not in skip
+                             and n not in never_index())
+        for n in sorted(filenames):
+            f = Path(dirpath) / n
+            if n.startswith((".", "~$")) or (here == base.resolve() and n in ("CLAUDE.md", "PORTFOLIO.md", "project-register.md", "people-register.md")):
+                continue
+            if ok(f):
+                out.append(f)
+    return out
+
+
+REPORT_LABELS = (("steerco", "Steerco"), ("weekly_reports", "Weekly"), ("client_reports", "Weekly"), ("adhoc_documents", "Adhoc"))
+
+
+def report_files(code: str, online: bool = False) -> list:
+    """[(file, label)] for a project's report folders (BL-87), the label saying which one: Steerco, Weekly (weekly and client
+    reports are filed together) or Adhoc. Steerco is read, never written to. When ad hoc documents share the weekly folder (the
+    default layout keeps all reports in reports/), a file named ad hoc is Adhoc; reports/Steerco is the Steerco folder there."""
+    out, taken = [], set()
+    shared = folder(code, "adhoc_documents").resolve() == folder(code, "weekly_reports").resolve()
+    for kind, label in REPORT_LABELS:
+        d = folder(code, kind)
+        if not d.is_dir():
+            continue
+        for f in sorted(d.rglob("*")):
+            if not f.is_file() or f.name.startswith((".", "~$")) or f.resolve() in taken or not (online or not is_online_only(f)):
+                continue
+            taken.add(f.resolve())
+            out.append((f, "Adhoc" if label == "Weekly" and shared and re.search(r"ad[ _-]?hoc", f.name, re.I) else label))
+    return out
+
+
+def project_files(code: str, online: bool = False, documents: bool = True) -> list:
+    """[(file, kind, sub)] for one project: minutes, transcripts, agendas (BL-135: their own kind, `sub` the folder path below Agendas),
+    reports (Steerco, weekly, client and ad hoc folders) and documents, wherever the `locations` setting puts them. `sub` is a report's folder label (Steerco, Weekly, Adhoc: BL-87) or a
+    document's folder path below its root, joined with " › ". `documents=False` leaves documents out and doesn't walk them
+    (the Files page's default: the bulk of a large OneDrive); search indexing still reads them."""
+    base = portfolio_dir() if code == "_portfolio" else project_dir(code)
+    out, seen = [], set()
+
+    def add(d, kind):
+        """Add the files under `d` as `kind`, once per folder, skipping hidden, lock and online-only files."""
+        if d.is_dir() and d.resolve() not in seen:
+            seen.add(d.resolve())
+            out.extend((f, kind, "") for f in sorted(d.rglob("*"))
+                       if f.is_file() and not f.name.startswith((".", "~$")) and (online or not is_online_only(f)))
+    add(folder(code, "minutes"), "minutes")
+    add(folder(code, "transcripts"), "transcripts")
+    # ===== BL-135 (sprint-prep-files): Agendas are their own kind, listed whether or not documents are, and kept out of the documents walk
+    ag = folder(code, "agendas")
+    if ag.is_dir() and ag.resolve() not in seen:
+        seen.add(ag.resolve())
+        out.extend((f, "agendas", " › ".join(f.relative_to(ag).parts[:-1])) for f in sorted(ag.rglob("*"))
+                   if f.is_file() and not f.name.startswith((".", "~$")) and (online or not is_online_only(f)))
+    out.extend((f, "reports", label) for f, label in report_files(code, online))
+    if documents:
+        root = base if external() else base / "documents"
+        for f in document_files(code, online):
+            parts = f.relative_to(root).parts
+            out.append((f, "documents", " › ".join(parts[:-1])))
+    return out
+
+
+# ── Dates in file names (BL-85) ────────────────────────────────────────────────
+# creaite names what it files `YYYY-MM-DD Title`; Teams names its own `Title-YYYYMMDD_HHMMSS-Meeting Transcript.docx`, `Title-YYYYMMDD.docx`
+# (and sometimes has no date at all). The meeting date comes from the name, else from the file's own date (flagged in Review).
+
+_CREAITE_NAME = re.compile(r"(\d{4})-(\d{2})-(\d{2}) (.+)")
+_TEAMS_NAME = re.compile(r"(.+)-(\d{4})(\d{2})(\d{2})(?:_\d{6})?(?:UTC)?(?:-(?:Meeting )?(?:Transcript|Recording))?", re.I)
+
+
+def _valid(y, m, d):
+    from datetime import date
+    try:
+        return date(int(y), int(m), int(d)).isoformat()
+    except ValueError:
+        return None
+
+
+def name_date(name: str):
+    """(YYYY-MM-DD, title, how) read from a file name, or (None, title, None) when it has no date. how: "creaite" or "teams"."""
+    stem = Path(name).stem if Path(name).suffix and len(Path(name).suffix) <= 6 else Path(name).name
+    m = _CREAITE_NAME.fullmatch(stem)
+    if m and _valid(*m.group(1, 2, 3)):
+        return _valid(*m.group(1, 2, 3)), m.group(4).strip(), "creaite"
+    m = _TEAMS_NAME.fullmatch(stem)
+    if m and _valid(*m.group(2, 3, 4)):
+        return _valid(*m.group(2, 3, 4)), m.group(1).strip(), "teams"
+    return None, re.sub(r"[-_ ]*(Meeting )?(Transcript|Recording)$", "", stem, flags=re.I).strip(), None
+
+
+def file_date(path) -> tuple:
+    """(YYYY-MM-DD, how): the date in the file's name, else the file's own date (how "file"; "" if it can't be read)."""
+    day, _, how = name_date(Path(path).name)
+    if day:
+        return day, how
+    try:
+        from datetime import datetime
+        return datetime.fromtimestamp(Path(path).stat().st_mtime).strftime("%Y-%m-%d"), "file"
+    except OSError:
+        return "", "file"
+
+
+def online_only_files() -> list:
+    """[(code, kind, file)] for every project file that is a OneDrive placeholder (its content isn't on this device). creaite never
+    reads these (reading one would download it): indexing and extraction skip them, and doctor lists them."""
+    out = []
+    for code, _ in project_folders():
+        out += [(code, kind, f) for f, kind, _ in project_files(code, online=True) if is_online_only(f)]
+    return out
+
+
+# ── What may be read and written in the project folders (BL-93) ────────────────
+# Reading: every document of a project (never an online-only file, never zz Archive or _Templates). Writing: creaite may create files
+# in any folder of a project when producing something Alan asked for and approved, and change an existing one only when Alan asks, shown
+# and confirmed, a copy kept first (filechange.py). Everything is inside a project folder or the vault: never outside, never _Templates
+# or zz Archive, never a hidden file.
+
+def project_area(path):
+    """(code, path below its folder) when `path` (a stored path or a real one) is inside a project's folder or the portfolio folder;
+    else None. Nothing is checked about the file itself."""
+    p = (resolve(path) if not Path(str(path)).is_absolute() else Path(path)).resolve()
+    for code, folder in project_folders():
+        f = folder.resolve()
+        if p == f or f in p.parents:
+            return code, p.relative_to(f).parts
+    return None
+
+
+def project_path_problem(path, write=False):
+    """None if `path` may be read (or created in, when `write`); else a plain reason."""
+    if ".." in Path(str(path)).parts:
+        return "a path with .. in it"
+    area = project_area(path)
+    if area is None:
+        return "it isn't inside a project folder (or the portfolio folder)"
+    code, parts = area
+    skipped = set(never_index())
+    if any(part in skipped for part in parts):
+        return f"{next(p for p in parts if p in skipped)} is never read or written by creaite"
+    if write and any(part.startswith(".") for part in parts):
+        return "creaite never writes a hidden file"
+    return None
+
+
+
+def consume_draft(spec_file, file=None) -> str:
+    """BL-118: delete the draft input a staging command has finished with, so nothing piles up in system/staging/drafts/ (where draft
+    minutes also live). Call it only after the output is written and checked. Deletes only the exact .json file passed in, and
+    only when it sits directly in the drafts folder once the path is resolved (so `..` and symlinks can't reach anything else);
+    a symlink itself is left alone. Prints one line (to `file`, stdout unless a command's output is data) and returns the name, or
+    returns '' when nothing was removed."""
+    try:
+        given = Path(spec_file)
+        real = given.resolve()
+        if given.is_symlink() or real.suffix.lower() != ".json" or real.parent != DRAFTS.resolve() or not real.is_file():
+            return ""
+        given.unlink()
+    except OSError:
+        return ""
+    print(f"Removed draft input: {real.name}", file=file or sys.stdout)
+    return real.name
+
+
+def tool_pattern(sub: str) -> str:
+    """The Claude Code permission pattern for `sub`, a path below the logical projects/ prefix (BL-93): relative to the vault
+    when the projects are in it; `~/…` (kept home-relative, like the setting) or `//abs/…` when they are in a projects root."""
+    sub = sub.lstrip("/")
+    if not external():
+        return f"projects/{sub}"
+    portfolio = str(locations().get("portfolio") or "_Portfolio")
+    if sub == "_portfolio" or sub.startswith("_portfolio/"):
+        sub = portfolio + sub[len("_portfolio"):]
+    root = str(locations().get("projects_root")).strip().rstrip("/")
+    if root.startswith("~"):
+        return f"{root}/{sub}"
+    if Path(root).is_absolute():
+        return f"/{root}/{sub}"                      # Claude Code writes an absolute path as //abs/path
+    return f"{root}/{sub}"
+
+
+def never_index_patterns():
+    """Permission patterns (below the projects root) for the folders creaite never reads or writes: zz Archive, _Templates, 99 System."""
+    return [f"**/{n}/**" for n in never_index()]

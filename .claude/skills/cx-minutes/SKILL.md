@@ -1,0 +1,157 @@
+---
+name: cx-minutes
+description: creaite meeting processing. Turns Teams transcripts (from inbox/, a named file, or a meeting found in Alan's calendar) into draft Word minutes and proposed tracker items (actions, decisions, risks, issues, promises) for review. Use whenever Alan says "process new minutes", "process [file name]", "process Tuesday's ABC steering", "do the minutes for…", "extract actions from this meeting", "re-extract", "process <quick note>", or drops a transcript or minutes file. Manual only. Never runs unattended.
+---
+
+# cx-minutes
+
+Turn meetings into draft minutes and proposed items, held for Alan's review. Nothing is filed, moved or written to the database until he approves.
+
+**Projects by name (BL-101):** refer to a project by its full name in everything Alan reads (summaries, tables, messages, file names, drafts). The short code appears only inside a work item's ID (`ABC-A-003`) and in a command he can type; `tracker.project_label(code)` gives the name.
+
+All paths are relative to the vault root (see `system/scripts/paths.py`). Read these before starting:
+- `projects/_portfolio/project-register.md`
+- `projects/_portfolio/people-register.md` (BL-55: everyone who owns an item; every run)
+- `references/project-matching.md`
+- `references/tracker-conventions.md`
+- `dev/staging-format.md`
+
+Scripts (standard library; run from the vault root):
+- `system/scripts/run minutes.py transcript <file>`: the transcript as readable speaker turns
+- `system/scripts/run minutes.py key --date YYYY-MM-DD --title "<title>" [--transcript <file>] [--event-id <id>]`: the meeting key and whether it was already processed
+- `system/scripts/run minutes.py filename --date YYYY-MM-DD --title "<title>"`: the file name stem
+- `system/scripts/run docx_tools.py fill …`, `text …`: fill and read Word documents
+- `system/scripts/run minutes.py stage <meeting.json>`: write the proposal and print the items table
+
+## Modes
+
+| Alan says | Process |
+|-----------|---------|
+| "process new minutes" | (With a projects folder outside the vault, `system/scripts/run minutes.py new [CODE]` lists the unprocessed files in each project's minutes and transcripts folders as JSON, with the date and title read from the name.) Everything new, in this order: (1) transcripts in `inbox/`; (2) other files in `inbox/`; (3) new files in each project's minutes and transcripts folders (`projects/*/minutes/` and `projects/*/transcripts/` by default; the mapped folders with a projects folder outside the vault) not yet in `system/processed.txt` |
+| "process <file name>" | That file only, wherever it is in the vault |
+| "process <meeting>", e.g. "Tuesday's ABC steering" | Find the meeting in Alan's calendar (Microsoft 365). Retrieve its Teams transcript and meeting chat, then treat them as an inbox transcript. If the transcript can't be retrieved, say so and ask Alan to download it to `inbox/` |
+| From Intake's Meetings section: `process the meeting "<title>" on DD-MM-YYYY at HH:MM (calendar event ID <id>[, project ABC])` | As "process <meeting>", but find the meeting **by that event ID** (the title, date and time only confirm it). Pass the ID on: `minutes.py key --event-id <id>` and `"event_id"` in the meeting spec, so the processed key is `calendar:<id>` and the Inbox row shows "Already processed" after approval. A given project is a strong hint for matching, not a reason to skip it (BL-42 phase 2) |
+| "re-extract" | Refresh the proposed items from the draft minutes Alan has edited: `system/scripts/run minutes.py refresh <proposal>` (also the dashboard's Refresh items button). Show its summary of added, removed and updated items |
+| "process projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick note - <title>.md", "note: …" | A **quick note** (BL-54): see Quick notes below |
+
+**Teams file names (BL-85):** Teams names its transcripts `<Title>-YYYYMMDD_HHMMSS-Meeting Transcript.docx`, `<Title>-YYYYMMDD.docx`, or sometimes with no date. Get the meeting date and title with `system/scripts/run minutes.py filedate <file>`: it reads creaite's `YYYY-MM-DD Title` or Teams' names, else the file's own date (`from_name: false`; `stage` then flags every item `date-from-file` and Review says so). A transcript or minutes file that is already in the project's transcripts or minutes folder is Alan's own: give `stage` its path as the `transcript`; it is never copied, moved or renamed. What creaite files itself keeps its `YYYY-MM-DD Title` form.
+
+Never read `documents/` or `reports/` folders for extraction (with a projects folder outside the vault: never anything outside the project's mapped minutes and transcripts folders; `report.py` and `paths.py extract-dirs` name them). Where a project's folders are is `system/scripts/paths.py` (`folder(code, kind)`, from settings `locations`): by default the vault's `projects/<CODE> <Name>/` with `minutes/`, `transcripts/`, `documents/` and `reports/`; with a projects folder outside the vault (the company OneDrive, BL-85) the engagement folder and its mapped subfolders (for example `02 Meetings/Minutes`). Paths below are the default layout.
+
+## Quick notes (BL-54)
+
+A quick note is Alan's own rough notes from a conversation with no transcript (a call, a corridor chat), saved by the dashboard's Quick capture (or "note: …" in ask creaite) as `projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick note - <title>.md`. Its header gives the date, the project and who was there.
+- **Project:** the note's header names it (Alan chose it, or creaite matched it); don't re-match. Items for another project are left out and mentioned.
+- **No Word minutes** unless Alan asks: skip the draft (steps 3 and 6), read the note directly (it's short Markdown, not a transcript), and extract only what it states. Rough notes are terse: an owner or date that isn't written stays empty (`TBC`, no due date); mark anything you had to interpret `low-confidence`. People named in "Who was there" are the likely owners only when the note says so.
+- **Stage** with `minutes.py stage` and `"note": "<the note's path>"` in place of `draft` and `transcript` (title from the file name, date from the header). Nothing is copied or moved; each item's source is the note plus its section; on apply the note is recorded as processed. Show the items table as usual.
+
+**Loaded from the calendar (BL-42 phase 3):** Intake's **Load into inbox** and **Process selected** (which loads, then processes) save a meeting's Teams transcript as `inbox/YYYY-MM-DD <Title>.vtt` and its meeting chat as `inbox/YYYY-MM-DD <Title> - chat.txt`, written by the dashboard's server from Microsoft 365 (never typed by Claude). Both start with a header carrying the calendar event ID (`Event ID: …`); the `.vtt` also has a `NOTE` block with the title, date, start time, organiser and attendee names. Process the `.vtt`: `minutes.py filedate <file>` returns `event_id`, and `minutes.py key` picks the ID up from the file by itself, so the meeting is `calendar:<id>` in `processed.txt`; pass `"event_id"` in the meeting spec. **Read the `- chat.txt` with its transcript** (decisions and links are often only in the chat) and never process a chat on its own; Intake lists it as "Goes with its transcript". The cues are in start-time order and the speaker names are as Teams gave them.
+
+## Flow for each meeting
+
+### 1. Identify the meeting
+- Get the title, date, start time and attendees from the calendar entry if there is one, otherwise from the transcript.
+- **Private or confidential calendar entries are skipped** unless Alan named that meeting explicitly. The sweep's ignore rules (BL-97) leave private meetings out of the saved calendar, so they can't be picked in Intake; a named one ("process Tuesday's one-to-one") is found in the calendar and processed as usual. The ignore rules apply to the sweep only, never to a meeting Alan asks for.
+- **Duplicates:** run `minutes.py key` (the calendar event ID if known, otherwise a fingerprint of `YYYY-MM-DD` + normalised title + transcript content hash). If `processed_on` is set, **skip the meeting and tell Alan**: "Already processed on <DD-MM-YYYY>: <title>".
+
+### 2. Match projects
+Check **both the meeting title and the transcript content** against the register: codes, names, aliases, stakeholders and keywords. Follow `references/project-matching.md`.
+- **One project clearly dominant:** the meeting belongs to that project.
+- **Several projects substantively discussed:** the meeting belongs to **each** of them. Every item is still matched individually.
+- **Weak or conflicting:** stop for this meeting. Leave the file in `inbox/`, flag it as `Project?` with the candidates, and continue with the next meeting.
+
+### 3. Draft the minutes
+**Required for every transcript: never skipped (BL-260).** `minutes.py stage` refuses a transcript with no draft, or a draft file that doesn't exist, and stages nothing. Only a quick note (above) has no draft. If the fill fails, fix it and run it again; never stage without it.
+Follow `references/minutes-style.md` (Alan's format: content, flags, dates, British English).
+- Read the transcript with `minutes.py transcript`, and the meeting chat if retrieved.
+- Write `values.json` in `system/staging/drafts/` with every placeholder listed in the style file, then run `system/scripts/run docx_tools.py fill system/templates/minutes-template.docx <values.json> system/staging/drafts/<stem>.docx` (stem from `minutes.py filename`); `fill` deletes `values.json` itself once the document is written. Never create a document from scratch; the fill stops, writing nothing, if a placeholder is left empty.
+- `STATUS_LINE` is `Draft, generated by creaite on <long date>. Not yet reviewed.`; approval replaces it with `Approved by Alan on <long date>`.
+- Draft Decisions, the RAID section (Risks, Issues, Assumptions & Dependencies, one typed line each) and Action Items in the same words as the items you'll stage in step 5, so the approval check and re-extract can match them.
+- The full chat is never saved; only points that add something go into the minutes.
+- Check the result with `docx_tools.py text`. The docx skill isn't needed.
+
+### 4. Extract items
+From the draft minutes, using the transcript only to fill gaps such as an owner or date:
+- **Actions:** one per Action Items row. When the owner is Alan (written as "Alan…", or "I'll…" spoken by Alan), set `owner` to his full name from settings. For everyone else use the **full name from the people register**: match what was said (a first name, a nickname, initials, an email address) against each person's full name, aliases and email, and write the full name in the draft minutes and the item. When no one in the register matches exactly, write the name as spoken and leave the mapping to `people map` in step 5; never pick a likely match yourself. Fill workstream, priority, RAID response action and due dates only when stated; leave client messaging as the three empty headings (see the conventions).
+- **Guessed fields (BL-208):** when a field is your reading rather than something said plainly (an owner named once or by a role, a due date read from "by Friday" or "early December", a decision maker never named, a likelihood read from wording), add `"inferred": [{"field": "owner", "why": "named once, near the end"}]` to the item (fields as stored: `owner`, `made_by`, `due_date`, `needed_by`, `priority`, `impact`, `likelihood`, `type`, `status`, `response_action`). Review's One at a time shows those first, underlined, with your reason. Leave it out when nothing was guessed.
+- **Due dates on working days (BL-181):** a stated weekday stays as said ("by Friday" is Friday); when the source gives a date that works out to a weekend without saying so, or only a period ("next week", "in ten days"), choose the nearest working day and never invent a weekend date. A weekend date that was said stays, and Review notes it.
+- **Decisions, risks, issues, assumptions and dependencies.** Assumptions: things the plan relies on being true ("Finance accepts a 2-day lag"). Dependencies: things the project needs from another party or piece of work ("Vendor delivers the API by 15-10-2026"). Use the RAID `type` field; impact and likelihood only when stated.
+- **Workstream (BL-58):** from the matched project's own workstreams only (`tracker.py read workstreams --project CODE`), by name, keyword, alias, lead or Teams channel; a name the project doesn't have is left for staging to flag as `new-workstream` (see the conventions).
+- **Low confidence:** include the item with the `low-confidence` flag.
+- **Status signals:** add them to `status_signals` for cx-weekly-report.
+- Check the open items in the database and the `rejected` table, and never re-propose a duplicate or a rejected item. **Read the project's reject reasons too** (BL-133): `system/scripts/run tracker.py read rejected --project <CODE> --days 90` lists recent rejections with Alan's reason and the item's text ("Not mine to track", "Not an action", "Duplicate of ABC-A-009"). Treat them as guidance: don't propose the same kind of item again. They block nothing by themselves.
+
+### 4a. Expected items: propose updates, not repeats (BL-65)
+Every meeting matched to a project has **expected items**: the project's open items, whether or not Alan opened the meeting's prep brief. For those the meeting discusses, propose an **update**; never propose them again as new items.
+1. **Read them** after matching the project, with `system/scripts/run minutes.py expected <CODE> --title "<meeting title>"` (read-only JSON; never query the database yourself). It lists the project's open **actions**, its open **risks and issues with no response**, apart its other open RAID items (which already have a response), and its **decisions needed** (`decisions_needed`: the pending ones). It also names the meeting's series, when the series last met, and whether the series is remembered for another project (`series_project`): if that differs from the project you matched, say so to Alan and don't guess.
+2. **Compare** the transcript (or the quick note) with them. An item is *discussed* only if the transcript speaks to that item: a status ("that's done"), a new date ("pushed to the 16th"), a response to a risk ("we'll escalate to the CIO"), or progress worth recording. A passing keyword isn't enough. Items not discussed are left alone: no update, no mention from you.
+3. **Propose updates** in the meeting spec, one per discussed item: `{"op": "update", "table": "actions" | "raid" | "decisions", "id": "ABC-A-003", "set": {…}, "why": "<what was said, who said it>", "section": "Actions"}`. Actions may change `status` (Closed only when the transcript says it's done; Delayed when it says it's late), `due_date` (YYYY-MM-DD), `latest_update` (`DD-MM-YYYY: what happened`). RAID items may change `status`, `response_action` (only what the transcript says is being done) and `due_date`. A pending decision the meeting made or withdrew: see 4b. **Never** the owner, title or project (say it to Alan instead; cx-edit and Review change those), and never an item that isn't in the expected list.
+4. **Never re-propose** an expected item as a new action, risk or issue. If you extract something that is one of them, make it the update. (`minutes.py stage` also turns a new item that duplicates an open one into an update, or a mention if nothing changed, and logs each discussed item as a mention for the early warnings.)
+5. **Cite** the transcript in `why`; stage fills `based_on` and the source, so an apply holds a conflict if the item changed after the proposal. Updates that close items are approved one at a time in Review.
+**Quick notes get the same treatment:** run `expected` with the note's project and title and propose updates from what the note states.
+6. **Probably done (BL-218):** run `python3 system/scripts/minutes.py done-candidates <CODE> <transcript or note>` (read only). It lists, from plain code, the passages that may show one of the project's open items finished: its ID or most of its words with a completion word ("sent", "done", "signed"), the line and the speaker, and a hint (Looks done, Maybe done, Not done). **Judge only those:** does the passage state that this very item is finished? If so, add `"done": {"strength": "Looks done" | "Maybe done", "quote": "<the words that show it, as said>", "who": "<the speaker>", "reason": "<for Maybe done: what makes you unsure>"}` to the item's closing update (`"set": {"status": "Closed"}`; for an open promise, BL-125 A, `"set": {"status": "Done"}`: its maker is its owner here). Looks done is an explicit completion statement naming the thing; anything less is Maybe done. If it shows the item is late or moved, use `"strength": "Not done"` on a re-dating update (`"set": {"due_date": "YYYY-MM-DD"}`). Stage marks it for Review with the evidence; a passage not said by the owner or Alan and not naming the owner becomes Maybe done. Never close anything that isn't in the candidates or the expected list.
+7. **Looks like (BL-221):** after staging, `minutes.py stage` marks a new item that repeats one in the tracker ("Looks like an existing item: n"), by plain code. When you can already see that a new item is, or isn't, the same as an existing one, say so on the spec item: `"repeat": {"id": "ABC-A-009", "judged": "same" | "different"}` ("different" drops a mark; "same" makes it Very likely, **even when plain code found nothing** (BL-297), if the ID is an open, or recently closed, item of the item's project; otherwise it is ignored with a note). Plain code matches on the item's ID in the text, a person from the people register and a less common word in both, and the item's timeframe (never an item raised after the meeting). Alan merges, keeps, rejects it, or picks another item to update in Review. An update of the due date and latest update only is routine in Review; anything else is approved on its own.
+8. **Vague actions (BL-220):** write each action verb-first with its object ("Confirm who owns the cut-over data extract", not "data thing"). A new action of under four words or with no verb is marked as guessed by stage and offered **Sharpen** in Review.
+
+### 4b. Decisions needed and fuller decision records (BL-53)
+A decision can be **pending** before it is made. Fill the new fields **only where the source says so; never guess**.
+- **A decision made:** `status` is `Made` (the default), `date` the meeting date, `made_by` the person who decided. Add `reasoning` (why), `options` (the alternatives discussed, in one line) and `revisit` (a date as YYYY-MM-DD, or the trigger in words: "revisit if adoption falls below 60%") only when the meeting states them. `replaces` is the ID of an earlier decision of the same project that this one overrides, only when the meeting says so ("this replaces the 15-09 decision": look it up in the tracker and cite the ID; never guess one).
+- **A decision needed:** when the meeting says one is needed ("we need a decision on…", "Sara to confirm the pilot extension by the 16th"), propose a new decision with `"status": "Pending"` and **no date**. Set `made_by` to who is asked (the full name, mapped as for owners; Alan himself when it falls to him) and `needed_by` (YYYY-MM-DD) only if the meeting names them. The source rule is unchanged. Add `reasoning` or `options` when the meeting states why it is needed or the choices.
+- **A pending decision the meeting made:** if a decision in `decisions_needed` is made in this meeting, propose an **update** to it (never a second decision): `{"op": "update", "table": "decisions", "id": "ABC-D-004", "set": {"status": "Made", "reasoning": "…"}, "why": "<who decided, what was said>", "section": "Decisions"}`. The date defaults to the meeting date; `made_by`, `date`, `reasoning`, `options` and `revisit` may be set. `"status": "Withdrawn"` when the meeting drops it without deciding. Never a decision that isn't pending, and never one outside the expected list. Recording or withdrawing a decision is approved on its own in Review, never by "Approve routine".
+- **Minutes:** write decisions made under Decisions as now. A decision still needed goes under Open Questions / Escalations in the draft minutes (the Word draft doesn't carry pending decisions; they are staged items, and "Refresh items from the draft" leaves them alone).
+
+### 4c. Coverage: was the agenda discussed? (BL-209)
+After the minutes are drafted, run `python3 system/scripts/minutes.py agenda <CODE> --date YYYY-MM-DD --title "<meeting title>"` (read only). It gives the meeting's agenda points: an agenda file in the project's Agendas folder for that day, else the questions on creaite's prep page for it. **No points: skip this step** (a meeting with no agenda costs nothing extra). Otherwise compare each point with the transcript and give one verdict per point: **Covered** (discussed and settled or reported on), **Touched on** (mentioned without getting anywhere) or **Not discussed**. Add them to the meeting spec as `"coverage": [{"point": "<the point exactly as agenda gave it>", "verdict": "Covered"}]`. Use the agenda's own words only: never put transcript text in the point. Stage keeps them as `meeting.coverage` and refuses a point that isn't on the agenda. Alan carries a point that wasn't covered to the series' next meeting from the meeting page; never write to the agenda file.
+
+### 4d. Promises (BL-125 A)
+Commitments made in passing, kept apart from formal actions: "I'll send you the deck after the call", "Sara will get the extract to Alan by Friday". Only those **made by Alan or to Alan**; one between two other people is left out.
+- **Promise or action?** Anything the meeting agreed as an action (it is in the Action Items table) stays an action; a promise is one person's word to another, said in passing, that isn't an action item. Never propose the same thing as both.
+- **Propose** `{"table": "promises", "section": "<speaker, cue time>", "values": {"project": "ABC", "promised_by": "<full name>", "promised_to": "<full name>", "description": "<verb first: Send the SOW to the client>", "due_date": "YYYY-MM-DD"}}`. People as for owners: Alan's full name when he says "I'll…" or is the one promised to, everyone else from the people register (`people map` maps them and flags an unknown name). `due_date` only when a time is said, by the working-day rule above (BL-181); with none, leave it out and stage flags `no-due-date` (a promise with no date is never overdue). Mark a guessed person or date in `inferred` as for actions.
+- **Stage does the rest:** `raised` is the meeting date and the source is the transcript copy plus your section (a promise isn't in the minutes); a quick note's promise cites the note. Promises aren't written in the Word draft, and "Refresh items from the draft" leaves them alone.
+- **Open promises:** `expected` lists the project's `open_promises`. If the meeting says one was kept, dropped or moved, propose an update, never a new promise: `{"op": "update", "table": "promises", "id": "ABC-P-004", "set": {"status": "Done"}, "why": "<who said it>"}` (`status` Done or Dropped, or a new `due_date`). Marking one Done or Dropped is routine in Review (Approve routine covers it, Alan 13-10-2026), unless it carries a `done` block (probably done, BL-218), which is approved on its own. A promise said again is logged as a mention, which resets its "quiet for N days" in Waiting on.
+
+### 5. Stage for review
+Write `system/staging/drafts/<stem>.json` in the format shown in `minutes.py`'s help (title, date, event ID, projects, draft, transcript, items with their table, section and values — every action and RAID item with `raised` set to the meeting date (BL-26) — status signals). Run `system/scripts/run propose.py people map <that file>` first (BL-55): it changes every owner and decision maker that matches the people register exactly (alias, email, full name in any case) to the full name, and adds an `unknown-owner` flag to each name the register doesn't know, so Review shows it with the likely matches. Show its output. Then run `system/scripts/run minutes.py stage <that file>`; it deletes the file itself once the proposal is staged and checked (it keeps it if the check fails, so you can fix and retry). Stage:
+- builds the meeting key and the file operations for every project;
+- sets each item's source to the minutes copy in its own project folder plus the section (or the transcript copy when there are no minutes);
+- skips items rejected before or already open in the tracker, and says so;
+- adds `no-owner` and `no-due-date` flags;
+- writes `system/staging/proposed-YYYY-MM-DD-HHMM.json`, validates it, and prints the items table.
+
+**Enrich for search (BL-07), once, now.** Write a **two-line summary** of the meeting (what was decided or learnt, in plain words) and **three to eight topic tags** ("data access", "UAT", "vendor risk": what someone might search for), then run `system/scripts/run search.py enrich set --path <each minutes copy> --path <each transcript copy> --summary "<line 1>\n<line 2>" --tags "tag, tag, tag"`. The paths are the `to` of every `copy` in the proposal's `meeting.file_ops` (one per project, under `minutes/` and `transcripts/`). It writes small files in `system/search/`, which the search index folds in at its next rebuild (after the apply), so keyword search matches the meaning as well as the words. Never at search time, and never again for the same meeting unless Alan says "re-extract". If it's rejected, nothing more is needed (a summary for a file that never arrives is ignored).
+
+Then show Alan:
+- the meeting, its project(s) and the draft file `fill` wrote (by name, with a link). Never say minutes were drafted unless the fill ran and stage printed `Draft minutes:` (BL-260);
+- the items table: # · Project · Type · Description · Owner · Due · Flags · Source;
+- the flags and status signals.
+
+Then stop. Alan decides with cx-review. Never run `tracker.py apply` without Alan's confirmation.
+
+### 6. On approval (performed by `tracker.py apply`)
+1. Mark the draft final: replace the status line with `Approved by Alan on <date>`.
+2. For **each** matched project, copy the minutes to its minutes folder as `YYYY-MM-DD <Meeting title>.docx` (`projects/<CODE> <Name>/minutes/` by default), and the transcript to its transcripts folder as `YYYY-MM-DD <Meeting title>.<ext>`. `minutes.py stage` writes those paths into the proposal; never rename the person's own files.
+3. Remove the originals from `inbox/` and `system/staging/drafts/`.
+4. Write the approved items. Each item's source is the copy in its own project's folder.
+5. Add the meeting key to `system/processed.txt`, listing every project it was filed under.
+
+If Alan rejects the minutes but approves some items, the items are written, and the transcript is filed without minutes.
+
+## File naming
+
+`YYYY-MM-DD <Meeting title>.<ext>`
+- Take the title from the calendar entry, or from the transcript.
+- Remove characters that aren't allowed in file names.
+- Keep any `[CODE]` tags out of the file name, because the folder already shows the project.
+
+## Rules
+
+- Nothing is filed, moved or written before approval.
+- Manual only: never run as part of a scheduled task.
+- References and minutes only. Never paste raw transcript text into the database.
+- Exclude anything marked confidential or restricted from items unless Alan says otherwise.
+- **Milestones are never changed from minutes** (BL-186). When a meeting moves a milestone's expected date, says one is at risk or achieved, or agrees a new agreed date, write it in the minutes and tell Alan, so he makes the change on the Milestones page or with cx-edit (which ask for the reason, and for a rebaseline the people who agreed it, and record its decision). A rebaseline agreed in the meeting is still extracted as a Decision. Use the five states in the minutes' words (Achieved, On track, At risk, Slipped, Overdue); Missed no longer exists.
+
+
+## Dates in the minutes
+
+Header and status line: long dates in UAE time ("30 September 2026, 12:00–13:05 (UAE time)"). Action Items deadlines: DD-MM-YYYY, or "Not set". The file name stays `YYYY-MM-DD Meeting title.docx`. See `references/minutes-style.md`.

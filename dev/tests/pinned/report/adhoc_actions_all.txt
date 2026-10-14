@@ -1,0 +1,63 @@
+exit 0
+{
+ "table": "actions",
+ "count": 6,
+ "columns": [
+  "ID",
+  "Action",
+  "Owner",
+  "Due",
+  "Priority",
+  "Status"
+ ],
+ "rows": [
+  [
+   "ABC-A-002",
+   "Escalate data access to the client CIO",
+   "Alan Carter",
+   "07-10-2026 · 2 days late",
+   "Urgent",
+   "Open"
+  ],
+  [
+   "ABC-A-006",
+   "Renegotiate the licence price with the vendor",
+   "Alan Carter",
+   "12-10-2026",
+   "Medium",
+   "Open"
+  ],
+  [
+   "ABC-A-003",
+   "Book the UAT environment",
+   "Sara Example",
+   "14-10-2026",
+   "Medium",
+   "Open"
+  ],
+  [
+   "ABC-A-005",
+   "Agree the pilot success criteria",
+   "Sara Example (Example Client Ltd)",
+   "15-10-2026",
+   "Medium",
+   "Open"
+  ],
+  [
+   "ABC-A-004",
+   "Plan the go-live weekend",
+   "Omar Ali",
+   "18-11-2026",
+   "Medium",
+   "Open"
+  ],
+  [
+   "ABC-A-001",
+   "Send the revised SOW",
+   "Omar Ali",
+   "",
+   "Medium",
+   "Closed"
+  ]
+ ]
+}

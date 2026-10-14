@@ -1,0 +1,26 @@
+{
+ "denied": [],
+ "events": [
+  {
+   "asked": "Edit",
+   "covered": null,
+   "ok": false,
+   "reason": "ask creaite doesn't need it: it changes files through filechange.py, and a change that needs your approval comes to you on a card",
+   "refused": [],
+   "rule": "Edit",
+   "state": "refused",
+   "type": "permission",
+   "why": "to change a file"
+  },
+  {
+   "chat": "s-1",
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": "s-1",
+   "type": "done"
+  }
+ ],
+ "said": [],
+ "session": "s-1",
+ "steps": []
+}

@@ -1,0 +1,280 @@
+<aside class="panel peek on" id="panel" aria-label="Details">
+<div class="pin">
+<div class="pk-bar" id="pkBar">
+<button type="button" class="ib" aria-label="Close" data-tip="Close" data-key="Esc" id="pkClose">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="arrowright">
+<path d="M5 12h14M13 6l6 6-6 6">
+</path>
+</svg>
+</button>
+<button type="button" class="ib" aria-label="Expand to full width" data-tip="Expand to full width" id="pkExpand" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="expand">
+<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7">
+</path>
+</svg>
+</button>
+<span class="pk-sep" aria-hidden="true">
+</span>
+<button type="button" class="ib" aria-label="Previous item" data-tip="Previous item" data-key="K" id="pkPrev" disabled="">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevup">
+<path d="M6 15l6-6 6 6">
+</path>
+</svg>
+</button>
+<button type="button" class="ib" aria-label="Next item" data-tip="Next item" data-key="J" id="pkNext">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
+<path d="m6 9 6 6 6-6">
+</path>
+</svg>
+</button>
+<span class="sp">
+</span>
+<span class="pk-save" id="pkSave" role="status" aria-live="polite">
+</span>
+<button type="button" class="ib" aria-label="Sneak peek: change this item in words" data-tip="Sneak peek: change this item in words" data-key="//" id="pkSneakBtn" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="sneak">
+<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z">
+</path>
+<path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib" aria-label="Draft chase" data-tip="Draft chase" data-key="C" id="pkChaseBtn" aria-pressed="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chase">
+<rect x="3" y="5" width="14" height="11" rx="2">
+</rect>
+<path d="M3.5 6.5 10 11l6.5-4.5">
+</path>
+<path d="M15 19h6M18.5 16.5 21 19l-2.5 2.5">
+</path>
+</svg>
+</button>
+<button type="button" class="ib" aria-label="Copy link" data-tip="Copy link" id="pkLink">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="link">
+<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1">
+</path>
+</svg>
+</button>
+<button type="button" class="ib" aria-label="More" data-tip="More" id="pkMore" aria-haspopup="menu">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="more">
+<circle cx="5" cy="12" r="1">
+</circle>
+<circle cx="12" cy="12" r="1">
+</circle>
+<circle cx="19" cy="12" r="1">
+</circle>
+</svg>
+</button>
+</div>
+<div class="pk-scroll" id="pkScroll" tabindex="-1">
+<div class="pk-ask" id="pkAsk" role="alertdialog" aria-labelledby="pkAskT" hidden="">
+<span class="t" id="pkAskT">
+</span>
+<button type="button" class="btn primary" data-pkask="keep">Keep</button>
+<button type="button" class="btn" data-pkask="discard">Discard</button>
+</div>
+<div class="pdraft" id="pkDraft" role="status" hidden="">
+</div>
+<div class="pk-id" id="pkId">
+<span>ABC-A-001</span>
+<span aria-hidden="true">·</span>
+<a href="#" class="hlink" data-proj="ABC" data-tip="Open the project page">Example Programme</a>
+</div>
+<div id="pkWarn">
+</div>
+<div class="pk-propnotes" id="pkPropTop">
+</div>
+<h2 class="pk-title pked" id="pkTitle" data-pkf="t" contenteditable="plaintext-only" role="textbox" spellcheck="true" data-ph="Add a title" aria-label="Action">Escalate data access to the client CIO</h2>
+<div id="pkChips" class="pkchips">
+<span class="pkchipl" role="group" aria-label="Suggested fields">
+</span>
+</div>
+<div class="pk-props" id="pkProps" role="group" aria-label="Key fields">
+<div class="pk-prop">
+<button type="button" class="pk-chip" data-pkp="st" aria-haspopup="listbox" aria-label="Status: Open" data-tip="Status">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" style="color:var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<circle cx="12" cy="12" r="8">
+</circle>
+<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none">
+</path>
+</svg>
+<span>Open</span>
+</button>
+</div>
+<div class="pk-prop">
+<button type="button" class="pk-chip" data-pkp="pr" aria-haspopup="listbox" aria-label="Priority: Urgent" data-tip="Priority">
+<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+<rect x="3" y="16" width="3.4" height="4" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+<rect x="8" y="12" width="3.4" height="8" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+<rect x="13" y="8" width="3.4" height="12" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+<rect x="18" y="4" width="3.4" height="16" rx="1" fill="var(--bad)" opacity="1">
+</rect>
+</svg>
+<span>Urgent</span>
+</button>
+</div>
+<div class="pk-prop">
+<button type="button" class="pk-chip" data-pkp="o" aria-haspopup="listbox" aria-label="Owner: Alan Carter (you)" data-tip="Owner">
+<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+<circle cx="12" cy="12" r="10" fill="var(--accent-soft)">
+</circle>
+<text x="12" y="15.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--accent)" font-family="inherit">AC</text>
+</svg>
+<span>Alan Carter <small class="sub">(you)</small>
+</span>
+</button>
+</div>
+<div class="pk-prop">
+<button type="button" class="pk-chip late" data-pkp="due" aria-haspopup="listbox" aria-label="Due date: 06-10-2026 overdue" data-tip="Due date">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calendar">
+<rect x="3.5" y="5" width="17" height="15" rx="2">
+</rect>
+<path d="M3.5 10h17M8 3v4M16 3v4">
+</path>
+</svg>
+<span>
+<span class="nw">06-10-2026</span>
+<em>overdue</em>
+</span>
+</button>
+</div>
+</div>
+<div class="pk-props sec" id="pkProps#1" role="group" aria-label="Impact and likelihood">
+</div>
+<div id="pkDep">
+</div>
+<div class="pk-note" id="pkNote" role="status" hidden="">
+</div>
+<div class="pk-dl pk-src-l" id="pkSrcL" hidden="">Source</div>
+<div class="pk-desc pked pk-srcin" id="pkSrcIn" data-pkf="srcIn" contenteditable="plaintext-only" role="textbox" spellcheck="true" aria-label="Source" hidden="">
+</div>
+<div class="pk-dlrow">
+<div class="pk-dl" id="pkDescL">Latest update</div>
+<span class="pk-dldr" id="pkDescDr">
+<button type="button" class="drbtn" data-draft="update" data-drf="upd" aria-label="Draft" data-tip="Draft the latest update from what has happened since the last one">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="spark">
+<path d="M12 1Q12 12 23 12Q12 12 12 23Q12 12 1 12Q12 12 12 1Z" fill="currentColor" stroke="none">
+</path>
+</svg>
+<span>Draft</span>
+</button>
+</span>
+</div>
+<div class="pk-desc pked" id="pkDesc" contenteditable="plaintext-only" role="textbox" aria-multiline="true" data-pkml="1" spellcheck="true" data-pkf="upd" data-ph="Add the latest update…" aria-label="Latest update">
+</div>
+<div id="pkAiDraft" class="pkdrhost">
+</div>
+<div id="pkAfter">
+<div class="pk-last" id="pkLast">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="history">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7v5l3 2">
+</path>
+</svg>
+<span>Last updated 09-10-2026 08:00</span>
+</div>
+<section aria-label="Details">
+<button type="button" class="pk-dethead" id="pkDetT" aria-expanded="false" aria-controls="pkDet">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevright">
+<path d="M9 6l6 6-6 6">
+</path>
+</svg>Details</button>
+<div class="pk-det" id="pkDet" hidden="">
+</div>
+<div id="pkAiDraftD" class="pkdrhost">
+</div>
+</section>
+<section aria-label="Activity">
+<div class="pk-tabs" role="tablist" aria-label="Activity" id="pkTabs">
+<button type="button" class="pk-tab" role="tab" data-pktab="all" aria-selected="true" tabindex="0" id="pkTabSel">All</button>
+<button type="button" class="pk-tab" role="tab" data-pktab="act" aria-selected="false" tabindex="-1">Activity</button>
+<button type="button" class="pk-tab" role="tab" data-pktab="upd" aria-selected="false" tabindex="-1">Updates</button>
+<button type="button" class="pk-tab" role="tab" data-pktab="src" aria-selected="false" tabindex="-1">Source</button>
+</div>
+<div class="pk-feed" id="pkFeed" role="tabpanel" aria-labelledby="pkTabSel">
+<div class="pk-fe" data-t="src">
+<span class="pk-fi" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</span>
+<div>
+<b>You, via cx-edit</b>
+<span class="chg">created (owner Alan Carter, due 06-10-2026)</span>
+<span class="when">· 09-10-2026 08:00</span>
+</div>
+</div>
+<div class="pk-fe" data-t="src">
+<span class="pk-fi" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
+<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
+</path>
+<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
+</path>
+</svg>
+</span>
+<div>
+<b>Source</b>
+<div class="pk-src">
+<a href="#" class="srclink" data-openfile="projects/ABC Example Programme/minutes/2026-10-04 Steering.docx">2026-10-04 Steering.docx</a>
+<span class="sub">· Actions</span>
+<div class="sub">projects/ABC Example Programme/minutes</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<div id="pkPropEnd">
+</div>
+</div>
+</div>
+<div class="pk-foot" id="pkFoot#1">
+<button type="button" class="btn" id="pkReject" aria-haspopup="menu" aria-expanded="false">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="x">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>Reject</button>
+<span class="sp">
+</span>
+<button type="button" class="btn" id="pkCancel">Cancel</button>
+<button type="button" class="btn" id="pkPSave" data-key="⌘↵" data-tip="Save">Save</button>
+<button type="button" class="btn primary" id="pkPSaveA">Save and approve</button>
+</div>
+<div class="pk-scroll pk-chase" id="pkChase" hidden="">
+</div>
+<div class="sp-hint" id="pkSneakHint">
+<button type="button" class="sp-hintbtn" id="pkSneakHintBtn">
+<kbd>/</kbd>
+<kbd>/</kbd> Change this item in words</button>
+</div>
+<div class="sp-host" id="pkSneak" hidden="">
+</div>
+<div class="ph">
+<div style="flex:1">
+<div class="id" id="pId">
+</div>
+<h2 id="pTitle">
+</h2>
+</div>
+<button class="btn quiet" id="pClose">Close</button>
+</div>
+<div class="pb" id="pBody">
+<div class="editbanner" id="editBanner">Editing — changes apply when you save</div>
+<dl class="fgrid" id="pFields">
+</dl>
+</div>
+<div class="ferr" id="pErr">
+</div>
+<div class="pkeys" id="pKeys">
+</div>
+<div class="pf" id="pFoot">
+</div>
+</div>
+</aside>

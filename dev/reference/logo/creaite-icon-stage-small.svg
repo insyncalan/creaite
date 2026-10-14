@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="32" height="32" role="img" aria-label="creaite">
+  <title>creaite</title>
+  <!-- Stage at 32 px and below (the favicon): the dashes and the c would blur, so the draft is a solid grey square and the
+       record a plain saffron one; the overlap still reads as draft and record -->
+  <rect width="512" height="512" rx="112" fill="#18181B"/>
+  <rect x="87" y="87" width="225" height="225" rx="46" fill="#52525B"/>
+  <rect x="200" y="200" width="225" height="225" rx="46" fill="#F2B544"/>
+</svg>

@@ -1,0 +1,19 @@
+{
+ "denied": null,
+ "events": [
+  {
+   "message": "Claude Code stopped with an error.",
+   "type": "error"
+  },
+  {
+   "chat": null,
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": null,
+   "type": "done"
+  }
+ ],
+ "said": [],
+ "session": null,
+ "steps": []
+}

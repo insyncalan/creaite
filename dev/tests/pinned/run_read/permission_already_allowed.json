@@ -1,0 +1,26 @@
+{
+ "denied": [],
+ "events": [
+  {
+   "asked": "Bash(python3 system/scripts/tracker.py *)",
+   "covered": "Bash(python3 system/scripts/tracker.py *)",
+   "ok": false,
+   "reason": "already allowed",
+   "refused": [],
+   "rule": "Bash(python3 system/scripts/tracker.py *)",
+   "state": "allowed",
+   "type": "permission",
+   "why": "to read the tracker"
+  },
+  {
+   "chat": "s-1",
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": "s-1",
+   "type": "done"
+  }
+ ],
+ "said": [],
+ "session": "s-1",
+ "steps": []
+}

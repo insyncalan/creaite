@@ -1,0 +1,2008 @@
+[
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Send revised SOW to client",
+     "due_date": "2030-06-14",
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "High",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": null
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "applied": 1,
+       "decision": "rejected",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 3,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Decide later",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [
+    {
+     "duplicate_of": null,
+     "fingerprint": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "reason": "Not ours",
+     "rejected_at": "<TS>",
+     "via": "cx-edit"
+    }
+   ],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 1: written 1, filed 0, rejected 1, held 0, 1 still pending.\n",
+  "step": "decide"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Send revised SOW to client",
+     "due_date": "2030-06-14",
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "High",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": null
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 2,
+       "decision": "rejected",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "applied": 2,
+       "decision": "rejected",
+       "duplicate_of": "ABC-A-001",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Copy of the SOW action",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "applied": 1,
+       "decision": "rejected",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 3,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Decide later",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [
+    {
+     "duplicate_of": "ABC-A-001",
+     "fingerprint": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "reason": "Duplicate",
+     "rejected_at": "<TS>",
+     "via": "cx-edit"
+    },
+    {
+     "duplicate_of": null,
+     "fingerprint": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "reason": "Not ours",
+     "rejected_at": "<TS>",
+     "via": "cx-edit"
+    }
+   ],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 2: written 0, filed 0, rejected 2, held 0, 1 still pending.\n",
+  "step": "again"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Send revised SOW to client",
+     "due_date": "2030-06-14",
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "High",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": null
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": null,
+     "old_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "op": "undo",
+     "tbl": "rejected",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "applied": 1,
+       "decision": "rejected",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 3,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Decide later",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "duplicate_of": "ABC-A-001",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Copy of the SOW action",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [
+    {
+     "duplicate_of": null,
+     "fingerprint": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "reason": "Not ours",
+     "rejected_at": "<TS>",
+     "via": "cx-edit"
+    }
+   ],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 2: 1 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": null,
+     "old_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "op": "undo",
+     "tbl": "rejected",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": null,
+     "old_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "op": "undo",
+     "tbl": "rejected",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Send revised SOW to client",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "High",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2030-06-14",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 3,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Decide later",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "duplicate_of": "ABC-A-001",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Copy of the SOW action",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 1: 2 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "rejected",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "new_value": null,
+     "old_value": "099647ef5471a78727a1d8fd4749a550a56486a1",
+     "op": "undo",
+     "tbl": "rejected",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "fingerprint",
+     "item_id": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "new_value": null,
+     "old_value": "ac0d0da08767469623d13c0fd751082da57b3787",
+     "op": "undo",
+     "tbl": "rejected",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Send revised SOW to client",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "High",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2030-06-14",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 3,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Decide later",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "reject_reason": "Not ours",
+       "table": "actions",
+       "values": {
+        "description": "Not wanted 2",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      },
+      {
+       "decision": "pending",
+       "duplicate_of": "ABC-A-001",
+       "flags": [],
+       "match": "strong",
+       "n": 2,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Copy of the SOW action",
+        "owner": "Alan Carter",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Nothing to undo.\n",
+  "step": "undo"
+ }
+]

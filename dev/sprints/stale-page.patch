@@ -1,0 +1,41 @@
+diff --git a/dev/tests/test_app_launcher.py b/dev/tests/test_app_launcher.py
+index 34d8adb..542be9f 100644
+--- a/dev/tests/test_app_launcher.py
++++ b/dev/tests/test_app_launcher.py
+@@ -125,6 +125,9 @@ class RoutesTests(unittest.TestCase):
+         with self.assertRaises(urllib.error.HTTPError) as e:
+             urllib.request.urlopen(req)
+         self.assertEqual(e.exception.code, 403)
++        body = json.loads(e.exception.read())               # a stale page says so, rather than "Not allowed"
++        self.assertTrue(body["stale"])
++        self.assertIn("Reload", body["message"])
+         ok = urllib.request.Request(self.base + "/api/here", data=b"{}", method="POST",
+                                     headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+         self.assertEqual(json.loads(urllib.request.urlopen(ok).read()), {"ok": True, "launched": False})
+diff --git a/system/scripts/live_server.py b/system/scripts/live_server.py
+index 15da6f6..15cce32 100644
+--- a/system/scripts/live_server.py
++++ b/system/scripts/live_server.py
+@@ -95,6 +95,7 @@ import search as vault_search  # noqa: E402  (BL-07)
+ import reach  # noqa: E402  (BL-141: what ask creaite may touch, the run's mark and the guard hook)
+ 
+ TOKEN = secrets.token_urlsafe(24)
++STALE_PAGE = "The live server was restarted since this page was opened. Reload the page (Cmd+R) and try again."
+ SCRIPTS = Path(__file__).resolve().parent
+ LOCK = threading.Lock()          # one tracker/review command at a time
+ 
+@@ -369,9 +370,13 @@ class Handler(BaseHTTPRequestHandler):
+         return json.loads(self.rfile.read(n) or b"{}") if n else {}
+ 
+     def authorised(self):
+-        if not self.host_ok() or self.headers.get("X-Creaite-Token") != TOKEN:
++        if not self.host_ok():
+             self.send(403, {"ok": False, "message": "Not allowed"})
+             return False
++        if self.headers.get("X-Creaite-Token") != TOKEN:
++            # the token is new at every server start, so a page opened before a restart is stale, not unauthorised
++            self.send(403, {"ok": False, "stale": True, "message": STALE_PAGE})
++            return False
+         return True
+ 
+     # ── routes ──

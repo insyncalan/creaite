@@ -1,0 +1,3507 @@
+[
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "result_id": "ABC-W-001",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": [
+    {
+     "aliases": null,
+     "channel": null,
+     "created": "2026-10-01",
+     "id": "ABC-W-001",
+     "keywords": null,
+     "lead": null,
+     "name": "Data",
+     "project": "ABC",
+     "source": "Alan (cx-edit)",
+     "status": "Active",
+     "updated_at": "<TS>"
+    }
+   ]
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 1: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "step": "workstream"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Send revised SOW to client",
+     "due_date": "2030-06-14",
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "High",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": "Data"
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "result_id": "ABC-W-001",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "applied/proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 2,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+        "workstream": "Data"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": [
+    {
+     "aliases": null,
+     "channel": null,
+     "created": "2026-10-01",
+     "id": "ABC-W-001",
+     "keywords": null,
+     "lead": null,
+     "name": "Data",
+     "project": "ABC",
+     "source": "Alan (cx-edit)",
+     "status": "Active",
+     "updated_at": "<TS>"
+    }
+   ]
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 2: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "step": "item in it"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Send revised SOW to client",
+     "due_date": "2030-06-14",
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "High",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": "Data and migration"
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step3.json\"]",
+     "undone_at": null
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "result_id": "ABC-W-001",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "applied/proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 2,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+        "workstream": "Data"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "applied/proposed-step3.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 3,
+       "changes": {
+        "name": "Data and migration"
+       },
+       "decision": "approved",
+       "flags": [],
+       "id": "ABC-W-001",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "result_id": "ABC-W-001",
+       "table": "workstreams"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": [
+    {
+     "aliases": null,
+     "channel": null,
+     "created": "2026-10-01",
+     "id": "ABC-W-001",
+     "keywords": null,
+     "lead": null,
+     "name": "Data and migration",
+     "project": "ABC",
+     "source": "Alan (cx-edit)",
+     "status": "Active",
+     "updated_at": "<TS>"
+    }
+   ]
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Apply 3: written 1, filed 0, rejected 0, held 0, 0 still pending.\n",
+  "step": "rename"
+ },
+ {
+  "after": {
+   "actions": [
+    {
+     "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "client_visible": 0,
+     "closed": null,
+     "description": "Send revised SOW to client",
+     "due_date": "2030-06-14",
+     "id": "ABC-A-001",
+     "latest_update": null,
+     "milestone": null,
+     "owner": "Alan Carter",
+     "priority": "High",
+     "project": "ABC",
+     "raised": "2026-10-01",
+     "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "status": "Open",
+     "updated_at": "<TS>",
+     "workstream": "Data"
+    }
+   ],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step3.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "result_id": "ABC-W-001",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "applied/proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 2,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "result_id": "ABC-A-001",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+        "workstream": "Data"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step3.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "name": "Data and migration"
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-W-001",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "workstreams"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": [
+    {
+     "aliases": null,
+     "channel": null,
+     "created": "2026-10-01",
+     "id": "ABC-W-001",
+     "keywords": null,
+     "lead": null,
+     "name": "Data",
+     "project": "ABC",
+     "source": "Alan (cx-edit)",
+     "status": "Active",
+     "updated_at": "<TS>"
+    }
+   ]
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 3: 2 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": null
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step3.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Send revised SOW to client",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Data",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "High",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2030-06-14",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "applied/proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "applied": 1,
+       "decision": "approved",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "result_id": "ABC-W-001",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+        "workstream": "Data"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step3.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "name": "Data and migration"
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-W-001",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "workstreams"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": [
+    {
+     "aliases": null,
+     "channel": null,
+     "created": "2026-10-01",
+     "id": "ABC-W-001",
+     "keywords": null,
+     "lead": null,
+     "name": "Data",
+     "project": "ABC",
+     "source": "Alan (cx-edit)",
+     "status": "Active",
+     "updated_at": "<TS>"
+    }
+   ]
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 2: 1 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step3.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Send revised SOW to client",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Data",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "High",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2030-06-14",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "ABC-W-001",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "Data",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "Active",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "Alan (cx-edit)",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+        "workstream": "Data"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step3.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "name": "Data and migration"
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-W-001",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "workstreams"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Undid apply 1: 1 item(s) reversed.\n",
+  "step": "undo"
+ },
+ {
+  "after": {
+   "actions": [],
+   "applies": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step1.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step2.json\"]",
+     "undone_at": "<TS>"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "file_ops": "[]",
+     "proposals": "[\"system/staging/proposed-step3.json\"]",
+     "undone_at": "<TS>"
+    }
+   ],
+   "change_log": [
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC-W-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": "Active",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": "Alan (cx-edit)",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC-A-001",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": "ABC",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": "Send revised SOW to client",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": "Alan Carter",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": "High",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": "2030-06-14",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": "Open",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": "2026-10-01",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": "0",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": null,
+     "op": "insert",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "workstreams",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data and migration",
+     "old_value": "Data",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "update",
+     "tbl": "actions",
+     "via": "cx-edit"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": "Data",
+     "old_value": "Data and migration",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 3,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": "<TS>",
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC-A-001",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "description",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Send revised SOW to client",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "workstream",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Data",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "owner",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Alan Carter",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "priority",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "High",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "due_date",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2030-06-14",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "Open",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "raised",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_visible",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "0",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "client_message",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "What it is: \nWhat it means for you: \nWhat is being done: ",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 2,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-A-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "actions",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "id",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "ABC-W-001",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "project",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "ABC",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "name",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "Data",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "status",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "Active",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "created",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "2026-10-01",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "source",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "Alan (cx-edit)",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    },
+    {
+     "apply_id": 1,
+     "at": "<TS>",
+     "field": "updated_at",
+     "item_id": "ABC-W-001",
+     "new_value": null,
+     "old_value": "<TS>",
+     "op": "undo",
+     "tbl": "workstreams",
+     "via": "undo"
+    }
+   ],
+   "decisions": [],
+   "documents": {},
+   "files": [
+    "CLAUDE.md",
+    "projects/ABC Example Programme/CLAUDE.md",
+    "projects/ABC Example Programme/documents/.gitkeep",
+    "projects/ABC Example Programme/minutes/.gitkeep",
+    "projects/ABC Example Programme/reports/.gitkeep",
+    "projects/ABC Example Programme/transcripts/.gitkeep",
+    "projects/_portfolio/PORTFOLIO.md",
+    "projects/_portfolio/minutes/.gitkeep",
+    "projects/_portfolio/people-register.md",
+    "projects/_portfolio/project-register.md",
+    "projects/_portfolio/transcripts/.gitkeep",
+    "system/creaite-rules.md",
+    "system/processed.txt",
+    "system/staging/export-state.json",
+    "system/staging/review-index.json"
+   ],
+   "item_labels": [],
+   "labels": [
+    {
+     "behaviour": "warn",
+     "builtin": 1,
+     "colour": "red",
+     "default_choice": "exclude",
+     "name": "Sensitive",
+     "note": "Commercially or client sensitive"
+    }
+   ],
+   "links": [],
+   "milestones": [],
+   "processed": "",
+   "projects": [
+    {
+     "active": 1,
+     "code": "ABC",
+     "health": null,
+     "health_reason": null,
+     "milestone_date": null,
+     "name": "Example Programme",
+     "next_milestone": null,
+     "phase": null,
+     "sponsor": null,
+     "updated_at": "<TS>"
+    }
+   ],
+   "promises": [],
+   "proposals": {
+    "proposed-step1.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 8,
+       "op": "new",
+       "table": "workstreams",
+       "values": {
+        "created": "2026-10-01",
+        "name": "Data",
+        "project": "ABC",
+        "source": "Alan (cx-edit)"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step2.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "decision": "pending",
+       "flags": [],
+       "match": "strong",
+       "n": 1,
+       "op": "new",
+       "table": "actions",
+       "values": {
+        "description": "Send revised SOW to client",
+        "due_date": "2030-06-14",
+        "owner": "Alan Carter",
+        "priority": "High",
+        "project": "ABC",
+        "raised": "2026-10-01",
+        "source": "projects/ABC Example Programme/minutes/2026-10-01 Steering.docx — Actions",
+        "workstream": "Data"
+       }
+      }
+     ],
+     "source_run": "cx-edit"
+    },
+    "proposed-step3.json": {
+     "created": "<TS>",
+     "files": [],
+     "items": [
+      {
+       "changes": {
+        "name": "Data and migration"
+       },
+       "decision": "pending",
+       "flags": [],
+       "id": "ABC-W-001",
+       "match": "strong",
+       "n": 1,
+       "op": "update",
+       "table": "workstreams"
+      }
+     ],
+     "source_run": "cx-edit"
+    }
+   },
+   "raid": [],
+   "rejected": [],
+   "updates": [],
+   "workstreams": []
+  },
+  "exit": 0,
+  "stderr": "",
+  "stdout": "Nothing to undo.\n",
+  "step": "undo"
+ }
+]

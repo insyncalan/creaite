@@ -1,0 +1,4 @@
+exit 0
+{
+ "error": "That meeting isn't in the saved calendar for 09-10-2026 any more; refresh the calendar."
+}

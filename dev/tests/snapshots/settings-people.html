@@ -1,0 +1,301 @@
+<section class="view" id="v-settings">
+<div class="wrapmax">
+<h1>Settings</h1>
+<div class="setlayout">
+<div class="setside">
+<input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
+<label class="setchg">
+<input type="checkbox" id="setChanged"> Show changed only</label>
+<nav class="setcats" id="setcats" aria-label="Settings categories">
+<button data-scat="essentials" aria-selected="false">Essentials</button>
+<button data-scat="people" aria-selected="true">People and projects</button>
+<button data-scat="advanced" aria-selected="false">Advanced</button>
+<button data-scat="health" aria-selected="false">Health</button>
+</nav>
+<select id="setcatsel" class="setcatsel" aria-label="Settings category">
+<option value="essentials">Essentials</option>
+<option value="people" selected="">People and projects</option>
+<option value="advanced">Advanced</option>
+<option value="health">Health</option>
+</select>
+</div>
+<div id="settingsBody">
+<div class="setstack">
+<div class="card wide" id="peopleMgr" data-sec="people">
+<div style="display:flex;align-items:center;gap:#px;flex-wrap:wrap">
+<h2 style="flex:1">People</h2>
+<button class="btn" id="pmAdd">Add a person</button>
+</div>
+<p class="sub" style="margin:#px 0 #px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
+<p class="sub" id="pmLegacy">
+<span class="tag warn">1 name still in settings.json</span>
+<button class="mini" data-ask="setup: move the people still listed in settings.json into the people register">Move them into the register</button>
+<span class="sub">(ask creaite does it, asking first)</span>
+</p>
+<div class="toolbar pmtools" role="search">
+<input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="">
+<span class="dd" id="pmFdd">
+<button type="button" class="ib bd fbtn" id="pmFBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="pmFMenu" data-key="F" aria-label="Filter people" data-tip="Filter people">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel">
+<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
+</path>
+</svg>
+</button>
+<div class="ddmenu left fpmenu" id="pmFMenu" role="dialog" aria-label="Filter people">
+</div>
+</span>
+</div>
+<div class="wapplied" id="pmApplied">
+<span class="sp">
+</span>
+<span class="sub" id="pmCount">Showing 5 of 5 people · 1 needs attention <button type="button" class="linkbtn" data-pfquick="att">Show</button>
+</span>
+</div>
+<div class="vh" id="pmLive" role="status" aria-live="polite">Showing 5 of 5 people</div>
+<div class="tbl">
+<table class="mgr">
+<thead>
+<tr>
+<th>Name</th>
+<th>Email</th>
+<th>Organisation · role</th>
+<th>Aliases</th>
+<th class="num" id="pmHA">Actions</th>
+<th class="num" id="pmHR">RAID</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody id="pmRows">
+<tr class="" data-pn="Alan Carter">
+<td>Alan Carter <span class="tag">(you)</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td class="sub">—</td>
+<td class="num">
+<a href="#" class="cntl" data-nav="actions:open::st=&amp;o=Alan%20Carter" data-n="1" aria-label="1 action owned by Alan Carter, any status, open in Work">1</a>
+</td>
+<td class="num">0</td>
+<td class="mgract">
+<span class="x">Change in Settings › Essentials › You</span>
+</td>
+</tr>
+<tr class="" data-pn="Jane Doe">
+<td>Jane Doe</td>
+<td>jane.doe@client.com</td>
+<td>Example Client Ltd · Sponsor</td>
+<td class="sub">Jane, JD</td>
+<td class="num">0</td>
+<td class="num">0</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Jane Doe">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Rename" data-tip="Rename" data-pm="ren" data-n="Jane Doe">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="type">
+<path d="M4 7V4h16v3M9 20h6M12 4v16">
+</path>
+</svg>
+</button>
+<select class="mgsel pmsel" data-n="Jane Doe" aria-label="Merge Jane Doe into">
+<option value="">Merge into…</option>
+<option value="Alan Carter">Alan Carter</option>
+<option value="Noah Price (FAL)">Noah Price (FAL)</option>
+<option value="Omar Ali">Omar Ali</option>
+<option value="Sara Example">Sara Example</option>
+</select>
+<button type="button" class="ib sm no" aria-label="Remove from list" data-tip="Remove from list" data-pm="hide" data-n="Jane Doe">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr class="" data-pn="Noah Price (FAL)">
+<td>Noah Price (FAL) <span class="tag warn" title="On items but not in the register yet">not in register</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td>
+<span class="sub">—</span>
+</td>
+<td class="sub">—</td>
+<td class="num">0</td>
+<td class="num">0</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Add details" data-tip="Add details" data-pm="edit" data-n="Noah Price (FAL)">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Rename" data-tip="Rename" data-pm="ren" data-n="Noah Price (FAL)">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="type">
+<path d="M4 7V4h16v3M9 20h6M12 4v16">
+</path>
+</svg>
+</button>
+<select class="mgsel pmsel" data-n="Noah Price (FAL)" aria-label="Merge Noah Price (FAL) into">
+<option value="">Merge into…</option>
+<option value="Alan Carter">Alan Carter</option>
+<option value="Jane Doe">Jane Doe</option>
+<option value="Omar Ali">Omar Ali</option>
+<option value="Sara Example">Sara Example</option>
+</select>
+<button type="button" class="ib sm no" aria-label="Remove from list" data-tip="Remove from list" data-pm="hide" data-n="Noah Price (FAL)">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr class="" data-pn="Omar Ali">
+<td>Omar Ali</td>
+<td>omar@def.example</td>
+<td>Enable · Project manager</td>
+<td class="sub">Omar</td>
+<td class="num">
+<a href="#" class="cntl" data-nav="actions:open::st=&amp;o=Omar%20Ali" data-n="1" aria-label="1 action owned by Omar Ali, any status, open in Work">1</a>
+</td>
+<td class="num">0</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Omar Ali">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Rename" data-tip="Rename" data-pm="ren" data-n="Omar Ali">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="type">
+<path d="M4 7V4h16v3M9 20h6M12 4v16">
+</path>
+</svg>
+</button>
+<select class="mgsel pmsel" data-n="Omar Ali" aria-label="Merge Omar Ali into">
+<option value="">Merge into…</option>
+<option value="Alan Carter">Alan Carter</option>
+<option value="Jane Doe">Jane Doe</option>
+<option value="Noah Price (FAL)">Noah Price (FAL)</option>
+<option value="Sara Example">Sara Example</option>
+</select>
+<button type="button" class="ib sm no" aria-label="Remove from list" data-tip="Remove from list" data-pm="hide" data-n="Omar Ali">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+<tr class="" data-pn="Sara Example">
+<td>Sara Example</td>
+<td>sara.example@client.com</td>
+<td>Example Client Ltd · Delivery lead</td>
+<td class="sub">Sara, Sara E</td>
+<td class="num">
+<a href="#" class="cntl" data-nav="actions:open::st=&amp;o=Sara%20Example" data-n="1" aria-label="1 action owned by Sara Example, any status, open in Work">1</a>
+</td>
+<td class="num">0</td>
+<td class="mgract">
+<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Sara Example">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
+<path d="M12 20h9">
+</path>
+<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z">
+</path>
+</svg>
+</button>
+<button type="button" class="ib sm" aria-label="Rename" data-tip="Rename" data-pm="ren" data-n="Sara Example">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="type">
+<path d="M4 7V4h16v3M9 20h6M12 4v16">
+</path>
+</svg>
+</button>
+<select class="mgsel pmsel" data-n="Sara Example" aria-label="Merge Sara Example into">
+<option value="">Merge into…</option>
+<option value="Alan Carter">Alan Carter</option>
+<option value="Jane Doe">Jane Doe</option>
+<option value="Noah Price (FAL)">Noah Price (FAL)</option>
+<option value="Omar Ali">Omar Ali</option>
+</select>
+<button type="button" class="ib sm no" aria-label="Remove from list" data-tip="Remove from list" data-pm="hide" data-n="Sara Example">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="trash">
+<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6">
+</path>
+</svg>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="card wide" id="wsMgr" data-sec="workstreams">
+<div style="display:flex;align-items:center;gap:#px;flex-wrap:wrap">
+<h2 style="flex:1">Workstreams</h2>
+<select id="wsmP" aria-label="Project">
+<option value="">All projects</option>
+<option value="ABC">Example Programme</option>
+<option value="DEF">Digital Enablement</option>
+</select>
+<input id="wsmName" type="text" placeholder="New workstream" aria-label="New workstream">
+<button class="btn" data-wsm="add">Add…</button>
+</div>
+<p class="sub" style="margin:#px 0 #px">Each project's own workstreams. A lead, keywords and aliases (e.g. UAT for Testing) help creaite match items from minutes and mail. Renaming one renames its items too; closing one stops it being chosen for new items. Every change is a proposal, with Undo.</p>
+<div class="tbl">
+<table class="mgr">
+<thead>
+<tr>
+<th>Project</th>
+<th>Workstream</th>
+<th>Lead</th>
+<th>Keywords</th>
+<th>Aliases</th>
+<th>Teams channel</th>
+<th class="num">Open</th>
+<th>Status</th>
+<th>
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td colspan="9" class="sub">No workstreams yet. Add one, or say “setup” to bring them in from the items.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="card wide" id="set-projects" data-sec="projects">
+<h2>Projects and register</h2>
+<p class="sub" style="margin:#px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok="">“add project DEF…”, “add client.com to ABC's domains”</span>).</p>
+</div>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:#px;display:flex;align-items:center;gap:#px">
+<div style="flex:1">
+<h2>Help and documentation</h2>
+<div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div>
+</div>
+<button class="btn" data-go="help">Open help</button>
+</div>
+<p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
+</div>
+</section>

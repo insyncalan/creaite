@@ -1,0 +1,25 @@
+{
+ "denied": null,
+ "events": [
+  {
+   "text": "Starting.",
+   "type": "text"
+  },
+  {
+   "message": "Error: Claude Code couldn't reach the API",
+   "type": "error"
+  },
+  {
+   "chat": "s-1",
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": "s-1",
+   "type": "done"
+  }
+ ],
+ "said": [
+  "Starting."
+ ],
+ "session": "s-1",
+ "steps": []
+}

@@ -1,0 +1,79 @@
+<aside id="chat" aria-label="ask creaite" class="on">
+<div class="chgrip" id="chGrip" role="separator" aria-orientation="vertical" aria-label="Resize ask creaite" tabindex="0" title="Drag to resize; double-click to reset" aria-valuenow="420">
+</div>
+<div class="chh">
+<h2>ask creaite</h2>
+<button class="iconbtn chbtn" id="chNew" aria-label="New chat" data-tip="New chat">
+<svg data-ic="plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" data-icn="plus">
+<path d="M12 5v14M5 12h14">
+</path>
+</svg>
+</button>
+<span class="dd">
+<button class="iconbtn chbtn" id="chHist" aria-label="History" aria-haspopup="true" aria-expanded="false" data-tip="History">
+<svg data-ic="history" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" data-icn="history">
+<circle cx="12" cy="12" r="9">
+</circle>
+<path d="M12 7v5l3 2">
+</path>
+</svg>
+</button>
+<div class="ddmenu chhist" id="chHistMenu" role="menu">
+</div>
+</span>
+<button class="iconbtn" id="chatClose" aria-label="Close" data-key="Esc" data-tip="Close">
+<svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="x" aria-hidden="true">
+<path d="M18 6 6 18M6 6l12 12">
+</path>
+</svg>
+</button>
+</div>
+<div class="chs" id="chSub">
+<span class="dot">
+</span>Claude Code on this laptop, working in your vault</div>
+<div class="chq" id="chQuick">
+<button class="mini" data-q="sweep mail">Sweep</button>
+<button class="mini" data-q="process new minutes">Process minutes</button>
+<button class="mini" data-q="weekly report">Weekly report</button>
+<button class="mini" data-q="what's overdue?">What's overdue?</button>
+</div>
+<div class="chlogbox">
+<div class="chlog" id="chLog" aria-live="polite">
+<div class="msg a">Hi Alan. I run your requests through Claude Code in the vault, so your skills and rules apply. Anything that writes asks you first.<button type="button" class="msgcopy" data-msgcopy="" aria-label="Copy the reply" data-tip="Copy the reply">
+<svg class="i" viewBox="0 0 24 24" width="13" height="13" style="width:#px;height:#px" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="copy">
+<rect x="8" y="8" width="13" height="13" rx="2">
+</rect>
+<path d="M4 16V5a2 2 0 0 1 2-2h10">
+</path>
+</svg>
+</button>
+</div>
+</div>
+<button type="button" class="btn primary chjump" id="chJump" hidden="">↓ New activity</button>
+</div>
+<div class="chqueue" id="chQueue" role="region" aria-label="Queued messages" hidden="">
+</div>
+<div class="chthumbs" id="chThumbs" hidden="">
+</div>
+<div class="chdraft sub" id="chDraftNote" aria-live="polite">
+</div>
+<div class="chin" style="--acmax: #px;">
+<div class="acmenu" id="acMenu" role="listbox" aria-label="Suggestions" hidden="">
+</div>
+<button class="iconbtn chbtn" id="chAttach" type="button" aria-label="Attach an image" data-tip="Attach an image">
+<svg data-ic="clip" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="clip">
+<path d="M21 12.5l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l9-9a3.7 3.7 0 0 1 5.2 5.2l-9 9a1.8 1.8 0 0 1-2.6-2.6l8.3-8.3">
+</path>
+</svg>
+</button>
+<input type="file" id="chFile" accept="image/png,image/jpeg" multiple="" hidden="">
+<textarea id="chIn" aria-autocomplete="list" aria-controls="acMenu" rows="1" placeholder="Ask a question or give an instruction…" aria-label="Message" data-ag="1" style="height: #px;" class="agfit">
+</textarea>
+<button type="button" class="sendb" id="chSend" aria-label="Send" data-tip="Send" data-key="Enter">
+<svg data-ic="arrowup" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="arrowup" aria-hidden="true">
+<path d="M12 19V5M5 12l7-7 7 7">
+</path>
+</svg>
+</button>
+</div>
+</aside>

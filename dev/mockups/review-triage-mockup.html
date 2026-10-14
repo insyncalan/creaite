@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Review triage mockup</title>
+<style>
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#8A949D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --new:#6B3FA0; --new-soft:#EFE7F8;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#7D8790; --line:#2B3238;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
+  --ok:#9FD6A5; --ok-soft:#1D3322; --new:#C9A8F0; --new-soft:#2E2340;}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+button{font:inherit;color:inherit}
+.page{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:20px;margin:0 0 4px;font-weight:600}
+.lede{color:var(--muted);margin:0 0 16px;max-width:780px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px;font-size:12px;color:var(--muted)}
+.tag{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.02em;padding:1px 7px;border-radius:999px;vertical-align:1px;background:var(--sunk);color:var(--muted)}
+.tag.new{background:var(--new-soft);color:var(--new)}
+.tag.chg{background:var(--warn-soft);color:var(--warn)}
+.tag.sb{background:var(--bad-soft);color:var(--bad)}
+.tag.stale{background:var(--warn-soft);color:var(--warn)}
+.tag.ind{background:var(--bad-soft);color:var(--bad)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.frames{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.frames button{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:32px;padding:0 14px;cursor:pointer;font-size:13px}
+.frames button[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.frames button:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:16px;align-items:start}
+@media (max-width:980px){.layout{grid-template-columns:1fr}}
+.shell{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-height:460px;position:relative}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:13px}
+.notes h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.notes ol{margin:0;padding-left:18px}
+.notes li{margin:0 0 8px}
+.notes .why{display:block;color:var(--muted);font-size:12px}
+
+.row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.row+.row{margin-top:10px}
+.sp{flex:1}
+.sub{color:var(--muted);font-size:12px}
+.btn{height:32px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 12px;cursor:pointer;font-weight:500;font-size:13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.on{background:var(--accent-soft);border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.sm{height:26px;padding:0 9px;font-size:12px}
+.btn.ok{color:var(--ok);border-color:var(--ok)}
+.btn.no{color:var(--bad);border-color:var(--bad)}
+.search{height:32px;border:1px solid var(--line);border-radius:8px;padding:0 10px;background:var(--surface);color:var(--ink);width:130px;font:inherit;font-size:13px}
+.fchip{display:inline-flex;align-items:center;gap:4px;background:var(--sunk);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px}
+.fchip b{font-weight:500;color:var(--muted)}
+.fchip button{border:0;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:0 4px}
+.linkbtn{border:0;background:none;color:var(--accent);cursor:pointer;font-size:13px;padding:0 4px;text-decoration:underline}
+.kbd{font:600 11px var(--font);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+.hint{color:var(--muted);font-size:12px;margin-top:10px}
+.mark{outline:2px dashed var(--new);outline-offset:3px;border-radius:8px;position:relative;display:inline-flex}
+.mark.blk{display:flex}
+.mark::after{content:attr(data-n);position:absolute;top:-10px;left:-10px;width:20px;height:20px;border-radius:50%;background:var(--new);color:#fff;font-size:11px;font-weight:700;display:grid;place-items:center;z-index:3}
+
+/* review rows */
+.ghead{display:flex;align-items:center;gap:10px;margin:16px 0 6px;font-weight:600}
+.ghead span.c{font-weight:400;color:var(--muted);font-size:13px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:8px 8px;border-top:1px solid var(--line);vertical-align:top}
+tr.cursor td{background:color-mix(in srgb,var(--accent-soft) 55%,transparent)}
+tr.cursor td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+tr.sel td{background:var(--accent-soft)}
+tr.done td{opacity:.55}
+tr.left td{background:var(--warn-soft)}
+tr.child td:nth-child(2){padding-left:26px}
+td.tick{width:30px}
+td.act{white-space:nowrap;text-align:right}
+.why{color:var(--muted);font-size:12px}
+.rdet{color:var(--ink);font-size:12.5px;margin-top:2px}
+.late{color:var(--bad)} .amber{color:var(--warn)}
+.ico{display:inline-block;width:18px;height:18px;border-radius:4px;background:var(--sunk);color:var(--muted);font-size:10px;font-weight:700;text-align:center;line-height:18px;margin-right:6px;vertical-align:1px}
+input[type=checkbox]{accent-color:var(--accent)}
+
+/* the review bar */
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--ink);color:var(--surface);border-radius:10px;padding:8px 12px;margin:12px 0 4px}
+.bar .btn{background:transparent;color:var(--surface);border-color:rgba(255,255,255,.35);height:28px}
+.bar .btn.hot{background:var(--surface);color:var(--ink)}
+.bar .btn[disabled]{opacity:.45}
+.bar .split{font-size:12.5px;opacity:.9}
+.bar .linkbtn{color:var(--surface)}
+
+.pop{position:absolute;z-index:6;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:12px;font-size:13px}
+.pop h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:10px 0 6px;font-weight:600}
+.pop h3:first-child{margin-top:0}
+.pop .opt{display:flex;justify-content:space-between;gap:12px;padding:5px 8px;border-radius:6px}
+.pop .opt.act{background:var(--accent-soft)}
+.scrim{position:absolute;inset:0;border-radius:12px;background:rgba(0,0,0,.28);z-index:5}
+.dlg{position:absolute;z-index:6;left:50%;top:44px;transform:translateX(-50%);width:min(560px,92%);background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.28);padding:18px}
+.dlg h2{margin:0 0 4px;font-size:16px}
+.cnt{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.cnt div{background:var(--sunk);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--muted)}
+.cnt b{display:block;font-size:18px;color:var(--ink);font-weight:600}
+.lst{border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:12.5px}
+.lst div{padding:6px 10px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
+.lst div:first-child{border-top:0}
+.toast{position:sticky;bottom:14px;margin:0 auto;background:var(--ink);color:var(--surface);border-radius:8px;padding:9px 14px;display:flex;gap:14px;align-items:center;font-size:13px;z-index:7;width:max-content;max-width:94%}
+.toast button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer}
+.toast .pt{display:inline-block;background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:0 8px;font-size:11px;font-weight:600}
+.empty{text-align:center;padding:50px 16px 30px}
+.empty h2{font-size:18px;margin:0 0 6px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Review: triage and mass change</h1>
+  <p class="lede">A design proposal for BL-133 stage A (with stage B marked), not built. Sample data only. It reuses the Work page's bar, filter picker and Display menu. The bulk rule is unchanged: minutes, reports, health changes, new decisions, new risks, closing updates and conflicts are never approved in bulk, however they are selected.</p>
+  <div class="legend">
+    <span><span class="tag new">NEW</span> not in creaite today</span>
+    <span><span class="tag chg">CHANGED</span> exists, reshaped</span>
+    <span><span class="tag sb">STAGE B</span> small schema change, built last in the same sprint</span>
+  </div>
+  <div class="frames" role="tablist" aria-label="Mockup frames" id="frames"></div>
+  <div class="layout">
+    <div class="shell" id="shell" aria-live="polite"></div>
+    <aside class="notes" id="notes" aria-label="Notes for this frame"></aside>
+  </div>
+</div>
+
+<script>
+/* ---------- fictional data ---------- */
+/* kind: A action, R raid, D decision, U update ; st: routine | ind (individual) | conflict | noproj */
+const I={
+ n1:{k:'A',t:'Confirm data residency with legal',d:'Mia Hale · 16-10 · in 7 days · Medium',src:'Mail from Priya Nair, 08-10',why:'Strong match to a client request',st:'noproj'},
+ n2:{k:'A',t:'Send pilot invoice to finance',d:'<span class="amber">No owner</span> · <span class="amber">No due date</span> · Medium',src:'Teams chat, 08-10',why:'Possible match',st:'noproj'},
+ n3:{k:'R',t:'Vendor SLA not yet signed',d:'Risk · Alan Carter · 3 × 4 → High',src:'Mail from Priya Nair, 09-10',why:'Strong match to a client request',st:'noproj'},
+ a1:{k:'A',t:'Revise the SOW and resend',d:'Omar Khan · 12-10 · in 3 days · High',src:'Steering minutes 07-10',why:'Strong match',st:'routine'},
+ a2:{k:'A',t:'Book the follow-up workshop',d:'Sara Khan · 14-10 · in 5 days · Medium',src:'Steering minutes 07-10',why:'Strong match',st:'routine'},
+ a3:{k:'R',t:'Scope creep from the pilot dataset',d:'Risk · Alan Carter · 3 × 3 → Medium',src:'Steering minutes 07-10',why:'New risk',st:'ind'},
+ a4:{k:'D',t:'Approve the revised timeline',d:'Made by Sponsor · 07-10',src:'Steering minutes 07-10',why:'New decision',st:'ind'},
+ a5:{k:'U',t:'Close ABC-A-003: Send revised SOW',d:'Status: Open → Closed',src:'Steering minutes 07-10',why:'Closing update',st:'ind'},
+ a6:{k:'A',t:'Share the pilot dataset access list',d:'Mia Hale · 14-10 · in 5 days · Medium',src:'Mail from Mia Hale, 27-09',why:'Strong match',st:'routine',stale:12},
+ a7:{k:'U',t:'Move ABC-A-011 due date to 20-10',d:'Due: 14-10 → 20-10',src:'Teams channel, 09-10',why:'Conflict with a newer change',st:'conflict'},
+ d1:{k:'A',t:'Agree the success measures with Finance',d:'Omar Khan · 06-10 · <span class="late">3 days overdue</span> · High',src:'Teams chat, 03-10',why:'Strong match',st:'routine',stale:6},
+ d2:{k:'R',t:'Finance sign-off delayed',d:'Issue · <span class="amber">Priyanka Rao (not in the people register)</span> · 4 × 3 → High',src:'Mail from Omar Khan, 08-10',why:'Strong match',st:'routine'},
+ d3:{k:'A',t:'Circulate the vendor shortlist',d:'Alan Carter · 19-10 · in 10 days · Medium',src:'Dashboard',why:'Entered by you',st:'routine'}
+};
+const KI={A:'A',R:'R',D:'D',U:'↻'};
+const kindWord={A:'Proposed action',R:'Proposed risk or issue',D:'Proposed decision',U:'Proposed update'};
+function row(id,o={}){ const x=I[id], kid=o.child?'child':'';
+  const cls=[kid,o.cursor?'cursor':'',o.sel?'sel':'',o.done?'done':'',o.left?'left':''].join(' ');
+  const tags=[ x.stale?`<span class="tag stale">Stale · ${x.stale} days</span>`:'', x.st==='ind'?'<span class="tag ind">approve individually</span>':'', x.st==='conflict'?'<span class="tag ind">conflict</span>':'', x.st==='noproj'?'<span class="tag stale">needs a project</span>':'', o.extraTag||'' ].filter(Boolean).join(' ');
+  const act=o.done?`<span style="color:${o.done==='Rejected'?'var(--bad)':'var(--ok)'};font-weight:500">${o.done}</span>`:`<button class="btn sm">Edit</button> <button class="btn sm ok">Approve</button> <button class="btn sm no">Reject</button>`;
+  return `<tr class="${cls}"><td class="tick"><input type="checkbox" aria-label="Select ${x.t}" ${o.sel?'checked':''}></td><td><span class="ico">${KI[x.k]}</span>${x.t} ${tags}<div class="rdet">${x.d}</div><div class="why">${kindWord[x.k]} · ${x.why}${o.leftWhy?' · <b class="amber">'+o.leftWhy+'</b>':''}</div><div class="why">${x.src}${o.extra||''}</div></td><td class="act">${act}</td></tr>`; }
+const mp=(title,n,tick)=>`<tr><td class="tick"><input type="checkbox" aria-label="Select routine items from these minutes" ${tick?'checked':''}></td><td><b>${title}</b> <button class="btn sm">▾ ${n} items</button><div class="why">Draft minutes · Steering committee · Alan Carter</div></td><td class="act"><button class="btn sm ok">Approve all from these minutes</button> <button class="btn sm">Open draft</button> <button class="btn sm no">Reject</button></td></tr>`;
+const gh=(name,c,extra='',tick=false,mk='')=>`<div class="ghead"><input type="checkbox" aria-label="Select the rows in ${name}" ${tick?'checked':''}> ${mk} <span>${name}</span><span class="c">${c}</span>${extra}</div>`;
+const mk=(n,html,blk)=>`<span class="mark ${blk?'blk':''}" data-n="${n}">${html}</span>`;
+
+/* toolbar */
+function toolbar(o={}){
+  return `<h1 style="font-size:18px;margin:0 0 2px">Review</h1>
+  <div class="sub">Claude's proposals. ${o.count||'23 waiting · 3 stale'}</div>
+  <div class="row" style="margin-top:10px">
+    <input class="search" placeholder="Search proposals" aria-label="Search proposals">
+    ${mk(3,`<button class="btn ${o.kind?'on':''}">${o.kind||'Kind'}</button><button class="btn ${o.needs?'on':''}" style="margin-left:6px">${o.needs||'Needs'}</button><button class="btn ${o.source?'on':''}" style="margin-left:6px">${o.source||'Source'}</button><button class="btn" style="margin-left:6px">+ Filter</button>`)}
+    <span class="sp"></span>
+    ${mk(4,`<button class="btn">⚙ Display</button>`)}
+    ${mk(5,`<button class="btn ${o.preview?'on':''}">Approve all routine <span class="sub">(${o.routine||8})</span></button>`)}
+  </div>
+  ${o.chips?`<div class="row">${o.chips}<button class="linkbtn">Clear all</button><span class="sp"></span><span class="sub">${o.shown||''}</span></div>`:''}
+`; }
+const chip=(f,v)=>`<span class="fchip"><b>${f}</b> ${v}<button aria-label="Remove ${f} filter">×</button></span>`;
+
+const KEYS=`<div class="hint"><span class="kbd">J</span> <span class="kbd">K</span> move · <span class="kbd">Space</span> select · <span class="kbd">A</span> approve · <span class="kbd">R</span> reject · <span class="kbd">E</span> edit · <span class="kbd">Shift</span>+<span class="kbd">R</span> reject with a reason · <span class="kbd">⌘/Ctrl</span>+<span class="kbd">Z</span> undo</div>`;
+/* ---------- frames ---------- */
+const F={};
+
+F.queue={label:'1 · The queue',
+ html:()=>toolbar()+`
+  ${gh('Needs a project','3 proposals',' <span class="sub">Select them, then set a project together</span>',false,'')}
+  <table><tbody>${row('n1')}${row('n2')}${row('n3')}</tbody></table>
+  ${gh('ABC Example Programme','8 proposals',' <span class="tag stale">1 stale</span>',false,'')}
+  <table><tbody>
+   ${mp('Minutes: Steering committee 07-10',5)}
+   ${row('a1',{child:1,cursor:1})}${row('a2',{child:1})}${row('a3',{child:1})}${row('a4',{child:1})}${row('a5',{child:1})}
+   ${row('a6')}${row('a7')}
+  </tbody></table>
+  ${gh('DEF Discovery','3 proposals','',false,'')}
+  <table><tbody>${row('d1')}${row('d2')}${row('d3')}</tbody></table>`,
+ notes:[
+  ['Selection tick on every group header','Ticks the visible, undecided rows in that project. The minutes row already ticks its routine items; this brings the same to every group (BL-122 makes the highlight and the ticks one selection).'],
+  ['Stale tags and a Stale filter','Proposals older than your stale setting (7 days) are tagged, never expired (FR-24). Today the dashboard does not show this.'],
+  ['Filters in the Work page’s style','Kind, Needs, Source and Project use the same field picker as BL-130, so Work and Review work alike.'],
+  ['Display: group, sort','Group by Project (default), Source or Kind; sort by age, kind or due date. Same menu as the Work page (BL-128).'],
+  ['“Approve all routine (8)” shows its count','It acts on what the filters show and opens a preview first (frame 5). Today it is global and silent.'],
+  ['The cursor row','The left bar marks where J and K are. After an approve or reject it moves on to the next undecided row (auto-advance, on by default, a setting turns it off).']]};
+
+F.select={label:'2 · Several selected',
+ html:()=>toolbar({count:'23 waiting · 3 stale'})+`
+  ${mk(1,`<div class="bar" style="margin:12px 0 4px;width:100%"><b>5 selected</b>
+     <span class="split">3 can be approved together · 1 needs individual approval · 1 needs a project</span>
+     <button class="linkbtn">Select all 21</button>
+     <span class="sp"></span>
+     <button class="btn hot">Approve (3)</button><button class="btn">Reject (5) ▾</button>
+     <button class="btn">Set project ▾</button><button class="btn">Owner ▾</button><button class="btn">Due ▾</button><button class="btn">Workstream ▾</button><button class="btn">Milestone ▾</button>
+     <button class="btn" aria-label="Clear selection">×</button></div>`,1)}
+  <div class="ghead"><input type="checkbox" aria-label="Select the rows in Needs a project"> <span>Needs a project</span><span class="c">3 proposals</span></div>
+  <table><tbody>${row('n1',{sel:1})}${row('n2')}${row('n3')}</tbody></table>
+  ${gh('ABC Example Programme','8 proposals')}
+  <table><tbody>
+   ${mp('Minutes: Steering committee 07-10',5)}
+   ${row('a1',{child:1,sel:1})}${row('a2',{child:1,sel:1})}${row('a3',{child:1,sel:1})}${row('a4',{child:1})}
+  </tbody></table>
+  <div class="hint">Hovering “1 needs individual approval” names it: “Scope creep from the pilot dataset: a new risk is never approved in bulk.”</div>`,
+ notes:[
+  ['One bar, with a count and the split','“5 selected · 3 can be approved together”. Approve (3) acts only on what the bulk rule allows; Reject (5) acts on all five. The bar replaces the three always-visible buttons (NN/G: a contextual action bar, a count, and Select all with its number).'],
+  ['Mass change before approving','Set project, owner, due date, workstream or milestone on the selected proposals. A field that does not apply to all of them is not offered, as on the Work page (BL-124). Edits are tagged “edited”, validated one by one, and undone together.'],
+  ['Reject covers any proposed item','Rejecting writes nothing to the tracker beyond the rejected fingerprint, so the new risk can be rejected here but never approved here. Minutes and reports are still rejected one at a time. The arrow offers a reason (stage B).'],
+  ['Select all 21','Every undecided row the filters show, with the number stated first. Shift ranges never reach rows in a collapsed group.']]};
+
+F.project={label:'3 · Set a project together',
+ html:()=>toolbar()+`
+  ${mk(1,`<div class="bar" style="margin:12px 0 4px;width:100%"><b>3 selected</b><span class="split">0 can be approved yet · 3 need a project</span><span class="sp"></span>
+     <button class="btn hot" disabled>Approve (0)</button><button class="btn">Reject (3) ▾</button><button class="btn hot" style="outline:2px solid var(--surface)">Set project ▾</button><button class="btn">Owner ▾</button><button class="btn">Due ▾</button><button class="btn" aria-label="Clear selection">×</button></div>`,1)}
+  <div class="ghead"><input type="checkbox" checked aria-label="Select the rows in Needs a project"> <span>Needs a project</span><span class="c">3 proposals</span></div>
+  <table><tbody>${row('n1',{sel:1})}${row('n2',{sel:1})}${row('n3',{sel:1})}</tbody></table>
+  <div class="pop" style="top:236px;right:120px;width:300px">
+    <h3>Set project for 3 proposals</h3>
+    <div class="opt act"><span>ABC Example Programme</span><span class="sub">2 look like this</span></div>
+    <div class="opt"><span>DEF Discovery</span><span class="sub">1 looks like this</span></div>
+    <div class="opt"><span>GHI Platform</span><span></span></div>
+    <h3>After you choose</h3>
+    <div class="sub">The three become routine and Approve (3) turns on. Nothing is approved until you press it.</div>
+  </div>
+  <div style="margin-top:50px;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:10px 14px">
+    ${mk(2,`<span><b>Remember this?</b> Mail from <b>priya.nair@client.example</b> is usually ABC Example Programme (2 of these 3 came from there). <span style="margin-left:8px"><button class="btn sm primary">Remember</button> <button class="btn sm">Not now</button></span></span>`)}
+  </div>`,
+ notes:[
+  ['The commonest mass change','“Needs a project” items can’t be approved until a project is set, and today each must be opened one by one. Select them, choose a project once, and they become routine.'],
+  ['One learning card, not three','Choosing a project teaches the sweep (FR-14). With several items from one sender it offers one signal as one card, never one per item.'],
+  ['Each proposal is still checked','A due date earlier than allowed, an owner not in the people register or a milestone from another project is refused for that item only; the rest change and the message lists the ones left out.']]};
+
+F.result={label:'4 · The result',
+ html:()=>toolbar({count:'12 waiting · 3 stale',routine:2})+`
+  ${gh('Needs a project','1 proposal remaining')}
+  <table><tbody>${row('n3',{left:1,leftWhy:'needs a project'})}</tbody></table>
+  ${gh('ABC Example Programme','5 proposals')}
+  <table><tbody>
+   ${mp('Minutes: Steering committee 07-10',3)}
+   ${row('a1',{child:1,done:'Approved'})}${row('a2',{child:1,done:'Approved'})}
+   ${row('a3',{child:1,left:1,leftWhy:'needs individual approval'})}
+   ${row('a4',{child:1})}${row('a5',{child:1})}
+  </tbody></table>
+  <div style="height:70px"></div>
+  ${mk(1,`<div class="toast" role="status"><span><b>Approved 9</b> <span class="pt">partial</span> · 2 need a project · 1 needs individual approval</span><button>Show them</button><button>Undo</button></div>`)}`,
+ notes:[
+  ['A summary that names what was left out','Today a batch gives no result, and an item with no project opens its panel once per item with a message each time. Here: one message with the counts, and Show them highlights the ones remaining.'],
+  ['One Undo for the whole batch','Approvals still apply at once (auto-apply), and Undo reverses all nine together. The partial result is stated in words, never by colour alone.'],
+  ['Left-over rows say why','Each remaining row carries its reason in plain words, so nothing looks silently skipped.']]};
+
+F.preview={label:'5 · Approve all routine: preview',
+ html:()=>toolbar({preview:1,routine:8})+`
+  ${gh('ABC Example Programme','8 proposals')}
+  <table><tbody>${mp('Minutes: Steering committee 07-10',5)}${row('a1',{child:1})}${row('a2',{child:1})}${row('a3',{child:1})}${row('a6')}</tbody></table>
+  <div class="scrim"></div>
+  <div class="dlg" role="dialog" aria-label="Approve all routine items">
+    <h2>Approve 8 routine proposals?</h2>
+    <div class="sub">What the filters show: all projects, all kinds. Applied at once; Undo reverses the batch.</div>
+    <div class="cnt"><div><b>8</b>to approve</div><div><b>ABC 4 · DEF 3 · GHI 1</b>by project</div><div><b>7 actions · 1 risk</b>by kind</div></div>
+    <div class="lst" role="list">
+      <div><span>Revise the SOW and resend</span><span class="sub">ABC · Omar Khan · 12-10</span></div>
+      <div><span>Book the follow-up workshop</span><span class="sub">ABC · Sara Khan · 14-10</span></div>
+      <div><span>Share the pilot dataset access list</span><span class="sub">ABC · Mia Hale · 14-10</span></div>
+      <div><span>Agree the success measures with Finance</span><span class="sub">DEF · Omar Khan · 06-10</span></div>
+      <div><span class="sub">+ 4 more</span><button class="linkbtn">Show all</button></div>
+    </div>
+    <div class="cnt" style="margin-top:12px"><div style="background:var(--warn-soft)"><b>6</b>not included: 3 individual approval · 1 conflict · 2 need a project</div></div>
+    <div class="row" style="margin-top:10px"><span class="sp"></span><button class="btn">Cancel</button><button class="btn primary">Approve 8</button></div>
+    <div class="sub" style="margin-top:8px">A batch over about 25 items always asks first like this; smaller batches from the bar apply and offer Undo.</div>
+  </div>`,
+ notes:[
+  ['Scoped to what the filters show','Filter to one project or kind and “Approve all routine” acts on just that. Today it approves every routine item in every project.'],
+  ['The preview is the confirmation','Counts by project and kind, a short list, and an honest line about what is not included and why. NN/G: confirmation dialogs slow people and train them to click through, so they are kept for large or global batches; everything else relies on Undo.'],
+  ['Same rule underneath','The bulk rule is unchanged. “Not included” lists exactly what it excludes.']]};
+
+F.filter={label:'6 · Filtered and grouped',
+ html:()=>toolbar({needs:'Needs: Stale',source:'Source: Mail',group:'Source',chips:chip('Needs','Stale')+chip('Source','Mail'),shown:'Showing 2 of 23',count:'23 waiting · 3 stale',routine:1})+`
+  ${gh('Mail from Mia Hale, 27-09','1 proposal')}
+  <table><tbody>${row('a6')}</tbody></table>
+  ${gh('Mail from Omar Khan, 08-10','1 proposal')}
+  <table><tbody>${row('d2',{extraTag:''})}</tbody></table>
+  <div class="hint">Filters and the group are kept while you work through the queue, and cleared on a new session. Saved Review views are not built: a queue empties, so a saved view of it would rarely be reused.</div>`,
+ notes:[
+  ['Take one kind of thing in one pass','“Everything stale”, “all RAID items from mail”, “everything with no owner” (GitHub’s inbox keeps up to 15 saved filters for the same reason). Kind, Needs, Source, Project and Age are the fields.'],
+  ['Group by Source','Each meeting or sweep becomes a group, so you can clear one source at a time.'],
+  ['Counts stay honest','“Showing 2 of 23” and the routine count follow the filters.']]};
+
+F.dup={label:'7 · Duplicates and reasons (stage B)',
+ html:()=>toolbar()+`
+  ${gh('ABC Example Programme','sample rows')}
+  <table><tbody>${row('a2',{cursor:1,extraTag:'<span class="tag sb">STAGE B</span> <span class="tag stale">Possible duplicate of ABC-A-009 (open)</span>'})}</tbody></table>
+  <div class="pop" style="top:215px;right:20px;width:320px">
+    <h3>Reject with a reason <span class="tag sb">STAGE B</span></h3>
+    <div class="opt act"><span>Duplicate of ABC-A-009</span><span class="kbd">1</span></div>
+    <div class="opt"><span>Not mine to track</span><span class="kbd">2</span></div>
+    <div class="opt"><span>Not an action</span><span class="kbd">3</span></div>
+    <div class="opt"><span>Other</span><span class="kbd">4</span></div>
+    <div class="sub" style="margin-top:8px">The reason is stored with the rejection, shown in Activity and given to the sweep and cx-minutes as guidance. The exact item is never re-proposed (as today); a duplicate also records the link.</div>
+  </div>
+  <div style="height:230px"></div>
+  <div class="hint">Linear’s Triage does the same: Accept, Decline with a reason, Mark as duplicate with the item chosen. The duplicate hint is a plain text match against open items in the project; no model call.</div>`,
+ notes:[
+  ['Needs a schema change','Two nullable columns on the rejected table (the reason, and the item it duplicates). It is the last item in the sprint, built after everything else passes, and Alan sees the exact DDL before it is written.'],
+  ['Possible duplicate','A deterministic match against open items in the same project, shown beside the proposal, with “Reject as duplicate of ABC-A-009”.'],
+  ['Shift+R opens the reason menu','R alone still rejects at once, as today.']]};
+
+F.empty={label:'8 · Queue clear',
+ html:()=>`<h1 style="font-size:18px;margin:0 0 2px">Review</h1>
+  <div class="empty">
+    <h2>Nothing left to review</h2>
+    <div class="sub" style="font-size:14px">Today: approved 14 · rejected 3 · edited 2</div>
+    <div class="row" style="justify-content:center;margin-top:16px"><button class="btn">Undo the last batch</button><button class="btn">Open Activity</button><button class="btn">Sweep now</button></div>
+    <div class="hint" style="margin-top:20px">The last sweep was at 07:04 today. Intake has 1 new file.</div>
+  </div>`,
+ notes:[
+  ['A quiet finish','The page says what you did, offers Undo while it is still fresh, and points at what usually comes next. It does not invent work.'],
+  ['Auto-advance ends here','With auto-advance on, the last approve lands on this screen instead of an empty list.']]};
+
+/* ---------- render ---------- */
+const order=['queue','select','project','result','preview','filter','dup','empty'];
+const fr=document.getElementById('frames'), shell=document.getElementById('shell'), notes=document.getElementById('notes');
+fr.innerHTML=order.map(k=>`<button role="tab" data-k="${k}" aria-pressed="false">${F[k].label}</button>`).join('');
+function show(k){
+  [...fr.children].forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===k));
+  shell.innerHTML=F[k].html()+(k==='empty'||k==='dup'?'':KEYS);
+  notes.innerHTML='<h2>What to look at</h2><ol>'+F[k].notes.map(n=>`<li><b>${n[0]}</b><span class="why">${n[1]}</span></li>`).join('')+'</ol>';
+  try{ history.replaceState(null,'','#'+k); }catch(e){}
+}
+fr.addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) show(b.dataset.k); });
+show(order.includes(location.hash.slice(1))?location.hash.slice(1):'queue');
+</script>
+</body>
+</html>

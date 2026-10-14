@@ -1,0 +1,89 @@
+{
+ "blocked": 0,
+ "blockers": [
+  "ABC-009 Data feed from the client (Sara Example (Example Client Ltd), due 08-11-2026) blocks UAT start (forecast 02-11-2026). ABC-M-002 forecast 02-11-2026, but dependency ABC-009 isn't due until 08-11-2026",
+  "ABC-A-002 Escalate data access to the client CIO blocks ABC-A-003 Book the UAT environment"
+ ],
+ "changes": [
+  "Milestone moved: UAT start, 26-10-2026 → 02-11-2026",
+  "New risk: ABC-007 Data access delayed so UAT slips",
+  "Decided: Go-live moves two weeks (Jane Doe)",
+  "Decided: Drop the pricing option from the proposal (Alan Carter)",
+  "Closed: Send the revised SOW"
+ ],
+ "code": "ABC",
+ "decisions_needed": [
+  "For the committee: Extend the pilot by two weeks — from Sara Example, needed by 06-10-2026 (3 days overdue)",
+  "For Alan: Choose the UAT venue — from Alan Carter, needed by 14-10-2026",
+  "For the committee: Share the pilot plan with the client — from Jane Doe, needed by 16-10-2026"
+ ],
+ "early_warnings": [
+  "ABC-009: ABC-M-002 forecast 02-11-2026, but dependency ABC-009 isn't due until 08-11-2026",
+  "ABC-009: Due on a Sunday (08-11-2026): a working day is usually meant",
+  "ABC-D-010: Decision needed from Sara Example by 06-10-2026: 3 days late"
+ ],
+ "evidence": {
+  "reasons": [
+   "open Urgent risk or issue (ABC-007)",
+   "UAT start moved 14 days"
+  ],
+  "suggested": "At risk",
+  "warnings": [
+   "ABC-009: ABC-M-002 forecast 02-11-2026, but dependency ABC-009 isn't due until 08-11-2026",
+   "ABC-009: Due on a Sunday (08-11-2026): a working day is usually meant",
+   "ABC-D-010: Decision needed from Sara Example by 06-10-2026: 3 days late"
+  ]
+ },
+ "flow": "0 opened, 1 closed; 1 overdue, up from 0; the oldest open action is 8 days old",
+ "health": "At risk",
+ "health_reason": "Data access is late and UAT may start later",
+ "labelled_but_excluded": [],
+ "last_steerco": null,
+ "milestones": [
+  {
+   "M_BASE": "09-09-2026",
+   "M_DATE": "09-09-2026",
+   "M_STATUS": "Achieved",
+   "M_TEXT": "Build complete"
+  },
+  {
+   "M_BASE": "19-10-2026",
+   "M_DATE": "02-11-2026",
+   "M_STATUS": "Slipped",
+   "M_TEXT": "UAT start"
+  },
+  {
+   "M_BASE": "08-12-2026",
+   "M_DATE": "08-12-2026",
+   "M_STATUS": "On track",
+   "M_TEXT": "Go-live"
+  }
+ ],
+ "name": "Example Programme",
+ "next_period": [
+  "Escalate data access to the client CIO — Alan Carter, due 07-10-2026 (overdue)",
+  "Renegotiate the licence price with the vendor — Alan Carter, due 12-10-2026",
+  "Book the UAT environment — Sara Example, due 14-10-2026",
+  "Agree the pilot success criteria — Sara Example (Example Client Ltd), due 15-10-2026"
+ ],
+ "omitted": [],
+ "risks": [
+  {
+   "R_ID": "ABC-007",
+   "R_OWNER": "Omar Ali",
+   "R_PRIORITY": "Urgent",
+   "R_TEXT": "Risk: Data access delayed so UAT slips. Response: Escalating to the client CIO"
+  },
+  {
+   "R_ID": "ABC-008",
+   "R_OWNER": "Sara Example",
+   "R_PRIORITY": "High",
+   "R_TEXT": "Issue: Test licences not ordered. No response yet."
+  }
+ ],
+ "sensitive": [],
+ "since": "2026-09-25",
+ "steerco_date": "2026-10-09",
+ "trend": "Over the last 4 weekly updates: On track (2) → At risk (2).",
+ "version": "internal"
+}

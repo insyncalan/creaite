@@ -1,0 +1,2101 @@
+"""creaite AI drafts (BL-218 to BL-227): the shared scaffold, and the field drafts of sprint-drafts-fields.
+
+A draft is a suggestion, never a write. Plain code here gathers the facts and their sources from the tracker, the registers and the
+vault; a model is asked only to word them (through the live server's run engine, `Run(..., kind="generate")`: read-only tools, one
+run at a time, progress and Stop). The text lands where Alan already edits or approves: an unsaved field in the peek, a pending
+proposal in Review (individually approved), or a dialog. Nothing here writes to the tracker.
+
+  python3 system/scripts/drafts.py context              JSON request on stdin → {feature, kind, prompt, facts, sources} or {nothing}
+  python3 system/scripts/drafts.py result               JSON {request, context, reply} on stdin → the parsed draft and its checks
+  python3 system/scripts/drafts.py stat FEATURE EVENT [N]   count an event (offered, used, edited, rejected) in draft-stats.json
+  python3 system/scripts/drafts.py stats [--json]       the counts, per feature
+  python3 system/scripts/drafts.py features [--json]    each feature, its label and whether it is on (settings.json `drafting`)
+  python3 system/scripts/drafts.py chase record --ids A,B [--mode chase|help|decision|update|followup]   "I sent it" (BL-224, BL-298)
+  python3 system/scripts/drafts.py chase-pane          JSON {id, …} on stdin → BL-298's Draft chase: mode, recipient, suggestions, draft
+
+How to add a draft kind (the next sprints do this):
+  1. A feature switch: add it to FEATURES (id, label, help). Settings › General › AI drafts lists it from the page's DRAFTFEATURES,
+     and settings.json `drafting.<id>` turns it off (on when missing).
+  2. A builder: `@kind("name", "feature")` on `def build(con, req)`, returning `Draft(prompt_values, sources, ...)` from plain code, or
+     raising `Nothing("Nothing new since 03-10-2026")` (shown as is, nothing is asked of the model) or `Refused("why")`.
+  3. A prompt template: `system/templates/drafts/<name>.md`, with `$placeholders` filled by string.Template (values are inserted,
+     never formatted, so braces in a value are safe). `$sources` is always the numbered source list; ask for `[S1]` tags.
+  4. Optionally `@parser("name")` to split the reply into parts (the default: the text, its sources marked per sentence), and
+     `@stager("name")` for a kind that drafts several items: its parsed result becomes pending proposals (`proposal_file`), each
+     item carrying `drafted: <feature>` and `drafted_text`, so Review approves it on its own and counts it when decided.
+  5. In the page: `draftBtn(kind, label, attrs)` where the button belongs, and `draftAsk({kind, ...})`, which streams the run and
+     returns the parsed result; `draftCard(...)` shows it with "Drafted from…", Use and Discard, and counts what Alan does.
+
+Counts (Alan, 11-10-2026): `system/staging/draft-stats.json` holds, per feature, how many drafts were offered, used as written,
+used after an edit, and rejected. Counts only: never text, IDs or names.
+Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
+"""
+import json
+import os
+import re
+import sqlite3
+import string
+import sys
+from datetime import date, datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402
+import tracker  # noqa: E402
+
+sys.modules.setdefault("drafts", sys.modules[__name__])     # run as a script, report.py's `import drafts` is this same module
+TEMPLATE_DIR = paths.TEMPLATES / "drafts"
+STATS = paths.STAGING / "draft-stats.json"
+EVENTS = ("offered", "used", "edited", "rejected")
+MAX_SOURCES = 12
+
+# id: (label, what it drafts). The order is the order Settings lists them. Later sprints add theirs here.
+FEATURES = {
+    "update": ("Draft the latest update", "An action's latest update from what happened since the last one; Draft updates for stale actions"),
+    "client": ("Draft client wording", "Plain client messaging from the item's own text, with what was taken out"),
+    "thinking": ("Suggest the thinking fields", "A decision's options and reasoning; a risk's response, impact and likelihood"),
+    "reason": ("Draft the reason for a health or forecast change", "One sentence from the evidence creaite already holds"),
+    # ===== BL-221 (sprint-drafts-extraction) =====
+    "repeat": ("Spot repeats of existing items",
+               "Marks a proposal that looks like an item already in the tracker; Merge, Keep or Reject in Review"),
+    # ===== BL-218 (sprint-drafts-extraction) =====
+    "done": ("Spot items that are probably done",
+             "The sweep and the minutes propose closing an open item when a sent mail, reply or meeting shows it finished"),
+    # ===== BL-220 (sprint-drafts-extraction) =====
+    "sharpen": ("Sharpen a vague action", "A clear, verb-first title for a vague action, beside the original; you pick one"),
+    # ===== BL-223, BL-224, BL-227 (sprint-drafts-writing) =====
+    "agenda": ("Draft the agenda and invite text", "From the Prep page: a POAD for the invite and a timed agenda, to copy"),
+    "email": ("Polish the email wording",
+              "Draft email's cover paragraph reworded in a warm, neutral or firm tone; the table is untouched"),
+    "forms": ("Write the status in other forms",
+              "Generate's Form: a steering note, a three-line update, an email paragraph or a Teams message"),
+    # ===== BL-286 C (sprint-prep-shape): its switch, with the page's DRAFTFEATURES (stores/prepShape.js) =====
+    "shape": ("Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's "
+              "carried over, each line cited"),
+}
+# BL-286 (sprint-prep-server): the kind "shape" counts under the feature "shape" (draft-stats.json takes any lower-case feature
+# name) and is on unless settings.json `drafting.shape` is false. Its Settings switch is in FEATURES above (sprint-prep-shape).
+ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
+SECRET_WORDS = re.compile(r"\b(confidential|restricted)\b", re.I)
+STOP = set("the a an and or of to for in on at by with from is are was were be been it this that these those as into not no "
+           "will shall can could should would has have had do does did our we you they their them its".split())
+
+
+class Nothing(Exception):
+    """Nothing to draft from: the message is shown as it is, and no model is asked."""
+
+
+class Refused(Exception):
+    """The draft isn't allowed (a confidential item, a closed item, the wrong kind of item)."""
+
+
+class Draft:
+    def __init__(self, values, sources, item=None, extra=None):
+        self.values, self.sources, self.item, self.extra = values, sources, item or {}, extra or {}
+
+
+KINDS, PARSERS, STAGERS = {}, {}, {}
+
+
+def kind(name, feature):
+    """Register a draft builder: `@kind(name, feature)` on build(con, req); settings.json `drafting.<feature>` switches it."""
+    def wrap(fn):
+        """Record the builder under its name and return it unchanged."""
+        KINDS[name] = (feature, fn)
+        return fn
+    return wrap
+
+
+def parser(name):
+    """Register a reply parser for a draft kind: `@parser(name)` on fn(reply, ctx)."""
+    def wrap(fn):
+        """Record the parser under its name and return it unchanged."""
+        PARSERS[name] = fn
+        return fn
+    return wrap
+
+
+def stager(name):
+    """A kind that drafts several items at once stages them: fn(parsed, ctx) -> (proposal file name, how many)."""
+    def wrap(fn):
+        """Record the stager under its name and return it unchanged."""
+        STAGERS[name] = fn
+        return fn
+    return wrap
+
+
+def proposal_file(items, tag="drafts"):
+    """Write pending proposal items to system/staging/ (source_run "drafts"); each is approved on its own in Review."""
+    paths.STAGING.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+    name, i = f"proposed-{stamp}-{tag}.json", 2
+    while (paths.STAGING / name).exists():
+        name, i = f"proposed-{stamp}-{i}-{tag}.json", i + 1
+    data = {"created": datetime.now().isoformat(timespec="seconds"), "source_run": "drafts", "files": [], "items": items}
+    (paths.STAGING / name).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return name
+
+
+# ── settings, clock, counts ──────────────────────────────────────────────────
+
+def today():
+    """Today as YYYY-MM-DD, or CREAITE_NOW's date in tests."""
+    now = os.environ.get("CREAITE_NOW")
+    return now[:10] if now else date.today().isoformat()
+
+
+def switches(settings=None):
+    """{feature: on} from settings.json `drafting` (a feature not named there is on)."""
+    s = (settings if settings is not None else paths.load_settings()).get("drafting") or {}
+    return {f: bool(s.get(f, True)) for f in FEATURES} | {k: bool(v) for k, v in s.items() if isinstance(v, bool)}
+
+
+def enabled(feature, settings=None):
+    """Whether a draft feature is on (settings.json `drafting`; on when not named)."""
+    return switches(settings).get(feature, True)
+
+
+def read_stats():
+    """The counts in system/staging/draft-stats.json, or {} when there are none or the file can't be read."""
+    try:
+        data = json.loads(STATS.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def record(feature, event, n=1):
+    """Add n to one count. Only known features and events, and whole numbers, are kept: the file never holds text."""
+    if feature not in FEATURES and not re.fullmatch(r"[a-z][a-z0-9-]{1,30}", str(feature)):
+        raise ValueError("unknown feature")
+    if event not in EVENTS or not isinstance(n, int) or not 0 < n <= 500:
+        raise ValueError("unknown event")
+    STATS.parent.mkdir(parents=True, exist_ok=True)
+    lock = None
+    try:
+        import fcntl
+        lock = open(STATS.with_suffix(".lock"), "w")
+        fcntl.flock(lock, fcntl.LOCK_EX)
+    except (ImportError, OSError):
+        lock = None
+    try:
+        data = read_stats()
+        row = data.setdefault(feature, {e: 0 for e in EVENTS})
+        for e in EVENTS:
+            row[e] = int(row.get(e) or 0)
+        row[event] += n
+        data["_updated"] = datetime.now().isoformat(timespec="seconds")
+        tmp = STATS.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        tmp.replace(STATS)
+    finally:
+        if lock:
+            lock.close()
+    return data[feature]
+
+
+# ── shared plain-code helpers ────────────────────────────────────────────────
+
+def ro():
+    """A read-only connection to the tracker database, rows as sqlite3.Row: drafts never write to it."""
+    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def words(text):
+    """A text's key words: lower case, three letters or more, stop words left out."""
+    return {w for w in re.findall(r"[a-z][a-z0-9]+", (text or "").lower()) if len(w) > 2 and w not in STOP}
+
+
+def overlap(a, b):
+    """How far two texts share key words, 0 to 1 (shared words over the shorter text's)."""
+    wa, wb = words(a), words(b)
+    return len(wa & wb) / max(1, min(len(wa), len(wb))) if wa and wb else 0.0
+
+
+def secret(text):
+    """Whether a text is marked confidential or restricted (SECRET_WORDS): such text is never a draft's source."""
+    return bool(SECRET_WORDS.search(text or ""))
+
+
+def short(text, n=220):
+    """Text on one line, cut to n characters with an ellipsis."""
+    text = re.sub(r"\s+", " ", str(text or "")).strip()
+    return text if len(text) <= n else text[:n - 1] + "…"
+
+
+def source_path(src):
+    """A file a source line points at (`projects/… — Section`), when it is one in the vault, else None."""
+    head = (src or "").split(" — ")[0].strip()
+    if not head or head.startswith(("Email", "Teams", "Mail", "Alan", "http")):
+        return None
+    for cand in (head, f"projects/{head}"):
+        try:
+            p = paths.resolve(cand)
+        except Exception:  # noqa: BLE001  an odd stored path
+            continue
+        if p.is_file():
+            return p
+    return None
+
+
+def file_text(p):
+    """A file's text (tracker.text_of), or '' when it can't be read."""
+    try:
+        return tracker.text_of(Path(p)) or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def passages(text, about, item_id=None, limit=3, span=1):
+    """The lines of a file that name the item (its ID, else most of its key words), with a line either side."""
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip()]
+    want = words(about)
+    hits = []
+    for i, ln in enumerate(lines):
+        score = 2.0 if item_id and item_id in ln else (len(want & words(ln)) / len(want) if len(want) >= 3 else 0)
+        if score >= 0.5:
+            hits.append((score, i))
+    out, used = [], set()
+    for score, i in sorted(hits, key=lambda h: (-h[0], h[1]))[:limit]:
+        if i in used:
+            continue
+        lo, hi = max(0, i - span), min(len(lines), i + span + 1)
+        used.update(range(lo, hi))
+        out.append(" ".join(lines[lo:hi]))
+    return out
+
+
+def number(sources):
+    """Give each source its tag (S1, S2…), keeping at most MAX_SOURCES; the list as the prompt shows it."""
+    kept = sources[:MAX_SOURCES]
+    for i, s in enumerate(kept, 1):
+        s["ref"] = f"S{i}"
+    return kept, "\n".join(f"[{s['ref']}] {s['text']}" for s in kept) or "(none)"
+
+
+def labels_excluding(con, item_id):
+    """An item's labels that keep it out of client output (behaviour or default "exclude"); [] if none."""
+    try:
+        return [r[0] for r in con.execute("SELECT il.label FROM item_labels il JOIN labels l ON l.name = il.label WHERE il.item_id = ? "
+                                          "AND (l.behaviour = 'exclude' OR l.default_choice = 'exclude')", (item_id,))]
+    except sqlite3.Error:
+        return []
+
+
+def item_row(con, item_id):
+    """(table, row) for an action, RAID item or decision; raises Refused for any other ID or one not in the tracker."""
+    table = tracker.item_table(item_id)
+    if table not in ("actions", "raid", "decisions"):
+        raise Refused(f"{item_id} isn't an action, a RAID item or a decision.")
+    row = con.execute(f"SELECT * FROM {table} WHERE id = ?", (item_id,)).fetchone()
+    if not row:
+        raise Refused(f"{item_id} isn't in the tracker.")
+    return table, dict(row)
+
+
+def proposal_item(req):
+    """A pending proposal's item from staging ({file, ref}), as (table, values): a draft for Review works on what is proposed."""
+    p = req.get("proposal") or {}
+    name, ref = str(p.get("file") or ""), p.get("ref")
+    if not re.fullmatch(r"proposed-[A-Za-z0-9._-]+\.json", name):
+        raise Refused("Not a proposal.")
+    try:
+        data = json.loads((paths.STAGING / name).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise Refused("That proposal has been applied or removed.")
+    it = next((i for i in data.get("items") or [] if i.get("n") == ref), None)
+    if not it or it.get("op") != "new" or it.get("table") not in ("actions", "raid", "decisions"):
+        raise Refused("That proposal isn't a new item.")
+    v = dict(it.get("values") or {})
+    edits = req.get("edits") if isinstance(req.get("edits"), dict) else {}      # what Alan has changed in the peek, not yet saved
+    for k in ("description", "decision", "type", "response_action", "reasoning", "options"):
+        if isinstance(edits.get(k), str):
+            v[k] = edits[k][:4000]
+    v["id"] = f"Review #{ref}"
+    return it["table"], v
+
+
+TITLE = {"actions": "description", "raid": "description", "decisions": "decision"}
+
+
+def item_lines(table, x):
+    """The item as the prompt shows it (its own fields, in words)."""
+    t = x.get(TITLE[table]) or ""
+    if table == "actions":
+        bits = [f"Action: {t}", f"Owner: {x.get('owner') or 'TBC'}", f"Status: {x.get('status') or 'Open'}",
+                f"Due: {tracker.shown(x['due_date']) if x.get('due_date') else 'no date'}",
+                f"Latest update: {x.get('latest_update') or '(none)'}"]
+    elif table == "raid":
+        bits = [f"{x.get('type') or 'Risk'}: {t}", f"Owner: {x.get('owner') or 'TBC'}", f"Status: {x.get('status') or 'Open'}",
+                f"Impact: {x.get('impact') or 'not set'}; likelihood: {x.get('likelihood') or 'not set'}",
+                f"Response: {x.get('response_action') or '(none)'}"]
+    else:
+        bits = [f"Decision: {t}", f"Status: {x.get('status') or 'Made'}", f"Reasoning: {x.get('reasoning') or '(none)'}",
+                f"Options considered: {x.get('options') or '(none)'}"]
+    return "\n".join(bits)
+
+
+def render(name, values):
+    """A draft's prompt: system/templates/drafts/<name>.md, its $placeholders filled by string.Template (braces in a value are safe)."""
+    tpl = (TEMPLATE_DIR / f"{name}.md").read_text(encoding="utf-8")
+    return string.Template(tpl).safe_substitute(values)
+
+
+# ── the parts every draft shares: sentences and their sources ───────────────
+
+TAG = re.compile(r"\s*\[(S\d+(?:\s*,\s*S\d+)*)\]")
+
+
+def sentences(text):
+    """A reply split into its sentences and lines."""
+    return [s for s in re.split(r"(?<=[.!?\]])\s+(?=[A-Z0-9“\"(])|\n+", (text or "").strip()) if s.strip()]
+
+
+def marked(text, sources):
+    """[{text, refs, unsourced}] for each sentence; the [S…] tags are taken out of the text and kept as refs."""
+    known = {s["ref"] for s in sources}
+    out = []
+    for s in sentences(text):
+        refs = [r.strip() for m in TAG.finditer(s) for r in m.group(1).split(",")]
+        clean = TAG.sub("", s).strip()
+        if not clean or re.fullmatch(r"[-–•*\s]*", clean):
+            continue
+        good = [r for r in refs if r in known]
+        out.append({"text": clean, "refs": good, "unsourced": not good})
+    return out
+
+
+def clean(text):
+    """A reply's text with the [S…] source tags taken out."""
+    return re.sub(r"[ \t]+\n", "\n", TAG.sub("", text or "")).strip()
+
+
+def section(reply, head, heads):
+    """The text under `HEAD:` up to the next of `heads`."""
+    m = re.search(rf"^{head}:\s*(.*?)(?=^(?:{'|'.join(heads)}):|\Z)", reply or "", re.S | re.M)
+    return m.group(1).strip() if m else ""
+
+
+def default_parse(reply, ctx):
+    """The default reply parser: the text before SOURCES:, with each sentence's sources marked."""
+    text = (reply or "").split("\nSOURCES:")[0].strip()
+    return {"text": clean(text), "sentences": marked(text, ctx["sources"])}
+
+
+# ── BL-219: the latest update ────────────────────────────────────────────────
+
+def since_last_update(con, item_id, raised):
+    """When an item's latest update last changed (the change log), else when it was raised: its evidence is gathered from then (BL-219)."""
+    row = con.execute("SELECT max(at) FROM change_log WHERE item_id = ? AND field = 'latest_update' AND op <> 'undo'", (item_id,)).fetchone()
+    return (row[0] or "")[:10] or raised or "0000-00-00"
+
+
+def mentions_of(item_id, since):
+    """An item's mentions in system/staging/mentions.jsonl since a date, confidential sources left out (BL-219)."""
+    out = []
+    try:
+        lines = paths.MENTIONS.read_text(encoding="utf-8").splitlines() if paths.MENTIONS.exists() else []
+    except OSError:
+        lines = []
+    for line in lines:
+        try:
+            m = json.loads(line)
+        except ValueError:
+            continue
+        if m.get("id") == item_id and str(m.get("at") or "") >= since and not secret(m.get("source")):
+            out.append(m)
+    return out
+
+
+FIELD_WORDS = {"status": "status", "due_date": "due date", "owner": "owner", "priority": "priority", "description": "wording",
+               "milestone": "milestone", "workstream": "workstream", "response_action": "response", "impact": "impact",
+               "likelihood": "likelihood", "client_visible": "client-visible", "closed": "closed date"}
+
+
+def evidence_for_update(con, x, since):
+    """The sources an action's update may draw on, newest last: its own changes, meetings and sweeps that raised it again, the
+    minutes and transcripts that name it, and changes to the items linked to it. A confidential or restricted source is skipped."""
+    item_id, code, about = x["id"], x["project"], x.get("description") or ""
+    src = []
+    for r in con.execute("SELECT at, field, old_value, new_value FROM change_log WHERE item_id = ? AND substr(at,1,10) >= ? "
+                         "AND op = 'update' ORDER BY at", (item_id, since)):
+        if r["field"] in FIELD_WORDS:
+            old, new = r["old_value"], r["new_value"]
+            if r["field"].endswith("date") or r["field"] == "closed":
+                old, new = tracker.shown(old) if old else "none", tracker.shown(new) if new else "none"
+            src.append({"id": item_id, "kind": "change", "at": r["at"][:10],
+                        "text": f"{tracker.shown(r['at'][:10])}: {FIELD_WORDS[r['field']]} changed from {old or 'none'} to {new or 'none'}"})
+    seen = set()
+    for m in mentions_of(item_id, since):
+        key = m.get("source") or ""
+        if key in seen:
+            continue
+        seen.add(key)
+        where = paths.name_date(Path(key.split(" — ")[0]).name)[1] if "/" in key else key
+        src.append({"id": item_id, "kind": "mention", "at": m.get("at") or "", "path": key if "/" in key else "",
+                    "text": f"{tracker.shown(m.get('at') or '')}: raised again in {short(where, 120)}"})
+    for d in paths.extract_dirs(code):
+        if not d.is_dir():
+            continue
+        for f in sorted(d.iterdir()):
+            day = paths.name_date(f.name)[0]
+            if not f.is_file() or not day or day < since or secret(f.name):
+                continue
+            text = file_text(f)
+            if secret(text[:400]):
+                continue
+            for q in passages(text, about, item_id, limit=2):
+                if secret(q):
+                    continue
+                src.append({"id": item_id, "kind": "minutes", "at": day, "path": paths.rel(f),
+                            "text": f"{tracker.shown(day)}, {f.stem[11:] if f.stem[:4].isdigit() else f.stem}: “{short(q)}”"})
+    for r in con.execute("SELECT from_item, to_item FROM links WHERE from_item = ? OR to_item = ?", (item_id, item_id)):
+        other = r["to_item"] if r["from_item"] == item_id else r["from_item"]
+        for c in con.execute("SELECT at, field, new_value FROM change_log WHERE item_id = ? AND substr(at,1,10) >= ? AND op = 'update' "
+                             "AND field IN ('status','due_date','forecast_date') ORDER BY at", (other, since)):
+            new = tracker.shown(c["new_value"]) if c["field"] != "status" and c["new_value"] else c["new_value"]
+            rel = "blocks this" if r["to_item"] == item_id else "is blocked by this"
+            src.append({"id": other, "kind": "link", "at": c["at"][:10],
+                        "text": f"{tracker.shown(c['at'][:10])}: {other} ({rel}) {FIELD_WORDS.get(c['field'], c['field'].replace('_', ' '))} now {new}"})
+    return sorted(src, key=lambda s: s.get("at") or "")
+
+
+@kind("update", "update")
+def build_update(con, req):
+    """Builder for Draft the latest update (BL-219): an open action's evidence since its last update. Refused for anything else; Nothing
+    when there is no new evidence."""
+    item_id = str(req.get("id") or "")
+    table, x = item_row(con, item_id)
+    if table != "actions":
+        raise Refused("Draft the latest update is for actions. A RAID item's response has Suggest.")
+    if x["status"] not in ("Open", "Delayed"):
+        raise Refused(f"{item_id} is {x['status'].lower()}: there is nothing to update.")
+    since = since_last_update(con, item_id, x.get("raised"))
+    src = evidence_for_update(con, x, since)
+    if not src:
+        raise Nothing(f"Nothing new since {tracker.shown(since)}.")
+    kept, listed = number(src)
+    return Draft({"item": item_lines(table, x), "since": tracker.shown(since), "sources": listed, "today": tracker.shown(today())},
+                 kept, item={"id": item_id, "table": table, "since": since})
+
+
+# BL-219, several at once: one run for the chosen actions; each line becomes a pending update proposal in Review.
+@kind("update-bulk", "update")
+def build_update_bulk(con, req):
+    """Builder for latest updates on several open actions at once (up to 25, BL-219): one run, every action's evidence in one numbered
+    list. Those with nothing new are skipped."""
+    ids = [i for i in (req.get("ids") or []) if isinstance(i, str) and ID_RE.fullmatch(i)][:25]
+    if not ids:
+        raise Refused("Choose the actions to draft updates for.")
+    blocks, every, skipped, items = [], [], [], {}
+    for item_id in ids:
+        try:
+            table, x = item_row(con, item_id)
+        except Refused:
+            skipped.append(f"{item_id}: not in the tracker")
+            continue
+        if table != "actions" or x["status"] not in ("Open", "Delayed"):
+            skipped.append(f"{item_id}: not an open action")
+            continue
+        since = since_last_update(con, item_id, x.get("raised"))
+        src = evidence_for_update(con, x, since)[:6]
+        if not src:
+            skipped.append(f"{item_id}: nothing new since {tracker.shown(since)}")
+            continue
+        start = len(every)
+        every.extend(src)
+        items[item_id] = {"since": since, "updated_at": x["updated_at"], "project": x["project"], "refs": (start, len(every))}
+        blocks.append((item_id, item_lines(table, x), src))
+    if not items:
+        raise Nothing("Nothing new for any of them: " + "; ".join(skipped) + ".")
+    for i, s in enumerate(every, 1):
+        s["ref"] = f"S{i}"
+    text = "\n\n".join(f"### {item_id}\n{lines}\nSources:\n" + "\n".join(f"[{s['ref']}] {s['text']}" for s in src)
+                       for item_id, lines, src in blocks)
+    return Draft({"items": text, "today": tracker.shown(today())}, every, item={"ids": list(items)},
+                 extra={"items": items, "skipped": skipped})
+
+
+@parser("update-bulk")
+def parse_bulk(reply, ctx):
+    """Parser for update-bulk: one "ID: text" line per action, each sentence's sources marked from that action's own."""
+    items, out = ctx["extra"]["items"], []
+    for line in (reply or "").splitlines():
+        m = re.match(r"\s*[-*]?\s*(" + ID_RE.pattern + r")\s*[:–-]\s*(.+)$", line)
+        if not m or m.group(1) not in items:
+            continue
+        lo, hi = items[m.group(1)]["refs"]
+        own = ctx["sources"][lo:hi]
+        text = m.group(2).strip()
+        out.append({"id": m.group(1), "text": clean(text), "sentences": marked(text, own), "sources": [s["ref"] for s in own]})
+    return {"items": out, "skipped": ctx["extra"]["skipped"]}
+
+
+@stager("update-bulk")
+def stage_bulk(parsed, ctx):
+    """One proposal of pending `update` items (latest_update only), one per drafted action. Each is individually approved
+    (review.individual_only: "drafted update"); nothing is saved in place. Returns (file name, count)."""
+    items, by_ref = [], {s["ref"]: s for s in ctx["sources"]}
+    for d in parsed["items"]:
+        meta = ctx["extra"]["items"][d["id"]]
+        if not d["text"]:
+            continue
+        refs = sorted({r for s in d["sentences"] for r in s["refs"]}, key=lambda r: int(r[1:]))
+        loose = sum(1 for s in d["sentences"] if s["unsourced"])
+        items.append({"n": len(items) + 1, "op": "update", "table": "actions", "id": d["id"],
+                      "changes": {"latest_update": d["text"]}, "based_on": meta["updated_at"],
+                      "why": ("Drafted from " + "; ".join(short(by_ref[r]["text"], 90) for r in refs[:3])
+                              + (f" (+{len(refs) - 3} more)" if len(refs) > 3 else "")) if refs else "Drafted, with no source: check it",
+                      "source": f"AI draft (BL-219), {tracker.shown(today())}",
+                      "drafted": "update", "drafted_text": d["text"],
+                      "draft_sources": [by_ref[r]["text"] for r in refs],
+                      "match": "strong", "flags": ["low-confidence"] if loose else [], "decision": "pending"})
+    if not items:
+        return None, 0
+    return proposal_file(items), len(items)
+
+
+# ── BL-225: client wording ───────────────────────────────────────────────────
+
+@kind("client", "client")
+def build_client(con, req):
+    """Builder for an item's client wording (BL-225), from the item's own text (report.client_item_context's checks apply)."""
+    import report
+    ctx = report.client_item_context(con, str(req.get("id") or ""))
+    src = [{"id": "", "kind": "item", "text": f"The item's own text: {short(ctx['text'], 600)}"}]
+    kept, listed = number(src)
+    return Draft({"kind": ctx["kind"], "text": ctx["text"], "shape": ctx["shape"], "sources": listed}, kept,
+                 item={"id": ctx["id"], "table": ctx["table"], "own_text": ctx["text"]})
+
+
+@parser("client")
+def parse_client(reply, ctx):
+    """Parser for client wording: the text, what the model says it took out (REMOVED), and the client-wording checks' notes."""
+    import status_checks
+    heads = ["REMOVED", "SOURCES"]
+    body = (reply or "").split("\nREMOVED:")[0].split("\nSOURCES:")[0].strip()
+    removed = [ln.strip("-• ").strip() for ln in section(reply, "REMOVED", heads).splitlines() if ln.strip("-• ").strip()]
+    removed = [r for r in removed if r.lower() not in ("none", "nothing", "(none)")]
+    text = clean(body)
+    flags = status_checks.client_wording(text, ctx["item"]["own_text"], people_names())
+    return {"text": text, "removed": removed[:8], "notes": flags, "sentences": []}
+
+
+CMH = ("What it is:", "What it means for you:", "What is being done:")
+
+
+def messaging_done(table, text):
+    """The page's cmOK and cmdOK: each heading has some words after it (actions, RAID), or some words at all (decisions)."""
+    if table == "decisions":
+        return len(re.sub(r"[^\w]", "", text or "")) >= 5
+    lines = (text or "").splitlines()
+    for h in CMH:
+        line = next((ln.strip() for ln in lines if ln.strip().startswith(h)), None)
+        if not line or len(re.sub(r"[^\w]", "", line[len(h):])) < 5:
+            return False
+    return True
+
+
+# BL-225, several at once: the project page's "client-visible items need client messaging" card offers Draft all; each wording is a
+# pending `client_message` proposal in Review, approved on its own (it faces a client) and never part of Approve routine.
+@kind("client-bulk", "client")
+def build_client_bulk(con, req):
+    """Builder for Draft all on a project's client-visible items that still need client messaging (up to 15, BL-225)."""
+    import report
+    code = str(req.get("code") or "")
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code):
+        raise Refused("Not a project.")
+    want = []
+    for table, col in (("actions", "client_message"), ("raid", "client_message"), ("decisions", "client_message")):
+        for r in con.execute(f"SELECT id, {col}, updated_at FROM {table} WHERE project = ? AND client_visible = 1", (code,)):
+            if not messaging_done(table, r[1]):
+                want.append((r[0], r[2]))
+    blocks, every, items, skipped = [], [], {}, []
+    for item_id, updated in want[:15]:
+        try:
+            c = report.client_item_context(con, item_id)
+        except Refused as e:
+            skipped.append(str(e))
+            continue
+        every.append({"id": "", "kind": "item", "text": f"{item_id}'s own text: {short(c['text'], 400)}"})
+        items[item_id] = {"table": c["table"], "updated_at": updated, "own_text": c["text"]}
+        blocks.append(f"### {item_id}\nKind: {c['kind']}. Shape: {c['shape']}\nIts own text:\n{c['text']}")
+    if not items:
+        raise Nothing("No client-visible item needs client wording" + (": " + "; ".join(skipped) if skipped else "."))
+    for i, s in enumerate(every, 1):
+        s["ref"] = f"S{i}"
+    return Draft({"items": "\n\n".join(blocks)}, every, item={"ids": list(items)}, extra={"items": items, "skipped": skipped})
+
+
+@parser("client-bulk")
+def parse_client_bulk(reply, ctx):
+    """Parser for client-bulk: one "### ID" block per item, with its text, what was taken out and the checks' notes."""
+    import status_checks
+    people, out = people_names(), []
+    for item_id, body in re.findall(r"^### (\S+)\s*\n(.*?)(?=^### |\Z)", reply or "", re.S | re.M):
+        meta = ctx["extra"]["items"].get(item_id)
+        if not meta:
+            continue
+        text = clean(body.split("\nREMOVED:")[0])
+        removed = [ln.strip("-• ").strip() for ln in section(body, "REMOVED", ["REMOVED"]).splitlines() if ln.strip("-• ").strip()]
+        out.append({"id": item_id, "text": text, "removed": [r for r in removed if r.lower() not in ("none", "nothing")][:8],
+                    "notes": status_checks.client_wording(text, meta["own_text"], people), "sentences": []})
+    return {"items": out, "skipped": ctx["extra"]["skipped"]}
+
+
+@stager("client-bulk")
+def stage_client_bulk(parsed, ctx):
+    """Stager for client-bulk: each wording becomes a pending client_message proposal in system/staging/, approved on its own in Review
+    (BL-225). Returns (file name, count), or (None, 0)."""
+    items = []
+    for d in parsed["items"]:
+        meta = ctx["extra"]["items"][d["id"]]
+        if not d["text"]:
+            continue
+        why = "Drafted client wording" + (f"; taken out: {', '.join(d['removed'][:4])}" if d["removed"] else "") + \
+            (f"; check: {' '.join(n['note'] for n in d['notes'][:2])}" if d["notes"] else "")
+        items.append({"n": len(items) + 1, "op": "update", "table": meta["table"], "id": d["id"],
+                      "changes": {"client_message": d["text"]}, "based_on": meta["updated_at"], "why": short(why, 300),
+                      "source": f"AI draft (BL-225), {tracker.shown(today())}", "drafted": "client", "drafted_text": d["text"],
+                      "draft_sources": ["The item's own text"], "match": "strong", "flags": ["low-confidence"] if d["notes"] else [],
+                      "decision": "pending"})
+    return (proposal_file(items), len(items)) if items else (None, 0)
+
+
+def people_names():
+    """Every name and alias in the people register (and Alan's own), for the client-wording check."""
+    names = set()
+    try:
+        s = paths.load_settings().get("identity") or {}
+        names.add(s.get("name") or "")
+        names.update(s.get("short_forms") or [])
+        text = paths.PEOPLE_REGISTER.read_text(encoding="utf-8") if paths.PEOPLE_REGISTER.exists() else ""
+        for line in text.splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if len(cells) >= 3 and cells[0] and not set(cells[0]) <= set("-: ") and cells[0].lower() not in ("name", "full name"):
+                names.add(cells[0])
+                for a in re.split(r"[;,]", cells[2] if len(cells) > 2 else ""):
+                    names.add(a.strip())
+    except Exception:  # noqa: BLE001  the register is optional here
+        pass
+    return sorted(n for n in names if n and len(n) > 1)
+
+
+# ── BL-222: the thinking fields ──────────────────────────────────────────────
+
+THINK_FIELDS = {"decisions": ("reasoning", "options"), "raid": ("response_action",)}
+
+
+@kind("thinking", "thinking")
+def build_thinking(con, req):
+    """Builder for Suggest (BL-222) on a decision's reasoning or options, or a RAID item's response: passages from its source, and for a
+    RAID item similar closed ones' responses. Works on a pending proposal too."""
+    field = req.get("field")
+    if req.get("proposal"):
+        table, x = proposal_item(req)
+    else:
+        table, x = item_row(con, str(req.get("id") or ""))
+    if field not in THINK_FIELDS.get(table, ()):
+        raise Refused("Suggest works on a decision's reasoning and options, and on a RAID item's response.")
+    src = []
+    srcline = x.get("source") or ""
+    p = source_path(srcline)
+    if p and not secret(srcline) and not secret(p.name):
+        text = file_text(p)
+        if text and not secret(text[:400]):
+            for q in passages(text, x.get(TITLE[table]) or "", None if str(x.get("id", "")).startswith("Review") else x.get("id"), limit=3, span=2):
+                if not secret(q):
+                    src.append({"id": x.get("id"), "kind": "passage", "path": paths.rel(p), "text": f"{p.stem}: “{short(q, 400)}”"})
+    elif srcline and not secret(srcline) and not p:
+        src.append({"id": x.get("id"), "kind": "source", "text": f"Its source: {short(srcline, 200)}"})
+    if table == "raid":
+        about = x.get("description") or ""
+        rows = con.execute("SELECT id, project, type, description, response_action FROM raid WHERE status = 'Closed' "
+                           "AND coalesce(response_action, '') <> '' AND id <> ?", (x.get("id") or "",)).fetchall()
+        ranked = sorted(rows, key=lambda r: (r["project"] != x.get("project"), -overlap(about, r["description"])))
+        for r in [r for r in ranked if overlap(about, r["description"]) > 0][:4] or ranked[:2]:
+            if labels_excluding(con, r["id"]) or secret(r["response_action"]):
+                continue
+            where = "this project" if r["project"] == x.get("project") else "another project"
+            src.append({"id": r["id"], "kind": "closed", "text": f"A closed {r['type'].lower()} in {where}: “{short(r['description'], 140)}”; "
+                                                                  f"its response: “{short(r['response_action'], 200)}”"})
+    if not src:
+        raise Nothing("Nothing to suggest from: the item has no meeting passage" + (" and no closed risks have a response." if table == "raid" else "."))
+    kept, listed = number(src)
+    name = "thinking-response" if table == "raid" else "thinking-decision"
+    what = {"reasoning": "the reasoning given", "options": "the options considered", "response_action": "the response"}[field]
+    return Draft({"item": item_lines(table, x), "sources": listed, "field": what}, kept,
+                 item={"id": x.get("id"), "table": table, "field": field}, extra={"template": name})
+
+
+@parser("thinking")
+def parse_thinking(reply, ctx):
+    """Parser for Suggest: the field's text, and for a response the suggested impact and likelihood with their reasons."""
+    heads = ["RESPONSE", "IMPACT", "LIKELIHOOD", "OPTIONS", "REASONING", "SOURCES"]
+    field = ctx["item"]["field"]
+    if field == "response_action":
+        body = section(reply, "RESPONSE", heads) or (reply or "").split("\nIMPACT:")[0]
+        out = {}
+        for k in ("IMPACT", "LIKELIHOOD"):
+            m = re.match(r"(High|Medium|Low)\b\s*[|–:-]?\s*(.*)", section(reply, k, heads), re.S | re.I)
+            if m:
+                out[k.lower()] = {"value": m.group(1).capitalize(), "why": clean(m.group(2))[:200]}
+    else:
+        body = section(reply, "OPTIONS" if field == "options" else "REASONING", heads) or reply or ""
+        out = {}
+    return {"text": clean(body), "sentences": marked(body, ctx["sources"]), **out}
+
+
+# ── BL-226: the reason for a health or forecast change ──────────────────────
+
+HEALTH = ("On track", "At risk", "Off track")
+
+
+@kind("health", "reason")
+def build_health(con, req):
+    """Builder for the reason behind a health change (BL-226), from the evidence facts the page sends."""
+    import report
+    code, to = str(req.get("code") or ""), req.get("to")
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code) or not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
+        raise Refused("Not a project.")
+    if to not in HEALTH:
+        raise Refused("Choose the health first.")
+    facts = [short(f, 200) for f in (req.get("facts") or []) if isinstance(f, str) and f.strip()][:10]
+    if not facts:
+        raise Nothing("The evidence holds nothing to explain it: no overdue actions, Urgent risks, slips or warnings. Say why in your own words.")
+    src = [{"id": code, "kind": "evidence", "text": f} for f in facts]
+    kept, listed = number(src)
+    return Draft({"name": tracker.project_label(code), "to": to, "sources": listed, "style": report.style_guide()}, kept,
+                 item={"code": code})
+
+
+@kind("forecast", "reason")
+def build_forecast(con, req):
+    """Builder for the reason behind a milestone forecast move (BL-226): its overdue actions, risks, dependencies, blockers and pending
+    decisions."""
+    mid, fc = str(req.get("id") or ""), str(req.get("fc") or "")
+    m = con.execute("SELECT * FROM milestones WHERE id = ?", (mid,)).fetchone()
+    if not m:
+        raise Refused("Not a milestone.")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", fc):
+        raise Refused("Choose the new forecast first.")
+    old = m["forecast_date"] or m["baseline_date"]
+    t = today()
+    src = []
+    for r in con.execute("SELECT id, description, owner, due_date FROM actions WHERE milestone = ? AND status IN ('Open','Delayed') "
+                         "AND due_date < ? ORDER BY due_date", (mid, t)):
+        src.append({"id": r["id"], "kind": "overdue", "text": f"Action overdue since {tracker.shown(r['due_date'])}: {short(r['description'], 120)} ({r['owner']})"})
+    for r in con.execute("SELECT id, type, description, due_date, priority FROM raid WHERE milestone = ? AND status = 'Open' ORDER BY due_date", (mid,)):
+        late = r["due_date"] and r["due_date"] < t
+        if r["type"] == "Dependency" or late or r["priority"] == "Urgent":
+            moved = con.execute("SELECT old_value, new_value FROM change_log WHERE item_id = ? AND field = 'due_date' AND op = 'update' "
+                                "ORDER BY at DESC LIMIT 1", (r["id"],)).fetchone()
+            what = f"moved from {tracker.shown(moved[0])} to {tracker.shown(moved[1])}" if moved and moved[0] and moved[1] else \
+                f"overdue since {tracker.shown(r['due_date'])}" if late else f"{r['priority']} priority"
+            src.append({"id": r["id"], "kind": r["type"].lower(), "text": f"{r['type']} {what}: {short(r['description'], 120)}"})
+    for r in con.execute("SELECT l.from_item FROM links l WHERE l.to_item = ?", (mid,)):
+        if not any(s["id"] == r[0] for s in src):
+            row = con.execute("SELECT description, due_date, status FROM raid WHERE id = ?", (r[0],)).fetchone() or \
+                con.execute("SELECT description, due_date, status FROM actions WHERE id = ?", (r[0],)).fetchone()
+            if row and row["status"] in ("Open", "Delayed") and row["due_date"] and row["due_date"] >= old:
+                src.append({"id": r[0], "kind": "blocker", "text": f"Blocked by {r[0]}, due {tracker.shown(row['due_date'])}: {short(row['description'], 120)}"})
+    for r in con.execute("SELECT id, decision, needed_by FROM decisions WHERE project = ? AND status = 'Pending' ORDER BY needed_by", (m["project"],)):
+        if not r["needed_by"] or r["needed_by"] <= fc:
+            src.append({"id": r["id"], "kind": "decision", "text": f"Decision still pending{' (needed by ' + tracker.shown(r['needed_by']) + ')' if r['needed_by'] else ''}: {short(r['decision'], 120)}"})
+    if not src:
+        raise Nothing("Nothing in the tracker explains the move: no overdue work, dependency or pending decision behind it. Say why in your own words.")
+    kept, listed = number(src)
+    days_ = (date.fromisoformat(fc) - date.fromisoformat(old)).days if old else 0
+    return Draft({"milestone": m["name"], "old": tracker.shown(old) if old else "none", "new": tracker.shown(fc),
+                  "move": f"{abs(days_)} days {'later' if days_ >= 0 else 'earlier'}", "sources": listed}, kept, item={"id": mid})
+
+
+# ===== BL-223 (sprint-drafts-writing) ===== the agenda and the invite text (POAD), from the Prep page's own selection =====
+# Plain code builds the agenda: prep_page.context picks the meeting's items (urgent, overdue, due soon; decisions needed or to
+# revisit), and the points go in a fixed order (the decisions that need the meeting, then overdue and Urgent work, then milestones
+# due, then last time's uncovered points), at most six, each timed from the meeting's length. The model only words the POAD (or the
+# lighter write-up) around them, with each sentence tagged. A confidential meeting gives the model its title and times only.
+AGENDA_POINTS = 6
+AGENDA_STYLES = ("poad", "lite")
+POAD_HEADS = ("PURPOSE", "OBJECTIVES", "APPROACH", "DELIVERABLES")
+
+
+def agenda_style(req, settings=None):
+    """'poad' (the default) or 'lite': the request's choice, else settings.json `drafting.agenda_style`."""
+    if req.get("style") in AGENDA_STYLES:
+        return req["style"]
+    v = ((settings if settings is not None else paths.load_settings()).get("drafting") or {}).get("agenda_style")
+    return v if v in AGENDA_STYLES else "poad"
+
+
+def meeting_length(meeting):
+    """The meeting's length in minutes from its start and end (HH:MM); 60 when either is missing or odd."""
+    try:
+        (h1, m1), (h2, m2) = [map(int, str(meeting.get(k) or "").split(":")) for k in ("start", "end")]
+    except ValueError:
+        return 60
+    n = (h2 * 60 + m2) - (h1 * 60 + m1)
+    return n if 10 <= n <= 480 else 60
+
+
+def milestones_due(con, codes, day, soon):
+    """[(id, name, date)] of the open milestones forecast (else baselined) on or before `soon` days after the meeting."""
+    from datetime import timedelta
+    limit = (date.fromisoformat(day) + timedelta(days=soon)).isoformat()
+    out = []
+    for c in codes:
+        for r in con.execute("SELECT id, name, COALESCE(forecast_date, baseline_date) AS d FROM milestones WHERE project = ? AND "
+                             "status = 'Planned' AND COALESCE(forecast_date, baseline_date) <= ? ORDER BY d", (c, limit)):
+            out.append((r["id"], r["name"], r["d"]))
+    return out
+
+
+def _point_one(kind, x):
+    """One agenda point for one item, in plain words."""
+    if kind == "decide":
+        when = f" (needed by {tracker.shown(x['due'])})" if x.get("due") and x.get("type") == "Decision needed" else ""
+        verb = "Revisit" if x.get("type") == "Decision to revisit" else "Decide"
+        return f"{verb}: {short(x['text'], 120)}{when}"
+    if kind == "work":
+        late = x.get("due") and x["due"] < x["_day"]
+        tail = f"due {tracker.shown(x['due'])}" if x.get("due") else "no date"
+        return f"{'Overdue' if late else 'Urgent'}: {short(x['text'], 120)} ({x.get('owner') or 'no owner'}, {tail})"
+    if kind == "milestone":
+        return f"Milestone due {tracker.shown(x['due'])}: {x['text']}"
+    return f"Not covered last time: {short(x['text'], 120)}"
+
+
+GROUP_WORDS = {"decide": "Decisions", "work": "Overdue and urgent work", "milestone": "Milestones due", "carried": "Not covered last time"}
+
+
+def _point_many(kind, xs):
+    """One agenda point standing for several items of one kind."""
+    ids = [x["id"] for x in xs if x.get("id")]
+    return f"{GROUP_WORDS[kind]}: {len(xs)} items" + (f" ({', '.join(ids)})" if ids else "")
+
+
+def allot(groups, limit=AGENDA_POINTS):
+    """[(kind, [items])] → at most `limit` points: each kind with items gets one, then items get their own while slots last;
+    a kind with more items than points ends with one point for the rest."""
+    groups = [(k, xs) for k, xs in groups if xs][:limit]
+    slots, left = [1] * len(groups), limit - len(groups)
+    for i, (_, xs) in enumerate(groups):
+        extra = min(left, len(xs) - 1)
+        slots[i] += extra
+        left -= extra
+    points = []
+    for (k, xs), n in zip(groups, slots):
+        for x in xs[:n - 1]:
+            points.append({"kind": k, "point": _point_one(k, x), "ids": [x["id"]] if x.get("id") else []})
+        rest = xs[n - 1:]
+        one = len(rest) == 1
+        points.append({"kind": k, "point": _point_one(k, rest[0]) if one else _point_many(k, rest),
+                       "ids": [x["id"] for x in rest if x.get("id")]})
+    return points
+
+
+def timed(points, meeting):
+    """Each point with its minutes and clock times: a decision counts double; whole fives, at least five; the last takes the rest."""
+    total = meeting_length(meeting)
+    weights = [2 if p["kind"] == "decide" else 1 for p in points]
+    mins = [max(5, round(total * w / max(1, sum(weights)) / 5) * 5) for w in weights]
+    if mins:
+        mins[-1] = max(5, total - sum(mins[:-1]))
+    try:
+        h, m = map(int, str(meeting.get("start") or "").split(":"))
+        clock = h * 60 + m
+    except ValueError:
+        clock = None
+    for p, n in zip(points, mins):
+        p["minutes"] = n
+        if clock is not None:
+            p["at"] = f"{clock // 60 % 24:02d}:{clock % 60:02d}"
+            clock += n
+    return points
+
+
+def agenda_groups(ctx, con):
+    """The agenda's kinds in order, each with its items: decisions, overdue and Urgent work, milestones due, carried points."""
+    day = ctx["day"]
+    items = [dict(i, _day=day) for i in ctx.get("items") or []]
+    decide = [i for i in items if i["table"] == "decisions"]
+    work = [i for i in items if i["table"] != "decisions" and ((i.get("due") and i["due"] < day) or i.get("priority") == "Urgent")]
+    codes = (ctx.get("research") or {}).get("codes") or ([ctx["project"]] if ctx.get("project") else [])
+    ms = [{"id": m[0], "text": m[1], "due": m[2]} for m in milestones_due(con, codes, day, ctx.get("due_soon_days") or 7)]
+    carried = [{"id": "", "text": c["point"]} for c in ctx.get("carried") or []]
+    return [("decide", decide), ("work", work), ("milestone", ms), ("carried", carried)]
+
+
+def agenda_meeting(ctx):
+    """The meeting as the prompt may see it: a confidential one keeps only its title and times (the calendar rule)."""
+    m = ctx.get("meeting") or {}
+    keep = {"title": m.get("title") or "", "start": m.get("start") or "", "end": m.get("end") or ""}
+    if m.get("confidential"):
+        return keep, True
+    return {**keep, "where": m.get("where") or "", "body": short(m.get("body") or "", 1500)}, False
+
+
+@kind("agenda", "agenda")
+def build_agenda(con, req):
+    """BL-223: the agenda points in plain code (each a source), and the meeting, for the model to word the invite text around."""
+    import prep_page
+    key = str(req.get("key") or "")
+    if not re.fullmatch(r"(\d{4}-\d{2}-\d{2}\|)?\d{2}:\d{2}\|.{1,200}", key):
+        raise Refused("Which meeting?")
+    import contextlib
+    with contextlib.redirect_stdout(sys.stderr):           # a library note ("image not found…") must not mix into the JSON
+        ctx = prep_page.context(key)
+    if ctx.get("error"):
+        raise Refused(ctx["error"])
+    meeting, confidential = agenda_meeting(ctx)
+    points = timed(allot(agenda_groups(ctx, con)), meeting)
+    if not points and not meeting.get("body"):
+        raise Nothing("Nothing to build an agenda from: no decisions, overdue or urgent work, milestones due or carried points, "
+                      "and no invite text. Write it yourself, or add the invite's purpose first.")
+    src = [{"id": ", ".join(p["ids"]) or "carried", "kind": p["kind"], "text": p["point"]} for p in points]
+    if meeting.get("body"):
+        src.append({"id": "invite", "kind": "invite", "text": "The invite says: " + short(meeting["body"], 400)})
+    kept, listed = number(src)
+    style = agenda_style(req)
+    what = (f"{meeting['title']}, {tracker.shown(ctx['day'])} {meeting['start']}–{meeting['end']}"
+            + (f" ({meeting['where']})" if meeting.get("where") else ""))
+    return Draft({"meeting": what, "project": ctx.get("project_name") or "", "sources": listed}, kept,
+                 item={"key": key, "project": ctx.get("project")},
+                 extra={"template": f"agenda-{style}", "style": style, "agenda": points, "confidential": confidential,
+                        "title": meeting["title"], "day": ctx["day"], "start": meeting["start"], "end": meeting["end"]})
+
+
+@parser("agenda")
+def parse_agenda(reply, ctx):
+    """POAD's four parts (or the lighter style's one), each with its sentences and sources; the timed agenda from plain code."""
+    ex = ctx.get("extra") or {}
+    heads = POAD_HEADS if ex.get("style") == "poad" else ("SUMMARY",)
+    parts = []
+    for h in heads:
+        body = section(reply, h, heads)
+        if body:
+            parts.append({"head": h.capitalize(), "text": clean(body), "sentences": marked(body, ctx["sources"])})
+    if not parts:
+        parts = [{"head": "", "text": clean(reply), "sentences": marked(reply, ctx["sources"])}]
+    return {"text": "\n\n".join(p["text"] for p in parts), "sentences": [s for p in parts for s in p["sentences"]], "parts": parts,
+            "agenda": ex.get("agenda") or [], "style": ex.get("style"), "confidential": bool(ex.get("confidential")),
+            "meeting": {k: ex.get(k) for k in ("title", "day", "start", "end")}}
+
+
+def agenda_file_text(d, attendees=False):
+    """The agenda as a Markdown file for the Agendas folder: marked Internal unless Alan marked it for attendees. Its list lines
+    are the agenda's points, which is what minutes.py agenda reads for Coverage (BL-209)."""
+    m = d.get("meeting") or {}
+    when = f"{tracker.shown(m.get('day') or '')} {m.get('start') or ''}–{m.get('end') or ''}".strip(" –")
+    lines = [f"# Agenda: {m.get('title') or 'Meeting'}", "", when, "",
+             "For attendees." if attendees else "Internal: not for sending as it is.", ""]
+    for p in d.get("parts") or []:
+        lines += ([f"## {p['head']}"] if p.get("head") else []) + [p.get("text") or "", ""]
+    lines += ["## Agenda", ""]
+    for p in d.get("agenda") or []:
+        at = f"{p['at']}, " if p.get("at") else ""
+        lines.append(f"- {p['point']} ({at}{p.get('minutes', 5)} min)")
+    return "\n".join(lines).rstrip() + "\n"
+# ===== end BL-223 =====
+
+
+# ===== BL-224 (sprint-drafts-writing) ===== follow-up and chase emails on the one Draft email builder =====
+# The email itself is plain code in the page (draftEmail's modes); nothing here writes an email, and nothing is ever sent. This block
+# gives the builder what only the server can read: a meeting's attendees with their addresses (the saved calendar, then the people
+# register) and the minutes' own summary paragraph (written by cx-minutes; nothing new is generated), and keeps the chase log
+# (system/staging/chases.json: item IDs, the date and the mode, written only when Alan presses "I sent it"). "Polish the wording"
+# is the one model step: it rewords the cover paragraph only, in a chosen tone; the table, subject and addresses are never sent to it.
+CHASES = paths.STAGING / "chases.json"
+CHASE_MODES = ("chase", "help", "decision")             # BL-298: the peek's three kinds of chase, all counted for the tone
+RECORD_MODES = ("chase", "update", "followup", "help", "decision")
+TONES = ("warm", "neutral", "firm")
+SUMMARY_HEADS = re.compile(r"^\s*(?:#+\s*)?(executive summary|summary)\s*:?\s*$", re.I)
+NEXT_HEAD = re.compile(r"^\s*(?:#+\s*)?(updates|decisions|action items|actions|open questions|attendees|agenda|escalations|"
+                       r"risks|next steps)\b.*$", re.I)
+
+
+def chases_load():
+    """The chase log's records, [{ids, date, mode}]; an unreadable file is an empty log."""
+    try:
+        data = json.loads(CHASES.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [c for c in data.get("chases") or [] if isinstance(c, dict)]
+
+
+def chase_record(ids, mode="chase", day=None):
+    """Add one record (the items Alan says he chased, today): references only, never message text. Returns the record."""
+    ids = list(dict.fromkeys(i for i in ids if isinstance(i, str) and ID_RE.fullmatch(i)))[:50]
+    if not ids:
+        raise ValueError("No item IDs to record.")
+    if mode not in RECORD_MODES:
+        raise ValueError("Not a mode creaite records.")
+    rec = {"ids": ids, "date": day or today(), "mode": mode}
+    data = {"chases": chases_load() + [rec]}
+    CHASES.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CHASES.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
+    tmp.replace(CHASES)
+    return rec
+
+
+def chase_counts():
+    """{item ID: {"n": how often chased, "last": YYYY-MM-DD}} from the log: chase records, and BL-298's help and decision requests
+    (each is a chase of one item, so the next one steps up)."""
+    out = {}
+    for c in chases_load():
+        if c.get("mode") not in CHASE_MODES:
+            continue
+        for i in c.get("ids") or []:
+            row = out.setdefault(i, {"n": 0, "last": ""})
+            row["n"] += 1
+            row["last"] = max(row["last"], str(c.get("date") or ""))
+    return out
+
+
+def minutes_summary(text):
+    """The minutes' own summary paragraph: the text under an "Executive summary" or "Summary" heading, up to the next heading."""
+    lines, out, inside = (text or "").splitlines(), [], False
+    for ln in lines:
+        if SUMMARY_HEADS.match(ln):
+            inside = True
+            continue
+        if inside and (NEXT_HEAD.match(ln) or ln.lstrip().startswith("#")) and out:
+            break
+        if inside and ln.strip():
+            out.append(ln.strip())
+    return short(" ".join(out), 1500)
+
+
+def minutes_file(files):
+    """The meeting's minutes, from the files the meeting page lists: a filed minutes file, else its draft in staging."""
+    for f in files or []:
+        f = str(f)
+        if ".." in f.split("/") or not re.search(r"(/minutes/|^system/staging/drafts/)[^/]+\.(docx|md|txt)$", f, re.I):
+            continue
+        try:
+            p = paths.resolve(f)
+        except (LookupError, ValueError):  # a path that no longer maps to a folder: try the next file
+            continue
+        if p.is_file():
+            return p
+    return None
+
+
+def calendar_event(req):
+    """The saved calendar's entry for the meeting (by its ID, else its day, start and title), or {}."""
+    try:
+        days = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+    except (OSError, ValueError):
+        return {}
+    for day, evs in days.items():
+        for ev in evs if isinstance(evs, list) else []:
+            if (req.get("eid") and ev.get("id") == req["eid"]) or \
+                    (day == req.get("day") and ev.get("start") == req.get("start") and ev.get("title") == req.get("title")):
+                return ev
+    return {}
+
+
+def attendees_of(ev):
+    """[{name, email}] from the invite, an address filled from the people register where the invite has none."""
+    import propose
+    try:
+        reg = {p["name"].lower(): p for p in propose.people_parse(propose.people_register_text()[0])}   # BL-298: (text, exists)
+    except Exception:  # noqa: BLE001  the register is a help here: without it, the invite's own addresses
+        reg = {}
+    me = (paths.load_settings().get("identity") or {}).get("name") or ""
+    out = []
+    for a in ev.get("attendees") or []:
+        name = str(a.get("name") or "").strip()
+        email = str(a.get("email") or "").strip() or (reg.get(name.lower()) or {}).get("email", "")
+        if name and name != me:
+            out.append({"name": name, "email": email})
+    return out
+
+
+def followup_facts(req):
+    """BL-224: what the follow-up email needs that only the server can read: the attendees and the minutes' summary paragraph.
+    A confidential meeting or minutes marked confidential or restricted give no summary (and the calendar keeps no attendees)."""
+    ev = calendar_event(req)
+    confidential = (ev.get("sensitivity") or "") == "confidential"
+    p = minutes_file(req.get("files"))
+    text = file_text(p) if p else ""
+    summary = "" if confidential or secret(text) else minutes_summary(text)
+    note = "Confidential: the summary is left out." if text and (confidential or secret(text)) else \
+        "" if summary else "The minutes have no summary paragraph yet." if p else "No minutes yet, so no summary."
+    return {"attendees": [] if confidential else attendees_of(ev), "summary": summary, "note": note,
+            "minutes": paths.rel(p) if p else None, "confidential": confidential}
+
+
+@kind("polish", "email")
+def build_polish(con, req):
+    """The cover paragraph only (never the table, subject or addresses), and the tone to reword it in."""
+    text, tone = short(req.get("text") or "", 1500), req.get("tone") if req.get("tone") in TONES else "neutral"
+    if not text:
+        raise Nothing("There is no cover paragraph to polish.")
+    if secret(text):
+        raise Refused("The paragraph mentions something confidential or restricted, so it isn't sent to a draft.")
+    kept, listed = number([{"id": "cover", "kind": "paragraph", "text": text}])
+    return Draft({"tone": tone, "sources": listed}, kept, item={"tone": tone}, extra={"tone": tone, "original": text})
+
+
+@parser("polish")
+def parse_polish(reply, ctx):
+    """The reworded paragraph (TEXT:), its sentences, and the original beside it."""
+    body = section(reply, "TEXT", ("TEXT",)) or reply
+    ex = ctx.get("extra") or {}
+    return {"text": clean(body), "sentences": marked(body, ctx["sources"]), "original": ex.get("original", ""), "tone": ex.get("tone")}
+# ===== end BL-224 =====
+
+
+# ===== BL-298 (sprint-draft-chase) ===== Draft chase from the peek: one item, three modes =====
+# Whose item it is decides the mode: someone else's is a chase to its owner (BL-224's DE_CHASE wording, unchanged); Alan's own is a
+# request for help (he picks the recipient from the suggestions below); a pending decision is asked of its decision maker. The email
+# is written by plain code from the item's facts (chase_draft), with no model call, so the peek pane renders it as Alan types; Polish
+# stays the existing "polish" kind (the opening paragraph only). "I sent it" is chase_record(ids, mode): IDs, the date and the mode.
+TONE_NAMES = ("First", "Second", "Firmer")
+# As accepted (Alan, 13-10-2026, dev/BACKLOG.md › BL-298 › As accepted); the page may reuse these strings as they are.
+CHASE_WORDING = {
+    "chase": {      # BL-224's DE_CHASE, unchanged (0129-bl-224-sprint-drafts-writing.js)
+        "subjects": ("Reminder", "Second reminder", "Overdue, reply needed"),
+        "openings": ("A quick reminder about the items below, which are now past their due dates.",
+                     "I'm following up on my earlier note{last} about the items below, which are still overdue.",
+                     "These items are now well overdue and are holding up other work; I have chased them {n}{since}."),
+        "asks": ("Could you let me know where each one stands, and when I can expect it?",
+                 "Could you let me have an update on each, and a date for anything still open?",
+                 "Please reply with a firm date for each, or tell me what is blocking it so that we can resolve it together."),
+        "reply_by": " It would be helpful to hear back by {reply_by}.",
+        "thanks": " Thank you very much for your help.",
+        "sign_off": "Kind regards,"},
+    "chase_one": {  # Alan, 13-10-2026: the peek chases one item, so DE_CHASE's texts in the singular (the subjects are DE_CHASE's)
+        "openings": ("A quick reminder about the item below, which is now past its due date.",
+                     "I'm following up on my earlier note{last} about the item below, which is still overdue.",
+                     "This item is now well overdue and is holding up other work; I have chased it {n}{since}."),
+        "asks": ("Could you let me know where it stands, and when I can expect it?",
+                 "Could you let me have an update, and a date for it?",
+                 "Please reply with a firm date, or tell me what is blocking it so that we can resolve it together.")},
+    "help": {
+        "subjects": ("Your help with", "Following up: your help with", "Needed this week: your help with"),
+        "openings": ("I've been asked to follow up with you on {item}, to get {outcome}. "
+                     "The action is with me ({id}), and I need your help to close it.",
+                     "I'm following up on my note of {last} about {item}; I still need your help to get {outcome}. "
+                     "The action is with me ({id}), and I need your help to close it.",
+                     "I need to close this out this week: the action to get {outcome} is with me, "
+                     "and I can't finish it without your input."),
+        "need": "What I need from you:",
+        "ask": "Could you let me know by {reply_by}? If someone else is better placed to help, a name would be just as useful.",
+        "sign_off": "Thank you,"},
+    "decision": {
+        "subjects": ("Decision needed", "Second reminder: decision needed", "Decision needed this week"),
+        "openings": ("A quick note on the decision below, which is needed soon for {unblocks}.",
+                     "I'm following up on my earlier note of {last} about the decision below; it is needed for {unblocks}.",
+                     "This decision is now holding up {unblocks}; I have asked for it {n}, most recently on {last}."),
+        "ask": "Could you let me have the decision, or tell me what you need to make it, by {reply_by}?",
+        "sign_off": "Thank you,"},
+}
+MODE_LINES = {      # the pane's mode line (a tag and one sentence)
+    "chase": ("Chase", "Chasing {first}, who owns it. {count}"),
+    "help": ("Yours", "This action is yours, so this asks for help rather than chasing. It makes clear the action is with you and what "
+                      "you need from them."),
+    "decision": ("Decision", "Asking {first} for the decision by its needed-by date. {count}"),
+}
+COUNT_WORDS = ("Not chased before: a first reminder.", "Chased once, on {last}: this is a second reminder.",
+               "Chased {n}, most recently on {last}: this is a firmer reminder.")
+REACH_OUT = re.compile(r"^(?:reach out to|follow up with|follow-up with|speak to|speak with|talk to|talk with|check with|"
+                       r"catch up with|chase|ask|contact|email|call|ping|meet)\s+(?:[A-Z][\w'’-]*\s+){1,3}"
+                       r"(?:on|about|re|regarding|for|over)\s+(.+)$", re.I)
+WHY_ORDER = ("named in the item", "raised it", "at the meeting", "project stakeholder")
+
+
+def times(n):
+    """once, twice, 3 times: as the Draft email says it (deTimes)."""
+    return "once" if n == 1 else "twice" if n == 2 else f"{n} times"
+
+
+def weekday_date(iso):
+    """YYYY-MM-DD → "Thursday 15-10-2026", the way the email names a reply-by date."""
+    try:
+        return f"{tracker.WEEKDAY_NAMES[date.fromisoformat(iso).weekday()]} {tracker.shown(iso)}"
+    except (TypeError, ValueError):
+        return ""
+
+
+def working_days_ahead(start, n=2, settings=None):
+    """The date n working days after start (YYYY-MM-DD or a date): weekend days (settings work.weekend_days) are skipped."""
+    from datetime import timedelta
+    d = date.fromisoformat(start) if isinstance(start, str) else start
+    off = tracker.weekend_days(settings)
+    left = n
+    while left > 0:
+        d += timedelta(days=1)
+        if d.weekday() not in off:
+            left -= 1
+    return d.isoformat()
+
+
+def due_words(due, day, kind="actions", soon=7):
+    """(words, overdue) for a due or needed-by date, as the Draft email says them: "4 days overdue", "due in 6 days",
+    "needed in 2 days"; no words beyond the due-soon window or without a date."""
+    if not due:
+        return "", False
+    try:
+        n = (date.fromisoformat(due) - date.fromisoformat(day)).days
+    except ValueError:
+        return "", False
+    if n < 0:
+        return f"{-n} day{'' if n == -1 else 's'} overdue", True
+    verb = "needed" if kind == "decisions" else "due"
+    if n > soon:
+        return "", False
+    return (f"{verb} today" if n == 0 else f"{verb} tomorrow" if n == 1 else f"{verb} in {n} days"), False
+
+
+def help_topic(text):
+    """(topic in a sentence, topic in a subject) from an action's words: "Reach out to Dana on back-to-back commercials" →
+    ("the back-to-back commercials", "back-to-back commercials"); otherwise the words as written, in quotes in the sentence."""
+    text = short(text, 160).rstrip(".")
+    m = REACH_OUT.match(text)
+    if m:
+        rest = m.group(1).strip()
+        bare = re.sub(r"^the\s+", "", rest, flags=re.I)
+        return f"the {bare}", bare
+    return f"“{text}”", text
+
+
+def chase_mode(kind, owner, me):
+    """BL-298: whose item it is decides the mode. A pending decision asked of someone else: decision; Alan's own item (owner or
+    decision maker): help; anyone else's: chase."""
+    mine = bool(me) and str(owner or "").strip().lower() == str(me).strip().lower()
+    if mine:
+        return "help"
+    if kind == "decisions":
+        return "decision"
+    return "chase"
+
+
+def chase_defaults(item_id, day=None, counts=None, settings=None):
+    """The pane's defaults: reply by two working days ahead, the tone preset from how often the item was chased (First, Second,
+    Firmer), the latest update included; with the count and the last chase date."""
+    day = day or today()
+    c = (chase_counts() if counts is None else counts).get(item_id) or {"n": 0, "last": ""}
+    return {"reply_by": working_days_ahead(day, 2, settings), "tone": min(c["n"], 2), "include_update": True,
+            "chased": {"n": c["n"], "last": c["last"]}}
+
+
+def mode_line(mode, first, chased):
+    """(tag, sentence) for the pane's mode line."""
+    tag, words = MODE_LINES[mode]
+    n, last = chased.get("n", 0), tracker.shown(chased.get("last") or "")
+    count = COUNT_WORDS[min(n, 2)].format(n=times(n), last=last)
+    return tag, words.format(first=first or "them", count=count)
+
+
+def chase_tone(o):
+    """The tone chosen (0 First, 1 Second, 2 Firmer), else the one the chase count presets."""
+    t = o.get("tone")
+    if t is None:
+        t = (o.get("chased") or {}).get("n", 0)
+    return max(0, min(int(t), 2))
+
+
+def greeting(hour, first):
+    """The Draft email's greeting: "Good morning, Dana," by the hour (deGreeting)."""
+    part = "morning" if hour < 12 else "afternoon" if hour < 18 else "evening"
+    return f"Good {part}{', ' + first if first else ''},"
+
+
+def _chase_words(f, o, tone, n, last, reply):
+    """{subject, opening, ask} for a chase: BL-224's DE_CHASE for one item, in the singular (Alan, 13-10-2026)."""
+    w, one = CHASE_WORDING["chase"], CHASE_WORDING["chase_one"]
+    opening = one["openings"][tone].replace("{last}", f" of {tracker.shown(last)}" if last else "").replace("{n}", times(n)) \
+        .replace("{since}", f", most recently on {tracker.shown(last)}" if last else "")
+    ask = one["asks"][tone] + (w["reply_by"].format(reply_by=reply) if reply else "") + w["thanks"]
+    return {"subject": f"[{f.get('code') or ''}] {w['subjects'][tone]}: {f.get('text') or ''}", "opening": opening, "ask": ask}
+
+
+def _help_words(f, o, tone, n, last, reply):
+    """{subject, opening, ask, outcome, need} for a request for help with Alan's own item; the outcome and need are his, else filled."""
+    w = CHASE_WORDING["help"]
+    topic, subj_topic = help_topic(f.get("text") or "")
+    outcome = str(o.get("outcome") or "").strip() or (f"{topic} done" if topic.startswith("the ") else "this done")
+    need = str(o.get("need") or "").strip() or f"Your input on {topic}."
+    tmpl = w["openings"][tone]
+    if not last:
+        tmpl = tmpl.replace("my note of {last}", "my earlier note")
+    opening = tmpl.format(item=topic, outcome=outcome, id=f.get("id") or "", last=tracker.shown(last))
+    ask = w["ask"].format(reply_by=reply or "the end of the week")
+    return {"subject": f"[{f.get('code') or ''}] {w['subjects'][tone]} {subj_topic}", "opening": opening, "ask": ask,
+            "outcome": outcome, "need": need}
+
+
+def _decision_words(f, o, tone, n, last, reply):
+    """{subject, opening, ask, unblocks} for a decision asked of its decision maker, by its needed-by date."""
+    w = CHASE_WORDING["decision"]
+    unblocks = str(o.get("unblocks") or f.get("unblocks") or "").strip() or f"the next steps on {f.get('name') or f.get('code')}"
+    tmpl = w["openings"][tone]
+    if not last:
+        tmpl = tmpl.replace(" of {last}", "").replace("{n}, most recently on {last}", "before")
+    opening = tmpl.format(unblocks=unblocks, last=tracker.shown(last), n=times(n))
+    ask = w["ask"].format(reply_by=reply or "its needed-by date")
+    return {"subject": f"[{f.get('code') or ''}] {w['subjects'][tone]}: {f.get('text') or ''}", "opening": opening, "ask": ask,
+            "unblocks": unblocks}
+
+
+MODE_WORDS = {"chase": _chase_words, "help": _help_words, "decision": _decision_words}
+
+
+def chase_row(f, mode, day, include_update=True):
+    """The item's one-row table, in all modes: ID; the item (a decision's "Decision needed:", the owner line for Alan's own, a
+    RAID item's response, the latest update when included); Due or Needed by with its words; priority."""
+    kind = f.get("kind") or "actions"
+    words, overdue = due_words(f.get("due"), day, kind)
+    update = str(f.get("update") or "").strip()
+    return {"id": f.get("id") or "", "label": row_label(f), "item": str(f.get("text") or "").strip(),
+            "owner": f"Owner: {f.get('owner')}" if mode == "help" else "", "response": row_response(f),
+            "update": f"Latest update: {update}" if include_update and update else "",
+            "due_label": "Needed by" if kind == "decisions" else "Due", "due": tracker.shown(f.get("due") or "") or "No date",
+            "due_words": words, "overdue": overdue, "priority": f.get("priority") or ""}
+
+
+def row_label(f):
+    """The words before the item in its row: "Decision needed:" for a decision, "Risk:" or "Issue:" for a RAID item."""
+    kind = f.get("kind") or "actions"
+    return "Decision needed:" if kind == "decisions" else f"{f.get('type') or 'Risk'}:" if kind == "raid" else ""
+
+
+def row_response(f):
+    """A RAID item's response line, as the Draft email shows it ("none recorded yet" when empty); '' for anything else."""
+    if (f.get("kind") or "") != "raid":
+        return ""
+    return f"Response: {str(f.get('response') or '').strip() or 'none recorded yet'}"
+
+
+def chase_text(parts):
+    """The email as plain text (Copy as text): the greeting, the opening, the need, the row as aligned lines, the ask, the sign-off."""
+    row = parts["row"]
+    lines = [parts["greeting"], "", parts["opening"], ""]
+    if parts["need"]:
+        lines += [f"{parts['need_label']} {parts['need']}", ""]
+    label = f"{row['label']} " if row["label"] else ""
+    words = f" ({row['due_words']})" if row["due_words"] else ""
+    lines.append(f"  {row['id']}  {label}{row['item']}  |  {row['due']}{words}  |  {row['priority']}")
+    lines += [f"  {' ' * len(row['id'])}  {x}" for x in (row["owner"], row["response"], row["update"]) if x]
+    lines += ["", parts["ask"], "", *[x for x in (parts["sign_off"], parts["from"]) if x]]
+    return "\n".join(lines)
+
+
+def chase_draft(facts, opts=None):
+    """BL-298: the drafted email for one item, from its facts, with no model call. facts: {id, code, name (the project's), kind
+    (actions, raid, decisions), text, owner, due, priority, update, type, response, unblocks}; opts: {mode, tone (0 First, 1 Second,
+    2 Firmer), reply_by (YYYY-MM-DD), include_update, first (the recipient's first name), from (Alan's first name), chased {n, last},
+    today, hour, outcome, need, unblocks, cover (a polished opening)}. Returns {mode, tone, subject, greeting, opening, need, row,
+    ask, sign_off, text}; the page builds its HTML from the same parts in the email's own palette."""
+    o = dict(opts or {})
+    mode = o.get("mode") or "chase"
+    if mode not in CHASE_MODES:
+        raise ValueError("Not a kind of chase creaite drafts.")
+    tone = chase_tone(o)
+    chased = o.get("chased") or {}
+    words = MODE_WORDS[mode](facts, o, tone, int(chased.get("n") or 0), chased.get("last") or "", weekday_date(o.get("reply_by") or ""))
+    hour = o.get("hour")
+    parts = {"mode": mode, "tone": tone, "tone_name": TONE_NAMES[tone], "subject": words["subject"],
+             "greeting": greeting(datetime.now().hour if hour is None else int(hour), str(o.get("first") or "").strip()),
+             "opening": str(o.get("cover") or "").strip() or words["opening"], "need_label": CHASE_WORDING[mode].get("need", ""),
+             "need": words.get("need", ""), "outcome": words.get("outcome", ""), "unblocks": words.get("unblocks", ""),
+             "row": chase_row(facts, mode, o.get("today") or today(), o.get("include_update", True) is not False), "ask": words["ask"],
+             "sign_off": CHASE_WORDING[mode]["sign_off"], "from": str(o.get("from") or "").strip()}
+    parts["text"] = chase_text(parts)
+    return parts
+
+
+def _register():
+    """The people register's people, [{name, email, aliases, org, role, hidden}]; [] when it can't be read."""
+    import propose
+    try:
+        return propose.people_parse(propose.people_register_text()[0])
+    except Exception:  # noqa: BLE001  without the register there are no suggestions to resolve, not an error
+        return []
+
+
+def _lookup(people):
+    """{full name, alias, email or a first name only one person has (lower case): person} for resolving a name to the register."""
+    out, firsts = {}, {}
+    for p in people:
+        fn = p["name"].split()[0].lower()
+        firsts[fn] = None if fn in firsts else p
+    out.update({k: p for k, p in firsts.items() if p})
+    for p in people:
+        out.update({k.lower(): p for k in [*p.get("aliases", []), p.get("email", "")] if k})
+        out[p["name"].lower()] = p
+    return out
+
+
+def _named(text, people, me_names):
+    """The register's people named in a text (full name, an alias, or a first name only one person has), in order of appearance."""
+    text = str(text or "")
+    firsts = {}
+    for p in people:
+        fn = p["name"].split()[0]
+        firsts[fn] = None if fn in firsts else p
+    found = []
+    for p in people:
+        if p["name"].lower() in me_names:
+            continue
+        keys = [p["name"], *p.get("aliases", [])] + ([p["name"].split()[0]] if firsts.get(p["name"].split()[0]) is p else [])
+        at = [m.start() for k in keys if k for m in [re.search(rf"(?<![\w@.]){re.escape(k)}(?![\w@])", text)] if m]
+        if at:
+            found.append((min(at), p))
+    return [p for _, p in sorted(found, key=lambda x: x[0])]
+
+
+def _source_meeting(src):
+    """(day, title) of the meeting a file source came from ("…/minutes/2026-10-12 ABC weekly.docx — Actions"), else None."""
+    head = (src or "").split(" — ")[0].strip()
+    m = re.search(r"/(?:minutes|transcripts)/(\d{4}-\d{2}-\d{2})\s+([^/]+?)(?:\.[A-Za-z0-9]+)?$", head)
+    return (m.group(1), m.group(2).strip()) if m else None
+
+
+def _meeting_attendees(day, title):
+    """The saved calendar's attendees for that meeting (its day, the title matched loosely), [] when it isn't there."""
+    try:
+        days = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+    except (OSError, ValueError, AttributeError):
+        return []
+    want = words(title)
+    for ev in days.get(day) or []:
+        if isinstance(ev, dict) and (ev.get("sensitivity") or "") != "confidential" and \
+                (str(ev.get("title") or "").strip().lower() == title.lower() or (want and want <= words(ev.get("title")))):
+            return [str(a.get("name") or "").strip() for a in ev.get("attendees") or [] if isinstance(a, dict)]
+    return []
+
+
+def _me_names(settings):
+    """Alan's own names (settings identity: his name and short forms), lower case: never a suggestion."""
+    ident = settings.get("identity") or {}
+    return {str(x).strip().lower() for x in [ident.get("name"), *(ident.get("short_forms") or [])] if str(x or "").strip()}
+
+
+def _source_people(src, look, people, me_names):
+    """[(name, why)] from an item's source: the sender of a mail or Teams message and anyone it names ("raised it"), then the
+    source meeting's attendees from the saved calendar ("at the meeting"). A confidential source gives no one."""
+    if secret(src):
+        return []
+    out = []
+    sender = re.search(r"\bFrom:\s*([^<·]+?)\s*(?:<([^>]*)>)?\s*(?:·|$)", src)
+    if sender:
+        out.append(((look.get((sender.group(2) or "").strip().lower()) or {}).get("name") or sender.group(1), WHY_ORDER[1]))
+    out += [(p["name"], WHY_ORDER[1]) for p in _named(src.split(" · Link:")[0], people, me_names)]
+    meeting = _source_meeting(src)
+    out += [(name, WHY_ORDER[2]) for name in (_meeting_attendees(*meeting) if meeting else [])]
+    return out
+
+
+def chase_recipients(facts, settings=None):
+    """BL-298: who might help with Alan's own item, ranked: named in the item (its words or latest update), who raised it (named in
+    its source), the source meeting's attendees, then the project's stakeholders. Each resolved through the people register (name,
+    email, organisation, role) and never Alan; the project shown by name. Nobody is labelled a VIP (BL-288)."""
+    settings = settings if settings is not None else paths.load_settings()
+    me_names, people = _me_names(settings), _register()
+    look = _lookup(people)
+    named = _named(f"{facts.get('text') or ''} {facts.get('update') or ''}", people, me_names)
+    ranked = [(p["name"], WHY_ORDER[0]) for p in named] + _source_people(str(facts.get("source") or ""), look, people, me_names) + \
+        [(n, WHY_ORDER[3]) for n in stakeholders_of(facts.get("code"), facts.get("sponsor"))]
+    project = tracker.project_label(facts.get("code")) if facts.get("code") else ""
+    out, seen = [], set(me_names) | {"tbc", ""}
+    for name, why in ranked:
+        name = str(name or "").strip()
+        p = look.get(name.lower()) or {}
+        key = (p.get("name") or name).lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"name": p.get("name") or name, "email": p.get("email", ""), "org": p.get("org", ""), "role": p.get("role", ""),
+                    "why": why, "known": bool(p), "project": project})
+    return out
+
+
+def stakeholders_of(code, sponsor=None):
+    """The project's stakeholders: its sponsor, then the register's Key and Shared stakeholders (build_dashboard.stakeholders)."""
+    names = [sponsor] if sponsor else []
+    try:
+        import build_dashboard
+        names += build_dashboard.stakeholders().get(code or "", [])
+    except (ImportError, OSError, ValueError):  # the project register is a help here: without it, the sponsor alone
+        return names
+    return [n for n in names if n]
+
+
+def chase_anyone(settings=None):
+    """"+ Anyone": everyone in the people register but Alan and hidden people, by name, with their email (never a VIP label)."""
+    settings = settings if settings is not None else paths.load_settings()
+    me = _me_names(settings)
+    return [{"name": p["name"], "email": p["email"], "org": p["org"], "role": p["role"]}
+            for p in sorted(_register(), key=lambda p: p["name"].lower()) if not p["hidden"] and p["name"].lower() not in me]
+
+
+LINKED_TEXT = {"milestones": "name", "actions": "description", "raid": "description", "decisions": "decision", "promises": "description"}
+
+
+def _the(name):
+    """A milestone's name as the email says it: "the Phase 2 proposal"."""
+    return name if name.lower().startswith("the ") else f"the {name}"
+
+
+def decision_unblocks(con, decision_id, next_milestone):
+    """What a decision is needed for: the first item it is linked to as a blocker (BL-90's links), else the project's next
+    milestone; '' when neither is known (the email then says "the next steps on <project>")."""
+    for (to,) in con.execute("SELECT to_item FROM links WHERE from_item = ? ORDER BY created", (decision_id,)):
+        t = tracker.item_table(to)
+        r = con.execute(f"SELECT {LINKED_TEXT[t]} FROM {t} WHERE id = ?", (to,)).fetchone() if t in LINKED_TEXT else None
+        if r and r[0] and not secret(r[0]):
+            return _the(r[0]) if t == "milestones" else r[0]
+    return _the(next_milestone) if next_milestone else ""
+
+
+def _chase_core(table, x, item_id):
+    """(text, owner, due) of an item that can be chased; Refused for a decision not pending or an item that isn't open."""
+    if table == "decisions":
+        if x.get("status") != "Pending":
+            raise Refused(f"{item_id} isn't waiting on a decision.")
+        return x["decision"], x.get("made_by") or "", x.get("needed_by")
+    if x.get("status") not in ("Open", "Delayed"):
+        raise Refused(f"{item_id} is closed, so there is nothing to chase.")
+    return x["description"], x.get("owner") or "", x.get("due_date")
+
+
+def chase_facts(item_id):
+    """The item's facts for a chase, from the tracker (read only): {id, code, name, kind, text, owner, due, priority, update, type,
+    response, source, sponsor, status, unblocks}. Refused for a closed item, a proposal or anything confidential."""
+    con = ro()
+    try:
+        table, x = item_row(con, str(item_id or ""))
+        text, owner, due = _chase_core(table, x, item_id)
+        upd, src = x.get("latest_update") or "", x.get("source") or ""
+        if secret(" ".join([text, upd, x.get("response_action") or "", src])) or re.search(r"(^|/)documents/", src):
+            raise Refused(f"{item_id} is marked confidential or restricted, so it can't go in an email.")
+        proj = con.execute("SELECT name, sponsor, next_milestone FROM projects WHERE code = ?", (x["project"],)).fetchone()
+        proj = dict(proj) if proj else {"name": x["project"], "sponsor": "", "next_milestone": ""}
+        unblocks = decision_unblocks(con, x["id"], proj["next_milestone"]) if table == "decisions" else ""
+        return {"id": x["id"], "code": x["project"], "name": proj["name"], "kind": table, "text": text, "owner": owner, "due": due,
+                "priority": x.get("priority") or "", "update": upd, "type": x.get("type") or "", "response": x.get("response_action") or "",
+                "source": src, "sponsor": proj["sponsor"] or "", "status": x.get("status"), "unblocks": unblocks}
+    finally:
+        con.close()
+
+
+def chase_to(mode, owner, asked, suggestions):
+    """The recipient: the one Alan picked, else the owner or decision maker, else (Alan's own item) the first suggestion; with
+    the email from the people register and the first name the greeting uses."""
+    name = str(asked or "").strip() or ("" if mode == "help" else owner)
+    if not name and suggestions:
+        name = suggestions[0]["name"]
+    p = _lookup(_register()).get(name.lower()) or {}
+    name = p.get("name") or name
+    return {"name": name, "email": p.get("email", ""), "first": name.split()[0] if name else ""}
+
+
+def chase_options(req, d):
+    """Alan's choices from the pane over the defaults: the tone, reply-by date, latest update and his own words."""
+    tone = req.get("tone") if req.get("tone") in (0, 1, 2) else d["tone"]
+    reply_by = req.get("reply_by") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(req.get("reply_by") or "")) else d["reply_by"]
+    inc = d["include_update"] if req.get("include_update") is None else bool(req.get("include_update"))
+    own = {k: str(req[k])[:500] for k in ("outcome", "need", "unblocks", "cover") if req.get(k)}
+    return {"tone": tone, "reply_by": reply_by, "include_update": inc, "chased": d["chased"], "hour": req.get("hour"), **own}
+
+
+def chase_pane(req):
+    """Everything the peek's Draft chase pane needs for one item: the mode and its line, the recipient (the owner or decision maker,
+    from the people register; for Alan's own item the first suggestion), the suggestions and "Anyone", the defaults and the draft
+    with Alan's choices (req: {id, tone, reply_by, include_update, to, outcome, need, unblocks, cover, hour}), and the wording."""
+    settings = paths.load_settings()
+    me = str((settings.get("identity") or {}).get("name") or "").strip()
+    try:
+        f = chase_facts(req.get("id"))
+    except Refused as e:
+        return {"ok": False, "message": str(e)}
+    mode = chase_mode(f["kind"], f["owner"], me)
+    d = chase_defaults(f["id"], settings=settings)
+    suggestions = chase_recipients(f, settings) if mode == "help" else []
+    to = chase_to(mode, f["owner"], req.get("to"), suggestions)
+    draft = chase_draft(f, {**chase_options(req, d), "mode": mode, "first": to["first"], "from": me.split()[0] if me else ""})
+    tag, line = mode_line(mode, to["first"], d["chased"])
+    return {"ok": True, "id": f["id"], "mode": mode, "mode_tag": tag, "mode_line": line, "project": f["name"], "code": f["code"],
+            "to": to, "suggestions": suggestions, "anyone": chase_anyone(settings) if mode == "help" else [],
+            "defaults": d, "draft": draft, "wording": CHASE_WORDING}
+
+
+# Polish in the Draft chase pane (Alan, 13-10-2026, option A). Someone else's item and a decision use the "polish" kind above (the
+# opening only). Alan's own item uses "polish-help": the opening reworded, and the two lines above it (To get … done, What I need
+# from you) suggested. The model gets the opening, the item's own wording, its latest update, the two lines as Alan has them and the
+# tone; never the table, subject or addresses. The server reads the item itself (chase_facts: closed or confidential is refused).
+DATE_OR_ID = re.compile(r"\b(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2}|[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3})\b")
+
+
+@kind("polish-help", "email")
+def build_polish_help(con, req):
+    """Alan's own item: the opening, the item as written, its latest update and his two lines, in the tone; anyone else's is refused."""
+    text, tone = short(req.get("text") or "", 1500), req.get("tone") if req.get("tone") in TONES else "neutral"
+    if not text:
+        raise Nothing("There is no opening to polish.")
+    f = chase_facts(req.get("id"))
+    me = str((paths.load_settings().get("identity") or {}).get("name") or "").strip()
+    if chase_mode(f["kind"], f["owner"], me) != "help":
+        raise Refused("The two lines are suggested only for your own items; Polish rewords the opening alone here.")
+    outcome, need = short(req.get("outcome") or "", 300), short(req.get("need") or "", 500)
+    if secret(" ".join([text, outcome, need])):
+        raise Refused("The wording mentions something confidential or restricted, so it isn't sent to a draft.")
+    src = [{"id": "cover", "kind": "paragraph", "text": text},
+           {"id": f["id"], "kind": "item", "text": f"The action as written: “{short(f['text'], 300)}”"}]
+    if f.get("update"):
+        src.append({"id": f["id"], "kind": "update", "text": f"Its latest update: {short(f['update'], 300)}"})
+    if outcome:
+        src.append({"id": "outcome", "kind": "outcome", "text": f"To get … done, as Alan has it: {outcome}"})
+    if need:
+        src.append({"id": "need", "kind": "need", "text": f"What I need from you, as Alan has it: {need}"})
+    kept, listed = number(src)
+    return Draft({"tone": tone, "sources": listed}, kept, item={"tone": tone, "id": f["id"]},
+                 extra={"tone": tone, "original": text, "outcome": outcome, "need": need})
+
+
+def help_outcome(text):
+    """A suggested "To get … done" as the opening uses it ("to get <it>"): one line, no leading "to get", no full stop, 200 at most."""
+    t = re.sub(r"^(?:to\s+)?get\s+", "", clean(text).splitlines()[0].strip() if clean(text) else "", flags=re.I)
+    return short(t.rstrip(" ."), 200)
+
+
+def help_need(text):
+    """A suggested "What I need from you": one or two sentences, ending with a full stop, 400 at most."""
+    t = re.sub(r"^what i need from you:\s*", "", " ".join(clean(text).split()), flags=re.I)
+    t = short(t, 400)
+    return t if not t or t[-1] in ".?!…" else t + "."
+
+
+def polish_help_notes(parsed, sources):
+    """Plain-code checks on the reply: a date or ID that none of the sources gives, and a line that came back empty."""
+    given = " ".join(s["text"] for s in sources)
+    notes = []
+    for part, words_ in (("opening", parsed["text"]), ("To get … done", parsed["outcome"]), ("What I need from you", parsed["need"])):
+        if not words_:
+            notes.append(f"No {part} came back, so yours is kept.")
+        for x in sorted(set(DATE_OR_ID.findall(words_ or ""))):
+            if x not in given:
+                notes.append(f"The {part} mentions {x}, which the item doesn't give.")
+    return notes
+
+
+@parser("polish-help")
+def parse_polish_help(reply, ctx):
+    """TEXT: the reworded opening; OUTCOME: To get … done; NEED: What I need from you; Alan's own versions beside them; the notes."""
+    heads = ("TEXT", "OUTCOME", "NEED", "SOURCES")
+    body = section(reply, "TEXT", heads) or (reply or "").split("\nOUTCOME:")[0]
+    ex = ctx.get("extra") or {}
+    out = {"text": clean(body), "sentences": marked(body, ctx["sources"]), "original": ex.get("original", ""), "tone": ex.get("tone"),
+           "outcome": help_outcome(section(reply, "OUTCOME", heads)), "need": help_need(section(reply, "NEED", heads)),
+           "was_outcome": ex.get("outcome", ""), "was_need": ex.get("need", "")}
+    out["notes"] = polish_help_notes(out, ctx["sources"])
+    return out
+# ===== end BL-298 =====
+
+
+# ===== BL-227 (sprint-drafts-writing) ===== one set of facts, many forms =====
+# The ranked facts sheet (status_facts.py) written as a Steering note, a Three-line update, an Email paragraph or a Teams message, for
+# an audience (Internal, Client-safe, Steering committee, Sponsor). Plain code chooses the facts; the model words them in the form's
+# voice (executive-style.md › Forms); a plain-code check says when the text is longer than the form allows. The text is shown with
+# Copy and is never saved; only the Current state form (Generate as before) can be saved.
+FORMS = {"steering": ("Steering note", "Steering note", None, None),
+         "three": ("Three-line update", "Three-line update", 60, 3),
+         "email": ("Email paragraph", "Email paragraph", 120, 1),
+         "teams": ("Teams message", "Teams message", 50, 3)}
+FORM_AUDIENCES = ("internal", "client", "steering", "sponsor")
+
+
+def form_voice(form):
+    """The form's own note in executive-style.md (its "### <name>" section under Forms)."""
+    import report
+    m = re.search(rf"^### {re.escape(FORMS[form][1])}\n(.*?)(?=^#|\Z)", report.style_guide(forms=True), re.S | re.M)
+    return m.group(1).strip() if m else ""
+
+
+def form_limits(form, length):
+    """(words, lines) the form allows: a Steering note takes the chosen length's words; the others their own."""
+    import status_facts
+    words, lines = FORMS[form][2], FORMS[form][3]
+    if words is None:
+        words = status_facts.settings()["length_words"].get(length) or 150
+    return words, lines
+
+
+def form_request(req):
+    """(code, form, audience, length, start, end) from a request, or Refused."""
+    code, form = str(req.get("code") or ""), req.get("form")
+    audience, length = req.get("audience") or "internal", req.get("length") or "standard"
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code):
+        raise Refused("Not a project.")
+    if form not in FORMS:
+        raise Refused("Choose a form: steering note, three-line update, email paragraph or Teams message.")
+    if audience not in FORM_AUDIENCES or length not in ("short", "standard", "fuller"):
+        raise Refused("Not an audience or length creaite knows.")
+    dates = [req.get(k) or None for k in ("from", "to")]
+    if any(d and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
+        raise Refused("Dates must be YYYY-MM-DD.")
+    return code, form, audience, length, dates[0], dates[1]
+
+
+@kind("status-form", "forms")
+def build_status_form(con, req):
+    """BL-227: the facts sheet for the audience (status_facts: client-safe holds only client-visible items; steering and sponsor
+    nothing sensitive), each line a source, and the form's voice and length."""
+    import contextlib
+    import report
+    import status_facts
+    code, form, audience, length, start, end = form_request(req)
+    if not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
+        raise Refused("Not a project.")
+    with contextlib.redirect_stdout(sys.stderr):
+        f = status_facts.facts(code, start, end, audience)
+    src = [{"id": ln["fid"], "kind": part["title"], "text": ln["text"]} for part in f["parts"] for ln in part["lines"]]
+    if not src:
+        raise Nothing("The facts sheet is empty for this period and audience: nothing to write from.")
+    kept, listed = number(src)
+    words, lines = form_limits(form, length)
+    note = str(req.get("note") or "").strip()[:500]
+    return Draft({"form": form, "form_name": FORMS[form][0], "name": f"{code} {f['name']}", "start": tracker.shown(f["start"]),
+                  "end": tracker.shown(f["end"]), "audience_note": report.AUDIENCE_NOTES[audience],
+                  "length_note": f"at most {words} words" + (f" and {lines} line{'s' if lines != 1 else ''}" if lines else ""),
+                  "note": f"Alan's steer: {note}\n" if note else "", "form_voice": form_voice(form),
+                  "style": report.style_guide(forms=True),
+                  "sources": listed}, kept, item={"code": code},
+                 extra={"form": form, "audience": audience, "words": words, "lines": lines})
+
+
+@parser("status-form")
+def parse_status_form(reply, ctx):
+    """The text and its sources, and a plain-code length check against the form's limits."""
+    out = default_parse(reply, ctx)
+    ex = ctx.get("extra") or {}
+    n_words, n_lines = len(re.findall(r"\S+", out["text"])), len([ln for ln in out["text"].splitlines() if ln.strip()])
+    notes = []
+    if ex.get("words") and n_words > ex["words"]:
+        notes.append(f"{n_words} words: longer than this form's {ex['words']}.")
+    if ex.get("lines") and n_lines > ex["lines"]:
+        notes.append(f"{n_lines} lines: this form takes {ex['lines']}.")
+    return {**out, "form": ex.get("form"), "audience": ex.get("audience"), "words": n_words, "lines": n_lines, "length_notes": notes}
+# ===== end BL-227 =====
+
+
+# ===== BL-220 (sprint-drafts-extraction) ===== Sharpen: a vague action's title (extraction.vague: under four words or no verb; a clear
+# title is refused, so the model is asked only for a vague one) is reworded verb-first from what creaite holds: the words as written,
+# the project, its workstreams and open milestones, the owner, and the passage it came from. The page shows it beside the original;
+# Alan picks one and the original is kept (BL-232's as_proposed for a proposal; the source line for a new item).
+@kind("sharpen", "sharpen")
+def build_sharpen(con, req):
+    """The facts for Sharpen: the words as written, the owner, the project's lists, the source passage. A clear title is refused."""
+    import extraction
+    title, code, owner, srcline = sharpen_item(con, req)
+    why = extraction.vague(title)
+    if not why:
+        raise Refused("The title is already clear: it has a verb and says what. Sharpen is for a vague title.")
+    src = [{"id": "", "kind": "title", "text": f"The action as written: “{short(title, 300)}”"}]
+    if owner and owner != "TBC":
+        src.append({"id": "", "kind": "owner", "text": f"Its owner: {owner}"})
+    src += project_lists(con, code)
+    p = source_path(srcline)
+    if p and not secret(srcline) and not secret(p.name):
+        text = file_text(p)
+        for q in passages(text, title, None, limit=2, span=1) if not secret(text[:400]) else []:
+            if not secret(q):
+                src.append({"id": "", "kind": "passage", "path": paths.rel(p), "text": f"{p.stem}: “{short(q, 300)}”"})
+    kept, listed = number(src)
+    return Draft({"title": title, "why": why, "sources": listed}, kept, item={"title": title})
+
+
+def sharpen_item(con, req):
+    """(title, project code, owner, source line) of the action to sharpen: a proposal, a tracker item, or the words typed."""
+    if req.get("proposal"):
+        table, x = proposal_item(req)
+    elif req.get("id"):
+        table, x = item_row(con, str(req.get("id")))
+    else:
+        table, x = "actions", {"description": req.get("title") or "", "project": req.get("code") or ""}
+    if table != "actions":
+        raise Refused("Sharpen is for actions.")
+    title = str(req.get("title") or x.get("description") or "").strip()
+    if not title:
+        raise Nothing("Write the action first; Sharpen rewords what you typed.")
+    return title, str(req.get("code") or x.get("project") or ""), x.get("owner") or "", x.get("source") or ""
+
+
+def project_lists(con, code):
+    """The project's name, its active workstreams and its open milestones, as sources (names only)."""
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code or ""):
+        return []
+    out = [{"id": code, "kind": "project", "text": f"The project: {tracker.project_label(code)}"}]
+    ws = [r[0] for r in con.execute("SELECT name FROM workstreams WHERE project = ? AND coalesce(status, 'Active') = 'Active'", (code,))]
+    ms = [r[0] for r in con.execute("SELECT name FROM milestones WHERE project = ? AND coalesce(status, '') NOT IN ('Done', 'Cancelled')",
+                                    (code,))]
+    if ws:
+        out.append({"id": code, "kind": "workstreams", "text": "Its workstreams: " + ", ".join(ws[:12])})
+    if ms:
+        out.append({"id": code, "kind": "milestones", "text": "Its open milestones: " + ", ".join(ms[:12])})
+    return out
+
+
+@parser("sharpen")
+def parse_sharpen(reply, ctx):
+    """The sharpened title (with its sources), the original beside it, and the one-line why."""
+    lines = (section(reply, "TITLE", ["TITLE", "WHY", "SOURCES"]) or (reply or "")).strip().splitlines()
+    line = lines[0].strip() if lines else ""
+    why = clean(section(reply, "WHY", ["TITLE", "WHY", "SOURCES"]))[:200]
+    return {"text": clean(line).rstrip("."), "sentences": marked(line, ctx["sources"]), "original": ctx["item"]["title"], "why": why}
+# ===== end BL-220 =====
+
+
+# ===== BL-286 (sprint-prep-server) ===== Shape the meeting: Alan's instruction (his focus and aim) read and turned into cited notes.
+# Plain code gathers the sources (prep_shape.shape_sources: the instruction, the invite and its ranking, the listed items, what
+# wasn't covered last time, the items and documents linked to the focus, milestones due, the latest minutes); the model states its
+# reading and words the notes; prep_shape.parse checks every line's citation. A confidential meeting: the instruction and tracker
+# items only (the live server also gives that run no tools). Nothing is saved here: Accept saves to prep-focus.json.
+SHAPE_SOURCES = 30
+
+
+def _shape_meeting(ctx, conf):
+    mt = ctx["meeting"]
+    what = f"{mt['title']}, {tracker.shown(ctx['day'])} {mt.get('start', '')}–{mt.get('end', '')}"
+    return what + (f" ({mt['where']})" if mt.get("where") and not conf else "")
+
+
+def _shape_correction(reading):
+    if not reading:
+        return ""
+    focus = "; ".join(f.get("text") or f.get("id") or "" for f in reading.get("focus") or [])
+    return (f"\nAlan corrected your reading. Keep it exactly: FOCUS: {focus}\nAIM: {reading.get('aim') or ''}\n"
+            f"SHOW: {reading.get('show') or 'focus-first'}\n")
+
+
+def _shape_research(conf):
+    if conf:
+        return ("\nThis meeting is confidential: use only the sources below. Do not search, open or read anything else, and "
+                "never look for the invite.")
+    return ("\nYou may read the meeting records and documents listed below (read-only) to understand them, but cite only the "
+            "numbered sources.")
+
+
+def _known_ids(con, codes):
+    out = []
+    for table in ("actions", "raid", "decisions", "milestones"):
+        marks = ",".join("?" * len(codes))
+        out += [r[0] for r in con.execute(f"SELECT id FROM {table} WHERE project IN ({marks})", codes)]
+    return out
+
+
+def _shape_context(key):
+    """(the meeting's prep context, its Prep brief record); Refused when the meeting isn't in the calendar any more."""
+    import contextlib
+    import prep_page
+    with contextlib.redirect_stdout(sys.stderr):           # a library note must not mix into the JSON
+        d = prep_page._collect()
+        with prep_page.using(d):
+            ctx = prep_page.context(key)
+    if ctx.get("error"):
+        raise Refused(ctx["error"])
+    return ctx, prep_page.meeting_entry(d, key)
+
+
+def _shape_clear(v):
+    """Clear: True (every section), a list of sections, or False (keep Alan's edits)."""
+    return v if v is True or isinstance(v, list) else False
+
+
+@kind("shape", "shape")
+def build_shape(con, req):
+    """BL-286: the sources for shaping one meeting from Alan's instruction (and his corrected reading, when he gave one)."""
+    import prep_shape
+    key, instruction = str(req.get("key") or ""), str(req.get("instruction") or "").strip()[:4000]
+    if not re.fullmatch(r"(\d{4}-\d{2}-\d{2}\|)?\d{2}:\d{2}\|.{1,200}", key):
+        raise Refused("Which meeting?")
+    if not instruction:
+        raise Nothing("Write how you want to run the meeting first: the focus and what you want out of it.")
+    ctx, m = _shape_context(key)
+    conf = bool(ctx["meeting"].get("confidential"))
+    reading = prep_shape.clean_reading(req["reading"]) if isinstance(req.get("reading"), dict) else None
+    src = prep_shape.shape_sources(con, ctx, instruction, reading, m.get("rank"))[:SHAPE_SOURCES]
+    for i, s in enumerate(src, 1):
+        s["ref"] = f"S{i}"
+    mid = prep_shape.canonical(key, ctx["day"])
+    current = req.get("current") if isinstance(req.get("current"), dict) else prep_shape.get(mid)
+    codes = (ctx.get("research") or {}).get("codes") or [ctx["project"]]
+    return Draft({"meeting": _shape_meeting(ctx, conf), "project": ctx.get("project_name") or "", "instruction": instruction,
+                  "correction": _shape_correction(reading), "research": _shape_research(conf),
+                  "sources": "\n".join(f"[{s['ref']}] {s['text']}" for s in src)}, src,
+                 item={"key": key, "id": mid, "project": ctx["project"]},
+                 extra={"confidential": conf, "key": key, "day": ctx["day"], "known_ids": _known_ids(con, codes),
+                        "current": current or {}, "clear": _shape_clear(req.get("clear")), "instruction": instruction})
+
+
+@parser("shape")
+def parse_shape(reply, ctx):
+    """The reading, the drafted notes (merged with Alan's edits unless he cleared them) and the checks on every line."""
+    import prep_shape
+    ex = ctx.get("extra") or {}
+    out = prep_shape.parse(reply, ctx["sources"], ex.get("known_ids") or [], ex.get("current"), ex.get("clear"))
+    lines = [ln for sec in prep_shape.SECTIONS for ln in out["drafted"].get(sec) or []]
+    out["checks_ok"] = out.pop("ok")                      # "ok" is the draft event's own (it says the reply could be read)
+    return {**out, "confidential": bool(ex.get("confidential")), "instruction": ex.get("instruction", ""),
+            "text": "\n".join(ln["text"] for ln in lines),
+            "sentences": [{"text": ln["text"], "refs": ln["refs"], "unsourced": not ln["refs"]} for ln in lines]}
+# ===== end BL-286 =====
+
+
+# ── the two steps the live server calls ──────────────────────────────────────
+
+# ===== BL-322 (v193-sneak-peek-server) ===== Sneak peek: an action's latest update, tidied ("tidy the update") or written from the
+# reason Alan typed ("push it out a week because Northgate's dates slipped"). Under the feature "update"; Use this or Keep mine in the box.
+SNEAK_MODES = ("tidy", "reason")
+
+
+@kind("sneak-update", "update")
+def build_sneak_update(con, req):
+    """Builder for Sneak peek's update: the action's own update to tidy, or Alan's reason to word as one. Nothing else is a source."""
+    item_id = str(req.get("id") or "")
+    table, x = item_row(con, item_id)
+    if table != "actions":
+        raise Refused("Only actions have a latest update.")
+    mode = req.get("mode")
+    if mode not in SNEAK_MODES:
+        raise Refused("Sneak peek drafts an update by tidying the one there, or from a reason.")
+    words = (x.get("latest_update") or "").strip() if mode == "tidy" else str(req.get("text") or "").strip()[:1500]
+    if not words:
+        raise Nothing("There's no update to tidy yet." if mode == "tidy" else "No reason was given.")
+    if secret(words):
+        raise Refused("Those words are marked confidential or restricted: no draft is made from them.")
+    src = [{"id": item_id, "kind": "words", "text": ("The update as it stands" if mode == "tidy" else "Alan's reason")
+            + f": “{short(words, 600)}”"}]
+    kept, listed = number(src)
+    task = ("Tidy the action's latest update: the same facts, said more clearly and briefly." if mode == "tidy" else
+            "Turn Alan's reason into the action's latest update: one short line saying what changed and why.")
+    return Draft({"item": item_lines(table, x), "task": task, "sources": listed, "today": tracker.shown(today())}, kept,
+                 item={"id": item_id, "table": table, "mode": mode})
+# ===== end BL-322 =====
+
+
+def context(req):
+    """{feature, kind, prompt, sources, item, extra} for a request, or {nothing}/{refused} with the words to show."""
+    name = req.get("kind")
+    if name not in KINDS:
+        return {"refused": "Not a kind of draft creaite knows."}
+    feature, fn = KINDS[name]
+    if not enabled(feature):
+        return {"refused": f"{FEATURES.get(feature, (feature.capitalize(),))[0]} is turned off in Settings › General › AI drafts.",
+                "off": True}
+    con = ro()
+    try:
+        d = fn(con, req)
+    except Nothing as e:
+        return {"nothing": str(e), "feature": feature}
+    except Refused as e:
+        return {"refused": str(e), "feature": feature}
+    finally:
+        con.close()
+    template = d.extra.get("template") or name
+    return {"feature": feature, "kind": name, "prompt": render(template, d.values), "sources": d.sources, "item": d.item,
+            "extra": d.extra}
+
+
+def result(req, ctx, reply):
+    """The parsed draft: text, sentences with their sources (an unsourced one marked), and the kind's own parts."""
+    out = (PARSERS.get(ctx["kind"]) or default_parse)(reply, ctx)
+    out["sources"] = ctx["sources"]
+    out["unsourced"] = sum(1 for s in out.get("sentences") or [] if s["unsourced"])
+    return out
+
+
+def main(argv):
+    """The scaffold's commands: context, result (a several-item draft is staged as pending proposals), stat, stats and features.
+    Counts go to system/staging/draft-stats.json; nothing here writes to the tracker."""
+    if not argv:
+        print(__doc__)
+        return 2
+    cmd, args = argv[0], argv[1:]
+    if cmd == "context":
+        print(json.dumps(context(json.loads(sys.stdin.read() or "{}")), ensure_ascii=False))
+        return 0
+    if cmd == "result":
+        got = json.loads(sys.stdin.read() or "{}")
+        out = result(got.get("request") or {}, got["context"], got.get("reply") or "")
+        stager = STAGERS.get(got["context"].get("kind"))
+        if stager:                                          # a draft of several items: staged as pending proposals
+            name, n = stager(out, got["context"])
+            out.update({"staged": n, "file": name})
+            if n:
+                record(got["context"]["feature"], "offered", n)
+        elif out.get("text"):
+            record(got["context"]["feature"], "offered")
+        print(json.dumps(out, ensure_ascii=False))
+        return 0
+    if cmd == "stat" and len(args) >= 2:
+        try:
+            row = record(args[0], args[1], int(args[2]) if len(args) > 2 else 1)
+        except ValueError as e:
+            print(f"Not counted: {e}")
+            return 1
+        print(json.dumps(row))
+        return 0
+    if cmd == "stats":
+        data = read_stats()
+        if "--json" in args:
+            print(json.dumps(data, indent=1))
+        else:
+            for f, (label, _) in FEATURES.items():
+                r = data.get(f) or {}
+                print(f"{label}: offered {r.get('offered', 0)}, used {r.get('used', 0)}, edited {r.get('edited', 0)}, rejected {r.get('rejected', 0)}")
+        return 0
+    if cmd == "features":
+        on = switches()
+        rows = [{"id": f, "label": label, "help": hlp, "on": on.get(f, True)} for f, (label, hlp) in FEATURES.items()]
+        print(json.dumps(rows) if "--json" in args else "\n".join(f"{r['label']}: {'on' if r['on'] else 'off'}" for r in rows))
+        return 0
+    print(__doc__)
+    return 2
+
+
+# ===== BL-224 (sprint-drafts-writing) ===== the command line's writing commands, ahead of main's own
+def _cmd_chase(args):
+    """chase record --ids A,B [--mode chase|help|decision|update|followup]: one record in chases.json (references only)."""
+    opts = dict(zip(args[1::2], args[2::2]))
+    try:
+        print(json.dumps(chase_record((opts.get("--ids") or "").split(","), opts.get("--mode", "chase"))))
+    except ValueError as e:
+        print(f"Not recorded: {e}")
+        return 1
+    return 0
+
+
+def _cmd_followup(args):
+    """followup: the meeting (JSON on stdin) → its attendees and the minutes' summary paragraph."""
+    print(json.dumps(followup_facts(json.loads(sys.stdin.read() or "{}")), ensure_ascii=False))
+    return 0
+
+
+def _cmd_chase_pane(args):
+    """chase-pane: BL-298's Draft chase for one item (JSON {id, …} on stdin) → its mode, recipient, suggestions, defaults and draft."""
+    print(json.dumps(chase_pane(json.loads(sys.stdin.read() or "{}")), ensure_ascii=False))
+    return 0
+
+
+WRITING_COMMANDS = {"chase": _cmd_chase, "chases": lambda args: print(json.dumps(chase_counts())) or 0, "followup": _cmd_followup,
+                    "chase-pane": _cmd_chase_pane}   # BL-298
+_main_before_writing = main
+
+
+def main(argv):  # noqa: F811  the writing commands first, then the scaffold's own (sprint-drafts-writing)
+    """drafts.py's command line: the writing sprint's commands (chase, chases, followup), else the scaffold's."""
+    if argv and argv[0] in WRITING_COMMANDS:
+        return WRITING_COMMANDS[argv[0]](argv[1:])
+    return _main_before_writing(argv)
+# ===== end BL-224 =====
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

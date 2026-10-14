@@ -1,0 +1,78 @@
+exit 0
+Wrote <VAULT>/system/staging/drafts/2026-10-09 Weekly report - Example Programme.docx
+Removed draft input: 2026-10-09 Weekly report - Example Programme.values.json
+system/staging/proposed-2026-10-09-1300-weekly-ABC.json: 2 items, 0 problem(s)
+Staged system/staging/proposed-2026-10-09-1300-weekly-ABC.json: Example Programme weekly report, week ending 09-10-2026
+Draft: system/staging/drafts/2026-10-09 Weekly report - Example Programme.docx
+Health: At risk — UAT start slipped 14 days
+Current state: rewritten in the project's CLAUDE.md on approval.
+Removed draft input: weekly.json
+
+== proposed-2026-10-09-1300-weekly-ABC.json
+{
+ "files": [],
+ "items": [
+  {
+   "decision": "pending",
+   "flags": [],
+   "match": "strong",
+   "n": 1,
+   "op": "new",
+   "table": "updates",
+   "values": {
+    "health": "At risk",
+    "key_changes": "UAT start moved",
+    "project": "ABC",
+    "summary": "UAT start has slipped two weeks.\n\nEscalation is planned.",
+    "week_ending": "2026-10-09"
+   }
+  },
+  {
+   "based_on": "<TS>",
+   "changes": {
+    "health": "At risk",
+    "health_reason": "UAT start slipped 14 days"
+   },
+   "decision": "pending",
+   "flags": [],
+   "id": "ABC",
+   "match": "strong",
+   "n": 2,
+   "op": "update",
+   "table": "projects"
+  }
+ ],
+ "report": {
+  "current_state": "Recovery plan agreed with the client.",
+  "draft": "system/staging/drafts/2026-10-09 Weekly report - Example Programme.docx",
+  "file_ops": [
+   {
+    "content": "# ABC — Example Programme\n\n## Brief\n\n- **Client / partner:** Example Client Ltd\n- **Client report rhythm:** weekly\n\n## Sensitivities\n\n- Budget overrun on phase one is being absorbed (Client-safe: no)\n\n## Current state\n\n_Rewritten weekly._\n\nRecovery plan agreed with the client.\n\n![Delivery plan](images/plan.png)\n\n",
+    "op": "write",
+    "path": "projects/ABC Example Programme/CLAUDE.md",
+    "previous": "# ABC — Example Programme\n\n## Brief\n\n- **Client / partner:** Example Client Ltd\n- **Client report rhythm:** weekly\n\n## Sensitivities\n\n- Budget overrun on phase one is being absorbed (Client-safe: no)\n\n## Current state\n\n_Rewritten weekly._\n\nBuild is two weeks behind.\n\n![Delivery plan](images/plan.png)\n"
+   },
+   {
+    "from": "draft",
+    "op": "copy",
+    "to": "projects/ABC Example Programme/reports/2026-10-09 Weekly report - Example Programme.docx"
+   },
+   {
+    "op": "remove",
+    "path": "system/staging/drafts/2026-10-09 Weekly report - Example Programme.docx"
+   }
+  ],
+  "health": "At risk",
+  "health_reason": "UAT start slipped 14 days",
+  "kind": "weekly",
+  "project": "ABC",
+  "projects": [
+   "ABC"
+  ],
+  "report_decision": "pending",
+  "summary": "UAT start has slipped two weeks.\n\nEscalation is planned.",
+  "title": "Example Programme weekly report, week ending 09-10-2026",
+  "week_ending": "2026-10-09"
+ },
+ "source_run": "cx-weekly-report"
+}

@@ -1,0 +1,15 @@
+# creaite live vault: local git only (no remote). Data stays on this laptop.
+# The database and Excel export are backed up separately in system/backups/.
+system/tracker.db
+system/tracker.db-*
+tracker-view.xlsx
+~$*
+system/backups/
+system/history/
+system/releases/
+system/search/
+dashboard.html
+.DS_Store
+__pycache__/
+*.pyc
+system/guard/

@@ -1,0 +1,15 @@
+{
+ "denied": [],
+ "events": [
+  {
+   "chat": "s-1",
+   "done_at": "<TIME>",
+   "run": "r-1",
+   "session": "s-1",
+   "type": "done"
+  }
+ ],
+ "said": [],
+ "session": "s-1",
+ "steps": []
+}

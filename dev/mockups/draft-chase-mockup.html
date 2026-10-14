@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Draft chase from the peek (Alan, 13-10-2026). Published: https://claude.ai/artifact/6JTCcsiWfsp3HVf6PV5bwo -->
+<title>Draft chase from the peek</title>
+<style>
+/* Layout: the Work page behind, the peek on the right with its icon bar; the chase pane opens inside the peek; notes beside it. */
+:root{
+  --bg:#F6F7F8; --surface:#FFFFFF; --sunk:#EEF1F3; --ink:#1A1F24; --muted:#5C6670; --faint:#7A848D; --line:#E2E6EA;
+  --accent:#0B6E7F; --accent-ink:#FFFFFF; --accent-soft:#DCEFF2;
+  --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#8A5A00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
+  --mail-bg:#FFFFFF; --mail-ink:#1E1F1E; --mail-muted:#5C5D60; --mail-head:#F1F3F4; --mail-rule:#D9D9E0; --mail-red:#B3261E;
+  --font:"Roboto","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  --mail:Calibri,Carlito,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C;
+  --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#86939A; --line:#2A343A;
+  --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C;
+  --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--font);margin:0}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.page{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:24px 64px}
+h1.t{font-size:20px;margin:0 0 4px;font-weight:600;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 14px;max-width:900px}
+.sub{color:var(--muted);font-size:12px}
+.ctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.tg{border:1px solid var(--line);background:var(--surface);border-radius:999px;height:32px;padding:0 14px;cursor:pointer;font-size:13px}
+.tg[aria-pressed="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 470px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg);min-height:640px}
+@media (max-width:820px){.stage{grid-template-columns:1fr}.work{display:none}}
+.work{padding:14px;opacity:.55;min-width:0}
+.work .row{display:grid;grid-template-columns:96px 1fr 120px 86px;gap:10px;padding:9px 10px;border-bottom:1px solid var(--line);font-size:13px;background:var(--surface)}
+.work .row.sel{outline:2px solid var(--accent);outline-offset:-2px;opacity:1}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:13px;min-width:0}
+.notes h3{margin:12px 0 4px;font-size:13px} .notes h3:first-child{margin-top:0}
+.notes ul{margin:4px 0;padding-left:18px} .notes li{margin:3px 0}
+
+/* the peek */
+.peek{background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.pk-bar{display:flex;align-items:center;gap:2px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.pk-bar .sp{flex:1}
+.ib{width:32px;height:32px;display:grid;place-items:center;border:0;background:none;border-radius:7px;cursor:pointer;color:var(--muted);position:relative}
+.ib:hover{background:var(--sunk);color:var(--ink)}
+.ib[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent)}
+.ib svg{width:18px;height:18px}
+.ib.new::after{content:"New";position:absolute;top:-6px;right:-10px;font-size:9.5px;font-weight:600;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 5px}
+.sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.pk-body{padding:16px 18px;display:grid;gap:12px;overflow:auto}
+.pk-id{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pk-title{font-size:18px;font-weight:600;margin:0;text-wrap:balance}
+.fld{display:grid;grid-template-columns:110px 1fr;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}
+.fld .k{color:var(--muted)}
+.tag{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:999px;background:var(--sunk);color:var(--muted);font-size:11.5px;font-weight:500;white-space:nowrap}
+.tag.bad{background:var(--bad-soft);color:var(--bad)} .tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.warn{background:var(--warn-soft);color:var(--warn)} .tag.acc{background:var(--accent-soft);color:var(--accent)}
+
+/* the chase pane */
+.chase{display:grid;gap:12px}
+.chase h2{margin:0;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.mode{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:var(--sunk);font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.mode b{font-weight:600}
+.f{display:grid;gap:4px}
+.f label{font-size:12px;color:var(--muted);font-weight:500}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border:1px solid var(--line);border-radius:8px;padding:5px 6px;background:var(--surface);min-height:36px}
+.chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:500}
+.chip button{border:0;background:none;color:inherit;cursor:pointer;width:18px;height:18px;border-radius:50%}
+.sugg{display:flex;gap:6px;flex-wrap:wrap}
+.sugg button{border:1px dashed var(--line);background:none;border-radius:999px;height:26px;padding:0 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.sugg button small{color:var(--faint)}
+input[type=text],input[type=date],textarea{border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface);width:100%}
+textarea{min-height:56px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);height:30px;padding:0 10px;font-size:12px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:500}
+.btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border:1px solid var(--line);background:var(--surface);border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
+.acts .left{margin-right:auto;font-size:12px;color:var(--muted)}
+.snack{font-size:12.5px;color:var(--ok)}
+
+/* the email preview: as Outlook will show it (fixed light colours, like the Draft email's own) */
+.mailwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.mailhead{background:var(--sunk);padding:7px 10px;font-size:12px;display:grid;gap:2px}
+.mailhead span{color:var(--muted)}
+.mail{background:var(--mail-bg);color:var(--mail-ink);font:11pt/1.4 var(--mail);padding:14px 16px}
+.mail p{margin:0 0 11px}
+.mail table{border-collapse:collapse;width:100%;font:10.5pt/1.35 var(--mail);margin:2px 0 12px}
+.mail th{background:var(--mail-head);text-align:left;padding:5px 7px;border-bottom:1px solid var(--mail-rule)}
+.mail td{padding:5px 7px;border-bottom:1px solid var(--mail-rule);vertical-align:top}
+.mail .m{color:var(--mail-muted)} .mail .r{color:var(--mail-red);font-weight:bold}
+.mail .ask{background:#F7F3E3;border-left:3px solid #C9A227;padding:6px 9px;margin:0 0 11px}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <h1 class="t">Draft chase, from the peek</h1>
+  <p class="lede">A new <b>Draft chase</b> icon in the work-item peek's top bar, to the left of Copy link. It writes a ready-to-paste email for Outlook, using the same builder and look as the Draft email on a person's page, and it reads whose action it is: when it is someone else's it chases them; when it is <b>yours</b> it asks for help, making clear the action is yours. Sample items from your portfolio.</p>
+  <div class="ctl" role="group" aria-label="Sample item">
+    <span class="sub">Try it on:</span>
+    <button class="tg" type="button" data-case="other" aria-pressed="true">Someone else's action</button>
+    <button class="tg" type="button" data-case="mine" aria-pressed="false">My action</button>
+    <button class="tg" type="button" data-case="decision" aria-pressed="false">A decision waiting on someone</button>
+  </div>
+
+  <div class="grid">
+    <div class="stage">
+      <div class="work" aria-hidden="true">
+        <div class="row"><span>FAL-A-006</span><span>Confirm FDS sign-off for the remaining workflows</span><span>Tom Reid</span><span>17-10-2026</span></div>
+        <div class="row" id="selRow"><span id="selId">FAL-A-009</span><span id="selT">Share the Northgate UAT plan</span><span id="selO">Tom Reid</span><span id="selD">09-10-2026</span></div>
+        <div class="row"><span>FAL-A-013</span><span>Install creaite v1.7.0 and do the hand checks</span><span>Alan Carter</span><span>13-10-2026</span></div>
+        <div class="row"><span>ORX-A-011</span><span>Draft the rollout plan for Ben Ito</span><span>Alan Carter</span><span>16-10-2026</span></div>
+        <div class="row"><span>MER-D-002</span><span>Which use cases go into the Phase 2 proposal</span><span>Chris Dunn</span><span>15-10-2026</span></div>
+      </div>
+
+      <div class="peek" aria-label="Work item">
+        <div class="pk-bar">
+          <button class="ib" type="button" aria-label="Close" title="Close (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <button class="ib" type="button" aria-label="Expand to full width"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/></svg></button>
+          <span class="sep" aria-hidden="true"></span>
+          <button class="ib" type="button" aria-label="Previous item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg></button>
+          <button class="ib" type="button" aria-label="Next item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+          <span class="sp"></span>
+          <button class="ib new" type="button" id="chaseBtn" aria-pressed="false" aria-label="Draft chase" title="Draft chase (C)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="14" height="11" rx="2"/><path d="M3.5 6.5 10 11l6.5-4.5"/><path d="M15 19h6M18.5 16.5 21 19l-2.5 2.5"/></svg></button>
+          <button class="ib" type="button" aria-label="Copy link" title="Copy link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>
+        </div>
+        <div class="pk-body" id="pkBody"></div>
+      </div>
+    </div>
+
+    <aside class="notes">
+      <h3>The icon</h3>
+      <ul><li>An envelope with an arrow, in the peek's top bar to the left of Copy link; key <b>C</b> while the peek is open. Shown for an open action, risk, issue or decision; hidden for closed items.</li>
+      <li>It opens the chase <b>inside the peek</b> (Back returns to the item), so the item stays in view beside Work.</li></ul>
+      <h3>How it reads the item</h3>
+      <ul>
+        <li><b>Someone else's:</b> a chase to the owner (their email from the people register), in BL-224's tone: first reminder, second, then firmer, from how often it was chased.</li>
+        <li><b>Yours:</b> a request for help. The opening is "I've been asked to follow up with you on …, to get … done", it says the action is yours, and "What I need from you" is its own line. You pick who it goes to; creaite suggests people from the item (named in its updates, who raised it, the meeting it came from, the project's stakeholders).</li>
+        <li><b>A decision:</b> to the decision maker, asking for the decision by its needed-by date.</li>
+      </ul>
+      <h3>Rules it keeps</h3>
+      <ul>
+        <li>No model call: the same deterministic builder as the Draft email. An optional <b>Polish</b> (AI drafts) rewords it, with the switch in Settings › AI drafts.</li>
+        <li>Never sends and never makes an Outlook draft: <b>Copy for Outlook</b> copies formatted HTML with a plain-text fallback.</li>
+        <li><b>I sent it</b> records the chase (ID, date, mode) in chases.json, so the next one steps up and the person's page shows it. Nothing reaches the tracker.</li>
+        <li>The subject keeps the project code in brackets, so Outlook rules can file it. The body uses the project's name. A followed person is never labelled (BL-288).</li>
+      </ul>
+    </aside>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ITEMS={
+    other:{id:"FAL-A-009",code:"FAL",proj:"Kestrel Energy AI",type:"Action",t:"Share the Northgate UAT plan",owner:"Tom Reid",first:"Tom",email:"tom.r@example.com",due:"09-10-2026",dueWords:"4 days overdue",pr:"High",
+      upd:"Tom: plan in draft, waiting on Northgate's test environment dates (08-10-2026)",src:"Alan x Tom Catch up on Northgate, 12-10-2026",chased:{n:0}},
+    mine:{id:"FAL-A-007",code:"FAL",proj:"Kestrel Energy AI",type:"Action",t:"Reach out to Dana on back-to-back commercials",owner:"Alan Carter",first:"Dana",email:"dana.o@example.com",due:"19-10-2026",dueWords:"due in 6 days",pr:"Medium",
+      upd:"Alan: Tom asked for the commercials to mirror the Kestrel Group contract terms (12-10-2026)",src:"Alan x Tom Catch up on Northgate, 12-10-2026",chased:{n:0},
+      outcome:"the back-to-back commercials for Northgate agreed",ask:"Confirm whether the Northgate terms mirror the Kestrel Group contract, and who on your side signs them off."},
+    decision:{id:"MER-D-002",code:"MER",proj:"Larkspur Phase 2",type:"Decision",t:"Which use cases go into the Phase 2 proposal",owner:"Chris Dunn",first:"Chris",email:"chris.d@example.com",due:"15-10-2026",dueWords:"needed in 2 days",pr:"High",
+      upd:"Sam: shortlist of six use cases shared on 08-10-2026",src:"Larkspur Phase II - Use Case & Proposal, 06-10-2026",chased:{n:1,last:"08-10-2026"}}
+  };
+  let CASE="other", CHASE=false, TONE=null, sent=false;
+  const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const toneOf=it=>Math.min(it.chased.n,2);
+
+  function itemView(it){
+    const mine=it.owner==="Alan Carter";
+    return `<div class="pk-id"><span>${it.id}</span><span class="tag">${it.type}</span><span class="tag acc">${esc(it.proj)}</span>${it.dueWords.includes("overdue")?`<span class="tag bad">${it.dueWords}</span>`:`<span class="tag warn">${it.dueWords}</span>`}${mine?'<span class="tag ok">Yours</span>':""}</div>
+      <h2 class="pk-title">${esc(it.t)}</h2>
+      <div class="fld"><span class="k">${it.type==="Decision"?"Decision maker":"Owner"}</span><span>${esc(it.owner)}</span></div>
+      <div class="fld"><span class="k">${it.type==="Decision"?"Needed by":"Due"}</span><span>${it.due}</span></div>
+      <div class="fld"><span class="k">Priority</span><span>${it.pr}</span></div>
+      <div class="fld"><span class="k">Latest update</span><span>${esc(it.upd)}</span></div>
+      <div class="fld"><span class="k">Source</span><span>${esc(it.src)}</span></div>
+      <p class="sub">Press the envelope in the bar above (or C) to draft a chase.</p>`; }
+
+  function chaseView(it){
+    const mine=it.owner==="Alan Carter", dec=it.type==="Decision", lv=TONE??toneOf(it);
+    const mode=mine?`<div class="mode"><span class="tag ok">Yours</span><div><b>This action is yours,</b> so this asks for help rather than chasing. It makes clear the action is with you and what you need from them.</div></div>`
+      :dec?`<div class="mode"><span class="tag">Decision</span><div><b>Asking ${esc(it.first)} for the decision</b> by its needed-by date. Chased once, on ${it.chased.last}: this is a second reminder.</div></div>`
+      :`<div class="mode"><span class="tag">Chase</span><div><b>Chasing ${esc(it.first)}</b>, who owns it. Not chased before: a first reminder.</div></div>`;
+    const to=`<div class="f"><label for="toIn">To</label><div class="chips" id="toIn"><span class="chip">${esc(mine?"Dana Okoye":it.owner)} <button type="button" aria-label="Remove">×</button></span><span class="sub">${esc(it.email)}</span></div>
+      ${mine?`<div class="sugg" aria-label="Suggested from the item"><button type="button">Tom Reid <small>raised it</small></button><button type="button">Leo Marsh <small>project stakeholder</small></button><button type="button">+ Anyone</button></div>`:""}</div>`;
+    const need=mine?`<div class="f"><label for="outc">To get … done</label><input type="text" id="outc" value="${esc(it.outcome)}"></div>
+      <div class="f"><label for="askIn">What I need from you</label><textarea id="askIn">${esc(it.ask)}</textarea></div>`:"";
+    const tone=`<div class="f"><label>Tone</label><div class="seg" role="group" aria-label="Tone">${["First","Second","Firmer"].map((w,i)=>`<button type="button" data-tone="${i}" aria-pressed="${i===lv}">${w}</button>`).join("")}</div></div>`;
+    return `<div class="chase">
+      <h2><button class="ib" type="button" id="back" aria-label="Back to the item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></button>Draft chase · <span class="sub">${it.id}</span></h2>
+      ${mode}${to}${need}
+      <div class="row2"><div class="f"><label for="rb">Reply by</label><input type="date" id="rb" value="2026-10-15"></div>${tone}</div>
+      <label class="sub"><input type="checkbox" id="incUpd" checked> Include the latest update</label>
+      <div class="mailwrap"><div class="mailhead"><div><span>To:</span> ${esc(it.email)}</div><div><span>Subject:</span> <b id="subj"></b></div></div><div class="mail" id="mail"></div></div>
+      <div class="acts"><span class="left" id="snack"></span><button class="btn" type="button" id="cpText">Copy as text</button><button class="btn" type="button" id="sentBtn">I sent it</button><button class="btn primary" type="button" id="cpHtml">Copy for Outlook</button></div>
+    </div>`; }
+
+  function buildMail(it){
+    const mine=it.owner==="Alan Carter", dec=it.type==="Decision", lv=TONE??toneOf(it), inc=$("incUpd")?$("incUpd").checked:true;
+    const rbv=$("rb")?$("rb").value:"2026-10-15", rbd=new Date(rbv+"T12:00:00"), rb=rbd.toLocaleDateString("en-GB",{weekday:"long"})+" "+rbv.split("-").reverse().join("-");
+    const first=mine?"Dana":it.first;
+    const row=`<table><tr><th style="width:22%">ID</th><th>Item</th><th style="width:22%">${dec?"Needed by":"Due"}</th></tr><tr><td>${it.id}</td><td>${dec?"<b>Decision needed:</b> ":""}${esc(it.t)}${mine?`<br><span class="m">Owner: Alan Carter</span>`:""}${inc?`<br><span class="m">Latest update: ${esc(it.upd)}</span>`:""}</td><td><span class="${it.dueWords.includes("overdue")?"r":""}">${it.due}<br>${it.dueWords}</span></td></tr></table>`;
+    let subj, body;
+    if(mine){
+      const outc=$("outc")?$("outc").value:it.outcome, ask=$("askIn")?$("askIn").value:it.ask;
+      const open=[`I've been asked to follow up with you on ${it.t.replace(/^Reach out to Dana on /i,"the ")}, to get ${outc}.`,
+                  `I'm following up on my note of 13-10-2026 about ${it.t.replace(/^Reach out to Dana on /i,"the ")}; I still need your help to get ${outc}.`,
+                  `I need to close this out this week: the action to get ${outc} is with me, and I can't finish it without your input.`][lv];
+      subj=`[${it.code}] ${["Your help with","Following up: your help with","Needed this week: your help with"][lv]} ${it.t.replace(/^Reach out to Dana on /i,"")}`;
+      body=`<p>Hi ${first},</p><p>${esc(open)} The action is with me (${it.id}), and I need your help to close it.</p><div class="ask"><b>What I need from you:</b> ${esc(ask)}</div>${row}<p>Could you let me know by ${rb}? If someone else is better placed to help, a name would be just as useful.</p><p>Thank you,<br>Alan</p>`;
+    } else if(dec){
+      const open=["A quick note on the decision below, which is needed soon for the Phase 2 proposal.","I'm following up on my earlier note of 08-10-2026 about the decision below; it is needed for the Phase 2 proposal.","This decision is now holding up the Phase 2 proposal; I have asked for it twice, most recently on 08-10-2026."][lv];
+      subj=`[${it.code}] ${["Decision needed","Second reminder: decision needed","Decision needed this week"][lv]}: ${it.t}`;
+      body=`<p>Hi ${first},</p><p>${esc(open)}</p>${row}<p>Could you let me have the decision, or tell me what you need to make it, by ${rb}? Thank you.</p><p>Thanks,<br>Alan</p>`;
+    } else {
+      const open=["A quick reminder about the item below, which is now past its due date.","I'm following up on my earlier note about the item below, which is still overdue.","This item is now well overdue and is holding up other work; I have chased it before."][lv];
+      const ask=["Could you let me know where it stands, and when I can expect it?","Could you let me have an update, and a date for it?","Please reply with a firm date, or tell me what is blocking it so that we can resolve it together."][lv];
+      subj=`[${it.code}] ${["Reminder","Second reminder","Overdue, reply needed"][lv]}: ${it.t}`;
+      body=`<p>Hi ${first},</p><p>${esc(open)}</p>${row}<p>${esc(ask)} It would be helpful to hear back by ${rb}. Thank you.</p><p>Thanks,<br>Alan</p>`;
+    }
+    $("subj").textContent=subj; $("mail").innerHTML=body; }
+
+  function draw(){
+    const it=ITEMS[CASE]; $("chaseBtn").setAttribute("aria-pressed",CHASE);
+    $("selId").textContent=it.id; $("selT").textContent=it.t; $("selO").textContent=it.owner; $("selD").textContent=it.due; $("selRow").className="row sel";
+    $("pkBody").innerHTML=CHASE?chaseView(it):itemView(it);
+    if(!CHASE) return;
+    buildMail(it);
+    $("back").onclick=()=>{ CHASE=false; draw(); };
+    $("pkBody").querySelectorAll("[data-tone]").forEach(b=>b.onclick=()=>{ TONE=+b.dataset.tone; $("pkBody").querySelectorAll("[data-tone]").forEach(x=>x.setAttribute("aria-pressed",x===b)); buildMail(it); });
+    ["rb","incUpd","outc","askIn"].forEach(id=>{ const el=$(id); if(el) el.addEventListener("input",()=>buildMail(it)); });
+    const say=t=>{ $("snack").textContent=t; $("snack").className="left snack"; };
+    $("cpHtml").onclick=async()=>{ try{ await navigator.clipboard.writeText($("mail").innerText); say("Copied. Paste into a new Outlook email."); }catch(e){ say("Select the email above and copy it."); } };
+    $("cpText").onclick=async()=>{ try{ await navigator.clipboard.writeText($("subj").textContent+"\n\n"+$("mail").innerText); say("Copied as plain text."); }catch(e){ say("Select the email above and copy it."); } };
+    $("sentBtn").onclick=()=>{ say(`Recorded: chased ${it.first==="Dana"||CASE==="mine"?"Dana":it.first} on 13-10-2026. The next one will be a ${["second","firmer","firmer"][TONE??toneOf(it)]} reminder.`); };
+  }
+  $("chaseBtn").onclick=()=>{ CHASE=!CHASE; TONE=null; draw(); };
+  document.querySelectorAll("[data-case]").forEach(b=>b.onclick=()=>{ CASE=b.dataset.case; TONE=null; document.querySelectorAll("[data-case]").forEach(x=>x.setAttribute("aria-pressed",x===b)); draw(); });
+  document.addEventListener("keydown",e=>{ if(e.key==="c"&&!e.target.closest("input,textarea")){ CHASE=true; TONE=null; draw(); } });
+  CHASE=true; draw();
+})();
+</script>
+</body>
+</html>
