@@ -6,12 +6,14 @@ Usage: python3 system/scripts/session.py start [--json] [--force]
 
 Does, in order (values from settings.json):
   1. daily backup: copies tracker.db to system/backups/tracker-YYYY-MM-DD.db once a day (backups.daily), then the day's
-     closed zip, its OneDrive copy, Tidy up and the weekly restore check (backup.py, BL-323);
+     closed zip, its OneDrive copy, Tidy up and the weekly restore check (backup.py, BL-323); then (BL-10) archives the
+     items closed long ago, once a day, through tracker.py apply (archive.py daily; never from an ask creaite run);
   2. sweep: says whether the daily sweep is due (Claude then runs cx-sweep first);
   3. reminders: the weekly report and client reports due (minus any dismissed forever);
   4. status line: pending items by kind, drafts waiting, inbox files, last apply, and sweep failures in the run log;
   5. First thing (BL-295): what the last Close the day put first for this morning, still open.
-In the development repo (.creaite-dev) it does nothing unless --force. Read-only on the database (the backup is a copy).
+In the development repo (.creaite-dev) it does nothing unless --force. Read-only on the database (the backup is a copy), apart
+from the daily archiving, which writes only through tracker.py apply.
 Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
 """
 import json
@@ -85,6 +87,14 @@ def backup_now():
 # ===== end BL-320 =====
 
 
+def archive_today():
+    """BL-10: once a day, after the daily backup, archive the items closed long ago (archive.py daily: through tracker.py apply,
+    never from an ask creaite run). The line to show, or None (already run today, or nothing to say)."""
+    import archive
+    code, line = archive.daily()
+    return line if line and (code or not line.startswith("Archiving: already")) else None
+
+
 def run_log_failures():
     """Sweep failures since the last successful sweep."""
     if not paths.RUN_LOG.exists():
@@ -149,6 +159,16 @@ def first_line(f):
     return f"First thing (from Close the day on {f['day_shown']}): {n} open — {words}{more}."
 
 
+def print_backup(out):
+    """The daily backup's line, its notes (BL-323), then the archiving line (BL-10)."""
+    if out["backup"]:
+        print(f"Daily backup: {out['backup']}")
+    for line in out["backup_notes"]:
+        print(line)
+    if out["archive"]:
+        print(out["archive"])
+
+
 def print_notes(out):
     """The reminders, each with what to say, then First thing (BL-295)."""
     for r in out["reminders"]:
@@ -182,16 +202,13 @@ def start(as_json=False, force=False):
         return 0
     t = sweep.now()
     notes = []                                           # BL-323: the zip, OneDrive copy, Tidy up and restore check lines
-    out = {"backup": backup_today(t, notes.append), "backup_notes": notes, "sweep": sweep.due_info(), "reminders": reminders(t),
-           "status": status(),
+    out = {"backup": backup_today(t, notes.append), "backup_notes": notes, "archive": archive_today(), "sweep": sweep.due_info(),
+           "reminders": reminders(t), "status": status(),
            "first": first_thing(t)}
     if as_json:
         print(json.dumps(out, indent=1))
         return 0
-    if out["backup"]:
-        print(f"Daily backup: {out['backup']}")
-    for line in notes:
-        print(line)
+    print_backup(out)
     if out["sweep"]["due"]:
         print(f"Sweep due since {out['sweep']['due_from']}, running now… (run cx-sweep before anything else)")
     print_notes(out)

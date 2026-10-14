@@ -6,12 +6,14 @@
      says the answer's message, opens the answer's `url` (Microsoft 365: Claude's connector page) and checks again;
    - every other fix is a disclosure, "How to fix", with the manual step and Copy when the step is a command.
    The fixes no check can see (Chrome's icon, Microsoft 365) are offered on their own, under "If you need them". The checks that
-   passed fold into one line; errors that kept coming back and have stopped are listed as stopped (BL-263). The check runs when
+   passed fold into one line; errors that kept coming back and have stopped are listed as stopped (BL-263); the last archiving
+   runs (BL-10, BL-03) are listed under Archiving. The check runs when
    Health opens (if it hasn't this visit) and on Check again; it takes a few seconds, shown as it runs. */
 import { useEffect, useState } from "preact/hooks";
 import { copied, fd } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
 import { checkHealth, healthResult, healthBusy, healthError } from "../../stores/settings.js";
+import { pendingEdit } from "../../ask.js";
 
 const CMD = /system\/scripts\/run [^,;"]+/;
 /** The command in a manual step, to copy, or "". @param {string} how */
@@ -22,6 +24,7 @@ export async function runHealthFix(f) {
   const r = await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
   snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));
   if (r.ok && r.url) window.open(r.url, "_blank", "noopener");
+  if (r.ok && r.card) await pendingEdit();      /* BL-09: a move waits on the approval card in ask creaite */
   if (r.ok && !r.url) checkHealth();
   return !!r.ok;
 }
@@ -153,6 +156,14 @@ export function Health() {
             <summary>{res.fine} check{res.fine === 1 ? "" : "s"} fine</summary>
             <p class="sub">{res.fine_names.join(", ")}</p>
           </details>
+          {(res.archiving || []).length > 0 && (
+            <>
+              <h3 class="hsub">Archiving</h3>
+              <ul class="hsteps" id="healthArchiving" aria-label="Archiving">
+                {(res.archiving || []).map(a => <li>{a}</li>)}
+              </ul>
+            </>
+          )}
           {alone.length > 0 && (
             <>
               <h3 class="hsub">If you need them</h3>

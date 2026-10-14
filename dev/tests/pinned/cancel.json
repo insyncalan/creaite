@@ -3,6 +3,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -958,6 +959,7 @@
    ],
    "decisions": [
     {
+     "archived": 0,
      "client_message": "",
      "client_visible": 0,
      "date": "2026-10-01",
@@ -975,6 +977,7 @@
      "updated_at": "<TS>"
     },
     {
+     "archived": 0,
      "client_message": "",
      "client_visible": 0,
      "date": null,
@@ -1024,6 +1027,7 @@
    "milestones": [
     {
      "actual_date": null,
+     "archived": 0,
      "baseline_date": "2030-06-14",
      "client_message": null,
      "client_visible": 0,
@@ -1048,6 +1052,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -1061,6 +1066,7 @@
    ],
    "promises": [
     {
+     "archived": 0,
      "closed": null,
      "description": "Share the plan",
      "due_date": "2030-06-14",
@@ -1229,6 +1235,7 @@
    },
    "raid": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -1250,6 +1257,7 @@
      "workstream": null
     },
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -1276,6 +1284,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -1298,6 +1307,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": "<TODAY>",
@@ -2348,6 +2358,7 @@
    ],
    "decisions": [
     {
+     "archived": 0,
      "client_message": "",
      "client_visible": 0,
      "date": "2026-10-01",
@@ -2365,6 +2376,7 @@
      "updated_at": "<TS>"
     },
     {
+     "archived": 0,
      "client_message": "",
      "client_visible": 0,
      "date": null,
@@ -2414,6 +2426,7 @@
    "milestones": [
     {
      "actual_date": null,
+     "archived": 0,
      "baseline_date": "2030-06-14",
      "client_message": null,
      "client_visible": 0,
@@ -2438,6 +2451,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -2451,6 +2465,7 @@
    ],
    "promises": [
     {
+     "archived": 0,
      "closed": null,
      "description": "Share the plan",
      "due_date": "2030-06-14",
@@ -2659,6 +2674,7 @@
    },
    "raid": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -2680,6 +2696,7 @@
      "workstream": null
     },
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": "<TODAY>",
@@ -2706,6 +2723,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -2728,6 +2746,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -3866,6 +3885,7 @@
    ],
    "decisions": [
     {
+     "archived": 0,
      "client_message": "",
      "client_visible": 0,
      "date": "2026-10-01",
@@ -3883,6 +3903,7 @@
      "updated_at": "<TS>"
     },
     {
+     "archived": 0,
      "client_message": "",
      "client_visible": 0,
      "date": null,
@@ -3933,6 +3954,7 @@
    "milestones": [
     {
      "actual_date": null,
+     "archived": 0,
      "baseline_date": "2030-06-14",
      "client_message": null,
      "client_visible": 0,
@@ -3957,6 +3979,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -3970,6 +3993,7 @@
    ],
    "promises": [
     {
+     "archived": 0,
      "closed": null,
      "description": "Share the plan",
      "due_date": "2030-06-14",
@@ -4172,6 +4196,7 @@
    },
    "raid": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -4193,6 +4218,7 @@
      "workstream": null
     },
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -4219,6 +4245,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -6318,6 +6345,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -8592,6 +8620,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,

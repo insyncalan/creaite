@@ -2,7 +2,7 @@
 /* settings.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0073-settings-page-bl-115-sprint-settings.js, 0074-bl-214-sprint-ui-audit.js, 0075-after-bl-214.js, 0076-bl-235-fix-small-17.js, 0078-after-bl-163-settings-row.js, 0079-people-bl-55-bl-56.js, 0127-workstreams-bl-58-bl-56.js, 0138-sweep-and-alerts-bl-97-bl-99-bl-98.js, 0140-after-bl-152.js, 0153-bl-252-fix-small-17.js, 0154-bl-263-fix-doctor-errors.js, 0155-after-bl-263.js, 0163-bl-165-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { mdView, RBMARK, SEARCHCFG } from "./ask.js";
+import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
 import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, saveWs, SWEPT, wsFor, wsHidden, wsKey, WSL, wsParts, wsUsed } from "./core/data.js";
 import { effect } from "@preact/signals";
 import { h, render } from "preact";
@@ -74,6 +74,26 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
     return `<${tag} aria-label="${esc(srText(l)+(ex?": "+ex:""))}"${rest}>`; }); }
 /* ⌘K's search box had only its placeholder; named here rather than on its line, which sprint-insight is changing */
 (()=>{ const i=document.getElementById("cmdkIn"); if(i&&!i.hasAttribute("aria-label")&&!i.hasAttribute("aria-labelledby")) i.setAttribute("aria-label","Search projects, items and commands"); })();
+/* ===== BL-09: Archive and Restore in Settings › Projects =====
+   Each project has Archive (Restore for an archived one, listed with Show archived). The live server builds the change with
+   propose.py (the folder to _Archive, the register row to Retired codes, the project and its items marked archived) and puts it on
+   the approval card in ask creaite; Approve applies it through tracker.py apply, and Undo reverses it. A project with open items
+   lists them first: Cancel them all and archive, or Stop. */
+const PSTATE={active:"Active",closed:"Closed",archived:"Archived"};
+export function projArchiveHtml(){ const L=(D.project_states||[]).filter(p=>p.state!=="archived"||S.showArchived);
+  return row("Show archived projects",sw("showArchived"),"Their items in Work, Today and the Excel export. Search finds them either way, marked Archived")
+    +`<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L.map(p=>{ const back=p.state==="archived";
+      return `<tr><td>${esc(p.name)}</td><td>${PSTATE[p.state]||esc(p.state)}</td><td class="mgract"><button class="mini" data-parch="${back?"restore":"archive"}" data-pcode="${esc(p.code)}" aria-label="${back?"Restore":"Archive"} ${esc(p.name)}">${back?"Restore":"Archive"}</button></td></tr>`; }).join("")||'<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`; }
+export function openItemsAsk(name,open){ return new Promise(res=>{ let dlg=$("#parchDlg"); if(!dlg){ addHTML(document.body,"beforeend",html`<dialog id="parchDlg" aria-labelledby="parchH"></dialog>`); dlg=$("#parchDlg"); }
+  putHTML(dlg,html`<h2 id="parchH">${name} has ${open.length} open item${open.length===1?"":"s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open.slice(0,30).map(o=>html`<li><b>${o.id}</b> ${o.text}</li>`)}</ul>${open.length>30?html`<p class="sub">and ${open.length-30} more</p>`:""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
+  const fin=v=>{ dlg.close(); res(v); }; dlg.querySelector('[data-a="stop"]').onclick=()=>fin(false); dlg.querySelector('[data-a="go"]').onclick=()=>fin(true); dlg.oncancel=()=>res(false); dlg.showModal(); }); }
+export async function projArchive(code,action,cancel){ if(!viaServer()){ snack("Archiving needs the live server"); return; }
+  const r=await api("/api/project/archive",{code,action,cancel_open:!!cancel});
+  if(!r.ok&&(r.open||[]).length&&!cancel){ if(await openItemsAsk(pName(code),r.open)) return projArchive(code,action,true); snack("Stopped: nothing was archived"); return; }
+  if(!r.ok){ snack(oneLine(r.message||"It couldn't be prepared")); return; }
+  snack(r.message); await pendingEdit(); }
+export function projArchiveBind(){ $$("#projArch [data-parch]").forEach(b=>b.onclick=()=>projArchive(b.dataset.pcode,b.dataset.parch,false)); }
+/* ===== end BL-09 ===== */
 export const row=(l,c,h)=>{ const id="sr"+(++SRN); return `<div class="srow"><div><span id="${id}">${l}</span>${h?`<small id="${id}h">${h}</small>`:""}</div><div>${srName(c,id,h,l)}</div></div>`; };
 /* ===== end BL-214 ===== */
 export const SETSECTIONS=[
@@ -115,8 +135,9 @@ export const SETSECTIONS=[
    +row("Dismissed reminders",`<button class="btn" id="remRestore">Restore</button>`,"Brings back reminders dismissed forever")},
  {id:"people",cat:"people",title:"People",raw:true,kw:"people owners register email aliases organisation role rename merge vip",render:()=>'<div class="card wide" id="peopleMgr" data-sec="people"></div>',after:()=>renderPeopleMgr()},
  {id:"workstreams",cat:"people",title:"Workstreams",raw:true,kw:"workstreams lead keywords rename merge retire project",render:()=>'<div class="card wide" id="wsMgr" data-sec="workstreams"></div>',after:()=>renderMgr("ws")},
- {id:"projects",cat:"people",title:"Projects and register",wide:true,kw:"projects register add close code signals domains matching",
-  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'},
+ {id:"projects",cat:"people",title:"Projects and register",wide:true,kw:"projects register add close archive restore archived code signals domains matching",
+  render:()=>'<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC\'s domains”</span>).</p>'+projArchiveHtml(),
+  after:()=>projArchiveBind()},   /* BL-09 */
  {id:"health",cat:"health",title:"Health",kw:"health check problems fix",
   mount:el=>render(h(Health,null),el),match:()=>false},
  {id:"live",cat:"system",title:"Live server and backups",elid:"liveCard",kw:"live server backups port daily database backup status start terminal",
@@ -332,7 +353,7 @@ $("#settingsBody").addEventListener("change",e=>{ const r=mounted(e.target)?null
 $("#settingsBody").addEventListener("change",async e=>{ const el=e.target; if(el.dataset.rhythm){ const p=P.find(x=>x.code===el.dataset.rhythm), was=p.rhythm; if(await setRhythm(p.code,el.value)){ p.rhythm=el.value; snack(`Saved to ${p.name}'s CLAUDE.md`); savedNow(); } else el.value=was; return; } const k=el.dataset.k; if(!k||!SKEY[k]) return;
   let v=el.type==="checkbox"?el.checked:el.type==="number"?Number(el.value):el.value; if((k==="sweepDue"||k==="weeklyTime")&&!/^\d{2}:\d{2}$/.test(v)){ snack("Use 24-hour HH:MM"); el.value=S[k]; return; }
   const was=S[k]; if(!await writeSettings({[SKEY[k]]:k==="short"?String(v).split(",").map(x=>x.trim()).filter(Boolean):k==="ownDomains"?(v=String(v).split(",").map(x=>x.trim().toLowerCase()).filter(Boolean)):v})){ if(el.type==="checkbox") el.checked=!!was; else el.value=was; return; }
-  S[k]=v; if(k==="theme"||k==="palette"){ themeFade(); applyTheme(); } if(k==="motion") applyMotion(); if(k==="palette") renderSettings(); if(k==="autoApply") renderSettings(); if(k==="filesDocs") refreshFiles(true); if(k==="flowWeeks") reloadData(); status(); snack("Saved to settings.json"); });
+  S[k]=v; if(k==="theme"||k==="palette"){ themeFade(); applyTheme(); } if(k==="motion") applyMotion(); if(k==="palette") renderSettings(); if(k==="autoApply") renderSettings(); if(k==="filesDocs") refreshFiles(true); if(k==="flowWeeks") reloadData(); if(k==="showArchived") reloadData().then(()=>renderSettings());   /* BL-09 */ status(); snack("Saved to settings.json"); });
 /* BL-302: the Workstreams list only. Settings › People has its own buttons (data-pm, below), saved to the register since BL-55,
    which removed savePeople; a data-mg button for people is no longer drawn, so one is ignored rather than throwing. */
 $("#settingsBody").addEventListener("click",e=>{ const b=e.target.closest("[data-mg]"); if(!b) return; const kind=b.dataset.kind; if(kind!=="ws") return; const isP=false, L=WSL, save=saveWs, n=b.dataset.n;

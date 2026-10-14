@@ -54,6 +54,10 @@ PLAIN = {
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
     "vault_not_synced": ("The vault is in a synced folder", "manual"),
     "online_only": ("Some project files are online-only", "manual"),
+    "old_archive_folders": ("Folders still called zz Archive", "manual"),        # BL-09: health_fixes builds its Fix it
+    "skeleton_archive": ("The project skeleton still holds zz Archive", "manual"),   # BL-09: Alan renames it in Finder
+    "archive_reports": ("Old reports and minutes to archive", "manual"),     # BL-03: health_fixes builds its Fix it (the card)
+    "archive_items": ("Archiving of old items", "manual"),                   # BL-10: information only (never a warning)
     "extraction_scope": ("Something was extracted from documents or reports", "manual"),
     "no_absolute_paths": ("A full path was stored", "manual"),
     "config_files": ("A configuration file is missing", "setup"),
@@ -72,6 +76,9 @@ PLAIN = {
 }
 
 BACKUP_LINES = ("offsite_backup", "backup_check", "tidy_up")      # BL-323: shown under Backups when fine (the last copy, check, tidy)
+
+
+ARCHIVING = ("archive_items", "archive_reports")      # BL-10, BL-03: their last runs are listed under Archiving when fine
 
 
 def doctor_checks():
@@ -126,11 +133,16 @@ def health(result=None):
             fine.append(c.get("name", ""))
             continue
         title, kind = PLAIN.get(c.get("id"), (c.get("name", "A check"), "manual"))
+        if c.get("id") == "archive_reports" and str(c.get("detail", "")).startswith("Archive "):
+            title = str(c["detail"]).split(":")[0]               # BL-03: "Archive 14 reports and minutes older than 12 months"
         problems.append({"id": c.get("id"), "title": title, "check": c.get("name", ""), "severity": c.get("status"),
                          "detail": home_short(c.get("detail", "")), "fix": fix_for(kind, c.get("id"), c.get("detail", ""))})
     problems.sort(key=lambda p: p["severity"] != "fail")         # failures first, then warnings, each in doctor's order
+    archiving = [home_short(c.get("detail", "")) for c in result.get("checks") or []      # BL-10, BL-03: the last runs
+                 if c.get("id") in ARCHIVING and c.get("status") == "pass" and c.get("detail")]
     backups = [f"{c.get('name', '')}: {home_short(c.get('detail', ''))}" for c in result.get("checks") or []   # BL-323
                if c.get("id") in BACKUP_LINES and c.get("status") == "pass"]
-    return {"problems": problems, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(), "backups": backups,
+    return {"problems": problems, "fine": len(fine), "fine_names": fine, "stopped": stopped_errors(), "archiving": archiving,
+            "backups": backups,
             "standalone": [built_fix(f) for f in health_fixes.STANDALONE],
             "read_only": bool(result.get("read_only")), "checked": datetime.now().strftime("%Y-%m-%d %H:%M")}

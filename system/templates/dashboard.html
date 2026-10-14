@@ -4447,6 +4447,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     openFound: () => openFound,
     openFromAddress: () => openFromAddress,
     openGen: () => openGen,
+    openItemsAsk: () => openItemsAsk,
     openMilestone: () => openMilestone,
     openNew: () => openNew,
     openNewMilestone: () => openNewMilestone,
@@ -4702,6 +4703,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     prio: () => prio,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
+    projArchive: () => projArchive,
+    projArchiveBind: () => projArchiveBind,
+    projArchiveHtml: () => projArchiveHtml,
     projFeedItems: () => projFeedItems,
     projFirst: () => projFirst,
     projHistory: () => projHistory,
@@ -7508,6 +7512,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
     snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
     if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
+    if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
     return !!r4.ok;
   }
@@ -7684,6 +7689,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
             " fine"
           ] }),
           /* @__PURE__ */ u2("p", { class: "sub", children: res.fine_names.join(", ") })
+        ] }),
+        (res.archiving || []).length > 0 && /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h3", { class: "hsub", children: "Archiving" }),
+          /* @__PURE__ */ u2("ul", { class: "hsteps", id: "healthArchiving", "aria-label": "Archiving", children: (res.archiving || []).map((a5) => /* @__PURE__ */ u2("li", { children: a5 })) })
         ] }),
         alone.length > 0 && /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("h3", { class: "hsub", children: "If you need them" }),
@@ -9681,6 +9690,53 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const i5 = document.getElementById("cmdkIn");
     if (i5 && !i5.hasAttribute("aria-label") && !i5.hasAttribute("aria-labelledby")) i5.setAttribute("aria-label", "Search projects, items and commands");
   })();
+  var PSTATE = { active: "Active", closed: "Closed", archived: "Archived" };
+  function projArchiveHtml() {
+    const L2 = (D.project_states || []).filter((p6) => p6.state !== "archived" || S.showArchived);
+    return row("Show archived projects", sw("showArchived"), "Their items in Work, Today and the Excel export. Search finds them either way, marked Archived") + `<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L2.map((p6) => {
+      const back = p6.state === "archived";
+      return `<tr><td>${esc(p6.name)}</td><td>${PSTATE[p6.state] || esc(p6.state)}</td><td class="mgract"><button class="mini" data-parch="${back ? "restore" : "archive"}" data-pcode="${esc(p6.code)}" aria-label="${back ? "Restore" : "Archive"} ${esc(p6.name)}">${back ? "Restore" : "Archive"}</button></td></tr>`;
+    }).join("") || '<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`;
+  }
+  function openItemsAsk(name, open2) {
+    return new Promise((res) => {
+      let dlg = $("#parchDlg");
+      if (!dlg) {
+        addHTML(document.body, "beforeend", html`<dialog id="parchDlg" aria-labelledby="parchH"></dialog>`);
+        dlg = $("#parchDlg");
+      }
+      putHTML(dlg, html`<h2 id="parchH">${name} has ${open2.length} open item${open2.length === 1 ? "" : "s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open2.slice(0, 30).map((o5) => html`<li><b>${o5.id}</b> ${o5.text}</li>`)}</ul>${open2.length > 30 ? html`<p class="sub">and ${open2.length - 30} more</p>` : ""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
+      const fin = (v4) => {
+        dlg.close();
+        res(v4);
+      };
+      dlg.querySelector('[data-a="stop"]').onclick = () => fin(false);
+      dlg.querySelector('[data-a="go"]').onclick = () => fin(true);
+      dlg.oncancel = () => res(false);
+      dlg.showModal();
+    });
+  }
+  async function projArchive(code, action, cancel) {
+    if (!viaServer()) {
+      snack("Archiving needs the live server");
+      return;
+    }
+    const r4 = await api("/api/project/archive", { code, action, cancel_open: !!cancel });
+    if (!r4.ok && (r4.open || []).length && !cancel) {
+      if (await openItemsAsk(pName(code), r4.open)) return projArchive(code, action, true);
+      snack("Stopped: nothing was archived");
+      return;
+    }
+    if (!r4.ok) {
+      snack(oneLine(r4.message || "It couldn't be prepared"));
+      return;
+    }
+    snack(r4.message);
+    await pendingEdit();
+  }
+  function projArchiveBind() {
+    $$("#projArch [data-parch]").forEach((b5) => b5.onclick = () => projArchive(b5.dataset.pcode, b5.dataset.parch, false));
+  }
   var row = (l6, c5, h5) => {
     const id = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id}">${l6}</span>${h5 ? `<small id="${id}h">${h5}</small>` : ""}</div><div>${srName(c5, id, h5, l6)}</div></div>`;
@@ -9781,9 +9837,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       cat: "people",
       title: "Projects and register",
       wide: true,
-      kw: "projects register add close code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>`
+      kw: "projects register add close archive restore archived code signals domains matching",
+      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projArchiveHtml(),
+      after: () => projArchiveBind()
     },
+    /* BL-09 */
     {
       id: "health",
       cat: "health",
@@ -10319,6 +10377,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (k5 === "autoApply") renderSettings();
       if (k5 === "filesDocs") refreshFiles(true);
       if (k5 === "flowWeeks") reloadData();
+      if (k5 === "showArchived") reloadData().then(() => renderSettings());
       status();
       snack("Saved to settings.json");
     });
@@ -34112,6 +34171,10 @@ ${d5.text}`);
   }
   function openFound(r4) {
     const o5 = r4.opens;
+    if (o5.type === "item" && o5.archived && !S.showArchived) {
+      snack("Its project is archived: Settings › Advanced › Show archived projects opens it");
+      return;
+    }
     if (o5.type === "item") {
       if (o5.table === "milestones") {
         openMilestone(o5.id);
@@ -37899,7 +37962,7 @@ ${d5.text}`);
     }, by);
     return true;
   }
-  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
+  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
   async function writeSettings(changes) {
     let sp = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {

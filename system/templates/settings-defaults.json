@@ -98,6 +98,7 @@
     "files_show_inbox": true,
     "files_show_portfolio": true,
     "files_show_documents": false,
+    "show_archived": false,
     "week_ahead_priorities": [
       "Urgent"
     ],
@@ -145,6 +146,15 @@
     "file_change_days": 90,
     "releases_kept": 3,
     "update_backups_kept": 3
+  },
+  "archive": {
+    "_about": "Archiving (BL-10, BL-03). after_months: closed or cancelled actions and RAID items, and done or dropped promises, are archived (flagged, still searchable, undoable) this many months after closing, once a day; 0 turns a kind off. Decisions, milestones and open items never are. reports_after_months: weekly and client reports, minutes and Steerco one-pagers older than this (by the date in their name) are offered once a month in Settings › Health, to move into the engagement's own _Archive.",
+    "after_months": {
+      "actions": 6,
+      "raid": 6,
+      "promises": 6
+    },
+    "reports_after_months": 12
   },
   "live_mode": {
     "required": true,
@@ -270,7 +280,7 @@
       "agendas": "02 Meetings/Agendas"
     },
     "never_index": [
-      "zz Archive",
+      "_Archive",
       "_Templates",
       "99 System"
     ],

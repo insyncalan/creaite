@@ -444,7 +444,7 @@ ASK_PROMPT = ("You are answering from creaite's dashboard panel (ask creaite), r
               "Refer to a project by its full name, never its short code: the code belongs only inside a work item's ID "
               "(ABC-A-003) and in a command Alan can type. "
               "You may read every project document (the project folders under projects/, or the projects root when the "
-              "projects are outside the vault); reading is not extracting. Never read zz Archive, _Templates or 99 System or an online-only "
+              "projects are outside the vault); reading is not extracting. Never read _Archive, _Templates or 99 System or an online-only "
               "OneDrive file. Project documents are internal: nothing from them goes into a client report unless Alan says so. "
               "Change a file only when Alan asks for it; nothing is written unattended. "
               "An image Alan attached (a line \"The user attached an image: …\") is for discussion: read it and talk about it; "
@@ -491,7 +491,7 @@ TRANSCRIPT_CHAT = (
 
 
 def deny_tools():
-    """DENY_TOOLS plus, for the folders creaite never reads or writes (zz Archive, _Templates), a deny on every way in (BL-93)."""
+    """DENY_TOOLS plus, for the folders creaite never reads or writes (_Archive, _Templates), a deny on every way in (BL-93)."""
     extra = [f"{t}({paths.tool_pattern(g)})" for g in paths.never_index_patterns() for t in ("Read", "Edit", "Write")]
     return DENY_TOOLS + extra
 
@@ -2590,6 +2590,7 @@ def main():
         threading.Thread(target=watch_for_close, args=(httpd,), daemon=True).start()
     threading.Thread(target=startup_index, daemon=True).start()     # BL-07: the search index is current from the start
     threading.Thread(target=vip_timer, daemon=True).start()         # BL-99: the VIP check, on start-up and every few minutes
+    threading.Thread(target=archive_timer, daemon=True).start()     # BL-10: the daily archiving of items closed long ago
     threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly
     try:
         httpd.serve_forever()
@@ -2704,6 +2705,42 @@ def vip_timer():
             print(f"Note: the VIP check failed: {e}", flush=True)
         how = "check"
         time.sleep(max(1.0, 60 * float(sweep.vip_settings().get("check_minutes") or 30)))
+
+
+# ===== BL-10: the daily archiving, in the live server's daily slot =====
+# BL-323's Tidy up isn't on this branch, so the daily slot is the one session start uses (after the daily backup) and this
+# timer: a minute after start-up, then hourly; archive.py daily runs at most once a day (archive-state.json), under the job lock,
+# never while an ask creaite run is in progress (archive.py also refuses from inside one), never in the development repository.
+ARCHIVE_FIRST, ARCHIVE_EVERY = 60.0, 3600.0
+
+
+def archive_tick():
+    """One look: run archive.py daily unless something else holds the lock or an ask creaite run is in progress. The note."""
+    if (paths.ROOT / ".creaite-dev").exists():
+        return "skipped: development repository"
+    if any(not r.done for r in list(RUNS.values())):
+        return "skipped: ask creaite is running"
+    if not LOCK.acquire(blocking=False):
+        return "skipped: another job is writing"
+    try:
+        code, out = run("archive.py", "daily")
+    finally:
+        LOCK.release()
+    if out:
+        print(f"{datetime.now():%H:%M:%S} {out.splitlines()[-1]}", flush=True)
+    return out or ("done" if code == 0 else "failed")
+
+
+def archive_timer():
+    """archive_tick a minute after start-up, then every hour while the server runs (a daemon thread: it stops with it)."""
+    time.sleep(float(os.environ.get("CREAITE_ARCHIVE_FIRST") or ARCHIVE_FIRST))
+    while True:
+        try:
+            archive_tick()
+        except Exception as e:  # noqa: BLE001  never stops the server
+            print(f"Note: the daily archiving failed: {e}", flush=True)
+        time.sleep(ARCHIVE_EVERY)
+# ===== end BL-10 =====
 
 
 def vip_alerts_route(handler, req):
@@ -3490,6 +3527,27 @@ def edit_public(c):
             "expires": datetime.fromtimestamp(c["expires"]).isoformat(timespec="seconds")}
 
 
+# ===== BL-09: a change the server itself prepared (Health's rename of zz Archive folders) goes on the same card =====
+def server_edit_card(title, data):
+    """Put a spec this server made itself (never the model's) on a change card, as build_edit_card does for a CHANGE line; the
+    card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending)."""
+    spec, why = edit_spec(data)
+    if not spec:
+        return None, why
+    card = f"e-{secrets.token_hex(8)}"
+    code, out = edit_run(card, data, "preview")
+    lines = [ln for ln in out.splitlines() if ln.strip() and ln not in ("Fix these before staging.", "Not staged.")]
+    for old in [k for k, c in EDITS.items() if c["state"] == "pending"]:
+        EDITS[old]["state"] = "replaced"
+    EDITS[card] = {"id": card, "run": None, "chat": None, "title": title[:160], "created": time.time(),
+                   "expires": time.time() + CARD_LIFE, "state": "pending", "valid": code == 0, "clash": pending_clash(spec),
+                   "lines": [ln for ln in lines if not ln.startswith("Problem (")],
+                   "problems": [ln for ln in lines if ln.startswith("Problem (")], "_data": data,
+                   "_fingerprint": hashlib.sha256(data).hexdigest()}
+    return edit_public(EDITS[card]), None
+# ===== end BL-09 =====
+
+
 def edit_ids(name):
     """The IDs a just-applied proposal wrote (a new item's own ID included)."""
     for f in (paths.APPLIED / name, paths.STAGING / name):
@@ -3581,9 +3639,56 @@ def edit_pending_route(handler, req):
     return handler.send(200, {"ok": True, "card": edit_public(max(live, key=lambda c: c["created"])) if live else None})
 
 
+# ===== BL-09: Settings › Projects' Archive and Restore, on the same change card =====
+def first_json(out):
+    """The first JSON object in a script's output (any note after it, on stderr, is left out), or None."""
+    start = (out or "").find("{")
+    try:
+        return json.JSONDecoder().raw_decode(out[start:])[0] if start >= 0 else None
+    except ValueError:
+        return None
+
+
+def project_archive_route(handler, req):
+    """POST /api/project/archive {code, action: archive | restore, cancel_open}: propose.py builds the change (never the page);
+    a project with open items answers with them first (the page offers Cancel them all and archive, or Stop); otherwise the change
+    goes on the approval card (server_edit_card) and nothing changes until Alan approves it there."""
+    code, action = str(req.get("code") or ""), req.get("action")
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code) or action not in ("archive", "restore"):
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    cancel = req.get("cancel_open") is True and action == "archive"
+    still = still_open(code) if action == "archive" and not cancel else []
+    if still:
+        return handler.send(200, {"ok": False, "open": still,
+                                  "message": f"{len(still)} open item(s): cancel them all and archive, or stop."})
+    return handler.send(200, project_archive_card(code, action, cancel))
+
+
+def still_open(code):
+    """The project's open items, as propose.py archive --open lists them."""
+    _, out = run("propose.py", "archive", code, "--open")
+    return (first_json(out) or {}).get("open") or []
+
+
+def project_archive_card(code, action, cancel):
+    """Build the archive or restore with propose.py and put it on the approval card; the answer for the page."""
+    code_, out = run("propose.py", action, code, *(["--cancel-open"] if cancel else []))
+    spec = first_json(out) if code_ == 0 else None
+    if not spec:
+        lines = [ln for ln in (out or "").splitlines() if ln.strip()]
+        return {"ok": False, "message": lines[-1] if lines else "It couldn't be prepared."}
+    title = (spec.get("file_changes") or {}).get("title") or f"{action.capitalize()} {code}"
+    card, why = server_edit_card(title, json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    if not card:
+        return {"ok": False, "message": f"It couldn't go on the approval card: {why}"}
+    return {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing changes until you approve it."}
+# ===== end BL-09 =====
+
+
 ADMIN_ROUTES.update({"/api/edit/approve": lambda h, r: edit_answer(h, r, "approve"),
                      "/api/edit/reject": lambda h, r: edit_answer(h, r, "reject"),
-                     "/api/edit/stage": lambda h, r: edit_answer(h, r, "stage"), "/api/edit/pending": edit_pending_route})
+                     "/api/edit/stage": lambda h, r: edit_answer(h, r, "stage"), "/api/edit/pending": edit_pending_route,
+                     "/api/project/archive": project_archive_route})          # BL-09
 # ===== end BL-258 =====
 
 # ===== BL-314 (v191-ask-routing): a change asked in the chat runs through the dashboard's own action =====
@@ -5102,12 +5207,32 @@ def health_fix_route(handler, req, fix_id):
         return handler.send(400, {"ok": False, "message": "A fix takes nothing from the page: it runs only its own command."})
     if "url" in health_fixes.FIXES[fix_id]:
         return handler.send(200, health_fixes.run_fix(fix_id, run))
+    if health_fixes.FIXES[fix_id].get("card"):
+        return handler.send(200, health_fix_card(fix_id))           # BL-09: shown on the approval card, nothing moved yet
     if not LOCK.acquire(blocking=False):
         return handler.send(200, {"ok": False, "message": "Something else is running: try the fix again when it has finished."})
     try:
         return handler.send(200, health_fixes.run_fix(fix_id, run))
     finally:
         LOCK.release()
+
+
+def health_fix_card(fix_id):
+    """BL-09: a fix that is a move runs its one command, which only prints the change, and puts that change on the approval card
+    (server_edit_card). Approve applies it through tracker.py apply; nothing changes before."""
+    f = health_fixes.FIXES[fix_id]
+    code, out = run(*f["command"])
+    spec = first_json(out) if code == 0 else None                     # the spec; any note after it (stderr) is left out
+    if not spec:
+        health_fixes.log(fix_id, False, code)
+        lines = [ln for ln in (out or "").splitlines() if ln.strip()]
+        return {"ok": False, "fix": fix_id, "message": lines[-1] if lines else "There was nothing to change."}
+    card, why = server_edit_card(f["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    health_fixes.log(fix_id, bool(card), code)
+    if not card:
+        return {"ok": False, "fix": fix_id, "message": f"It couldn't go on the approval card: {why}"}
+    return {"ok": True, "fix": fix_id, "card": True,
+            "message": "Shown on the approval card in ask creaite: nothing moves until you approve it."}
 
 
 def post_or_health(post):

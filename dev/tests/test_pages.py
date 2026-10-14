@@ -126,7 +126,7 @@ class FilesExternalLayoutTests(OneDriveCase):
         touch(self.eng("ABC", "04 Reporting", "Content", "chart.png"))
         touch(self.eng("ABC", "02 Meetings", "Agendas", "Agenda.docx"))
         touch(self.eng("ABC", "00 Admin", "Contract", "Statement of work.docx"))
-        touch(self.eng("ABC", "zz Archive", "Old plan.docx"))
+        touch(self.eng("ABC", "_Archive", "Old plan.docx"))
         touch(self.eng("ABC", "02 Meetings", "Minutes", "2026-10-01 Weekly sync.docx"))
 
     def files(self, show=False):

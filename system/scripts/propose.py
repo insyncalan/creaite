@@ -24,6 +24,17 @@ Commands:
                              signal that already belongs to another project into Shared instead
   fields [<table>]           the fields a spec may use for a table, from schema.sql (BL-249); read only, writes nothing
   register-columns           stage adding the Senders and Exclude columns to the register if it lacks them
+  archive <CODE> [--open | --cancel-open] [--out <name>.json]
+                             print (or save) the spec that archives a project (BL-09): the folder moved to _Archive, the
+                             register row to Retired codes, the project and its items marked archived. With open items it
+                             stops and lists them, unless --cancel-open (which cancels them all first, in the same proposal);
+                             --open prints them as JSON and nothing else
+  restore <CODE> [--out <name>.json]
+                             print (or save) the spec that restores an archived project: the folder back (a number added if the
+                             name is taken), the register row back, its items live again
+  old-archives [--out <name>.json]
+                             print (or save) the spec that renames each folder still called zz Archive to _Archive (BL-09):
+                             a `move` of the apply, so it is shown, approved and undoable; exit 1 when there is none
   people list|resolve|add|edit|rename|merge|map|migrate
                              the people register (BL-55): see "People register" below, or `propose.py people`
   workstreams list [--project X] [--json] | suggest <CODE> <name> | add <CODE> <name> [--lead … --keywords …
@@ -109,6 +120,8 @@ def preview_lines(spec):
             out += [f"    Note: {n}; a working day is usually meant" for n in tracker.weekend(t, v)]      # BL-181: a note, never a refusal
         elif op == "recode":
             out += recode_lines(con, item)
+        elif op in tracker.ARCHIVE_OPS:
+            out += archive_lines(item)                                       # BL-09
         else:
             row = tracker.fetch(con, t, item["id"])
             cur = dict(row) if row is not None else {}
@@ -126,16 +139,25 @@ def preview_lines(spec):
                 if ev:
                     out.append(f"    Evidence suggests {ev['suggested']}: {'; '.join(ev['reasons'])}")
     for op in (spec.get("file_changes") or {}).get("file_ops", []):
-        if op["op"] == "mkdir":
-            out.append(f"Create folder {op['path']}/")
-        elif op["op"] == "write" and op.get("previous") is None:
-            out.append(f"Create {op['path']} ({len(op['content'].splitlines())} lines)")
-        elif op["op"] == "write":
-            diff = [d for d in difflib.unified_diff(op["previous"].splitlines(), op["content"].splitlines(), lineterm="",
-                                                    n=0) if not d.startswith(("---", "+++", "@@"))]
-            out.append(f"Change {op['path']}:")
-            out += [f"    {d}" for d in diff] or ["    (no change)"]
+        out += file_op_lines(op)
     return out
+
+
+def file_op_lines(op):
+    """The preview lines of one file operation: a folder made or moved (BL-09), a file made or changed (its diff)."""
+    if op["op"] == "move" and paths.resolve(op["from"], archived=False).is_file():     # BL-03: one report or minutes file
+        return [f"Move file {op['from']} → {op['to']}"]
+    if op["op"] == "move":                                                      # BL-09: a whole folder
+        return [f"Move folder {op['from']}/ → {op['to']}/"]
+    if op["op"] == "mkdir":
+        return [f"Create folder {op['path']}/"]
+    if op["op"] == "write" and op.get("previous") is None:
+        return [f"Create {op['path']} ({len(op['content'].splitlines())} lines)"]
+    if op["op"] == "write":
+        diff = [d for d in difflib.unified_diff(op["previous"].splitlines(), op["content"].splitlines(), lineterm="",
+                                                n=0) if not d.startswith(("---", "+++", "@@"))]
+        return [f"Change {op['path']}:"] + ([f"    {d}" for d in diff] or ["    (no change)"])
+    return []
 
 
 def milestone_notes(item, cur, changes):
@@ -175,7 +197,7 @@ def check(spec):
         try:
             tracker.check_file_op(op, spec["file_changes"])
         except tracker.Invalid as e:
-            problems[op.get("path")] = ("invalid", str(e))
+            problems[op.get("path") or op.get("from")] = ("invalid", str(e))
         if op.get("op") == "write" and op.get("previous") is not None:
             current = paths.resolve(op["path"]).read_text(encoding="utf-8")
             if current not in (op["previous"], op.get("content")):    # already as proposed is not a conflict
@@ -274,7 +296,49 @@ def folder_ops(folder, adopting=False):
     else:
         ops += [{"op": "mkdir", "path": f"{folder}/{paths.folder_name(k)}"}
                 for k in ("transcripts", "minutes", "weekly_reports", "client_reports", "adhoc_documents")]
-    return ops
+    return [skeleton_renamed(op) for op in ops]
+
+
+def skeleton_renamed(op):
+    """BL-09: a folder the skeleton still calls zz Archive is made as _Archive in the new project (nothing else is renamed)."""
+    def fix(p):
+        """The path with each zz Archive part named _Archive."""
+        return "/".join(paths.ARCHIVE if part == paths.OLD_ARCHIVE else part for part in str(p).split("/"))
+    out = dict(op)
+    for k in ("path", "to"):
+        if k in out:
+            out[k] = fix(out[k])
+    return out
+
+
+# ===== BL-09: rename the folders still called zz Archive (Health's Fix it) =====
+def old_archives_spec():
+    """The spec that renames each folder still called zz Archive to _Archive in the same place (a `move` of the apply), and the
+    folders left as they are (an _Archive already beside them: two folders are never merged)."""
+    ops, kept = [], []
+    for f in paths.old_archive_folders():
+        new = f.with_name(paths.ARCHIVE)
+        if new.exists():
+            kept.append(paths.rel(f))
+            continue
+        ops.append({"op": "move", "from": paths.rel(f), "to": paths.rel(f.parent) + "/" + paths.ARCHIVE})
+    n = len(ops)
+    spec = {"source_run": "cx-setup", "items": [], "file_changes": {
+        "title": f"Rename {n} zz Archive folder{'s' if n != 1 else ''} to _Archive", "project": None, "archive": "rename",
+        "file_ops": ops}} if ops else None
+    return spec, kept
+
+
+def cmd_old_archives(out=None):
+    """Print (or save with --out) the spec that renames every zz Archive folder to _Archive (BL-09). Nothing to do: says so."""
+    spec, kept = old_archives_spec()
+    for k in kept:
+        print(f"Left as it is: {k} (an _Archive folder is already beside it; move its contents yourself)", file=sys.stderr)
+    if not spec:
+        print("No folder is called zz Archive any more: nothing to rename.", file=sys.stderr)
+        return 1
+    return emit_spec(spec, out)
+# ===== end BL-09 =====
 
 
 def emit_spec(spec, out=None):
@@ -503,6 +567,161 @@ def cmd_register_columns():
         return cmd_preview(f, write=True)
     finally:
         f.unlink(missing_ok=True)
+
+
+# ===== BL-09: archive and restore a whole project =====
+RETIRED = "## Retired codes"
+CANCEL_FOR_ARCHIVE = {"actions": ("cancel", None), "raid": ("cancel", None), "promises": ("cancel", None),
+                      "decisions": ("update", {"status": "Withdrawn"}), "milestones": ("update", {"status": "Cancelled"})}
+ITEM_TEXT = {"actions": "description", "raid": "description", "promises": "description", "decisions": "decision",
+             "milestones": "name"}
+
+
+def archive_lines(item):
+    """The preview lines of an archive or restore item."""
+    who = f"{tracker.project_label(item['id'])} ({item['id']})"
+    if item["op"] == "archive":
+        return [f"Archive {who}: closed, it and its items marked archived (they leave the views, the export, the reminders "
+                "and project matching; still in search, marked Archived)"]
+    back = "active" if (item.get("changes") or {}).get("active", 1) else "closed, as it was"
+    return [f"Restore {who}: its items live again, the project {back}"]
+
+
+def retired_table(lines):
+    """(index after the Retired codes table's last line, [row indices]) or None when the register has no such section."""
+    if RETIRED not in lines:
+        return None
+    i = lines.index(RETIRED) + 1
+    while i < len(lines) and not lines[i].startswith("|"):
+        if lines[i].startswith("## "):
+            return None
+        i += 1
+    head, rows_at = i, []
+    i += 2
+    while i < len(lines) and lines[i].startswith("|"):
+        rows_at.append(i)
+        i += 1
+    return (i if head < len(lines) else len(lines)), rows_at
+
+
+def archive_register(text, code, name):
+    """(new text, the project's row as it was): the row moved from Projects to Retired codes."""
+    lines = text.splitlines()
+    _, _, rows_at = projects_table(lines)
+    at = next((i for i in rows_at if split_row(lines[i])[0] == code), None)
+    if at is None:
+        raise SystemExit(f"{code} isn't in the register's Projects table.")
+    row = lines.pop(at)
+    retired = join_row([code, cell_clean(name), f"{datetime.now():%d-%m-%Y} (archived)"])
+    found = retired_table(lines)
+    if found is None:
+        lines += ["", RETIRED, "", "| Code | Project | Closed |", "|------|---------|--------|", retired]
+    else:
+        lines.insert(found[0], retired)
+    return "\n".join(lines) + ("\n" if text.endswith("\n") else ""), row
+
+
+def restore_register(text, code, row):
+    """The register with `code`'s Retired codes row taken out and its Projects row put back."""
+    lines = text.splitlines()
+    found = retired_table(lines)
+    for i in reversed(found[1] if found else []):
+        if split_row(lines[i])[0] == code:
+            del lines[i]
+    _, _, rows_at = projects_table(lines)
+    after = [i for i in rows_at if split_row(lines[i])[0] and split_row(lines[i])[0] > code]
+    if after:                                   # in code order, where it was in a sorted register
+        lines.insert(after[0], row)
+        return "\n".join(lines) + ("\n" if text.endswith("\n") else "")
+    return add_register_row("\n".join(lines) + ("\n" if text.endswith("\n") else ""), row)
+
+
+def free_folder(base, name):
+    """`name`, or `name 2`, `name 3` … when a folder of that name is in `base` already (never overwriting)."""
+    cand, n = name, 2
+    while (base / cand).exists():
+        cand, n = f"{name} {n}", n + 1
+    return cand
+
+
+def open_list(con, code):
+    """[{table, id, text}] of the project's open items, for the page and for cx-edit to show before archiving."""
+    out = []
+    for t, i in tracker.open_items(con, code):
+        r = con.execute(f"SELECT {ITEM_TEXT[t]} FROM {t} WHERE id = ?", (i,)).fetchone()
+        out.append({"table": t, "id": i, "text": r[0] if r else ""})
+    return out
+
+
+def archive_spec(code, cancel_open=False):
+    """The spec that archives a project: its open items cancelled (only with cancel_open), the archive item, the folder moved
+    to _Archive and the register row moved to Retired codes. Exits with the reason when it can't be done."""
+    con = tracker.connect()
+    row = tracker.fetch(con, "projects", code)
+    if row is None:
+        sys.exit(f"{code} isn't a project in the tracker.")
+    if row["archived"]:
+        sys.exit(f"{tracker.project_label(code)} is archived already.")
+    still = open_list(con, code)
+    if still and not cancel_open:
+        sys.exit(f"{tracker.project_label(code)} has {len(still)} open item(s): "
+                 + "; ".join(f"{o['id']} {o['text']}" for o in still)
+                 + ". Cancel them all and archive (--cancel-open), or stop.")
+    folder = paths.project_dir(code)
+    src = paths.rel(folder)
+    dst = f"projects/{paths.ARCHIVE}/{free_folder(paths.archive_dir(), folder.name)}"
+    reg, old_row = archive_register(paths.REGISTER.read_text(encoding="utf-8"), code, row["name"])
+    items = []
+    for o in still:
+        op, changes = CANCEL_FOR_ARCHIVE[o["table"]]
+        items.append({"op": op, "table": o["table"], "id": o["id"], **({"changes": dict(changes)} if changes else {}),
+                      "note": "Cancelled to archive the project"})
+    items.append({"op": "archive", "table": "projects", "id": code, "register_row": old_row, "folder": {"from": src, "to": dst}})
+    return {"source_run": "cx-edit", "items": items, "file_changes": {
+        "title": f"Archive {row['name']}", "project": code, "archive": "archive",
+        "file_ops": [{"op": "move", "from": src, "to": dst}, {"op": "write", "path": paths.rel(paths.REGISTER), "content": reg}]}}
+
+
+def restore_spec(code):
+    """The spec that restores an archived project: the folder back (a number added if its name is taken), the register row back,
+    its items live again and `active` as it was before the archive."""
+    con = tracker.connect()
+    row = tracker.fetch(con, "projects", code)
+    if row is None or not row["archived"]:
+        sys.exit(f"{code} isn't an archived project.")
+    last = tracker.last_archive(con, code)
+    if not last or not last.get("folder") or not last.get("register_row"):
+        sys.exit(f"The archive of {code} isn't in the history, so it can't be restored here.")
+    src, orig = last["folder"]["to"], last["folder"]["from"]
+    if not paths.resolve(src, archived=False).is_dir():
+        sys.exit(f"{src} isn't there any more, so {code} can't be restored.")
+    name = free_folder(paths.projects_root(), orig.split("/", 1)[1])
+    dst = f"projects/{name}"
+    cells = split_row(last["register_row"])
+    if len(cells) > 2 and name != orig.split("/", 1)[1]:
+        cells[2] = name                                           # the register names the numbered folder
+    reg = restore_register(paths.REGISTER.read_text(encoding="utf-8"), code, join_row(cells))
+    return {"source_run": "cx-edit", "items": [{"op": "restore", "table": "projects", "id": code,
+                                                "changes": {"active": last["active"]}, "folder": {"from": src, "to": dst}}],
+            "file_changes": {"title": f"Restore {row['name']}", "project": code, "archive": "restore",
+                             "file_ops": [{"op": "move", "from": src, "to": dst},
+                                          {"op": "write", "path": paths.rel(paths.REGISTER), "content": reg}]}}
+
+
+def archive_cli(cmd, args):
+    """archive <CODE> [--open | --cancel-open] [--out <name>.json]; restore <CODE> [--out <name>.json] (BL-09)."""
+    words = [a for a in args if not a.startswith("--")]
+    out = args[args.index("--out") + 1] if "--out" in args and args.index("--out") + 1 < len(args) else None
+    code = words[0] if words else ""
+    if not re.fullmatch(tracker.CODE_RE, code):
+        sys.exit(f"{cmd} needs a project code: propose.py {cmd} ABC")
+    if cmd == "archive" and "--open" in args:
+        con = tracker.connect()
+        print(json.dumps({"code": code, "name": tracker.project_label(code), "open": open_list(con, code)}, ensure_ascii=False))
+        return 0
+    spec = archive_spec(code, "--cancel-open" in args) if cmd == "archive" else restore_spec(code)
+    return emit_spec(spec, out)
+# ===== end BL-09 =====
 
 
 def cmd_close_project(code, out=None):
@@ -1452,6 +1671,17 @@ def cmd_fields(table=None):
 # ===== end BL-249 =====
 
 
+def _main_files(cmd, args):
+    """The register and folder commands: register-columns, and old-archives (BL-09). None when cmd is neither."""
+    if cmd == "register-columns":
+        return cmd_register_columns()
+    if cmd == "old-archives" and (not args or (len(args) == 2 and args[0] == "--out")):
+        return cmd_old_archives(args[1] if args else None)
+    if cmd in ("archive", "restore") and args:
+        return archive_cli(cmd, args)                                    # BL-09
+    return None
+
+
 def main(argv):
     """Run the propose command in `argv` (see the module docstring)."""
     cmd, args = (argv[0], argv[1:]) if argv else ("", [])
@@ -1473,8 +1703,9 @@ def main(argv):
     if cmd == "learn" and len([a for a in args if not a.startswith("--")]) == 3:
         code, kind, value = [a for a in args if not a.startswith("--")]
         return cmd_learn(code, kind, value, shared="--shared" in args, check_only="--check" in args)
-    if cmd == "register-columns":
-        return cmd_register_columns()
+    done = _main_files(cmd, args)
+    if done is not None:
+        return done
     if cmd == "workstreams":
         return main_ws(args)
     if cmd == "people":

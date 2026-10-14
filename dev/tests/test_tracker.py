@@ -66,6 +66,7 @@ def make_vault():
               "extraction.py", "quality.py",                       # sprint-drafts-extraction
               "claims.py",                                         # BL-314
               "settings_catalogue.py", "health.py",                # BL-320
+              "archive.py",                                        # BL-10, BL-03
               "sneak_peek.py",                                     # BL-322
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)
