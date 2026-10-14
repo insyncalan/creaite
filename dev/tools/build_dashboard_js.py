@@ -130,7 +130,7 @@ def source_text(folder=SRC):
     return "\n".join(p.read_bytes().decode("utf-8") for p in sorted([*module_files(folder), *component_files(folder)])) + "\n"
 
 
-# ---------- helpers for converting an area (dev/V18-MODULES-PLAN.md) ----------
+# ---------- helpers for converting an area (dev/archive/notes/v1.8.0/V18-MODULES-PLAN.md) ----------
 OPENERS, CLOSERS = ("(", "[", "{", "${"), (")", "]", "}", "}$")
 BLOCK_HEADS = ("function", "class", "if", "for", "while", "try", "switch", "{")
 DECLARES = ("function", "class", "const", "let", "var")

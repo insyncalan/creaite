@@ -2,7 +2,7 @@
 
 From the second laptop, 12-10-2026. **This touches `system/templates/dashboard.html` while v1.7.0 is still open, at Alan's request.**
 
-Alan ruled that the two bugs in `dev/V18-HANDLERS-NOTE.md` are bugs to fix, here, as the first commits of BL-231 phase 2. The branch is `v18-fold`, from `origin/main` at `3764b02`. No wrapper has been folded yet: these two commits only make two controls run the full function, so that the fold has nothing left to decide for them.
+Alan ruled that the two bugs in `dev/archive/notes/v1.8.0/V18-HANDLERS-NOTE.md` are bugs to fix, here, as the first commits of BL-231 phase 2. The branch is `v18-fold`, from `origin/main` at `3764b02`. No wrapper has been folded yet: these two commits only make two controls run the full function, so that the fold has nothing left to decide for them.
 
 ## The two commits
 
@@ -28,7 +28,7 @@ Alan ruled that the two bugs in `dev/V18-HANDLERS-NOTE.md` are bugs to fix, here
 
 That note's branch is merged and its decisions are settled:
 1. `check.py` counts 245 real wrappers (`3ef9e5c`).
-2. The six early-bound handlers are dealt with by `dev/V18-HANDLERS-NOTE.md` and the two commits above.
+2. The six early-bound handlers are dealt with by `dev/archive/notes/v1.8.0/V18-HANDLERS-NOTE.md` and the two commits above.
 3. Still open for the fold, see below.
 4. The guide's `npx -p` command is fixed.
 5. The 241 figure is superseded by 245.

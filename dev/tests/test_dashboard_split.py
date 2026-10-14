@@ -195,7 +195,7 @@ class Source(unittest.TestCase):
                 self.assertEqual(sd.stale(src, page), "")
 
     def test_convert_area_moves_pieces_into_a_module(self):
-        """dev/tools/convert_area.py (the recipe in dev/V18-MODULES-PLAN.md), on a copy: a made-up area's two pieces
+        """dev/tools/convert_area.py (the recipe in dev/archive/notes/v1.8.0/V18-MODULES-PLAN.md), on a copy: a made-up area's two pieces
         (every real area is converted), one with a load-time step, a shared `let` and a seam, one with neither."""
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "dashboard"

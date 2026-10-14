@@ -1,7 +1,7 @@
 # v1.9.2 · BL-320 page side: Settings, calmer, with Health inside
 
 Branch `v192-settings-ui`, from `origin/v192-settings-server` (with `origin/main` merged in for Preact). For Team 1. Built on the
-server note, `dev/V192-SETTINGS-SERVER-NOTE.md`. The full description is in `dev/dashboard-spec.md`, "Settings, calmer, and
+server note, `dev/archive/notes/v1.9.2/V192-SETTINGS-SERVER-NOTE.md`. The full description is in `dev/dashboard-spec.md`, "Settings, calmer, and
 Health: the page".
 
 ## What was built

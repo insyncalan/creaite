@@ -14,7 +14,7 @@ Alan has reviewed the five designs. This laptop doesn't edit `dev/BACKLOG.md`, s
 | BL-125 B and C, links and labels | Not scheduled | Out of any sprint, **low priority** |
 | BL-264, Settings › People filters | v1.9.0 | **Redesigned and approved ("mockup is perfect", 12-10-2026):** one filter icon and picker like Work's (`96bc57b`; brief revised to M, about 2.5 days). **Alan: in v1.9.0, built on laptop 2** (12-10-2026), as the first item once BL-231's modules are merged. Alan has answered the brief's four questions (see its Decisions): register stakeholders, filters remembered until cleared, both Needs attention choices, removed hidden by default |
 
-BL-125 A (promises) is also moving out of v1.9.0, to low priority; see `dev/V19-PROMISES-NOTE.md` on `v19-promises-data`.
+BL-125 A (promises) is also moving out of v1.9.0, to low priority; see `dev/archive/notes/v1.9.0/V19-PROMISES-NOTE.md` on `v19-promises-data`.
 
 ## What's in it
 

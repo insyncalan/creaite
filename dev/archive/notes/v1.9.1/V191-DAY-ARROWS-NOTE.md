@@ -8,7 +8,7 @@ The ‹ › arrows sit at a fixed place at the top right of Today's band on ever
 
 ## The merge (sprint-today-days-ui, with today's main, into fix-day-arrows)
 
-Merge order for Team 1: `sprint-today-days-ui` first (see `dev/V190-TODAY-DAYS-NOTE.md`), then `fix-day-arrows`.
+Merge order for Team 1: `sprint-today-days-ui` first (see `dev/archive/notes/v1.9.0/V190-TODAY-DAYS-NOTE.md`), then `fix-day-arrows`.
 
 Three conflicts:
 
@@ -26,4 +26,4 @@ None changed.
 
 ## CI fixes carried over
 
-The two CI fixes on `sprint-today-days-ui` (218076e) came in by a merge with no conflicts. One is the single reduced-motion rule; the other updates the Prep label test to expect the day written out. See `dev/V190-TODAY-DAYS-NOTE.md`. BL-321 adds no reduced-motion block of its own. Passed afterwards: test_motion, test_sweep_alerts, test_today_days_ui, test_today_brief, test_snapshots, check.py.
+The two CI fixes on `sprint-today-days-ui` (218076e) came in by a merge with no conflicts. One is the single reduced-motion rule; the other updates the Prep label test to expect the day written out. See `dev/archive/notes/v1.9.0/V190-TODAY-DAYS-NOTE.md`. BL-321 adds no reduced-motion block of its own. Passed afterwards: test_motion, test_sweep_alerts, test_today_days_ui, test_today_brief, test_snapshots, check.py.

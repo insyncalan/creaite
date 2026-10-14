@@ -620,7 +620,7 @@ No schema changes. One marked section in `dashboard.html`, `/* ===== Dashboard p
 
 ## Settings, calmer, and Health: the server side (BL-320, v1.9.2)
 
-The routes and data the page reads; the page itself is the next section. Notes: `dev/V192-SETTINGS-SERVER-NOTE.md`.
+The routes and data the page reads; the page itself is the next section. Notes: `dev/archive/notes/v1.9.2/V192-SETTINGS-SERVER-NOTE.md`.
 
 - **The catalogue** (`system/scripts/settings_catalogue.py`): for every key in `system/templates/settings-defaults.json` (the one home of the defaults; descriptions `_about` and `note` skipped; `prep.series` and lists such as `sweep.ignore` are one setting each), its group, its tier (`essentials`, `advanced`, or `developer` once there are development-only settings), a label, one line on what it does, and the reason for its default, written out. `ESSENTIAL_ROWS` is the Essentials page: 16 rows in six sections (You, Your day, Saving and review, People I follow, Look and help, Safety), a row covering one key or several (What the sweep reads is the five `sweep.sources`; AI drafts is every `drafting` switch). `dev/tests/test_settings_catalogue.py` fails when a default key has no entry or an entry no default.
 - **Changed:** a setting's value (from `settings.json`; a missing key is its default) differs from its default; order is ignored for lists where it means nothing (weekend days, Week ahead priorities, short forms, own domains, never-read folders, dismissed reminders, hidden rail pages). `last_changed` is the last `settings-log.jsonl` line naming the key, a parent or a child. Once that log is over 30 days old, `retire_candidates` counts the resettable settings never changed (counts only).
@@ -708,7 +708,7 @@ The routes and data the page reads; the page itself is the next section. Notes: 
 
 ## Settings, calmer, and Health: the page (BL-320, v1.9.2)
 
-Branch `v192-settings-ui`. The page side of the routes above; notes for Team 1 in `dev/V192-SETTINGS-UI-NOTE.md`.
+Branch `v192-settings-ui`. The page side of the routes above; notes for Team 1 in `dev/archive/notes/v1.9.2/V192-SETTINGS-UI-NOTE.md`.
 
 - **Four places** (`SETCATS`): **Essentials** (opens first), **People and projects**, **Advanced** and **Health**. The sections keep their old category in `cat`; `CATOF` maps general, work, review (the old Health and warnings: thresholds and Early warnings) and capture to Advanced, and system to Health, so a section another module adds (Set-up from today.js, AI drafts from drafts.js) moves without touching that module. Old addresses still resolve (`SETOLD`: prefs → Essentials, general/work/capture → Advanced, system → Health; `#settings/follow` is the People I follow card).
 - **Components** (dev/COMPONENTS.md): Essentials, Health and Advanced's "Everything else" are Preact components in `src/components/settings/` (`Essentials.jsx`, `Health.jsx`, `MoreSettings.jsx`, and `SettingRow.jsx`, the row frame with the dot and Reset). Their state is `src/stores/settings.js`: `catalogue`, `query`, `changedOnly`, `health`, `healthBusy`, `healthError`, `healthCount`. A section with `mount` is drawn into its own box (`data-mount`); the old code never writes into it (search, Saved and the dots skip it), and renderSettings unmounts the boxes before it redraws.
