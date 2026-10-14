@@ -34,6 +34,7 @@ print(json.dumps({"type": "system", "subtype": "init", "session_id": "s-1"}), fl
 print(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Sweeping."}]}}), flush=True)
 if (here / "fake_mode").read_text().strip() == "hang":
     time.sleep(300)
+time.sleep(1)                       # a real sweep holds the lock for a while: long enough for the harness to see it
 print(json.dumps({"type": "result", "session_id": "s-1", "result": "Swept: 0 items staged for Review."}), flush=True)
 '''
 
