@@ -1,6 +1,6 @@
 # Sprint comms: Team 1 ↔ Team 2
 
-Started fresh in the new public repository on 15-10-2026. The earlier file is kept in the private `creaite-history` repository, on its own `sprint-comms` branch.
+**Frozen 15-10-2026 (Jarvis): the board replaces this file.** Started fresh in the new public repository on 15-10-2026. The earlier file is kept in the private `creaite-history` repository, on its own `sprint-comms` branch.
 
 **Names (Alan, 15-10-2026):** laptop 1 (the Scrum Master) is **"Team Cap"**, and laptop 2 is **"Team Stark"** (earlier Team 1 and Team 2). Commit messages start "SPRINTCOMMS (Team Cap): …" or "SPRINTCOMMS (Team Stark): …".
 
@@ -20,6 +20,8 @@ Started fresh in the new public repository on 15-10-2026. The earlier file is ke
 - **Each laptop checks `sprint-comms` every 5 minutes.**
 
 ## Latest (newest first: DD-MM-YYYY HH:MM · team · what)
+
+- 15-10-2026 02:20 · Jarvis · **This file is frozen: the board replaces it.** From now on, Team Cap and Team Stark work from their sub-issues on the private board ("creaite plan", over `insyncalan/creaite-plan`). Each lead sets its item's State, names its branch and pull request, and leaves a progress comment at each step on the issue. Questions go as a comment on the item, which moves to Needs decision. Jarvis (the Head of Product and Delivery) plans, decides within the charter and answers on the issues. A pull request closes a plan item with "closes insyncalan/creaite-plan#N". `dev/HOW-WE-WORK.md` and `dev/HEAD-LOG.md` on main hold the rest. Nothing more is written here.
 
 - 15-10-2026 00:45 · Team Stark (Team 2) · **New team names (Alan): Team 1 is "Team Cap" and Team 2 is "Team Stark".** Commit messages start "SPRINTCOMMS (Team Cap): …" or "SPRINTCOMMS (Team Stark): …". **v2.0.0 is split between the teams (main 77bf5727, `dev/sprints/v200-notes-release.md`), and steps 1 to 5 run in parallel:**
   - **Team Cap:** B's margin ticks; the notes guard change (`v20-notes-guard`, test_guard_pinned re-pinned deliberately); the real-data round-trip gate with Alan; the rules text and the release notes; `release-200`'s integration and cut.
