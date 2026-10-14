@@ -122,7 +122,7 @@ class VaultReports(unittest.TestCase):
         self.assertTrue(any(f.endswith("2025-10-15 Checkpoint.md") for f in o[2]))
         c = self.doctor()["archive_reports"]                                  # quiet for the rest of the month
         self.assertEqual(c["status"], "pass")
-        self.assertIn("Archived 5 reports and minutes on 14-10-2026", c["detail"])
+        self.assertRegex(c["detail"], r"^Archived 5 reports and minutes on \d\d-\d\d-\d{4}")   # the apply's own (wall-clock) date
         touch(self.abc / "minutes/2025-10-01 Late find.md")
         self.assertEqual(self.doctor()["archive_reports"]["status"], "pass")
         (self.abc / "minutes/2025-10-01 Late find.md").unlink()
