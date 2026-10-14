@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
 META, SHIFT = 4, 8
+MOD = META if sys.platform == "darwin" else 2      # the editor's Mod key: ⌘ on a Mac, Ctrl elsewhere (CI runs on Linux)
 TEXT = "First line <b>not bold</b>\n\n  *kept as typed*"
 
 # Mount two TextEditors (many lines, and one line) on a fixture; record each onInput and onCommit.
@@ -69,9 +70,9 @@ class TextEditorBlock(LiveBrowserCase):
         b.key("Enter")
         b.type("x")
         b.wait("document.querySelector('#teMany').value.endsWith('\\nx')")
-        b.key("z", META)
+        b.key("z", MOD)
         b.wait(f"document.querySelector('#teMany').value==={json.dumps(TEXT)}")
-        b.key("z", META | SHIFT)
+        b.key("z", MOD | SHIFT)
         b.wait("document.querySelector('#teMany').value.endsWith('\\nx')")
 
     def test_a_one_line_box_refuses_enter_and_pastes_on_one_line(self):

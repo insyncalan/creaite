@@ -7,6 +7,7 @@
 // BL-301's wrapper will call on save.
 import { Editor, Extension, Mark, Node, mergeAttributes } from "@tiptap/core";
 import { Plugin, PluginKey } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
 import Image from "@tiptap/extension-image";
@@ -18,6 +19,8 @@ import { writeMarkdown } from "./writer.js";
 
 // What the dashboard's wrapper builds its own pieces from (the claim mark, the image's figure, the keys).
 export { Extension, Mark, Node, mergeAttributes, Plugin, PluginKey };
+// BL-301 B (Notes): decorations, for the note's wiki links and item chips (drawn, never written).
+export { Decoration, DecorationSet };
 
 /** The pinned Tiptap version this file was written and gated against (tiptap.py's PINNED, set by the bundler). */
 export const PINNED = typeof __TIPTAP_PINNED__ === "undefined" ? null : __TIPTAP_PINNED__;   // eslint-disable-line no-undef

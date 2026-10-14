@@ -16,6 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
 META, SHIFT = 4, 8
+MOD = META if sys.platform == "darwin" else 2      # the editor's Mod key: ⌘ on a Mac, Ctrl elsewhere (CI runs on Linux)
 MARKER = "<!-- creaite: second pane -->"
 # forms the old editor rewrote on every save (italic with stars, an entity, a nested numbered list, a bare link, a comment)
 LEFT = ("Status is *provisional* and Q&A is &amp; done.\n\n1. Escalate\n  1. Sponsor first\n\n"
@@ -98,9 +99,9 @@ class CurrentState(LiveBrowserCase):
         self.end("curEd")
         b.type(" Typed")
         self.assertIn("Last line. Typed", b.eval("edValue(curEd)"))
-        b.key("z", META)
+        b.key("z", MOD)
         self.assertEqual(b.eval("joinPanes(edValue(curEd),edValue(curEd2))"), shown)
-        b.key("z", META | SHIFT)
+        b.key("z", MOD | SHIFT)
         self.assertIn("Last line. Typed", b.eval("edValue(curEd)"))
 
     def test_bold_and_a_list_from_the_keys_and_the_toolbar(self):
@@ -110,10 +111,10 @@ class CurrentState(LiveBrowserCase):
         b.key("Enter")
         b.type("Bold")
         b.eval("const e=curEd2.cxed.editor; const to=e.state.selection.from; e.commands.setTextSelection({from:to-4,to})")
-        b.key("b", META)
+        b.key("b", MOD)
         self.end("curEd2")
         b.key("Enter")
-        b.key("b", META)                                     # bold off again for the next line
+        b.key("b", MOD)                                     # bold off again for the next line
         b.type("Item")
         b.click('.inplace [data-rc="insertUnorderedList"]')
         self.assertIn("saved and applied", self.save())
@@ -169,9 +170,9 @@ class PeekText(LiveBrowserCase):
         b.key("Enter")
         b.type("Second & <third>")
         self.assertEqual(b.eval("pkDesc.textContent"), "First line\nSecond & <third>")
-        b.key("z", META)
+        b.key("z", MOD)
         self.assertNotEqual(b.eval("pkDesc.textContent"), "First line\nSecond & <third>")
-        b.key("z", META | SHIFT)
+        b.key("z", MOD | SHIFT)
         b.eval("pkDesc.blur()")
         b.wait(f"(A.find(x=>x.id==={id_!r})||{{}}).upd==='First line\\nSecond & <third>'||PKS.some(s=>JSON.stringify(s).includes('Second & <third>'))", 10)
 

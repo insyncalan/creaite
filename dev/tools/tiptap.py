@@ -44,7 +44,8 @@ MODULE = "tiptap.module.js"           # the one ES module BL-301 A vendors
 MANIFEST = "manifest.json"
 LICENCES = "licenses"
 EXPORTS = ("PINNED", "createEditor", "envelope", "wrap", "parser", "markdownOf", "roundTrip", "fromHtml", "roundTripAll",
-           "Extension", "Mark", "Node", "mergeAttributes", "Plugin", "PluginKey")   # the last six: the dashboard's wrapper
+           "Extension", "Mark", "Node", "mergeAttributes", "Plugin", "PluginKey",   # these six: the dashboard's wrapper
+           "Decoration", "DecorationSet")                                           # BL-301 B: the note's links and chips
 GLOBAL_NAME = "CreaiteTiptap"
 STAMP = ".creaite-sha256"             # written last in each unpacked package: its tarball's hash, so a half-unpack never counts
 

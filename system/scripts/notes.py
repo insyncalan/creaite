@@ -191,15 +191,29 @@ def template(name, title, today=None, when=None, people=()):
 
 # ── Paragraphs and what Find updates applied (notes-sent.json) ────────────────
 
+LIST_ITEM = re.compile(r"(?:[-*+]|\d{1,3}[.)])\s")      # BL-301 E: a top-level list item ("- ", "* ", "1. ", "- [ ] ")
+
+
 def paragraphs(body):
-    """[(n, text)] for a note's body: blocks separated by blank lines, numbered from 1 in order (a source's `#p<n>`)."""
+    """[(n, text)] for a note's body: blocks separated by blank lines, numbered from 1 in order (a source's `#p<n>`). BL-301 E: in a
+    list, each top-level item is its own line (its indented sub-items and continuation lines stay with it), because Find updates
+    marks, and sends, a note line by line, and a tight list has no blank lines between its items."""
     out, buf = [], []
-    for ln in body.split("\n") + [""]:
-        if ln.strip():
-            buf.append(ln)
-        elif buf:
+
+    def flush():
+        """End the line being gathered."""
+        if buf:
             out.append((len(out) + 1, "\n".join(buf)))
-            buf = []
+            buf.clear()
+
+    for ln in body.split("\n") + [""]:
+        if not ln.strip():
+            flush()
+        elif buf and LIST_ITEM.match(ln) and LIST_ITEM.match(buf[0]):
+            flush()                                        # the next item of the same list
+            buf.append(ln)
+        else:
+            buf.append(ln)
     return out
 
 
@@ -223,19 +237,42 @@ def sent(rel):
     return list(_sent_all().get(rel) or [])
 
 
-def record_sent(rel, entries, at):
+def record_sent(rel, entries, at, apply_id=None):
     """Add what one Find updates apply sent from the note at stored path `rel`: `entries` is [(paragraph number, paragraph text,
-    [item IDs])]; only the number, the text's fingerprint and the IDs are kept, with `at` (YYYY-MM-DD HH:MM). Written whole, through
-    a temporary file. Returns the note's records."""
+    [item IDs])]; only the number, the text's fingerprint and the IDs are kept, with `at` (YYYY-MM-DD HH:MM) and, when it was
+    applied, the apply's number (`apply`, so an Undo can take it back: forget_sent). Written whole, through a temporary file.
+    Returns the note's records."""
     data = _sent_all()
     rows = data.setdefault(rel, [])
     for n, text, ids in entries:
-        rows.append({"p": int(n), "fp": fingerprint(text), "ids": [str(i) for i in ids], "at": str(at)})
+        rows.append({"p": int(n), "fp": fingerprint(text), "ids": [str(i) for i in ids], "at": str(at),
+                     **({"apply": int(apply_id)} if apply_id is not None else {})})
+    _write_sent(data)
+    return rows
+
+
+def _write_sent(data):
+    """notes-sent.json written whole, through a temporary file."""
     paths.NOTES_SENT.parent.mkdir(parents=True, exist_ok=True)
     tmp = paths.NOTES_SENT.with_suffix(".json.tmp")
     tmp.write_text(json.dumps({"version": 1, "notes": data}, ensure_ascii=False, indent=1), encoding="utf-8")
     os.replace(tmp, paths.NOTES_SENT)
-    return rows
+
+
+def forget_sent(rel, apply_id):
+    """BL-301 E: after an Undo of apply `apply_id`, the note's lines that apply sent count as new again. Returns how many records
+    went."""
+    data = _sent_all()
+    rows = data.get(rel) or []
+    keep = [r for r in rows if r.get("apply") != int(apply_id)]
+    if len(keep) == len(rows):
+        return 0
+    if keep:
+        data[rel] = keep
+    else:
+        data.pop(rel, None)
+    _write_sent(data)
+    return len(rows) - len(keep)
 
 
 def unsent(rel, body):
@@ -252,3 +289,208 @@ def sent_ids(rel, body):
         ids = by_fp.setdefault(r.get("fp"), [])
         ids.extend(x for x in dict.fromkeys(r.get("ids") or []) if x not in ids)
     return {n: by_fp[fingerprint(t)] for n, t in paragraphs(body) if fingerprint(t) in by_fp}
+
+
+# ===== BL-301 B (v20-notes-tab): what the Notes tab reads, and a note's draft while it is typed =====
+# The Notes tab (the dashboard, through the live server's /api/notes/* routes) lists a project's notes from their front matter and
+# the references in their bodies (no text), opens one, keeps a draft in system/staging/drafts/notes/ as Alan types, and writes the
+# file through filechange.py (backed up, logged, undoable) once per editing session. Nothing here writes a project file.
+
+WIKI_LINK = re.compile(r"\[\[([^\[\]\n|]{1,160})(?:\|[^\[\]\n]*)?\]\]")
+ITEM_LINK = re.compile(r"\]\(creaite:item/([A-Za-z0-9-]{3,30})\)")
+ITEM_ID = re.compile(r"(?<![A-Za-z0-9/-])([A-Z][A-Z0-9]{2,6}-[A-Z]-\d{2,4})(?![A-Za-z0-9-])")
+PERSON_LINK = re.compile(r"@\[([^\[\]\n]{1,80})\]\(creaite:person/[^)\s]*\)")
+KIND_WORDS = (("working-session", "Working session"), ("stakeholder", "Stakeholder"), ("lessons", "Lessons learned"))
+DRAFT_DIR = paths.DRAFTS / "notes"
+
+
+def kind_of(meta):
+    """The note's kind as the list shows it ("Stakeholder", "Lessons learned", "Working session"), from its front matter; ''."""
+    if meta.get("date") or meta.get("with"):
+        return "Working session"
+    tags = [str(t).lower() for t in meta.get("tags") or []]
+    for key, word in KIND_WORDS:
+        if any(t == key or t.startswith(key) for t in tags):
+            return word
+    return ""
+
+
+def refs(body):
+    """{links, items, people} the body points at: the titles in [[…]], the item IDs (chips and plain IDs) and the people (@[…])."""
+    def once(xs):
+        """Each value once, in order, stripped."""
+        return list(dict.fromkeys(x.strip() for x in xs if x.strip()))
+    return {"links": once(WIKI_LINK.findall(body)), "items": once(ITEM_LINK.findall(body) + ITEM_ID.findall(body)),
+            "people": once(PERSON_LINK.findall(body))}
+
+
+def text_sha(text):
+    """What a save checks the file against: the SHA-256 of the note's text as it was opened (16 hex characters)."""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+def summary(p, code=None):
+    """One note as the list and the dashboard's data hold it: where it is, its front matter and what it points at. Never its text."""
+    p = Path(p)
+    text = p.read_text(encoding="utf-8", errors="ignore")
+    meta, body = parse(text)
+    from datetime import datetime
+    mod = datetime.fromtimestamp(p.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+    out = {"path": paths.rel(p), "file": p.name, "title": str(meta.get("title") or p.stem), "created": str(meta.get("created") or ""),
+           "updated": str(meta.get("updated") or ""), "tags": list(meta.get("tags") or []), "pinned": bool(meta.get("pinned")),
+           "confidential": bool(meta.get("confidential")), "date": str(meta.get("date") or ""), "with": list(meta.get("with") or []),
+           "kind": kind_of(meta), "mod": mod, **refs(body)}
+    if code:
+        out["p"] = code
+    return out
+
+
+def listing(code):
+    """[summary] of a project's (or `_portfolio`'s) notes: pinned first, then the most recently changed."""
+    out = []
+    for f in paths.note_files(code):
+        try:
+            out.append(summary(f, code))
+        except OSError:  # a note that went while the list was read is simply not listed
+            continue
+    return sorted(out, key=lambda n: (not n["pinned"], -_stamp(n)))
+
+
+def _stamp(n):
+    """A sortable number for when a note last changed: its file's time, else its `updated` date."""
+    t = n.get("mod") or n.get("updated") or ""
+    return int(re.sub(r"\D", "", t)[:12].ljust(12, "0") or 0)
+
+
+def note_of(rel):
+    """(code, real path) when the stored path `rel` is a note directly in a notes folder; else None."""
+    s = str(rel or "")
+    if not s or ".." in Path(s).parts or not s.lower().endswith(".md"):
+        return None
+    p = paths.resolve(s)
+    if not paths.is_note(p):
+        return None
+    area = paths.project_area(p)
+    return (area[0], p) if area else None
+
+
+def draft_file(rel):
+    """Where a note's draft is kept while it is typed: system/staging/drafts/notes/<16 hex of its path>.json."""
+    return DRAFT_DIR / (hashlib.sha256(str(rel).encode("utf-8")).hexdigest()[:16] + ".json")
+
+
+def save_draft(rel, body, changes, base, at):
+    """Keep what Alan has typed in a note, before the file is written: {path, body, changes, base, at}. Written whole."""
+    DRAFT_DIR.mkdir(parents=True, exist_ok=True)
+    f = draft_file(rel)
+    tmp = f.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps({"path": str(rel), "body": body, "changes": changes or {}, "base": base, "at": at},
+                              ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, f)
+    return f
+
+
+def read_draft(rel):
+    """The note's draft, or None."""
+    try:
+        d = json.loads(draft_file(rel).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return d if isinstance(d, dict) and d.get("path") == str(rel) else None
+
+
+def drop_draft(rel):
+    """Remove the note's draft (after its file is written)."""
+    try:
+        draft_file(rel).unlink()
+    except OSError:  # no draft to remove: nothing to do
+        pass
+
+
+EDITABLE = ("title", "tags", "pinned", "confidential", "date", "with")
+
+
+def clean_changes(changes):
+    """The front-matter changes a save may make, kept to known keys, types and sizes."""
+    out = {}
+    for k, v in (changes or {}).items():
+        if k not in EDITABLE:
+            continue
+        if k in FLAGS:
+            out[k] = bool(v)
+        elif k in LISTS:
+            vals = v if isinstance(v, list) else str(v or "").split(",")
+            out[k] = [str(x).replace(",", " ").strip()[:60] for x in vals if str(x).strip()][:20]
+        elif k == "date":
+            if v and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v)):
+                continue
+            out[k] = str(v or "")
+        else:
+            out[k] = re.sub(r"\s+", " ", str(v or "")).strip()[:160]
+    return out
+
+
+def saved_text(text, body=None, changes=None, today=None):
+    """The note's new text from its current `text`: the body (None keeps it) and the front-matter changes, stamped `updated`. None
+    when nothing would change (so an unchanged note isn't written)."""
+    meta, old = parse(text)
+    new = dict(meta)
+    for k, v in clean_changes(changes).items():
+        if k == "date" and not v:
+            new.pop("date", None)
+        else:
+            new[k] = v
+    if not new.get("title"):
+        new["title"] = meta.get("title") or "Untitled note"
+    body = old if body is None else str(body)
+    if new == meta and body == old:
+        return None
+    return render(touched(new, today), body)
+# ===== end BL-301 B =====
+
+
+# ===== BL-301 B gaps (v20-notes-gaps): pictures, a renamed title renames the file, links to a renamed note =====
+# Pictures go in the notes folder's `_images/` and are written `![caption](_images/<name>)` (a path beside the note, so the
+# Markdown reads in Finder and OneDrive). A note whose title changes is renamed to match (a move through filechange.py), and
+# the `[[…]]` links to it in other notes are changed to the new title. Nothing here writes a file: the live server does, through
+# filechange.py.
+
+IMAGE_REF = re.compile(r"!\[[^\]\n]*\]\((_images/[A-Za-z0-9][A-Za-z0-9._-]{0,120}\.(?:png|jpe?g))\)", re.I)
+WIKI_PARTS = re.compile(r"\[\[([^\[\]\n|]{1,160})(\|[^\[\]\n]*)?\]\]")
+
+
+def image_refs(body):
+    """The `_images/…` pictures a note's body shows, each once, in order."""
+    return list(dict.fromkeys(IMAGE_REF.findall(body or "")))
+
+
+def image_name(label, ext, today=None):
+    """A new picture's file name: `YYYY-MM-DD-<words>.<ext>`, no spaces (a Markdown image link can't hold one)."""
+    slug = re.sub(r"[^a-z0-9]+", "-", str(label or "").lower()).strip("-")[:40].strip("-") or "image"
+    return f"{(today or date.today()).isoformat()}-{slug}.{ext}"
+
+
+def name_fits(p, title):
+    """Whether the note file `p` is already named by `title` (or by it with the number a taken name gets)."""
+    want, stem = file_name(title), Path(p).stem
+    return stem == want or bool(re.fullmatch(re.escape(want) + r"(?:-\d+| \(\d+\))", stem)) or stem.lower() == want.lower()
+
+
+def link_safe(title):
+    """Whether a title can stand in a [[…]] link (no brackets, bar or line break)."""
+    return bool(title) and not re.search(r"[\[\]|\n]", title)
+
+
+def relinked(text, old_names, new_title):
+    """The note's text with each [[old]] (or [[old|shown]]) link to a renamed note pointing at `new_title`; the front matter is left
+    as it is. `old_names` are matched without regard to case. None when no link changes."""
+    olds = {str(o).strip().lower() for o in old_names if str(o).strip()}
+    _meta, body = parse(text)
+    head = text[:len(text) - len(body)]
+
+    def swap(m):
+        """One link, pointed at the new title when it named the old one."""
+        return f"[[{new_title}{m.group(2) or ''}]]" if m.group(1).strip().lower() in olds else m.group(0)
+    new_body = WIKI_PARTS.sub(swap, body)
+    return None if new_body == body else head + new_body
+# ===== end BL-301 B gaps =====

@@ -72,9 +72,18 @@ export * from "./stores/rejects.js";
 
 export * from "./components/notes/CaptureDrawer.jsx";   /* BL-301 C: the capture drawer */
 export * from "./stores/capture.js";
+export * from "./components/AiSelect.jsx";   /* BL-301 D: AI on selected text */
+export * from "./stores/aiEdit.js";
+
+import { bootAiSelect } from "./components/AiSelect.jsx";
+
 export * from "./components/peek/SneakPeek.jsx";   /* BL-322: Sneak peek */
 
 export * from "./sneak.js";
+export * from "./notes.js";   /* BL-301 B: the Notes tab */
+export * from "./stores/notes.js";
+export * from "./components/notes/FindUpdates.jsx";   /* BL-301 E: Find updates, the panel beside a note */
+export * from "./stores/findUpdates.js";
 
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";
@@ -90,6 +99,7 @@ import { bootDebugLog, bootEventStream, bootLive, bootPulse, bootSnackKeys, boot
 import { shared } from "./core/state.js";
 import { bootDrafts0129, bootDrafts0160, bootDrafts0196, bootDrafts0202, bootDrafts0203, bootDrafts0204 } from "./drafts.js";
 import { bootFiles0068, bootFiles0069 } from "./files.js";
+import { bootNotes } from "./notes.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
 import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
@@ -108,6 +118,7 @@ publish(page);
 
 /* ======================= the load-time steps and the start-up, in today's order ======================= */
 bootTooltips();
+bootAiSelect();   /* BL-301 D: before any editor is made */
 bootDevTag();
 bootRail0007();
 bootTheme();
@@ -273,3 +284,4 @@ bootAsk0207();
 bootAsk0208();
 bootReview0209();
 bootReview0315();
+bootNotes();   /* BL-301 B */

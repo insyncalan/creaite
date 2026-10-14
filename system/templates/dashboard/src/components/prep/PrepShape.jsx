@@ -117,6 +117,11 @@ function Notes() {
   const drafted = shapeDrafted.value, busy = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
   if (!drafted && !SHAPE_SECTIONS.some(([k]) => (texts[k] || "").trim())) return null;
   const now = notesNow(), edited = new Set(editedSections()), why = draftWhyNot("shape");
+  /** BL-301 D: AI on a selection in the notes (plain text), with the meeting's project; a confidential meeting asks once first.
+      @type {import("../../core/editor.js").EdAi} */
+  const ai = { place: "plain", project: () => prepNow().m.p || "",
+    confidential: () => shapeConfidential.value || !!(prepNow().m.invite && prepNow().m.invite.confidential),
+    key: () => `shape|${shapeKey.value || ""}` };
   return (
     <div class="shdraft" role="region" aria-label="Draft notes">
       <div class="shdh">
@@ -141,7 +146,7 @@ function Notes() {
               <label id={`shN-${k}-l`}>{label}</label>
               {edited.has(k) ? <span class="sub shmine">Your edit, kept on Regenerate · <button type="button" class="linkbtn" onClick={() => giveBack(k)}>let creaite redraft it</button></span> : null}
             </div>
-            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`}
+            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`} ai={ai}
               describedBy={lines.length ? `shC-${k}` : undefined} onInput={t => { shapeText.value = { ...shapeText.value, [k]: t }; }} />
             {lines.length ? (
               <ol class="shcites" id={`shC-${k}`} aria-label={`${label}: each line's source`}>

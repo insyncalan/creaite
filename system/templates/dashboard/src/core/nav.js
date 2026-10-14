@@ -17,6 +17,8 @@ import { helpNorm, renderHelp } from "../help.js";
 import { renderInbox } from "../intake.js";
 import { HUB, renderMeeting } from "../meetings.js";
 import { renderPrep } from "../components/prep/PrepPage.jsx";
+import { notesCodeOk, notesLeave, renderNotes } from "../notes.js";
+import { noteCur, noteFind } from "../stores/notes.js";
 import { prepHref, prepKeyOf, prepView, prepViewKey } from "../stores/prep.js";
 import { mvAfter, mvEdClose, renderMilestones } from "../milestones.js";
 import { openRecord, pkNewAsk, pkNewTitle } from "../panel.js";
@@ -38,8 +40,10 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
   if(shared.VIEW==="milestones"){ st.arg=shared.MSCODE; st.mv=shared.MV.view; st.ms=shared.MV.peek||null; }   /* BL-245 */
   if(shared.VIEW==="meeting") st.arg=shared.MEETING;   /* BL-233 */
   if(shared.VIEW==="prep") st.arg=prepViewKey.value;   /* BL-286 D */
+  if(shared.VIEW==="notes"){ st.arg=shared.NOTECODE; const c=noteCur.value; st.note=c&&c.code===shared.NOTECODE?c.note.file:null; st.find=!!(st.note&&noteFind.value); }   /* BL-301 B */
   return st; }
 export function hashOf(st){ if(st&&st.v==="meeting") return `#meeting=${st.arg||""}`;   /* BL-233 */
+  if(st&&st.v==="notes") return `#notes=${st.arg||""}${st.note?`&n=${encodeURIComponent(st.note)}`:""}${st.note&&st.find?"&find=1":""}`;   /* BL-301 B */
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
   if(st&&st.v==="milestones") return `#milestones=${st.arg}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
   if(st&&st.v==="people") return "#people"+(st.arg==="none"?"/none":"");   /* BL-190 */
@@ -50,6 +54,8 @@ export function hashOf(st){ if(st&&st.v==="meeting") return `#meeting=${st.arg||
     if(a.from) p.push("from="+a.from); if(a.to) p.push("to="+a.to); if(p.length) h+="&"+p.join("&"); } return h; }
 export function parseHash(h){ { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm) return {v:"meeting",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-233 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
+  { const mm=/^#?notes=([^&]+)(?:&n=([^&]*))?/.exec(String(h||"")); if(mm){ let code="", n=null; try{ code=decodeURIComponent(mm[1]); n=mm[2]?decodeURIComponent(mm[2]):null; }catch(e){ return null; }
+    if(!notesCodeOk(code)) return null; return {v:"notes",arg:code,note:n,find:/[&]find=1(&|$)/.test(String(h||"")),wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-301 B */
   { const q=String(h||"").replace(/^#/,""), mm=/^milestones=([^&]+)(.*)$/.exec(q);
     if(mm){ const code=decodeURIComponent(mm[1]); if(!P.some(p=>p.code===code)) return null;
     const kv=Object.fromEntries(mm[2].split("&").filter(Boolean).map(x=>x.split("=")));
@@ -83,6 +89,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
   if(!PKN.force&&pkNewPending()){ try{ history.pushState(shared.NAVSTATE,"",hashOf(shared.NAVSTATE)); }catch(x){} pkNewAsk(()=>history.back()); return; }   /* BL-179 */
   if(st&&st.v==="activity") shared.ACTF=st.aq?{...st.aq,types:[...(st.aq.types||[])]}:{};
   if(!st) st={v:"today",arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0};
+  if(st.v==="notes"){ shared.NOTEFILE=st.note||null; shared.NOTEFIND=!!st.find; }   /* BL-301 B: the note the address names opens; E: &find=1 opens Find updates */
   shared.WT=st.wt||shared.WT; if(st.v==="work"){ if(st.fx){ applyFilters(st.fx); WINIT[shared.WT]=true; if(st.vb&&allViews(shared.WT).some(v=>v.id===st.vb)) WB[shared.WT]=st.vb; syncView(); } else if(st.wv) applyView(st.wv);
     PROJF.clear(); (st.p||[]).forEach(c=>PROJF.add(c)); shared.WQ=st.q||""; SORT[shared.WT]=st.sort||null;
     if(st.lay){ shared.LAYCHOSEN=true; WLAY[shared.WT]=st.lay; if(st.g) WGRP[shared.WT]=st.g; }   /* BL-103: the layout and grouping are in the address */
@@ -96,6 +103,7 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   if(v==="milestones"){ if(!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg; }
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
+  if(from==="notes"&&v!=="notes") notesLeave();   /* BL-301 B: leaving the note ends its editing session (its file is written) */
   if(!shared.LOADING&&from==="review"&&v!=="review"){ shared.MREVLEFT=true; rjCloseMenu(false); rjLeave(); }   /* BL-263; BL-315: the greyed rejected rows go when Review is left */
   if(v==="people"&&(arg==="none"||arg==="work")) setPTab(arg);   /* BL-190 */
   const r=((v,arg,opt={})=>{ if(!opt.restore){ if(navBlocked(()=>go(v,arg,opt))) return false; navWrite(false); }   /* keep this entry's item and scroll for Back */
@@ -105,11 +113,11 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   shared.FROMPROJ=(v==="work"&&opt.from)||null;
   closePanel(true); closeDisp(false); shared.VIEW=v; $$(".view").forEach(s=>s.hidden=true);
   const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
-  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today"}[v]||v;   /* BL-286 D: the prep page sits under Today */
+  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today */
   setRailView(railKey);   /* BL-163, BL-319: the sidebar marks the page (through its store) */
-  if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="person") shared.PERSON=arg;
+  if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="person") shared.PERSON=arg; if(v==="notes") shared.NOTECODE=arg;
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
-  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg)}[v]||(()=>{}))();
+  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),notes:()=>renderNotes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
   tabTitle();
@@ -174,7 +182,7 @@ export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Wor
 export function tabTitle(){ if(shared.VIEW==="meeting"){ const m=HUB()[shared.MEETING]; TABNAME.meeting=m?m.title:"Meeting"; }   /* BL-233 */
   if(shared.VIEW==="prep"){ const v=prepView.value, t=v&&v.ok&&v.model?v.model.meeting.title:""; TABNAME.prep=t?`Prep · ${t}`:"Prep"; }   /* BL-286 D */
   const n=REV.filter(r=>!r.done).length, vips=VIPS().length;
-  const where=shared.VIEW==="cockpit"&&shared.COCK?pName(shared.COCK):shared.VIEW==="person"&&shared.PERSON?shared.PERSON:TABNAME[shared.VIEW]||"";
+  const where=shared.VIEW==="notes"&&shared.NOTECODE?(shared.NOTECODE==="_portfolio"?"Portfolio notes":`${pName(shared.NOTECODE)} notes`):shared.VIEW==="cockpit"&&shared.COCK?pName(shared.COCK):shared.VIEW==="person"&&shared.PERSON?shared.PERSON:TABNAME[shared.VIEW]||"";
   const t=(shared.RBMARKED?RBMARK:"")+(vips?`(${vips}) `:"")+BASETITLE+(where?` · ${where}`:"")+(shared.VIEW==="review"&&n?` (${n})`:"");
   if(document.title!==t) document.title=t; 
   if(shared.VIEW==="milestones"&&shared.MSCODE){ const t=document.title.replace(/ · [^·]*$/,"").replace(/ \(\d+\)$/,"")+` · ${pName(shared.MSCODE)} milestones`; if(document.title!==t) document.title=t; } }   /* BL-245 */

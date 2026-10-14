@@ -126,7 +126,11 @@ class DashboardTests(unittest.TestCase):
         # (BL-256, vendor/preact) uses to tell what kind of element it is creating
         links = set(re.findall(r'https?://[^\s"\'<>)]+', self.html)) - {"http://www.w3.org/2000/svg",
                                                                          "http://www.w3.org/1998/Math/MathML",
-                                                                         "http://www.w3.org/1999/xhtml"}
+                                                                         "http://www.w3.org/1999/xhtml",
+                                                                         # BL-301 A: text inside the vendored Tiptap module (an error message
+                                                                         # and a comment), never fetched
+                                                                         "https://prosemirror.net/docs/guide/#generatable",
+                                                                         "https://github.com/markedjs/marked.`,"}
         self.assertEqual({u for u in links if "office365.com" not in u and not u.startswith("http://127.0.0.1:")},
                          set())   # only stored message links, and this Mac's own live server
         self.assertNotIn(str(self.v.root), self.html)

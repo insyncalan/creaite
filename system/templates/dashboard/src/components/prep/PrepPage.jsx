@@ -133,19 +133,28 @@ function Outline({ mo }) {
 }
 
 /** One section's box: the lines as text, saved when the box is left with a change.
-    @param {{sec: string, label: string, lines: import("../../stores/prep.js").NoteLine[], onSave: (sec: string, text: string) => void}} props */
-function NoteBox({ sec, label, lines, onSave }) {
+    @param {{sec: string, label: string, lines: import("../../stores/prep.js").NoteLine[], onSave: (sec: string, text: string) => void,
+      ai?: import("../../core/editor.js").EdAi}} props */
+function NoteBox({ sec, label, lines, onSave, ai }) {
   const start = lines.map(l => l.text).join("\n");
   const cites = lines.flatMap(l => l.sources || []).filter((s, i, a) => a.findIndex(x => (x.path || x.url || x.id || x.label) === (s.path || s.url || s.id || s.label)) === i);
   return (
     <div class="ppnote">
       <label id={`pp-n-${sec}-l`}>{label}</label>
-      <TextEditor id={`pp-n-${sec}`} cls="ppbox" rows={Math.max(2, lines.length + 1)} value={start} labelledBy={`pp-n-${sec}-l`}
+      <TextEditor id={`pp-n-${sec}`} cls="ppbox" rows={Math.max(2, lines.length + 1)} value={start} labelledBy={`pp-n-${sec}-l`} ai={ai}
         onCommit={now => { if (now.trim() !== start.trim()) onSave(sec, now); }} />
       {cites.length ? <div class="ppcites">{cites.slice(0, 6).map((s, i) => <SourceLink key={i} s={s} cite />)}</div> : null}
     </div>
   );
 }
+
+/** BL-301 D: AI on a selection in the Prep page's boxes (plain text), with the meeting's project; a confidential meeting asks
+    once before its text goes to Claude. @param {any} mo @returns {import("../../core/editor.js").EdAi} */
+const aiOf = mo => {
+  const mt = (mo && mo.meeting) || {};
+  return { place: "plain", project: () => mt.project || "", confidential: () => !!mt.confidential,
+    key: () => `prep|${mt.day || ""}|${mt.start || ""}|${mt.title || ""}` };
+};
 
 function FocusBand({ mo, saving }) {
   const f = mo.focus || {}, reading = f.reading || {}, notes = f.notes || {};
@@ -162,7 +171,7 @@ function FocusBand({ mo, saving }) {
       <h2 id="pp-h-focus"><Icon name="spark" />{focusText ? `Focus: ${focusText}` : "Focus and notes"}</h2>
       {reading.aim ? <p class="ppaim"><b>Aim:</b> {reading.aim}</p> : null}
       {shaped ? <>
-        <div class="ppnotes">{SECTIONS.map(([k, label]) => <NoteBox key={k} sec={k} label={label} lines={notes[k] || []} onSave={save} />)}</div>
+        <div class="ppnotes">{SECTIONS.map(([k, label]) => <NoteBox key={k} sec={k} label={label} lines={notes[k] || []} onSave={save} ai={aiOf(mo)} />)}</div>
         <p class="sub ppstamp" role="status">{saving === "notes" ? "Saving…" : `Your notes${f.accepted_at ? `, accepted ${fd(f.accepted_at)}` : ""} · edit here; drag a box's corner to make it bigger`}</p>
       </> : <p class="sub">Nothing has been shaped for this meeting yet. Change focus to say what it should settle; the notes appear here.</p>}
     </section>
@@ -234,7 +243,7 @@ function QuestionsCard({ mo, saving }) {
     <section class="card pc" id="pp-questions" tabIndex={-1} aria-labelledby="pp-h-questions">
       <h2 id="pp-h-questions">Questions and asks</h2>
       <span class="vh" id="pp-q-l">Questions and asks, one a line</span>
-      <TextEditor id="pp-q" cls="ppbox" rows={Math.max(3, (mo.questions || []).length + 1)} value={start} placeholder="One question or ask a line" labelledBy="pp-q-l"
+      <TextEditor id="pp-q" cls="ppbox" rows={Math.max(3, (mo.questions || []).length + 1)} value={start} placeholder="One question or ask a line" labelledBy="pp-q-l" ai={aiOf(mo)}
         onCommit={now => { if (now.trim() !== start.trim()) saveFocus({ questions: now.split("\n").map(x => x.trim()).filter(Boolean) }, "questions"); }} />
       <p class="sub ppstamp" role="status">{saving === "questions" ? "Saving…" : mo.questions_edited
         ? <>Your questions · <button type="button" class="linkbtn" onClick={() => saveFocus({ questions: null }, "questions")}>Use creaite's questions</button></>

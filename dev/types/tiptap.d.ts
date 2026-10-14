@@ -17,4 +17,6 @@ declare module "tiptap" {
   export function mergeAttributes(...attrs: any[]): any;
   export const Plugin: any;
   export const PluginKey: any;
+  export const Decoration: any;          // BL-301 B: the note's drawn links and chips
+  export const DecorationSet: any;
 }

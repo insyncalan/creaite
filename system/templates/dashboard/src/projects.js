@@ -2,6 +2,7 @@
 /* projects.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0029-projects-cockpit.js, 0054-generate-current-state-with-claude-bl-46.js, 0055-executive-current-state-bl-106.js, 0056-current-state-edited-in-place-bl-47.js, 0058-bl-162-sprint-rail.js, 0059-bl-207-sprint-insight.js, 0081-dashboard-pages-bl-87-to-bl-95.js, 0082-bl-190-sprint-links.js, 0083-after-bl-190-flow.js, 0124-insight-bl-51-bl-49-bl-54.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { mountAiMenu } from "./components/AiSelect.jsx";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, paintIcons, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
@@ -18,6 +19,7 @@ import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, 
 import { mvBindScroll, mvCardHtml } from "./milestones.js";
 import { bl185Row, htmlToMd, imgSrc, joinPanes, markSel, MD_IMG, mdHtml, openProject, openRecord, pkDrDrop, pkNewAsk, pkNewAskOff, pkNewKey, pkNewOffer, REC, saveCurrent, savePanel, splitPanes } from "./panel.js";
 import { mountPrepPopup } from "./components/prep/PrepPopup.jsx";
+import { drawCockpitTabs } from "./notes.js";
 import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
 import { draftOn, pencil, SPARKI } from "./review.js";
@@ -54,6 +56,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
   putHTML($("#v-cockpit"),html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div>
      <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P.length<2?"disabled":""}>‹</button><select id="projSw" aria-label="Switch project">${P.map(x=>html`<option value="${x.code}" ${x.code===code?"selected":""}>${x.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P.length<2?"disabled":""}>›</button></div></div>
+   <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}"${!viaServer()||shared.RUN||shared.GEN.run?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
@@ -69,6 +72,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
    </div></div>
    ${raw(flowCard(code))}
    <div class="cockfoot"><button class="btn" data-ask="weekly report ${p.code}" aria-label="Draft weekly report" data-tip="Draft the weekly report with ask creaite">${raw(ic("filetext"))}Weekly report</button><button class="btn" data-ask="client report ${p.code}" aria-label="Draft client report" data-tip="Draft a client-safe report with ask creaite">${raw(ic("filetext"))}Client report</button>${raw(ibtn("folder","Browse files",`data-files="${p.code}"`,"bd"))}</div></div>`); })();
+  drawCockpitTabs(code);   /* BL-301 B: Overview and Notes */
   csHead(code);   /* BL-274 */
   if(!(shared.CURED&&shared.CURED.code===code)) readClaims(code);   /* BL-162 */
   { const v=$("#v-cockpit"); if(v){
@@ -185,12 +189,15 @@ export function execResult(code,original,md){ if(!shared.CURED||shared.CURED.cod
   shared.CURED.rewrite={md,original,notes:null}; mountCurEdit(); snack("Executive version ready. Use it or discard it; your text is unchanged.");
   const cur=shared.CURED, rw=cur.rewrite, claims=claimsPayload("rw"); api("/api/current/check",{code:cur.code,text:stripMarks(md),original,sources:"",claims,...execOpts()}).then(r=>{ if(shared.CURED!==cur||cur.rewrite!==rw) return;
     rw.notes=r.ok?r.notes:[]; if(r.ok) cur.facts=r.facts; setRewrite(); setNotes(); if(r.ok&&r.evidence) claimsApply("rw",r.evidence,claims); }); }
+/* BL-301 D: Make it executive is now an option of AI ▾ beside Save (the whole Current state, with its facts and evidence, as
+   before); the other options act on the whole pane the cursor was last in, and on a selection through the bar over it. */
+export function curAiMenu(){ const el=$("#curAi"); if(!el||!shared.CURED) return;
+  mountAiMenu(el,{place:"current",onExecutive:execRewrite,target:()=>{ const c=shared.CURED; const h=c&&(c.last===2?c.ed2:c.ed1); return h?{h,ai:{place:"current",project:()=>c.code}}:null; }}); }
 export function setRewrite(){ const el=$("#genRewrite"); if(el) swapHTML(el,raw(rewriteHtml())); rwWrap(); evRefresh(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0055(){
 $("#genDlg").addEventListener("click",e=>{ const a=e.target.closest("[data-ga]"), l=e.target.closest("[data-gl]"), f=e.target.closest("[data-gf]"); if(a) shared.GEN.aud=a.dataset.ga; else if(l&&!l.disabled) shared.GEN.len=l.dataset.gl; else if(f){ if(f.getAttribute("aria-disabled")==="true"){ snack(f.dataset.tip||"That form is off"); return; } shared.GEN.form=f.dataset.gf; } else return; genOptions(); });
 document.addEventListener("click",e=>{ if(!shared.CURED) return;
-  if(e.target.closest("[data-exec]")){ execRewrite(); return; }
   if(e.target.closest("[data-chk]")){ curCheck(); return; }
   const rw=e.target.closest("[data-rw]"); if(rw&&shared.CURED.rewrite){ const md=shared.CURED.rewrite.md; shared.CURED.rewrite=null;
     if(rw.dataset.rw==="use"){ curLoad(1,md); shared.CURED.dirty=true; shared.CURED.notes=null; shared.CURED.claims=null; mountCurEdit(); claimsInit("ed"); curCheck(); }
@@ -211,7 +218,8 @@ export const CUR_PROPS={
 export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#curEd"), k=n===2?"ed2":"ed1"; if(!c||!slot) return;
   if(c[k]&&!c[k].editor.isDestroyed){ for(const a of ["aria-label","data-ph"]) c[k].el.setAttribute(a,slot.getAttribute(a)); slot.replaceWith(c[k].el); return; }
   const imgs=(P.find(x=>x.code===c.code)||{}).images;
-  c[k]=creaiteEditor(slot,{features:"current",markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS}); }
+  c[k]=creaiteEditor(slot,{features:"current",markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
+    ai:{place:"current",project:()=>(shared.CURED&&shared.CURED.code)||""}}); }   /* BL-301 D: AI on selected text */
 /** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
 export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
 export const RTE_TOOLS=[["bold","B","Bold (⌘B)"],["italic","I","Italic (⌘I)"],["strikeThrough","S","Strikethrough (⌘⇧X)"],["formatBlock:h3","H","Sub-heading"],["|"],
@@ -231,8 +239,8 @@ export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
     ${shared.CURED.sources?html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>`:""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts?"":"hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
-    <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><button class="btn" data-exec="1" title="Rewrite what is in the editor in the executive voice, keeping your facts. You choose whether to use it.">Make it executive</button><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
-  curAttach(1); curAttach(2); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
+    <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
+  curAttach(1); curAttach(2); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
   if(shared.CURED){ const t=csTitle(shared.CURED.code);
     $("#curEd")?.setAttribute("aria-label",`${t}, left pane`); $("#curEd2")?.setAttribute("aria-label",`${t}, right pane`); csHead(shared.CURED.code); }
   if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); } }

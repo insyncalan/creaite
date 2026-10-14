@@ -66,9 +66,14 @@ const plainDoc=t=>({ type:"doc", content:String(t??"").split("\n").map(l=>l?{ ty
 const plainText=doc=>{ const L=[]; doc.forEach(p=>{ L.push(p.textContent); }); return L.join("\n"); };
 
 /**
- * @typedef {{features?: "current"|"plain", markdown?: string, html?: string, text?: string, multiline?: boolean,
- *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value"}} EdOptions
- * @typedef {{el: HTMLElement, editor: any, features: string, value: () => string, setValue: (v: string) => void,
+ * BL-301 D: AI on selected text. `place` chooses the options (edit_ai.py PLACES: "current", "plain", "notes", "email");
+ * `project()` the project's code (its name, people and open item IDs go with the text); `confidential()` true makes the page ask
+ * once (per `key()`) before the text goes to Claude.
+ * @typedef {{place: string, project?: () => string, confidential?: () => boolean, key?: () => string}} EdAi
+ * @typedef {{features?: "current"|"plain"|"notes", markdown?: string, html?: string, text?: string, multiline?: boolean,
+ *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",
+ *   ai?: EdAi}} EdOptions
+ * @typedef {{el: HTMLElement, editor: any, features: string, multiline?: boolean, value: () => string, setValue: (v: string) => void,
  *   touched: () => boolean, focus: (at?: any) => void, destroy: () => void}} EdHandle
  */
 /**
@@ -94,7 +99,7 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
     el.dispatchEvent(new Event("input",{ bubbles:true })); });
   blank();
   /** @type {EdHandle} */
-  const h={ el, editor, features,
+  const h={ el, editor, features, multiline,
     value:()=>{ if(!touched&&orig!==null) return orig;
       if(plain) return plainText(editor.state.doc);
       const md=markdownOf(editor,dropClaims(editor.getJSON())).markdown; return env?wrap(env,md):md; },
@@ -105,6 +110,7 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
     destroy:()=>{ if(o.prop) delete /** @type {any} */ (el)[o.prop]; try{ editor.destroy(); }catch(e){ /* already gone with its page */ }
       if(/** @type {any} */ (el).cxed===h) delete /** @type {any} */ (el).cxed; } };
   /** @type {any} */ (el).cxed=h;
+  if(o.ai&&ED_HOOKS.ai) ED_HOOKS.ai(h,o.ai);      /* BL-301 D: the AI bar over a selection (components/AiSelect.jsx) */
   /* `prop` (a plain field that code reads and sets by a property, as the peek's do by textContent and Prep's by value, as
      its textarea had): that property of the element is the field's text, its lines joined by "\n", and setting it sets the
      text quietly (not an edit: setting a field's text by code never was) */
@@ -128,3 +134,42 @@ export function edClaim(el,runs){ const h=edOf(el); if(!h||!runs.length) return 
 /** Current state's editing ends: its two editors are destroyed and shared.CURED cleared (the one way it is cleared). */
 export function curDrop(){ const c=shared.CURED; if(c){ for(const k of ["ed1","ed2"]) if(c[k]){ c[k].destroy(); c[k]=null; } } shared.CURED=null; }
 /* ===== end BL-301 A ===== */
+
+/* ===== BL-301 D (v20-ai-select) ===== AI on selected text: what an editor's selection holds, and putting a suggestion in its
+   place as one transaction (one ⌘Z undoes it). The AI bar itself is components/AiSelect.jsx, which sets ED_HOOKS.ai at boot, so
+   the core imports no component. */
+/** @type {{ai: null | ((h: EdHandle, ai: EdAi) => void)}} */
+export const ED_HOOKS={ ai:null };
+/**
+ * A range of an editor as the AI sees it. Inside one paragraph (or heading, or list line) it is that run of text (`inline`);
+ * across paragraphs it widens to the whole blocks it touches, so a reply of whole blocks replaces whole blocks. A rich editor's
+ * text is Markdown (by the exact writer, claim marks taken out); a plain one's is its lines.
+ * @typedef {{from: number, to: number, text: string, inline: boolean}} EdRange
+ * @param {EdHandle} h @param {number} from @param {number} to @returns {EdRange|null}
+ */
+export function edRange(h,from,to){ const ed=h.editor, doc=ed.state.doc; if(to<=from) return null;
+  if(h.features==="plain"){ const text=doc.textBetween(from,to,"\n"); return text.trim()?{ from, to, text, inline:false }:null; }
+  const $f=doc.resolve(from), $t=doc.resolve(to);
+  if($f.sameParent($t)&&$f.parent.isTextblock){ const cut=$f.parent.cut($f.parentOffset,$t.parentOffset);
+    const json={ type:"doc", content:[{ type:"paragraph", ...(cut.content.size?{ content:cut.content.toJSON() }:{}) }] };
+    const text=markdownOf(ed,dropClaims(json)).markdown; return text.trim()?{ from, to, text, inline:true }:null; }
+  const a=$f.depth?$f.before(1):from, b=$t.depth?$t.after(1):to;
+  const text=markdownOf(ed,dropClaims({ type:"doc", content:doc.slice(a,b).content.toJSON() })).markdown;
+  return text.trim()?{ from:a, to:b, text, inline:false }:null; }
+/** The editor's selection as an EdRange, or null when nothing (or only spaces) is selected. @param {EdHandle} h */
+export const edSelection=h=>{ const s=h.editor.state.selection; return s.empty?null:edRange(h,s.from,s.to); };
+/**
+ * Put `text` (Markdown for a rich editor, lines for a plain one) in place of `r`, as one undoable transaction. False when the
+ * range no longer holds what it held (the text was edited since): nothing is changed then.
+ * @param {EdHandle} h @param {EdRange} r @param {string} text @returns {boolean}
+ */
+export function edReplace(h,r,text){ const ed=h.editor; if(ed.isDestroyed) return false;
+  const now=r.to<=ed.state.doc.content.size?edRange(h,r.from,r.to):null; if(!now||now.text!==r.text) return false;
+  let content;
+  if(h.multiline===false) text=String(text).replace(/\s*[\r\n]+\s*/g," ").trim();   /* a one-line field stays one line (the peek's title) */
+  if(h.features==="plain"){ const L=String(text).replace(/\r\n?/g,"\n").split("\n"); content=L.length===1?(L[0]?[{ type:"text", text:L[0] }]:[]):plainDoc(L.join("\n")).content; }
+  else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(String(text))).toJSON().content)||[];
+    content=r.inline&&blocks.length===1&&blocks[0].type==="paragraph"?(blocks[0].content||[]):blocks; }
+  const chain=ed.chain().focus();
+  return (content.length?chain.insertContentAt({ from:r.from, to:r.to },content,{ updateSelection:true }):chain.deleteRange({ from:r.from, to:r.to })).run(); }
+/* ===== end BL-301 D ===== */
