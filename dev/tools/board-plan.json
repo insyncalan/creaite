@@ -1,0 +1,1663 @@
+{
+  "about": "Dry run of the Phase C board import, made by dev/tools/board_import.py plan from dev/BACKLOG.md. Review it, then run apply --dry-run.",
+  "owner": "insyncalan",
+  "repo": "insyncalan/creaite-plan",
+  "project_title": "creaite plan",
+  "size_mapping": {
+    "options": [
+      "XS",
+      "S",
+      "S–M",
+      "M",
+      "M–L",
+      "L",
+      "XL"
+    ],
+    "mapped": {
+      "M (was S)": "M",
+      "S-M": "S–M",
+      "M-L": "M–L"
+    },
+    "note": "S–M and M–L are kept as their own options, between their neighbours, rather than rounded"
+  },
+  "milestones": [
+    {
+      "title": "v1.9.4",
+      "description": "creaite v1.9.4 (Alan, 14-10-2026)"
+    },
+    {
+      "title": "v1.9.5",
+      "description": "creaite v1.9.5 (Alan, 14-10-2026)"
+    },
+    {
+      "title": "v2.0.0",
+      "description": "creaite v2.0.0: Notes (Alan, 13-10-2026)"
+    },
+    {
+      "title": "v2.1.0",
+      "description": "creaite v2.1.0 (Alan, 13-10-2026)"
+    },
+    {
+      "title": "Unscheduled",
+      "description": "Open items in no release: Not scheduled, On hold and After the trial"
+    }
+  ],
+  "labels": [
+    {
+      "name": "bug",
+      "note": "already on the repo; put on items the backlog calls a Defect"
+    }
+  ],
+  "fields": [
+    {
+      "name": "Priority",
+      "options": [
+        {
+          "name": "Urgent",
+          "color": "RED"
+        },
+        {
+          "name": "High",
+          "color": "ORANGE"
+        },
+        {
+          "name": "Normal",
+          "color": "GRAY"
+        },
+        {
+          "name": "Low",
+          "color": "BLUE"
+        }
+      ]
+    },
+    {
+      "name": "State",
+      "options": [
+        {
+          "name": "Idea",
+          "color": "GRAY"
+        },
+        {
+          "name": "Needs decision",
+          "color": "PINK"
+        },
+        {
+          "name": "Ready",
+          "color": "BLUE"
+        },
+        {
+          "name": "Building",
+          "color": "YELLOW"
+        },
+        {
+          "name": "In review",
+          "color": "PURPLE"
+        },
+        {
+          "name": "Shipped",
+          "color": "GREEN"
+        },
+        {
+          "name": "On hold",
+          "color": "ORANGE"
+        },
+        {
+          "name": "Dropped",
+          "color": "RED"
+        }
+      ]
+    },
+    {
+      "name": "Release",
+      "options": [
+        {
+          "name": "v1.9.4",
+          "color": "BLUE"
+        },
+        {
+          "name": "v1.9.5",
+          "color": "BLUE"
+        },
+        {
+          "name": "v2.0.0",
+          "color": "BLUE"
+        },
+        {
+          "name": "v2.1.0",
+          "color": "BLUE"
+        },
+        {
+          "name": "Unscheduled",
+          "color": "GRAY"
+        }
+      ]
+    },
+    {
+      "name": "Size",
+      "options": [
+        {
+          "name": "XS",
+          "color": "GRAY"
+        },
+        {
+          "name": "S",
+          "color": "BLUE"
+        },
+        {
+          "name": "S–M",
+          "color": "BLUE"
+        },
+        {
+          "name": "M",
+          "color": "GREEN"
+        },
+        {
+          "name": "M–L",
+          "color": "YELLOW"
+        },
+        {
+          "name": "L",
+          "color": "ORANGE"
+        },
+        {
+          "name": "XL",
+          "color": "RED"
+        }
+      ]
+    },
+    {
+      "name": "Team",
+      "options": [
+        {
+          "name": "Team Cap",
+          "color": "BLUE"
+        },
+        {
+          "name": "Team Stark",
+          "color": "RED"
+        },
+        {
+          "name": "Both",
+          "color": "PURPLE"
+        },
+        {
+          "name": "Unassigned",
+          "color": "GRAY"
+        }
+      ]
+    }
+  ],
+  "views": [
+    {
+      "name": "By release",
+      "layout": "TABLE_LAYOUT",
+      "filter": null,
+      "manual": "Group by › Release"
+    },
+    {
+      "name": "By state",
+      "layout": "BOARD_LAYOUT",
+      "filter": null,
+      "manual": "Column by › State"
+    },
+    {
+      "name": "Needs decision",
+      "layout": "TABLE_LAYOUT",
+      "filter": "state:\"Needs decision\"",
+      "manual": "none (filter set by apply)"
+    }
+  ],
+  "checks": {
+    "items": 33,
+    "per_release": {
+      "v1.9.4": 7,
+      "v1.9.5": 8,
+      "v2.0.0": 1,
+      "v2.1.0": 5,
+      "Unscheduled": 12
+    },
+    "per_state": {
+      "Building": 9,
+      "In review": 7,
+      "Ready": 5,
+      "Idea": 3,
+      "On hold": 8,
+      "Needs decision": 1
+    },
+    "per_priority": {
+      "Normal": 26,
+      "High": 4,
+      "Low": 3
+    },
+    "per_team": {
+      "Both": 2,
+      "Team Cap": 7,
+      "Unassigned": 15,
+      "Team Stark": 9
+    },
+    "per_size": {
+      "XL": 3,
+      "M–L": 4,
+      "L": 5,
+      "S–M": 3,
+      "XS": 4,
+      "S": 5,
+      "M": 8,
+      "(none)": 1
+    },
+    "weak_evidence": [
+      {
+        "id": "BL-335",
+        "field": "state",
+        "value": "Ready",
+        "reason": "in a release, no status words in the row's Plan: default"
+      },
+      {
+        "id": "BL-336",
+        "field": "state",
+        "value": "Ready",
+        "reason": "in a release, no status words in the row's Plan: default"
+      },
+      {
+        "id": "BL-337",
+        "field": "state",
+        "value": "Ready",
+        "reason": "in a release, no status words in the row's Plan: default"
+      },
+      {
+        "id": "BL-338",
+        "field": "state",
+        "value": "Ready",
+        "reason": "in a release, no status words in the row's Plan: default"
+      },
+      {
+        "id": "BL-339",
+        "field": "state",
+        "value": "Ready",
+        "reason": "in a release, no status words in the row's Plan: default"
+      },
+      {
+        "id": "BL-255",
+        "field": "release",
+        "value": "Unscheduled",
+        "reason": "no Summary row; write-up only"
+      },
+      {
+        "id": "BL-255",
+        "field": "state",
+        "value": "Needs decision",
+        "reason": "write-up says 'follows … when Alan decides'"
+      },
+      {
+        "id": "BL-255",
+        "field": "size",
+        "value": null,
+        "reason": "no Size in the backlog"
+      }
+    ],
+    "problems": [
+      "BL-255 has a write-up (line 339) but no Summary row; imported as Unscheduled"
+    ],
+    "skipped_writeups": [
+      {
+        "id": "BL-320",
+        "line": 448,
+        "why": "shipped (mapped to an FR in 'Moved into scope'); write-up left over"
+      },
+      {
+        "id": "BL-321",
+        "line": 479,
+        "why": "shipped (mapped to an FR in 'Moved into scope'); write-up left over"
+      },
+      {
+        "id": "BL-319",
+        "line": 488,
+        "why": "shipped (mapped to an FR in 'Moved into scope'); write-up left over"
+      },
+      {
+        "id": "BL-322",
+        "line": 541,
+        "why": "shipped (mapped to an FR in 'Moved into scope'); write-up left over"
+      },
+      {
+        "id": "BL-323",
+        "line": 578,
+        "why": "shipped (mapped to an FR in 'Moved into scope'); write-up left over"
+      }
+    ]
+  },
+  "items": [
+    {
+      "id": "BL-301",
+      "title": "BL-301 Notes",
+      "release": "v2.0.0",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "XL",
+      "team": "Both",
+      "labels": [],
+      "source_line": 23,
+      "writeup_line": 253,
+      "evidence": {
+        "release": {
+          "value": "v2.0.0",
+          "reason": "Summary group 'v2.0.0: Notes (Alan, 13-10-2026)' (line 23)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v200-notes-release.md: 'Ship Notes, all five parts, as built'; branches v20-base, v20-capture (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "XL",
+          "reason": "row Size 'XL'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Both",
+          "reason": "v200-notes-release.md: work split between Team Cap and Team Stark (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-301: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.0.0: Notes (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-301 | **Notes:** a Notes tab on each project (files in `08 Notes`), a capture drawer (⌘⇧N), Tiptap as the one editor everywhere, AI on selected text, and **Find updates**, which turns a note into tracker changes applied from a panel beside it | Alan, 13-10-2026 (mockup `dev/mockups/wiki-notes-mockup.html`, options A and C chosen) | XL | **In v2.0.0 (Alan, 13-10-2026), all five parts.** Scrum Master to place in waves; A (the editor switch) first, since every other editor change waits on it |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-13 (Alan): \"a light wiki in the project structure, to capture ad hoc notes stored in a structured way and searchable by creaite; a rich text editor we could use throughout the app.\" Mockup `dev/mockups/wiki-notes-mockup.html` (published: https://claude.ai/artifact/M5fWZ8FDnXe1vPbentNZLJ). **In v2.0.0 (Alan, 13-10-2026), all five parts.** No schema change; one new folder kind in `locations`, one new staging record and one new `vault_search` kind.\n\n**Decided (Alan, 14-10-2026): plain-text fields stay plain text.** With one editor (part A), the peek's fields (title, latest update, response, reasoning, source, options, revisit, client messaging) and the Prep boxes use the editor in its `plain` form: one paragraph a line, saved exactly as typed, no Markdown or marks, because Work's table, the Word reports and the Agendas page show them as plain text. Only Current state is rich. Markdown in those fields would be a separate, later change.\n\n**Why.** Alan's working thinking (stakeholder observations, negotiation positions, how a client works, lessons, notes from a conversation with a colleague) has no home. Project memory is a one-page brief changed by proposal; quick capture (FR-71) is for extraction only. Notes give it a home that search, ask creaite and Prep can read, and a way to turn it into tracker changes.\n\n**Principles.**\n- **Notes never hold the record.** Actions, risks, decisions, milestones and health stay in `system/tracker.db`. A note points at them with live item chips; **Find updates** (part E) turns its lines into tracker changes.\n- **Memory and notes stay separate.** `CLAUDE.md` is the short brief Claude reads every run; notes are Alan's longer material, read when a question needs them.\n- **Plain files.** Markdown with a small front matter, readable in Finder and OneDrive without creaite.\n- **Internal.** Never in a client report, like documents (BL-93). Never extracted by the sweep or unattended.\n\n**A. One editor: Tiptap everywhere.**\n- Tiptap 3 (MIT core, ProseMirror) with the official `@tiptap/markdown` extension, pinned to an exact version at least two weeks old, built in dev into one ESM file in `system/templates/vendor/` and committed (nothing built at run time; listed in the vendor manifest).\n- One wrapper, `creaiteEditor(el, {markdown, features, pickers, ai})`, replacing the BL-47 `contenteditable` and `execCommand` editor. It keeps creaite's own toolbar, keys, paste cleaning, the \"Discard changes?\" guard and images (BL-63); the BL-207 claim marks become a ProseMirror mark.\n- Each place switches on what it needs: Current state (no tables or checklists, which the Word reports can't take yet), the Draft email preview (BL-224, no wiki links), Prep focus notes (BL-286), item descriptions in the peek, and Notes (everything).\n- Pickers: `[[` a note, `@` a person from the people register, `#` a work item, `/` an insert menu (sub-heading, checklist, work item, person, table, template).\n- **Gate:** every existing Current state in the vault's project `CLAUDE.md` files loads and saves back byte for byte before the switch. The Markdown extension is labelled beta upstream, which is why the version is pinned and the round-trip is tested.\n\n**B. Notes on the project page (option A).**\n- A **Notes** tab on each project, after Meetings. Left: the list (search, pinned, recent), **collapsible** with « and », or ⌘\\, remembered per browser; the note widens when it is hidden. Centre: the note. Right: Mentioned in (backlinks), Linked work (live state), People.\n- **An open note is editable**: no Edit, Save or Cancel. The toolbar shows while the cursor is in the note. It saves a draft to `system/staging/drafts/` as Alan types and writes the file through `filechange.py` (backed up, logged, undoable) once per editing session: on leaving the note, or after 30 seconds without typing. \"Saved\" shows in the header.\n- **Storage:** a new folder kind `notes`, `locations.folders.notes`, default **`08 Notes`** in each engagement folder (`notes/` in the default layout). Flat, one file per note named by its title (a taken name gets a number), pictures in `08 Notes/_images/`. Portfolio notes in `_Portfolio/08 Notes`, shown under Portfolio. Added to the skeleton for new projects; an existing project gets the folder on its first note. Files lists it as its own folder, outside Documents, as it does Agendas (BL-135).\n- Front matter: `title`, `created`, `updated`, `tags`, `pinned`, `confidential`, and, for a Working session note, `date` and `with`.\n- Templates: Blank, Stakeholder, Lessons learned, Working session.\n- **Search and Claude:** indexed in `vault_search` as kind `note`, refreshed on save; a Notes filter in search (⌘K); ask creaite and Prep read notes and cite them. A note mentioning an item shows on that item's peek (\"2 notes mention this\").\n- A note marked Confidential is excluded from Prep pages and asks once before its text goes to Claude (parts D and E).\n\n**C. Capture drawer (⌘⇧N).**\n- Opens from any page without leaving it. The project is guessed from the project register's signals (the matching rules cx-minutes uses), shown with its reason and changeable; no guess means Unfiled (`_Portfolio/08 Notes`). Saved as Alan types.\n- Two endings: **Done** keeps the note; **Done and find updates** opens the full note with the part E panel. Recent notes are listed at the foot.\n- \"Note for this meeting\" on a Today meeting opens the drawer with the Working session template, the date and the attendees filled in.\n- ⌘K stays search. **Quick capture merges into Notes (Alan, 13-10-2026):** the drawer replaces FR-71's quick capture form; quick notes are saved in `08 Notes`, not the project's `minutes/`, and become tracker changes through Find updates instead of a trip through Review. Old quick notes stay where they are. \"note: …\" in ask creaite saves a note the same way.\n\n**D. AI on selected text, in every editor.**\n- Selecting text shows a small bar with **AI ▾**: Rewrite clearly, Shorter, Longer (adds no facts), Make it executive (the BL-106 voice; today's button becomes this option), Fix spelling and grammar (British English), Format nicely, Turn into a checklist, Summarise at the top, and a free \"Or say what you want…\" box. ⌘A first applies it to the whole note.\n- The result is a **suggestion** with Accept, Discard, Try again and Show changes; it never replaces the text by itself, and ⌘Z undoes an Accept.\n- One live-server route, `/api/edit/ai`. Claude runs headless with **no tools**: it sees the selected text, the option, and the project's name, people and open item IDs (so it can make chips). It cannot read files or mail and cannot write.\n- The BL-106 plain-code check runs on every suggestion: a date, number, name or item ID lost or added is noted under it.\n- Each place chooses its options (the Draft email adds More formal and Warmer). Counts only (offered, accepted, discarded) go to `draft-stats.json`, never text.\n\n**E. Find updates: from a note to the tracker.**\n- **✦ Find updates** on a note opens a panel **beside the note, on the same screen** (it takes the right-hand column's place until closed). Each line that gave a change gets a numbered marker matching its row; hovering one highlights the other.\n- Rows are grouped: **New** (action, risk, decision, issue), **Updates to existing items** (due date, done, owner, latest update), **Milestones**, **Project information** (people register, a project memory line, project details). Lines with nothing in them are left alone and counted.\n- **Apply, not Send to Review (Alan, 13-10-2026).** Ticking a row is the approval. **Apply** writes the ticked rows as already-approved proposals (`source_run: \"note\"`, as dashboard edits are today) and runs `tracker.py apply` through the live server, as one apply, so **Undo** in the snackbar reverses all of it. **Save for later** sends the ticked rows to Review instead; without the live server, Apply does the same and says so. Unticked rows are never staged.\n- **The bulk rule holds.** New risks, new decisions, milestone moves and health changes always start **unticked** and are ticked one at a time. Routine rows (a new action, a due date, done, owner) start ticked.\n- Clicking a row opens it in the peek layout Review uses (BL-177) to edit it first. Every row passes the schema's validation; a row that fails says why and stays unticked.\n- **Hedged words** (\"probably\", \"might\", \"to confirm\") never move a milestone or change health: the row is shown unticked, with a confirm action proposed beside it that shows as an early warning on the milestone.\n- The same engine as quick capture (cx-minutes) and cx-edit, given a note as the source, with the staging checks: repeats of an existing item (BL-221), probably-done evidence (BL-218), vague actions (BL-221); BL-297's matching when it lands.\n- Each item's source is the note and paragraph (`projects/<folder>/08 Notes/<title>.md#p4`); its source link opens the note at that line, highlighted.\n- What was applied is recorded beside the note, not in it: `system/staging/notes-sent.json` (path, paragraph fingerprint, item IDs). The note text stays as written; a margin tick shows lines that became items, and running Find updates again only looks at new or changed lines.\n- Also from one line (select, then AI › Make this an action, a risk, a decision or an update) and while typing (a checklist line with an `@person` and a date gets a faint dotted underline; a click opens the panel for that line). Never unattended, never from the sweep. A Confidential note's items are marked Sensitive.\n\n**Rules text.** `creaite-rules.md` changes with this item: the folder map gains `08 Notes` (and `notes-sent.json` in staging); \"Approval before writes\" names the Find updates panel as a place Alan approves; Project documents notes that notes are passive until Find updates; the editor line in Dashboard editing names Tiptap.\n\n**Done when:**\n- A: every Current state round-trips unchanged; Current state, the Draft email, Prep notes and the peek description use the one editor; the BL-207 marks and images work as before.\n- B: a note is created, edited and autosaved through `filechange.py` (undoable) in `08 Notes`; the list collapses and stays collapsed after a reload; links, backlinks and item chips work; search finds the note and ask creaite cites it.\n- C: ⌘⇧N captures from any page, guesses the project with its reason, and falls back to Unfiled.\n- D: each AI option returns a suggestion that changes nothing until Accept, with the fact check shown; the route has no tools.\n- E: the mockup's catch-up note yields the rows shown there; Apply writes the ticked rows in one apply and Undo reverses it; new risks and milestone moves start unticked; hedged lines don't move milestones; a second run skips sent lines; each item's source opens the note at its line.\n- Tests for each part, Help updated, `dev/dashboard-spec.md` updated.\n\n**Touches:** `system/templates/vendor/` (the Tiptap bundle, its licence, the manifest), `dev/tools/` (the bundle's build script), the dashboard modules (the editor wrapper, `0056-current-state-edited-in-place-bl-47.js` and the other editors, the project page's tabs, a Notes module, the drawer, the panel), `system/scripts/paths.py` (`notes` in `LOCATION_DEFAULTS` and `DEFAULT_FOLDERS`, `folder`, the Documents skip list), `filechange.py`, `search.py` and `tracker.py index` (kind `note`), `live_server.py` (`/api/notes/*`, `/api/edit/ai`, `/api/notes/find`), `minutes.py`, `extraction.py`, `propose.py` (a note as source), `reach.py` (`08 Notes` as Alan's own notes: ordinary), `system/templates/notes/` (the four templates), `system/creaite-rules.md`, `system/templates/help.md`, `dev/dashboard-spec.md`, `dev/tests/`.\n\n**Decisions (Alan, 13-10-2026).** Called Notes, not Wiki. Options A (Notes in the project) and C (capture drawer); B (a Notes page of its own) not chosen, though it can be added later on the same files. Tiptap for every editor. Stored with the project, in `08 Notes`; portfolio notes in the portfolio folder. The notes list is collapsible. An open note is editable, with no Edit button. AI options on selected text. Find updates applies from the panel beside the note rather than sending to Review. Quick capture (FR-71) merges into Notes. Tiptap's Markdown extension is accepted while labelled beta upstream, with the version pinned and the byte-for-byte round-trip of every Current state as the gate. **Release: v2.0.0, all five parts.**\n\n**Decisions (Alan, 13-10-2026, via laptop 2).** Tiptap's Markdown escaping: a custom exact writer, re-checked by the round-trip gate on every Tiptap upgrade, not a one-time rewrite of Current states. Italic and nested numbering: the writer learns creaite's style (`_italic_`, 2-space nesting), so stored text never changes. The notes server: all seven decisions in `dev/V20-NOTES-SERVER-NOTE.md` accepted as written (confidential notes searchable but kept out of ask creaite; reading a note in OneDrive counts as outside content; notes have their own search group). `v20-notes-server` is parked until v2.0.0 ships BL-301 whole. Before the notes switch, run the round-trip gate over Alan's live Current states (read-only, on laptop 1, with Alan).\n\n**More decisions (Alan, 13-10-2026, Tiptap).** HTML comments in a Current state are **kept**, by a custom node that hides them while editing and saves them back byte for byte. Notes use **Tiptap's own** table and checklist format as standard, gated on idempotence (save, load and save again gives the same bytes). The round-trip gate runs over Alan's **real** Current states **now** (read-only, on a copy, with Alan). The page-size cost (about 488 KB raw, 154 KB compressed) is **fine as is**: the full feature set stays.\n\n**Decision (Alan, 14-10-2026, directly to Team 1): a note's file is renamed with its title.** Renaming a note in the Notes tab moves its file through `filechange.py`, and `/api/notes/rename` issues the one-time approval for that single move itself, with no card. Alan starts it by retitling the note, as Find updates' Apply is his approval. It applies only to a note-to-note move inside the notes folder, never in a run that has read outside content; no guard file changes.\n\n**Real-data gate (13-10-2026, run by Alan, read-only, `--private --exact`):** 3 of 4 Current state panes round-trip exactly; the fourth is a pane holding only an HTML comment, which the writer still drops. The comment node (Alan's decision) closes it.\n\n**Decided (Alan, 15-10-2026), the integration note's open questions** (`dev/V20-INTEGRATION-NOTE.md` on `v20-base`):\n1. **Tabs:** not in v2.0.0. The project page keeps Overview and Notes; Work, Milestones, Meetings and Files as tabs wait for BL-317 (on hold).\n2. **Clicks in a note:** a click on a `[[note]]` link or an item chip opens it; ⌥-click edits inside it. Kept as built.\n3. **Note drafts** (`system/staging/drafts/notes/`) stay in the daily backup zip (BL-323).\n4. **Notes are exempt from outside content.** Reading Alan's own note, a `.md` directly inside a project's or the portfolio's notes folder as `notes.note_of` accepts, no longer marks an ask creaite run (`live_server.py` `OUTSIDE_CONTENT`, the hook in `reach.py`). Everything else in OneDrive still marks: a note's pictures, other files, transcripts and documents. **This is a guard change**, made on its own branch with its own tests, and `creaite-rules.md`'s BL-141 lines say so.\n\n**Recommended by the Product Manager, 15-10-2026 (Alan may change them):** E's calls stay as built (each list item is a line; a hedged milestone or health row can't be ticked; only a \"Very likely\" repeat starts unticked; the memory line starts unticked; \"Linked to …\" is a note, not a staged link; rows open in the peek's layout inside the panel). The Draft email preview stays a plain contenteditable in v2.0.0 (option a); it moves to the one editor later.\n\nThe release plan is `dev/sprints/v200-notes-release.md`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-09",
+      "title": "BL-09 Archive and restore whole projects",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "M–L",
+      "team": "Team Cap",
+      "labels": [],
+      "source_line": 41,
+      "writeup_line": 165,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 41)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Ready: row Plan says 'ready for a sprint')",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M–L",
+          "reason": "row Size 'M–L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "v194-release.md: 'Team Cap: check BL-09 on the release' (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-09: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-09 | **Archive and restore whole projects**, into `_Archive/` (and **zz Archive is renamed _Archive throughout**) | Alan | M–L | **In v1.9.4 (Alan, 14-10-2026)**, on its own (moved from v1.9.3 the same day; before that \"after the trial\"). The guard exception and the four open points agreed (Alan, 14-10-2026): **ready for a sprint**, after BL-320's Health |\n<!-- /summary -->\n\n<!-- write-up -->\nArchive a finished project completely, so it disappears from the dashboard, the sweep and reminders, and restore it if needed. **In v1.9.4 (Alan, 14-10-2026)**, on its own: a schema change and migration, a guard exception and folder moves are easier to check and roll back alone (moved from v1.9.3 the same day; before that \"after the trial\"). BL-10 follows. **Ready for a sprint (Alan, 14-10-2026):** every point below is decided. **Depends on BL-320** (Health, v1.9.2) for the Fix it lines. Size M–L.\n- **Today:** cx-edit \"close project ABC\" sets `active = 0`; the folder, register row and items stay where they are. Closed projects can still appear in Files and search.\n- **\"archive project ABC\":** closes it if it's still active; moves its folder to **`_Archive/`** (Alan, 14-10-2026): `<projects root>/_Archive/<engagement folder>` with the projects in OneDrive (BL-85), `projects/_Archive/<CODE> <Name>/` with the vault's own projects folder; moves its register row to **Retired codes**; marks its items **archived** in `tracker.db` (a flag, not a second database: still searchable, covered by the backups, undoable), so they leave the default views, Work, Today, the Excel export, the reminders and project matching. Nothing is deleted. An archived code is never reused.\n- **\"restore project ABC\":** reverses each step: the folder moves back (a number is added if the name is taken, never overwriting), the row returns to the register, the items are live again.\n- **Decided (Alan, 14-10-2026):**\n  - **Links keep working:** stored paths never change. `paths.resolve` maps `projects/<folder>/…` to `_Archive/<folder>/…` for an archived project, so every item's source, report and minutes link still opens, and restore needs no rewrite.\n  - **Search:** an archived project's items stay searchable (marked Archived); its files in `_Archive/` are not indexed and ask creaite can't read them. Restore brings them back.\n  - **Open items:** archiving lists the project's open items and offers **Cancel them all and archive** or **Stop**; nothing is archived with an item still open.\n  - **Where:** \"archive project ABC\" (cx-edit) and an **Archive** button in Settings › Projects beside Close, on the existing confirm card; **Restore** in the same place for an archived project (shown with Show archived). No mockup needed.\n- **Both** are shown first and confirmed, then go through a proposal and `tracker.py apply`, so they're logged and undoable. The folder moves are file operations of the apply (a `move` op), backed up and logged like every other file change.\n- **Rename zz Archive to _Archive throughout (Alan, 14-10-2026).** One name for every archive folder creaite knows of:\n  - `paths.py` (`never_index` default and `ALWAYS_NEVER_INDEX`), `settings-defaults.json`, `locations.py`, `live_server.py`, `permissions.py`, `reach.py`, `creaite-rules.md`, `help.md`, the BRD, BUILD, the dashboard spec and the tests (49 mentions in 20 files on 14-10-2026).\n  - **The update** replaces `zz Archive` with `_Archive` in a saved `locations.never_index`, keeping every other value (the only time an update changes a saved value; it says so).\n  - **The project skeleton (Alan, 14-10-2026):** each engagement's own archive folder, copied from `_Templates/_Skeleton` (`locations.skeleton`) for a new project, is `_Archive` too. If `_Templates/_Skeleton` exists, Alan renames its `zz Archive` to `_Archive` himself, in Finder (creaite never writes in `_Templates`); without a skeleton, setup uses the first engagement as the template and the engagements' own `zz Archive` folders are the ones Health offers to rename. As a safeguard, creating a project from the skeleton names any `zz Archive` it copies `_Archive`, and Health says if the skeleton still holds a `zz Archive` (a folder listing only, as setup already reads the skeleton). The test fixtures' sample engagement (`test_onedrive_projects.py`) uses `_Archive`.\n  - **Folders already called `zz Archive`** in Alan's OneDrive keep being skipped for one release (both names are never indexed), and Health lists them with a **Fix it** that renames each one to `_Archive` (a move, so it goes on the approval card). After that only `_Archive` is known.\n- **The guard (agreed, Alan, 14-10-2026; BL-141):** `_Archive/` stays on ask creaite's never list for reading and writing, as `zz Archive` is today. The only thing that may move a folder into or out of it is `tracker.py apply` running an approved archive or restore, never a model and never `filechange.py` on its own. `reach.py` gains that one exception, with a test that ask creaite still can't read, write or move anything there.\n- **Security (Alan, 14-10-2026, directly to Team 1)**, on the build's note `dev/V194-ARCHIVE-NOTE.md` › Security changes:\n  - **Points 1, 2, 3, 4, 6 and 7 approved:** `reach.archive_move_problem` as the one guard exception (whole-folder moves in the archive, restore and rename shapes only; called only by tracker.py's `move`); `propose.py old-archives` as a read command; the `old_archive` Health fix waiting on the approval card; the stricter `tracker.safe_path`; the rename on the BL-258 change card; and no new guard exception in part 2.\n  - **Point 5, changed:** the deny lists and permission patterns name **only `_Archive`**, never `zz Archive` beside it. `classify()` still treats `zz Archive` as never, so ask creaite stays out of an old folder until it's renamed. The two exact-list tests follow.\n- **Touches:** a project state (`active` / `closed` / `archived`) and an `archived` flag on items in `schema.sql` (with `tracker.py migrate`); `paths.py` (`_Archive/`); `tracker.py` (the `move` op, archive and restore); cx-edit; cx-sweep and project matching (ignore archived codes); the dashboard's and the Excel export's filters (\"Show archived\"); search (archived items found, marked Archived); `reach.py`; Health; Help.\n- **Done when:** archiving and restoring a sample project round-trips exactly (folder, register, items, search), with undo; nothing in `_Archive/` is read by ask creaite or indexed; an existing `zz Archive` folder is skipped and Health offers to rename it; a new project made from the skeleton has `_Archive`, never `zz Archive`; the update renames the saved setting and nothing else.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-304",
+      "title": "BL-304 Changes appear at once, and only what changed is redrawn",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "L",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 42,
+      "writeup_line": 351,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 42)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "L",
+          "reason": "row Size 'L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-304: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-304 | **Technical: changes appear at once, and only what changed is redrawn.** An edit shows on screen immediately and is staged and applied in the background (put back, with the reason, if it fails); the page keeps its data in memory and BL-253's events update just the changed records instead of reloading `/api/data` | Alan, 13-10-2026 (from the Linear, Asana and Plane research) | L | **In v1.9.4 (Alan, 14-10-2026)**, beside BL-09 |\n<!-- /summary -->\n\n<!-- write-up -->\n**In v1.9.4 (Alan, 14-10-2026)**, beside BL-09.\n\n**Decided (Alan, 15-10-2026): Retry keeps Alan's value.** After \"changed elsewhere\", Retry applies his edit on top of the item as it now is (as built); the other change stays in the history, and Undo works.\n\n**Decided (Alan, 14-10-2026): Retry after \"changed elsewhere\" overwrites.** When an instant save is refused because the item changed elsewhere, **Retry** re-applies Alan's value on top of the item as it now is, so his value wins; it doesn't go to Review as a conflict. The other change stays in Activity and can be undone.\n\nRaised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are built (Linear's local-first object pool and optimistic updates; Asana's LunaDb subscriptions; Plane's MobX stores). **Technical. In v1.9.0 (Alan, 13-10-2026; moved from v2.0.0), after BL-256 in the same release** (it needs signals and the component store). No schema change.\n\n**Why.** Today an edit waits for the server to stage and apply it (about 3 seconds with auto-apply) before the screen changes, and many actions reload all of the page's data (`/api/data`) and redraw whole sections. The tools Alan compares creaite with feel instant because the screen never waits: the change shows at once and is saved in the background. creaite is already local (SQLite on the laptop), so it can have the same feel without their sync machinery.\n\n**1. Changes appear at once (optimistic updates).**\n- An edit in the peek, Work's cells and lists, the board, ⌘K, Review's Approve and Reject, and the right-click menu updates the in-memory record and the screen **immediately**, marked as saving (a quiet dot, like the peek's staged dot), then is staged and applied through the live server as now.\n- On success the mark clears; on a refusal or a failed apply the record is **put back** and a message says what happened and why (\"Not saved: FAL-A-007 changed elsewhere; reloaded it\"), with the failed change kept for Retry.\n- **The rules don't move:** `tracker.py apply` stays the only writer; approval before writes holds (a change Alan makes is his approval, exactly as auto-apply today); with auto-apply off the screen shows the change as **staged** until Apply. Undo works on an unsaved change as on a saved one.\n- One change at a time per record: a second edit to a record still saving waits for the first.\n\n**2. Load once, then update only what changed.**\n- The page loads its data once into a store (signals, per BL-256 and the component guide), keyed by item ID.\n- **BL-253's live-updates stream** carries what changed (the IDs and tables after an apply, a sweep, minutes, Quick capture, a save from another window), and the page fetches **just those records** (a new read-only, token-checked `/api/records?ids=…`), updating the store; only the components that show them redraw.\n- A full reload stays as the fallback: on start, after a server restart (BL-269), when the stream has a gap, and from Settings › Diagnostics (\"Reload all data\"). The 30-second pulse stays as the safety net.\n\n**Done when:** an edit in the peek, a Work cell, the board and ⌘K shows on screen within a frame and is applied in the background; a forced apply failure puts it back with the reason and offers Retry; with auto-apply off it shows as staged; an apply from another source updates only the changed rows (a test counts `/api/data` calls: none for a single change); a gap in the stream falls back to a full reload; scroll, focus and text being typed survive an update (BL-262's rule, for every screen); BL-254's snapshots unchanged.\n\n**Touches:** `system/templates/dashboard/` (the store, the save path for every edit, the saving mark), `live_server.py` (`/api/records`; the live-updates events carry IDs), `build_dashboard.py` (one record's data by ID), `dev/COMPONENTS.md` (the store section), `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-327",
+      "title": "BL-327 Defect: slow saves and a slow first load",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "S–M",
+      "team": "Team Cap",
+      "labels": [
+        "bug"
+      ],
+      "source_line": 43,
+      "writeup_line": 806,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 43)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S–M",
+          "reason": "row Size 'S–M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "v194-release.md: Team Cap fixes test_fast_save, which BL-327's change broke (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-327: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-327 | **Defect.** Saving is sometimes slow (14 to 24 s instead of about 1) and the first page load after a start takes 5 to 14.5 s: after an apply, the OneDrive backup copy and a full search-index rebuild run before the save returns | Alan, 14-10-2026 (live debug log, 13-10) | S–M | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), from the live debug log (1.8.0, 13-10-2026, logging at debug). **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** No schema change.\n\n**What happened.** Most applies took about 1 s, but four took 14 to 24 s (10:38 23.9 s; 11:15 19.2 s and 14.2 s; 11:35 19.6 s) and an approval 21.8 s (11:06). At 10:38 the tracker write finished at 10:38:27 and nothing was logged until `build_dashboard` started at 10:38:48. The first page load after each server start took 5 to 14.5 s (nine times). `tracker.after_apply()` runs `offsite_copy()` (the backup copy into OneDrive) and `refresh_index()` (a **full** `build_index()` whenever anything changed, re-reading every document in the OneDrive project folders) before the dashboard rebuild and the Excel export, all before `/api/apply` answers. Neither step logs its time, so the log can't say which took the 21 s.\n\n**Fix.**\n1. **Log each step** of `after_apply` (offsite copy, index, dashboard, Excel) with its duration, and the page build's parts on a first load.\n2. **Incremental index:** re-index only the files whose modification time or hash changed since the last build (the stamp in `system/search/`), and records changed by the apply; a full rebuild only when the index version changes.\n3. **Don't make the save wait:** `/api/apply` answers once the tracker is written and the dashboard data is rebuilt; the index refresh and the offsite copy run after, in the background (one at a time), and the debug log records them. Search may be a few seconds behind; nothing else changes.\n4. **First load:** the page is served from the last built data at once; anything slow (the index state, the OneDrive file list) is fetched after, not before.\n\n**Done when:** an apply returns in about 1 to 2 s on the sample vault with a changed document (a timed test), the index catches up within seconds, the log shows each step's time, and a first page load after a start is under 2 s.\n\n**Note (Team 1, 14-10-2026):** BL-323 (v1.9.3) makes `offsite_copy` the daily zip; build this on it.\n\n**Touches:** `tracker.py` (`after_apply`, `refresh_index`, `build_index`), `live_server.py` (`/api/apply`, background steps, the page), `build_dashboard.py`, `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-328",
+      "title": "BL-328 Defect: a sweep's lock outlives the sweep",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "XS",
+      "team": "Unassigned",
+      "labels": [
+        "bug"
+      ],
+      "source_line": 44,
+      "writeup_line": 823,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 44)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "XS",
+          "reason": "row Size 'XS'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-328: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-328 | **Defect.** A sweep that ends abnormally (stopped, timed out, or cut off when the server stops) leaves its lock, so the next sweep waits until the lock is 30 minutes old | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), from the live debug log. **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** No schema change.\n\n**What happened.** A sweep started about 08:39 on 13-10 took the lock and never released it (the server stopped at 09:25 with no unlock). The next sweep, at 10:54, logged \"a stale sweep lock (over 30 minutes old) was replaced\" and only then ran. The 30-minute recovery works, but a sweep in those 30 minutes would have been refused.\n\n**Fix.** Release the sweep lock whenever a sweep run ends, however it ends: finished, stopped by Alan, timed out, refused by the guard, or the server stopping (on shutdown the server releases any lock its own runs hold). The lock records the run's ID, so the server knows it is its own. Doctor and Settings › Health show a lock held with no sweep running, with Release.\n\n**Done when:** stopping a sweep, its timing out and stopping the server each leave no lock (tests); a held lock with no run shows in the health check.\n\n**Touches:** `sweep.py` (`lock`, `unlock`, the run ID), `live_server.py` (run end, shutdown), `doctor.py`, `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-329",
+      "title": "BL-329 Defect: two servers start at once",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "XS",
+      "team": "Unassigned",
+      "labels": [
+        "bug"
+      ],
+      "source_line": 45,
+      "writeup_line": 834,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 45)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "XS",
+          "reason": "row Size 'XS'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-329: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-329 | **Defect.** Two servers start at once: the launcher starts a second while the first is still starting, which fails with \"exit 1\" (three times on 13-10) | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), from the live debug log. **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** No schema change.\n\n**What happened.** At 18:12:19 a server started; at 18:12:33 the launcher started another, which found the port taken and exited 1 (\"exit 1 after 0.0s\"). The same at 21:45:02 and 21:47:56 (around the 1.8.0 update's restart). Harmless, but it's noise, and the window can wait on the wrong server.\n\n**Fix.** The server writes a \"starting\" mark (its process ID and port) as it starts and clears it once it answers `/health`. The launcher, finding a server starting, waits for its `/health` (up to about 20 s) instead of starting another. A server that finds the port already taken by this vault's own server logs \"already running\" at INFO and exits 0, not a warning.\n\n**Done when:** two launches in quick succession give one server and one window (a test with a slow-starting server); the log shows no \"exit 1\" for it.\n\n**Touches:** `launch.py`, `live_server.py` (the starting mark, the port check), `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-330",
+      "title": "BL-330 Defect: a remembered chat that's gone",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "XS",
+      "team": "Team Stark",
+      "labels": [
+        "bug"
+      ],
+      "source_line": 46,
+      "writeup_line": 845,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 46)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "XS",
+          "reason": "row Size 'XS'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "v194-release.md: Team Stark merges BL-330 and BL-326 (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-330: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-330 | **Defect.** The page asks for a remembered ask creaite chat that no longer exists (only 10 are kept): a 404 logged as a warning, six times on 13-10 | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), from the live debug log. **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** No schema change.\n\n**What happened.** Six times on 13-10 (08:39 twice, 09:40, 09:44, 11:14, 18:12) the page asked `POST /api/chat` for the chat it remembers and got 404: the chat had been removed (only the 10 most recent are kept, BL-32) or belonged to another vault. The page recovered quietly (a new chat), but each was logged as a WARN.\n\n**Fix.** On 404 the page forgets the remembered chat at once (so it isn't asked for again on the next load), and the server logs a missing chat at INFO, not WARN. The remembered chat is kept per vault.\n\n**Done when:** a removed chat is asked for once and then forgotten; the log shows no WARN for it; a test for each.\n\n**Touches:** `system/templates/dashboard/src/ask.js` (`loadChat`), `live_server.py` (`/api/chat`), `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-326",
+      "title": "BL-326 ask creaite shows the ask, the activity and the outcome, never a run's machine text",
+      "release": "v1.9.4",
+      "priority": "Normal",
+      "state": "In review",
+      "size": "S",
+      "team": "Team Stark",
+      "labels": [
+        "bug"
+      ],
+      "source_line": 47,
+      "writeup_line": 663,
+      "evidence": {
+        "release": {
+          "value": "v1.9.4",
+          "reason": "Summary group 'v1.9.4 (Alan, 14-10-2026)' (line 47)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "In review",
+          "reason": "dev/sprints/v194-release.md: 'Everything in it is already built'; integration, checks and the cut remain (backlog alone gave Building: row Plan says 'built on `v195-run-chat-bl330`')",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S",
+          "reason": "row Size 'S'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "v194-release.md: 'Team Stark: merge v195-run-chat-bl330 … It carries BL-330 and BL-326' (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-326: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.4 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-326 | **Defect. ask creaite shows a run's machine text:** pressing Prep page shows the run in ask creaite with its whole prompt (\"creaite prep page. Research one meeting … reply with ONLY a JSON object\"), the meeting's context as JSON and the reply's JSON and HTML. Show only the ask, the activity and the outcome | Alan, 14-10-2026 | S | **Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330: both built on `v195-run-chat-bl330`. **In v1.9.5 (Alan, 14-10-2026)**; moved from v2.1.0 the same day |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), a defect. **In v1.9.5 (Alan, 14-10-2026)**; placed in v2.1.0 earlier the same day, then moved. v1.9.1 was already cut. No schema change.\n\n**Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330, because both are built and approved on `v195-run-chat-bl330`. The release plan is `dev/sprints/v194-release.md`.\n\n**What happens now.** Pressing **Prep page** for a meeting in the dashboard starts a run through the run engine (`/api/prep/page`, `kind=\"prep\"`), and ask creaite shows it as a chat. That chat shows the whole working copy: the prompt (`prep_page.PROMPT`: \"creaite prep page. Research one meeting for Alan and reply with ONLY a JSON object, nothing else. Read-only: …\"), the meeting's context as JSON, and Claude's reply, the JSON with the finished page's HTML in it.\n\n**What Alan sees instead (Alan, 14-10-2026): the ask, the activity and the closure.**\n- **The ask:** one plain line, as if Alan had typed it: \"Prep page for FAL weekly with Northgate, Thursday 15th October 10:00\".\n- **The activity:** the run's working status as it is today (the rotating line and \"✓ n steps\", BL-195), with the research steps in plain words (\"Reading the project's open items\", \"Searching mail for the Northgate environment dates\"). Never a prompt, JSON, HTML or a tool's raw output.\n- **The closure:** one line with the outcome and a link: \"Saved the prep page in FAL › 02 Meetings › Agendas · Open\", or, when it fails, what went wrong and what to do (\"Couldn't finish: the meeting has no project. Choose one and try again\").\n- **The rest stays where it is:** the server keeps the full prompt and reply for troubleshooting in the debug log's run record (counts and IDs only, as BL-102 requires) and behind Settings › Diagnostics, never in the chat.\n\n**The same rule for every run creaite starts itself,** not only the prep page: Generate (Current state), Draft agenda, Shape this meeting, the meeting checks and loads, Polish and the other AI drafts, and the VIP check, wherever they appear in ask creaite. A chat Alan types keeps showing his words and the reply as now.\n\n**Done when:** a Prep page run in ask creaite shows exactly three things (the ask line, the activity, the closure line), with no `{`, `<`, prompt text or JSON in the panel, for success, failure and Stop; the same for each kind of run listed above; the chat history file keeps the plain lines, never the prompt; a test checks each kind of run; Help says what ask creaite shows for a run creaite started.\n\n**Touches:** `live_server.py` (the run engine's chat record for `kind` other than \"ask\"), `system/templates/dashboard/src/ask.js` (how a run's messages are drawn), `prep_page.py` (the ask and closure lines), the drafts module, `help.md`, `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-324",
+      "title": "BL-324 UI audit: fix first",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "S–M",
+      "team": "Team Stark",
+      "labels": [],
+      "source_line": 53,
+      "writeup_line": 616,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 53)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v195-design-scale, held in v195-vip-conversations; to be brought level",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S–M",
+          "reason": "row Size 'S–M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev/sprints/v195-release.md: Team Stark's branch",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-324: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-324 | **UI audit: fix first:** the ten points Alan approved from the 14-10-2026 UI/UX audit: its eight P1 findings (dark-mode logo bar, an undefined border token, unreadable dark-mode count badges, faint-text and past-time contrast, the column-resize handles' and sortable headers' ARIA, dead tokens) and three P2 items (control drift across pages, Help's fonts, the prep page's fonts and colours) | Alan, 14-10-2026 (`dev/reviews/ui-audit-2026-10-14.md`) | S–M | **In v1.9.5 (Alan, 14-10-2026); being built by Team 2 on `v195-ui-fixes`** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), from the UI/UX consistency and design-token audit (`dev/reviews/ui-audit-2026-10-14.md`, branch `dev-ui-audit`; verdict amber). **In v1.9.5 (Alan, 14-10-2026)**, beside BL-10 and BL-03; Team 2 started building it on `v195-ui-fixes` the same day, at Alan's request. No schema change.\n\n**The ten points (Alan approved building all ten, 14-10-2026).** The handover counts the faint-text and past-time contrast findings (4 and 5) as one point, so it's the eight P1 findings plus three P2 items.\n\n**The eight P1 findings:**\n1. The Saffron logo bar is wrong in system dark mode: `--saffron` has only an explicit-dark rule (`style.css:2274`).\n2. `--line-strong` is undefined in the creaite, Brightwater and Notion palettes and read without a fallback, so those borders disappear (`style.css:2118`).\n3. Count badges are unreadable in dark mode: white `--bad-ink` on the pale dark `--bad` is 1.71:1, in five palettes (the rail badges).\n4. `--faint` text is under 4.5:1 in most palettes: check where it's used; fine only for placeholders and disabled text.\n5. Today's past-time marks (`--day-past`, `--day-sun`) are below 3:1 in every palette; Brightwater's now-line is 2.95:1.\n6. The column-resize handles (`.colrz`, `work.js`) have `role=separator` without `aria-valuenow`: 220 axe-critical nodes on Work, Projects and Today. Add the value attributes or drop the role.\n7. The sortable headers on People and Settings (`th[data-psort]`) use ARIA attributes `th` doesn't allow.\n8. Dead or invalid tokens: `--pc` is never set (`.ms i.pc` never draws); the guides read the undefined `--d2`.\n\n**The three P2 items:**\n9. Control drift: `.btn`, inputs and section headings are styled differently from page to page (a button is 32px on five pages, 28 or 30px on Today; six input sizes; four heading styles). Bring them to one style each.\n10. The Help page ignores the theme's fonts.\n11. The prep page uses the system font and its own status colours instead of the theme's.\n\n**Not in this item, and not being built:** the rest of the audit's P2 and P3 work, above all a shared type, radius, spacing, shadow and z-index scale under the colour tokens. It is for Alan to place.\n\n**Done when:** each point is fixed in every palette, light, dark and system; buttons, inputs and section headings measure the same on every page; the audit's tools (`dev/tools/token_audit.py`, `ui_audit.py`) report none of the eight; axe reports no critical node on Work, Projects, Today, People or Settings; any snapshot that changes is re-recorded with Alan's agreement (BL-254).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-325",
+      "title": "BL-325 One design scale",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "M–L",
+      "team": "Team Stark",
+      "labels": [],
+      "source_line": 54,
+      "writeup_line": 640,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 54)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v195-design-scale, held in v195-vip-conversations; to be brought level (backlog alone gave Ready: row Plan says 'Ready for a sprint')",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M–L",
+          "reason": "row Size 'M–L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev/sprints/v195-release.md: Team Stark's branch (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-325: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-325 | **One design scale:** type, spacing, corner-radius, shadow and z-index tokens under the colour tokens, the near-duplicate values merged and the outliers moved, so every control looks the same on every page (the audit's wider P2/P3 work) | Alan, 14-10-2026 (`dev/reviews/ui-audit-2026-10-14.md`) | M–L | **In v1.9.5 (Alan, 14-10-2026)**, after BL-324. **Ready for a sprint:** Alan's three choices made (below) |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan), from the UI/UX audit's wider findings (`dev/reviews/ui-audit-2026-10-14.md`, \"Token and scale drift\" and \"Consistency across pages and surfaces\"). **In v1.9.5 (Alan, 14-10-2026)**, after BL-324 (the same files; BL-324 fixes the worst drift, BL-325 removes its cause). No schema change.\n\n**Why.** The colour tokens are sound, but nothing sits beneath them. `style.css` has 47 font sizes (17 px values and 30 rem values from the embedded guide), 23 radii, about 60 spacing values, 45 box shadows and 20 z-index values (0 to 210, ad hoc). So the same control is drawn differently from page to page: `.btn` in three sizes, `.ib` in two, inputs at 30, 32, 36, 40 and 58px with radii of 6, 8 and 10px, `h2` in four styles, `.tag` in two fonts.\n\n**What it does.**\n- **Tokens:** a type scale (about six sizes, near-duplicates merged: 11, 11.5 and 12px; 13 and 13.5px; 14 and 14.5px), a spacing scale (a 4px base), three or four radii, three shadow levels and named z-index layers. Every palette keeps its colours; the scale is shared by all nine.\n- **Controls on the scale:** `.btn`, `.linkbtn`, `.ib`, `.mini`, inputs and selects, `h1`/`h2`, `.tag`, one height and radius each (Today's 34px title stays, by design).\n- **Literals to tokens:** the ten hard-coded colours that exactly equal an existing token become `var(--x)`; the 23 near-duplicate token pairs are merged where the values match.\n- **Surfaces:** the Help page's rem scale moves onto the shared scale (BL-324 already fixes its fonts); the offline page uses the theme's font and the dashboard's dark accent.\n- **Touch targets** of at least 24px: checkboxes (13 to 16px on Review, Intake and Activity), the column-resize handles and the Settings toggles.\n- **Small wording fix:** Projects' \"(In 24 days)\" becomes \"(in 24 days)\". The written-out dates there stay (decided, Alan, 14-10-2026).\n- **Out of scope (decided, Alan, 14-10-2026):** Word templates stay in the Brightwater brand; email drafts stay in Calibri. The audit's taste-rule findings (the Impeccable detector, P3) are weighed against creaite's own design, not treated as defects.\n\n**Decided (Alan, 14-10-2026):**\n1. **Section headings, one pattern:** sentence case at one size, as Settings does; Today's uppercase labels and Intake's Title Case with icons change to match.\n2. **Primary actions stay as they are:** BL-325 doesn't change which treatment each page uses for its main action (Today's and Intake's filled button, Review's outlined Approve, Work's tinted \"+\"). They move onto the shared size and radius only.\n3. **Snapshots:** re-recorded in one agreed pass at the end, with a before-and-after view per screen for Alan to look through (BL-254).\n\n**Done when:** `dev/tools/token_audit.py` finds no font size, radius, spacing, shadow or z-index outside the scale (bar listed exceptions); `ui_audit.py` finds one variant of each control across pages; every palette still passes its contrast checks; no page scrolls sideways at 320px; touch targets are at least 24px; Alan has agreed the re-recorded snapshots.\n\n**Touches:** `system/templates/dashboard/style.css` (tokens, every control), the components (`dev/COMPONENTS.md`), the guides' embedded CSS, the offline page, `dev/tools/token_audit.py` (exceptions list), the snapshots, Help where it shows controls.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-10",
+      "title": "BL-10 Age-based archiving of older items",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "M",
+      "team": "Team Cap",
+      "labels": [],
+      "source_line": 55,
+      "writeup_line": 188,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 55)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v195-archiving; to be brought level, plus the BL-323 follow-up (backlog alone gave Ready: row Plan says 'Ready for a sprint')",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "dev/sprints/v195-release.md: Team Cap's branch (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-10: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-10 | Age-based archiving of older items | Alan | M | **In v1.9.5 (Alan, 14-10-2026)**, after BL-09 (v1.9.4), with the rest of BL-03. **Ready for a sprint** (decisions below) |\n<!-- /summary -->\n\n<!-- write-up -->\nArchive information older than a set period, for example closed actions and RAID items closed more than 6 months ago, and decisions older than 12 months.\n- **Proposed:** a setting per item type in `settings.json` (`archive.after_months`); archived rows keep their IDs and history but drop out of default views, the Excel export and the weekly report; \"show archived\" brings them back; un-archiving is automatic if an archived item is edited.\n- **Overlaps BL-03** (files) and BL-09 (whole projects); one archiving design should cover all three.\n- **Decided by BL-09 (Alan, 14-10-2026):** a flag in the database, the same archived flag BL-09 adds (still searchable, covered by the backups, undoable), never a second database file.\n- **In v1.9.5 (Alan, 14-10-2026)**, after BL-09 (v1.9.4), with the rest of BL-03.\n- **Decided (Alan, 14-10-2026, accepting the recommendations):**\n  - **Periods, from the closed date:** closed or cancelled actions and RAID items, 6 months; done or dropped promises, 6 months. **Decisions and milestones are never archived** (Alan, 14-10-2026), nor is any open item. Each period is a setting (`archive.after_months`, Settings › Advanced).\n  - **Automatic,** once a day after BL-323's Tidy up: the flag is reversible, so no review list. Health shows the last run (\"Archived 12 items\"); \"Show archived\" brings them back, and editing an archived item un-archives it.\n  - **Client reports:** an item is archived on the same rule whether or not a client report cited it. The report is a saved Word file and doesn't change; the item stays searchable, marked Archived.\n  - **Editing an archived item** un-archives it, and it stays live for a full period from that edit (Alan, 14-10-2026, directly to Team 1).\n  - **Restoring a whole project** (BL-09) clears only the flags the project archive set; items archived for their age stay archived (Alan, 14-10-2026, directly to Team 1).\n- **Security (Alan, 14-10-2026, directly to Team 1):** all six security points in the build's note `dev/V195-ARCHIVING-NOTE.md` approved (shared with BL-03).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-03",
+      "title": "BL-03 Archiving old reports, snapshots and applied proposals",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "S–M",
+      "team": "Team Cap",
+      "labels": [],
+      "source_line": 56,
+      "writeup_line": 105,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 56)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v195-archiving; to be brought level, plus the BL-323 follow-up (backlog alone gave Ready: row Plan says 'ready for a sprint')",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S–M",
+          "reason": "row Size 'S–M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "dev/sprints/v195-release.md: Team Cap's branch (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-03: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-03 | Archiving old reports, snapshots and applied proposals (the backup half split out as BL-323) | BRD | S–M | **In v1.9.5 (Alan, 14-10-2026)**, with BL-10, after BL-09 (v1.9.4). Archived reports and minutes move into the engagement's `_Archive/`; **ready for a sprint** (decisions below) |\n<!-- /summary -->\n\n<!-- write-up -->\nRules for archiving the files that build up over time: reports, dashboard snapshots and applied proposals. **Split on 14-10-2026 (Alan):** the backup and retention half is now **BL-323**, in v1.9.3; what is left here follows **with BL-10**, after BL-09 (v1.9.4), using its `_Archive/` and archived flag.\n- **In v1.9.5 (Alan, 14-10-2026)**, with BL-10, after BL-09 (v1.9.4).\n- **Depends on:** BL-09 (the `_Archive/` folder and the archived flag) and BL-323 (which already prunes backups and dashboard snapshots).\n- **Decided (Alan, 14-10-2026):** archived **reports and minutes move into the engagement's own `_Archive/`**, keeping their place below it (`<engagement>/_Archive/04 Reporting/Weekly/…`), so restoring is a move back. As in BL-09: stored paths never change (`paths.resolve` finds a moved file under `_Archive/`), the files are no longer indexed and ask creaite can't read them, and only `tracker.py apply` moves them (BL-09's agreed guard exception). Nothing is deleted.\n- **Decided (Alan, 14-10-2026):**\n  - **Age:** weekly and client reports, minutes and Steerco one-pagers older than 12 months, by the date in their file name. Transcripts, agendas and documents stay where they are.\n  - **How:** a monthly Health line, \"Archive 14 reports and minutes older than 12 months\", one click on the confirm card. These are Alan's own files in OneDrive, so they're moved on a yes, not automatically (unlike BL-10's flag).\n  - **Applied proposals** (`system/staging/applied/`) aren't archived: BL-323 keeps them all as the audit trail. Dashboard snapshots are already handled by BL-323's retention.\n  - **Portfolio minutes** are archived on the same 12-month rule, into `_Portfolio/_Archive/<same folder>/` (Alan, 14-10-2026, directly to Team 1). This widens the approved `reports` move shape to the portfolio's own `_Archive`; the exact new shape is shown to Team 1 before it merges.\n  - **Security:** all six security points in `dev/V195-ARCHIVING-NOTE.md` approved (Alan, 14-10-2026, directly to Team 1).\n  - **Moving one report back** is a follow-up, BL-331.\n- **Related:** BL-10 (age-based archiving of items); build the two together.\n\n**Guard change approved (Alan, 14-10-2026, directly):** the widened `reports` move shape for portfolio minutes (`v195-archiving` fbc05da, `reach._report_archive`): one dated minutes file in the portfolio's own minutes folder may move into the portfolio's own `_Archive`, keeping its place (`<projects root>/<portfolio>/<minutes folder>/<file>` → `<projects root>/<portfolio>/_Archive/<minutes folder>/<file>`). Still refused: the portfolio's transcripts or any other folder, any other destination, symlinks, `..`, an existing destination, anything but a file. `classify()` is unchanged; only `tracker.py apply` calls it. Team 1 reviewed it as technically sound.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-316",
+      "title": "BL-316 Consistency audit after the move to components",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "M",
+      "team": "Both",
+      "labels": [],
+      "source_line": 57,
+      "writeup_line": 426,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 57)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: 'frozen partway on v195-consistency'; split by screen (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Both",
+          "reason": "dev/sprints/v195-release.md: Team Stark the shared test and five screens, Team Cap five screens (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-316: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-316 | **Consistency audit after the move to components:** every screen on BL-256's building blocks; one shared behaviour test (keys, focus, Esc, Undo) on every menu, picker and dialog; check.py counts the old helpers down to 0 | Alan, 13-10-2026 | M | **In v1.9.5 (Alan, 14-10-2026)**, after BL-325, so every screen is checked once the shared scale is in |\n<!-- /summary -->\n\n<!-- write-up -->\n**In v1.9.5 (Alan, 14-10-2026)**, after BL-325, so every screen is checked once the shared scale is in.\n\nRaised 2026-10-13 (Alan). **Not scheduled; after BL-256's screens.** Each sprint built its own filter bar, menu, picker, dialog and toast; BL-256's guide (`dev/COMPONENTS.md`) is the fix, and this audit checks it delivered.\n- **Inventory** every screen against the blocks (Menu, Dialog, Picker, Combobox, FilterBar, Tabs, Toast, Peek, StatusDot, Chip); **move or retire** each own copy, one screen at a time.\n- **Behaviour, not just code:** the same keys, focus return, wording, empty states and Undo everywhere; a Chrome test runs one script (open, ↑ ↓, Enter, Esc, Tab) on every menu, picker and dialog on every screen.\n- **Ratchet:** check.py counts the old helpers (newMenu, pkList, drawPicker, snackAdd and the rest), falling to zero.\n\n**Done when:** every screen uses the blocks, the shared behaviour test passes everywhere, and the old-helper count is 0.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-333",
+      "title": "BL-333 Defect: the page scrolls past its own bottom",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "XS",
+      "team": "Team Stark",
+      "labels": [
+        "bug"
+      ],
+      "source_line": 58,
+      "writeup_line": 856,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 58)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v195-design-scale, held in v195-vip-conversations; to be brought level (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "XS",
+          "reason": "row Size 'XS'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev/sprints/v195-release.md: Team Stark's branch (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-333: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-333 | **Defect.** The page scrolls past its own bottom: on Today and the Prep page the whole window scrolls down into empty space, and the rail and content scroll away with it | Alan, 14-10-2026 (screenshot, Prep page) | XS | **Defect. In v1.9.5 (Alan, 14-10-2026).** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan, screenshot of the Prep page), via the Product Manager. **Defect. In v1.9.5 (Alan, 14-10-2026).** No schema change.\n\n**Cause** (reproduced on sample data in headless Chrome, v1.9.1): `.vh` (visually hidden text) is `position:absolute`, and each screen's scroll box (`#v-today` and the rest, `overflow:auto`) is `position:static`. So a hidden span lower down a long screen takes `body` as its containing block, escapes the screen's clipping, and sits at its natural place below the window, growing the window's scroll height to reach it.\n- **Today:** `span.vh#pfd-ABC` (the project's description in the Portfolio table, today.js:318) sits at y 1635 in a 913 px window, so the document is 1636 px tall while the shell is 913.\n- **Prep page:** the same, from the `.vh` label for `#pp-q` (PrepPage.jsx:240) and the \"not in the people register\" spans (PrepFacts.jsx:63).\n- **Other screens:** Work, Review, Settings and Activity were fine in the probe, but any long screen with a `.vh` can do it.\n\n**Fix.** Give every screen's scroll box `position:relative`, so hidden text is clipped inside it: one rule beside the screen styles; nothing moves visually. Don't hide overflow on html or body, which would hide the next case too.\n\n**Done when:** on every screen and in Prep, with long sample data, `document.scrollingElement.scrollHeight === innerHeight` and the window never scrolls; a browser test checks every screen (test_ui_sweep.py's screen list extended).\n\n**Touches:** the dashboard CSS for the screens (`[id^=v-]` or the view class), `dev/tests/test_ui_sweep.py`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-334",
+      "title": "BL-334 Alerts read the conversation, not the message",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "M",
+      "team": "Team Stark",
+      "labels": [],
+      "source_line": 59,
+      "writeup_line": 870,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 59)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v195-vip-conversations; to be brought level (backlog alone gave Ready: in a release, no status words in the row's Plan: default)",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev/sprints/v195-release.md: Team Stark's branch (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-334: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-334 | **Alerts from people Alan follows read the conversation, not the message:** one card per Teams chat or mail thread since the last check, saying what came out of it (a short summary plus proposed actions, decisions and risks), never one card per line of to and fro | Alan, 14-10-2026 (live Today: 3 cards from one chat, 3 from one group chat) | M | **In v1.9.5 (Alan, 14-10-2026).** |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan, from live Today), via the Product Manager. **In v1.9.5 (Alan, 14-10-2026).** No schema change. (Live names are left out of this repository: sample data only.)\n\n**Problem.** `VIP_PROMPT` (live_server.py) asks for \"one object per message\", so every message becomes its own Today card with a gist of up to 140 characters, and none says what the conversation came to.\n- One chat between a followed person and a colleague became 3 cards: a greeting, a commitment (\"her team will take the solution from production to live\") and a decision (go-live work falls under the existing contract). All three said \"no project\", although the chat's title named the client.\n- One group chat became 3 cards: a greeting, \"shares the UAT schedule\", and a follow-up, all titled \"Group chat\" and all \"no project\".\n\n**Change.**\n1. **The unit is the conversation:** grouped by the Teams chat ID or mail conversation ID, covering everything since the last check. A conversation that carries on updates the same card (\"updated HH:MM\") instead of adding one.\n2. **Read the whole conversation:** everyone's messages, not only the followed person's, plus a few earlier ones for context; and the chat or thread title, the participants and any attachment names.\n3. **Report the outcome, not the to and fro:** a one- or two-line summary, then the candidate items: actions (owner and due date where stated), decisions and risks. Greetings and chatter never become a card or a line.\n4. **Quiet line:** a conversation with nothing actionable gets one quiet line (\"<person> with <person>: nothing for you\"), not a card with buttons.\n5. **Wait for quiet:** if a conversation's last message is under 15 minutes old, wait at most 15 minutes so the card covers the whole exchange.\n6. **Match the project from the whole conversation:** the title first, then the participants, attachment names and content, against the project register's signals as the sweep does.\n7. **Card title:** the chat's or thread's own title where it has one, never a generic \"Group chat\"; without one, the people in it.\n\n**Alan's decisions (14-10-2026).**\n- **A.** Nothing goes to Review unless he asks: the candidates sit on the card; **Create work item** stages that item as a proposal for Review; **Dismiss** sends and records nothing.\n- **B.** Nothing actionable: the quiet line (point 4).\n- **C.** Overlap with the sweep: the sweep skips a conversation the check has already summarised, unless new messages arrived after that summary, so the same items are never proposed twice.\n- **D.** Mail threads: the same rules.\n\n**Unchanged.** No message text is kept: the summary and items are in Claude's own words (the gist limit rises to about 300 characters for the summary). Private and confidential messages still get only a neutral line. The word VIP never appears on screen (BL-288). Nothing reaches the tracker without approval; the check stays read-only on Microsoft 365. The existing Create work item and Dismiss buttons stay, per candidate item.\n\n**Done when:**\n- with a stand-in claude, a three-message chat (greeting, commitment, decision) gives one card with one summary, one action and one decision, its project matched from the chat title;\n- a greeting-only chat gives one quiet line and no buttons;\n- a later message updates the same card;\n- Dismiss stages nothing, and Create work item stages one proposal;\n- a later sweep proposes nothing from a conversation already summarised;\n- vip.json still holds no message text.\n\n**Touches:** `VIP_PROMPT` and `vip_check` (live_server.py); `sweep.py`'s vip record and the vip.json shape (conversation ID, summary, candidates, updated time) and the sweep's skip for summarised conversations; the Today alert card (today.js); test_vip* and the BL-296 alert-action tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-331",
+      "title": "BL-331 Move back one archived report",
+      "release": "v1.9.5",
+      "priority": "Normal",
+      "state": "Building",
+      "size": "S",
+      "team": "Team Cap",
+      "labels": [],
+      "source_line": 60,
+      "writeup_line": 682,
+      "evidence": {
+        "release": {
+          "value": "v1.9.5",
+          "reason": "Summary group 'v1.9.5 (Alan, 14-10-2026)' (line 60)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Building",
+          "reason": "dev/sprints/v195-release.md: built on v196-move-back, put on top of v195-archiving",
+          "strength": "medium"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S",
+          "reason": "row Size 'S'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "dev/sprints/v195-release.md: Team Cap (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-331: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v1.9.5 (Alan, 14-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-331 | **Move back one archived report:** in Files, a report or minutes shown as archived gets **Move back**, which returns it to its place through the approval card | Alan, 14-10-2026, directly to Team 1 | S | **In v1.9.5 (Alan, 15-10-2026)**, after BL-10 and BL-03; built on `v196-move-back`. After v1.9.5 (follows BL-03) |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan, directly to Team 1), a follow-up to BL-03. **After v1.9.5.** No schema change.\n\n**In v1.9.5 (Alan, 15-10-2026)**, on BL-10 and BL-03's archiving; built on `v196-move-back`. The release plan is `dev/sprints/v195-release.md`.\n- In Files, a report, minutes or Steerco one-pager shown as archived (in the engagement's or the portfolio's `_Archive/`) gets a **Move back** action.\n- It returns that one file to its place (the same folder below `_Archive/`), never overwriting: a name already taken gets a number.\n- It goes on the approval card, with the move shown, and is applied by `tracker.py apply` through BL-09's agreed `move` exception; ask creaite can't do it. Logged and undoable.\n- **Done when:** a moved-back file is indexed and searchable again, its stored links still open, Undo puts it back in `_Archive/`, and ask creaite still can't read or move anything there.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-335",
+      "title": "BL-335 The weekly report, redesigned and built in creaite",
+      "release": "v2.1.0",
+      "priority": "High",
+      "state": "Ready",
+      "size": "L",
+      "team": "Team Cap",
+      "labels": [],
+      "source_line": 66,
+      "writeup_line": 691,
+      "evidence": {
+        "release": {
+          "value": "v2.1.0",
+          "reason": "Summary group 'v2.1.0 (Alan, 13-10-2026)' (line 66)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Ready",
+          "reason": "in a release, no status words in the row's Plan: default",
+          "strength": "weak"
+        },
+        "priority": {
+          "value": "High",
+          "reason": "row says 'Priority High'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "L",
+          "reason": "row Size 'L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "dev-v210-sprint-plan:dev/sprints/v210-reporting.md (on hold, not merged): Team Cap, reports (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-335: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-335 | **The weekly report, redesigned and built in creaite:** drafted, edited and approved on the project's Reports tab as a true A4 page; filed as a creaite report (`.html` with the report's data inside, reopened to edit, versioned); exported to Word (the firm's template), PDF and HTML to share. New layout that leads with health and the asks; sections you move and hide, rows you choose, a layout remembered per project, up to two client and partner logos, inline AI checks and suggestions, the standard peek on every item | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category, with BL-336 and BL-337.** Needs v2.0.0's one editor |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan). **In v2.1.0 (Alan, 14-10-2026). Priority High (Alan, 14-10-2026: \"log the entire reporting category in backlog as a priority\"): the Reporting category, with BL-336 (the client report) and BL-337 (the reporting space and the Reports page).** Mockup: a private artifact (Alan's claude.ai, \"Weekly report redesign\"), not committed here because it uses the firm's real brand. Depends on v2.0.0's one editor (BL-301 part A). No schema change expected; the filed report is a file, the layout a per-project setting.\n\n**Decided (Alan, 14-10-2026):**\n1. **Built in creaite,** with exports, not drafted in Word.\n2. **Filed as a creaite report:** `YYYY-MM-DD Weekly report - <Project name>.html` in the project's weekly reports folder. One file with two parts: the page as approved, and the report's data (each section, its order, its text, which rows show, the items as they stood that Friday). creaite reopens it in the report view to edit again; saving makes a new version and keeps the earlier one, with Undo. Outside creaite it opens in any browser. Search reads each section and figure.\n3. **Exports to share, on demand:** Word (`.docx`, the firm's template), PDF (printed from the page by Chrome, already required) and HTML (one read-only page without the editing data). An export is filed beside the report only when Alan ticks it. Nothing is ever sent.\n4. **Current state at the end,** as context.\n5. **The client report uses the same layout,** as a Client view of the same week's report (BL-336).\n\n**The page.** A true A4 page shown at 80% of the window, zoomable from 40% to 80% (trackpad pinch, ⌘+ ⌘− ⌘0, or − + in the toolbar), with page breaks marked, so what Alan sees is what exports. **Show as exported** previews it without any editing controls. Body text 14px (about 10.5pt), tables 12.5px (about 9.5pt).\n\n**Layout, top to bottom (the default; every section can move):**\n1. **Header, one row:** \"Weekly report · Internal\", the project's name, the week ending and the client on the left; the firm's logo then up to two logos (client, partner) on the right.\n2. **Health:** the flag with six weeks of trend flush under it (dates under the first and last), and the reason written as a one-sentence headline, then what it was last week and why.\n3. **At a glance:** the next milestone and its slip, overdue actions, high risks open, decisions needed.\n4. **Summary:** 3 to 5 sentences in the executive voice (BL-106): the position, the one thing, progress, focus.\n5. **Milestones:** a timeline that scrolls sideways and opens at today; drag its bottom edge to make it taller, which zooms in. The milestone list toggles in under it and is exported only when it's showing. The export starts the line just before today, shows what fits at a comfortable size and says what follows (\"2 more milestones to March 2027 →\"); it never squeezes the whole line in.\n6. **What we need from people:** a table of ask, from whom, by when and why it matters. Asks come from decisions needed, overdue promises made to Alan (waiting on), and risk responses or overdue items that hold up a milestone; each row shows its source and can be edited or hidden; **+ Add an ask** adds Alan's own.\n7. **This week and Next week,** side by side; promises first in Next week. A ✦ beside each heading asks Claude for a fresh fill from the week's tracker changes, with its sources, and Keep mine, Add the new lines or Use this.\n8. **Decisions made this week,** written out: the decision, made by whom, on what date, and its source, all editable. No item IDs.\n9. **Risks and issues:** top 5 by priority by default, each row with an eye to show or hide; \"Showing 5 of 8\".\n10. **Overdue actions:** all by default, each with an eye.\n11. **Current state:** the project's Current state, the same text as the cockpit's card, with its two panes side by side and their titles; when the second pane is empty the first takes the full width. Editing it here edits the project's Current state.\n12. **Footer:** the page number on the right, nothing else.\n\n**Editing.** Everything is editable in place with the one editor (rich in the Summary and Current state; plain in table cells). creaite drafts every section when the report is made. Inline AI: creaite's checks underline a claim it can't find in the week's facts, with the last recorded figure and a way to fix it; selecting words offers Shorten, Make it executive, Polish and Find the source, shown beside Alan's words. Every item ID and milestone opens the **standard work-item peek** (the same component as Work, not a copy), so a last-minute change to an item updates the report at once.\n\n**Also decided (Alan, 14-10-2026):**\n- **Headings are renamable,** remembered for the project, each with Reset to creaite's default.\n- **✦ on Summary and Current state** as well as This week and Next week: a fresh draft in the executive voice from the week's facts, with its sources, and Keep mine or Use this (for Current state, using it updates the project's Current state, as editing does).\n- **Source tags** on lines drawn from work items (This week, Next week, the Summary): click to open the item, hover for ✕ to remove one, Remove all tags beside the heading. Shown in creaite, never exported.\n- **At a glance is a section** like the others, movable and hideable; each figure can be dragged to reorder or hidden. Default order: next milestone, overdue actions, high risks, decisions needed.\n- **The milestone list:** an eye on each milestone picks which appear in the list, for a tidy report; the timeline always shows every milestone. Remembered with the layout.\n\n**Per-project layout.** The section order, the renamed headings, the order of At a glance, hidden sections (hidden from a section's handle; a thin \"Hidden\" bar holds its place while editing), the milestone list, the logos shown and the row rules (for example \"top 5 risks\") are saved as the project's report layout, so next week's draft starts the same way. Each project can differ. Hiding a single row applies to that week only.\n\n**Logos.** Set once per project in Settings › Projects › Report logos: a client logo and a partner logo (PNG, JPG or SVG). Every logo set for the project shows by default; clicking the logos on a report unticks any, and that becomes the project's layout. The firm's logo always comes first. The files live in the vault's local branding folder, which is kept out of git, so no real logo reaches the public repo.\n\n**Approve and file** files the creaite report with the health change and the week's update in one apply, with Undo, as today's weekly report does. cx-weekly-report drafts into this view instead of a Word draft.\n\n**Done when:** a week's report is drafted into the view, edited in place, approved and filed as a creaite report that reopens and re-edits; Word, PDF and HTML exports match the page's sections and order (a test compares them); hidden sections and rows never reach a filed report or an export; the layout is remembered per project; the timeline export starts near today; the peek is the standard one; search finds a report by a section's words; the client report can reuse the layout.\n\n**Touches:** a new report view on the project's Reports tab (on the components), `report.py` (the data model, the creaite report file, the three exports), the weekly template, `docx_tools.py`, the cx-weekly-report skill, search, Settings › Projects (logos, layout), `paths.py` (the branding folder for logos), Help, tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-336",
+      "title": "BL-336 The client report, as a Client view of the week's report",
+      "release": "v2.1.0",
+      "priority": "High",
+      "state": "Ready",
+      "size": "L",
+      "team": "Team Cap",
+      "labels": [],
+      "source_line": 67,
+      "writeup_line": 736,
+      "evidence": {
+        "release": {
+          "value": "v2.1.0",
+          "reason": "Summary group 'v2.1.0 (Alan, 13-10-2026)' (line 67)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Ready",
+          "reason": "in a release, no status words in the row's Plan: default",
+          "strength": "weak"
+        },
+        "priority": {
+          "value": "High",
+          "reason": "row says 'Priority High'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "L",
+          "reason": "row Size 'L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Cap",
+          "reason": "dev-v210-sprint-plan:dev/sprints/v210-reporting.md (on hold, not merged): Team Cap, P8 the client view (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-336: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-336 | **The client report, as a Client view of the week's report:** one per client, with its own layout and renamable headings remembered per client; client health may differ, with a required reason; client-visible items only, in their client wording; Match internal per section or for all; a check of what's left out before export; a baseline (approved or exported only after the internal week is approved, its facts locked to it); HTML, Word or PDF | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category.** With BL-335; replaces cx-client-report's Word draft |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan). **In v2.1.0, Priority High (Alan, 14-10-2026): the Reporting category, with BL-335 and BL-337.** Mockup: a private artifact (Alan's claude.ai, \"Client report\"), not committed. Replaces cx-client-report's Word draft; depends on BL-335 and v2.0.0's one editor. No schema change expected: the client layout is a per-client setting and the report is a filed creaite report.\n\n**Decided (Alan, 14-10-2026):**\n1. **The same week's report in a Client view,** not a separate document. Each client of a project has its own Client view and remembered layout: section order, hidden sections, renamed headings, logos, the milestone list and row choices.\n2. **Every feature of the internal report:** move and hide sections, renamable headings, ✦ drafts (from client-safe facts only), eyes on rows, zoom, the standard peek, the exports.\n3. **Health may differ from the internal health.** Clicking the client flag changes it and asks for a reason; **Match internal health** takes the internal flag and headline. The internal report shows the difference and the reason; the internal health and the cockpit never change.\n4. **What it contains:** client-visible milestones, risks, issues and decisions, in their client wording (milestones in the client's words: On plan, At risk, Expected later, Late, Achieved); asks only where the client is asked; overdue actions the client owns by default, the others greyed with an eye to show them. Showing a risk that isn't client-visible opens the peek to make it client-visible, with its wording. A Sensitive item can never be shown; partner-only items never appear.\n5. **A separate client summary,** drafted by creaite from the client-safe facts only. Summary and Current state are edited for the client; the internal text and the cockpit's Current state never change.\n6. **Match internal** on each section copies the internal section in, then Alan edits from there (labelled Matching internal or Edited for the client); **Match internal for every section** does them all, keeping the client-only choices. No lasting link back to the internal text.\n7. **Logos:** the firm, the client and the partner by default; untick any for this client.\n8. **Check before export:** a list of what's left out and why (items not client-visible, Sensitive items, hidden sections, internal notes and source tags, any logo unticked, the health difference). Exports: HTML, Word or PDF; filed as a creaite report beside the internal one.\n9. **Baseline:** the Client view can be drafted and edited at any time, but approved or exported only after that week's internal report is approved; its facts (items, dates, milestones, figures) then lock to the approved internal week, and a later tracker change doesn't alter it. A fortnightly or monthly client uses the latest approved internal week, and the report says which.\n10. **Rhythm:** each client's rhythm (weekly, fortnightly, monthly) as today; creaite drafts the client report with the internal one, for each client due that week.\n11. **Client At a glance** (default): next milestone, what we need from the client, points to watch.\n\n**Done when:** a client report is drafted with the internal one, edited in its own view, checked and exported in all three formats; nothing not client-visible or Sensitive can reach it (a test); it can't be approved before the internal week; its health difference and reason show on the internal report; its layout and headings are remembered per client; Match internal copies one section or all.\n\n**Touches:** the report view (BL-335), `report.py` (the client view's data, the check of what's left out, the lock to the approved week), the per-client layout settings, the cx-client-report skill, Help, tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-337",
+      "title": "BL-337 Reporting space and journey",
+      "release": "v2.1.0",
+      "priority": "High",
+      "state": "Ready",
+      "size": "M–L",
+      "team": "Team Stark",
+      "labels": [],
+      "source_line": 68,
+      "writeup_line": 756,
+      "evidence": {
+        "release": {
+          "value": "v2.1.0",
+          "reason": "Summary group 'v2.1.0 (Alan, 13-10-2026)' (line 68)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Ready",
+          "reason": "in a release, no status words in the row's Plan: default",
+          "strength": "weak"
+        },
+        "priority": {
+          "value": "High",
+          "reason": "row says 'Priority High'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "M–L",
+          "reason": "row Size 'M–L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev-v210-sprint-plan:dev/sprints/v210-reporting.md (on hold, not merged): Team Stark, P9 the reporting space (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-337: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-337 | **Reporting space and journey:** a Reporting card on the project cockpit; one reporting space per project (weeks down the left, the week's internal and client reports as cards, the files filed); the editor with Internal, Client and Side by side views (≠ Client indicators, the difference on hover); a top-level **Reports** page listing every project's week, for Fridays; creaite drafts the client reports with the internal one | Alan, 14-10-2026 (mockup published as a private artifact) | M–L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category.** With BL-335 and BL-336 |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-14 (Alan). **In v2.1.0, Priority High (Alan, 14-10-2026): the Reporting category, with BL-335 and BL-336.** Mockup: a private artifact (Alan's claude.ai, \"Reporting journey\"), not committed. No schema change expected.\n\n- **Project cockpit:** a **Reporting** card for the week: the internal weekly report and each client's report, with its state and rhythm; **Open** goes straight to a report, **Open reporting** to the space. It sits on today's cockpit; BL-317's tabbed project page (on hold) would host it later.\n- **Reporting space, one per project:** weeks down the left, newest first, each with both reports' state; the week's internal and client reports as cards (state, thumbnail, who it's for, how the client version differs, Open, Approve, Export); **Edit both side by side**; the files filed for the week. A client not due that week shows Not due, with Make one anyway. The client card's Approve reads \"Approve the internal report first\" until it is.\n- **The editor:** one page with three views, **Internal**, **Client** and **Side by side**, switched without leaving it. Side by side puts the internal page beside the client page, section beside section, with Scroll together; the internal page shows a small **≠ Client** marker on each section the client version changes (health included: \"≠ Client: On track\"), with both versions on hover; Match internal is on the client page. Markers are creaite only, never exported.\n- **Reports page:** **Reports** in the left menu, with a count of what needs Alan; one row per active project for the week: health, the internal report's state and each client report's state; **Needs me** or **All projects**; earlier weeks one click back; **Open** goes to the project's reporting space. The Friday reminder on Today points here.\n- **Other ways in:** ⌘K (\"weekly report FAL\"), ask creaite and Review reach the same space.\n\n**Done when:** every way in reaches the same reporting space; the space shows each week's reports and their files; the three views switch without losing place; the Reports page lists every active project's week and what needs Alan.\n\n**Touches:** the cockpit (a Reporting card), a reporting space view, the left menu (Reports), the Today reminder, ⌘K, Help, tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-338",
+      "title": "BL-338 The minutes editor, replacing today's minutes experience",
+      "release": "v2.1.0",
+      "priority": "High",
+      "state": "Ready",
+      "size": "XL",
+      "team": "Team Stark",
+      "labels": [],
+      "source_line": 69,
+      "writeup_line": 769,
+      "evidence": {
+        "release": {
+          "value": "v2.1.0",
+          "reason": "Summary group 'v2.1.0 (Alan, 13-10-2026)' (line 69)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Ready",
+          "reason": "in a release, no status words in the row's Plan: default",
+          "strength": "weak"
+        },
+        "priority": {
+          "value": "High",
+          "reason": "row says 'Priority High'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "XL",
+          "reason": "row Size 'XL'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev-v210-sprint-plan:dev/sprints/v210-reporting.md (on hold, not merged): Team Stark, P4 and P7 the minutes (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-338: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-338 | **The minutes editor, replacing today's minutes experience:** draft minutes from the transcript on a true A4 page, edited in place, with the transcript beside them (time tags on every line), checks against the transcript, the proposed items as rows in the page (approved unless removed), deadlines picked or typed in words, agenda coverage you act on, one version or an internal and a distributed version, saved in creaite's own format and exported to HTML, Word or PDF | Alan, 15-10-2026 (mockup published as a private artifact) | XL | **In v2.1.0 (Alan, 15-10-2026). Priority High: the Reporting category.** Replaces BL-59 and BL-60; on BL-335's editor |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-15 (Alan). **In v2.1.0, Priority High (Alan, 15-10-2026): the Reporting category, with BL-335 to BL-337.** Mockup: a private artifact (Alan's claude.ai, \"Minutes editor\"), not committed because it uses the firm's real brand. **Replaces today's minutes experience** (cx-minutes' Word draft, edited in Word and reconciled at approval) and **BL-59 and BL-60**, which leave the backlog (their write-ups are in git history). Built on BL-335's report editor, so it reuses the A4 page, zoom, the one editor, the inline AI, the standard peek and the exports rather than building them twice. No schema change expected: the minutes are a filed creaite file and their items are the staged proposal.\n\n**Decided (Alan, 14 and 15-10-2026):**\n1. **After the transcript is processed,** cx-minutes drafts the minutes into the editor instead of a Word draft (the sections of `minutes-style.md`: header, executive summary, updates by topic with flags, decisions, risks, issues, assumptions and dependencies, action items, open questions and escalations, source). The source line names the meeting exactly: \"Teams transcript and meeting chat, <meeting title>, <long date>, HH:MM–HH:MM (UAE time)\".\n2. **The page:** a true A4 page shown at 80% of the window's width, zoomable from 40% to 80% of the width (− +, trackpad pinch, ⌘+ ⌘− ⌘0), as on the reports; Show as exported; scrolling or clicking never moves the page back to the top.\n3. **Everything is edited in place,** with the one editor. ✦ beside a heading redrafts that section from the transcript (Keep mine or Use this); selected words offer Shorten, Make it executive, Polish and Find the source; flags are chosen from a click on a line (the ten flags of `minutes-style.md`, used sparingly).\n4. **The transcript beside the minutes:** a pane of speaker turns with times, searchable and closable. Every line drawn from the transcript has a **time tag**; clicking it scrolls the pane to what was said and highlights it; hover for ✕ to remove a tag. Tags are shown in creaite only, never exported.\n5. **Checks against the transcript:** a claim, date, figure or owner the transcript doesn't support is underlined, with what was said and who said it, and Use that, Keep mine or Show in the transcript. A check left open is listed when approving.\n6. **The proposed items are rows in the page,** not a second list: decisions, risks, issues, assumptions and dependencies, and actions are the staged items themselves, so editing a row edits the item and nothing needs reconciling. Each row shows what it does: New action, New risk, Records FAL-D-004 as made, Closes FAL-A-003 · Looks done (with the evidence), Looks like FAL-R-006 (BL-221), Sensitive. An owner the people register doesn't know is picked from the register in the row (BL-55), and the alias is remembered. Every ID opens the **full standard peek**, with **Sneak peek** (BL-322) to change the item in words.\n7. **Looks like an existing item:** **Update that one** turns the new item into an update of the existing one and shows exactly what changes (latest update, due date; title, owner, priority and response unchanged; the earlier update kept in the history; the minutes added as a source). **Keep as new** leaves it a new item. Both are also in the full peek, with the meeting's quote and the changes shown before and after.\n8. **Items are approved unless removed:** Alan doesn't tick each one. **✕ Remove** on a row removes the item and its line from the minutes (Keep the line in the minutes keeps the line only), with Undo.\n9. **Deadlines:** clicking a deadline opens a calendar and quick picks (Friday, Next week, Next Wednesday, End of month, each with its date shown), and Alan can type words instead (\"Friday\", \"next week\", \"next Wednesday\", \"end of month\", \"in 2 weeks\", \"30-10\"). Words are worked out from the meeting's date (`minutes-style.md`), and the date is shown before it is set; \"next week\" is that week's Friday; \"end of month\" the last working day. Not set stays possible.\n10. **Approve minutes** opens one popup (wider than today's, about 784px; Esc or a click outside closes it) that says what will be filed and lists the items in two groups: **Actions and updates**, approved together with one tick (\"Approve all n as reviewed in the minutes\", ticked by default); and **one tick each** for a new decision, a decision recorded or withdrawn, a new risk and an update that closes an item, as the bulk rule requires. Whatever is ticked is applied **with the minutes, in one apply with Undo, and doesn't go to Review again**; anything left unticked waits in Review. The minutes are always approved on their own, as now. Approved minutes reopen with **Edit again**, which makes a new version and keeps the earlier one.\n11. **Agenda coverage** (BL-209's Coverage, moved here): where the meeting had an agenda or a prep page, a section shown in creaite only lists each point as Covered, Touched on or Not discussed. **Deal with it…** on a point that wasn't covered offers: **Carry it to the next meeting of the series** (on its draft agenda and Prep, marked \"carried from <date>\"); **Set up a separate session** (adds an action for Alan, due Friday by default, to set it up; creaite never creates the invite, since Microsoft 365 actions stay off); or **No longer needed** / **Covered enough**. With \"Add a line to the minutes\" (on by default) it writes a line under **Not covered in this meeting** (\"Training plan was not discussed; it is carried to the next steering committee on 27 October 2026\"). Undo on each.\n12. **Milestones are never changed from minutes** (BL-186): a milestone the meeting moved gets a note in creaite only, and **Review the Go-live milestone** opens it in the peek with the change filled in (expected date, state, the reason from the transcript, an optional rebaseline), proposed on its own to Review.\n13. **One version, or internal and distributed (Alan, 15-10-2026: minimise the work when one is enough).** One version by default. **Internal + distributed** turns on a distributed version for attendees or the client, remembered for the meeting series. It works like BL-336's Client view: Internal, Distributed and Side by side views; a line can be marked **Internal only**; a Sensitive item never reaches it; ≠ Distributed markers on the internal page with both versions on hover; Match internal per section; a check of what's left out before export; its facts lock to the approved internal minutes. Side by side keeps matching sections and topics the same height, so their headings stay level as both pages scroll together.\n14. **Saved in creaite's own format** as Alan goes (a version shown in the bar), filed on approval in the project's minutes folder as `YYYY-MM-DD <Meeting title>` in creaite's format (the page and its data in one file, as BL-335's reports), with the transcript in Transcripts. Reopening it brings back every option: versions, the transcript pane, time tags, checks, coverage and the item rows. Search reads it.\n15. **Export for distribution:** HTML, Word (the firm's minutes template, `minutes-template.docx`) or PDF, all ticked by default; **File the exports beside the minutes** is on by default; each export opens in the default viewer as soon as it's made. Nothing is ever sent.\n16. **Feeds the weekly report:** the approved minutes' decisions and updates feed BL-335's \"Decisions made this week\" and \"This week\".\n\n**Done when:** a processed transcript opens as draft minutes in the editor with the transcript pane and time tags; edits to a row change its staged item; Remove, Update that one and the owner picker work with Undo; a deadline typed in words sets the right date from the meeting's date; Approve applies the minutes and the ticked items in one apply and sends nothing else to Review; agenda coverage can carry a point, add the action or note it; the distributed version never contains an Internal only line or a Sensitive item (a test); the minutes reopen from creaite's format with every option; HTML, Word and PDF exports match the page and open in the default viewer; scrolling side by side keeps headings level; the page never jumps to the top.\n\n**Touches:** a minutes view on BL-335's editor; `minutes.py` (the minutes record, stage, the source positions for time tags, coverage carry and actions); cx-minutes (draft into the editor, no Word draft); cx-review and `review.py` (approving minutes and their items in one apply); `docx_tools.py` (Word from the record); `report.py` (the shared creaite file, HTML and PDF); `live_server.py` (save, the transcript, opening an export); `paths.py`; `minutes-style.md`; `creaite-rules.md` (the cx-minutes row, the Word draft); Help; tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-339",
+      "title": "BL-339 Retire the meeting hub",
+      "release": "v2.1.0",
+      "priority": "Normal",
+      "state": "Ready",
+      "size": "S",
+      "team": "Team Stark",
+      "labels": [],
+      "source_line": 70,
+      "writeup_line": 794,
+      "evidence": {
+        "release": {
+          "value": "v2.1.0",
+          "reason": "Summary group 'v2.1.0 (Alan, 13-10-2026)' (line 70)",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Ready",
+          "reason": "in a release, no status words in the row's Plan: default",
+          "strength": "weak"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S",
+          "reason": "row Size 'S'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Team Stark",
+          "reason": "dev-v210-sprint-plan:dev/sprints/v210-reporting.md (on hold, not merged): Team Stark, P10 retire the meeting hub (backlog alone gave Unassigned: no team named as builder: default)",
+          "strength": "medium"
+        }
+      },
+      "body": "<!-- creaite-plan BL-339: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-339 | **Retire the meeting hub** (BL-209's page for each meeting, FR-167): its links go to the Prep popup before a meeting and to the minutes after it; Coverage and Carry move into the minutes editor (BL-338) | Alan, 15-10-2026 | S | **In v2.1.0 (Alan, 15-10-2026)**, with BL-338 |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-15 (Alan). **In v2.1.0 (Alan, 15-10-2026)**, with BL-338. Alan: the page is too complex and not needed now. No schema change.\n\n- **Remove** BL-209's page for each meeting (`#meeting=<token>`, its strip of steps and its next-step button, FR-167) and its \"Meeting page\" links from Today, the Week ahead, Intake, the Prep brief, Files, an item's source and Review.\n- **Where the links go instead:** before a meeting, its Prep popup; after it, its minutes in BL-338's editor (the draft or the filed minutes). An old `#meeting=` link opens the same place.\n- **Coverage and Carry to the next agenda** move into BL-338's Agenda coverage; carried points still appear on the series' next prep page under \"Not covered last time\".\n- **Done when:** no screen links to a meeting page; old links land on Prep or the minutes; coverage and carry work from the minutes; the BRD retires FR-167 and moves its coverage part to BL-338's requirement.\n- **Touches:** `meetings.js` (`hubLink` and the page), Today, the Week ahead, Intake, Prep, Files, Review, `build_dashboard.py`, cx-minutes (the coverage step's wording), Help, tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-340",
+      "title": "BL-340 Notes transcripts in the minutes editor",
+      "release": "Unscheduled",
+      "priority": "Low",
+      "state": "Idea",
+      "size": "M",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 76,
+      "writeup_line": 803,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'Not scheduled' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Idea",
+          "reason": "Summary group 'Not scheduled'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Low",
+          "reason": "row says 'Priority Low'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-340: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (Not scheduled)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-340 | **Notes transcripts in the minutes editor:** how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes | Alan, 15-10-2026 | M | **Not scheduled. Priority Low (Alan, 15-10-2026):** to look at after BL-338 |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-15 (Alan). **Not scheduled, Priority Low (Alan, 15-10-2026).** To look at after BL-338: how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes and BL-54's quick notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes (no attendees or agenda, one speaker, perhaps no Word export). Design first; nothing decided yet.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-313",
+      "title": "BL-313 Plain words",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "On hold",
+      "size": "M",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 82,
+      "writeup_line": 411,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M (was S)'",
+          "strength": "medium"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-313: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-313 | **Plain words:** with automatic apply on, nothing on screen or in ask creaite says \"staged\", \"apply\" or \"proposal\"; your own change is \"Saved\" (with Undo); what creaite suggests \"waits for you in Review\" | Alan, 13-10-2026 (UX review against Linear, Asana and Plane) | M (was S) | **On hold (Alan, 14-10-2026)**; the review is in dev/reviews/BL-313-review.md |\n<!-- /summary -->\n\n<!-- write-up -->\n**On hold (Alan, 14-10-2026).** The review is in `dev/reviews/BL-313-review.md`.\n\nRaised 2026-10-13 (Alan), from the UX review against Linear, Asana and Plane: the dashboard's code uses \"proposal\" about 230 times, \"apply\" about 230 and \"staged\" over 100, and much of it reaches Alan. **In v2.1.0 (Alan, 13-10-2026; moved from v1.9.1), on hold for Alan's full review before it is committed; the review pack is `dev/reviews/BL-313-review.md`.** No schema change.\n\n**One model, in Alan's words:** what you change is saved (with Undo); what creaite suggests waits for you in Review.\n- **With auto-apply on (the default):** your own edits read \"Saved\", with Undo; the peek's staged dot means \"saving\"; no \"staged\", \"apply\", \"Apply\", \"pending apply\" or \"proposal\" in the dashboard, its messages or Help.\n- **creaite's suggestions** (minutes, sweeps, drafts, ask creaite's ideas) are \"suggestions\" waiting \"in Review\". Approve and Reject stay.\n- **ask creaite's replies** use the same words: ASK_PROMPT and the skills' panel lines never say \"at the next apply\" when auto-apply is on; they say \"Saved\" or \"waiting for you in Review\".\n- **With auto-apply off:** \"Ready to save\", a count with one Save button. \"Apply\" survives only as a command typed in Claude Code.\n- **Unchanged underneath:** proposals, staging and `tracker.py apply` stay as they are, in code and dev docs.\n- **A check:** check.py or a test counts user-facing strings (the dashboard's text, Help, the panel prompt) containing staged, apply or proposal outside an allow list; the ratchet stops new ones.\n\n**Done when:** with auto-apply on, a full click-through (peek, Work cell, board, ⌘K, Review, an ask creaite change) shows none of the three words and Help reads the same; with it off, \"Ready to save\" and one Save appear; the string check passes. **Touches:** `system/templates/dashboard/src/`, help.md, live_server.py (ASK_PROMPT, CONFIRMED_PROMPT), the cx-edit, cx-review and cx-sweep panel lines, check.py, tests. Pairs with BL-304 whenever that's scheduled; doesn't depend on it.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-40",
+      "title": "BL-40 More named themes",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "On hold",
+      "size": "S",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 83,
+      "writeup_line": 202,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S",
+          "reason": "row Size 'S'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-40: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-40 | More named themes | Alan | S | **On hold (Alan, 14-10-2026)** |\n<!-- /summary -->\n\n<!-- write-up -->\n**On hold (Alan, 14-10-2026).**\n\nRaised 2026-10-05. Alan names further dashboard themes; each is added as a token set (FR-57), in light and dark, beside the five there are now (Brightwater, creaite, Notion, Linear, Cursor; v1.3.0).\n- **Rules kept:** health colours stay icon plus text with sufficient contrast in every theme and mode; no external resources.\n- **Touches:** `system/templates/dashboard.html` (a token set per theme under `[data-palette=…]`), the Settings choice and swatches, the theme tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-183",
+      "title": "BL-183 Health evidence and calibration",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "On hold",
+      "size": "S",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 84,
+      "writeup_line": 217,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "S",
+          "reason": "row Size 'S'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-183: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-183 | Health evidence and calibration: a banner when the declared health is better than the evidence, and your own health calls scored afterwards | Alan, from the 11-10-2026 research | S | **On hold again (Alan, 14-10-2026)**, out of v1.9.4: not buildable as written (where calibration shows is undecided; no Done-when). Eight recommendations recorded in its write-up for when it resumes |\n<!-- /summary -->\n\n<!-- write-up -->\n**On hold again (Alan, 14-10-2026)**, out of v1.9.4 (it was moved in earlier the same day). A readiness check found it can't be built as written: the write-up leaves where calibration shows undecided, and it has no Done-when.\n\n**Recommendations from the readiness check (14-10-2026), not yet decided by Alan, for when it resumes:**\n1. Calibration shows only on Activity › Quality.\n2. Add a Done-when (one was proposed with the check).\n3. A miss is a declared On track followed by Off track within 21 days.\n4. Calibration covers a fixed 10 weeks.\n5. The banner shows only when the declared health is better than the evidence.\n6. \"Keep, add a reason\" is remembered in a staging file.\n7. One Needs attention row on Today (BL-319's design).\n8. Worked out in `quality.py`, reusing `healthEvidence()` (one evidence function, never a second copy).\n\nRaised 2026-10-11 (Alan), from the same research; **on hold**. BL-52 already checks a health edit against the evidence (the same criteria as the weekly report, in `dashboard.html` near `evidence(p)`), but only when Alan edits health.\n- **Banner (S).** Reuse that one evidence function (do not write a second copy in Python) for a passive note on the project cockpit and in Today's Needs attention: \"Health is On track; the evidence suggests At risk: <reasons>\", with **Change health** and **Keep, add a reason**. creaite never changes health itself.\n- **Calibration (S).** Score Alan's own weekly health calls from the `updates` table (week ending, project, health): a green counts as a miss when a red follows within three weeks; weeks with less than three weeks of later data are not scored. Shown only once there are enough scored weeks (about 10 across the portfolio). **Private:** no report, one-pager, client output or Excel export reads it. No schema change.\n- **Open decision:** whether calibration shows on screen at all, or only in a private view.\n- **Touches:** `system/templates/dashboard.html`, `build_dashboard.py`, Help, `dev/dashboard-spec.md`, `dev/tests/` (the banner matches BL-52's rule; the score on a fixture; nothing leaks into any report or export).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-317",
+      "title": "BL-317 Reports you live in: a living status page per project",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "On hold",
+      "size": "L",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 85,
+      "writeup_line": 436,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "L",
+          "reason": "row Size 'L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-317: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-317 | **Reports you live in:** one living Status page per project (health, Current state, milestones, top risks, help needed), edited in place with evidence; each week a snapshot; Client view; Export to Word from it | Alan, 13-10-2026 | L | **On hold (Alan, 14-10-2026): design paused, to revisit later; in no release.** Mockup so far: the project page as six tabs, with Milestones worked through (`dev/mockups/project-page-mockup.html`; published https://claude.ai/artifact/Xk2SGW7fz6AJGCr45bPjfL) |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-13 (Alan). **On hold (Alan, 14-10-2026): design paused, to revisit later; in no release.**\n\n**Design so far (14-10-2026), to pick up from:** mockup `dev/mockups/project-page-mockup.html` (published https://claude.ai/artifact/Xk2SGW7fz6AJGCr45bPjfL). The project page becomes six tabs (Status first, then Overview, Milestones, Work, Files, Reports), regrouping today's cockpit (the mockup maps each part). Alan's direction on **Milestones**: every function of today's Plan and Movement page and the milestone editor lives on the Milestones tab unchanged, including the Client and Internal views; new, the tab chooses what Status shows, either the **full picture** or **3 or 4 milestones as tiles**. Open when it resumes: the default for a new project (suggested: tiles, the next 3 open), whether a tile stays when its milestone is achieved (suggested: it stays), which tab opens first (suggested: Status), and the four Status choices in the mockup. Overview, Work, Files and Reports are drawn but not yet reviewed.\n\nEarlier: **Not scheduled (Alan, 13-10-2026).** Mockup: the calm mockups, tab 8, option A (B, the Friday composer, and C, a portfolio page with BL-02, were not chosen). Overlaps BL-59 (on hold).\n- **One Status page** per project, always current: health, Current state, milestones, top risks, help needed; edited in place, every sentence keeping its evidence (BL-207).\n- **Each week is a snapshot:** a timeline of past weeks; Friday's report is \"this week\", not a new document.\n- **Client view** shows the client-safe version (client-visible flags; BL-288's privacy). **Export to Word** makes the branded weekly or client report from it, so the report builders take the page as their source.\n\n**Touches:** a new Status area (on the components), report.py, the weekly and client skills, tests.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-125",
+      "title": "BL-125 Promises, links and labels: the features on the tables Sprint 5 built",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "On hold",
+      "size": "XL",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 86,
+      "writeup_line": 127,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "XL",
+          "reason": "row Size 'XL'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-125: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-125 | Promises, links and labels: the features on the tables Sprint 5 built | Alan | XL | **B (links) and C (labels) on hold (Alan, 13-10-2026).** Stage A built in v1.9.0 (FR-229) |\n<!-- /summary -->\n\n<!-- write-up -->\nReplaces BL-50 (promises and waiting on), BL-90 part 2 (links) and BL-94 (labels), Alan's decisions kept. **Built already (FR-101, FR-97, FR-102):** the `promises`, `links`, `labels` and `item_labels` tables with validation, apply and undo; the Excel Promises, Links and Labels sheets and columns; the people register's Labels column; **Sensitive** as the built-in label (warn, exclude as the default choice); the dependency part 1 (milestone attach, suggestion, Dependencies card, date warning, Work filter); and the client-safe one-pager and `review.client_findings` honouring an excluding label. **What is left is below, in three stages that can be built and released one at a time.** They share the same hand-offs (the sweep, cx-minutes and Review), so stage A goes first; B and C can follow in either order.\n\n#### A. Promises and waiting on\n**Built in v1.9.0 (FR-229; moved from v2.0.0 by Alan, 13-10-2026).** **Stages B and C are on hold (Alan, 13-10-2026).**\n- **Start small, measure the noise (Alan, 13-10-2026):** promises come first from cx-minutes and from Alan adding them by hand (the peek, ⌘K, Quick capture). The sweep's proposed promises (Sent Items, Teams, incoming mail) are switched off (`promises.from_sweep`, default off) until BL-233's quality data shows enough of them accepted unedited; the bar is Alan's to set (suggested 70%). Close the day's \"You promised today\" (BL-295), Draft chase (BL-298) and Smarter updates (BL-297) read real promises once they exist.\n- **Build after BL-233 (formerly BL-182 step A, 11-10-2026):** the sweep and cx-minutes will propose promises, and their precision is the main risk; measuring accepted, edited and rejected proposals from the first sweep makes it visible. Also from the research: **silence is the signal**, so extend the `mentions.jsonl` matching to promise IDs and flag an overdue promise as \"quiet for N days\".\nCommitments made in passing (\"I'll send the SOW by Friday\"), kept apart from formal actions: what Alan has promised, and what others have promised him. Lighter than actions: no priority or workstream.\n- **Capture:** the sweep proposes them from Sent Items and Teams (Alan's promises) and from incoming mail and chats (others' promises to Alan); cx-minutes may propose them from meetings. They go through Review like any other item (who to whom from the people register, what, by when, project, source).\n- **Where they show:** \"You owe\" and \"Waiting on\" lists on Alan's page and each person's page, in meeting prep, and as counts on Today. Overdue promises are flagged.\n- **One click to turn a promise into a formal action** if it grows, keeping its source and people.\n- **Replaces BL-04 (cx-chase, removed 12-10-2026, Alan):** Alan chases from Waiting on rather than from drafted emails; chase emails themselves are BL-224's Chase mode.\n- **Alignment with the Work views (BL-128 to BL-134):** promises stay their own lists, not a Work tab; the Chase view (BL-131) covers formal items that have gone quiet and Waiting on covers promises, and each links to the other so there is one place to chase from at a glance. BL-134 may add promises as a type.\n- **Touches:** `sweep.py`, `minutes.py`, `build_dashboard.py`, `system/templates/dashboard.html` (the lists, the Today counts, prep), cx-sweep and cx-minutes, cx-review, `dev/staging-format.md`, Help, tests.\n\n#### B. Links: attach a dependency to an action or RAID item, and across projects\n**On hold (Alan, 13-10-2026).**\nA dependency can be attached to a milestone (built), and now also to **actions and RAID items, in the same project or another**. Attaching is **never mandatory**: a dependency stands on its own, and creaite only suggests.\n- **\"Attach to…\" picker** beside the milestone field in the detail panel, for one or several targets. The target depends on the dependency (it blocks it); both ends show the link: the dependency lists what it blocks, and the target lists what it is waiting on.\n- **Suggestions** (up to three one-click chips, plus \"None needed\") extended beyond the milestone suggestion that exists: open actions and RAID items in the same workstream or sharing key words, and items or milestones in other projects named in the text by ID or project code. When a dependency is created in the dashboard, with cx-edit, or proposed by cx-minutes or cx-sweep, **extraction proposes links only as suggestions in Review**. Nothing is attached until accepted; a declined suggestion is not raised again unless the text changes.\n- **The links now do what a milestone link does:** the date warning (dependency due after what it blocks, or overdue while the target is near), \"waiting on MER-005\" and an at-risk marker in Work, on the milestone and on the project page; the Dependencies card lists open dependencies by what they block, and cross-project ones show both projects. Blockers appear in meeting prep; a client report shows a dependency only if flagged client-visible. (The one-pager already reads the table.)\n- **Not in scope:** an automatic critical-path calculation, and dates that move targets automatically.\n- **Touches:** `build_dashboard.py` (warning and cards), `system/templates/dashboard.html` (the picker, chips, card, tags), cx-minutes, cx-sweep and cx-edit (suggestions), Help, `dev/dashboard-spec.md`, tests.\n\n#### C. Labels: warnings, exclusion and the sensitivity read\n**On hold (Alan, 13-10-2026).**\nItems and people can carry labels; **Sensitive** is built in. Anything shared or reported that includes a labelled item shows a **warning**, and a label can **exclude** items from client reports. (Word's own sensitivity label, which Review no longer needs, is unrelated: BL-121.)\n- **Managing labels:** a Settings page and cx-edit phrases to add, rename and remove labels other than Sensitive (\"add a label *Legal review*\"), each with a colour, a note and a behaviour; and to label items and people (\"label ABC-A-004 Sensitive\", \"remove the Sensitive label from ABC-002\").\n- **Behaviours:** **warn** (a banner in every output that includes the item, and a card before building: \"This includes 3 sensitive items: include, exclude or cancel\"; Alan can proceed; Word documents and drafts show the label beside the item and a line at the top) and **exclude from client reports** (Sensitive: warn, with exclude as the default choice). Reminder-or-review behaviours come later, once labels have been used.\n- **Double catch:** an item that is both Sensitive and client-visible is not blocked. The client report stops at review, shows each such item with both flags, defaults to **exclude**, and Alan's choice to include it is logged against the report. Setting the second flag raises a one-line notice in the editor.\n- **Interpreting, not only matching:** sensitivity is judged from intent and tone (blame of a named person, a dispute, pricing or contract terms, a delay attributed to a client principal, a threat to the relationship). Claude does the reading, in two places: **at extraction** (cx-minutes, cx-sweep: a proposed item can carry `labels` and a one-line reason, approved in Review like any field; nothing is labelled unseen) and **before anything is shared** (a **sensitivity read** over the items going out: \"2 items look sensitive and aren't labelled\", each with its reason, so Alan can label, exclude or proceed; never stored unless approved). **The deterministic floor stays**: the label check, the people-label check and the word scan always run, and the reading cannot remove a warning. Draft email, which has no Claude, uses stored labels only and says so.\n- **Labels on people:** an item owned by or naming a labelled person shows it (\"owner is a client principal\") and counts as sensitive for warnings without a Sensitive label being written; a delay, issue or risk attributed to a labelled person is treated as sensitive by extraction and the sensitivity read, and a client report naming that person negatively stops at review; Draft email to a labelled person warns about internal-only or sensitive items.\n- **Where the check runs (every route that carries an item out):** client and weekly reports (`report.py`, `review.py`; the client-safe one-pager is done), one-off documents (`report.adhoc`, whose filters also gain `label`), Draft email, the Excel export (labelled rows marked, a warning line on the sheet), the dashboard (a chip on rows and in the panel, a filter by label), Today and project views, the live server's ask creaite (told which items are labelled so its answers carry the warning), and search results.\n- **In the Work lists (BL-122 to BL-132):** **Labels** is a property (shown in the Display menu, BL-128), a group (BL-129), a filter with is and is not (BL-130: \"Label is not Sensitive\"), and an editable cell and bulk change (BL-123, BL-124: add or remove a label). The double-catch notice applies to any inline or bulk change that would make a Sensitive item client-visible, so BL-123 and BL-124 never offer Client-visible alone.\n- **Proposals:** `labels` as a field on proposed items and edits (`dev/staging-format.md`); unknown labels are refused on Excel import (done in the schema work).\n- **Tests:** every output route is built with a sensitive item and asserted to warn (a route that skips the check is the main risk); the double-catch card; a people label flowing to the owner's items; label changes undone with an apply; a client report excluding a Sensitive item that the word scan alone would miss; the sensitivity read skipped cleanly when Claude is unavailable, with the floor checks still running.\n- **Touches:** `tracker.py`, `propose.py`, `report.py`, `review.py`, `build_dashboard.py`, `excel_sync.py`, `live_server.py`, `system/templates/dashboard.html`, the people register reader, the skills (cx-minutes, cx-sweep, cx-client-report, cx-weekly-report, cx-document, cx-review, cx-edit), the conventions file, `system/creaite-rules.md` (the Confidential material rule is rewritten around labels), `dev/BRD.md` (new FR; NFR-04), Help, `dev/tests/`.\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-204",
+      "title": "BL-204 People with contact rhythm, and a one-click 1:1 prep",
+      "release": "Unscheduled",
+      "priority": "Low",
+      "state": "On hold",
+      "size": "M",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 87,
+      "writeup_line": 245,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Low",
+          "reason": "row says 'Low priority'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-204: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-204 | People with contact rhythm, and a one-click 1:1 prep page | Alan, 11-10-2026 | M | **On hold (Alan, 13-10-2026).** Low priority |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-11 (Alan), from the UX ideas mockups (idea 6); **low priority**. A person's page (BL-56) shows their open work. Add **how long since you last spoke**, against your usual rhythm with them, and a **1:1 prep page**. **On hold (Alan, 13-10-2026).**\n- **Contact rhythm (private).** Derived from what creaite already holds: meetings you both attended (the saved calendar and the minutes' attendees) and, where the sweep recorded them, mail and Teams references. A small bar chart of the last eight weeks, \"Usual rhythm: weekly\", and \"21 days since last contact\" in amber when the gap is well beyond the usual. Shown only with enough history (about four contacts); otherwise nothing.\n- **Private by rule:** about you and a person, so no report, client output, one-pager or Excel export reads it (as BL-183's calibration). The people page is the only place.\n- **1:1 prep page.** A button runs the Prep page engine (BL-98: headless, read-only research, the server renders and saves the page in the agendas folder) for a person: their open and overdue items, what they have promised you and you them (when BL-125 stage A exists), the last meetings you both attended, the contact gap, and three suggested talking points. Internal, never sent.\n- **To settle in the build:** what counts as a contact (meetings only first, or mail and Teams too); where the prep page is filed for a person in several projects (recommended: the project with most open items, or the portfolio folder).\n- **Touches:** `system/templates/dashboard.html` (the person page), `build_dashboard.py`, `live_server.py` and `prep_page.py` (the person variant), the cx-prep skill, Help, `dev/dashboard-spec.md`, `dev/tests/` (rhythm from fixture meetings; nothing shown on thin history; the gap flags correctly; nothing in any report or export).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-203",
+      "title": "BL-203 A project as it stood on any day",
+      "release": "Unscheduled",
+      "priority": "Low",
+      "state": "On hold",
+      "size": "M",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 88,
+      "writeup_line": 236,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Low",
+          "reason": "row says 'Low priority'",
+          "strength": "strong"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-203: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-203 | A project as it stood on any day: an \"as of\" date on the project page, and what changed between two dates | Alan, 11-10-2026 | M | **On hold (Alan, 13-10-2026).** Low priority |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-11 (Alan), from the UX ideas mockups (idea 4); **low priority**. **Read only.** On the project page, an **As of** date shows the project as it was on that day, and a **What changed** view compares any two dates. Useful for steering prep (\"what changed since the last steering?\") and for explaining why health moved. **On hold (Alan, 13-10-2026).**\n- **Source: rebuild it, don't depend on snapshots.** `system/history/dashboard-YYYY-MM-DD.html` only goes back to the first build and is whole-page; `flow-YYYY-MM-DD.json` holds counts only. The data is rebuilt from `change_log` and `updates` the way BL-91's overdue-over-time already does (the last change on or before the day, else the old value of the first change after it; an undone apply never happened). Shown: health (from the weekly `updates`, with the last known value between weeks), open actions and RAID items and their status, overdue count, milestone forecast dates, and decisions made or pending.\n- **Stops:** a slider with quick stops (last steering, last Friday, start of the month, 30 days ago) and a date field (typed in plain words, BL-147). **What changed since** lists the item events between the stop and the one before (raised, closed, due date moved, owner changed, forecast moved, health changed), each linking to the item.\n- **Honest limits:** before an item was in the tracker it isn't shown, and the view says so (\"tracker starts 05-10-2026 for this project\"). Anything the log can't rebuild says \"not recorded\", never a guess.\n- **Served on demand** (`GET /api/asof?project=&date=`, live server, read-only) rather than embedding every day in the page. Internal only: no report, one-pager or export uses it unless a later item says so.\n- **Later, not now:** a portfolio version (BL-02) and a \"Compare with the last steering\" button in the Prep page.\n- **Touches:** `build_dashboard.py` (an as-of function next to `flow_data`), `live_server.py` (the route), `system/templates/dashboard.html` (the project page control, the slider, the change list), Help, `dev/dashboard-spec.md`, `dev/tests/` (a fixture log rebuilds a past day's counts and forecast; an undone apply is ignored; a date before the first record says \"not recorded\"; no write happens).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-182",
+      "title": "BL-182 Extraction quality, the rest (steps C and D)",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "On hold",
+      "size": "M–L",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 89,
+      "writeup_line": 209,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'On hold' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "On hold",
+          "reason": "Summary group 'On hold'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M–L",
+          "reason": "row Size 'M–L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-182: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (On hold)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-182 | Extraction quality, the rest: learn patterns from reject reasons (step C) and spot-check what was missed (step D). Steps A and B were built as BL-233 (FR-191, v1.7.0) and BL-232 (FR-182, v1.6.1) | Alan, from the 11-10-2026 research | M–L | **C and D stay on hold (Alan, 13-10-2026).** On hold (Alan, 11-10-2026): revisit step C after about a month of BL-233's data |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-11 (Alan), from research into modern dashboards and project tools; **on hold**. **Steps A and B were taken out and are now BL-233 and BL-232.** What stays here waits for about a month of BL-233's data. **Steps C and D both stay on hold (Alan, 13-10-2026);** note that the live vault had 36 rejections and none with a reason on that day, so C has nothing to learn from until reasons are given (Shift+R in Review).\n- **C. Learned patterns (M).** A \"Suggest patterns\" button runs headless Claude read-only over the reject reasons (as Prep page runs) and proposes short patterns (\"vague intentions with no object\", \"scheduling chatter\"). Accepted ones are written to `system/config/extraction-guidance.md`, which cx-minutes and cx-sweep read, each switchable. BL-233 shows whether there is enough to learn from.\n- **D. Recall spot-check (M).** After extraction, a sampled second pass lists commitment-like passages that became no item. Stored as a transcript path and offset in `system/staging/spotcheck.json`, never the text (the quote is read from the file when shown). Today offers one at a time (\"Should this have been an item?\"); the answer goes to a small log, and \"Yes\" stages a normal proposal. Shows counts (\"6 of 8\"), never a percentage, until there are at least 10 answers. The sampling rate is a setting (each sample costs one extra model call per meeting).\n- **Rules kept:** nothing here writes to `tracker.db`; `tracker.py apply` stays the only writer; proposals still need approval.\n- **Open decisions:** the spot-check sampling rate.\n- **Touches:** `system/scripts/quality.py`, `live_server.py`, `minutes.py`, `.claude/skills/cx-minutes/` and `cx-sweep/`, `system/templates/settings-defaults.json`, Help, `dev/dashboard-spec.md`, `dev/BRD.md`, `dev/tests/` (the patterns file is read only when switched on; the spot-check shows no percentage under 10 answers).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-02",
+      "title": "BL-02 Portfolio-level reporting",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "Idea",
+      "size": "L",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 95,
+      "writeup_line": 100,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'After the trial' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Idea",
+          "reason": "Summary group 'After the trial'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "L",
+          "reason": "row Size 'L'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-02: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (After the trial)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-02 | Portfolio-level reporting | BRD | L | After the trial, with portfolio workstream categories |\n<!-- /summary -->\n\n<!-- write-up -->\nA leadership report and a weekly portfolio report across all projects, a portfolio reports folder in `projects/_portfolio/`, and automatic refresh of `PORTFOLIO.md`. The dashboard's portfolio view stays as is meanwhile.\n- **Depends on:** per-project reporting stable after the trial.\n- **Related:** the parked monthly leadership report on a schedule (see On hold).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-06",
+      "title": "BL-06 Unattended cx-minutes",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "Idea",
+      "size": "M",
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": 96,
+      "writeup_line": 121,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "Summary group 'After the trial' is not a release",
+          "strength": "strong"
+        },
+        "state": {
+          "value": "Idea",
+          "reason": "Summary group 'After the trial'",
+          "strength": "strong"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": "M",
+          "reason": "row Size 'M'",
+          "strength": "strong"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-06: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (After the trial)\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-06 | Unattended cx-minutes | BRD | M | After the trial |\n<!-- /summary -->\n\n<!-- write-up -->\nAllow minutes processing (drafting and staging) to run unattended, like the morning sweep. Approval and filing stay manual.\n- **Depends on:** confidence in draft quality after the trial; transcript retrieval working (Step 0 item 5 is still unconfirmed).\n<!-- /write-up -->\n"
+    },
+    {
+      "id": "BL-255",
+      "title": "BL-255 A hash-based script policy",
+      "release": "Unscheduled",
+      "priority": "Normal",
+      "state": "Needs decision",
+      "size": null,
+      "team": "Unassigned",
+      "labels": [],
+      "source_line": null,
+      "writeup_line": 339,
+      "evidence": {
+        "release": {
+          "value": "Unscheduled",
+          "reason": "no Summary row; write-up only",
+          "strength": "weak"
+        },
+        "state": {
+          "value": "Needs decision",
+          "reason": "write-up says 'follows … when Alan decides'",
+          "strength": "weak"
+        },
+        "priority": {
+          "value": "Normal",
+          "reason": "no priority stated: default",
+          "strength": "default"
+        },
+        "size": {
+          "value": null,
+          "reason": "no Size in the backlog",
+          "strength": "weak"
+        },
+        "team": {
+          "value": "Unassigned",
+          "reason": "no team named as builder: default",
+          "strength": "default"
+        }
+      },
+      "body": "<!-- creaite-plan BL-255: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary:** none (this item had only a detailed write-up in dev/BACKLOG.md).\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-11 (Alan) as BL-231 step 3; **split out 12-10-2026.** **Report-only built in v1.9.0 (FR-230); enforcing follows after a week of reports, when Alan decides.** No schema change.\n\nAfter BL-212's headers, add `Content-Security-Policy` for the page. It is within reach because the page has **no inline `on*=` attributes, no `eval` or `new Function`, no external scripts or links, and two inline scripts** (the data block, which is not executed, and the app). The build computes the hash of the app script when the page is rendered and the policy is `default-src 'self'; script-src 'sha256-…'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'`.\n- `style-src` keeps `'unsafe-inline'` because the page uses about 200 `style=\"\"` attributes.\n- A page saved to disk and opened as a file cannot carry the header; give it the same policy in a `<meta>` tag (without `frame-ancestors`, which a meta tag ignores).\n- Check Help's fonts, the service worker, the installed-app launcher, BL-253's event stream and every image source (Current-state images, Agendas) before turning it on, and ship it first in report-only mode for a week.\n\n**Touches:** `live_server.py` (headers), `build_dashboard.py` (the hash and the meta tag), a test.\n\n**Decisions (Alan, 13-10-2026).** The report endpoint is answered before the token check (local only, rate-limited, counts only): acceptable (relayed by the Product Manager; confirmed by Alan to the Scrum Master, 13-10-2026). Style hashes are sent once BL-231 removes the page's run-time `<style>`.\n<!-- /write-up -->\n"
+    }
+  ]
+}
