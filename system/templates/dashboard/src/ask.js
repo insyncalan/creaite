@@ -503,7 +503,7 @@ export async function loadChat(chat,quiet,skipRun){ const rec=await api("/api/ch
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
     if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
   setChat(rec.chat,rec.session); CHSTARTED=rec.started?{chat:rec.chat,started:rec.started}:null;
-  rec.messages.forEach(m=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
+  rec.messages.forEach((m,i)=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); const r=rec.messages[i+1]; if(m.run&&r&&r.plain&&r.run===m.run) runAsk(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
 /* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing */
 export function histClose(){ $("#chHistMenu").classList.remove("on"); $("#chHist").setAttribute("aria-expanded","false"); }
 export async function showHistory(e){ e&&e.stopPropagation(); if($("#chHistMenu").classList.contains("on")){ histClose(); return; } if(shared.BUSY) return; if(!viaServer()){ snack("History needs the live server"); return; } await drawHistory(); }
@@ -572,12 +572,12 @@ $("#chQueue").addEventListener("click",async e=>{ const rm=e.target.closest("[da
    - else the chat's history, in one step, with the run's part as far as the history reaches (the server says how far: `seq`);
    - a run the history doesn't have yet: Alan's message, from the start. */
 export async function attachDraw(run){ if(shared.SHOWN&&shared.SHOWN.run===run.id&&$("#chLog").children.length) return shared.SHOWN.seq;
-  if(run.chat&&run.chat===shared.ASKCHAT&&$("#chLog").children.length){ const d=addEl("msg u",html`${run.message}${raw(imgThumbsHtml(run.images))}`,run.started||undefined); if((run.images||[]).length) fillThumbs(d); shared.SHOWN={run:run.id,seq:0}; return 0; }   /* BL-257: the next queued message, in the chat on screen */
+  if(run.chat&&run.chat===shared.ASKCHAT&&$("#chLog").children.length){ const d=addEl("msg u",html`${run.message}${raw(imgThumbsHtml(run.images))}`,run.started||undefined); if((run.images||[]).length) fillThumbs(d); if(run.plain) runAsk(d); shared.SHOWN={run:run.id,seq:0}; return 0; }   /* BL-257: the next queued message, in the chat on screen */
   let after=0, has=false;
   if(run.chat){ setChat(run.chat,shared.ASKSESSION); const rec=await loadChat(run.chat,true,r=>r.seq&&run.id in r.seq?null:run.id);   /* a history that doesn't say how far it reaches: the run is followed from the start */
     has=!!(rec&&rec.ok&&rec.messages.some(m=>m.run===run.id)); if(has) after=rec.seq[run.id]||0; }
   else { $("#chLog").textContent=""; }
-  if(!has) addEl("msg u",html`${run.message}`,run.started||undefined);
+  if(!has){ const d=addEl("msg u",html`${run.message}`,run.started||undefined); if(run.plain) runAsk(d); }
   shared.SHOWN={run:run.id,seq:after}; return after; }
 /* ===== end BL-262 ===== */
 export async function reattach(){ if(!viaServer()) return; queueLoad(); const r=await api("/api/ask/running"); if(r.ok&&r.run) attachRun(r.run); else { pendingCard(); pendingEdit(); } }   /* BL-257: the queue comes back too; BL-258: a change card too */   /* BL-141: a card still waiting comes back */
@@ -683,6 +683,8 @@ export function stepGroup(g,label){ if(!g||!g.isConnected) g=addEl("step steps",
    "✓ n steps", in plain words) and its closure (one line with the outcome and a link, or what went wrong and what to do). Never
    its prompt, JSON, HTML or a tool's raw output: askStream draws only these events for such a run (the cards stay cards). */
 export const PLAINEV=["step","closure","changes","editcard","fieldcard","done"];
+/* #36: its ask is drawn as Alan's message but isn't one he typed, so it never offers Edit (BL-148), which would send it as a chat */
+export function runAsk(d){ if(d) d.classList.add("runask"); return d; }
 export function runClosure(c){ const href=/^#[\w=%.|:&-]*$/.test(String(c.href||""))?String(c.href):"";
   return addEl("msg a runend"+(c.ok===false?" info":""),html`${String(c.line||"")}${href?html` · <a href="${href}" class="hlink" data-runhref="${href}">${c.link||"Open"}</a>`:""}`); }
 /* ===== end BL-326 ===== */
@@ -851,7 +853,8 @@ $("#chQuick").onclick=e=>{ const b=e.target.closest("[data-q]"); if(b) send(b.da
 /* ===== BL-148 (sprint-ux) ===== the conveniences a chat should have.
    (1) Copy on every reply: a small button in the reply's corner, shown on hover and on focus, copies the reply as plain text.
    (2) ↑ in an empty box recalls the last message sent in this chat; ↑ again goes further back, ↓ forward (and back to empty).
-   (3) Edit on Alan's last message puts it back in the box; sending it continues the chat (no branching).
+   (3) Edit on Alan's last message puts it back in the box; sending it continues the chat (no branching). Never on the ask of a
+       run creaite started (BL-326, #36): Alan didn't type it.
    (4) Try again after a stopped or failed run sends the same message again.
    (5) The unsent draft (its text and the names of attached images) is kept per chat in this browser and comes back after a
        reload; it is cleared on send. It never reaches the server. Enter sends and Shift+Enter makes a new line, as before (BL-145). */
@@ -861,7 +864,8 @@ export function msgPlain(d){ d.classList.add("copying"); const t=d.innerText.rep
 export let CHDECOR=false;
 export function chDecorate(){ CHDECOR=false; const log=$("#chLog"); if(!log) return;
   log.querySelectorAll(".msg.a").forEach(d=>{ if(!d.querySelector(":scope>.msgcopy")&&d.textContent.trim()) addHTML(d,"beforeend",html`<button type="button" class="msgcopy" data-msgcopy title="Copy the reply" aria-label="Copy the reply">${raw(CPYI)}</button>`); });
-  const us=[...log.querySelectorAll(".msg.u")], last=us[us.length-1];
+  log.querySelectorAll(".msg.u.runask>.msgedit").forEach(b=>b.remove());   /* #36: a run creaite started has no Edit */
+  const us=[...log.querySelectorAll(".msg.u:not(.runask)")], last=us[us.length-1];
   us.forEach(d=>{ const b=d.querySelector(":scope>.msgedit"); if(d!==last&&b) b.remove(); });
   if(last&&!last.querySelector(":scope>.msgedit")&&msgText(last).trim()) addHTML(last,"beforeend",html`<button type="button" class="msgedit" data-msgedit title="Edit and send again" aria-label="Edit and send again">Edit</button>`); }
 export function chPut(t){ const el=$("#chIn"); el.value=t; el.focus(); el.setSelectionRange(t.length,t.length); draftSave(); }
