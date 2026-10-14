@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | Jarvis may push for 48 hours, until 17-10-2026 02:45: the `git push *` deny removed from laptop 2's working copy of `.claude/settings.json` (never committed); force-push stays denied. Alan restores it with `git -C ~/dev.env/creaite checkout -- .claude/settings.json` | Pushes were waiting on Alan overnight; the shipped deny protects the live vault and stays in git |
 | 15-10-2026 | Jarvis | Pilot baseline: 43 questions reached Alan on 14-10-2026 (32 raised in SPRINTCOMMS, 11 known only from relayed answers; about 48 on 13-10). Target: under 15 a day | The charter's pilot measure, counted from the old SPRINTCOMMS and DECISIONS-FOR-ALAN in `creaite-history` |
 | 15-10-2026 | Jarvis | Digests run as cron jobs in Jarvis's session, at 07:57 and 15:57 (full) and 11:57 and 19:57 (lite), into the Release radar, a Claude Docs page (https://claude.ai/code/artifact/464092fa-862e-4fee-8d5b-48a1f06c4062) | The schedule lives only in the running session and expires after 7 days, which covers the pilot; a new Jarvis session sets it up again |
 | 15-10-2026 | Jarvis | `test_debug_log` raised as plan #78: v1.9.4, High, XS, Team Stark, blocks #39 (full suite) | It fails on `main` from 15-10: a likely date-sensitive test (init runs at the real date and prunes the 08-10 fixtures) |
