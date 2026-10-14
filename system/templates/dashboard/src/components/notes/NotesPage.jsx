@@ -7,7 +7,7 @@
 import { useEffect, useState } from "preact/hooks";
 import { P, pName } from "../../core/data.js";
 import { DDATE, fd, TODAY, toIso } from "../../core/page.js";
-import { viaServer } from "../../core/server.js";
+import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNotes, noteBodyFrom, noteCur, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading,
   noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
@@ -121,9 +121,20 @@ function lineAt(h, from) {
     return b && h.el.contains(b) ? +(b.getAttribute("data-p") || 0) : 0;
   } catch (e) { return 0; }
 }
-/* BL-301 D × E: AI › "Make this an action, a risk, a decision or an update" on a note's selection opens Find updates on its line */
+/** The one line a selection is on, or 0 when it is on none (a picture, a table) or spans more than one. @param {any} h
+    @param {{from: number, to: number}} range */
+export function selectedLine(h, range) {
+  const a = lineAt(h, range.from), b = lineAt(h, Math.max(range.from, range.to - 1));
+  return a && a === b ? a : 0;
+}
+/* BL-301 D × E: AI › "Make this an action, a risk, a decision or an update" on a note's selection opens Find updates on its line
+   only (never the whole note: a selection on no line, or on more than one, says so and runs nothing) */
 aiAction({ id: "fu-line", name: "Make this an action, a risk, a decision or an update", line: "Find updates on this line only",
-  icon: "check", places: ["notes"], run: (range, h) => { toggleFind(true, lineAt(h, range.from)); } });
+  icon: "check", places: ["notes"], run: (range, h) => {
+    const p = selectedLine(h, range);
+    if (!p) { snack("Select text on one line of the note: Find updates looks at that line only"); return; }
+    toggleFind(true, p);
+  } });
 /** ✦ Find updates, in the note's header (the slot part B left for it). */
 function FindButton() {
   const on = noteFind.value;
