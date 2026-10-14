@@ -301,7 +301,11 @@ class Panel(LiveBrowserCase):
         return {"CREAITE_CLAUDE": str(cls.v.root / "fake_claude.py")}
 
     def token(self):
-        return self.b.eval("D.token")
+        # read once, on the test's own thread: a background post that evals in Chrome at the same moment as the test
+        # shares the one CDP socket, and the two reads can each take the other's reply and wait for ever
+        if not getattr(self, "_token", None):
+            self._token = self.b.eval("D.token")
+        return self._token
 
     def post(self, path, body, stream=False):
         req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
@@ -314,6 +318,7 @@ class Panel(LiveBrowserCase):
 
     def started_elsewhere(self, path, body):
         """Start a run as its own feature would (a Prep page button), reading its stream in the background."""
+        self.token()                                                    # before the thread starts (see token)
         t = threading.Thread(target=lambda: self.post(path, body, stream=True), daemon=True)
         t.start()
         for _ in range(200):
@@ -328,8 +333,11 @@ class Panel(LiveBrowserCase):
         b.wait("document.querySelector('#chLog .runend')", 60)
         return {"text": b.eval("document.getElementById('chLog').textContent"),
                 "shown": b.eval("document.getElementById('chLog').innerText"),
-                "you": b.eval("[...document.querySelectorAll('#chLog .msg.u')].map(m=>m.textContent)"),
-                "replies": b.eval("[...document.querySelectorAll('#chLog .msg.a')].map(m=>m.className+'|'+m.textContent)"),
+                # the message as drawn, not the chat's own Edit button on Alan's last message (BL-148)
+                "you": b.eval("[...document.querySelectorAll('#chLog .msg.u')].map(m=>[...m.childNodes].filter(n=>n.nodeType===3).map(n=>n.data).join(''))"),
+                # creaite's replies, not the panel's greeting: a new chat greets, and that can land before or after the run
+                "replies": b.eval("[...document.querySelectorAll('#chLog .msg.a')].filter(m=>m.textContent!==GREET)"
+                                  ".map(m=>m.className+'|'+m.textContent)"),
                 "steps": b.eval("[...document.querySelectorAll('#chLog .step.steps summary')].map(s=>s.textContent)")}
 
     def three_things(self, d, ask, closure):
