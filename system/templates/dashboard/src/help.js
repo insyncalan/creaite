@@ -2,6 +2,7 @@
 /* help.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0091-help-bl-84.js, 0158-bl-155-sprint-ux.js, 0161-bl-169-sprint-polish-2.js, 0162-bl-167-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { drawTabs } from "./components/Tabs.jsx";
 import { open } from "./core/data.js";
 import { $, $$, addHTML, esc, html, putHTML, raw } from "./core/dom.js";
 import { go, navWrite } from "./core/nav.js";
@@ -24,7 +25,7 @@ export function helpNorm(a){ a=String(a||""); const i=a.indexOf("-"), tab=i<0?a:
 export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`); return; }
   const a=helpNorm(arg)||helpNorm(store.get("creaite-help-tab","start"))||HTABS[0], i=a.indexOf("-"), tab=i<0?a:a.slice(0,i), rest=i<0?"":a.slice(i+1), changed=!$("#helpPane").dataset.tab||$("#helpPane").dataset.tab!==tab;
   shared.HELPARG=a; store.set("creaite-help-tab",tab);
-  putHTML($("#helpTabs"),HD.tabs.map(t=>html`<button role="tab" data-help="${t.id}" id="htab-${t.id}" aria-selected="${String(t.id===tab)}" tabindex="${t.id===tab?0:-1}">${t.title}</button>`));
+  drawTabs($("#helpTabsHost"),{items:HD.tabs.map(t=>({id:t.id,label:t.title,tabId:"htab-"+t.id,data:{help:t.id}})),selected:tab,onSelect:helpGo,label:"Help",className:"tabs",id:"helpTabs",wrap:true});   /* BL-316: the Tabs block */
   if(changed){ const html=HD.tabs.find(t=>t.id===tab).html.replace("<p>[start command]</p>",cmdBox());
     putHTML($("#helpPane"),raw(`<div class="hp-wrap hp-${tab}">${html}</div>`)); $("#helpPane").dataset.tab=tab; $("#helpPane").setAttribute("aria-labelledby","htab-"+tab); }
   $$("#helpPane .hp-task").forEach(t=>t.classList.toggle("hp-hl",!!rest&&tab==="howto"&&t.dataset.task===rest));
@@ -51,8 +52,7 @@ export function helpCk(q){ q=q.toLowerCase(); if(q.trim().length<2) return [];
   return out; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootHelp0091(){
-document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help); });
-$("#helpTabs").addEventListener("keydown",e=>{ if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft") return; e.preventDefault(); const i=HTABS.indexOf(shared.HELPARG.split("-")[0]), j=(i+(e.key==="ArrowRight"?1:HTABS.length-1))%HTABS.length; helpGo(HTABS[j]); $(`#htab-${HTABS[j]}`)?.focus(); });
+document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]:not([role=tab])"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help); });   /* the tabs are the Tabs block's (BL-316) */
 document.addEventListener("input",e=>{ if(e.target.id!=="helpQ") return; const q=e.target.value.toLowerCase().trim(); $$("#helpPane .hp-ref").forEach(s=>s.classList.toggle("hidden",!!q&&!s.textContent.toLowerCase().includes(q))); });
 }
 /* ===== BL-155 (sprint-ux) ===== the key-hint line becomes a Keys chip. Work and Review each get a small Keys chip at the end of

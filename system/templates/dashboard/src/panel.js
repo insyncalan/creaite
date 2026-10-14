@@ -6,6 +6,10 @@ import { actHref, actId } from "./activity.js";
 import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
 import { CHASE_ICON, mountChase, unmountChase } from "./components/peek/ChasePane.jsx";
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+import { drawTabs } from "./components/Tabs.jsx";
+import { statusDotNodes } from "./components/StatusDot.jsx";
+import { peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { typing } from "./core/keys.js";
 import { CALI, DATE_HELP, formProject, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
@@ -17,8 +21,8 @@ import { shared } from "./core/state.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
-import { feedBlock, feedLines, feedListHtml, feedTabsHtml, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
-import { closePanel, curGuard, depChips, depHash, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
+import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
+import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
 import { decide, isMin, llNoteHtml, rejectMinutes, rjMenuFor, rtNoteHtml, rvDup, rvRejectOK } from "./review.js";
 import { alertStage, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
 import { pkAdd, plur, renderToday } from "./today.js";
@@ -212,7 +216,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(shared.CUR.mode==="proposal"){ const sig=learnable(REV.find(r=>r.n===shared.CUR.n)); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
   if(shared.CUR.mode==="health") h+=`<div class="evidence" id="hEvidence" aria-live="polite"></div>`;
   if(shared.CUR.k==="project") h+=`<dd class="full">${feedBlock("proj",projFeedItems(shared.CUR.code))}</dd>`;   /* BL-250 A: its history, under the fields */
-  putHTML($("#pFields"),raw(h)); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
+  putHTML($("#pFields"),raw(h)); mountFeedTabs($("#pFields")); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
   const foot={record:"",   /* BL-176 (sprint-peek): an action, RAID item or decision is the peek, with no Edit, Save or Cancel */
     proposal:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn" id="pSave">Save</button><button class="btn primary" id="pSaveA">Save and approve</button>`,
     health:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Save</button>`,
@@ -234,7 +238,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(shared.EDITING){ const f=focusField&&$("#f_"+(focusField==="imp"?"imp":focusField)); (f||$("#pFields .rted")||$("#pFields [name]"))?.focus(); } } finally{ PANELF=false; } morePanel(focusField);
   { if(shared.CUR&&shared.CUR.mode==="proposal"){ const r=REV.find(x=>x.n===shared.CUR.n); if(r&&rvDup(r)&&!r.done)
     addHTML($("#pFields"),"afterbegin",raw(llNoteHtml(r))); } }   /* BL-133 */
-  depChips();
+  depFormDraw();
   { $("#pWarn")?.remove(); const w=shared.CUR&&shared.CUR.mode==="record"?warnsOf(shared.CUR.k,shared.CUR.id):[];
     if(w.length) addHTML($("#pTitle"),"afterend",html`<div class="wnote" id="pWarn">${w.map(x=>html`<div>${raw(WICO.replace("<svg",'<svg width="14" height="14" style="flex:none;margin-top:1px"'))}<span>${x.text}</span></div>`)}</div>`); }   /* BL-51 */
   if(!shared.LOADING){ pKeysShow(pkNew()&&$("#pFields").contains(document.activeElement));   /* BL-157 */
@@ -369,7 +373,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||shared.COMBO||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,.bmenu,#railPop,#railMoreMenu,#newMenu,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(document.querySelector("dialog:modal")||shared.CAL||shared.COMBO||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */
@@ -392,7 +396,6 @@ export const pkTitleL=k=>k==="actions"?"Action":k==="raid"?"Description":"Decisi
 export const pkOwnF=k=>k==="decisions"?"by":"o", pkOwnL=k=>k==="decisions"?"Decision maker":"Owner";
 export const pkStatuses=k=>k==="decisions"?["Pending","Made","Withdrawn"]:k==="raid"?["Open","Closed","Cancelled"]:["Open","Delayed","Closed","Cancelled"];
 export const pkLate=(k,x)=>k==="decisions"?decLate(x):!!(OPENST(x.st)&&x.due&&x.due<TODAY);
-export const pkPlain=h=>String(h).replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
 export const pkWho=n=>!n||n==="TBC"?"":n;
 export const PKFL={t:null,upd:"Latest update",resp:null,why:"Reasoning",st:"Status",pr:"Priority",o:"Owner",by:"Decision maker",due:null,date:"Date made",imp:"Impact",lik:"Likelihood",type:"Type",
   p:"Project",ws:"Workstream",ms:"Milestone",opts:"Options considered",revisit:"Revisit",replaces:"Replaces",client:"Client-visible",cm:"Client messaging",cmd:"Client messaging"};
@@ -405,23 +408,22 @@ export function pkPr(p){ const n={Urgent:4,High:3,Medium:2,Low:1}[p]||0, c={Urge
   return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${[0,1,2,3].map(i=>`<rect x="${3+i*5}" y="${16-i*4}" width="3.4" height="${4+i*4}" rx="1" fill="${c}" opacity="${i<n?1:.25}"/>`).join("")}</svg>`; }
 export function pkAv(n){ n=pkWho(n); if(!n) return ic("user"); const i=n.split(/\s+/).map(w=>w[0]||"").join("").slice(0,2).toUpperCase();
   return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--accent-soft)"/><text x="12" y="15.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--accent)" font-family="inherit">${esc(i)}</text></svg>`; }
-export function pkChip(f,name,icon,html,empty,cls=""){ return `<div class="pk-prop"><button type="button" class="pk-chip${empty?" empty":""}${cls?" "+cls:""}" data-pkp="${f}" aria-haspopup="listbox" aria-label="${esc(name)}: ${esc(empty?"not set":pkPlain(html))}" data-tip="${esc(name)}">${icon}<span>${html}</span></button></div>`; }
 export const PKDRAW=[];                                   /* later blocks add what they draw (staging, details, activity) */
 export function pkNote(msg){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||""; }
 export function pkDrawId(x,k){ putHTML($("#pkId"),html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type}" data-tip="Type">${x.type}${raw(ic("chevdown"))}</button>`:""}`);
   const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`)); }
 export function pkDrawProps(x,k){ (()=>{ if(shared.PKPOP&&($("#pkProps").contains(shared.PKPOP.anchor)||$("#pkProps2").contains(shared.PKPOP.anchor)||$("#pkId").contains(shared.PKPOP.anchor))) return;
-  const o=pkWho(x[pkOwnF(k)]), late=pkLate(k,x);
-  let h=pkChip("st","Status",pkSt(x.st),esc(x.st),false);
-  if(k==="actions") h+=pkChip("pr","Priority",pkPr(x.pr),esc(x.pr||"Medium"),false);
-  if(k==="raid"){ const p=prio(x.imp,x.lik); h+=`<div class="pk-prop"><div class="pk-chip ro" role="note" aria-label="Priority: ${p}, calculated from impact and likelihood" data-tip="Priority is calculated from impact and likelihood">${pkPr(p)}<span>${p}</span></div></div>`; }
-  h+=pkChip("o",pkOwnL(k),pkAv(o),o?esc(o)+(isMe(o)?' <small class="sub">(you)</small>':""):(k==="decisions"?"Add decision maker":"Add owner"),!o);
-  if(k==="decisions"&&x.st==="Made") h+=pkChip("date","Date made",ic("calendar"),x.date?`<span class="nw">${esc(fd(x.date))}</span>`:"Date made",!x.date);
-  else h+=pkChip("due",pkLabel(k,"due",x),ic("calendar"),x.due?`<span class="nw">${esc(fd(x.due))}</span>`+(late?" <em>overdue</em>":""):pkLabel(k,"due",x),!x.due,late?"late":"");
-  putHTML($("#pkProps"),raw(h));
-  putHTML($("#pkProps2"),k==="raid"?raw(pkChip("imp","Impact",ic("alert"),"Impact: "+esc(x.imp||"Medium"),false)+pkChip("lik","Likelihood",ic("alert"),"Likelihood: "+esc(x.lik||"Medium"),false)):""); })();
+  /* BL-316: each property is a Chip (components/peek/PeekProps.jsx), drawn afresh as before */
+  const o=pkWho(x[pkOwnF(k)]), late=pkLate(k,x), L=/** @type {import("./components/peek/PeekProps.jsx").PeekProp[]} */([{f:"st",name:"Status",mark:{st:x.st},value:x.st||""}]);
+  if(k==="actions") L.push({f:"pr",name:"Priority",mark:{pr:x.pr},value:x.pr||"Medium"});
+  if(k==="raid"){ const p=prio(x.imp,x.lik); L.push({f:"prc",name:"Priority",mark:{pr:p},value:p,ro:`Priority: ${p}, calculated from impact and likelihood`,roTip:"Priority is calculated from impact and likelihood"}); }
+  L.push({f:"o",name:pkOwnL(k),mark:{who:o},value:o||(k==="decisions"?"Add decision maker":"Add owner"),you:!!o&&isMe(o),empty:!o});
+  if(k==="decisions"&&x.st==="Made") L.push({f:"date",name:"Date made",mark:{icon:"calendar"},value:x.date?fd(x.date):"Date made",nw:!!x.date,empty:!x.date});
+  else L.push({f:"due",name:pkLabel(k,"due",x),mark:{icon:"calendar"},value:x.due?fd(x.due):pkLabel(k,"due",x),nw:!!x.due,late:!!x.due&&late,empty:!x.due,cls:late?"late":""});
+  $("#pkProps").replaceChildren(...peekPropNodes(L));
+  $("#pkProps2").replaceChildren(...peekPropNodes(k==="raid"?[{f:"imp",name:"Impact",mark:{icon:"alert"},value:"Impact: "+(x.imp||"Medium")},{f:"lik",name:"Likelihood",mark:{icon:"alert"},value:"Likelihood: "+(x.lik||"Medium")}]:[])); })();
   if(shared.CUR&&shared.CUR.mode==="proposal"&&!(shared.PKPOP&&$("#pkProps").contains(shared.PKPOP.anchor))&&!$('#pkProps [data-pkp="p"]'))
-    addHTML($("#pkProps"),"beforeend",raw(pkChip("p","Project",ic("projects"),x.p?esc(pName(x.p)):"Choose a project",!x.p))); }
+    $("#pkProps").append(...peekPropNodes([{f:"p",name:"Project",mark:{icon:"projects"},value:x.p?pName(x.p):"Choose a project",empty:!x.p}])); }
 export function pkDrawText(x,k){ const t=$("#pkTitle"), d=$("#pkDesc"), f=pkDescF(k);
   t.setAttribute("aria-label",pkTitleL(k)); if(document.activeElement!==t) t.textContent=x.t||"";
   $("#pkDescL").textContent=pkDescL(k,x); d.dataset.pkf=f; d.dataset.ph=pkDescPh(k,x); d.setAttribute("aria-label",pkDescL(k,x)); if(document.activeElement!==d) d.textContent=x[f]||""; }
@@ -589,9 +591,9 @@ window.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.close
   if(e.key==="Escape"){ e.preventDefault(); e.stopImmediatePropagation(); el.textContent=el.dataset.orig??el.textContent; el.dataset.skip="1"; el.blur(); return; }
   if(e.key==="Enter"&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!el.dataset.pkml){ e.preventDefault(); el.blur(); } },true);
 /* More: mark done (or made), ask creaite about it, copy the ID */
-$("#pkMore").onclick=()=>{ const x=curObj(), k=shared.CUR.k, id=pkCid(), b=$("#pkMore"); if(shared.PKPOP&&shared.PKPOP.anchor===b){ pkPopClose(); return; }
-  const can=k==="decisions"?x.st==="Pending":OPENST(x.st);
-  pkList(b,{role:"menu",label:"More",options:[{v:"done",label:k==="decisions"?"Mark as made":"Mark done",icon:ic("check"),disabled:!can,hint:can?"":"Already complete"},{v:"ask",label:"ask creaite about this",icon:ic("chat")},{v:"id",label:"Copy ID",icon:ic("copy")}],
+$("#pkMore").onclick=()=>{ const x=curObj(), k=shared.CUR.k, id=pkCid(), b=$("#pkMore"); if(menuOpenFor(b)){ closeMenu(); return; }
+  const can=k==="decisions"?x.st==="Pending":OPENST(x.st);   /* BL-316: the Menu block's menu (openMenu) */
+  openMenu(b,{label:"More",id:"pkMoreMenu",align:"right",items:[{id:"done",name:k==="decisions"?"Mark as made":"Mark done",icon:"check",disabled:!can,line:can?"":"Already complete"},{id:"ask",name:"ask creaite about this",icon:"chat"},{id:"id",name:"Copy ID",icon:"copy"}],
     onPick:v=>{ if(v==="done") pkSetStatus(k,id,k==="decisions"?"Made":"Closed");
       if(v==="ask"){ openChat(); setTimeout(()=>{ const t=$("#chIn"); if(t&&!t.value.trim()){ t.value=`About ${id} (${x.t}): `; t.dispatchEvent(new Event("input",{bubbles:true})); t.focus(); } },60); }
       if(v==="id"){ const done=()=>snack(`Copied ${id}`); if(navigator.clipboard) navigator.clipboard.writeText(id).then(done,()=>prompt("Copy this ID:",id)); else prompt("Copy this ID:",id); } }}); };
@@ -618,10 +620,11 @@ export function pkLast(x,k){ let el=$("#pkLast"); if(!el){ addHTML($("#pkAfter")
   const s=pkStagedOf(pkCid()), d=shared.PKDONE.filter(e=>e.id===pkCid());
   putHTML(el,html`${raw(ic("history"))}<span>${s.length?html`You edited this ${s[s.length-1].at.slice(11)===nowStamp().slice(11)?"just now":raw("at "+s[s.length-1].at.slice(11))} · ${s.length} change${s.length===1?"":"s"} staged`:d.length?html`Last applied ${fd(d[d.length-1].at)}`:x.upd_at?html`Last updated ${fd(x.upd_at)}`:""}</span>`);
   pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Saved to staging":d.length?"Applied":""); }
-/* the dot on a row with something staged */
-export function pkDots(){ const ids=new Set(shared.PKS.map(s=>s.id));
+/* the dot on a row with something staged: the StatusDot block, named by its word (BL-316) */
+export function markStagedRows(){ const ids=new Set(shared.PKS.map(s=>s.id));
   $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const has=ids.has(r.dataset.row), d=r.querySelector(".pkdot");
-    if(has&&!d){ const x=r.querySelector("td.title>.x"); const dot='<span class="pkdot" role="img" aria-label="Staged, not yet applied" data-tip="Staged, not yet applied"></span>'; if(x) addHTML(x,"beforebegin",raw(dot)); else addHTML((r.querySelector("td.title")||r.firstElementChild||r),"beforeend",raw(dot)); }
+    if(has&&!d){ const x=r.querySelector("td.title>.x"), dot=statusDotNodes({status:"staged",cls:"pkdot",label:"Staged, not yet applied"});
+      if(x) x.before(...dot); else (r.querySelector("td.title")||r.firstElementChild||r).append(...dot); }
     else if(!has&&d) d.remove(); }); }
 /* after any apply or reload: what left staging was applied; what is still there stays staged and is shown again on the fresh data */
 export let PKREC=null;
@@ -658,7 +661,8 @@ export async function pkUndoLast(){ await shared.PKQ; const s=shared.PKS[shared.
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0167(){
 /* the pill */
-addHTML(document.body,"beforeend",html`<div class="pkstage" id="pkStage" role="region" aria-label="Staged changes" hidden><span class="dot" aria-hidden="true"></span><span id="pkStN" aria-live="polite"></span><small>Nothing reaches the tracker until you apply</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Apply everything staged" data-key="${raw(MOD)}↵">Apply<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
+addHTML(document.body,"beforeend",html`<div class="pkstage" id="pkStage" role="region" aria-label="Staged changes" hidden><small>Nothing reaches the tracker until you apply</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Apply everything staged" data-key="${raw(MOD)}↵">Apply<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
+$("#pkStage").prepend(...statusDotNodes({status:"staged",wordId:"pkStN",live:true}));   /* BL-316: the StatusDot block; pkStageDraw writes its word */
 PKDRAW.push(pkLast);
 $("#pkUndo").onclick=()=>pkUndoLast();
 $("#pkApply").onclick=()=>pkApply();
@@ -742,7 +746,7 @@ export const pkUpdLabel=k=>k==="actions"?"latest update":k==="raid"?"response":"
 export function bootPanel0169(){
 Object.assign(ICONS,{layers:'<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>',msg:'<path d="M4 5h16v11H9l-5 4z"/>',clock:'<path d="M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/>'});
 addHTML($("#pkAfter"),"beforeend",html`<section aria-label="Details"><button type="button" class="pk-dethead" id="pkDetT" aria-expanded="false" aria-controls="pkDet">${raw(ic("chevright"))}Details</button><div class="pk-det" id="pkDet" hidden></div></section>
-  <section aria-label="Activity"><div class="pk-tabs" role="tablist" aria-label="Activity" id="pkTabs"></div><div class="pk-feed" id="pkFeed" role="tabpanel" aria-labelledby="pkTabSel"></div></section>`);
+  <section aria-label="Activity"><div class="tabhost" id="pkTabsHost"></div><div class="pk-feed" id="pkFeed" role="tabpanel" aria-labelledby="pkTabSel"></div></section>`);
 PKDRAW.push(pkDetails);
 $("#pkDetT").onclick=()=>{ if(!shared.CUR) return; const x=curObj(), open=pkDetOpen(x,pkCid()); PK.det[pkCid()]=!open; pkDetails(x,shared.CUR.k); };
 $("#panel").addEventListener("click",e=>{ const sw=e.target.closest("[data-pksw]"); if(!sw||!pkOn()) return; e.preventDefault(); pkClient(shared.CUR.k,pkCid(),sw.getAttribute("aria-checked")!=="true"); });
@@ -772,15 +776,13 @@ export function pkFeedItems(x,k){ const id=pkCid(), out=[], ul=pkUpdLabel(k);
   return out; }
 export const pkShort=(s,n=60)=>{ s=String(s??"").replace(/\s+/g," ").trim(); return !s?"empty":s.length>n?s.slice(0,n-1)+"…":s; };
 export function pkFeed(x,k){ const tab=PK.tab||"all";
-  putHTML($("#pkTabs"),raw(feedTabsHtml(tab,"data-pktab","pkTabSel")));
+  drawTabs($("#pkTabsHost"),{items:feedTabItems(tab,"pktab","pkTabSel"),selected:tab,onSelect:v=>{ if(!shared.CUR) return; PK.tab=v; pkFeed(curObj(),shared.CUR.k); },
+    label:"Activity",className:"pk-tabs",tabClass:"pk-tab",id:"pkTabs",wrap:true});   /* BL-316: the Tabs building block */
   putHTML($("#pkFeed"),raw(feedListHtml(pkFeedItems(x,k),tab))); }
 /* ===== end BL-176 (details and activity) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0171(){
 PKDRAW.push(pkFeed);
-$("#pkTabs").addEventListener("click",e=>{ const t=e.target.closest("[data-pktab]"); if(!t||!shared.CUR) return; PK.tab=t.dataset.pktab; pkFeed(curObj(),shared.CUR.k); $("#pkTabSel")?.focus(); });
-$("#pkTabs").addEventListener("keydown",e=>{ if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)||!shared.CUR) return; e.preventDefault(); const i=PKTABS.findIndex(t=>t[0]===(PK.tab||"all"));
-  const n=e.key==="Home"?0:e.key==="End"?PKTABS.length-1:(i+(e.key==="ArrowRight"?1:-1)+PKTABS.length)%PKTABS.length; PK.tab=PKTABS[n][0]; pkFeed(curObj(),shared.CUR.k); $("#pkTabSel")?.focus(); });
 if(shared.CUR&&pkOn()) drawPanel();
 }
 /* ===== BL-177 (sprint-peek) ===== Review's proposals (openProposal) for an action, a RAID item or a decision open in the same peek: the
@@ -999,14 +1001,14 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-pknd]"); 
   if(a==="restore") pkNewRestore(); else { if(a==="discard"){ pdDrop(PKN.offer&&PKN.offer.key); snack("Unsaved new item discarded"); } PKN.offer=null; pkNewOffer(""); $("#pkTitle").focus(); } });
 }
 /* ===== BL-179 (sprint-peek-new) ===== a dependency's suggested milestones in the peek. The Create form offered them under its Milestone
-   field (depChips: up to three it could threaten, nearest first, then None needed, remembered until the text changes); the peek has no
+   field (depFormDraw: up to three it could threaten, nearest first, then None needed, remembered until the text changes); the peek has no
    form, so the same suggestions (depSuggest, depHash, the same store) show under the key row of a RAID Dependency with no milestone,
    new or existing. Attach is the milestone chip's own change (staged, or into the new item's draft). Nothing is attached by itself. */
 export function pkDepDraw(x,k){ const box=$("#pkDep"); if(!box) return; box.textContent="";
   if(k!=="raid"||x.type!=="Dependency"||x.ms||!x.p||!OPENST(x.st||"Open")) return; const key=shared.CUR.mode==="new"?"new":pkCid();
   if((store.get("creaite-dep-none",{})[key])===depHash(x.t)) return;
   const L=depSuggest(x.p,x.due||""); if(!L.length) return;
-  putHTML(box,html`<div id="depChips" class="depchips" role="group" aria-label="Suggested milestones">${L.map(m=>html`<button type="button" class="chipbtn" data-pkdep="${m[3]}">Attach to ${m[3]} (forecast ${fd(m[8]||m[4])})?</button>`)}<button type="button" class="chipbtn quiet" data-pkdepnone>None needed</button></div>`); }
+  depSugDraw(box,L,"pkdep"); }
 /* ===== end BL-179 (dependency suggestions) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0178(){
@@ -1358,7 +1360,7 @@ addHTML($("#pkScroll"),"afterend",html`<div class="pk-scroll pk-chase" id="pkCha
 $("#pkChaseBtn").onclick=()=>chaseIsOpen()?chaseClose(true):chaseOpen();
 PKDRAW.push(chaseDraw);
 document.addEventListener("keydown",e=>{ if(e.key.toLowerCase()!=="c"||e.metaKey||e.ctrlKey||e.altKey||e.repeat||!pkOn()||typing()) return;
-  const a=document.activeElement; if(document.querySelector("dialog[open]")||shared.PKPOP||(a&&a.closest&&a.closest("#chat,.bmenu,.cal,.combo,.pkpop"))) return;
+  const a=document.activeElement; if(document.querySelector("dialog[open]")||shared.PKPOP||(a&&a.closest&&a.closest("#chat,[role=menu],.cal,.combo,.pkpop"))) return;
   const b=$("#pkChaseBtn"); if(!b||b.hidden) return; e.preventDefault(); chaseOpen(); });
 }
 /* ===== end BL-298 ===== */

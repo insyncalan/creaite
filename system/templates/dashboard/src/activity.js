@@ -2,7 +2,10 @@
 /* activity.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0070-activity.js, 0071-bl-164-sprint-rail.js, 0072-after-bl-164-js.js, 0205-bl-233-sprint-drafts-extraction.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
+import { makeUndoDialog } from "./components/dialogs/PageDialogs.jsx";
 import { renderAskChanges } from "./ask.js";
+import { drawTabs } from "./components/Tabs.jsx";
 import { A, DEC, P, pName, R } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { parseWhen } from "./core/fields.js";
@@ -104,9 +107,9 @@ export function actPlanLine(d){ const val=v=>v==null||v===""?"—":DATE.test(Str
   if(d.change==="removed") return `<li><b>${esc(d.id)}</b> · removed (that change created it)</li>`;
   if(d.change==="put back") return `<li><b>${esc(d.id)}</b> · put back</li>`;
   const t=itemText(d.id); return `<li><b>${esc(d.id)}</b>${t?` <span class="sub">${esc(t.length>60?t.slice(0,59)+"…":t)}</span>`:""} · ${esc(f)} ${esc(val(d.from))} → ${esc(val(d.to))}</li>`; }
-export function actConfirm(ids,plan){ let dlg=$("#actDlg"); if(!dlg){ addHTML(document.body,"beforeend",html`<dialog id="actDlg" aria-labelledby="actDlgH"></dialog>`); dlg=$("#actDlg"); }
+export function actConfirm(ids,plan){ const dlg=$("#actDlg")||makeUndoDialog();
   const done=plan.done||[], skipped=plan.skipped||[], n=done.length; let asked=false;
-  putHTML(dlg,html`<h2 id="actDlgH" style="margin:0 0 6px">${n?html`Undo ${raw(n)} change${n===1?"":"s"}?`:"Nothing here can be undone"}</h2>
+  putHTML($("#actDlgBody"),html`<h2 id="actDlgH" style="margin:0 0 6px">${n?html`Undo ${raw(n)} change${n===1?"":"s"}?`:"Nothing here can be undone"}</h2>
     <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n?"Each goes back to what it was before, only where it still holds the value that change gave it. It is one new apply, so you can undo it too.":html`Each of these has changed since, or can't be put back here.`}</p>
     <ul class="actplan">${raw(done.map(actPlanLine).join(""))}${raw(skipped.map(actPlanLine).join(""))}</ul>
     <div class="curacts"><span class="sp"></span><button type="button" class="btn" id="actDlgCancel">${n?"Cancel":"Close"}</button>${n?html`<button type="button" class="btn primary" id="actDlgGo">Undo ${raw(n)}</button>`:""}</div>`);
@@ -114,7 +117,7 @@ export function actConfirm(ids,plan){ let dlg=$("#actDlg"); if(!dlg){ addHTML(do
   if(n) $("#actDlgGo").onclick=async()=>{ if(n>ACT_ASK_AGAIN&&!asked){ asked=true; $("#actDlgAsk").textContent=`This undoes ${n} changes at once. Are you sure? (It can itself be undone.)`; $("#actDlgGo").textContent=`Yes, undo ${n}`; $("#actDlgGo").focus(); return; }
     const go=$("#actDlgGo"); go.disabled=true; const r=await api("/api/undo-changes",{rowids:ids}); dlg.close(); hlClear(); await reloadData(); actPaint();
     snack(r.ok?oneLine(r.message):"Not undone: "+oneLine(r.message),r.ok&&r.apply_id?()=>undoApply(r.apply_id):null); };
-  dlg.showModal(); ($("#actDlgGo")||$("#actDlgCancel")).focus(); }
+  openDialog(dlg,{focus:$("#actDlgGo")?"#actDlgGo":"#actDlgCancel"}); }
 /* ===== end BL-164 (JS) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootActivity0071(){
@@ -163,8 +166,10 @@ export function renderQuality(){ const q=D.quality||{}; if(q.error){ $("#qPeriod
   (q.fields||[]).forEach(r=>qRow(fl,r.field,[r.text,Object.entries(r.by_source||{}).map(([k,n])=>`${lab[k]||k} ${n}`).join(" · ")])); if(!(q.fields||[]).length) qEmpty(fl,3,"No edits with a known field in this period.");
   const u=q.unknown||{}; $("#qUnknown").textContent=u.n?`${u.n} of ${u.of} edited proposals were edited before creaite kept what was first proposed: field unknown.`:"";
   const dr=$("#qDrafts"); dr.replaceChildren(); (q.drafts||[]).forEach(r=>qRow(dr,r.label,r.offered?[String(r.offered),r.used.text,r.edited.text,r.rejected.text]:["0","—","—","—"],qNR(r.rated,r.offered,"offered"))); }
-export function actTab(q){ $("#v-activity").classList.toggle("q",q); $("#actQuality").hidden=!q; $("#actTabQ").setAttribute("aria-selected",String(q)); $("#actTabCh").setAttribute("aria-selected",String(!q));
-  $("#actTabQ").tabIndex=q?0:-1; $("#actTabCh").tabIndex=q?-1:0; if(q){ renderQuality(); rjLoadRecent(); } }   /* BL-315: What you rejected, fresh each time */
+/* BL-316: Activity's two tabs, Changes and Quality, are the Tabs building block (drawn into #actTabsHost) */
+export function actTabsDraw(q){ drawTabs($("#actTabsHost"),{items:[{id:"ch",label:"Changes",tabId:"actTabCh",controls:"actTbl"},{id:"q",label:"Quality",tabId:"actTabQ",controls:"actQuality"}],
+  selected:q?"q":"ch",onSelect:id=>actShowQuality(id==="q"),label:"Activity",className:"acttabs",wrap:true}); }
+export function actShowQuality(q){ $("#v-activity").classList.toggle("q",q); $("#actQuality").hidden=!q; actTabsDraw(q); if(q){ renderQuality(); rjLoadRecent(); } }   /* BL-315: What you rejected, fresh each time */
  
 /* ===== end BL-233 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -172,7 +177,5 @@ export function bootActivity0205(){
 /* BL-315: Activity › Quality › What you rejected: the chip changes the reason, Approve instead, Undo (review.js does each) */
 mountRejectsList($("#qRejects"),{onReason:(r,el)=>rjReasonFor([{key:r.key,file:r.file,ref:r.ref,t:r.text||"",reason:r.reason||"",dup:r.duplicate_of||null,guess:null}],el),
   onApprove:r=>rjApproveInstead([r]),onUndo:r=>rjUnreject([r]),name:pName,when:at=>`${fd(String(at).slice(0,10))}${String(at).length>15?" "+String(at).slice(11,16):""}`});
-$("#actTabQ").addEventListener("click",()=>actTab(true));
-$("#actTabCh").addEventListener("click",()=>actTab(false));
-$(".acttabs").addEventListener("keydown",e=>{ if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft") return; e.preventDefault(); const q=!$("#v-activity").classList.contains("q"); actTab(q); (q?$("#actTabQ"):$("#actTabCh")).focus(); });
+actTabsDraw(false);
 }

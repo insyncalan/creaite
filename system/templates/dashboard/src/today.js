@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { dcIcon, openChat, say, send } from "./ask.js";
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
@@ -17,6 +18,7 @@ import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
+import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
@@ -53,7 +55,7 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
     REMINDERS.filter(r=>!hide.includes(r.id)).forEach(r=>out.push({reminder:r.id,html:n=>tl(n,
       tLink(r.id.startsWith("client:")?`data-cock="${r.id.split(":")[1]}"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:'data-go="projects"',esc(longText(r.text))),
       `${remBody(r)}${RUNNING.has(r.id)?' <span class="tag">Running…</span>':""}${r.vip?` ${r.vip} message${r.vip===1?"":"s"} about it not yet seen: check ${r.vip===1?"it":"them"} first.`:""}`,
-      `${remBtn(r)}<span class="rm"><button class="dots" aria-label="Options: ${esc(r.text)}" aria-haspopup="menu">…</button><span class="dmenu" role="menu">${r.cmd?`<button data-d="run" ${viaServer()&&!RUNNING.has(r.id)?"":`disabled title="${RUNNING.has(r.id)?"Already running":"Needs the live server"}"`}>Run report now</button>`:""}<button data-d="s">Dismiss for this session</button><button data-d="f">Dismiss forever</button></span></span>`,
+      `${remBtn(r)}<span class="rm"><button class="dots" type="button" aria-label="Options: ${esc(r.text)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
       `class="rem" data-id="${r.id}"`)})); }
   /* Work with no owner (TBC) or, for actions, no due date: one line, counted per project, each count opening Work filtered to it */
   const gap={}; [...A.filter(x=>x.st==="Open"||x.st==="Delayed").map(x=>["actions",x]),...R.filter(r=>r.st==="Open").map(r=>["raid",r])].forEach(([k,x])=>{
@@ -217,8 +219,8 @@ export function dayPrep(m){ const iso=dayShown(), raw=(((D.calendar||{}).days||{
   if(!D.prep) D.prep=/** @type {any} */({}); if(!D.prep.meetings) D.prep.meetings={}; const pm=D.prep.meetings;
   if(!pm[key]) pm[key]={series:seriesOf(m.title),p:m.confidential?null:m.p||null,how:m.p?"matched":"unsure",last:null,day:iso,since:pkAdd(iso,-7)};
   openPrep(e,iso); }
-/** Process an ended meeting's transcript, as Calendar Import does (load it unless it is loaded, then cx-minutes). */
-export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar Import to process this meeting"); return; }
+/** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
+export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
   DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
   try{ await processMeetings(); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
 /** Look for an ended meeting's transcript (Alan, 13-10-2026: a meeting not checked yet offers Check). */
@@ -234,7 +236,7 @@ export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!
 /* BL-34: a report reminder can run its report: the command goes to ask creaite, which drafts as usual (confirmed in
    the panel, held for review, filed on approval). The reminder stays until the report is filed. */
 export const RUNNING=new Set();
-export async function runReminder(r){ if(!r||!r.cmd||!viaServer()||RUNNING.has(r.id)) return; $$(".dmenu.on").forEach(m=>m.classList.remove("on"));
+export async function runReminder(r){ if(!r||!r.cmd||!viaServer()||RUNNING.has(r.id)) return; closeMenu();
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; }
   RUNNING.add(r.id); renderToday(); openChat();
   try{ await send(r.cmd); } finally{ RUNNING.delete(r.id); renderToday(); }
@@ -290,18 +292,22 @@ export const spark=p=>`<span class="spark" title="Health, last 8 weeks (oldest f
    hover and on keyboard focus (the name is a button that opens the project), and read by screen readers from a hidden span
    (aria-describedby). The columns resize like Work's (pfResize), remembered under portfolio|<column>. */
 export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","8 weeks"],["next","Next milestone"]];
-/** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots) */
+/** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots). BL-325: the next milestone's relative date is mid-sentence in brackets, so lower case ("(in 24 days)") */
 export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
-  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1])})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
+  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
+/* BL-316: a reminder's "…" menu is the Menu block's (openMenu): Run report now, Dismiss for this session, Dismiss forever */
+export function remMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=REMINDERS.find(x=>x.id===id); if(!r) return; const why=RUNNING.has(id)?"Already running":viaServer()?"":"Needs the live server";
+  openMenu(b,{label:`Options: ${r.text}`,id:"remMenu",align:"right",onPick:d=>remPick(id,d),
+    items:[...(r.cmd?[{id:"run",name:"Run report now",disabled:!!why,tip:why||undefined,data:{d:"run"}}]:[]),{id:"s",name:"Dismiss for this session",data:{d:"s"}},{id:"f",name:"Dismiss forever",data:{d:"f"}}]}); }
+export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id===id)); return; }
+  if(d==="s"){ const a=dismissedS(); a.push(id); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(a)); } else { const a=dismissedF(); a.push(id); store.set("creaite-dismiss",a); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...a])]}); }
+  renderToday(); snack(d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
 $("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
-  if(!b.dataset.d){ n.querySelector(".dmenu").classList.toggle("on"); return; }
-  if(b.dataset.d==="run"){ runReminder(REMINDERS.find(r=>r.id===n.dataset.id)); return; }
-  const id=n.dataset.id; if(b.dataset.d==="s"){ const a=dismissedS(); a.push(id); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(a)); } else { const a=dismissedF(); a.push(id); store.set("creaite-dismiss",a); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...a])]}); }
-  renderToday(); snack(b.dataset.d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); });
-document.addEventListener("click",e=>{ if(!e.target.closest(".rem")) $$(".dmenu.on").forEach(m=>m.classList.remove("on")); });
+  if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
+  if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
 }
 /* ===== BL-156 (sprint-ux) ===== first run: a short checklist on Today. On a vault that hasn't finished set-up (no project, no
@@ -448,7 +454,8 @@ export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
   if(act.id==="approve"){ if(!tdApprovable(r)){ tdToReview(r.n); return; } await decide(r.n,"approved"); return; }   /* Undo: the apply's (decide) */
   /* BL-315: the same reasons menu as Review (rjMenuFor: the seven reasons, Use each guess, No reason, Duplicate's item), through
      /api/review/reject, with its one message and Undo; the guesses are fetched first, so the row's guess is offered */
-  if(act.id==="reject"){ await rjLoadGuesses(); rjMenuFor([r],btn,()=>{ if(shared.VIEW==="today") renderToday(); }); return; }
+  if(act.id==="reject"){ const menu=()=>rjMenuFor([r],btn,()=>{ if(shared.VIEW==="today") renderToday(); }), was=rjGuesses.value;
+    menu(); await rjLoadGuesses(); if(rjGuesses.value!==was&&rjMenu.value&&rjMenu.value.anchor===btn) menu(); return; }   /* BL-316: open at once; again with the guesses when they arrive */
   if(act.id==="review") tdToReview(r.n); }
 export function tdOpen(row){ if(row.kind==="review") tdToReview(row.n); else if(row.kind==="transcript") go("inbox"); }
 export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return;

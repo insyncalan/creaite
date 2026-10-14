@@ -134,7 +134,7 @@ class PanelRoom(LiveBrowserCase):
         b.pump(0.6)
         self.assertEqual(b.eval("document.querySelectorAll('#wfilters .wfold').length"), 0)
         b.resize(900, 900)                                                                       # a narrow window still folds, as before
-        b.eval("closePanel(); wfFit()")
+        b.eval("closePanel(); fitFilterBar($('#wfilters'))")
         b.pump(0.6)
         self.assertGreater(b.eval("document.querySelectorAll('#wfilters .wfold').length"), 0)
         self.assertTrue(b.eval("!document.querySelector('#wfilters .dd.wfold .fbtn.on')"))      # a set filter never folds

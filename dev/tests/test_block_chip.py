@@ -74,6 +74,35 @@ class ChipBlockTones(LiveBrowserCase):
         html = self.b.eval(f"{DRAW}({{tone:'mute',children:'<i>x</i>'}})")
         self.assertIn("&lt;i&gt;x&lt;/i&gt;", html)
 
+    def test_a_row_of_chips_is_redrawn_in_place(self):
+        """BL-316: drawChips draws a row (the suggestions, the dependency chips); drawn again, a chip with the same key is the
+        same element, so its focus stays."""
+        b = self.b
+        out = b.eval("""(()=>{ const box=document.createElement('div'); document.body.append(box); window.ROWHIT=[];
+          const draw=n=>drawChips(box,[{key:'a',cls:'capchip',button:true,'data-chip':'0',children:'+ Owner: '+n,onClick:()=>ROWHIT.push('a')},
+            {key:'none',cls:'chipbtn quiet',button:true,'data-depnone':'',children:'None needed'}]);
+          draw('Sara'); const first=box.querySelector('[data-chip]'); first.focus(); draw('<b>Omar</b>');
+          const same=box.querySelector('[data-chip]')===first&&document.activeElement===first; first.click();
+          const html=box.innerHTML; box.remove(); return [html,same,ROWHIT]; })()""")
+        self.assertEqual(out[0], '<button type="button" class="chip capchip" data-chip="0">+ Owner: &lt;b&gt;Omar&lt;/b&gt;</button>'
+                                 '<button type="button" class="chip chipbtn quiet" data-depnone="">None needed</button>')
+        self.assertTrue(out[1])
+        self.assertEqual(out[2], ["a"])
+
+    def test_the_peek_s_properties_are_chips(self):
+        """BL-316: the peek's key row (PeekProps): each property a Chip named in full, with its picker and tooltip."""
+        b = self.b
+        out = b.eval("""(()=>{ const box=document.createElement('div');
+          box.append(...peekPropNodes([{f:'o',name:'Owner',mark:{who:''},value:'Add owner',empty:true},
+            {f:'due',name:'Due date',mark:{icon:'calendar'},value:'01-10-2026',nw:true,late:true,cls:'late'},
+            {f:'prc',name:'Priority',mark:{pr:'High'},value:'High',ro:'Priority: High, calculated',roTip:'Calculated'}]));
+          return [...box.querySelectorAll('.pk-prop>.chip')].map(c=>[c.tagName,c.className,c.dataset.pkp||null,c.getAttribute('aria-haspopup'),
+            c.getAttribute('aria-label'),c.dataset.tip,c.getAttribute('role'),c.textContent]); })()""")
+        self.assertEqual(out, [
+            ["BUTTON", "chip pk-chip empty", "o", "listbox", "Owner: not set", "Owner", None, "Add owner"],
+            ["BUTTON", "chip pk-chip late", "due", "listbox", "Due date: 01-10-2026 overdue", "Due date", None, "01-10-2026 overdue"],
+            ["SPAN", "chip pk-chip ro", None, None, "Priority: High, calculated", "Calculated", "note", "High"]])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,7 @@
 /* intake.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0052-inbox-bl-42-phase-1-add-meeting-files-th.js, 0053-bl-137-sprint-final.js, 0134-meetings-in-the-inbox-bl-42-phase-2.js, 0135-bl-119-sprint-polish.js, 0136-transcripts-bl-42-phase-3-select-with-tr.js, 0137-clear-day-bl-104-set-meetings-aside-now.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
 import { askLive, askStream, mdView, openChat, setRunning } from "./ask.js";
 import { P } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
@@ -20,7 +21,7 @@ export const INSTATE={new:"New",draft:"Draft ready — in Review",processed:"Alr
 export const kb=n=>n>1048576?`${(n/1048576).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1024))} KB`;
 export function inboxBadge(){ const n=(D.inbox||[]).filter(f=>f.state==="new").length; setRailCount("inbox",n,`${n} new file${n===1?"":"s"} in Intake`); }   /* BL-70: Intake; ids and the inbox/ folder keep their names */
 /* ===== BL-137 (sprint-final) =====
-   Upload Files lists only files that were uploaded. A file Calendar Import loaded is known by its recorded event ID (`f.event`), never
+   Upload files lists only files that were uploaded. A file Calendar import loaded is known by its recorded event ID (`f.event`), never
    by its name; it is never listed there at any stage. Its state, Preview and Remove are on its meeting row. The Intake badge and the
    "waiting" counts still count a loaded transcript that has not been processed. */
 export const uploadedFiles=()=>(D.inbox||[]).filter(f=>f.uploaded!==false&&!f.event);
@@ -45,7 +46,7 @@ export async function previewInbox(path){ if(!viaServer()){ snack("Previewing ne
   if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
   if(r.open){ const o=await api("/api/open",{path}); snack(o.ok?"Opened in its own app":oneLine(o.message)); return; }
   $("#inPrevName").textContent=r.name; $("#inPrevText").textContent=r.text||"(empty)";
-  { const md=/\.(md|markdown)$/i.test(r.name||path)&&!!r.text; $("#inPrevText").hidden=md; $("#inPrevMd").hidden=!md; putHTML($("#inPrevMd"),raw(md?mdView(r.text,{hBase:2}):"")); }   /* BL-196: a Markdown file is shown formatted */ $("#inPrevCut").hidden=!r.cut; $("#inPrev").dataset.path=path; $("#inPrev").showModal(); }
+  { const md=/\.(md|markdown)$/i.test(r.name||path)&&!!r.text; $("#inPrevText").hidden=md; $("#inPrevMd").hidden=!md; putHTML($("#inPrevMd"),raw(md?mdView(r.text,{hBase:2}):"")); }   /* BL-196: a Markdown file is shown formatted */ $("#inPrevCut").hidden=!r.cut; $("#inPrev").dataset.path=path; openDialog("inPrev"); }
 export async function removeInbox(path){ if(!viaServer()){ snack("Removing needs the live server"); return; } const f=(D.inbox||[]).find(x=>x.path===path), r=await api("/api/inbox/remove",{path});
   if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
   INSEL.delete(path); D.inbox=(D.inbox||[]).filter(x=>x.path!==path); renderInbox();
@@ -77,7 +78,7 @@ export const MTG=()=>(D.meetings&&D.meetings.rows)||[], MSEL=new Set(), MRUN={};
 export let nowHM = function(){ const n=new Date(); return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`; };   /* a function, so tests can set the clock */
 export const mtgLater=m=>m.day>TODAY||(m.day===TODAY&&(m.end||m.start||"")>nowHM());
 export const mtgCanPick=m=>!!m.id&&!m.processed&&!m.draft&&!mtgLater(m)&&MRUN[m.id]!=="processing";
-     /* BL-73: inside the Calendar Import section */
+     /* BL-73: inside the Calendar import section */
 export function mtgState(m){ const r=MRUN[m.id];
   if(mtgLater(m)) return html`<span class="sub">${m.day===TODAY&&m.start&&m.start<=nowHM()?"In progress: a transcript comes after it ends":"Not happened yet"}</span>`;
   if(r==="loading") return html`<span class="spin" aria-hidden="true"></span> Loading the transcript…`;     /* BL-119: Process selected loads first */
@@ -86,7 +87,7 @@ export function mtgState(m){ const r=MRUN[m.id];
   if(m.draft||r==="draft") return html`<a href="#" data-go="review" class="hlink">Draft ready in Review</a>`;
   if(r&&r.startsWith("skipped:")) return html`<span class="tag">Skipped</span> <span class="sub">${r.slice(8)}</span>`;
   if(r&&r.startsWith("failed:")) return html`<span class="tag warn">Couldn't</span> <span class="sub">${r.slice(7)}</span>`;
-  if(m.loaded) return html`<span class="tag">Loaded</span> <span class="sub">in the inbox, not processed yet</span>`;     /* BL-137: the file is not listed under Upload Files */
+  if(m.loaded) return html`<span class="tag">Loaded</span> <span class="sub">in the inbox, not processed yet</span>`;     /* BL-137: the file is not listed under Upload files */
   return html`<span class="sub">Not processed</span>`; }
 /* BL-42 phase 3, BL-104: what the sweep found for each meeting. A transcript that exists and isn't processed stands out (tint, accent bar and a
    Transcript badge: words as well as colour); no transcript, not transcribed and no access are muted; processed ones are quiet. */

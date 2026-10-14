@@ -2,6 +2,12 @@
 /* work.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0030-work.js, 0031-bl-150-sprint-ux.js, 0032-bl-159-sprint-icons.js, 0033-bl-160-sprint-icons.js, 0034-after-bl-160-js.js, 0035-work-board-bl-103-sprint-4a.js, 0036-bl-128-sprint-work-views.js, 0037-decisions-board-bl-103-sprint-debug-log.js, 0038-bl-129-sprint-work-views.js, 0039-bl-130-sprint-work-views.js, 0040-bl-132-sprint-work-views.js, 0041-bl-131-sprint-work-views.js, 0130-person-rows-bl-68.js, 0131-bl-122-sprint-polish.js, 0132-bl-123-sprint-polish.js, 0133-bl-124-sprint-polish.js, 0147-bl-134-sprint-all-items.js, 0148-bl-138-sprint-all-items.js, 0149-bl-190-sprint-links.js, 0150-after-bl-190-people.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
+import { drawFilterBar, fitFilterBar } from "./components/FilterBar.jsx";
+
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+import { drawTabs } from "./components/Tabs.jsx";
+import { drawNewTile } from "./components/work/NewTile.jsx";
 import { A, DEC, open, overdue, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
 import { CALI, closeCal, DATE_HELP, srcShort, WK, wkAsk, wkClear } from "./core/fields.js";
@@ -15,7 +21,7 @@ import { draftBtn } from "./drafts.js";
 import { kb } from "./intake.js";
 import { decLate, decLateWords, withdrawDecision } from "./meetings.js";
 import { ceListPlace } from "./milestones.js";
-import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCommit, pkDots, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
+import { commitRecord, fieldsFor, markSel, msChoices, norm, openNew, openRecord, pkCommit, markStagedRows, pkFollowable, pkKeepFocus, pkSetStatus, REC, validate } from "./panel.js";
 import { closePanel, wflag } from "./projects.js";
 import { CHK, isMin, RHL, rvBar, rvBulkOK, RVF, RVFIELDS, rvSyncChk } from "./review.js";
 import { dueSort, isHiddenPerson, nm, ownerFinal, PERS, personLink, PSORTS, renderPerson, row, xcueAll } from "./settings.js";
@@ -102,54 +108,43 @@ export function btnLabel0(d){ const set=setOf(d[0]), v=[...set], opts=d[2](), la
   if(d[0]==="p") return v.length===1?pName(v[0]):`${v.length} projects`;
   if(d[0]==="pr") return PRIOS.filter(x=>set.has(x)).join(", ");
   return `${d[1]}: ${v.length<=2?v.map(lab).join(", "):v.length+" chosen"}`; }
-export function optsHtml(d,q=""){ const set=setOf(d[0]);
-  return d[2]().filter(o=>!q||o[1].toLowerCase().includes(q.toLowerCase())).map(o=>{ const n=countFor(d[0],o[0]);
-    return `<label class="${n||set.has(o[0])?"":"dim"}"><input type="checkbox" data-fk="${d[0]}" value="${esc(o[0])}" ${set.has(o[0])?"checked":""}>${esc(o[1])}<small>${n}</small></label>`; }).join("")||'<div class="sub" style="padding:6px 14px">Nothing to choose</div>'; }
-export function drawMenu(k,q=""){ const d=defOf(k), m=$(`#${BTNID[k]||k}Menu`), long=d[2]().length>6;
-  putHTML(m,raw(isNotSeg(k)+(long?`<input type="search" class="mq" data-fk="${k}" placeholder="Search ${d[1].toLowerCase()}" value="${esc(q)}">`:"")
-    +`<div class="acts">${k==="o"?'<button class="mini" data-ma="me">Only me</button>':""}<button class="mini" data-ma="all">Select all</button><button class="mini" data-ma="clear">Clear</button></div>`+optsHtml(d,q))); }
-export function drawMore(){ drawPicker(); }   /* BL-130: "+ Filter" is the searchable field picker (below) */
-export function renderFilterBar(){ const main=defs().filter(d=>!d[4]);
-  putHTML($("#wfilters"),html`${raw(main.map(d=>{ const id=BTNID[d[0]]||d[0]; return `<span class="dd"><button class="btn fbtn ${setOf(d[0]).size?"on":""}" id="${id}Btn" data-open-fk="${d[0]}" aria-haspopup="true">${esc(btnLabel(d))}</button><div class="ddmenu left" id="${id}Menu"></div></span>`; }).join(""))}<span class="dd"><button class="ib bd fbtn ${defs().some(d=>d[4]&&setOf(d[0]).size)||shared.DR.from||shared.DR.to||RR.from||RR.to||shared.CR.from||shared.CR.to?"on":""}" id="moreBtn" aria-haspopup="dialog" aria-label="${raw(funnelTip(wfCount()))}" data-tip="${raw(funnelTip(wfCount()))}" data-key="F">${raw(ic("funnel"))}${wfCount()?html`<span class="dot" aria-hidden="true">${raw(wfCount())}</span>`:""}</button><div class="ddmenu left fpmenu" id="moreMenu" role="dialog" aria-label="Add a filter"></div></span>`); wfFit(); }
-/* ===== BL-150 (sprint-ux) ===== the Work filter bar never wraps onto extra rows: when the toolbar is too narrow for one row
-   (the ask creaite panel or the side panel open, or a small window), the unused filter buttons fold away from the end
-   (priorities, projects, owners, due) into + Filter, whose picker lists every field; a filter that is set always stays. */
-export function wfFit(){ const bar=$("#v-work .toolbar"), wf=$("#wfilters"); if(!bar||!wf||!bar.offsetParent) return;
-  const dds=[...wf.querySelectorAll(":scope>.dd")]; dds.forEach(d=>d.classList.remove("wfold"));
-  if(!($("#panel").classList.contains("on")&&!$("#panel").classList.contains("peek"))&&innerWidth>=1100) return;   /* BL-176: the peek is over the page, so it folds nothing */   /* nothing beside the page: the bar wraps as before, no button disappears (BL-173: ask creaite is over the page, so it no longer folds) */
-  const first=bar.firstElementChild, wrapped=()=>[...bar.children,...dds].some(c=>c.offsetParent&&c.offsetWidth&&c.offsetHeight>8&&c.offsetTop>first.offsetTop+8);
-  const fold=dds.filter((d,i)=>i>0&&d.querySelector(".fbtn:not(.on):not(#moreBtn)")).reverse();   /* the first (Status) stays */
-  for(const d of fold){ if(!wrapped()) break; d.classList.add("wfold"); }
-  const n=wf.querySelectorAll(".dd.wfold").length, mb=$("#moreBtn"); if(mb){ const t=funnelTip(wfCount())+(n?`. ${n} more filter${n===1?" is":"s are"} here`:""); mb.dataset.tip=t; mb.setAttribute("aria-label",t); } }
-/* ===== end BL-150 ===== */
+/* BL-316: Work's filter bar is the FilterBar building block (components/FilterBar.jsx), drawn into #wfilters from FDEFS and the
+   date ranges; the block draws the buttons, their lists, + Filter's field picker and BL-150's folding, and says what changed */
+export function workBarProps(){ const R=FPRANGES(), main=defs().filter(d=>!d[4]), more=defs().filter(d=>d[4]);
+  if(![...defs().map(d=>d[0]),...R.map(r=>r[0])].includes(shared.FPK)) shared.FPK=(more.find(d=>setOf(d[0]).size)||more[0]||main[0])[0];
+  const rng=k=>k==="dr"?shared.DR:k==="rr"?RR:shared.CR, rOn=k=>!!(rng(k).from||rng(k).to), total=items().length, shown=items().filter(x=>passes(x)).length;
+  const fields=[...defs().map(d=>{ const k=d[0], on=!!setOf(k).size, id=BTNID[k]||k;
+      return {id:k,label:d[1],main:!d[4],section:d[4]?"More fields":undefined,btnId:d[4]?undefined:`${id}Btn`,menuId:`${id}Menu`,data:{"open-fk":k},
+        button:btnLabel(d),on,selected:setOf(k),not:NEG.has(k),mark:on?`${NEG.has(k)?"not · ":""}set`:"",onlyMe:k==="o"?myOwnerNames():undefined,
+        options:()=>d[2]().map(o=>({value:o[0],label:o[1],count:countFor(k,o[0])}))}; }),
+    ...R.map(([k,l])=>({id:k,label:l,section:"More fields",on:rOn(k),mark:rOn(k)?"set":"",range:{from:rng(k).from?fd(rng(k).from):"",to:rng(k).to?fd(rng(k).to):"",name:l.replace(/ between$/,"")}}))];
+  return {fields,
+    onSelect:(k,vals)=>{ const set=setOf(k); set.clear(); vals.forEach(v=>set.add(v)); workChanged(); },
+    onNot:(k,n)=>{ n?NEG.add(k):NEG.delete(k); workChanged(); },
+    onRange:(k,end,text)=>{ const v=text.trim(); if(v&&!DDATE.test(v)){ snack("Not a date creaite knows. "+DATE_HELP); return; } rng(k)[end]=v?toIso(v):""; workChanged(); },
+    more:{id:"moreBtn",menuId:"moreMenu",label:funnelTip(wfCount()),menuLabel:"Add a filter",count:wfCount(),key:"F",
+      on:defs().some(d=>d[4]&&setOf(d[0]).size)||!!(shared.DR.from||shared.DR.to||RR.from||RR.to||shared.CR.from||shared.CR.to),
+      field:shared.FPK,onField:k=>{ shared.FPK=k; drawWorkFilters(); },query:shared.FPQ,
+      onQuery:q=>{ shared.FPQ=q; const vis=[...defs().map(d=>[d[0],d[1]]),...FPRANGES()].filter(f=>!q||f[1].toLowerCase().includes(q.toLowerCase()));
+        if(vis.length&&!vis.some(f=>f[0]===shared.FPK)) shared.FPK=vis[0][0]; drawWorkFilters(); },
+      result:`Result: ${shown} of ${total} shown`,resultId:"fpResult",doneId:"fpDone"},
+    fold:()=>{ const bar=$("#v-work .toolbar"); if(!bar||!bar.offsetParent) return false;   /* BL-150; BL-176: the peek is over the page, so it folds nothing; BL-173: nor does ask creaite */
+      return $("#panel").classList.contains("on")&&!$("#panel").classList.contains("peek")||innerWidth<1100?bar:null; }}; }
+export function drawWorkFilters(){ const h=$("#wfilters"); if(h) drawFilterBar(h,workBarProps()); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0031(){
-if(window.ResizeObserver) new ResizeObserver(()=>requestAnimationFrame(wfFit)).observe($("#v-work"));
+if(window.ResizeObserver) new ResizeObserver(()=>requestAnimationFrame(()=>fitFilterBar($("#wfilters")))).observe($("#v-work"));   /* BL-150 */
 }
 /* ===== BL-159 (sprint-icons) ===== the Work toolbar in icons. The funnel carries how many filters are on; the New tile says the
    tab's own word (in its label, its tooltip and, on hover or focus, as it grows); on Decisions it opens a two-item menu:
    Record a decision (the form as Made, dated today) and Ask for a decision (as Pending: openNew("decisions","needed")).
-   The menu is a real role="menu": the arrow keys, Home and End move, Esc closes it and puts focus back, a click away closes it. */
+   The tile is components/work/NewTile.jsx; on Decisions it is the Menu building block (BL-316). */
 export function wfCount(){ return defs().filter(d=>setOf(d[0])&&setOf(d[0]).size).length+(shared.WT!=="decisions"&&(shared.DR.from||shared.DR.to)?1:0)+(shared.WT!=="decisions"&&(RR.from||RR.to)?1:0)+(shared.WT!=="decisions"&&(shared.CR.from||shared.CR.to)?1:0); }
 export function funnelTip(n,what="Add a filter"){ return n?`${what}: ${n} on`:what; }   /* BL-264: Settings › People says "Filter people" */
-export function newTile(){ const b=$("#newBtn"); if(!b) return; const w=shared.WT==="actions"?"New action":shared.WT==="raid"?"New RAID item":"New decision", dec=shared.WT==="decisions";
-  b.querySelector(".w").textContent=w; b.setAttribute("aria-label",w); b.dataset.tip=w; b.classList.toggle("hasmenu",dec);
-  if(dec){ b.setAttribute("aria-haspopup","menu"); b.setAttribute("aria-expanded",String(newMenuOpen())); } else { b.removeAttribute("aria-haspopup"); b.removeAttribute("aria-expanded"); newMenu(false); } }
-export function newMenuOpen(){ const m=$("#newMenu"); return !!m&&!m.hidden; }
-export function newMenu(open,focusBack){ const m=$("#newMenu"), b=$("#newBtn"); if(!m) return; const was=!m.hidden; m.hidden=!open; m.classList.toggle("on",open);
-  if(shared.WT==="decisions") b.setAttribute("aria-expanded",String(open)); if(open){ tipHide(); m.querySelector("[role=menuitem]").focus(); } else if(was&&focusBack) b.focus(); }
+export function newTile(){ const h=$("#newHost"); if(!h) return; const w=shared.WT==="actions"?"New action":shared.WT==="raid"?"New RAID item":"New decision";
+  drawNewTile(h,{word:w,decisions:shared.WT==="decisions",hidden:shared.WT==="all",onNew:()=>openNew(shared.WT),onDecision:how=>openNew("decisions",how==="needed"?"needed":undefined)}); }
+export function newMenuOpen(){ return !!$("#newDecMenu"); }
 /* ===== end BL-159 (JS) ===== */
-/* BL-231: what this block did at load, run in today's order by src/main.js */
-export function bootWork0032(){
-$("#newMenu").addEventListener("click",e=>{ const it=e.target.closest("[data-newd]"); if(!it) return; e.stopPropagation(); newMenu(false); openNew("decisions",it.dataset.newd==="needed"?"needed":undefined); });
-$("#newMenu").addEventListener("keydown",e=>{ const L=[...$("#newMenu").querySelectorAll("[role=menuitem]")], i=L.indexOf(document.activeElement);
-  if(e.key==="ArrowDown"||e.key==="ArrowUp"){ e.preventDefault(); L[(i+(e.key==="ArrowDown"?1:L.length-1))%L.length].focus(); }
-  else if(e.key==="Home"||e.key==="End"){ e.preventDefault(); L[e.key==="Home"?0:L.length-1].focus(); }
-  else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); newMenu(false,true); }
-  else if(e.key==="Tab") newMenu(false); });
-$("#newBtn").addEventListener("keydown",e=>{ if(shared.WT==="decisions"&&e.key==="ArrowDown"){ e.preventDefault(); newMenu(true); } });
-document.addEventListener("click",e=>{ if(newMenuOpen()&&!e.target.closest(".newdd")) newMenu(false); });
-}
 /* ===== BL-160 (sprint-icons) ===== Review in icons: the funnel counts its filters (Review's own: Kind, Needs, Source, Project, Age);
    Approve and Reject keep their words in the bulk bar; on a row, Approve keeps its word, Reject is the x, and Edit and Refresh
    items show on hover, on focus and on the cursor row (.rowact), so the keyboard still reaches them. */
@@ -199,10 +194,10 @@ export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultVie
   shared.CE=null;   /* BL-251 */
   if(WINIT[shared.WT]) syncView();   /* BL-132 */
   (()=>{ if(!WINIT[shared.WT]) applyView(defaultView(shared.WT));
-  $$("#wtabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===shared.WT));
-  renderViewChips();   /* BL-131 */
+  drawWorkTabs();   /* BL-316 */
+  renderViewBar();   /* BL-131 */
   newTile();   /* BL-159 */
-  renderFilterBar(); if($("#workQ").value!==shared.WQ) $("#workQ").value=shared.WQ;
+  drawWorkFilters(); if($("#workQ").value!==shared.WQ) $("#workQ").value=shared.WQ;
   const fromP=shared.FROMPROJ&&PROJF.size===1&&PROJF.has(shared.FROMPROJ)?shared.FROMPROJ:null; $("#workCrumb").hidden=!fromP;   /* BL-38 */
   if(fromP) putHTML($("#workCrumb"),html`<a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><a href="#" data-proj="${raw(fromP)}">${raw(fromP)}</a><span aria-hidden="true">›</span><span aria-current="page">${raw({actions:"Actions",raid:"RAID",decisions:"Decisions"}[shared.WT])}</span>`);
   const C=orderedCols(), L=rows(), s=SORT[shared.WT];
@@ -222,15 +217,13 @@ export function renderWork(){ const fresh=!WINIT[shared.WT], dv=fresh?defaultVie
   allDecorate();   /* BL-113 */
   if(!shared.LOADING){ mDots("work");
     if(fresh&&dv&&dv!==allViews(shared.WT)[0].id) OPENEDON[shared.WT]=shared.WVIEW; openedNote();
-  pkDots(); } }
+  markStagedRows(); } }
 shared.COLORD=store.get("creaite-colorder",{});
 export function orderedCols(t=shared.WT){ const vis=COLS[t].filter(c=>shared.COLVIS[t].includes(c[0])||c[0]==="t"), ord=shared.COLORD[t]||[];
   return vis.sort((a,b)=>{ const i=ord.indexOf(a[0]), j=ord.indexOf(b[0]); return (i<0?99+COLS[t].indexOf(a):i)-(j<0?99+COLS[t].indexOf(b):j); }); }
 export function moveCol(col,before){ const keys=orderedCols().map(c=>c[0]).filter(k=>k!==col); const i=before?keys.indexOf(before):keys.length; keys.splice(i<0?keys.length:i,0,col);
   shared.COLORD[shared.WT]=keys; store.set("creaite-colorder",shared.COLORD); renderWork(); }
 export let DRAGCOL=null;
-export function reopen(k,q=""){ const id=k==="more"?"more":BTNID[k]||k, m=$(`#${id}Menu`); if(!m) return; k==="more"?drawMore():drawMenu(k,q); m.classList.add("on");
-  const box=m.querySelector(".mq"); if(box&&q){ box.focus(); box.setSelectionRange(q.length,q.length); } }   /* BL-62: search text and focus kept */
 /* BL-77: this closes the menus on a click anywhere else. It used to run for the opening click too (a second listener on the same
    document isn't stopped by stopPropagation), so every filter menu closed the moment it opened. */
 export async function saveView(name){ name=String(name||"").trim().replace(/[<>"]/g,""); if(!name){ snack("Name the view first"); return; }
@@ -241,6 +234,10 @@ export async function deleteView(name){ const before=shared.SAVED[shared.WT]; sh
 /* BL-62: each tab keeps its own filters, search and sort; switching tabs never carries filters across */
 export const TABSTATE={};
 export function saveTab(){ TABSTATE[shared.WT]={fx:snapshot(),p:[...PROJF],q:shared.WQ,view:shared.WVIEW,base:WB[shared.WT]||null}; }
+/* BL-316: Work's tabs are the Tabs building block (#wtabs, drawn into #wtabsHost); ← → Home End wrap round */
+export const WTABS=[["actions","Actions"],["raid","RAID"],["decisions","Decisions"],["all","All items"]].map(([t,l])=>({id:t,label:l,data:{t}}));
+export function workTabGo(t){ if(t===shared.WT) return; saveTab(); loadTab(t); shared.SEL=null; hlClear(); closePanel(); renderWork(); navWrite(false); }
+export function drawWorkTabs(){ const h=$("#wtabsHost"); if(h) drawTabs(h,{items:WTABS,selected:shared.WT,onSelect:workTabGo,label:"Work",className:"tabs",id:"wtabs",wrap:true}); }
 export function clearAllFilters(){ Object.values(FX).forEach(s=>s.clear()); OWN.clear(); PRIF.clear(); PROJF.clear(); shared.DR={from:"",to:""}; RR={from:"",to:""}; shared.CR={from:"",to:""}; NEG.clear(); }
 export function loadTab(t){ clearAllFilters(); shared.WT=t; const st=TABSTATE[t]; if(!st){ WINIT[t]=false; shared.WQ=""; return; }
   applyFilters(st.fx); st.p.forEach(c=>PROJF.add(c)); shared.WQ=st.q; WINIT[t]=true; syncView(); if(TABSTATE[t]&&TABSTATE[t].base) WB[t]=TABSTATE[t].base; }
@@ -255,7 +252,11 @@ shared.RZ=store.get("creaite-colwidths",{});
    (←/→, 16 px), 60 to 900 px, double-click puts the column back; widths in creaite-colwidths under the key given */
 export function colResizer(th,k,after){ if(shared.RZ[k]){ th.style.width=shared.RZ[k]+"px"; th.style.minWidth=shared.RZ[k]+"px"; }
   const h=document.createElement("span"); h.className="colrz"; h.tabIndex=0; h.setAttribute("role","separator"); h.setAttribute("aria-label","Resize "+th.textContent+" column");
-  const put=w=>{ w=Math.max(60,Math.min(900,w)); th.style.width=w+"px"; th.style.minWidth=w+"px"; shared.RZ[k]=Math.round(w); };
+  /* v1.9.5 (UI audit P1-6): a focusable separator needs its value: the width in px, 60 to 900 */
+  const val=w=>h.setAttribute("aria-valuenow",String(Math.round(Math.max(60,Math.min(900,w||0)))));
+  h.setAttribute("aria-orientation","vertical"); h.setAttribute("aria-valuemin","60"); h.setAttribute("aria-valuemax","900"); val(shared.RZ[k]||th.getBoundingClientRect().width);
+  h.addEventListener("focus",()=>val(th.getBoundingClientRect().width));
+  const put=w=>{ w=Math.max(60,Math.min(900,w)); th.style.width=w+"px"; th.style.minWidth=w+"px"; shared.RZ[k]=Math.round(w); val(w); };
   h.addEventListener("click",e=>e.stopPropagation());
   h.addEventListener("pointerdown",e=>{ e.preventDefault(); const x0=e.clientX,w0=th.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
     const mv=ev=>put(w0+ev.clientX-x0);
@@ -282,20 +283,6 @@ $("#workTbl").addEventListener("dragstart",e=>{ const th=e.target.closest&&e.tar
 $("#workTbl").addEventListener("dragover",e=>{ const th=e.target.closest("th[data-col]"); if(!th||!DRAGCOL) return; e.preventDefault(); $$("#workTbl th").forEach(x=>x.classList.toggle("dropbefore",x===th&&th.dataset.col!==DRAGCOL)); });
 $("#workTbl").addEventListener("drop",e=>{ const th=e.target.closest("th[data-col]"); if(!th||!DRAGCOL) return; e.preventDefault(); const c=DRAGCOL; DRAGCOL=null; if(th.dataset.col!==c) moveCol(c,th.dataset.col); });
 $("#workTbl").addEventListener("dragend",()=>{ DRAGCOL=null; $$("#workTbl th").forEach(x=>x.classList.remove("dropbefore")); });
-/* filter menus (one handler for all of them) */
-document.addEventListener("click",e=>{ const b=e.target.closest("[data-open-fk],#moreBtn"); if(!b||!b.closest("#wfilters")) return; e.stopPropagation();
-  const menu=b.nextElementSibling, wasOpen=menu.classList.contains("on"); $$(".ddmenu.on").forEach(m=>m.classList.remove("on"));
-  if(wasOpen) return; b.id==="moreBtn"?drawMore():drawMenu(b.dataset.openFk); menu.classList.add("on"); (menu.querySelector(".mq")||menu.querySelector("input"))?.focus(); });
-$("#wfilters").addEventListener("click",e=>{ if(e.target.closest(".ddmenu")) e.stopPropagation(); const a=e.target.closest("[data-ma]"); if(!a) return;
-  const menu=a.closest(".ddmenu"), k=menu.querySelector("[data-fk]")?.dataset.fk; if(!k) return; const set=setOf(k);
-  if(a.dataset.ma==="me"){ set.clear(); myOwnerNames().forEach(n=>set.add(n)); } else if(a.dataset.ma==="all") [...menu.querySelectorAll("input[type=checkbox]")].forEach(i=>set.add(i.value)); else set.clear();
-  workChanged(); reopen(k,menu.querySelector(".mq")?.value||""); });
-$("#wfilters").addEventListener("change",e=>{ const i=e.target; if(i.type==="checkbox"&&i.dataset.fk){ const set=setOf(i.dataset.fk); i.checked?set.add(i.value):set.delete(i.value); const more=!!i.closest("#moreMenu"), q=i.closest(".ddmenu").querySelector(".mq")?.value||""; workChanged(); reopen(more?"more":i.dataset.fk,q); }
-  if(i.dataset.dr){ const v=i.value.trim(); if(v&&!DDATE.test(v)){ snack("Not a date creaite knows. "+DATE_HELP); return; } shared.DR[i.dataset.dr]=v?toIso(v):""; workChanged(); reopen("more"); }
-  if(i.dataset.cr){ const v=i.value.trim(); if(v&&!DDATE.test(v)){ snack("Not a date creaite knows. "+DATE_HELP); return; } shared.CR[i.dataset.cr]=v?toIso(v):""; workChanged(); reopen("more"); }
-  if(i.dataset.rr){ const v=i.value.trim(); if(v&&!DDATE.test(v)){ snack("Not a date creaite knows. "+DATE_HELP); return; } RR[i.dataset.rr]=v?toIso(v):""; workChanged(); reopen("more"); } });
-$("#wfilters").addEventListener("input",e=>{ if(e.target.classList.contains("mq")){ const k=e.target.dataset.fk, q=e.target.value; drawMenu(k,q); const n=$(`#${BTNID[k]||k}Menu .mq`); n.focus(); n.setSelectionRange(q.length,q.length); } });
-document.addEventListener("click",e=>{ if(e.target.closest("#wfilters .dd")) return; $$("#wfilters .ddmenu.on").forEach(m=>m.classList.remove("on")); });
 /* applied-filter chips, Clear all, Save view */
 $("#wapplied").addEventListener("click",e=>{ const c=e.target.closest("[data-clr]");
   if(c){ const k=c.dataset.clr; if(k==="dr") shared.DR={from:"",to:""}; else if(k==="rr") RR={from:"",to:""}; else if(k==="cr") shared.CR={from:"",to:""}; else if(k==="q") shared.WQ=""; else { setOf(k).clear(); NEG.delete(k); } workChanged(); return; }
@@ -304,14 +291,13 @@ $("#wapplied").addEventListener("click",e=>{ const c=e.target.closest("[data-clr
   if(e.target.id==="viewSave") saveView($("#viewName").value); });
 $("#wapplied").addEventListener("keydown",e=>{ if(e.target.id==="viewName"){ if(e.key==="Enter") saveView(e.target.value); if(e.key==="Escape"){ e.stopPropagation(); renderWork(); } } });
 $("#wviews").onclick=e=>{ if(e.target.closest("[data-vmenu],#vmore,#vrename,[data-vren]")) return;   /* BL-131: a saved view's menu, More views and renaming are handled below */
-  const b=e.target.closest("[data-wv]"); if(!b) return; $("#vmoreMenu")?.classList.remove("on"); applyView(b.dataset.wv); renderWork(); navWrite(false); };
+  const b=e.target.closest("[data-wv]"); if(!b) return; applyView(b.dataset.wv); renderWork(); navWrite(false); };
 /* sortable headers (a drag still moves the column) */
 $("#workTbl").addEventListener("click",e=>{ const th=e.target.closest("th[data-col]"); if(!th||e.target.closest(".colrz")||document.body.classList.contains("resizing")) return;
   const col=th.dataset.col, s=SORT[shared.WT]; SORT[shared.WT]=!s||s.col!==col?{col,dir:"asc"}:s.dir==="asc"?{col,dir:"desc"}:null; renderWork(); navWrite(false); });
-$("#wtabs").onclick=e=>{ const b=e.target.closest("button"); if(!b||b.dataset.t===shared.WT) return; saveTab(); loadTab(b.dataset.t); shared.SEL=null; hlClear(); closePanel(); renderWork(); navWrite(false); };
+drawWorkTabs();   /* BL-316: the Tabs block; choosing a tab is workTabGo */
 $("#workQ").addEventListener("input",e=>{ shared.WQ=e.target.value; renderWork(); navWrite(false); });
 $("#workQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&shared.WQ){ e.preventDefault(); e.stopPropagation(); shared.WQ=""; renderWork(); navWrite(false); } if(e.key==="Enter"){ const L=rows(); if(L.length){ e.preventDefault(); e.target.blur(); openRecord(shared.WT,L[0].id); } } });
-$("#newBtn").onclick=e=>{ if(shared.WT==="decisions"){ e.stopPropagation(); newMenu(!newMenuOpen()); return; } openNew(shared.WT); };
 window.addEventListener("resize",sizeList);
 $("#workTbl").addEventListener("click",e=>{ if(e.target.closest(".colrz")) return; const tr=e.target.closest("tr[data-row]"); if(tr&&!ceClick(e,tr)) hlRowClick(e,shared.WT,tr); });
 $("#workTbl").addEventListener("dblclick",e=>{ const tr=e.target.closest("tr[data-row]"); if(tr&&!e.target.closest("td.editing")) hlRowOpen(e,shared.WT,tr,false); });
@@ -440,28 +426,21 @@ export function boardAsk(o){ const {title,hint,date,clear,range,okText}=o, p=new
     if(isNaN(new Date(iso))||fd(iso)!==v){ $("#bdErr").textContent="That isn't a real date."; return; } if(iso<TODAY){ $("#bdErr").textContent="Choose today or a later day: a past date would make it overdue."; return; } fin(iso); };
   $("#bdOk").onclick=ok; $("#bdCancel").onclick=()=>fin(null); dlg.onclose=()=>fin(null); inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); ok(); } };
   $$("#bdQuick [data-q]").forEach(b=>b.onclick=()=>{ inp.value=fd(b.dataset.q==="fri"?thisFriday():b.dataset.q==="nfri"?nextFriday():isoAdd(TODAY,14)); $("#bdErr").textContent=""; });
-  dlg.showModal(); (clear?$("#bdOk"):inp).focus(); if(!clear) inp.select(); });
+  openDialog(dlg,{focus:clear?"#bdOk":"#bdDate"}); if(!clear) inp.select(); });
   const ok0=$("#bdOk").onclick, inp=$("#bdDate");
     if(!o.clear){ const gated=()=>{ wkClear(); const v=inp.value.trim(), iso=DDATE.test(v)?toIso(v):""; if(iso&&iso>=TODAY&&!WK.ok&&wkAsk(iso,$("#bdDateRow"),d=>{ inp.value=fd(d); ok0(); },{inline:true,after:$("#bdDateRow")})) return; ok0(); };
       $("#bdOk").onclick=gated; inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); gated(); } }; }
     p.finally(wkClear); return p; }
 /* "Move to…" on a card: the same moves, without dragging */
-export function boardMenu(btn,id){ (()=>{ { const x=REC(shared.WT,id); if(shared.WT==="decisions"&&x&&x.st!=="Pending"){ snack(`${x.id} is ${x.st.toLowerCase()}: it can't be moved`); return; } }   /* Move to… offers nothing for a decision that is no longer pending */
-  closeBoardMenu(); const t=shared.WT, x=REC(t,id), g=BCUR&&BCUR.g; if(!x||!BCUR) return;
-  const cur=boardKeyOf(t,g,x), all=boardTargets(t,g); const m=document.createElement("div"); m.className="bmenu"; m.id="bmenu"; m.setAttribute("role","menu"); m.setAttribute("aria-label",`Move ${x.id} to`);
-  putHTML(m,raw(all.filter(c=>c.drop&&c.key!==cur).map(c=>`<button type="button" role="menuitem" data-bto="${esc(c.key)}">${esc(c.label)}</button>`).join("")||'<div class="sub" style="padding:6px 12px">Nowhere else to move it</div>'));
-  document.body.appendChild(m); const r=btn.getBoundingClientRect(); m.style.top=Math.min(r.bottom+4,innerHeight-m.offsetHeight-8)+"px"; m.style.left=Math.max(8,Math.min(r.right-m.offsetWidth,innerWidth-m.offsetWidth-8))+"px";
-  m._btn=btn; m._id=id; m.querySelector("button")?.focus();
-  m.addEventListener("click",e=>{ const b=e.target.closest("[data-bto]"); if(!b) return; closeBoardMenu(); boardDrop(id,b.dataset.bto); });
-  m.addEventListener("keydown",e=>{ const /** @type {Element[]} */ bs=[...m.querySelectorAll("button")], i=bs.indexOf(document.activeElement);
-    if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); closeBoardMenu(); btn.focus(); } else if(e.key==="ArrowDown"){ e.preventDefault(); bs[(i+1)%bs.length].focus(); } else if(e.key==="ArrowUp"){ e.preventDefault(); bs[(i-1+bs.length)%bs.length].focus(); } }); })();
-  { const m=$("#bmenu"), t=shared.WT, x=REC(t,id); if(!m||!BCUR||!BCUR.sub||!x) return;
-    const cur=wgKey(t,BCUR.sub,x), lanes=BCUR.lanes.filter(l=>l.key!==cur);
-    addHTML(m,"afterbegin",html`<div class="fsec2">${grpLabel(t,BCUR.g)}</div>`);
-    addHTML(m,"beforeend",html`<div class="fsec2">${grpLabel(t,BCUR.sub)} (lane)</div>${raw(lanes.map(l=>`<button type="button" role="menuitem" data-blto="${esc(l.key)}" ${l.settable?"":`aria-disabled="true" title="${esc(l.why||"")}"`}>${esc(l.label)}</button>`).join("")||'<div class="sub" style="padding:6px 12px">No other lane</div>')}`);
-    const r=btn.getBoundingClientRect(); m.style.top=Math.max(8,Math.min(r.bottom+4,innerHeight-m.offsetHeight-8))+"px";
-    m.addEventListener("click",e=>{ const b=e.target.closest("[data-blto]"); if(!b) return; closeBoardMenu(); laneDrop(id,boardKeyOf(t,BCUR.g,x),b.dataset.blto); }); } }
-export function closeBoardMenu(){ const m=$("#bmenu"); if(m) m.remove(); }
+export function boardMoveMenu(btn,id){ if(menuOpenFor(btn)){ closeMenu(); return; }
+  { const x=REC(shared.WT,id); if(shared.WT==="decisions"&&x&&x.st!=="Pending"){ snack(`${x.id} is ${x.st.toLowerCase()}: it can't be moved`); return; } }   /* Move to… offers nothing for a decision that is no longer pending */
+  const t=shared.WT, x=REC(t,id), g=BCUR&&BCUR.g; if(!x||!BCUR) return;
+  const cur=boardKeyOf(t,g,x), cols=boardTargets(t,g).filter(c=>c.drop&&c.key!==cur), sub=BCUR.sub, lanes=sub?BCUR.lanes.filter(l=>l.key!==wgKey(t,sub,x)):[];
+  /** @type {any[]} */ const items=[...(sub?[{id:"h1",head:grpLabel(t,g)}]:[]),
+    ...(cols.length?cols.map(c=>({id:"c:"+c.key,name:c.label,data:{bto:c.key}})):[{id:"n1",note:"Nowhere else to move it"}]),
+    ...(sub?[{id:"h2",head:`${grpLabel(t,sub)} (lane)`},...(lanes.length?lanes.map(l=>({id:"l:"+l.key,name:l.label,disabled:!l.settable,tip:l.settable?undefined:l.why||"",data:{blto:l.key}})):[{id:"n2",note:"No other lane"}])]:[])];
+  openMenu(btn,{label:`Move ${x.id} to`,id:"bdMoveMenu",align:"right",items,
+    onPick:k=>{ if(k.startsWith("c:")) boardDrop(id,k.slice(2)); else laneDrop(id,boardKeyOf(t,BCUR.g,x),k.slice(2)); }}); }
 /* every column the grouping can move an item to, including a Cancelled column that is hidden while empty */
 export function boardTargets(t,g){ const all=[...BCUR.cols], end=t==="decisions"?"Withdrawn":"Cancelled"; if(g==="status"&&!all.some(c=>c.key===end)) all.push({key:end,label:end,drop:true,value:end,items:[]}); BCUR.all=all; return all; }
    /* BL-122 */
@@ -472,9 +451,8 @@ export function boardDragEnd(){ const d=BDRAG; BDRAG=null; if(!d) return null; i
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0035(){
 $("#wlay").addEventListener("click",e=>{ const b=e.target.closest("[data-lay]"); if(b) setLayout(shared.WT,b.dataset.lay); });
-document.addEventListener("click",e=>{ if(!e.target.closest("#bmenu,.bmv")) closeBoardMenu(); });
 $("#workBoard").addEventListener("click",e=>{ if(performance.now()-BNOCLICK<30) return;
-  const mv=e.target.closest(".bmv"); if(mv){ e.stopPropagation(); boardMenu(mv,mv.closest(".bcard").dataset.row); return; }
+  const mv=e.target.closest(".bmv"); if(mv){ e.stopPropagation(); boardMoveMenu(mv,mv.closest(".bcard").dataset.row); return; }
   const cl=e.target.closest("[data-bcoll]"); if(cl){ const k=cl.dataset.bcoll; BCOLL[k]=!BCOLL[k]; store.set("creaite-boardcoll",BCOLL); renderWork(); return; }
   const sh=e.target.closest("[data-bshow]"); if(sh){ const k=sh.dataset.bshow; BSHOWALL.has(k)?BSHOWALL.delete(k):BSHOWALL.add(k); renderWork(); return; }
   const col=e.target.closest(".bcol.collapsed"); if(col){ const k=bcKey(shared.WT,groupOf(shared.WT),col.dataset.col); BCOLL[k]=false; store.set("creaite-boardcoll",BCOLL); renderWork(); return; }
@@ -694,21 +672,8 @@ export const staleAge=(t,x)=>{ const d=(x.upd_at||"").slice(0,10)||(t==="decisio
 export const isStale=(t,x)=>{ const op=t==="actions"?open(x):t==="raid"?x.st==="Open":x.st==="Pending", a=staleAge(t,x); return op&&a!==null&&a>=(+S.staleDays||7); };
 export const msOpts=()=>{ const ps=PROJF.size===1?P.filter(p=>PROJF.has(p.code)):P; return ps.flatMap(p=>(p.ms||[]).filter(m=>m[3]).map(m=>[m[3],m[0]+(ps.length>1?` (${p.name})`:"")])); };
 export const lastDays=[["7","Last 7 days"],["14","Last 14 days"],["30","Last 30 days"]], within=(iso,set)=>!!iso&&[...set].some(n=>-days(iso.slice(0,10))<=+n&&-days(iso.slice(0,10))>=0);
-export function isNotSeg(k,n=NEG.has(k)){ return `<div class="isnot"><span class="seg" role="group" aria-label="Match"><button type="button" data-neg="0" data-nk="${k}" aria-pressed="${!n}">is</button><button type="button" data-neg="1" data-nk="${k}" aria-pressed="${n}">is not</button></span><span class="sub">${n?"none of":"any of"}</span></div>`; }
 shared.FPK=null; shared.FPQ="";
 export const FPRANGES=()=>shared.WT==="decisions"?[]:[["dr","Due between"],["rr","Raised between"],["cr","Closed between"]];   /* BL-190: closed between */
-export function drawPicker(){ const m=$("#moreMenu"); if(!m) return; const main=defs().filter(d=>!d[4]), more=defs().filter(d=>d[4]), R=FPRANGES(), all=[...main.map(d=>[d[0],d[1]]),...more.map(d=>[d[0],d[1]]),...R];
-  const ok=l=>!shared.FPQ||l.toLowerCase().includes(shared.FPQ.toLowerCase());
-  if(!all.some(f=>f[0]===shared.FPK)) shared.FPK=(more.find(d=>setOf(d[0]).size)||more[0]||main[0])[0];
-  const on=k=>k==="dr"?!!(shared.DR.from||shared.DR.to):k==="rr"?!!(RR.from||RR.to):k==="cr"?!!(shared.CR.from||shared.CR.to):!!setOf(k).size;
-  const fb=([k,l])=>`<button type="button" role="option" class="fpf${on(k)?" on":""}" data-fpk="${k}" aria-selected="${k===shared.FPK}">${esc(l)}${on(k)?` <small>${NEG.has(k)?"not · ":""}set</small>`:""}</button>`;
-  const L1=main.map(d=>[d[0],d[1]]).filter(f=>ok(f[1])), L2=[...more.map(d=>[d[0],d[1]]),...R].filter(f=>ok(f[1]));
-  const left=`<div class="fpl"><input type="search" id="fpq" placeholder="Find a field…" aria-label="Find a field" value="${esc(shared.FPQ)}" autocomplete="off"><div class="fplist" role="listbox" aria-label="Fields">${L1.map(fb).join("")}${L2.length?`<div class="fsec2">More fields</div>${L2.map(fb).join("")}`:""}${!L1.length&&!L2.length?'<div class="sub" style="padding:6px 4px">No field matches</div>':""}</div></div>`;
-  const total=items().length, shown=items().filter(x=>passes(x)).length, d=defOf(shared.FPK);
-  const range=(k,lab,obj)=>`<div class="drange"><input type="text" data-${k}="from" placeholder="DD-MM-YYYY" value="${esc(obj.from?fd(obj.from):"")}" aria-label="${lab} from"><span>and</span><input type="text" data-${k}="to" placeholder="DD-MM-YYYY" value="${esc(obj.to?fd(obj.to):"")}" aria-label="${lab} to"></div>`;
-  const right=shared.FPK==="dr"?`<h3>Due between</h3>${range("dr","Due",shared.DR)}`:shared.FPK==="rr"?`<h3>Raised between</h3>${range("rr","Raised",RR)}`:shared.FPK==="cr"?`<h3>Closed between</h3>${range("cr","Closed",shared.CR)}`
-    :d?`<h3>${esc(d[1])}</h3>${isNotSeg(shared.FPK)}<div class="fpopts">${optsHtml(d)}</div>`:"";
-  putHTML(m,html`<div class="fpick">${raw(left)}<div class="fpr">${raw(right)}<div class="fpfoot"><span class="sub" id="fpResult">Result: ${raw(shown)} of ${raw(total)} shown</span><span class="sp"></span><button type="button" class="btn primary" id="fpDone">Done</button></div></div></div>`); }
 /* ===== end BL-130 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0039(){
@@ -719,14 +684,6 @@ Object.assign(FX,{sl:new Set(),lu:new Set(),rd:new Set()});
   L.push(["lu","Last updated",()=>lastDays,x=>x.upd_at,1,(x,set)=>within(x.upd_at,set)],["rd","Raised",()=>lastDays,x=>x.raised,1,(x,set)=>within(x.raised,set)]);
   if(t==="actions") L.push(["ms","Milestone",()=>[["none","No milestone"],...msOpts()],x=>x.ms||"none",1]);
   else { const i=L.findIndex(d=>d[0]==="ms"); L[i]=["ms","Milestone",()=>[["yes","Attached to a milestone"],["no","Not attached"],...msOpts()],x=>x.ms?"yes":"no",1,(x,set)=>set.has(x.ms?"yes":"no")||(!!x.ms&&set.has(x.ms))]; } });
-$("#wfilters").addEventListener("click",e=>{ const n=e.target.closest("[data-neg]");
-  if(n){ e.stopPropagation(); const k=n.dataset.nk, more=!!n.closest("#moreMenu"); n.dataset.neg==="1"?NEG.add(k):NEG.delete(k); workChanged(); reopen(more?"more":k); const b=$(`${more?"#moreMenu":"#"+(BTNID[k]||k)+"Menu"} [data-neg="${n.dataset.neg}"]`); b&&b.focus(); return; }
-  const f=e.target.closest("[data-fpk]"); if(f){ e.stopPropagation(); shared.FPK=f.dataset.fpk; drawPicker(); $("#moreMenu").classList.add("on"); ($("#moreMenu .fpr input")||$(`#moreMenu [data-fpk="${shared.FPK}"]`))?.focus(); return; }
-  if(e.target.id==="fpDone"){ e.stopPropagation(); $("#moreMenu").classList.remove("on"); $("#moreBtn")?.focus(); } });
-$("#wfilters").addEventListener("input",e=>{ if(e.target.id!=="fpq") return; shared.FPQ=e.target.value; const vis=[...defs().map(d=>[d[0],d[1]]),...FPRANGES()].filter(f=>!shared.FPQ||f[1].toLowerCase().includes(shared.FPQ.toLowerCase()));
-  if(vis.length&&!vis.some(f=>f[0]===shared.FPK)) shared.FPK=vis[0][0]; drawPicker(); const q=$("#fpq"); q.focus(); q.setSelectionRange(shared.FPQ.length,shared.FPQ.length); });
-$("#wfilters").addEventListener("keydown",e=>{ if(e.target.id==="fpq"&&e.key==="Enter"){ e.preventDefault(); ($("#moreMenu .fpr input")||$("#moreMenu [data-fpk]"))?.focus(); }
-  if(e.key==="Escape"&&e.target.closest&&e.target.closest("#wfilters .ddmenu.on")){ e.preventDefault(); e.stopPropagation(); const m=e.target.closest(".ddmenu"); m.classList.remove("on"); m.previousElementSibling?.focus(); } });
 }
 /* ===== BL-132 (sprint-work-views) =====
    When nothing matches, the list (or board) names the filters, counts what removing each one alone would show, and offers Remove,
@@ -787,13 +744,19 @@ export function viewMatches(v,snap){ if(!sameF(snap,v.f)) return false; if(v.bui
 export function viewSaveBtns(){ const b=allViews(shared.WT).find(v=>v.id===WB[shared.WT]);
   return `${b&&!b.builtin?`<button class="linkbtn" id="updView" title="Save these filters and this display into “${esc(b.label)}”">Update view</button>`:""}<button class="linkbtn" id="saveView">${b?"Save as new view":"Save view"}</button>`; }
 export let VRENAME=null;                                 /* the saved view being renamed */
-export function renderViewChips(){ const el=$("#wviews"), V=allViews(shared.WT), dirty=!shared.WVIEW&&!!WB[shared.WT], act=shared.WVIEW||WB[shared.WT];
+export const VMORE={views:[]};                           /* the views under More views, as last drawn */
+/* BL-316: More views is the Menu block's menu, opened from its chip */
+export function moreViewsMenu(b){ if(menuOpenFor(b)){ closeMenu(); return; }
+  openMenu(b,{label:"More views",id:"vmoreMenu",onPick:id=>{ applyView(id); renderWork(); navWrite(false); },items:VMORE.views.map(v=>({id:v.id,name:v.label,cls:"vmitem",data:{wv:v.id}}))}); }
+/* the views bar (BL-316): toggle buttons (aria-pressed) that choose the list's view, each with its own
+   menu, renaming in place and More views; not Chips (a Chip is a labelled value) and not tabs (no panels), so it stays its own */
+export function renderViewBar(){ const el=$("#wviews"), V=allViews(shared.WT), dirty=!shared.WVIEW&&!!WB[shared.WT], act=shared.WVIEW||WB[shared.WT];
   const chip=v=>{ const on=v.id===act, dot=dirty&&on;
     if(VRENAME&&v.id==="saved:"+VRENAME) return `<span class="vwrap vren"><input id="vrename" value="${esc(v.label)}" aria-label="New name for the ${esc(v.label)} view"><button class="mini ok" type="button" data-vren="save">Save</button><button class="mini" type="button" data-vren="cancel">Cancel</button></span>`;
-    return `<span class="vwrap"><button class="vchip${dot?" dirty":""}" data-wv="${esc(v.id)}" aria-pressed="${on}"${dot?' title="Changed since it was opened: Update view or Save as new view"':""}>${esc(v.label)}${dot?'<span class="vdot" aria-hidden="true">●</span><span class="vh"> (changed, not saved)</span>':""}</button>${v.builtin?"":`<button class="vmenu" type="button" data-vmenu="${esc(v.label)}" aria-haspopup="menu" aria-label="Options for the ${esc(v.label)} view" title="Rename, move or delete">▾</button>`}</span>`; };
-  let row=V.filter(v=>!v.more||v.id===act), more=V.filter(v=>v.more&&v.id!==act);
+    return `<span class="vwrap"><button class="vchip${dot?" dirty":""}" data-wv="${esc(v.id)}" aria-pressed="${on}"${dot?' title="Changed since it was opened: Update view or Save as new view"':""}>${esc(v.label)}${dot?'<span class="vdot" aria-hidden="true">●</span><span class="vh"> (changed, not saved)</span>':""}</button>${v.builtin?"":`<button class="vmenu" type="button" data-vmenu="${esc(v.label)}" aria-haspopup="menu" aria-expanded="false" aria-label="Options for the ${esc(v.label)} view" title="Rename, move or delete">▾</button>`}</span>`; };
+  let row=V.filter(v=>!v.more||v.id===act), more=V.filter(v=>v.more&&v.id!==act); VMORE.views=more;
   const draw=()=>{ putHTML(el,raw(row.map(chip).join("")+(!shared.WVIEW&&!WB[shared.WT]?'<span class="vchip custom" aria-pressed="true">Custom</span>':"")
-    +(more.length?`<span class="dd vmorewrap"><button class="vchip" type="button" id="vmore" aria-haspopup="menu" aria-expanded="false">More views (${more.length}) ▾</button><div class="ddmenu left" id="vmoreMenu" role="menu">${more.map(v=>`<button type="button" role="menuitem" class="vmitem" data-wv="${esc(v.id)}">${esc(v.label)}</button>`).join("")}</div></span>`:""))); };
+    +(more.length?`<span class="dd vmorewrap"><button class="vchip" type="button" id="vmore" aria-haspopup="menu" aria-expanded="false">More views (${more.length}) ▾</button></span>`:""))); };
   draw(); if(!el.offsetParent) return;
   for(let n=0;n<40&&el.scrollWidth>el.clientWidth+1;n++){ const i=row.map(v=>v.id!==act&&!(VRENAME&&v.id==="saved:"+VRENAME)).lastIndexOf(true); if(i<0) break; more.unshift(row.splice(i,1)[0]); draw(); } }
 export async function updateView(){ const b=allViews(shared.WT).find(v=>v.id===WB[shared.WT]); if(!b||b.builtin) return; const before=shared.SAVED[shared.WT], i=before.findIndex(v=>v.name===b.label); if(i<0) return;
@@ -806,25 +769,20 @@ export async function renameView(old,name){ name=String(name||"").trim().replace
   if(S[dk]==="saved:"+old) ch[SKEY[dk]]="saved:"+name;                                          /* the default view follows its new name */
   if(await writeSettings(ch)){ if(ch[SKEY[dk]]) S[dk]="saved:"+name; if(shared.WVIEW==="saved:"+old) shared.WVIEW="saved:"+name; if(WB[shared.WT]==="saved:"+old) WB[shared.WT]="saved:"+name; VRENAME=null; renderWork(); navWrite(false); snack(`View renamed “${name}”`); $(`#wviews [data-wv="saved:${CSS.escape(name)}"]`)?.focus(); }
   else shared.SAVED[shared.WT]=before; }
-export function closeViewMenu(){ $("#vmenuPop")?.remove(); }
-export function viewMenu(btn,name){ closeViewMenu(); const L=shared.SAVED[shared.WT]||[], i=L.findIndex(v=>v.name===name), m=document.createElement("div"); m.className="bmenu"; m.id="vmenuPop"; m.setAttribute("role","menu"); m.setAttribute("aria-label",`The ${name} view`);
-  putHTML(m,html`<button type="button" role="menuitem" data-vm="rename">Rename</button><button type="button" role="menuitem" data-vm="up" ${i<=0?html`aria-disabled="true"`:""}>Move earlier</button><button type="button" role="menuitem" data-vm="down" ${i>=L.length-1?html`aria-disabled="true"`:""}>Move later</button><button type="button" role="menuitem" data-vm="delete">Delete</button>`);
-  document.body.appendChild(m); const r=btn.getBoundingClientRect(); m.style.top=(r.bottom+4)+"px"; m.style.left=Math.max(8,Math.min(r.left,innerWidth-m.offsetWidth-8))+"px"; m.querySelector("button").focus();
-  m.addEventListener("click",e=>{ const b=e.target.closest("[data-vm]"); if(!b||b.getAttribute("aria-disabled")) return; closeViewMenu(); const a=b.dataset.vm;
-    if(a==="rename"){ VRENAME=name; renderWork(); const inp=$("#vrename"); inp&&(inp.focus(),inp.select()); } else if(a==="up") moveView(name,-1); else if(a==="down") moveView(name,1); else deleteView(name); });
-  m.addEventListener("keydown",e=>{ const /** @type {Element[]} */ bs=[...m.querySelectorAll("button")], k=bs.indexOf(document.activeElement);
-    if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); closeViewMenu(); btn.focus(); } else if(e.key==="ArrowDown"){ e.preventDefault(); bs[(k+1)%bs.length].focus(); } else if(e.key==="ArrowUp"){ e.preventDefault(); bs[(k-1+bs.length)%bs.length].focus(); } }); }
+/* BL-316: a saved view's ▾ opens the Menu block's menu */
+export function savedViewMenu(btn,name){ if(menuOpenFor(btn)){ closeMenu(); return; } const L=shared.SAVED[shared.WT]||[], i=L.findIndex(v=>v.name===name);
+  openMenu(btn,{label:`The ${name} view`,id:"vmenuPop",items:[{id:"rename",name:"Rename",data:{vm:"rename"}},{id:"up",name:"Move earlier",disabled:i<=0,data:{vm:"up"}},
+      {id:"down",name:"Move later",disabled:i>=L.length-1,data:{vm:"down"}},{id:"delete",name:"Delete",data:{vm:"delete"}}],
+    onPick:a=>{ if(a==="rename"){ VRENAME=name; renderWork(); const inp=$("#vrename"); inp&&(inp.focus(),inp.select()); } else if(a==="up") moveView(name,-1); else if(a==="down") moveView(name,1); else deleteView(name); }}); }
 /* ===== end BL-131 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0041(){
-document.addEventListener("click",e=>{ if(!e.target.closest("#vmenuPop,[data-vmenu]")) closeViewMenu(); if(!e.target.closest(".vmorewrap")) $("#vmoreMenu")?.classList.remove("on"); });
-$("#wviews").addEventListener("click",e=>{ const m=e.target.closest("[data-vmenu]"); if(m){ e.stopPropagation(); viewMenu(m,m.dataset.vmenu); return; }
-  if(e.target.closest("#vmore")){ e.stopPropagation(); const mm=$("#vmoreMenu"), on=!mm.classList.contains("on"); mm.classList.toggle("on",on); $("#vmore").setAttribute("aria-expanded",String(on)); if(on) mm.querySelector("button")?.focus(); return; }
+$("#wviews").addEventListener("click",e=>{ const m=e.target.closest("[data-vmenu]"); if(m){ e.stopPropagation(); savedViewMenu(m,m.dataset.vmenu); return; }
+  if(e.target.closest("#vmore")){ e.stopPropagation(); moreViewsMenu($("#vmore")); return; }
   const r=e.target.closest("[data-vren]"); if(r){ e.stopPropagation(); if(r.dataset.vren==="save") renameView(VRENAME,$("#vrename").value); else { VRENAME=null; renderWork(); } } });
-$("#wviews").addEventListener("keydown",e=>{ if(e.target.id==="vrename"){ if(e.key==="Enter"){ e.preventDefault(); renameView(VRENAME,e.target.value); } if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); const n=VRENAME; VRENAME=null; renderWork(); $(`#wviews [data-vmenu="${CSS.escape(n)}"]`)?.focus(); } }
-  if(e.target.closest("#vmoreMenu")&&e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); $("#vmoreMenu").classList.remove("on"); $("#vmore").focus(); } });
+$("#wviews").addEventListener("keydown",e=>{ if(e.target.id==="vrename"){ if(e.key==="Enter"){ e.preventDefault(); renameView(VRENAME,e.target.value); } if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); const n=VRENAME; VRENAME=null; renderWork(); $(`#wviews [data-vmenu="${CSS.escape(n)}"]`)?.focus(); } } });
 $("#wapplied").addEventListener("click",e=>{ if(e.target.id==="updView") updateView(); });
-window.addEventListener("resize",()=>{ if(shared.VIEW==="work") renderViewChips(); });
+window.addEventListener("resize",()=>{ if(shared.VIEW==="work") renderViewBar(); });
 }
 /* ===== Person rows (BL-68) ===== */
 /* A person's open work is the Work lists' own rows: rows(), cell() and orderedCols() with the item type, so a change
@@ -1120,7 +1078,7 @@ export function allCell(k,x){ let h;
 /* opening: the row's own table, never the tab */
 /* no Board here */
 /* no bulk bar */
-export function allDecorate(){ const on=shared.WT==="all"; $("#wlay").hidden=on; $("#newBtn").hidden=on; if(!on) return;
+export function allDecorate(){ const on=shared.WT==="all"; $("#wlay").hidden=on; if(!on) return;
   $$("#workTbl tr[data-row]").forEach(tr=>{ tr.dataset.k=kOfId(tr.dataset.row)||""; });
   const c=$("#workCrumb [aria-current]"); if(c&&!$("#workCrumb").hidden) c.textContent="All items";
   putHTML($("#whintList"),html`${raw(workHint("list").replace(/ · click a value to change it/,""))} · read-only: change an item on its own tab`); }
@@ -1166,9 +1124,10 @@ export function peopleTabs(){ const L=PERS().filter(x=>!isHiddenPerson(x.name)).
   return {work:L.filter(x=>has(x)||isMe(x.name)),none:L.filter(x=>!has(x)&&!isMe(x.name))}; }
 export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none", f=PSORTS[shared.PSORT.col]||PSORTS.name;
   const L=T[shared.PTAB].sort((a,b)=>(!none&&(isMe(a.name)?-1:isMe(b.name)?1:0))||(()=>{ const x=f(a),y=f(b); return (x<y?-1:x>y?1:0)*(shared.PSORT.dir==="asc"?1:-1); })()||a.name.localeCompare(b.name));
-  if(!$("#ptabs")) addHTML($("#peopleTbl"),"beforebegin",html`<div class="tabs" role="tablist" id="ptabs" aria-label="People" style="margin-bottom:12px"></div>`);
-  putHTML($("#ptabs"),raw([["work","With work"],["none","Nothing assigned"]].map(([k,l])=>`<button role="tab" data-ptab="${k}" aria-selected="${shared.PTAB===k}" aria-controls="peopleTbl">${l} <span class="sub">${T[k].length}</span></button>`).join("")));
-  const th=(c,l,num)=>`<th class="${num?"num":""}" data-psort="${c}" role="button" tabindex="0" aria-sort="${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?"ascending":"descending"):"none"}">${l}${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?" ▲":" ▼"):""}</th>`;
+  if(!$("#ptabsHost")) addHTML($("#peopleTbl"),"beforebegin",html`<div class="tabhost" id="ptabsHost"></div>`);   /* BL-316: the Tabs block */
+  drawTabs($("#ptabsHost"),{items:[["work","With work"],["none","Nothing assigned"]].map(([k,l])=>({id:k,label:l,count:T[k].length,data:{ptab:k}})),selected:shared.PTAB,
+    onSelect:k=>{ if(k===shared.PTAB) return; setPTab(k); renderPeople(); navWrite(false); },label:"People",className:"tabs",id:"ptabs",controls:"peopleTbl",wrap:true});
+  const th=(c,l,num)=>`<th class="${num?"num":""}" data-psort="${c}" aria-sort="${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?"ascending":"descending"):"none"}"><button type="button" class="thsort">${l}${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?" ▲":" ▼"):""}</button></th>`;   /* v1.9.5 (UI audit P1-7): aria-sort stays on the column header; the control is a real button inside it */
   const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
   $("#peopleTbl").setAttribute("role","tabpanel");
@@ -1194,6 +1153,5 @@ export function personCounts(x){ const nm=isMe(x.name)?"you":x.name, late=latesO
 /* ===== end BL-138 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootWork0150(){
-document.addEventListener("click",e=>{ const b=e.target.closest("[data-ptab]"); if(!b||shared.VIEW!=="people") return; if(b.dataset.ptab!==shared.PTAB){ setPTab(b.dataset.ptab); renderPeople(); navWrite(false); } $(`#ptabs [data-ptab="${shared.PTAB}"]`)?.focus(); });
-document.addEventListener("keydown",e=>{ const b=e.target.closest&&e.target.closest("[data-ptab]"); if(!b||(e.key!=="ArrowRight"&&e.key!=="ArrowLeft")) return; e.preventDefault(); setPTab(shared.PTAB==="work"?"none":"work"); renderPeople(); navWrite(false); $(`#ptabs [data-ptab="${shared.PTAB}"]`)?.focus(); });
+/* BL-316: People's two tabs are the Tabs block (renderPeople draws them; a click or ← → Home End chooses) */
 }

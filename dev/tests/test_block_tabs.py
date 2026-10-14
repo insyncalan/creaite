@@ -112,5 +112,41 @@ class TabsBlockIds(LiveBrowserCase):
         self.assertIsNone(b.eval("document.querySelector('#fx-tab-b b')"))
 
 
+# BL-316: the props the page's tab lists use: the list's id, a tab's own id, its own panel, a count and data- attributes;
+# wrap-round with `items`.
+MOUNT_MORE = """(()=>{ let box=document.getElementById('tmFix'); if(box) box.remove(); box=document.createElement('div'); box.id='tmFix';
+  document.body.appendChild(box); window.TMSEL=[];
+  const items=[{id:'a',label:'With work',count:3,tabId:'tmA',controls:'tmPanelA',data:{pt:'a'}},
+    {id:'b',label:'Nothing assigned',count:'<i>0</i>',controls:'tmPanelB',data:{pt:'b'}}];
+  const draw=sel=>drawTabs(box,{items,selected:sel,label:'More',className:'tabs',id:'tmList',controls:'tmPanel',wrap:true,
+    onSelect:id=>{ TMSEL.push(id); draw(id); }});
+  draw('a'); })()"""
+
+
+class TabsBlockMore(LiveBrowserCase):
+    shared_server = True
+
+    def setUp(self):
+        super().setUp()
+        self.b.eval(MOUNT_MORE)
+
+    def test_ids_panels_counts_and_data(self):
+        b = self.b
+        self.assertEqual(b.eval("document.querySelector('#tmFix [role=tablist]').id"), "tmList")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#tmList [role=tab]')].map(t=>[t.id,t.getAttribute('aria-controls'),"
+                                "t.dataset.pt,t.textContent,t.querySelector('span.sub').textContent])"),
+                         [["tmA", "tmPanelA", "a", "With work 3", "3"], ["", "tmPanelB", "b", "Nothing assigned <i>0</i>", "<i>0</i>"]])
+        self.assertIsNone(b.eval("document.querySelector('#tmList i')"))           # the count is text too
+
+    def test_wrap_round_with_items(self):
+        b = self.b
+        b.eval("document.querySelector('#tmA').focus()")
+        b.key("ArrowLeft")
+        b.wait("document.activeElement && document.activeElement.dataset.pt==='b'")
+        b.key("ArrowRight")
+        b.wait("document.activeElement.id==='tmA'")
+        self.assertEqual(b.eval("TMSEL"), ["b", "a"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -239,10 +239,10 @@ class ReviewProjectBrowserTests(LiveBrowserCase):
         row = self.row_of("Send the joint plan")
         self.b.click(row + " td.title")                                    # the row's buttons show on the cursor row
         self.b.click(row + ' [data-act="pj"]')
-        self.b.wait('!!document.querySelector(".pkpop [role=menu]")')
-        self.assertEqual(self.b.eval('document.querySelector(".pkpop .pkopt[aria-disabled=true]").textContent.trim()'),
+        self.b.wait('!!document.querySelector("#rvMoveTo[role=menu]")')                 # BL-316: the Menu block's menu
+        self.assertEqual(self.b.eval('document.querySelector("#rvMoveTo [role=menuitem][aria-disabled=true]").textContent.trim()'),
                          "Example ProgrammeIts project now")
-        self.b.eval('[...document.querySelectorAll(".pkpop .pkopt")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
+        self.b.eval('[...document.querySelectorAll("#rvMoveTo [role=menuitem]")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
         self.b.wait('/Moved to Growth Hub/.test(document.getElementById("snackT").textContent)')
         it = next(i for i in self.data()["items"] if i["n"] == 1)
         self.assertEqual((it["values"]["project"], it["values"]["milestone"], it["decision"]), ("GHI", None, "pending"))
@@ -260,8 +260,8 @@ class ReviewProjectBrowserTests(LiveBrowserCase):
         row = '#reviewBody tr.mparent'
         self.b.click(row + " td.title")
         self.b.click(row + ' [data-act="pj"]')
-        self.b.wait('!!document.querySelector(".pkpop [role=menu]")')
-        self.b.eval('[...document.querySelectorAll(".pkpop .pkopt")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
+        self.b.wait('!!document.querySelector("#rvMoveTo[role=menu]")')
+        self.b.eval('[...document.querySelectorAll("#rvMoveTo [role=menuitem]")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
         self.b.wait('!!document.querySelector(".pkpop.rvmv")')
         self.assertEqual(self.b.eval('document.querySelector(".rvmv-h").textContent'), "Move 2 items from Example Programme to Growth Hub")
         self.assertIn(self.a_id, self.b.eval('document.querySelector(".pkpop.rvmv").textContent'))

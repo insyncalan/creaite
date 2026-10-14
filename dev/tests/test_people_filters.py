@@ -62,7 +62,7 @@ class PeopleFilters(LiveBrowserCase):
         self.assertIn("Showing 7 of 8 people", count)
         self.assertIn("1 removed hidden", count)
         self.assertIsNone(b.eval("document.getElementById('pmClearF')"))           # nothing beyond the default
-        self.assertIsNone(b.eval("document.querySelector('#pmFBtn .dot')"))
+        self.assertIsNone(b.eval("document.querySelector('#pmFBtn .fcount')"))
         self.assertEqual(b.eval("document.getElementById('pmFBtn').getAttribute('aria-label')"), "Filter people")
         b.click("#pmCount [data-pfquick=showrem]")
         self.assertIn("Hannah Brooks", self.rows())
@@ -73,10 +73,10 @@ class PeopleFilters(LiveBrowserCase):
         b.click("#pmApplied [data-pfclr=rem]")
         self.assertEqual(b.eval("PF.rem"), "show")
         b.eval("pfOpen('rem')")
-        b.click("#pmFMenu [data-pfrem=only]")
+        b.click("#pmFMenu input[data-fk=rem][value=only]")
         self.assertEqual(self.rows(), ["Hannah Brooks"])
         self.assertIn("Removed only", b.eval("document.getElementById('pmApplied').textContent"))
-        self.assertEqual(b.eval("document.querySelector('#pmFBtn .dot').textContent"), "1")
+        self.assertEqual(b.eval("document.querySelector('#pmFBtn .fcount').textContent"), "1")
 
     def test_vip_is_never_labelled(self):
         b = self.b
@@ -94,15 +94,15 @@ class PeopleFilters(LiveBrowserCase):
     def test_only_existing_fields_and_choices_are_offered_with_counts(self):
         b = self.b
         b.eval("pfOpen('org')")
-        fields = b.eval("[...document.querySelectorAll('#pmFMenu [data-pfk]')].map(x=>x.dataset.pfk)")
+        fields = b.eval("[...document.querySelectorAll('#pmFMenu [data-fpk]')].map(x=>x.dataset.fpk)")
         self.assertEqual(fields, ["proj", "inv", "org", "vip", "reg", "att", "rem"])
         self.assertEqual(b.eval("[...document.querySelectorAll('#pmFMenu .fsec2')].map(x=>x.textContent)"), ["Who", "Tidy up"])
         opts = b.eval("[...document.querySelectorAll('#pmFMenu .fpopts label')].map(l=>[l.firstChild.nextSibling.textContent,l.querySelector('small').textContent])")
         self.assertEqual(opts, [["Brightwater", "1"], ["Northgate Energy", "2"], ["Orbit Retail", "1"], ["No organisation", "3"]])
-        self.assertEqual(b.eval("document.activeElement.dataset.pfv"), "Brightwater")      # focus lands on the first choice
+        self.assertEqual(b.eval("document.activeElement.querySelector('input').value"), "Brightwater")      # focus lands on the first choice
         # with nobody removed, following nobody and everyone in the register, those fields are not offered
         b.eval("REG.forEach(p=>{ p.hidden=false; p.extra={}; }); A.splice(A.findIndex(a=>a.o==='Tom'),1); R.splice(R.findIndex(r=>r.o==='Chris Doyle'),1); pfDraw()")
-        fields = b.eval("[...document.querySelectorAll('#pmFMenu [data-pfk]')].map(x=>x.dataset.pfk)")
+        fields = b.eval("[...document.querySelectorAll('#pmFMenu [data-fpk]')].map(x=>x.dataset.fpk)")
         self.assertEqual(fields, ["proj", "inv", "org", "att"])
         self.assertEqual(b.eval("[...document.querySelectorAll('#pmApplied .fchip')].length"), 0)     # no Removed: hidden chip either
 
@@ -133,7 +133,7 @@ class PeopleFilters(LiveBrowserCase):
     def test_is_not_and_combining_fields(self):
         b = self.b
         b.eval("pfOpen('proj')")
-        b.click("#pmFMenu [data-pfv=ABC]")
+        b.click("#pmFMenu input[data-fk=proj][value=ABC]")
         b.click("#pmFMenu [data-neg='1']")
         self.assertEqual(self.rows(), ["Chris Doyle", "Mei Tan", "Tom"])
         chip = b.eval("[...document.querySelectorAll('#pmApplied .fchip')].map(c=>[c.className,c.textContent])")
@@ -194,13 +194,13 @@ class PeopleFilters(LiveBrowserCase):
         b.key("F")
         b.wait("document.getElementById('pmFMenu').classList.contains('on')")
         self.assertEqual(b.eval("document.getElementById('pmFBtn').getAttribute('aria-expanded')"), "true")
-        b.eval("document.querySelector('#pmFMenu [data-pfk]').focus()")
+        b.eval("document.querySelector('#pmFMenu [data-fpk]').focus()")
         b.key("ArrowDown")
-        self.assertEqual(b.eval("document.activeElement.dataset.pfk"), "inv")
+        self.assertEqual(b.eval("document.activeElement.dataset.fpk"), "inv")
         b.key("ArrowRight")
-        self.assertEqual(b.eval("document.activeElement.dataset.pfv"), "own")
+        self.assertEqual(b.eval("document.activeElement.querySelector('input').value"), "own")
         b.key("ArrowLeft")
-        self.assertEqual(b.eval("document.activeElement.dataset.pfk"), "inv")
+        self.assertEqual(b.eval("document.activeElement.dataset.fpk"), "inv")
         b.key("Escape")
         self.assertFalse(b.eval("document.getElementById('pmFMenu').classList.contains('on')"))
         self.assertEqual(b.eval("document.activeElement.id"), "pmFBtn")

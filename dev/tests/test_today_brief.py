@@ -80,7 +80,7 @@ class IntakeNameTests(PageTests):
 
 
 class IntakeSectionsTests(PageTests):
-    """BL-73: Calendar Import, Upload Files and Quick Capture are three separate framed sections, in that order."""
+    """BL-73: Calendar import, Upload files and Quick capture are three separate framed sections, in that order."""
 
     def test_three_sections_in_order_each_with_its_own_heading_purpose_and_buttons(self):
         o = self.probe("""
@@ -92,9 +92,9 @@ class IntakeSectionsTests(PageTests):
             widths:rects.map(r=>Math.round(r.width)),
             where:{drop:within(secs[1],"#inboxDrop"),table:within(secs[1],"#inboxTbl"),mtg:within(secs[0],"#mtgSec"),qc:within(secs[2],"#qcNotes")},
             h1s:[...document.querySelectorAll("#v-inbox h1, #v-inbox h2")].map(h=>h.textContent)};""")
-        self.assertEqual([i["h"] for i in o["info"]], ["Calendar Import", "Upload Files", "Quick Capture"])
+        self.assertEqual([i["h"] for i in o["info"]], ["Calendar import", "Upload files", "Quick capture"])
         self.assertEqual([i["id"] for i in o["info"]], ["isecCal", "isecUp", "isecQuick"])
-        self.assertTrue(all(i["icon"] and i["labelled"] for i in o["info"]))
+        self.assertTrue(all(i["labelled"] and not i["icon"] for i in o["info"]))   # BL-325: a plain sentence-case h2, as Settings, no icon
         self.assertEqual([i["purpose"] for i in o["info"]], [
             "Pick meetings from your calendar and load their transcripts.", "Drop transcripts or minutes you already have.",
             "Type rough notes from a call or conversation that has no transcript."])
@@ -102,7 +102,7 @@ class IntakeSectionsTests(PageTests):
         self.assertEqual(cal, ["mtgRefresh", "mtgNew", "mtgTx", "mtgLoad", "mtgGo"])   # Refresh, Select new, Select with transcripts, Load into inbox, Process selected (BL-119: one process button)
         self.assertIn("inboxNew", up)
         self.assertIn("inboxGo", up)
-        self.assertEqual({"qcGo", "qcCancel"} <= set(quick), True)                       # Quick Capture's Process and Clear
+        self.assertEqual({"qcGo", "qcCancel"} <= set(quick), True)                       # Quick capture's Process and Clear
         self.assertEqual(o["where"], {"drop": True, "table": True, "mtg": True, "qc": True})
         self.assertTrue(o["stacked"])                                                    # nothing side by side
         self.assertTrue(all(g >= 24 for g in o["gaps"]), o["gaps"])                      # a visible gap between panels
@@ -484,8 +484,8 @@ class TodayBriefTests(PageTests):
           setRev([]); REMINDERS.push({id:"weekly:2026-10-09",text:"Weekly report for week ending 09-10-2026 is due",cmd:"weekly report for week ending 09-10-2026"},
             {id:"client:ABC:2026-09-01",text:"ABC client report is due (last: 01-09-2026)",cmd:"client report ABC"});
           go("today"); renderToday(); const rem=[...document.querySelectorAll("#attnList .rem")], first=rem[0];
-          first.querySelector(".dots").click(); const open=first.querySelector(".dmenu").classList.contains("on");
-          window.OUT={n:rem.length,titles:rem.map(r=>r.querySelector("a.t").textContent),open,menu:[...first.querySelectorAll(".dmenu button")].map(b=>[b.textContent,b.disabled]),
+          first.querySelector(".dots").click(); const open=!!document.querySelector("#remMenu[role=menu]")&&first.querySelector(".dots").getAttribute("aria-expanded")==="true";
+          window.OUT={n:rem.length,titles:rem.map(r=>r.querySelector("a.t").textContent),open,menu:[...document.querySelectorAll("#remMenu [role=menuitem]")].map(b=>[b.textContent,b.getAttribute("aria-disabled")==="true"]),
             old:!!document.getElementById("notes"), links:rem.map(r=>r.querySelector("a.t").dataset.cock||r.querySelector("a.t").dataset.go), label:first.querySelector(".dots").getAttribute("aria-label")};""")
         self.assertEqual(o["n"], 2)
         self.assertEqual(o["menu"][0][0], "Run report now")
@@ -608,24 +608,28 @@ class HeaderTests(PageTests):
 
 
 class TodayHeadingTests(PageTests):
-    """BL-79: the six section headings on Today (five, and BL-210's Decisions needed) are bold in every theme and mode, and keep their size and letter-spacing."""
+    """BL-325 (Alan, 14-10-2026; was BL-79's bold 13px capitals): the six section headings on Today (five, and BL-210's Decisions
+    needed) are the one shared section heading, in every theme and mode: sentence case, the size, weight, face and spacing any
+    h2 has in that theme (as Settings' and Intake's), on one line, with the count beside them light."""
 
-    def test_the_headings_are_bold_in_every_theme_and_mode(self):
+    def test_the_headings_are_the_shared_h2_in_every_theme_and_mode(self):
         o = self.probe("""
-          const out={}; go("today");
+          const out={}; go("today"); const ref=document.createElement("h2"); ref.textContent="Reference"; document.body.append(ref);
+          const sig=c=>[c.fontWeight, c.fontSize, c.fontFamily, c.letterSpacing, c.textTransform];
           for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme();
-            out[pal+"|"+mode]=[...document.querySelectorAll("#tBrief .tsec:not(.setupsec) .th")].map(h=>{ const c=getComputedStyle(h), n=h.querySelector(".cnt"), cc=n?getComputedStyle(n):null;
-              return [c.fontWeight, c.fontSize, c.letterSpacing, c.textTransform, cc&&cc.fontWeight, h.getBoundingClientRect().height]; }); }
-          window.OUT={out};""")
+            out[pal+"|"+mode]={ref:sig(getComputedStyle(ref)),rows:[...document.querySelectorAll("#tBrief .tsec:not(.setupsec) h2.th")].map(h=>{
+              const n=h.querySelector(".cnt"), cc=n?getComputedStyle(n):null;
+              return [sig(getComputedStyle(h)), cc&&cc.fontWeight, h.getBoundingClientRect().height, h.firstChild.textContent.trim()]; })}; }
+          ref.remove(); window.OUT={out};""")
         self.assertEqual(len(o["out"]), theme_count() * 2)                       # every theme × 2 modes
-        for key, rows in o["out"].items():
-            self.assertEqual(len(rows), 10, key)                                      # BL-319's To decide, BL-295's First thing, BL-125 A's You owe and Waiting on (hidden when empty)
-            for weight, size, spacing, transform, count, height in rows:
-                self.assertEqual(weight, "700", key)
-                self.assertEqual((size, transform), ("13px", "uppercase"), key)           # size and capitals as BL-72 set them
-                self.assertEqual(spacing, "0.78px", key)                                   # .06em of 13px, whatever the theme says
+        for key, v in o["out"].items():
+            self.assertEqual(len(v["rows"]), 8, key)                                   # BL-319's To decide and BL-295's First thing added (BL-125 A's You owe and Waiting on are h3)
+            for sig, count, height, text in v["rows"]:
+                self.assertEqual(sig, v["ref"], key)                                       # exactly the shared h2
+                self.assertEqual(sig[4], "none", key)                                      # no capitals
+                self.assertEqual(text[:1] + text[1:].lower(), text, key)                  # sentence case in the words themselves
                 self.assertIn(count, (None, "400"), key)                                   # the count beside it stays light
-                self.assertLess(height, 24, key)                                           # a bold heading doesn't wrap onto a second line
+                self.assertLess(height, 30, key)                                           # one line
 
 
 class EditGroundTests(PageTests):

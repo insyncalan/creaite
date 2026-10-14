@@ -21,7 +21,7 @@ Commands:
   calendar-window          the days the calendar should cover, as JSON: from the start of settings.json
                            inbox.meetings_from ("monday" = Monday of this week, or a number of days back) to 7 days ahead
   transcripts todo|record <facts.json>|show
-                           BL-42 phase 3: which meetings in the Calendar Import window to look up for a transcript, and keep what
+                           BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
                            was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py
   vip addresses|record <found.json> [--found sweep|start-up|check]|seen <id…>|--all|list
                            VIPs (BL-99): the addresses to check, recording alerts in system/staging/vip.json (from a

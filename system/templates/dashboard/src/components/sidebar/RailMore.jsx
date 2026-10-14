@@ -2,24 +2,22 @@
 /* RailMore (BL-319 part 6): More, at the bottom of the sidebar, out of the eye line. It opens upwards (sideways when the
    sidebar is collapsed) on the pages kept there (Intake, Files, Activity, Settings by default), then Customise
    sidebar… at its foot. Its badge adds up what the pages inside have waiting, and its name says which ("More: Intake
-   has 2 waiting"). A menu (dev/COMPONENTS.md's Menu): aria-haspopup and aria-expanded on the button; ↑ ↓ Home End move,
-   Enter or Space opens, Esc closes and puts focus back on More, Tab or a click away closes. Hidden when More is empty.
+   has 2 waiting"). A menu (dev/COMPONENTS.md's Menu): aria-haspopup and aria-expanded on the button; the box is the Menu
+   block's MenuPanel (BL-316): ↑ ↓ Home End move, Enter or Space opens, Esc closes and puts focus back on More, Tab or a
+   click away closes. Hidden when More is empty.
    Its items stay in the page while it is closed, so their badges (#inboxBadge …) are always there. */
 import { effect } from "@preact/signals";
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { railCfg, railCollapsed, railMoreOpen, railMoreWaiting } from "../../stores/rail.js";
+import { MenuPanel } from "../Menu.jsx";
 import { RailButton } from "./RailButton.jsx";
 import { RailIcon } from "./RailIcon.jsx";
 
 /** @typedef {{onGo: (id: string) => void, onCustomise: (opener: HTMLElement) => void}} RailMoreProps */
 
-/** @param {HTMLElement | null} menu */
-const railMenuItems = menu => /** @type {HTMLButtonElement[]} */ ([...(menu ? menu.querySelectorAll("[role=menuitem]") : [])]);
-
 /** @param {RailMoreProps} props */
 export function RailMore({ onGo, onCustomise }) {
   const btn = useRef(/** @type {HTMLButtonElement | null} */ (null));
-  const menu = useRef(/** @type {HTMLDivElement | null} */ (null));
   const [at, setAt] = useState(/** @type {Record<string, string>} */ ({}));
   const open = railMoreOpen.value, collapsed = railCollapsed.value, more = railCfg.value.more;
   const bd = useRef(/** @type {HTMLSpanElement | null} */ (null));
@@ -41,25 +39,9 @@ export function RailMore({ onGo, onCustomise }) {
     const r = btn.current.getBoundingClientRect(), rail = btn.current.closest(".rail")?.getBoundingClientRect() || r;
     setAt(collapsed ? { left: `${rail.right + 8}px`, bottom: `${Math.max(8, innerHeight - r.bottom)}px` }
       : { left: `${r.left}px`, bottom: `${Math.max(8, innerHeight - r.top + 6)}px` });
-    railMenuItems(menu.current)[0]?.focus();
   }, [open, collapsed]);
-  useEffect(() => {
-    if (!open) return;
-    /** @param {PointerEvent} e */
-    const away = e => { const t = /** @type {Element} */ (e.target); if (!menu.current?.contains(t) && !btn.current?.contains(t)) close(false); };
-    document.addEventListener("pointerdown", away, true);
-    return () => document.removeEventListener("pointerdown", away, true);
-  }, [open]);
   if (!more.length) return null;
 
-  /** @param {KeyboardEvent} e */
-  const keys = e => {
-    const L = railMenuItems(menu.current), i = L.indexOf(/** @type {HTMLButtonElement} */ (document.activeElement));
-    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(true); }
-    else if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); L[(i + (e.key === "ArrowDown" ? 1 : -1) + L.length) % L.length]?.focus(); }
-    else if (e.key === "Home" || e.key === "End") { e.preventDefault(); (e.key === "Home" ? L[0] : L[L.length - 1])?.focus(); }
-    else if (e.key === "Tab") close(false);
-  };
   /** @param {string} id */
   const go = id => { close(false); onGo(id); };
   return (
@@ -72,7 +54,7 @@ export function RailMore({ onGo, onCustomise }) {
         <span class="rl">More</span>
         <span class="badge" id="railMoreBadge" ref={bd} style="display:none" aria-hidden="true"></span>
       </button>
-      <div id="railMoreMenu" role="menu" aria-label="More" ref={menu} hidden={!open} style={at} onKeyDown={keys}>
+      <MenuPanel bare id="railMoreMenu" label="More" hidden={!open} style={at} anchor={btn.current} onClose={how => close(how === "esc")}>
         {more.map(id => <RailButton key={id} id={id} inMenu onGo={go} />)}
         <div role="separator" class="railsep"></div>
         <button type="button" class="nv" role="menuitem" id="railCustBtn" aria-haspopup="dialog"
@@ -80,7 +62,7 @@ export function RailMore({ onGo, onCustomise }) {
           <RailIcon name="sliders" />
           <span class="rl">Customise sidebar…</span>
         </button>
-      </div>
+      </MenuPanel>
     </div>
   );
 }

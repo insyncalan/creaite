@@ -3,6 +3,8 @@
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0011-vault-access-step-4b-file-system-access.js, 0012-live-server-step-4c.js, 0013-bl-253-sprint-live-updates.js, 0014-after-bl-253.js, 0015-bl-266-fix-backup-names.js, 0016-after-bl-266.js, 0017-bl-232-fix-as-proposed-capture-edits-eve.js, 0018-after-bl-232.js, 0019-live-apply-undo-snackbar.js, 0020-bl-215-sprint-ui-audit.js, 0021-after-bl-215.js, 0141-chat-and-sweep-the-open-page-refreshes-i.js, 0142-bl-253-sprint-live-updates.js, 0152-debug-log-bl-102-part-2.js */
 import { renderActivity } from "../activity.js";
+import { drawStatusDot } from "../components/StatusDot.jsx";
+import { drawToast } from "../components/Toast.jsx";
 import { openChat, reattach, say } from "../ask.js";
 import { A, DEC, FILES, P, R, REMINDERS, REV } from "./data.js";
 import { $, $$, addHTML, esc, html, putHTML, raw } from "./dom.js";
@@ -15,7 +17,7 @@ import { refreshFiles } from "../files.js";
 import { inboxBadge, renderInbox } from "../intake.js";
 import { qcFill, renderMeeting } from "../meetings.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
-import { drawPanel, errBanner, MD_IMG, pkDots, pkReconcile, pkStageDraw } from "../panel.js";
+import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
 import { renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
@@ -188,51 +190,34 @@ export async function setRhythm(code,val){ if(!await needVault()) return false;
     await shared.VW.append("system/config/settings-log.jsonl",JSON.stringify({at:stampFull(),key:`client_report_rhythm.${code}`,old:m[2],new:val.toLowerCase()})+"\n"); }); return true;
   }catch(e){ snack("Not saved: "+e.message); return false; } }
 
-/* ======================= live, apply, undo, snackbar ======================= */
+/* ======================= live, apply, undo, the toast ======================= */
 shared.LIVE=!!D.live; shared.HELD=[]; shared.DATA_AT=D.data_at||"";
-export let ST=null; shared.UNDO=null;
-export let snack = function(msg,undo,label){ $("#snackT").textContent=msg; shared.UNDO=undo||null; $("#snackU").textContent=label||"Undo"; $("#snackU").style.display=undo?"":"none"; $("#snack").classList.add("on"); clearTimeout(ST); ST=setTimeout(()=>$("#snack").classList.remove("on"),undo?6000:3000);
-  snkStart(); const s=$("#snack"); s.classList.remove("mtimer"); if(undo){ void s.offsetWidth; s.classList.add("mtimer"); } };
-/* BL-231: what this block did at load, run in today's order by src/main.js (piece 0019's place) */
-export function bootSnackUndo(){
-$("#snackU").onclick=()=>{ if(shared.UNDO) shared.UNDO(); $("#snack").classList.remove("on"); };
-}
-/* ===== BL-215 (sprint-ui-audit) ===== the message stays long enough and waits while you are on it: one with Undo 10 seconds, a plain
-   one 5; the pointer over it or focus inside it holds it, and leaving starts the full time again; Esc hides it (at once when you are on
-   it, otherwise when Esc has nothing else to close); focus that was in it goes back where it came from. ⌘Z (Ctrl+Z) in Work undoes the
-   last change, as Review's does, when focus isn't in a text field. */
-export const SNACK_UNDO_MS=10000, SNACK_MS=5000;
-export let SNKOVER=false, SNKIN=false, SNKFROM=null;
-export const snkEl=()=>document.getElementById("snack"), snkOn=()=>snkEl().classList.contains("on"), snkHasUndo=()=>$("#snackU").style.display!=="none";
-export function snkBar(){ const s=snkEl(); if(!s.classList.contains("mtimer")&&!snkHasUndo()) return; s.classList.remove("mtimer"); if(snkHasUndo()){ void s.offsetWidth; s.classList.add("mtimer"); } }
-export function snkStart(){ clearTimeout(ST); const held=SNKOVER||SNKIN; snkEl().classList.toggle("held",held); if(held||!snkOn()) return;
-  ST=setTimeout(()=>{ const e=snkEl(); if(e.contains(document.activeElement)||e.matches(":hover")){ SNKIN=e.contains(document.activeElement); SNKOVER=e.matches(":hover"); snkStart(); } else snkHide(); },
-    snkHasUndo()?SNACK_UNDO_MS:SNACK_MS); }   /* checked again when it fires, in case a focus or pointer event was missed */
-export function snkHide(){ const s=snkEl(), inside=s.contains(document.activeElement); clearTimeout(ST); s.classList.remove("on","held"); SNKOVER=false; SNKIN=false;
-  if(inside){ const b=SNKFROM; SNKFROM=null; if(b&&b.isConnected&&b!==document.body) b.focus({preventScroll:true}); else document.activeElement.blur(); } }
-export const SNK_LAYERS="dialog[open],#panel.on,#chat.on,.ddmenu.on,.dmenu.on,.combo.open,#mvPeek:not([hidden]),.cal";
-/* ===== end BL-215 ===== */
-/* BL-231: what this block did at load, run in today's order by src/main.js (piece 0020's place) */
-export function bootSnackKeys(){
-{ const s=snkEl();
-  s.addEventListener("mouseenter",()=>{ SNKOVER=true; snkStart(); });
-  s.addEventListener("mouseleave",()=>{ SNKOVER=false; snkStart(); if(!SNKIN) snkBar(); });
-  s.addEventListener("focusin",e=>{ if(!SNKIN&&e.relatedTarget&&!s.contains(e.relatedTarget)) SNKFROM=e.relatedTarget; SNKIN=true; snkStart(); });
-  s.addEventListener("focusout",e=>{ if(e.relatedTarget&&s.contains(e.relatedTarget)) return; SNKIN=false; snkStart(); if(!SNKOVER) snkBar(); });
-  $("#snackU").addEventListener("click",()=>snkHide()); }
-document.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!snkOn()) return;
-  if(SNKIN||SNKOVER){ e.preventDefault(); e.stopImmediatePropagation(); snkHide(); return; }
-  if(!document.querySelector(SNK_LAYERS)) snkHide(); },true);
+shared.UNDO=null;
+/* BL-316: the message at the foot of the page is the Toast building block (components/Toast.jsx), which keeps BL-215's rules:
+   one with Undo stays 10 seconds, a plain one 5; the pointer over it or focus inside it holds it, and leaving starts the full
+   time again; Esc hides it (at once when you are on it, otherwise when Esc has nothing else to close); focus that was in it goes
+   back where it came from. snack(msg, undo, label) stays the call (and the seam tests replace); it draws the block, at once. */
+const TOAST={open:false,text:"",action:"",run:0};
+function drawPageToast(){ const host=document.getElementById("toastHost"); if(!host) return;
+  drawToast(host,{...TOAST,onAction:()=>{ if(shared.UNDO) shared.UNDO(); },onHide:hideSnack}); }
+export let snack = function(msg,undo,label){ shared.UNDO=undo||null;
+  Object.assign(TOAST,{open:true,text:msg,action:undo?(label||"Undo"):"",run:TOAST.run+1}); drawPageToast(); };
+/** Hide the message (its time is up, Esc, its action, ⌘Z). */
+export function hideSnack(){ if(!TOAST.open) return; TOAST.open=false; drawPageToast(); }
+/* BL-231: what this block did at load, run in today's order by src/main.js (pieces 0019 and 0020's place). ⌘Z (Ctrl+Z) in Work
+   undoes the last change, as Review's does, when focus isn't in a text field (BL-215). */
+export function bootToast(){
+drawPageToast();
 document.addEventListener("keydown",e=>{ if(shared.VIEW!=="work"||!(e.metaKey||e.ctrlKey)||e.shiftKey||e.altKey||e.key.toLowerCase()!=="z") return;
   if(typing()||(e.target.closest&&e.target.closest("dialog,.ddmenu,#chat"))) return;
-  e.preventDefault(); if(!shared.UNDO){ snack("Nothing to undo"); return; } const u=shared.UNDO; shared.UNDO=null; snkHide(); u(); });
+  e.preventDefault(); if(!shared.UNDO){ snack("Nothing to undo"); return; } const u=shared.UNDO; shared.UNDO=null; hideSnack(); u(); });
 }
 export const DIAG={level:"info",days:0,errors:[],last24:0,loaded:false};   /* declared before status, which runs at load */
 export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE==="ok"?"":html`<button class="mini" id="vaultBtn">${shared.VSTATE==="prompt"?"Reconnect vault":shared.VSTATE==="unsupported"?"Read-only: use Chrome":"Connect vault"}</button>`}${shared.HELD.length?html`<span class="pend">${shared.HELD.length} held</span>`:""}`);   /* BL-71: only what needs an action; Live moved to the rail */
   $("#liveAlert").classList.toggle("on",!shared.LIVE); $("#liveAlert").classList.toggle("found",shared.LIVELINK);
   if(ALERT0===null) ALERT0=$("#liveAlert").innerHTML;
   if(!(shared.LIVELINK&&!SERVED)){ if($("#liveAlert").innerHTML!==ALERT0) putHTML($("#liveAlert"),raw(ALERT0)); }
-  else putHTML($("#liveAlert"),html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${S.port}/">open the live dashboard</a> to save and apply directly.`); putHTML($("#chSub"),shared.LIVE?html`<span class="dot"></span>Claude Code on this laptop, working in your vault`:html`<span class="dot off"></span>Live server not running — commands will be copied instead`); 
+  else putHTML($("#liveAlert"),html`<b>The live server is running.</b> This copy of the dashboard is the file version; <a href="http://127.0.0.1:${S.port}/">open the live dashboard</a> to save and apply directly.`); drawStatusDot($("#chSub"),shared.LIVE?{status:"ok",word:"Claude Code on this laptop, working in your vault"}:{status:"off",word:"Live server not running — commands will be copied instead"});   /* BL-316: the StatusDot block */ 
   if(!shared.LOADING) errBanner(); }
 /* BL-86: the installed app. The service worker shows an offline page when the server is stopped; the page says "still here"
    every 10 seconds, so a server the launcher started can stop itself when the last window closes. */
@@ -255,7 +240,7 @@ export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P
     if(cnts) $$("#v-today .th .cnt").forEach(e=>{ const k=e.id||e.parentElement.id; if(cnts.has(k)&&cnts.get(k)!==e.textContent.trim()) hit.push(e); });
     if(hit.length>12) mSay(`${hit.length} values changed`); else hit.forEach(td=>{ td.classList.remove("mflash"); void td.offsetWidth; td.classList.add("mflash"); setTimeout(()=>td.classList.remove("mflash"),1400*mK()+100); });
     P.forEach(p=>{ if(hp.has(p.code)&&hp.get(p.code)!==p.health) $$(`[data-cock="${p.code}"] .health,#v-cockpit .health`).filter(el=>shared.VIEW!=="cockpit"||shared.COCK===p.code).forEach(el=>{ el.classList.add("mhchg"); setTimeout(()=>el.classList.remove("mhchg"),900*mK()+100); }); }); }
-  pkStageDraw(); pkDots();
+  pkStageDraw(); markStagedRows();
   if(shared.MVREADY){ const sig=mvSig(); if(sig!==shared.MV.sig){ shared.MV.sig=sig;
       if(shared.VIEW==="milestones"&&!(document.activeElement&&["mvNote","mvRbWhy","mvAdjWhy"].includes(document.activeElement.id))) renderMilestones();
       if(shared.MV.peek&&!shared.MV.add&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw(); } }   /* BL-245: once the Milestones block has run (a reload with staged peek changes refreshes before it) */

@@ -2,15 +2,13 @@
 /* RejectMenu (BL-315): the one reasons menu, for one row or many. "Reject n because", then the seven reasons on 1 to 7,
    Use each guess (G) and No reason (0); one key rejects with that reason and Esc closes. Opened from the Review bar's
    Reject with a reason (R), a row's ✕ or ▾, the row's or the peek's menu, and a reject's chip ("Rejected · Chatter", to
-   change its reason). A menu (dev/COMPONENTS.md's Menu): role="menu" and menuitem; ↑ ↓ Home End move, Enter or Space
-   picks, Esc closes and puts focus back on what opened it, Tab or a click away closes. Duplicate with no item named asks
+   change its reason). A menu (dev/COMPONENTS.md's Menu): the box is the Menu block's MenuPanel (BL-316), so ↑ ↓ Home End
+   move, Enter or Space picks, Esc closes and puts focus back on what opened it, Tab or a click away closes. Duplicate with no item named asks
    for the item: the look-alikes creaite finds (BL-297's list), an ID typed, or none. Text only through JSX. */
 import { render } from "preact";
-import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { rjCloseMenu, rjMenu, rjReasons } from "../../stores/rejects.js";
-
-/** @param {HTMLElement | null} box */
-const rjMenuItems = box => /** @type {HTMLElement[]} */ ([...(box ? box.querySelectorAll('[role=menuitem]:not([aria-disabled="true"])') : [])]);
+import { menuItemsIn, MenuPanel } from "../Menu.jsx";
 const ID = /^[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}$/;
 
 /** The open menu, from the store; nothing when none is open. */
@@ -30,16 +28,8 @@ export function RejectMenu() {
     const w = el.offsetWidth, h = el.offsetHeight;
     let top = r.bottom + 4; if (top + h > innerHeight - 8) top = Math.max(8, r.top - h - 4);
     el.style.top = `${Math.max(8, Math.min(top, innerHeight - h - 8))}px`; el.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;   /* set here, so it is visible before focus moves */
-    const first = stage === "dup" ? el.querySelector("input") : rjMenuItems(el)[0]; /** @type {HTMLElement | null} */ (first)?.focus({ preventScroll: true });
+    const first = stage === "dup" ? el.querySelector("input") : menuItemsIn(el)[0]; /** @type {HTMLElement | null} */ (first)?.focus({ preventScroll: true });
   }, [m, stage, cands === null]);
-  /* a click away closes */
-  useEffect(() => {
-    if (!m) return;
-    /** @param {PointerEvent} e */
-    const away = e => { const t = /** @type {Node} */ (e.target); if (!box.current?.contains(t) && !(m.anchor && m.anchor.contains(t))) rjCloseMenu(false); };
-    document.addEventListener("pointerdown", away, true);
-    return () => document.removeEventListener("pointerdown", away, true);
-  }, [m]);
   if (!m) return null;
 
   const n = m.rows.length, reasons = rjReasons.value, guessed = m.rows.filter(r => r.guess).length;
@@ -57,16 +47,14 @@ export function RejectMenu() {
   };
   const useTyped = () => { const id = typed.trim().toUpperCase(); if (!ID.test(id)) { setBad("Type an item ID, like ABC-A-009"); return; } pick({ reason: "Duplicate", dup: id }); };
 
-  /** @param {KeyboardEvent} e */
+  /** Its own keys, before the menu's (MenuPanel: ↑ ↓ Home End, Esc, Tab). @param {KeyboardEvent} e */
   const keys = e => {
-    const L = rjMenuItems(box.current), i = L.indexOf(/** @type {HTMLElement} */ (document.activeElement));
     const inField = /** @type {HTMLElement} */ (e.target).tagName === "INPUT";
     const stop = () => { e.preventDefault(); e.stopPropagation(); };
-    if (e.key === "Escape") { stop(); if (stage === "dup") setStage("reasons"); else rjCloseMenu(true); return; }
-    if (e.key === "Tab") { rjCloseMenu(false); return; }
-    if (inField) { if (e.key === "Enter") { stop(); useTyped(); } else if (e.key === "ArrowDown") { stop(); L[0]?.focus(); } else e.stopPropagation(); return; }
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") { stop(); L[(i + (e.key === "ArrowDown" ? 1 : -1) + L.length) % L.length]?.focus(); return; }
-    if (e.key === "Home" || e.key === "End") { stop(); (e.key === "Home" ? L[0] : L[L.length - 1])?.focus(); return; }
+    if (e.key === "Escape") { if (stage === "dup") { stop(); setStage("reasons"); } return; }
+    if (e.key === "Tab") return;
+    if (inField) { if (e.key === "Enter") { stop(); useTyped(); } else if (e.key === "ArrowDown") { stop(); menuItemsIn(box.current)[0]?.focus(); } else e.stopPropagation(); return; }
+    if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (stage === "reasons") {
       if (/^[1-9]$/.test(e.key) && reasons[+e.key - 1]) { stop(); choose(reasons[+e.key - 1]); return; }
@@ -78,7 +66,8 @@ export function RejectMenu() {
 
   const title = m.mode === "reason" ? (n === 1 ? "Rejected because" : `Change the reason for ${n}`) : `Reject ${n === 1 ? "this" : n} because`;
   return (
-    <div class="bmenu rvreason rjmenu" id="rvReason" role="menu" aria-label={stage === "dup" ? "Duplicate of which item?" : title} ref={box} onKeyDown={keys}>
+    <MenuPanel bare cls="rvreason rjmenu" id="rvReason" label={stage === "dup" ? "Duplicate of which item?" : title} boxRef={box}
+      anchor={m.anchor} onClose={how => rjCloseMenu(how === "esc")} onKey={keys} autoFocus={false}>
       {stage === "reasons" ? <>
         <div class="rjh" aria-hidden="true">{title}</div>
         {reasons.map((r, i) => (
@@ -114,7 +103,7 @@ export function RejectMenu() {
         <div class="rjsep" role="separator"></div>
         <button type="button" role="menuitem" data-dupof="" onClick={() => pick({ reason: "Duplicate", dup: null })}><span>Don't name it</span></button>
       </>}
-    </div>
+    </MenuPanel>
   );
 }
 

@@ -2,10 +2,11 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
 import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
-import { MSKEL, mWords } from "./core/motion.js";
+import { mWords } from "./core/motion.js";
 import { go, navBlocked, pLink } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
@@ -23,6 +24,7 @@ import { ownerFinal, peopleCk, PERS, renderSettings, resolvePerson, row, VIPD } 
 import { DC, longDay, pkAdd, plur, tl } from "./today.js";
 import { allViews, applyView, items, itemsMove, loadTab, rows, saveTab } from "./work.js";
 import { openCloseDay } from "./components/closeday/CloseDay.jsx";
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 /* ===== Search (BL-07) ===== */
 /* One search box finds anything in the vault. It runs through the live server (GET /api/search), which understands
    project codes, people, types and dates in the text and returns them as chips; the rest are the search terms.
@@ -61,7 +63,7 @@ export function openFound(r){ const o=r.opens;
 export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing needs the live server"); return; }
   const r=await api("/api/search/preview",{path,q}); if(!r.ok){ snack(r.message===OLDSERVER?OLDSERVER:oneLine(r.message)); return; }
   if(r.empty){ openPath(path); return; }
-  $("#spName").textContent=r.name; putHTML($("#spText"),raw(r.html)); $("#spCut").hidden=!r.cut; $("#searchPrev").dataset.path=path; $("#searchPrev").showModal();
+  $("#spName").textContent=r.name; putHTML($("#spText"),raw(r.html)); $("#spCut").hidden=!r.cut; $("#searchPrev").dataset.path=path; openDialog("searchPrev");
   const m=$("#spText mark"); if(m) m.scrollIntoView({block:"center"}); }
 export function openSearch(q){ go("files"); $("#vsInput").value=q; SRCH.skip=[]; runSearch(); $("#vsInput").focus(); }
 /* ⌘K: a "Search the vault…" row from three characters, with the top five results under the jump list */
@@ -497,15 +499,17 @@ export async function loadChat(chat,quiet,skipRun){ const rec=await api("/api/ch
   if(!rec.ok){ if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
   setChat(rec.chat,rec.session); CHSTARTED=rec.started?{chat:rec.chat,started:rec.started}:null;
   rec.messages.forEach(m=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped) addEl("step stopped","Stopped"); if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
-/* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing */
-export function histClose(){ $("#chHistMenu").classList.remove("on"); $("#chHist").setAttribute("aria-expanded","false"); }
-export async function showHistory(e){ e&&e.stopPropagation(); if($("#chHistMenu").classList.contains("on")){ histClose(); return; } if(shared.BUSY) return; if(!viaServer()){ snack("History needs the live server"); return; } await drawHistory(); }
-export async function drawHistory(){ const M=$("#chHistMenu"); const t=setTimeout(()=>{ putHTML(M,MSKEL); M.classList.add("on"); },150);
-  try{ const res=await api("/api/chats"), L=(res.chats||[]).slice(0,10), M=$("#chHistMenu");
-  putHTML(M,html`<div class="sub" style="padding:4px 10px 6px">Recent chats</div>${L.length?L.map(c=>html`<button role="menuitem" data-chat="${c.chat}" class="${c.chat===shared.ASKCHAT?"cur":""}">${c.title||"Untitled"}${c.chat===shared.ASKCHAT?" · current":""}<small>${fd(c.updated.slice(0,10))} ${c.updated.slice(11,16)} · ${c.count} message${c.count===1?"":"s"}</small></button>`):html`<div class="empty">No earlier chats yet.</div>`}`);
-  M.classList.add("on"); $("#chHist").setAttribute("aria-expanded","true"); M.querySelector("button")?.focus(); }
-  finally{ clearTimeout(t); M.querySelector(".msk")?.remove(); if(M.classList.contains("on")) anim(M,[{opacity:.4,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } }
- 
+/* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing. BL-316: the Menu
+   block's menu (openMenu), opened from #chHist; a slow list shows the skeleton first (motion 15) */
+export function histClose(){ if(menuOpenFor($("#chHist"))) closeMenu(); }
+export async function showHistory(e){ e&&e.stopPropagation(); if(menuOpenFor($("#chHist"))){ histClose(); return; } if(shared.BUSY) return; if(!viaServer()){ snack("History needs the live server"); return; } await drawHistory(); }
+export const histOpen=(items,loading)=>openMenu($("#chHist"),{label:"History",id:"chHistMenu",cls:"chhist",align:"right",loading,items,onPick:c=>{ if(c!==shared.ASKCHAT) loadChat(c); }});
+export async function drawHistory(){ let shown=false; const t=setTimeout(()=>{ shown=true; histOpen([],true); },150);
+  try{ const res=await api("/api/chats"), L=(res.chats||[]).slice(0,10); if(shown&&!menuOpenFor($("#chHist"))) return;   /* closed while it loaded */
+    histOpen([{id:"rc",note:"Recent chats"},...(L.length?L.map(c=>({id:c.chat,name:c.title||"Untitled",mark:c.chat===shared.ASKCHAT?"current":"",cls:c.chat===shared.ASKCHAT?"cur":undefined,
+      line:`${fd(c.updated.slice(0,10))} ${c.updated.slice(11,16)} · ${c.count} message${c.count===1?"":"s"}`,data:{chat:c.chat}})):[{id:"none",note:"No earlier chats yet."}])],false); }
+  finally{ clearTimeout(t); const M=$("#chHistMenu"); if(M) anim(M,[{opacity:.4,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } }
+
 export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "note: …" in ask creaite */
   if(m){ if(!viaServer()){ await say("Quick capture needs the live server."); return; } if(!await captureNote({notes:m[1].trim(),date:TODAY})) await say("Pick the project in Quick capture on the Inbox page, then press Process."); return; }
   if(!viaServer()){ await say(SERVED?"The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
@@ -529,9 +533,6 @@ export async function attachRun(run){ if(run&&run.kind==="search") return reatta
 export function bootAsk0101(){
 $("#chNew").onclick=newChat;
 $("#chHist").onclick=showHistory;
-$("#chHistMenu").addEventListener("click",e=>{ e.stopPropagation(); const b=e.target.closest("[data-chat]"); if(!b) return; histClose(); if(b.dataset.chat!==shared.ASKCHAT) loadChat(b.dataset.chat); });
-$("#chHistMenu").addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); histClose(); $("#chHist").focus(); } });
-document.addEventListener("click",e=>{ if(!e.target.closest("#chHistMenu")) histClose(); });
 }
 /* ===== BL-257 (sprint-ask-flow) ===== messages sent while ask creaite is working are queued. The live server keeps the queue with
    the chat (system/staging/ask/queue/), so a reload or a closed panel keeps it, and starts the next one itself when a run ends; a
@@ -927,9 +928,9 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(!q||"close the day evening end".includes(q.toLowerCase())||/^close( the)? day/i.test(q)) out.splice(!q?Math.max(0,out.findIndex(x=>x.g==="Actions")):0,0,{g:"Actions",l:"Close the day",h:"Today",fn:()=>{ go("today"); openClose(); }});   /* BL-205 */
   return out; }
 export function drawCk(){ let g="",h=""; shared.CK.forEach((it,i)=>{ if(it.g!==g){ g=it.g; h+=`<div class="grp">${g}</div>`; } h+=`<button data-i="${i}" aria-selected="${i===shared.CKI}">${esc(it.l)}<small>${esc(it.h)}</small></button>`; }); putHTML($("#cmdkList"),h?raw(h):html`<div class="grp">No matches.</div>`); $("#cmdkList [aria-selected=true]")?.scrollIntoView({block:"nearest"});
-  { let pv=$("#ckPrev"); if(!pv){ addHTML($("#cmdk"),"beforeend",html`<div id="ckPrev" hidden></div>`); pv=$("#ckPrev"); }
+  { const pv=$("#ckPrev");
     const it=shared.CK[shared.CKI]; pv.hidden=!(it&&it.change); putHTML(pv,it&&it.change?raw(ckPreview(it.change)):""); $("#cmdkList").querySelectorAll("button").forEach((b,i)=>{ if(shared.CK[i]&&shared.CK[i].g.startsWith("Change")) b.classList.add("ckchg"); }); } }
-export function openCk(){ shared.CKPICK={}; $("#cmdkIn").value=""; shared.CK=ckItems(""); shared.CKI=0; drawCk(); $("#cmdk").showModal(); $("#cmdkIn").focus(); }
+export function openCk(){ shared.CKPICK={}; $("#cmdkIn").value=""; shared.CK=ckItems(""); shared.CKI=0; drawCk(); openDialog("cmdk",{focus:"#cmdkIn"}); }
 export function runCk(i){ const it=shared.CK[i]; if(!it) return; if(it.keep){ it.fn(); return; } $("#cmdk").close(); it.fn(); }
  
 export async function setPalette(id){ if(S.palette===id) return; if(!await writeSettings({"dashboard.palette":id})) return; S.palette=id; themeFade(); applyTheme(); if(document.querySelector("#settingsBody [data-k=palette]")) renderSettings(); snack(`Theme: ${id}`); }

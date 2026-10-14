@@ -1,7 +1,7 @@
 // @ts-check
 /* DayMeetings (BL-293): the meetings of the day the band shows, drawn into #dayMeets. A column per meeting: its times, its
    title and project (by name, BL-101), where and who organises it, and what to do about it:
-   - a past day: the follow-up, as Calendar Import works it out: Minutes made, Draft in Review (with Review), Transcript ready
+   - a past day: the follow-up, as Calendar import works it out: Minutes made, Draft in Review (with Review), Transcript ready
      (with Process), or No transcript; a transcript not checked yet offers Check (Alan, 13-10-2026);
    - today and later: one pill that opens the meeting's Prep popup, the accent **Prepare** for a meeting worth preparing for
      (the Week ahead's reason) and **Prep** otherwise; when a prep page exists, BL-287's Open icon and "Prep page made".

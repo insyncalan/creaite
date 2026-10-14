@@ -4,6 +4,7 @@
    boot…() functions that src/main.js calls in today's order. */
 import { actId } from "./activity.js";
 import { step } from "./ask.js";
+import { drawTabs } from "./components/Tabs.jsx";
 import { A, P, peopleAll, pName, R } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, paintIcons, putHTML, raw } from "./core/dom.js";
 import { autoGrow, DATE_HELP, onCmdEnter, srcHTML } from "./core/fields.js";
@@ -65,7 +66,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e
    by shared helpers, so the milestone editor (#mvPeek) and the project panel (openProject: health and its reason) show their own
    history the same way. All three read ACT (build_dashboard.activity, which already holds every table's change_log lines and the
    Current state edits from file_activity) through pkHistory (BL-250 B: ACT plus D.activity_older, so early history and "created"
-   survive a long log): no new data. feedLines maps an item's lines; feedTabsHtml and
+   survive a long log): no new data. feedLines maps an item's lines; feedTabItems (the Tabs building block's tabs, BL-316) and
    feedListHtml draw the tabs and the list. A milestone's feed: Activity is each field change, Updates the reason given with a
    change (the note in the same apply, as Movement reads it), Source its creation and its source line; internal only, so it is not
    shown in Client view. A project's: Activity is health, its reason and the other fields, Updates the Current state edits and
@@ -73,7 +74,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e
 export function feedLines(lines,typeOf,textOf){ return lines.map(a=>{ const ch=String(a.change||a.what||"");
   return {type:typeOf(ch,a),who:a.by,html:`<span class="chg">${esc(textOf?textOf(ch,a):ch)}</span>`,when:a.at,state:a.reverted||a.undone?"undone":PKAPPLIED.has(a.apply_id)?"applied":""}; }); }
 /* function declarations (hoisted): the peek can be drawn before this block runs (BL-176's "if(CUR&&pkOn()) drawPanel()" on load) */
-export function feedTabsHtml(tab,attr,sel){ return PKTABS.map(([v,l])=>`<button type="button" class="pk-tab" role="tab" ${attr}="${v}" aria-selected="${tab===v}" tabindex="${tab===v?0:-1}"${tab===v?` id="${sel}"`:""}>${l}</button>`).join(""); }
+export function feedTabItems(tab,attr,sel){ return PKTABS.map(([v,l])=>({id:v,label:l,tabId:tab===v?sel:undefined,data:{[attr]:v}})); }
 export function feedListHtml(items,tab){ const icn={act:"pencil",upd:"msg",src:"filetext"}, L=items.filter(e=>tab==="all"||e.type===tab);
   return L.length?L.map(e=>`<div class="pk-fe${e.state==="undone"?" undone":""}" data-t="${e.type}"><span class="pk-fi" aria-hidden="true">${ic(icn[e.type]||"pencil")}</span><div><b>${esc(e.who)}</b> ${e.html}${e.when?`<span class="when">· ${esc(fd(e.when))}</span>`:""}${e.state==="staged"?'<span class="pk-pill st">staged</span>':e.state==="applied"?'<span class="pk-pill ap">applied</span>':e.state==="undone"?'<span class="pk-pill un">undone</span>':""}${e.note?`<div class="sub">${esc(e.note)}</div>`:""}</div></div>`).join(""):'<div class="sub">Nothing here yet.</div>'; }
 /* the feed outside the peek: a section with its own tabs (data-fdtab), remembered per host ("ms", "proj") for the session. It draws
@@ -82,10 +83,12 @@ export function feedListHtml(items,tab){ const icn={act:"pencil",upd:"msg",src:"
 export const FDTAB={};
 export function feedBlock(host,items){ const tab=FDTAB[host]||"all", sel="fdTabSel-"+host, has=new Set(items.map(e=>e.type));
   const none=["act","upd","src"].filter(t=>!has.has(t)).map(t=>`<div class="sub fd-none" data-none="${t}">Nothing here yet.</div>`).join("");
-  return `<section class="fd-hist" data-fdhost="${host}" data-tab="${tab}" aria-label="History"><div class="pk-tabs" role="tablist" aria-label="History">${feedTabsHtml(tab,"data-fdtab",sel)}</div><div class="pk-feed" role="tabpanel" aria-labelledby="${sel}">${items.length?feedListHtml(items,"all"):""}${items.length?none:'<div class="sub">Nothing here yet.</div>'}</div></section>`; }
-export function feedTab(s,v){ const host=s.dataset.fdhost, sel="fdTabSel-"+host; FDTAB[host]=v; s.dataset.tab=v;
-  s.querySelectorAll("[data-fdtab]").forEach(b=>{ const on=b.dataset.fdtab===v; b.setAttribute("aria-selected",String(on)); b.tabIndex=on?0:-1; if(on) b.id=sel; else b.removeAttribute("id"); });
-  document.getElementById(sel)?.focus(); }
+  return `<section class="fd-hist" data-fdhost="${host}" data-tab="${tab}" aria-label="History"><div class="tabhost" data-fdtabs></div><div class="pk-feed" role="tabpanel" aria-labelledby="${sel}">${items.length?feedListHtml(items,"all"):""}${items.length?none:'<div class="sub">Nothing here yet.</div>'}</div></section>`; }
+/* BL-316: a feed's tabs are the Tabs building block, drawn into the section's [data-fdtabs] once its HTML is in the page (mountFeedTabs) */
+export function feedTabsDraw(s){ const host=s.dataset.fdhost, tab=FDTAB[host]||"all", box=s.querySelector(":scope>[data-fdtabs]"); if(!box) return;
+  drawTabs(box,{items:feedTabItems(tab,"fdtab","fdTabSel-"+host),selected:tab,onSelect:v=>feedTab(s,v),label:"History",className:"pk-tabs",tabClass:"pk-tab",wrap:true}); }
+export function mountFeedTabs(root){ if(root) root.querySelectorAll("section.fd-hist[data-fdhost]").forEach(feedTabsDraw); }
+export function feedTab(s,v){ FDTAB[s.dataset.fdhost]=v; s.dataset.tab=v; feedTabsDraw(s); }
 export function mvFeedItems(m){ const out=feedLines(pkHistory(m.id),ch=>/^created\b/.test(ch)?"src":/^note:/.test(ch)?"upd":"act",ch=>ch.replace(/^note: /,"reason: "));
   if(m.src) out.push({type:"src",who:"Source",html:`<div class="pk-src">${srcHTML(m.src)}</div>`,when:""});
   return out; }
@@ -99,10 +102,7 @@ export function projFeedItems(code){ const wk=new RegExp(`^(\\d{4}-\\d{2}-\\d{2}
 /* ===== end BL-250 A ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootMilestones0172(){
-document.addEventListener("click",e=>{ const t=e.target.closest&&e.target.closest("[data-fdtab]"); if(t) feedTab(t.closest("[data-fdhost]"),t.dataset.fdtab); });
-document.addEventListener("keydown",e=>{ const t=e.target.closest&&e.target.closest("[data-fdtab]"); if(!t||!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return; e.preventDefault();
-  const s=t.closest("[data-fdhost]"), i=PKTABS.findIndex(x=>x[0]===s.dataset.tab), n=e.key==="Home"?0:e.key==="End"?PKTABS.length-1:(i+(e.key==="ArrowRight"?1:-1)+PKTABS.length)%PKTABS.length;
-  feedTab(s,PKTABS[n][0]); });
+/* BL-316: the feeds' tabs take their own clicks and keys (the Tabs building block) */
 }
 /* ===== BL-174 (sprint-milestones) ===== a page opened before a live server restart says so. The server's token is new at every
    start, so its requests are refused with {stale:true}; any such refusal (an apply, a save, the pulse) shows a banner under the
@@ -419,7 +419,7 @@ export function mvEdDraw(){ const p=mvPeekEl(), code=mvCode(), pn=pName(code);
   /* BL-250 A: its history, internal only */
   h+=`<div class="mv-pksec"><h4>History</h4>${shared.MVAUD==="cli"?'<span class="mv-hint" id="mvHistHid">History is internal: switch to Internal view to see it.</span>':feedBlock("ms",mvFeedItems(m))}</div>`;
   h+=`<div class="mv-pksec"><button type="button" class="mv-btn danger" data-mvpk="cancel">Cancel this milestone</button> <span class="mv-hint">Keeps its history; hides it from every view.</span></div></div>`;
-  putHTML(p,raw(h)); p.hidden=false; sneakMvAttach(p); paintIcons(p); const d=$("#mvDesc"); if(d&&typeof autoGrow==="function") autoGrow(d);   /* BL-322: Sneak peek's sparkle, foot line and box */
+  putHTML(p,raw(h)); mountFeedTabs(p); p.hidden=false; sneakMvAttach(p); paintIcons(p); const d=$("#mvDesc"); if(d&&typeof autoGrow==="function") autoGrow(d);   /* BL-322: Sneak peek's sparkle, foot line and box */
   if(keep&&document.getElementById(keep)) document.getElementById(keep).focus(); 
   drFcDraw(); }
 export function mvShake(){ const p=$("#mvPeek"); if(!p) return; p.classList.remove("shake"); void p.offsetWidth; if(!reduced()) p.classList.add("shake"); snack("Finish or cancel the pending change first."); }

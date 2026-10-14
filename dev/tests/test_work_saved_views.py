@@ -157,7 +157,9 @@ class Views(LiveBrowserCase):
 
     def test_overflow_keeps_the_view_in_use_in_sight(self):
         b = self.open_work()
+        b.click("#vmore")                                                                            # BL-316: the menu is drawn when it opens
         self.assertTrue(b.eval("!!document.querySelector('#vmoreMenu [data-wv=\"overdue\"]')"))     # Overdue sits under More views
+        b.key("Escape")
         for n in range(6):
             b.eval(f"applyFilters({{st:['Open'],pr:['Urgent'],due:['{['overdue','soon','none','later'][n % 4]}'],cv:['{['yes','no'][n // 4]}']}}); workChanged()")
             self.save_as(f"A longer saved view name {n}")
@@ -165,10 +167,10 @@ class Views(LiveBrowserCase):
         b.pump(0.3)
         b.eval("renderWork()")
         self.assertLessEqual(b.eval("document.getElementById('wviews').scrollWidth"), b.eval("document.getElementById('wviews').clientWidth") + 1)   # never wraps or spills
+        b.click("#vmore")
         hidden = b.eval("[...document.querySelectorAll('#vmoreMenu [data-wv]')].map(x=>x.dataset.wv)")
         self.assertIn("saved:A longer saved view name 0", hidden)
         self.assertIn(f"More views ({len(hidden)})", b.eval("document.getElementById('vmore').textContent"))
-        b.click("#vmore")
         b.click('#vmoreMenu [data-wv="saved:A longer saved view name 0"]')
         b.wait("WVIEW==='saved:A longer saved view name 0'")
         self.assertTrue(b.eval("(()=>{ const c=document.querySelector('#wviews .vwrap [data-wv=\"saved:A longer saved view name 0\"]'); const r=c.getBoundingClientRect(), w=document.getElementById('wviews').getBoundingClientRect(); return c.getAttribute('aria-pressed')==='true'&&r.right<=w.right+1&&r.width>0; })()"))
