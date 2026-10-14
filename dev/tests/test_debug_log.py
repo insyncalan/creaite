@@ -298,11 +298,11 @@ class Refusals(LogCase):
         self.assertEqual(self.py("print(log.refusals_line(7))", now="2026-10-30 09:00").stdout.strip(), "none")
 
     def test_doctor_shows_the_counts_without_any_command_text(self):
-        # init at the fixed time too: run at today's date it logs a line and prunes the samples' days once they are a week old
-        subprocess.run([sys.executable, str(self.root / "system" / "scripts" / "tracker.py"), "init"], check=True,
-                       env={**os.environ, "CREAITE_NOW": "2026-10-09 09:00"}, capture_output=True, text=True)
-        r = subprocess.run([sys.executable, str(self.root / "system" / "scripts" / "doctor.py")],
-                           env={**os.environ, "CREAITE_NOW": "2026-10-09 09:00"}, capture_output=True, text=True)
+        env = {**os.environ, "CREAITE_NOW": "2026-10-09 09:00"}   # init too: its log entry at today's date would prune 08-10
+        scripts = self.root / "system" / "scripts"
+        subprocess.run([sys.executable, str(scripts / "tracker.py"), "init"], env=env, capture_output=True, text=True,
+                       cwd=tempfile.gettempdir(), check=True)
+        r = subprocess.run([sys.executable, str(scripts / "doctor.py")], env=env, capture_output=True, text=True)
         self.assertRegex(r.stdout, r"PASS  ask creaite's refused commands — last 7 days: 2 × a pipe, 1 × a redirect, 1 × cd … &&")
         self.assertNotIn("CANARY", r.stdout)
 # ===== end BL-252 =====
