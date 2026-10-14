@@ -1124,7 +1124,7 @@ class Handler(BaseHTTPRequestHandler):
         """POST /api/chat {chat}: one chat's messages from system/staging/ask/, with `seq` for a held run (BL-262)."""
         rec = chat_record(req.get("chat"))
         if rec is None:
-            return self.send(404, {"ok": False, "message": "That chat isn't in the history."})
+            return self.send(404, {"ok": False, "gone": True, "message": "That chat isn't in the history."})   # BL-330: the page forgets it
         return self.send(200, {"ok": True, **rec})
 
     def ask_stop(self, req):
@@ -1327,7 +1327,7 @@ class Handler(BaseHTTPRequestHandler):
             else f"t-{secrets.token_hex(6)}"
         try:
             task = Run(run_id, prompt, None, None, None, kind=mode, job=job,
-                       label=f"{'Load' if mode == 'load' else 'Check'} the transcript of “{title}”")
+                       label=transcript_ask(mode, title, day, row.get("start")))      # BL-326
         except OSError as e:
             return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
         return self.follow(task)
@@ -1440,7 +1440,7 @@ class Handler(BaseHTTPRequestHandler):
         run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
             else f"g-{secrets.token_hex(6)}"
         try:
-            gen = Run(run_id, prompt, None, None, None, kind="generate")
+            gen = Run(run_id, prompt, None, None, None, kind="generate", **current_lines(code))      # BL-326
         except OSError as e:
             return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
         return self.follow(gen)
@@ -1550,7 +1550,7 @@ class Handler(BaseHTTPRequestHandler):
         run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
             else f"x-{secrets.token_hex(6)}"
         try:
-            rewrite = Run(run_id, prompt, None, None, None, kind="generate")
+            rewrite = Run(run_id, prompt, None, None, None, kind="generate", **current_lines(code, rewrite=True))   # BL-326
         except OSError as e:
             return self.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
         return self.follow(rewrite)
@@ -1758,7 +1758,7 @@ class Run:
     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
 
     def __init__(self, run_id, message, session, chat, confirmed, kind="ask", images=(), job=None, label=None, only=None,
-                 sweep=False):
+                 sweep=False, lines=None, closer=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
         prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
@@ -1779,7 +1779,8 @@ class Run:
         self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
         self.sweep = bool(sweep)                                # BL-309
         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
-        self.job, self.label, self.tooluse = job, label or message, {}      # a transcript job reads this run's tool results (see transcripts.Job)
+        self.job, self.tooluse = job, {}      # a transcript job reads this run's tool results (see transcripts.Job)
+        self._plain_setup(label, lines, closer)                # BL-326: its label, closure lines and closer
         self.events, self.cond, self.watchers = [], threading.Condition(), 0
         self.pending, self.said, self.steps = {}, [], []
         if self.sweep:                                          # BL-309: the chat says what kind of run this is
@@ -1799,12 +1800,27 @@ class Run:
         threading.Thread(target=self.read, daemon=True).start()
         threading.Thread(target=self.watchdog, daemon=True).start()
 
+    def _plain_setup(self, label, lines, closer):
+        """The run's label (a chat's is Alan's message; BL-326: a run creaite started has a plain ask, never its prompt), its
+        closure lines and its closer; the debug log's run record for a run creaite started (IDs and counts only, BL-102)."""
+        self.label = label or (PLAIN_ASK.get(self.kind, PLAIN_ASK_ANY) if self.plain else self.message)
+        self.lines, self.closer = dict(lines or {}), closer
+        if self.plain and globals().get("debuglog") is not None:
+            debuglog.info("run", f"{self.id} {self.kind} started: prompt {len(self.message)} characters")
+
     def summary(self):
         """The run as the page shows it: ID, kind, chat, label, whether done or confirmed, its images and start time."""
         return {"id": self.id, "kind": self.kind, "chat": self.chat or self.session, "message": self.label, "done": self.done,
                 "images": self.images,                                                       # BL-257: a queued message's images
                 "confirmed": bool(self.confirmed), "sweep": self.sweep,                       # BL-309: a typed sweep
+                "plain": self.plain,                                  # BL-326: a run creaite started: the ask, steps and closure
                 "started": datetime.fromtimestamp(self.started).isoformat(timespec="seconds")}
+
+    @property
+    def plain(self):
+        """BL-326: a run creaite started itself (a Prep page, a draft, a meeting's check or load, the catch-up sweep): ask creaite
+        shows its ask, its steps in plain words and its closure, never its prompt or reply. A chat and a search answer are not."""
+        return getattr(self, "kind", "ask") not in ("ask", "search")
 
     def emit(self, kind, **data):
         """Add one event to the run's list and wake every page following it."""
@@ -1868,7 +1884,8 @@ class Run:
             if part.get("type") == "tool_use":   # shown once it has run (refused tools aren't shown)
                 if self.guarded:                 # BL-141: the server's own mark, from the stream
                     self.observe(part.get("name", ""), part.get("input") or {})
-                self.pending[part.get("id")] = describe_tool(part.get("name", ""), part.get("input") or {})
+                self.pending[part.get("id")] = (plain_step if self.plain else describe_tool)(part.get("name", ""),
+                                                                                          part.get("input") or {})   # BL-326
                 self.__dict__.setdefault("order", []).append(part.get("id"))     # BL-201: the calls in order
                 self.tooluse[part.get("id")] = (part.get("name", ""), part.get("input") or {})
             elif part.get("type") == "text" and part.get("text", "").strip():
@@ -1966,6 +1983,7 @@ class Run:
 
     def _end_failed(self, proc):
         err = proc.stderr.read().strip().splitlines()
+        self.failed = True                                   # BL-326: a run creaite started closes with a plain failure
         self.emit("error", message=(err[-1] if err else "Claude Code stopped with an error."))
         self.record()
 
@@ -2050,12 +2068,73 @@ class Run:
         try:
             outcome = self.job.finish()
         except Exception as e:  # noqa: BLE001
-            outcome = {"status": None, "files": [], "message": f"Couldn't finish ({type(e).__name__}): {e}"}
+            outcome = {"status": None, "files": [], "message": f"Couldn't finish ({type(e).__name__}): {e}", "fault": True}
+        self.outcome = outcome                                 # BL-326: a transcript job's message is its closure
         self.emit("text", text=outcome["message"])
         self.emit("transcript", **outcome)
 
+    # ===== BL-326 (v1.9.5): the closure of a run creaite started =====
+    def _closing(self, failed):
+        """The closure: Stop and a failure in plain words; else what the run's closer made (a Prep page saved), what its job set
+        (a draft that couldn't be read, a transcript's outcome) or the kind's own done line, with its link."""
+        lines = getattr(self, "lines", None) or {}
+        if self.stop:
+            return {"ok": False, "stopped": True,
+                    "line": PLAIN_TIMED_OUT if getattr(self, "timed_out", False) else lines.get("stopped") or PLAIN_STOPPED}
+        if failed:
+            return {"ok": False, "line": lines.get("failed") or PLAIN_FAILED}
+        got = self._closer()
+        if got:
+            return got
+        if getattr(self, "closing", None):
+            return self.closing
+        out = getattr(self, "outcome", None)
+        if out and out.get("message"):                     # a fault's own words are never shown: the plain line instead
+            line = PLAIN_CLOSER_FAILED if out.get("fault") else out["message"]
+            return {"ok": out.get("status") is not None, "line": line, "href": "#intake", "link": "Intake"}
+        done = {"ok": True, "line": lines.get("done") or PLAIN_DONE}
+        if lines.get("href"):
+            done.update(href=lines["href"], link=lines.get("link") or "Open")
+        return done
+
+    def _closer(self):
+        """What the run's closer makes of a finished run (a Prep page saved), or None; a fault is one plain line too."""
+        closer = getattr(self, "closer", None)
+        if closer is None:
+            return None
+        try:
+            return closer(self)
+        except Exception as e:  # noqa: BLE001  the closure is always one plain line
+            if globals().get("debuglog") is not None:
+                debuglog.error("run", f"{self.id} {self.kind} closure failed: {type(e).__name__}")
+            return {"ok": False, "line": PLAIN_CLOSER_FAILED}
+
+    def _close(self, failed):
+        """Emit the closure, keep the run's plain lines in the day's history chat and the run record in the debug log."""
+        c = self._closing(failed)
+        c = {k: v for k, v in c.items() if k in ("ok", "line", "href", "link", "stopped")}
+        if not str(c.get("href") or "#").startswith("#"):           # a link is only ever a place in the dashboard
+            c.pop("href", None)
+            c.pop("link", None)
+        self.closure = c
+        self.emit("closure", **c)
+        if globals().get("debuglog") is not None:
+            debuglog.info("run", f"{self.id} {self.kind} ended {'stopped' if self.stop else 'ok' if c.get('ok') else 'failed'}: "
+                                 f"{len(self.steps)} steps, reply {sum(len(t) for t in self.said)} characters")
+        try:
+            remember_chat(plain_chat_id(), None, self.label, [c["line"]], self.steps, stopped=self.stop, run=self.id,
+                          sent=datetime.fromtimestamp(self.started).isoformat(timespec="seconds"),
+                          title=f"Runs creaite started, {datetime.now():%d-%m-%Y}", keep_session=True,
+                          extra={"plain": True, **{k: c[k] for k in ("href", "link") if c.get(k)}})
+        except (OSError, ValueError) as e:                       # the history is a convenience: the run has ended either way
+            if globals().get("debuglog") is not None:
+                debuglog.warn("run", f"{self.id} history not kept: {type(e).__name__}")
+    # ===== end BL-326 =====
+
     def _done(self):
-        job_run = self.kind in ("check", "load")
+        if self.plain:                                    # BL-326: one plain closure line, for success, failure and Stop
+            self._close(getattr(self, "failed", False))
+        job_run = self.kind in ("check", "load") or self.plain     # BL-326: a run creaite started never becomes the panel's chat
         nxt = queue_after(self)                           # BL-257: the next queued message starts before this run is done
         with self.cond:
             self.done = True
@@ -2340,18 +2419,27 @@ def chat_record(chat):
 # ===== end BL-262 =====
 
 
-def remember_chat(chat, session, message, said, steps, stopped=False, running=False, run=None, images=(), sent=None):
+def chat_rec(p, chat, title, session, keep_session, now):
+    """A chat's history record to update (a new one titled `title`), with its session: this run's, or, for a run creaite started
+    (`keep_session`, BL-326), the one Alan's own messages in it last ran in."""
+    rec = json.loads(p.read_text(encoding="utf-8")) if p.is_file() else \
+        {"chat": chat, "title": title[:80], "started": now, "messages": []}
+    rec.update(session=rec.get("session") if keep_session and not session else session, updated=now)
+    return rec
+
+
+def remember_chat(chat, session, message, said, steps, stopped=False, running=False, run=None, images=(), sent=None,
+                  title=None, keep_session=False, extra=()):
     """Keep this exchange in the chat's history file (BL-20); a run's entry is updated as it goes (BL-37). The chat
-    ID is its first session ID."""
+    ID is its first session ID. BL-326: a run creaite started is kept with its plain lines only (`extra`: plain, its link), in
+    the day's own chat (`title`), which keeps the session Alan's own messages in it last ran in (`keep_session`)."""
     p = chat_file(chat)
     if not p:
         return None
     now = datetime.now().isoformat(timespec="seconds")
-    rec = json.loads(p.read_text(encoding="utf-8")) if p.is_file() else \
-        {"chat": chat, "title": message[:80], "started": now, "messages": []}
-    rec.update(session=session, updated=now)
+    rec = chat_rec(p, chat, title or message, session, keep_session, now)
     reply = {"who": "creaite", "text": "\n\n".join(said), "steps": list(steps), **({"run": run} if run else {}),
-             **({"stopped": True} if stopped else {}), **({"running": True} if running else {})}
+             **({"stopped": True} if stopped else {}), **({"running": True} if running else {}), **dict(extra)}
     at = next((i for i, m in enumerate(rec["messages"]) if run and m.get("run") == run and m.get("who") == "creaite"), None)
     # Chat and sweep (BL-108): Alan's message carries when it was sent; the reply when it started (kept on later updates)
     # and, once it has finished, done_at. The laptop's clock, to the second; an earlier chat simply has none.
@@ -2404,6 +2492,110 @@ def describe_tool(name, inp):
     if name == "Skill":
         return "Using " + str(inp.get("skill") or inp.get("name") or "a skill")
     return name
+
+
+# ===== BL-326 (v1.9.5): a run creaite starts itself shows the ask, the activity and the closure =====
+# A Prep page, Generate and Make it executive, the AI drafts (Draft agenda, Shape this meeting, Polish and the rest), Draft from the
+# message, a meeting's transcript check or load and Close the day's catch-up sweep are runs creaite starts itself. Wherever ask
+# creaite shows one it shows three things: the ask (one plain line, as if Alan had typed it: the run's label, never its prompt),
+# the activity (the working line and "✓ n steps", each step in plain words) and the closure (one line with the outcome and a link,
+# or what went wrong and what to do), for success, failure and Stop. The prompt and the reply never reach the panel or the chat
+# history: the debug log keeps the run record (IDs and counts only, BL-102). The VIP check is not a run of the run engine (one
+# `claude -p` call of its own, vip_check) and never shows in ask creaite.
+PLAIN_ASK = {"prep": "Make a prep page", "generate": "Draft with Claude", "shape-closed": "Shape the meeting",
+             "check": "Check a meeting's transcript", "load": "Load a meeting's transcript",
+             "sweep": "Sweep mail and Teams since the last sweep"}
+PLAIN_ASK_ANY = "A run creaite started"
+PLAIN_DONE = "Finished."
+PLAIN_STOPPED = "Stopped: nothing was saved. Start it again when you're ready."
+PLAIN_TIMED_OUT = "Stopped: nobody was watching for too long, so nothing was saved. Start it again when you're ready."
+PLAIN_FAILED = ("Couldn't finish: Claude Code stopped with a problem. Try again; if it happens again, Settings › Diagnostics "
+                "has the details.")
+PLAIN_CLOSER_FAILED = "Couldn't finish: creaite couldn't save the result. Try again; Settings › Diagnostics has the details."
+PLAIN_SCRIPTS = {"tracker.py": "Reading the tracker", "prep_page.py": "Reading the meeting's context",
+                 "report.py": "Reading the project's reporting", "search.py": "Searching the vault",
+                 "status_facts.py": "Reading the project's facts", "drafts.py": "Reading the draft's sources",
+                 "transcripts.py": "Reading the meeting's transcript", "minutes.py": "Reading the minutes",
+                 "sweep.py": "Staging what the sweep found", "propose.py": "Mapping names to people in the register"}
+PLAIN_M365 = (("outlook_email_search", "Searching mail"), ("outlook_calendar_search", "Reading the calendar"),
+              ("find_meeting_availability", "Reading the calendar"), ("chat_message_search", "Searching Teams chats"),
+              ("teams_list_chats", "Reading Teams chats"), ("teams_list_channel", "Reading Teams channels"),
+              ("teams_list_teams", "Reading Teams"), ("read_resource", "Reading a meeting, a message or a chat"),
+              ("sharepoint", "Searching SharePoint and OneDrive"), ("search_people", "Looking people up"),
+              ("get_me", "Reading your Microsoft 365 profile"))
+PLAIN_FILES = (".docx", ".pdf", ".vtt", ".txt", ".xlsx", ".pptx", ".eml")
+
+
+PLAIN_TOOLS = {"Grep": "Searching the vault", "Glob": "Searching the vault", "Write": "Writing a working file",
+               "Edit": "Writing a working file", "WebSearch": "Searching the web", "WebFetch": "Reading a web page"}
+
+
+def _plain_bash(inp):
+    m = re.search(r"system/scripts/(?:run )?([a-z0-9_]+\.py)", str(inp.get("command") or ""))
+    return PLAIN_SCRIPTS.get(m.group(1) if m else "", "Running a creaite step")
+
+
+def _plain_read(inp):
+    f = Path(str(inp.get("file_path") or ""))
+    if f.name == "CLAUDE.md":
+        return "Reading the project's memory"
+    return f"Reading {f.name}" if f.suffix.lower() in PLAIN_FILES else "Reading creaite's own notes"
+
+
+def _plain_skill(inp):
+    return "Following the sweep's steps" if "sweep" in str(inp.get("skill") or inp.get("name") or "") else \
+        "Following creaite's own steps"
+
+
+def plain_step(name, inp):
+    """A step of a run creaite started, in plain words (BL-326): what it is doing, never a command, a path or a tool's name."""
+    name, inp = str(name or ""), inp if isinstance(inp, dict) else {}
+    own = {"Bash": _plain_bash, "Read": _plain_read, "Skill": _plain_skill}.get(name)
+    if own:
+        return own(inp)
+    if name.startswith("mcp__"):
+        tool = name.split("__")[-1]
+        return next((w for k, w in PLAIN_M365 if k in tool), "Reading Microsoft 365")
+    return PLAIN_TOOLS.get(name, "Working")
+
+
+def project_name(code):
+    """A project's full name for a plain line (BL-101), or the code when the tracker can't say."""
+    try:
+        import tracker
+        return tracker.project_label(code)
+    except (Exception, SystemExit):  # noqa: BLE001  a line is never lost for want of a name
+        return code
+
+
+def current_lines(code, rewrite=False):
+    """Generate's and Make it executive's ask and closure lines (as Run keywords): the project by its full name."""
+    name = project_name(code)
+    if rewrite:
+        return {"label": f"Make the current state for {name} executive",
+                "lines": {"done": "Rewrote the current state in the executive voice: check it before you keep it",
+                          "href": f"#cockpit={code}", "link": "Open"}}
+    return {"label": f"Draft the current state for {name}",
+            "lines": {"done": f"Drafted the current state for {name}: check it in the editor before you save it",
+                      "href": f"#cockpit={code}", "link": "Open"}}
+
+
+def transcript_ask(mode, title, day, start):
+    """A transcript check's or load's ask, as the Intake page writes it: "Check the transcript of “…” (DD-MM-YYYY at HH:MM)"."""
+    when = " at ".join(x for x in (f"{day[8:10]}-{day[5:7]}-{day[:4]}" if day else "", start or "") if x)
+    return f"{'Load' if mode == 'load' else 'Check'} the transcript of “{title}”" + (f" ({when})" if when else "")
+
+
+def draft_lines(ctx, default):
+    """A draft run's ask and closure lines from drafts.run_lines (as Run keywords)."""
+    lines = ctx.get("run") or {}
+    return {"label": lines.get("ask") or default, "lines": lines}
+
+
+def plain_chat_id(day=None):
+    """The history chat that keeps the day's runs creaite started (one a day, so they never crowd out Alan's own chats)."""
+    return f"runs-{day or datetime.now().date().isoformat()}"
+# ===== end BL-326 =====
 
 
 # ===== BL-140 (sprint-admin): what was refused, said plainly =====
@@ -2747,16 +2939,43 @@ def prep_page_route(handler, req):
     run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
         else f"p-{secrets.token_hex(6)}"
     try:
-        r = Run(run_id, prep_page.prompt(ctx), None, None, None, kind="prep")
+        r = prep_run(run_id, ctx)
     except OSError as e:
         return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
     PREP_CTX[run_id] = ctx
     return handler.follow(r)
 
 
+# ===== BL-326 (v1.9.5): a Prep page run's ask and closure. The page is built as the run ends (still the server's own write,
+# prep_page.build, never Claude's), so its closure can say where it was saved; /api/prep/build and the prep queue hand that
+# result on rather than building it again.
+def prep_close(run, ctx):
+    """The run's closer: build and save the page from the reply; the closure line and the link to the page."""
+    import prep_page
+    try:
+        with LOCK:
+            run.built = prep_page.build(ctx["key"], "\n".join(run.said), ctx)
+    except (OSError, ValueError) as e:
+        run.build_error = f"The page wasn't written: {e}"
+        if globals().get("debuglog") is not None:
+            debuglog.error("prep", f"{run.id} page not written: {type(e).__name__}")
+        return {"ok": False, "line": "Couldn't finish: the prep page wasn't written. Press Prep page to try again; "
+                                     "Settings › Diagnostics has the details."}
+    return prep_page.closure(ctx, run.built[0])
+
+
+def prep_run(run_id, ctx):
+    """Start a Prep page run: its plain ask ("Prep page for …"), its Stop line and its closer."""
+    import prep_page
+    return Run(run_id, prep_page.prompt(ctx), None, None, None, kind="prep", label=prep_page.ask_line(ctx),
+               lines={"stopped": "Stopped: no prep page was written. Press Prep page to start again."},
+               closer=lambda r: prep_close(r, ctx))
+# ===== end BL-326 =====
+
+
 def prep_build_route(handler, req):
     """POST /api/prep/build {run}: write the prep page from the finished run's reply into the project's Agendas folder
-    (prep_page.build; the server's own write, BL-98)."""
+    (prep_page.build; the server's own write, BL-98). BL-326: the run has normally built it as it ended; that is handed on."""
     import prep_page
     run = RUNS.get(str(req.get("run") or ""))
     ctx = PREP_CTX.pop(str(req.get("run") or ""), None)
@@ -2764,6 +2983,10 @@ def prep_build_route(handler, req):
         return handler.send(200, {"ok": False, "message": "That prep run isn't there any more; press Prep page again."})
     if run.stop:
         return handler.send(200, {"ok": False, "message": "Stopped; no page was written."})
+    if getattr(run, "built", None):                            # BL-326: built as the run ended
+        return handler.send(200, {"ok": True, "path": run.built[0], "html": run.built[1]})
+    if getattr(run, "build_error", None):
+        return handler.send(200, {"ok": False, "message": run.build_error})
     try:
         with LOCK:
             rel, page = prep_page.build(ctx["key"], "\n".join(run.said), ctx)
@@ -2890,6 +3113,8 @@ class AlertDraftJob:
         if self.run and not self.run.stop:
             if not title:
                 self.run.emit("draft", ok=False, message="The message couldn't be read; the form keeps what it had.")
+                self.run.closing = {"ok": False, "line": "Couldn't finish: the message couldn't be read, so the form keeps "
+                                                         "what it had. Try again, or write the item yourself."}   # BL-326
             else:
                 pre = json.loads(json.dumps(self.pre))
                 pre["values"]["decision" if pre["table"] == "decisions" else "description"] = title
@@ -2937,7 +3162,9 @@ def alert_draft_route(handler, req):
         else f"m-{secrets.token_hex(6)}"
     job = AlertDraftJob(pre)
     try:
-        r = Run(run_id, prompt, None, None, None, kind="generate", job=job, label="Drafting from the message",
+        r = Run(run_id, prompt, None, None, None, kind="generate", job=job,
+                label=f"Draft a{'n' if pre['type'][:1] in 'aeiou' else ''} {pre['type']} from the message",          # BL-326
+                lines={"done": f"Drafted the {pre['type']} from the message: check it in the form before you save it"},
                 only=ALERT_DRAFT_TOOLS)
     except OSError as e:
         return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
@@ -4252,6 +4479,7 @@ class DraftJob:
         """At the run's end: check the reply with drafts.py result (a bulk draft is staged there) and emit one "draft" event."""
         self.ready.wait(5)
         reply = "\n\n".join(self.run.said) if self.run else ""
+        got = None
         if self.run and reply.strip():
             rc, out = run_stdin("drafts.py", {"request": self.req, "context": self.ctx, "reply": reply}, "result")
             try:
@@ -4259,6 +4487,9 @@ class DraftJob:
             except ValueError:
                 got = None
             self.run.emit("draft", ok=bool(got), **(got or {"message": "The draft couldn't be read."}))
+        if self.run:                                         # BL-326: the closure ask creaite shows (drafts.run_closure)
+            import drafts
+            self.run.closing = drafts.run_closure(self.ctx, got if isinstance(got, dict) else None)
         return {"status": None, "files": [], "message": ""}
 
 
@@ -4302,7 +4533,8 @@ def draft_route(handler, req):
         else f"d-{secrets.token_hex(6)}"
     job = DraftJob(body, ctx)
     try:
-        r = Run(run_id, ctx["prompt"], None, None, None, kind="generate", job=job, label="Drafting with Claude")
+        r = Run(run_id, ctx["prompt"], None, None, None, kind="generate", job=job,
+                **draft_lines(ctx, "Draft with Claude"))                     # BL-326: drafts.run_lines
     except OSError as e:
         return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
     job.run = r
@@ -4476,7 +4708,7 @@ def prep_shape_route(handler, req):
     job = DraftJob(body, ctx)
     try:
         r = Run(run_id, ctx["prompt"], None, None, None, kind="shape-closed" if closed else "generate", job=job,
-                label="Shaping the meeting with Claude")
+                **draft_lines(ctx, "Shape the meeting"))                     # BL-326
     except OSError as e:
         return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
     job.run = r
@@ -4662,7 +4894,10 @@ def start_catchup(now, force=False):
     """Start cx-sweep as a guarded "sweep" run (START_LOCK held): {status: start, run} or {status: cant, message}."""
     before = sorted(p.name for p in paths.STAGING.glob("proposed-*.json"))
     try:
-        run = Run(f"s-{secrets.token_hex(6)}", "sweep", None, None, None, kind="sweep", label="Catch-up sweep")
+        run = Run(f"s-{secrets.token_hex(6)}", "sweep", None, None, None, kind="sweep",
+                  label="Catch-up sweep: mail and Teams since the last sweep",                                          # BL-326
+                  lines={"done": "The catch-up sweep has finished: anything it found is waiting in Review", "href": "#review",
+                         "link": "Review"})
     except OSError as e:
         CATCHUP.update(day=now.date().isoformat(), state="failed", run=None)
         return {"status": "cant", "message": f"Couldn't start Claude Code ({e})."}
@@ -4857,7 +5092,7 @@ def prepq_next():
         item.update(state="failed", message=ctx["error"])
         return "next"
     try:
-        run = Run(f"p-{secrets.token_hex(6)}", prep_page.prompt(ctx), None, None, None, kind="prep")
+        run = prep_run(f"p-{secrets.token_hex(6)}", ctx)
     except OSError as e:
         item.update(state="failed", message=f"Couldn't start Claude Code ({e}).")
         return "next"
@@ -4897,8 +5132,13 @@ def prepq_finish(item, run, ctx):
                     i.update(state="stopped", message="Stopped; no page was written.")
         return
     try:
-        with LOCK:
-            rel, _ = prep_page.build(ctx["key"], "\n".join(run.said), ctx)
+        if getattr(run, "built", None):                      # BL-326: built as the run ended
+            rel = run.built[0]
+        elif getattr(run, "build_error", None):
+            raise ValueError(run.build_error[len("The page wasn't written: "):])
+        else:
+            with LOCK:
+                rel, _ = prep_page.build(ctx["key"], "\n".join(run.said), ctx)
         item.update(state="made", path=rel)
     except (OSError, ValueError) as e:
         item.update(state="failed", message=f"The page wasn't written: {e}")
@@ -5390,6 +5630,8 @@ def log_request(handler, started):
         debuglog.warn("server", f"{line} not ok: {debuglog.clean(getattr(handler, '_log_msg', ''), 160)}")
     elif code and code >= 500:
         debuglog.error("server", line)
+    elif code == 404 and route == "/api/chat":                 # BL-330: a remembered chat that's gone is normal, not a WARN
+        debuglog.info("server", f"{line} chat not in the history")
     elif code and code >= 400:
         debuglog.warn("server", line)
     elif route in QUIET_ROUTES or handler.command == "GET":
