@@ -60,7 +60,7 @@
 | BL-183 | Health evidence and calibration: a banner when the declared health is better than the evidence, and your own health calls scored afterwards | S | On hold | Normal | Unassigned | #26 |
 | BL-203 | A project as it stood on any day: an "as of" date on the project page, and what changed between two dates | M | On hold | Low | Unassigned | #30 |
 | BL-204 | People with contact rhythm, and a one-click 1:1 prep page | M | On hold | Low | Unassigned | #29 |
-| BL-255 | A hash-based script policy |  | Needs decision | Normal | Unassigned | #33 |
+| BL-255 | **A hash-based script policy:** a `Content-Security-Policy` that allows only the app script's hash, in a header and a `<meta>` tag; report-only shipped in v1.9.0 (FR-230) | S | Needs decision | Normal | Unassigned | #33 |
 | BL-313 | **Plain words:** with automatic apply on, nothing on screen or in ask creaite says "staged", "apply" or "proposal"; your own change is "Saved" (with Undo); what creaite suggests "waits for you in Review" | M | On hold | Normal | Unassigned | #25 |
 | BL-317 | **Reports you live in:** one living Status page per project (health, Current state, milestones, top risks, help needed), edited in place with evidence; each week a snapshot; Client view; Export to Word from it | L | On hold | Normal | Unassigned | #27 |
 | BL-340 | **Notes transcripts in the minutes editor:** how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes | M | On hold | Low | Unassigned | #24 |
@@ -252,6 +252,8 @@ Raised 2026-10-11 (Alan), from the UX ideas mockups (idea 6); **low priority**. 
 - **Touches:** `system/templates/dashboard.html` (the person page), `build_dashboard.py`, `live_server.py` and `prep_page.py` (the person variant), the cx-prep skill, Help, `dev/dashboard-spec.md`, `dev/tests/` (rhythm from fixture meetings; nothing shown on thin history; the gap flags correctly; nothing in any report or export).
 
 ### BL-255 — A hash-based script policy
+
+**Plan (as imported):** Unscheduled. **Turning on enforcement is Alan's** (security), after a week of reports
 
 Raised 2026-10-11 (Alan) as BL-231 step 3; **split out 12-10-2026.** **Report-only built in v1.9.0 (FR-230); enforcing follows after a week of reports, when Alan decides.** No schema change.
 
@@ -483,11 +485,11 @@ Raised 2026-10-14 (Alan), from the UI/UX audit's wider findings (`dev/reviews/ui
 
 ### BL-326 — ask creaite shows the ask, the activity and the outcome, never a run's machine text
 
-**Plan (as imported):** **Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330: both built on `v195-run-chat-bl330`. **In v1.9.5 (Alan, 14-10-2026)**; moved from v2.1.0 the same day
+**Plan (as imported):** **In v1.9.4 (Alan, 15-10-2026)**, with BL-330: both built on `v195-run-chat-bl330`. (Earlier placed in v2.1.0, then v1.9.5, on 14-10-2026.)
 
-Raised 2026-10-14 (Alan), a defect. **In v1.9.5 (Alan, 14-10-2026)**; placed in v2.1.0 earlier the same day, then moved. v1.9.1 was already cut. No schema change.
+Raised 2026-10-14 (Alan), a defect. No schema change. (Placed in v2.1.0, then v1.9.5, on 14-10-2026.)
 
-**Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330, because both are built and approved on `v195-run-chat-bl330`. The release plan is `dev/sprints/v194-release.md`.
+**In v1.9.4 (Alan, 15-10-2026)**, with BL-330, because both are built and approved on `v195-run-chat-bl330`. The release plan is `dev/sprints/v194-release.md`.
 
 **What happens now.** Pressing **Prep page** for a meeting in the dashboard starts a run through the run engine (`/api/prep/page`, `kind="prep"`), and ask creaite shows it as a chat. That chat shows the whole working copy: the prompt (`prep_page.PROMPT`: "creaite prep page. Research one meeting for Alan and reply with ONLY a JSON object, nothing else. Read-only: …"), the meeting's context as JSON, and Claude's reply, the JSON with the finished page's HTML in it.
 
@@ -567,9 +569,9 @@ Raised 2026-10-14 (Alan), from the live debug log. **Defect. In v1.9.4 (Alan pla
 
 ### BL-331 — Move back one archived report
 
-**Plan (as imported):** **In v1.9.5 (Alan, 15-10-2026)**, after BL-10 and BL-03; built on `v196-move-back`. After v1.9.5 (follows BL-03)
+**Plan (as imported):** **In v1.9.5 (Alan, 15-10-2026)**, after BL-10 and BL-03; built on `v196-move-back`
 
-Raised 2026-10-14 (Alan, directly to Team 1), a follow-up to BL-03. **After v1.9.5.** No schema change.
+Raised 2026-10-14 (Alan, directly to Team 1), a follow-up to BL-03. No schema change.
 
 **In v1.9.5 (Alan, 15-10-2026)**, on BL-10 and BL-03's archiving; built on `v196-move-back`. The release plan is `dev/sprints/v195-release.md`.
 - In Files, a report, minutes or Steerco one-pager shown as archived (in the engagement's or the portfolio's `_Archive/`) gets a **Move back** action.

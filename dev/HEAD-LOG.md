@@ -4,6 +4,14 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | Pilot baseline: 43 questions reached Alan on 14-10-2026 (32 raised in SPRINTCOMMS, 11 known only from relayed answers; about 48 on 13-10). Target: under 15 a day | The charter's pilot measure, counted from the old SPRINTCOMMS and DECISIONS-FOR-ALAN in `creaite-history` |
+| 15-10-2026 | Jarvis | Digests run as cron jobs in Jarvis's session, at 07:57 and 15:57 (full) and 11:57 and 19:57 (lite), into the Release radar, a Claude Docs page (https://claude.ai/code/artifact/464092fa-862e-4fee-8d5b-48a1f06c4062) | The schedule lives only in the running session and expires after 7 days, which covers the pilot; a new Jarvis session sets it up again |
+| 15-10-2026 | Jarvis | `test_debug_log` raised as plan #78: v1.9.4, High, XS, Team Stark, blocks #39 (full suite) | It fails on `main` from 15-10: a likely date-sensitive test (init runs at the real date and prunes the 08-10 fixtures) |
+| 15-10-2026 | Jarvis | `board_update.py` and `board-update.json` moved to `dev/archive/tools/`; never re-run | Its job is done, and a re-run would put back the states the team leads have since set |
+| 15-10-2026 | Jarvis | `board_import.py`'s check.py debt (complexity, length, long lines, docstrings) added to the baseline; no other number changed | A one-off migration tool of which only `export` is still used; leaving the rest untouched keeps the release branches' baselines mergeable |
+| 15-10-2026 | Jarvis | The board's contradictions tidied: BL-326 in v1.9.4 only, BL-331 in v1.9.5 only, BL-255 given a summary row and Size S | Each named two releases or had none; Alan's latest placements (15-10-2026) kept |
+| 15-10-2026 | Jarvis | Step 15 done: `dev/BACKLOG.md` is the board's export; the last hand-edited backlog kept as `dev/archive/BACKLOG-before-the-board.md`. The next new item is **BL-341** | The export carries open items only, so the history sections (Out of scope, Deferred options, Moved into scope) and the next free number are kept here |
+| 15-10-2026 | Jarvis | The stuck macOS job of Actions run 38623416816 re-run | Done-when of the Jarvis set-up issue |
 | 15-10-2026 | Alan | The Head of Product and Delivery is named Jarvis; Alan uses that name | Not recorded |
 | 15-10-2026 | Alan | The teams are named Team Cap (laptop 1) and Team Stark (laptop 2) | Not recorded |
 | 14-10-2026 | Alan | The repo stays public, with no real names anywhere: only the fictional demo data | Not recorded; `dev/tests/test_no_real_names.py` guards it |
