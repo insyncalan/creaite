@@ -326,6 +326,16 @@ Raised 2026-10-13 (Alan): "a light wiki in the project structure, to capture ad 
 
 **Real-data gate (13-10-2026, run by Alan, read-only, `--private --exact`):** 3 of 4 Current state panes round-trip exactly; the fourth is a pane holding only an HTML comment, which the writer still drops. The comment node (Alan's decision) closes it.
 
+**Decided (Alan, 15-10-2026), the integration note's open questions** (`dev/V20-INTEGRATION-NOTE.md` on `v20-base`):
+1. **Tabs:** not in v2.0.0. The project page keeps Overview and Notes; Work, Milestones, Meetings and Files as tabs wait for BL-317 (on hold).
+2. **Clicks in a note:** a click on a `[[note]]` link or an item chip opens it; ⌥-click edits inside it. Kept as built.
+3. **Note drafts** (`system/staging/drafts/notes/`) stay in the daily backup zip (BL-323).
+4. **Notes are exempt from outside content.** Reading Alan's own note, a `.md` directly inside a project's or the portfolio's notes folder as `notes.note_of` accepts, no longer marks an ask creaite run (`live_server.py` `OUTSIDE_CONTENT`, the hook in `reach.py`). Everything else in OneDrive still marks: a note's pictures, other files, transcripts and documents. **This is a guard change**, made on its own branch with its own tests, and `creaite-rules.md`'s BL-141 lines say so.
+
+**Recommended by the Product Manager, 15-10-2026 (Alan may change them):** E's calls stay as built (each list item is a line; a hedged milestone or health row can't be ticked; only a "Very likely" repeat starts unticked; the memory line starts unticked; "Linked to …" is a note, not a staged link; rows open in the peek's layout inside the panel). The Draft email preview stays a plain contenteditable in v2.0.0 (option a); it moves to the one editor later.
+
+The release plan is `dev/sprints/v200-notes-release.md`.
+
 ### BL-255 — A hash-based script policy
 Raised 2026-10-11 (Alan) as BL-231 step 3; **split out 12-10-2026.** **Report-only built in v1.9.0 (FR-230); enforcing follows after a week of reports, when Alan decides.** No schema change.
 
