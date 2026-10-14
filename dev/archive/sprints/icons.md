@@ -49,7 +49,7 @@ Each sprint runs its own tests only (STATUS.md's rule); one full suite runs on t
 
 - `help.md` and the first-day guide (`build_guides.py`, then regenerate): every sentence that names a button now an icon ("press Display", "choose List or Board", "Decision needed") says what the icon looks like and where its tooltip is. Add a "What the icons mean" table to Help's reference (the mockup's legend, which is the source).
 - `dev/dashboard-spec.md`: the Work toolbar, Review, the New button and the tooltip; remove the "Decision needed button beside New decision" line (FR-100's text moves to the menu).
-- **Don't edit `dev/BRD.md`, `dev/BACKLOG.md` or `dev/sprints/STATUS.md`** (the usual rule, Alan 10-10-2026). Write the FR text for the icon rule and the tooltip in BUILD; the scrum master adds it to the BRD and removes BL-158 to BL-161 from the backlog at the merge.
+- **Don't edit `dev/BRD.md`, `dev/BACKLOG.md` or `dev/archive/sprints/STATUS.md`** (the usual rule, Alan 10-10-2026). Write the FR text for the icon rule and the tooltip in BUILD; the scrum master adds it to the BRD and removes BL-158 to BL-161 from the backlog at the merge.
 - `dev/BUILD.md`: a "Sprint icons" section: what was built, the icon source and licence, departures from this brief, and "Open".
 - `dev/release-notes/1.3.0.md`: one paragraph under Changed, plain words: "Many buttons are now icons with a tooltip; New is a quiet tile; New decision and Decision needed are one button with a menu."
 

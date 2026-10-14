@@ -22,4 +22,4 @@ Branch `sprint-review-work`, worktree `../creaite-review-work`, from `main` afte
   - then every test file that mentions Review, the peek, `hlRow`, `openProposal` or `review.py`, not a sample.
 
   One pass is enough; a file that fails under load and passes alone counts. Tests also run on GitHub's Linux runner: wait for conditions, and don't rely on hover or a native list's keys. Stop runs by their own process tree only; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge.

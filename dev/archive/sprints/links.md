@@ -19,4 +19,4 @@ Branch `sprint-links`, worktree `../creaite-links`, from `main`. For v1.4.0; `VE
 - **No schema change, no `tracker.py` change, no new server route.**
 - **Look at it** in the real browser at 1400px and 1100px, chat open and closed, light and dark, in two themes. Keep the screenshots.
 - **Tests:** one pass is enough; your own tests plus `test_pages`, `test_people_dashboard`, `test_today_brief`, `test_work_filters_live` and `test_activity_undo`. They also run on GitHub's Linux runner, so wait for conditions.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge.

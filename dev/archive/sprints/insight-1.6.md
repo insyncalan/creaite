@@ -44,4 +44,4 @@ The scrum master merges them into `main` soon and tells you. **Then run `git mer
   - then **every** test file that touches the areas you changed (Review, ⌘K, Today, the project page, prep, `status_facts`), not a sample.
 
   One pass is enough; a file that fails under load and passes alone counts. Tests also run on GitHub's Linux runner: wait for conditions. Stop runs by their own process tree only; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge.

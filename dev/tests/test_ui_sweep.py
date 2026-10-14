@@ -1,4 +1,4 @@
-"""sprint-ui-sweep (v1.7.0): the measured UI checks from dev/sprints/ui-sweep-audit.md, in a real browser on the snapshot
+"""sprint-ui-sweep (v1.7.0): the measured UI checks from dev/archive/sprints/ui-sweep-audit.md, in a real browser on the snapshot
 sample vault (test_snapshots: fixed day, UTC, en-GB).
 
 - BL-216: every pointer target on every screen is at least 24 by 24, or its 24-pixel circle touches no other target

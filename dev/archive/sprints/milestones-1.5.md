@@ -25,7 +25,7 @@ Branch `sprint-milestones`, worktree `../creaite-milestones`, from `main` after 
 ## Order: one commit per item, each in a marked block (`/* ===== BL-1xx (sprint-milestones) ===== */`)
 
 1. **BL-174: a page opened before a server restart says "reload".**
-   - Your worktree already holds Alan's draft, moved from `main`: `live_server.py`'s `STALE_PAGE` 403, and a test in `test_app_launcher.py`. A copy is also in `dev/sprints/stale-page.patch`.
+   - Your worktree already holds Alan's draft, moved from `main`: `live_server.py`'s `STALE_PAGE` 403, and a test in `test_app_launcher.py`. A copy is also in `dev/archive/sprints/stale-page.patch`.
    - Finish it: the page shows that message (not a bare refusal) with a **Reload** button, and the test passes.
 2. **BL-189: other applies leave the peek's staged changes alone.**
    - A cell edit, a bulk change or a Review approval (with auto-apply on) applies only its own proposals.
@@ -78,7 +78,7 @@ Branch `sprint-milestones`, worktree `../creaite-milestones`, from `main` after 
   - One pass is enough; a file that fails under load and passes alone counts.
   - Tests also run on GitHub's Linux runner: wait for conditions, and don't rely on hover, macOS scrollbars or a native list's keys.
   - Stop a test run only by its own process tree; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge.
 - **Style:** British English, plain and concise; "ask creaite" in lower case; DD-MM-YYYY shown, YYYY-MM-DD stored.
 
 ## Done when

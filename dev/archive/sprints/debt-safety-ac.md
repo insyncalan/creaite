@@ -35,7 +35,7 @@ No change to what Alan sees.
   - use `-j 2` at most, because seven sprints are testing;
   - one pass is enough; a file that fails under load and passes alone counts;
   - stop only your own processes, by PID; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge. No schema change.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge. No schema change.
 
 ## Done when
 

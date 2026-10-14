@@ -69,7 +69,7 @@ BL-326 moved to v1.9.4.
 - **The archiving never runs** in the development repository or from an ask creaite run.
 - **No real names:** use the fictional sample data.
 - **Only the main session pushes;** agents commit only. Merge, never rebase. Clean up worktrees once work lands.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`.
 
 ## Tests
 

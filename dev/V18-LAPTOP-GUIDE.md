@@ -22,7 +22,7 @@ Written 12-10-2026 by the Scrum Master session for Alan. **v1.8.0 is BL-231 and 
 3. **`dev/tools/check.py` must pass** before every commit. Never use `--allow-worse`. This sprint should *lower* the figures; lower the baseline with `check.py --update-baseline` as they fall.
 4. **Full test suites run on GitHub Actions,** not on the laptop: `gh workflow run tests.yml --ref <branch>`. Local runs are single files, at `-j 2` at most.
 5. **Development repository only:** sample data, never your real vault, never Microsoft 365. The `.creaite-dev` file in the repo marks it.
-6. **Don't edit** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md` from this laptop. The Scrum Master records progress; you tell Alan, who tells the Scrum Master.
+6. **Don't edit** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md` from this laptop. The Scrum Master records progress; you tell Alan, who tells the Scrum Master.
 7. **No skip-permissions mode** in Claude Code. Approve each permission it asks for.
 
 ## Phase 0: set up the laptop (about 30 to 45 minutes)

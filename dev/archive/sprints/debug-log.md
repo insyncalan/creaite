@@ -54,7 +54,7 @@ Standard library only. It takes its location and its setting from `paths.py`.
 
 ## Boundaries
 
-- **Owns:** `system/scripts/log.py` (new), `dev/tests/test_debug_log.py` (new), `dev/sprints/debug-log.md`, and small additions to `paths.py` (one line), `doctor.py` (a new check and one `check(...)` line), `session.py` (the status field and line), `settings.json`, `settings-defaults.json`, `.gitignore` and `dev/BUILD.md`.
+- **Owns:** `system/scripts/log.py` (new), `dev/tests/test_debug_log.py` (new), `dev/archive/sprints/debug-log.md`, and small additions to `paths.py` (one line), `doctor.py` (a new check and one `check(...)` line), `session.py` (the status field and line), `settings.json`, `settings-defaults.json`, `.gitignore` and `dev/BUILD.md`.
 - **Don't edit:** `tracker.py` (Sprint 5), `sweep.py` and `minutes.py` (`sprint-sweep-alerts`, `sprint-4a`), `live_server.py` (`sprint-permissions` and others), `dashboard.html`, `report.py`, `docx_tools.py`, `creaite-rules.md`, `help.md`, `BACKLOG.md` and `BRD.md` (updated at merge).
 - **Shared files** (`paths.py`, `doctor.py`, `session.py`, `settings.json`): add, never reformat or move existing lines, so the merge stays readable. Put new code in its own marked section.
 - **Development guard:** sample data and temporary vaults only; never connect to Microsoft 365.

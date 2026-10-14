@@ -28,4 +28,4 @@ Branch `sprint-drafts-fields`, worktree `../creaite-drafts-fields`, from `main`.
   - then **every** test file touching the areas changed, not a sample.
 
   One pass is enough; a file that fails under load and passes alone counts. Tests also run on GitHub's Linux runner. Stop runs by their own process tree only; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Write the FR text in BUILD, add lines to `dev/release-notes/1.6.0.md`, update Help and regenerate the guides. Don't change VERSION. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Write the FR text in BUILD, add lines to `dev/release-notes/1.6.0.md`, update Help and regenerate the guides. Don't change VERSION. Never push or merge.

@@ -20,4 +20,4 @@ Branch `sprint-decisions-needed`, worktree `../creaite-decisions-needed`, from `
   - pin the page clock (`live_browser.pin_page_clock`) so "days waiting" doesn't depend on today's date.
 - **Look at it:** in the real browser at 1400px, light and dark. Keep the screenshots in the scratchpad.
 - **Never push or merge.** No Actions runs unless told. Stop only your own processes, by PID.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. No schema change.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. No schema change.

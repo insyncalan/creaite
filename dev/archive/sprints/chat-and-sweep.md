@@ -10,7 +10,7 @@ Branch `sprint-chat-sweep`, worktree `../creaite-chat-sweep`, made from the tip 
 
 ## When it can start
 
-The chat code and the live server are being changed by other sprints, so check `dev/sprints/STATUS.md` first.
+The chat code and the live server are being changed by other sprints, so check `dev/archive/sprints/STATUS.md` first.
 
 - **Item 1 (the sweep rebuild)** touches `sweep.py`, `minutes.py` and `build_dashboard.py` only at their tails: it can start any time, beside the others.
 - **Items 2 to 4** change the chat panel in `dashboard.html` and `live_server.py`, which sprint 4b, Sprint 5 (the lower-case "ask creaite" pass, BL-105) and debug log part 2 are also editing. **Start them after sprint 4b has merged.** If Alan wants them sooner, follow the rules for working beside another sprint in `debug-log-2.md` (marked blocks, one-line additions, wrappers where another sprint has rewritten a function, and whoever merges second brings `main` in first).

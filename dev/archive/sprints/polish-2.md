@@ -52,13 +52,13 @@ Connecting Microsoft 365, running setup and making the launcher still send Alan 
   Don't edit those.
 - **Shared files** (`dashboard.html`, `help.md`, `dev/dashboard-spec.md`, `build_dashboard.py`, `live_server.py`): new code in marked sections, and don't reformat unrelated lines. Regenerate the guides with `python3 dev/tools/build_guides.py`; never hand-merge them.
 - **No schema change.** Engine changes (BL-166's routes, BL-172's test runner) go in the next release's notes: create `dev/release-notes/1.4.0.md` if it doesn't exist, and don't change `VERSION`.
-- **Don't edit** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md` (the usual rule). Write the FR text in BUILD; the scrum master records it at merge.
+- **Don't edit** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md` (the usual rule). Write the FR text in BUILD; the scrum master records it at merge.
 - **Development guard:** sample data only; test with temporary vaults; never connect to Microsoft 365. Tests set `CREAITE_NO_LAUNCH=1` (BL-171), so nothing opens Word or other apps.
 - **Stop a test run by its process tree,** never with `pkill` by name.
 
 ## Tests
 
-The sprint runs **its own tests**; one pass is enough (`dev/sprints/STATUS.md`). A file that fails under load and passes alone counts; name it.
+The sprint runs **its own tests**; one pass is enough (`dev/archive/sprints/STATUS.md`). A file that fails under load and passes alone counts; name it.
 - **BL-172:**
   - a test run leaves no `creaite-test-*` folder behind;
   - the runner's per-file count names a leaking file.

@@ -1,4 +1,4 @@
-# Sprint drafts-extraction: repeats, "probably done", sharpen on capture, and Quality (BL-221, BL-218, BL-220, BL-233)
+# Sprint drafts-writing: agenda and invite, follow-up and chase emails, one set of facts in many forms (BL-223, BL-224, BL-227)
 
 > **Update (12-10-2026): for v1.7.0.**
 > - **Base:** branched from `sprint-drafts-fields` (`a344a33`), because it isn't on main yet; it already holds insight, BL-232 and the drafts scaffold.
@@ -7,23 +7,20 @@
 > - **GitHub Actions:** none of your runs until told. Run test files locally, at most `-j 2`; the Chrome cap (BL-246) shares 3 Chrome tests across the machine.
 > - **Ignore** the "For v1.6.0" line below.
 
-Branch `sprint-drafts-extraction`, worktree `../creaite-drafts-extraction`. Made from `main` **after `sprint-insight`, `sprint-drafts-fields` and the `fix-as-proposed` branch (BL-232) have merged**: it needs BL-205 (⌘K), BL-208's inferred fields and the drafts scaffold, and insight changes the same Review and cx-minutes code. **For v1.6.0.** It owns:
-- `minutes.py`, `sweep.py` and `review.py`'s update cards;
-- the cx-minutes and cx-sweep skills;
-- `dev/staging-format.md`.
+Branch `sprint-drafts-writing`, worktree `../creaite-drafts-writing`. Made from `main` **after `sprint-insight` and `sprint-drafts-fields` have merged**, because BL-207's Generate work and BL-209 touch the same places. Runs beside `sprint-drafts-extraction`. **For v1.6.0.** It owns:
+- `prep_page.py` and the Prep popup;
+- `draftEmail`;
+- Generate's dialog and `/api/current/generate`.
 
 ## Order: one commit each
 
-1. **BL-221:** "Looks like": repeat proposals, merged as an update.
-2. **BL-218:** "Probably done": the sweep and minutes propose closing an item, with evidence.
-3. **BL-220:** sharpen on capture: chips and Sharpen for vague actions, the Review-side vague mark, and ⌘K chips.
-4. **BL-233: Quality** (Alan split it from BL-182, 11-10-2026), last.
-   - A read-only `system/scripts/quality.py` plus an Activity › Quality tab.
-   - It reads applied and pending proposals, `rejected` (BL-133's reasons), BL-232's `as_proposed`, and `system/staging/draft-stats.json` (from drafts-fields).
-   - It shows approved, edited and rejected counts by source and item type, the fields changed most, and each AI-draft feature's use and edit rate.
-   - **Every figure shows its count and its denominator,** never a bare percentage, and nothing under 10 is rated.
-   - It counts extraction and drafts only, never a person. No report or export reads it.
-5. **Docs.**
+1. **BL-223:** draft an agenda and POAD invite text from the Prep page.
+2. **BL-224:** follow-up and chase emails, as new modes of the existing Draft email builder.
+   - **The chase mode** (Alan, 11-10-2026) works from overdue items owned by other people, plus an "I sent it" log, `system/staging/chases.json` (references only, never message text).
+   - It moves onto BL-125's "waiting on" when that is built.
+   - Nothing is ever sent, and no Outlook draft is made.
+3. **BL-227:** one set of facts, many forms (a steering note, a three-line update, and so on).
+4. **Docs.**
 
 ## Shared rules for this sprint
 
@@ -36,4 +33,4 @@ Branch `sprint-drafts-extraction`, worktree `../creaite-drafts-extraction`. Made
   - then **every** test file touching the areas changed, not a sample.
 
   One pass is enough; a file that fails under load and passes alone counts. Tests also run on GitHub's Linux runner. Stop runs by their own process tree only; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Write the FR text in BUILD, add lines to `dev/release-notes/1.6.0.md`, update Help and regenerate the guides. Don't change VERSION. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Write the FR text in BUILD, add lines to `dev/release-notes/1.6.0.md`, update Help and regenerate the guides. Don't change VERSION. Never push or merge.

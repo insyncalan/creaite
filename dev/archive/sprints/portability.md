@@ -55,7 +55,7 @@ Branch `sprint-portability`, worktree `../creaite-portability`, from `main` (whi
   - Never run a real `launchctl`, `gh` against GitHub, `brew install` or `pip install` from tests.
   - Don't install anything on this Mac.
   - Development repo only: sample data, no Microsoft 365.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge. No schema change.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge. No schema change.
 
 ## Done when
 

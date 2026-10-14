@@ -24,11 +24,11 @@ The commits are one per item. Each item has a self-contained HTML mockup (no net
 |---|---|---|---|
 | BL-203, a project as of any day | `dev/mockups/asof-mockup.html` | `dev/sprints/asof.md` | M, about 3 days (2.5 without the slider) |
 | BL-204, contact rhythm and the 1:1 prep page | `dev/mockups/contact-rhythm-mockup.html` | `dev/sprints/contact-rhythm.md` | M, about 3 days (+0.5 if mail and Teams count) |
-| BL-59 and BL-60, minutes edited in Review and the transcript pane | `dev/mockups/minutes-review-mockup.html` | `dev/sprints/minutes-review.md` | BL-59 L (about 7 days) + BL-60 M (about 3 days): two sprints |
+| BL-59 and BL-60, minutes edited in Review and the transcript pane | `dev/mockups/minutes-review-mockup.html` | `dev/archive/sprints/minutes-review.md` | BL-59 L (about 7 days) + BL-60 M (about 3 days): two sprints |
 | BL-125 B and C, links and labels | `dev/mockups/links-labels-mockup.html` | `dev/sprints/links-labels.md` | B M (about 4 days) + C L (8–10 days): best as two releases |
-| BL-264, Settings › People filters | `dev/mockups/people-filters-mockup.html` | `dev/sprints/people-filters.md` | S, about 1.5 days |
+| BL-264, Settings › People filters | `dev/mockups/people-filters-mockup.html` | `dev/archive/sprints/people-filters.md` | S, about 1.5 days |
 
-`links-labels.md` is named that way because `dev/sprints/links.md` already exists for BL-190.
+`links-labels.md` is named that way because `dev/archive/sprints/links.md` already exists for BL-190.
 
 ## Questions for Alan
 

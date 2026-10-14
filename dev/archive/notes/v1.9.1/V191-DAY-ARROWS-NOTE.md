@@ -12,7 +12,7 @@ Merge order for Team 1: `sprint-today-days-ui` first (see `dev/archive/notes/v1.
 
 Three conflicts:
 
-- `dev/BACKLOG.md`, `dev/sprints/STATUS.md` — the older main ce528cf carried against today's; resolved to origin/main's version exactly (no edit of our own; BL-321's entry is already in main).
+- `dev/BACKLOG.md`, `dev/archive/sprints/STATUS.md` — the older main ce528cf carried against today's; resolved to origin/main's version exactly (no edit of our own; BL-321's entry is already in main).
 - `src/today.js` — two comment-only hunks (BL-256 StatusDot comments); took main's wording. BL-321's own changes merged cleanly.
 - `dashboard.html` rebuilt with `split_dashboard.py build`.
 

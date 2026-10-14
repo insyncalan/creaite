@@ -20,4 +20,4 @@ Branch `sprint-peek-new`, worktree `../creaite-peek-new`, from `main` after `spr
 - **No schema change.** No `tracker.py` change for BL-179 or BL-180; BL-181's small `weekend` note in `tracker.py` is the one allowed change (a note, never a rejection).
 - **Look at it** in the real browser (`dev/tests/live_browser.py`, `dev/tools/cdp.py`) at 1400px, 1100px and 900px, chat open and closed, light and dark, in at least two themes, beside the mockup. Keep the screenshots.
 - **Tests:** one pass is enough; your own tests and the files that open New (search the tests for `#newBtn`, `openNew(`, `newDecNeeded`). Tests also run on GitHub's Linux runner: wait for conditions, and don't rely on hover, macOS scrollbars or a native list's keys.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge.

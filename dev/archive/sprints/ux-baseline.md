@@ -13,7 +13,7 @@ Alan should not have to ask for the things a good tool does by default. This spr
 ## When it can start
 
 - **BL-145 (`fix-chat-box`, worktree `../creaite-chat-box`) merges first.** It holds the chat box's auto-grow and `dev/tests/test_chat_box.py`; BL-146 builds its shared helper from that code, so there must be only one. If it has not merged, ask Alan.
-- Nothing else is in flight (`dev/sprints/STATUS.md`). Bring `main` in before starting and before the merge.
+- Nothing else is in flight (`dev/archive/sprints/STATUS.md`). Bring `main` in before starting and before the merge.
 - Everything is in `system/templates/dashboard.html` apart from the few server routes in BL-149 and the docs. It is one big file: commit each item separately and keep each item's code in its own marked block (`/* ===== BL-1xx (sprint-ux) ===== */`).
 
 ## Order
@@ -48,7 +48,7 @@ Two stages. **Stage A can merge on its own.**
 
 ## Tests
 
-Per `dev/sprints/STATUS.md`: the sprint runs **its own tests**, not the whole suite; one full suite runs on the final `main` before a release. Real-browser tests use `LiveBrowserCase`.
+Per `dev/archive/sprints/STATUS.md`: the sprint runs **its own tests**, not the whole suite; one full suite runs on the final `main` before a release. Real-browser tests use `LiveBrowserCase`.
 
 - `test_autosize_fields` (BL-146): the edit panel's Action and Latest update, Quick Capture and Steer it grow at three, six and thirty lines, stop at the cap with an inner scroll, shrink back, and are right after a paste and when a record is opened.
 - `test_plain_dates` (BL-147): the parser against a fixed "today" (every form in the item, and the ones that must be refused), and one field in the browser showing "Friday 16-10-2026".

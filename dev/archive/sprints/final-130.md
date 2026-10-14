@@ -62,7 +62,7 @@ The top-bar dot stays.
 - No other sprint is running. Shared files (`dashboard.html`, `help.md`, `dev/dashboard-spec.md`): put new code in marked sections and don't reformat unrelated lines. Regenerate the guides with `python3 dev/tools/build_guides.py`; never hand-edit them.
 - **Engine changes:** item 1 changes `update.py` (and possibly `build_dashboard.py`); item 3 changes `build_dashboard.py`. Add a line for each user-visible change to `dev/release-notes/1.3.0.md` under its headings. `VERSION` stays 1.3.0.
 - **Release notes:** the "Check once by hand" list mentions themes and "the Live light"; bring it in line.
-- **Don't touch** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`; they're updated at merge. Write the FR text in BUILD (FR-57 for the themes; extensions for Intake and ask creaite).
+- **Don't touch** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`; they're updated at merge. Write the FR text in BUILD (FR-57 for the themes; extensions for Intake and ask creaite).
 - **Tests:** run them in the worktree, never the main folder, whose `system/config/settings.json` holds Alan's dev values. Stop a run by its process tree, never with `pkill` by name.
 - **Development guard:** sample data only; test with temporary vaults.
 

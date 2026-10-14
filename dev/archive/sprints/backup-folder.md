@@ -56,7 +56,7 @@ The full suite passes (`python3 dev/tools/run_tests.py`, on a quiet machine).
 ## Boundaries
 
 - **Owns:** the backup default and `paths.never_index()`; a marked block in `update.py`; the doctor lines; wording.
-- **Don't edit:** `merge_permissions` and the rest of `update.py` that 4b changes; the schema or anything Sprint 5, recode or chat-sweep own (`dev/sprints/STATUS.md`). `BACKLOG.md` is updated at merge.
+- **Don't edit:** `merge_permissions` and the rest of `update.py` that 4b changes; the schema or anything Sprint 5, recode or chat-sweep own (`dev/archive/sprints/STATUS.md`). `BACKLOG.md` is updated at merge.
 - **Development guard:** sample data and temporary vaults only; never touch Alan's OneDrive or live vault.
 
 ## Confirmed by Alan (09-10-2026)

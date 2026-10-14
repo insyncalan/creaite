@@ -62,7 +62,7 @@ As soon as each laptop has re-cloned the new repository. Steps 1 to 4 run at the
 - **No guard change** beyond BL-09's agreed exception.
 - **No real names:** use the fictional sample data.
 - **Only the main session pushes;** agents commit only. Merge, never rebase. Clean up worktrees once work lands.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`.
 
 ## Tests
 

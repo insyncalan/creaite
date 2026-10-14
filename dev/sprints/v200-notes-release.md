@@ -83,7 +83,7 @@ The sprint closes the remaining gaps and applies Alan's 15-10 decisions.
 - **No real names:** use the fictional sample data (Brightwater, Kestrel Group, Northgate, FAL, MER, ORX, ABC, Alan Carter).
 - **Look at it** in the real browser at 1400px and 1100px, light and dark, in two themes.
 - **`check.py`** holds you: no figure may rise.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Only the main session pushes; agents commit only. Clean up worktrees and branches once work lands.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Only the main session pushes; agents commit only. Clean up worktrees and branches once work lands.
 
 ## Tests
 

@@ -26,4 +26,4 @@ If anything here seems to need one of those, stop that part and report it.
   - `test_admin_card`, `test_reach`, `test_permissions`, `test_permission_panel`, `test_permission_file`, `test_open_write` and `test_file_access`, all unchanged and passing.
 
   One pass is enough. Tests also run on GitHub's Linux runner. Stop runs by their own process tree only.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge. No schema change.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge. No schema change.

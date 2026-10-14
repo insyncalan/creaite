@@ -22,4 +22,4 @@ Branch `sprint-chat-text`, worktree `../creaite-chat-text`, from `main` after v1
   - then every test file that mentions ask creaite's input (`acKey`, `chIn`), refusals (`refused`, `denied`) or markdown (`mdHtml`, `mdChat`, `mdInline`), not a sample.
 
   One pass is enough; a file that fails under load and passes alone counts. Tests also run on GitHub's Linux runner: wait for conditions. Stop runs by their own process tree only; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. No schema change. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. No schema change. Never push or merge.

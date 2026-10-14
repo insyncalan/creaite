@@ -36,4 +36,4 @@ Keep to your items' code, in marked blocks (`/* ===== BL-21x (sprint-ui-audit) =
   - then every file that mentions `live_server`'s headers or `/health`, `snack`, the Milestones strip, Files or Settings, and `openChat`.
 
   One pass is enough; a file that fails under load and passes alone counts. Tests also run on GitHub's Linux runner. Stop runs by their own process tree only; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge.

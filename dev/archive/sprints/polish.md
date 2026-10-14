@@ -10,7 +10,7 @@ Commit each separately, in this order.
 
 **What happens:** two proposals that write the same change to one file (for example two cx-edit memory changes made from the same text). The first applies. The second finds the file already says what it proposes, fails `previous` (or "already exists"), and the whole apply stops.
 
-**The fix so far** is in `dev/sprints/polish-defect.patch`, taken from an unfinished copy on `main`. Apply it with `git apply dev/sprints/polish-defect.patch`. It adds the following to `run_file_ops` in `tracker.py`:
+**The fix so far** is in `dev/archive/sprints/polish-defect.patch`, taken from an unfinished copy on `main`. Apply it with `git apply dev/archive/sprints/polish-defect.patch`. It adds the following to `run_file_ops` in `tracker.py`:
 - a `write` whose target already holds the proposed content is skipped;
 - nothing is written, and there is nothing to undo.
 

@@ -424,7 +424,7 @@ Open this folder in the Code tab of the Claude desktop app and work through the 
 
 ## Backups folder (BL-112; sprint-backup-folder)
 
-> - **Default:** `locations.offsite_backup` is `_Portfolio/99 System/creaite backups` (`paths.LOCATION_DEFAULTS`, `settings-defaults.json`). `offsite_copy` already makes missing folders, so neither has to exist. Brief: `dev/sprints/backup-folder.md`.
+> - **Default:** `locations.offsite_backup` is `_Portfolio/99 System/creaite backups` (`paths.LOCATION_DEFAULTS`, `settings-defaults.json`). `offsite_copy` already makes missing folders, so neither has to exist. Brief: `dev/archive/sprints/backup-folder.md`.
 > - **Reserved folder:** `paths.never_index()` is the saved `never_index` plus `zz Archive`, `_Templates` and `99 System`, so an older or emptied saved list never exposes the backups. It feeds the document scan, the permission patterns (`never_index_patterns`) and `permissions.py`'s check.
 > - **Migration:** `update.migrate_backup_folder` (called from `merged_changes`): an `offsite_backup` that is exactly the old default (trailing slash ignored) becomes the new one; `99 System` is appended to `never_index`; any other value is kept. It is shown in the update preview (the notes), logged to `settings-log.jsonl` with the old value, run twice with no effect, and undone by "undo update".
 > - **Doctor:** warns only when the folder can't be written (`offsite_unwritable`; it creates nothing), and, once the new folder holds a copy, names the old folder if it still holds copies. creaite never moves or deletes them.
@@ -442,7 +442,7 @@ Open this folder in the Code tab of the Claude desktop app and work through the 
 
 ## Recode a project (BL-111; sprint-recode)
 
-> - **What it does:** `propose.py recode <OLD> <NEW> [--name …] [--folder …] [--dry-run]` stages one proposal item, `op: "recode"` on `projects`, plus the file changes that name the project. Apply writes it inside the apply's one transaction (`tracker.recode_project`, which uses `rewrite_project`); `undo` runs `rewrite_project` the other way round from the `recode` rows in `change_log`. Brief and decisions: `dev/sprints/recode.md`.
+> - **What it does:** `propose.py recode <OLD> <NEW> [--name …] [--folder …] [--dry-run]` stages one proposal item, `op: "recode"` on `projects`, plus the file changes that name the project. Apply writes it inside the apply's one transaction (`tracker.recode_project`, which uses `rewrite_project`); `undo` runs `rewrite_project` the other way round from the `recode` rows in `change_log`. Brief and decisions: `dev/archive/sprints/recode.md`.
 > - **Rewritten in the database:** `projects.code` and `name`; the `project` column and the ID of `milestones`, `workstreams`, `actions`, `raid` and `decisions` (numbers kept); `updates.project`; the milestone links; `source` paths when the folder changed; every `change_log` row (`item_id`, and `id`, `milestone` and `project` values); the `rejected` fingerprints (recomputed from the rejected items kept in `system/staging/`, because a fingerprint hashes the code); `vault_search.project`. Foreign keys are deferred for the transaction and `PRAGMA foreign_key_check` must be clean at the end. Item rows keep their `updated_at`, so undo is exact.
 > - **Files (through the proposal's `file_changes`, so they are undoable):** the register row, the old code added to Retired codes, the code swapped in the Shared table; the `# CODE — Name` heading of the project's `CLAUDE.md`; `mentions.jsonl`; the search sidecars when the folder changed (`system/search/` joined `WRITABLE`). Reported as "Check:" lines and not edited: the people register, `PORTFOLIO.md`, other lines of the project memory, the reminders dismissed for good (with the exact `propose.py setting …` command), and the old name as an alias.
 > - **Safety:** a recode is applied on its own (`recode_barrier`); it is refused while another pending proposal mentions the old code (whole token), for a code that exists or is in the register (retired codes too), and when the database has a table or column the recode doesn't know (`recode_unclassified`; `RECODE_COLUMNS` lists what is rewritten). **When a sprint adds a table or column that carries a project or an item ID, add it to `RECODE_COLUMNS` (and to `RECODE_ID_TABLES` if its own ID starts with the code, or `RECODE_LINKS` if it holds another item's ID)**; `test_recode.py` fails until it is. Sprint 5's are in: `promises` is an ID table; `decisions.replaces`, `links.from_item` / `to_item` and `item_labels.item_id` are references, rewritten in every row (a decision or link of another project that points at this one follows) and keyed in `change_log` as `from|to|kind` and `item|label`; `labels` holds no code.
@@ -477,7 +477,7 @@ Open this folder in the Code tab of the Claude desktop app and work through the 
 
 ## Sprint ux: the UX baseline (BL-146 to BL-157; branch `sprint-ux`)
 
-Brief: `dev/sprints/ux-baseline.md`; items: "UX review, 10-10-2026" in `dev/BACKLOG.md`. In v1.3.0 (Alan, 10-10-2026). Raised after BL-145 (the chat box should grow without being asked). Two stages: A (BL-146 to BL-148, BL-150 to BL-153) can merge alone; B (BL-149, BL-154 to BL-157) adds the sends-to-Claude-Code fixes and the "UX baseline" below, which every later sprint is checked against. Built overnight on 10-10-2026 with Alan unavailable: the brief's defaults were taken, and every other open choice took the most conservative working option (listed under each item and in "Open"). Each item was looked at in the real dashboard (a throwaway vault and the live server) at 1400px and 1100px, light and dark, in at least two themes.
+Brief: `dev/archive/sprints/ux-baseline.md`; items: "UX review, 10-10-2026" in `dev/BACKLOG.md`. In v1.3.0 (Alan, 10-10-2026). Raised after BL-145 (the chat box should grow without being asked). Two stages: A (BL-146 to BL-148, BL-150 to BL-153) can merge alone; B (BL-149, BL-154 to BL-157) adds the sends-to-Claude-Code fixes and the "UX baseline" below, which every later sprint is checked against. Built overnight on 10-10-2026 with Alan unavailable: the brief's defaults were taken, and every other open choice took the most conservative working option (listed under each item and in "Open"). Each item was looked at in the real dashboard (a throwaway vault and the live server) at 1400px and 1100px, light and dark, in at least two themes.
 
 ### BL-146: one auto-grow helper for every text box
 
@@ -579,7 +579,7 @@ Every screen is checked against these ten before it is called done (BL-157; Alan
 
 ## Sprint icons: icons in place of words (BL-158 to BL-161; branch `sprint-icons`)
 
-Brief: `dev/sprints/icons.md`; design: `dev/mockups/icons-mockup.html` (accepted by Alan on 10-10-2026, the New button as style A); items: "Icons in place of words" in `dev/BACKLOG.md`. In v1.3.0; `VERSION` stays 1.3.0. Built after `sprint-ux` merged (the brief's "Before starting" check passed), with Alan away: where anything was open the brief's rule ("when in doubt, keep the word") or the most conservative choice was taken, and is listed below. One commit per item, each in its own marked block (`/* ===== BL-15x (sprint-icons) ===== */`, CSS and JS).
+Brief: `dev/archive/sprints/icons.md`; design: `dev/mockups/icons-mockup.html` (accepted by Alan on 10-10-2026, the New button as style A); items: "Icons in place of words" in `dev/BACKLOG.md`. In v1.3.0; `VERSION` stays 1.3.0. Built after `sprint-ux` merged (the brief's "Before starting" check passed), with Alan away: where anything was open the brief's rule ("when in doubt, keep the word") or the most conservative choice was taken, and is listed below. One commit per item, each in its own marked block (`/* ===== BL-15x (sprint-icons) ===== */`, CSS and JS).
 
 ### What sprint-ux built, against its backlog text (the code wins)
 
@@ -649,7 +649,7 @@ Brief: `dev/sprints/icons.md`; design: `dev/mockups/icons-mockup.html` (accepted
 
 ## Sprint rail: the Current state title, the left rail and Activity (BL-162 to BL-164; branch `sprint-rail`)
 
-Brief: `dev/sprints/rail-and-titles.md`. For the release after 1.3.0 (1.4.0); `VERSION` unchanged. Built from `main` after `sprint-icons` merged (the "Before starting" check passed), alongside `sprint-polish-2`, with Alan away: the brief's "Decisions taken" were followed and anything else open took the most conservative working choice (listed under each item). One commit per item, in marked blocks (`/* ===== BL-16x (sprint-rail) ===== */`, CSS and JS; `# ===== BL-162 (sprint-rail) =====` in Python).
+Brief: `dev/archive/sprints/rail-and-titles.md`. For the release after 1.3.0 (1.4.0); `VERSION` unchanged. Built from `main` after `sprint-icons` merged (the "Before starting" check passed), alongside `sprint-polish-2`, with Alan away: the brief's "Decisions taken" were followed and anything else open took the most conservative working choice (listed under each item). One commit per item, in marked blocks (`/* ===== BL-16x (sprint-rail) ===== */`, CSS and JS; `# ===== BL-162 (sprint-rail) =====` in Python).
 
 **The backlog text:** the detailed BL-162 to BL-164 sections were dropped from `dev/BACKLOG.md` by d8e38cb (sprint-icons' merge housekeeping), which left only their summary rows; they were read from d8e38cb's parent. Restore them or retire the rows at merge.
 
@@ -1176,7 +1176,7 @@ The animation edits to sprint-admin's code went into the merge commit (a25acfa) 
 
 ## Sprint final (BL-142, BL-143, BL-137, BL-139; branch `sprint-final`)
 
-> **Built in order, one commit each:** BL-142 five themes; BL-143 no Live dot; BL-137 Upload Files lists only uploads; BL-139 the ask creaite running and finished badge. Engine changes (`update.py`, `build_dashboard.py`) are in `dev/release-notes/1.3.0.md`; `VERSION` stays 1.3.0. `dev/BACKLOG.md`, `dev/BRD.md` and `dev/sprints/STATUS.md` are not touched.
+> **Built in order, one commit each:** BL-142 five themes; BL-143 no Live dot; BL-137 Upload Files lists only uploads; BL-139 the ask creaite running and finished badge. Engine changes (`update.py`, `build_dashboard.py`) are in `dev/release-notes/1.3.0.md`; `VERSION` stays 1.3.0. `dev/BACKLOG.md`, `dev/BRD.md` and `dev/archive/sprints/STATUS.md` are not touched.
 
 **Defaults taken ("to confirm" / "assumed"):**
 - **BL-142:** the list order is Brightwater, creaite, Notion, Linear, Cursor. The `:root` tokens are kept as the base every theme overrides (many things, including the Help tokens, read them), so "creaite standard" has no block to delete; what goes is its `THEMES` entry. Every theme, creaite included, now sets `data-palette` on `<html>` (before, the default set none). `update.py tidy` and `merged_changes` rewrite only the three retired names (`creaite standard`, `Minimals`, `creaite teal`); any other unknown value is left in `settings.json`, and the page opens it as creaite. The browser kept no copy of the palette of its own, so the one map (`THEME_OLD`, in `themeOf`) covers the value baked in from `settings.json`. The committed dev `system/config/settings.json` now says `creaite`.
@@ -1205,7 +1205,7 @@ The animation edits to sprint-admin's code went into the merge commit (a25acfa) 
 
 ## Sprint polish 2: the UX sweep's follow-ups and test hygiene (BL-165 to BL-169, BL-172, BL-173; branch `sprint-polish-2`)
 
-Brief: `dev/sprints/polish-2.md`. For 1.4.0; `VERSION` unchanged. Built side by side with `sprint-rail`, with Alan away: where anything was open, the most conservative working choice was taken and is listed under each item. One commit per item, each in its own marked block (`===== BL-1xx (sprint-polish-2) =====`).
+Brief: `dev/archive/sprints/polish-2.md`. For 1.4.0; `VERSION` unchanged. Built side by side with `sprint-rail`, with Alan away: where anything was open, the most conservative working choice was taken and is listed under each item. One commit per item, each in its own marked block (`===== BL-1xx (sprint-polish-2) =====`).
 
 ### BL-172: tests clean up their vaults
 
@@ -1316,7 +1316,7 @@ UX baseline: checked 3 (a draft survives a reload: BL-167), 4 (nothing sends Ala
 
 ## Sprint peek: the work item peek and the Work toolbar (BL-176, BL-177, BL-175; branch `sprint-peek`)
 
-Brief: `dev/sprints/peek-panel.md`; the spec is the mockup `dev/mockups/work-item-peek-mockup.html`. For 1.4.0; `VERSION` unchanged. Built from `main` after `sprint-polish-2` and `sprint-rail` merged (41774c0), with Alan away: his decisions of 10-10-2026 were followed and anything else open took the most conservative working choice (below and in "Open"). One commit per item, in marked blocks (`===== BL-176 (sprint-peek) =====`, `===== BL-177 …`, `===== BL-175 …`, CSS and JS). The design and its mechanics are in `dev/dashboard-spec.md` › The work item peek and › The Work and Review toolbars.
+Brief: `dev/archive/sprints/peek-panel.md`; the spec is the mockup `dev/mockups/work-item-peek-mockup.html`. For 1.4.0; `VERSION` unchanged. Built from `main` after `sprint-polish-2` and `sprint-rail` merged (41774c0), with Alan away: his decisions of 10-10-2026 were followed and anything else open took the most conservative working choice (below and in "Open"). One commit per item, in marked blocks (`===== BL-176 (sprint-peek) =====`, `===== BL-177 …`, `===== BL-175 …`, CSS and JS). The design and its mechanics are in `dev/dashboard-spec.md` › The work item peek and › The Work and Review toolbars.
 
 ### Today, looked at first
 
@@ -1385,7 +1385,7 @@ A throwaway vault and the live server (`shots.py`, `shots2.py`, `probe.py` in th
 
 ## Sprint peek-new: new items open in the peek (BL-179; branch `sprint-peek-new`)
 
-Brief: `dev/sprints/peek-new.md`. For 1.4.0; `VERSION` unchanged. Built from `main` after `sprint-peek` merged (747735f), with Alan away: his request of 11-10-2026 ("creating an item must look and work like opening one") was followed and anything else open took the most conservative working choice (below and in "Open"). One commit per item, in marked blocks (`===== BL-179 (sprint-peek-new) =====`, CSS and JS). The mechanics are in `dev/dashboard-spec.md` › New items in the peek.
+Brief: `dev/archive/sprints/peek-new.md`. For 1.4.0; `VERSION` unchanged. Built from `main` after `sprint-peek` merged (747735f), with Alan away: his request of 11-10-2026 ("creating an item must look and work like opening one") was followed and anything else open took the most conservative working choice (below and in "Open"). One commit per item, in marked blocks (`===== BL-179 (sprint-peek-new) =====`, CSS and JS). The mechanics are in `dev/dashboard-spec.md` › New items in the peek.
 
 ### Today, looked at first
 
@@ -1496,7 +1496,7 @@ Screenshots: `fixpeek-shots/` in the session's scratchpad (`bl187-*`, `bl188-*`,
 
 ## Sprint links: every count of work items opens Work, filtered (BL-190; branch `sprint-links`)
 
-Brief: `dev/sprints/links.md`. For 1.4.0; `VERSION` unchanged. Built from `main` (6317e39) beside `fix-peek-140`, whose peek, staging pill and errors banner are untouched. One commit per item, in marked blocks (`===== BL-190 (sprint-links) =====`, CSS and JS); the mechanics are in `dev/dashboard-spec.md` › Every count opens Work. Alan's request (11-10-2026): every figure that counts work items is clickable and opens Work filtered to those items. Choices made on his behalf are under "Decisions".
+Brief: `dev/archive/sprints/links.md`. For 1.4.0; `VERSION` unchanged. Built from `main` (6317e39) beside `fix-peek-140`, whose peek, staging pill and errors banner are untouched. One commit per item, in marked blocks (`===== BL-190 (sprint-links) =====`, CSS and JS); the mechanics are in `dev/dashboard-spec.md` › Every count opens Work. Alan's request (11-10-2026): every figure that counts work items is clickable and opens Work filtered to those items. Choices made on his behalf are under "Decisions".
 
 ### Today, looked at first
 
@@ -1551,7 +1551,7 @@ A throwaway vault and the live server (`shots.py`, `focus.py` in the sprint's sc
 
 ## Sprint milestones: Plan and Movement, the slip range, and loose ends (BL-174, BL-189, BL-178, BL-186, BL-184, tidy-ups; branch `sprint-milestones`)
 
-Brief: `dev/sprints/milestones-1.5.md`; for BL-186 the spec is the mockup `dev/mockups/milestones-views-mockup.html` (v6). For 1.5.0; `VERSION` unchanged. Built from `main` after v1.4.0 (637cf7b), with Alan's decisions of 11-10-2026 (the BL-186 DDL as written, Missed retired, "Late" for the client, one vocabulary, BL-184 proved on fixtures). One commit per item, in marked blocks (`===== BL-1xx (sprint-milestones) =====`).
+Brief: `dev/archive/sprints/milestones-1.5.md`; for BL-186 the spec is the mockup `dev/mockups/milestones-views-mockup.html` (v6). For 1.5.0; `VERSION` unchanged. Built from `main` after v1.4.0 (637cf7b), with Alan's decisions of 11-10-2026 (the BL-186 DDL as written, Missed retired, "Late" for the client, one vocabulary, BL-184 proved on fixtures). One commit per item, in marked blocks (`===== BL-1xx (sprint-milestones) =====`).
 
 ### Items 1 to 3 (looked at first, then built)
 
@@ -1671,7 +1671,7 @@ Alan's commit 8811f76 (11-10-2026) made Actions' All open, Mine, Due soon and Ch
 
 ## Sprint polish-themes: the gear, the rail by right-click, four themes and the colour audit (BL-192, BL-191, BL-40a to BL-40d; branch `sprint-polish-themes`)
 
-Brief: `dev/sprints/polish-and-themes.md` (with the scrum master's notes, 11-10-2026). For 1.5.1; `VERSION` unchanged. Built with Alan away: the brief's "Decisions taken" were followed and anything else open took the most conservative working choice (listed below and under "Open"). One commit per item, in the brief's order. No schema, `tracker.py` or server change.
+Brief: `dev/archive/sprints/polish-and-themes.md` (with the scrum master's notes, 11-10-2026). For 1.5.1; `VERSION` unchanged. Built with Alan away: the brief's "Decisions taken" were followed and anything else open took the most conservative working choice (listed below and under "Open"). One commit per item, in the brief's order. No schema, `tracker.py` or server change.
 
 ### BL-192: Settings is a gear
 
@@ -1742,7 +1742,7 @@ A throwaway vault on `milestone_data` and the live server (`shots.py`, `styles.p
 
 ## Sprint ask-creaite-access: risk tiers on the approval card (BL-194; branch `sprint-ask-creaite-access`)
 
-Brief: `dev/sprints/ask-access.md`. For 1.5.1; `VERSION` unchanged. No schema change. Built with Alan away: the brief's defaults were followed and anything else open took the conservative choice (below). One commit per item, in marked blocks (`BL-194 (sprint-ask-creaite-access)`).
+Brief: `dev/archive/sprints/ask-access.md`. For 1.5.1; `VERSION` unchanged. No schema change. Built with Alan away: the brief's defaults were followed and anything else open took the conservative choice (below). One commit per item, in marked blocks (`BL-194 (sprint-ask-creaite-access)`).
 
 ### The rule, and how it was kept
 
@@ -1794,7 +1794,7 @@ A throwaway vault and the live server, the card with one Sensitive and one High-
 
 ## Sprint review-work: project changes in Review, the peek follows a click, and a right-click menu (BL-200, BL-198, BL-197; branch `sprint-review-work`)
 
-Brief: `dev/sprints/review-work.md`. For v1.6.0; `VERSION` unchanged. No schema change. Built beside `sprint-chat-text` (ask creaite's box, its refusal wording, the markdown renderer: not touched here). One commit per item, in marked blocks (`BL-1xx (sprint-review-work)`); `live_server.py`'s new code is one block (`REVIEW_WORK_ROUTES`) and one routing line. Built with Alan away: the defaults below are the conservative choices.
+Brief: `dev/archive/sprints/review-work.md`. For v1.6.0; `VERSION` unchanged. No schema change. Built beside `sprint-chat-text` (ask creaite's box, its refusal wording, the markdown renderer: not touched here). One commit per item, in marked blocks (`BL-1xx (sprint-review-work)`); `live_server.py`'s new code is one block (`REVIEW_WORK_ROUTES`) and one routing line. Built with Alan away: the defaults below are the conservative choices.
 
 ### Item 1: BL-200, change the project in Review (Alan's priority)
 
@@ -1963,7 +1963,7 @@ The real dashboard and live server (a throwaway vault with `milestone_data`), 14
 
 ## Sprint drafts-fields: the AI-draft scaffold and per-field drafts (BL-219, BL-225, BL-222, BL-226; branch `sprint-drafts-fields`)
 
-Brief: `dev/sprints/drafts-fields.md`; the shared rules are "AI drafts: rules shared by BL-218 to BL-227" in `dev/BACKLOG.md`. For 1.6.0; `VERSION` unchanged. Built from `main` (aab3593) beside `sprint-insight` and `sprint-ui-audit`, with Alan away: each item's recommended option was taken and is recorded below. One commit per item (scaffold, BL-219, BL-225, BL-222, BL-226, docs) plus one commit of fixes from the look in the browser, each in marked blocks (`===== AI drafts … (sprint-drafts-fields) =====`, `===== BL-2xx (sprint-drafts-fields) =====`, CSS and JS). No schema change.
+Brief: `dev/archive/sprints/drafts-fields.md`; the shared rules are "AI drafts: rules shared by BL-218 to BL-227" in `dev/BACKLOG.md`. For 1.6.0; `VERSION` unchanged. Built from `main` (aab3593) beside `sprint-insight` and `sprint-ui-audit`, with Alan away: each item's recommended option was taken and is recorded below. One commit per item (scaffold, BL-219, BL-225, BL-222, BL-226, docs) plus one commit of fixes from the look in the browser, each in marked blocks (`===== AI drafts … (sprint-drafts-fields) =====`, `===== BL-2xx (sprint-drafts-fields) =====`, CSS and JS). No schema change.
 
 ### Today, looked at first
 
@@ -2046,7 +2046,7 @@ A throwaway vault with the stand-in Claude (`shots.py` in the sprint's scratchpa
 
 ## Sprint drafts-writing: agenda and invite text, follow-up and chase emails, one set of facts in many forms (BL-223, BL-224, BL-227; branch `sprint-drafts-writing`)
 
-Brief: `dev/sprints/drafts-writing.md`; the shared rules are "AI drafts: rules shared by BL-218 to BL-227" in `dev/BACKLOG.md`. For **v1.7.0**, built from `sprint-drafts-fields` (`a344a33`) beside `sprint-drafts-extraction`; `VERSION` unchanged; no schema change. One commit per item plus docs, each in marked blocks (`===== BL-2xx (sprint-drafts-writing) =====`, the CSS block `AI drafts: writing`). The page's behaviour is in `dev/dashboard-spec.md` › AI drafts: writing.
+Brief: `dev/archive/sprints/drafts-writing.md`; the shared rules are "AI drafts: rules shared by BL-218 to BL-227" in `dev/BACKLOG.md`. For **v1.7.0**, built from `sprint-drafts-fields` (`a344a33`) beside `sprint-drafts-extraction`; `VERSION` unchanged; no schema change. One commit per item plus docs, each in marked blocks (`===== BL-2xx (sprint-drafts-writing) =====`, the CSS block `AI drafts: writing`). The page's behaviour is in `dev/dashboard-spec.md` › AI drafts: writing.
 
 ### What was built
 
@@ -2136,7 +2136,7 @@ Under "Dashboard editing", after the live-mode line:
 
 ## Sprint milestone-ui: the milestone view's two looks, Add milestone in one step, the history feed (BL-244, BL-245, BL-250 A; branch `sprint-milestone-ui`)
 
-Brief: `dev/sprints/milestone-ui.md`; BL-250 part A added by Alan (12-10-2026). For v1.6.1; `VERSION` unchanged. No schema change. The design is in `dev/dashboard-spec.md` › Sprint milestone-ui.
+Brief: `dev/archive/sprints/milestone-ui.md`; BL-250 part A added by Alan (12-10-2026). For v1.6.1; `VERSION` unchanged. No schema change. The design is in `dev/dashboard-spec.md` › Sprint milestone-ui.
 
 ### BL-244: client plain, internal marked
 
@@ -2250,7 +2250,7 @@ For v1.6.1 (Alan, 11-10-2026). One commit per item; every change sits in a marke
 
 ## Sprint insight: evidence on hover, the meeting hub, ⌘K that does things, Close the day, Review one at a time (BL-207, BL-209, BL-205, BL-206, BL-208; branch `sprint-insight`)
 
-Brief: `dev/sprints/insight-1.6.md`. Planned for v1.6.0; ships in **v1.6.1** (no 1.6.0 is published), its lines kept in `dev/release-notes/1.6.0.md`. `VERSION` unchanged. No schema change. One commit per item, in marked blocks (`BL-2xx (sprint-insight)`). The page's behaviour is in `dev/dashboard-spec.md` › Sprint insight; this section records the engine side, the choices made and the tests.
+Brief: `dev/archive/sprints/insight-1.6.md`. Planned for v1.6.0; ships in **v1.6.1** (no 1.6.0 is published), its lines kept in `dev/release-notes/1.6.0.md`. `VERSION` unchanged. No schema change. One commit per item, in marked blocks (`BL-2xx (sprint-insight)`). The page's behaviour is in `dev/dashboard-spec.md` › Sprint insight; this section records the engine side, the choices made and the tests.
 
 ### Item 1: BL-207, evidence on hover
 
@@ -2313,7 +2313,7 @@ Help (How do I… › Start the day's neighbour **Close the day**, Review and ap
 
 ## Sprint decisions-needed: what waits on a named person (BL-210; branch `sprint-decisions-needed`)
 
-Brief: `dev/sprints/decisions-needed.md`. For **v1.7.0**, built from `sprint-drafts-writing` (`76e6ead`), because Chase uses BL-224's chase mode; `VERSION` unchanged; no schema change. The code is in marked blocks (`===== BL-210 (sprint-decisions-needed) =====`); the page's behaviour is in `dev/dashboard-spec.md` › Decisions needed.
+Brief: `dev/archive/sprints/decisions-needed.md`. For **v1.7.0**, built from `sprint-drafts-writing` (`76e6ead`), because Chase uses BL-224's chase mode; `VERSION` unchanged; no schema change. The code is in marked blocks (`===== BL-210 (sprint-decisions-needed) =====`); the page's behaviour is in `dev/dashboard-spec.md` › Decisions needed.
 
 ### What was built
 
@@ -2419,7 +2419,7 @@ One commit per item, each in marked blocks (`===== BL-2xx (sprint-ask-flow) ====
 
 ## Sprint drafts-extraction: repeats, "probably done", sharpen on capture, and Quality (BL-221, BL-218, BL-220, BL-233; branch `sprint-drafts-extraction`)
 
-Brief: `dev/sprints/drafts-extraction.md`; the shared rules are "AI drafts: rules shared by BL-218 to BL-227" in `dev/BACKLOG.md`. For **v1.7.0**, branched from `sprint-drafts-fields` (`a344a33`); `VERSION` unchanged. One commit per item (BL-221 `f09765d`, BL-218 `00cdfeb`, BL-220 `7a5ef75`, BL-233 `e1fe0a1`) and one for the docs and the fixes from the look in the browser, each in marked blocks (`===== BL-2xx (sprint-drafts-extraction) =====`; the page's CSS in one `sprint-drafts-extraction` block). No schema change.
+Brief: `dev/archive/sprints/drafts-extraction.md`; the shared rules are "AI drafts: rules shared by BL-218 to BL-227" in `dev/BACKLOG.md`. For **v1.7.0**, branched from `sprint-drafts-fields` (`a344a33`); `VERSION` unchanged. One commit per item (BL-221 `f09765d`, BL-218 `00cdfeb`, BL-220 `7a5ef75`, BL-233 `e1fe0a1`) and one for the docs and the fixes from the look in the browser, each in marked blocks (`===== BL-2xx (sprint-drafts-extraction) =====`; the page's CSS in one `sprint-drafts-extraction` block). No schema change.
 
 ### What was built
 
@@ -2516,7 +2516,7 @@ Marked blocks `===== BL-253 (sprint-live-updates) =====` and `===== BL-269 (spri
 
 ## Sprint ui-sweep: click targets, a narrow window and high contrast, the Stage wordmark, ⌘↵ everywhere, Today's header (BL-216, BL-217, BL-273, BL-274, BL-270; branch `sprint-ui-sweep`, v1.7.0)
 
-Worked from the measured checklist `dev/sprints/ui-sweep-audit.md`. Marked blocks `===== BL-2xx (sprint-ui-sweep) =====`; the CSS sits at the end of the stylesheet, so it wins over the rules it adjusts. No schema change; no new HTML sink (Today's new markup goes through `putHTML`/`html`). Tests: `dev/tests/test_ui_sweep.py` (TargetSizes, Reflow, ForcedColours, Wordmark, TodayHeader; `dev/tests/ui_probe.js` holds the audit's measuring helpers as `window.AUD`) and `dev/tests/test_cmd_enter.py`. Design detail: `dev/dashboard-spec.md`, "Sprint ui-sweep".
+Worked from the measured checklist `dev/archive/sprints/ui-sweep-audit.md`. Marked blocks `===== BL-2xx (sprint-ui-sweep) =====`; the CSS sits at the end of the stylesheet, so it wins over the rules it adjusts. No schema change; no new HTML sink (Today's new markup goes through `putHTML`/`html`). Tests: `dev/tests/test_ui_sweep.py` (TargetSizes, Reflow, ForcedColours, Wordmark, TodayHeader; `dev/tests/ui_probe.js` holds the audit's measuring helpers as `window.AUD`) and `dev/tests/test_cmd_enter.py`. Design detail: `dev/dashboard-spec.md`, "Sprint ui-sweep".
 
 ### Item 1: BL-216, click targets (`e97576d`)
 - **Fixed, the four failures:** `.cebtn` (24 by 24, its extra width given back with a negative right margin; Work's owner column is 3 px wider), which also clears the "You" owner link; `.colmv` buttons; `.ib.rvrr` (Review's action column is 4 px wider).

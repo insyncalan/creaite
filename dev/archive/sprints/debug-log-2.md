@@ -1,13 +1,13 @@
 # Sprint: Debug log, part 2 (BL-102)
 
-Branch `sprint-debug-log-2`, worktree `../creaite-debug-log-2`, made from the tip of `main` when it starts. Read BL-102 in `dev/BACKLOG.md` and `dev/sprints/debug-log.md` (part 1) first; they hold Alan's decisions. Part 1 is merged: `system/scripts/log.py`, the `logging` setting, `paths.LOGS`, the `doctor.py` check and the session-start status line. **Nothing writes to the log yet** except `doctor.py`: this sprint wires it in.
+Branch `sprint-debug-log-2`, worktree `../creaite-debug-log-2`, made from the tip of `main` when it starts. Read BL-102 in `dev/BACKLOG.md` and `dev/archive/sprints/debug-log.md` (part 1) first; they hold Alan's decisions. Part 1 is merged: `system/scripts/log.py`, the `logging` setting, `paths.LOGS`, the `doctor.py` check and the session-start status line. **Nothing writes to the log yet** except `doctor.py`: this sprint wires it in.
 
 ## Stage B: set up (09-10-2026) — three items
 
 Stage A merged (`242e15c`). Stage B runs on branch `sprint-debug-log-2b`, worktree `../creaite-debug-log-2b`, made from `main` after Sprint 4b, chat-sweep, backup-folder, Sprint 5 and recode merged. Alan (09-10-2026) added two more items, both in files this sprint already touches, so the sprint carries **three items**, each committed separately:
 
 1. **BL-102 stage B: the debug log's calls inside the scripts, the rules text and Help.** B1 and B2 below, with A4 (the panel reads `system/logs/` and is refused a write there) in the tests. Don't re-wrap what stage A wrapped (`session.py`, `build_dashboard.py`, `doctor.py` and the other entry points use `log.main`): add the calls **inside** the scripts at the points listed. Keep `import log as debuglog`, guarded so a script still runs if `log.py` is missing. Recode's code (`recode_project`, `rewrite_project`) logs one line: the old and new code and the row counts, nothing else.
-2. **BL-113: meeting prep and the sweep learn decisions needed** (Sprint 5's hand-offs). Read BL-113 and BL-53 in `dev/BACKLOG.md` and the hand-offs in `dev/sprints/sprint-5.md`.
+2. **BL-113: meeting prep and the sweep learn decisions needed** (Sprint 5's hand-offs). Read BL-113 and BL-53 in `dev/BACKLOG.md` and the hand-offs in `dev/archive/sprints/sprint-5.md`.
    - **Prep (BL-49, BL-98):** a meeting's prep brief and its Prep page list the project's **pending decisions** (`status` Pending, who is asked, the needed-by date) and the **made decisions whose revisit date has come** (`revisit` as a YYYY-MM-DD date; a revisit written in words has no date and is not listed). In `build_dashboard.py` (the prep data) and `dashboard.html` (the prep brief); the Prep page prompt gets the same two lists.
    - **`sweep.py stage`:** stop defaulting `date` for a pending decision (today it runs `v.setdefault("date", …)` for every new decision, around line 207), and support `op: update` on a pending decision, as `minutes.py` does, so a message that makes a pending decision updates it instead of leaving a note. The cx-sweep skill drops its `"date": ""` workaround.
    - **Tests:** extend `test_sweep_alerts.py`, `test_decisions_sprint5.py` and `test_decisions_dashboard.py` (or a new file): prep lists both kinds and omits a withdrawn or made-without-revisit decision; a staged pending decision keeps its empty date; a sweep that makes a pending decision updates it and the apply fills the date.
@@ -90,7 +90,7 @@ Short entries at the points that matter, each following the privacy list above:
 
 - **Stage A owns:** the entry points of the scripts listed in A1; the debug-log blocks in `live_server.py`, `dashboard.html` and `build_dashboard.py`; the Diagnostics tests. Beside 4b: only the rules above.
 - **Stage B owns:** the calls in `tracker.py`, `excel_sync.py`, `sweep.py`, `minutes.py`, `review.py`, `report.py`, and the rules and Help text.
-- **Don't edit** what another running sprint owns (see `dev/sprints/STATUS.md`).
+- **Don't edit** what another running sprint owns (see `dev/archive/sprints/STATUS.md`).
 - **Shared files:** put new code in its own marked block; add lines, never reformat or move existing ones, so the merge stays readable. Leave `BACKLOG.md` alone (updated at merge).
 - **Development guard:** sample data and temporary vaults only; never connect to Microsoft 365.
 

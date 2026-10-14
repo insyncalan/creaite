@@ -39,7 +39,7 @@ Branch `sprint-milestone-ui`, worktree `../creaite-milestone-ui`, from `main`. *
   - One pass is enough; a file that fails under load and passes alone counts.
   - Tests also run on Linux: wait for conditions, and don't rely on hover.
   - Stop only your own processes, by PID; never `pkill` by name.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. Never push or merge. No schema change.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. Never push or merge. No schema change.
 - **Style:** British English; "ask creaite" in lower case; DD-MM-YYYY shown.
 
 ## Done when

@@ -152,7 +152,7 @@ Approved: the sprints below, plus BL-252 and insight's screenshots. BL-231 moves
 | BL-252, BL-234 | ask creaite and grep; automatic CI | wave 1; BL-234 after v1.6.1 ships |
 | `fix-small-17` | BL-235 the Week ahead priorities in Settings; BL-252's last part, a count of pipe refusals in Diagnostics (Alan, 12-10-2026) | wave 1, now |
 | `sprint-decisions-needed` | BL-210 Decisions needed on Today (Alan, 12-10-2026) | **started 12-10 16:20** from `sprint-drafts-writing` |
-| `sprint-ui-sweep` | BL-216, BL-217, BL-273 (wordmark; Retro Arcade and Thermo Scan keep their lettering), BL-274; **BL-270 after escaping-2 merges** | started 12-10 about 21:40 from main, beside escaping-2 (Alan); CSS-first, guided by `dev/sprints/ui-sweep-audit.md` |
+| `sprint-ui-sweep` | BL-216, BL-217, BL-273 (wordmark; Retro Arcade and Thermo Scan keep their lettering), BL-274; **BL-270 after escaping-2 merges** | started 12-10 about 21:40 from main, beside escaping-2 (Alan); CSS-first, guided by `dev/archive/sprints/ui-sweep-audit.md` |
 | `fix-handcheck-161` | BL-278 to BL-283 (v1.8.0) | **merged 13-10 00:20** (BL-283 added by the Product Manager) |
 | `sprint-live-updates` | BL-253 server-sent events, pulse as fallback | started 12-10 about 20:05 from `sprint-ask-flow` (Alan: parallel) |
 | `sprint-debt-docs` (part 1) | BL-230 docstrings, every script no open branch is changing | started 12-10 about 20:05 from main |

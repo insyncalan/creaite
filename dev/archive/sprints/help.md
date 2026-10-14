@@ -67,7 +67,7 @@ Define the conventions once, at the top of `help.md` in a comment, and keep them
 - numbered steps;
 - an `Or say:` line of backticked phrases.
 
-Bring the 16 artifact tasks across as written, and update them for anything merged since: **Prep 1:1 is replaced by Draft email** (BL-83), so describe Draft email from its brief, `dev/sprints/draft-email.md`.
+Bring the 16 artifact tasks across as written, and update them for anything merged since: **Prep 1:1 is replaced by Draft email** (BL-83), so describe Draft email from its brief, `dev/archive/sprints/draft-email.md`.
 
 **Reference:** everything in today's `help.md`, regrouped:
 - keyboard shortcuts;
@@ -168,8 +168,8 @@ Trim only what a task card already says in the same words. **Nothing may be drop
 **Removed from today's Help** (nothing else was dropped or reworded; every other section is in Reference word for word):
 - The **Guides** section ("New to creaite? Two one-page guides sit beside this help in `system/templates/`…", with its two bullets for `guide-first-day.html` and `guide-how-to.html`): Help now contains the guides. Reference's opening paragraph says instead that "a printable copy of those two guides is in `system/templates/`".
 - The one-line intro under the title ("The dashboard's Help page (press `?`, or Settings › Help) is built from this file at every rebuild. Edit it here. `Cmd` on Mac, `Ctrl` on Windows."): now the comment at the top of `help.md`.
-- In **People**, the **Prep 1:1** bullet ("**Prep 1:1** on a person's page opens a short brief: what they owe…"): replaced by a **Draft email** bullet written from `dev/sprints/draft-email.md`. The Start here "People" view line and the how-to "Prepare for a meeting or 1:1" card changed the same way (Prep 1:1 became "Prepare for a meeting" plus a new "Ask someone for an update" card). Reword these from the built sprint at merge if its wording is more exact.
+- In **People**, the **Prep 1:1** bullet ("**Prep 1:1** on a person's page opens a short brief: what they owe…"): replaced by a **Draft email** bullet written from `dev/archive/sprints/draft-email.md`. The Start here "People" view line and the how-to "Prepare for a meeting or 1:1" card changed the same way (Prep 1:1 became "Prepare for a meeting" plus a new "Ask someone for an update" card). Reword these from the built sprint at merge if its wording is more exact.
 
 **Changed in Help on purpose:** the `?` shortcut row says it opens the tab used last.
 
-**Needs doing by someone with the internet (Alan):** run `python3 dev/tools/fetch_help_fonts.py`, then `python3 dev/tools/build_guides.py`, and commit the three font families (WOFF2 files and `help-fonts-OFL.txt`) and the rebuilt guides. This session had no network, so the fonts are not vendored yet: Help and the guides use the system's sans and mono fonts until then, and the screenshots in `dev/sprints/help-merge/` show that fallback.
+**Needs doing by someone with the internet (Alan):** run `python3 dev/tools/fetch_help_fonts.py`, then `python3 dev/tools/build_guides.py`, and commit the three font families (WOFF2 files and `help-fonts-OFL.txt`) and the rebuilt guides. This session had no network, so the fonts are not vendored yet: Help and the guides use the system's sans and mono fonts until then, and the screenshots in `dev/archive/sprints/help-merge/` show that fallback.

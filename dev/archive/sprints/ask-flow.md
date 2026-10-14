@@ -34,4 +34,4 @@ Branch `sprint-ask-flow`, worktree `../creaite-ask-flow`, from `fix-search-read`
 - **Look at it:** in the real browser (`dev/tools/cdp.py`), at 1400px, in light and dark, in three themes. Keep the screenshots in the scratchpad.
 - **Never push or merge.** No Actions runs unless told.
 - **Processes:** stop only your own processes, by PID. Never `pkill`.
-- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. No schema change.
+- **The usual edit rule:** don't edit `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. No schema change.

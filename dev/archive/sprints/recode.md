@@ -39,7 +39,7 @@ Commit each separately.
 - `propose.py recode <OLD> <NEW> [--name "…"] [--folder "…"] [--dry-run]`: builds the spec (the recode item; the register row, Retired codes row and Shared table; the project `CLAUDE.md` heading; `mentions.jsonl`; sidecars), prints the preview (counts per table, sample new IDs, files changed, things to check by hand, the settings command), and stages it approved unless `--dry-run`.
 
 ### 3. Docs and skill
-`dev/BUILD.md` section, `dev/staging-format.md` (the `recode` op), `tracker-conventions.md`, the cx-edit skill (a "Recode a project" recipe), `system/creaite-rules.md` (cx-edit row), `dev/sprints/STATUS.md`.
+`dev/BUILD.md` section, `dev/staging-format.md` (the `recode` op), `tracker-conventions.md`, the cx-edit skill (a "Recode a project" recipe), `system/creaite-rules.md` (cx-edit row), `dev/archive/sprints/STATUS.md`.
 
 ## Done when
 
@@ -58,6 +58,6 @@ The full suite passes (`python3 dev/tools/run_tests.py`, when no other session i
 ## Boundaries
 
 - **Owns:** the recode block in `tracker.py` and `propose.py`, the one-line hooks listed above, `test_recode.py`, the docs in item 3.
-- **Don't edit:** the schema (`schema.sql`; Sprint 5 owns it), `excel_sync.py`, or anything else in Sprint 5, 4b or chat-sweep's list (`dev/sprints/STATUS.md`). `BACKLOG.md` and `BRD.md` are updated at merge.
+- **Don't edit:** the schema (`schema.sql`; Sprint 5 owns it), `excel_sync.py`, or anything else in Sprint 5, 4b or chat-sweep's list (`dev/archive/sprints/STATUS.md`). `BACKLOG.md` and `BRD.md` are updated at merge.
 - **Development guard:** sample data and temporary vaults only. Never touch Alan's live vault.
 - **Release:** an engine change, so it ships in a release zip; the release notes line is added when the release is cut (v1.2.0 is 4b's).

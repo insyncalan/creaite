@@ -38,7 +38,7 @@ Commit each separately, each in its own marked block (`/* ===== BL-176 (sprint-p
 - **Don't change what the mockup doesn't show:** new items keep the Create form, and the milestone, rebaseline and project-health panels, Review's draft-minutes flow, Current state, the Work, Mine and person lists and their inline cell edits stay as they are. If a new item needs the peek layout to feel right, take the conservative default (keep the form), note it in BUILD under "Open" and carry on.
 - **No schema change.** A change to `tracker.py` or the database is out of scope; if one looks needed, stop and report it.
 - **Shared files** (`dashboard.html`, `help.md`, `dev/dashboard-spec.md`, `build_dashboard.py`, `live_server.py`): new code in marked sections, and don't reformat unrelated lines. `sprint-rail` owns the left rail, Activity and the Current state title. Never hand-merge the generated guides; regenerate them.
-- **Don't edit** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/sprints/STATUS.md`. The Scrum Master records the FR at merge. Create `dev/release-notes/1.4.0.md` entries only if the file exists or is yours to create; don't change `VERSION`.
+- **Don't edit** `dev/BACKLOG.md`, `dev/BRD.md` or `dev/archive/sprints/STATUS.md`. The Scrum Master records the FR at merge. Create `dev/release-notes/1.4.0.md` entries only if the file exists or is yours to create; don't change `VERSION`.
 - **Development guard:** sample data only; test with temporary vaults; never connect to Microsoft 365. Tests set `CREAITE_NO_LAUNCH=1`.
 - **Stop a test run by its process tree,** never with `pkill` by name.
 - **Never push or merge from the sprint session.**
@@ -46,7 +46,7 @@ Commit each separately, each in its own marked block (`/* ===== BL-176 (sprint-p
 
 ## Tests
 
-The sprint runs **its own tests**; one pass is enough (`dev/sprints/STATUS.md` › Testing rule). A file that fails under load and passes alone counts; name it. Start from the mockup's own checks, which already pass in headless Chrome, and port them to the real page (`dev/tests/live_browser.py`, screenshots with `dev/tools/cdp.py`).
+The sprint runs **its own tests**; one pass is enough (`dev/archive/sprints/STATUS.md` › Testing rule). A file that fails under load and passes alone counts; name it. Start from the mockup's own checks, which already pass in headless Chrome, and port them to the real page (`dev/tests/live_browser.py`, screenshots with `dev/tools/cdp.py`).
 - **Opens editable:** opening an item shows the title, key row and free text live, with no Edit, Save or Cancel in the DOM.
 - **Overlay:** with the panel open the page's width and first row's position are unchanged; with ask creaite open the two never overlap; at 1100px the panel is not under 520px; outside click and Esc close it; J and K move; another row swaps it.
 - **Each edit is its own proposal:** three edits to one item write three proposals; Undo last removes only the newest unapplied dashboard one; Apply applies them all through the existing route; nothing reaches `tracker.db` before Apply.
