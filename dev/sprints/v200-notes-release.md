@@ -4,6 +4,11 @@
 
 **Goes into:** v2.0.0. Branch `release-200`, made from `release-195` once v1.9.5 is cut. Releases are stacked, as `dev/RELEASE-BRANCHES-NOTE.md` describes: `git merge --no-ff`, never a rebase or a force-push, and each merge commit says what it carries. Merged in this order: `v20-base`, `v20-capture`, then the finishing branches below. Written by the Product Manager on 15-10-2026, from `dev/V20-INTEGRATION-NOTE.md`, `dev/V20-CAPTURE-NOTE.md` and `dev/V20-AI-SELECT-NOTE.md`.
 
+**Two teams, work split to run in parallel (Alan, 15-10-2026): Team Cap (Team 1, laptop 1) and Team Stark (Team 2, laptop 2).**
+- **Team Cap:** B's margin ticks (step 3), the guard change (4), the real-data gate with Alan on laptop 1 (6), the rules text and the release notes (7), and `release-200`'s integration and cut (8).
+- **Team Stark:** bringing `v20-capture` level (1), finishing D (2), the `review` snapshot fix (5), and Help, the guides, `dev/dashboard-spec.md` and the hand-check script (7).
+- **Running together:** steps 1 to 5 run at the same time, two branches per team. Each team runs its own tests, and Team Cap merges in the order below.
+
 **Read first:** BL-301 in `dev/BACKLOG.md`, including Alan's decisions of 15-10-2026: no new tabs; click opens and ⌥-click edits; note drafts stay in the backup zip; notes are exempt from outside content.
 
 ## Goal
@@ -24,16 +29,16 @@ The sprint closes the remaining gaps and applies Alan's 15-10 decisions.
 
 ## Order
 
-1. **Bring the branches level (Team 1).**
+1. **Bring the branches level (Team Stark).**
    - Merge the latest `v20-base` into `v20-capture`, keeping both sides as Team 2 did before (test_tracker's script list, main.js's exports, Help's keyboard table, the rules' scripts rows).
    - Rebuild the generated files (`split_dashboard.py build`, `build_guides.py`).
    - Run test_capture_drawer, test_dashboard_split, test_tracker and test_help_loop.
-2. **Finish D (Team 2, `v20-ai-select`).**
+2. **Finish D (Team Stark, `v20-ai-select`).**
    - Test and finish the WIP commit that wires D into Notes (the top of `v20-base`).
    - Build the hook "Make this an action / risk / decision / update" on a selected line: `mountFindUpdates(path, el, {p})`.
    - `/api/edit/ai` keeps no tools; counts only go to `draft-stats.json`.
-3. **B's last gap (Team 1):** draw the margin ticks on lines already sent (`notes.sent_ids`).
-4. **The guard change: notes exempt from outside content (Team 1, its own branch `v20-notes-guard`).**
+3. **B's last gap (Team Cap):** draw the margin ticks on lines already sent (`notes.sent_ids`).
+4. **The guard change: notes exempt from outside content (Team Cap, its own branch `v20-notes-guard`).**
    - **What changes:** reading a note no longer marks an ask creaite run. A note here is a `.md` file directly inside a project's or the portfolio's notes folder, as `notes.note_of` accepts it. The marking is in `live_server.py` `OUTSIDE_CONTENT` and in the hook in `reach.py`.
    - **What still marks:** everything else in OneDrive, including a note's pictures (`_images/`), other files, transcripts, documents and `inbox/`.
    - **Tests:**
@@ -42,12 +47,12 @@ The sprint closes the remaining gaps and applies Alan's 15-10 decisions.
      - a new test that a note doesn't mark and a transcript in the same project still does.
    - `creaite-rules.md`'s BL-141 lines say so.
    - **No other guard change** in this release.
-5. **Fix the `review` snapshot (Team 1).** After the `v20-a-finish` merge, a "Possible match" row loses BL-315's reject guess ("guess: Doesn't need tracking"). Find and fix the cause; don't re-record the golden.
-6. **A's gate on real data (Alan, read only, on laptop 1).**
+5. **Fix the `review` snapshot (Team Stark).** After the `v20-a-finish` merge, a "Possible match" row loses BL-315's reject guess ("guess: Doesn't need tracking"). Find and fix the cause; don't re-record the golden.
+6. **A's gate on real data (Alan with Team Cap, read only, on laptop 1).**
    - Re-run the round-trip gate over Alan's real Current states (`--private --exact`).
    - The comment node must close the fourth pane (one holding only an HTML comment).
    - No release until every pane round-trips byte for byte.
-7. **Rules and docs (Team 1).** `system/creaite-rules.md`:
+7. **Rules and docs (Team Cap: the rules and the release notes; Team Stark: Help, the guides, the spec and the hand checks).** `system/creaite-rules.md`:
    - `08 Notes` and `notes-sent.json` in the folder map;
    - the Find updates panel as a place Alan approves;
    - notes passive until Find updates;
@@ -56,7 +61,7 @@ The sprint closes the remaining gaps and applies Alan's 15-10 decisions.
    - the notes exemption (step 4).
 
    Also `dev/release-notes/2.0.0.md` (already started on `v20-base`), Help, the guides and `dev/dashboard-spec.md`.
-8. **Release (Team 1 integrates, the main session pushes).**
+8. **Release (Team Cap integrates and cuts; the main session pushes).**
    - Run the full suite on `release-200` (`dev/tools/run_tests.py`), then Actions `tests.yml` on `insyncalan/creaite`.
    - Run `check.py`, and the vendor manifest check (the Tiptap bundle, its licence).
    - Alan runs the hand checks in `dev/handchecks/v2.0.0.md` (to write):
