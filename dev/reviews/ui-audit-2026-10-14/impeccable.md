@@ -1,0 +1,58 @@
+# Impeccable detector (static, v4.5.2)
+
+54 findings.
+
+- **border-accent-on-rounded** (warning) system/templates/dashboard/style.css:1101 — `border-top:3px solid`
+- **bounce-easing** (advisory) system/templates/dashboard/style.css:766 — `cubic-bezier(.3, 1.35, .5, 1)`
+- **broken-image** (warning) system/templates/dashboard/src/ask.js:700 — `<img alt='Attached image'>`
+- **cramped-padding** (warning) system/templates/guide-first-day.html:0 — `<div> "hp-phrases": children flush against border+bg on all sides (no inset)`
+- **gray-on-color** (warning) system/templates/guide-first-day.html:0 — `text #a2aeb5 on bg #3a2c10`
+- **hero-eyebrow-chip** (warning) system/templates/guide-first-day.html:0 — `eyebrow chip (tracked-caps) "creaite 1.8.0 · first day" above h1 "Claude drafts. You appro`
+- **hero-eyebrow-chip** (warning) system/templates/guide-how-to.html:0 — `eyebrow chip (tracked-caps) "creaite 1.8.0 · how-to" above h1 "How do I…"`
+- **kicker-above-heading** (warning) system/templates/guide-first-day.html:0 — `kicker "Once" above h2 "Your first hour"`
+- **kicker-above-heading** (warning) system/templates/guide-first-day.html:0 — `kicker "Every day" above h2 "The rhythm"`
+- **kicker-above-heading** (warning) system/templates/guide-first-day.html:0 — `kicker "The dashboard" above h2 "Where things are"`
+- **kicker-above-heading** (warning) system/templates/guide-first-day.html:0 — `kicker "Phrasebook" above h2 "Say this in Claude Code or ask creaite"`
+- **kicker-above-heading** (warning) system/templates/guide-first-day.html:0 — `kicker "Never bends" above h2 "Four rules"`
+- **side-tab** (warning) system/templates/dashboard/style.css:575 — `.bcard.hl — inset box-shadow 4px stripe (left)`
+- **side-tab** (warning) system/templates/dashboard/style.css:602 — `border-left:3px solid var(--line)`
+- **side-tab** (warning) system/templates/dashboard/style.css:613 — `border-left:3px solid var(--accent)`
+- **side-tab** (warning) system/templates/dashboard/style.css:615 — `border-left:3px solid var(--warn)}`
+- **side-tab** (warning) system/templates/dashboard/style.css:647 — `border-left:2px solid var(--line)}`
+- **side-tab** (warning) system/templates/dashboard/style.css:805 — `border-left:3px solid var(--accent)`
+- **side-tab** (warning) system/templates/dashboard/style.css:1221 — `border-left:3px solid var(--warn)`
+- **side-tab** (warning) system/templates/dashboard/style.css:1235 — `border-left-width:4px`
+- **side-tab** (warning) system/templates/dashboard/style.css:1329 — `.bcol.drop — inset box-shadow 3px stripe (left)`
+- **side-tab** (warning) system/templates/dashboard/style.css:1362 — `0%,36% — inset box-shadow 3px stripe (left)`
+- **side-tab** (warning) system/templates/dashboard/style.css:1373 — `0% — inset box-shadow 3px stripe (left)`
+- **side-tab** (warning) system/templates/dashboard/style.css:1821 — `border-left:3px solid var(--warn)`
+- **side-tab** (warning) system/templates/dashboard/style.css:1985 — `border-left:2px solid var(--line)`
+- **side-tab** (warning) system/templates/dashboard/style.css:2037 — `border-left:3px solid var(--warn)} .mv-explain button{margin-left:6px}`
+- **side-tab** (warning) system/templates/dashboard/style.css:2060 — `border-left:3px solid var(--accent)`
+- **side-tab** (warning) system/templates/dashboard/style.css:2118 — `border-left:3px solid var(--line-strong)`
+- **side-tab** (warning) system/templates/dashboard/style.css:2125 — `border-left:3px solid var(--accent)`
+- **side-tab** (warning) system/templates/dashboard/style.css:2172 — `border-left:3px solid var(--line-strong)`
+- **side-tab** (warning) system/templates/guide-first-day.html:0 — `border-top: 3px`
+- **side-tab** (warning) system/templates/guide-first-day.html:0 — `border-top: 3px`
+- **side-tab** (warning) system/templates/guide-first-day.html:0 — `border-top: 3px`
+- **side-tab** (warning) system/templates/guide-first-day.html:0 — `border-top: 3px`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`
+- **tiny-text** (warning) system/templates/guide-how-to.html:0 — `11.84px body text`

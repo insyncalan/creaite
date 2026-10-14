@@ -800,7 +800,11 @@ export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.igno
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
    is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
-export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen);
+export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet);
+/* BL-334: a conversation with nothing for Alan is one quiet line on Today (no buttons, no count), shown the day it was updated */
+export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&String(a.updated||"").slice(0,10)===TODAY);
+/** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
+const vipSig=()=>(VIPD().alerts||[]).filter(a=>!a.seen).map(a=>`${a.id}@${a.updated||""}`).join();
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
@@ -813,17 +817,21 @@ export function alertFocus(id,what){ const vis=()=>$$("#tdList > li").filter(l=>
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
   const h=$("#hTd"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); return; } const h2=$("#hAttn"); if(h2){ h2.tabIndex=-1; h2.focus(); } }; }
-export async function alertDismiss(id){ if(!viaServer()){ snack("Dismiss needs the live server"); return; }
-  const r=await api("/api/alerts/dismiss",{ids:[id]}); if(!r.ok){ snack(r.message||"Not dismissed"); return; }
-  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"); if(a) a.seen=r.at||nowStamp(); vipBadge(); renderToday(); back();
-  snack("Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss needs the live server"); return; }
+  const c=cand?{cand}:{}, r=await api("/api/alerts/dismiss",{ids:[id],...c}); if(!r.ok){ snack(r.message||"Not dismissed"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"), it=cand&&a?(a.candidates||[]).find(/** @param {any} x */x=>x.n===cand):null;
+  if(it){ it.dismissed=r.at||nowStamp(); if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=r.at||nowStamp(); }   /* BL-334: that item only; nothing is staged */
+  else if(a) a.seen=r.at||nowStamp();
+  vipBadge(); renderToday(); back();
+  snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it through /api/alerts/make, which dismisses the message; closing the peek leaves the message as it was. */
 export const ALERTTYPES=[["action","Action"],["risk","Risk"],["issue","Issue"],["decision","Decision"]];
 export const alertTypeOf=(k,x)=>k==="actions"?"action":k==="decisions"?"decision":String((x&&x.type)||"risk").toLowerCase();
-export async function alertMake(id,type="action",keep){ if(!viaServer()){ snack("Create work item needs the live server"); return; }
-  const r=await api("/api/alerts/prefill",{id,type}); if(!r.ok||!r.prefill){ snack(r.message||"That message can't be read"); return; }
+export async function alertMake(id,type,keep,cand){ if(!viaServer()){ snack("Create work item needs the live server"); return; }
+  const r=await api("/api/alerts/prefill",{id,...(type?{type}:{}),...(cand?{cand}:{})}); if(!r.ok||!r.prefill){ snack(r.message||"That message can't be read"); return; }
+  type=r.prefill.type||type||"action";
   const pre=r.prefill, k=pre.table, v=pre.values||{}; openNew(k,k==="decisions"?"needed":"");
   if(!shared.CUR||shared.CUR.mode!=="new"||shared.CUR.k!==k) return;
   PKN.offer=null; pkNewOffer("");                                               /* not a kept draft of another new item */
@@ -831,16 +839,19 @@ export async function alertMake(id,type="action",keep){ if(!viaServer()){ snack(
   if(k==="decisions"){ x.by=v.made_by||""; x.srcIn=pre.source||""; if(keep&&keep.due) x.due=keep.due; }
   else { x.o=v.owner||""; if(v.type) x.type=v.type; if(keep&&keep.due) x.due=keep.due; }
   if(pre.raised) x.raised=pre.raised;
-  shared.CUR.alert={id,type,link:pre.link||"",who:pre.who||"",sent:pre.sent||"",kind:pre.kind||"mail",marker:pre.marker||"",source:pre.source||""};
+  if(!keep&&k!=="decisions"&&v.due_date) x.due=v.due_date; if(!keep&&k==="decisions"&&v.needed_by) x.due=v.needed_by;   /* BL-334: a due date the conversation stated */
+  shared.CUR.alert={id,type,cand:cand||0,link:pre.link||"",who:pre.who||"",sent:pre.sent||"",kind:pre.kind||"mail",marker:pre.marker||"",source:pre.source||""};
   shared.CUR.blank={...x}; drawPanel(); const t=$("#pkTitle"); if(t){ t.textContent=x.t; t.focus(); } }
 export function alertValues(k,f){ const v=toDb(k,f); return {...v,project:f.p||""}; }
 /* the peek's first stage for an item made from a message: the server stages it and dismisses the message */
 export async function alertStage(k,nid,f){ const al=shared.CUR.alert, type=alertTypeOf(k,shared.CUR.draft); pkSaving("busy");
-  const r=await api("/api/alerts/make",{id:al.id,type,values:alertValues(k,f)});
+  const r=await api("/api/alerts/make",{id:al.id,type,values:alertValues(k,f),...(al.cand?{cand:al.cand}:{})});
   if(!r.ok){ pkSaving("fail"); pkNote(r.message||"Not staged"); return "wait"; }
   const meta={k,id:nid,patch:{},prev:{},label:"Created",from:"",to:f.t,at:nowStamp(),note:"",type:"act",isNew:true,title:f.t,p:f.p,known:pkArr(k).map(y=>y.id),ms:Date.now()};
   shared.PKS.push({name:r.proposal,...meta}); if(shared.CUR&&shared.CUR.nid===nid) shared.CUR.staged=r.proposal; pkPersist(); pkSaving("ok");
-  const a=(VIPD().alerts||[]).find(z=>z.id===al.id); if(a){ a.seen=nowStamp(); a.made=r.made||{proposal:r.proposal}; } vipBadge(); refreshAll(); return "ok"; }
+  const a=(VIPD().alerts||[]).find(z=>z.id===al.id), it=a&&al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===al.cand):null;
+  if(it){ it.made=r.made||{proposal:r.proposal}; if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=nowStamp(); }   /* BL-334: that item only */
+  else if(a){ a.seen=nowStamp(); a.made=r.made||{proposal:r.proposal}; } vipBadge(); refreshAll(); return "ok"; }
 /* why Draft from the message can't run, or "" */
 export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs the live server":""; }
 /* the strip at the top of the peek: where it came from, the type, Draft from the message, Save and Cancel */
@@ -856,7 +867,7 @@ export function alertPeekDraw(x,k){ let el=$("#pkAlert"); const al=shared.CUR&&s
     <button type="button" class="btn" data-alertpeek="cancel">Cancel</button><button type="button" class="btn primary" data-alertpeek="save" data-tip="Stages it and dismisses the message (${MOD}↵)">Save</button></div>`); }
 export async function alertDraft(){ const al=shared.CUR&&shared.CUR.mode==="new"?shared.CUR.alert:null; if(!al) return;
   const why=alertDraftWhy(al); if(why){ snack(why); return; } const k=shared.CUR.k, nid=shared.CUR.nid, st=$("#pkAlertSt");
-  const d=await draftAsk({id:al.id,type:alertTypeOf(k,shared.CUR.draft)},{url:"/api/alerts/draft",label:"Reading the message",status:h=>{ if(st) putHTML(st,raw(h)); }});
+  const d=await draftAsk({id:al.id,type:alertTypeOf(k,shared.CUR.draft),...(al.cand?{cand:al.cand}:{})},{url:"/api/alerts/draft",label:"Reading the message",status:h=>{ if(st) putHTML(st,raw(h)); }});
   if(!shared.CUR||shared.CUR.nid!==nid) return;
   if(!d.ok||!d.prefill){ snack(d.message||"No draft came back"); return; }
   const v=d.prefill.values||{}, x=shared.CUR.draft, t=String(v.description??v.decision??"").trim(), due=v.due_date||v.needed_by||"", f=k==="actions"?"upd":k==="raid"?"resp":"why";
@@ -888,8 +899,8 @@ export function vipNotify(list){ if(VIPD().notify===false||!("Notification" in w
     if(Notification.permission==="granted"){ try{ const n=new Notification(String(a.who||"creaite"),{body:a.subject,tag:"creaite-vip-"+a.id}); n.onclick=()=>{ window.focus(); go("today"); n.close(); }; }catch(e){} } });
   if(Notification.permission==="default"&&list.length&&!store.get("creaite-vip-asked",false)){ store.set("creaite-vip-asked",true); try{ Notification.requestPermission(); }catch(e){} } }
 export async function vipPoll(){ if(!viaServer()) return; const r=await api("/api/vip"); if(!r.ok) return;
-  const before=VIPS().map(a=>a.id).join(); Object.assign(VIPD(),{alerts:r.alerts||[],last_check:r.last_check});
-  if(VIPS().map(a=>a.id).join()!==before){ vipNotify(VIPS()); vipBadge(); if(shared.VIEW==="today") renderToday(); } }
+  const before=vipSig(); Object.assign(VIPD(),{alerts:r.alerts||[],last_check:r.last_check});
+  if(vipSig()!==before){ vipNotify(VIPS()); vipBadge(); if(shared.VIEW==="today") renderToday(); } }
 /* Settings › VIP alerts: the switches, and what "always" can honestly mean */
 export function vipSectionHtml(){ const v=VIPD();
   return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow in People and projects › People.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v.notify!==false?"checked":""} aria-label="Browser notification"></div></div>`; }
@@ -898,8 +909,9 @@ export function vipSectionHtml(){ const v=VIPD();
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id);
-  else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due}); }
+  const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
+  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
+  else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */
 PKDRAW.push(alertPeekDraw);
 setInterval(vipPoll,60*1000);

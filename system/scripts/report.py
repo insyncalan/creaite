@@ -574,7 +574,7 @@ def weekly_vip(code, owners):
         import sweep
         vips = {v["name"]: v["kind"] for v in propose.vip_people()}
         alerts = [{"who": a["who"], "subject": a["subject"], "sent": a["sent"], "marker": a.get("marker")}
-                  for a in sweep.vip_state()["alerts"] if not a.get("seen") and a.get("p") == code]
+                  for a in sweep.vip_state()["alerts"] if sweep.vip_open(a) and a.get("p") == code]
     except Exception:  # noqa: BLE001  VIP facts are a help, never a blocker
         return {"owners": [], "unseen_alerts": []}
     return {"owners": sorted({o: vips[o] for o in owners if o in vips}.items()), "unseen_alerts": alerts}

@@ -1,4 +1,4 @@
-"""BL-104 Clear day (Sprint 4a): set a day's meetings aside in Intake's Calendar Import, in a real browser against the real
+"""BL-104 Clear day (Sprint 4a): set a day's meetings aside in Intake's Calendar import, in a real browser against the real
 live server, plus the data rules behind it.
 
 Run: python3 dev/tests/test_clear_day.py   (the page tests need Google Chrome; skipped otherwise)

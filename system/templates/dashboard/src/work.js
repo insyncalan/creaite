@@ -255,7 +255,11 @@ shared.RZ=store.get("creaite-colwidths",{});
    (←/→, 16 px), 60 to 900 px, double-click puts the column back; widths in creaite-colwidths under the key given */
 export function colResizer(th,k,after){ if(shared.RZ[k]){ th.style.width=shared.RZ[k]+"px"; th.style.minWidth=shared.RZ[k]+"px"; }
   const h=document.createElement("span"); h.className="colrz"; h.tabIndex=0; h.setAttribute("role","separator"); h.setAttribute("aria-label","Resize "+th.textContent+" column");
-  const put=w=>{ w=Math.max(60,Math.min(900,w)); th.style.width=w+"px"; th.style.minWidth=w+"px"; shared.RZ[k]=Math.round(w); };
+  /* v1.9.5 (UI audit P1-6): a focusable separator needs its value: the width in px, 60 to 900 */
+  const val=w=>h.setAttribute("aria-valuenow",String(Math.round(Math.max(60,Math.min(900,w||0)))));
+  h.setAttribute("aria-orientation","vertical"); h.setAttribute("aria-valuemin","60"); h.setAttribute("aria-valuemax","900"); val(shared.RZ[k]||th.getBoundingClientRect().width);
+  h.addEventListener("focus",()=>val(th.getBoundingClientRect().width));
+  const put=w=>{ w=Math.max(60,Math.min(900,w)); th.style.width=w+"px"; th.style.minWidth=w+"px"; shared.RZ[k]=Math.round(w); val(w); };
   h.addEventListener("click",e=>e.stopPropagation());
   h.addEventListener("pointerdown",e=>{ e.preventDefault(); const x0=e.clientX,w0=th.getBoundingClientRect().width; document.body.classList.add("resizing"); h.setPointerCapture(e.pointerId);
     const mv=ev=>put(w0+ev.clientX-x0);
@@ -1168,7 +1172,7 @@ export function renderPeople(){ const T=peopleTabs(), none=shared.PTAB==="none",
   const L=T[shared.PTAB].sort((a,b)=>(!none&&(isMe(a.name)?-1:isMe(b.name)?1:0))||(()=>{ const x=f(a),y=f(b); return (x<y?-1:x>y?1:0)*(shared.PSORT.dir==="asc"?1:-1); })()||a.name.localeCompare(b.name));
   if(!$("#ptabs")) addHTML($("#peopleTbl"),"beforebegin",html`<div class="tabs" role="tablist" id="ptabs" aria-label="People" style="margin-bottom:12px"></div>`);
   putHTML($("#ptabs"),raw([["work","With work"],["none","Nothing assigned"]].map(([k,l])=>`<button role="tab" data-ptab="${k}" aria-selected="${shared.PTAB===k}" aria-controls="peopleTbl">${l} <span class="sub">${T[k].length}</span></button>`).join("")));
-  const th=(c,l,num)=>`<th class="${num?"num":""}" data-psort="${c}" role="button" tabindex="0" aria-sort="${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?"ascending":"descending"):"none"}">${l}${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?" ▲":" ▼"):""}</th>`;
+  const th=(c,l,num)=>`<th class="${num?"num":""}" data-psort="${c}" aria-sort="${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?"ascending":"descending"):"none"}"><button type="button" class="thsort">${l}${shared.PSORT.col===c?(shared.PSORT.dir==="asc"?" ▲":" ▼"):""}</button></th>`;   /* v1.9.5 (UI audit P1-7): aria-sort stays on the column header; the control is a real button inside it */
   const nameCell=x=>`<td class="title"><a href="#" class="plink2" data-person="${esc(x.name)}">${esc(isMe(x.name)?`You (${x.name})`:x.name)}</a>${x.p||isMe(x.name)?"":` <span class="tag warn" title="${none?"Seen on items but isn’t in the people register":"Owns items but isn’t in the people register"}">not in register</span>`}</td>
     <td>${x.p&&x.p.org?esc(x.p.org):'<span class="sub">—</span>'}</td><td>${x.p&&x.p.role?esc(x.p.role):'<span class="sub">—</span>'}</td><td>${x.codes.map(pLink).join(" ")||'<span class="sub">—</span>'}</td>`;
   $("#peopleTbl").setAttribute("role","tabpanel");

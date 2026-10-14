@@ -6,12 +6,17 @@
 <title>creaite: the live server isn't running</title>
 <meta name="theme-color" content="#0B6E7F">
 <style>
-  :root{--bg:#F6F7F8;--surface:#FFFFFF;--ink:#1A1F24;--muted:#5C6670;--line:#E2E6EA;--accent:#0B6E7F}
-  @media (prefers-color-scheme:dark){:root{--bg:#111518;--surface:#181D21;--ink:#E3E7EA;--muted:#A3ADB5;--line:#2B3238;--accent:#3FB6C8}}
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-  main{max-width:520px;margin:24px;padding:28px 32px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
-  h1{margin:0 0 6px;font-size:20px} p{margin:8px 0;color:var(--muted)} code{display:block;margin:10px 0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
-  button{margin-top:10px;padding:8px 16px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
+  /* BL-325: the default theme's (creaite's) colours, light and dark, its fonts (when installed; this page loads nothing), and
+     the dashboard's type, spacing and radius scale */
+  :root{--bg:#F3F6F7;--surface:#FFFFFF;--ink:#14212A;--muted:#4D5C66;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#FFFFFF;
+    --font:"Source Sans 3","Segoe UI",system-ui,-apple-system,Arial,sans-serif;--display:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --fs-sm:13px;--fs-md:14px;--fs-2xl:22px;--r-md:8px;--r-lg:12px;--ctl-h:32px}
+  @media (prefers-color-scheme:dark){:root{--bg:#0F1518;--surface:#171E22;--ink:#E4EAED;--muted:#A2AEB5;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A}}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:var(--fs-md)/1.5 var(--font)}
+  main{max-width:520px;margin:24px;padding:28px 32px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+  h1{margin:0 0 6px;font:800 var(--fs-2xl)/28px var(--display);letter-spacing:-.02em} p{margin:8px 0;color:var(--muted)} code{display:block;margin:10px 0;padding:10px 12px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r-md);color:var(--ink);font:var(--fs-sm) var(--mono);overflow-wrap:anywhere}
+  button{margin-top:10px;height:var(--ctl-h);padding:0 16px;border:0;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font:500 var(--fs-sm) var(--font);cursor:pointer}
 </style>
 </head>
 <body>

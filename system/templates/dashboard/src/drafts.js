@@ -251,7 +251,7 @@ document.addEventListener("click",e=>{ if(!shared.DE) return; const t=e.target;
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-defollow]"); if(b){ e.preventDefault(); e.stopPropagation(); openFollowup(b.dataset.defollow); } },true);
 }
 /* ===== BL-157 (sprint-ux) ===== fixes from the one-off UX sweep (each under an hour; the rest are BL-165 onwards):
-   an empty Activity and an empty Projects page say what to do next (baseline check 6), and Quick Capture's unsent note is kept
+   an empty Activity and an empty Projects page say what to do next (baseline check 6), and Quick capture's unsent note is kept
    in this browser across a reload and cleared by Process or Clear (check 3). */
 /* ===== end BL-157 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -399,10 +399,10 @@ Object.assign(DRAFTKIND,{polish:"email","polish-help":"email"});   /* BL-298: th
 DRAFTFEATURES.push(["email","Polish the email wording","Draft email's opening paragraph reworded in a warm, neutral or firm tone; the table, subject and addresses are untouched"]);
 }
 /* ===== BL-220 (sprint-drafts-extraction) ===== Sharpen on capture. When an action is typed (the new-item form, ⌘K's "add an action",
-   Quick Capture) plain code offers chips, never set until clicked: Owner (a named person from the register, or "I'll…" as you), Due
+   Quick capture) plain code offers chips, never set until clicked: Owner (a named person from the register, or "I'll…" as you), Due
    (from the words, through parseWhen), Workstream and Milestone (named in the words, else as the closest past item in the project was
    filed) and Priority (urgent, asap, critical; important). A click changes that one field: the peek's own staging (pkCommit), ⌘K's
-   pending change, or a clause added to the note's line in Quick Capture. A vague title (under four words, or no verb: plain code, as
+   pending change, or a clause added to the note's line in Quick capture. A vague title (under four words, or no verb: plain code, as
    extraction.vague) offers Sharpen (drafts.py kind "sharpen", the run engine): a verb-first title beside the original, Use or
    Discard; the original is kept (as_proposed, BL-232, for a proposal). Review marks a vague new action as shaky (BL-208) with Sharpen. */
 export const SHVERBS=new Set(("accept add agree align allocate amend analyse analyze appoint approve arrange ask assess assign attend audit book brief build buy "
@@ -470,7 +470,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-shrv]"); 
   setTimeout(()=>{ const t=$('#pkChips [data-draft="sharpen"]'); if(t) t.click(); else snack("This title isn't vague any more"); },0); },true);
 document.addEventListener("click",e=>{ const b=e.target.closest("#cmdk [data-ckchip]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const it=shared.CK[shared.CKI], c=it&&it.change, ch=c&&c.chips&&c.chips[+b.dataset.ckchip]; if(!ch||!c.new) return; c.new[ch.f]=ch.v; drawCk(); $("#cmdkIn").focus(); },true);
-/* Quick Capture: chips for the line being written; a click adds that field to the line, in words cx-minutes reads */
+/* Quick capture: chips for the line being written; a click adds that field to the line, in words cx-minutes reads */
 { const host=document.createElement("div"); host.id="qcChips"; host.className="qcchips"; host.setAttribute("role","group"); host.setAttribute("aria-label","Suggested fields for this line"); $("#qcNotes").after(host); }
 ["input","click","keyup"].forEach(ev=>$("#qcNotes").addEventListener(ev,()=>qcChipsDraw()));
 }

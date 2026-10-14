@@ -367,7 +367,7 @@ def inbox(projects):
             state = "processed"
         out.append({"name": f.name, "path": rel, "ext": f.suffix.lower()[1:], "size": f.stat().st_size,
                     "date": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d"), "p": likely, "state": state,
-                    "event": eid, "uploaded": eid is None})      # BL-137: Upload Files lists the uploaded files; one with a recorded event ID was loaded from the calendar
+                    "event": eid, "uploaded": eid is None})      # BL-137: Upload files lists the uploaded files; one with a recorded event ID was loaded from the calendar
     return out
 
 
@@ -807,7 +807,7 @@ def vip_unseen_by_project():
     try:
         import sweep
         for a in sweep.vip_state()["alerts"]:
-            if not a.get("seen") and a.get("p"):
+            if sweep.vip_open(a) and a.get("p"):          # BL-334: a quiet line is not counted
                 vip_unseen[a["p"]] = vip_unseen.get(a["p"], 0) + 1
     except (ImportError, OSError, ValueError, LookupError, TypeError):  # no sweep helper or an odd VIP file: no VIP count
         pass
@@ -2105,7 +2105,7 @@ def meetings_start(settings, today):
         return today - timedelta(days=today.weekday())
 
 
-# ── Clear day (BL-104): meetings set aside in Calendar Import ─────────────────
+# ── Clear day (BL-104): meetings set aside in Calendar import ─────────────────
 # system/staging/intake-cleared.json: {"cleared": [{key, day, start, title, cleared}]}. A cleared meeting is not a
 # processed one: nothing here touches processed.txt or the tracker. The key is the calendar event ID, or
 # "day|start|title" for a meeting without one. Entries older than the look-back window are dropped.
@@ -2209,7 +2209,7 @@ def inbox_meetings(settings, projects, today):
 # ===== BL-293 (sprint-today-days-server) ===== Today moves between the calendar's days. calendar_days gives every working day
 # the saved calendar holds (sweep.calendar_span: Monday of this week, or inbox.meetings_from, to seven days ahead), with a weekend
 # day only when it has a meeting. Each meeting carries its times, and: an ended one its follow-up (Minutes made, Transcript ready,
-# No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar Import reads them); today
+# No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar import reads them); today
 # and later its Prep key, whether it is worth preparing for (the Week ahead's plan) and its prep page (BL-286's records). A
 # confidential meeting keeps only its title, times, event ID and those states; a private one is "Busy" with its times.
 TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not transcribed yet", "no_access": "No access to the transcript"}
@@ -2237,7 +2237,7 @@ def calendar_days(d, now):
 
 
 def day_lookups(d, now):
-    """What every day's meetings are looked up in, read once: projects, Calendar Import's rows, filed minutes and prep pages."""
+    """What every day's meetings are looked up in, read once: projects, Calendar import's rows, filed minutes and prep pages."""
     today, rows_ = now.date(), import_rows(d)
     items = [x for x in d.get("actions") or [] if x["st"] in ("Open", "Delayed")] + [x for x in d.get("raid") or [] if x["st"] == "Open"]
     projects = d.get("projects") or []
@@ -2249,7 +2249,7 @@ def day_lookups(d, now):
 
 
 def import_rows(d):
-    """Calendar Import's meetings (inbox_meetings), the ones set aside with Clear day marked cleared."""
+    """Calendar import's meetings (inbox_meetings), the ones set aside with Clear day marked cleared."""
     mt = d.get("meetings") or {}
     return [dict(m, cleared=False) for m in mt.get("rows") or []] + [dict(m, cleared=True) for m in mt.get("cleared") or []]
 
@@ -2333,9 +2333,9 @@ def meeting_project(e, title, look):
 
 
 def follow_state(e, iso, title, look):
-    """An ended meeting's follow-up: {state: minutes|transcript|none, …}, as Calendar Import works it out (BL-42, BL-119).
+    """An ended meeting's follow-up: {state: minutes|transcript|none, …}, as Calendar import works it out (BL-42, BL-119).
     minutes: processed (processed.txt), a draft waiting in Review, or minutes filed for that day and series. transcript: loaded
-    into inbox/ or found by the sweep; `process` is what Process needs (cx-minutes, as Calendar Import). none: `why`, and
+    into inbox/ or found by the sweep; `process` is what Process needs (cx-minutes, as Calendar import). none: `why`, and
     `checked` False when the sweep hasn't looked yet."""
     start, eid = str(e.get("start") or ""), str(e.get("id") or "") or None
     row = (look["by_id"].get(eid) if eid else None) or look["by_time"].get((iso, start, title)) or {}
