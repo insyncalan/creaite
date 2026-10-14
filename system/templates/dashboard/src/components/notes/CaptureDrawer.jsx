@@ -187,7 +187,7 @@ async function discard() {
 }
 
 /** A time stamp as the foot shows it: today's as HH:MM, another day's as DD-MM-YYYY. @param {string} at */
-const when = at => !at ? "" : at.slice(0, 10) === TODAY ? at.slice(11, 16) : fd(at.slice(0, 10));
+const capWhen = at => !at ? "" : at.slice(0, 10) === TODAY ? at.slice(11, 16) : fd(at.slice(0, 10));
 
 /** The drawer. */
 export function CaptureDrawer() {
@@ -242,7 +242,7 @@ export function CaptureDrawer() {
       <div ref={box} id="capBody" class="capbody" role="textbox" aria-multiline="true" aria-label="Note" aria-describedby="capSaved"
         data-ph="Type the note: what was said, what you think, who to follow up…" spellcheck />
       <div class="capfoot">
-        <span class="sub" id="capSaved" role="status" aria-live="polite">{capMsg.value || (n.saved ? `Draft saved ${when(n.saved)}` : live ? "Saved as you type" : "Notes need the live server")}</span>
+        <span class="sub" id="capSaved" role="status" aria-live="polite">{capMsg.value || (n.saved ? `Draft saved ${capWhen(n.saved)}` : live ? "Saved as you type" : "Notes need the live server")}</span>
         <span class="sp" />
         <button type="button" class="btn ai" id="capFind" disabled={capBusy.value} aria-disabled={off ? "true" : undefined} data-tip={off || "Save it, then open it with Find updates"}
           onClick={() => captureDone(true)}>Done and find updates</button>
@@ -256,11 +256,11 @@ export function CaptureDrawer() {
             {drafts.map(d => (
               <li><button type="button" class="caprow" onClick={() => resume(d)} aria-label={`Carry on with the draft ${d.title || "Untitled"}`}>
                 <b>{d.title || (d.body || "").trim().split("\n")[0].slice(0, 60) || "Untitled"}</b><span class="sp" />
-                <span class="sub">Draft · {where(d.code)} · {when(d.at)}</span></button></li>))}
+                <span class="sub">Draft · {where(d.code)} · {capWhen(d.at)}</span></button></li>))}
             {recent.notes.map(r => (
               <li><button type="button" class="caprow" onClick={() => { capOpen.value = false; openNoteFull({ code: r.code, path: r.path, find: false }); }}
                 aria-label={`Open the note ${r.title}`}>
-                <b>{r.title}</b><span class="sp" /><span class="sub">{where(r.code)} · {when(r.at)}</span></button></li>))}
+                <b>{r.title}</b><span class="sp" /><span class="sub">{where(r.code)} · {capWhen(r.at)}</span></button></li>))}
           </ul>
         </div>) : null}
     </aside>
