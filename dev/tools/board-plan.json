@@ -225,8 +225,8 @@
       "Needs decision": 1
     },
     "per_priority": {
-      "Normal": 26,
-      "High": 4,
+      "Normal": 25,
+      "High": 5,
       "Low": 3
     },
     "per_team": {
@@ -998,8 +998,8 @@
         },
         "state": {
           "value": "Ready",
-          "reason": "in a release, no status words in the row's Plan: default",
-          "strength": "weak"
+          "reason": "Alan, 15-10-2026: \"2.1.0 this release is ready\"",
+          "strength": "strong"
         },
         "priority": {
           "value": "High",
@@ -1038,8 +1038,8 @@
         },
         "state": {
           "value": "Ready",
-          "reason": "in a release, no status words in the row's Plan: default",
-          "strength": "weak"
+          "reason": "Alan, 15-10-2026: \"2.1.0 this release is ready\"",
+          "strength": "strong"
         },
         "priority": {
           "value": "High",
@@ -1078,8 +1078,8 @@
         },
         "state": {
           "value": "Ready",
-          "reason": "in a release, no status words in the row's Plan: default",
-          "strength": "weak"
+          "reason": "Alan, 15-10-2026: \"2.1.0 this release is ready\"",
+          "strength": "strong"
         },
         "priority": {
           "value": "High",
@@ -1118,8 +1118,8 @@
         },
         "state": {
           "value": "Ready",
-          "reason": "in a release, no status words in the row's Plan: default",
-          "strength": "weak"
+          "reason": "Alan, 15-10-2026: \"2.1.0 this release is ready\"",
+          "strength": "strong"
         },
         "priority": {
           "value": "High",
@@ -1143,7 +1143,7 @@
       "id": "BL-339",
       "title": "BL-339 Retire the meeting hub",
       "release": "v2.1.0",
-      "priority": "Normal",
+      "priority": "High",
       "state": "Ready",
       "size": "S",
       "team": "Team Stark",
@@ -1158,13 +1158,13 @@
         },
         "state": {
           "value": "Ready",
-          "reason": "in a release, no status words in the row's Plan: default",
-          "strength": "weak"
+          "reason": "Alan, 15-10-2026: \"2.1.0 this release is ready\"",
+          "strength": "strong"
         },
         "priority": {
-          "value": "Normal",
-          "reason": "no priority stated: default",
-          "strength": "default"
+          "value": "High",
+          "reason": "row says 'Priority High'",
+          "strength": "strong"
         },
         "size": {
           "value": "S",
@@ -1177,7 +1177,7 @@
           "strength": "medium"
         }
       },
-      "body": "<!-- creaite-plan BL-339: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-339 | **Retire the meeting hub** (BL-209's page for each meeting, FR-167): its links go to the Prep popup before a meeting and to the minutes after it; Coverage and Carry move into the minutes editor (BL-338) | Alan, 15-10-2026 | S | **In v2.1.0 (Alan, 15-10-2026)**, with BL-338 |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-15 (Alan). **In v2.1.0 (Alan, 15-10-2026)**, with BL-338. Alan: the page is too complex and not needed now. No schema change.\n\n- **Remove** BL-209's page for each meeting (`#meeting=<token>`, its strip of steps and its next-step button, FR-167) and its \"Meeting page\" links from Today, the Week ahead, Intake, the Prep brief, Files, an item's source and Review.\n- **Where the links go instead:** before a meeting, its Prep popup; after it, its minutes in BL-338's editor (the draft or the filed minutes). An old `#meeting=` link opens the same place.\n- **Coverage and Carry to the next agenda** move into BL-338's Agenda coverage; carried points still appear on the series' next prep page under \"Not covered last time\".\n- **Done when:** no screen links to a meeting page; old links land on Prep or the minutes; coverage and carry work from the minutes; the BRD retires FR-167 and moves its coverage part to BL-338's requirement.\n- **Touches:** `meetings.js` (`hubLink` and the page), Today, the Week ahead, Intake, Prep, Files, Review, `build_dashboard.py`, cx-minutes (the coverage step's wording), Help, tests.\n<!-- /write-up -->\n"
+      "body": "<!-- creaite-plan BL-339: imported from dev/BACKLOG.md -->\n<!-- summary -->\n**Backlog summary** (v2.1.0 (Alan, 13-10-2026))\n\n| ID | Item | Source | Size | Plan |\n|----|------|--------|------|------|\n| BL-339 | **Retire the meeting hub** (BL-209's page for each meeting, FR-167): its links go to the Prep popup before a meeting and to the minutes after it; Coverage and Carry move into the minutes editor (BL-338) | Alan, 15-10-2026 | S | **In v2.1.0 (Alan, 15-10-2026). Priority High (Alan, 15-10-2026), like its siblings**, with BL-338. Ready (Alan, 15-10-2026: \"this release is ready\") |\n<!-- /summary -->\n\n<!-- write-up -->\nRaised 2026-10-15 (Alan). **In v2.1.0 (Alan, 15-10-2026)**, with BL-338. Alan: the page is too complex and not needed now. No schema change.\n\n- **Remove** BL-209's page for each meeting (`#meeting=<token>`, its strip of steps and its next-step button, FR-167) and its \"Meeting page\" links from Today, the Week ahead, Intake, the Prep brief, Files, an item's source and Review.\n- **Where the links go instead:** before a meeting, its Prep popup; after it, its minutes in BL-338's editor (the draft or the filed minutes). An old `#meeting=` link opens the same place.\n- **Coverage and Carry to the next agenda** move into BL-338's Agenda coverage; carried points still appear on the series' next prep page under \"Not covered last time\".\n- **Done when:** no screen links to a meeting page; old links land on Prep or the minutes; coverage and carry work from the minutes; the BRD retires FR-167 and moves its coverage part to BL-338's requirement.\n- **Touches:** `meetings.js` (`hubLink` and the page), Today, the Week ahead, Intake, Prep, Files, Review, `build_dashboard.py`, cx-minutes (the coverage step's wording), Help, tests.\n<!-- /write-up -->\n"
     },
     {
       "id": "BL-340",
