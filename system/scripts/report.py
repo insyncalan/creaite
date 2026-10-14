@@ -93,10 +93,11 @@ def doc_stem(name):
     return re.sub(r"\s+", " ", re.sub(r'[\\/:*?"<>|\x00-\x1f]', " ", name or "")).strip(" .") or "Project"
 
 
-def report_file(day, kind, name):
+def report_file(day, kind, name, ext=".docx"):
     """YYYY-MM-DD Weekly report - <Project name>.docx (or Client report): the project's full name, never its code (BL-101).
-    Files named the earlier way (YYYY-MM-DD Weekly report.docx) are still recognised and never renamed."""
-    return f"{day} {kind} - {doc_stem(name)}.docx"
+    Files named the earlier way (YYYY-MM-DD Weekly report.docx) are still recognised and never renamed. v2.1.0 P1: ext=".html"
+    names a creaite report (creaite_doc.target); the Word drafts keep .docx until P3 retires them."""
+    return f"{day} {kind} - {doc_stem(name)}{ext}"
 
 
 def project(con, code):

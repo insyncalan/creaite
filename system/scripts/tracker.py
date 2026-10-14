@@ -2874,7 +2874,7 @@ def pdf_text_stdlib(p, limit=400_000):
 
 
 # ===== BL-276: saved-email text for the search index =====
-INDEX_READERS = 3   # BL-276 (2), BL-275 (3): raise when text_of reads more, so the next build reads every file again
+INDEX_READERS = 4   # BL-276 (2), BL-275 (3), v2.1.0 P1 (4): raise when text_of reads more, so the next build reads every file again
 
 
 def log_path(p):
@@ -2926,6 +2926,15 @@ def eml_text(p, limit=400_000):
 # ===== end BL-276 =====
 
 
+def cue_text(p):
+    """A .vtt or .srt transcript's words, without cue numbers, times or tags; a <v Speaker> tag becomes "Speaker: "."""
+    lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
+    keep = [ln for ln in lines if ln.strip() and "-->" not in ln and ln.strip() != "WEBVTT"
+            and not ln.strip().isdigit()]
+    return "\n".join(re.sub(r"<v ([^>]+)>", r"\1: ", re.sub(r"</?[a-z][^>]*>", "", k))
+                     if k.startswith("<v ") else re.sub(r"<[^>]+>", "", k) for k in keep)
+
+
 def text_of(p):
     """Plain text of a vault file for the search index (standard library, and the bundled pypdf for PDFs)."""
     suffix = p.suffix.lower()
@@ -2938,17 +2947,16 @@ def text_of(p):
             xml = re.sub(r"</w:p>|</a:p>|</si>", "\n", xml)
             return re.sub(r"[ \t]+", " ", re.sub(r"<[^>]+>", "", xml)).strip()
         if suffix in (".vtt", ".srt"):
-            lines = p.read_text(encoding="utf-8", errors="ignore").splitlines()
-            keep = [ln for ln in lines if ln.strip() and "-->" not in ln and ln.strip() != "WEBVTT"
-                    and not ln.strip().isdigit()]
-            return "\n".join(re.sub(r"<v ([^>]+)>", r"\1: ", re.sub(r"</?[a-z][^>]*>", "", k))
-                             if k.startswith("<v ") else re.sub(r"<[^>]+>", "", k) for k in keep)
+            return cue_text(p)
         if suffix in (".txt", ".md", ".csv"):
             return p.read_text(encoding="utf-8", errors="ignore")
         if suffix == ".pdf":
             return pdf_text(p)
         if suffix == ".eml":
             return eml_text(p)
+        if suffix == ".html":          # v2.1.0 P1: a creaite document's shown sections; any other page by name only, as before
+            import creaite_doc
+            return creaite_doc.search_text(p)
     except (OSError, zipfile.BadZipFile):
         return ""
     return ""  # other types are indexed by name only

@@ -1,6 +1,9 @@
 # v2.1.0 contract: creaite's document format, its calls and the export call
 
 Team Cap, branch `sprint-reporting` (P1 `v210-p1-doc`, P2 `v210-p2-exports`). Team Stark builds P4 against this from day 1.
+Changed (15-10-2026, before any use): no command line (a script command line must be classified in `reach.SCRIPT_COMMANDS`, a
+guard change; P3 and P4 call it from Python); `save` takes `approver` instead of `approval`; `project_name` added.
+
 Read with `git show sprint-reporting:dev/sprints/v210-contract.md`. A change goes in a "Changed:" line at the top and a
 SPRINTCOMMS entry. Additions only once Team Stark has started; nothing is renamed.
 
@@ -22,6 +25,7 @@ only code that reads or writes the format.
   "kind": "weekly",
   "audience": "internal",
   "project": "ABC",
+  "project_name": "Example Programme",
   "title": "Weekly report",
   "date": "2026-10-16",
   "client": null,
@@ -62,6 +66,7 @@ only code that reads or writes the format.
 | `kind` | `weekly`, `client` or `minutes`. |
 | `audience` | `internal` (default), `client` (a Client view, BL-336) or `distributed` (the minutes' distributed version, BL-338). |
 | `project` | The project code (`_portfolio` for a cross-project meeting). Shown nowhere: the page uses the name (BL-101). |
+| `project_name` | The project's full name as it stood (`tracker.project_label`, set by `new`); the page shows this. |
 | `title` | Weekly: `Weekly report`. Client: `Client report`. Minutes: the meeting's title. |
 | `date` | YYYY-MM-DD: the week ending (Friday) for reports, the meeting's day for minutes. |
 | `client` | The client's name for a Client view; else `null`. |
@@ -94,7 +99,7 @@ an export, and their content never reaches the file. `items` loses an item that 
 
 ## 2. `creaite_doc.py`: read, write and versions
 
-Python, standard library only; run through `system/scripts/run creaite_doc.py …` for the command line. Paths are stored paths
+Python, standard library only. **A library, with no command line** (the live server and the other scripts import it). Paths are stored paths
 (`projects/<folder>/…`, or a vault path such as `system/staging/drafts/…`); a `Path` is also accepted.
 
 ```python
@@ -110,11 +115,10 @@ dumps(doc) -> str                             # the whole file: render(doc) with
 render(doc, editing=True) -> str              # the page; editing=False leaves the data block out (the HTML export)
 clean(doc) -> dict                            # a copy with hidden content dropped (save and render call it)
 
-save(path, doc, why, *, base_version=None, approval=None, via="cli") -> dict
+save(path, doc, why, *, base_version=None, approver=None, via="cli") -> dict
 versions(path) -> list
 read_version(path, change) -> dict            # the version that change <change> replaced (from its backup)
 undo(path) -> dict                            # undo the latest save of this file (filechange.py undo)
-fingerprint(path, data) -> str                # what a one-time approval for saving `data` over `path` is bound to
 
 target(kind, project, date, name=None, client=None) -> str   # the stored path a document is filed at
 search_text(path_or_doc) -> str               # headings and text of every shown section, for the search index
@@ -138,8 +142,12 @@ earlier version backed up under `system/backups/files/changes/<n>/`, logged in `
 - `base_version`: the version the editor opened. If the file is now at another version: code 1, `conflict: true`,
   "It was saved elsewhere since you opened it (now version N).", nothing written.
 - **Approval.** A draft in `system/staging/drafts/` and a first filing (a create) are ordinary. Saving over a filed report or
-  minutes is **sensitive** under `reach.py` (a report or meeting record that may have been sent), so it needs `approval`: a
-  token the live server issues in its own process when Alan himself presses Save (`reach.APPROVALS.issue(creaite_doc.fingerprint(path, doc_bytes))`, see below). `save` never issues one. `fingerprint(path, data)` returns what the token must be bound to.
+  minutes is **sensitive** under `reach.py` (a report or meeting record that may have been sent), so it needs Alan's approval.
+  The live server, when Alan himself presses Save, passes `approver=reach.APPROVALS.issue`: `save` calls it with the exact
+  change's fingerprint (`filechange.fingerprint`) and hands the one-time token to `filechange.perform`. `save` never issues a
+  token itself, and without `approver` such a save answers code 3.
+- A file at `path` that isn't a creaite document: code 1, "A file that isn't a creaite document is there; creaite never
+  overwrites it."
 - `why`: up to 300 characters, logged ("Weekly report saved", "Minutes approved").
 
 **`versions(path)`** newest first:
