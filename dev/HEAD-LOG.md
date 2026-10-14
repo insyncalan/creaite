@@ -4,6 +4,9 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | The v2.1.0 client report's file name is kept: `YYYY-MM-DD Client report - <Project name> (<Client>).html`, one per client (#64). The save-over-a-filed-report question is Alan's (guard); until he answers, it's built with the card every time | Naming is within the charter; the card is the safe side and needs no reach.py change |
+| 15-10-2026 | Jarvis | #37's docs drift (FR-84 and dashboard-spec still naming `zz Archive` and `ALWAYS_NEVER_INDEX`) goes into v1.9.4's docs on `v194-docs` (#38, Team Stark) | Docs wording is the Head's; it ships with the release that renames |
+| 15-10-2026 | Jarvis | Correction: the times on Jarvis's board comments and the bedtime digest from about 02:15 to 02:30 were written up to 1h20 ahead (03:20 to 03:50). From now on times come from the system clock | Accuracy of the record |
 | 15-10-2026 | Jarvis | `v194-debug-log` (#78, a test-only fix) merged into main with `--no-ff`; Team Stark merges it into `release-194` after #36 | Main's suite was red on it; test fixes are the Head's |
 | 15-10-2026 | Jarvis | The leads post the Done-when points they've met; Jarvis checks them and ticks the boxes on the issue | The safety check refuses a lead's edit to an issue body; one writer for the write-ups, as the charter says |
 | 15-10-2026 | Jarvis | Branches are pushed by name only, never with `--tags` or `--follow-tags` | Old clones still hold local tags v1.0.0 to v1.9.1 from the old history, which has real names; deleting them is Alan's |
