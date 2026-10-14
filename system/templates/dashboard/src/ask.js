@@ -6,7 +6,7 @@ import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
 import { MSKEL, mWords } from "./core/motion.js";
-import { go, navBlocked, pLink } from "./core/nav.js";
+import { go, navBlocked, parseHash, pLink, restoreNav } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -298,6 +298,8 @@ export function chgRollbackNumbers(d,results){ (results||[]).forEach(x=>{ const 
 /* ===== end BL-194 the card ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootAsk0090(){
+$("#chLog").addEventListener("click",e=>{ const a=e.target.closest("[data-runhref]"); if(!a) return; e.preventDefault(); const href=a.dataset.runhref, st=parseHash(href);   /* BL-326: a closure's link goes to that place in creaite */
+  if(!st){ snack("That isn't there any more"); return; } if(navBlocked()) return; try{ history.pushState(null,"",href); }catch(x){} restoreNav(st); });
 $("#chLog").addEventListener("click",e=>{ const b=e.target.closest("[data-chgcopy]"); if(!b) return; const code=b.parentElement.querySelector("code");
   (navigator.clipboard?navigator.clipboard.writeText(code.textContent):Promise.reject()).then(()=>{ copied(b); snack("Copied"); },
     ()=>{ const sel=getSelection(), rg=document.createRange(); rg.selectNodeContents(code); sel.removeAllRanges(); sel.addRange(rg); snack("Couldn't copy: the command is selected, press ⌘C"); }); });
@@ -501,7 +503,7 @@ export async function loadChat(chat,quiet,skipRun){ const rec=await api("/api/ch
   if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
     if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
   setChat(rec.chat,rec.session); CHSTARTED=rec.started?{chat:rec.chat,started:rec.started}:null;
-  rec.messages.forEach(m=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped) addEl("step stopped","Stopped"); if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
+  rec.messages.forEach(m=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.plain){ const b=runClosure({line:m.text,href:m.href,link:m.link}); if(m.done_at) stampMsg(b,m.done_at); } else if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped&&!m.plain) addEl("step stopped","Stopped");   /* BL-326: a run creaite started is kept as its closure line */ if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
 /* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing */
 export function histClose(){ $("#chHistMenu").classList.remove("on"); $("#chHist").setAttribute("aria-expanded","false"); }
 export async function showHistory(e){ e&&e.stopPropagation(); if($("#chHistMenu").classList.contains("on")){ histClose(); return; } if(shared.BUSY) return; if(!viaServer()){ snack("History needs the live server"); return; } await drawHistory(); }
@@ -527,9 +529,9 @@ export let askLive = async function(q,confirmed){ const id=`r-${Date.now().toStr
   try{ await askStream("/api/ask",{message:q,session:shared.ASKSESSION,chat:shared.ASKCHAT,confirmed,run:id,images:SENDIMG.length?SENDIMG:undefined},confirmed,ctl); } finally{ shared.RUN=null; setRunning(false); } };
 /* BL-37: runs belong to the live server. Closing the panel or the page doesn't stop one; on load the page reattaches
    (steps so far replayed, then live), the ask creaite button shows it's working, and a note says when it's done. */
-export async function attachRun(run){ if(run&&run.kind==="search") return reattachSearch(run);   /* BL-07: a search answer */ if(shared.RUN||!run||run.kind==="generate"||run.kind==="check"||run.kind==="load") return;   /* a Current state draft isn't a chat */ const ctl=new AbortController(); shared.RUN={id:run.id,ctl,attached:true}; setRunning(!run.done);
+export async function attachRun(run){ if(run&&run.kind==="search") return reattachSearch(run);   /* BL-07: a search answer */ if(shared.RUN||!run) return;   /* BL-326: a run creaite started (a draft, a Prep page, a check or load) is drawn plainly: its ask, steps and closure */ const ctl=new AbortController(); shared.RUN={id:run.id,ctl,attached:true}; setRunning(!run.done);
   ATTACHED=run.id; const after=await attachDraw(run);   /* BL-262 */
-  try{ await askStream("/api/ask/attach",{run:run.id,after},run.confirmed,ctl,run.done); } finally{ shared.RUN=null; setRunning(false); } }
+  try{ await askStream("/api/ask/attach",{run:run.id,after},run.confirmed,ctl,run.done,!!run.plain); } finally{ shared.RUN=null; setRunning(false); } }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootAsk0101(){
 $("#chNew").onclick=newChat;
@@ -676,7 +678,15 @@ setInterval(()=>$$("#chLog .step.working").forEach(quip),500);
 export function stepGroup(g,label){ if(!g||!g.isConnected) g=addEl("step steps",html`<details><summary>✓ <span class="n"></span></summary><ul></ul></details>`);
   const ul=g.querySelector("ul"), li=document.createElement("li"); li.textContent=label; ul.appendChild(li);
   const n=ul.children.length; g.querySelector(".n").textContent=`${n} step${n===1?"":"s"}`; return g; }
-export async function askStream(url,body,confirmed,ctl,ended){ let res, outcome="done"; const live=!ended; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
+/* ===== BL-326 (v1.9.5) ===== a run creaite started itself (a Prep page, Generate, an AI draft, a meeting's check or load, the
+   catch-up sweep) shows three things: its ask (one plain line, drawn as Alan's message), its activity (the working line and
+   "✓ n steps", in plain words) and its closure (one line with the outcome and a link, or what went wrong and what to do). Never
+   its prompt, JSON, HTML or a tool's raw output: askStream draws only these events for such a run (the cards stay cards). */
+export const PLAINEV=["step","closure","changes","editcard","fieldcard","done"];
+export function runClosure(c){ const href=/^#[\w=%.|:&-]*$/.test(String(c.href||""))?String(c.href):"";
+  return addEl("msg a runend"+(c.ok===false?" info":""),html`${String(c.line||"")}${href?html` · <a href="${href}" class="hlink" data-runhref="${href}">${c.link||"Open"}</a>`:""}`); }
+/* ===== end BL-326 ===== */
+export async function askStream(url,body,confirmed,ctl,ended,plain){ let res, outcome="done"; const live=!ended; askWorking(live); if(live) rbStart(shared.RUNLABEL||rbGuess(body&&body.message));     /* BL-139; BL-262: a finished run (ended) shows no working line */
   try{ res=await fetch(url,{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token,"X-Creaite-Seq":"1"},body:JSON.stringify(body)}); }   /* BL-262: numbered events */
   catch(e){ askWorking(false); if(e.name==="AbortError"){ rbEnd("stopped"); addEl("step stopped","Stopped"); retryOffer("stopped",body); return; } rbEnd("failed"); setLive(false); await say("The live server stopped."); retryOffer("failed",body); return; }   /* BL-148: Try again */
   if(res.status===409){ askWorking(false); rbCancel(); const j=await res.json().catch(()=>({})); await say("ask creaite is still working on the last request. Stop it, or wait until it finishes."); if(j.run&&!shared.RUN) attachRun(j.run); return; }
@@ -686,7 +696,9 @@ export async function askStream(url,body,confirmed,ctl,ended){ let res, outcome=
   for(;;){ let chunk; try{ chunk=await rd.read(); }catch(e){ spin.remove(); askWorking(false); rbEnd(shared.RUN&&shared.RUN.stopping?"stopped":"failed"); if(shared.RUN&&shared.RUN.stopping) addEl("step stopped","Stopped"); retryOffer(shared.RUN&&shared.RUN.stopping?"stopped":"failed",body); return; } const {value,done}=chunk; if(done) break; buf+=dec.decode(value,{stream:true}); let i;
     while((i=buf.indexOf("\n\n"))>=0){ const chunk=buf.slice(0,i); buf=buf.slice(i+2); if(!chunk.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(chunk.slice(6)); }catch(e){ continue; }
       if(ev.seq&&runId) shared.SHOWN={run:runId,seq:ev.seq};   /* BL-262: the last event drawn */
-      if(ev.type==="step"){ spin.remove(); grp=stepGroup(grp,ev.label); spin=work(); }
+      if(plain&&!PLAINEV.includes(ev.type)){ if(ev.type==="stopped") outcome="stopped"; else if(ev.type==="error") outcome="failed"; continue; }   /* BL-326: a run creaite started shows its steps and its closure, never its prompt, reply or raw output */
+      if(ev.type==="closure"){ spin.remove(); grp=null; outcome=ev.ok?"done":ev.stopped?"stopped":"failed"; replies.push(runClosure(ev)); spin=work(); }
+      else if(ev.type==="step"){ spin.remove(); grp=stepGroup(grp,ev.label); spin=work(); }
       else if(ev.type==="text"){ spin.remove(); grp=null; replies.push(mWords(await sayMd(fdText(ev.text))));   /* BL-136: a live reply's words fade in */ claimsNote(ev.checked); spin=work(); }
       else if(ev.type==="cant"){ spin.remove(); grp=null; cantCard(ev); spin=work(); }   /* BL-314: the plain "I can't", with where it can be done */
       else if(ev.type==="confirm") conf=ev;

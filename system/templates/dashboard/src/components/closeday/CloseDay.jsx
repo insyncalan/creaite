@@ -61,15 +61,16 @@ export function openCloseDay() {
   cdOpen.value = true;
 }
 
-/** Which of SOURCES a run's step line is reading (its index), or -1 for another step. Labels are the server's describe_tool.
+/** Which of SOURCES a run's step line is reading (its index), or -1 for another step. Labels are the server's describe_tool,
+    or (BL-326: the catch-up is a run creaite started) its plain_step words.
     @param {string} label */
 export function cdSourceOf(label) {
   const l = String(label || "").toLowerCase();
-  if (/calendar|read resource/.test(l)) return -1;
+  if (/calendar|read resource|a meeting, a message or a chat/.test(l)) return -1;
   if (/channel/.test(l)) return 2;
   if (/teams|chat message|list chats/.test(l)) return 1;
   if (/email|outlook|mail/.test(l)) return 0;
-  if (/sweep\.py stage|people map|propose\.py/.test(l)) return 3;
+  if (/sweep\.py stage|people map|propose\.py|staging what the sweep found|mapping names/.test(l)) return 3;
   return -1;
 }
 

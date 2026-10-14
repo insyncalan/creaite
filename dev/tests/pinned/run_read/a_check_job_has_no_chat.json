@@ -2,6 +2,11 @@
  "denied": [],
  "events": [
   {
+   "line": "Finished.",
+   "ok": true,
+   "type": "closure"
+  },
+  {
    "chat": null,
    "done_at": "<TIME>",
    "run": "r-1",

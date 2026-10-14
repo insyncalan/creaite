@@ -1980,6 +1980,104 @@ def build_sneak_update(con, req):
 # ===== end BL-322 =====
 
 
+# ===== BL-326 (v1.9.5): what ask creaite shows for a draft run: one plain ask line, as if Alan had typed it, and one closure
+# line with a link. Never the prompt or the reply. {id} is a work item's ID, {project} the project's full name (BL-101), {meeting}
+# the meeting's title and day, {n} how many, {form} the form's name.
+RUN_LINES = {
+    "update": ("Draft the latest update for {id}", "Drafted the latest update for {id}: check it before you use it"),
+    "sneak-update": ("Draft the latest update for {id}", "Drafted the latest update for {id}: check it before you use it"),
+    "update-bulk": ("Draft updates for {n} stale actions", "Drafted the updates: they're waiting in Review"),
+    "client": ("Draft client wording for {id}", "Drafted the client wording for {id}: check it before you use it"),
+    "client-bulk": ("Draft client wording for {project}'s waiting items", "Drafted the client wording: it's waiting in Review"),
+    "thinking": ("Suggest the thinking fields for {id}", "Suggested the thinking fields for {id}: check them before you use them"),
+    "health": ("Draft the reason for {project}'s health change", "Drafted the reason: check it before you save the health"),
+    "forecast": ("Draft the reason for the forecast change on {id}", "Drafted the reason: check it before you save the forecast"),
+    "sharpen": ("Sharpen a vague action", "Sharpened the action's title: pick the wording you want"),
+    "agenda": ("Draft the agenda and invite text for {meeting}", "Drafted the agenda and invite text: copy what you need"),
+    "polish": ("Polish the email wording", "Polished the wording: check it before you copy the email"),
+    "polish-help": ("Polish the request for help on {id}", "Polished the request: check it before you copy the email"),
+    "status-form": ("Write {project}'s status as {form}", "Wrote the status: copy it from the draft"),
+    "shape": ("Shape {meeting}", "Shaped the meeting: check the notes before you keep them"),
+}
+RUN_DEFAULT = ("Draft with Claude", "The draft is ready: check it before you use it")
+RUN_UNREAD = "Couldn't finish: the draft couldn't be read. Try again."
+
+
+def _run_meeting(key):
+    """A meeting key as words: "ABC steering, Thursday 15th October 10:00"."""
+    parts = str(key or "").split("|")
+    if len(parts) == 3:
+        day, start, title = parts
+    elif len(parts) == 2:                             # an undated key is today's (prep_page.split_key)
+        day, (start, title) = date.today().isoformat(), parts
+    else:
+        return "the meeting"
+    import prep_page
+    when = " ".join(x for x in ((prep_page.long_day(day) if day else ""), start) if x)
+    return f"{' '.join(title.split())[:120] or 'the meeting'}{', ' + when if when else ''}"
+
+
+def _run_form(name):
+    """A form's name as words: "a steering note", "an email paragraph", "a Teams message"."""
+    form = FORMS.get(str(name or ""), ("",))[0]
+    if not form:
+        return "another form"
+    return f"{'an' if form[:1] in 'AEIOU' else 'a'} {form.lower().replace('teams', 'Teams')}"
+
+
+def _run_link(name, req, item, code):
+    """Where a draft run's result can be seen: Review for a draft of several, the meeting's prep page, the item, the project."""
+    if name in ("update-bulk", "client-bulk"):
+        return {"href": "#review", "link": "Review"}
+    if name in ("agenda", "shape") and req.get("key"):
+        from urllib.parse import quote
+        key = str(req["key"])
+        key = key if re.match(r"\d{4}-\d{2}-\d{2}\|", key) else f"{date.today().isoformat()}|{key}"
+        return {"href": "#prep=" + quote(key, safe=""), "link": "Open"}
+    if item:
+        return {"href": f"#item={item}", "link": "Open"}
+    return {"href": f"#cockpit={code}", "link": "Open"} if code else {}
+
+
+def _run_project(code):
+    """A project's full name (BL-101); its code when the tracker can't be read."""
+    if not code:
+        return "the project"
+    try:
+        return tracker.project_label(code)
+    except SystemExit:               # no tracker yet: the code stands in
+        return code
+
+
+def run_lines(req, extra=None):
+    """{ask, done, href, link} for a draft run (BL-326): the plain lines ask creaite shows, and where the result can be seen."""
+    name = req.get("kind")
+    ask, done = RUN_LINES.get(name, RUN_DEFAULT)
+    item = str(req.get("id") or "")
+    item = item if ID_RE.fullmatch(item) else ""
+    code = str(req.get("code") or "") or item.split("-")[0]
+    words = {"id": item or "the item", "project": _run_project(code),
+             "meeting": _run_meeting(req.get("key")), "n": len(req.get("ids") or []) or "the", "form": _run_form(req.get("form"))}
+    return {"ask": ask.format(**words), "done": done.format(**words), **_run_link(name, req, item, code)}
+
+
+def run_closure(ctx, got):
+    """The closure line for a finished draft run: the kind's own line, how many were staged for a draft of several, or plainly
+    that the reply couldn't be read."""
+    lines = ctx.get("run") or {}
+    if not got:
+        return {"ok": False, "line": RUN_UNREAD}
+    out = {"ok": True, "line": lines.get("done") or RUN_DEFAULT[1]}
+    if isinstance(got.get("staged"), int):
+        n = got["staged"]
+        out["line"] = f"Drafted {n} item{'' if n == 1 else 's'}: {'it is' if n == 1 else 'they are'} waiting in Review" if n \
+            else "Nothing new to draft: nothing was staged"
+    if lines.get("href"):
+        out.update(href=lines["href"], link=lines.get("link") or "Open")
+    return out
+# ===== end BL-326 =====
+
+
 def context(req):
     """{feature, kind, prompt, sources, item, extra} for a request, or {nothing}/{refused} with the words to show."""
     name = req.get("kind")
@@ -2000,7 +2098,7 @@ def context(req):
         con.close()
     template = d.extra.get("template") or name
     return {"feature": feature, "kind": name, "prompt": render(template, d.values), "sources": d.sources, "item": d.item,
-            "extra": d.extra}
+            "extra": d.extra, "run": run_lines(req, d.extra)}                  # BL-326: the plain lines ask creaite shows
 
 
 def result(req, ctx, reply):

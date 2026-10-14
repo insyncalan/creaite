@@ -174,7 +174,7 @@ $("#mtgRefresh").onclick=refreshCalendar;
 /* ===== Transcripts (BL-42 phase 3): Select with transcripts, Load into inbox, Load and process, Check again ===== */
 /* a transcript job (a check or a load) goes through the run engine like a question, but isn't a chat; the server writes the status and the files */
 export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
-  try{ await askStream(url,{...body,run:id},true,ctl); } finally{ shared.RUN=null; setRunning(false); } };
+  try{ await askStream(url,{...body,run:id},true,ctl,undefined,true); } finally{ shared.RUN=null; setRunning(false); } };   /* BL-326: drawn plainly (steps and the closure) */
 export async function checkMeeting(m){ if(!viaServer()){ snack("Checking needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MRUN[m.id]="checking"; renderMeetings(); openChat(); addEl("msg u",html`${`Check the transcript of “${m.title}” (${fd(m.day)} at ${m.start})`}`);
   try{ await jobLive("/api/transcripts/check",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); renderMeetings(); }

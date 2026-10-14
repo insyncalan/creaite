@@ -132,6 +132,31 @@ class IndexTests(unittest.TestCase):
         self.assertEqual(self.query("capybaras"), [f"{ABC}/documents/Note 01.md"])
 
 
+class PageInputsTests(unittest.TestCase):
+    """The files the server writes itself at start never count as page inputs (BL-329's starting mark made the first load
+    after a start build anew whenever it came before the mark was cleared)."""
+
+    def setUp(self):
+        self.v = Vault()
+        self.v.run("init")
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def test_the_servers_own_files_are_not_inputs(self):
+        for name in ("live-server.json", "live-server-starting.json"):
+            put(self.v, f"system/staging/{name}", '{"pid": 1, "port": 1}\n')
+        put(self.v, "system/staging/proposed-x.json", "{}")
+        r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts'); import live_server\n"
+                            "print('\\n'.join(f.name for f in live_server.page_inputs()))"],
+                           cwd=self.v.root, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        names = r.stdout.split()
+        self.assertIn("proposed-x.json", names)
+        self.assertNotIn("live-server.json", names)
+        self.assertNotIn("live-server-starting.json", names)
+
+
 class LiveTimingTests(unittest.TestCase):
     """The timed test on the sample vault, through the real live server."""
 

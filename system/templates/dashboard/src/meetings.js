@@ -79,6 +79,7 @@ export async function prepPage(given,o){ const was=shared.PREPRUN; o=o||{}; shar
   for(;;){ let c; try{ c=await rd.read(); }catch(e){ stopped=true; break; } if(c.done) break; buf+=dec.decode(c.value,{stream:true}); let i;
     while((i=buf.indexOf("\n\n"))>=0){ const ch=buf.slice(0,i); buf=buf.slice(i+2); if(!ch.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(ch.slice(6)); }catch(e){ continue; }
       if(ev.type==="step"){ steps++; show(); } else if(ev.type==="stopped") stopped=true; else if(ev.type==="error") failed=ev.message; } }
+  api("/api/ask/ack",{run:id}).catch(()=>{});   /* BL-326: this page saw the run end, so ask creaite doesn't draw it again on the next load */
   if(stopped) return end("Stopped; no page was written");
   if(failed) return end(failed);
   prepPgStat('<span class="spin"></span> Writing the page…'); if(o.status) o.status("Writing the page…");
