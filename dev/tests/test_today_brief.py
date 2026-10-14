@@ -80,9 +80,9 @@ class IntakeNameTests(PageTests):
 
 
 class IntakeSectionsTests(PageTests):
-    """BL-73: Calendar Import, Upload Files and Quick Capture are three separate framed sections, in that order."""
+    """BL-73: Calendar Import and Upload Files are separate framed sections, in that order (Quick Capture became the drawer, BL-301 C)."""
 
-    def test_three_sections_in_order_each_with_its_own_heading_purpose_and_buttons(self):
+    def test_two_sections_in_order_each_with_its_own_heading_purpose_and_buttons(self):
         o = self.probe("""
           go("inbox"); const secs=[...document.querySelectorAll("#v-inbox .isec")];
           const info=secs.map(s=>({id:s.id,h:s.querySelector("h2").textContent,icon:!!s.querySelector(".ish svg"),purpose:s.querySelector(".ipurpose").textContent,
@@ -90,20 +90,18 @@ class IntakeSectionsTests(PageTests):
           const rects=secs.map(s=>s.getBoundingClientRect()), within=(s,sel)=>!!s.querySelector(sel);
           window.OUT={info,gaps:rects.slice(1).map((r,i)=>Math.round(r.top-rects[i].bottom)),stacked:rects.slice(1).every((r,i)=>r.top>=rects[i].bottom),
             widths:rects.map(r=>Math.round(r.width)),
-            where:{drop:within(secs[1],"#inboxDrop"),table:within(secs[1],"#inboxTbl"),mtg:within(secs[0],"#mtgSec"),qc:within(secs[2],"#qcNotes")},
+            where:{drop:within(secs[1],"#inboxDrop"),table:within(secs[1],"#inboxTbl"),mtg:within(secs[0],"#mtgSec")},
             h1s:[...document.querySelectorAll("#v-inbox h1, #v-inbox h2")].map(h=>h.textContent)};""")
-        self.assertEqual([i["h"] for i in o["info"]], ["Calendar Import", "Upload Files", "Quick Capture"])
-        self.assertEqual([i["id"] for i in o["info"]], ["isecCal", "isecUp", "isecQuick"])
+        self.assertEqual([i["h"] for i in o["info"]], ["Calendar Import", "Upload Files"])   # BL-301 C: Quick Capture became the drawer
+        self.assertEqual([i["id"] for i in o["info"]], ["isecCal", "isecUp"])
         self.assertTrue(all(i["icon"] and i["labelled"] for i in o["info"]))
         self.assertEqual([i["purpose"] for i in o["info"]], [
-            "Pick meetings from your calendar and load their transcripts.", "Drop transcripts or minutes you already have.",
-            "Type rough notes from a call or conversation that has no transcript."])
-        cal, up, quick = (i["buttons"] for i in o["info"])
+            "Pick meetings from your calendar and load their transcripts.", "Drop transcripts or minutes you already have."])
+        cal, up = (i["buttons"] for i in o["info"])
         self.assertEqual(cal, ["mtgRefresh", "mtgNew", "mtgTx", "mtgLoad", "mtgGo"])   # Refresh, Select new, Select with transcripts, Load into inbox, Process selected (BL-119: one process button)
         self.assertIn("inboxNew", up)
         self.assertIn("inboxGo", up)
-        self.assertEqual({"qcGo", "qcCancel"} <= set(quick), True)                       # Quick Capture's Process and Clear
-        self.assertEqual(o["where"], {"drop": True, "table": True, "mtg": True, "qc": True})
+        self.assertEqual(o["where"], {"drop": True, "table": True, "mtg": True})
         self.assertTrue(o["stacked"])                                                    # nothing side by side
         self.assertTrue(all(g >= 24 for g in o["gaps"]), o["gaps"])                      # a visible gap between panels
         self.assertEqual(len(set(o["widths"])), 1)                                       # the same frame, the same width
@@ -120,93 +118,7 @@ class IntakeSectionsTests(PageTests):
             self.assertTrue(bordered and filled, key)
 
 
-class QuickCaptureDateTests(PageTests):
-    """BL-74: the date is today whenever the form opens, can't be a future day, its calendar popup is reachable by
-    keyboard; the Title box is wider. Since BL-147 the date can also be typed (in plain words), and the calendar button opens the popup."""
-
-    def test_a_read_only_field_that_is_today_and_resets(self):
-        o = self.probe("""
-          const q=id=>document.getElementById(id), pad=n=>String(n).padStart(2,"0"), today=fd(TODAY);
-          go("inbox"); q("qcNotes").focus(); const field=q("qcDate");
-          const first=[field.readOnly, field.value, field.dataset.max, field.hasAttribute("data-noclear"), q("qcDate").closest(".dwrap").querySelector("button").getAttribute("aria-label")];
-          field.closest(".dwrap").querySelector("button").click(); const pop1=!!document.querySelector(".cal");
-          const days=[...document.querySelectorAll(".cal .cg button")], todayBtn=days.find(b=>b.classList.contains("today")),
-            after=days.filter(b=>b.getAttribute("aria-label")>"" && toIso(b.getAttribute("aria-label"))>TODAY), before=days.filter(b=>toIso(b.getAttribute("aria-label"))<=TODAY);
-          const foot=[...document.querySelectorAll(".cal .cf button")].map(b=>b.textContent);
-          // a past day is chosen by clicking it
-          const past=days.find(b=>toIso(b.getAttribute("aria-label"))<TODAY); let chosen=null;
-          if(past){ past.click(); chosen=[field.value, !document.querySelector(".cal")]; }
-          // BL-147: typing is possible; a future day is refused by Process (test_plain_dates)
-          const typed=!field.readOnly;
-          // Clear (the form's) and Process put it back to today; reopening does too
-          q("qcCancel").click(); const afterClear=field.value; q("qcNotes").focus(); const reopened=field.value;
-          if(past){ openCal(field,field.closest(".dwrap").querySelector("button")); document.querySelector(".cal .cg button:not(:disabled)").click(); }
-          openCapture("note: something"); const viaCapture=field.value;
-          window.OUT={today, first, pop1, offCount:after.length, offAllDisabled:after.every(b=>b.disabled&&b.classList.contains("off")), beforeEnabled:before.every(b=>!b.disabled),
-            todayEnabled:todayBtn&&!todayBtn.disabled, foot, chosen, typed, afterClear, reopened, viaCapture};""")
-        self.assertEqual(o["first"], [False, o["today"], "today", True, "Choose date"])   # BL-147: typed too
-        self.assertTrue(o["pop1"])                                                    # the calendar button opens the popup
-        self.assertEqual(o["foot"], ["Today"])                                        # no Clear for this field
-        self.assertTrue(o["beforeEnabled"] and o["todayEnabled"])
-        self.assertTrue(o["offAllDisabled"])                                          # later days are greyed out and disabled
-        self.assertEqual((o["afterClear"], o["reopened"], o["viaCapture"]), (o["today"],) * 3)
-        if o["chosen"]:
-            self.assertEqual(o["chosen"][1], True)                                    # choosing a day closes the popup
-
-    def test_future_days_cannot_be_chosen_in_any_month(self):
-        o = self.probe("""
-          go("inbox"); document.getElementById("qcNotes").focus(); document.querySelector('#qcap [data-cal="qcDate"]').click();
-          document.querySelector('.cal [data-n="1"]').click(); const next=[...document.querySelectorAll(".cal .cg button")];
-          document.querySelector('.cal [data-n="-1"]').click(); document.querySelector('.cal [data-n="-1"]').click(); const older=[...document.querySelectorAll(".cal .cg button")];
-          window.OUT={nextAllOff:next.every(b=>b.disabled), nextCount:next.length, olderOn:older.every(b=>!b.disabled)};""")
-        self.assertTrue(o["nextAllOff"] and o["nextCount"] >= 28)
-        self.assertTrue(o["olderOn"])
-
-    def test_keyboard_control(self):
-        o = self.probe("""
-          const key=(k)=>document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true})), lab=()=>document.activeElement.getAttribute("aria-label");
-          go("inbox"); document.getElementById("qcNotes").focus(); const btn=document.querySelector('#qcap [data-cal="qcDate"]'); btn.focus(); btn.click();
-          const start=lab(); key("ArrowRight"); const clamped=lab();             // today is the latest day: it stays
-          key("ArrowLeft"); const left=lab(); key("ArrowUp"); const up=lab(); key("ArrowDown"); const down=lab(); key("ArrowDown"); const clampedDown=lab();
-          key("PageUp"); const pageUp=lab(); key("Home"); const home=lab(); key("End"); const end=lab();
-          const focusedIsDay=document.activeElement.closest(".cg")!==null;
-          key("Escape"); const closed=!document.querySelector(".cal"), back=document.activeElement===btn;
-          // opened again from the field with the keyboard
-          const f=document.getElementById("qcDate"); f.focus(); f.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowDown",bubbles:true,cancelable:true})); const reopened=!!document.querySelector(".cal"); document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));
-          // the same keys work in the other date fields (no latest day there)
-          go("files"); const fb=document.querySelector('[data-cal="fsFrom"]'); fb.click(); const o0=lab(); key("ArrowRight"); const fwd=lab(); key("ArrowDown"); const fwd7=lab(); const hasClear=[...document.querySelectorAll(".cal .cf button")].map(b=>b.textContent);
-          window.OUT={start,clamped,left,up,down,clampedDown,pageUp,home,end,focusedIsDay,closed,back,reopened,o0,fwd,fwd7,hasClear,today:fd(TODAY)};""")
-        t = o["today"]
-        self.assertEqual((o["start"], o["clamped"]), (t, t))
-        self.assertNotEqual(o["left"], t)
-        self.assertNotEqual(o["up"], o["left"])
-        self.assertEqual(o["clampedDown"], t)                                        # down from yesterday is today; again stays
-        self.assertTrue(o["focusedIsDay"])
-        self.assertTrue(o["closed"] and o["back"])
-        self.assertTrue(o["reopened"])
-        self.assertNotEqual(o["fwd"], o["o0"])                                       # other date fields move forward freely
-        self.assertEqual(o["hasClear"], ["Today", "Clear"])                          # and keep their Clear
-
-    def test_the_project_list_is_filled_without_waiting_for_focus(self):
-        o = self.probe("""
-          go("inbox"); const q=document.getElementById("qcProj"), n=()=>[...q.options].map(o=>o.value);
-          const atLoad=n(); document.getElementById("qcNotes").focus(); document.getElementById("qcCancel").click();
-          const hiddenAfterClear=document.getElementById("qcMore").hidden; document.getElementById("qcNotes").click();
-          const reopened=!document.getElementById("qcMore").hidden;
-          P.push({code:"NEW",name:"New Project"}); refreshAll(); const afterReload=n(); P.pop();
-          window.OUT={atLoad,hiddenAfterClear,reopened,afterReload};""")
-        self.assertEqual(len(o["atLoad"]), 3, o)                                     # "Match from the note" and both projects, before any focus
-        self.assertTrue(o["hiddenAfterClear"] and o["reopened"], o)                  # a click reopens the form while the box keeps focus
-        self.assertIn("NEW", o["afterReload"], o)                                    # a data reload refreshes the list
-
-    def test_the_title_box_is_wider(self):
-        o = self.probe("""
-          go("inbox"); document.getElementById("qcNotes").focus(); const t=document.getElementById("qcTitle"), w=document.getElementById("qcWho"), p=document.getElementById("qcProj");
-          window.OUT={title:Math.round(t.getBoundingClientRect().width),who:Math.round(w.getBoundingClientRect().width),proj:Math.round(p.getBoundingClientRect().width),
-            max:getComputedStyle(t).maxWidth};""")
-        self.assertTrue(380 <= o["title"] <= 420, o)                                # about 400px, from about 160px
-        self.assertEqual(o["max"], "100%")                                           # and never wider than its row
-        self.assertLess(o["who"], 250)
+# BL-301 C: QuickCaptureDateTests went with Quick Capture's form (the capture drawer replaced it; test_capture_drawer).
 
 
 class LiveIndicatorTests(PageTests):

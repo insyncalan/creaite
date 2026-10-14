@@ -7,6 +7,7 @@ import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
 import { CHASE_ICON, mountChase, unmountChase } from "./components/peek/ChasePane.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
+import { creaiteEditor } from "./core/editor.js";
 import { typing } from "./core/keys.js";
 import { CALI, DATE_HELP, formProject, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
 import { mDotGo } from "./core/motion.js";
@@ -576,6 +577,7 @@ addHTML($("#pkBar"),"afterend",html`<div class="pk-scroll" id="pkScroll"><div cl
   <div class="pk-note" id="pkNote" role="status" hidden></div>
   <div class="pk-dlrow"><div class="pk-dl" id="pkDescL"></div><span class="pk-dldr" id="pkDescDr"></span></div><div class="pk-desc pked" id="pkDesc" contenteditable="plaintext-only" role="textbox" aria-multiline="true" data-pkml="1" spellcheck="true"></div>
   <div id="pkAfter"></div></div>`);
+pkEdMount($("#pkScroll"));
 document.addEventListener("mousedown",e=>{ if(shared.PKPOP&&!shared.PKPOP.el.contains(e.target)&&!shared.PKPOP.anchor.contains(e.target)) pkPopClose(false); },true);
 addEventListener("resize",()=>pkPopClose(false));
 $("#pkScroll").addEventListener("scroll",()=>{ if(shared.PKPOP&&$("#pkScroll").contains(shared.PKPOP.anchor)) pkPopClose(false); });
@@ -715,6 +717,11 @@ PK.det={};
    change log lines as the Activity page (ACT, from build_dashboard.activity, with actId), so there is one reading of the history:
    a change staged here shows first, marked "staged", and once applied it is the change log's own line, marked "applied". Updates
    are the changes to the free text (latest update, the response, the reasoning); Source is the item's source and its creation. */
+/* BL-301 A: the peek's text fields are the one editor (core/editor.js), as plain text: one paragraph a line, no Markdown, so
+   the stored text stays as it was. Their text is read and set by textContent as before (the editor answers for it), so the
+   commit on leaving the field, Esc, the rules and the AI drafts are unchanged. */
+export function pkEdMount(root){ if(!root) return; root.querySelectorAll(".pked").forEach(el=>{ if(el.cxed) return;
+  creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent"}); }); }
 export const pkDetOpen=(x,id)=>!!((PK.pc&&PK.pc.id===id)||(id in PK.det?PK.det[id]:!!x.client));
 export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#pkDetT"); tg.setAttribute("aria-expanded",String(open)); $("#pkDet").hidden=!open; if(!open) return;
   const body=$("#pkDet"); if(body.contains(document.activeElement)&&document.activeElement.isContentEditable) return;   /* never under the cursor */
@@ -734,7 +741,7 @@ export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#p
   h+=row("eye","Client-visible",`<button type="button" class="pk-sw" role="switch" aria-checked="${on}" aria-label="Client-visible" data-pksw="client"></button>`);
   if(on){ const f=pkMsgF(k);   /* actions and RAID: an empty messaging offers its three headings */
     h+=row("msg","Client messaging",`<div class="pk-vtext pked" contenteditable="plaintext-only" role="textbox" data-pkf="${f}" data-pkml="1" aria-multiline="true" data-ph="Plain wording for the client" aria-label="Client messaging">${esc(x[f]||(k==="decisions"?"":CMT))}</div>`); }
-  putHTML(body,raw(h)); if(af) body.querySelector(`[data-pkp="${af}"],[data-pksw="${af}"]`)?.focus(); }
+  putHTML(body,raw(h)); pkEdMount(body); if(af) body.querySelector(`[data-pkp="${af}"],[data-pksw="${af}"]`)?.focus(); }
 /* the feed */
 export const PKTABS=[["all","All"],["act","Activity"],["upd","Updates"],["src","Source"]];
 export const pkUpdLabel=k=>k==="actions"?"latest update":k==="raid"?"response":"reasoning";
@@ -879,6 +886,7 @@ export function pkNewDraw(x,k){ const on=shared.CUR.mode==="new", s=$("#pkSrcIn"
 export function bootPanel0175(){
 PKFL.srcIn="Source";
 addHTML($("#pkNote"),"afterend",html`<div class="pk-dl pk-src-l" id="pkSrcL" hidden>Source</div><div class="pk-desc pked pk-srcin" id="pkSrcIn" data-pkf="srcIn" contenteditable="plaintext-only" role="textbox" spellcheck="true" aria-label="Source" hidden></div>`);
+pkEdMount($("#pkScroll"));
 PKDRAW.push(pkNewDraw);
 if(shared.CUR&&pkOn()) drawPanel();
 }

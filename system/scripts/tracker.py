@@ -2956,8 +2956,20 @@ def text_of(p):
 
 # ── The search index (BL-07) ──────────────────────────────────────────────────
 
-INDEX_FOLDERS = ("minutes", "transcripts", "reports", "documents")      # what the index covers, in every project
-STORED_KIND = {"reports": "report", "agendas": "documents"}                # the others are stored as their folder name (BL-135: an agenda is a document to search)
+INDEX_FOLDERS = ("minutes", "transcripts", "reports", "documents", "notes")      # what the index covers, in every project
+STORED_KIND = {"reports": "report", "agendas": "documents", "notes": "note"}     # the others are stored as their folder name (BL-135: an agenda
+#                                                                                  is a document to search; BL-301: a note is kind `note`)
+INDEX_VERSION = 2          # BL-301: raised when what the index holds changes, so a vault built by an older release rebuilds once
+
+
+def index_entry_text(f, folder):
+    """(text, date) a file is indexed with. A note (BL-301) is read by notes.py (front matter left out, its own date); every other
+    file by text_of, dated as before."""
+    if folder == "notes":
+        import notes
+        return notes.index_text(f), notes.index_date(f)
+    when = paths.file_date(f)[0] if folder in ("minutes", "transcripts") else (paths.name_date(f.name)[0] or "")
+    return text_of(f), when
 
 
 def index_files():
@@ -3001,6 +3013,8 @@ def index_state():
         stamp = json.loads(index_stamp().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return True, "never built"
+    if stamp.get("version", 1) != INDEX_VERSION:
+        return True, "built by an older release"
     sidecars = list(paths.SEARCH_DIR.glob("*.json")) if paths.SEARCH_DIR.is_dir() else []
     newest = max([f.stat().st_mtime for f, _, _ in files] + [s.stat().st_mtime for s in sidecars
                                                               if s.name != index_stamp().name] + [0])
@@ -3032,11 +3046,11 @@ def build_index():
     meeting's or report's summary and tags (its sidecar) are part of its content, so keyword search matches them."""
     found = {}
     for f, folder, code in index_files():
-        content = text_of(f)
+        content, when = index_entry_text(f, folder)
         # A meeting filed in several projects is indexed once
         dup = hashlib.sha256(f.read_bytes()).hexdigest() if folder in ("minutes", "transcripts") else paths.rel(f)
         entry = found.setdefault(dup, {"path": paths.rel(f), "projects": [], "kind": STORED_KIND.get(folder, folder),
-                                       "date": paths.file_date(f)[0] if folder in ("minutes", "transcripts") else (paths.name_date(f.name)[0] or ""), "text": content, "stem": f.stem, "note": None})
+                                       "date": when, "text": content, "stem": f.stem, "note": None})
         entry["note"] = entry["note"] or read_sidecar(paths.rel(f))        # any copy's sidecar will do
         if code not in entry["projects"]:
             entry["projects"].append(code)
@@ -3055,8 +3069,8 @@ def build_index():
     con.execute("COMMIT")
     con.close()
     paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
-    index_stamp().write_text(json.dumps({"built": started, "files": len(index_files()),
-                                               "readers": INDEX_READERS}), encoding="utf-8")
+    index_stamp().write_text(json.dumps({"built": started, "files": len(index_files()), "version": INDEX_VERSION,
+                                         "readers": INDEX_READERS}), encoding="utf-8")
     return len(found)
 
 

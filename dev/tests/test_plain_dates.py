@@ -98,22 +98,8 @@ class PlainDates(LiveBrowserCase):
                 break
             b.pump(0.2)
         self.assertEqual(next(r for r in self.v.rows("actions") if r["id"] == id_)["due_date"], fri.isoformat())
-
-    def test_typed_words_in_a_filter_and_quick_capture(self):
-        b = self.b
-        b.eval("openCapture('note: words in the date')")
-        b.pump(0.3)
-        self.assertFalse(b.eval("$('#qcDate').readOnly"))                     # Quick Capture's date can be typed now
-        b.eval("$('#qcDate').focus(); $('#qcDate').select()")
-        b.type("yesterday")
-        b.key("Tab")
-        b.pump(0.1)
-        self.assertEqual(b.eval("$('#qcDate').value"), f"{date.today() - timedelta(days=1):%d-%m-%Y}")
-        b.eval("$('#qcDate').focus(); $('#qcDate').select()")
-        b.type("tomorrow")
-        b.pump(0.1)
-        self.assertIn("after today", b.eval("$('#dateHint').textContent"))    # its latest day is today
-        b.eval("$('#qcDate').value=fd(TODAY)")
+    # BL-301 C: Quick Capture's typed date went with its form (the capture drawer replaced it); a Working session note takes
+    # its date from the meeting.
 
 
 if __name__ == "__main__":

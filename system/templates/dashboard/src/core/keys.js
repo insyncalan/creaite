@@ -3,6 +3,7 @@
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0122-after-bl-158-theme.js, 0123-keyboard.js */
 import { closeChat, openChat, openCk } from "../ask.js";
+import { openCapture } from "../components/notes/CaptureDrawer.jsx";
 import { REV } from "./data.js";
 import { $, $$ } from "./dom.js";
 import { closeCal } from "./fields.js";
@@ -16,7 +17,7 @@ import { CHK, decide, isMin, renderReview, RHL, rjKey315, rvSyncChk, toggleGroup
 import { dayKey } from "../today.js";
 import { HL, hlClear, hlKey, openDisp, rvOnly, rvPaint } from "../work.js";
 /* click outside closes ask creaite and the detail panel — never while editing */
-export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,#newMenu,[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip";   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
+export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,#newMenu,[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer";   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0122's place) */
 export function bootCopyCommand(){
 /* copy the start command */
@@ -36,11 +37,13 @@ export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TE
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0123's place) */
 export function bootKeyboard(){
 document.addEventListener("keydown",e=>{
+  if((e.metaKey||e.ctrlKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==="n"){ e.preventDefault(); openCapture(); return; }   /* BL-301 C: a note, from any page */
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){ e.preventDefault(); openCk(); return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="j"){ e.preventDefault(); $("#chat").classList.contains("on")?closeChat():openChat(); return; }
   if(e.key==="Escape"){ if($("#cmdk").open||$("#boardDlg").open) return; if(shared.CAL){ closeCal(); return; } if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")){ hlClear(); return; } if(shared.VIEW==="review"&&(RHL.size||CHK.size)&&!$("#panel").classList.contains("on")){ RHL.clear(); CHK.clear(); renderReview(); return; } if($("#panel").classList.contains("on")){ closePanel(); return; } if($("#chat").classList.contains("on")){ closeChat(); return; } return; }
   if(typing()||e.metaKey||e.ctrlKey||e.altKey) return;
-  if(e.key==="/"){ e.preventDefault(); openChat(); return; }   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
+  if(e.key==="/"){ e.preventDefault(); openChat(); return; }
+  if((e.key==="n"||e.key==="N")&&!e.shiftKey&&!document.querySelector("dialog[open]")){ e.preventDefault(); openCapture(); return; }   /* BL-301 C (Alan, 14-10-2026): N, the second key for a note: ⌘⇧N is Chrome's incognito window in an ordinary tab */   /* / is always ask creaite, on every page (Alan, 2026-10-09) */
   if((e.key==="f"||e.key==="F")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); if(!$("#moreMenu").classList.contains("on")) $("#moreBtn")?.click(); $("#fpq")?.focus(); return; }   /* BL-130: F opens the field picker */
   if((e.key==="d"||e.key==="D")&&(shared.VIEW==="work"||shared.VIEW==="mine")){ e.preventDefault(); openDisp(); return; }   /* BL-128 */
   if(e.key==="?"){ e.preventDefault(); go("help"); return; }

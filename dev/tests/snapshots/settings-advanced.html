@@ -1166,10 +1166,21 @@
 <code class="setval">02 Meetings/Agendas</code>
 </div>
 </div>
+<div class="srow" data-keys="locations.folders.notes">
+<div>
+<span id="ss#41">Notes folder</span>
+<small id="ss#41h">Where each engagement's notes are saved (BL-301).<span class="setnote"> Default: 08 Notes. Its own folder, as in your template; made on the first note.</span>
+</small>
+<small class="setfixed">Set at set-up: changed at set-up</small>
+</div>
+<div class="setctl">
+<code class="setval">08 Notes</code>
+</div>
+</div>
 <div class="srow" data-keys="locations.never_index">
 <div>
-<span id="ss#41">Never read</span>
-<small id="ss#41h">Folders creaite never reads or indexes.<span class="setnote"> Default: zz Archive, _Templates, 99 System. Archive, templates and creaite's own files are never project content.</span>
+<span id="ss#42">Never read</span>
+<small id="ss#42h">Folders creaite never reads or indexes.<span class="setnote"> Default: zz Archive, _Templates, 99 System. Archive, templates and creaite's own files are never project content.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1179,8 +1190,8 @@
 </div>
 <div class="srow" data-keys="locations.offsite_backup">
 <div>
-<span id="ss#42">OneDrive backup copy folder</span>
-<small id="ss#42h">Where the daily backup's closed copy goes.<span class="setnote"> Default: _Portfolio/99 System/creaite backups. Inside _Portfolio's 99 System, which creaite keeps for its own files.</span>
+<span id="ss#43">OneDrive backup copy folder</span>
+<small id="ss#43h">Where the daily backup's closed copy goes.<span class="setnote"> Default: _Portfolio/99 System/creaite backups. Inside _Portfolio's 99 System, which creaite keeps for its own files.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1193,8 +1204,8 @@
 <h2>Live server and ask creaite</h2>
 <div class="srow" data-keys="live_mode.required">
 <div>
-<span id="ss#43">Live server required</span>
-<small id="ss#43h">The dashboard works through the live server.<span class="setnote"> Default: on. Required: IT approved live mode; it is what makes Apply and ask creaite work.</span>
+<span id="ss#44">Live server required</span>
+<small id="ss#44h">The dashboard works through the live server.<span class="setnote"> Default: on. Required: IT approved live mode; it is what makes Apply and ask creaite work.</span>
 </small>
 <small class="setfixed">Set at set-up: the dashboard needs the live server (IT-approved); not a choice</small>
 </div>
@@ -1204,28 +1215,28 @@
 </div>
 <div class="srow" data-keys="live_mode.health_check_seconds">
 <div>
-<span id="ss#44">Check the server every (seconds)</span>
-<small id="ss#44h">How often the open page checks the server and refreshes itself.<span class="setnote"> Default: 30. Thirty seconds: quick to notice, no load to speak of.</span>
+<span id="ss#45">Check the server every (seconds)</span>
+<small id="ss#45h">How often the open page checks the server and refreshes itself.<span class="setnote"> Default: 30. Thirty seconds: quick to notice, no load to speak of.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#44" aria-describedby="ss#44h" min="5" max="3600" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#45" aria-describedby="ss#45h" min="5" max="3600" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="live_mode.script_policy">
 <div>
-<span id="ss#45">Script policy</span>
-<small id="ss#45h">The page's script policy: report-only, or off.<span class="setnote"> Default: report-only. Report-only: violations are counted before the policy is ever enforced.</span>
+<span id="ss#46">Script policy</span>
+<small id="ss#46h">The page's script policy: report-only, or off.<span class="setnote"> Default: report-only. Report-only: violations are counted before the policy is ever enforced.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#45" aria-describedby="ss#45h" size="14">
+<input type="text" aria-labelledby="ss#46" aria-describedby="ss#46h" size="14">
 </div>
 </div>
 <div class="srow" data-keys="assistant.enabled">
 <div>
-<span id="ss#46">ask creaite</span>
-<small id="ss#46h">The assistant panel.<span class="setnote"> Default: on. On: it is how you ask creaite.</span>
+<span id="ss#47">ask creaite</span>
+<small id="ss#47h">The assistant panel.<span class="setnote"> Default: on. On: it is how you ask creaite.</span>
 </small>
 <small class="setfixed">Set at set-up: ask creaite's switch is kept out of the screens on purpose</small>
 </div>
@@ -1235,32 +1246,32 @@
 </div>
 <div class="srow" data-keys="assistant.shortcut">
 <div>
-<span id="ss#47">Shortcut</span>
-<small id="ss#47h">The key that opens ask creaite.<span class="setnote"> Default: Cmd/Ctrl+J. Cmd/Ctrl+J: free in Chrome and easy to reach.</span>
+<span id="ss#48">Shortcut</span>
+<small id="ss#48h">The key that opens ask creaite.<span class="setnote"> Default: Cmd/Ctrl+J. Cmd/Ctrl+J: free in Chrome and easy to reach.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#47" aria-describedby="ss#47h" size="14">
+<input type="text" aria-labelledby="ss#48" aria-describedby="ss#48h" size="14">
 </div>
 </div>
 <div class="srow" data-keys="assistant.confirm_writes">
 <div>
-<span id="ss#48">Confirm changes</span>
-<small id="ss#48h">ask creaite asks before changing the record.<span class="setnote"> Default: on. On: nothing reaches the record without your yes.</span>
+<span id="ss#49">Confirm changes</span>
+<small id="ss#49h">ask creaite asks before changing the record.<span class="setnote"> Default: on. On: nothing reaches the record without your yes.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#48" aria-describedby="ss#48h">
+<input type="checkbox" class="switch" aria-labelledby="ss#49" aria-describedby="ss#49h">
 </div>
 </div>
 <div class="srow" data-keys="assistant.run_timeout_minutes">
 <div>
-<span id="ss#49">Unwatched run stops after (minutes)</span>
-<small id="ss#49h">A request nobody is watching ends after this long.<span class="setnote"> Default: 30. Half an hour fits the longest real job (a sweep or minutes).</span>
+<span id="ss#50">Unwatched run stops after (minutes)</span>
+<small id="ss#50h">A request nobody is watching ends after this long.<span class="setnote"> Default: 30. Half an hour fits the longest real job (a sweep or minutes).</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#49" aria-describedby="ss#49h" min="1" max="240" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#50" aria-describedby="ss#50h" min="1" max="240" step="1" style="width: #px;">
 </div>
 </div>
 </div>
@@ -1268,32 +1279,32 @@
 <h2>Logging</h2>
 <div class="srow" data-keys="logging.max_mb">
 <div>
-<span id="ss#50">Log file limit (MB)</span>
-<small id="ss#50h">The largest a day's log may grow.<span class="setnote"> Default: 5. 5 MB: a busy day fits; a loop can't fill the disk.</span>
+<span id="ss#51">Log file limit (MB)</span>
+<small id="ss#51h">The largest a day's log may grow.<span class="setnote"> Default: 5. 5 MB: a busy day fits; a loop can't fill the disk.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#50" aria-describedby="ss#50h" min="1" max="500" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#51" aria-describedby="ss#51h" min="1" max="500" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="logging.keep_days">
 <div>
-<span id="ss#51">Keep logs for (days)</span>
-<small id="ss#51h">How many days of log are kept.<span class="setnote"> Default: 7. A week covers the last report cycle.</span>
+<span id="ss#52">Keep logs for (days)</span>
+<small id="ss#52h">How many days of log are kept.<span class="setnote"> Default: 7. A week covers the last report cycle.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#51" aria-describedby="ss#51h" min="1" max="90" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#52" aria-describedby="ss#52h" min="1" max="90" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="logging.repeat_window_hours">
 <div>
-<span id="ss#52">Repeating error window (hours)</span>
-<small id="ss#52h">An error seen again within this time still counts as live.<span class="setnote"> Default: 24. A day: anything older has stopped.</span>
+<span id="ss#53">Repeating error window (hours)</span>
+<small id="ss#53h">An error seen again within this time still counts as live.<span class="setnote"> Default: 24. A day: anything older has stopped.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#52" aria-describedby="ss#52h" min="1" max="168" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#53" aria-describedby="ss#53h" min="1" max="168" step="1" style="width: #px;">
 </div>
 </div>
 </div>
@@ -1301,14 +1312,14 @@
 <h2>Help</h2>
 <div class="srow" data-keys="help.start_seen">
 <div>
-<span id="ss#53">Start here seen</span>
+<span id="ss#54">Start here seen</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#53h">Whether Help › Start here has been shown once.<span class="setnote"> Default: off. Not yet: a new user sees it on the first visit; Reset shows it again.</span>
+<small id="ss#54h">Whether Help › Start here has been shown once.<span class="setnote"> Default: off. Not yet: a new user sees it on the first visit; Reset shows it again.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#53" aria-describedby="ss#53h">
+<input type="checkbox" class="switch" aria-labelledby="ss#54" aria-describedby="ss#54h">
 <button type="button" class="mini setreset" aria-label="Reset Start here seen to its default" title="Back to the default">Reset</button>
 </div>
 </div>
@@ -1317,10 +1328,10 @@
 <h2>Legacy</h2>
 <div class="srow" data-keys="people.added">
 <div>
-<span id="ss#54">People (old list)</span>
+<span id="ss#55">People (old list)</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#54h">Names added before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
+<small id="ss#55h">Names added before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the people register</small>
 </div>
@@ -1330,8 +1341,8 @@
 </div>
 <div class="srow" data-keys="people.hidden">
 <div>
-<span id="ss#55">Hidden people (old list)</span>
-<small id="ss#55h">Names hidden before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
+<span id="ss#56">Hidden people (old list)</span>
+<small id="ss#56h">Names hidden before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the people register</small>
 </div>
@@ -1341,8 +1352,8 @@
 </div>
 <div class="srow" data-keys="workstreams.added">
 <div>
-<span id="ss#56">Workstreams (old list)</span>
-<small id="ss#56h">Workstreams added before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
+<span id="ss#57">Workstreams (old list)</span>
+<small id="ss#57h">Workstreams added before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the workstreams table</small>
 </div>
@@ -1352,8 +1363,8 @@
 </div>
 <div class="srow" data-keys="workstreams.hidden">
 <div>
-<span id="ss#57">Hidden workstreams (old list)</span>
-<small id="ss#57h">Workstreams hidden before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
+<span id="ss#58">Hidden workstreams (old list)</span>
+<small id="ss#58h">Workstreams hidden before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the workstreams table</small>
 </div>

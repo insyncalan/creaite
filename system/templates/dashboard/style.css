@@ -1769,6 +1769,16 @@ body:has(#chat.on) #panel.peek.pkwide{width:calc(100vw - var(--rail-w,72px) - va
 .pked:hover{background:color-mix(in srgb,var(--sunk) 55%,transparent)} .pked:focus{background:var(--sunk)}
 .pked:focus-visible{box-shadow:0 0 0 2px var(--focus)}
 .pked:empty::before{content:attr(data-ph);color:var(--faint)}
+/* BL-301 A: the one editor (Tiptap on ProseMirror; Tiptap's own stylesheet isn't injected, these are its essentials). An HTML
+   comment in the text (BL-89's pane marker, the template's guidance) is kept, hidden; other HTML shows as a quiet chip. */
+.ProseMirror{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere;font-variant-ligatures:none}
+.ProseMirror [contenteditable="false"]{white-space:normal} .ProseMirror [contenteditable="false"] [contenteditable="true"]{white-space:pre-wrap}
+.ProseMirror-hideselection *::selection{background:transparent} .ProseMirror-hideselection{caret-color:transparent}
+.ProseMirror-selectednode{outline:2px solid var(--focus);outline-offset:2px}
+.ProseMirror [data-md-html][data-raw^="<!--"]{display:none}
+.ProseMirror [data-md-html]:not([data-raw^="<!--"]){font-family:ui-monospace,Menlo,monospace;font-size:.85em;color:var(--muted)}
+.ProseMirror img.ProseMirror-separator{display:inline!important;border:none!important;margin:0!important}
+.pked p{margin:0} .pked.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
 .pk-title{font-size:22px;line-height:30px;font-weight:600;margin:6px 0 6px -8px;padding:4px 8px;white-space:pre-wrap}
 .pk-props{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));margin:10px 0 4px}
 .pk-props.sec{margin:0 0 4px} .pk-props:empty{display:none}
@@ -2568,9 +2578,9 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .shtop h3{margin:0;font-size:14px;display:flex;align-items:center;gap:6px;color:var(--accent);flex:1;min-width:0}
 .shtop h3 svg.i{width:16px;height:16px}
 .shconf{margin:0 0 6px}
-textarea.shgrow{display:block;width:100%;box-sizing:border-box;min-height:84px;margin-top:6px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--surface);color:var(--ink);font:14px/1.5 var(--font)}
-textarea.shgrow:focus{border-color:var(--accent);outline:2px solid var(--focus);outline-offset:0}
-textarea.shbox{min-height:52px;margin-top:4px}
+.shgrow{display:block;width:100%;box-sizing:border-box;min-height:84px;margin-top:6px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--surface);color:var(--ink);font:14px/1.5 var(--font)}
+.shgrow:focus{border-color:var(--accent);outline:2px solid var(--focus);outline-offset:0}
+.shbox{min-height:52px;margin-top:4px} .shbox.ProseMirror{overflow:auto;cursor:text} .shbox p{margin:0}   /* BL-301 A: a div on the one editor too */
 .shrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .shrow .sp,.shdh .sp{flex:1}
 .shape .btn{min-height:30px} .shape .btn.shsm{min-height:28px;padding:0 10px;font-size:13px}
@@ -2683,6 +2693,7 @@ textarea.shbox{min-height:52px;margin-top:4px}
 .ppnote label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:3px}
 .ppbox{display:block;width:100%;min-height:52px;resize:vertical;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);font:13px/19px var(--font);padding:6px 9px;box-sizing:border-box}
 .ppbox:focus{outline:2px solid var(--spark);outline-offset:0}
+.ppbox.ProseMirror{overflow:auto;cursor:text} .ppbox p{margin:0} .ppbox.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}   /* BL-301 A: the one editor */
 .ppcites{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:3px}
 .ppcite{font-size:11px;color:var(--spark);text-decoration:none;border-bottom:1px dotted currentColor;overflow-wrap:anywhere}
 .ppcite.plain{color:var(--muted);border-bottom:0}
@@ -2781,3 +2792,28 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   #tBrief .wkwhy{margin-left:0}
 }
 /* ===== end BL-319 ===== */
+/* ===== BL-301 C (v20-capture): the capture drawer (components/notes/CaptureDrawer.jsx), at the right of any page, not modal ===== */
+.capdrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);box-sizing:border-box;z-index:47;background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.capdrawer[hidden]{display:none}
+.caphead{display:flex;align-items:center;gap:8px} .caphead h2{margin:0;font-size:15px;line-height:24px} .caphead .sp,.capfoot .sp,.caprow .sp{flex:1}
+.capwhere{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px}
+.capwhere select{min-height:28px;max-width:100%;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--surface);color:var(--ink);font:inherit}
+.capwhere .sub,.capmeet{font-size:12px;overflow-wrap:anywhere}
+.capconf{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px;cursor:pointer}
+.capconf .sub{font-size:12px;overflow-wrap:anywhere}
+.capconf .switch{height:24px;border-radius:12px;flex:none} .capconf .switch::after{top:4px}   /* 24 high, like every control in the drawer */
+.captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
+.capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
+.capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
+.capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
+.capfoot .btn[aria-disabled="true"]{opacity:.55}
+.caprecent{border-top:1px solid var(--line);padding-top:8px} .caprecent h3{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted)}
+.caprecent ul{list-style:none;margin:0;padding:0}
+.caprow{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;border:0;background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;padding:2px 4px;border-radius:6px;cursor:pointer}
+.caprow:hover,.caprow:focus-visible{background:var(--sunk)} .caprow b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0} .caprow .sub{white-space:nowrap;font-size:12px}
+.capdiscard{font-size:12px;min-height:24px}
+.dm .mnote{min-height:24px}
+@media (max-width:480px){.capdrawer{padding:12px 16px} .caprow{flex-wrap:wrap} .caprow .sp{display:none}}
+/* ===== end BL-301 C ===== */

@@ -129,14 +129,14 @@ class PrepView(LiveBrowserCase):
     def test_6_focus_band_read_only_then_editable_and_saved(self):
         b = self.b
         self.open_view()
-        self.assertEqual(b.eval("document.querySelectorAll('#pp-focus textarea').length"), 0)
+        self.assertEqual(b.eval("document.querySelectorAll('#pp-focus .ppbox').length"), 0)
         self.assertIn("Nothing has been shaped", self.text("#pp-focus"))
         notes = {"objective": [{"text": "A date for data access", "sources": [{"type": "item", "id": "ABC-A-001", "label": "ABC-A-001"}]}],
                  "ask": [{"text": "Jane: a date", "sources": []}]}
         r = b.eval(f"api('/api/prep/focus/save',{{key:{json.dumps(KEY)},accept:true,reading:{{focus:[{{id:'ABC-A-001',text:'Data access'}}],aim:'A date',show:'focus-first'}},notes:{json.dumps(notes)},drafted:{json.dumps(notes)}}}).then(r=>r.ok)")
         self.assertTrue(r)
         b.eval(f"loadPrep({json.dumps(DATED)})")
-        b.wait("document.querySelectorAll('#pp-focus textarea').length===4")   # every section, so an empty one can be filled
+        b.wait("document.querySelectorAll('#pp-focus .ppbox').length===4")   # every section, so an empty one can be filled
         self.assertIn("Focus: ABC-A-001 · Data access", self.text("#pp-h-focus"))
         self.assertIn("A date", self.text("#pp-focus .ppaim"))
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#pp-n-objective')).resize"), "vertical")

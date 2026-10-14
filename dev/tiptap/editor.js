@@ -1,11 +1,12 @@
 // BL-301 part A groundwork (development only): the minimal Tiptap editor that dev/tools/tiptap.py bundles into one IIFE
 // (window.CreaiteTiptap), and that the round-trip gate (dev/tools/tiptap_roundtrip.py) runs in headless Chrome.
-// Not creaite's editor yet: the wrapper creaiteEditor(el, {markdown, features, pickers, ai}) is BL-301's build.
+// The dashboard's one editor (BL-301 A, src/core/editor.js `creaiteEditor`) imports this module, vendored, as "tiptap".
 //
 // Saving uses creaite's exact writer (writer.js), not Tiptap's serialiser: the parse side (source.js) keeps each text's
 // written form in the document, and the writer gives it back byte for byte (Alan, 13-10-2026). `markdownOf` is what
 // BL-301's wrapper will call on save.
-import { Editor } from "@tiptap/core";
+import { Editor, Extension, Mark, Node, mergeAttributes } from "@tiptap/core";
+import { Plugin, PluginKey } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { Markdown } from "@tiptap/markdown";
 import Image from "@tiptap/extension-image";
@@ -14,6 +15,9 @@ import { TableKit } from "@tiptap/extension-table";
 import { BoldForm, BulletListForm, CodeForm, HardBreakForm, HtmlBlock, HtmlBlockFromMarked, HtmlInline, ItalicForm, LinkForm, Literal,
   OrderedListForm, TableForm } from "./source.js";
 import { writeMarkdown } from "./writer.js";
+
+// What the dashboard's wrapper builds its own pieces from (the claim mark, the image's figure, the keys).
+export { Extension, Mark, Node, mergeAttributes, Plugin, PluginKey };
 
 /** The pinned Tiptap version this file was written and gated against (tiptap.py's PINNED, set by the bundler). */
 export const PINNED = typeof __TIPTAP_PINNED__ === "undefined" ? null : __TIPTAP_PINNED__;   // eslint-disable-line no-undef
@@ -26,19 +30,30 @@ const STARTER = { link: false, bold: false, code: false, italic: false, hardBrea
 const base = () => [StarterKit.configure(STARTER), BoldForm, CodeForm, ItalicForm, LinkForm.configure({ openOnClick: false }),
   HardBreakForm, BulletListForm, OrderedListForm, HtmlBlock, HtmlBlockFromMarked, HtmlInline, Literal, Image];
 
+// A plain-text field (the peek's text, Prep's notes): paragraphs only, one a line, no Markdown and no marks, so what is
+// stored stays plain text (the dashboard's wrapper loads and saves the lines itself).
+const PLAIN = { blockquote: false, bold: false, bulletList: false, code: false, codeBlock: false, hardBreak: false,
+  heading: false, horizontalRule: false, italic: false, listItem: false, listKeymap: false, orderedList: false,
+  strike: false, link: false, underline: false, trailingNode: false };
+
 // Each place switches on what it needs (BL-301 A): Current state has no tables or checklists; Notes have everything.
 const FEATURES = {
+  plain: () => [StarterKit.configure(PLAIN)],
   current: () => [...base(), Markdown],
   notes: () => [...base(), TaskList, TaskItem.configure({ nested: true }), TableKit.configure({ table: false }), TableForm,
     Markdown],
 };
 
-/** A Tiptap editor in `element` (a detached one when null), loaded from Markdown. */
-export function createEditor(element, { markdown = "", features = "current" } = {}) {
+/** A Tiptap editor in `element` (a detached one when null; `{mount: el}` makes `el` itself the editable root), loaded
+ * from Markdown, or from `html` or `json` when given. `extensions`: more extensions, or a function given the feature
+ * set's list that returns the list to use (to replace one). Any other option goes to Tiptap's Editor as it is. */
+export function createEditor(element, { markdown = "", features = "current", html, json, extensions, ...options } = {}) {
   const make = FEATURES[features];
   if (!make) throw new Error(`unknown features: ${features}`);
-  return new Editor({ element: element || document.createElement("div"), extensions: make(), content: markdown,
-    contentType: "markdown" });
+  const list = typeof extensions === "function" ? extensions(make()) : [...make(), ...(extensions || [])];
+  const content = json !== undefined ? { content: json } : html !== undefined ? { content: html }
+    : { content: markdown, contentType: "markdown" };
+  return new Editor({ element: element || document.createElement("div"), extensions: list, ...content, ...options });
 }
 
 /** What the document can't hold, kept around it: the line ending (CRLF when every line ends so) and the blank lines and
@@ -69,9 +84,10 @@ export function parser(editor) {
   };
 }
 
-/** {markdown, faithful}: the editor's document as Markdown, by creaite's exact writer. */
-export function markdownOf(editor) {
-  return writeMarkdown(editor.getJSON(), parser(editor));
+/** {markdown, faithful}: the editor's document (or `json`, a document of this editor's schema, such as getJSON() with
+ * the marks Markdown doesn't hold taken out) as Markdown, by creaite's exact writer. */
+export function markdownOf(editor, json) {
+  return writeMarkdown(json || editor.getJSON(), parser(editor));
 }
 
 /** `editor`'s Markdown by `mode` ("exact": creaite's writer; "upstream": Tiptap's own getMarkdown, for comparison, its

@@ -7,6 +7,7 @@ import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
 import { drawDayMeetings } from "./components/today/DayMeetings.jsx";
+import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { drawDayTabs } from "./components/today/DayTabs.jsx";
 import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
@@ -225,7 +226,7 @@ export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!r
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};
+export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c),note:(m,day)=>{ openCapture({meeting:{day,start:m.start,title:m.title}}); }};   /* BL-301 C: Note for this meeting */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;

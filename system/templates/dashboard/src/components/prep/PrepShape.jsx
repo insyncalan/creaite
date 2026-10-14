@@ -15,6 +15,7 @@ import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Chip } from "../Chip.jsx";
 import { Icon } from "../Icon.jsx";
+import { TextEditor } from "../TextEditor.jsx";
 import { fd } from "../../core/page.js";
 import { viaServer } from "../../core/server.js";
 import { draftWhyNot } from "../../drafts.js";
@@ -137,11 +138,11 @@ function Notes() {
         return (
           <div class="shsec" key={k}>
             <div class="shsech">
-              <label for={`shN-${k}`}>{label}</label>
+              <label id={`shN-${k}-l`}>{label}</label>
               {edited.has(k) ? <span class="sub shmine">Your edit, kept on Regenerate · <button type="button" class="linkbtn" onClick={() => giveBack(k)}>let creaite redraft it</button></span> : null}
             </div>
-            <textarea id={`shN-${k}`} class="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} aria-describedby={lines.length ? `shC-${k}` : undefined}
-              onInput={e => { shapeText.value = { ...shapeText.value, [k]: /** @type {HTMLTextAreaElement} */ (e.currentTarget).value }; }} />
+            <TextEditor id={`shN-${k}`} cls="shgrow shbox" rows={Math.max(2, lines.length + 1)} value={texts[k] || ""} labelledBy={`shN-${k}-l`}
+              describedBy={lines.length ? `shC-${k}` : undefined} onInput={t => { shapeText.value = { ...shapeText.value, [k]: t }; }} />
             {lines.length ? (
               <ol class="shcites" id={`shC-${k}`} aria-label={`${label}: each line's source`}>
                 {lines.map((l, i) => (

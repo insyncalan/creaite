@@ -66,6 +66,8 @@ def make_vault():
               "extraction.py", "quality.py",                       # sprint-drafts-extraction
               "claims.py",                                         # BL-314
               "settings_catalogue.py", "health.py",                # BL-320
+              "notes.py",                                          # BL-301: the note format, read by search
+              "capture.py",                                        # BL-301 C: the capture drawer's server side
               "sneak_peek.py",                                     # BL-322
               "run"):                                              # BL-237: the interpreter wrapper (copy2 keeps its execute bit)
         shutil.copy2(REPO / "system" / "scripts" / f, scripts / f)

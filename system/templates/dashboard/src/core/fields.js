@@ -93,7 +93,7 @@ export function parseWhen(text,today=TODAY,due=false){ let s=String(text||"").tr
 export const dateSaid=iso=>`${new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(iso)}`;
 /* which fields: every typed date field (item forms, inline cells, the project page's No due date card, filters' From and To,
    Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick Capture); read-only ones are picker only */
-export const isDateField=el=>!!(el&&el.tagName==="INPUT"&&!el.readOnly&&el.matches('[data-date],[placeholder="DD-MM-YYYY"],#qcDate,#bdDate,[data-und]'));
+export const isDateField=el=>!!(el&&el.tagName==="INPUT"&&!el.readOnly&&el.matches('[data-date],[placeholder="DD-MM-YYYY"],#bdDate,[data-und]'));
 export const dueField=el=>/(^|_)due$/.test(el.name||el.id||"")||el.dataset.cf==="due"||el.dataset.bf==="due"||["rvDate","bdDate","bkDate","deReply"].includes(el.id)||el.dataset.und!=null||el.name==="fc";
 export function dateRead(el){ const v=el.value.trim(); if(!v) return {empty:true}; const iso=parseWhen(v,TODAY,dueField(el)); if(!iso) return {bad:true};
   const max=el.dataset.max==="today"?TODAY:el.dataset.max, min=el.dataset.min==="today"?TODAY:el.dataset.min;

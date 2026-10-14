@@ -7,6 +7,7 @@ import { RBMARK } from "../ask.js";
 import { A, DEC, P, pName, R, REV } from "./data.js";
 import { $, $$, addHTML, esc, html } from "./dom.js";
 import { mFirst, mLeave } from "./motion.js";
+import { curDrop } from "./editor.js";
 import { anim, DATE, mScroll, reduced, store } from "./page.js";
 import { snack } from "./server.js";
 import { shared } from "./state.js";
@@ -130,7 +131,7 @@ export function openWork(code,wt,view,extra){ if(navBlocked(()=>openWork(code,wt
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0022's place) */
 export function bootNav(){
 window.addEventListener("popstate",e=>{ if((shared.EDITING&&shared.CUR)||(shared.CURED&&shared.CURED.dirty)){ try{ history.pushState(shared.NAVSTATE,"",hashOf(shared.NAVSTATE)); }catch(x){} if(shared.EDITING&&shared.CUR) shakeEdit(); else askDiscard(()=>history.back()); return; }
-  shared.CURED=null;
+  curDrop();
   restoreNav(e.state||parseHash(location.hash)); });
 document.addEventListener("click",e=>{ const n=e.target.closest("[data-nav]"); if(n){ e.preventDefault(); e.stopPropagation(); const {wt,view,code,extra}=navParse(n.dataset.nav); openWork(code,wt,view,extra); return; }   /* BL-190: an optional fourth part adds filters */
   const pj=e.target.closest("[data-proj]"); if(pj){ e.preventDefault(); e.stopPropagation(); go("cockpit",pj.dataset.proj); return; }

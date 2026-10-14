@@ -291,16 +291,17 @@ class LiveServerLog(unittest.TestCase):
         import base64
         canaries = ("CANARY-NOTE", "CANARY-ACTION", "CANARY-TITLE", "CANARY-WHO", "CANARY-UPLOAD", "CANARY-TRANSCRIPT",
                     "CANARY-QUESTION", "CANARY-GEN-NOTE")
-        self.s.post("/api/capture", {"notes": "CANARY-NOTE: Sara agreed to CANARY-ACTION by Friday", "code": "ABC",
-                                     "title": "CANARY-TITLE catch-up", "who": "CANARY-WHO", "date": "2026-10-09"})
+        self.s.post("/api/notes/capture/done", {"body": "CANARY-NOTE: Sara agreed to CANARY-ACTION by Friday", "code": "ABC",   # BL-301 C
+                                                "title": "CANARY-TITLE catch-up", "with": ["CANARY-WHO"], "template": "working-session",
+                                                "date": "2026-10-09"})
         self.s.post("/api/inbox/upload", {"name": "CANARY-UPLOAD.vtt",
                                           "data": base64.b64encode(b"WEBVTT\n\n00:00.000 --> 00:02.000\nCANARY-TRANSCRIPT words").decode()})
         self.s.post("/api/search/ask", {"q": "what did CANARY-QUESTION say?"})
         self.s.post("/api/generate", {"code": "ABC", "note": "CANARY-GEN-NOTE"})
-        for route in ("capture", "inbox/upload", "search/ask"):          # every request's line is written before the checks
+        for route in ("notes/capture/done", "inbox/upload", "search/ask"):          # every request's line is written before the checks
             self.s.wait_for(rf"POST /api/{route} \S+ \d+ms")            # a streamed reply has no status: "-"
         text = self.s.wait_for(r"POST /api/generate \S+ \d+ms")
-        self.assertRegex(text, r"POST /api/capture \d{3}")
+        self.assertRegex(text, r"POST /api/notes/capture/done \d{3}")
         self.assertRegex(text, r"POST /api/inbox/upload \d{3}")
         for canary in canaries:
             self.assertNotIn(canary, text)

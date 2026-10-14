@@ -22,7 +22,9 @@ import { wheelRef } from "./wheel.js";
     its newest prep page; `running`: a check or a process under way ("Checking…"). */
 /** @typedef {{title: string, p?: string | null}} AllDay */
 /** @typedef {{prep: (m: DayMeeting) => void, open: (path: string) => void, process: (m: DayMeeting) => void,
-    check: (m: DayMeeting) => void, review: () => void, name: (code: string) => string}} DayActs */
+    check: (m: DayMeeting) => void, review: () => void, name: (code: string) => string,
+    note?: (m: DayMeeting, day: string) => void}} DayActs
+    `note`: "Note for this meeting" (BL-301 C), the capture drawer with the Working session template. */
 /** @typedef {{day: string, dow: string, isToday: boolean, past: boolean, now: number, mode: string, live: boolean,
     calendar: boolean, lastRead?: string, meetings: DayMeeting[], allDay: AllDay[], acts: DayActs,
     onWheel?: (e: WheelEvent) => void}} DayMeetingsProps
@@ -100,7 +102,9 @@ export function DayMeetings(props) {
             <div class="tm">{e.start} – {e.end}</div>
             <div class="tt">{e.title ?? ""}{!hidden && e.p ? <> <Proj code={e.p} name={acts.name} /></> : null}</div>
             {wh ? <div class="wh">{wh}</div> : null}
-            {acts2 || (e.hub && !hidden) ? <div class="acts">{acts2}{e.hub && !hidden ? <a href={`#meeting=${e.hub}`} class="linkbtn mhlink" data-meeting={e.hub} title="Everything about this meeting, from invite to follow-up">Meeting</a> : null}</div> : null}
+            {acts2 || (e.hub && !hidden) || (acts.note && !e.private) ? <div class="acts">{acts2}{e.hub && !hidden ? <a href={`#meeting=${e.hub}`} class="linkbtn mhlink" data-meeting={e.hub} title="Everything about this meeting, from invite to follow-up">Meeting</a> : null}
+              {acts.note && !e.private ? <button type="button" class="linkbtn mnote" aria-label={`Note for this meeting: ${e.title ?? ""}`} data-tip="Note for this meeting"
+                onClick={() => acts.note && acts.note(e, day)}>Note</button> : null}</div> : null}
           </div>);
       })}</div> : null}
       {allDay.length ? <div class="dayall" ref={ref}>All day: {allDay.map((e, i) => <>{i ? " · " : ""}{e.title ?? ""}{e.p ? <> <Proj code={e.p} name={acts.name} /></> : null}</>)}</div> : null}

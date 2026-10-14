@@ -48,6 +48,7 @@ export * from "./components/mount.js";
 export * from "./components/Icon.jsx";
 export * from "./components/Dialog.jsx";
 export * from "./components/Chip.jsx";
+export * from "./components/TextEditor.jsx";   /* BL-301 A: the one editor as a block */
 
 export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft chase in the peek */
 export * from "./components/Tabs.jsx";
@@ -69,6 +70,8 @@ export * from "./components/review/RejectsList.jsx";
 
 export * from "./stores/rejects.js";
 
+export * from "./components/notes/CaptureDrawer.jsx";   /* BL-301 C: the capture drawer */
+export * from "./stores/capture.js";
 export * from "./components/peek/SneakPeek.jsx";   /* BL-322: Sneak peek */
 
 export * from "./sneak.js";

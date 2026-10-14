@@ -102,7 +102,7 @@ class Shape(ShapeCase):
         chips = b.eval("[...document.querySelectorAll('#prepShape .readas .chip')].map(c=>c.textContent)")
         self.assertTrue(any("ABC-A-001" in c for c in chips), chips)
         self.assertIn("A date for data access", b.eval("document.querySelector('#prepShape .readas').textContent"))
-        boxes = b.eval("[...document.querySelectorAll('#prepShape textarea.shbox')].map(t=>[t.id,t.value])")
+        boxes = b.eval("[...document.querySelectorAll('#prepShape .shbox')].map(t=>[t.id,t.value])")
         self.assertEqual([x[0] for x in boxes], ["shN-objective", "shN-talking_points", "shN-ask", "shN-carried_over"])
         self.assertEqual(boxes[0][1], "Agree a date for data access.")
         cite = b.eval("document.querySelector('#shC-objective [data-open]').dataset.open")
