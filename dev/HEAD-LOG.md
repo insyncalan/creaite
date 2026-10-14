@@ -4,6 +4,9 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | BL-326: a run creaite started shows no Edit button on its ask line; a late transcript-check result may land below a new chat's greeting (no change) | Edit would re-send a machine ask as a chat, which BL-326 removes; the order is harmless. Alan may overrule at 07:57 |
+| 15-10-2026 | Jarvis | The five test files failing on `release-194` ae92cf8 (drafts_client, evidence, milestones_page, work_all_items, work_saved_views) go to Team Cap under #39 | Team Cap owns #39 and made ae92cf8 |
+| 15-10-2026 | Jarvis | P4 (#67), like P1 (#64), is built with the approval card every time until Alan decides on an approval without a card (a BL-141 exception) | Guard matters are Alan's; the card is the safe side and keeps the build moving |
 | 15-10-2026 | Jarvis | The v2.1.0 client report's file name is kept: `YYYY-MM-DD Client report - <Project name> (<Client>).html`, one per client (#64). The save-over-a-filed-report question is Alan's (guard); until he answers, it's built with the card every time | Naming is within the charter; the card is the safe side and needs no reach.py change |
 | 15-10-2026 | Jarvis | #37's docs drift (FR-84 and dashboard-spec still naming `zz Archive` and `ALWAYS_NEVER_INDEX`) goes into v1.9.4's docs on `v194-docs` (#38, Team Stark) | Docs wording is the Head's; it ships with the release that renames |
 | 15-10-2026 | Jarvis | Correction: the times on Jarvis's board comments and the bedtime digest from about 02:15 to 02:30 were written up to 1h20 ahead (03:20 to 03:50). From now on times come from the system clock | Accuracy of the record |
