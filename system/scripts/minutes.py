@@ -38,12 +38,21 @@ Commands:
 
 meeting.json (written by cx-minutes):
   {"title": "...", "date": "YYYY-MM-DD", "event_id": null, "projects": ["ABC"],
-   "draft": "system/staging/drafts/<stem>.docx", "transcript": "inbox/<file>",
+   "minutes": {...} (v2.1.0, BL-338: the minutes record; see below) or, before it, "draft": "system/staging/drafts/<stem>.docx",
+   "transcript": "inbox/<file>",
    "items": [{"table": "actions", "section": "Actions", "values": {...}, "flags": []}, ...],
    "status_signals": ["..."],
    "coverage": [{"point": "<an agenda point, as `agenda` gave it>", "verdict": "Covered" | "Touched on" | "Not discussed"}]}
   coverage (BL-209) only when `agenda` found points; stage keeps the point's own words (never transcript text) as
   meeting.coverage and refuses a point that isn't on the agenda.
+The minutes record (v2.1.0 P4, BL-338; minutes_record.py): stage drafts it itself, as a creaite document in system/staging/drafts/,
+  filed on approval as creaite_doc.target's "YYYY-MM-DD <Meeting title>.html" in each project's minutes folder:
+  {"start": "HH:MM", "end": "HH:MM" (UAE time), "attendees": "...", "summary": [<paragraph>], "chat": true, "partial": false,
+   "updates": [{"heading": "<topic>", "items": [<line>]}], "open_questions": [<line>],
+   "milestones": [{"id": "ABC-M-002", "note": "...", "at": ...}]}   (a milestone note only: never a change, BL-186)
+  A <line> is text or {"text", "flag" (one of minutes-style's ten), "at": "<cue time HH:MM:SS>" | "turn": <speaker turn, from 1>};
+  an item may carry "at" or "turn" too, and an action or promise "due_words" ("Friday", "next week", "end of month", "30-10"),
+  worked out from the meeting's date (date_words.deadline). Decisions, RAID items and actions are the staged items, as rows.
 Item sources are set by stage: the minutes copy in the item's own project folder, plus the section.
 A promise (BL-125 A) is {"table": "promises", "section": "<speaker, time>", "values": {"project", "promised_by",
   "promised_to", "description", "due_date"}}: something said in passing, so its source is the transcript copy (not the
@@ -517,6 +526,11 @@ def stage_refused(spec):
 def draft_refused(spec):
     """True (and says why) when a transcript comes without its draft Word minutes, or the named draft doesn't exist:
     otherwise Review shows a minutes row with nothing to open. Only a quick note has no draft."""
+    if spec.get("minutes") is not None:          # v2.1.0 P4 (BL-338): the minutes record, drafted by stage itself
+        if not isinstance(spec["minutes"], dict) or spec.get("draft"):
+            print("The minutes record (\"minutes\") is an object, given without a Word \"draft\". Nothing staged.")
+            return True
+        return False
     if spec.get("transcript") and not spec.get("draft"):
         print("No draft minutes: run step 3 (docx_tools.py fill) first, then stage again. Nothing staged.")
         debuglog.warn("minutes", "stage refused: a transcript was given with no draft minutes")
@@ -550,9 +564,10 @@ def stage_gate(spec):
     return None, key
 
 
-def stage_ops(spec, projects, name):
+def stage_ops(spec, projects, name, copies=None):
     """Where the draft and the transcript go for each project, as file operations done on approval: (folders, ops,
-    source_map, tcopies)."""
+    source_map, tcopies). `copies` names each project's filed minutes (a minutes record's, creaite_doc.target); else
+    "<minutes folder>/<name>.docx"."""
     ext = Path(spec["transcript"]).suffix if spec.get("transcript") else None
     folders, ops, source_map, tcopies = {}, [], {}, {}
     tpath = paths.resolve(spec["transcript"]).resolve() if spec.get("transcript") else None
@@ -560,7 +575,7 @@ def stage_ops(spec, projects, name):
     for code in projects:
         mdir, tdir = paths.rel(paths.folder(code, "minutes")), paths.rel(paths.folder(code, "transcripts"))   # BL-85: the mapped folders
         folders[code] = (mdir, tdir)
-        minutes_copy = f"{mdir}/{name}.docx"
+        minutes_copy = (copies or {}).get(code) or f"{mdir}/{name}.docx"
         if spec.get("draft"):
             ops.append({"op": "copy", "from": "draft", "to": minutes_copy})
         if spec.get("transcript"):
@@ -581,8 +596,9 @@ class Staging:
     """The items one meeting stages (BL-229: out of cmd_stage): new items, updates to open items, and notes on what was
     skipped."""
 
-    def __init__(self, spec, key, name, folders, tcopies):
+    def __init__(self, spec, key, name, folders, tcopies, copies=None):
         self.spec, self.key, self.name, self.folders, self.tcopies = spec, key, name, folders, tcopies
+        self.copies = copies or {}                 # v2.1.0 P4: where a minutes record is filed, per project
         self.day, self.title, self.note = spec["date"], spec["title"], spec.get("note")
         self.ext = Path(spec["transcript"]).suffix if spec.get("transcript") else None
         self.date_from_file = bool(spec.get("transcript")) and paths.file_date(spec["transcript"])[1] == "file"   # a dateless name (BL-85)
@@ -596,7 +612,7 @@ class Staging:
         """Where an item came from: the note, the filed minutes, or the filed transcript, and the section. A promise cites the
         transcript when there is one: it was said in passing, so it isn't in the minutes (BL-125 A)."""
         cite_minutes = self.spec.get("draft") and not (table == "promises" and self.ext)
-        where = self.note or (f"{self.folders[project][0]}/{self.name}.docx" if cite_minutes else
+        where = self.note or ((self.copies.get(project) or f"{self.folders[project][0]}/{self.name}.docx") if cite_minutes else
                               self.tcopies.get(project) or f"{self.folders[project][1]}/{self.name}{self.ext}")
         return f"{where} — {section or SECTIONS.get(table, RAID_HEADING)}"
 
@@ -722,13 +738,19 @@ def stage_proposal(spec, key, projects, ops, source_map, staging):
     return proposal
 
 
-def write_proposal(proposal):
-    """Write it to staging under a name not yet taken; return its path."""
+def proposal_out():
+    """A proposal file name not yet taken in staging."""
     out = paths.STAGING / f"proposed-{datetime.now():%Y-%m-%d-%H%M}.json"
     n = 2
     while out.exists():
         out = paths.STAGING / f"proposed-{datetime.now():%Y-%m-%d-%H%M}-{n}.json"
         n += 1
+    return out
+
+
+def write_proposal(proposal, out=None):
+    """Write it to staging under a name not yet taken (or `out`); return its path."""
+    out = out or proposal_out()
     out.write_text(json.dumps(proposal, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return out
 
@@ -770,6 +792,45 @@ def print_staged(out, spec, projects, proposal, notes):
         print("Note: " + note)
 
 
+# ===== v2.1.0 P4 (BL-338) ===== the minutes record: stage drafts it (minutes_record.py), so no Word draft is filled. Deadlines in
+# words are worked out from the meeting's date first; the record is saved (creaite_doc.save) before the proposal is written, so its
+# filing (a copy, on approval, to creaite_doc.target in each project) validates.
+def record_copies(spec, projects):
+    """Work the deadlines out, choose the record's draft path (spec["draft"]) and return each project's filed path."""
+    import minutes_record
+    staging_notes = minutes_record.deadlines(spec)
+    spec.setdefault("_notes", []).extend(staging_notes)
+    spec["draft"] = paths.rel(minutes_record.record_path(spec["date"], spec["title"]))
+    return minutes_record.filed_paths(projects, spec["date"], spec["title"])
+
+
+def draft_record(spec, proposal, out, at_of):
+    """Build and save the minutes record (version 1, in system/staging/drafts/). False, saying why, when it isn't saved."""
+    import minutes_record
+    try:
+        doc = minutes_record.build(spec, proposal, out.name, at_of)
+        minutes_record.save_record(spec["draft"], doc, "Minutes drafted", via="cx-minutes")
+    except (ValueError, OSError) as e:          # creaite_doc.DocError and RecordError are ValueErrors
+        print(f"The minutes record wasn't saved: {e} Nothing staged.")
+        debuglog.warn("minutes", f"stage refused: the minutes record wasn't saved ({type(e).__name__})")
+        return False
+    return True
+
+
+def follow_marks(draft, out):
+    """The record's rows follow what the staging checks marked (Looks like, probably done): saved again only if one changed."""
+    import creaite_doc
+    import minutes_record
+    data = json.loads(out.read_text(encoding="utf-8"))
+    doc = creaite_doc.read(draft)
+    before = json.dumps(doc["items"], sort_keys=True)
+    for it in data.get("items") or []:
+        minutes_record.sync_item(doc, it)
+    if json.dumps(doc["items"], sort_keys=True) != before:
+        minutes_record.save_record(draft, doc, "Minutes drafted: the staging checks", via="cx-minutes")
+# ===== end v2.1.0 P4 =====
+
+
 def cmd_stage(spec_file):
     """Write the proposal for one meeting (from cx-minutes' meeting.json) to system/staging/ and print its items.
 
@@ -782,13 +843,25 @@ def cmd_stage(spec_file):
         return refused
     projects = spec["projects"]
     name = stem(spec["date"], spec["title"])
-    folders, ops, source_map, tcopies = stage_ops(spec, projects, name)
-    staging = Staging(spec, key, name, folders, tcopies)
+    record = spec.get("minutes") is not None            # v2.1.0 P4 (BL-338): the minutes record instead of the Word draft
+    copies = record_copies(spec, projects) if record else None
+    folders, ops, source_map, tcopies = stage_ops(spec, projects, name, copies)
+    staging = Staging(spec, key, name, folders, tcopies, copies)
+    at_of = {}
     for raw in spec.get("items", []):
+        before = len(staging.items)
         staging.take(raw)
+        if len(staging.items) > before and isinstance(raw, dict):    # the line's transcript position, for its time tag
+            at_of[staging.items[-1]["n"]] = {k: raw[k] for k in ("at", "turn") if k in raw}
+    staging.notes += spec.pop("_notes", [])
     proposal = stage_proposal(spec, key, projects, ops, source_map, staging)
-    out = write_proposal(proposal)
+    out = proposal_out()
+    if record and not draft_record(spec, proposal, out, at_of):
+        return 1
+    out = write_proposal(proposal, out)
     check = extraction.after_stage(out, spec) if staging.items else 0     # BL-221, BL-218, BL-220 (sprint-drafts-extraction)
+    if record:
+        follow_marks(spec["draft"], out)
     log_staged(out, spec, key, projects, staging)
     print_staged(out, spec, projects, proposal, staging.notes)
     if not check:
@@ -803,6 +876,14 @@ def follows_draft(i):
             and not (i.get("table") == "decisions" and (i.get("values") or {}).get("status") == "Pending"))
 
 
+def record_refresh(draft):
+    """True (and says so) for a minutes record: its item rows are the staged items, so it is never refreshed from Word."""
+    if str(draft).lower().endswith(".html"):
+        print("These minutes are edited in creaite, where each item row is the staged item, so there is nothing to refresh.")
+        return True
+    return False
+
+
 def cmd_refresh(arg):
     """Re-extract: make a meeting's unapplied items follow its edited draft."""
     prop = tracker.resolve_proposal(arg)
@@ -811,6 +892,8 @@ def cmd_refresh(arg):
     draft = meeting.get("draft")
     if not draft or not paths.resolve(draft).is_file():
         print("No draft minutes to refresh from (already filed, or no draft in this proposal).")
+        return 1
+    if record_refresh(draft):                    # v2.1.0 P4 (BL-338): the record's rows are the staged items; nothing to reconcile
         return 1
     if docx_tools.is_open(paths.resolve(draft)):
         print(f"{Path(draft).name} is open in Word. Save and close it, then refresh.")

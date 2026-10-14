@@ -1472,15 +1472,15 @@ def stash(apply_id, src):
     return paths.rel(dest)
 
 
-def run_file_ops(apply_id, blk, field, ops, done):
+def run_file_ops(apply_id, blk, field, ops, done, data=None):
     """Run ops in order, appending an undo record for each to `done`. BL-229: each operation is its own function."""
-    _stamp_approved(apply_id, blk, field, done)
+    _stamp_approved(apply_id, blk, field, done, data)
     for fop in ops:
         check_file_op(fop, blk)
         FILE_OPS[fop["op"]](apply_id, fop, blk, done)
 
 
-def _stamp_approved(apply_id, blk, field, done):
+def _stamp_approved(apply_id, blk, field, done, data=None):
     """An approved draft (minutes or a report) says who approved it and when, before it is filed."""
     approved_by = (paths.load_settings().get("identity", {}).get("name") or "Alan").split()[0]
     if field in ("minutes_decision", "report_decision") and blk.get(field) == "approved" and blk.get("draft"):
@@ -1488,8 +1488,36 @@ def _stamp_approved(apply_id, blk, field, done):
         if draft.exists():
             kept = stash(apply_id, draft)
             on = (os.environ.get("CREAITE_NOW") or today())[:10]          # creaite's clock: CREAITE_NOW fixes it in tests
-            if set_status_line(draft, f"Approved by {approved_by} on {long_date(on)}"):
+            if draft.suffix.lower() == ".html":                           # v2.1.0 P4: a minutes record (creaite_doc)
+                _stamp_record(draft, f"Approved by {approved_by} on {long_date(on)}", on, apply_id, data)
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
+            elif set_status_line(draft, f"Approved by {approved_by} on {long_date(on)}"):
+                done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
+
+
+def _stamp_record(draft, status, on, apply_id, data):
+    """v2.1.0 P4 (BL-338): an approved minutes record is marked approved (state, approved_at, the status line) and each row of an
+    item this apply wrote names the ID it was given (a row ref "@<n>" becomes it), then rendered again (creaite_doc)."""
+    import creaite_doc
+    doc = creaite_doc.read(draft)
+    ids = {f"@{i['n']}": i["result_id"] for i in (data or {}).get("items", [])
+           if i.get("applied") == apply_id and i.get("decision") == "approved" and i.get("result_id")}
+    doc.update(state="approved", approved_at=f"{on} {now()[11:19]}")
+    for s in doc.get("sections") or []:
+        _stamp_section(s, (doc.get("meta") or {}).get("status_line"), status, ids)
+    doc["items"] = {ids.get(k, k): ({**v, "id": ids[k]} if k in ids else v) for k, v in (doc.get("items") or {}).items()}
+    doc.setdefault("meta", {}).update(status_line=status, removed={})     # removed rows are kept for Undo while a draft only
+    draft.write_text(creaite_doc.dumps(doc), encoding="utf-8")
+
+
+def _stamp_section(s, was, status, ids):
+    """One section of an approved record: the header's status line, and each written item's row ref as its ID."""
+    if s.get("id") == "header" and was:
+        s["text"] = s.get("text", "").replace(was, status, 1)
+        s.setdefault("data", {})["status"] = status
+    for r in s.get("rows") or []:
+        if r.get("ref") in ids:
+            r["ref"] = ids[r["ref"]]
 
 
 def _op_copy(apply_id, fop, blk, done):
@@ -1952,7 +1980,7 @@ def _apply_blocks(data, apply_id, summary, file_records):
         if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
             continue
         ops = selected_ops(blk, field)
-        run_file_ops(apply_id, blk, field, ops, file_records)
+        run_file_ops(apply_id, blk, field, ops, file_records, data)
         if ops:
             summary["filed"] += 1
         if field == "minutes_decision" and blk.get("key"):

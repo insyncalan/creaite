@@ -9,7 +9,12 @@ out from the meeting's date (minutes-style.md): "Friday", "next week" (that week
 last working day), "in 2 weeks", "30-10".
 """
 import re
+import sys
 from datetime import date, timedelta
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402
 
 DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]
 MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
@@ -173,7 +178,11 @@ def parse(text, today, due=False, mode="", weekend=SAT_SUN):
 def weekend_days():
     """The weekend's days as getDay() numbers, from settings work.weekend_days (tracker.weekend_days counts Monday 0)."""
     import tracker
-    return tuple(sorted((d + 1) % 7 for d in tracker.weekend_days()))
+    try:
+        settings = paths.load_settings()
+    except (OSError, ValueError):     # no settings yet: Saturday and Sunday
+        settings = {}
+    return tuple(sorted((d + 1) % 7 for d in tracker.weekend_days(settings)))
 
 
 def deadline(text, meeting_day, weekend=None):
