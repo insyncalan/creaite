@@ -1,9 +1,10 @@
 # Head log
 
-The Head of Product and Delivery's memory: every decision, the reason and who made it, newest first. One line each. The Head adds a line whenever a decision is made; nothing is removed. Earlier decisions on backlog items are in each item's write-up (the board, and `dev/BACKLOG.md`).
+The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, the reason and who made it, newest first. One line each. Jarvis adds a line whenever a decision is made; nothing is removed. Earlier decisions on backlog items are in each item's write-up (the board, and `dev/BACKLOG.md`).
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | The Head of Product and Delivery is named Jarvis; Alan uses that name | Not recorded |
 | 15-10-2026 | Alan | The teams are named Team Cap (laptop 1) and Team Stark (laptop 2) | Not recorded |
 | 14-10-2026 | Alan | The repo stays public, with no real names anywhere: only the fictional demo data | Not recorded; `dev/tests/test_no_real_names.py` guards it |
 | 14-10-2026 | Alan | The backlog moves to a GitHub Project board on `insyncalan/creaite-plan`; `dev/BACKLOG.md` becomes a read-only export | The board replaces STATUS (now `dev/archive/sprints/STATUS.md`) (`dev/REPOMIGRATION.md`, Phase C) |
