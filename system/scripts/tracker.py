@@ -115,8 +115,12 @@ class Conflict(Exception):
 # ── Small helpers ─────────────────────────────────────────────────────────────
 
 def now():
-    """Local time to the millisecond, so based_on catches changes made within the same second."""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    """Local time to the millisecond, so based_on catches changes made within the same second. Tests only: CREAITE_STAMP_DAY
+    ("YYYY-MM-DD") fixes the date part of these stamps (an apply's time, change_log, updated_at); the time of day stays real,
+    so stamps still differ and keep their order within a day."""
+    t = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    day = os.environ.get("CREAITE_STAMP_DAY")
+    return f"{day[:10]}{t[10:]}" if day and len(day) >= 10 else t
 
 
 def today():

@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_archive_reports.py     (quick tier: no Chrome; one live server)
 
-What is covered, with the clock pinned (CREAITE_NOW):
+What is covered, with the clock pinned (CREAITE_NOW, and CREAITE_STAMP_DAY for the apply's date):
 - which files are due: weekly and client reports, minutes and Steerco one-pagers dated 12 months ago or more (by the date in
   their name), never transcripts, agendas, documents, ad hoc reports or an undated file; the period is a setting;
 - the monthly Health line ("Archive 4 reports and minutes older than 12 months") with its Fix it; once archived this month it is
@@ -30,7 +30,7 @@ from test_onedrive_projects import OneDriveCase, touch  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 
 DAY = "2026-10-14 09:00"
-ENV = {"CREAITE_NOW": DAY}
+ENV = {"CREAITE_NOW": DAY, "CREAITE_STAMP_DAY": DAY[:10]}     # the apply's date too, so its month is the pinned one
 
 
 def vault_files(abc):
@@ -122,7 +122,7 @@ class VaultReports(unittest.TestCase):
         self.assertTrue(any(f.endswith("2025-10-15 Checkpoint.md") for f in o[2]))
         c = self.doctor()["archive_reports"]                                  # quiet for the rest of the month
         self.assertEqual(c["status"], "pass")
-        self.assertRegex(c["detail"], r"^Archived 5 reports and minutes on \d\d-\d\d-\d{4}")   # the apply's own (wall-clock) date
+        self.assertIn("Archived 5 reports and minutes on 14-10-2026", c["detail"])
         touch(self.abc / "minutes/2025-10-01 Late find.md")
         self.assertEqual(self.doctor()["archive_reports"]["status"], "pass")
         (self.abc / "minutes/2025-10-01 Late find.md").unlink()

@@ -285,5 +285,6 @@ test_pages, test_onedrive_projects, test_file_access, test_search, test_update, 
 test_dashboard_split, test_agendas_files, test_propose, test_excel, test_new_vault, test_project_names, test_admin_card.
 test_sweep_lock's `test_a_finished_sweep_leaves_no_lock` failed under load and passed alone (twice).
 
-**Open:** `test_archive_reports`' "quiet for the rest of the month" check compares the apply's wall-clock month with the
-pinned day (October 2026), so it will fail from 01-11-2026 until the test pins the apply's time too.
+**Then pinned:** `test_archive_reports` now pins the apply's date as well (`CREAITE_STAMP_DAY`, a tests-only seam in
+`tracker.now()`: it fixes the date part of the stamps, the time of day stays real), so its exact "on 14-10-2026" check is
+back and the "quiet for the rest of the month" check no longer depends on the real month.
