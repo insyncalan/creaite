@@ -34,6 +34,10 @@ print(json.dumps({"type": "system", "subtype": "init", "session_id": "s-1"}), fl
 print(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Sweeping."}]}}), flush=True)
 if (here / "fake_mode").read_text().strip() == "hang":
     time.sleep(300)
+for _ in range(100):                     # "finish": hold the lock until the harness has read it (else the run can end first)
+    if (here / "lock_seen").exists():
+        break
+    time.sleep(0.05)
 print(json.dumps({"type": "result", "session_id": "s-1", "result": "Swept: 0 items staged for Review."}), flush=True)
 '''
 
@@ -51,6 +55,7 @@ for _ in range(200):
     time.sleep(0.05)
 held = sweep.lock_info()
 state = sweep.lock_state()
+open("lock_seen", "w").close()                 # the stand-in claude may finish now
 if how == "stop":
     run.request_stop()
 for _ in range(400):
