@@ -42,7 +42,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          never overwriting (BL-42)
 - POST /api/inbox/preview {path}: an inbox file's text (Word text extracted; PDFs open in their app); /api/inbox/remove
                          {path} moves it to system/backups/inbox-removed/; /api/inbox/restore {kept} undoes that
-- POST /api/intake/clear {op: clear|restore|restore_day, items|keys|day}: Clear day in Calendar Import (BL-104); saves
+- POST /api/intake/clear {op: clear|restore|restore_day, items|keys|day}: Clear day in Calendar import (BL-104); saves
                          system/staging/intake-cleared.json. Cleared is not processed
 - POST /api/current/generate {code, from, to, sources, note, audience, length}: draft a project's Current state from the vault
                          (report.py current-context, then Claude with read-only tools), streamed like /api/ask (BL-46). BL-106:
@@ -1334,7 +1334,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # ===== Sprint 4a: Clear day (BL-104) =====
     def intake_clear(self, req):
-        """Set meetings aside in Intake's Calendar Import, or bring them back. {op: "clear", items: [{key, day, start,
+        """Set meetings aside in Intake's Calendar import, or bring them back. {op: "clear", items: [{key, day, start,
         title}]} sets aside exactly those; {op: "restore", keys: [...]} and {op: "restore_day", day} bring them
         back. Saved in system/staging/intake-cleared.json. Not processed: processed.txt and the tracker are never touched."""
         op = req.get("op")

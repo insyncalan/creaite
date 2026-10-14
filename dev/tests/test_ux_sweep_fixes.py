@@ -1,5 +1,5 @@
 """BL-157: the fixes the one-off UX sweep made (each under an hour): an empty Activity and an empty Projects page say what to do
-next, Quick Capture's unsent note survives a reload, and Activity no longer sends Alan to Claude Code for an older apply. Also
+next, Quick capture's unsent note survives a reload, and Activity no longer sends Alan to Claude Code for an older apply. Also
 checks the UX baseline is written down in dev/BUILD.md. A real browser against the real live server.
 
 Run: python3 dev/tests/test_ux_sweep_fixes.py   (needs Google Chrome; skipped otherwise)

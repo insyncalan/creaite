@@ -12,7 +12,7 @@ passcode, a PIN or transcript text), and tidies and writes the files. A script w
 Claude never re-types a transcript.
 
 Commands (the daily sweep, cx-sweep, uses them through sweep.py):
-  todo                    the meetings in the Calendar Import window still to look up, as JSON; meetings that aren't
+  todo                    the meetings in the Calendar import window still to look up, as JSON; meetings that aren't
                           online are recorded as "No transcript" at once
   record <facts.json>     classify what the sweep read for each meeting and keep the statuses
   show                    the statuses kept so far
@@ -239,7 +239,7 @@ def ended(row, at=None):
 
 
 def todo(at=None):
-    """Meetings in the Calendar Import window that are new, or still 'Not transcribed' or unchecked: the sweep looks them up.
+    """Meetings in the Calendar import window that are new, or still 'Not transcribed' or unchecked: the sweep looks them up.
     Meetings that aren't online are recorded at once as 'No transcript'. Cleared, private and processed ones are left alone."""
     import build_dashboard
     import minutes

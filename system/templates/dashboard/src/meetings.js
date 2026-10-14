@@ -98,7 +98,7 @@ export async function choosePrep(code){ const m=prepOf(shared.PREPEV); if(!m||!c
    projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick note - <title>.md (/api/capture; the project is matched from the
    note if not chosen) and runs cx-minutes on it through the run engine, as the Inbox does: proposals in Review, no
    Word minutes. Also "Quick capture" in ⌘K, and "note: …" in ask creaite. Needs the live server. */
-     /* BL-73: inside the Quick Capture section */
+     /* BL-73: inside the Quick capture section */
 export function qcFill(){ const sel=$("#qcProj"), cur=sel.value;      /* the list is always current: at load, on open and after every data reload */
   putHTML(sel,html`<option value="">Match from the note</option>${P.map(p=>html`<option value="${p.code}">${p.name}</option>`)}`); sel.value=cur; }
 export function qcOpen(show){ const was=$("#qcMore").hidden; $("#qcMore").hidden=!show; if(show&&(was||!$("#qcDate").value)) $("#qcDate").value=fd(TODAY);    /* BL-74: today whenever the form opens */
@@ -132,7 +132,7 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-prepgo]")
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-prepday]"); if(!b) return; e.preventDefault(); const day=b.dataset.prepday;
   const ev=(((D.calendar||{}).days||{})[day]||[]).find(x=>!x.all_day&&x.start===b.dataset.start&&x.title===b.dataset.title); if(ev) openPrep(ev,day); });
 document.addEventListener("click",e=>{ if(e.target.closest("#prepDlg [data-nav], #prepDlg [data-proj]")) $("#prepDlg").close(); },true);
-putHTML($("#isecQuickBody"),html`<div class="qcap" id="qcap"><label for="qcNotes" class="vh">Quick Capture notes</label>
+putHTML($("#isecQuickBody"),html`<div class="qcap" id="qcap"><label for="qcNotes" class="vh">Quick capture notes</label>
   <textarea id="qcNotes" rows="2" placeholder="Notes from a call or a conversation: what was agreed, who will do what by when, any new risk…"></textarea>
   <div class="qcrow" id="qcMore" hidden><label>Project <select id="qcProj"></select></label><div class="qcf"><label for="qcDate">Date</label><span class="dwrap qcdate"><input id="qcDate" type="text" data-max="today" data-noclear size="12" autocomplete="off" aria-describedby="qcMsg"><button type="button" class="dbtn" data-cal="qcDate" aria-label="Choose date">${raw(CALI)}</button></span></div>
     <label>Who was there <input id="qcWho" placeholder="Sara, Omar"></label><label class="qct">Title <input id="qcTitle" placeholder="From the first line"></label><span class="sp"></span>

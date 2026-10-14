@@ -1,5 +1,5 @@
 """BL-146: every multi-line field grows to show what is typed, through the one shared helper (autoGrow, made from BL-145's chFit).
-A real browser against the real live server: the edit panel's Action and Latest update, Quick Capture's notes and Generate's
+A real browser against the real live server: the edit panel's Action and Latest update, Quick capture's notes and Generate's
 "Steer it" grow at three, six and thirty lines, stop at about 60% of the window with an inner scroll, shrink back, and are
 right after a paste and when a record is opened with long text already in it.
 

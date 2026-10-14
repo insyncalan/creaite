@@ -217,8 +217,8 @@ export function dayPrep(m){ const iso=dayShown(), raw=(((D.calendar||{}).days||{
   if(!D.prep) D.prep=/** @type {any} */({}); if(!D.prep.meetings) D.prep.meetings={}; const pm=D.prep.meetings;
   if(!pm[key]) pm[key]={series:seriesOf(m.title),p:m.confidential?null:m.p||null,how:m.p?"matched":"unsure",last:null,day:iso,since:pkAdd(iso,-7)};
   openPrep(e,iso); }
-/** Process an ended meeting's transcript, as Calendar Import does (load it unless it is loaded, then cx-minutes). */
-export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar Import to process this meeting"); return; }
+/** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
+export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
   DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
   try{ await processMeetings(); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
 /** Look for an ended meeting's transcript (Alan, 13-10-2026: a meeting not checked yet offers Check). */
@@ -290,9 +290,9 @@ export const spark=p=>`<span class="spark" title="Health, last 8 weeks (oldest f
    hover and on keyboard focus (the name is a button that opens the project), and read by screen readers from a hidden span
    (aria-describedby). The columns resize like Work's (pfResize), remembered under portfolio|<column>. */
 export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","8 weeks"],["next","Next milestone"]];
-/** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots) */
+/** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots). BL-325: the next milestone's relative date is mid-sentence in brackets, so lower case ("(in 24 days)") */
 export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
-  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1])})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
+  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
