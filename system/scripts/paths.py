@@ -110,9 +110,11 @@ LOCATION_DEFAULTS = {"projects_root": "", "portfolio": "_Portfolio", "skeleton":
                                  "adhoc_documents": "04 Reporting/Adhoc", "images": "04 Reporting/Content",
                                  "steerco": "04 Reporting/Steerco",       # BL-93, BL-87: listed in Files; creaite may file into it when asked
                                  "agendas": "02 Meetings/Agendas"},                    # BL-98: meeting prep pages
-                     "never_index": ["zz Archive", "_Templates", "99 System"],     # BL-112: 99 System holds creaite's own files (the backup copies)
+                     "never_index": ["_Archive", "_Templates", "99 System"],     # BL-112: 99 System holds the backup copies
                      "offsite_backup": "_Portfolio/99 System/creaite backups"}
-ALWAYS_NEVER_INDEX = ("zz Archive", "_Templates", "99 System")      # skipped whatever the saved list says (BL-112)
+ARCHIVE = "_Archive"               # BL-09: archived projects (<projects root>/_Archive/<folder>) and each engagement's own archive folder
+OLD_ARCHIVE = "zz Archive"         # BL-09: the old name, still skipped for one release (Health offers to rename it)
+ALWAYS_NEVER_INDEX = (ARCHIVE, "_Templates", "99 System")      # skipped whatever the saved list says (BL-112, BL-09)
 DEFAULT_FOLDERS = {"minutes": "minutes", "transcripts": "transcripts", "weekly_reports": "reports", "client_reports": "reports",
                    "adhoc_documents": "reports", "images": "images", "documents": "documents", "steerco": "reports/Steerco",
                    "agendas": "agendas"}   # the default layout (Steerco its own folder so Files can label it; agendas: BL-98)
@@ -184,8 +186,9 @@ def rel(p: Path) -> str:
     return p.relative_to(ROOT).as_posix()
 
 
-def resolve(stored) -> Path:
-    """The inverse of rel: a stored path as a real path. Not checked for safety; tracker.safe_path does that."""
+def resolve(stored, archived=True) -> Path:
+    """The inverse of rel: a stored path as a real path. Not checked for safety; tracker.safe_path does that. An archived project's
+    path is mapped into _Archive (BL-09) unless `archived` is False (the apply's own folder moves)."""
     s = str(stored).replace("\\", "/")
     if Path(s).is_absolute():
         return Path(s)
@@ -193,8 +196,55 @@ def resolve(stored) -> Path:
         if s == LOGICAL_PORTFOLIO or s.startswith(LOGICAL_PORTFOLIO + "/"):
             return portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/")
         if s == LOGICAL or s.startswith(LOGICAL + "/"):
-            return projects_root() / s[len(LOGICAL):].lstrip("/")
-    return ROOT / s
+            p = projects_root() / s[len(LOGICAL):].lstrip("/")
+            return archived_path(p) if archived else p
+    return archived_path(ROOT / s) if archived and (s == LOGICAL or s.startswith(LOGICAL + "/")) else ROOT / s
+
+
+# ===== BL-09: archived projects =====
+# An archived project's folder is <projects root>/_Archive/<folder>. Stored paths never change (Alan, 14-10-2026): resolve maps
+# projects/<folder>/… to _Archive/<folder>/… when <folder> is not in the projects root but is in _Archive, so every link still
+# opens and a restore rewrites nothing. A move into or out of _Archive is made only by tracker.py apply (reach.archive_move_problem).
+
+def archive_dir() -> Path:
+    """<projects root>/_Archive: where archived projects' folders are (BL-09)."""
+    return projects_root() / ARCHIVE
+
+
+def archived_path(p: Path) -> Path:
+    """p, or its place in _Archive when p is in an archived project's folder (that folder isn't in the projects root, but is in
+    _Archive). Anything else is returned as it is."""
+    root = projects_root()
+    try:
+        parts = Path(p).relative_to(root).parts
+    except ValueError:
+        return p
+    if not parts or parts[0] in (ARCHIVE, OLD_ARCHIVE) or parts[0].startswith((".", "_")) or (root / parts[0]).exists():
+        return p
+    return root / ARCHIVE / Path(*parts) if (root / ARCHIVE / parts[0]).is_dir() else p
+
+
+def old_archive_folders() -> list:
+    """Folders still called zz Archive (BL-09): in the projects root itself and in each engagement or project folder (never in
+    _Templates, _Portfolio or another _ folder, which creaite doesn't write in). A folder listing only; nothing inside is read."""
+    root = projects_root()
+    if not root.is_dir():
+        return []
+    out = [root / OLD_ARCHIVE] if (root / OLD_ARCHIVE).is_dir() else []
+    for d in sorted(x for x in root.iterdir() if x.is_dir() and not x.name.startswith((".", "_")) and x.name not in skipped_names()):
+        if (d / OLD_ARCHIVE).is_dir() and not (d / OLD_ARCHIVE).is_symlink():
+            out.append(d / OLD_ARCHIVE)
+    return out
+
+
+def skeleton_old_archive() -> list:
+    """The folders called zz Archive in the project skeleton (locations.skeleton, BL-09), relative to it: a listing of folder names
+    only, as setup already reads the skeleton. creaite never writes in _Templates: Alan renames them in Finder."""
+    sk = projects_root() / str(locations().get("skeleton") or "_Templates/_Skeleton")
+    if not external() or not sk.is_dir():
+        return []
+    return sorted(d.relative_to(sk).as_posix() for d in sk.rglob("*") if d.is_dir() and d.name == OLD_ARCHIVE)
+# ===== end BL-09 =====
 
 
 rel_project, resolve_project = rel, resolve         # the names the brief uses
@@ -282,7 +332,7 @@ def project_folders() -> list:
                 out.append((code, projects_root() / name))
     else:
         for d in sorted(x for x in projects_root().iterdir() if x.is_dir()):
-            if d != portfolio_dir():
+            if d != portfolio_dir() and d.name not in skipped_names():          # BL-09: never _Archive (archived projects)
                 out.append((d.name.split(" ", 1)[0], d))
     if portfolio_dir().is_dir():
         out.append(("_portfolio", portfolio_dir()))
@@ -321,10 +371,17 @@ def never_index() -> list:
     return saved + [n for n in ALWAYS_NEVER_INDEX if n not in saved]
 
 
+def skipped_names() -> list:
+    """never_index plus the old archive name, zz Archive (BL-09): still never listed, indexed, read or written for one release,
+    and never for reach.classify, but left out of ask creaite's deny lists and permission patterns (Alan, 14-10-2026: _Archive only)."""
+    names = never_index()
+    return names + ([OLD_ARCHIVE] if OLD_ARCHIVE not in names else [])
+
+
 def _excluded_dirs(code: str) -> list:
     base = portfolio_dir() if code == "_portfolio" else project_dir(code)
     skip = [folder(code, k) for k in ("minutes", "transcripts", "weekly_reports", "client_reports", "adhoc_documents", "images", "steerco", "agendas")]   # BL-135: agendas are their own kind in Files
-    return skip, [base / n for n in never_index()]
+    return skip, [base / n for n in skipped_names()]
 
 
 def document_roots(code: str) -> list:
@@ -358,7 +415,7 @@ def document_files(code: str, online: bool = False) -> list:
     for dirpath, dirnames, filenames in os.walk(base):
         here = Path(dirpath).resolve()
         dirnames[:] = sorted(n for n in dirnames if not n.startswith(".") and (here / n) not in skip
-                             and n not in never_index())
+                             and n not in skipped_names())
         for n in sorted(filenames):
             f = Path(dirpath) / n
             if n.startswith((".", "~$")) or (here == base.resolve() and n in ("CLAUDE.md", "PORTFOLIO.md", "project-register.md", "people-register.md")):
@@ -470,10 +527,10 @@ def online_only_files() -> list:
 
 
 # ── What may be read and written in the project folders (BL-93) ────────────────
-# Reading: every document of a project (never an online-only file, never zz Archive or _Templates). Writing: creaite may create files
+# Reading: every document of a project (never an online-only file, never _Archive or _Templates). Writing: creaite may create files
 # in any folder of a project when producing something Alan asked for and approved, and change an existing one only when Alan asks, shown
 # and confirmed, a copy kept first (filechange.py). Everything is inside a project folder or the vault: never outside, never _Templates
-# or zz Archive, never a hidden file.
+# or _Archive, never a hidden file.
 
 def project_area(path):
     """(code, path below its folder) when `path` (a stored path or a real one) is inside a project's folder or the portfolio folder;
@@ -494,7 +551,7 @@ def project_path_problem(path, write=False):
     if area is None:
         return "it isn't inside a project folder (or the portfolio folder)"
     code, parts = area
-    skipped = set(never_index())
+    skipped = set(skipped_names())
     if any(part in skipped for part in parts):
         return f"{next(p for p in parts if p in skipped)} is never read or written by creaite"
     if write and any(part.startswith(".") for part in parts):
@@ -539,5 +596,5 @@ def tool_pattern(sub: str) -> str:
 
 
 def never_index_patterns():
-    """Permission patterns (below the projects root) for the folders creaite never reads or writes: zz Archive, _Templates, 99 System."""
-    return [f"**/{n}/**" for n in never_index()]
+    """Permission patterns (below the projects root) for the folders creaite never reads or writes: _Archive, _Templates, 99 System."""
+    return [f"**/{n}/**" for n in never_index() if n != OLD_ARCHIVE]      # BL-09: _Archive only (Alan, 14-10-2026)

@@ -322,8 +322,11 @@ def item_result(table, r, text, terms):
         meta = [f"made by {r['made_by']}" if r["made_by"] else ""]
     else:
         meta = [r["status"], f"forecast {tracker.shown(r['forecast_date'] or r['baseline_date'])}"]
-    opens = {"type": "item", "table": table, "id": r["id"]}
+    if r.get("archived"):                      # BL-09: an archived project's items are still found, marked Archived
+        meta.append("Archived")
+    opens = {"type": "item", "table": table, "id": r["id"], **({"archived": True} if r.get("archived") else {})}
     return {"group": "items", "kind": kind, "id": r["id"], "title": r[text], "snippet": mark(r[text], terms, 220),
+            "archived": bool(r.get("archived")),
             "project": r["project"], "date": r["_date"] or "", "date_shown": tracker.shown(r["_date"]) if r["_date"] else "",
             "meta": " · ".join(x for x in meta if x), "opens": opens}
 

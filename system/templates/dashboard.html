@@ -1847,6 +1847,7 @@ body:has(#chat.on) .pkstage{left:calc((100vw - var(--chatw,420px))/2);max-width:
 .pkbtn:disabled{opacity:.5;cursor:default}
 body.pkstaged .snack{bottom:68px}
 .pkdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--warn);margin-left:6px;vertical-align:1px}
+.pkdot.saving{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)}   /* BL-304: a change still saving */
 /* ===== end BL-176 (CSS, staging) ===== */
 /* ===== BL-176 (sprint-peek) ===== Details (folded) and the activity feed */
 .pk-dethead{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;padding:12px 0 8px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;border-top:1px solid var(--line);margin-top:10px;text-align:left;color:var(--ink)}
@@ -3025,6 +3026,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     ALL_TYPES: () => ALL_TYPES,
     APPLYN: () => APPLYN,
     APPLYT: () => APPLYT,
+    ASKVK: () => ASKVK,
     ATTACHED: () => ATTACHED,
     BASETITLE: () => BASETITLE,
     BCLALL: () => BCLALL,
@@ -3048,6 +3050,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     CHANGED: () => CHANGED,
     CHASE_ICON: () => CHASE_ICON,
     CHATFROM: () => CHATFROM,
+    CHATK: () => CHATK,
     CHATW0: () => CHATW0,
     CHDECOR: () => CHDECOR,
     CHFOLLOW: () => CHFOLLOW,
@@ -3172,6 +3175,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     IMG_BYTES: () => IMG_BYTES,
     IMG_MAX: () => IMG_MAX,
     IMG_SIDE: () => IMG_SIDE,
+    INFLIGHT: () => INFLIGHT,
     INRUN: () => INRUN,
     INSEL: () => INSEL,
     INSTATE: () => INSTATE,
@@ -3309,6 +3313,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     REASONS: () => REASONS,
     REC: () => REC,
     RECENT_DEC_DAYS: () => RECENT_DEC_DAYS,
+    RECORD_KINDS: () => RECORD_KINDS,
+    RECSTAT: () => RECSTAT,
     REGD: () => REGD,
     REGPEND: () => REGPEND,
     REGTEXT: () => REGTEXT,
@@ -3346,12 +3352,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     RejectsList: () => RejectsList,
     S: () => S,
     SA: () => SA,
+    SAVEQ: () => SAVEQ,
     SEARCHCFG: () => SEARCHCFG,
     SECT: () => SECT,
     SEENBUSY: () => SEENBUSY,
     SENDI: () => SENDI,
     SENDIMG: () => SENDIMG,
     SERVED: () => SERVED,
+    SESSK: () => SESSK,
     SETALIAS: () => SETALIAS,
     SETCATS: () => SETCATS,
     SETFLASH: () => SETFLASH,
@@ -3364,6 +3372,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     SKEY: () => SKEY,
     SKIND: () => SKIND,
     SMATCH: () => SMATCH,
+    SNACKOP: () => SNACKOP,
     SNACK_MS: () => SNACK_MS,
     SNACK_UNDO_MS: () => SNACK_UNDO_MS,
     SNEAK_CMD: () => SNEAK_CMD,
@@ -3621,6 +3630,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     bootNav: () => bootNav,
     bootOpenAll: () => bootOpenAll,
     bootOwnerCombo: () => bootOwnerCombo,
+    bootPageRefresh: () => bootPageRefresh,
     bootPanel0050: () => bootPanel0050,
     bootPanel0165: () => bootPanel0165,
     bootPanel0166: () => bootPanel0166,
@@ -4447,6 +4457,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     openFound: () => openFound,
     openFromAddress: () => openFromAddress,
     openGen: () => openGen,
+    openItemsAsk: () => openItemsAsk,
     openMilestone: () => openMilestone,
     openNew: () => openNew,
     openNewMilestone: () => openNewMilestone,
@@ -4463,6 +4474,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     optsHtml: () => optsHtml,
     orderedCols: () => orderedCols,
     ordinal: () => ordinal,
+    ovAdd: () => ovAdd,
+    ovBusy: () => ovBusy,
+    ovDrop: () => ovDrop,
+    ovKey: () => ovKey,
+    ovReapply: () => ovReapply,
     overdue: () => overdue,
     ownedBy: () => ownedBy,
     ownerFinal: () => ownerFinal,
@@ -4624,6 +4640,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkNewWhy: () => pkNewWhy,
     pkNewWord: () => pkNewWord,
     pkNote: () => pkNote,
+    pkNow: () => pkNow,
     pkOn: () => pkOn,
     pkOpenProp: () => pkOpenProp,
     pkOpts: () => pkOpts,
@@ -4702,6 +4719,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     prio: () => prio,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
+    projArchive: () => projArchive,
+    projArchiveBind: () => projArchiveBind,
+    projArchiveHtml: () => projArchiveHtml,
     projFeedItems: () => projFeedItems,
     projFirst: () => projFirst,
     projHistory: () => projHistory,
@@ -4761,12 +4781,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     readForm: () => readForm,
     reattach: () => reattach,
     reattachSearch: () => reattachSearch,
+    recMerge: () => recMerge,
+    recNorm: () => recNorm,
     recordFromBoard: () => recordFromBoard,
+    recordsRefresh: () => recordsRefresh,
     reduced: () => reduced,
     refreshAll: () => refreshAll,
     refreshCalendar: () => refreshCalendar,
     refreshFiles: () => refreshFiles,
     refreshItems: () => refreshItems,
+    refreshRecords: () => refreshRecords,
     refusedSteps: () => refusedSteps,
     regAddAlias: () => regAddAlias,
     regAddPerson: () => regAddPerson,
@@ -4914,6 +4938,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     rvEmptyHtml: () => rvEmptyHtml,
     rvFilterBar: () => rvFilterBar,
     rvHintHtml: () => rvHintHtml,
+    rvHold: () => rvHold,
     rvKey: () => rvKey,
     rvLearnCard: () => rvLearnCard,
     rvLeftOut: () => rvLeftOut,
@@ -4936,6 +4961,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     rvRejectOK: () => rvRejectOK,
     rvRejectSelected: () => rvRejectSelected,
     rvRender: () => rvRender,
+    rvRestore: () => rvRestore,
     rvRoutine: () => rvRoutine,
     rvRoutineBtn: () => rvRoutineBtn,
     rvSel: () => rvSel,
@@ -4960,12 +4986,15 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     saveFocus: () => saveFocus,
     saveIgnore: () => saveIgnore,
     savePanel: () => savePanel,
+    saveQueue: () => saveQueue,
     saveS: () => saveS,
     saveTab: () => saveTab,
     saveView: () => saveView,
     saveWs: () => saveWs,
     savedFactsHtml: () => savedFactsHtml,
     savedNow: () => savedNow,
+    savesSettled: () => savesSettled,
+    savingIds: () => savingIds,
     say: () => say,
     sayMd: () => sayMd,
     searchCkItems: () => searchCkItems,
@@ -5102,6 +5131,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     typing: () => typing,
     undCommit: () => undCommit,
     undatedCard: () => undatedCard,
+    undatedRecount: () => undatedRecount,
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
     uniq: () => uniq,
@@ -7508,6 +7538,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
     snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
     if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
+    if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
     return !!r4.ok;
   }
@@ -9681,6 +9712,53 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const i5 = document.getElementById("cmdkIn");
     if (i5 && !i5.hasAttribute("aria-label") && !i5.hasAttribute("aria-labelledby")) i5.setAttribute("aria-label", "Search projects, items and commands");
   })();
+  var PSTATE = { active: "Active", closed: "Closed", archived: "Archived" };
+  function projArchiveHtml() {
+    const L2 = (D.project_states || []).filter((p6) => p6.state !== "archived" || S.showArchived);
+    return row("Show archived projects", sw("showArchived"), "Their items in Work, Today and the Excel export. Search finds them either way, marked Archived") + `<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L2.map((p6) => {
+      const back = p6.state === "archived";
+      return `<tr><td>${esc(p6.name)}</td><td>${PSTATE[p6.state] || esc(p6.state)}</td><td class="mgract"><button class="mini" data-parch="${back ? "restore" : "archive"}" data-pcode="${esc(p6.code)}" aria-label="${back ? "Restore" : "Archive"} ${esc(p6.name)}">${back ? "Restore" : "Archive"}</button></td></tr>`;
+    }).join("") || '<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`;
+  }
+  function openItemsAsk(name, open2) {
+    return new Promise((res) => {
+      let dlg = $("#parchDlg");
+      if (!dlg) {
+        addHTML(document.body, "beforeend", html`<dialog id="parchDlg" aria-labelledby="parchH"></dialog>`);
+        dlg = $("#parchDlg");
+      }
+      putHTML(dlg, html`<h2 id="parchH">${name} has ${open2.length} open item${open2.length === 1 ? "" : "s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open2.slice(0, 30).map((o5) => html`<li><b>${o5.id}</b> ${o5.text}</li>`)}</ul>${open2.length > 30 ? html`<p class="sub">and ${open2.length - 30} more</p>` : ""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
+      const fin = (v4) => {
+        dlg.close();
+        res(v4);
+      };
+      dlg.querySelector('[data-a="stop"]').onclick = () => fin(false);
+      dlg.querySelector('[data-a="go"]').onclick = () => fin(true);
+      dlg.oncancel = () => res(false);
+      dlg.showModal();
+    });
+  }
+  async function projArchive(code, action, cancel) {
+    if (!viaServer()) {
+      snack("Archiving needs the live server");
+      return;
+    }
+    const r4 = await api("/api/project/archive", { code, action, cancel_open: !!cancel });
+    if (!r4.ok && (r4.open || []).length && !cancel) {
+      if (await openItemsAsk(pName(code), r4.open)) return projArchive(code, action, true);
+      snack("Stopped: nothing was archived");
+      return;
+    }
+    if (!r4.ok) {
+      snack(oneLine(r4.message || "It couldn't be prepared"));
+      return;
+    }
+    snack(r4.message);
+    await pendingEdit();
+  }
+  function projArchiveBind() {
+    $$("#projArch [data-parch]").forEach((b5) => b5.onclick = () => projArchive(b5.dataset.pcode, b5.dataset.parch, false));
+  }
   var row = (l6, c5, h5) => {
     const id = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id}">${l6}</span>${h5 ? `<small id="${id}h">${h5}</small>` : ""}</div><div>${srName(c5, id, h5, l6)}</div></div>`;
@@ -9781,9 +9859,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       cat: "people",
       title: "Projects and register",
       wide: true,
-      kw: "projects register add close code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>`
+      kw: "projects register add close archive restore archived code signals domains matching",
+      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projArchiveHtml(),
+      after: () => projArchiveBind()
     },
+    /* BL-09 */
     {
       id: "health",
       cat: "health",
@@ -10319,6 +10399,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (k5 === "autoApply") renderSettings();
       if (k5 === "filesDocs") refreshFiles(true);
       if (k5 === "flowWeeks") reloadData();
+      if (k5 === "showArchived") reloadData().then(() => renderSettings());
       status();
       snack("Saved to settings.json");
     });
@@ -20485,7 +20566,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (done) hlClear();
     return done;
   }
-  async function itemsMove(list, what) {
+  async function itemsMove(list, what, opts = {}) {
     const owners = /* @__PURE__ */ new Map(), none = { done: [], left: [], missing: [] };
     for (const o5 of list) for (const n5 of ["o", "by"]) {
       const v4 = o5.patch[n5];
@@ -20524,7 +20605,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         Object.keys(o5.x).forEach((c5) => delete o5.x[c5]);
         Object.assign(o5.x, o5.before);
       });
-    });
+    }, void 0, { recs: ok.map((o5) => ({ k: o5.k, id: o5.id, f: Object.fromEntries(o5.ch.map((n5) => [n5, o5.f[n5]])) })), wait: !!opts.wait });
     return { done: done ? ok.map((o5) => o5.id) : [], left, missing };
   }
   function bkFields() {
@@ -26559,6 +26640,136 @@ ${d5.text}`);
     R(null, box);
   }
 
+  // core/instant.js
+  var INFLIGHT = /* @__PURE__ */ new Map();
+  var RECORD_KINDS = ["actions", "raid", "decisions"];
+  var ovKey = (k5, id) => k5 + "|" + id;
+  function ovAdd(recs) {
+    for (const r4 of recs || []) {
+      const key = ovKey(r4.k, r4.id);
+      if (!INFLIGHT.has(key)) INFLIGHT.set(key, []);
+      INFLIGHT.get(key)?.push(r4);
+    }
+  }
+  function ovDrop(recs) {
+    for (const r4 of recs || []) {
+      const key = ovKey(r4.k, r4.id), L2 = INFLIGHT.get(key);
+      if (!L2) continue;
+      const i5 = L2.indexOf(r4);
+      if (i5 >= 0) L2.splice(i5, 1);
+      if (!L2.length) INFLIGHT.delete(key);
+    }
+  }
+  var ovBusy = (recs) => (recs || []).some((r4) => INFLIGHT.has(ovKey(r4.k, r4.id)));
+  var savingIds = () => new Set([...INFLIGHT.values()].flat().map((o5) => o5.id));
+  function ovReapply() {
+    for (const s5 of shared.PKS || []) {
+      if (!RECORD_KINDS.includes(s5.k) || !s5.patch) continue;
+      const x5 = REC(s5.k, s5.id);
+      if (x5) {
+        Object.assign(x5, s5.patch);
+        if (s5.k === "raid") x5.pr = prio(x5.imp, x5.lik);
+      }
+    }
+    for (const L2 of INFLIGHT.values()) for (const o5 of L2) {
+      const x5 = REC(o5.k, o5.id);
+      if (!x5) continue;
+      Object.assign(x5, o5.f);
+      if (o5.k === "raid") x5.pr = prio(x5.imp, x5.lik);
+    }
+  }
+  var SAVEQ = Promise.resolve();
+  function saveQueue(fn) {
+    const run = SAVEQ.then(fn, fn);
+    SAVEQ = run.catch(() => {
+    });
+    return run;
+  }
+  async function savesSettled() {
+    let q4;
+    do {
+      q4 = SAVEQ;
+      await q4;
+    } while (q4 !== SAVEQ);
+  }
+  var TEXT = ["t", "upd", "resp", "cm", "cmd", "reason"];
+  function recNorm(t5, o5) {
+    TEXT.forEach((k5) => {
+      if (typeof o5[k5] === "string") o5[k5] = fdText(o5[k5]);
+    });
+    if (t5 === "raid") o5.pr = prio(o5.imp, o5.lik);
+    return o5;
+  }
+  function recMerge(n4) {
+    const T5 = { actions: A4, raid: R2, decisions: DEC };
+    for (const t5 of RECORD_KINDS) for (const got of n4.records && n4.records[t5] || []) {
+      const arr = T5[t5], x5 = arr.find((o5) => o5.id === got.id);
+      recNorm(t5, got);
+      if (x5) {
+        Object.keys(x5).forEach((c5) => {
+          if (!(c5 in got)) delete x5[c5];
+        });
+        Object.assign(x5, got);
+      } else arr.push(got);
+    }
+    for (const id of n4.missing || []) for (const t5 of RECORD_KINDS) {
+      const arr = T5[t5], i5 = arr.findIndex((o5) => o5.id === id);
+      if (i5 >= 0) arr.splice(i5, 1);
+    }
+    for (const k5 of ["review_focus", "peek_staged", "activity_capped", "activity_older", "milestone_names", "latest_apply"]) if (k5 in n4) D[k5] = n4[k5];
+    if (Array.isArray(n4.review)) {
+      REV.splice(0, REV.length, ...n4.review);
+      D.review = REV;
+    }
+    if (Array.isArray(n4.activity)) {
+      shared.ACT = n4.activity;
+      shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
+    }
+    if (n4.data_at) shared.DATA_AT = n4.data_at;
+    ovReapply();
+    undatedRecount();
+  }
+  function undatedRecount() {
+    for (const p6 of P3) {
+      if (!p6 || !p6.undated) continue;
+      const a5 = A4.filter((x5) => x5.p === p6.code && open(x5) && !x5.due).length;
+      const r4 = R2.filter((x5) => x5.p === p6.code && x5.st === "Open" && !x5.due && (x5.type === "Risk" || x5.type === "Issue" || x5.resp)).length;
+      p6.undated = { actions: a5, raid: r4, total: a5 + r4 };
+    }
+  }
+  var RECSTAT = { records: 0, full: 0 };
+  async function recordsRefresh(ids, o5 = {}) {
+    const list = [...new Set(ids || [])].filter(Boolean);
+    if (list.length > 200) return false;
+    PULSE.reloads++;
+    let n4 = null;
+    try {
+      const hold = o5.hold ? o5.hold() : null;
+      try {
+        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
+        if (r4.ok) n4 = await r4.json();
+      } catch (e4) {
+        n4 = null;
+      }
+      if (!n4 || !n4.ok) return false;
+      RECSTAT.records++;
+      recMerge(n4);
+      refreshAll();
+      if (o5.restore) o5.restore(hold);
+      if (PULSE.v != null && !PULSE.busy) {
+        const r4 = await pulseGet();
+        if (r4 && !PULSE.stale) {
+          PULSE.v = r4.v;
+          PULSE.pending = r4.pending;
+        }
+      }
+    } finally {
+      PULSE.reloads--;
+    }
+    if (o5.after) await o5.after();
+    return true;
+  }
+
   // panel.js
   shared.CUR = null;
   shared.EDITING = false;
@@ -27236,7 +27447,7 @@ ${d5.text}`);
     }, () => {
       Object.keys(x5).forEach((n4) => delete x5[n4]);
       Object.assign(x5, before);
-    });
+    }, void 0, { recs: [{ k: k5, id, f: Object.fromEntries(ch.map((n4) => [n4, f5[n4]])) }] });
   }
   function newItemOf(k5, f5) {
     const id = nextId(k5, f5.p);
@@ -27801,13 +28012,36 @@ ${d5.text}`);
   var pkSame = (a5, b5) => typeof b5 === "boolean" ? !!a5 === b5 : String(a5 ?? "").trim() === String(b5 ?? "").trim();
   shared.PKQ = Promise.resolve();
   function pkCommit(k5, id, patch, label, from, to, o5 = {}) {
-    const run = shared.PKQ.then(() => pkCommit1(k5, id, patch, label, from, to, o5));
+    const now = o5.now || pkNow(k5, id, patch);
+    const run = shared.PKQ.then(() => pkCommit1(k5, id, patch, label, from, to, now ? { ...o5, now } : o5));
     shared.PKQ = run.catch(() => false);
     return run;
+  }
+  function pkNow(k5, id, patch) {
+    if (/^(nw|rv)/.test(String(id))) return null;
+    const x5 = pkX(k5, id);
+    if (!x5) return null;
+    const keys = Object.keys(patch).filter((n4) => !pkSame(x5[n4], patch[n4]));
+    if (!keys.length) return null;
+    const P22 = Object.fromEntries(keys.map((n4) => [n4, patch[n4]]));
+    if ("o" in P22 && !P22.o) P22.o = "TBC";
+    const was = Object.fromEntries(keys.map((n4) => [n4, x5[n4]])), ov = { k: k5, id, f: P22 };
+    Object.assign(x5, P22);
+    if (k5 === "raid") x5.pr = prio(x5.imp, x5.lik);
+    ovAdd([ov]);
+    if (shared.CUR && pkCid() === id) pkSaving("busy");
+    refreshAll();
+    return { P2: P22, was, ov };
   }
   async function pkCommit1(k5, id, patch, label, from, to, o5) {
     const x5 = pkX(k5, id);
     if (!x5) return false;
+    if (o5.now) {
+      if (!o5.keepNote && shared.CUR && pkCid() === id) pkNote("");
+      const ok2 = await pkWrite(k5, id, o5.now.P2, { label, from, to, ...o5, retry: { patch, label, from, to, o: o5 } });
+      if (!ok2 && shared.CUR && pkCid() === id && pkOn()) pkDraw();
+      return ok2;
+    }
     const keys = Object.keys(patch).filter((n4) => !pkSame(x5[n4], patch[n4]));
     if (!keys.length) return false;
     const P22 = Object.fromEntries(keys.map((n4) => [n4, patch[n4]]));
@@ -27844,15 +28078,30 @@ ${d5.text}`);
         pkDraw();
         return true;
       }
-      const x5 = pkX(k5, id);
-      if (!x5) return false;
-      if (!await needVault()) return false;
+      const x5 = pkX(k5, id), now = o5.now;
+      const back = (msg) => {
+        if (now) {
+          ovDrop([now.ov]);
+          for (const n4 in now.P2) if (pkSame(x5 && x5[n4], now.P2[n4]) && x5) x5[n4] = now.was[n4];
+          if (x5 && k5 === "raid") x5.pr = prio(x5.imp, x5.lik);
+          ovReapply();
+          refreshAll();
+        }
+        pkSaving("fail");
+        if (msg) snack(msg, now && o5.retry ? () => {
+          const r5 = o5.retry;
+          pkCommit(k5, id, r5.patch, r5.label, r5.from, r5.to, { ...r5.o, now: void 0 });
+        } : null, "Retry");
+        return false;
+      };
+      if (!x5) return back("");
+      if (!await needVault()) return back("");
       const first = !shared.PKS.some((s5) => s5.k === k5 && s5.id === id), item = { op: "update", table: k5, id, changes: toDb(k5, P22) };
       if (first && x5.updated_at) item.based_on = x5.updated_at;
       pkSaving("busy");
       let name;
       const items2 = [...o5.pre || [], item];
-      const prev = Object.fromEntries(Object.keys(P22).map((n4) => [n4, x5[n4] ?? ""]));
+      const prev = now ? Object.fromEntries(Object.keys(P22).map((n4) => [n4, now.was[n4] ?? ""])) : Object.fromEntries(Object.keys(P22).map((n4) => [n4, x5[n4] ?? ""]));
       const meta = { k: k5, id, patch: P22, prev, label: o5.label, from: o5.from == null ? "" : String(o5.from), to: o5.to == null ? "" : String(o5.to), at: nowStamp(), note: o5.note || "", type: o5.type || "act", ms: Date.now(), ...o5.wsRow ? { wsNew: o5.wsRow.name, wsP: o5.wsRow.p } : {} };
       try {
         name = await vq(async () => {
@@ -27863,12 +28112,11 @@ ${d5.text}`);
           return n4;
         });
       } catch (e4) {
-        pkSaving("fail");
-        snack("Not saved: " + e4.message);
-        return false;
+        return back("Not saved: " + e4.message);
       }
       Object.assign(x5, P22);
       if (k5 === "raid") x5.pr = prio(x5.imp, x5.lik);
+      if (now) ovDrop([now.ov]);
       if (o5.wsRow) (D.ws_table = D.ws_table || []).push(o5.wsRow);
       shared.PKS.push({ name, ...meta });
       pkPersist();
@@ -28141,15 +28389,14 @@ ${d5.text}`);
     pkSaving(s5.length ? "ok" : d5.length ? "ok" : "", s5.length ? "Saved to staging" : d5.length ? "Applied" : "");
   }
   function pkDots() {
-    const ids = new Set(shared.PKS.map((s5) => s5.id));
+    const ids = /* @__PURE__ */ new Set([...shared.PKS.map((s5) => s5.id), ...(shared.PENDING || []).flatMap((p6) => p6.ids || [])]), sv = savingIds();
     $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach((r4) => {
-      const has = ids.has(r4.dataset.row), d5 = r4.querySelector(".pkdot");
-      if (has && !d5) {
-        const x5 = r4.querySelector("td.title>.x");
-        const dot = '<span class="pkdot" role="img" aria-label="Staged, not yet applied" data-tip="Staged, not yet applied"></span>';
-        if (x5) addHTML(x5, "beforebegin", raw(dot));
-        else addHTML(r4.querySelector("td.title") || r4.firstElementChild || r4, "beforeend", raw(dot));
-      } else if (!has && d5) d5.remove();
+      const id = r4.dataset.row, st = sv.has(id) ? "saving" : ids.has(id) ? "staged" : "", d5 = r4.querySelector(".pkdot");
+      if (d5 && d5.dataset.st !== st) d5.remove();
+      if (!st || d5 && d5.dataset.st === st) return;
+      const tip = st === "saving" ? "Saving…" : "Staged, not yet applied", dot = `<span class="pkdot${st === "saving" ? " saving" : ""}" data-st="${st}" role="img" aria-label="${tip}" data-tip="${tip}"></span>`, x5 = r4.querySelector("td.title>.x");
+      if (x5) addHTML(x5, "beforebegin", raw(dot));
+      else addHTML(r4.querySelector("td.title") || r4.firstElementChild || r4, "beforeend", raw(dot));
     });
   }
   var PKREC = null;
@@ -34112,6 +34359,10 @@ ${d5.text}`);
   }
   function openFound(r4) {
     const o5 = r4.opens;
+    if (o5.type === "item" && o5.archived && !S.showArchived) {
+      snack("Its project is archived: Settings › Advanced › Show archived projects opens it");
+      return;
+    }
     if (o5.type === "item") {
       if (o5.table === "milestones") {
         openMilestone(o5.id);
@@ -34630,7 +34881,7 @@ ${d5.text}`);
     }
     acts2.textContent = "Working…";
     const what = c5.items.length === 1 ? c5.items[0].label : `${c5.title}: {n} updated`;
-    const r4 = await itemsMove(c5.items.map((it) => ({ k: it.k, id: it.id, patch: { ...it.patch } })), what);
+    const r4 = await itemsMove(c5.items.map((it) => ({ k: it.k, id: it.id, patch: { ...it.patch } })), what, { wait: true });
     const done = r4.done, left = [...r4.left, ...r4.missing.map((id) => `${id} (not on this page: reload and ask again)`)];
     acts2.textContent = done.length ? "✓ Saved" : "Not saved";
     if (done.length) addEl("msg a", html`${S.autoApply ? "Applied" : "Saved, waiting for Apply"}: ${done.join(", ")}.${S.autoApply && D.latest_apply ? html` <button class="mini" data-edundo="${String(D.latest_apply)}">Undo</button>` : ""}`);
@@ -35107,15 +35358,20 @@ ${d5.text}`);
       };
     });
   }
-  shared.ASKSESSION = store.get("creaite-ask-session", null);
-  shared.ASKCHAT = store.get("creaite-ask-chat", null);
+  var ASKVK = (() => {
+    let h5 = 5381;
+    for (const c5 of String(VAULT_PATH)) h5 = (Math.imul(h5, 33) ^ c5.charCodeAt(0)) >>> 0;
+    return h5.toString(36);
+  })(), CHATK = "creaite-ask-chat:" + ASKVK, SESSK = "creaite-ask-session:" + ASKVK;
+  shared.ASKSESSION = store.get(SESSK, store.get("creaite-ask-session", null));
+  shared.ASKCHAT = store.get(CHATK, store.get("creaite-ask-chat", null));
   function setChat(chat, session) {
     const was = shared.ASKCHAT;
     if (chat !== was && $("#chIn").value && was !== null) draftSave();
     shared.ASKCHAT = chat;
     shared.ASKSESSION = session;
-    store.set("creaite-ask-chat", chat);
-    store.set("creaite-ask-session", session);
+    store.set(CHATK, chat);
+    store.set(SESSK, session);
     if (chat !== was) {
       if (was === null && $("#chIn").value) draftSave();
       else draftRestore();
@@ -35136,6 +35392,7 @@ ${d5.text}`);
     $("#chLog").textContent = "";
     shared.SHOWN = null;
     if (!rec.ok) {
+      if (rec.gone && chat === shared.ASKCHAT) setChat(null, null);
       if (quiet) {
         setChat(null, null);
         greet();
@@ -37643,16 +37900,38 @@ ${d5.text}`);
     upload: (...a5) => (viaServer() ? SVW : FVW).upload(...a5)
   };
   var oneLine = (m5) => String(m5 || "").split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
+  function rvHold() {
+    const keys = [...RHL].map((n4) => REV.find((x5) => x5.n === n4)).filter(Boolean).map(rvKey), t5 = $$("#reviewBody tr[data-n]")[shared.RSEL], cr = t5 && REV.find((x5) => x5.n === +t5.dataset.n);
+    return { keys, ck: cr && rvKey(cr) };
+  }
+  function rvRestore(h5) {
+    if (!h5) return;
+    const { keys, ck } = h5;
+    RHL.clear();
+    REV.filter((r4) => keys.includes(rvKey(r4)) && !r4.done).forEach((r4) => RHL.add(r4.n));
+    rvSyncChk();
+    if (shared.VIEW === "review") {
+      renderReview();
+      if (ck) {
+        const r4 = REV.find((x5) => rvKey(x5) === ck), i5 = r4 ? $$("#reviewBody tr[data-n]").findIndex((tr) => +tr.dataset.n === r4.n) : -1;
+        if (i5 >= 0) {
+          shared.RSEL = i5;
+          rvPaint();
+        }
+      }
+    }
+  }
   async function reloadData() {
     PULSE.reloads++;
     try {
-      const keys = [...RHL].map((n4) => REV.find((x5) => x5.n === n4)).filter(Boolean).map(rvKey), t5 = $$("#reviewBody tr[data-n]")[shared.RSEL], cr = t5 && REV.find((x5) => x5.n === +t5.dataset.n), ck = cr && rvKey(cr);
+      const hold = rvHold();
       await (async () => {
         if (!SERVED) return;
         try {
           const r4 = await fetch("/api/data", { headers: { "X-Creaite-Token": D.token } });
           if (!r4.ok) return;
           const n4 = await r4.json();
+          RECSTAT.full++;
           Object.assign(D, n4);
           [[P3, n4.projects], [A4, n4.actions], [R2, n4.raid], [DEC, n4.decisions], [REV, n4.review], [FILES, n4.files], [REMINDERS, n4.reminders]].forEach(([a5, b5]) => a5.splice(0, a5.length, ...b5));
           shared.ACT = n4.activity;
@@ -37662,23 +37941,12 @@ ${d5.text}`);
             if (typeof o5[k5] === "string") o5[k5] = (k5 === "current" ? fdMd : fdText)(o5[k5]);
           }));
           shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
+          ovReapply();
           refreshAll();
         } catch (e4) {
         }
       })();
-      RHL.clear();
-      REV.filter((r4) => keys.includes(rvKey(r4)) && !r4.done).forEach((r4) => RHL.add(r4.n));
-      rvSyncChk();
-      if (shared.VIEW === "review") {
-        renderReview();
-        if (ck) {
-          const r4 = REV.find((x5) => rvKey(x5) === ck), i5 = r4 ? $$("#reviewBody tr[data-n]").findIndex((tr) => +tr.dataset.n === r4.n) : -1;
-          if (i5 >= 0) {
-            shared.RSEL = i5;
-            rvPaint();
-          }
-        }
-      }
+      rvRestore(hold);
       if (SERVED && PULSE.v != null && !PULSE.busy) {
         const r4 = await pulseGet();
         if (r4 && !PULSE.stale) {
@@ -37695,16 +37963,25 @@ ${d5.text}`);
       errBanner();
     }
   }
+  function bootPageRefresh() {
+    if (SERVED && D.page_refresh) reloadData();
+  }
   async function applyNow(o5) {
     const r4 = await api("/api/apply", o5 && o5.peek ? {} : { hold_peek: true });
     await reloadData();
     return r4;
   }
-  var undoApply = async function(id) {
+  var undoApply = async function(id, ids) {
     const u5 = await api("/api/undo", { apply_id: id });
-    await reloadData();
+    if (!(ids && await refreshRecords(ids))) await reloadData();
     snack(u5.ok ? "Undone" : oneLine(u5.message));
   };
+  async function refreshRecords(ids) {
+    if (!SERVED) return false;
+    return await recordsRefresh(ids, { hold: rvHold, restore: rvRestore, after: async () => {
+      await pkReconcile();
+    } });
+  }
   var APPLYT = null, APPLYN = 0;
   function applySoon() {
     APPLYN++;
@@ -37842,7 +38119,8 @@ ${d5.text}`);
       if (apKey(it[w5.part] ?? null) !== w5.key) it.as_proposed = w5.copy;
     });
   }
-  async function save(what, items2, extra, doIt, undoIt, by) {
+  var SNACKOP = null;
+  async function save(what, items2, extra, doIt, undoIt, by, opt) {
     {
       const nv = shared.WSNEW;
       if (nv && (items2 || []).some((i5) => ["actions", "raid"].includes(i5.table) && String((i5.values || i5.changes || {}).workstream || "").toLowerCase() === nv.name.toLowerCase() && ((i5.values || {}).project || (i5.changes || {}).project || String(i5.id || "").split("-")[0]) === nv.project)) {
@@ -37866,28 +38144,139 @@ ${d5.text}`);
         shared.WSNEW = null;
         if (shared.CUR) shared.CUR.wsNew = null;
         what += ` (new workstream ${nv.name})`;
+        opt = { ...opt || {}, wsNew: true };
       }
     }
     if (!await needVault()) return false;
-    let name;
+    const recs = opt && opt.recs || [], quick = recs.length > 0, op = { what, items: items2, extra, doIt, undoIt, by, opt: opt || {}, recs, state: "queued", cancel: false, rebase: ovBusy(recs) || !!(opt && opt.retry), name: null, apply_id: null };
+    doIt();
+    ovAdd(recs);
+    refreshAll();
+    const live = viaServer() && S.autoApply;
+    if (quick && live) {
+      SNACKOP = op;
+      snack(`${what} — saving…`, () => opUndo(op));
+    }
+    const run = saveQueue(() => live ? saveApply(op) : saveStage(op));
+    if (quick && !(opt && opt.wait)) return true;
+    return await run;
+  }
+  function opRebase(op) {
+    op.items.forEach((it) => {
+      if (it && it.based_on != null && RECORD_KINDS.includes(it.table)) {
+        const x5 = REC(it.table, it.id);
+        if (x5 && x5.updated_at) it.based_on = x5.updated_at;
+      }
+    });
+  }
+  var opIds = (op) => [...new Set(op.items.filter((it) => it && it.id && RECORD_KINDS.includes(it.table)).map((it) => it.id))];
+  var opTargeted = (op) => op.recs.length > 0 && !op.opt.wsNew && op.items.every((it) => RECORD_KINDS.includes(it.table) && it.op !== "new");
+  function opRevert(op) {
+    ovDrop(op.recs);
+    op.undoIt();
+    ovReapply();
+    refreshAll();
+  }
+  async function opDropFile(name) {
     try {
-      name = await writeProposal(items2, extra);
+      await vq(async () => {
+        const pth = "system/staging/" + name;
+        if (await shared.VW.exists(pth)) await shared.VW.remove(pth);
+      });
+      return true;
     } catch (e4) {
-      snack("Not saved: " + e4.message);
       return false;
     }
-    if (viaServer() && S.autoApply) {
-      doIt();
-      const res = await applyNow();
-      if (!res.ok) {
-        snack("Saved, but the apply stopped: " + oneLine(res.message));
-        return true;
+  }
+  async function opFail(op, msg) {
+    op.state = "failed";
+    opRevert(op);
+    if (opTargeted(op) && viaServer()) await refreshRecords(opIds(op));
+    snack(msg, () => {
+      save(op.what, op.items, op.extra, op.doIt, op.undoIt, op.by, { ...op.opt, retry: true });
+    }, "Retry");
+    return false;
+  }
+  async function saveApply(op) {
+    PULSE.reloads++;
+    try {
+      if (op.cancel) {
+        op.state = "cancelled";
+        return false;
       }
-      snack(`${what} — saved and applied`, () => undoApply(res.apply_id));
+      if (op.rebase) opRebase(op);
+      op.state = "writing";
+      try {
+        op.name = await writeProposal(op.items, op.extra);
+      } catch (e4) {
+        return await opFail(op, "Not saved: " + e4.message);
+      }
+      if (op.cancel) {
+        await opDropFile(op.name);
+        op.state = "cancelled";
+        return false;
+      }
+      op.state = "applying";
+      const res = await api("/api/apply", { hold_peek: true });
+      if (!res.ok) {
+        await opDropFile(op.name);
+        return await opFail(op, "Not saved: " + oneLine(res.message));
+      }
+      let held = false;
+      try {
+        held = await shared.VW.exists("system/staging/" + op.name);
+      } catch (e4) {
+        held = false;
+      }
+      if (held) {
+        await opDropFile(op.name);
+        const ids = opIds(op);
+        return await opFail(op, `Not saved: ${ids.join(", ") || "it"} changed elsewhere; reloaded ${ids.length > 1 ? "them" : "it"}`);
+      }
+      op.state = "done";
+      op.apply_id = res.apply_id;
+      ovDrop(op.recs);
+      if (!(opTargeted(op) && await refreshRecords(opIds(op)))) await reloadData();
+      if (op.cancel) {
+        const u5 = await api("/api/undo", { apply_id: op.apply_id });
+        if (!(opTargeted(op) && await refreshRecords(opIds(op)))) await reloadData();
+        if (!u5.ok) snack("Not undone: " + oneLine(u5.message));
+        return false;
+      }
+      const undo = () => undoApply(op.apply_id, opTargeted(op) ? opIds(op) : null);
+      if (!op.recs.length) snack(`${op.what} — saved and applied`, undo);
+      else if (SNACKOP === op && snkOn()) {
+        $("#snackT").textContent = `${op.what} — saved and applied`;
+        shared.UNDO = undo;
+      } else if (SNACKOP === op) snack(`${op.what} — saved and applied`, undo);
       return true;
+    } finally {
+      PULSE.reloads--;
     }
-    apply(what, doIt, async () => {
-      undoIt();
+  }
+  function opUndo(op) {
+    if (op.state === "done") {
+      undoApply(op.apply_id, opTargeted(op) ? opIds(op) : null);
+      return;
+    }
+    if (op.state === "failed" || op.cancel) return;
+    op.cancel = true;
+    opRevert(op);
+    snack(`Undone: ${op.what}`);
+  }
+  async function saveStage(op) {
+    let name;
+    try {
+      name = await writeProposal(op.items, op.extra);
+    } catch (e4) {
+      return await opFail(op, "Not saved: " + e4.message);
+    }
+    ovDrop(op.recs);
+    refreshAll();
+    apply(op.what, () => {
+    }, async () => {
+      op.undoIt();
+      ovReapply();
       try {
         await vq(async () => {
           if (await shared.VW.exists("system/staging/" + name)) await shared.VW.remove("system/staging/" + name);
@@ -37896,10 +38285,10 @@ ${d5.text}`);
       } catch (e4) {
         snack(viaServer() ? "Already applied: undo it in Activity" : "Already applied: use “undo last apply” in Claude Code");
       }
-    }, by);
+    }, op.by, opIds(op));
     return true;
   }
-  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
+  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
   async function writeSettings(changes) {
     let sp = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {
@@ -38120,7 +38509,7 @@ ${d5.text}`);
     }
     status();
   }
-  function apply(what, doIt, undoIt, by = "You, in the dashboard") {
+  function apply(what, doIt, undoIt, by = "You, in the dashboard", ids = []) {
     doIt();
     const entry = { at: nowStamp(), what, by, undo: undoIt };
     const commit = () => {
@@ -38128,11 +38517,13 @@ ${d5.text}`);
       shared.DATA_AT = entry.at;
     };
     if (!S.autoApply) {
-      shared.PENDING.push({ what, commit, undo: undoIt });
+      const pend = { what, commit, undo: undoIt, ids };
+      shared.PENDING.push(pend);
       refreshAll();
       snack(`${what} — saved; press Apply to write it`, () => {
         undoIt();
-        shared.PENDING.pop();
+        const i5 = shared.PENDING.indexOf(pend);
+        if (i5 >= 0) shared.PENDING.splice(i5, 1);
         refreshAll();
       });
       return;
@@ -38318,7 +38709,7 @@ ${d5.text}`);
       }, (S.healthSecs || 30) * 1e3);
     }
   }
-  var EVS = { up: false, ctl: null, retry: null, wait: 1e3, hid: null, parts: /* @__PURE__ */ new Set(), timer: null, opened: 0 };
+  var EVS = { up: false, ctl: null, retry: null, wait: 1e3, hid: null, parts: /* @__PURE__ */ new Set(), timer: null, opened: 0, ids: /* @__PURE__ */ new Set(), full: false };
   var EV_FULL = ["tracker", "review", "calendar"], EV_HIDDEN_MS = 10 * 60 * 1e3, EV_QUIET_MS = 1200;
   function evStale() {
     const b5 = $("#staleAlert");
@@ -38383,20 +38774,50 @@ ${d5.text}`);
     }
     if (ev.type !== "changed") return;
     (ev.parts || []).forEach((p6) => EVS.parts.add(p6));
+    if ((ev.parts || []).includes("tracker")) {
+      const ids = ev.ids && typeof ev.ids === "object" ? ev.ids : null;
+      if (!ids || Object.keys(ids).some((t5) => !RECORD_KINDS.includes(t5))) EVS.full = true;
+      else Object.values(ids).forEach((L2) => (L2 || []).forEach((id) => EVS.ids.add(id)));
+    }
     clearTimeout(EVS.timer);
     EVS.timer = setTimeout(evFlush, 250);
   }
-  function evFlush() {
+  async function evFlush() {
     EVS.timer = null;
     if (PULSE.reloads > 0 || Date.now() - OWNPOST < EV_QUIET_MS) {
       EVS.timer = setTimeout(evFlush, 400);
       return;
     }
-    const parts = new Set(EVS.parts);
+    const parts = new Set(EVS.parts), ids = [...EVS.ids], full = EVS.full;
     EVS.parts.clear();
+    EVS.ids.clear();
+    EVS.full = false;
     if (parts.has("files")) refreshFiles(true);
     if (parts.has("vip")) vipPoll();
-    if (EV_FULL.some((p6) => parts.has(p6))) pulseCheck();
+    if (parts.has("calendar") || full) {
+      if (EV_FULL.some((p6) => parts.has(p6))) pulseCheck();
+      return;
+    }
+    if (!parts.has("tracker") && !parts.has("review")) return;
+    if (pulseEditing(true)) {
+      parts.forEach((p6) => {
+        if (EV_FULL.includes(p6)) EVS.parts.add(p6);
+      });
+      ids.forEach((i5) => EVS.ids.add(i5));
+      EVS.timer = setTimeout(evFlush, 2e3);
+      $("#newChip").classList.add("on");
+      return;
+    }
+    const prev = PULSE.pending;
+    if (!await refreshRecords(ids)) {
+      pulseCheck();
+      return;
+    }
+    if (!PULSE.stale) $("#newChip").classList.remove("on");
+    if (prev != null && PULSE.pending != null && PULSE.pending > prev) {
+      const n4 = PULSE.pending - prev;
+      snack(`${n4} new item${n4 === 1 ? "" : "s"} in Review`);
+    }
   }
   function bootEventStream() {
     document.addEventListener("visibilitychange", () => {
@@ -38649,6 +39070,7 @@ ${d5.text}`);
         "catOf",
         "catalogue",
         "ceApply",
+        "ceOpen",
         "cell",
         "chFit",
         "changesCardHtml",
@@ -38658,6 +39080,7 @@ ${d5.text}`);
         "ckItems",
         "ckMs",
         "ckParse",
+        "ckStage",
         "claimState",
         "claimsNote",
         "clearAllFilters",
@@ -38709,6 +39132,7 @@ ${d5.text}`);
         "errBanner",
         "esc",
         "evClose",
+        "evOn",
         "evOpen",
         "evRoot",
         "evidence",
@@ -38885,6 +39309,7 @@ ${d5.text}`);
         "reattach",
         "reduced",
         "refreshAll",
+        "refreshRecords",
         "regAddAlias",
         "regSetHidden",
         "rel",
@@ -38932,6 +39357,7 @@ ${d5.text}`);
         "saveCurEdit",
         "savePanel",
         "saveView",
+        "savesSettled",
         "say",
         "sayMd",
         "seeAll",
@@ -39326,6 +39752,7 @@ ${d5.text}`);
   bootAsk0208();
   bootReview0209();
   bootReview0315();
+  bootPageRefresh();
   return __toCommonJS(main_exports);
 })();
 </script>

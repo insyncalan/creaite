@@ -285,6 +285,35 @@
 <div class="card wide" id="set-projects" data-sec="projects">
 <h2>Projects and register</h2>
 <p class="sub" style="margin:#px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok="">“add project DEF…”, “add client.com to ABC's domains”</span>).</p>
+<div class="srow">
+<div>
+<span id="sr#1">Show archived projects</span>
+<small id="sr#1h">Their items in Work, Today and the Excel export. Search finds them either way, marked Archived</small>
+</div>
+<div>
+<input aria-labelledby="sr#1" aria-describedby="sr#1h" type="checkbox" class="switch" data-k="showArchived">
+</div>
+</div>
+<div class="tbl">
+<table class="mgr" id="projArch" aria-label="Projects: archive and restore">
+<tbody>
+<tr>
+<td>Example Programme</td>
+<td>Active</td>
+<td class="mgract">
+<button class="mini" data-parch="archive" data-pcode="ABC" aria-label="Archive Example Programme">Archive</button>
+</td>
+</tr>
+<tr>
+<td>Digital Enablement</td>
+<td>Active</td>
+<td class="mgract">
+<button class="mini" data-parch="archive" data-pcode="DEF" aria-label="Archive Digital Enablement">Archive</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 </div>

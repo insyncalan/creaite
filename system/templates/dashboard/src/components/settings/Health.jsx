@@ -12,6 +12,7 @@ import { useEffect, useState } from "preact/hooks";
 import { copied, fd } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
 import { checkHealth, healthResult, healthBusy, healthError } from "../../stores/settings.js";
+import { pendingEdit } from "../../ask.js";
 
 const CMD = /system\/scripts\/run [^,;"]+/;
 /** The command in a manual step, to copy, or "". @param {string} how */
@@ -22,6 +23,7 @@ export async function runHealthFix(f) {
   const r = await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
   snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));
   if (r.ok && r.url) window.open(r.url, "_blank", "noopener");
+  if (r.ok && r.card) await pendingEdit();      /* BL-09: a move waits on the approval card in ask creaite */
   if (r.ok && !r.url) checkHealth();
   return !!r.ok;
 }

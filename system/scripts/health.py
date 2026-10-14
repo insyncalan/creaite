@@ -54,6 +54,8 @@ PLAIN = {
     "assistant_guard": ("ask creaite's guard needs attention", "permissions"),
     "vault_not_synced": ("The vault is in a synced folder", "manual"),
     "online_only": ("Some project files are online-only", "manual"),
+    "old_archive_folders": ("Folders still called zz Archive", "manual"),        # BL-09: health_fixes builds its Fix it
+    "skeleton_archive": ("The project skeleton still holds zz Archive", "manual"),   # BL-09: Alan renames it in Finder
     "extraction_scope": ("Something was extracted from documents or reports", "manual"),
     "no_absolute_paths": ("A full path was stored", "manual"),
     "config_files": ("A configuration file is missing", "setup"),
@@ -63,6 +65,7 @@ PLAIN = {
     "offsite_backup": ("The OneDrive backup copy is missing or out of date", "offsite"),
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
+    "sweep_lock": ("A sweep lock is held with no sweep running", "manual"),   # BL-328: health_fixes builds its Release
     "debug_log": ("Errors keep coming back", "manual"),
     "minutes_drafts": ("Staged minutes have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),

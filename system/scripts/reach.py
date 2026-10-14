@@ -212,8 +212,8 @@ def _never_verdict(p, operation, where):
         return why
     if operation in WRITES and any(x.lower() == ".git" for x in p.parts):
         return "it is inside a .git folder, whose hooks run commands"
-    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # zz Archive, _Templates, 99 System (BL-93, BL-112)
-    skipped = {n.lower() for n in paths.never_index()}
+    below = parts_under(p, Path(os.path.realpath(paths.projects_root())))          # _Archive, _Templates, 99 System (BL-93, BL-112)
+    skipped = {n.lower() for n in paths.skipped_names()}
     hit = next((x for x in (below or ()) if x.lower() in skipped), None)
     if hit:
         return f"{hit} is never read or written by creaite"
@@ -257,6 +257,72 @@ def _whose_file(p):
     except OSError:  # BL-228: a file that isn't there yet has no other owner
         pass
     return []
+
+
+# ===== BL-09: the one exception for _Archive (agreed, Alan, 14-10-2026) =====
+# _Archive stays on ask creaite's never list for reading and writing (classify above is unchanged: never). The only thing that may
+# move a folder into or out of it is tracker.py apply running an approved archive, restore or rename of an old zz Archive folder:
+# its `move` file operation asks archive_move_problem, and nothing else calls it. A model can't use it (filechange.py and the hook
+# go through classify, which says never), and it covers only these whole-folder shapes, nothing inside a folder:
+#   archive  <projects root>/<project folder>      -> <projects root>/_Archive/<same or numbered name>
+#   restore  <projects root>/_Archive/<folder>     -> <projects root>/<same or numbered name>
+#   rename   <projects root>[/<engagement>]/zz Archive -> the same folder's _Archive (Health's Fix it, BL-09)
+ARCHIVE_MOVES = ("archive", "restore", "rename")
+
+
+def _top_folder(name):
+    """A project or engagement folder's own name: not hidden, not _-prefixed (_Archive, _Templates, _Portfolio), not skipped."""
+    return not name.startswith((".", "_")) and name.lower() not in {x.lower() for x in paths.skipped_names()}
+
+
+def _in_archive(parts):
+    """parts are <_Archive>/<a project folder>."""
+    return len(parts) == 2 and parts[0].lower() == paths.ARCHIVE.lower() and _top_folder(parts[1])
+
+
+def _project_folder(parts):
+    """parts are one project or engagement folder in the projects root."""
+    return len(parts) == 1 and _top_folder(parts[0])
+
+
+def _old_archive_rename(pa, pb):
+    """pa is a zz Archive folder (in the root or one engagement) and pb the _Archive beside it."""
+    same_place = len(pa) == len(pb) and len(pa) in (1, 2) and pa[:-1] == pb[:-1] and (len(pa) == 1 or _top_folder(pa[0]))
+    return same_place and pa[-1].lower() == paths.OLD_ARCHIVE.lower() and pb[-1] == paths.ARCHIVE
+
+
+def _move_shape(kind, pa, pb):
+    """Whether the parts below the projects root (pa from, pb to) are the whole-folder move `kind`."""
+    if kind == "archive":
+        return _project_folder(pa) and _in_archive(pb)
+    if kind == "restore":
+        return _in_archive(pa) and _project_folder(pb)
+    return _old_archive_rename(pa, pb)
+
+
+def archive_move_problem(src, dst, kind):
+    """None when moving the folder `src` to `dst` (stored paths, never mapped into _Archive) is the `kind` of move above; else why
+    not. Neither end may be a symlink; the source must be a folder that exists and the destination must not exist."""
+    if kind not in ARCHIVE_MOVES:
+        return f"a folder move is an archive, a restore or a rename of an old archive folder (got {kind!r})"
+    if any(".." in Path(str(x)).parts for x in (src, dst)):
+        return "a path with .. in it"
+    root = Path(os.path.realpath(paths.projects_root()))
+    a, b = paths.resolve(src, archived=False), paths.resolve(dst, archived=False)
+    if a.is_symlink() or b.is_symlink():
+        return "a folder move never follows a symlink"
+    pa = parts_under(Path(os.path.realpath(a)), root)
+    pb = parts_under(Path(os.path.realpath(b.parent)) / b.name, root)
+    if not pa or not pb:
+        return "a folder move stays inside the projects folder"
+    if not _move_shape(kind, pa, pb):
+        return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
+    if not a.is_dir():
+        return f"{src} isn't a folder that exists"
+    if b.exists():
+        return f"{dst} already exists; a folder move never overwrites"
+    return None
+# ===== end BL-09 =====
 
 
 def worst(*verdicts):
@@ -652,7 +718,7 @@ SCRIPT_COMMANDS = {
                   "unreject": RECORD, "rereason": RECORD, "approve-instead": RECORD},
     "propose.py": {"fields": READ, "preview": READ, "new-project": READ, "close-project": READ,
                    "stage": RECORD, "recode": (RECORD, "--dry-run"), "setting": RECORD, "learn": (RECORD, "--check"),
-                   "register-columns": RECORD,
+                   "register-columns": RECORD, "old-archives": READ, "archive": READ, "restore": READ,   # BL-09: print (or save) a spec
                    "people": READ, "people list": READ, "people resolve": READ, "people add": RECORD, "people edit": RECORD,
                    "people rename": RECORD, "people merge": RECORD, "people map": RECORD, "people migrate": RECORD,
                    "workstreams": READ, "workstreams list": READ, "workstreams suggest": READ, "workstreams add": RECORD,

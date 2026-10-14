@@ -1025,7 +1025,7 @@ export async function batchMove(k,ids,patch,what){ const r=await itemsMove(ids.m
 /* BL-314: the same save for a list of {k, id, patch}, each item with its own change (ask creaite's field card): each owner resolved
    against the register (ownerFinal), each item through the sidebar's checks (prepMove), then one proposal, one apply, one Undo.
    Resolves to {done, left, missing}: the IDs saved (none when nothing was), the items left out and why, and IDs not on the page. */
-export async function itemsMove(list,what){ const owners=new Map(), none={done:[],left:[],missing:[]};
+export async function itemsMove(list,what,opts={}){ const owners=new Map(), none={done:[],left:[],missing:[]};
   for(const o of list) for(const n of ["o","by"]){ const v=o.patch[n]; if(n in o.patch&&v&&v!=="TBC"&&!owners.has(v)){ const w=await ownerFinal(v); if(w===null) return none; owners.set(v,w); } }
   const ok=[], left=[], missing=[];
   for(const {k,id,patch} of list){ const x=REC(k,id); if(!x){ missing.push(id); continue; }
@@ -1035,7 +1035,7 @@ export async function itemsMove(list,what){ const owners=new Map(), none={done:[
   if(list.length>BULK_MAX&&!await boardAsk({title:`Change ${list.length} items?`,hint:what,clear:true,okText:"Change them"})) return {...none,left,missing};
   const items=ok.map(o=>({op:"update",table:o.k,id:o.id,changes:toDb(o.k,Object.fromEntries(o.ch.filter(n=>!(o.k==="raid"&&n==="pr")).map(n=>[n,o.f[n]]))),based_on:o.x.updated_at}));
   const n=ok.length, text=what.replace("{n}",`${n} item${n===1?"":"s"}`)+(left.length?`. Left out: ${left.join("; ")}`:"");
-  const done=await save(text,items,null,()=>{ ok.forEach(o=>Object.assign(o.x,o.f,{upd_at:nowStamp()})); },()=>{ ok.forEach(o=>{ Object.keys(o.x).forEach(c=>delete o.x[c]); Object.assign(o.x,o.before); }); });
+  const done=await save(text,items,null,()=>{ ok.forEach(o=>Object.assign(o.x,o.f,{upd_at:nowStamp()})); },()=>{ ok.forEach(o=>{ Object.keys(o.x).forEach(c=>delete o.x[c]); Object.assign(o.x,o.before); }); },undefined,{recs:ok.map(o=>({k:o.k,id:o.id,f:Object.fromEntries(o.ch.map(n=>[n,o.f[n]]))})),wait:!!opts.wait});   /* BL-304: on screen at once */
   return {done:done?ok.map(o=>o.id):[],left,missing}; }
 /* what the bar offers for these items: [field, label, options|"date", reason when withheld] */
 export function bkFields(){ const L=bkItems(); if(L.length<2) return []; const k=L[0].k, mixed=L.some(o=>o.k!==k), one=new Set(L.map(o=>o.x.p)); const proj=one.size===1?[...one][0]:null, x0=L[0].x;

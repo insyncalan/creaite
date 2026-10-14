@@ -125,6 +125,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -168,6 +169,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -190,6 +192,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -481,6 +484,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -551,6 +555,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -573,6 +578,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -915,6 +921,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -1006,6 +1013,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -1028,6 +1036,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -1415,6 +1424,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -1504,6 +1514,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -2037,6 +2048,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -2124,6 +2136,7 @@
    "workstreams": [
     {
      "aliases": null,
+     "archived": 0,
      "channel": null,
      "created": "2026-10-01",
      "id": "ABC-W-001",
@@ -2734,6 +2747,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -3415,6 +3429,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,

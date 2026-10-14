@@ -7,7 +7,7 @@ import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./cor
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
 import { MSKEL, mWords } from "./core/motion.js";
 import { go, navBlocked, pLink } from "./core/nav.js";
-import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
+import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, needVault, OLDSERVER, oneLine, refreshAll, reloadData, save, SERVED, setLive, snack, viaServer, writeProposal, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
@@ -55,6 +55,7 @@ export let runSearch = async function(){ const q=$("#vsInput").value.trim(); SRC
 export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.res.groups[g]&&SRCH.res.groups[g][+i]; if(r) openFound(r); }
 /* where a result belongs: an item in its panel, a meeting in the preview, a report or document in the system viewer */
 export function openFound(r){ const o=r.opens;
+  if(o.type==="item"&&o.archived&&!S.showArchived){ snack("Its project is archived: Settings › Advanced › Show archived projects opens it"); return; }   /* BL-09 */
   if(o.type==="item"){ if(o.table==="milestones"){ openMilestone(o.id); return; }   /* BL-186: the Milestones page, its editor open */ const k=o.table; shared.WT=k; go("work"); openRecord(k,o.id); return; }
   if(o.type==="preview") return searchPreview(o.path,o.q);
   openPath(o.path); }
@@ -270,7 +271,7 @@ export async function fieldFlow(c){
   if(how!=="go"){ acts.textContent="Cancelled"; addEl("step stopped","Cancelled: nothing was changed"); return 0; }
   acts.textContent="Working…";
   const what=c.items.length===1?c.items[0].label:`${c.title}: {n} updated`;
-  const r=await itemsMove(c.items.map(it=>({k:it.k,id:it.id,patch:{...it.patch}})),what);   /* the dashboard's own save */
+  const r=await itemsMove(c.items.map(it=>({k:it.k,id:it.id,patch:{...it.patch}})),what,{wait:true});   /* the dashboard's own save */
   const done=r.done, left=[...r.left,...r.missing.map(id=>`${id} (not on this page: reload and ask again)`)];
   acts.textContent=done.length?"✓ Saved":"Not saved";
   if(done.length) addEl("msg a",html`${S.autoApply?"Applied":"Saved, waiting for Apply"}: ${done.join(", ")}.${S.autoApply&&D.latest_apply?html` <button class="mini" data-edundo="${String(D.latest_apply)}">Undo</button>`:""}`);
@@ -486,15 +487,19 @@ export function dayDividers(){ const log=$("#chLog"); log.querySelectorAll(".mda
 export async function say(t,acts){ const d=addEl("msg a",""); for(let i=0;i<t.length;i+=4){ d.textContent=t.slice(0,i+4); await sleep(8); } if(acts){ const a=document.createElement("div"); a.className="acts"; putHTML(a,raw(acts)); d.appendChild(a); } chatScroll(); }
 export async function step(l,ms=600){ const d=addEl("step",html`<span class="spin"></span>${l}`); await sleep(ms); putHTML(d,html`✓ ${l}`); }
 export function confirmCard(title,body,ok,pre,md){ return new Promise(res=>{ const d=addEl("confirm",html`<b>${title}</b>${md?raw(mdView(body)):body}${pre?html`<pre class="permdiff">${pre}</pre>`:""}<div class="acts"><button class="btn">Cancel</button><button class="btn primary">${ok}</button></div>`); const [c,o]=d.querySelectorAll("button"); c.onclick=()=>{ putHTML(d.querySelector(".acts"),html`<span class='sub'>Cancelled</span>`); res(false); }; o.onclick=()=>{ putHTML(d.querySelector(".acts"),html`<span class='sub'>Confirmed</span>`); res(true); }; }); }
-shared.ASKSESSION=store.get("creaite-ask-session",null); shared.ASKCHAT=store.get("creaite-ask-chat",null);
+/* BL-330: the remembered chat is kept per vault, under a short fingerprint of the vault's path (never the path itself): two vaults
+   served on the same address no longer ask for each other's chats. An older page's one shared key is read until this vault has its own. */
+export const ASKVK=(()=>{ let h=5381; for(const c of String(VAULT_PATH)) h=(Math.imul(h,33)^c.charCodeAt(0))>>>0; return h.toString(36); })(), CHATK="creaite-ask-chat:"+ASKVK, SESSK="creaite-ask-session:"+ASKVK;
+shared.ASKSESSION=store.get(SESSK,store.get("creaite-ask-session",null)); shared.ASKCHAT=store.get(CHATK,store.get("creaite-ask-chat",null));
 /* BL-20: New chat and History. Chats are kept by the live server in system/staging/ask/ */
 export function setChat(chat,session){ const was=shared.ASKCHAT; if(chat!==was&&$("#chIn").value&&was!==null) draftSave();
-  shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set("creaite-ask-chat",chat); store.set("creaite-ask-session",session);
+  shared.ASKCHAT=chat; shared.ASKSESSION=session; store.set(CHATK,chat); store.set(SESSK,session);
   if(chat!==was){ if(was===null&&$("#chIn").value) draftSave(); else draftRestore(); } }
 export function newChat(){ if(shared.BUSY) return; setChat(null,null); $("#chLog").textContent=""; shared.SHOWN=null; greet(); $("#chIn").focus(); }   /* BL-262: greeted at once */
 export async function loadChat(chat,quiet,skipRun){ const rec=await api("/api/chat",{chat}); if(rec.ok&&typeof skipRun==="function") skipRun=skipRun(rec); if(rec.ok&&skipRun) rec.messages=rec.messages.filter(m=>m.run!==skipRun);
   $("#chLog").textContent=""; shared.SHOWN=null;   /* BL-262: the whole history is drawn below in one step; it returns the record */
-  if(!rec.ok){ if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
+  if(!rec.ok){ if(rec.gone&&chat===shared.ASKCHAT) setChat(null,null);   /* BL-330: a chat that's gone is forgotten at once, so it isn't asked for again */
+    if(quiet){ setChat(null,null); greet(); } else say(rec.message||"Couldn't open that chat."); return rec; }
   setChat(rec.chat,rec.session); CHSTARTED=rec.started?{chat:rec.chat,started:rec.started}:null;
   rec.messages.forEach(m=>{ if(m.who==="you"){ const d=addEl("msg u",html`${m.text}${raw(imgThumbsHtml(m.images))}`,m.at||null); if(m.images&&m.images.length) fillThumbs(d); } else { { let g=null; (m.steps||[]).forEach(l=>g=stepGroup(g,l)); } if(m.text){ const b=addEl("msg a md",raw(mdChat(fdText(m.text)))); if(m.done_at) stampMsg(b,m.done_at); } if(m.stopped) addEl("step stopped","Stopped"); if(m.interrupted) addEl("step stopped","Interrupted: the live server stopped"); } }); dayDividers(); return rec; }
 /* BL-32: History is a dropdown of the 10 most recent chats; the current chat stays on screen while choosing */

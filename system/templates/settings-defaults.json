@@ -98,6 +98,7 @@
     "files_show_inbox": true,
     "files_show_portfolio": true,
     "files_show_documents": false,
+    "show_archived": false,
     "week_ahead_priorities": [
       "Urgent"
     ],
@@ -270,7 +271,7 @@
       "agendas": "02 Meetings/Agendas"
     },
     "never_index": [
-      "zz Archive",
+      "_Archive",
       "_Templates",
       "99 System"
     ],
