@@ -622,7 +622,8 @@ PAGE = {"key": None, "data": None, "at": 0.0}
 PAGE_LOCK = threading.Lock()
 PAGE_FRESH = 5           # seconds: older data is shown at once and refreshed by the page straight after
 PAGE_SLOW = 0.5          # a page build this slow logs its parts
-PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json")   # the build's, the Excel export's and the server's own
+PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json",   # the build's, the Excel export's, the server's own
+               "live-server-starting.json")                                      # and its starting mark (BL-329), cleared once it answers
 
 
 def page_inputs():
