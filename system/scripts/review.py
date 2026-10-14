@@ -691,8 +691,17 @@ def no_draft_refusal(n, ref, block, decision):
 
 
 def decide_entry(n, p, data, ref, block, decision, mode=None):
-    """decide_draft, after the no-draft check."""
+    """decide_draft, after the no-draft check; a minutes record has no Word to compare or clean (v2.1.0 P4)."""
+    if ref == "meeting" and str(block.get("draft") or "").lower().endswith(".html"):
+        return no_draft_refusal(n, ref, block, decision) or decide_record(n, p, data, block, decision)
     return no_draft_refusal(n, ref, block, decision) or decide_draft(n, p, data, ref, block, decision, mode)
+
+
+def decide_record(n, p, data, block, decision):
+    """Record a decision on a minutes record (v2.1.0 P4, BL-338): its items are its rows, so there is nothing to reconcile."""
+    block["minutes_decision"] = decision
+    save(p, data)
+    return f"{n}: Minutes {decision} — {block.get('title', '')}"
 # ===== end BL-260 point 4 =====
 
 
@@ -1451,34 +1460,40 @@ def retarget_note(item, target):
 
 def cmd_retarget(n, target):
     """Turn a pending new item into an update to `target`, an open item of its project (BL-297 part D)."""
-    import extraction
     p, data, ref, item = lookup(int(n))
-    target = str(target or "").strip().upper()
+    code, msg = retarget_item(p, data, item, str(target or "").strip().upper(), ref)
+    print(f"{n}: {msg}")
+    if code or msg.startswith("nothing new"):
+        return code
+    return tracker.cmd_validate(str(p))
+
+
+def retarget_item(p, data, item, target, ref=None, decided_in="review"):
+    """retarget's work on one proposal item, saved: (0, what was done) or (1, why not). Also the minutes' Update that one
+    (v2.1.0 P4, BL-338: decided_in "minutes")."""
+    import extraction
     why = retarget_refusal(ref, item, target)
     con = tracker.connect()
     row = None if why else tracker.fetch(con, item["table"], target)
     con.close()
     why = why or target_refusal(item, dict(row) if row is not None else None, target)
     if why:
-        print(f"{n}: {why}.")
-        return 1
+        return 1, f"{why}."
     note, new = retarget_note(item, target), extraction.merged_item(item, dict(row))
     if note["marked"] == target:
         extraction.count("repeat", "used")
     if new is None:                                  # nothing to carry: it is the same item, so it is rejected as its duplicate
-        item.update(decision="rejected", reject_reason="Duplicate", duplicate_of=target, decided_in="review", was=snapshot(item),
+        item.update(decision="rejected", reject_reason="Duplicate", duplicate_of=target, decided_in=decided_in, was=snapshot(item),
                     retargeted=note)
         save(p, data)
-        print(f"{n}: nothing new to carry to {target}, so it was rejected as a duplicate of it.")
-        return 0
+        return 0, f"nothing new to carry to {target}, so it was rejected as a duplicate of it."
     v = item.get("values") or {}
     new.update(retargeted=note, why=f"Update instead: raised as “{v.get(extraction.TEXT[item['table']]) or ''}”")
     data["items"][data["items"].index(item)] = new
     save(p, data)
     debuglog.info("review", f"{p.name} item {new['n']} retargeted to {target} ({', '.join(new['changes'])}"
                   + (", unmarked" if not note["marked"] else "") + ")")
-    print(f"{n}: now an update to {target} ({', '.join(UPDATE_LABELS.get(f, f) for f in new['changes'])}); approve it as usual.")
-    return tracker.cmd_validate(str(p))
+    return 0, f"now an update to {target} ({', '.join(UPDATE_LABELS.get(f, f) for f in new['changes'])}); approve it as usual."
 
 
 def entry(spec):
@@ -1855,6 +1870,125 @@ def _main_with_rejects(argv):
 
 main = _main_with_rejects
 # ===== end BL-315 =====
+
+
+# ===== v2.1.0 P4 (BL-338) ===== Approve minutes: the minutes and the items Alan ticked in ONE apply (tracker.py apply, the one writer,
+# naming only this proposal), so nothing goes to Review again. Actions and updates are one group with one tick; whatever the bulk rule
+# approves only on its own (a new decision, a decision recorded or withdrawn, a new risk, a closure, and the rest of individual_only)
+# needs its own tick; unticked items wait in Review; a milestone change is never approved here (BL-186: proposed on its own); removed
+# items (rejected in the minutes) are recorded as rejections in the same apply. The open point (Alan): should a new decision, a new
+# risk and a closure join the group? That is MINUTES_GROUP_JOINS, the one switch here (and its mirror in P7's popup).
+MINUTES_GROUP_JOINS = frozenset()            # e.g. {"new decision", "new risk", "closing update"} if Alan changes the bulk rule
+
+
+def minutes_group(item):
+    """Where an item of the minutes goes in the approve popup: "group" (actions and updates, one tick), "own" (its own tick),
+    "milestone" (proposed on its own, never here), "waits" (needs a project, or invalid), "removed" or "applied"."""
+    if item.get("applied"):
+        return "applied"
+    if item.get("decision") == "rejected":
+        return "removed"
+    if item.get("table") == "milestones":
+        return "milestone"
+    if needs_project(item) or "invalid" in (item.get("flags") or []):
+        return "waits"
+    why = individual_only(item)
+    return "own" if why and why not in MINUTES_GROUP_JOINS else "group"
+
+
+def _plan_text(item):
+    """An item's words in the approve popup: its title, or the update in words."""
+    if item.get("op") == "update":
+        return update_text(item)
+    v = item.get("values") or {}
+    return v.get("description") or v.get("decision") or ""
+
+
+def minutes_plan(data):
+    """What the approve popup lists: where the minutes are filed, and each item by group with what it is ({n, group, why, label})."""
+    import minutes_record
+    meeting = data.get("meeting") or {}
+    rows = []
+    for it in data.get("items") or []:
+        g = minutes_group(it)
+        rows.append({"n": it.get("n"), "group": g, "why": individual_only(it) if g == "own" else None,
+                     "label": f"{minutes_record.does(it)}: {_plan_text(it)}"[:300]})
+    filed = [op["to"] for op in meeting.get("file_ops") or [] if op.get("op") == "copy" and op.get("from") == "draft"]
+    return {"files": filed, "transcripts": [op["to"] for op in meeting.get("file_ops") or []
+                                            if op.get("op") == "copy" and op.get("from") == "transcript"],
+            "items": rows, "group": sum(1 for r in rows if r["group"] == "group"), "joins": sorted(MINUTES_GROUP_JOINS)}
+
+
+def _minutes_refusal(p, data):
+    """Why these minutes can't be approved from the minutes view, or None."""
+    import minutes_record
+    meeting = data.get("meeting") or {}
+    if not meeting or meeting.get("applied") or meeting.get("note"):
+        return "These minutes have already been approved, or this proposal has no minutes."
+    if not minutes_record.is_record(meeting.get("draft")):
+        return "These minutes are a Word draft: approve them in Review."
+    return None
+
+
+def approve_minutes(name, group=True, own=(), via="dashboard"):
+    """Approve a meeting's minutes and the ticked items in one apply: {ok, message, apply_id, approved, waiting}. `group` ticks
+    actions and updates; `own` lists the numbers of the items ticked one by one. On a failed apply nothing changes: every decision
+    is put back as it was."""
+    p = paths.STAGING / Path(str(name)).name
+    if not re.fullmatch(r"proposed-[\w.-]+\.json", p.name) or not p.is_file():
+        return {"ok": False, "message": "That proposal is no longer pending."}
+    data = json.loads(p.read_text(encoding="utf-8"))
+    why = _minutes_refusal(p, data)
+    if why:
+        return {"ok": False, "message": why}
+    was = {"meeting": data["meeting"].get("minutes_decision"),
+           "items": {i.get("n"): (i.get("decision"), i.get("decided_in")) for i in data.get("items") or []}}
+    approved, waiting = _tick(data, group, {int(n) for n in own or () if str(n).isdigit()})
+    data["meeting"].update(minutes_decision="approved", decided_in="minutes")
+    save(p, data)
+    debuglog.info("review", f"{p.name} minutes approved with {approved} item(s) in one apply; {len(waiting)} wait in Review ({via})")
+    r = subprocess.run([sys.executable, str(Path(__file__).with_name("tracker.py")), "apply", p.name], cwd=paths.ROOT,
+                       capture_output=True, text=True)
+    out = (r.stdout + r.stderr).strip()
+    if r.returncode != 0:
+        _put_back(p, was)
+        return {"ok": False, "message": out or "The apply didn't run; nothing was changed."}
+    m = re.search(r"Apply (\d+):", out)
+    return {"ok": True, "message": out, "apply_id": int(m.group(1)) if m else None, "approved": approved, "waiting": waiting}
+
+
+def _tick(data, group, own):
+    """Approve the ticked items: the group when `group`, and each of `own`. (how many, [the numbers left waiting in Review])."""
+    approved, waiting = 0, []
+    for it in data.get("items") or []:
+        g = minutes_group(it)
+        if (g == "group" and group) or (g == "own" and it.get("n") in own):
+            it.update(decision="approved", decided_in="minutes")
+            approved += 1
+        elif g in ("group", "own", "milestone", "waits"):
+            waiting.append(it.get("n"))
+    return approved, waiting
+
+
+def _put_back(p, was):
+    """A failed apply: the proposal's decisions as they were before Approve minutes."""
+    target = p if p.is_file() else paths.APPLIED / p.name
+    if not target.is_file():
+        return
+    data = json.loads(target.read_text(encoding="utf-8"))
+    if data.get("meeting") and not data["meeting"].get("applied"):
+        data["meeting"]["minutes_decision"] = was["meeting"] or "pending"
+        data["meeting"].pop("decided_in", None)
+    for it in data.get("items") or []:
+        d, how = was["items"].get(it.get("n"), (None, None))
+        if not it.get("applied") and d is not None:
+            it["decision"] = d
+            if how:
+                it["decided_in"] = how
+            else:
+                it.pop("decided_in", None)
+    save(target, data)
+# ===== end v2.1.0 P4 =====
 
 if __name__ == "__main__":
     sys.exit(debuglog.main("review.py", main, sys.argv[1:]))
