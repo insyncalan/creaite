@@ -485,7 +485,7 @@ class TestBackupFolderMigration(unittest.TestCase):
 
     def locations(self, offsite=None, never=None):
         data = json.loads(self.cfg.read_text(encoding="utf-8"))
-        data["locations"] = {"projects_root": "", "never_index": never if never is not None else ["zz Archive", "_Templates"],
+        data["locations"] = {"projects_root": "", "never_index": never if never is not None else ["_Archive", "_Templates"],
                              "offsite_backup": offsite or self.OLD}
         self.cfg.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
@@ -501,15 +501,15 @@ class TestBackupFolderMigration(unittest.TestCase):
         self.assertEqual(self.saved()["offsite_backup"], self.OLD + "/")               # inspect changed nothing
         self.v.update("install", str(self.zip))
         loc = self.saved()
-        self.assertEqual((loc["offsite_backup"], loc["never_index"]), (self.NEW, ["zz Archive", "_Templates", "99 System"]))
+        self.assertEqual((loc["offsite_backup"], loc["never_index"]), (self.NEW, ["_Archive", "_Templates", "99 System"]))
         log = [json.loads(ln) for ln in (self.v.root / "system/config/settings-log.jsonl").read_text().splitlines()]
         moved = next(r for r in log if r["key"] == "locations.offsite_backup")
         self.assertEqual((moved["old"], moved["new"]), (self.OLD + "/", self.NEW))
         self.assertTrue(moved["by"].startswith("update "))
-        self.assertEqual(next(r for r in log if r["key"] == "locations.never_index")["old"], ["zz Archive", "_Templates"])
+        self.assertEqual(next(r for r in log if r["key"] == "locations.never_index")["old"], ["_Archive", "_Templates"])
         self.v.update("undo")
         self.assertEqual(self.saved()["offsite_backup"], self.OLD + "/")
-        self.assertEqual(self.saved()["never_index"], ["zz Archive", "_Templates"])
+        self.assertEqual(self.saved()["never_index"], ["_Archive", "_Templates"])
 
     def test_a_custom_value_stays_and_99_system_is_still_added(self):
         self.locations("_Portfolio/My own backups")

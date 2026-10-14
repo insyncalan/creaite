@@ -61,7 +61,8 @@ class HoldPeek(LiveBrowserCase):
     def test_a_cell_edit_applies_only_its_own_change(self):
         b = self.b
         other = self.ids[1]
-        self.assertTrue(b.eval(f"ceApply('actions',[{other!r}],{{pr:'Low'}})"))
+        self.assertTrue(b.eval(f"ceApply('actions',[{other!r}],{{pr:'Low'}})"))   # BL-304: on screen at once, applied in the background
+        self.assertTrue(b.eval("(async()=>{ await savesSettled(); return true; })()"))
         self.assertEqual(self.field(other, "priority"), "Low")
         self.still_staged()
         self.then_the_peek_applies()

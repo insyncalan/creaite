@@ -202,7 +202,7 @@ class ReachOneDrive(OneDriveCase):
         self.assertEqual(self.kind("projects/Example Programme/03 Delivery/Design/new.md", "create"), ["ordinary", ""])   # a stored path
         said = touch(eng / "02 Meetings/Transcripts/2026-10-01 Steering.vtt", "WEBVTT\n")
         self.assertEqual(self.kind(said, "change")[0], "sensitive")
-        self.assertEqual(self.kind(eng / "zz Archive/old.md", "read"), ["never", "zz Archive is never read or written by creaite"])
+        self.assertEqual(self.kind(eng / "_Archive/old.md", "read"), ["never", "_Archive is never read or written by creaite"])
         self.assertEqual(self.kind(eng / "CLAUDE.md", "change")[0], "sensitive")
 
     def test_the_rest_of_the_home_folder_is_outside_the_projects(self):

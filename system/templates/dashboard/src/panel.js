@@ -14,6 +14,7 @@ import { go, navWrite } from "./core/nav.js";
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
 import { api, applyNow, applySoon, DIAG, editProposal, FIELD, memPath, needVault, oneLine, refreshAll, reloadData, replaceCurrent, save, snack, stampFile, stampFull, toDb, undoApply, viaServer, vq, writeProposal } from "./core/server.js";
 import { shared } from "./core/state.js";
+import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
@@ -297,7 +298,7 @@ export async function commitRecord(k,id,f,label){ const x=REC(k,id), before={...
   const ch=Object.keys(f).filter(n=>typeof f[n]==="boolean"?!!x[n]!==f[n]:!same(x[n],f[n])); if(!ch.length) return "nochange";
   const FN={t:"description",o:"owner",st:"status",pr:"priority",due:"due date",ws:"workstream",upd:"latest update",client:"client-visible",cm:"client messaging",cmd:"client messaging",by:"made by",date:"date",why:"reasoning",opts:"options",revisit:"revisit",replaces:"replaces",resp:"response",imp:"impact",lik:"likelihood",raised:"raised",closed:"closed date",type:"type",p:"project",ms:"milestone"}; label=label||`${id} ${[...new Set(ch.filter(n=>n!=="pr"||k!=="raid").map(n=>FN[n]||n))].join(", ")} updated`;
   const changes=toDb(k,Object.fromEntries(ch.filter(n=>!(k==="raid"&&n==="pr")).map(n=>[n,f[n]])));
-  return await save(label,[{op:"update",table:k,id,changes,based_on:x.updated_at}],null,()=>{ Object.assign(x,f,{upd_at:nowStamp()}); },()=>{ Object.keys(x).forEach(n=>delete x[n]); Object.assign(x,before); }); }
+  return await save(label,[{op:"update",table:k,id,changes,based_on:x.updated_at}],null,()=>{ Object.assign(x,f,{upd_at:nowStamp()}); },()=>{ Object.keys(x).forEach(n=>delete x[n]); Object.assign(x,before); },undefined,{recs:[{k,id,f:Object.fromEntries(ch.map(n=>[n,f[n]]))}]}); }   /* BL-304: on screen at once */
 /* a new item's values for its "new" proposal, from the form's fields after validate and norm: shared by the Create form and the
    new item peek (BL-179), so both write the same proposal */
 export function newItemOf(k,f){ const id=nextId(k,f.p); const rec=Object.assign({id,upd_at:nowStamp()},f); let source;
@@ -496,8 +497,17 @@ export function pkDate(anchor,o){ const op=o.onPick, gate=!!o.due, {value,onPick
 export const pkSame=(a,b)=>typeof b==="boolean"?!!a===b:String(a??"").trim()===String(b??"").trim();
 /* one change to one item: the fields that differ, written by pkWrite. Calls queue (PKQ), so changes are written in the order made. */
 shared.PKQ=Promise.resolve();
-export function pkCommit(k,id,patch,label,from,to,o={}){ const run=shared.PKQ.then(()=>pkCommit1(k,id,patch,label,from,to,o)); shared.PKQ=run.catch(()=>false); return run; }
+export function pkCommit(k,id,patch,label,from,to,o={}){ const now=o.now||pkNow(k,id,patch);   /* BL-304: on screen at once; written in turn */
+  const run=shared.PKQ.then(()=>pkCommit1(k,id,patch,label,from,to,now?{...o,now}:o)); shared.PKQ=run.catch(()=>false); return run; }
+/* BL-304: an existing item's change goes on the record and the screen now, marked as saving, before it waits its turn to be staged */
+export function pkNow(k,id,patch){ if(/^(nw|rv)/.test(String(id))) return null; const x=pkX(k,id); if(!x) return null;
+  const keys=Object.keys(patch).filter(n=>!pkSame(x[n],patch[n])); if(!keys.length) return null;
+  const P2=Object.fromEntries(keys.map(n=>[n,patch[n]])); if("o" in P2&&!P2.o) P2.o="TBC";
+  const was=Object.fromEntries(keys.map(n=>[n,x[n]])), ov={k,id,f:P2};
+  Object.assign(x,P2); if(k==="raid") x.pr=prio(x.imp,x.lik); ovAdd([ov]); if(shared.CUR&&pkCid()===id) pkSaving("busy"); refreshAll();
+  return {P2,was,ov}; }
 export async function pkCommit1(k,id,patch,label,from,to,o){ const x=pkX(k,id); if(!x) return false;
+  if(o.now){ if(!o.keepNote&&shared.CUR&&pkCid()===id) pkNote(""); const ok=await pkWrite(k,id,o.now.P2,{label,from,to,...o,retry:{patch,label,from,to,o}}); if(!ok&&shared.CUR&&pkCid()===id&&pkOn()) pkDraw(); return ok; }
   const keys=Object.keys(patch).filter(n=>!pkSame(x[n],patch[n])); if(!keys.length) return false;
   const P2=Object.fromEntries(keys.map(n=>[n,patch[n]])); if("o" in P2&&!P2.o) P2.o="TBC";
   if(!o.keepNote&&shared.CUR&&pkCid()===id) pkNote("");   /* a rule's note stays until the next change; o.note goes in the feed */
@@ -512,16 +522,20 @@ export async function pkWrite(k,id,P2,o){ const r=await (async()=>{
     if(shared.CUR&&shared.CUR.nid===id&&pkOn()) pkDraw(); pkNewFocus(); return r!=="fail"; }   /* BL-179: a new item */
   if(String(id).startsWith("rv")){
     const x=pkX(k,id); if(!x) return false; Object.assign(x,P2); if(k==="raid") x.pr=prio(x.imp,x.lik); PK.dirty=true; if(o.note) pkNote(o.note); pkDraw(); return true; }   /* BL-250 A: a proposal */
-  const x=pkX(k,id); if(!x) return false; if(!await needVault()) return false;
+  const x=pkX(k,id), now=o.now;
+  /* BL-304: a change already on screen (pkNow) that can't be staged is put back, says why and offers Retry */
+  const back=msg=>{ if(now){ ovDrop([now.ov]); for(const n in now.P2) if(pkSame(x&&x[n],now.P2[n])&&x) x[n]=now.was[n]; if(x&&k==="raid") x.pr=prio(x.imp,x.lik); ovReapply(); refreshAll(); }
+    pkSaving("fail"); if(msg) snack(msg,now&&o.retry?()=>{ const r=o.retry; pkCommit(k,id,r.patch,r.label,r.from,r.to,{...r.o,now:undefined}); }:null,"Retry"); return false; };
+  if(!x) return back(""); if(!await needVault()) return back("");
   const first=!shared.PKS.some(s=>s.k===k&&s.id===id), item={op:"update",table:k,id,changes:toDb(k,P2)}; if(first&&x.updated_at) item.based_on=x.updated_at;
   pkSaving("busy"); let name; const items=[...(o.pre||[]),item];   /* BL-187: a new workstream travels ahead of the item, in the same proposal */
-  const prev=Object.fromEntries(Object.keys(P2).map(n=>[n,x[n]??""]));
+  const prev=now?Object.fromEntries(Object.keys(P2).map(n=>[n,now.was[n]??""])):Object.fromEntries(Object.keys(P2).map(n=>[n,x[n]??""]));
   const meta={k,id,patch:P2,prev,label:o.label,from:o.from==null?"":String(o.from),to:o.to==null?"":String(o.to),at:nowStamp(),note:o.note||"",type:o.type||"act",ms:Date.now(),...(o.wsRow?{wsNew:o.wsRow.name,wsP:o.wsRow.p}:{})};   /* BL-188: what every window needs to show it */
   try{ name=await vq(async()=>{ let n=pkFile(); while(await shared.VW.exists("system/staging/"+n)) n=pkFile();
       const data={created:stampFull().replace(" ","T"),source_run:"dashboard",files:[],peek:meta,items:items.map((it,j)=>Object.assign({n:j+1,match:"strong",flags:[],decision:"approved"},it))};
       await shared.VW.write("system/staging/"+n,JSON.stringify(data,null,2)+"\n"); return n; }); }
-  catch(e){ pkSaving("fail"); snack("Not saved: "+e.message); return false; }
-  Object.assign(x,P2); if(k==="raid") x.pr=prio(x.imp,x.lik);
+  catch(e){ return back("Not saved: "+e.message); }
+  Object.assign(x,P2); if(k==="raid") x.pr=prio(x.imp,x.lik); if(now) ovDrop([now.ov]);   /* staged: pkReconcile keeps it on screen from here */
   if(o.wsRow) (D.ws_table=D.ws_table||[]).push(o.wsRow);   /* BL-187 */
   shared.PKS.push({name,...meta});
   pkPersist(); pkSaving("ok"); refreshAll(); return true; })();
@@ -619,10 +633,11 @@ export function pkLast(x,k){ let el=$("#pkLast"); if(!el){ addHTML($("#pkAfter")
   putHTML(el,html`${raw(ic("history"))}<span>${s.length?html`You edited this ${s[s.length-1].at.slice(11)===nowStamp().slice(11)?"just now":raw("at "+s[s.length-1].at.slice(11))} · ${s.length} change${s.length===1?"":"s"} staged`:d.length?html`Last applied ${fd(d[d.length-1].at)}`:x.upd_at?html`Last updated ${fd(x.upd_at)}`:""}</span>`);
   pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Saved to staging":d.length?"Applied":""); }
 /* the dot on a row with something staged */
-export function pkDots(){ const ids=new Set(shared.PKS.map(s=>s.id));
-  $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const has=ids.has(r.dataset.row), d=r.querySelector(".pkdot");
-    if(has&&!d){ const x=r.querySelector("td.title>.x"); const dot='<span class="pkdot" role="img" aria-label="Staged, not yet applied" data-tip="Staged, not yet applied"></span>'; if(x) addHTML(x,"beforebegin",raw(dot)); else addHTML((r.querySelector("td.title")||r.firstElementChild||r),"beforeend",raw(dot)); }
-    else if(!has&&d) d.remove(); }); }
+export function pkDots(){ const ids=new Set([...shared.PKS.map(s=>s.id),...(shared.PENDING||[]).flatMap(p=>p.ids||[])]), sv=savingIds();   /* BL-304: also a change still saving (hollow), and one waiting for Apply */
+  $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const id=r.dataset.row, st=sv.has(id)?"saving":ids.has(id)?"staged":"", d=r.querySelector(".pkdot");
+    if(d&&d.dataset.st!==st) d.remove(); if(!st||(d&&d.dataset.st===st)) return;
+    const tip=st==="saving"?"Saving…":"Staged, not yet applied", dot=`<span class="pkdot${st==="saving"?" saving":""}" data-st="${st}" role="img" aria-label="${tip}" data-tip="${tip}"></span>`, x=r.querySelector("td.title>.x");
+    if(x) addHTML(x,"beforebegin",raw(dot)); else addHTML((r.querySelector("td.title")||r.firstElementChild||r),"beforeend",raw(dot)); }); }
 /* after any apply or reload: what left staging was applied; what is still there stays staged and is shown again on the fresh data */
 export let PKREC=null;
 export async function pkReconcile(){ pkFromVault(); const news=shared.PKS.filter(s=>s.isNew), r=await (async()=>{ if(!shared.PKS.length) return; if(PKREC) return PKREC; PKREC=(async()=>{ const keep=[], gone=[];

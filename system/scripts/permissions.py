@@ -35,7 +35,7 @@ Rules creaite will add are narrow:
   Edit(<path>) and Write(<path>)                             inside projects/<folder>/ (one project's folder, never all of
                                                              projects/), inbox/, system/staging/, system/search/ or
                                                              system/history/; never the engine, the database, .claude or .git,
-                                                             and never zz Archive or _Templates. A projects/<folder>/ rule is
+                                                             and never _Archive or _Templates. A projects/<folder>/ rule is
                                                              written in the form Claude Code needs (~/… when the projects are
                                                              in a OneDrive projects root)
 Anything else (a blanket Bash or Edit rule, node, curl, a path outside the vault, a deny rule) is refused: edit
@@ -210,8 +210,8 @@ def _path_rule_refused(tool, spec):
         folder = parts[1] if len(parts) > 1 else ""
         if not folder or re.search(r"[*?\[\]]", folder):
             return "name the project folder: projects/<folder>/…, not all of projects/"
-        if any(p in parts for p in paths.never_index()):
-            return "zz Archive, _Templates and 99 System are never read or written by creaite"
+        if any(p in parts for p in paths.skipped_names()):
+            return "_Archive, _Templates and 99 System are never read or written by creaite"
     if any(n in spec for n in EDIT_NEVER):
         return "that path holds the engine, the database, the settings or .claude: creaite never lets the panel write there"
     return None

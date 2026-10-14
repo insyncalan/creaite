@@ -35,7 +35,13 @@ runtime; `StatusDot` on Today's portfolio table.
 - **The data** (`D`, `P`, `A`, `R`, `DEC`, `ACT`, `PEOPLE`) stays in `core/data.js` for now. `src/stores/data.js` holds a
   `dataVersion` signal that `reloadData` and `refreshAll` bump, so a component that reads the data redraws after a
   reload. BL-304 grows this into records keyed by ID.
-- Saving is unchanged: `save`/`writeProposal`/`api` in core. No component writes to the server by any other route.
+- **Records stay put, changes go on top (BL-304, v1.9.4, `core/instant.js`).** `A`, `R` and `DEC` keep their objects:
+  a targeted refresh (`recordsRefresh`, `GET /api/records?ids=…`) merges each item into the object already there, so a
+  component holding a record keeps it. A change still saving is an overlay in `INFLIGHT`, laid over any fresh data by
+  `ovReapply()`; never write to a record from fresh data without calling it. Not yet signals: the merge ends in
+  `refreshAll`, as a reload does.
+- Saving is unchanged: `save`/`writeProposal`/`api` in core. No component writes to the server by any other route. A
+  record edit passes `opt.recs` to `save` (or goes through the peek's `pkCommit`), so it shows at once (BL-304).
 
 ## 3. The building blocks
 

@@ -253,6 +253,16 @@ class LiveServerLog(unittest.TestCase):
         for canary in ("CANARY-FILE-NAME", "CANARY-QUERY-2", "token-ish"):
             self.assertNotIn(canary, text)                                       # no body, no query value, no file name
 
+    def test_a_remembered_chat_that_is_gone_is_logged_at_info_not_warn(self):
+        """BL-330: a chat removed from the history (or another vault's) is normal: one INFO line, never a WARN."""
+        code, rec = self.s.post("/api/chat", {"chat": "ask-CANARY-GONE"})
+        self.assertEqual((code, rec.get("ok")), (404, False))
+        self.assertIs(rec.get("gone"), True)                                     # the page forgets it on this
+        text = self.s.wait_for(r"POST /api/chat 404 \d+ms")
+        self.assertRegex(text, r"INFO  server\s+POST /api/chat 404 \d+ms chat not in the history")
+        self.assertNotRegex(text, r"WARN\s+server\s+POST /api/chat")
+        self.assertNotIn("CANARY-GONE", text)                                    # the chat's ID is the page's, not logged
+
     def test_a_failed_apply_logs_its_reason_without_item_text(self):
         prop = self.s.v.root / "system" / "staging" / "proposed-canary.json"
         prop.write_text(json.dumps({"created": "2026-10-05T10:00:00", "source_run": "dashboard", "files": [], "items": [

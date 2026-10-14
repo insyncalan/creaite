@@ -3,7 +3,9 @@
 Commands:
   due                      is the daily sweep due? (last success before today's sweep.due_from, and it's now after it)
   window [--days N]        the window to search: since the last successful sweep, or the first-run look-back, or N days
-  lock | unlock            one sweep at a time (system/staging/sweep.lock; older than 30 minutes counts as stale)
+  lock | unlock            one sweep at a time (system/staging/sweep.lock; older than 30 minutes counts as stale). BL-328: the
+                           lock records the live server's run (CREAITE_RUN_ID), so the server releases it when that run ends
+  unlock --if-idle         release the lock only when no sweep holds it (Settings › Health's Release)
   stage <sweep.json>       write the proposal (source_run cx-sweep) and print its summary
   done --started "YYYY-MM-DD HH:MM" [--normal] [--summary "…"]
                            record success: last-sweep.txt (normal sweeps only) and one run-log line
@@ -130,30 +132,112 @@ def window(days=None):
             "ignore": [r for r in ignore_rules() if r.get("on", True)]}                 # BL-97: the rules in force
 
 
-def lock():
-    """Take the sweep lock (system/staging/sweep.lock); refused while another sweep started under 30 minutes ago."""
-    if LOCK.exists():
+# ===== BL-328: the lock records the run that holds it, so it never outlives the sweep =====
+# Line 1 is when it was taken (YYYY-MM-DD HH:MM), as before; then "run <id>" and "server <pid>" when the live server started
+# the sweep (CREAITE_RUN_ID and CREAITE_SERVER_PID, set for each run). The server releases the lock when that run ends, however
+# it ends, and on shutdown. A lock is held with no sweep running ("idle") when its run is no longer the run in progress
+# (system/guard/run.json) or its server has stopped; a lock with no run (a sweep from Claude Code) is idle once it is stale.
+def lock_info():
+    """The sweep lock: {started (datetime), run, server (pid)}, or None when no sweep holds it."""
+    try:
+        lines = LOCK.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+    info = {"started": None, "run": None, "server": None}
+    try:
+        info["started"] = datetime.strptime((lines[0] if lines else "").strip()[:16], "%Y-%m-%d %H:%M")
+    except ValueError:
         try:
-            started = datetime.strptime(LOCK.read_text(encoding="utf-8").strip()[:16], "%Y-%m-%d %H:%M")
-        except ValueError:
-            started = datetime.fromtimestamp(LOCK.stat().st_mtime)
-        age = now() - started
-        if age < STALE:
+            info["started"] = datetime.fromtimestamp(LOCK.stat().st_mtime)
+        except OSError:
+            return None
+    for line in lines[1:]:
+        key, _, value = line.strip().partition(" ")
+        if key == "run" and re.fullmatch(r"[A-Za-z0-9-]{6,64}", value):
+            info["run"] = value
+        elif key == "server" and value.isdigit():
+            info["server"] = int(value)
+    return info
+
+
+def _alive(pid):
+    """Whether a process with this pid is running."""
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except (PermissionError, OSError):           # someone else's process: it exists
+        return True
+    return True
+
+
+def _run_in_progress():
+    """The live server's run in progress (system/guard/run.json), or None."""
+    try:
+        import reach
+        return (reach.guard_run() or {}).get("run")
+    except Exception:  # noqa: BLE001  unreadable: no run known
+        return None
+
+
+def lock_state(info=None):
+    """None (no lock), "running" (a sweep holds it) or "idle" (held with no sweep running: safe to release)."""
+    info = lock_info() if info is None else info
+    if not info:
+        return None
+    if info["run"]:
+        if info["server"] and not _alive(info["server"]):
+            return "idle"
+        return "running" if _run_in_progress() == info["run"] else "idle"
+    return "running" if now() - info["started"] < STALE else "idle"
+
+
+def lock():
+    """Take the sweep lock (system/staging/sweep.lock); refused while another sweep holds it (under 30 minutes old). A lock
+    whose run has ended, or whose server has stopped, is replaced at once (BL-328)."""
+    info = lock_info()
+    run = os.environ.get("CREAITE_RUN_ID", "")
+    run = run if re.fullmatch(r"[A-Za-z0-9-]{6,64}", run) else ""
+    if info and not (run and info["run"] == run):          # the same run taking it again keeps it
+        age = now() - info["started"]
+        state = lock_state(info)
+        if state == "running" and age < STALE:
             print(f"Another sweep started {int(age.total_seconds() // 60)} minutes ago; wait for it to finish.")
             debuglog.info("sweep", f"lock refused: another sweep started {int(age.total_seconds() // 60)} minutes ago")
             return 3
-        print("A stale sweep lock was found (over 30 minutes old); continuing.")
-        debuglog.warn("sweep", "a stale sweep lock (over 30 minutes old) was replaced")
-    LOCK.write_text(now().strftime("%Y-%m-%d %H:%M"), encoding="utf-8")
+        if age >= STALE:
+            print("A stale sweep lock was found (over 30 minutes old); continuing.")
+            debuglog.warn("sweep", "a stale sweep lock (over 30 minutes old) was replaced")
+        else:
+            print("A sweep lock was left by a sweep that has ended; continuing.")
+            debuglog.warn("sweep", f"a sweep lock left by run {info['run'] or '?'} (ended) was replaced")
+    text = now().strftime("%Y-%m-%d %H:%M")
+    if run:
+        text += f"\nrun {run}"
+        server = os.environ.get("CREAITE_SERVER_PID", "")
+        if server.isdigit():
+            text += f"\nserver {server}"
+    LOCK.write_text(text + "\n", encoding="utf-8")
     print("Locked.")
     return 0
 
 
-def unlock():
-    """Release the sweep lock."""
+def unlock(if_idle=False):
+    """Release the sweep lock; with if_idle (Health's Release), only when no sweep holds it."""
+    if if_idle:
+        state = lock_state()
+        if state is None:
+            print("No sweep lock is held.")
+            return 0
+        if state == "running":
+            print("A sweep is running: its lock is released when it ends.")
+            debuglog.info("sweep", "release refused: a sweep is running")
+            return 3
+        debuglog.info("sweep", f"an idle sweep lock was released (run {(lock_info() or {}).get('run') or 'none'})")
     LOCK.unlink(missing_ok=True)
     print("Unlocked.")
     return 0
+# ===== end BL-328 =====
 
 
 def log_line(text):
@@ -1537,7 +1621,8 @@ def main(argv):
     w = sub.add_parser("window")
     w.add_argument("--days", type=int)
     sub.add_parser("lock")
-    sub.add_parser("unlock")
+    ul = sub.add_parser("unlock")
+    ul.add_argument("--if-idle", action="store_true")              # BL-328: Health's Release
     st = sub.add_parser("stage")
     st.add_argument("spec")
     d = sub.add_parser("done")
@@ -1569,7 +1654,7 @@ def main(argv):
     if a.cmd == "lock":
         return lock()
     if a.cmd == "unlock":
-        return unlock()
+        return unlock(a.if_idle)
     if a.cmd == "stage":
         return stage(a.spec)
     if a.cmd == "done":

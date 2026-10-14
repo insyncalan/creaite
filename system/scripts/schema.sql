@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS projects (
   next_milestone  TEXT,
   milestone_date  TEXT CHECK (milestone_date IS NULL OR milestone_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   active          INTEGER NOT NULL DEFAULT 1 CHECK (active IN (0,1)),
+  archived        INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1) AND (archived = 0 OR active = 0)),  -- BL-09: an archived project is never active
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS milestones (
   client_message TEXT,            -- plain wording; required when client_visible = 1 (checked by tracker.py)
   internal_note TEXT,             -- Alan's own words on Movement; internal only, never in any client output (Alan, 11-10-2026)
   source        TEXT NOT NULL,
+  archived      INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),   -- BL-09
   updated_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -56,6 +58,7 @@ CREATE TABLE IF NOT EXISTS workstreams (
   status     TEXT NOT NULL DEFAULT 'Active' CHECK (status IN ('Active','Closed')),
   created    TEXT NOT NULL CHECK (created GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   source     TEXT NOT NULL,
+  archived   INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),   -- BL-09
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (project, name COLLATE NOCASE)
 );
@@ -76,6 +79,7 @@ CREATE TABLE IF NOT EXISTS actions (
   client_message TEXT NOT NULL DEFAULT ('What it is: ' || char(10) || 'What it means for you: ' || char(10) || 'What is being done: '),  -- three headings always present; must be complete when client_visible = 1 (checked by tracker.py)
   milestone    TEXT REFERENCES milestones(id),
   source       TEXT NOT NULL,
+  archived     INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),   -- BL-09
   updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -100,6 +104,7 @@ CREATE TABLE IF NOT EXISTS raid (
   client_message TEXT NOT NULL DEFAULT ('What it is: ' || char(10) || 'What it means for you: ' || char(10) || 'What is being done: '),
   milestone    TEXT REFERENCES milestones(id),
   source       TEXT NOT NULL,
+  archived     INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),   -- BL-09
   updated_at   TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -120,6 +125,7 @@ CREATE TABLE IF NOT EXISTS decisions (
   revisit      TEXT,                         -- a date (YYYY-MM-DD) or a trigger in words ("revisit if adoption falls below 60%")
   replaces     TEXT REFERENCES decisions(id),
   source       TEXT NOT NULL,
+  archived     INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),   -- BL-09
   updated_at   TEXT NOT NULL DEFAULT (datetime('now')),
   CHECK (status <> 'Made' OR date IS NOT NULL),
   CHECK (replaces IS NULL OR replaces <> id)
@@ -137,6 +143,7 @@ CREATE TABLE IF NOT EXISTS promises (
   raised      TEXT NOT NULL,
   closed      TEXT CHECK (closed IS NULL OR closed >= raised),
   source      TEXT NOT NULL,
+  archived    INTEGER NOT NULL DEFAULT 0 CHECK (archived IN (0,1)),   -- BL-09
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

@@ -30,6 +30,8 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import threading
+import time
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
@@ -399,6 +401,13 @@ def safe_path(rel_path, purpose):
         raise Invalid(f"{purpose}: path is outside the vault and the projects folder ({rel_path!r})")
     if not r.startswith(WRITABLE):
         raise Invalid(f"{purpose}: {r} is not in projects/, inbox/, system/staging/ or system/search/")
+    proot = paths.projects_root().resolve()
+    below = [x.lower() for x in p.parts[len(proot.parts):]] if proot in p.parents else []
+    if purpose == "mkdir" and below:            # a new project's own empty _Archive folder (from the skeleton) may be made
+        below = below[:-1]
+    hit = next((n for n in paths.skipped_names() if n.lower() in below), None)
+    if hit:                                     # BL-09: never into _Archive (an archived project's folder), _Templates, 99 System
+        raise Invalid(f"{purpose}: {hit} is never written by creaite ({rel_path})")
     return p
 
 
@@ -544,6 +553,8 @@ def _workstream_unique(con, table, row, changed):
 def _project_exists(con, table, row, changed):
     if row.get("project") and not con.execute("SELECT 1 FROM projects WHERE code = ?", (row["project"],)).fetchone():
         raise Invalid(f"project {row['project']} is not in the tracker")
+    if row.get("project") and is_archived(con, row["project"]):         # BL-09
+        raise Invalid(f"{project_label(row['project'])} is archived: restore it first (restore project {row['project']})")
 
 
 def _milestone_link(con, table, row, changed):
@@ -762,6 +773,9 @@ def write_item(con, item, apply_id, via):
         raise Invalid(f"unknown table {table!r}")
     if op == "recode" and table == "projects":
         return recode_project(con, item, apply_id, via)        # BL-111
+    if op in ARCHIVE_OPS and table == "projects":
+        return archive_project(con, item, apply_id, via)       # BL-09
+    refuse_archived_field(item)
     if op not in ("new", "update", "cancel"):
         raise Invalid(f"op must be new, update or cancel (got {op!r})")
     cols = columns(con, table)
@@ -884,7 +898,7 @@ def _insert_row(con, table, item, cols, apply_id, via):
     key = key_of(table, values)
     row = fetch(con, table, key)
     for f in cols:
-        if row[f] is not None:
+        if row[f] is not None and not (f == "archived" and not row[f]):     # BL-09: a new row is never archived; not logged
             log(con, apply_id, table, key, f, None, row[f], "insert", via)
     if want:
         set_labels(con, key, want, extras.get("label_reason"), extras.get("label_suggested"), apply_id, via)
@@ -1383,6 +1397,8 @@ def check_file_op(fop, blk):
         safe_path(fop.get("path"), "write")
         if not isinstance(fop.get("content"), str):
             raise Invalid("write: content must be text")
+    elif op == "move":
+        check_move(fop, blk)                       # BL-09: a whole folder into or out of _Archive, nothing else
     else:
         raise Invalid(f"unknown file operation {op!r}")
 
@@ -1539,7 +1555,187 @@ def _op_write(apply_id, fop, blk, done):
     done.append({"op": "write", "path": paths.rel(p), "previous": current, "hash": file_hash(p)})
 
 
-FILE_OPS = {"copy": _op_copy, "remove": _op_remove, "mkdir": _op_mkdir, "write": _op_write}
+# ===== BL-09: archive and restore a whole project =====
+# {"op": "archive", "table": "projects", "id": CODE, "register_row": "<the project's register row>", "folder": {"from", "to"}}
+# closes the project (active 0) and sets `archived` on it and on every item of it; {"op": "restore", …, "changes": {"active": 0|1}}
+# clears them and puts `active` back. Nothing is archived with an item still open (propose.py archive --cancel-open cancels them
+# first, in the same proposal). Each field is logged in change_log, so undo reverses it exactly; updated_at is left as it was. The
+# register row and the folder are logged too ("register_row", "folder"; not columns), so a restore can put them back. The same
+# proposal's file block (archive: "archive" | "restore") moves the folder and rewrites the register (archive_problems).
+ARCHIVE_OPS = ("archive", "restore")
+ARCHIVABLE = ("milestones", "workstreams", "actions", "raid", "decisions", "promises")
+ARCHIVE_OPEN = {"actions": ("Open", "Delayed"), "raid": ("Open",), "decisions": ("Pending",), "promises": ("Open",),
+                 "milestones": ("Planned",)}
+
+
+def is_archived(con, code):
+    """Whether project `code` is archived (False on a database from before BL-09)."""
+    try:
+        r = con.execute("SELECT archived FROM projects WHERE code = ?", (code,)).fetchone()
+    except sqlite3.OperationalError:            # no archived column yet: tracker.py migrate adds it
+        return False
+    return bool(r and r[0])
+
+
+def open_items(con, code):
+    """[(table, id)] of a project's items that are still open (an archived project has none)."""
+    out = []
+    for t, statuses in ARCHIVE_OPEN.items():
+        q = f"SELECT id FROM {t} WHERE project = ? AND status IN ({','.join('?' * len(statuses))}) ORDER BY id"
+        out += [(t, r[0]) for r in con.execute(q, (code, *statuses))]
+    return out
+
+
+def refuse_archived_field(item):
+    """`archived` is never set by an ordinary new item or update: only an archive or a restore of the project sets it."""
+    if "archived" in (item.get("values") or {}) or "archived" in (item.get("changes") or {}):
+        raise Invalid("archived is set only by archiving or restoring the project (archive project / restore project)")
+
+
+def archive_project(con, item, apply_id, via):
+    """Write one archive or restore item (see the block's note). Returns the project code."""
+    code = item.get("id")
+    row = fetch(con, "projects", code)
+    if row is None:
+        raise Invalid(f"{code} is not a project in the tracker")
+    flags, active = _archive_target(con, item, row)
+    for t in ARCHIVABLE:
+        for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND archived = ? ORDER BY id", (code, 1 - flags)).fetchall():
+            con.execute(f"UPDATE {t} SET archived = ? WHERE id = ?", (flags, i))
+            log(con, apply_id, t, i, "archived", 1 - flags, flags, "update", via)
+    for field, new in (("active", active), ("archived", flags)) if flags else (("archived", flags), ("active", active)):
+        if row[field] != new:
+            con.execute(f"UPDATE projects SET {field} = ? WHERE code = ?", (new, code))
+            log(con, apply_id, "projects", code, field, row[field], new, "update", via)
+    for field in ("register_row", "folder"):           # history only: what a restore puts back
+        if item.get(field):
+            v = item[field] if isinstance(item[field], str) else json.dumps(item[field], ensure_ascii=False)
+            log(con, apply_id, "projects", code, field, None, v, "update", via)
+    return code
+
+
+def _archive_target(con, item, row):
+    """(archived, active) the project and its items will have: an archive needs no open item; a restore puts active back."""
+    code = item.get("id")
+    if item.get("op") == "archive":
+        if row["archived"]:
+            raise Invalid(f"{project_label(code)} is archived already")
+        still = open_items(con, code)
+        if still:
+            raise Invalid(f"{project_label(code)} has {len(still)} open item(s) ({', '.join(i for _, i in still[:8])}): "
+                          "cancel them first (archive project --cancel-open) or stop")
+        flags, active = 1, 0
+    else:
+        if not row["archived"]:
+            raise Invalid(f"{project_label(code)} isn't archived")
+        flags, active = 0, int((item.get("changes") or {}).get("active", 1))
+    if active not in (0, 1):
+        raise Invalid("a restore's active is 0 or 1")
+    return flags, active
+
+
+def last_archive(con, code):
+    """{active, register_row, folder} logged by the latest archive of `code` that hasn't been undone, or None."""
+    r = con.execute("SELECT c.apply_id FROM change_log c JOIN applies a ON a.apply_id = c.apply_id WHERE c.tbl = 'projects' "
+                    "AND c.item_id = ? AND c.field = 'archived' AND c.new_value = '1' AND c.op = 'update' "
+                    "AND a.undone_at IS NULL ORDER BY c.rowid DESC LIMIT 1", (code,)).fetchone()
+    if not r:
+        return None
+    got = {f: (o, n) for f, o, n in con.execute("SELECT field, old_value, new_value FROM change_log WHERE apply_id = ? "
+                                                "AND tbl = 'projects' AND item_id = ?", (r[0], code))}
+    folder = json.loads(got["folder"][1]) if got.get("folder") else None
+    return {"active": int(got["active"][0]) if got.get("active") else 0,
+            "register_row": got["register_row"][1] if got.get("register_row") else None, "folder": folder}
+
+
+def archive_problems(p, data):
+    """An approved archive or restore item and its file block go together: the block says the same kind, is approved too, and
+    moves that project's folder; a block marked archive or restore has its item. Returns the problems."""
+    items = [i for i in data.get("items", []) if i.get("op") in ARCHIVE_OPS and not i.get("applied")
+             and i.get("decision") == "approved"]
+    blk = data.get("file_changes") or {}
+    kind = blk.get("archive") if blk.get("file_changes_decision") == "approved" and not blk.get("applied") else None
+    if not items and kind not in ARCHIVE_OPS:
+        return []
+    if len(items) != 1 or kind != items[0].get("op"):
+        return [f"{p.name}: an archive or restore is one project item with its approved file block (archive: archive or restore)"]
+    return [] if _moves_its_folder(items[0], blk) else [f"{p.name}: an archive or restore moves exactly its project's folder"]
+
+
+def _moves_its_folder(item, blk):
+    """The block has one move, and it is the item's own folder move (when the item names one)."""
+    moves = [o for o in blk.get("file_ops", []) if o.get("op") == "move"]
+    want = item.get("folder") or {}
+    return len(moves) == 1 and (not want or (moves[0].get("from"), moves[0].get("to")) == (want.get("from"), want.get("to")))
+
+
+def hide_archived(con, settings=None):
+    """BL-09: the default views leave archived projects and their items out. Temporary views named like the tables (projects, the
+    item tables, links, item_labels, updates) shadow them for this connection only, read-only connections included; the
+    tables themselves are still main.<table>. With dashboard.show_archived on, nothing is hidden. Returns con."""
+    try:
+        s = settings if settings is not None else paths.load_settings()
+        have = [r[1] for r in con.execute("PRAGMA main.table_info(projects)")]
+        if (s.get("dashboard") or {}).get("show_archived") or "archived" not in have:
+            return con
+    except (OSError, ValueError, sqlite3.Error):     # no settings or an older database: nothing to hide
+        return con
+    gone = "SELECT code FROM main.projects WHERE archived = 1"
+    views = {t: f"SELECT * FROM main.{t} WHERE archived = 0" for t in ("projects",) + ARCHIVABLE}
+    views["links"] = (f"SELECT * FROM main.links WHERE substr(from_item, 1, instr(from_item, '-') - 1) NOT IN ({gone}) "
+                      f"AND substr(to_item, 1, instr(to_item, '-') - 1) NOT IN ({gone})")
+    views["item_labels"] = f"SELECT * FROM main.item_labels WHERE substr(item_id, 1, instr(item_id, '-') - 1) NOT IN ({gone})"
+    views["updates"] = f"SELECT * FROM main.updates WHERE project NOT IN ({gone})"
+    for t, sql in views.items():
+        con.execute(f"CREATE TEMP VIEW IF NOT EXISTS {t} AS {sql}")
+    return con
+# ===== end BL-09 =====
+
+
+# ===== BL-09: the `move` file operation (archive, restore, and renaming an old zz Archive folder) =====
+# {"op": "move", "from": "projects/<folder>", "to": "projects/_Archive/<folder>"} in a file block whose "archive" says which kind
+# of move it is ("archive", "restore" or "rename"). reach.archive_move_problem is the one exception to _Archive's never rule: only
+# this apply calls it. The paths are stored paths, never mapped into _Archive (paths.resolve(…, archived=False)). Undo moves the
+# folder back, and removes the _Archive folder this move made if it is empty again.
+
+def check_move(fop, blk):
+    """Check one move: the block says which kind of move it is, and reach.py agrees it is that whole-folder move; raises Invalid."""
+    import reach
+    kind = blk.get("archive")
+    if kind not in reach.ARCHIVE_MOVES:
+        raise Invalid("move: a folder is moved only by an archive, a restore or a rename of an old archive folder")
+    src, dst = fop.get("from"), fop.get("to")
+    for p in (src, dst):
+        if not p or Path(str(p)).is_absolute() or not str(p).startswith("projects/"):
+            raise Invalid(f"move: path must be a stored projects/ path ({p!r})")
+    problem = reach.archive_move_problem(src, dst, kind)
+    if problem:
+        raise Invalid(f"move: {problem}")
+
+
+def _op_move(apply_id, fop, blk, done):
+    a, b = paths.resolve(fop["from"], archived=False), paths.resolve(fop["to"], archived=False)
+    made = not b.parent.exists()
+    b.parent.mkdir(parents=True, exist_ok=True)
+    os.rename(a, b)
+    done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(b.parent) if made else None})
+
+
+def _reverse_move(rec, report):
+    a, b = paths.resolve(rec["from"], archived=False), paths.resolve(rec["to"], archived=False)
+    if not b.is_dir():
+        report.append(f"skipped moving {rec['to']} back: it isn't there")
+    elif a.exists():
+        report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
+    else:
+        os.rename(b, a)
+        made = paths.resolve(rec["made"], archived=False) if rec.get("made") else None
+        if made is not None and made.is_dir() and not any(made.iterdir()):
+            made.rmdir()
+# ===== end BL-09 =====
+
+
+FILE_OPS = {"copy": _op_copy, "remove": _op_remove, "mkdir": _op_mkdir, "write": _op_write, "move": _op_move}
 
 
 def reverse_file_ops(records, report):
@@ -1580,12 +1776,19 @@ def reverse_file_ops(records, report):
                 p.unlink(missing_ok=True)
             else:
                 p.write_text(rec["previous"], encoding="utf-8")
-        elif op == "processed":
-            lines = paths.PROCESSED.read_text(encoding="utf-8").splitlines(keepends=True)
-            for line in rec["lines"]:
-                if line in lines:
-                    lines.remove(line)
-            paths.PROCESSED.write_text("".join(lines), encoding="utf-8")
+        elif op in REVERSE_MORE:
+            REVERSE_MORE[op](rec, report)         # BL-09: processed.txt lines, and a folder move
+
+
+def _reverse_processed(rec, report):
+    lines = paths.PROCESSED.read_text(encoding="utf-8").splitlines(keepends=True)
+    for line in rec["lines"]:
+        if line in lines:
+            lines.remove(line)
+    paths.PROCESSED.write_text("".join(lines), encoding="utf-8")
+
+
+REVERSE_MORE = {"processed": _reverse_processed, "move": _reverse_move}
 
 
 # ── Apply ─────────────────────────────────────────────────────────────────────
@@ -1716,6 +1919,7 @@ def _validate_work(con, work):
             else:
                 held[(p, n)] = (kind, reason)
         blocked += _file_op_problems(p, data, written)
+        blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
         blocked += _rejection_problems(con, p, data)
@@ -2004,21 +2208,57 @@ def _finish_apply(work, apply_id, summary):
 # ===== end BL-229 step 3 (apply) =====
 
 
-def after_apply():
-    """Refresh the search index (BL-07), rebuild the dashboard, then re-export Excel (each only once it exists); and keep the
-    off-laptop copy of the daily backup current (BL-85, only when the projects live outside the vault)."""
-    r = offsite_copy()
+# ===== BL-327: after an apply, each step timed in the debug log; the live server runs the two slow ones after it answers =====
+AFTER_ENV = "CREAITE_AFTER_APPLY"               # "background": the live server runs after_apply_slow itself, after answering
+AFTER_DUE = "after-apply-due"                   # in system/search/: the slow steps are owed (the server's worker clears it)
+
+
+def after_due_flag():
+    """The marker that says an apply's index refresh and OneDrive copy are still to run (BL-327)."""
+    return paths.SEARCH_DIR / AFTER_DUE
+
+
+def _timed(step, fn):
+    """Run one after-apply step and log how long it took (BL-327); its result."""
+    t0 = time.monotonic()
+    try:
+        return fn()
+    finally:
+        debuglog.info("tracker", f"after apply: {step} in {time.monotonic() - t0:.2f}s")
+
+
+def after_apply_slow():
+    """The steps a save needn't wait for: the off-laptop copy of the daily backup (BL-85, BL-323; only when the projects live
+    outside the vault) and the search index (BL-07, incremental since BL-327). Each is timed in the debug log; neither raises."""
+    r = _timed("offsite copy", offsite_copy)
     if r["error"]:
         print(f"Note: off-laptop backup copy not made: {r['error']}")
-    refresh_index()
+    _timed("search index", refresh_index)
+
+
+def after_apply():
+    """After an apply or undo: the OneDrive copy and the search index (after_apply_slow), then rebuild the dashboard and
+    re-export Excel (each only once it exists), every step timed in the debug log (BL-327). Run by the live server
+    (CREAITE_AFTER_APPLY=background), the slow steps are left to its background worker, marked as owed, so the save answers
+    as soon as the tracker is written and the dashboard data rebuilt."""
+    if os.environ.get(AFTER_ENV) == "background":
+        try:
+            paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
+            after_due_flag().touch()
+        except OSError:                                # can't mark it: do them now, as before
+            after_apply_slow()
+    else:
+        after_apply_slow()
     for script, args in (("build_dashboard.py", []), ("excel_sync.py", ["export"])):
         s = paths.ROOT / "system" / "scripts" / script
         if s.exists():
-            r = subprocess.run([sys.executable, str(s), *args], cwd=paths.ROOT, capture_output=True, text=True)
+            r = _timed(" ".join([script, *args]), lambda s=s, args=args: subprocess.run(
+                [sys.executable, str(s), *args], cwd=paths.ROOT, capture_output=True, text=True))
             if r.returncode == 3:      # paused on purpose (e.g. unimported Excel edits); say why
                 print(f"Note: {r.stdout.strip()}")
             elif r.returncode != 0:
                 print(f"Note: {script} {' '.join(args)} failed: {(r.stderr or r.stdout).strip()[:300]}")
+# ===== end BL-327 (after apply) =====
 
 
 # ── Undo ──────────────────────────────────────────────────────────────────────
@@ -3010,6 +3250,8 @@ def index_state():
         return True, "files changed"
     if stamp.get("readers", 1) != INDEX_READERS:     # BL-275, BL-276: PDFs and saved emails are read anew
         return True, "file readers changed"
+    if stamp.get("layout") != INDEX_LAYOUT:          # BL-327: a stamp without each file's record is rebuilt once in full
+        return True, "index layout changed"
     return False, ""
 
 
@@ -3027,42 +3269,145 @@ def read_sidecar(rel):
     return rec if isinstance(rec, dict) and rec.get("path") == rel else None
 
 
-def build_index():
-    """Rebuild vault_search in full (incremental indexing isn't worth it at this size). Returns the file count. A
-    meeting's or report's summary and tags (its sidecar) are part of its content, so keyword search matches them."""
-    found = {}
+# ===== BL-327: an incremental index. The stamp keeps each file's modification time, size, sidecar time and (for a meeting,
+# indexed once wherever it is filed) its content hash; a build re-reads only the files whose stamp changed, or that share a
+# meeting's hash with one that did. A full rebuild only when the readers (INDEX_READERS) or this layout (INDEX_LAYOUT) change,
+# when the table is recreated, or when asked (`tracker.py index`).
+INDEX_LAYOUT = 1
+INDEX_LOCK = threading.Lock()          # one build at a time within a process (the live server's threads)
+MEETING_FOLDERS = ("minutes", "transcripts")
+
+
+def _sidecar_time(rel):
+    """The modification time (ns) of a file's sidecar, or 0."""
+    try:
+        return sidecar_path(rel).stat().st_mtime_ns
+    except OSError:                                     # no sidecar (most files have none)
+        return 0
+
+
+def _index_scan(old):
+    """[(slot, file, folder, code, meta, changed)] for every indexed file now. meta is the stamp's record for the file; a
+    meeting's content hash is worked out again only when its stamp changed."""
+    out = []
     for f, folder, code in index_files():
-        content = text_of(f)
-        # A meeting filed in several projects is indexed once
-        dup = hashlib.sha256(f.read_bytes()).hexdigest() if folder in ("minutes", "transcripts") else paths.rel(f)
-        entry = found.setdefault(dup, {"path": paths.rel(f), "projects": [], "kind": STORED_KIND.get(folder, folder),
-                                       "date": paths.file_date(f)[0] if folder in ("minutes", "transcripts") else (paths.name_date(f.name)[0] or ""), "text": content, "stem": f.stem, "note": None})
-        entry["note"] = entry["note"] or read_sidecar(paths.rel(f))        # any copy's sidecar will do
+        rel = paths.rel(f)
+        try:
+            st = f.stat()
+        except OSError:
+            continue                                     # gone while it was listed
+        meta = {"m": st.st_mtime_ns, "s": st.st_size, "n": _sidecar_time(rel), "f": folder, "c": code}
+        slot = f"{code}|{rel}"
+        prev = (old or {}).get(slot)
+        same = bool(prev) and all(prev.get(k) == v for k, v in meta.items())
+        if same:
+            meta["k"] = prev.get("k")
+        else:
+            try:
+                meta["k"] = hashlib.sha256(f.read_bytes()).hexdigest() if folder in MEETING_FOLDERS else rel
+            except OSError:                              # unreadable now: left out, and read at the next build
+                continue
+        out.append((slot, f, folder, code, meta, not same))
+    return out
+
+
+def _index_entries(scan, keys):
+    """The vault_search rows for these dedup keys, from the files now listed: a meeting filed in several projects once."""
+    found = {}
+    for _slot, f, folder, code, meta, _changed in scan:
+        if meta["k"] not in keys:
+            continue
+        rel = paths.rel(f)
+        entry = found.get(meta["k"])
+        if entry is None:
+            entry = found[meta["k"]] = {"path": rel, "projects": [], "kind": STORED_KIND.get(folder, folder),
+                                        "date": paths.file_date(f)[0] if folder in MEETING_FOLDERS else (paths.name_date(f.name)[0] or ""),
+                                        "text": text_of(f), "stem": f.stem, "note": None}
+        entry["note"] = entry["note"] or read_sidecar(rel)        # any copy's sidecar will do
         if code not in entry["projects"]:
             entry["projects"].append(code)
     for e in found.values():
         note = e.pop("note")
         extra = f"{note.get('summary', '')}\n{', '.join(note.get('tags') or [])}\n" if note else ""
         e["content"] = f"{e.pop('stem')}\n{extra}{e.pop('text')}"
-    started = datetime.now().timestamp()
-    con = connect()
-    ensure_search_table(con)
-    con.execute("BEGIN")
-    con.execute("DELETE FROM vault_search")
+    return list(found.values())
+
+
+def _index_old(full, recreated):
+    """The last build's per-file records, or None when this build must read everything (asked for, a recreated table, new
+    readers or a new layout, or no stamp)."""
+    try:
+        stamp = json.loads(index_stamp().read_text(encoding="utf-8"))
+    except (OSError, ValueError):                      # never built, or a stamp caught half-written: a full build
+        return None
+    if full or recreated or stamp.get("readers", 1) != INDEX_READERS or stamp.get("layout") != INDEX_LAYOUT:
+        return None
+    return stamp.get("entries")
+
+
+def _index_plan(old, scan):
+    """(the dedup keys to write again, the paths whose rows go first). Everything when `old` is None; otherwise the keys of
+    the files changed, added or removed (before and now), and every path a row for them may be under."""
+    if old is None:
+        return {meta["k"] for *_, meta, _c in scan}, set()
+    now_slots = {slot for slot, *_ in scan}
+    keys = {meta["k"] for *_, meta, changed in scan if changed}
+    keys |= {old[slot].get("k") for slot, *_, changed in scan if changed and slot in old}
+    keys |= {m.get("k") for slot, m in old.items() if slot not in now_slots}
+    gone = {slot.split("|", 1)[1] for slot, m in old.items() if m.get("k") in keys}
+    gone |= {paths.rel(f) for _s, f, _fo, _c, meta, _ch in scan if meta["k"] in keys}
+    return keys, gone
+
+
+def _index_write(con, everything, gone, entries):
+    """One transaction: the rows going (all of them for a full build), then the new rows."""
+    con.execute("BEGIN IMMEDIATE")
+    if everything:
+        con.execute("DELETE FROM vault_search")
+    listed = sorted(gone)
+    for i in range(0, len(listed), 500):
+        part = listed[i:i + 500]
+        con.execute(f"DELETE FROM vault_search WHERE path IN ({','.join('?' * len(part))})", part)
     con.executemany("INSERT INTO vault_search (path, project, kind, date, content) VALUES (?,?,?,?,?)",
-                    [(e["path"], " ".join(e["projects"]), e["kind"], e["date"], e["content"])
-                     for e in found.values()])
+                    [(e["path"], " ".join(e["projects"]), e["kind"], e["date"], e["content"]) for e in entries])
     con.execute("COMMIT")
-    con.close()
-    paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
-    index_stamp().write_text(json.dumps({"built": started, "files": len(index_files()),
-                                               "readers": INDEX_READERS}), encoding="utf-8")
-    return len(found)
+
+
+def build_index(full=False):
+    """Bring vault_search up to date and return how many entries it holds. Only the files whose stamp changed since the last
+    build are read again (BL-327); `full`, a change of readers or layout, or a recreated table rebuild it all. A meeting's
+    or report's summary and tags (its sidecar) are part of its content, so keyword search matches them. The time, the files
+    read and removed are in the debug log."""
+    with INDEX_LOCK:
+        t0, started = time.monotonic(), datetime.now().timestamp()
+        con = connect()
+        try:
+            old = _index_old(full, ensure_search_table(con))
+            scan = _index_scan(old)
+            keys, gone = _index_plan(old, scan)
+            entries = _index_entries(scan, keys)
+            if old is None or keys:                    # nothing changed: tracker.db isn't touched (its stamp is the page's signal)
+                _index_write(con, old is None, gone, entries)
+        finally:
+            con.close()
+        paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
+        total = len({meta["k"] for *_, meta, _c in scan})
+        tmp = index_stamp().with_suffix(".tmp")
+        tmp.write_text(json.dumps({"built": started, "files": len(scan), "readers": INDEX_READERS, "layout": INDEX_LAYOUT,
+                                   "entries": {slot: meta for slot, _f, _fo, _c, meta, _ch in scan}}), encoding="utf-8")
+        os.replace(tmp, index_stamp())
+        now_slots = {slot for slot, *_ in scan}
+        removed = sum(1 for slot in (old or {}) if slot not in now_slots)
+        debuglog.info("tracker", f"search index: {'full' if old is None else 'incremental'} in "
+                                 f"{time.monotonic() - t0:.2f}s: {len(entries)} entr{'y' if len(entries) == 1 else 'ies'} "
+                                 f"read again, {removed} file(s) removed, {total} indexed")
+        return total
+# ===== end BL-327 (index) =====
 
 
 def cmd_index():
     """Rebuild the full-text search index (BL-07) and say which online-only files were skipped (BL-85)."""
-    print(f"Indexed {build_index()} file(s).")
+    print(f"Indexed {build_index(full=True)} file(s).")
     away = paths.online_only_files()
     if away:                                         # BL-85: never read, so never downloaded
         print(f"Skipped {len(away)} online-only file(s) (not on this device): " + ", ".join(f.name for _, _, f in away[:5])
@@ -3071,10 +3416,9 @@ def cmd_index():
 
 
 def refresh_index():
-    """After an apply or undo: rebuild if anything changed. Never stops the apply."""
+    """After an apply or undo: bring the index up to date (BL-327: only what changed is read again). Never stops the apply."""
     try:
-        if index_state()[0]:
-            build_index()
+        build_index()
     except Exception as e:  # noqa: BLE001
         print(f"Note: the search index wasn't refreshed: {e}")
 

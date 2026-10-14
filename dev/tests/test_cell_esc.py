@@ -68,6 +68,7 @@ class OneEsc(LiveBrowserCase):
         b.key("Enter")
         b.wait("document.getElementById('snackT').textContent!==''", 30)
         b.wait("document.querySelectorAll('#workTbl td.editing').length===0", 5)
+        b.eval("(async()=>{ await savesSettled(); return true; })()")        # BL-304: the snack says "saving…" at once; applied in the background
         self.assertEqual(self.row("ABC-A-002")["priority"], chosen)
 
     def test_tab_goes_on_to_the_next_cell_with_one_press(self):
@@ -89,6 +90,7 @@ class OneEsc(LiveBrowserCase):
         b.eval("document.getElementById('snackT').textContent=''")
         b.click(f"{self.cell('ABC-A-002', 'pr')} select option[value=\"{other}\"]")
         b.wait("document.getElementById('snackT').textContent!==''", 30)
+        b.eval("(async()=>{ await savesSettled(); return true; })()")        # BL-304: saved in the background
         self.assertEqual(self.row("ABC-A-002")["priority"], other)
         self.assertEqual(b.errors, [])
 
