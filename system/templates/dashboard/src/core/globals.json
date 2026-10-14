@@ -314,6 +314,7 @@
    "paneMarkers",
    "parseHash",
    "parseWhen",
+   "parseWords",
    "passes",
    "pencil",
    "peopleAll",
