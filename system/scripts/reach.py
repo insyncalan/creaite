@@ -271,7 +271,10 @@ def _whose_file(p):
 #                                                  -> <projects root>/<engagement>/_Archive/<that folder>/<file> (BL-03; one file)
 #            <projects root>/<portfolio folder>/<its minutes folder>/<file>
 #                                                  -> <projects root>/<portfolio folder>/_Archive/<minutes folder>/<file> (BL-03)
-ARCHIVE_MOVES = ("archive", "restore", "rename", "reports")
+#   reports_back  exactly the reverse of a "reports" move: <…>/_Archive/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
+#                 the same folders, the same engagement or portfolio; tracker.check_move also requires that an archive moved it)
+ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back")
+FILE_MOVES = ("reports", "reports_back")             # one file, never a folder
 
 
 def _top_folder(name):
@@ -318,11 +321,24 @@ def _move_shape(kind, pa, pb):
     """Whether the parts below the projects root (pa from, pb to) are the move `kind`: a whole folder, or (BL-03) one report file."""
     if kind == "reports":
         return _report_archive(pa, pb)
+    if kind == "reports_back":
+        return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":
         return _in_archive(pa) and _project_folder(pb)
     return _old_archive_rename(pa, pb)
+
+
+def _not_the_shape(kind):
+    """Why a move isn't the `kind` it says it is."""
+    if kind == "reports":
+        return (f"that isn't a report or minutes file moved into its own engagement's {paths.ARCHIVE} (minutes, weekly and "
+                "client reports and Steerco one-pagers only)")
+    if kind == "reports_back":
+        return (f"that isn't a report or minutes file moved back from its own engagement's {paths.ARCHIVE} to the same "
+                "folder (minutes, weekly and client reports and Steerco one-pagers only)")
+    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
 
 
 def archive_move_problem(src, dst, kind):
@@ -342,13 +358,10 @@ def archive_move_problem(src, dst, kind):
     if not pa or not pb:
         return "a folder move stays inside the projects folder"
     if not _move_shape(kind, pa, pb):
-        if kind == "reports":
-            return (f"that isn't a report or minutes file moved into its own engagement's {paths.ARCHIVE} (minutes, weekly and "
-                    "client reports and Steerco one-pagers only)")
-        return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
-    if kind == "reports" and not a.is_file():
+        return _not_the_shape(kind)
+    if kind in FILE_MOVES and not a.is_file():
         return f"{src} isn't a file that exists"
-    if kind != "reports" and not a.is_dir():
+    if kind not in FILE_MOVES and not a.is_dir():
         return f"{src} isn't a folder that exists"
     if b.exists():
         return f"{dst} already exists; a folder move never overwrites"

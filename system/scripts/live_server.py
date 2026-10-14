@@ -87,7 +87,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/update/upload   save a chosen release zip {name, data (base64)} to system/releases/
 - POST /api/update/inspect  {source: "releases" | "downloads"} what installing it would change (update.py inspect)
 - POST /api/update/install  {source, reinstall} update.py install; POST /api/update/undo {keep_database} update.py undo
-- GET  /api/files        the Files page's lists, rescanned (BL-87)
+- GET  /api/files        the Files page's lists, rescanned (BL-87); with the files BL-03 archived, for Files' Archived (BL-331)
+- POST /api/files/move-back {path}: one archived report or minutes back to its place, on the approval card (BL-331)
 - POST /api/ask/queue    {op: list|add|remove|resume}: messages typed while a run is going, run in order after it (BL-257)
 - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
                          {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
@@ -3818,6 +3819,8 @@ def build_edit_card(run, final):
     src = edit_spec_file(m.group(1))
     data = src.read_bytes() if src else None
     spec, why = edit_spec(data) if data is not None else (None, "the change file isn't a .json file in system/staging/drafts/")
+    if spec and (spec.get("file_changes") or {}).get("archive") == "reports_back":      # BL-331: Files' Move back only
+        spec, why = None, "an archived file is moved back from Files (Move back), never from ask creaite"
     if not spec:
         run.emit("editcard", card=None, title=title, refused=why)
         return None
@@ -4001,10 +4004,30 @@ def project_archive_card(code, action, cancel):
 # ===== end BL-09 =====
 
 
+# ===== BL-331: Files' Move back, on the same change card =====
+def move_back_route(handler, req):
+    """POST /api/files/move-back {path}: the stored path of a file Files shows as archived. archive.back_spec builds the move
+    (never the page): only a file an archive moved, back to the place it came from, never onto a file that is there. It goes on
+    the approval card (server_edit_card); tracker.py apply moves it on Approve, and undo puts it back in _Archive."""
+    import archive
+    path = req.get("path")
+    if not isinstance(path, str) or set(req) - {"path"}:
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    spec, why = archive.back_spec(path)
+    if not spec:
+        return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
+    card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    if not card:
+        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+    return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
+# ===== end BL-331 =====
+
+
 ADMIN_ROUTES.update({"/api/edit/approve": lambda h, r: edit_answer(h, r, "approve"),
                      "/api/edit/reject": lambda h, r: edit_answer(h, r, "reject"),
                      "/api/edit/stage": lambda h, r: edit_answer(h, r, "stage"), "/api/edit/pending": edit_pending_route,
-                     "/api/project/archive": project_archive_route})          # BL-09
+                     "/api/project/archive": project_archive_route,           # BL-09
+                     "/api/files/move-back": move_back_route})                # BL-331
 # ===== end BL-258 =====
 
 # ===== BL-314 (v191-ask-routing): a change asked in the chat runs through the dashboard's own action =====

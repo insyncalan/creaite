@@ -21,7 +21,9 @@ archive.reports_after_months months ago (12) move into their engagement's own _A
 a line once a month while any are due ("Archive 14 reports and minutes older than 12 months"); its Fix it puts this command's spec
 on the approval card, and Approve applies it through tracker.py apply (a `move` of kind "reports", the BL-09 guard exception: only
 the apply moves into _Archive). Stored paths keep resolving (paths.resolve). Transcripts, agendas, documents and applied proposals
-are never moved. Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
+are never moved. BL-331: Files lists the archived ones with Move back, the exact reverse move ("reports_back"), which only the
+live server puts on the approval card (archived_files, back_spec); never onto a file that is there.
+Set CREAITE_NOW="YYYY-MM-DD HH:MM" to fix the clock (tests).
 """
 import json
 import os
@@ -178,13 +180,13 @@ def due_reports(on=None):
     if months <= 0:
         return []
     cutoff = tracker.months_before(on or today(), months).isoformat()
-    out, seen = [], set()
+    out, seen, back = [], set(), moved_back()           # BL-331: a file Alan moved back is never offered again
     for code, base in paths.project_folders():
         kinds = ("minutes",) if code == "_portfolio" else paths.ARCHIVED_FILE_KINDS   # the portfolio: minutes only (Alan, 14-10-2026)
         for kind in kinds:
             sub = paths.folder_name(kind).strip("/")
             for f in due_in(base / sub, kind, cutoff):
-                if f not in seen and not (base / paths.ARCHIVE / sub / f.name).exists():
+                if f not in seen and paths.rel(f) not in back and not (base / paths.ARCHIVE / sub / f.name).exists():
                     seen.add(f)
                     out.append({"code": code, "kind": kind, "from": paths.rel(f),
                                 "to": paths.rel(base / paths.ARCHIVE / sub / f.name)})
@@ -270,6 +272,126 @@ def reports_line(st):
         return f"Archived {n} report{'s' if n != 1 else ''} and minutes on {shown(r['last']['at'])}."
     return f"No reports or minutes older than {r['months']} months." if not r["due"] else \
         f"{r['due']} reports and minutes older than {r['months']} months: offered again next month."
+
+
+# ===== BL-331: move one archived report back (Alan, 14-10-2026) =====
+# Files lists what BL-03's archive moved into an engagement's (or the portfolio's) _Archive, marked Archived, each with Move back.
+# Move back is the exact reverse of that move (a `move` of kind "reports_back": reach.archive_move_problem checks the reversed
+# shape, and tracker.check_move that an archive moved that very file there). Only the live server puts it on the approval card,
+# from the stored path the page names; tracker.py apply moves it and undo puts it back in _Archive. Never onto a file that is
+# there: a taken place is refused. Once back, the apply's search refresh indexes it again.
+BACK = "reports_back"
+
+
+def archived_moves(con=None):
+    """{the archived file's stored path: its original stored path} for each file an apply (not undone) archived (kind "reports")
+    and no later apply (not undone) moved back, oldest first. Read from the applies table only."""
+    own = con is None
+    if own:
+        if not paths.DB.exists():
+            return {}
+        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    try:
+        rows = con.execute("SELECT file_ops FROM applies WHERE undone_at IS NULL ORDER BY apply_id").fetchall()
+    except sqlite3.Error:  # a database from before applies kept file operations: nothing was archived
+        rows = []
+    finally:
+        if own:
+            con.close()
+    out = {}
+    for (ops,) in rows:
+        try:
+            recs = json.loads(ops or "[]")
+        except ValueError:  # an apply's record in an older shape: no archive moves in it
+            continue
+        for r in recs if isinstance(recs, list) else []:
+            if not isinstance(r, dict) or r.get("op") != "move":
+                continue
+            if r.get("kind") == "reports":
+                out[r.get("to")] = r.get("from")
+            elif r.get("kind") == BACK:
+                out.pop(r.get("from"), None)
+    return out
+
+
+def moved_back(con=None):
+    """The stored paths of the files moved back (a `move` of kind "reports_back" in an apply not undone): BL-03's monthly offer
+    leaves them out for good (Alan, 14-10-2026). Read from the applies table only."""
+    own = con is None
+    if own:
+        if not paths.DB.exists():
+            return set()
+        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    try:
+        rows = con.execute("SELECT file_ops FROM applies WHERE undone_at IS NULL").fetchall()
+    except sqlite3.Error:  # a database from before applies kept file operations: nothing was moved back
+        rows = []
+    finally:
+        if own:
+            con.close()
+    out = set()
+    for (ops,) in rows:
+        try:
+            recs = json.loads(ops or "[]")
+        except ValueError:  # an apply's record in an older shape: no moves back in it
+            continue
+        out.update(r.get("to") for r in (recs if isinstance(recs, list) else [])
+                   if isinstance(r, dict) and r.get("op") == "move" and r.get("kind") == BACK)
+    return out
+
+
+def _place(original):
+    """(code, Files folder, sub) of an original stored path in a project or the portfolio that is in place, or None."""
+    p = paths.resolve(original, archived=False)
+    for code, base in paths.project_folders():
+        try:
+            rest = p.relative_to(base).parts
+        except ValueError:  # not this project's folder: the next one
+            continue
+        sub = "/".join(rest[:-1])
+        if sub == paths.folder_name("minutes").strip("/"):
+            return code, "minutes", ""
+        if code != "_portfolio" and sub in paths.archivable_folders():
+            return code, "reports", "Steerco" if sub == paths.folder_name("steerco").strip("/") else "Weekly"
+    return None
+
+
+def archived_files():
+    """Files' archived list (BL-331): [{p, f, sub, n, type, date, kb, path, archived}] for each file BL-03 moved that is still in
+    its _Archive. path is the stored path (it opens, through paths.resolve). Names, sizes and dates only; nothing is read."""
+    out = []
+    for at, original in archived_moves().items():
+        if not at or not original:
+            continue
+        f = paths.resolve(at, archived=False)
+        place = _place(original)
+        if place is None or f.is_symlink() or not f.is_file():
+            continue
+        code, kind, sub = place
+        out.append({"p": code, "f": kind, "sub": sub, "n": f.name, "type": f.suffix.lstrip(".").lower(),
+                    "date": paths.name_date(f.name)[0] or "", "kb": max(1, round(f.stat().st_size / 1024)),
+                    "path": original, "archived": True})
+    return sorted(out, key=lambda x: (x["date"], x["n"]), reverse=True)
+
+
+def back_spec(original):
+    """(spec, None) that moves the archived file whose stored path is `original` back to it, or (None, why not)."""
+    original = str(original or "")
+    if not original.startswith("projects/") or ".." in Path(original).parts:
+        return None, "that isn't a stored project path"
+    at = next((a for a, o in archived_moves().items() if o == original), None)
+    if not at:
+        return None, "that file isn't one the archive moved, so it can't be moved back"
+    src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
+    if src.is_symlink() or not src.is_file():
+        return None, f"{src.name} isn't in {paths.ARCHIVE} any more"
+    if os.path.lexists(dst):
+        return None, f"{dst.name} is already in its place: nothing is overwritten (rename or move that file first)"
+    place = _place(original)
+    return {"source_run": "archive", "items": [], "file_changes": {
+        "title": f"Move back {dst.name}", "project": place[0] if place and place[0] != "_portfolio" else None,
+        "archive": BACK, "file_ops": [{"op": "move", "from": at, "to": original}]}}, None
+# ===== end BL-331 =====
 
 
 def main(argv):
