@@ -3,6 +3,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -211,6 +212,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -305,6 +307,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -531,6 +534,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -673,6 +677,7 @@
   "after": {
    "actions": [
     {
+     "archived": 0,
      "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
      "client_visible": 0,
      "closed": null,
@@ -910,6 +915,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -1404,6 +1410,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -1887,6 +1894,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,

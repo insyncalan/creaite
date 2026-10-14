@@ -55,6 +55,7 @@ export let runSearch = async function(){ const q=$("#vsInput").value.trim(); SRC
 export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.res.groups[g]&&SRCH.res.groups[g][+i]; if(r) openFound(r); }
 /* where a result belongs: an item in its panel, a meeting in the preview, a report or document in the system viewer */
 export function openFound(r){ const o=r.opens;
+  if(o.type==="item"&&o.archived&&!S.showArchived){ snack("Its project is archived: Settings › Advanced › Show archived projects opens it"); return; }   /* BL-09 */
   if(o.type==="item"){ if(o.table==="milestones"){ openMilestone(o.id); return; }   /* BL-186: the Milestones page, its editor open */ const k=o.table; shared.WT=k; go("work"); openRecord(k,o.id); return; }
   if(o.type==="preview") return searchPreview(o.path,o.q);
   openPath(o.path); }

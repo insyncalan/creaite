@@ -4081,6 +4081,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     execResult: () => execResult,
     execRewrite: () => execRewrite,
     factsHtml: () => factsHtml,
+    farch: () => farch,
     fchipHtml: () => fchipHtml,
     fd: () => fd,
     fdMd: () => fdMd,
@@ -4303,6 +4304,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     mountSneak: () => mountSneak,
     mountStatusDots: () => mountStatusDots,
     mounted: () => mounted,
+    moveBack: () => moveBack,
     moveCol: () => moveCol,
     moveView: () => moveView,
     msChoices: () => msChoices,
@@ -4447,6 +4449,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     openFound: () => openFound,
     openFromAddress: () => openFromAddress,
     openGen: () => openGen,
+    openItemsAsk: () => openItemsAsk,
     openMilestone: () => openMilestone,
     openNew: () => openNew,
     openNewMilestone: () => openNewMilestone,
@@ -4702,6 +4705,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     prio: () => prio,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
+    projArchive: () => projArchive,
+    projArchiveBind: () => projArchiveBind,
+    projArchiveHtml: () => projArchiveHtml,
     projFeedItems: () => projFeedItems,
     projFirst: () => projFirst,
     projHistory: () => projHistory,
@@ -7508,6 +7514,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
     snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
     if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
+    if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
     return !!r4.ok;
   }
@@ -7684,6 +7691,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
             " fine"
           ] }),
           /* @__PURE__ */ u2("p", { class: "sub", children: res.fine_names.join(", ") })
+        ] }),
+        (res.archiving || []).length > 0 && /* @__PURE__ */ u2(S2, { children: [
+          /* @__PURE__ */ u2("h3", { class: "hsub", children: "Archiving" }),
+          /* @__PURE__ */ u2("ul", { class: "hsteps", id: "healthArchiving", "aria-label": "Archiving", children: (res.archiving || []).map((a5) => /* @__PURE__ */ u2("li", { children: a5 })) })
         ] }),
         alone.length > 0 && /* @__PURE__ */ u2(S2, { children: [
           /* @__PURE__ */ u2("h3", { class: "hsub", children: "If you need them" }),
@@ -9681,6 +9692,53 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const i5 = document.getElementById("cmdkIn");
     if (i5 && !i5.hasAttribute("aria-label") && !i5.hasAttribute("aria-labelledby")) i5.setAttribute("aria-label", "Search projects, items and commands");
   })();
+  var PSTATE = { active: "Active", closed: "Closed", archived: "Archived" };
+  function projArchiveHtml() {
+    const L2 = (D.project_states || []).filter((p6) => p6.state !== "archived" || S.showArchived);
+    return row("Show archived projects", sw("showArchived"), "Their items in Work, Today and the Excel export. Search finds them either way, marked Archived") + `<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L2.map((p6) => {
+      const back = p6.state === "archived";
+      return `<tr><td>${esc(p6.name)}</td><td>${PSTATE[p6.state] || esc(p6.state)}</td><td class="mgract"><button class="mini" data-parch="${back ? "restore" : "archive"}" data-pcode="${esc(p6.code)}" aria-label="${back ? "Restore" : "Archive"} ${esc(p6.name)}">${back ? "Restore" : "Archive"}</button></td></tr>`;
+    }).join("") || '<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`;
+  }
+  function openItemsAsk(name, open2) {
+    return new Promise((res) => {
+      let dlg = $("#parchDlg");
+      if (!dlg) {
+        addHTML(document.body, "beforeend", html`<dialog id="parchDlg" aria-labelledby="parchH"></dialog>`);
+        dlg = $("#parchDlg");
+      }
+      putHTML(dlg, html`<h2 id="parchH">${name} has ${open2.length} open item${open2.length === 1 ? "" : "s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open2.slice(0, 30).map((o5) => html`<li><b>${o5.id}</b> ${o5.text}</li>`)}</ul>${open2.length > 30 ? html`<p class="sub">and ${open2.length - 30} more</p>` : ""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
+      const fin = (v4) => {
+        dlg.close();
+        res(v4);
+      };
+      dlg.querySelector('[data-a="stop"]').onclick = () => fin(false);
+      dlg.querySelector('[data-a="go"]').onclick = () => fin(true);
+      dlg.oncancel = () => res(false);
+      dlg.showModal();
+    });
+  }
+  async function projArchive(code, action, cancel) {
+    if (!viaServer()) {
+      snack("Archiving needs the live server");
+      return;
+    }
+    const r4 = await api("/api/project/archive", { code, action, cancel_open: !!cancel });
+    if (!r4.ok && (r4.open || []).length && !cancel) {
+      if (await openItemsAsk(pName(code), r4.open)) return projArchive(code, action, true);
+      snack("Stopped: nothing was archived");
+      return;
+    }
+    if (!r4.ok) {
+      snack(oneLine(r4.message || "It couldn't be prepared"));
+      return;
+    }
+    snack(r4.message);
+    await pendingEdit();
+  }
+  function projArchiveBind() {
+    $$("#projArch [data-parch]").forEach((b5) => b5.onclick = () => projArchive(b5.dataset.pcode, b5.dataset.parch, false));
+  }
   var row = (l6, c5, h5) => {
     const id = "sr" + ++SRN;
     return `<div class="srow"><div><span id="${id}">${l6}</span>${h5 ? `<small id="${id}h">${h5}</small>` : ""}</div><div>${srName(c5, id, h5, l6)}</div></div>`;
@@ -9781,9 +9839,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       cat: "people",
       title: "Projects and register",
       wide: true,
-      kw: "projects register add close code signals domains matching",
-      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>`
+      kw: "projects register add close archive restore archived code signals domains matching",
+      render: () => `<p class="sub" style="margin:4px 0 0">Add or close projects and edit matching signals with plain English in ask creaite (for example <span data-codeok>“add project DEF…”, “add client.com to ABC's domains”</span>).</p>` + projArchiveHtml(),
+      after: () => projArchiveBind()
     },
+    /* BL-09 */
     {
       id: "health",
       cat: "health",
@@ -10319,6 +10379,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (k5 === "autoApply") renderSettings();
       if (k5 === "filesDocs") refreshFiles(true);
       if (k5 === "flowWeeks") reloadData();
+      if (k5 === "showArchived") reloadData().then(() => renderSettings());
       status();
       snack("Saved to settings.json");
     });
@@ -21401,6 +21462,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   // files.js
   shared.FSEL = { p: "All", f: "All", sub: "", quick: "all" };
   var FOPEN = new Set(store.get("creaite-files-open", []));
+  var farch = () => D.files_archived || [];
   var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
   function renderFiles() {
     const cnt = (f5) => FILES.filter(f5).length;
@@ -21416,7 +21478,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       });
     });
     putHTML($("#tree"), html`${h5}`);
-    putHTML($("#fquick"), html`${[["all", "All files"], ["latest", "Latest reports"], ["week", "This week's meetings"], ["inbox", "Intake"]].map((q5) => html`<button class="vchip" data-q="${q5[0]}" aria-pressed="${String(shared.FSEL.quick === q5[0] && !(shared.FSEL.f === "reports" && shared.FSEL.sub && shared.FSEL.p === "All"))}">${q5[1]}</button>`)}${REPFOLDERS.map((r4) => html`<button class="vchip" data-rep="${r4}" aria-pressed="${String(shared.FSEL.p === "All" && shared.FSEL.f === "reports" && shared.FSEL.sub === r4)}" title="Reports filed in the ${r4} folder">${r4}</button>`)}`);
+    putHTML($("#fquick"), html`${[["all", "All files"], ["latest", "Latest reports"], ["week", "This week's meetings"], ["inbox", "Intake"], ...farch().length ? [["archived", "Archived"]] : []].map((q5) => html`<button class="vchip" data-q="${q5[0]}" aria-pressed="${String(shared.FSEL.quick === q5[0] && !(shared.FSEL.f === "reports" && shared.FSEL.sub && shared.FSEL.p === "All"))}">${q5[1]}</button>`)}${REPFOLDERS.map((r4) => html`<button class="vchip" data-rep="${r4}" aria-pressed="${String(shared.FSEL.p === "All" && shared.FSEL.f === "reports" && shared.FSEL.sub === r4)}" title="Reports filed in the ${r4} folder">${r4}</button>`)}`);
     const q4 = $("#fsName").value.toLowerCase(), t5 = $("#fsType").value, fr = DDATE.test($("#fsFrom").value) ? toIso($("#fsFrom").value) : "", to = DDATE.test($("#fsTo").value) ? toIso($("#fsTo").value) : "";
     let L2 = FILES.filter((x5) => (shared.FSEL.p === "All" || x5.p === shared.FSEL.p) && (shared.FSEL.f === "All" || x5.f === shared.FSEL.f) && (!shared.FSEL.sub || x5.sub === shared.FSEL.sub));
     if (shared.FSEL.quick === "latest") {
@@ -21428,8 +21490,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     if (shared.FSEL.quick === "week") L2 = FILES.filter((f5) => (f5.f === "minutes" || f5.f === "transcripts") && f5.date >= WEEKSTART);
     if (shared.FSEL.quick === "inbox") L2 = FILES.filter((f5) => f5.p === "inbox");
+    if (shared.FSEL.quick === "archived") L2 = farch().slice();
     L2 = L2.filter((f5) => (!q4 || f5.n.toLowerCase().includes(q4)) && (t5 === "All" || f5.type === t5) && (!fr || f5.date >= fr) && (!to || f5.date <= to)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L2.length ? L2.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${pName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L2.length ? L2.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${pName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
     filesStatus(L2.length);
     if (!shared.LOADING) $$("#filesTbl tr[data-fp]").forEach((tr) => {
       const t6 = hubFor({ path: tr.dataset.fp }), td = tr.querySelector("td");
@@ -21492,6 +21555,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const known = new Set(FILES.map((f5) => f5.path));
       const fresh = j4.files.filter((f5) => !known.has(f5.path) && f5.p !== "inbox");
       FILES.splice(0, FILES.length, ...j4.files);
+      D.files_archived = j4.archived || [];
       D.inbox = j4.inbox;
       FAT = j4.at;
       FERR = "";
@@ -21527,11 +21591,25 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (!SERVED) snack("Refresh needs the live server; this page shows the file list of the last build");
     };
     $("#filesTbl").addEventListener("click", (e4) => {
+      const mb = e4.target.closest("[data-moveback]");
+      if (mb) {
+        moveBack(mb.dataset.moveback);
+        return;
+      }
       const tr = e4.target.closest("tr[data-fp]");
       if (!tr || e4.target.closest("a,button")) return;
       shared.FSELFILE = tr.dataset.fp;
       $$("#filesTbl tr[data-fp]").forEach((r4) => r4.classList.toggle("sel", r4 === tr));
     });
+  }
+  async function moveBack(path) {
+    if (!viaServer()) {
+      snack("Moving a file back needs the live server");
+      return;
+    }
+    const r4 = await api("/api/files/move-back", { path });
+    snack(oneLine(r4.message || (r4.ok ? "On the approval card" : "It couldn't be prepared")));
+    if (r4.ok) await pendingEdit();
   }
 
   // help.js
@@ -34112,6 +34190,10 @@ ${d5.text}`);
   }
   function openFound(r4) {
     const o5 = r4.opens;
+    if (o5.type === "item" && o5.archived && !S.showArchived) {
+      snack("Its project is archived: Settings › Advanced › Show archived projects opens it");
+      return;
+    }
     if (o5.type === "item") {
       if (o5.table === "milestones") {
         openMilestone(o5.id);
@@ -37899,7 +37981,7 @@ ${d5.text}`);
     }, by);
     return true;
   }
-  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
+  var SKEY = { bgActions: "work.board.group.actions", bgRaid: "work.board.group.raid", bgDecisions: "work.board.group.decisions", boardClosedDays: "work.board.closed_days", flowWeeks: "dashboard.flow_weeks", undatedGrace: "dashboard.undated_grace_days", filesDocs: "dashboard.files_show_documents", showArchived: "dashboard.show_archived", listCap: "dashboard.project_list_cap", me: "identity.name", short: "identity.short_forms", defPriority: "defaults.new_action_priority", defActionView: "defaults.actions_status_filter", defRaidView: "defaults.raid_status_filter", defDecisionView: "defaults.decisions_view", dueSoon: "review.due_soon_days", autoApply: "dashboard.auto_apply", theme: "dashboard.theme", palette: "dashboard.palette", motion: "dashboard.motion", remindersOn: "reminders.enabled", weeklyDay: "reminders.weekly_report_day", weeklyTime: "reminders.weekly_report_from", sweepDue: "sweep.due_from", lookback: "sweep.first_run_lookback_days", srcInbox: "sweep.sources.inbox", srcSent: "sweep.sources.sent_items", srcChats: "sweep.sources.teams_chats", srcChannels: "sweep.sources.teams_channels", srcCalendar: "sweep.sources.calendar", possible: "sweep.show_possible_matches", staleDays: "review.stale_after_days", rvAdvance: "review.auto_advance", dupOverlap: "review.duplicate_overlap", overdueDays: "health.at_risk_overdue_days", slipAtRisk: "health.at_risk_milestone_slip_weeks_max", slipOff: "health.off_track_milestone_slip_weeks_over", urgentOff: "health.off_track_urgent_risks_min", port: "live_mode.port", dailyBackup: "backups.daily", ownDomains: "identity.own_domains", catchupSweep: "day.catchup_sweep", catchupAfter: "day.catchup_after_minutes" };
   async function writeSettings(changes) {
     let sp = null;
     if (shared.SETROW && Date.now() - shared.SETROW.at < 2e3) {

@@ -102,7 +102,7 @@ def boom(*a, **k): raise SystemExit('built everything')
 bd.collect = boom
 v = bd.files_view()
 print(json.dumps([sorted(v), len(v['files']), [f['f'] for f in v['files'] if f['f'] == 'documents'], bool(v['inbox'])]))""")
-        self.assertEqual(o[0], ["at", "files", "inbox"])
+        self.assertEqual(o[0], ["archived", "at", "files", "inbox"])        # BL-331: the files BL-03 archived, for Files' Archived
         self.assertGreater(o[1], 0)
         self.assertEqual(o[2], [])
         self.assertTrue(o[3])
@@ -126,7 +126,7 @@ class FilesExternalLayoutTests(OneDriveCase):
         touch(self.eng("ABC", "04 Reporting", "Content", "chart.png"))
         touch(self.eng("ABC", "02 Meetings", "Agendas", "Agenda.docx"))
         touch(self.eng("ABC", "00 Admin", "Contract", "Statement of work.docx"))
-        touch(self.eng("ABC", "zz Archive", "Old plan.docx"))
+        touch(self.eng("ABC", "_Archive", "Old plan.docx"))
         touch(self.eng("ABC", "02 Meetings", "Minutes", "2026-10-01 Weekly sync.docx"))
 
     def files(self, show=False):
@@ -258,7 +258,7 @@ class FilesLiveTests(FilesLiveBase):
         req = urllib.request.Request(self.base + "/api/files", headers={"X-Creaite-Token": token})
         with urllib.request.urlopen(req, timeout=30) as r:
             body = json.loads(r.read())
-        self.assertEqual(sorted(body), ["at", "files", "inbox", "ok"])                            # not the dashboard's whole data
+        self.assertEqual(sorted(body), ["archived", "at", "files", "inbox", "ok"])                          # not the dashboard's whole data
         self.assertTrue(body["ok"])
         self.assertNotIn("documents", {f["f"] for f in body["files"]})
 

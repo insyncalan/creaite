@@ -312,6 +312,13 @@ def files(folders, documents=False):
     return out
 
 
+def archived_files(folders):
+    """BL-331: the reports and minutes BL-03 archived that are still in their _Archive, for the listed projects and the portfolio
+    (archive.archived_files: names, sizes and dates from the apply records; nothing in _Archive is read or indexed)."""
+    import archive
+    return [f for f in archive.archived_files() if f["p"] in folders or f["p"] == "_portfolio"]
+
+
 INBOX_TYPES = (".vtt", ".docx", ".txt", ".md", ".pdf")
 
 
@@ -1260,6 +1267,7 @@ def ui_settings(s):
             "slipOff": g("health", "off_track_milestone_slip_weeks_over", d=2),
             "urgentOff": g("health", "off_track_urgent_risks_min", d=2), "dailyBackup": g("backups", "daily", d=True),
             "filesDocs": g("dashboard", "files_show_documents", d=False),   # BL-87
+            "showArchived": g("dashboard", "show_archived", d=False),     # BL-09: archived projects' items in the views
             "undatedGrace": g("dashboard", "undated_grace_days", d=3),      # BL-95
             "flowWeeks": flow_weeks(s),                                     # BL-91
             "weekPrios": list(g("dashboard", "week_ahead_priorities", d=None) or []),   # BL-235 (fix-small-17): empty means every priority
@@ -1295,6 +1303,23 @@ def clock():
     return datetime.strptime(fixed, "%Y-%m-%d %H:%M") if fixed else datetime.now()
 
 
+def ro_db():
+    """A read-only connection to tracker.db in which archived projects and their items are left out (BL-09: they leave the
+    default views), unless Settings shows them (dashboard.show_archived)."""
+    import tracker
+    return tracker.hide_archived(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True))
+
+
+def project_states(con):
+    """[{code, name, state}] for Settings › Projects (BL-09): every project, archived ones included (main.projects is the table
+    itself, never the view that hides them). state is active, closed or archived."""
+    try:
+        found = con.execute("SELECT code, name, active, archived FROM main.projects ORDER BY code").fetchall()
+    except sqlite3.OperationalError:                # a database from before BL-09: no archived column until migrate
+        return []
+    return [{"code": c, "name": n, "state": "archived" if ar else "active" if a else "closed"} for c, n, a, ar in found]
+
+
 def collect(now=None):
     """Everything the dashboard shows, as one dict (embedded in dashboard.html): projects, work, review, files, Today,
     the Week ahead, the meeting hub, flow, settings and the rest, read from the tracker (read only) and the vault's
@@ -1302,7 +1327,7 @@ def collect(now=None):
     now = now or clock()
     today = now.date()
     settings = paths.load_settings()
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     con.row_factory = sqlite3.Row
     project_rows = rows(con, "SELECT * FROM projects WHERE active = 1 ORDER BY code")
     folders = {}
@@ -1359,11 +1384,13 @@ def collect(now=None):
         "settings": ui_settings(settings), "people": settings.get("people", {"added": [], "hidden": []}),
         "workstreams": settings.get("workstreams", {"added": [], "hidden": []}),
         "projects": projects, "actions": actions, "raid": raid, "decisions": decision_waits(con, decisions),
+        "project_states": project_states(con),                 # BL-09: Settings › Projects' Archive and Restore
         "review": (rq := review_queue(con)),
         "review_focus": review.focus_queue(rq, review.spot_rate(settings, con.execute("SELECT min(at) FROM applies").fetchone()[0], today.isoformat())),   # BL-208
         "peek_staged": peek_staged(), "activity": activity(con, act_flags), "activity_capped": act_flags.get("capped", False),
         "activity_older": act_flags.get("older", {}),          # BL-250 (fix-history-feed): older changes, for the items' own feeds
         "files": file_list,
+        "files_archived": archived_files(folders),            # BL-331: Files' Archived, each with Move back
         "folders": {c: f.name for c, f in folders.items()},
         "image_dirs": {c: paths.rel(paths.folder(c, "images")) for c in folders},     # BL-85: where the editor files new pictures
         "stakeholders": stakeholders(),
@@ -1749,7 +1776,7 @@ def early_warnings(settings, today, con=None):
     cfg = warn_settings(settings)
     own = con is None
     if own:
-        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+        con = ro_db()
     q = lambda sql, *a: con.execute(sql, a).fetchall()  # noqa: E731
     out = []
     try:
@@ -2058,7 +2085,7 @@ def decision_revisit_reminders(today):
     """A reminder for each made decision whose revisit date (YYYY-MM-DD) has come."""
     if not paths.DB.exists():
         return []
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     try:
         found = con.execute("SELECT id, decision, revisit FROM decisions WHERE status = 'Made' AND revisit GLOB "
                             "'[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND revisit <= ? ORDER BY revisit, id",
@@ -2517,7 +2544,7 @@ def files_view(now=None):
     """{files, inbox, at}: the file lists alone (BL-87), for the live server's /api/files."""
     now = now or clock()
     settings = paths.load_settings()
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     try:
         codes = [r[0] for r in con.execute("SELECT code FROM projects WHERE active = 1 ORDER BY code")]
     finally:
@@ -2529,7 +2556,8 @@ def files_view(now=None):
         except LookupError:  # BL-228: a project without a folder simply has no files to list
             pass
     shown = bool(_dig(settings, ("dashboard", "files_show_documents"), False))
-    return {"files": files(folders, shown), "inbox": inbox([{"code": c} for c in codes]), "at": now.strftime("%Y-%m-%d %H:%M")}
+    return {"files": files(folders, shown), "archived": archived_files(folders), "inbox": inbox([{"code": c} for c in codes]),
+            "at": now.strftime("%Y-%m-%d %H:%M")}
 
 
 # BL-91: Trends and flow. What the data shows over time, from dates already held: opened and closed per week, how long open items
@@ -2681,7 +2709,7 @@ def flow_summary(this, now_over, last_over, oldest_action):
 
 def flow_line(code, today=None, settings=None):
     """The one-line flow summary of a project's week (for the weekly report): "12 opened, 9 closed; 3 overdue, down from 5; …"."""
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     con.row_factory = sqlite3.Row
     try:
         settings = settings or paths.load_settings()

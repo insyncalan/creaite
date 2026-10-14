@@ -39,6 +39,18 @@ FIXES = {
                 "does": ("Make today's daily backup and its zip if they aren't there, then copy the newest zip to the OneDrive "
                          "backup folder."),
                 "command": ("session.py", "backup")},
+    # BL-09: a move, so it goes on the approval card: the command only prints the change; the live server puts it on the card
+    # (Approve applies it through tracker.py apply, the one thing that may move a folder into or out of _Archive)
+    "old_archive": {"title": "Folders still called zz Archive", "button": "Fix it",
+                    "does": "Show the renames (each zz Archive folder becomes _Archive, in the same place) on the approval card; "
+                            "nothing moves until you approve it there, and Undo moves them back.",
+                    "command": ("propose.py", "old-archives"), "card": True},
+    # BL-03: a move too, so the same: archive.py reports only prints the moves; Approve on the card applies them through tracker.py
+    "archive_reports": {"title": "Archive old reports and minutes", "button": "Archive them",
+                        "does": "Show the moves on the approval card: each report, minutes and Steerco one-pager older than the "
+                                "period goes into its engagement's own _Archive, in the same place below it. Nothing moves until "
+                                "you approve it there; links keep working, nothing is deleted, and Undo moves them back.",
+                        "command": ("archive.py", "reports"), "card": True},
 }
 
 # doctor check id → (fix id, words in its detail that mean this fix mends it: any of them, or None for any detail)
@@ -46,6 +58,8 @@ CHECK_FIXES = {
     "launcher_vault": ("launcher", ("opens another vault",)),
     "python_version": ("rosetta", ("Rosetta",)),
     "offsite_backup": ("offsite", ("no copy yet", "days ago")),       # not "can't write to …": a copy can't mend that
+    "old_archive_folders": ("old_archive", ("zz Archive",)),          # BL-09
+    "archive_reports": ("archive_reports", ("Archive ",)),            # BL-03: the monthly line
 }
 STANDALONE = ("icon", "m365")
 
