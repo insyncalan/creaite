@@ -3282,6 +3282,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     PKREC: () => PKREC,
     PKSTORE: () => PKSTORE,
     PKTABS: () => PKTABS,
+    PLAINEV: () => PLAINEV,
     POLISH_TONES: () => POLISH_TONES,
     PREPN: () => PREPN,
     PREPSAVED: () => PREPSAVED,
@@ -4915,6 +4916,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     rteCmd: () => rteCmd,
     rteLink: () => rteLink,
     runCk: () => runCk,
+    runClosure: () => runClosure,
     runGen: () => runGen,
     runReminder: () => runReminder,
     runSearch: () => runSearch,
@@ -21294,7 +21296,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     shared.RUN = { id, ctl };
     setRunning(true);
     try {
-      await askStream(url, { ...body, run: id }, true, ctl);
+      await askStream(url, { ...body, run: id }, true, ctl, void 0, true);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -23252,6 +23254,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       }
       shared.GEN.run = null;
       genStatus("");
+      api("/api/ask/ack", { run: id }).catch(() => {
+      });
       if (stopped) {
         shared.RBOUT = "stopped";
         snack("Stopped; nothing changed");
@@ -31665,6 +31669,8 @@ ${d5.text}`);
           else if (ev.type === "error") failed = ev.message;
         }
       }
+      api("/api/ask/ack", { run: id }).catch(() => {
+      });
       if (stopped) return end("Stopped; no page was written");
       if (failed) return end(failed);
       prepPgStat('<span class="spin"></span> Writing the page…');
@@ -33650,11 +33656,11 @@ ${d5.text}`);
   }
   function cdSourceOf(label) {
     const l6 = String(label || "").toLowerCase();
-    if (/calendar|read resource/.test(l6)) return -1;
+    if (/calendar|read resource|a meeting, a message or a chat/.test(l6)) return -1;
     if (/channel/.test(l6)) return 2;
     if (/teams|chat message|list chats/.test(l6)) return 1;
     if (/email|outlook|mail/.test(l6)) return 0;
-    if (/sweep\.py stage|people map|propose\.py/.test(l6)) return 3;
+    if (/sweep\.py stage|people map|propose\.py|staging what the sweep found|mapping names/.test(l6)) return 3;
     return -1;
   }
   var cdTyping = (t5) => t5 instanceof HTMLElement && !!t5.closest("input,textarea,select,[contenteditable]");
@@ -34924,6 +34930,22 @@ ${d5.text}`);
   }
   function bootAsk0090() {
     $("#chLog").addEventListener("click", (e4) => {
+      const a5 = e4.target.closest("[data-runhref]");
+      if (!a5) return;
+      e4.preventDefault();
+      const href = a5.dataset.runhref, st = parseHash(href);
+      if (!st) {
+        snack("That isn't there any more");
+        return;
+      }
+      if (navBlocked()) return;
+      try {
+        history.pushState(null, "", href);
+      } catch (x5) {
+      }
+      restoreNav(st);
+    });
+    $("#chLog").addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-chgcopy]");
       if (!b5) return;
       const code = b5.parentElement.querySelector("code");
@@ -35410,11 +35432,14 @@ ${d5.text}`);
           let g5 = null;
           (m5.steps || []).forEach((l6) => g5 = stepGroup(g5, l6));
         }
-        if (m5.text) {
+        if (m5.plain) {
+          const b5 = runClosure({ line: m5.text, href: m5.href, link: m5.link });
+          if (m5.done_at) stampMsg(b5, m5.done_at);
+        } else if (m5.text) {
           const b5 = addEl("msg a md", raw(mdChat(fdText(m5.text))));
           if (m5.done_at) stampMsg(b5, m5.done_at);
         }
-        if (m5.stopped) addEl("step stopped", "Stopped");
+        if (m5.stopped && !m5.plain) addEl("step stopped", "Stopped");
         if (m5.interrupted) addEl("step stopped", "Interrupted: the live server stopped");
       }
     });
@@ -35515,14 +35540,14 @@ ${d5.text}`);
   };
   async function attachRun(run) {
     if (run && run.kind === "search") return reattachSearch(run);
-    if (shared.RUN || !run || run.kind === "generate" || run.kind === "check" || run.kind === "load") return;
+    if (shared.RUN || !run) return;
     const ctl = new AbortController();
     shared.RUN = { id: run.id, ctl, attached: true };
     setRunning(!run.done);
     ATTACHED = run.id;
     const after = await attachDraw(run);
     try {
-      await askStream("/api/ask/attach", { run: run.id, after }, run.confirmed, ctl, run.done);
+      await askStream("/api/ask/attach", { run: run.id, after }, run.confirmed, ctl, run.done, !!run.plain);
     } finally {
       shared.RUN = null;
       setRunning(false);
@@ -35983,7 +36008,12 @@ ${d5.text}`);
     g5.querySelector(".n").textContent = `${n4} step${n4 === 1 ? "" : "s"}`;
     return g5;
   }
-  async function askStream(url, body, confirmed, ctl, ended) {
+  var PLAINEV = ["step", "closure", "changes", "editcard", "fieldcard", "done"];
+  function runClosure(c5) {
+    const href = /^#[\w=%.|:&-]*$/.test(String(c5.href || "")) ? String(c5.href) : "";
+    return addEl("msg a runend" + (c5.ok === false ? " info" : ""), html`${String(c5.line || "")}${href ? html` · <a href="${href}" class="hlink" data-runhref="${href}">${c5.link || "Open"}</a>` : ""}`);
+  }
+  async function askStream(url, body, confirmed, ctl, ended, plain) {
     let res, outcome = "done";
     const live = !ended;
     askWorking(live);
@@ -36050,7 +36080,18 @@ ${d5.text}`);
           continue;
         }
         if (ev.seq && runId) shared.SHOWN = { run: runId, seq: ev.seq };
-        if (ev.type === "step") {
+        if (plain && !PLAINEV.includes(ev.type)) {
+          if (ev.type === "stopped") outcome = "stopped";
+          else if (ev.type === "error") outcome = "failed";
+          continue;
+        }
+        if (ev.type === "closure") {
+          spin.remove();
+          grp = null;
+          outcome = ev.ok ? "done" : ev.stopped ? "stopped" : "failed";
+          replies.push(runClosure(ev));
+          spin = work();
+        } else if (ev.type === "step") {
           spin.remove();
           grp = stepGroup(grp, ev.label);
           spin = work();
@@ -38984,6 +39025,7 @@ ${d5.text}`);
         "MOD",
         "MRUN",
         "MSEL",
+        "MTG",
         "MVCWORD",
         "Menu",
         "NEG",
@@ -39075,6 +39117,7 @@ ${d5.text}`);
         "chFit",
         "changesCardHtml",
         "checkLive",
+        "checkMeeting",
         "choosePrep",
         "ckAsk",
         "ckItems",
