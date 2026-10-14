@@ -71,7 +71,7 @@ def spec(transcript="inbox/2026-10-14 Steering committee.vtt", **extra):
 class Base(unittest.TestCase):
     def setUp(self):
         self.now = os.environ.get("CREAITE_NOW")
-        os.environ["CREAITE_NOW"] = "2026-10-14T12:00:00"           # creaite's clock: the draft is made on the meeting's day
+        os.environ["CREAITE_NOW"] = "2026-10-14 12:00"           # creaite's clock: the draft is made on the meeting's day
         self.v = Vault()
         self.v.run("init")
         (self.v.root / "inbox/2026-10-14 Steering committee.vtt").write_text(VTT, encoding="utf-8")
