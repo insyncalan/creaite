@@ -271,7 +271,7 @@ class MoveBackRoute(unittest.TestCase):
         cls.port = free_port()
         cls.base = f"http://127.0.0.1:{cls.port}"
         cls.proc = subprocess.Popen([sys.executable, str(cls.v.root / "system/scripts/live_server.py")],
-                                    env={**os.environ, **ENV, "CREAITE_PORT": str(cls.port), "CREAITE_ARCHIVE_FIRST": "3600"},
+                                    env={**os.environ, **ENV, "CREAITE_PORT": str(cls.port)},
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:

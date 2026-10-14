@@ -12,8 +12,8 @@ BL-10, items, automatic: once a day closed or cancelled actions and RAID items, 
 archive.after_months.<kind> months ago or more (6 by default), are flagged archived (the BL-09 flag: still searchable, covered by
 the backups, undoable). Decisions, milestones and any open item never are. It runs through tracker.py apply (one proposal,
 source_run "archive", applied at once), so each flag is logged and undoable; an edit un-archives an item. It runs in the daily
-slot: session start (session.py start, after the daily backup) and the live server (a minute after start-up, then hourly), each
-once a day; never from an ask creaite run and never in the development repository. The last run is kept in
+slot: session start (session.py start, after the daily backup) and the live server's daily backup job (BL-323: after the
+backup, the zip and Tidy up; a minute after start-up, then hourly), each once a day; never from an ask creaite run and never in the development repository. The last run is kept in
 system/staging/archive-state.json (counts and IDs only) and shown in Settings › Health.
 
 BL-03, files, on a yes: weekly and client reports, minutes and Steerco one-pagers dated (by their file name) more than

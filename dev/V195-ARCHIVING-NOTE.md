@@ -18,6 +18,8 @@ Either way it runs at most once a day (`system/staging/archive-state.json`). It 
 
 **When BL-323 merges,** the live server's `backup_timer` can call `archive.daily()` after Tidy up, and `archive_timer` can then go. Session start already has it in the right place, after the backup.
 
+**Done (BL-323 follow-up, issue #44, 15-10-2026):** BL-323 shipped in v1.9.3, so the live server's daily backup job (`backup_daily_job`, run by `backup_timer` a minute after start-up and then hourly) now runs `archive.py daily` (`archive_after_backup`) after the backup, the zip and Tidy up, under the same job lock and the same ask creaite and development-repository checks. `archive_timer`, `archive_tick` and `CREAITE_ARCHIVE_FIRST` are gone. Session start keeps its call after the daily backup. Tested by `test_the_live_servers_daily_job_runs_it_after_tidy_up`.
+
 ## What was built
 
 **BL-10: items archived for their age, automatically.**

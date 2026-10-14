@@ -2795,8 +2795,7 @@ def main():
     threading.Thread(target=startup_index, daemon=True).start()     # BL-07: the search index is current from the start
     threading.Thread(target=after_apply_worker, daemon=True).start()  # BL-327: an apply's index and OneDrive copy, after it answers
     threading.Thread(target=vip_timer, daemon=True).start()         # BL-99: the VIP check, on start-up and every few minutes
-    threading.Thread(target=archive_timer, daemon=True).start()     # BL-10: the daily archiving of items closed long ago
-    threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly
+    threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly; then BL-10
     threading.Thread(target=clear_starting_when_up, args=(port,), daemon=True).start()   # BL-329
     delay = os.environ.get("CREAITE_START_DELAY")                   # tests only (BL-329): a slow-starting server
     if delay:
@@ -2975,38 +2974,19 @@ def vip_timer():
 
 
 # ===== BL-10: the daily archiving, in the live server's daily slot =====
-# BL-323's Tidy up isn't on this branch, so the daily slot is the one session start uses (after the daily backup) and this
-# timer: a minute after start-up, then hourly; archive.py daily runs at most once a day (archive-state.json), under the job lock,
-# never while an ask creaite run is in progress (archive.py also refuses from inside one), never in the development repository.
-ARCHIVE_FIRST, ARCHIVE_EVERY = 60.0, 3600.0
-
-
-def archive_tick():
-    """One look: run archive.py daily unless something else holds the lock or an ask creaite run is in progress. The note."""
-    if (paths.ROOT / ".creaite-dev").exists():
-        return "skipped: development repository"
-    if any(not r.done for r in list(RUNS.values())):
-        return "skipped: ask creaite is running"
-    if not LOCK.acquire(blocking=False):
-        return "skipped: another job is writing"
-    try:
-        code, out = run("archive.py", "daily")
-    finally:
-        LOCK.release()
-    if out:
-        print(f"{datetime.now():%H:%M:%S} {out.splitlines()[-1]}", flush=True)
-    return out or ("done" if code == 0 else "failed")
-
-
-def archive_timer():
-    """archive_tick a minute after start-up, then every hour while the server runs (a daemon thread: it stops with it)."""
-    time.sleep(float(os.environ.get("CREAITE_ARCHIVE_FIRST") or ARCHIVE_FIRST))
-    while True:
-        try:
-            archive_tick()
-        except Exception as e:  # noqa: BLE001  never stops the server
-            print(f"Note: the daily archiving failed: {e}", flush=True)
-        time.sleep(ARCHIVE_EVERY)
+# BL-323 shipped in v1.9.3, so the archiving runs in its daily job (backup_daily_job): after the daily backup, the zip and Tidy
+# up, under the same job lock, never while an ask creaite run is in progress (archive.py also refuses from inside one), never in
+# the development repository. archive.py daily runs at most once a day (archive-state.json). Session start keeps its own call,
+# after the daily backup (session.archive_today).
+def archive_after_backup():
+    """BL-10: archive.py daily in its own process, after the backup steps (the caller holds the job lock). Its line, or None
+    when there is nothing to say (already run today)."""
+    code, out = run("archive.py", "daily")
+    line = out.splitlines()[-1] if out else ""
+    if not line or (code == 0 and line.startswith("Archiving: already")):
+        return None
+    print(f"{datetime.now():%H:%M:%S} {line}", flush=True)
+    return line
 # ===== end BL-10 =====
 
 
@@ -5629,7 +5609,7 @@ BACKUP_EVERY = 3600
 
 
 def backup_daily_job():
-    """One pass of the daily backup steps; returns what it said (or why it didn't run)."""
+    """One pass of the daily backup steps, then (BL-10) the daily archiving; returns what they said (or why they didn't run)."""
     if (paths.ROOT / ".creaite-dev").exists():
         return ["skipped: the development repository"]
     if backup.ask_run():
@@ -5641,13 +5621,14 @@ def backup_daily_job():
         import sweep
         said = []
         made = session.backup_today(sweep.now(), said.append)
-        return ([f"daily backup made: {made}"] if made else []) + said
+        archived = archive_after_backup()                # BL-10: after Tidy up (backup.after_daily_backup), once a day
+        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else [])
     finally:
         LOCK.release()
 
 
 def backup_timer():
-    """The daily backup job a minute after start-up, then every hour (it does each step only once a day)."""
+    """The daily backup job (and BL-10's archiving after it) a minute after start-up, then every hour (each step once a day)."""
     time.sleep(60)
     while True:
         try:

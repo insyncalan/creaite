@@ -11,7 +11,7 @@ What is covered, with the clock pinned (CREAITE_NOW):
 - editing an archived item un-archives it, and the next day's run leaves it live (an edit buys a full period);
 - archived items leave the default views and stay searchable, marked Archived;
 - the daily slot runs once a day, never from an ask creaite run, and Health shows its last run;
-- session start runs it after the daily backup.
+- session start runs it after the daily backup, and the live server's daily backup job after Tidy up (no timer of its own).
 Everything is fictional and temporary.
 """
 import json
@@ -218,6 +218,22 @@ class ArchiveItems(unittest.TestCase):
         self.assertEqual(len(self.flagged()), 5)
         r = self.run_at(DAY, "start", "--force", script="session.py")
         self.assertNotIn("Archiv", r.stdout)                         # once a day: nothing said the second time
+
+    def test_the_live_servers_daily_job_runs_it_after_tidy_up(self):
+        """BL-323 follow-up: no archive timer of its own; the daily backup job archives after the backup, zip and Tidy up."""
+        text = (self.v.root / "system/scripts/live_server.py").read_text(encoding="utf-8")
+        self.assertNotIn("archive_timer", text)
+        job = text[text.index("def backup_daily_job"):text.index("def backup_timer")]
+        self.assertLess(job.index("session.backup_today("), job.index("archive_after_backup()"))
+        code = ("import sys, json; sys.path.insert(0, 'system/scripts'); import live_server as L; "
+                "print(json.dumps([L.backup_daily_job(), L.backup_daily_job()]))")
+        r = subprocess.run([sys.executable, "-c", code], cwd=self.v.root, capture_output=True, text=True,
+                           env={**os.environ, "CREAITE_NOW": DAY})
+        first, second = json.loads(r.stdout.strip().splitlines()[-1])
+        self.assertTrue(any(line.startswith("Archived 5 items") for line in first), first)
+        self.assertTrue(any("tracker-2026-10-14.db" in line for line in first), first)       # the backup came first
+        self.assertFalse(any("Archiv" in line for line in second), second)                    # once a day, nothing said again
+        self.assertEqual(len(self.flagged()), 5)
 
     def test_never_in_the_development_repository(self):
         (self.v.root / ".creaite-dev").write_text("")
