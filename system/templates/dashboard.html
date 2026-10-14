@@ -3086,7 +3086,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     DATE_HELP: () => DATE_HELP,
     DAYACTS: () => DAYACTS,
     DAYRUN: () => DAYRUN,
-    DAYS: () => DAYS,
     DC: () => DC,
     DDATE: () => DDATE,
     DEC: () => DEC,
@@ -5580,7 +5579,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const d5 = /* @__PURE__ */ new Date(), z3 = (n4) => String(n4).padStart(2, "0");
     return `${d5.getFullYear()}-${z3(d5.getMonth() + 1)}-${z3(d5.getDate())}`;
   })(), DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
-  var fd = (iso) => iso && DATE.test(iso.slice(0, 10)) ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}${iso.length > 10 ? iso.slice(10) : ""}` : iso || "";
+  var fd = (iso2) => iso2 && DATE.test(iso2.slice(0, 10)) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}${iso2.length > 10 ? iso2.slice(10) : ""}` : iso2 || "";
   var toIso = (dd) => DDATE.test(dd) ? `${dd.slice(6, 10)}-${dd.slice(3, 5)}-${dd.slice(0, 2)}` : dd;
   var fdText = (s5) => String(s5 ?? "").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3-$2-$1");
   var fdMd = (s5) => String(s5 ?? "").replace(/(\]\([^)\s]*\))|(\bhttps?:\/\/[^\s)<>]+)|\b(\d{4})-(\d{2})-(\d{2})\b/g, (m5, t5, u5, y5, mo, d5) => y5 ? `${d5}-${mo}-${y5}` : m5);
@@ -5801,6 +5800,110 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function bootThemeButton() {
     matchMedia("(prefers-color-scheme: dark)").addEventListener("change", themeIcon);
     themeIcon();
+  }
+
+  // core/datewords.js
+  var DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  var MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  var MONTHS = "january february march april may june july august september sept october november december".split(" ");
+  var DAYNAMES = "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ");
+  var pad = (n4) => String(n4).padStart(2, "0");
+  var iso = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+  function shift(today, n4, unit) {
+    const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
+    if (unit === "m") {
+      const day = d5.getDate();
+      d5.setDate(1);
+      d5.setMonth(d5.getMonth() + n4);
+      d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
+    } else d5.setDate(d5.getDate() + n4 * (unit === "w" ? 7 : 1));
+    return iso(d5);
+  }
+  function real(y5, m5, d5) {
+    if (y5 < 100) y5 += 2e3;
+    const x5 = new Date(y5, m5 - 1, d5, 12);
+    return x5.getFullYear() === y5 && x5.getMonth() === m5 - 1 && x5.getDate() === d5 ? iso(x5) : null;
+  }
+  function monthOf(w5) {
+    const i5 = MON.indexOf(w5.slice(0, 3));
+    return i5 >= 0 && (MONTHS.some((n4) => n4.startsWith(w5)) || w5.length === 3) ? i5 + 1 : 0;
+  }
+  function weekdayOf(w5) {
+    return DAYS.findIndex((d5) => w5.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w5)));
+  }
+  function workingDay(day, weekend = [0, 6]) {
+    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
+    if (!off(day)) return day;
+    for (let n4 = 1; n4 < 7; n4++) {
+      const back = shift(day, -n4, "d"), on = shift(day, n4, "d");
+      if (!off(back)) return back;
+      if (!off(on)) return on;
+    }
+    return day;
+  }
+  function lastWorkingDay(day, weekend) {
+    const d5 = /* @__PURE__ */ new Date(day + "T12:00:00");
+    let s5 = iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
+    for (let n4 = 0; n4 < 7 && weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
+    return s5;
+  }
+  function deadlineOnly(s5, today, weekend) {
+    const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), monday = (1 - dow + 7) % 7 || 7;
+    if (s5 === "next week") return shift(today, monday + 4, "d");
+    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend);
+    const m5 = s5.match(/^next ([a-z]{3,9})$/), w5 = m5 ? weekdayOf(m5[1]) : -1;
+    if (w5 >= 0) return shift(today, monday + (w5 + 6) % 7, "d");
+    return null;
+  }
+  function dayMonth(s5, today, due) {
+    const dm = (d5, m6, y5) => {
+      if (y5 != null) return real(+y5, +m6, +d5);
+      const yr = +today.slice(0, 4);
+      let r4 = real(yr, +m6, +d5);
+      if (r4 && due && r4 < today) r4 = real(yr + 1, +m6, +d5);
+      return r4;
+    };
+    let m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m5) return real(+m5[1], +m5[2], +m5[3]);
+    m5 = s5.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/);
+    if (m5) return dm(m5[1], m5[2], m5[3]);
+    m5 = s5.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/);
+    if (m5 && monthOf(m5[2])) return dm(m5[1], monthOf(m5[2]), m5[3]);
+    m5 = s5.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/);
+    if (m5 && monthOf(m5[1])) return dm(m5[2], monthOf(m5[1]), m5[3]);
+    return null;
+  }
+  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
+    let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
+    if (!s5) return null;
+    const deadline = mode === "deadline";
+    if (deadline) {
+      due = true;
+      s5 = s5.replace(/^(?:by|on) /, "");
+      const d5 = deadlineOnly(s5, today, weekend);
+      if (d5) return d5;
+    }
+    const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend) : r4;
+    if (s5 === "today" || s5 === "now") return today;
+    if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return shift(today, 1, "d");
+    if (s5 === "yesterday") return shift(today, -1, "d");
+    let m5 = s5.match(/^(next |this )?([a-z]{3,9})$/);
+    if (m5) {
+      const w5 = weekdayOf(m5[2]);
+      if (w5 >= 0) return shift(today, ((w5 - dow + 7) % 7 || 7) + (m5[1] === "next " ? 7 : 0), "d");
+    }
+    if (s5 === "next week") return shift(today, (1 - dow + 7) % 7 || 7, "d");
+    if (s5 === "end of week" || s5 === "eow") return shift(today, (5 - dow + 7) % 7, "d");
+    if (s5 === "end of month" || s5 === "eom") {
+      const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
+      return iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
+    }
+    if (s5 === "end of next week") return shift(today, (5 - dow + 7) % 7 + 7, "d");
+    m5 = s5.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/);
+    if (m5) return period(shift(today, +m5[1], m5[2][0]));
+    m5 = s5.match(/^\+(\d{1,3})$/);
+    if (m5) return period(shift(today, +m5[1], "d"));
+    return dayMonth(s5, today, due);
   }
 
   // ../../vendor/preact/preact/dist/preact.module.js
@@ -8580,14 +8683,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const live = viaServer();
     return String(html`<button type="button" class="ib prepgo" data-prepgo="${pg.key}" data-prepgoday="${day}" aria-label="Open the prep page for ${e4.title ?? ""}" data-tip="${live ? `Prep page saved ${pg.when}` : "Needs the live server"}"${raw(live ? "" : ' aria-disabled="true"')}>${raw(ic("external"))}</button><span class="tag ok prepmade">Prep page made</span>`);
   }
-  var longDay = (iso) => {
-    if (!iso || !DATE.test(iso.slice(0, 10))) return iso || "";
-    const d5 = /* @__PURE__ */ new Date(iso.slice(0, 10) + "T12:00:00");
-    return `${d5.toLocaleDateString("en-GB", { weekday: "long" })} ${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })}${iso.slice(0, 4) !== TODAY.slice(0, 4) ? " " + iso.slice(0, 4) : ""}`;
+  var longDay = (iso2) => {
+    if (!iso2 || !DATE.test(iso2.slice(0, 10))) return iso2 || "";
+    const d5 = /* @__PURE__ */ new Date(iso2.slice(0, 10) + "T12:00:00");
+    return `${d5.toLocaleDateString("en-GB", { weekday: "long" })} ${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })}${iso2.slice(0, 4) !== TODAY.slice(0, 4) ? " " + iso2.slice(0, 4) : ""}`;
   };
-  var longDate = (iso) => {
-    const d5 = /* @__PURE__ */ new Date(iso.slice(0, 10) + "T12:00:00");
-    return `${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })} ${iso.slice(0, 4)}`;
+  var longDate = (iso2) => {
+    const d5 = /* @__PURE__ */ new Date(iso2.slice(0, 10) + "T12:00:00");
+    return `${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })} ${iso2.slice(0, 4)}`;
   };
   var longText = (t5) => String(t5 ?? "").replace(/\b(\d{2})-(\d{2})-(\d{4})\b/g, (m5, dd, mm, yy) => longDay(`${yy}-${mm}-${dd}`));
   var TVIPSEEN = null;
@@ -8595,8 +8698,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var swept = () => !!(D.last_sweep && D.last_sweep !== "never");
   var SU_M365 = "setup: check Microsoft 365", SU_LAUNCH = () => `cd ${VAULT_PATH} && python3 system/scripts/launch.py make-launcher`, SU_SETUP = "setup";
   var DC = () => D.day || { moved: {}, promised: [], tomorrow: { meetings: [] } };
-  var pkAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
+  var pkAdd = (iso2, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00Z");
     d5.setUTCDate(d5.getUTCDate() + n4);
     return d5.toISOString().slice(0, 10);
   };
@@ -8684,10 +8787,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return `${cnt}, with ${part} ${part === "lunchtime" ? "free" : "wide open"}.`;
   }
   function renderDay() {
-    const cal = D.calendar, first = (S.me || "").split(" ")[0], on = S.srcCalendar !== false, L2 = on ? dayList() : [], iso = dayShown(), isToday = iso === TODAY;
+    const cal = D.calendar, first = (S.me || "").split(" ")[0], on = S.srcCalendar !== false, L2 = on ? dayList() : [], iso2 = dayShown(), isToday = iso2 === TODAY;
     if (isToday) selDay.value = "";
-    const rec = L2.find((d5) => d5.date === iso) || synthDay(iso), tabs = L2.length > 1;
-    drawDayTabs($("#todayDate"), tabs ? { days: L2, selected: iso, onSelect: (d5) => {
+    const rec = L2.find((d5) => d5.date === iso2) || synthDay(iso2), tabs = L2.length > 1;
+    drawDayTabs($("#todayDate"), tabs ? { days: L2, selected: iso2, onSelect: (d5) => {
       goDay(d5);
     }, onStep: (n5) => {
       stepDay(n5);
@@ -8702,15 +8805,15 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       meets.removeAttribute("role");
       meets.removeAttribute("aria-label");
     }
-    const v4 = on ? dayView(iso) : { known: false, meetings: [], allDay: [] };
-    $("#dayHead").textContent = v4.known ? dayShape(v4.meetings, first, iso) : `Good ${nowMins() < 12 * 60 ? "morning" : nowMins() < 18 * 60 ? "afternoon" : "evening"}${first ? ", " + first : ""}.`;
+    const v4 = on ? dayView(iso2) : { known: false, meetings: [], allDay: [] };
+    $("#dayHead").textContent = v4.known ? dayShape(v4.meetings, first, iso2) : `Good ${nowMins() < 12 * 60 ? "morning" : nowMins() < 18 * 60 ? "afternoon" : "evening"}${first ? ", " + first : ""}.`;
     if (!on) {
       drawDayCurve(line, null);
       drawDayMeetings(meets, null);
       calFoot(null);
       return;
     }
-    const common = { day: iso, dow: rec.dow || synthDay(iso).dow, isToday, past: iso < TODAY, now: nowMins(), live: viaServer(), calendar: !!cal, acts: DAYACTS, onWheel: onDayWheel, meetings: v4.meetings, allDay: v4.allDay };
+    const common = { day: iso2, dow: rec.dow || synthDay(iso2).dow, isToday, past: iso2 < TODAY, now: nowMins(), live: viaServer(), calendar: !!cal, acts: DAYACTS, onWheel: onDayWheel, meetings: v4.meetings, allDay: v4.allDay };
     if (!v4.known) {
       line.hidden = true;
       drawDayCurve(line, null);
@@ -8719,14 +8822,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return;
     }
     const n4 = v4.meetings.length;
-    drawDayCurve(line, { day: iso, timed: v4.meetings, now: isToday ? nowMins() : null, past: iso < TODAY, label: isToday ? `Today's meetings: ${n4}` : `${rec.long}: ${plur(n4, "meeting")}`, width: line.clientWidth, onWheel: onDayWheel });
+    drawDayCurve(line, { day: iso2, timed: v4.meetings, now: isToday ? nowMins() : null, past: iso2 < TODAY, label: isToday ? `Today's meetings: ${n4}` : `${rec.long}: ${plur(n4, "meeting")}`, width: line.clientWidth, onWheel: onDayWheel });
     drawDayMeetings(meets, { ...common, mode: "meetings" });
     calFoot(cal);
   }
   var WDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  function synthDay(iso) {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00"), dow = WDAYS[d5.getDay()];
-    return { date: iso, dow, short: `${dow.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso), today: iso === TODAY, past: iso < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
+  function synthDay(iso2) {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00"), dow = WDAYS[d5.getDay()];
+    return { date: iso2, dow, short: `${dow.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso2), today: iso2 === TODAY, past: iso2 < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
   }
   function dayList() {
     if (!D.calendar) return [];
@@ -8742,13 +8845,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return s5 && s5 !== TODAY && dayList().some((d5) => d5.date === s5) ? s5 : TODAY;
   };
   var isConf = (e4) => String(e4 && e4.sensitivity || "").toLowerCase() === "confidential";
-  function dayView(iso) {
-    const raw2 = ((D.calendar || {}).days || {})[iso], rec = dayList().find((d5) => d5.date === iso), srv = rec && rec.meetings || [];
+  function dayView(iso2) {
+    const raw2 = ((D.calendar || {}).days || {})[iso2], rec = dayList().find((d5) => d5.date === iso2), srv = rec && rec.meetings || [];
     const extra = (m5) => ({
       ...m5,
       page: m5.prep ? (SA().prep_pages || {})[m5.prep.key] || m5.prep.page || null : null,
-      pageWhen: m5.prep ? (prepPageOf(m5, iso) || {}).when || m5.prep.page_at_shown || "" : "",
-      hub: m5.private || m5.confidential || shared.LOADING ? null : hubFor({ eid: m5.id, day: iso, start: m5.start, title: m5.title }) || null,
+      pageWhen: m5.prep ? (prepPageOf(m5, iso2) || {}).when || m5.prep.page_at_shown || "" : "",
+      hub: m5.private || m5.confidential || shared.LOADING ? null : hubFor({ eid: m5.id, day: iso2, start: m5.start, title: m5.title }) || null,
       running: m5.id ? DAYRUN.get(m5.id) : void 0
     });
     if (raw2) {
@@ -8758,7 +8861,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         allDay: raw2.filter((e4) => e4.all_day).map((e4) => ({ title: e4.private ? "Busy" : e4.title ?? "", p: e4.private || isConf(e4) ? null : e4.p || null })),
         meetings: timed.map((e4, i5) => {
           const priv = !!e4.private, s5 = srv.find((m5) => m5.start === e4.start && (priv ? m5.private : m5.title === e4.title)), conf = !!(s5 && s5.confidential) || isConf(e4);
-          const prep = priv ? null : s5 && s5.prep || (iso >= TODAY && prepOf(e4, iso) ? { key: prepKey(e4, iso) } : null);
+          const prep = priv ? null : s5 && s5.prep || (iso2 >= TODAY && prepOf(e4, iso2) ? { key: prepKey(e4, iso2) } : null);
           return extra({
             start: e4.start,
             end: e4.end,
@@ -8777,16 +8880,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         })
       };
     }
-    if (rec && iso !== TODAY) return { known: true, meetings: srv.map((m5) => extra({ ...m5, ix: null })), allDay: (rec.all_day || []).map((t5) => ({ title: t5, p: null })) };
+    if (rec && iso2 !== TODAY) return { known: true, meetings: srv.map((m5) => extra({ ...m5, ix: null })), allDay: (rec.all_day || []).map((t5) => ({ title: t5, p: null })) };
     return { known: false, meetings: [], allDay: [] };
   }
-  function goDay(iso) {
+  function goDay(iso2) {
     const L2 = dayList();
     if (L2.length < 2 || S.srcCalendar === false) return false;
-    const i5 = L2.findIndex((d5) => d5.date === dayShown()), j4 = L2.findIndex((d5) => d5.date === iso);
+    const i5 = L2.findIndex((d5) => d5.date === dayShown()), j4 = L2.findIndex((d5) => d5.date === iso2);
     if (j4 < 0) return false;
     if (j4 === i5) return true;
-    selDay.value = iso === TODAY ? "" : iso;
+    selDay.value = iso2 === TODAY ? "" : iso2;
     renderDay();
     daySlide(j4 > i5 ? 1 : -1);
     return true;
@@ -8852,14 +8955,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var DAYRUN = /* @__PURE__ */ new Map();
   var seriesOf = (t5) => String(t5 || "").toLowerCase().replace(/\[[^\]]*\]/g, " ").replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w5) => w5 && !/^\d+$/.test(w5)).join(" ");
   function dayPrep(m5) {
-    const iso = dayShown(), raw2 = (((D.calendar || {}).days || {})[iso] || []).find((x5) => !x5.all_day && x5.start === m5.start && x5.title === m5.title);
-    const e4 = raw2 || { start: m5.start, end: m5.end, title: m5.title, where: m5.confidential ? "" : m5.where || "", p: m5.p }, key = prepKey(e4, iso);
+    const iso2 = dayShown(), raw2 = (((D.calendar || {}).days || {})[iso2] || []).find((x5) => !x5.all_day && x5.start === m5.start && x5.title === m5.title);
+    const e4 = raw2 || { start: m5.start, end: m5.end, title: m5.title, where: m5.confidential ? "" : m5.where || "", p: m5.p }, key = prepKey(e4, iso2);
     if (!D.prep) D.prep = /** @type {any} */
     {};
     if (!D.prep.meetings) D.prep.meetings = {};
     const pm = D.prep.meetings;
-    if (!pm[key]) pm[key] = { series: seriesOf(m5.title), p: m5.confidential ? null : m5.p || null, how: m5.p ? "matched" : "unsure", last: null, day: iso, since: pkAdd(iso, -7) };
-    openPrep(e4, iso);
+    if (!pm[key]) pm[key] = { series: seriesOf(m5.title), p: m5.confidential ? null : m5.p || null, how: m5.p ? "matched" : "unsure", last: null, day: iso2, since: pkAdd(iso2, -7) };
+    openPrep(e4, iso2);
   }
   async function dayProcess(m5) {
     const row2 = MTG().find((x5) => x5.id === m5.id);
@@ -13900,11 +14003,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   };
   var cxLink = (id) => location.origin + location.pathname + actHref(kOfId(id), id);
   function cxDates(cur, set, { clear = true, label = "Due date", hint } = {}) {
-    const nm2 = pkAdd(TODAY, 7 - pkDow(TODAY)), wk = (iso) => {
-      const w5 = weekendNote(iso);
+    const nm2 = pkAdd(TODAY, 7 - pkDow(TODAY)), wk = (iso2) => {
+      const w5 = weekendNote(iso2);
       return w5 ? w5.text : "";
     };
-    const at = (lab, iso) => ({ label: lab, icon: "calendar", hint: [fd(iso), wk(iso)].filter(Boolean).join(" · "), checked: cur === iso, run: () => set(iso) });
+    const at = (lab, iso2) => ({ label: lab, icon: "calendar", hint: [fd(iso2), wk(iso2)].filter(Boolean).join(" · "), checked: cur === iso2, run: () => set(iso2) });
     return [
       at("Today", TODAY),
       at("Tomorrow", pkAdd(TODAY, 1)),
@@ -15547,9 +15650,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       ] })
     ] });
   }
-  function dmyShown(iso) {
-    const m5 = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
-    return m5 ? `${m5[3]}-${m5[2]}-${m5[1]}` : String(iso);
+  function dmyShown(iso2) {
+    const m5 = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso2));
+    return m5 ? `${m5[3]}-${m5[2]}-${m5[1]}` : String(iso2);
   }
   function mountSneak(host2, id, onClose, acts2) {
     R(null, host2);
@@ -16264,7 +16367,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var MVCWORD = { achieved: "Achieved", ontrack: "On track", atrisk: "At risk", slipped: "Expected later", overdue: "Late" };
   var MVRANK = { achieved: 0, ontrack: 1, atrisk: 2, slipped: 3, overdue: 4 };
   var MVKEY = { "Achieved": "achieved", "On track": "ontrack", "At risk": "atrisk", "Slipped": "slipped", "Overdue": "overdue" };
-  var mvT = (iso) => iso ? Date.parse(iso.slice(0, 10) + "T00:00:00Z") : NaN, mvDays = (a5, b5) => Math.round((mvT(a5) - mvT(b5)) / 864e5);
+  var mvT = (iso2) => iso2 ? Date.parse(iso2.slice(0, 10) + "T00:00:00Z") : NaN, mvDays = (a5, b5) => Math.round((mvT(a5) - mvT(b5)) / 864e5);
   function mvPref(k5, d5) {
     try {
       const v4 = localStorage.getItem(k5);
@@ -16362,10 +16465,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return `<div class="mv-hint">Revised from ${fd(m5.orig)}${rb.date ? `, agreed ${fd(rb.date)}` : ""}${rb.decision ? ` (decision ${esc(rb.decision)})` : ""}</div>`;
   }
   var MVPXD = 8;
-  function mvAxis(list, pad) {
+  function mvAxis(list, pad2) {
     const ds = [TODAY];
     list.forEach((m5) => {
-      [mvWhen(m5), m5.state !== "achieved" && m5.fc > m5.agr ? m5.fc : "", m5.orig && pad ? m5.orig : ""].forEach((d5) => {
+      [mvWhen(m5), m5.state !== "achieved" && m5.fc > m5.agr ? m5.fc : "", m5.orig && pad2 ? m5.orig : ""].forEach((d5) => {
         if (d5 && DATE.test(d5)) ds.push(d5);
       });
     });
@@ -16613,8 +16716,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function mvCalPick(t5) {
     const cb = MVCAL.cb, btn = MVCAL.btn;
     mvCalClose(false);
-    const d5 = /* @__PURE__ */ new Date(+t5), iso = `${d5.getUTCFullYear()}-${String(d5.getUTCMonth() + 1).padStart(2, "0")}-${String(d5.getUTCDate()).padStart(2, "0")}`;
-    cb && cb(iso);
+    const d5 = /* @__PURE__ */ new Date(+t5), iso2 = `${d5.getUTCFullYear()}-${String(d5.getUTCMonth() + 1).padStart(2, "0")}-${String(d5.getUTCDate()).padStart(2, "0")}`;
+    cb && cb(iso2);
     setTimeout(() => {
       const b5 = btn.id && document.getElementById(btn.id);
       b5 && b5.focus();
@@ -18575,12 +18678,12 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const ok = (g5) => groupsOf(t5).some((x5) => x5[0] === g5), set = { actions: S.bgActions, raid: S.bgRaid, decisions: S.bgDecisions }[t5];
     return ok(WGRP[t5]) ? WGRP[t5] : ok(set) ? set : BDEFG[t5];
   };
-  var isoAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00");
+  var isoAdd = (iso2, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00");
     d5.setDate(d5.getDate() + n4);
     return `${d5.getFullYear()}-${z22(d5.getMonth() + 1)}-${z22(d5.getDate())}`;
   };
-  var isoDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T12:00:00")).getDay() + 6) % 7, weekSun = (iso) => isoAdd(iso, 6 - isoDow(iso));
+  var isoDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay() + 6) % 7, weekSun = (iso2) => isoAdd(iso2, 6 - isoDow(iso2));
   var thisFriday = () => {
     const f5 = isoAdd(TODAY, 4 - isoDow(TODAY));
     return f5 < TODAY ? TODAY : f5;
@@ -18844,16 +18947,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           $("#bdErr").textContent = "Not a date creaite knows. " + DATE_HELP;
           return;
         }
-        const iso = toIso(v4);
-        if (isNaN(new Date(iso)) || fd(iso) !== v4) {
+        const iso2 = toIso(v4);
+        if (isNaN(new Date(iso2)) || fd(iso2) !== v4) {
           $("#bdErr").textContent = "That isn't a real date.";
           return;
         }
-        if (iso < TODAY) {
+        if (iso2 < TODAY) {
           $("#bdErr").textContent = "Choose today or a later day: a past date would make it overdue.";
           return;
         }
-        fin(iso);
+        fin(iso2);
       };
       $("#bdOk").onclick = ok;
       $("#bdCancel").onclick = () => fin(null);
@@ -18876,8 +18979,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (!o5.clear) {
       const gated = () => {
         wkClear();
-        const v4 = inp.value.trim(), iso = DDATE.test(v4) ? toIso(v4) : "";
-        if (iso && iso >= TODAY && !WK.ok && wkAsk(iso, $("#bdDateRow"), (d5) => {
+        const v4 = inp.value.trim(), iso2 = DDATE.test(v4) ? toIso(v4) : "";
+        if (iso2 && iso2 >= TODAY && !WK.ok && wkAsk(iso2, $("#bdDateRow"), (d5) => {
           inp.value = fd(d5);
           ok0();
         }, { inline: true, after: $("#bdDateRow") })) return;
@@ -19605,7 +19708,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const ps = PROJF.size === 1 ? P3.filter((p6) => PROJF.has(p6.code)) : P3;
     return ps.flatMap((p6) => (p6.ms || []).filter((m5) => m5[3]).map((m5) => [m5[3], m5[0] + (ps.length > 1 ? ` (${p6.name})` : "")]));
   };
-  var lastDays = [["7", "Last 7 days"], ["14", "Last 14 days"], ["30", "Last 30 days"]], within = (iso, set) => !!iso && [...set].some((n4) => -days(iso.slice(0, 10)) <= +n4 && -days(iso.slice(0, 10)) >= 0);
+  var lastDays = [["7", "Last 7 days"], ["14", "Last 14 days"], ["30", "Last 30 days"]], within = (iso2, set) => !!iso2 && [...set].some((n4) => -days(iso2.slice(0, 10)) <= +n4 && -days(iso2.slice(0, 10)) >= 0);
   function isNotSeg(k5, n4 = NEG.has(k5)) {
     return `<div class="isnot"><span class="seg" role="group" aria-label="Match"><button type="button" data-neg="0" data-nk="${k5}" aria-pressed="${!n4}">is</button><button type="button" data-neg="1" data-nk="${k5}" aria-pressed="${n4}">is not</button></span><span class="sub">${n4 ? "none of" : "any of"}</span></div>`;
   }
@@ -24625,8 +24728,8 @@ ${pre}**Current state title:** ${title}`);
     addHTML(ms.closest("dd"), "beforeend", html`<div id="depChips" class="depchips" role="group" aria-label="Suggested milestones">${L2.map((m5) => html`<button type="button" class="chipbtn" data-depms="${m5[3]}">Attach to ${m5[3]} (forecast ${fd(m5[8] || m5[4])})?</button>`)}<button type="button" class="chipbtn quiet" data-depnone>None needed</button></div>`);
   }
   var FL = { W: 360, H: 150, L: 30, R: 8, T: 22, B: 30 };
-  var flDay = (iso) => {
-    const x5 = /* @__PURE__ */ new Date(iso + "T00:00:00"), p6 = (n4) => String(n4).padStart(2, "0");
+  var flDay = (iso2) => {
+    const x5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00"), p6 = (n4) => String(n4).padStart(2, "0");
     x5.setDate(x5.getDate() + 4 - (x5.getDay() + 6) % 7);
     return `${x5.getFullYear()}-${p6(x5.getMonth() + 1)}-${p6(x5.getDate())}`;
   };
@@ -25164,13 +25267,13 @@ ${pre}**Current state title:** ${title}`);
     return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID", "9%")}${deTh("Item")}${deTh("Due", "18%")}${deTh("Priority", "10%")}</tr>${list.map((i5) => deRowHtml(i5, o5)).join("")}</table>`;
   }
   function deTextRows(list, o5) {
-    const w5 = Math.max(...list.map((i5) => i5.id.length)), out = [], pad = "".padEnd(w5);
+    const w5 = Math.max(...list.map((i5) => i5.id.length)), out = [], pad2 = "".padEnd(w5);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
       out.push(`  ${i5.id.padEnd(w5)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
-      if (i5.k === "raid") out.push(`  ${pad}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
-      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad}  Latest update: ${i5.upd}`);
-      if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad}  ${deChasedWords(o5.chased[i5.id])}`);
+      if (i5.k === "raid") out.push(`  ${pad2}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
+      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad2}  Latest update: ${i5.upd}`);
+      if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad2}  ${deChasedWords(o5.chased[i5.id])}`);
     });
     return out;
   }
@@ -25949,8 +26052,8 @@ ${pre}**Current state title:** ${title}`);
     if (!m5) return null;
     const w5 = m5[1].split(/\s+/);
     for (let n4 = w5.length; n4 > 0; n4--) {
-      const iso = parseWhen(w5.slice(0, n4).join(" "), TODAY, true);
-      if (iso) return iso;
+      const iso2 = parseWhen(w5.slice(0, n4).join(" "), TODAY, true);
+      if (iso2) return iso2;
     }
     return null;
   }
@@ -26661,10 +26764,10 @@ ${d5.text}`);
   }
   function paneLines(t5) {
     t5 = String(t5 || "");
-    const real = new Set(paneMarkers(t5)), out = /* @__PURE__ */ new Set();
+    const real2 = new Set(paneMarkers(t5)), out = /* @__PURE__ */ new Set();
     let at = 0;
     t5.split("\n").forEach((line, n4) => {
-      if (line.trim() === PANE && real.has(at + line.indexOf(PANE))) out.add(n4);
+      if (line.trim() === PANE && real2.has(at + line.indexOf(PANE))) out.add(n4);
       at += line.length + 1;
     });
     return out;
@@ -27688,7 +27791,7 @@ ${d5.text}`);
     return el;
   }
   var PKMON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var pkDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var pkDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
   function pkDate(anchor, o5) {
     const op = o5.onPick, gate = !!o5.due, { value, onPick, label, due } = gate ? { ...o5, onPick: (v4) => {
       if (v4 && !WK.ok && wkAsk(v4, anchor, op)) return;
@@ -27701,8 +27804,8 @@ ${d5.text}`);
       let days2 = "";
       for (let i5 = 0; i5 < lead; i5++) days2 += "<span></span>";
       for (let d5 = 1; d5 <= n4; d5++) {
-        const iso = `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
-        days2 += `<button type="button" class="pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}" data-d="${iso}" aria-label="${fd(iso)}"${iso === value ? ' aria-pressed="true"' : ""} tabindex="-1">${d5}</button>`;
+        const iso2 = `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
+        days2 += `<button type="button" class="pkday${iso2 === TODAY ? " today" : ""}${iso2 === value ? " on" : ""}" data-d="${iso2}" aria-label="${fd(iso2)}"${iso2 === value ? ' aria-pressed="true"' : ""} tabindex="-1">${d5}</button>`;
       }
       const nm2 = pkAdd(TODAY, 7 - pkDow(TODAY));
       putHTML(el, html`<div class="pkcalh">${raw(ibtn("chevleft", "Previous month", 'data-m="-1"'))}<b aria-live="polite">${raw(PKMON[m5])} ${raw(y5)}</b>${raw(ibtn("chevright", "Next month", 'data-m="1"'))}</div>
@@ -27767,10 +27870,10 @@ ${d5.text}`);
           onPick("");
           return;
         }
-        const iso = parseWhen(t5, TODAY, !!due);
-        if (iso) {
+        const iso2 = parseWhen(t5, TODAY, !!due);
+        if (iso2) {
           pkPopClose();
-          onPick(iso);
+          onPick(iso2);
         } else {
           e4.target.classList.add("bad");
           e4.target.setAttribute("aria-invalid", "true");
@@ -27787,7 +27890,7 @@ ${d5.text}`);
       }
       if (gate) el2.addEventListener("input", (e4) => {
         if (!e4.target.matches(".pkdt")) return;
-        const t5 = e4.target.value.trim(), iso = t5 ? parseWhen(t5, TODAY, true) : null, n4 = weekendNote(iso);
+        const t5 = e4.target.value.trim(), iso2 = t5 ? parseWhen(t5, TODAY, true) : null, n4 = weekendNote(iso2);
         let w5 = el2.querySelector(".wkline");
         if (!w5) {
           addHTML(el2.querySelector(".pkerr"), "afterend", html`<div class="wkline" role="status" aria-live="polite"></div>`);
@@ -27970,8 +28073,8 @@ ${d5.text}`);
   }
   function pkTextRule(k5, id, f5, val2, el, x5) {
     if (f5 === "revisit" && !WK.ok) {
-      const iso = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
-      if (iso && wkAsk(iso, el, (v4) => pkCommit(k5, id, { revisit: DDATE.test(val2) ? fd(v4) : v4 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v4) : v4))) {
+      const iso2 = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
+      if (iso2 && wkAsk(iso2, el, (v4) => pkCommit(k5, id, { revisit: DDATE.test(val2) ? fd(v4) : v4 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v4) : v4))) {
         el.textContent = x5.revisit || "";
         return false;
       }
@@ -31681,7 +31784,7 @@ ${d5.text}`);
       return m5 ? `the ${esc(m5[0])} milestone${m5[2] ? ` (${dnDt(m5[2])})` : ""}` : esc(id);
     });
   }
-  var dnDt = (iso) => `<span class="dt">${fd(iso)}</span>`;
+  var dnDt = (iso2) => `<span class="dt">${fd(iso2)}</span>`;
   function dnWait(d5) {
     if (!d5.since) return "";
     const n4 = -days(d5.since);
@@ -32098,12 +32201,12 @@ ${d5.text}`);
     const r4 = btn.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
-    const pad = (n4) => String(n4).padStart(2, "0"), isoOf = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+    const pad2 = (n4) => String(n4).padStart(2, "0"), isoOf = (d5) => `${d5.getFullYear()}-${pad2(d5.getMonth() + 1)}-${pad2(d5.getDate())}`;
     const draw = (focus) => {
       const f5 = new Date(y5, m5, 1), st = (f5.getDay() + 6) % 7, dn = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st);
       for (let d5 = 1; d5 <= dn; d5++) {
-        const v4 = `${y5}-${pad(m5 + 1)}-${pad(d5)}`, off = max && v4 > max || min && v4 < min;
+        const v4 = `${y5}-${pad2(m5 + 1)}-${pad2(d5)}`, off = max && v4 > max || min && v4 < min;
         g5 += `<button type="button" data-v="${fd(v4)}" tabindex="${v4 === cur ? 0 : -1}" ${off ? 'disabled aria-disabled="true"' : ""} aria-label="${fd(v4)}" class="${v4 === TODAY ? "today" : ""} ${v4 === toIso(inp.value) ? "sel" : ""} ${off ? "off" : ""}">${d5}</button>`;
       }
       putHTML(box, html`<div class="ch"><button type="button" data-n="-1" aria-label="Previous month">‹</button><span>${raw(f5.toLocaleString("en-GB", { month: "long" }))} ${raw(y5)}</span><button type="button" data-n="1" aria-label="Next month">›</button></div><div class="cg">${raw(g5)}</div><div class="cf"><button type="button" data-v="${fd(min && TODAY < min ? min : max && TODAY > max ? max : TODAY)}">Today</button>${noclear ? "" : html`<button type="button" data-v="">Clear</button>`}</div>`);
@@ -32112,12 +32215,12 @@ ${d5.text}`);
         if (c5) c5.focus();
       }
     };
-    const goTo = (iso) => {
-      if (max && iso > max) iso = max;
-      if (min && iso < min) iso = min;
-      cur = iso;
-      y5 = +iso.slice(0, 4);
-      m5 = +iso.slice(5, 7) - 1;
+    const goTo = (iso2) => {
+      if (max && iso2 > max) iso2 = max;
+      if (min && iso2 < min) iso2 = min;
+      cur = iso2;
+      y5 = +iso2.slice(0, 4);
+      m5 = +iso2.slice(5, 7) - 1;
       draw(true);
     };
     draw(true);
@@ -32135,7 +32238,7 @@ ${d5.text}`);
           m5 = 0;
           y5++;
         }
-        cur = `${y5}-${pad(m5 + 1)}-${pad(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
+        cur = `${y5}-${pad2(m5 + 1)}-${pad2(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
         if (max && cur > max) cur = max;
         if (min && cur < min) cur = min;
         draw(false);
@@ -32199,76 +32302,19 @@ ${d5.text}`);
     });
   }
   var DATE_HELP = "Try “fri”, “+3d”, “15-10” or 16-10-2026.";
-  var DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-  function parseWhen(text, today = TODAY, due = false) {
-    let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
-    if (!s5) return null;
-    const pad = (n4) => String(n4).padStart(2, "0"), iso = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`, t0 = /* @__PURE__ */ new Date(today + "T12:00:00");
-    const add = (n4, unit) => {
-      const d5 = new Date(t0);
-      if (unit === "m") {
-        const day = d5.getDate();
-        d5.setDate(1);
-        d5.setMonth(d5.getMonth() + n4);
-        d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
-      } else d5.setDate(d5.getDate() + n4 * (unit === "w" ? 7 : 1));
-      return iso(d5);
-    };
-    const real = (y5, m6, d5) => {
-      if (y5 < 100) y5 += 2e3;
-      const x5 = new Date(y5, m6 - 1, d5, 12);
-      return x5.getFullYear() === y5 && x5.getMonth() === m6 - 1 && x5.getDate() === d5 ? iso(x5) : null;
-    };
-    const dm = (d5, m6, y5) => {
-      if (y5 != null) return real(+y5, +m6, +d5);
-      const yr = t0.getFullYear();
-      let r4 = real(yr, +m6, +d5);
-      if (r4 && due && r4 < today) r4 = real(yr + 1, +m6, +d5);
-      return r4;
-    };
-    const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], mon = (w5) => {
-      const i5 = MON.indexOf(w5.slice(0, 3));
-      return i5 >= 0 && ("january february march april may june july august september sept october november december".split(" ").some((n4) => n4.startsWith(w5)) || w5.length === 3) ? i5 + 1 : 0;
-    };
-    if (s5 === "today" || s5 === "now") return today;
-    if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return add(1, "d");
-    if (s5 === "yesterday") return add(-1, "d");
-    let m5 = s5.match(/^(next |this )?([a-z]{3,9})$/);
-    if (m5) {
-      const w5 = DAYS.findIndex((d5) => m5[2].startsWith(d5) && "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ").some((n4) => n4.startsWith(m5[2])));
-      if (w5 >= 0) {
-        const ahead = (w5 - t0.getDay() + 7) % 7 || 7;
-        return add(ahead + (m5[1] === "next " ? 7 : 0), "d");
-      }
-    }
-    if (s5 === "next week") return add((1 - t0.getDay() + 7) % 7 || 7, "d");
-    if (s5 === "end of week" || s5 === "eow") return add((5 - t0.getDay() + 7) % 7, "d");
-    if (s5 === "end of month" || s5 === "eom") return iso(new Date(t0.getFullYear(), t0.getMonth() + 1, 0, 12));
-    if (s5 === "end of next week") return add((5 - t0.getDay() + 7) % 7 + 7, "d");
-    m5 = s5.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/);
-    if (m5) return add(+m5[1], m5[2][0]);
-    m5 = s5.match(/^\+(\d{1,3})$/);
-    if (m5) return add(+m5[1], "d");
-    m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (m5) return real(+m5[1], +m5[2], +m5[3]);
-    m5 = s5.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/);
-    if (m5) return dm(m5[1], m5[2], m5[3]);
-    m5 = s5.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/);
-    if (m5 && mon(m5[2])) return dm(m5[1], mon(m5[2]), m5[3]);
-    m5 = s5.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/);
-    if (m5 && mon(m5[1])) return dm(m5[2], mon(m5[1]), m5[3]);
-    return null;
+  function parseWhen(text, today = TODAY, due = false, mode = "") {
+    return parseWords(text, today, due, mode);
   }
-  var dateSaid = (iso) => `${(/* @__PURE__ */ new Date(iso + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso)}`;
+  var dateSaid = (iso2) => `${(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso2)}`;
   var isDateField = (el) => !!(el && el.tagName === "INPUT" && !el.readOnly && el.matches('[data-date],[placeholder="DD-MM-YYYY"],#qcDate,#bdDate,[data-und]'));
   var dueField = (el) => /(^|_)due$/.test(el.name || el.id || "") || el.dataset.cf === "due" || el.dataset.bf === "due" || ["rvDate", "bdDate", "bkDate", "deReply"].includes(el.id) || el.dataset.und != null || el.name === "fc";
   function dateRead(el) {
     const v4 = el.value.trim();
     if (!v4) return { empty: true };
-    const iso = parseWhen(v4, TODAY, dueField(el));
-    if (!iso) return { bad: true };
+    const iso2 = parseWhen(v4, TODAY, dueField(el));
+    if (!iso2) return { bad: true };
     const max = el.dataset.max === "today" ? TODAY : el.dataset.max, min = el.dataset.min === "today" ? TODAY : el.dataset.min;
-    return { iso, late: !!(max && iso > max), early: !!(min && iso < min) };
+    return { iso: iso2, late: !!(max && iso2 > max), early: !!(min && iso2 < min) };
   }
   function dateHint(el) {
     let h5 = $("#dateHint");
@@ -32610,20 +32656,20 @@ ${d5.text}`);
   })();
   var WKNAME = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   var wkDays = () => new Set(Array.isArray(S.weekendDays) ? S.weekendDays : [5, 6]);
-  var wkDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
-  var wkLong = (iso) => `${WKNAME[wkDow(iso)]} ${fd(iso)}`;
-  function weekendNote(iso) {
-    if (!iso || !DATE.test(String(iso))) return null;
+  var wkDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var wkLong = (iso2) => `${WKNAME[wkDow(iso2)]} ${fd(iso2)}`;
+  function weekendNote(iso2) {
+    if (!iso2 || !DATE.test(String(iso2))) return null;
     const W2 = wkDays();
-    if (W2.size >= 7 || !W2.has(wkDow(iso))) return null;
-    let p6 = iso, n4 = iso;
+    if (W2.size >= 7 || !W2.has(wkDow(iso2))) return null;
+    let p6 = iso2, n4 = iso2;
     do
       p6 = pkAdd(p6, -1);
     while (W2.has(wkDow(p6)));
     do
       n4 = pkAdd(n4, 1);
     while (W2.has(wkDow(n4)));
-    return { iso, day: WKNAME[wkDow(iso)], prev: p6, next: n4, text: `${wkLong(iso)} is a weekend.` };
+    return { iso: iso2, day: WKNAME[wkDow(iso2)], prev: p6, next: n4, text: `${wkLong(iso2)} is a weekend.` };
   }
   function weekendHtml(n4, extra = "") {
     return `<div class="wknote" role="status" aria-live="polite"${extra}>${ic("calendar")}<span>${esc(n4.text)}</span><span class="wkb"><button type="button" class="mini" data-wkd="${n4.prev}">${esc(wkLong(n4.prev))}</button><button type="button" class="mini" data-wkd="${n4.next}">${esc(wkLong(n4.next))}</button><button type="button" class="mini" data-wkd="keep">Keep this date</button></span></div>`;
@@ -32636,8 +32682,8 @@ ${d5.text}`);
       WK.ask = null;
     }
   }
-  function wkAsk(iso, anchor, apply2, o5 = {}) {
-    const n4 = weekendNote(iso);
+  function wkAsk(iso2, anchor, apply2, o5 = {}) {
+    const n4 = weekendNote(iso2);
     if (!n4) return false;
     wkClear();
     const t5 = document.createElement("div");
@@ -32651,7 +32697,7 @@ ${d5.text}`);
       box.style.left = Math.max(8, Math.min(r4.left, innerWidth - box.offsetWidth - 8)) + "px";
       box.style.top = (r4.bottom + box.offsetHeight + 8 > innerHeight ? Math.max(8, r4.top - box.offsetHeight - 4) : r4.bottom + 4) + "px";
     }
-    WK.ask = { box, apply: apply2, iso, anchor };
+    WK.ask = { box, apply: apply2, iso: iso2, anchor };
     if (o5.focus !== false) box.querySelector("[data-wkd]").focus();
     return true;
   }
@@ -32672,7 +32718,7 @@ ${d5.text}`);
       if (!b5 || !WK.ask || !WK.ask.box.contains(b5)) return;
       e4.preventDefault();
       e4.stopPropagation();
-      const { apply: apply2, iso, anchor } = WK.ask, v4 = b5.dataset.wkd === "keep" ? iso : b5.dataset.wkd;
+      const { apply: apply2, iso: iso2, anchor } = WK.ask, v4 = b5.dataset.wkd === "keep" ? iso2 : b5.dataset.wkd;
       wkClear();
       WK.ok = true;
       try {
@@ -33625,8 +33671,8 @@ ${d5.text}`);
       ] })
     ] });
   }
-  function addDays(iso, n4) {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00");
+  function addDays(iso2, n4) {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00");
     d5.setDate(d5.getDate() + n4);
     return d5.toISOString().slice(0, 10);
   }
@@ -36669,10 +36715,10 @@ ${d5.text}`);
     const t5 = String(text || "").trim().replace(/^(to|on|by|for|until)\s+/i, "");
     if (/^[+-]\s*\d/.test(t5) && base) {
       const n4 = t5.replace(/\s+/g, "").replace(/^-/, "-"), neg = n4.startsWith("-");
-      const iso = parseWhen(neg ? n4.slice(1).replace(/^/, "+") : n4, base);
-      if (!iso) return null;
-      if (!neg) return iso;
-      const d5 = (/* @__PURE__ */ new Date(iso + "T12:00:00") - /* @__PURE__ */ new Date(base + "T12:00:00")) / 864e5;
+      const iso2 = parseWhen(neg ? n4.slice(1).replace(/^/, "+") : n4, base);
+      if (!iso2) return null;
+      if (!neg) return iso2;
+      const d5 = (/* @__PURE__ */ new Date(iso2 + "T12:00:00") - /* @__PURE__ */ new Date(base + "T12:00:00")) / 864e5;
       return pkAdd(base, -d5);
     }
     return parseWhen(t5, TODAY, true);
@@ -36754,11 +36800,11 @@ ${d5.text}`);
       const what = m5[1].replace(/\s+(?:due|due date)$/i, ""), when = m5[2];
       return one(what, (t5) => {
         const cur = t5.k === "milestones" ? ckMs(t5.id).due : REC(t5.k, t5.id).due;
-        const iso = ckDate(when, cur || TODAY);
-        if (!iso) return { ask: `“${when}” isn't a date creaite knows. ${DATE_HELP}` };
-        if (t5.k === "milestones") return { verb: "date", ...t5, patch: { fc: iso }, label: "Forecast" };
+        const iso2 = ckDate(when, cur || TODAY);
+        if (!iso2) return { ask: `“${when}” isn't a date creaite knows. ${DATE_HELP}` };
+        if (t5.k === "milestones") return { verb: "date", ...t5, patch: { fc: iso2 }, label: "Forecast" };
         if (t5.k === "decisions" && REC(t5.k, t5.id).st !== "Pending") return { ask: "Only a pending decision has a needed-by date" };
-        return { verb: "date", ...t5, patch: { due: iso }, label: t5.k === "decisions" ? "Needed by" : "Due date" };
+        return { verb: "date", ...t5, patch: { due: iso2 }, label: t5.k === "decisions" ? "Needed by" : "Due date" };
       });
     }
     return { ask: "creaite couldn't read that as a change" };
@@ -37261,9 +37307,9 @@ ${d5.text}`);
     document.addEventListener("change", (e4) => {
       const t5 = e4.target;
       if (t5.id !== "actFrom" && t5.id !== "actTo") return;
-      const v4 = t5.value.trim(), iso = v4 ? parseWhen(v4) : "";
-      if (v4 && !iso) return;
-      actFilter({ [t5.id === "actFrom" ? "from" : "to"]: iso || "" });
+      const v4 = t5.value.trim(), iso2 = v4 ? parseWhen(v4) : "";
+      if (v4 && !iso2) return;
+      actFilter({ [t5.id === "actFrom" ? "from" : "to"]: iso2 || "" });
     });
     document.addEventListener("click", (e4) => {
       const t5 = e4.target;
