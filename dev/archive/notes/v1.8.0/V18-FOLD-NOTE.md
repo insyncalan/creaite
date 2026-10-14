@@ -42,7 +42,7 @@ What's still open for the fold:
 ## For you
 
 - **Merging:** the edit is three lines, in places v1.7.0's sprints are unlikely to touch: the `#pClose` binding after `closePanel` (around L4678), the L8704 listener, and the `#searchBtn` binding (around L6951). It should merge cleanly into main now, or into v1.7.0 if you'd rather ship the two fixes there.
-- **The rest of phase 2 (folding) hasn't started.** It still waits for your three confirmations in `dev/V18-LAPTOP-GUIDE.md`: v1.7.0 released, BL-254 goldens on main, nobody else editing `dashboard.html`.
+- **The rest of phase 2 (folding) hasn't started.** It still waits for your three confirmations in `dev/archive/V18-LAPTOP-GUIDE.md`: v1.7.0 released, BL-254 goldens on main, nobody else editing `dashboard.html`.
 - **This branch stays open for the fold.** Merging these commits now and continuing on `v18-fold` later, with main merged in, is fine.
 
 ## Phase 2: the fold, done (13-10-2026)

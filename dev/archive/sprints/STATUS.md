@@ -206,7 +206,7 @@ Approved: the sprints below, plus BL-252 and insight's screenshots. BL-231 moves
 
 v1.9.0 can ship with BL-255 report-only; enforcing follows after its week (Alan decides). Release after wave 3, the full suite, hand checks in Chrome, and the docs.
 
-**v1.8.0: leaves Beta (Alan, 12-10-2026): not marked pre-release, no "(Beta)" in its notes.** BL-231 (phase 2 onwards now on laptop 1, from `v18-fold`; laptop 2 holds) plus the small defects from laptop 2's v1.6.1 hand checks (BL-278 to BL-282, `fix-handcheck-161`). Originally BL-231 only (Alan, 12-10-2026), built on a second laptop following `dev/V18-LAPTOP-GUIDE.md`: phase 1 (tools in `dev/`) now, the folding only after v1.7.0 ships. The guard-files split is no longer a v1.8.0 candidate (not scheduled).
+**v1.8.0: leaves Beta (Alan, 12-10-2026): not marked pre-release, no "(Beta)" in its notes.** BL-231 (phase 2 onwards now on laptop 1, from `v18-fold`; laptop 2 holds) plus the small defects from laptop 2's v1.6.1 hand checks (BL-278 to BL-282, `fix-handcheck-161`). Originally BL-231 only (Alan, 12-10-2026), built on a second laptop following `dev/archive/V18-LAPTOP-GUIDE.md`: phase 1 (tools in `dev/`) now, the folding only after v1.7.0 ships. The guard-files split is no longer a v1.8.0 candidate (not scheduled).
 
 **Carried into v1.7.0 from v1.6.1's one-time code-health acceptance** (creaite-c1's audit, 12-10-2026):
 - **BL-229, the rest:** step 4 for minutes.cmd_stage (86, 188 lines), build_dashboard's flow_data and review_queue (77), prep_page.context, live_server.read and docx_tools.fill_xml, plus the "fewer than 60 functions at 25 or more" target (73 now).
