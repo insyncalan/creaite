@@ -4983,6 +4983,7 @@ input[type=checkbox]:not(.switch,.vh):disabled{opacity:.45;cursor:default}
     rtOpen: () => rtOpen,
     rteCmd: () => rteCmd,
     rteLink: () => rteLink,
+    runAsk: () => runAsk,
     runCk: () => runCk,
     runClosure: () => runClosure,
     runGen: () => runGen,
@@ -21338,7 +21339,7 @@ input[type=checkbox]:not(.switch,.vh):disabled{opacity:.45;cursor:default}
       if (!m5.loaded) {
         MRUN[m5.id] = "loading";
         renderMeetings();
-        addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when})`}`);
+        runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when})`}`));
         shared.RUNLABEL = PL;
         try {
           await jobLive("/api/transcripts/load", { id: m5.id });
@@ -21480,7 +21481,7 @@ input[type=checkbox]:not(.switch,.vh):disabled{opacity:.45;cursor:default}
     MRUN[m5.id] = "checking";
     renderMeetings();
     openChat();
-    addEl("msg u", html`${`Check the transcript of “${m5.title}” (${fd(m5.day)} at ${m5.start})`}`);
+    runAsk(addEl("msg u", html`${`Check the transcript of “${m5.title}” (${fd(m5.day)} at ${m5.start})`}`));
     try {
       await jobLive("/api/transcripts/check", { id: m5.id });
     } catch (e4) {
@@ -21506,7 +21507,7 @@ input[type=checkbox]:not(.switch,.vh):disabled{opacity:.45;cursor:default}
       const when = `${fd(m5.day)} at ${m5.start}`;
       MRUN[m5.id] = "loading";
       renderMeetings();
-      addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when})`}`);
+      runAsk(addEl("msg u", html`${`Load the transcript of “${m5.title}” (${when})`}`));
       try {
         await jobLive("/api/transcripts/load", { id: m5.id });
       } catch (e4) {
@@ -35589,10 +35590,12 @@ ${d5.text}`);
     }
     setChat(rec.chat, rec.session);
     CHSTARTED = rec.started ? { chat: rec.chat, started: rec.started } : null;
-    rec.messages.forEach((m5) => {
+    rec.messages.forEach((m5, i5) => {
       if (m5.who === "you") {
         const d5 = addEl("msg u", html`${m5.text}${raw(imgThumbsHtml(m5.images))}`, m5.at || null);
         if (m5.images && m5.images.length) fillThumbs(d5);
+        const r4 = rec.messages[i5 + 1];
+        if (m5.run && r4 && r4.plain && r4.run === m5.run) runAsk(d5);
       } else {
         {
           let g5 = null;
@@ -35835,6 +35838,7 @@ ${d5.text}`);
     if (run.chat && run.chat === shared.ASKCHAT && $("#chLog").children.length) {
       const d5 = addEl("msg u", html`${run.message}${raw(imgThumbsHtml(run.images))}`, run.started || void 0);
       if ((run.images || []).length) fillThumbs(d5);
+      if (run.plain) runAsk(d5);
       shared.SHOWN = { run: run.id, seq: 0 };
       return 0;
     }
@@ -35847,7 +35851,10 @@ ${d5.text}`);
     } else {
       $("#chLog").textContent = "";
     }
-    if (!has) addEl("msg u", html`${run.message}`, run.started || void 0);
+    if (!has) {
+      const d5 = addEl("msg u", html`${run.message}`, run.started || void 0);
+      if (run.plain) runAsk(d5);
+    }
     shared.SHOWN = { run: run.id, seq: after };
     return after;
   }
@@ -36175,6 +36182,10 @@ ${d5.text}`);
     return g5;
   }
   var PLAINEV = ["step", "closure", "changes", "editcard", "fieldcard", "done"];
+  function runAsk(d5) {
+    if (d5) d5.classList.add("runask");
+    return d5;
+  }
   function runClosure(c5) {
     const href = /^#[\w=%.|:&-]*$/.test(String(c5.href || "")) ? String(c5.href) : "";
     return addEl("msg a runend" + (c5.ok === false ? " info" : ""), html`${String(c5.line || "")}${href ? html` · <a href="${href}" class="hlink" data-runhref="${href}">${c5.link || "Open"}</a>` : ""}`);
@@ -36736,7 +36747,8 @@ ${d5.text}`);
     log.querySelectorAll(".msg.a").forEach((d5) => {
       if (!d5.querySelector(":scope>.msgcopy") && d5.textContent.trim()) addHTML(d5, "beforeend", html`<button type="button" class="msgcopy" data-msgcopy title="Copy the reply" aria-label="Copy the reply">${raw(CPYI)}</button>`);
     });
-    const us = [...log.querySelectorAll(".msg.u")], last = us[us.length - 1];
+    log.querySelectorAll(".msg.u.runask>.msgedit").forEach((b5) => b5.remove());
+    const us = [...log.querySelectorAll(".msg.u:not(.runask)")], last = us[us.length - 1];
     us.forEach((d5) => {
       const b5 = d5.querySelector(":scope>.msgedit");
       if (d5 !== last && b5) b5.remove();

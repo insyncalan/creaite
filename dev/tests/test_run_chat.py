@@ -398,6 +398,8 @@ class Panel(LiveBrowserCase):
         d = self.drawn()
         self.assertEqual(len(d["you"]), 1)
         self.assertTrue(d["you"][0].startswith("Check the transcript of “ABC weekly”"))
+        self.decorated()
+        self.assertEqual(self.b.eval(self.EDITS), [False])                # #36: a transcript check's ask has no Edit
         self.assertEqual(len(d["replies"]), 1, d)
         for bad in MACHINE:
             self.assertNotIn(bad, d["text"], d["text"])
@@ -413,6 +415,30 @@ class Panel(LiveBrowserCase):
         self.assertIn("Saved the prep page in Example Programme › agendas", d["replies"][-1])
         for bad in MACHINE:
             self.assertNotIn(bad, d["text"], d["text"])
+
+    def decorated(self):
+        """Wait for the chat's own decoration (Copy and Edit, BL-148), drawn on the next frame after a change."""
+        self.b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,50))))")
+
+    EDITS = "[...document.querySelectorAll('#chLog .msg.u')].map(m=>!!m.querySelector(':scope>.msgedit'))"
+
+    def test_a_run_creaite_started_has_no_edit(self):
+        """#36: the ask of a run creaite started is drawn as Alan's message but offers no Edit (BL-148), which would send it
+        as a chat; Alan's own last message keeps Edit, in the panel and in the history."""
+        self.mode("ok")
+        self.b.eval("openChat(); $('#chIn').value='How is ABC?'; send()", wait=False)
+        self.b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Raise data access'))", 30)
+        _, t = self.started_elsewhere("/api/prep/page", {"key": "09:00|ABC weekly"})
+        t.join(60)
+        self.b.eval("reattach()")
+        self.drawn()
+        self.decorated()
+        self.assertEqual(self.b.eval(self.EDITS), [True, False])        # Alan's "How is ABC?", then the Prep page's ask
+        self.b.eval(f"loadChat('runs-{TODAY}')")                        # the history draws it the same way
+        self.drawn()
+        self.decorated()
+        self.assertEqual(self.b.eval(self.EDITS)[-1], False)
+        self.assertTrue(self.b.eval("[...document.querySelectorAll('#chLog .msg.u')].pop().classList.contains('runask')"))
 
     def test_a_chat_alan_types_is_unchanged(self):
         self.mode("ok")

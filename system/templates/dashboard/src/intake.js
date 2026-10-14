@@ -2,7 +2,7 @@
 /* intake.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0052-inbox-bl-42-phase-1-add-meeting-files-th.js, 0053-bl-137-sprint-final.js, 0134-meetings-in-the-inbox-bl-42-phase-2.js, 0135-bl-119-sprint-polish.js, 0136-transcripts-bl-42-phase-3-select-with-tr.js, 0137-clear-day-bl-104-set-meetings-aside-now.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { askLive, askStream, mdView, openChat, setRunning } from "./ask.js";
+import { askLive, askStream, mdView, openChat, runAsk, setRunning } from "./ask.js";
 import { P } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
 import { addEl } from "./core/fields.js";
@@ -142,7 +142,7 @@ export async function processMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id))
   MSEL.clear(); let chat=false; const PL=L.length>1?`Processing ${L.length} meetings`:`Processing “${L[0].title}”`;     /* BL-139: what the badge says */
   for(const m of L){ const why=mtgSkip(m); if(why){ MRUN[m.id]="skipped:"+why; renderMeetings(); continue; }
     if(!chat){ openChat(); chat=true; } const when=`${fd(m.day)} at ${m.start}`; let now=m;
-    if(!m.loaded){ MRUN[m.id]="loading"; renderMeetings(); addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`);
+    if(!m.loaded){ MRUN[m.id]="loading"; renderMeetings(); runAsk(addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`));
       shared.RUNLABEL=PL; try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); now=MTG().find(x=>x.id===m.id);
       if(!now||!now.loaded){ MRUN[m.id]="skipped:"+(TXWHY[now&&now.transcript]||"No transcript could be loaded"); renderMeetings(); continue; } }
     MRUN[m.id]="processing"; renderMeetings(); addEl("msg u",html`${`Process the meeting “${m.title}” (${when})`}`); const before=$$("#chLog .msg.a").length;
@@ -176,13 +176,13 @@ $("#mtgRefresh").onclick=refreshCalendar;
 export let jobLive = async function(url,body){ if(!shared.RUNLABEL) shared.RUNLABEL=/load/.test(url)?"Loading a transcript":"Checking a transcript"; const id=`r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.RUN={id,ctl}; setRunning(true);
   try{ await askStream(url,{...body,run:id},true,ctl,undefined,true); } finally{ shared.RUN=null; setRunning(false); } };   /* BL-326: drawn plainly (steps and the closure) */
 export async function checkMeeting(m){ if(!viaServer()){ snack("Checking needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
-  MRUN[m.id]="checking"; renderMeetings(); openChat(); addEl("msg u",html`${`Check the transcript of “${m.title}” (${fd(m.day)} at ${m.start})`}`);
+  MRUN[m.id]="checking"; renderMeetings(); openChat(); runAsk(addEl("msg u",html`${`Check the transcript of “${m.title}” (${fd(m.day)} at ${m.start})`}`));
   try{ await jobLive("/api/transcripts/check",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData(); renderMeetings(); }
 export async function loadMeetings(){ const L=MTG().filter(m=>MSEL.has(m.id)&&mtgLoadable(m)); if(!L.length) return;
   if(!viaServer()){ snack("Loading needs the live server"); return; } if(mtgBusy()){ snack("ask creaite is busy; try again when it's finished"); return; }
   MSEL.clear(); openChat();
   for(const m of L){ const when=`${fd(m.day)} at ${m.start}`; MRUN[m.id]="loading"; renderMeetings();
-    addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`);
+    runAsk(addEl("msg u",html`${`Load the transcript of “${m.title}” (${when})`}`));
     try{ await jobLive("/api/transcripts/load",{id:m.id}); }catch(e){} delete MRUN[m.id]; await reloadData();
     renderMeetings(); } }
 /* BL-137: a loaded transcript and its chat are previewed and removed from the meeting's row (Remove only before it is processed; one Undo) */
