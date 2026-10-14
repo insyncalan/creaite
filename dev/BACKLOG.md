@@ -1,6 +1,6 @@
 # Backlog
 
-Agreed features not yet built. Built items leave this list and become requirements in `dev/BRD.md` (v0.24 maps BL-08 and BL-11 to BL-39 to their FRs); their full write-ups are in git history. The next new item is **BL-336** (BL-193, BL-194 and BL-196 to BL-335 are in use, apart from BL-332, which no item holds and stays unused; BL-319 is in use (Today as one home, v1.9.2); BL-275 and BL-276 are PDF and .eml search, from laptop 2) (BL-75, one-off documents and permission requests, was built in `sprint-adhoc-docs`, FR-78).
+Agreed features not yet built. Built items leave this list and become requirements in `dev/BRD.md` (v0.24 maps BL-08 and BL-11 to BL-39 to their FRs); their full write-ups are in git history. The next new item is **BL-338** (BL-193, BL-194 and BL-196 to BL-337 are in use, apart from BL-332, which no item holds and stays unused; BL-319 is in use (Today as one home, v1.9.2); BL-275 and BL-276 are PDF and .eml search, from laptop 2) (BL-75, one-off documents and permission requests, was built in `sprint-adhoc-docs`, FR-78).
 
 **Rules**
 - Nothing here is built until Alan moves it into a build step in `dev/BUILD.md`.
@@ -62,7 +62,9 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 
 | ID | Item | Source | Size | Plan |
 |----|------|--------|------|------|
-| BL-335 | **The weekly report, redesigned and built in creaite:** drafted, edited and approved on the project's Reports tab as a true A4 page; filed as a creaite report (`.html` with the report's data inside, reopened to edit, versioned); exported to Word (the firm's template), PDF and HTML to share. New layout that leads with health and the asks; sections you move and hide, rows you choose, a layout remembered per project, up to two client and partner logos, inline AI checks and suggestions, the standard peek on every item | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026).** Needs v2.0.0's one editor. The client report follows the same layout (to discuss next) |
+| BL-335 | **The weekly report, redesigned and built in creaite:** drafted, edited and approved on the project's Reports tab as a true A4 page; filed as a creaite report (`.html` with the report's data inside, reopened to edit, versioned); exported to Word (the firm's template), PDF and HTML to share. New layout that leads with health and the asks; sections you move and hide, rows you choose, a layout remembered per project, up to two client and partner logos, inline AI checks and suggestions, the standard peek on every item | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category, with BL-336 and BL-337.** Needs v2.0.0's one editor |
+| BL-336 | **The client report, as a Client view of the week's report:** one per client, with its own layout and renamable headings remembered per client; client health may differ, with a required reason; client-visible items only, in their client wording; Match internal per section or for all; a check of what's left out before export; a baseline (approved or exported only after the internal week is approved, its facts locked to it); HTML, Word or PDF | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category.** With BL-335; replaces cx-client-report's Word draft |
+| BL-337 | **Reporting space and journey:** a Reporting card on the project cockpit; one reporting space per project (weeks down the left, the week's internal and client reports as cards, the files filed); the editor with Internal, Client and Side by side views (≠ Client indicators, the difference on hover); a top-level **Reports** page listing every project's week, for Fridays; creaite drafts the client reports with the internal one | Alan, 14-10-2026 (mockup published as a private artifact) | M–L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category.** With BL-335 and BL-336 |
 
 ### Not scheduled
 
@@ -691,14 +693,14 @@ Raised 2026-10-14 (Alan, directly to Team 1), a follow-up to BL-03. **After v1.9
 - **Done when:** a moved-back file is indexed and searchable again, its stored links still open, Undo puts it back in `_Archive/`, and ask creaite still can't read or move anything there.
 
 ### BL-335 — The weekly report, redesigned and built in creaite
-Raised 2026-10-14 (Alan). **In v2.1.0 (Alan, 14-10-2026).** Mockup: a private artifact (Alan's claude.ai, "Weekly report redesign"), not committed here because it uses the firm's real brand. Depends on v2.0.0's one editor (BL-301 part A). No schema change expected; the filed report is a file, the layout a per-project setting.
+Raised 2026-10-14 (Alan). **In v2.1.0 (Alan, 14-10-2026). Priority High (Alan, 14-10-2026: "log the entire reporting category in backlog as a priority"): the Reporting category, with BL-336 (the client report) and BL-337 (the reporting space and the Reports page).** Mockup: a private artifact (Alan's claude.ai, "Weekly report redesign"), not committed here because it uses the firm's real brand. Depends on v2.0.0's one editor (BL-301 part A). No schema change expected; the filed report is a file, the layout a per-project setting.
 
 **Decided (Alan, 14-10-2026):**
 1. **Built in creaite,** with exports, not drafted in Word.
 2. **Filed as a creaite report:** `YYYY-MM-DD Weekly report - <Project name>.html` in the project's weekly reports folder. One file with two parts: the page as approved, and the report's data (each section, its order, its text, which rows show, the items as they stood that Friday). creaite reopens it in the report view to edit again; saving makes a new version and keeps the earlier one, with Undo. Outside creaite it opens in any browser. Search reads each section and figure.
 3. **Exports to share, on demand:** Word (`.docx`, the firm's template), PDF (printed from the page by Chrome, already required) and HTML (one read-only page without the editing data). An export is filed beside the report only when Alan ticks it. Nothing is ever sent.
 4. **Current state at the end,** as context.
-5. **The client report uses the same layout,** with the client filter and wording (to be designed next).
+5. **The client report uses the same layout,** as a Client view of the same week's report (BL-336).
 
 **The page.** A true A4 page shown at 80% of the window, zoomable from 40% to 80% (trackpad pinch, ⌘+ ⌘− ⌘0, or − + in the toolbar), with page breaks marked, so what Alan sees is what exports. **Show as exported** previews it without any editing controls. Body text 14px (about 10.5pt), tables 12.5px (about 9.5pt).
 
@@ -718,15 +720,55 @@ Raised 2026-10-14 (Alan). **In v2.1.0 (Alan, 14-10-2026).** Mockup: a private ar
 
 **Editing.** Everything is editable in place with the one editor (rich in the Summary and Current state; plain in table cells). creaite drafts every section when the report is made. Inline AI: creaite's checks underline a claim it can't find in the week's facts, with the last recorded figure and a way to fix it; selecting words offers Shorten, Make it executive, Polish and Find the source, shown beside Alan's words. Every item ID and milestone opens the **standard work-item peek** (the same component as Work, not a copy), so a last-minute change to an item updates the report at once.
 
-**Per-project layout.** The section order, hidden sections (hidden from a section's handle; a thin "Hidden" bar holds its place while editing), the milestone list, the logos shown and the row rules (for example "top 5 risks") are saved as the project's report layout, so next week's draft starts the same way. Each project can differ. Hiding a single row applies to that week only.
+**Also decided (Alan, 14-10-2026):**
+- **Headings are renamable,** remembered for the project, each with Reset to creaite's default.
+- **✦ on Summary and Current state** as well as This week and Next week: a fresh draft in the executive voice from the week's facts, with its sources, and Keep mine or Use this (for Current state, using it updates the project's Current state, as editing does).
+- **Source tags** on lines drawn from work items (This week, Next week, the Summary): click to open the item, hover for ✕ to remove one, Remove all tags beside the heading. Shown in creaite, never exported.
+- **At a glance is a section** like the others, movable and hideable; each figure can be dragged to reorder or hidden. Default order: next milestone, overdue actions, high risks, decisions needed.
+- **The milestone list:** an eye on each milestone picks which appear in the list, for a tidy report; the timeline always shows every milestone. Remembered with the layout.
 
-**Logos.** Set once per project in Settings › Projects › Report logos: a client logo and a partner logo (PNG, JPG or SVG). Clicking the logos on a report chooses which show, and that becomes the project's layout. The firm's logo always comes first. The files live in the vault's local branding folder, which is kept out of git, so no real logo reaches the public repo.
+**Per-project layout.** The section order, the renamed headings, the order of At a glance, hidden sections (hidden from a section's handle; a thin "Hidden" bar holds its place while editing), the milestone list, the logos shown and the row rules (for example "top 5 risks") are saved as the project's report layout, so next week's draft starts the same way. Each project can differ. Hiding a single row applies to that week only.
+
+**Logos.** Set once per project in Settings › Projects › Report logos: a client logo and a partner logo (PNG, JPG or SVG). Every logo set for the project shows by default; clicking the logos on a report unticks any, and that becomes the project's layout. The firm's logo always comes first. The files live in the vault's local branding folder, which is kept out of git, so no real logo reaches the public repo.
 
 **Approve and file** files the creaite report with the health change and the week's update in one apply, with Undo, as today's weekly report does. cx-weekly-report drafts into this view instead of a Word draft.
 
 **Done when:** a week's report is drafted into the view, edited in place, approved and filed as a creaite report that reopens and re-edits; Word, PDF and HTML exports match the page's sections and order (a test compares them); hidden sections and rows never reach a filed report or an export; the layout is remembered per project; the timeline export starts near today; the peek is the standard one; search finds a report by a section's words; the client report can reuse the layout.
 
 **Touches:** a new report view on the project's Reports tab (on the components), `report.py` (the data model, the creaite report file, the three exports), the weekly template, `docx_tools.py`, the cx-weekly-report skill, search, Settings › Projects (logos, layout), `paths.py` (the branding folder for logos), Help, tests.
+
+### BL-336 — The client report, as a Client view of the week's report
+Raised 2026-10-14 (Alan). **In v2.1.0, Priority High (Alan, 14-10-2026): the Reporting category, with BL-335 and BL-337.** Mockup: a private artifact (Alan's claude.ai, "Client report"), not committed. Replaces cx-client-report's Word draft; depends on BL-335 and v2.0.0's one editor. No schema change expected: the client layout is a per-client setting and the report is a filed creaite report.
+
+**Decided (Alan, 14-10-2026):**
+1. **The same week's report in a Client view,** not a separate document. Each client of a project has its own Client view and remembered layout: section order, hidden sections, renamed headings, logos, the milestone list and row choices.
+2. **Every feature of the internal report:** move and hide sections, renamable headings, ✦ drafts (from client-safe facts only), eyes on rows, zoom, the standard peek, the exports.
+3. **Health may differ from the internal health.** Clicking the client flag changes it and asks for a reason; **Match internal health** takes the internal flag and headline. The internal report shows the difference and the reason; the internal health and the cockpit never change.
+4. **What it contains:** client-visible milestones, risks, issues and decisions, in their client wording (milestones in the client's words: On plan, At risk, Expected later, Late, Achieved); asks only where the client is asked; overdue actions the client owns by default, the others greyed with an eye to show them. Showing a risk that isn't client-visible opens the peek to make it client-visible, with its wording. A Sensitive item can never be shown; partner-only items never appear.
+5. **A separate client summary,** drafted by creaite from the client-safe facts only. Summary and Current state are edited for the client; the internal text and the cockpit's Current state never change.
+6. **Match internal** on each section copies the internal section in, then Alan edits from there (labelled Matching internal or Edited for the client); **Match internal for every section** does them all, keeping the client-only choices. No lasting link back to the internal text.
+7. **Logos:** the firm, the client and the partner by default; untick any for this client.
+8. **Check before export:** a list of what's left out and why (items not client-visible, Sensitive items, hidden sections, internal notes and source tags, any logo unticked, the health difference). Exports: HTML, Word or PDF; filed as a creaite report beside the internal one.
+9. **Baseline:** the Client view can be drafted and edited at any time, but approved or exported only after that week's internal report is approved; its facts (items, dates, milestones, figures) then lock to the approved internal week, and a later tracker change doesn't alter it. A fortnightly or monthly client uses the latest approved internal week, and the report says which.
+10. **Rhythm:** each client's rhythm (weekly, fortnightly, monthly) as today; creaite drafts the client report with the internal one, for each client due that week.
+11. **Client At a glance** (default): next milestone, what we need from the client, points to watch.
+
+**Done when:** a client report is drafted with the internal one, edited in its own view, checked and exported in all three formats; nothing not client-visible or Sensitive can reach it (a test); it can't be approved before the internal week; its health difference and reason show on the internal report; its layout and headings are remembered per client; Match internal copies one section or all.
+
+**Touches:** the report view (BL-335), `report.py` (the client view's data, the check of what's left out, the lock to the approved week), the per-client layout settings, the cx-client-report skill, Help, tests.
+
+### BL-337 — Reporting space and journey
+Raised 2026-10-14 (Alan). **In v2.1.0, Priority High (Alan, 14-10-2026): the Reporting category, with BL-335 and BL-336.** Mockup: a private artifact (Alan's claude.ai, "Reporting journey"), not committed. No schema change expected.
+
+- **Project cockpit:** a **Reporting** card for the week: the internal weekly report and each client's report, with its state and rhythm; **Open** goes straight to a report, **Open reporting** to the space. It sits on today's cockpit; BL-317's tabbed project page (on hold) would host it later.
+- **Reporting space, one per project:** weeks down the left, newest first, each with both reports' state; the week's internal and client reports as cards (state, thumbnail, who it's for, how the client version differs, Open, Approve, Export); **Edit both side by side**; the files filed for the week. A client not due that week shows Not due, with Make one anyway. The client card's Approve reads "Approve the internal report first" until it is.
+- **The editor:** one page with three views, **Internal**, **Client** and **Side by side**, switched without leaving it. Side by side puts the internal page beside the client page, section beside section, with Scroll together; the internal page shows a small **≠ Client** marker on each section the client version changes (health included: "≠ Client: On track"), with both versions on hover; Match internal is on the client page. Markers are creaite only, never exported.
+- **Reports page:** **Reports** in the left menu, with a count of what needs Alan; one row per active project for the week: health, the internal report's state and each client report's state; **Needs me** or **All projects**; earlier weeks one click back; **Open** goes to the project's reporting space. The Friday reminder on Today points here.
+- **Other ways in:** ⌘K ("weekly report FAL"), ask creaite and Review reach the same space.
+
+**Done when:** every way in reaches the same reporting space; the space shows each week's reports and their files; the three views switch without losing place; the Reports page lists every active project's week and what needs Alan.
+
+**Touches:** the cockpit (a Reporting card), a reporting space view, the left menu (Reports), the Today reminder, ⌘K, Help, tests.
 
 ### BL-327 — Defect: slow saves and a slow first load
 Raised 2026-10-14 (Alan), from the live debug log (1.8.0, 13-10-2026, logging at debug). **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** No schema change.
