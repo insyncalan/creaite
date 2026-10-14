@@ -89,6 +89,14 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
                          {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
 - POST /api/meeting/carry {key, point}: carry an agenda point to the series' next meeting (minutes.py carry, carried.json)
+- POST /api/minutes/draft {file | path}: the minutes view (v2.1.0 P4, BL-338): a meeting's minutes record, its versions, the
+                         transcript's turns and the approve popup's plan (minutes_record.view); read only
+- POST /api/minutes/save {path, doc, base_version} | {path, op, base_version}: save the page as a new version (Alan pressed
+                         Save, so filed minutes save with this server's one-time approval), or one row or coverage change (op:
+                         remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
+- POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
+                         approve_minutes, through tracker.py apply); unticked items wait in Review
+- POST /api/minutes/export {path, format, file_beside}: HTML, Word or PDF through creaite_doc.export (P2), opened once made
 - POST /api/day/close    {choices, prep}: close the day: the time and BL-295's plan (First thing tomorrow, Review now: references
                          only) in system/staging/day-closed.json, and the prep pages queued; waits for a running catch-up sweep
 - POST /api/day/card, /api/day/catchup {force}, /catchup/status, /catchup/skip, /api/day/prep {op, keys}: Close the day as a
@@ -4058,6 +4066,73 @@ def review_assign_route(handler, req):
 
 
 REVIEW_WORK_ROUTES = {"/api/review/assign": review_assign_route}
+
+
+# ===== v2.1.0 P4 (BL-338) ===== the minutes view's four routes. The work is minutes_record.py's (view, change, save_page, export) and
+# review.py's (approve_minutes: one apply through tracker.py apply, the one writer); every save goes through creaite_doc.save
+# (filechange.py). Saving over filed minutes is sensitive: only when Alan himself presses Save does this server pass its own
+# one-time approver (reach.APPROVALS.issue), as the contract says. Nothing here sends anything.
+def minutes_draft_route(handler, req):
+    """POST /api/minutes/draft {file | path}: the minutes view's record, versions, transcript turns and approve plan."""
+    import minutes_record
+    try:
+        return handler.send(200, minutes_record.view(req.get("file"), req.get("path")))
+    except minutes_record.RecordError as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+
+
+def minutes_save_route(handler, req):
+    """POST /api/minutes/save {path, doc | op, base_version}: a new version of the page, or one row or coverage change."""
+    import minutes_record
+    base = req.get("base_version")
+    base = base if isinstance(base, int) else None
+    with LOCK:
+        try:
+            if isinstance(req.get("op"), dict):
+                minutes_record.record_at(req.get("path"))
+                out = minutes_record.change(req["path"], req["op"], base_version=base)
+            else:
+                out = minutes_record.save_page(req.get("path"), req.get("doc"), base_version=base, approver=reach.APPROVALS.issue)
+        except minutes_record.RecordError as e:
+            return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, out)
+
+
+def minutes_approve_route(handler, req):
+    """POST /api/minutes/approve {file, group, own}: the minutes and the ticked items in one apply."""
+    import review
+    own = [n for n in req.get("own") or [] if isinstance(n, int)]
+    with LOCK:
+        out = review.approve_minutes(str(req.get("file") or ""), group=req.get("group", True) is not False, own=own)
+    return handler.send(200, out)
+
+
+def open_made(rel):
+    """Open a file creaite just made in its default viewer; with CREAITE_NO_LAUNCH (the tests) only say where it is."""
+    target = str(paths.resolve(rel))
+    if os.environ.get("CREAITE_NO_LAUNCH"):
+        return False
+    subprocess.Popen(["open", target] if sys.platform == "darwin" else ["xdg-open", target])
+    return True
+
+
+def minutes_export_route(handler, req):
+    """POST /api/minutes/export {path, format, file_beside}: export the minutes, then open the export (P2's creaite_doc.export)."""
+    import minutes_record
+    with LOCK:
+        try:
+            out = minutes_record.export(req.get("path"), req.get("format"), req.get("file_beside", True) is not False)
+        except minutes_record.RecordError as e:
+            return handler.send(200, {"ok": False, "message": str(e)})
+    if out.get("ok") and out.get("path"):
+        out["launched"] = open_made(out["path"])
+    return handler.send(200, out)
+
+
+MINUTES_ROUTES = {"/api/minutes/draft": minutes_draft_route, "/api/minutes/save": minutes_save_route,
+                  "/api/minutes/approve": minutes_approve_route, "/api/minutes/export": minutes_export_route}
+REVIEW_WORK_ROUTES.update(MINUTES_ROUTES)        # dispatched with Review's work, so do_POST gains no branch
+# ===== end v2.1.0 P4 =====
 # ===== end BL-200 =====
 
 

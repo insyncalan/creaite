@@ -1489,15 +1489,16 @@ def _stamp_approved(apply_id, blk, field, done, data=None):
             kept = stash(apply_id, draft)
             on = (os.environ.get("CREAITE_NOW") or today())[:10]          # creaite's clock: CREAITE_NOW fixes it in tests
             if draft.suffix.lower() == ".html":                           # v2.1.0 P4: a minutes record (creaite_doc)
-                _stamp_record(draft, f"Approved by {approved_by} on {long_date(on)}", on, apply_id, data)
+                _stamp_record(draft, f"Approved by {approved_by} on {long_date(on)}", on, apply_id, data, blk)
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
             elif set_status_line(draft, f"Approved by {approved_by} on {long_date(on)}"):
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
 
 
-def _stamp_record(draft, status, on, apply_id, data):
+def _stamp_record(draft, status, on, apply_id, data, blk=None):
     """v2.1.0 P4 (BL-338): an approved minutes record is marked approved (state, approved_at, the status line) and each row of an
-    item this apply wrote names the ID it was given (a row ref "@<n>" becomes it), then rendered again (creaite_doc)."""
+    item this apply wrote names the ID it was given (a row ref "@<n>" becomes it), then rendered again (creaite_doc). Its
+    transcript is the filed copy."""
     import creaite_doc
     doc = creaite_doc.read(draft)
     ids = {f"@{i['n']}": i["result_id"] for i in (data or {}).get("items", [])
@@ -1507,6 +1508,9 @@ def _stamp_record(draft, status, on, apply_id, data):
         _stamp_section(s, (doc.get("meta") or {}).get("status_line"), status, ids)
     doc["items"] = {ids.get(k, k): ({**v, "id": ids[k]} if k in ids else v) for k, v in (doc.get("items") or {}).items()}
     doc.setdefault("meta", {}).update(status_line=status, removed={})     # removed rows are kept for Undo while a draft only
+    filed = [op["to"] for op in (blk or {}).get("file_ops", []) if op.get("op") == "copy" and op.get("from") == "transcript"]
+    if filed:
+        doc["meta"].update(transcript=filed[0], transcripts=filed)
     draft.write_text(creaite_doc.dumps(doc), encoding="utf-8")
 
 

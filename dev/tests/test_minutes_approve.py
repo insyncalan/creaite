@@ -9,10 +9,14 @@ update of an existing one; Undo takes the whole apply back.
 """
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
+import time
 import unittest
+import urllib.error
+import urllib.request
 from contextlib import closing
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,19 +51,24 @@ def spec():
             ]}
 
 
+def world(v):
+    """The tracker's open items, then the meeting staged as a minutes record."""
+    v.run("init")
+    v.propose("2026-10-13-0900", SEED)
+    v.run("apply")
+    (v.root / "inbox/2026-10-14 Steering committee.vtt").write_text(VTT, encoding="utf-8")
+    f = v.root / "system/staging/drafts/meeting.json"
+    f.write_text(json.dumps(spec()), encoding="utf-8")
+    v.run("stage", str(f), script="minutes.py")
+    return next((v.root / "system/staging").glob("proposed-*.json")).name
+
+
 class Base(unittest.TestCase):
     def setUp(self):
         self.now = os.environ.get("CREAITE_NOW")
-        os.environ["CREAITE_NOW"] = "2026-10-14T12:00:00"
+        os.environ["CREAITE_NOW"] = "2026-10-14 12:00"
         self.v = Vault()
-        self.v.run("init")
-        self.v.propose("2026-10-13-0900", SEED)
-        self.v.run("apply")
-        (self.v.root / "inbox/2026-10-14 Steering committee.vtt").write_text(VTT, encoding="utf-8")
-        f = self.v.root / "system/staging/drafts/meeting.json"
-        f.write_text(json.dumps(spec()), encoding="utf-8")
-        self.v.run("stage", str(f), script="minutes.py")
-        self.name = self.proposal_path().name
+        self.name = world(self.v)
 
     def tearDown(self):
         self.v.cleanup()
@@ -259,6 +268,96 @@ class Rows(Base):
         self.assertEqual(self.rows(self.doc(), "actions")[0]["cells"]["owner"], "Omar Ali")
         self.assertIn("can't be changed", self.change({"op": "edit", "n": 1, "values": {"project": "DEF"}})["message"])
         self.assertIn("is an update", self.change({"op": "edit", "n": 3, "values": {"owner": "Omar Ali"}})["message"])
+
+
+class ThroughTheServer(unittest.TestCase):
+    """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
+    the filed minutes reopened and saved again (Edit again, with the server's own approval)."""
+
+    @classmethod
+    def setUpClass(cls):
+        from test_live_server import free_port
+        cls.now = os.environ.get("CREAITE_NOW")
+        os.environ["CREAITE_NOW"] = "2026-10-14 12:00"
+        cls.v = Vault()
+        cls.name = world(cls.v)
+        cls.port = free_port()
+        cls.base = f"http://127.0.0.1:{cls.port}"
+        cls.proc = subprocess.Popen([sys.executable, str(cls.v.root / "system/scripts/live_server.py")], cwd=cls.v.root,
+                                    env={**os.environ, "CREAITE_PORT": str(cls.port)}, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
+        for _ in range(150):
+            try:
+                urllib.request.urlopen(cls.base + "/health", timeout=1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        page = urllib.request.urlopen(cls.base + "/").read().decode()
+        cls.token = json.loads(re.search(r'id="data">(.*?)</script>', page, re.S).group(1).replace("<\\/", "</"))["token"]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.terminate()
+        cls.proc.wait(timeout=10)
+        cls.v.cleanup()
+        if cls.now is None:
+            os.environ.pop("CREAITE_NOW", None)
+        else:
+            os.environ["CREAITE_NOW"] = cls.now
+
+    def post(self, path, body):
+        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read().decode())
+
+    def test_the_four_routes(self):
+        view = self.post("/api/minutes/draft", {"file": self.name})
+        self.assertTrue(view["ok"], view)
+        self.assertEqual((view["path"], view["doc"]["kind"], view["doc"]["version"]), (DRAFT, "minutes", 1))
+        self.assertEqual([t["who"] for t in view["turns"]["turns"]], ["Alan Carter", "Jane Doe"])
+        self.assertEqual(view["plan"]["group"], 3)
+        self.assertEqual(view["versions"][0]["version"], 1)
+        r = self.post("/api/minutes/save", {"path": DRAFT, "op": {"op": "remove", "n": 2}, "base_version": 1})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["version"], 2)
+        page = r["doc"]
+        page["sections"][1]["text"] = "The committee met and agreed the go-live."
+        raid = next(s for s in page["sections"] if s["id"] == "raid")
+        raid["rows"] = []                                                      # rows change only through a row change
+        r = self.post("/api/minutes/save", {"path": DRAFT, "doc": page, "base_version": 2})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual(r["version"], 3)
+        self.assertEqual(r["doc"]["sections"][1]["text"], "The committee met and agreed the go-live.")
+        self.assertEqual([x["ref"] for x in next(s for s in r["doc"]["sections"] if s["id"] == "raid")["rows"]], ["@5"])
+        stale = self.post("/api/minutes/save", {"path": DRAFT, "doc": page, "base_version": 2})
+        self.assertFalse(stale["ok"])
+        self.assertIn("saved elsewhere", stale["message"])
+        ex = self.post("/api/minutes/export", {"path": DRAFT, "format": "pdf"})
+        if ex.get("stub"):                                                     # P2's creaite_doc.export isn't on this branch yet
+            self.assertFalse(ex["ok"])
+            self.assertIn("creaite_doc.export", ex["message"])
+        else:
+            self.assertTrue(ex["ok"], ex)
+        self.assertFalse(self.post("/api/minutes/export", {"path": DRAFT, "format": "odt"})["ok"])
+        ok = self.post("/api/minutes/approve", {"file": self.name, "group": True, "own": [4]})
+        self.assertTrue(ok["ok"], ok)
+        self.assertIsInstance(ok["apply_id"], int)
+        self.assertEqual(ok["waiting"], [5, 6, 7])
+        filed = self.post("/api/minutes/draft", {"path": FILED})
+        self.assertEqual((filed["doc"]["state"], filed["plan"]), ("approved", None))
+        self.assertEqual(filed["doc"]["meta"]["transcript"], f"{ABC}/transcripts/2026-10-14 Steering committee.vtt")
+        self.assertEqual(len(filed["turns"]["turns"]), 2)                     # the pane reads the filed transcript
+        doc = filed["doc"]
+        doc["sections"][1]["text"] = "Edited again after approval."
+        again = self.post("/api/minutes/save", {"path": FILED, "doc": doc, "base_version": doc["version"]})
+        self.assertTrue(again["ok"], again)                                     # sensitive, approved by Alan's own Save
+        self.assertEqual(again["version"], doc["version"] + 1)
+        self.assertEqual(again["doc"]["state"], "approved")
+        refused = self.post("/api/minutes/save", {"path": FILED, "op": {"op": "remove", "n": 5}})
+        self.assertIn("approved", refused["message"])
+        for bad in ("../etc/passwd.html", "system/config/settings.json", f"{ABC}/CLAUDE.md"):
+            self.assertFalse(self.post("/api/minutes/draft", {"path": bad})["ok"], bad)
 
 
 if __name__ == "__main__":

@@ -713,3 +713,81 @@ def change(path, op, base_version=None, via="dashboard"):
             doc["items"][f"@{it['n']}"] = item_snapshot(it)
     r = save_record(path, doc, f"Minutes: {kind}", base_version=base_version, via=via)
     return {"ok": True, "message": message, "version": r["version"], "doc": creaite_doc.read(path)}
+
+
+# ── The minutes view's routes (live_server.py /api/minutes/draft, save, export) ──
+
+RECORD_PATH = re.compile(r"(?:system/staging/drafts|projects)/[^\x00]+\.html")
+
+
+def record_at(path):
+    """(stored path, the record) for a minutes record the view may open: a draft in system/staging/drafts/ or filed minutes in a
+    project folder. Raises RecordError."""
+    rel = str(path or "")
+    if not RECORD_PATH.fullmatch(rel) or ".." in Path(rel).parts or "\\" in rel:
+        raise RecordError("Those aren't minutes creaite can open.")
+    try:
+        doc = creaite_doc.read(rel)
+    except creaite_doc.DocError as e:
+        raise RecordError(str(e)) from None
+    if doc.get("kind") != "minutes":
+        raise RecordError("That creaite document isn't a meeting's minutes.")
+    return rel, doc
+
+
+def view(file=None, path=None):
+    """What the minutes view opens: the record, its versions, the transcript's turns for the pane, and (while its items are
+    pending) the approve popup's plan. By the proposal's file name, or the record's stored path."""
+    import review
+    data = None
+    if file:
+        p = paths.STAGING / Path(str(file)).name
+        if not re.fullmatch(r"proposed-[\w.-]+\.json", p.name) or not p.is_file():
+            raise RecordError("That proposal is no longer pending.")
+        data = json.loads(p.read_text(encoding="utf-8"))
+        path = (data.get("meeting") or {}).get("draft")
+        if not is_record(path):
+            raise RecordError("These minutes aren't a minutes record: open them in Review.")
+    rel, doc = record_at(path)
+    if data is None and doc.get("state") == "draft":
+        try:
+            data = proposal_for(doc)[1]
+        except RecordError:
+            data = None
+    meta = doc.get("meta") or {}
+    return {"ok": True, "path": rel, "doc": doc, "versions": creaite_doc.versions(rel), "turns": turns(meta.get("transcript")),
+            "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None}
+
+
+def save_page(path, page, base_version=None, approver=None, via="dashboard"):
+    """Save the page as Alan edited it (text, headings, order, hidden sections) as a new version. While the minutes are a draft the
+    item rows stay as staged (they change only through `change`), and the record's items, meta and state are always kept."""
+    rel, cur = record_at(path)
+    if not isinstance(page, dict) or not isinstance(page.get("sections"), list):
+        raise RecordError("Nothing to save.")
+    out = {**cur, "sections": [], "layout": page.get("layout") if isinstance(page.get("layout"), dict) else cur.get("layout")}
+    seen = set()
+    for s in page["sections"]:
+        if not isinstance(s, dict) or s.get("id") in seen:
+            continue
+        seen.add(s.get("id"))
+        mine = section_of(cur, s.get("id"))
+        if mine is not None and s.get("id") in COLUMNS and cur.get("state") == "draft":
+            s = {**s, "rows": mine.get("rows") or [], "columns": mine.get("columns") or COLUMNS[s["id"]]}
+        out["sections"].append(s)
+    out["sections"] += [s for s in cur["sections"] if s.get("id") in COLUMNS and s["id"] not in seen]
+    r = save_record(rel, out, "Minutes saved", base_version=base_version, approver=approver, via=via)
+    return {**r, "doc": creaite_doc.read(rel)}
+
+
+def export(path, fmt, file_beside=True):
+    """An export of the minutes (HTML, Word or PDF) through creaite_doc.export (v2.1.0 P2, the contract's call). Until P2 is on the
+    branch it answers that it isn't there yet (a stub, never a guess at the format)."""
+    rel, _doc = record_at(path)
+    if fmt not in ("html", "docx", "pdf"):
+        raise RecordError("Export as HTML, Word or PDF.")
+    fn = getattr(creaite_doc, "export", None)
+    if fn is None:
+        return {"ok": False, "format": fmt, "stub": True,
+                "message": "Exporting isn't in this version yet: it comes with creaite_doc.export (v2.1.0 P2)."}
+    return fn(rel, fmt, file_beside=bool(file_beside), open_after=False)
