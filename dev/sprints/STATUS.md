@@ -58,8 +58,8 @@ v1.9.0, v1.9.1 and v1.9.2 are published (14-10-2026; tags v1.9.0 `d689f89`, v1.9
 
 | Release | Items |
 |---|---|
-| v1.9.4 | BL-09 archive and restore whole projects into `_Archive/`, with zz Archive renamed throughout; ready for a sprint, after BL-320's Health (Alan, 14-10-2026); BL-304 changes appear at once |
-| v1.9.5 | BL-324 UI audit: fix first (Team 2, `v195-ui-fixes`); BL-325 one design scale, after BL-324 (ready; Alan's three choices made); BL-10 age-based archiving and the rest of BL-03 (old reports, snapshots, applied proposals), after BL-09 (v1.9.4); both ready for a sprint: BL-10 archives closed actions, RAID items and promises (never decisions or milestones); BL-03 moves reports and minutes into the engagement's `_Archive/` after 12 months, monthly, on a yes (Alan, 14-10-2026); BL-316 consistency audit after the move to components, after BL-325; BL-326 ask creaite shows a run's ask, activity and outcome, never its prompt, JSON or HTML |
+| v1.9.4 | BL-09 archive and restore whole projects, BL-304 changes appear at once, BL-326 ask creaite shows the ask and the outcome (moved from v1.9.5), BL-327 fast saves, BL-328 the sweep lock, BL-329 one server, BL-330 a remembered chat that's gone. `release-194` (WIP: `test_fast_save`). Team Cap fixes and integrates, Team Stark cuts. Plan: `dev/sprints/v194-release.md` |
+| v1.9.5 | BL-324 UI fixes, BL-325 one design scale, BL-333 no scroll past the bottom, BL-334 alerts read the conversation, BL-10 and BL-03 archiving, BL-331 move back an archived report, BL-316 the consistency audit (split by screen between the teams). Team Stark integrates and cuts. Plan: `dev/sprints/v195-release.md` |
 | v2.0.0 | BL-301 Notes: A, B, D, E and the Notes server on `v20-base`; C on `v20-capture`; left: D wired into Notes, B's margin ticks, the notes guard change, the `review` snapshot fix, the real-data gate. Plan: `dev/sprints/v200-notes-release.md` |
 | v2.1.0 | BL-335 the weekly report redesigned and built in creaite |
 

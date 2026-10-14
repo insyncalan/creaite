@@ -44,6 +44,7 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | BL-328 | **Defect.** A sweep that ends abnormally (stopped, timed out, or cut off when the server stops) leaves its lock, so the next sweep waits until the lock is 30 minutes old | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
 | BL-329 | **Defect.** Two servers start at once: the launcher starts a second while the first is still starting, which fails with "exit 1" (three times on 13-10) | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
 | BL-330 | **Defect.** The page asks for a remembered ask creaite chat that no longer exists (only 10 are kept): a 404 logged as a warning, six times on 13-10 | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
+| BL-326 | **Defect. ask creaite shows a run's machine text:** pressing Prep page shows the run in ask creaite with its whole prompt ("creaite prep page. Research one meeting … reply with ONLY a JSON object"), the meeting's context as JSON and the reply's JSON and HTML. Show only the ask, the activity and the outcome | Alan, 14-10-2026 | S | **Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330: both built on `v195-run-chat-bl330`. **In v1.9.5 (Alan, 14-10-2026)**; moved from v2.1.0 the same day |
 
 ### v1.9.5 (Alan, 14-10-2026)
 
@@ -54,9 +55,9 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | BL-10 | Age-based archiving of older items | Alan | M | **In v1.9.5 (Alan, 14-10-2026)**, after BL-09 (v1.9.4), with the rest of BL-03. **Ready for a sprint** (decisions below) |
 | BL-03 | Archiving old reports, snapshots and applied proposals (the backup half split out as BL-323) | BRD | S–M | **In v1.9.5 (Alan, 14-10-2026)**, with BL-10, after BL-09 (v1.9.4). Archived reports and minutes move into the engagement's `_Archive/`; **ready for a sprint** (decisions below) |
 | BL-316 | **Consistency audit after the move to components:** every screen on BL-256's building blocks; one shared behaviour test (keys, focus, Esc, Undo) on every menu, picker and dialog; check.py counts the old helpers down to 0 | Alan, 13-10-2026 | M | **In v1.9.5 (Alan, 14-10-2026)**, after BL-325, so every screen is checked once the shared scale is in |
-| BL-326 | **Defect. ask creaite shows a run's machine text:** pressing Prep page shows the run in ask creaite with its whole prompt ("creaite prep page. Research one meeting … reply with ONLY a JSON object"), the meeting's context as JSON and the reply's JSON and HTML. Show only the ask, the activity and the outcome | Alan, 14-10-2026 | S | **In v1.9.5 (Alan, 14-10-2026)**; moved from v2.1.0 the same day |
 | BL-333 | **Defect.** The page scrolls past its own bottom: on Today and the Prep page the whole window scrolls down into empty space, and the rail and content scroll away with it | Alan, 14-10-2026 (screenshot, Prep page) | XS | **Defect. In v1.9.5 (Alan, 14-10-2026).** |
 | BL-334 | **Alerts from people Alan follows read the conversation, not the message:** one card per Teams chat or mail thread since the last check, saying what came out of it (a short summary plus proposed actions, decisions and risks), never one card per line of to and fro | Alan, 14-10-2026 (live Today: 3 cards from one chat, 3 from one group chat) | M | **In v1.9.5 (Alan, 14-10-2026).** |
+| BL-331 | **Move back one archived report:** in Files, a report or minutes shown as archived gets **Move back**, which returns it to its place through the approval card | Alan, 14-10-2026, directly to Team 1 | S | **In v1.9.5 (Alan, 15-10-2026)**, after BL-10 and BL-03; built on `v196-move-back`. After v1.9.5 (follows BL-03) |
 
 ### v2.1.0 (Alan, 13-10-2026)
 
@@ -73,7 +74,6 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | ID | Item | Source | Size | Plan |
 |----|------|--------|------|------|
 | BL-340 | **Notes transcripts in the minutes editor:** how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes | Alan, 15-10-2026 | M | **Not scheduled. Priority Low (Alan, 15-10-2026):** to look at after BL-338 |
-| BL-331 | **Move back one archived report:** in Files, a report or minutes shown as archived gets **Move back**, which returns it to its place through the approval card | Alan, 14-10-2026, directly to Team 1 | S | After v1.9.5 (follows BL-03) |
 
 ### On hold
 
@@ -350,6 +350,8 @@ After BL-212's headers, add `Content-Security-Policy` for the page. It is within
 
 ### BL-304 — Changes appear at once, and only what changed is redrawn
 **In v1.9.4 (Alan, 14-10-2026)**, beside BL-09.
+
+**Decided (Alan, 15-10-2026): Retry keeps Alan's value.** After "changed elsewhere", Retry applies his edit on top of the item as it now is (as built); the other change stays in the history, and Undo works.
 
 **Decided (Alan, 14-10-2026): Retry after "changed elsewhere" overwrites.** When an instant save is refused because the item changed elsewhere, **Retry** re-applies Alan's value on top of the item as it now is, so his value wins; it doesn't go to Review as a conflict. The other change stays in Activity and can be undone.
 
@@ -661,6 +663,8 @@ Raised 2026-10-14 (Alan), from the UI/UX audit's wider findings (`dev/reviews/ui
 ### BL-326 — ask creaite shows the ask, the activity and the outcome, never a run's machine text
 Raised 2026-10-14 (Alan), a defect. **In v1.9.5 (Alan, 14-10-2026)**; placed in v2.1.0 earlier the same day, then moved. v1.9.1 was already cut. No schema change.
 
+**Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330, because both are built and approved on `v195-run-chat-bl330`. The release plan is `dev/sprints/v194-release.md`.
+
 **What happens now.** Pressing **Prep page** for a meeting in the dashboard starts a run through the run engine (`/api/prep/page`, `kind="prep"`), and ask creaite shows it as a chat. That chat shows the whole working copy: the prompt (`prep_page.PROMPT`: "creaite prep page. Research one meeting for Alan and reply with ONLY a JSON object, nothing else. Read-only: …"), the meeting's context as JSON, and Claude's reply, the JSON with the finished page's HTML in it.
 
 **What Alan sees instead (Alan, 14-10-2026): the ask, the activity and the closure.**
@@ -677,6 +681,8 @@ Raised 2026-10-14 (Alan), a defect. **In v1.9.5 (Alan, 14-10-2026)**; placed in 
 
 ### BL-331 — Move back one archived report
 Raised 2026-10-14 (Alan, directly to Team 1), a follow-up to BL-03. **After v1.9.5.** No schema change.
+
+**In v1.9.5 (Alan, 15-10-2026)**, on BL-10 and BL-03's archiving; built on `v196-move-back`. The release plan is `dev/sprints/v195-release.md`.
 - In Files, a report, minutes or Steerco one-pager shown as archived (in the engagement's or the portfolio's `_Archive/`) gets a **Move back** action.
 - It returns that one file to its place (the same folder below `_Archive/`), never overwriting: a name already taken gets a number.
 - It goes on the approval card, with the move shown, and is applied by `tracker.py apply` through BL-09's agreed `move` exception; ask creaite can't do it. Logged and undoable.
