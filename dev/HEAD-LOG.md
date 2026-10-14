@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | The five release-194 failures move from Team Cap to Team Stark (03:50); Stark's next work is #45, then #57 | Critical path; Team Cap hadn't picked them up and Stark's agents were idle |
 | 15-10-2026 | Jarvis | BL-326: a run creaite started shows no Edit button on its ask line; a late transcript-check result may land below a new chat's greeting (no change) | Edit would re-send a machine ask as a chat, which BL-326 removes; the order is harmless. Alan may overrule at 07:57 |
 | 15-10-2026 | Jarvis | The five test files failing on `release-194` ae92cf8 (drafts_client, evidence, milestones_page, work_all_items, work_saved_views) go to Team Cap under #39 | Team Cap owns #39 and made ae92cf8 |
 | 15-10-2026 | Jarvis | P4 (#67), like P1 (#64), is built with the approval card every time until Alan decides on an approval without a card (a BL-141 exception) | Guard matters are Alan's; the card is the safe side and keeps the build moving |
