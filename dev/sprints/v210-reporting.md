@@ -2,7 +2,13 @@
 
 > **UX baseline first (BL-157).** Before it is called done, every screen this sprint touches is checked in the real browser against the ten checks in `dev/BUILD.md` › Sprint ux › UX baseline: (1) a text box shows what is typed; (2) a date field takes words; (3) nothing typed is lost (the peek stages each change; an unsent chat or note comes back after a reload); (4) nothing sends Alan to Claude Code that the app could do; (5) panels don't hide what you're working on (the chat opens over the page; an item panel's fields stay reachable); (6) an empty state says what to do next; (7) the tab title and the first thing seen are right; (8) the key fields come first (the peek's key row, the rest under Details); (9) hints are one tap away, not always on screen; (10) every "Today:" below states what Alan would see, checked in the real app. Look at 1400px and 1100px, light and dark, in at least two themes, with ask creaite open and closed. The report lists which checks were made, with screenshots.
 
-**Goes into:** v2.1.0, the Reporting category, Priority High (Alan, 14 and 15-10-2026). **Team 1, after v2.0.0** (Team 2, 14-10-2026). Branch `sprint-reporting`, worktree `../creaite-reporting`, from the tip of `main`; merge v2.0.0's release branch in for the editor when phase 2 starts (merge, never rebase). Each part below is its own branch from `sprint-reporting` (`v210-p1-doc`, `v210-p2-exports` and so on), merged back in the order given. Written by the Product Manager on 15-10-2026.
+**Goes into:** v2.1.0, the Reporting category, Priority High (Alan, 14 and 15-10-2026). **Both teams, after v2.0.0.** Branch `sprint-reporting`, worktree `../creaite-reporting`, from the tip of `main`; merge v2.0.0's release branch in for the editor when phase 2 starts (merge, never rebase). Each part below is its own branch from `sprint-reporting` (`v210-p1-doc`, `v210-p2-exports` and so on), merged back in the order given. Written by the Product Manager on 15-10-2026.
+
+**Two teams, work split to run in parallel (Alan, 15-10-2026): Team Cap (Team 1, laptop 1) and Team Stark (Team 2, laptop 2).**
+- **Team Cap, reports:** P1 (the document format), P2 (exports), P3 (report data and server), P5 (the A4 sheet), P6 (the weekly report view), P8 (the client view), and `release-210`'s integration and cut.
+- **Team Stark, minutes and the journey:** P4 (the minutes record and server), P7 (the minutes view), P9 (the reporting space and the Reports page), P10 (retire the meeting hub).
+- **Contracts first, so neither team waits.** On day 1 Team Cap writes `dev/sprints/v210-contract.md`: `creaite_doc.py`'s read, write and version calls, the data block's shape, and the export call (P1 and P2). Team Stark builds P4 against it from the start. In phase 2, Team Cap adds `Sheet.jsx`'s props and slots (P5) to the contract before building it. Team Stark builds P7's parts (the transcript pane, item rows, the deadline popover, coverage) on a stub sheet, then moves them onto the real one; P9 and P10 need no sheet. A change to the contract is a SPRINTCOMMS entry.
+- **Each team** runs its own parts' tests; Team Cap merges into `sprint-reporting` in the order below.
 
 **Read first:** BL-335 to BL-339 in `dev/BACKLOG.md`: every decision is there, with its Done when and Touches. This plan only orders the work. The mockups are private artifacts in Alan's claude.ai (not committed, because they use the firm's real brand): "Weekly report redesign" (https://claude.ai/artifact/HqGogxJp2Y41tF1DXWFTyR), "Client report" (https://claude.ai/artifact/PFQ9xsVxhneMnajidsYFkN), "Reporting journey" (https://claude.ai/artifact/D1TGuMeqwPPZE1fDaQiPsy) and "Minutes editor" (https://claude.ai/artifact/12jbexbSjXGTAK8CfKTeuG). Build them as drawn.
 
@@ -28,25 +34,25 @@ Weekly reports, client reports and meeting minutes are made, edited, approved an
 
 ### Phase 1: no editor needed
 
-1. **P1: creaite's document format (shared by reports and minutes).** A new `system/scripts/creaite_doc.py`:
+1. **P1 (Team Cap): creaite's document format (shared by reports and minutes).** A new `system/scripts/creaite_doc.py`:
    - It writes and reads one `.html` file: the page as approved, plus a `<script type="application/json" id="creaite-data">` block holding the data (each section, its order, its text, the rows shown, the items as they stood, the layout).
    - Saving makes a new version and keeps the earlier one, through `filechange.py` (backup, log, Undo).
    - Search reads each section and figure (the `search.py` index).
    - File names come from `paths.py`: `report.py` `report_file()` gives `.html` for the weekly and client reports; minutes are `YYYY-MM-DD <Meeting title>.html` in the minutes folder.
    - Outside creaite, the file opens in any browser.
-2. **P2: exports (shared).** Every export is made from the data, so all three match:
+2. **P2 (Team Cap): exports (shared).** Every export is made from the data, so all three match:
    - **HTML:** the page without the editing data.
    - **Word:** through `docx_tools.py fill` (`weekly-report-template.docx`, `client-report-template.docx`, `minutes-template.docx`).
    - **PDF:** Chrome's print to PDF. Chrome is already required.
 
    **File the exports beside it** is on by default. Each export opens in the default viewer as soon as it's made (`/api/open`).
-3. **P3: report data and server (BL-335, BL-336).**
+3. **P3 (Team Cap): report data and server (BL-335, BL-336).**
    - `report.py` `weekly_data` and `client_data` feed the editor's data model; `weekly_stage` and `client_stage`'s Word fill is retired for this flow.
    - Layout settings per project and per client: section order, hidden sections, renamed headings, logos, the milestone list, the row rules. Logos are kept in the git-ignored `system/branding/`.
    - The client leak check moves from `review.py` `client_findings` (which reads Word) onto the data. Nothing that isn't client-visible, is Sensitive or is partner-only can reach a client report.
    - **The baseline:** a client report is approved or exported only after that week's internal report; its facts then lock to the approved week.
    - Routes: `/api/report/draft`, `save`, `approve`, `export`. Approve is one apply with Undo, as today.
-4. **P4: the minutes record and server (BL-338).**
+4. **P4 (Team Stark, from day 1 against the contract): the minutes record and server (BL-338).**
    - `minutes.py` `cmd_stage` writes the minutes record instead of the Word draft:
      - the sections of `minutes-style.md`;
      - each line's transcript position for the time tags (VTT cue times, else speaker turns);
@@ -64,15 +70,15 @@ Weekly reports, client reports and meeting minutes are made, edited, approved an
 
 ### Phase 2: needs the editor and the peek
 
-5. **P5: the A4 sheet (shared).** `components/report/Sheet.jsx` and its parts, used by every report and the minutes:
+5. **P5 (Team Cap, its props in the contract first): the A4 sheet (shared).** `components/report/Sheet.jsx` and its parts, used by every report and the minutes:
    - a true A4 page at 80% of the width, zoomable from 40% to 80% of the width (− +, trackpad pinch, ⌘+ ⌘− ⌘0); Show as exported; page breaks marked;
    - **the scroll position kept on every redraw** (the mockup's first version jumped to the top);
    - sections that move and hide; renamable headings with Reset;
    - ✦ per section through `/api/edit/ai`; inline checks; selection actions (Shorten, Make it executive, Polish, Find the source);
    - source tags (creaite only, never exported);
    - **the standard peek with Sneak peek** on every item ID.
-6. **P6: the weekly report view (BL-335).** The header with logos, health with its trend, At a glance as a section, the scrolling timeline and the milestone list with its eyes, What we need from people, This week and Next week, decisions written out, risks and overdue actions with eyes, Current state in two panes, the footer.
-7. **P7: the minutes view (BL-338).**
+6. **P6 (Team Cap): the weekly report view (BL-335).** The header with logos, health with its trend, At a glance as a section, the scrolling timeline and the milestone list with its eyes, What we need from people, This week and Next week, decisions written out, risks and overdue actions with eyes, Current state in two panes, the footer.
+7. **P7 (Team Stark): the minutes view (BL-338).**
    - The transcript pane, with time tags linking to it.
    - Checks against the transcript.
    - Item rows: ✕ Remove with Undo; Looks like, with Update that one and What changes; Looks done; the owner picker from the people register.
@@ -80,17 +86,17 @@ Weekly reports, client reports and meeting minutes are made, edited, approved an
    - Agenda coverage with Deal with it…; the milestone note opening the milestone in the peek.
    - One version, or internal and distributed: Side by side with matching sections levelled, Internal only, ≠ markers, Match internal, the check of what's left out.
    - The approve popup: 784px wide; Esc or a click outside closes it.
-8. **P8: the client view (BL-336).** The same sheet with the client's own layout, the client health and its reason, Match internal (one section or all), the check of what's left out before export, and Side by side with the internal report.
-9. **P9: the reporting space and the Reports page (BL-337).**
+8. **P8 (Team Cap): the client view (BL-336).** The same sheet with the client's own layout, the client health and its reason, Match internal (one section or all), the check of what's left out before export, and Side by side with the internal report.
+9. **P9 (Team Stark): the reporting space and the Reports page (BL-337).**
    - The cockpit's Reporting card.
    - One reporting space per project: weeks down the left; the internal and client reports as cards; Edit both side by side; the week's files.
    - **Reports** in the left menu, with a count of what needs Alan; Needs me or All projects; the Friday reminder on Today points to it; ⌘K reaches it.
-10. **P10: retire the meeting hub (BL-339).**
+10. **P10 (Team Stark): retire the meeting hub (BL-339).**
     - Remove `meetings.js` `HUB`, `HUBIX`, `hubFor`, `hubLink` and `renderMeeting` (`#v-meeting`).
     - An old `#meeting=` link (`core/nav.js` `hashOf`) opens the meeting's Prep before it, and its minutes after.
     - Change the call sites in `today.js`, `review.js`, `files.js`, `intake.js`, `projects.js`, `ask.js` and `core/fields.js`.
     - `/api/meeting/carry` stays, now used by the minutes' coverage.
-11. **Docs, last:**
+11. **Docs, last (each team its own parts; Team Cap the rules text and the release notes):**
     - the FR text in `dev/BUILD.md`, `dev/release-notes/2.1.0.md`, Help and the regenerated guides;
     - the cx-minutes, cx-weekly-report and cx-client-report skills (they draft into the editor, not Word);
     - `system/creaite-rules.md`'s skills table and its Retention and Dashboard sections where they mention Word drafts;
