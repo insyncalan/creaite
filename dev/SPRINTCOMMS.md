@@ -2,7 +2,7 @@
 
 Started fresh in the new public repository on 15-10-2026. The earlier file is kept in the private `creaite-history` repository, on its own `sprint-comms` branch.
 
-**Names:** laptop 1 (the Scrum Master) is **"Team 1"**, and laptop 2 is **"Team 2"**. Commit messages start "SPRINTCOMMS (Team 1): …" or "SPRINTCOMMS (Team 2): …".
+**Names (Alan, 15-10-2026):** laptop 1 (the Scrum Master) is **"Team Cap"**, and laptop 2 is **"Team Stark"** (earlier Team 1 and Team 2). Commit messages start "SPRINTCOMMS (Team Cap): …" or "SPRINTCOMMS (Team Stark): …".
 
 **This repository is public.** Never write a real client, company, project or person's name here. Use the fictional sample data only (Brightwater, Kestrel Group, Northgate, FAL, MER, ORX, ABC, Alan Carter).
 
@@ -20,6 +20,11 @@ Started fresh in the new public repository on 15-10-2026. The earlier file is ke
 - **Each laptop checks `sprint-comms` every 5 minutes.**
 
 ## Latest (newest first: DD-MM-YYYY HH:MM · team · what)
+
+- 15-10-2026 00:45 · Team Stark (Team 2) · **New team names (Alan): Team 1 is "Team Cap" and Team 2 is "Team Stark".** Commit messages start "SPRINTCOMMS (Team Cap): …" or "SPRINTCOMMS (Team Stark): …". **v2.0.0 is split between the teams (main 77bf5727, `dev/sprints/v200-notes-release.md`), and steps 1 to 5 run in parallel:**
+  - **Team Cap:** B's margin ticks; the notes guard change (`v20-notes-guard`, test_guard_pinned re-pinned deliberately); the real-data round-trip gate with Alan; the rules text and the release notes; `release-200`'s integration and cut.
+  - **Team Stark:** bringing `v20-capture` level with `v20-base`; finishing D (the wiring into Notes, and E's "Make this an action" hook); the review snapshot fix (BL-315's guess); Help, the guides, the spec and the hand checks.
+  - **Start after the restart post.** Team Stark is re-cloning laptop 2 now.
 
 - 15-10-2026 00:35 · Team 2 · **All 10 branches are carried over, and the v2.0.0 plan is on main.**
   - **Carried** (one commit each on a478bbd6; banned-names test and check.py pass on each; the full suite hasn't run on them yet):
