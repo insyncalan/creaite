@@ -83,7 +83,7 @@ import { bootCopyCommand, bootKeyboard } from "./core/keys.js";
 import { bootMotionHooks } from "./core/motion.js";
 import { bootCountLinks, bootGoLinks, bootNav, bootOpenAll, bootTabTitle, navWrite, parseHash, restoreNav } from "./core/nav.js";
 import { bootDevTag, bootMotion, bootTheme, bootThemeButton, S } from "./core/page.js";
-import { bootDebugLog, bootEventStream, bootLive, bootPulse, bootSnackKeys, bootSnackUndo, checkLive, renderBadge, status, vaultInit } from "./core/server.js";
+import { bootDebugLog, bootEventStream, bootLive, bootPageRefresh, bootPulse, bootSnackKeys, bootSnackUndo, checkLive, renderBadge, status, vaultInit } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { bootDrafts0129, bootDrafts0160, bootDrafts0196, bootDrafts0202, bootDrafts0203, bootDrafts0204 } from "./drafts.js";
 import { bootFiles0068, bootFiles0069 } from "./files.js";
@@ -270,3 +270,4 @@ bootAsk0207();
 bootAsk0208();
 bootReview0209();
 bootReview0315();
+bootPageRefresh();   /* BL-327: last, once everything is drawn */

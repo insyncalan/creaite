@@ -546,6 +546,23 @@ def offsite_backup():
     return (None, f"last copy {shown}, {age} days ago: is OneDrive running?{tail}") if age >= 2 else (None if tail else True, f"last copy {shown}{tail}")
 
 
+# ===== BL-328: a sweep lock held with no sweep running =====
+def sweep_lock():
+    """The sweep lock (sweep.py lock): fine when none is held or a sweep holds it; a warning, with Release, when it is held with
+    no sweep running (its run ended, or its server stopped) and would refuse the next sweep."""
+    import sweep
+    info = sweep.lock_info()
+    state = sweep.lock_state(info)
+    if state is None:
+        return True, "no sweep lock held"
+    since = info["started"].strftime("%d-%m-%Y %H:%M")
+    if state == "running":
+        return True, f"a sweep is running (since {since})"
+    held_by = f" by run {info['run']}" if info.get("run") else ""
+    return None, (f"a sweep lock is held{held_by} since {since} with no sweep running: the next sweep replaces it, or "
+                  f"Release it (system/scripts/run sweep.py unlock --if-idle)")
+
+
 # ===== BL-323: the weekly restore check and the last Tidy up, from backup.py's state (read only) =====
 def backup_check():
     """The weekly restore check (backup.verify): when it last ran and what it found; a problem says what to do."""
@@ -771,6 +788,7 @@ def run_checks():
     check("Off-laptop backup copy", offsite_backup)
     check("Backup restore check", backup_check)            # BL-323
     check("Tidy up of old backups", tidy_up)               # BL-323
+    check("Sweep lock", sweep_lock)                           # BL-328
     check("Debug log", debug_log)
     check("Staged minutes have their Word draft", minutes_drafts)   # BL-260
     check("ask creaite's refused commands", refused_commands)     # BL-252 (fix-small-17)

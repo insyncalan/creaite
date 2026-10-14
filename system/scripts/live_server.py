@@ -17,7 +17,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - GET  /health           {"ok": true} only (BL-212): no vault name, no port, no cross-origin header; the launcher may send
                          X-Creaite-Vault to learn whether this is its own vault ({"this_vault": bool})
 - GET  /api/data         fresh dashboard data
+- GET  /api/records?ids=A,B  BL-304: just those actions, RAID items and decisions (the page's shape), with Review, Activity
+                         and the latest apply: the page's targeted refresh after a save or a live update. Read only
 - GET  /api/events       BL-253: one server-sent events stream per page: `hello` (the fingerprint), then `changed` {seq, parts, v}
+                         (BL-304: and `ids`, {table: [item IDs]} from the change log, when the tracker changed)
                          within about a second of a change on disk (at once for a save through the server), `ping` every 25 s.
                          Kinds, parts and numbers only, never text. The page falls back to /api/pulse while it is down
 - POST /api/fs           read, write, append, remove or test a file, within a fixed allowlist (proposals, settings,
@@ -147,11 +150,12 @@ import os
 import re
 import secrets
 import shutil
+import sqlite3
 import subprocess
 import sys
 import threading
 import time
-from datetime import datetime
+from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -507,17 +511,72 @@ def claude_path():
             or str(Path.home() / ".local/bin/claude"))
 
 
+def script_env():
+    """The environment a script runs in from the server: BL-327, an apply leaves its index refresh and OneDrive copy to the
+    server's background worker (tracker.after_apply), so the save answers as soon as the tracker and dashboard are done."""
+    return {**os.environ, "CREAITE_AFTER_APPLY": "background"}
+
+
 def run(script, *args):
     """Run one creaite script from the vault root and return (exit code, its output and errors as one string)."""
-    r = subprocess.run([sys.executable, str(SCRIPTS / script), *args], cwd=paths.ROOT, capture_output=True, text=True)
+    try:
+        r = subprocess.run([sys.executable, str(SCRIPTS / script), *args], cwd=paths.ROOT, capture_output=True, text=True,
+                           env=script_env())
+    finally:
+        after_apply_kick()
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
 def run_stdin(script, payload, *args):
     """Like run(), with a JSON payload on the script's standard input (BL-106: a draft is too long for a command line)."""
-    r = subprocess.run([sys.executable, str(SCRIPTS / script), *args], cwd=paths.ROOT, capture_output=True, text=True,
-                       input=json.dumps(payload))
+    try:
+        r = subprocess.run([sys.executable, str(SCRIPTS / script), *args], cwd=paths.ROOT, capture_output=True, text=True,
+                           input=json.dumps(payload), env=script_env())
+    finally:
+        after_apply_kick()
     return r.returncode, (r.stdout if r.returncode == 0 else r.stdout + r.stderr).strip()      # a library note on stderr isn't the answer
+
+
+# ===== BL-327: an apply's slow steps after the save has answered, one at a time =====
+AFTER_WAKE = threading.Event()
+AFTER_STATE = {"running": False, "runs": 0, "last": None}      # for tests and Diagnostics: counts and a time only
+
+
+def after_apply_kick():
+    """Wake the background worker when a script has left an apply's slow steps owed (tracker.after_due_flag)."""
+    try:
+        import tracker
+        if tracker.after_due_flag().exists():
+            AFTER_WAKE.set()
+    except Exception as e:  # noqa: BLE001  never stops the request
+        swallowed("after-apply kick", e)
+
+
+def after_apply_worker():
+    """One thread, so one run at a time: when woken, clear the marker and run tracker.after_apply_slow (the OneDrive copy,
+    then the incremental index), each step timed in the debug log by tracker; then tell open pages that search changed.
+    Applies made while it runs mark it again, so it goes round once more. Never stops the server."""
+    while True:
+        AFTER_WAKE.wait()
+        AFTER_WAKE.clear()
+        try:
+            import tracker
+            flag = tracker.after_due_flag()
+            if not flag.exists():
+                continue
+            flag.unlink(missing_ok=True)
+            AFTER_STATE["running"] = True
+            t0 = time.monotonic()
+            tracker.after_apply_slow()
+            AFTER_STATE["runs"] += 1
+            AFTER_STATE["last"] = round(time.monotonic() - t0, 2)
+            if debuglog is not None:
+                debuglog.info("server", f"after apply (background): done in {AFTER_STATE['last']:.2f}s")
+        except Exception as e:  # noqa: BLE001
+            swallowed("after-apply worker", e)
+        finally:
+            AFTER_STATE["running"] = False
+# ===== end BL-327 =====
 
 
 def latest_apply():
@@ -539,10 +598,141 @@ def allowed(op, rel):
 
 
 def live_data():
-    """The dashboard's data with the live fields added: the vault path, this run's token and the latest apply."""
-    data = build_dashboard.collect()
-    data.update(live=True, vault_path=str(paths.ROOT), token=TOKEN, latest_apply=latest_apply())
+    """The dashboard's data with the live fields added: the vault path, this run's token and the latest apply. BL-327: what
+    it was built from is stamped first, so the next page load can be served from it at once while nothing has changed."""
+    key, t0 = page_key(), time.monotonic()
+    data = build_dashboard.collect(timings=(parts := {}))
+    took = time.monotonic() - t0
+    with PAGE_LOCK:
+        PAGE.update(key=key, data=data, at=time.time())
+    data = dict(data, live=True, vault_path=str(paths.ROOT), token=TOKEN, latest_apply=latest_apply())
+    if debuglog is not None and took >= PAGE_SLOW:
+        debuglog.info("server", f"page data built in {took:.2f}s: " + ", ".join(f"{k} {v:.2f}s" for k, v in
+                                                                              sorted(parts.items(), key=lambda kv: -kv[1])[:6]))
     return data
+
+
+# ===== BL-327: the first page at once, from the last built data =====
+# GET / used to build everything (the tracker, every OneDrive file list, the meeting hub) before sending a byte. It now sends
+# the data last built, by this server or by build_dashboard into dashboard.html, when nothing it is built from has changed
+# since (page_key; built_page_usable); the page fetches /api/data after its first paint when that data is over PAGE_FRESH
+# seconds old, so the slow parts (the file lists, the index state) come after. Anything changed, or no usable copy: built
+# at once, as before.
+PAGE = {"key": None, "data": None, "at": 0.0}
+PAGE_LOCK = threading.Lock()
+PAGE_FRESH = 5           # seconds: older data is shown at once and refreshed by the page straight after
+PAGE_SLOW = 0.5          # a page build this slow logs its parts
+PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json")   # the build's, the Excel export's and the server's own
+
+
+def page_inputs():
+    """The files the page's data is built from, other than the database: every file directly in staging (proposals, the
+    sweep, calendar, transcripts and the rest) and its drafts, system/config, the registers, the portfolio and each project's
+    memory, the page template and help. Files the build and the server write themselves (PAGE_IGNORE) are left out."""
+    def listed(d):
+        """The files directly in `d` that count."""
+        try:
+            return sorted(f for f in d.iterdir() if f.is_file() and not f.name.startswith(".") and f.name not in PAGE_IGNORE)
+        except OSError:                                  # the folder isn't there (yet): nothing to stamp
+            return []
+    out = [f for d in (paths.STAGING, paths.DRAFTS, paths.SETTINGS.parent) for f in listed(d)]
+    out += [build_dashboard.TEMPLATE, paths.TEMPLATES / "help.md", paths.REGISTER, paths.PEOPLE_REGISTER, paths.PORTFOLIO_MEMORY]
+    try:
+        out += [d / "CLAUDE.md" for _c, d in paths.project_folders()]
+    except Exception as e:  # noqa: BLE001  no projects folder yet: the key still works
+        swallowed("page inputs", e)
+    return out
+
+
+def page_key():
+    """A fingerprint of what the page's data is built from: page_inputs' stamps (name, time, size; nothing is read), the
+    records' version (build_dashboard.records_version: an index refresh, which also writes tracker.db, doesn't change it)
+    and today's date."""
+    import hashlib
+    def stamp(p):
+        """A file's path, time and size, or its path and a dash."""
+        try:
+            st = p.stat()
+            return f"{p}:{st.st_mtime_ns}:{st.st_size}"
+        except OSError:                                  # not there: that is part of the fingerprint too
+            return f"{p}:-"
+    parts = [build_dashboard.records_version(), date.today().isoformat()] + [stamp(f) for f in page_inputs()]
+    return hashlib.sha1("|".join(parts).encode("utf-8")).hexdigest()[:16]
+
+
+def built_page_data():
+    """(the data embedded in dashboard.html, its age in seconds) when it was built from the current template, or (None, 0)."""
+    try:
+        html = paths.DASHBOARD.read_text(encoding="utf-8")
+        tpl = build_dashboard.TEMPLATE.read_text(encoding="utf-8").replace("/*__FONTS__*/", build_dashboard.font_faces(), 1)
+        i = tpl.index("/*__DATA__*/")
+        pre, post = tpl[:i], tpl[i + len("/*__DATA__*/"):]
+        if not (html.startswith(pre) and html.endswith(post)):
+            return None, 0
+        return json.loads(html[len(pre):len(html) - len(post)]), time.time() - paths.DASHBOARD.stat().st_mtime
+    except (OSError, ValueError):                        # no dashboard.html, or one from another template: build anew
+        return None, 0
+
+
+def built_page_usable():
+    """(dashboard.html's data, its age) when it is the last built data: built today, from the records as they are now
+    (its records_v), and newer than every other file the page is built from; otherwise (None, 0). dashboard.html is
+    rebuilt after each apply, sweep and minutes run."""
+    try:
+        built = paths.DASHBOARD.stat().st_mtime
+    except OSError:                                      # never built: build anew
+        return None, 0
+    if datetime.fromtimestamp(built).date() != date.today():
+        return None, 0
+    for f in page_inputs():
+        try:
+            if f.stat().st_mtime > built:
+                return None, 0
+        except OSError:                                  # not there: nothing newer
+            pass
+    data, age = built_page_data()
+    if data is None or data.get("records_v") != build_dashboard.records_version():
+        return None, 0
+    return data, age
+
+
+def page_data():
+    """(the page's data with the live fields, where it came from: "cache", "built" or "new", the seconds it took) for GET /.
+    The last data this server built, or dashboard.html's, while nothing it was built from has changed; otherwise built now."""
+    t0 = time.monotonic()
+    key = page_key()
+    with PAGE_LOCK:
+        cached = PAGE["data"] if PAGE["key"] == key else None
+        age = time.time() - PAGE["at"]
+    source = "cache" if cached is not None else None
+    if cached is None:
+        cached, age = built_page_usable()
+        if cached is not None:
+            source = "built"
+            with PAGE_LOCK:                              # the next load takes it from memory
+                PAGE.update(key=key, data=cached, at=time.time() - age)
+    if cached is None:
+        return live_data(), "new", time.monotonic() - t0
+    data = dict(cached, live=True, vault_path=str(paths.ROOT), token=TOKEN, latest_apply=latest_apply(),
+                page_age=int(age), page_refresh=age > PAGE_FRESH)
+    return data, source, time.monotonic() - t0
+# ===== end BL-327 =====
+
+
+# ===== BL-304 (v1.9.4 instant edits) =====
+RECORD_ID = re.compile(r"[A-Za-z][A-Za-z0-9]{1,6}-(?:[A-Za-z]-)?\d{3,}")
+
+
+def records_route(handler):
+    """GET /api/records?ids=ABC-A-001,ABC-002: those items in the page's shape (build_dashboard.records), with Review,
+    Activity and the latest apply. Read only, token-checked by the caller; IDs that aren't item IDs are refused."""
+    from urllib.parse import parse_qs, urlparse
+    q = parse_qs(urlparse(handler.path).query)
+    ids = [x.strip() for v in q.get("ids", []) for x in v.split(",") if x.strip()]
+    if len(ids) > build_dashboard.RECORD_MAX or any(not RECORD_ID.fullmatch(i) for i in ids):
+        return handler.send(400, {"ok": False, "message": "Bad item IDs"})
+    return handler.send(200, {"ok": True, **build_dashboard.records(ids), "latest_apply": latest_apply()})
+# ===== end BL-304 =====
 
 
 # ===== BL-253 (sprint-live-updates) =====
@@ -827,8 +1017,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send(403, {"ok": False})        # BL-212: no cross-origin reads at all, /health included
 
     def do_GET(self):
-        """GET routes: /health, the app's static files, the dashboard page, /api/data, /api/search, /api/files and
-        /api/events (see the module's list)."""
+        """GET routes: /health, the app's static files, the dashboard page, /api/data, /api/records, /api/search,
+        /api/files and /api/events (see the module's list)."""
         if not self.host_ok():
             return self.send(403, {"ok": False, "message": "Not allowed"})
         if self.path == "/health":
@@ -839,33 +1029,35 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(200, *static)
         if self.path.split("?")[0] in ("/", "/dashboard.html"):
             LAST_HERE[0] = time.time()                                # opening the page counts as "still here"
-            html = build_dashboard.render(live_data())
+            data, source, took = page_data()                          # BL-327: the last built data at once
+            t1 = time.monotonic()
+            html = build_dashboard.render(data)
+            if debuglog is not None:
+                debuglog.info("server", f"page: data {source} in {took:.2f}s, render {time.monotonic() - t1:.2f}s")
             inject = os.environ.get("CREAITE_TEST_INJECT")   # tests only: drive the live page in headless Chrome
             if inject:
                 html = html.replace("</body>", Path(inject).read_text(encoding="utf-8") + "</body>")
             return self.send(200, html, "text/html")
-        if self.path == "/api/data":
-            if self.authorised():
-                self.send(200, live_data())
-            return None
-        if self.path.split("?")[0] == "/api/search":                    # BL-07
-            return self.search_get() if self.authorised() else None
-        # ===== Dashboard pages (BL-87 to BL-95) =====
-        if self.path.split("?")[0] == "/api/files":                      # BL-87: just the file lists, rescanned
-            if self.authorised():
-                try:
-                    self.send(200, {"ok": True, **build_dashboard.files_view()})
-                except CLIENT_LEFT:                                       # BL-284: the page left; not a 500
-                    raise
-                except Exception as e:                                    # the page keeps its old list and says so
-                    self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
-            return None
-        # ===== end Dashboard pages =====
+        api_get = {"/api/data": lambda: self.send(200, live_data()),
+                   "/api/records": lambda: records_route(self),            # BL-304: just the changed items
+                   "/api/search": self.search_get,                          # BL-07
+                   "/api/files": self.files_get}.get(route)                 # BL-87
+        if api_get:
+            return api_get() if self.authorised() else None
         # ===== BL-253 (sprint-live-updates) =====
         if self.path.split("?")[0] == "/api/events":                     # the page's one change stream
             return events_route(self)
         # ===== end BL-253 =====
         self.send(404, {"ok": False, "message": "Not found"})
+
+    def files_get(self):
+        """GET /api/files (BL-87): just the file lists, rescanned."""
+        try:
+            self.send(200, {"ok": True, **build_dashboard.files_view()})
+        except CLIENT_LEFT:                                       # BL-284: the page left; not a 500
+            raise
+        except Exception as e:                                    # the page keeps its old list and says so
+            self.send(500, {"ok": False, "message": f"{type(e).__name__}: {e}"})
 
     def do_POST(self):
         """POST routes: checks the token, reads the body and dispatches to the route's method or a route table; an
@@ -1124,7 +1316,7 @@ class Handler(BaseHTTPRequestHandler):
         """POST /api/chat {chat}: one chat's messages from system/staging/ask/, with `seq` for a held run (BL-262)."""
         rec = chat_record(req.get("chat"))
         if rec is None:
-            return self.send(404, {"ok": False, "message": "That chat isn't in the history."})
+            return self.send(404, {"ok": False, "gone": True, "message": "That chat isn't in the history."})   # BL-330: the page forgets it
         return self.send(200, {"ok": True, **rec})
 
     def ask_stop(self, req):
@@ -1787,8 +1979,10 @@ class Run:
         self.stop = self.deferred = self.done = self.seen = False
         self.started, self.recorded = time.time(), 0       # BL-262: how many events the chat's history reaches
         try:
+            env = run_env()                                                            # BL-248
+            env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
             self.proc = subprocess.Popen(cmd, cwd=paths.ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                         bufsize=1, env=run_env())                     # BL-248
+                                         bufsize=1, env=env)
         except OSError:
             if guarded:
                 reach.end_run(run_id)
@@ -2056,6 +2250,8 @@ class Run:
 
     def _done(self):
         job_run = self.kind in ("check", "load")
+        release_sweep_lock([self.id], "timed out" if getattr(self, "timed_out", False) else "stopped" if self.stop
+                           else "ended")                  # BL-328: however the run ended (finished, stopped, refused, failed)
         nxt = queue_after(self)                           # BL-257: the next queued message starts before this run is done
         with self.cond:
             self.done = True
@@ -2565,15 +2761,22 @@ def main():
     way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
     the search index, the VIP check and, when launched, the close watcher (BL-07, BL-99, BL-86)."""
     port = int(os.environ.get("CREAITE_PORT") or paths.load_settings().get("live_mode", {}).get("port", 8765))
+    import launch as launcher
+    # ===== BL-329 (v194-one-server): this vault's server already there (or starting) is left be, and this one exits 0 =====
+    if held_by_this_vault(port):
+        return already_running(port)
     try:
         httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     except OSError as e:
+        if held_by_this_vault(port):
+            return already_running(port)
         sys.exit(f"Can't use port {port} ({e.strerror}). Is the live server already running? "
                  f"Change live_mode.port in settings.json if another app uses it.")
+    note_server(port)
+    # ===== end BL-329 =====
     print(f"creaite live server: http://127.0.0.1:{port}/  (vault: {paths.ROOT.name}). Leave this window open; "
           f"Ctrl+C stops it.", flush=True)
     # ===== BL-248 (sprint-portability): say so when the server runs under Rosetta =====
-    import launch as launcher
     if launcher.under_rosetta():
         print("Warning: the live server is running under Rosetta (as an Intel program). Start it from Terminal, or make the "
               "launcher again (system/scripts/run launch.py make-launcher), so scripts run natively.", flush=True)
@@ -2589,9 +2792,14 @@ def main():
         LAST_HERE[0] = time.time()
         threading.Thread(target=watch_for_close, args=(httpd,), daemon=True).start()
     threading.Thread(target=startup_index, daemon=True).start()     # BL-07: the search index is current from the start
+    threading.Thread(target=after_apply_worker, daemon=True).start()  # BL-327: an apply's index and OneDrive copy, after it answers
     threading.Thread(target=vip_timer, daemon=True).start()         # BL-99: the VIP check, on start-up and every few minutes
     threading.Thread(target=archive_timer, daemon=True).start()     # BL-10: the daily archiving of items closed long ago
     threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly
+    threading.Thread(target=clear_starting_when_up, args=(port,), daemon=True).start()   # BL-329
+    delay = os.environ.get("CREAITE_START_DELAY")                   # tests only (BL-329): a slow-starting server
+    if delay:
+        time.sleep(float(delay))
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -2600,15 +2808,73 @@ def main():
         EVENTS.close()                                    # BL-253 (sprint-live-updates): every change stream ends cleanly
         for run in list(RUNS.values()):
             end_process(run.proc)
+        release_sweep_lock(list(RUNS), "ended: the server stopped")     # BL-328: only a lock this server's own runs hold
+
+
+# ===== BL-329 (v194-one-server): the starting mark =====
+def held_by_this_vault(port):
+    """True if another of this vault's servers is starting or answers on the port (waiting up to 20 s for it to answer)."""
+    import launch as launcher
+    other = launcher.server_starting(port)
+    if not other and launcher.health(port) != "this":
+        return False
+    return launcher.wait_for_server(port, pid=other and other[0]) == "this"
+
+
+def already_running(port):
+    """This vault's server already holds the port: say so and exit 0 (not a warning)."""
+    print(f"The live server is already running on port {port}: this one stops.", flush=True)
+    if debuglog is not None:
+        debuglog.info("server", f"already running on port {port}: this start exits")
+    return 0
+
+
+def note_server(port):
+    """Once this server holds the port: its pid and port in live-server.json (BL-320) and the starting mark (BL-329). Never
+    before, so a server that can't have the port never overwrites the running one's."""
+    import launch as launcher
+    stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    for f, rec in ((launcher.SERVER_FILE, {"pid": os.getpid(), "port": port, "started": stamp}),
+                   (launcher.STARTING_FILE, {"pid": os.getpid(), "port": port, "launched": LAUNCHED, "started": stamp})):
+        try:
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(json.dumps(rec) + "\n", encoding="utf-8")
+        except OSError as e:
+            swallowed("server file", e)
+
+
+def clear_starting(f=None):
+    """Remove the starting mark if it is this server's."""
+    import launch as launcher
+    f = f or launcher.STARTING_FILE
+    try:
+        if json.loads(f.read_text(encoding="utf-8")).get("pid") == os.getpid():
+            f.unlink()
+    except (OSError, ValueError, AttributeError):  # gone or unreadable: a mark whose server has gone is ignored anyway
+        pass
+
+
+def clear_starting_when_up(port, seconds=120):
+    """Clear the starting mark as soon as this server answers /health."""
+    import launch as launcher
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        if launcher.health(port) == "this":
+            break
+        time.sleep(0.2)
+    clear_starting()
+# ===== end BL-329 =====
 
 
 def startup_index():
-    """Rebuild the search index once, in the background, when the server starts (BL-07)."""
+    """Bring the search index up to date once, in the background, when the server starts (BL-07), and run any apply's slow
+    steps left owed when the server last stopped (BL-327). The index is incremental, so this reads only what changed, and it
+    no longer holds LOCK: a save made meanwhile doesn't wait for it."""
     try:
         import tracker
         if paths.DB.exists():
-            with LOCK:
-                tracker.build_index()
+            tracker.build_index()
+            after_apply_kick()
     except Exception as e:  # noqa: BLE001  never stops the server
         print(f"Note: the search index wasn't built: {e}", flush=True)
 
@@ -2658,7 +2924,7 @@ def vip_check(how="check"):
     vs, vips = sweep.vip_settings(), sweep.vip_addresses()
     if not vs.get("enabled", True) or not vips:
         return "skipped: no VIPs"
-    if sweep.LOCK.exists():
+    if sweep_running():                                   # BL-328: a lock left by an ended sweep doesn't hold the check
         return "skipped: a sweep is running"
     if not VIP_LOCK.acquire(blocking=False):
         return "skipped: a check is running"
@@ -3113,7 +3379,7 @@ class EventHub:
         self.cond = threading.Condition()       # guards seq, events, streams and closed; streams wait on it
         self.wake = threading.Event()           # pokes the watcher
         self.seq, self.events, self.streams, self.closed = 0, [], 0, False
-        self.stamps, self.thread = None, None
+        self.stamps, self.thread, self.log_at = None, None, None
 
     def attach(self):
         """A stream opens: count it and make sure the watcher runs. Returns the sequence number it starts after."""
@@ -3141,22 +3407,32 @@ class EventHub:
             self.cond.notify_all()
         self.wake.set()
 
-    def publish(self, parts):
-        """Number and keep one `changed` event, and wake the streams."""
+    def publish(self, parts, ids=None):
+        """Number and keep one `changed` event, and wake the streams. BL-304: `ids` ({table: [item IDs]}) when the tracker
+        changed and the change log named what (none when it couldn't: the page then reloads everything)."""
         v = data_version()                      # stamps are read before the lock is taken: streams never wait on the disk
         with self.cond:
             self.seq += 1
-            self.events.append({"type": "changed", "seq": self.seq, "parts": sorted(parts), "v": v})
+            ev = {"type": "changed", "seq": self.seq, "parts": sorted(parts), "v": v}
+            if ids is not None:
+                ev["ids"] = ids
+            self.events.append(ev)
             del self.events[:-EVENT_KEEP]
             self.cond.notify_all()
 
     def check(self):
-        """Compare the parts' stamps with the last check and publish what changed."""
+        """Compare the parts' stamps with the last check and publish what changed (BL-304: with the IDs the tracker's
+        change log names since the last check)."""
         now = part_stamps()
         was, self.stamps = self.stamps, now
+        if was is None:
+            self.log_at = change_log_top()
         changed = [k for k in now if was is not None and was.get(k) != now[k]]
         if changed:
-            self.publish(changed)
+            ids = None
+            if "tracker" in changed:
+                ids, self.log_at = change_log_ids(self.log_at)
+            self.publish(changed, ids)
 
     def watch(self):
         """The watcher: once a second while a page follows the stream (sooner when poked); idle otherwise."""
@@ -3176,10 +3452,50 @@ class EventHub:
                 swallowed("events check", e)
 
     def after(self, seq):
-        """The events after `seq`, or one `changed` naming every part when the page fell too far behind to catch up."""
+        """The events after `seq`, or one `changed` naming every part (and no IDs: BL-304's full reload) when the page fell
+        too far behind to catch up."""
         if self.events and self.events[0]["seq"] > seq + 1:
-            return [{**self.events[-1], "parts": list(EVENT_PARTS)}]
+            return [{**{k: v for k, v in self.events[-1].items() if k != "ids"}, "parts": list(EVENT_PARTS)}]
         return [e for e in self.events if e["seq"] > seq]
+
+
+EVENT_IDS_MAX = 100
+
+
+def change_log_top():
+    """The change log's newest rowid (0 when empty), or None when the tracker can't be read."""
+    try:
+        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+        try:
+            return con.execute("SELECT coalesce(max(rowid), 0) FROM change_log").fetchone()[0]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
+
+
+def change_log_ids(since):
+    """BL-304: ({table: [item IDs]} changed after rowid `since`, the new newest rowid). IDs only, never values. None for the
+    IDs when they can't be told (no starting point, an unreadable tracker, or more than EVENT_IDS_MAX items): the page then
+    reloads everything, as before."""
+    if since is None:
+        return None, change_log_top()
+    try:
+        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+        try:
+            found = con.execute("SELECT rowid, tbl, item_id FROM change_log WHERE rowid > ? ORDER BY rowid", (since,)).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None, None
+    top = found[-1][0] if found else since
+    out, n = {}, 0
+    for _rowid, tbl, item in found:
+        bucket = out.setdefault(tbl, [])
+        if item not in bucket:
+            bucket.append(item)
+            n += 1
+    return (out if n <= EVENT_IDS_MAX else None), top
 
 
 EVENTS = EventHub()
@@ -4729,12 +5045,28 @@ def live_run():
 
 
 def sweep_running():
-    """A sweep holds its lock (sweep.py lock), and the lock is under 30 minutes old."""
+    """A sweep holds its lock (sweep.py lock): its run is the run in progress, or (a sweep from Claude Code, no run recorded)
+    the lock is under 30 minutes old. A lock left with no sweep running doesn't count (BL-328)."""
     import sweep
-    try:
-        return time.time() - sweep.LOCK.stat().st_mtime < sweep.STALE.total_seconds()
-    except OSError:              # no lock: no sweep running
+    return sweep.lock_state() == "running"
+
+
+# ===== BL-328: a sweep's lock never outlives the sweep =====
+def release_sweep_lock(run_ids, why):
+    """Release the sweep lock when one of `run_ids` (this server's own runs) holds it; never another's. True if released."""
+    import sweep
+    info = sweep.lock_info()
+    if not info or not info.get("run") or info["run"] not in set(run_ids):
         return False
+    try:
+        sweep.LOCK.unlink(missing_ok=True)
+    except OSError as e:
+        swallowed("sweep lock", e)
+        return False
+    if globals().get("debuglog") is not None:
+        debuglog.info("sweep", f"lock released: run {info['run']} {why}")
+    return True
+# ===== end BL-328 =====
 
 
 def catchup_today(now):
@@ -5400,21 +5732,30 @@ def restart_asked(signum, frame):
 _main_before_restart = main
 
 
+def stopped_by_signal(signum, frame):
+    """SIGTERM: release the sweep lock this server's runs hold (BL-328), end the runs, then stop exactly as SIGTERM always
+    did (the default action, so launchd sees the same exit)."""
+    import signal
+    try:
+        for run in list(RUNS.values()):
+            end_process(run.proc)
+        release_sweep_lock(list(RUNS), "ended: the server stopped")
+    finally:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        os.kill(os.getpid(), signal.SIGTERM)
+
+
 def main_with_restart():
     """main(), with this server's pid and port in system/staging/live-server.json (so launch.py restart finds it) and
     SIGUSR1 to restart; the file goes when the server stops."""
     import signal
     import launch as launcher
-    port = int(os.environ.get("CREAITE_PORT") or paths.load_settings().get("live_mode", {}).get("port", 8765))
-    try:
-        launcher.SERVER_FILE.parent.mkdir(parents=True, exist_ok=True)
-        launcher.SERVER_FILE.write_text(json.dumps({"pid": os.getpid(), "port": port,
-                                                    "started": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}) + "\n",
-                                        encoding="utf-8")
-    except OSError as e:
-        swallowed("server file", e)
     if hasattr(signal, "SIGUSR1"):
         signal.signal(signal.SIGUSR1, restart_asked)
+    try:
+        signal.signal(signal.SIGTERM, stopped_by_signal)      # BL-328: a stop from launchd or kill releases this server's lock
+    except (ValueError, OSError):                              # not the main thread (tests): the default stays
+        pass
     try:
         return _main_before_restart()
     finally:
@@ -5423,6 +5764,7 @@ def main_with_restart():
                 launcher.SERVER_FILE.unlink()
         except (OSError, ValueError):  # gone or unreadable: launch.py restart checks the pid and the port itself
             pass
+        clear_starting()                                  # BL-329
 
 
 main = main_with_restart
@@ -5515,6 +5857,8 @@ def log_request(handler, started):
         debuglog.warn("server", f"{line} not ok: {debuglog.clean(getattr(handler, '_log_msg', ''), 160)}")
     elif code and code >= 500:
         debuglog.error("server", line)
+    elif code == 404 and route == "/api/chat":                 # BL-330: a remembered chat that's gone is normal, not a WARN
+        debuglog.info("server", f"{line} chat not in the history")
     elif code and code >= 400:
         debuglog.warn("server", line)
     elif route in QUIET_ROUTES or handler.command == "GET":

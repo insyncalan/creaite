@@ -11,11 +11,12 @@ import { mCells, mCounts } from "./motion.js";
 import { go, tabTitle } from "./nav.js";
 import { D, days, fd, fdMd, fdText, mK, mSay, nowStamp, prio, reduced, S, TODAY } from "./page.js";
 import { shared } from "./state.js";
+import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
 import { inboxBadge, renderInbox } from "../intake.js";
 import { qcFill, renderMeeting } from "../meetings.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
-import { drawPanel, errBanner, MD_IMG, pkDots, pkReconcile, pkStageDraw } from "../panel.js";
+import { drawPanel, errBanner, MD_IMG, pkDots, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
 import { setRailCount } from "../stores/rail.js";
 import { renderReview, RHL, rvKey, rvSyncChk } from "../review.js";
@@ -75,22 +76,32 @@ shared.VW={ read:(...a)=>(viaServer()?SVW:FVW).read(...a), write:(...a)=>(viaSer
   exists:(...a)=>(viaServer()?SVW:FVW).exists(...a), append:(...a)=>(viaServer()?SVW:FVW).append(...a), upload:(...a)=>(viaServer()?SVW:FVW).upload(...a) };
 export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
 /* fresh data after an apply or undo */
+/* BL-216: Review keeps its selection and highlight across a reload (rvHold before, rvRestore after) */
+export function rvHold(){ const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n); return {keys,ck:cr&&rvKey(cr)}; }
+export function rvRestore(h){ if(!h) return; const {keys,ck}=h;
+  RHL.clear(); REV.filter(r=>keys.includes(rvKey(r))&&!r.done).forEach(r=>RHL.add(r.n)); rvSyncChk();
+  if(shared.VIEW==="review"){ renderReview(); if(ck){ const r=REV.find(x=>rvKey(x)===ck), i=r?$$("#reviewBody tr[data-n]").findIndex(tr=>+tr.dataset.n===r.n):-1; if(i>=0){ shared.RSEL=i; rvPaint(); } } } }
 export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads in flight counted */
-    const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n), ck=cr&&rvKey(cr);   /* BL-216: Review keeps its selection */
-    await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json();
+    const hold=rvHold();
+    await (async()=>{ if(!SERVED) return; try{ const r=await fetch("/api/data",{headers:{"X-Creaite-Token":D.token}}); if(!r.ok) return; const n=await r.json(); RECSTAT.full++;
   Object.assign(D,n); [[P,n.projects],[A,n.actions],[R,n.raid],[DEC,n.decisions],[REV,n.review],[FILES,n.files],[REMINDERS,n.reminders]].forEach(([a,b])=>a.splice(0,a.length,...b));
   shared.ACT=n.activity; R.forEach(x=>x.pr=prio(x.imp,x.lik)); shared.DATA_AT=n.data_at||shared.DATA_AT;
   [...A,...R,...DEC,...P].forEach(o=>["t","upd","resp","cm","cmd","reason","current"].forEach(k=>{ if(typeof o[k]==="string") o[k]=(k==="current"?fdMd:fdText)(o[k]); })); shared.ACT.forEach(a=>a.what=fdText(a.what));
+  ovReapply();   /* BL-304: a change still saving stays on screen */
   refreshAll(); }catch(e){} })();
-    RHL.clear(); REV.filter(r=>keys.includes(rvKey(r))&&!r.done).forEach(r=>RHL.add(r.n)); rvSyncChk();
-    if(shared.VIEW==="review"){ renderReview(); if(ck){ const r=REV.find(x=>rvKey(x)===ck), i=r?$$("#reviewBody tr[data-n]").findIndex(tr=>+tr.dataset.n===r.n):-1; if(i>=0){ shared.RSEL=i; rvPaint(); } } }
+    rvRestore(hold);
     if(SERVED&&PULSE.v!=null&&!PULSE.busy){ const r=await pulseGet(); if(r&&!PULSE.stale){ PULSE.v=r.v; PULSE.pending=r.pending; } }   /* BL-110: take the new fingerprint, so his own saves don't cause a second reload */
   }finally{ PULSE.reloads--; }
   await pkReconcile();
   if(SERVED){ await diagLoad(); errBanner(); } }
+/* BL-327: the server sent the last built data at once (its first load no longer waits for the file lists and the hub); when
+   that data is over a minute old the page fetches the rest straight after its first paint, through the usual reload */
+export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 /* BL-189 (sprint-milestones): every apply but the peek's own leaves the peek's staged changes in staging (hold_peek); pkApply passes peek */
 export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); return r; }
-export let undoApply = async function(id){ const u=await api("/api/undo",{apply_id:id}); await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };
+export let undoApply = async function(id,ids){ const u=await api("/api/undo",{apply_id:id}); if(!(ids&&await refreshRecords(ids))) await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };   /* BL-304: ids, just those items again */
+/* BL-304: just these items again (Review keeps its selection; the peek's staging is reconciled), or false */
+export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{hold:rvHold,restore:rvRestore,after:async()=>{ await pkReconcile(); }}); }
 /* several quick decisions (bulk approve) become one apply */
 export let APPLYT=null, APPLYN=0;
 export function applySoon(){ APPLYN++; clearTimeout(APPLYT); APPLYT=setTimeout(async()=>{ const n=APPLYN; APPLYN=0; const r=await applyNow();
@@ -146,8 +157,14 @@ export function apSnap(data){ const m=new Map(); (data.items||[]).forEach(it=>{ 
 export function apStamp(data,was){ (data.items||[]).forEach(it=>{ const w=it&&was.get(it.n); if(!w||w.had||w.key===null||w.op!==it.op||it.applied||"as_proposed" in it) return;
   if(apKey(it[w.part]??null)!==w.key) it.as_proposed=w.copy; }); }
 /* ===== end BL-232 ===== */
-/* save = write the proposal, then update the page; Undo removes the proposal while it's still unapplied */
-export async function save(what,items,extra,doIt,undoIt,by){
+/* save = the change on screen at once (BL-304), then the proposal written and, with auto-apply, applied in the background, one
+   save at a time in the order made. `opt.recs` ([{k, id, f}], the items and fields it changes) makes it a record edit: it
+   returns at once, the rows show a hollow "saving" dot until it is applied, a live update never clobbers it, and only those
+   items are fetched again afterwards. Without it (milestones, workstreams, the register…) the caller waits, as before, and
+   the page reloads all its data. A refused write or apply puts the record back, says why, and offers Retry. Undo works
+   while it is still saving (nothing is written, or what was applied is undone) as after. */
+export let SNACKOP=null;
+export async function save(what,items,extra,doIt,undoIt,by,opt){
   { const nv=shared.WSNEW;
     if(nv&&(items||[]).some(i=>["actions","raid"].includes(i.table)&&String((i.values||i.changes||{}).workstream||"").toLowerCase()===nv.name.toLowerCase()
         &&((i.values||{}).project||(i.changes||{}).project||String(i.id||"").split("-")[0])===nv.project)){
@@ -155,12 +172,51 @@ export async function save(what,items,extra,doIt,undoIt,by){
       const {item,row}=wsNewOf(nv);
       items=[item,...items]; const d0=doIt, u0=undoIt;
       doIt=()=>{ (D.ws_table=D.ws_table||[]).push(row); if(d0) d0(); }; undoIt=()=>{ const i=WSD().indexOf(row); if(i>=0) D.ws_table.splice(i,1); if(u0) u0(); };
-      shared.WSNEW=null; if(shared.CUR) shared.CUR.wsNew=null; what+=` (new workstream ${nv.name})`; } }   /* BL-58: a new workstream goes with the first item that uses it */
-  if(!await needVault()) return false; let name;
-  try{ name=await writeProposal(items,extra); }catch(e){ snack("Not saved: "+e.message); return false; }
-  if(viaServer()&&S.autoApply){ doIt(); const res=await applyNow(); if(!res.ok){ snack("Saved, but the apply stopped: "+oneLine(res.message)); return true; }
-    snack(`${what} — saved and applied`,()=>undoApply(res.apply_id)); return true; }
-  apply(what,doIt,async()=>{ undoIt(); try{ await vq(async()=>{ if(await shared.VW.exists("system/staging/"+name)) await shared.VW.remove("system/staging/"+name); else throw 0; }); }catch(e){ snack(viaServer()?"Already applied: undo it in Activity":"Already applied: use “undo last apply” in Claude Code"); } },by); return true; }   /* BL-149 */
+      shared.WSNEW=null; if(shared.CUR) shared.CUR.wsNew=null; what+=` (new workstream ${nv.name})`; opt={...(opt||{}),wsNew:true}; } }   /* BL-58: a new workstream goes with the first item that uses it */
+  if(!await needVault()) return false;
+  const recs=(opt&&opt.recs)||[], quick=recs.length>0, op={what,items,extra,doIt,undoIt,by,opt:opt||{},recs,state:"queued",cancel:false,rebase:ovBusy(recs)||!!(opt&&opt.retry),name:null,apply_id:null};
+  doIt(); ovAdd(recs); refreshAll();   /* BL-304: on screen now, before anything is written */
+  const live=viaServer()&&S.autoApply;
+  if(quick&&live){ SNACKOP=op; snack(`${what} — saving…`,()=>opUndo(op)); }
+  const run=saveQueue(()=>live?saveApply(op):saveStage(op));
+  if(quick&&!(opt&&opt.wait)) return true;   /* opt.wait: the caller needs the outcome (ask creaite's field card names the apply) */
+  return await run; }
+/* a later change to an item an earlier one changed: based on the item as the earlier one left it */
+function opRebase(op){ op.items.forEach(it=>{ if(it&&it.based_on!=null&&RECORD_KINDS.includes(it.table)){ const x=REC(it.table,it.id); if(x&&x.updated_at) it.based_on=x.updated_at; } }); }
+const opIds=op=>[...new Set(op.items.filter(it=>it&&it.id&&RECORD_KINDS.includes(it.table)).map(it=>it.id))];
+const opTargeted=op=>op.recs.length>0&&!op.opt.wsNew&&op.items.every(it=>RECORD_KINDS.includes(it.table)&&it.op!=="new");
+/* back on screen as it was: the change's own undo, then what is still saving on top again */
+function opRevert(op){ ovDrop(op.recs); op.undoIt(); ovReapply(); refreshAll(); }
+async function opDropFile(name){ try{ await vq(async()=>{ const pth="system/staging/"+name; if(await shared.VW.exists(pth)) await shared.VW.remove(pth); }); return true; }catch(e){ return false; } }
+async function opFail(op,msg){ op.state="failed"; opRevert(op);
+  if(opTargeted(op)&&viaServer()) await refreshRecords(opIds(op));   /* "reloaded it": the item as it is now */
+  snack(msg,()=>{ save(op.what,op.items,op.extra,op.doIt,op.undoIt,op.by,{...op.opt,retry:true}); },"Retry"); return false; }
+async function saveApply(op){ PULSE.reloads++;   /* its own change event waits for it */
+  try{ if(op.cancel){ op.state="cancelled"; return false; }
+    if(op.rebase) opRebase(op);
+    op.state="writing"; try{ op.name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
+    if(op.cancel){ await opDropFile(op.name); op.state="cancelled"; return false; }
+    op.state="applying"; const res=await api("/api/apply",{hold_peek:true});
+    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(res.message)); }
+    let held=false; try{ held=await shared.VW.exists("system/staging/"+op.name); }catch(e){ held=false; }
+    if(held){ await opDropFile(op.name); const ids=opIds(op); return await opFail(op,`Not saved: ${ids.join(", ")||"it"} changed elsewhere; reloaded ${ids.length>1?"them":"it"}`); }   /* held as a conflict: not applied */
+    op.state="done"; op.apply_id=res.apply_id; ovDrop(op.recs);
+    if(!(opTargeted(op)&&await refreshRecords(opIds(op)))) await reloadData();
+    if(op.cancel){ const u=await api("/api/undo",{apply_id:op.apply_id}); if(!(opTargeted(op)&&await refreshRecords(opIds(op)))) await reloadData(); if(!u.ok) snack("Not undone: "+oneLine(u.message)); return false; }
+    const undo=()=>undoApply(op.apply_id,opTargeted(op)?opIds(op):null);
+    if(!op.recs.length) snack(`${op.what} — saved and applied`,undo);
+    else if(SNACKOP===op&&snkOn()){ $("#snackT").textContent=`${op.what} — saved and applied`; shared.UNDO=undo; }
+    else if(SNACKOP===op) snack(`${op.what} — saved and applied`,undo);   /* the message had gone (Retry hides it as it starts) */
+    return true;
+  }finally{ PULSE.reloads--; } }
+/* Undo pressed while it is still saving: back on screen now; nothing is written, or what was applied is undone */
+function opUndo(op){ if(op.state==="done"){ undoApply(op.apply_id,opTargeted(op)?opIds(op):null); return; }
+  if(op.state==="failed"||op.cancel) return; op.cancel=true; opRevert(op); snack(`Undone: ${op.what}`); }
+/* auto-apply off, or no live server: staged (written, not applied), shown at once with the staged dot until Apply */
+async function saveStage(op){ let name;
+  try{ name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
+  ovDrop(op.recs); refreshAll();
+  apply(op.what,()=>{},async()=>{ op.undoIt(); ovReapply(); try{ await vq(async()=>{ if(await shared.VW.exists("system/staging/"+name)) await shared.VW.remove("system/staging/"+name); else throw 0; }); }catch(e){ snack(viaServer()?"Already applied: undo it in Activity":"Already applied: use “undo last apply” in Claude Code"); } },op.by,opIds(op)); return true; }   /* BL-149 */
 /* settings.json: backup, change, log line per key */
 export const SKEY={bgActions:"work.board.group.actions",bgRaid:"work.board.group.raid",bgDecisions:"work.board.group.decisions",boardClosedDays:"work.board.closed_days",flowWeeks:"dashboard.flow_weeks",undatedGrace:"dashboard.undated_grace_days",filesDocs:"dashboard.files_show_documents",showArchived:"dashboard.show_archived",listCap:"dashboard.project_list_cap",me:"identity.name",short:"identity.short_forms",defPriority:"defaults.new_action_priority",defActionView:"defaults.actions_status_filter",defRaidView:"defaults.raid_status_filter",defDecisionView:"defaults.decisions_view",dueSoon:"review.due_soon_days",autoApply:"dashboard.auto_apply",theme:"dashboard.theme",palette:"dashboard.palette",motion:"dashboard.motion",remindersOn:"reminders.enabled",weeklyDay:"reminders.weekly_report_day",weeklyTime:"reminders.weekly_report_from",sweepDue:"sweep.due_from",lookback:"sweep.first_run_lookback_days",srcInbox:"sweep.sources.inbox",srcSent:"sweep.sources.sent_items",srcChats:"sweep.sources.teams_chats",srcChannels:"sweep.sources.teams_channels",srcCalendar:"sweep.sources.calendar",possible:"sweep.show_possible_matches",staleDays:"review.stale_after_days",rvAdvance:"review.auto_advance",dupOverlap:"review.duplicate_overlap",overdueDays:"health.at_risk_overdue_days",slipAtRisk:"health.at_risk_milestone_slip_weeks_max",slipOff:"health.off_track_milestone_slip_weeks_over",urgentOff:"health.off_track_urgent_risks_min",port:"live_mode.port",dailyBackup:"backups.daily",ownDomains:"identity.own_domains",catchupSweep:"day.catchup_sweep",catchupAfter:"day.catchup_after_minutes"};
 export async function writeSettings(changes){ let sp=null;
@@ -238,10 +294,10 @@ export function status(){ putHTML($("#status"),html`${viaServer()||shared.VSTATE
    every 10 seconds, so a server the launcher started can stop itself when the last window closes. */
 export function setLive(on){ const was=shared.LIVE; shared.LIVE=on; if(on&&!was&&SERVED){ reloadData(); reattach(); } if(on&&shared.HELD.length){ const n=shared.HELD.length; shared.HELD.forEach(h=>h()); shared.HELD=[]; shared.DATA_AT=nowStamp(); snack(`Live server back — applied ${n} held change${n===1?"":"s"}`); } status(); }
 /* every write goes through apply(): logs to Activity, applies now (or holds), offers Undo */
-export function apply(what,doIt,undoIt,by="You, in the dashboard"){
+export function apply(what,doIt,undoIt,by="You, in the dashboard",ids=[]){
   doIt(); const entry={at:nowStamp(),what,by,undo:undoIt};
   const commit=()=>{ shared.ACT.unshift(entry); shared.DATA_AT=entry.at; };
-  if(!S.autoApply){ shared.PENDING.push({what,commit,undo:undoIt}); refreshAll(); snack(`${what} — saved; press Apply to write it`,()=>{ undoIt(); shared.PENDING.pop(); refreshAll(); }); return; }
+  if(!S.autoApply){ const pend={what,commit,undo:undoIt,ids}; shared.PENDING.push(pend); refreshAll(); snack(`${what} — saved; press Apply to write it`,()=>{ undoIt(); const i=shared.PENDING.indexOf(pend); if(i>=0) shared.PENDING.splice(i,1); refreshAll(); }); return; }   /* BL-304: ids, the staged dot */
   if(shared.LIVE) commit(); else shared.HELD.push(commit);
   refreshAll(); snack(shared.LIVE?`${what} — saved and applied`:`${what} — saved; applies when the server is back`,()=>{ undoIt(); const i=shared.ACT.indexOf(entry); if(i>=0) shared.ACT.splice(i,1); refreshAll(); });
 }
@@ -310,7 +366,7 @@ if(SERVED){ pulseCheck(); setInterval(()=>{ if(!EVS.up) pulseCheck(); },(S.healt
    pulse runs every healthSecs as before; the stream is retried with a growing wait. A tab hidden for 10 minutes closes its
    stream and reopens it when shown; leaving the page closes it. After a server restart the retry is refused as stale and
    BL-174's banner says reload; the stream then stays closed. */
-export const EVS={up:false,ctl:null,retry:null,wait:1000,hid:null,parts:new Set(),timer:null,opened:0};
+export const EVS={up:false,ctl:null,retry:null,wait:1000,hid:null,parts:new Set(),timer:null,opened:0,ids:new Set(),full:false};   /* BL-304: ids, full */
 export const EV_FULL=["tracker","review","calendar"], EV_HIDDEN_MS=10*60*1000, EV_QUIET_MS=1200;
 export function evStale(){ const b=$("#staleAlert"); return !!b&&!b.hidden; }
 export function evOpen(){ if(!SERVED||EVS.ctl||document.hidden||evStale()) return; clearTimeout(EVS.retry); EVS.retry=null;
@@ -328,13 +384,25 @@ export function evDown(ctl){ if(EVS.ctl!==ctl) return; EVS.ctl=null; EVS.up=fals
   EVS.retry=setTimeout(evOpen,EVS.wait); EVS.wait=Math.min(EVS.wait*2,30000); }
 export function evClose(){ clearTimeout(EVS.retry); EVS.retry=null; const c=EVS.ctl; if(c){ c.abort(); EVS.ctl=null; EVS.up=false; } }
 export function evOn(ev){ if(ev.type==="hello"){ pulseCheck(); return; }  /* a (re)connect: anything missed meanwhile shows now */
-  if(ev.type!=="changed") return; (ev.parts||[]).forEach(p=>EVS.parts.add(p)); clearTimeout(EVS.timer); EVS.timer=setTimeout(evFlush,250); }
-export function evFlush(){ EVS.timer=null;
+  if(ev.type!=="changed") return; (ev.parts||[]).forEach(p=>EVS.parts.add(p));
+  if((ev.parts||[]).includes("tracker")){ const ids=ev.ids&&typeof ev.ids==="object"?ev.ids:null;   /* BL-304: the items the tracker's change log names */
+    if(!ids||Object.keys(ids).some(t=>!RECORD_KINDS.includes(t))) EVS.full=true; else Object.values(ids).forEach(L=>(L||[]).forEach(id=>EVS.ids.add(id))); }
+  clearTimeout(EVS.timer); EVS.timer=setTimeout(evFlush,250); }
+export async function evFlush(){ EVS.timer=null;
   if(PULSE.reloads>0||Date.now()-OWNPOST<EV_QUIET_MS){ EVS.timer=setTimeout(evFlush,400); return; }  /* the page's own save reloads itself */
-  const parts=new Set(EVS.parts); EVS.parts.clear();
+  const parts=new Set(EVS.parts), ids=[...EVS.ids], full=EVS.full; EVS.parts.clear(); EVS.ids.clear(); EVS.full=false;
   if(parts.has("files")) refreshFiles(true);
   if(parts.has("vip")) vipPoll();
-  if(EV_FULL.some(p=>parts.has(p))) pulseCheck(); }
+  /* BL-304: the tracker or Review changed and the event named the items: just those (and Review, Activity) again. The calendar,
+     a change to anything but actions, RAID and decisions, a gap in the stream or a failed fetch: the whole of /api/data, as before */
+  if(parts.has("calendar")||full){ if(EV_FULL.some(p=>parts.has(p))) pulseCheck(); return; }
+  if(!parts.has("tracker")&&!parts.has("review")) return;
+  if(pulseEditing(true)){ parts.forEach(p=>{ if(EV_FULL.includes(p)) EVS.parts.add(p); }); ids.forEach(i=>EVS.ids.add(i)); EVS.timer=setTimeout(evFlush,2000);
+    $("#newChip").classList.add("on"); return; }   /* typing: after, as the pulse waits, with the chip showing that something waits */
+  const prev=PULSE.pending;
+  if(!await refreshRecords(ids)){ pulseCheck(); return; }
+  if(!PULSE.stale) $("#newChip").classList.remove("on");   /* the pulse's own wait (a full reload still to come) keeps it */
+  if(prev!=null&&PULSE.pending!=null&&PULSE.pending>prev){ const n=PULSE.pending-prev; snack(`${n} new item${n===1?"":"s"} in Review`); } }   /* as pulseReload says it */
 /* ===== end BL-253 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0142's place) */
 export function bootEventStream(){

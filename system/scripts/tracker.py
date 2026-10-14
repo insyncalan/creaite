@@ -30,6 +30,8 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import threading
+import time
 import zipfile
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -2343,21 +2345,57 @@ def _finish_apply(work, apply_id, summary):
 # ===== end BL-229 step 3 (apply) =====
 
 
-def after_apply():
-    """Refresh the search index (BL-07), rebuild the dashboard, then re-export Excel (each only once it exists); and keep the
-    off-laptop copy of the daily backup current (BL-85, only when the projects live outside the vault)."""
-    r = offsite_copy()
+# ===== BL-327: after an apply, each step timed in the debug log; the live server runs the two slow ones after it answers =====
+AFTER_ENV = "CREAITE_AFTER_APPLY"               # "background": the live server runs after_apply_slow itself, after answering
+AFTER_DUE = "after-apply-due"                   # in system/search/: the slow steps are owed (the server's worker clears it)
+
+
+def after_due_flag():
+    """The marker that says an apply's index refresh and OneDrive copy are still to run (BL-327)."""
+    return paths.SEARCH_DIR / AFTER_DUE
+
+
+def _timed(step, fn):
+    """Run one after-apply step and log how long it took (BL-327); its result."""
+    t0 = time.monotonic()
+    try:
+        return fn()
+    finally:
+        debuglog.info("tracker", f"after apply: {step} in {time.monotonic() - t0:.2f}s")
+
+
+def after_apply_slow():
+    """The steps a save needn't wait for: the off-laptop copy of the daily backup (BL-85, BL-323; only when the projects live
+    outside the vault) and the search index (BL-07, incremental since BL-327). Each is timed in the debug log; neither raises."""
+    r = _timed("offsite copy", offsite_copy)
     if r["error"]:
         print(f"Note: off-laptop backup copy not made: {r['error']}")
-    refresh_index()
+    _timed("search index", refresh_index)
+
+
+def after_apply():
+    """After an apply or undo: the OneDrive copy and the search index (after_apply_slow), then rebuild the dashboard and
+    re-export Excel (each only once it exists), every step timed in the debug log (BL-327). Run by the live server
+    (CREAITE_AFTER_APPLY=background), the slow steps are left to its background worker, marked as owed, so the save answers
+    as soon as the tracker is written and the dashboard data rebuilt."""
+    if os.environ.get(AFTER_ENV) == "background":
+        try:
+            paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
+            after_due_flag().touch()
+        except OSError:                                # can't mark it: do them now, as before
+            after_apply_slow()
+    else:
+        after_apply_slow()
     for script, args in (("build_dashboard.py", []), ("excel_sync.py", ["export"])):
         s = paths.ROOT / "system" / "scripts" / script
         if s.exists():
-            r = subprocess.run([sys.executable, str(s), *args], cwd=paths.ROOT, capture_output=True, text=True)
+            r = _timed(" ".join([script, *args]), lambda s=s, args=args: subprocess.run(
+                [sys.executable, str(s), *args], cwd=paths.ROOT, capture_output=True, text=True))
             if r.returncode == 3:      # paused on purpose (e.g. unimported Excel edits); say why
                 print(f"Note: {r.stdout.strip()}")
             elif r.returncode != 0:
                 print(f"Note: {script} {' '.join(args)} failed: {(r.stderr or r.stdout).strip()[:300]}")
+# ===== end BL-327 (after apply) =====
 
 
 # ── Undo ──────────────────────────────────────────────────────────────────────
@@ -3361,6 +3399,8 @@ def index_state():
         return True, "files changed"
     if stamp.get("readers", 1) != INDEX_READERS:     # BL-275, BL-276: PDFs and saved emails are read anew
         return True, "file readers changed"
+    if stamp.get("layout") != INDEX_LAYOUT:          # BL-327: a stamp without each file's record is rebuilt once in full
+        return True, "index layout changed"
     return False, ""
 
 
@@ -3378,42 +3418,145 @@ def read_sidecar(rel):
     return rec if isinstance(rec, dict) and rec.get("path") == rel else None
 
 
-def build_index():
-    """Rebuild vault_search in full (incremental indexing isn't worth it at this size). Returns the file count. A
-    meeting's or report's summary and tags (its sidecar) are part of its content, so keyword search matches them."""
-    found = {}
+# ===== BL-327: an incremental index. The stamp keeps each file's modification time, size, sidecar time and (for a meeting,
+# indexed once wherever it is filed) its content hash; a build re-reads only the files whose stamp changed, or that share a
+# meeting's hash with one that did. A full rebuild only when the readers (INDEX_READERS) or this layout (INDEX_LAYOUT) change,
+# when the table is recreated, or when asked (`tracker.py index`).
+INDEX_LAYOUT = 1
+INDEX_LOCK = threading.Lock()          # one build at a time within a process (the live server's threads)
+MEETING_FOLDERS = ("minutes", "transcripts")
+
+
+def _sidecar_time(rel):
+    """The modification time (ns) of a file's sidecar, or 0."""
+    try:
+        return sidecar_path(rel).stat().st_mtime_ns
+    except OSError:                                     # no sidecar (most files have none)
+        return 0
+
+
+def _index_scan(old):
+    """[(slot, file, folder, code, meta, changed)] for every indexed file now. meta is the stamp's record for the file; a
+    meeting's content hash is worked out again only when its stamp changed."""
+    out = []
     for f, folder, code in index_files():
-        content = text_of(f)
-        # A meeting filed in several projects is indexed once
-        dup = hashlib.sha256(f.read_bytes()).hexdigest() if folder in ("minutes", "transcripts") else paths.rel(f)
-        entry = found.setdefault(dup, {"path": paths.rel(f), "projects": [], "kind": STORED_KIND.get(folder, folder),
-                                       "date": paths.file_date(f)[0] if folder in ("minutes", "transcripts") else (paths.name_date(f.name)[0] or ""), "text": content, "stem": f.stem, "note": None})
-        entry["note"] = entry["note"] or read_sidecar(paths.rel(f))        # any copy's sidecar will do
+        rel = paths.rel(f)
+        try:
+            st = f.stat()
+        except OSError:
+            continue                                     # gone while it was listed
+        meta = {"m": st.st_mtime_ns, "s": st.st_size, "n": _sidecar_time(rel), "f": folder, "c": code}
+        slot = f"{code}|{rel}"
+        prev = (old or {}).get(slot)
+        same = bool(prev) and all(prev.get(k) == v for k, v in meta.items())
+        if same:
+            meta["k"] = prev.get("k")
+        else:
+            try:
+                meta["k"] = hashlib.sha256(f.read_bytes()).hexdigest() if folder in MEETING_FOLDERS else rel
+            except OSError:                              # unreadable now: left out, and read at the next build
+                continue
+        out.append((slot, f, folder, code, meta, not same))
+    return out
+
+
+def _index_entries(scan, keys):
+    """The vault_search rows for these dedup keys, from the files now listed: a meeting filed in several projects once."""
+    found = {}
+    for _slot, f, folder, code, meta, _changed in scan:
+        if meta["k"] not in keys:
+            continue
+        rel = paths.rel(f)
+        entry = found.get(meta["k"])
+        if entry is None:
+            entry = found[meta["k"]] = {"path": rel, "projects": [], "kind": STORED_KIND.get(folder, folder),
+                                        "date": paths.file_date(f)[0] if folder in MEETING_FOLDERS else (paths.name_date(f.name)[0] or ""),
+                                        "text": text_of(f), "stem": f.stem, "note": None}
+        entry["note"] = entry["note"] or read_sidecar(rel)        # any copy's sidecar will do
         if code not in entry["projects"]:
             entry["projects"].append(code)
     for e in found.values():
         note = e.pop("note")
         extra = f"{note.get('summary', '')}\n{', '.join(note.get('tags') or [])}\n" if note else ""
         e["content"] = f"{e.pop('stem')}\n{extra}{e.pop('text')}"
-    started = datetime.now().timestamp()
-    con = connect()
-    ensure_search_table(con)
-    con.execute("BEGIN")
-    con.execute("DELETE FROM vault_search")
+    return list(found.values())
+
+
+def _index_old(full, recreated):
+    """The last build's per-file records, or None when this build must read everything (asked for, a recreated table, new
+    readers or a new layout, or no stamp)."""
+    try:
+        stamp = json.loads(index_stamp().read_text(encoding="utf-8"))
+    except (OSError, ValueError):                      # never built, or a stamp caught half-written: a full build
+        return None
+    if full or recreated or stamp.get("readers", 1) != INDEX_READERS or stamp.get("layout") != INDEX_LAYOUT:
+        return None
+    return stamp.get("entries")
+
+
+def _index_plan(old, scan):
+    """(the dedup keys to write again, the paths whose rows go first). Everything when `old` is None; otherwise the keys of
+    the files changed, added or removed (before and now), and every path a row for them may be under."""
+    if old is None:
+        return {meta["k"] for *_, meta, _c in scan}, set()
+    now_slots = {slot for slot, *_ in scan}
+    keys = {meta["k"] for *_, meta, changed in scan if changed}
+    keys |= {old[slot].get("k") for slot, *_, changed in scan if changed and slot in old}
+    keys |= {m.get("k") for slot, m in old.items() if slot not in now_slots}
+    gone = {slot.split("|", 1)[1] for slot, m in old.items() if m.get("k") in keys}
+    gone |= {paths.rel(f) for _s, f, _fo, _c, meta, _ch in scan if meta["k"] in keys}
+    return keys, gone
+
+
+def _index_write(con, everything, gone, entries):
+    """One transaction: the rows going (all of them for a full build), then the new rows."""
+    con.execute("BEGIN IMMEDIATE")
+    if everything:
+        con.execute("DELETE FROM vault_search")
+    listed = sorted(gone)
+    for i in range(0, len(listed), 500):
+        part = listed[i:i + 500]
+        con.execute(f"DELETE FROM vault_search WHERE path IN ({','.join('?' * len(part))})", part)
     con.executemany("INSERT INTO vault_search (path, project, kind, date, content) VALUES (?,?,?,?,?)",
-                    [(e["path"], " ".join(e["projects"]), e["kind"], e["date"], e["content"])
-                     for e in found.values()])
+                    [(e["path"], " ".join(e["projects"]), e["kind"], e["date"], e["content"]) for e in entries])
     con.execute("COMMIT")
-    con.close()
-    paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
-    index_stamp().write_text(json.dumps({"built": started, "files": len(index_files()),
-                                               "readers": INDEX_READERS}), encoding="utf-8")
-    return len(found)
+
+
+def build_index(full=False):
+    """Bring vault_search up to date and return how many entries it holds. Only the files whose stamp changed since the last
+    build are read again (BL-327); `full`, a change of readers or layout, or a recreated table rebuild it all. A meeting's
+    or report's summary and tags (its sidecar) are part of its content, so keyword search matches them. The time, the files
+    read and removed are in the debug log."""
+    with INDEX_LOCK:
+        t0, started = time.monotonic(), datetime.now().timestamp()
+        con = connect()
+        try:
+            old = _index_old(full, ensure_search_table(con))
+            scan = _index_scan(old)
+            keys, gone = _index_plan(old, scan)
+            entries = _index_entries(scan, keys)
+            if old is None or keys:                    # nothing changed: tracker.db isn't touched (its stamp is the page's signal)
+                _index_write(con, old is None, gone, entries)
+        finally:
+            con.close()
+        paths.SEARCH_DIR.mkdir(parents=True, exist_ok=True)
+        total = len({meta["k"] for *_, meta, _c in scan})
+        tmp = index_stamp().with_suffix(".tmp")
+        tmp.write_text(json.dumps({"built": started, "files": len(scan), "readers": INDEX_READERS, "layout": INDEX_LAYOUT,
+                                   "entries": {slot: meta for slot, _f, _fo, _c, meta, _ch in scan}}), encoding="utf-8")
+        os.replace(tmp, index_stamp())
+        now_slots = {slot for slot, *_ in scan}
+        removed = sum(1 for slot in (old or {}) if slot not in now_slots)
+        debuglog.info("tracker", f"search index: {'full' if old is None else 'incremental'} in "
+                                 f"{time.monotonic() - t0:.2f}s: {len(entries)} entr{'y' if len(entries) == 1 else 'ies'} "
+                                 f"read again, {removed} file(s) removed, {total} indexed")
+        return total
+# ===== end BL-327 (index) =====
 
 
 def cmd_index():
     """Rebuild the full-text search index (BL-07) and say which online-only files were skipped (BL-85)."""
-    print(f"Indexed {build_index()} file(s).")
+    print(f"Indexed {build_index(full=True)} file(s).")
     away = paths.online_only_files()
     if away:                                         # BL-85: never read, so never downloaded
         print(f"Skipped {len(away)} online-only file(s) (not on this device): " + ", ".join(f.name for _, _, f in away[:5])
@@ -3422,10 +3565,9 @@ def cmd_index():
 
 
 def refresh_index():
-    """After an apply or undo: rebuild if anything changed. Never stops the apply."""
+    """After an apply or undo: bring the index up to date (BL-327: only what changed is read again). Never stops the apply."""
     try:
-        if index_state()[0]:
-            build_index()
+        build_index()
     except Exception as e:  # noqa: BLE001
         print(f"Note: the search index wasn't refreshed: {e}")
 

@@ -1087,6 +1087,7 @@ class UndatedWorkTests(LiveBrowserCase):
         b.eval(f"(()=>{{ const i=document.getElementById('und-{target}'); i.value='16-11-2026'; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         b.wait(f"!document.querySelector('#undatedCard [data-open=\"actions:{target}\"]')", 15)
         self.assertFalse(b.eval("!!document.getElementById('f_due')"))                                     # still no panel
+        b.eval("(async()=>{ await savesSettled(); return true; })()")                                     # BL-304: it leaves the card at once; applied in the background
         self.assertEqual(next(a for a in self.v.rows("actions") if a["id"] == target)["due_date"], "2026-11-16")   # a normal proposal, applied (BL-181: a Monday, so no weekend alert)
         b.wait(f"!document.querySelector('#undatedCard [data-open=\"actions:{target}\"]')")
         left_acts, left_raid = oracle(self.v)

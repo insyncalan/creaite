@@ -67,6 +67,7 @@ PLAIN = {
     "offsite_backup": ("The OneDrive backup copy is missing or out of date", "offsite"),
     "backup_check": ("The weekly backup restore check found a problem", "manual"),       # BL-323
     "tidy_up": ("Tidy up of old backups", "manual"),                                      # BL-323 (always fine: information)
+    "sweep_lock": ("A sweep lock is held with no sweep running", "manual"),   # BL-328: health_fixes builds its Release
     "debug_log": ("Errors keep coming back", "manual"),
     "minutes_drafts": ("Staged minutes have lost their Word draft", "manual"),
     "new_vault": ("Set-up isn't finished", "setup"),

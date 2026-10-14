@@ -51,6 +51,11 @@ FIXES = {
                                 "period goes into its engagement's own _Archive, in the same place below it. Nothing moves until "
                                 "you approve it there; links keep working, nothing is deleted, and Undo moves them back.",
                         "command": ("archive.py", "reports"), "card": True},
+    # BL-328: the lock file only, and only when no sweep holds it (sweep.py checks again before it removes anything)
+    "sweep_lock": {"title": "A sweep lock is held with no sweep running", "button": "Release",
+                   "does": "Release the sweep lock left by a sweep that has ended, so the next sweep can start. A sweep that is "
+                           "still running keeps its lock.",
+                   "command": ("sweep.py", "unlock", "--if-idle")},
 }
 
 # doctor check id → (fix id, words in its detail that mean this fix mends it: any of them, or None for any detail)
@@ -60,6 +65,7 @@ CHECK_FIXES = {
     "offsite_backup": ("offsite", ("no copy yet", "days ago")),       # not "can't write to …": a copy can't mend that
     "old_archive_folders": ("old_archive", ("zz Archive",)),          # BL-09
     "archive_reports": ("archive_reports", ("Archive ",)),            # BL-03: the monthly line
+    "sweep_lock": ("sweep_lock", ("no sweep running",)),               # BL-328
 }
 STANDALONE = ("icon", "m365")
 
