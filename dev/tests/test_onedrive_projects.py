@@ -350,13 +350,13 @@ class RegisterAndNewProjectTests(OneDriveCase):
         self.v.run("apply")
         self.assertEqual((mine.read_bytes(), mem.read_text()), (b"mine", "# my own notes\n"))
 
-    def test_the_default_layout_still_creates_the_four_subfolders(self):
+    def test_the_default_layout_still_creates_its_subfolders(self):
         cfg = self.v.root / "system/config/settings.json"
         data = json.loads(cfg.read_text())
         data.pop("locations")
         cfg.write_text(json.dumps(data, indent=2))
         ops = json.loads(self.v.run("new-project", "--code", "JKL", "--name", "Local One", script="propose.py").stdout)["file_changes"]["file_ops"]
-        self.assertEqual([o["path"] for o in ops if o["op"] == "mkdir"], [f"projects/JKL Local One/{s}" for s in ("minutes", "transcripts", "documents", "reports")])
+        self.assertEqual([o["path"] for o in ops if o["op"] == "mkdir"], [f"projects/JKL Local One/{s}" for s in ("minutes", "transcripts", "documents", "reports", "notes")])   # notes: BL-301
 
 
 class TeamsNamesTests(OneDriveCase):

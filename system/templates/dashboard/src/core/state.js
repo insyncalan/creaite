@@ -57,6 +57,8 @@ export const shared = {
   HELPARG: undefined,
   // drafts: set where its `let` was
   DE: undefined,
+  // notes (BL-301 B): the Notes tab's project and the note the address names
+  NOTECODE: undefined, NOTEFILE: undefined, NOTEFIND: undefined,
   // main: the start-up (HASH0, the address as opened; HADHASH, whether the page opened on an address)
   HADHASH: undefined, HASH0: undefined,
 };

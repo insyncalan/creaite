@@ -267,7 +267,8 @@
       "adhoc_documents": "04 Reporting/Adhoc",
       "images": "04 Reporting/Content",
       "steerco": "04 Reporting/Steerco",
-      "agendas": "02 Meetings/Agendas"
+      "agendas": "02 Meetings/Agendas",
+      "notes": "08 Notes"
     },
     "never_index": [
       "zz Archive",

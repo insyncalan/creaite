@@ -230,7 +230,7 @@ class SearchTests(SearchBase):
     def test_grouped_results_with_snippets_dates_and_where_they_open(self):
         r = self.q("data access")
         self.assertEqual([c["kind"] for c in r["chips"]], [])
-        self.assertEqual(set(r["groups"]), {"items", "meetings", "reports", "documents"})
+        self.assertEqual(set(r["groups"]), {"items", "meetings", "reports", "documents", "notes"})   # notes: BL-301
         self.assertEqual({x["id"] for x in r["groups"]["items"]}, {"ABC-A-001", "ABC-003"})
         self.assertEqual(sorted(self.titles(r, "meetings")), ["2026-09-25 Steering", "2026-09-25 Steering"])
         self.assertEqual(self.titles(r, "reports"), ["2026-10-02 Weekly report"])
@@ -276,7 +276,7 @@ class SearchTests(SearchBase):
     def test_only_filters_lists_by_date_and_nothing_searches_nothing(self):
         r = self.q("decisions last month")
         self.assertEqual([x["id"] for x in r["groups"]["items"]], ["ABC-D-004"])
-        self.assertEqual(self.q("")["totals"], {"items": 0, "meetings": 0, "reports": 0, "documents": 0})
+        self.assertEqual(self.q("")["totals"], {"items": 0, "meetings": 0, "reports": 0, "documents": 0, "notes": 0})
 
     def test_word_forms_item_ids_and_project_scope(self):
         self.assertEqual({x["id"] for x in self.q("slip")["groups"]["items"]}, {"ABC-003"})          # LIKE: slipped contains slip

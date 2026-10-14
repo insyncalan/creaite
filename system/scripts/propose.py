@@ -257,9 +257,9 @@ def add_register_row(text, row):
 
 
 def folder_ops(folder, adopting=False):
-    """The file operations that make a new project's folders. By default: the four subfolders. With a projects folder outside the vault
+    """The file operations that make a new project's folders. By default: the five subfolders. With a projects folder outside the vault
     (BL-85): a copy of its template skeleton (every folder, and any file in it), or if there is none the mapped folders; nothing at all
-    for an engagement folder that already exists (it is adopted as it is)."""
+    for an engagement folder that already exists (it is adopted as it is). The notes folder (BL-301) is added when the skeleton lacks it."""
     if not paths.external():
         return [{"op": "mkdir", "path": f"{folder}/{sub}"} for sub in paths.PROJECT_SUBFOLDERS]
     if adopting:
@@ -274,7 +274,8 @@ def folder_ops(folder, adopting=False):
     else:
         ops += [{"op": "mkdir", "path": f"{folder}/{paths.folder_name(k)}"}
                 for k in ("transcripts", "minutes", "weekly_reports", "client_reports", "adhoc_documents")]
-    return ops
+    notes = {"op": "mkdir", "path": f"{folder}/{paths.folder_name('notes')}"}       # BL-301: every new project gets its notes folder
+    return ops + ([notes] if notes not in ops else [])
 
 
 def emit_spec(spec, out=None):

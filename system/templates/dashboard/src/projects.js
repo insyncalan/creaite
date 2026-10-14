@@ -2,9 +2,11 @@
 /* projects.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0029-projects-cockpit.js, 0054-generate-current-state-with-claude-bl-46.js, 0055-executive-current-state-bl-106.js, 0056-current-state-edited-in-place-bl-47.js, 0058-bl-162-sprint-rail.js, 0059-bl-207-sprint-insight.js, 0081-dashboard-pages-bl-87-to-bl-95.js, 0082-bl-190-sprint-links.js, 0083-after-bl-190-flow.js, 0124-insight-bl-51-bl-49-bl-54.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { mountAiMenu } from "./components/AiSelect.jsx";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, paintIcons, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
+import { creaiteEditor, curDrop, ED_QUIET, edClaim, edOf, edValue } from "./core/editor.js";
 import { CALI, closeCal, comboClose, DATE_HELP, formProject, WK, wkAsk } from "./core/fields.js";
 import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll, tabTitle } from "./core/nav.js";
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
@@ -15,8 +17,9 @@ import { FOPEN } from "./files.js";
 import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
 import { mvBindScroll, mvCardHtml } from "./milestones.js";
-import { bl185Row, figHtml, htmlToMd, joinPanes, markSel, MD_IMG, mdHtml, openProject, openRecord, pkDrDrop, pkNewAsk, pkNewAskOff, pkNewKey, pkNewOffer, REC, saveCurrent, savePanel, splitPanes } from "./panel.js";
+import { bl185Row, htmlToMd, imgSrc, joinPanes, markSel, MD_IMG, mdHtml, openProject, openRecord, pkDrDrop, pkNewAsk, pkNewAskOff, pkNewKey, pkNewOffer, REC, saveCurrent, savePanel, splitPanes } from "./panel.js";
 import { mountPrepPopup } from "./components/prep/PrepPopup.jsx";
+import { drawCockpitTabs } from "./notes.js";
 import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
 import { draftOn, pencil, SPARKI } from "./review.js";
@@ -50,10 +53,10 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
   /* BL-12: current state leads, with images */
   const paras=curReadHtml(p);
   const pi=P.findIndex(x=>x.code===code), nOpenA=A.filter(x=>x.p===code&&openOnly(x)).length, nOpenR=R.filter(r=>r.p===code&&r.st==="Open").length, nDec=DEC.filter(d=>d.p===code).length;
-  if(shared.CURED&&shared.CURED.code===code){ const h=curEdHtml(); if(h) shared.CURED.html=h; }
   putHTML($("#v-cockpit"),html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div>
      <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P.length<2?"disabled":""}>‹</button><select id="projSw" aria-label="Switch project">${P.map(x=>html`<option value="${x.code}" ${x.code===code?"selected":""}>${x.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P.length<2?"disabled":""}>›</button></div></div>
+   <div id="cockTabs"></div>
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}"${!viaServer()||shared.RUN||shared.GEN.run?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
@@ -69,6 +72,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
    </div></div>
    ${raw(flowCard(code))}
    <div class="cockfoot"><button class="btn" data-ask="weekly report ${p.code}" aria-label="Draft weekly report" data-tip="Draft the weekly report with ask creaite">${raw(ic("filetext"))}Weekly report</button><button class="btn" data-ask="client report ${p.code}" aria-label="Draft client report" data-tip="Draft a client-safe report with ask creaite">${raw(ic("filetext"))}Client report</button>${raw(ibtn("folder","Browse files",`data-files="${p.code}"`,"bd"))}</div></div>`); })();
+  drawCockpitTabs(code);   /* BL-301 B: Overview and Notes */
   csHead(code);   /* BL-274 */
   if(!(shared.CURED&&shared.CURED.code===code)) readClaims(code);   /* BL-162 */
   { const v=$("#v-cockpit"); if(v){
@@ -135,7 +139,7 @@ export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrit
   genDraft(body.code,fdMd(draft.trim()),src.trim(),{audience:body.audience,length:body.length,from:body.from,to:body.to}); }
   finally{ rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
 export function genDraft(code,md,sources,opts){ if(shared.VIEW!=="cockpit"||shared.COCK!==code) go("cockpit",code);
-  if(!shared.CURED) startCurEdit(code); if(!shared.CURED) return; shared.CURED.html=mdHtml(md,(P.find(x=>x.code===code)||{}).images); shared.CURED.dirty=true; shared.CURED.sources=sources||"";
+  if(!shared.CURED) startCurEdit(code); if(!shared.CURED) return; curLoad(1,md); shared.CURED.dirty=true; shared.CURED.sources=sources||"";
   shared.CURED.opts=opts||null; shared.CURED.notes=null; shared.CURED.facts=""; shared.CURED.rewrite=null; shared.CURED.claims=null; shared.CURED.ev={}; mountCurEdit(); claimsInit("ed"); curCheck();   /* BL-207: the marks become claims */
   snack("Draft ready — edit it, then Save. Nothing is written until you do."); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -168,7 +172,7 @@ export function notesHtml(){ const h=(()=>{ const n=shared.CURED&&shared.CURED.n
 export function setNotes(){ const el=$("#genNotes"); if(el) putHTML(el,raw(notesHtml())); const f=$("#genFacts"); if(f&&shared.CURED){ f.hidden=!shared.CURED.facts; putHTML(f,html`<summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}`); } }
 export function factsHtml(t){ return String(t||"").split(/\n(?=## )/).map(b=>{ const L=b.split("\n").filter(x=>x.trim()); if(!L.length) return ""; const head=L[0].startsWith("## ")?`<strong>${esc(L[0].slice(3))}</strong>`:"";
   return `<div class="factblk">${head}<ul>${L.slice(head?1:0).map(x=>`<li>${esc(x.replace(/^- /,""))}</li>`).join("")}</ul></div>`; }).join(""); }
-export async function curCheck(text,original){ const cur=shared.CURED; if(!cur||!viaServer()) return; text=text??htmlToMd($("#curEd")); if(!String(text).trim()){ cur.notes=[]; setNotes(); return; }
+export async function curCheck(text,original){ const cur=shared.CURED; if(!cur||!viaServer()) return; text=text??edValue($("#curEd")); if(!String(text).trim()){ cur.notes=[]; setNotes(); return; }
   const claims=cur.claims?claimsPayload("ed"):undefined;   /* BL-207 */
   cur.checking=true; setNotes(); const r=await api("/api/current/check",{code:cur.code,text,sources:cur.sources||"",original,claims,...execOpts()}); cur.checking=false;
   if(shared.CURED!==cur) return; if(r.ok){ cur.notes=r.notes; cur.facts=r.facts; if(r.evidence) claimsApply("ed",r.evidence,claims); } else { cur.notes=null; snack(oneLine(r.message)||"Couldn't check the draft"); }
@@ -179,49 +183,68 @@ export function rewriteHtml(){ const rw=shared.CURED&&shared.CURED.rewrite; if(!
     <div class="rwbody">${mdHtml(rw.md,(P.find(x=>x.code===shared.CURED.code)||{}).images)}</div>${notes}
     <div class="curacts"><span class="sp"></span><button class="btn" data-rw="discard">Discard</button><button class="btn primary" data-rw="use">Use this version</button></div></div>`; }
 export function execRewrite(){ if(!shared.CURED) return; if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Make it executive needs the live server"); return; }
-  const text=htmlToMd($("#curEd")); if(!text.trim()){ snack("Write something first, or use Generate"); return; } shared.CURED.html=curEdHtml();
+  const text=edValue($("#curEd")); if(!text.trim()){ snack("Write something first, or use Generate"); return; }
   runGen({code:shared.CURED.code,text,...execOpts()},"rewrite"); }
 export function execResult(code,original,md){ if(!shared.CURED||shared.CURED.code!==code){ snack("The rewrite finished, but the editor was closed. Nothing was changed."); return; }
-  shared.CURED.html=curEdHtml(); shared.CURED.rewrite={md,original,notes:null}; mountCurEdit(); snack("Executive version ready. Use it or discard it; your text is unchanged.");
+  shared.CURED.rewrite={md,original,notes:null}; mountCurEdit(); snack("Executive version ready. Use it or discard it; your text is unchanged.");
   const cur=shared.CURED, rw=cur.rewrite, claims=claimsPayload("rw"); api("/api/current/check",{code:cur.code,text:stripMarks(md),original,sources:"",claims,...execOpts()}).then(r=>{ if(shared.CURED!==cur||cur.rewrite!==rw) return;
     rw.notes=r.ok?r.notes:[]; if(r.ok) cur.facts=r.facts; setRewrite(); setNotes(); if(r.ok&&r.evidence) claimsApply("rw",r.evidence,claims); }); }
+/* BL-301 D: Make it executive is now an option of AI ▾ beside Save (the whole Current state, with its facts and evidence, as
+   before); the other options act on the whole pane the cursor was last in, and on a selection through the bar over it. */
+export function curAiMenu(){ const el=$("#curAi"); if(!el||!shared.CURED) return;
+  mountAiMenu(el,{place:"current",onExecutive:execRewrite,target:()=>{ const c=shared.CURED; const h=c&&(c.last===2?c.ed2:c.ed1); return h?{h,ai:{place:"current",project:()=>c.code}}:null; }}); }
 export function setRewrite(){ const el=$("#genRewrite"); if(el) swapHTML(el,raw(rewriteHtml())); rwWrap(); evRefresh(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0055(){
 $("#genDlg").addEventListener("click",e=>{ const a=e.target.closest("[data-ga]"), l=e.target.closest("[data-gl]"), f=e.target.closest("[data-gf]"); if(a) shared.GEN.aud=a.dataset.ga; else if(l&&!l.disabled) shared.GEN.len=l.dataset.gl; else if(f){ if(f.getAttribute("aria-disabled")==="true"){ snack(f.dataset.tip||"That form is off"); return; } shared.GEN.form=f.dataset.gf; } else return; genOptions(); });
 document.addEventListener("click",e=>{ if(!shared.CURED) return;
-  if(e.target.closest("[data-exec]")){ execRewrite(); return; }
   if(e.target.closest("[data-chk]")){ curCheck(); return; }
-  const rw=e.target.closest("[data-rw]"); if(rw&&shared.CURED.rewrite){ shared.CURED.html=curEdHtml(); const md=shared.CURED.rewrite.md; shared.CURED.rewrite=null;
-    if(rw.dataset.rw==="use"){ shared.CURED.html=mdHtml(md,(P.find(x=>x.code===shared.CURED.code)||{}).images); shared.CURED.dirty=true; shared.CURED.notes=null; shared.CURED.claims=null; mountCurEdit(); claimsInit("ed"); curCheck(); }
+  const rw=e.target.closest("[data-rw]"); if(rw&&shared.CURED.rewrite){ const md=shared.CURED.rewrite.md; shared.CURED.rewrite=null;
+    if(rw.dataset.rw==="use"){ curLoad(1,md); shared.CURED.dirty=true; shared.CURED.notes=null; shared.CURED.claims=null; mountCurEdit(); claimsInit("ed"); curCheck(); }
     else mountCurEdit(); } });
 }
 /* ======================= Current state, edited in place (BL-47) ======================= */
-shared.CURED=null;   /* {code, orig (Markdown), html (kept across re-renders), dirty} */
+shared.CURED=null;   /* {code, orig (Markdown), src1, src2 (each pane's Markdown when its editor is made), ed1, ed2 (the panes' editors, BL-301 A: kept across re-renders), dirty} */
+/* BL-301 A: each pane is the one editor (core/editor.js), loaded and saved as Markdown byte for byte; pictures are its image
+   node, drawn as before (figure.cimg, an editable caption, ×). Paste keeps only what Current state supports (from Word,
+   Outlook or a web page), and a pasted or dropped picture is added as before (BL-63). */
+export const CUR_PROPS={
+  transformPastedHTML:h=>mdHtml(htmlToMd(new DOMParser().parseFromString(h,"text/html").body)),
+  handlePaste:(view,e)=>{ const pics=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//.test(f.type)); if(!pics.length) return false;
+    (async()=>{ for(const f of pics) await insertImage(f,view.dom); })(); return true; },
+  handleDrop:(view,e)=>{ const files=[...((e.dataTransfer&&e.dataTransfer.files)||[])]; if(!files.length) return false; e.preventDefault();
+    const at=view.posAtCoords({left:e.clientX,top:e.clientY}); (async()=>{ for(const f of files) await insertImage(f,view.dom,at?at.pos:undefined); })(); return true; } };
+/** pane n's editor, made from its text (shared.CURED.srcN) or, made before, moved into the card just drawn */
+export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#curEd"), k=n===2?"ed2":"ed1"; if(!c||!slot) return;
+  if(c[k]&&!c[k].editor.isDestroyed){ for(const a of ["aria-label","data-ph"]) c[k].el.setAttribute(a,slot.getAttribute(a)); slot.replaceWith(c[k].el); return; }
+  const imgs=(P.find(x=>x.code===c.code)||{}).images;
+  c[k]=creaiteEditor(slot,{features:"current",markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
+    ai:{place:"current",project:()=>(shared.CURED&&shared.CURED.code)||""}}); }   /* BL-301 D: AI on selected text */
+/** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
+export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
 export const RTE_TOOLS=[["bold","B","Bold (⌘B)"],["italic","I","Italic (⌘I)"],["strikeThrough","S","Strikethrough (⌘⇧X)"],["formatBlock:h3","H","Sub-heading"],["|"],
   ["insertUnorderedList","• List","Bulleted list"],["insertOrderedList","1. List","Numbered list"],["outdent","⇤","Outdent"],["indent","⇥","Indent (nested list)"],["formatBlock:blockquote","❝","Quote"],["image","Image","Add an image here (PNG or JPEG, up to 2 MB); or paste or drop one"],["|"],
   ["link","Link","Add or edit a link (⌘K)"],["unlink","Unlink","Remove the link"],["removeFormat","Clear","Clear formatting"],["|"],["undo","↶","Undo (⌘Z)"],["redo","↷","Redo (⌘⇧Z)"]];
 export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; const p=P.find(x=>x.code===code); if(!p) return; const [l,r]=splitPanes(p.current||"");
   if(pane===2) store.set("creaite-cur-collapsed",false);
-  shared.CURED={code,orig:p.current||"",html:mdHtml(l,p.images)||"<p><br></p>",html2:mdHtml(r,p.images)||"<p><br></p>",dirty:false,uploads:{},removed:new Set(),last:pane||1}; mountCurEdit();
+  shared.CURED={code,orig:p.current||"",src1:l,src2:r,ed1:null,ed2:null,dirty:false,uploads:{},removed:new Set(),last:pane||1}; mountCurEdit();
   /* a reopened editor carries the saved links; only fresh or edited sentences go to the check */
   if(!shared.CURED) return; const ev=evSaved(code), root=$("#curEd"); if(!ev||!root) return;
     const set={}; claimsMatch(root,ev).forEach(({n,h})=>{ const e=ev[h]; set[n]={text:claimText(root,n),ids:[],how:(e.how==="none"||e.how==="kept")?"none":"saved",saved:e,touched:true,...(e.kept!=null?{kept:e.kept}:{})}; });
-    if(Object.keys(set).length){ shared.CURED.claims=set; shared.CURED.html=curEdHtml(); claimPaint("ed"); } }
+    if(Object.keys(set).length){ shared.CURED.claims=set; claimPaint("ed"); } }
 export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=card&&card.querySelector(".curtext"); if(!shared.CURED||!box||shared.COCK!==shared.CURED.code) return;
   card.classList.add("editing"); card.querySelectorAll(".pencil").forEach(b=>b.hidden=true);
   putHTML(box,html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map(t=>t[0]==="|"?html`<span class="rtesep"></span>`:html`<button type="button" data-rc="${t[0]}" title="${t[2]}" aria-label="${t[2]}">${t[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
-    ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Current state, left pane">${shared.CURED.html}</div>`,`<div class="rted" id="curEd2" data-ph="Write here…" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Current state, right pane">${shared.CURED.html2}</div>`,"edit",!!splitPanes(shared.CURED.orig)[1]||!!shared.CURED.html2.replace(/<p><br><\/p>/g,"").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
+    ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`,`<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`,"edit",!!splitPanes(shared.CURED.orig)[1]||!!String(shared.CURED.ed2?edValue(shared.CURED.ed2.el):shared.CURED.src2||"").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
     ${shared.CURED.sources?html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>`:""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts?"":"hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
-    <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><button class="btn" data-exec="1" title="Rewrite what is in the editor in the executive voice, keeping your facts. You choose whether to use it.">Make it executive</button><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
-  $$(".curpanes .rted").forEach(e=>{ edFigs(e); paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
+    <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
+  curAttach(1); curAttach(2); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
   if(shared.CURED){ const t=csTitle(shared.CURED.code);
     $("#curEd")?.setAttribute("aria-label",`${t}, left pane`); $("#curEd2")?.setAttribute("aria-label",`${t}, right pane`); csHead(shared.CURED.code); }
   if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); } }
-export function curEdHtml(){ const a=$("#curEd"), b=$("#curEd2"); if(shared.CURED&&b) shared.CURED.html2=b.innerHTML; return a?a.innerHTML:shared.CURED&&shared.CURED.html; }
-export function endCurEdit(){ evPanelClose(); shared.CURED=null; DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
+export function endCurEdit(){ evPanelClose(); curDrop(); DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
 export const figRefs=ed=>[...ed.querySelectorAll("figure.cimg")].map(f=>f.dataset.ref).filter(r=>r&&!r.startsWith("new:"));
 /* BL-76: an image taken out with its × stays out when saved; one that merely isn't in a drafted text is kept. (Only the × removes a
    picture: Backspace and Delete don't remove one, because its caption is editable.) */
@@ -231,7 +254,7 @@ export async function saveCurEdit(){ const cur=shared.CURED, code=cur&&cur.code,
   await (async()=>{ if(shared.CURED&&shared.CURED.claims&&!shared.CURED.saving){ const root=$("#curEd");
     const wait=claimOrder(root).filter(n=>{ const c=shared.CURED.claims[n]; return c&&claimState(c)==="none"&&!c.touched; });
     if(wait.length){ evPanelOpen("ed",wait[0]); snack(wait.length===1?"One sentence has no source. Edit it, or keep it with a note, then Save.":`${wait.length} sentences have no source. Edit each one, or keep it with a note, then Save.`); return; } }
-  if(!shared.CURED||shared.CURED.saving) return; const code=shared.CURED.code; let md=stripMarks(joinPanes(htmlToMd($("#curEd")),htmlToMd($("#curEd2"))));   /* BL-207: never a fact mark */   /* BL-89: one message, one save */
+  if(!shared.CURED||shared.CURED.saving) return; const code=shared.CURED.code; let md=stripMarks(joinPanes(edValue($("#curEd")),edValue($("#curEd2"))));   /* BL-207: never a fact mark */   /* BL-89: one message, one save */
   if(md.trim()===String(shared.CURED.orig).trim()){ endCurEdit(); return; }
   /* BL-76: the editor stays open, with the text and pictures as they are, until the save has worked. Images staged for a save that
      didn't happen are taken away again. */
@@ -249,39 +272,43 @@ export async function saveCurEdit(){ const cur=shared.CURED, code=cur&&cur.code,
   const dropped=[...shared.CURED.removed].filter(r=>!md.includes(`](${r})`));
   const ok=await saveCurrent(code,md,ops,added,dropped);
   if(!ok){ await giveUp(notSaved()); return; }
-  if(shared.CURED===cur) shared.CURED=null; if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); })();
+  if(shared.CURED===cur) curDrop(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); })();
     if(cur&&shared.CURED!==cur&&payload&&(Object.keys(payload).length||had)&&viaServer()){
       const w=await api("/api/current/evidence",{code,sentences:payload}); const p=P.find(x=>x.code===code); if(w.ok&&p){ p.ev=payload; if(shared.VIEW==="cockpit"&&shared.COCK===code) readClaims(code); } } }
-export function edFigs(root){ root.querySelectorAll("figure.cimg").forEach(f=>{ f.contentEditable="false"; const c=f.querySelector("figcaption"); if(c){ c.contentEditable="true"; c.setAttribute("aria-label","Caption"); }
-  if(!f.querySelector(".cimgdel")) addHTML(f,"beforeend",html`<button type="button" class="cimgdel" aria-label="Remove image" title="Remove image">${raw(ic("x"))}</button>`); }); }
 export function pickImage(){ const i=$("#curImgFile"); if(i) i.click(); }
-export async function insertImage(file,at){ const ed=curPane(at); if(!ed||!shared.CURED) return;
+/** BL-63: a picture added to a pane (`at`: the pane, or a node in it; `pos`: where it was dropped), as its own block after the
+    block holding the cursor (or the drop point), else at the end; then its caption has the focus */
+export async function insertImage(file,at,pos){ const ed=curPane(at), h=edOf(ed); if(!ed||!h||!shared.CURED) return;
   if(!/^image\/(png|jpeg)$/.test(file.type)){ snack(`${file.name} can't be added: only PNG or JPEG images`); return; }
   if(file.size>2*1024*1024){ snack(`${file.name} is over 2 MB: images can be 2 MB at most (keeps the dashboard small)`); return; }
   const src=await new Promise(res=>{ const fr=new FileReader(); fr.onload=()=>res(fr.result); fr.readAsDataURL(file); });
   const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6); (shared.CURED.uploads=shared.CURED.uploads||{})[id]={file,src};
-  const box=document.createElement("div"); putHTML(box,raw(figHtml("",`new:${id}`,src))); edFigs(box); const /** @type {any} */ fig=box.firstChild;
-  /* its own block: after the paragraph, heading, quote or list holding the caret (or the drop point), else at the end */
-  let n=at||(()=>{ const s=getSelection(); return s.rangeCount&&ed.contains(s.anchorNode)?s.anchorNode:null; })(); while(n&&n.parentNode!==ed) n=n.parentNode;
-  if(n&&n!==ed) n.after(fig); else ed.appendChild(fig);
-  if(!fig.nextSibling){ const p=document.createElement("p"); putHTML(p,html`<br>`); fig.after(p); }
-  fig.querySelector("figcaption").focus(); ed.dispatchEvent(new Event("input",{bubbles:true})); }
+  const st=h.editor.state, end=st.doc.content.size, sel=getSelection(), inside=sel&&sel.rangeCount&&ed.contains(sel.anchorNode);
+  const at0=typeof pos==="number"?pos:inside?st.selection.from:end, $p=st.doc.resolve(Math.min(at0,end)), after=$p.depth?$p.after(1):end;
+  const nodes=[{type:"image",attrs:{src:`new:${id}`,alt:""}},...(after>=end?[{type:"paragraph"}]:[])];
+  h.editor.chain().insertContentAt(after,nodes).run();
+  const cap=ed.querySelector(`figure[data-ref="new:${id}"] figcaption`); if(cap) cap.focus(); }
 export function cancelCurEdit(){ if(shared.CURED&&shared.CURED.dirty) askDiscard(()=>{}); else endCurEdit(); }
 /* unsaved changes: leaving asks first (the dashboard never uses browser dialogs) */
 export let DISCARD=null;
 export function askDiscard(then){ DISCARD=then; $("#discardBar").classList.add("on"); $("#discardBar [data-dis=keep]").focus(); }
 export const PKN={seq:0};   /* BL-179: declared before curGuard, which runs at load (navBlocked) and reads it */
-export function curGuard(retry){ if(!PKN.force&&pkNewPending()){ pkNewAsk(retry); return true; } if(shared.CURED&&shared.CURED.dirty){ askDiscard(retry); return true; } if(shared.CURED) shared.CURED=null; return false; }
+export function curGuard(retry){ if(!PKN.force&&pkNewPending()){ pkNewAsk(retry); return true; } if(shared.CURED&&shared.CURED.dirty){ askDiscard(retry); return true; } if(shared.CURED) curDrop(); return false; }
 export let RTESEL=null;
-export function rteCmd(cmd){ const ed=curPane(); if(!ed) return;
+/* the toolbar's commands, on the pane the cursor is in */
+export const RTE_RUN={bold:c=>c.toggleBold(),italic:c=>c.toggleItalic(),strikeThrough:c=>c.toggleStrike(),"formatBlock:h3":c=>c.toggleHeading({level:3}),
+  insertUnorderedList:c=>c.toggleBulletList(),insertOrderedList:c=>c.toggleOrderedList(),outdent:c=>c.liftListItem("listItem"),indent:c=>c.sinkListItem("listItem"),
+  "formatBlock:blockquote":c=>c.toggleBlockquote(),unlink:c=>c.extendMarkRange("link").unsetLink(),removeFormat:c=>c.unsetAllMarks().clearNodes(),undo:c=>c.undo(),redo:c=>c.redo()};
+export function rteCmd(cmd){ const ed=curPane(), h=edOf(ed); if(!ed||!h) return;
   if(cmd==="image"){ pickImage(); return; }
-  if(cmd==="link"){ const sel=getSelection(); RTESEL=sel.rangeCount?sel.getRangeAt(0).cloneRange():null; const box=$(".curcard .rtelink"); box.hidden=false;
-    const a=sel.anchorNode&&(sel.anchorNode.nodeType===1?sel.anchorNode:sel.anchorNode.parentNode).closest("a"); box.querySelector("input").value=a?a.getAttribute("href"):""; box.querySelector("input").focus(); return; }
-  const [c,arg]=cmd.split(":"); document.execCommand(c,false,arg||null); ed.dispatchEvent(new Event("input",{bubbles:true})); }
-export function rteLink(add){ const ed=(RTESEL&&paneOf(RTESEL.startContainer))||curPane(), box=$(".curcard .rtelink"), url=box.querySelector("input").value.trim(); box.hidden=true; ed.focus();
-  if(RTESEL){ const sel=getSelection(); sel.removeAllRanges(); sel.addRange(RTESEL); }
-  if(add&&/^(https?:\/\/|mailto:)\S+$/i.test(url)){ document.execCommand("createLink",false,url); ed.dispatchEvent(new Event("input",{bubbles:true})); }
-  else if(add&&url) snack("Use a web (https) or mail (mailto) link"); }
+  if(cmd==="link"){ const sel=h.editor.state.selection; RTESEL={el:ed,from:sel.from,to:sel.to}; const box=$(".curcard .rtelink"); box.hidden=false;
+    box.querySelector("input").value=h.editor.getAttributes("link").href||""; box.querySelector("input").focus(); return; }
+  const run=RTE_RUN[cmd]; if(run) run(h.editor.chain().focus()).run(); }
+export function rteLink(add){ const ed=(RTESEL&&RTESEL.el)||curPane(), h=edOf(ed), box=$(".curcard .rtelink"), url=box.querySelector("input").value.trim(); box.hidden=true; if(!h) return;
+  const c=h.editor.chain().focus(); if(RTESEL) c.setTextSelection({from:RTESEL.from,to:RTESEL.to});
+  if(add&&/^(https?:\/\/|mailto:)\S+$/i.test(url)){ if(RTESEL&&RTESEL.from===RTESEL.to&&!h.editor.isActive("link")) c.insertContent({type:"text",text:url,marks:[{type:"link",attrs:{href:url}}]}).run();
+    else c.extendMarkRange("link").setLink({href:url}).run(); }
+  else { c.run(); if(add&&url) snack("Use a web (https) or mail (mailto) link"); } }
 shared.DRH=null;                                          /* the health form's draft: {code, html, d, used} */
 shared.PKDRC=null;   /* declared before closePanel, which runs at load */
 export const PK={wide:false,key:null};   /* declared before closePanel, which runs at load */
@@ -306,18 +333,16 @@ export async function saveAndClose(){ if(!shared.CUR||!shared.EDITING||shared.CU
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0056(){
 document.addEventListener("change",async e=>{ if(e.target.id!=="curImgFile") return; for(const f of [...e.target.files]) await insertImage(f); e.target.value=""; });
-document.addEventListener("click",e=>{ const b=e.target.closest(".curpanes .cimgdel"); if(!b) return; e.preventDefault(); const ed=b.closest(".rted"); b.closest("figure").remove(); noteRemoved($(".curpanes")); ed.dispatchEvent(new Event("input",{bubbles:true})); ed.focus(); });
-document.addEventListener("input",e=>{ if(shared.CURED&&e.target.closest&&e.target.closest(".curpanes figcaption")){ shared.CURED.dirty=true; curEdHtml(); } });
+document.addEventListener("click",e=>{ const b=e.target.closest(".curpanes .cimgdel"); if(!b) return; e.preventDefault(); const ed=b.closest(".rted"), f=b.closest("figure"); if(f.cxRemove) f.cxRemove(); else f.remove(); noteRemoved($(".curpanes")); ed.focus(); });
+document.addEventListener("input",e=>{ if(shared.CURED&&e.target.closest&&e.target.closest(".curpanes figcaption")) shared.CURED.dirty=true; });
 document.addEventListener("keydown",e=>{ if(!(e.target.closest&&e.target.closest(".curpanes figcaption"))) return; const mod=e.metaKey||e.ctrlKey;   /* a caption is one line */
   if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); cancelCurEdit(); }
   else if(e.key==="Enter"){ e.preventDefault(); if(mod) saveCurEdit(); else { const nx=e.target.closest("figure").nextElementSibling; if(nx){ const r=document.createRange(); r.selectNodeContents(nx); r.collapse(true); const s=getSelection(); s.removeAllRanges(); s.addRange(r); e.target.closest(".rted").focus(); } } } },true);
 document.addEventListener("dragover",e=>{ if(e.target.closest&&e.target.closest(".curpanes .rted")&&[...e.dataTransfer.types].includes("Files")) e.preventDefault(); });
-document.addEventListener("drop",async e=>{ if(!(e.target.closest&&e.target.closest(".curpanes .rted"))||!e.dataTransfer.files.length) return; e.preventDefault();
-  const r=document.caretRangeFromPoint&&document.caretRangeFromPoint(e.clientX,e.clientY); for(const f of [...e.dataTransfer.files]) await insertImage(f,r&&r.startContainer); });
 document.addEventListener("click",e=>{ const d=e.target.closest("[data-dis]"); if(!d) return; const then=DISCARD; $("#discardBar").classList.remove("on"); DISCARD=null;
-  if(d.dataset.dis==="go"){ shared.CURED=null; if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(then) then(); } else $("#curEd")?.focus(); });
+  if(d.dataset.dis==="go"){ curDrop(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(then) then(); } else $("#curEd")?.focus(); });
 document.addEventListener("click",e=>{ const c=e.target.closest("[data-cure]"); if(c){ c.dataset.cure==="save"?saveCurEdit():cancelCurEdit(); } });
-document.addEventListener("input",e=>{ if(shared.CURED&&e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes")){ shared.CURED.dirty=true; curEdHtml(); paneBlank(e.target); } });
+document.addEventListener("input",e=>{ if(shared.CURED&&e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes")){ shared.CURED.dirty=true; paneBlank(e.target); } });
 document.addEventListener("focusin",e=>{ const ed=e.target.closest&&e.target.closest(".curpanes .rted"); if(ed&&shared.CURED) shared.CURED.last=ed.id==="curEd2"?2:1; });
 document.addEventListener("mousedown",e=>{ const b=e.target.closest(".inplace [data-rc]"); if(!b) return; e.preventDefault(); rteCmd(b.dataset.rc); });
 document.addEventListener("click",e=>{ const b=e.target.closest(".inplace [data-rl]"); if(b){ e.preventDefault(); rteLink(b.dataset.rl==="add"); } });
@@ -328,12 +353,8 @@ document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest("
   else if(mod&&e.key.toLowerCase()==="k"){ e.preventDefault(); e.stopPropagation(); rteCmd("link"); }
   else if(mod&&e.shiftKey&&e.key.toLowerCase()==="x"){ e.preventDefault(); rteCmd("strikeThrough"); }
   else if(e.key==="Tab"&&getSelection().anchorNode&&(getSelection().anchorNode.parentElement||{}).closest&&getSelection().anchorNode.parentElement.closest("li")){ e.preventDefault(); rteCmd(e.shiftKey?"outdent":"indent"); } },true);
-/* paste keeps only the formats Current state supports (from Word, Outlook or a web page) */
-document.addEventListener("paste",e=>{ if(e.target.closest&&e.target.closest(".curpanes .rted")){ e.preventDefault(); const html=e.clipboardData.getData("text/html"), text=e.clipboardData.getData("text/plain");
-  const pics=[...e.clipboardData.files].filter(f=>/^image\//.test(f.type)); if(pics.length){ (async()=>{ for(const f of pics) await insertImage(f); })(); return; }   /* BL-63 */
-  if(e.target.closest("figcaption")){ document.execCommand("insertText",false,text.replace(/\s+/g," ")); return; }
-  if(html){ const doc=new DOMParser().parseFromString(html,"text/html"); document.execCommand("insertHTML",false,mdHtml(htmlToMd(doc.body))); }
-  else document.execCommand("insertText",false,text); e.target.closest(".rted").dispatchEvent(new Event("input",{bubbles:true})); } });
+/* a caption is one line of plain text (the editor itself pastes in the text: CUR_PROPS) */
+document.addEventListener("paste",e=>{ if(e.target.closest&&e.target.closest(".curpanes figcaption")){ e.preventDefault(); document.execCommand("insertText",false,e.clipboardData.getData("text/plain").replace(/\s+/g," ")); } });
 $("#pClose").onclick=()=>closePanel();
 }
 /* ===== BL-162 (sprint-rail) ===== the Current state card's title, renamed by clicking it. A label for the dashboard only, per project:
@@ -434,10 +455,14 @@ export function claimPaint(which){ const root=evRoot(which), set=claimSet(which)
     if(first) s.dataset.first=""; else delete s.dataset.first;
     const tip=claimTip(c); s.title=tip+(st==="edited"?"":" · click to see"); s.setAttribute("aria-description",tip);
     if(!edit&&first){ s.tabIndex=0; s.setAttribute("role","button"); } }); }
-export function claimsInit(which){ const root=evRoot(which); if(!root||!shared.CURED) return; const set={};
-  claimsWrap(root).forEach(c=>{ set[c.n]={text:c.text,ids:c.ids,how:c.ids.length?"":"none"}; });
+export function claimsInit(which){ const root=evRoot(which); if(!root||!shared.CURED) return; const set={}, h=edOf(root);
+  /* BL-301 A: in the editor the marks come out and the sentences become claim marks in one quiet step: the drafted text is
+     wrapped as the read view wraps it, and the editor takes that back */
+  const tpl=h?document.createElement("template"):null; if(tpl) putHTML(tpl,raw(h.editor.getHTML()));   /* a template: its pictures aren't fetched */
+  claimsWrap(tpl?tpl.content:root).forEach(c=>{ set[c.n]={text:c.text,ids:c.ids,how:c.ids.length?"":"none"}; });
+  if(tpl) h.editor.chain().setMeta(ED_QUIET,true).setMeta("addToHistory",false).setContent(tpl.innerHTML,{emitUpdate:false}).run();
   if(which==="rw"){ if(shared.CURED.rewrite) shared.CURED.rewrite.claims=shared.CURED.rewrite.claims||set; }
-  else { shared.CURED.claims=Object.keys(set).length?set:null; shared.CURED.html=curEdHtml(); }
+  else shared.CURED.claims=Object.keys(set).length?set:null;
   claimPaint(which); }
 export function claimsPayload(which){ const root=evRoot(which), set=claimSet(which); if(!root||!set) return undefined;
   return claimOrder(root).filter(n=>set[n]).map(n=>({n,text:claimText(root,n),ids:set[n].ids||[],edited:!!set[n].edited}))
@@ -507,7 +532,7 @@ export function claimHash(t){ t=String(t||"").replace(/\s+/g," ").trim().toLower
   for(let i=0;i<t.length;i++){ const c=t.charCodeAt(i); a=Math.imul(a^c,0x01000193)>>>0; b=Math.imul(b^c,0x5bd1e995)>>>0; b^=b>>>13; }
   return (a>>>0).toString(16).padStart(8,"0")+(b>>>0).toString(16).padStart(8,"0"); }
 /* Wrap the sentences of root whose hash is in ev (one sentence, or up to four in a row, as a claim was marked), from claim number n0. */
-export function claimsMatch(root,ev,n0){ const found=[]; if(!root||!ev) return found; let n=n0||0;
+export function claimsMatch(root,ev,n0){ const found=[]; if(!root||!ev) return found; let n=n0||0; const ed=edOf(root), runs=[];   /* BL-301 A: in the editor, marks */
   for(const bl of root.querySelectorAll("p,li,blockquote")){ if(bl.closest("figure")) continue;
     const tw=document.createTreeWalker(bl,NodeFilter.SHOW_TEXT,{acceptNode:t=>t.parentElement.closest("p,li,blockquote,figure")===bl&&!t.parentElement.closest(".claim")?1:2});
     const /** @type {any[]} */ nodes=[]; while(tw.nextNode()) nodes.push(tw.currentNode); if(!nodes.length) continue;
@@ -517,9 +542,10 @@ export function claimsMatch(root,ev,n0){ const found=[]; if(!root||!ev) return f
       if(hit){ const s=segs[i][0]+full.slice(segs[i][0]).match(/^\s*/)[0].length, e=segs[hit[0]][1]-full.slice(0,segs[hit[0]][1]).match(/\s*$/)[0].length; ranges.push([s,e,hit[1]]); i=hit[0]+1; } else i++; }
     for(const [s,e,h] of ranges.reverse()){ n++; let pos=0; const /** @type {[any, number, number][]} */ mine=[];
       for(const t of nodes){ const a=pos, b=pos+t.nodeValue.length; pos=b; if(b<=s||a>=e) continue; mine.push([t,Math.max(s,a)-a,Math.min(e,b)-a]); }
-      for(const [t,x,y] of mine){ let node=t; if(y<node.nodeValue.length) node.splitText(y); if(x>0) node=node.splitText(x);
+      for(const [t,x,y] of mine){ if(ed){ runs.push([t,x,y,n]); continue; } let node=t; if(y<node.nodeValue.length) node.splitText(y); if(x>0) node=node.splitText(x);
         const sp=document.createElement("span"); sp.className="claim"; sp.dataset.c=n; node.parentNode.insertBefore(sp,node); sp.appendChild(node); }
       found.push({n,h}); } }
+  if(ed) edClaim(root,runs);
   return found; }
 export const evSaved=code=>(P.find(x=>x.code===code)||{}).ev||null;
 export function readClaims(code){ shared.CURRD=null; const ev=evSaved(code), root=evRoot("rd"); if(!ev||!root) return; const set={}, hit=new Set();
@@ -540,15 +566,19 @@ export function savedFactsHtml(c){ return (c.saved.facts||[]).map((f,i)=>{ const
 /* Check sources: every sentence in the editor without a link becomes a claim to re-check (plain code: the same dates, numbers
    and words as a fact), then the usual check runs. */
 export function claimsAdopt(){ const root=$("#curEd"); if(!root||!shared.CURED) return 0; const set=shared.CURED.claims||(shared.CURED.claims={}); let n=Math.max(0,...Object.keys(set).map(Number)), added=0;
+  const ed=edOf(root), runs=[], made=[];   /* BL-301 A: in the editor, marks */
   for(const bl of root.querySelectorAll("p,li,blockquote")){ if(bl.closest("figure")) continue;
     const tw=document.createTreeWalker(bl,NodeFilter.SHOW_TEXT,{acceptNode:t=>t.parentElement.closest("p,li,blockquote,figure")===bl&&!t.parentElement.closest(".claim")?1:2});
     const /** @type {any[]} */ nodes=[]; while(tw.nextNode()) nodes.push(tw.currentNode);
     for(const t of nodes){ const txt=t.nodeValue; if((txt.match(/[A-Za-z]{2,}/g)||[]).length<3) continue;
-      const lead=txt.match(/^\s*/)[0].length, tail=txt.match(/\s*$/)[0].length; let node=t; if(tail) node.splitText(txt.length-tail); if(lead) node=node.splitText(lead);
+      const lead=txt.match(/^\s*/)[0].length, tail=txt.match(/\s*$/)[0].length; n++; added++; made.push(n);
+      if(ed){ runs.push([t,lead,txt.length-tail,n]); continue; }
+      let node=t; if(tail) node.splitText(txt.length-tail); if(lead) node=node.splitText(lead);
       // @ts-expect-error TS2322: dataset stores the claim's number as a string
-      n++; added++; const sp=document.createElement("span"); sp.className="claim"; sp.dataset.c=n; node.parentNode.insertBefore(sp,node); sp.appendChild(node);
-      set[n]={text:claimText(root,n),ids:[],how:"",edited:true,touched:true}; } }
-  shared.CURED.html=curEdHtml(); claimPaint("ed"); return added; }
+      const sp=document.createElement("span"); sp.className="claim"; sp.dataset.c=n; node.parentNode.insertBefore(sp,node); sp.appendChild(node); } }
+  if(ed) edClaim(root,runs);
+  made.forEach(k=>{ set[k]={text:claimText(root,k),ids:[],how:"",edited:true,touched:true}; });
+  claimPaint("ed"); return added; }
 export async function checkSources(code){ if(!viaServer()){ snack("Check sources needs the live server"); return; }
   if(!shared.CURED){ startCurEdit(code); if(!shared.CURED) return; }
   Object.values(shared.CURED.claims||{}).forEach(c=>{ if(c.how==="saved"){ c.edited=true; c.saved=null; c.how=""; } });   /* re-find them all against today's facts */
@@ -578,7 +608,7 @@ document.addEventListener("keydown",e=>{ if(!shared.EV||e.isComposing) return; c
   const inside=(p&&p.contains(e.target))||(root&&root.contains(e.target))||(shared.EV.which==="ed"&&e.target.id==="curEd");
   if(e.key==="Escape"&&(inside||!document.querySelector("dialog[open]"))){ e.preventDefault(); e.stopImmediatePropagation(); evPanelClose(); return; }
   if(e.key==="Tab"&&inside&&!(e.target.id==="evNote")&&!e.metaKey&&!e.ctrlKey&&!e.altKey){ e.preventDefault(); e.stopImmediatePropagation(); evMove(e.shiftKey?-1:1); } },true);
-document.addEventListener("input",e=>{ if(e.target.closest&&e.target.closest("#curEd")) claimTrack(); });
+document.addEventListener("input",e=>{ if(e.target.closest&&e.target.closest("#curEd")){ claimTrack(); if(shared.CURED&&shared.CURED.claims) claimPaint("ed"); } });   /* BL-301 A: a redrawn sentence is painted again */
 setInterval(()=>{ if(shared.EV&&!(evRoot(shared.EV.which)||{}).isConnected) evPanelClose(); },800);
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-chksrc]"); if(!b) return; e.preventDefault(); checkSources(b.dataset.chksrc||(shared.CURED&&shared.CURED.code)); });
 }

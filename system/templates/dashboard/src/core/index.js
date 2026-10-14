@@ -10,3 +10,4 @@ export * from "./nav.js";
 export * from "./fields.js";
 export * from "./keys.js";
 export * from "./motion.js";
+export * from "./editor.js";

@@ -1,7 +1,7 @@
 """BL-301 part A's gate: Tiptap's Markdown gives back every text creaite will put in it, byte for byte (development only).
 
-Run: python3 dev/tools/tiptap_roundtrip.py [--json] [--upstream] [--group current|minutes|constructs|hard] [--vault DIR]
-       [--private]
+Run: python3 dev/tools/tiptap_roundtrip.py [--json] [--upstream] [--group current|minutes|constructs|hard|stable]
+       [--vault DIR] [--private]
 
 Each text is loaded into the pinned Tiptap editor (dev/tools/tiptap.py's bundle of dev/tiptap/editor.js) with
 `contentType: "markdown"` and saved again by creaite's exact writer (dev/tiptap/writer.js, with the forms source.js keeps),
@@ -15,12 +15,21 @@ The texts, in four groups:
               (the repo's projects/, the four demo projects of dev/tools/demo_data.py written as `load` writes them, and
               the project memory template), its `## Current state` section read by build_dashboard.memory (guidance
               lines dropped, docx_tools.md_normalise), then split into its two panes (BL-89), each pane one case
+  fixtures    every Current state in the test fixtures (BL-301 A's gate, "the sample vault and every fixture"): each
+              string literal in dev/tests/*.py that holds a "## Current state" section, and each CLAUDE.md under
+              dev/tests, read as build_dashboard.memory reads a project's file and split into its panes
   minutes     every text in the sample minutes values (a dict with a "SUMMARY" key in demo_data.py and the minutes
               fixtures in dev/tests): summary paragraphs, update headings and lines, decisions, risks, action texts
   constructs  one case per Markdown form creaite's Current state stores (md_normalise's output: bold, italic, strike,
               links, headings, quotes, nested and numbered lists, images), so a failure names the construct
   hard        dev/tiptap/hard-cases.json: the awkward forms (tables, nested lists, links with brackets, HTML comments
               such as BL-89's pane marker, trailing spaces, Windows line ends, escapes, entities), each with why
+  stable      dev/tiptap/stable-cases.json: the notes gate (BL-301, Alan 13-10-2026: Notes use Tiptap's own table and
+              checklist form, gated on idempotence). Each case types a table or a checklist through the editor's own
+              commands (insertTable, goToNextCell, toggleTaskList, sinkListItem...), saves it, loads what was saved and
+              saves again, twice: it passes when the three saves are the same bytes, every save is faithful, and the
+              first holds the forms the case names (`contains`). A known loss (`unfaithful`) must be stable and the
+              writer must say it can't write it (faithful: false)
 Nothing in system/ imports this file, and it changes nothing in system/.
 
 Real data (BL-301, Alan 13-10-2026): `--vault DIR` reads the current group from that vault instead of the sample (each
@@ -39,7 +48,7 @@ import re
 import string
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -54,7 +63,9 @@ import tiptap  # noqa: E402
 
 MINUTES_SOURCES = ("dev/tools/demo_data.py", "dev/tests/test_minutes_review.py")
 HARD_CASES = REPO / "dev" / "tiptap" / "hard-cases.json"
-GROUPS = ("current", "minutes", "constructs", "hard")
+STABLE_CASES = REPO / "dev" / "tiptap" / "stable-cases.json"
+GROUPS = ("current", "fixtures", "minutes", "constructs", "hard", "stable")
+FIXTURES = REPO / "dev" / "tests"
 TEMPLATE = REPO / "system" / "templates" / "project-CLAUDE-template.md"
 CONSTRUCTS = (
     ("plain paragraph", "Build is complete for two of three data domains."),
@@ -98,6 +109,9 @@ class Case:
     features: str = "current"
     expect: str = None          # what must come back, when it isn't `text` (a known loss); None: `text` itself
     html: bool = False
+    script: bool = False        # the notes gate: `text` is JavaScript typing into `editor` (the stable group)
+    contains: tuple = ()        # the stable group: forms the first save must hold
+    unfaithful: bool = False    # the stable group: a known loss, which the writer must report (faithful: false)
 
     @property
     def wanted(self):
@@ -144,6 +158,33 @@ def current_cases(projects_root=REPO / "projects", demo=True):
         folder.mkdir()
         (folder / "CLAUDE.md").write_text(TEMPLATE.read_text(encoding="utf-8"), encoding="utf-8")
         out += _panes(label(TEMPLATE), folder)
+    return out
+
+
+def fixture_cases(folder=FIXTURES):
+    """The fixtures group: every test fixture's Current state, one case per pane. A string literal (not an f-string,
+    whose text is built at run time) in a test file counts when it holds a `## Current state` heading; it is read as a
+    project's CLAUDE.md. Identical texts are run once."""
+    texts = {}
+    for path in sorted(Path(folder).glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and re.search(r"^## Current state", node.value, re.M):
+                texts.setdefault(node.value, f"{label(path)}:{node.lineno}")
+    for path in sorted(Path(folder).rglob("CLAUDE.md")):
+        texts.setdefault(path.read_text(encoding="utf-8"), label(path))
+    out = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, (text, source) in enumerate(texts.items()):
+            sub = Path(tmp) / str(i)
+            sub.mkdir()
+            (sub / "CLAUDE.md").write_text(text, encoding="utf-8")
+            saved = build_dashboard.embed_image
+            build_dashboard.embed_image = lambda folder, alt, ref: None     # the text is all the gate needs
+            try:
+                out += [replace(c, group="fixtures") for c in _panes(source, sub)]
+            finally:
+                build_dashboard.embed_image = saved
     return out
 
 
@@ -201,6 +242,15 @@ def hard_cases(path=HARD_CASES):
     return out
 
 
+def stable_cases(path=STABLE_CASES):
+    """The notes gate's cases: [{name, features, script, contains, unfaithful?, why}] in a JSON file. `script` is the
+    body of a function given `editor` (an empty editor with those features) that types the content."""
+    return [Case("stable", c["name"] + ("" if c.get("features", "notes") == "current" else f" ({c.get('features', 'notes')})"),
+                 c["script"], c.get("features", "notes"), script=True, contains=tuple(c.get("contains", ())),
+                 unfaithful=bool(c.get("unfaithful")))
+            for c in json.loads(Path(path).read_text(encoding="utf-8"))]
+
+
 @contextlib.contextmanager
 def _vault(vault):
     """paths pointed at another vault (its root and its settings.json) for the block, and build_dashboard's image reader
@@ -241,7 +291,8 @@ def vault_cases(vault):
 
 def corpus(groups=GROUPS):
     """All the cases of the named groups, in order."""
-    make = {"current": current_cases, "minutes": minutes_cases, "constructs": construct_cases, "hard": hard_cases}
+    make = {"current": current_cases, "fixtures": fixture_cases, "minutes": minutes_cases, "constructs": construct_cases,
+            "hard": hard_cases, "stable": stable_cases}
     return [c for g in groups for c in make[g]()]
 
 
@@ -253,6 +304,62 @@ UNFAITHFUL = "the writer can't write this document so that it reads back the sam
 
 class VersionError(Exception):
     """The bundle's Tiptap isn't the pinned one: the gate's result would not be about the version creaite ships."""
+
+
+# The notes gate (stable group): type, save, then load and save twice. Upstream's saves have no faithfulness (null).
+STABLE_JS = """((cases, mode) => cases.map(([features, src]) => {
+  const T = CreaiteTiptap;
+  try {
+    const ed = T.createEditor(null, { features });
+    new Function("editor", src)(ed);
+    const first = mode === "upstream" ? { markdown: ed.getMarkdown(), faithful: null } : T.markdownOf(ed);
+    ed.destroy();
+    const second = T.roundTrip(first.markdown, features, mode);
+    const third = T.roundTrip(second.markdown, features, mode);
+    return { saves: [first.markdown, second.markdown, third.markdown], faithful: [first, second, third].map((r) => r.faithful) };
+  } catch (e) { return { error: String((e && e.message) || e) }; }
+}))(%s, %s)"""
+UNSTABLE_KNOWN = "a known loss the writer no longer reports (expected faithful: false): update stable-cases.json"
+
+
+def stable_result(case, r, mode="exact"):
+    """(case with `expect` set to its first save, the save that differs from it or the last, error) for one stable case's
+    browser result `r`: the gate's normal pass rule (no error, out == wanted) then means "stable". `contains` holds
+    creaite's style, so it is checked only for the exact writer (`--upstream` judges stability alone)."""
+    if "error" in r:
+        return case, None, r["error"]
+    saves, faithful = r["saves"], r["faithful"]
+    out = next((s for s in saves[1:] if s != saves[0]), saves[-1])
+    error = None
+    if case.unfaithful:
+        error = None if faithful[0] in (False, None) else UNSTABLE_KNOWN
+    elif False in faithful:
+        error = UNFAITHFUL
+    missing = sum(1 for needle in case.contains if needle not in saves[0]) if mode == "exact" else 0
+    if error is None and missing:
+        error = f"the first save lacks {missing} of the {len(case.contains)} forms the case names"
+    return replace(case, expect=saves[0]), out, error
+
+
+def _run_stable(b, cases, idx, mode):
+    """[(i, result)] for the stable cases at `idx`, in the open page `b`."""
+    if not idx:
+        return []
+    got = b.eval(STABLE_JS % (json.dumps([[cases[i].features, cases[i].text] for i in idx]), json.dumps(mode)))
+    return [(i, stable_result(cases[i], r, mode)) for i, r in zip(idx, got)]
+
+
+def vendored_js(path=tiptap.VENDOR / tiptap.MODULE):
+    """The committed vendored module (what the dashboard bundles, BL-301 A) as a classic script that sets
+    window.CreaiteTiptap: its closing `export{a as b,…}` becomes an object of the same names. Needs no cache and no
+    network, so the gate runs on exactly what ships."""
+    text = Path(path).read_text(encoding="utf-8")
+    m = re.search(r"export\{([^}]*)\};?\s*$", text)
+    if not m:
+        raise ValueError(f"{label(path)}: no export list at its end")
+    pairs = [part.strip().split(" as ") for part in m.group(1).split(",") if part.strip()]
+    names = ",".join(f"{p[-1]}:{p[0]}" for p in pairs)
+    return "(()=>{" + text[:m.start()] + f"window.CreaiteTiptap={{{names}}};}})();"
 
 
 def run(cases, bundle_js, mode="exact", pinned=None):
@@ -271,8 +378,10 @@ def run(cases, bundle_js, mode="exact", pinned=None):
                 if got != pinned:
                     raise VersionError(f"the bundle is Tiptap {got}, the gate is pinned to {pinned}: re-run the gate "
                                        "on the new version and re-check dev/tiptap/source.js and writer.js")
-            for features, html in sorted({(c.features, c.html) for c in cases}):
-                idx = [i for i, c in enumerate(cases) if (c.features, c.html) == (features, html)]
+            for i, result in _run_stable(b, cases, [i for i, c in enumerate(cases) if c.script], mode):
+                results[i] = result
+            for features, html in sorted({(c.features, c.html) for c in cases if not c.script}):
+                idx = [i for i, c in enumerate(cases) if (c.features, c.html) == (features, html) and not c.script]
                 got = b.eval(f"CreaiteTiptap.roundTripAll({json.dumps([cases[i].text for i in idx])}, "
                              f"{json.dumps(features)}, {json.dumps(mode)}, {json.dumps(html)})")
                 for i, r in zip(idx, got):
@@ -474,6 +583,8 @@ def main(argv=None):
     ap.add_argument("--exact", action="store_true", help="creaite's exact writer: the default (kept so older command "
                                                          "lines still work)")
     ap.add_argument("--vault", metavar="DIR", help="read the current group from this vault (read-only); default group: current")
+    ap.add_argument("--vendored", action="store_true", help="run the committed system/templates/vendor/tiptap/ module "
+                                                            "(what the dashboard ships; no cache needed), not a fresh build")
     ap.add_argument("--private", action="store_true", help="print no text from the cases: ids, pass or fail, lengths, "
                                                            "and where and how a failure differs")
     a = ap.parse_args(argv)
@@ -483,7 +594,8 @@ def main(argv=None):
         print(e, file=sys.stderr)
         return 2
     try:
-        results = run(cases, tiptap.bundle().decode("utf-8"), "upstream" if a.upstream else "exact", tiptap.PINNED)
+        js = vendored_js() if a.vendored else tiptap.bundle().decode("utf-8")
+        results = run(cases, js, "upstream" if a.upstream else "exact", tiptap.PINNED)
     except VersionError as e:
         print(f"round-trip: {e}", file=sys.stderr)
         return 1

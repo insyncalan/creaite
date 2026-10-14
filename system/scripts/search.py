@@ -5,7 +5,7 @@ Commands:
   parse "<text>"                       what the text means: the filter chips it contains and the words left to search
   query "<text>" [--project CODE] [--person NAME] [--kind TYPE] [--from YYYY-MM-DD] [--to YYYY-MM-DD]
                 [--skip kind:value ...] [--no-parse]
-                                       grouped results as JSON (Items, Meetings, Reports, Documents; 20 each)
+                                       grouped results as JSON (Items, Meetings, Reports, Documents, Notes; 20 each)
   preview <path> ["<text>"]            a vault file's text with the words highlighted, as JSON (used by the page)
   context "<question>" [filters as in query] [--json]
                                        what Ask should read first (BL-07): the best passages from the index, each with its
@@ -15,7 +15,7 @@ Commands:
 Query understanding is plain code, not AI. Each recognised word becomes a chip the page can remove:
   projects   a project code from the tracker ("ABC", "ORX2C")
   people     a name, alias or email from the people register (BL-55), and Alan's own name and short forms
-  types      risk, issue, assumption, dependency, action, decision, milestone, minutes, transcript, report, document
+  types      risk, issue, assumption, dependency, action, decision, milestone, minutes, transcript, report, document, note
   dates      today, yesterday, this/last week, this/last month, since DD-MM-YYYY, in September [2026], a date
 
 Enrichment (BL-07), done once when a meeting or report is processed, never per search:
@@ -37,12 +37,13 @@ from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import notes  # noqa: E402  (BL-301: a note's text and its confidential mark)
 import paths  # noqa: E402
 import propose  # noqa: E402  (the people register's reader; read only)
 import tracker  # noqa: E402
 
 GROUP_CAP = 20
-GROUPS = ("items", "meetings", "reports", "documents")
+GROUPS = ("items", "meetings", "reports", "documents", "notes")       # notes: BL-301
 STOPWORDS = set("""a an the of to and or is are was were be been do does did has have had what why how when who whom which
 where about for with on in at by from it this that there their his her its we you i me my our any all""".split())
 # what a typed type word means: (group, stored kind or None for the whole group)
@@ -58,10 +59,12 @@ TYPE_WORDS = {
     "report": ("reports", "report"), "reports": ("reports", "report"),
     "document": ("documents", "documents"), "documents": ("documents", "documents"), "doc": ("documents", "documents"),
     "docs": ("documents", "documents"),
+    "note": ("notes", "note"), "notes": ("notes", "note"),                 # BL-301
 }
 TYPE_LABEL = {"Risk": "Risks", "Issue": "Issues", "Assumption": "Assumptions", "Dependency": "Dependencies",
               "action": "Actions", "decision": "Decisions", "milestone": "Milestones", "minutes": "Minutes",
-              "transcripts": "Transcripts", "report": "Reports", "documents": "Documents"}
+              "transcripts": "Transcripts", "report": "Reports", "documents": "Documents",
+              "note": "Notes"}
 MONTHS = {m: i for i, names in enumerate(
     ["january jan", "february feb", "march mar", "april apr", "may", "june jun", "july jul", "august aug",
      "september sep sept", "october oct", "november nov", "december dec"], 1) for m in names.split()}
@@ -343,8 +346,12 @@ def fts_match(terms, vocab, person_names, any_term=False):
     return " AND ".join(f"({p})" if len(parts) > 1 else p for p in parts)
 
 
+FILE_GROUP = {"minutes": "meetings", "transcripts": "meetings", "report": "reports", "documents": "documents", "note": "notes"}
+FILE_KIND = {"minutes": "minutes", "transcripts": "transcript", "report": "report", "documents": "document", "note": "note"}
+
+
 def file_results(con, vocab, terms, flt, opts, any_term=False):
-    """Meetings, reports and documents from the full-text index matching the words and filters, grouped.
+    """Meetings, reports, documents and notes from the full-text index matching the words and filters, grouped.
     `any_term` matches any word instead of every word.
     """
     want_groups = flt["groups"]
@@ -372,23 +379,29 @@ def file_results(con, vocab, terms, flt, opts, any_term=False):
     sql = (f"SELECT path, project, kind, date, {snip} AS snip FROM vault_search" +
            (" WHERE " + " AND ".join(where) if where else "") +
            (" ORDER BY rank" if match else " ORDER BY date DESC") + " LIMIT 400")
-    out = {"meetings": [], "reports": [], "documents": []}
+    out = {"meetings": [], "reports": [], "documents": [], "notes": []}
     for r in con.execute(sql, args):
-        group = {"minutes": "meetings", "transcripts": "meetings", "report": "reports", "documents": "documents"}[r["kind"]]
+        group = FILE_GROUP.get(r["kind"])
+        if group is None:                                 # a kind a later release indexes: left out until this one knows it
+            continue
         if want_groups is not None and group not in want_groups:
             continue
-        name = Path(r["path"]).stem
-        text = (r["snip"] or "").replace(f"{name}\n", "", 1)
-        if not match:                                   # no words to match: the summary says more than the first lines
-            note = tracker.read_sidecar(r["path"])
-            text = " ".join(note["summary"].splitlines()) if note and note.get("summary") else text
-        body = html.escape(re.sub(r"\s+", " ", text)).replace("\x02", "<mark>").replace("\x03", "</mark>")
-        kind = {"minutes": "minutes", "transcripts": "transcript", "report": "report", "documents": "document"}[r["kind"]]
-        out[group].append({"group": group, "kind": kind, "title": name, "snippet": body, "project": r["project"],
-                           "path": r["path"], "date": r["date"], "date_shown": tracker.shown(r["date"]) if r["date"] else "",
-                           "opens": {"type": "preview" if group == "meetings" else "file", "path": r["path"],
-                                     "q": " ".join(terms)}})
+        out[group].append(file_result(r, group, terms, match))
     return out
+
+
+def file_result(r, group, terms, match):
+    """One indexed file as a search result: its title, snippet (or, with no words to match, its summary), project, date and how it
+    opens (meetings and notes in the preview, the rest in their own app)."""
+    name = Path(r["path"]).stem
+    text = (r["snip"] or "").replace(f"{name}\n", "", 1)
+    if not match:                                   # no words to match: the summary says more than the first lines
+        note = tracker.read_sidecar(r["path"])
+        text = " ".join(note["summary"].splitlines()) if note and note.get("summary") else text
+    body = html.escape(re.sub(r"\s+", " ", text)).replace("\x02", "<mark>").replace("\x03", "</mark>")
+    return {"group": group, "kind": FILE_KIND[r["kind"]], "title": name, "snippet": body, "project": r["project"],
+            "path": r["path"], "date": r["date"], "date_shown": tracker.shown(r["date"]) if r["date"] else "",
+            "opens": {"type": "preview" if group in ("meetings", "notes") else "file", "path": r["path"], "q": " ".join(terms)}}
 
 
 def understand(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), parse=True, now=None, vocab=None):
@@ -469,12 +482,17 @@ def indexed(rel):
     return p if p in ok else None
 
 
+def indexed_text(p):
+    """The text of an indexed file as search shows it: a note's (BL-301) without its front matter, else tracker.text_of's."""
+    return notes.index_text(p) if paths.is_note(p) else tracker.text_of(p)
+
+
 def preview(rel, q=""):
     """A vault file's text with the search words highlighted, as a dict for the page (cut at PREVIEW_LIMIT)."""
     p = indexed(rel)
     if not p:
         return {"ok": False, "message": "That file isn't in the search index."}
-    text = tracker.text_of(p)
+    text = indexed_text(p)
     if not text.strip():
         return {"ok": True, "name": p.name, "html": "", "cut": False, "empty": True, "open": True}
     cut = len(text) > PREVIEW_LIMIT
@@ -563,6 +581,18 @@ def item_line(table, r):
     return f"{r['id']} ({r['project']}) — {', '.join(b for b in bits if b)}: {what}"
 
 
+def file_passages(files, terms):
+    """([(result, passages)] for the best 14 files, [confidential notes left out]). BL-301: a note marked confidential is never
+    read here, so its text doesn't reach Claude; it is only counted."""
+    ordered = [r for g in ("meetings", "reports", "documents", "notes") for r in files[g]]
+    held = [r for r in ordered if r["kind"] == "note" and notes.is_confidential(paths.resolve(r["path"]))]
+    out = []
+    for r in [r for r in ordered if r not in held][:14]:
+        f = paths.resolve(r["path"])
+        out.append((r, best_passages(indexed_text(f), terms, 2400) if f.is_file() else []))
+    return out, held
+
+
 def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), now=None, budget=None):
     """Everything Ask should start from, as {text, sources}: the question and filters, the best passages (each with the
     paragraph around the match and its file and section), and the matching tracker rows. Gathered by plain code; the
@@ -574,7 +604,7 @@ def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), no
     head = [f"Question: {text.strip()}", f"Today is {shown(now or today())}.",
             "Filters understood: " + ("; ".join(c["label"] for c in chips) if chips else "none"),
             "Words searched for: " + (", ".join(terms) if terms else "none")]
-    sources, passages, rows = [], [], []
+    sources, passages, rows, held = [], [], [], []
     if paths.DB.is_file():
         con = tracker.connect()
         try:
@@ -584,10 +614,7 @@ def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), no
                 rows = item_rows(con, vocab, terms, flt, any_term=True)[:40]
             if flt["groups"] is None or flt["groups"] - {"items"}:
                 files = file_results(con, vocab, terms, flt, opts, any_term=True)
-                ordered = [r for g in ("meetings", "reports", "documents") for r in files[g]]
-                for r in ordered[:14]:
-                    f = paths.resolve(r["path"])
-                    passages.append((r, best_passages(tracker.text_of(f), terms, 2400) if f.is_file() else []))
+                passages, held = file_passages(files, terms)
         finally:
             con.close()
     body, used = [], sum(len(h) for h in head)
@@ -597,7 +624,7 @@ def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), no
     for n, (r, pars) in enumerate(passages, 1):
         name = Path(r["path"]).name
         label = {"minutes": "Meeting minutes", "transcript": "Meeting transcript", "report": "Report",
-                 "document": "Document (internal)"}[r["kind"]]
+                 "document": "Document (internal)", "note": "Note (internal)"}[r["kind"]]
         for heading, chunk in pars:
             block = f"[{name}{' › ' + heading if heading else ''}] — {label}, {r['date_shown'] or 'undated'}, " \
                     f"{r['project'] or 'no project'}\n{chunk}"
@@ -610,7 +637,9 @@ def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), no
         else:
             continue
         break
-    out = head + ["", "## Passages from meetings, reports and documents"] + (body or ["(none found)"]) + \
+    if held:
+        body.append(f"({len(held)} confidential note(s) also matched; their text is left out)")
+    out = head + ["", "## Passages from meetings, reports, documents and notes"] + (body or ["(none found)"]) + \
         ["", "## Tracker items"] + ([items_text[:max(0, budget - sum(len(x) for x in head + body) - 200)]] if items_block else ["(none found)"])
     for t, r, _ in rows:
         sources.append({"name": r["id"], "path": "", "kind": "item", "table": t, "project": r["project"]})
