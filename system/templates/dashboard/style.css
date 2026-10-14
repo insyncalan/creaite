@@ -2798,6 +2798,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nsplit.finding.collapsed{grid-template-columns:40px minmax(0,1fr) 360px}
 #noteFind.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .ned .nbody .nflash{background:var(--accent-soft);border-radius:3px;box-shadow:0 0 0 2px var(--accent-soft)}
+/* BL-301 B: a line Find updates already sent shows a tick in the note's left margin (data-sent holds its item IDs) */
+.ned .nbody [data-sent]{position:relative;--tick-x:-16px}
+.ned .nbody :is(ul,ol)>li[data-sent]{--tick-x:-38px}
+.ned .nbody ul[data-type=taskList]>li[data-sent]{--tick-x:-18px}
+.ned .nbody [data-sent]::after{content:"\2713" / "";position:absolute;left:var(--tick-x);top:.1em;font-size:12px;font-weight:700;line-height:1.5;color:var(--ok);pointer-events:none}
 .projtabs{margin:0 0 16px}
 .projtabs [role=tab]{min-height:32px}
 .nhh{margin-bottom:8px}

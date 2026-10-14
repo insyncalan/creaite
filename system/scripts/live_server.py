@@ -5456,8 +5456,21 @@ def notes_get_route(handler, req):
         draft["stale"] = True                       # the file changed since the draft was typed: the page asks which to keep
     return handler.send(200, {"ok": True, "code": code, "note": notes.summary(p, code), "body": body,
                               "meta": {k: meta.get(k) for k in notes.FIELDS if k in meta}, "base": notes.text_sha(text),
-                              "draft": draft,
+                              "draft": draft, "sent": note_sent_lines(notes, rel, body),
                               "images": note_images(code, body + "\n" + str((draft or {}).get("body") or ""))})     # BL-301 B gaps
+
+
+def note_sent_lines(notes, rel, body=None):
+    """BL-301 B, the margin ticks: the note's lines (of `body`, else the file as it is now) that Find updates already sent, as
+    [{p, ids, text}] from notes.sent_ids. The page matches each to its line by its text, so a moved line keeps its tick and an edited
+    one loses it. The text is the note's own, already on the page; notes-sent.json itself still holds none."""
+    if body is None:
+        p = paths.resolve(rel)
+        if not p.is_file():
+            return []
+        body = notes.parse(p.read_text(encoding="utf-8", errors="ignore"))[1]
+    got, lines = notes.sent_ids(rel, body), dict(notes.paragraphs(body))
+    return [{"p": n, "ids": ids, "text": lines[n]} for n, ids in sorted(got.items())]
 
 
 def notes_new_route(handler, req):
@@ -5834,7 +5847,8 @@ def notes_apply_now(rel, got):
             staged.unlink()
         return {"ok": False, "message": out.strip().splitlines()[-1] if out.strip() else "The apply stopped."}
     ids, n = notes_find.record(rel, name, apply_id), got["items"] + got["files"]
-    return {"ok": True, "apply_id": apply_id, "ids": ids, "file": name, "held": staged.exists(),
+    import notes
+    return {"ok": True, "apply_id": apply_id, "ids": ids, "file": name, "held": staged.exists(), "sent": note_sent_lines(notes, rel),
             "message": f"{n} change{'s' if n != 1 else ''} applied to {notes_find.note_of(rel).get('name', '')}"}
 
 
@@ -5852,7 +5866,8 @@ def notes_undo_route(handler, req):
         code, out = run("tracker.py", "undo")
         if code == 0:
             notes_find.forget(rel, aid)
-        return handler.send(200, {"ok": code == 0, "message": out})
+        import notes
+        return handler.send(200, {"ok": code == 0, "message": out, "sent": note_sent_lines(notes, rel)})
 
 
 DRAFT_ROUTES.update({"/api/notes/find": notes_find_route, "/api/notes/apply": notes_apply_route, "/api/notes/undo": notes_undo_route})

@@ -11,6 +11,7 @@
 import { signal, computed } from "@preact/signals";
 import { api, oneLine, reloadData, snack, viaServer, writeProposal } from "../core/server.js";
 import { draftAsk } from "../drafts.js";
+import { noteSetSent } from "./notes.js";
 
 /** @typedef {{t: string, tone?: string, tip?: string}} FuFlag */
 /** @typedef {{f: string, label: string, from: string, to: string}} FuChange */
@@ -132,6 +133,7 @@ export async function fuApply(mode) {
   fuDrop(picked);
   if (mode === "later") { snack(oneLine(r.message)); return; }
   fuLast.value = { apply_id: r.apply_id, rows: picked };
+  noteSetSent(path, r.sent);                       /* BL-301 B: the lines just sent get their margin tick */
   await reloadData();
   snack(oneLine(r.message), () => fuUndo(), "Undo");
 }
@@ -148,7 +150,8 @@ function fuDrop(gone) {
 export async function fuUndo() {
   const last = fuLast.value;
   if (!last) return;
-  const r = await api("/api/notes/undo", { path: fuPath.value, apply_id: last.apply_id });
+  const path = fuPath.value, r = await api("/api/notes/undo", { path, apply_id: last.apply_id });
+  noteSetSent(path, r.sent);                       /* their ticks go: the lines count as new again */
   await reloadData();
   if (!r.ok) { snack(oneLine(r.message) || "Not undone"); return; }
   fuLast.value = null;

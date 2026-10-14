@@ -14,7 +14,9 @@ import { api, oneLine, viaServer } from "../core/server.js";
     confidential: boolean, date: string, with: string[], kind: string, mod: string, links: string[], items: string[],
     people: string[], p?: string}} NoteSummary */
 /** @typedef {{path: string, code: string, note: NoteSummary, body: string, meta: Record<string, any>, base: string,
-    restored?: boolean, stale?: {body: string, at: string} | null, load: number, images?: Record<string, string>}} OpenNote */
+    restored?: boolean, stale?: {body: string, at: string} | null, load: number, images?: Record<string, string>,
+    sent?: SentLine[]}} OpenNote */
+/** @typedef {{p: number, ids: string[], text: string}} SentLine  a line Find updates already sent (notes.sent_ids): the margin tick */
 /** @typedef {{state: ""|"typing"|"saving"|"saved"|"draft"|"wait"|"conflict"|"error", at?: string, msg?: string}} SaveState */
 
 export const IDLE_MS = 30000;          // a session ends after 30 seconds without typing
@@ -91,7 +93,8 @@ export async function openNote(path) {
   notesMsg.value = "";
   ses.changes = {}; ses.dirty = false;
   /** @type {OpenNote} */
-  const cur = { path: r.note.path, code: r.code, note: r.note, body: r.body, meta: r.meta || {}, base: r.base, stale: null, load: ++loads, images: r.images || {} };
+  const cur = { path: r.note.path, code: r.code, note: r.note, body: r.body, meta: r.meta || {}, base: r.base, stale: null, load: ++loads, images: r.images || {},
+    sent: Array.isArray(r.sent) ? r.sent : [] };
   const d = r.draft;
   if (d && !d.stale && (d.body !== null && d.body !== undefined && d.body !== r.body || Object.keys(d.changes || {}).length)) {
     cur.body = d.body ?? r.body; cur.restored = true; ses.changes = { ...(d.changes || {}) }; ses.dirty = true;
@@ -208,6 +211,12 @@ export const noteFind = signal(false);
 export const noteFindP = signal(0);
 /** The panel's markers on the note's lines ({line: number}) and the hovered line, drawn by the editor as decorations. */
 export const noteMarks = signal(/** @type {{markers: Record<number, number>, hover: number}} */ ({ markers: {}, hover: 0 }));
+/** BL-301 B: after a Find updates apply or its Undo, the open note's margin ticks follow (the server's notes.sent_ids).
+    @param {string} path @param {SentLine[] | undefined} sent */
+export function noteSetSent(path, sent) {
+  const c = noteCur.value;
+  if (c && c.path === path && Array.isArray(sent)) noteCur.value = { ...c, sent };
+}
 /** A note to open at a line, highlighted (a source link "…/08 Notes/<title>.md#p4"). */
 export const noteFlash = signal(/** @type {{path: string, line: number}} */ ({ path: "", line: 0 }));
 

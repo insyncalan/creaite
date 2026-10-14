@@ -250,6 +250,40 @@ class InTheNotesTab(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelectorAll('#v-notes .nbody .nflash').length"), 1)
         self.assertEqual(b.errors, [])
 
+    TICKS = "[...document.querySelectorAll('#v-notes .nbody [data-sent]')].map(p=>[p.dataset.p, p.dataset.sent])"
+
+    def test_lines_already_sent_show_a_margin_tick(self):
+        """BL-301 B: a line notes-sent.json holds (by fingerprint) has a tick, wherever it moved; an edited one loses it."""
+        b = self.b
+        lines = dict(LINES)
+        (self.v.root / "system/staging/notes-sent.json").write_text(json.dumps({"version": 1, "notes": {fx.NOTE: [
+            {"p": 1, "fp": notes.fingerprint(lines[1]), "ids": ["FAL-A-002"], "at": "2026-10-13 10:00"},
+            {"p": 9, "fp": notes.fingerprint(lines[3]), "ids": ["FAL-A-001"], "at": "2026-10-13 10:00"}]}}))
+        self.open_note()
+        b.wait(f"{self.LINE % 1}.hasAttribute('data-sent')", 10)
+        self.assertEqual(b.eval(self.TICKS), [["1", "FAL-A-002"], ["3", "FAL-A-001"]])
+        tick = b.eval(f"getComputedStyle({self.LINE % 3},'::after').content")
+        self.assertIn("✓", tick)
+        self.assertIn(b.eval("noteSave.value.state"), ["", "saved"])                                    # drawing ticks is never an edit
+        b.eval(f"(()=>{{ const ed=document.querySelector('.nbody').cxed.editor, el={self.LINE % 3}; "
+               "const pos=ed.view.posAtDOM(el,0); ed.chain().focus().insertContentAt(pos+2,'Not ').run(); })()")
+        b.wait(f"!{self.LINE % 3}.hasAttribute('data-sent')", 10)
+        self.assertEqual(b.eval(self.TICKS), [["1", "FAL-A-002"]])
+        self.assertEqual(b.errors, [])
+
+    def test_apply_ticks_the_sent_lines_and_undo_takes_the_ticks_away(self):
+        b = self.b
+        self.open_note(find=True)
+        b.wait("fuState.value==='ready'", 40)
+        self.assertEqual(b.eval(self.TICKS), [])
+        b.click("#fuApply")
+        b.wait("document.getElementById('snack').classList.contains('on')", 40)
+        b.wait("document.querySelectorAll('#v-notes .nbody [data-sent]').length===5", 10)
+        self.assertEqual([t[0] for t in b.eval(self.TICKS)], ["1", "2", "3", "4", "6"])
+        b.click("#snackU")
+        b.wait("document.querySelectorAll('#v-notes .nbody [data-sent]').length===0", 30)
+        self.assertEqual(b.errors, [])
+
 
 if __name__ == "__main__":
     unittest.main()

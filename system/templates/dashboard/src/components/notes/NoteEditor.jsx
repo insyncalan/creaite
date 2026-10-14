@@ -9,7 +9,7 @@
    note). Decorations draw them; nothing drawn is written. The picker is a listbox the editor drives (focus stays in the text:
    ↑ ↓ move, Enter or Tab picks, Esc closes). */
 import { useEffect, useRef, useState } from "preact/hooks";
-import { Decoration, DecorationSet, Extension, Plugin, PluginKey } from "tiptap";
+import { Decoration, DecorationSet, Extension, Plugin, PluginKey, markdownOf } from "tiptap";
 import { creaiteEditor } from "../../core/editor.js";
 import { A, DEC, R } from "../../core/data.js";
 import { D, fd, TODAY } from "../../core/page.js";
@@ -106,7 +106,7 @@ function blockLines(doc, md) {
   const take = (node, pos) => {
     const t = flat(node.textContent);
     if (!t) return;
-    for (let j = i; j < lines.length; j++) if (lines[j].includes(t) || (t.includes(lines[j]) && lines[j])) { i = j; out.push({ pos, size: node.nodeSize, line: j + 1 }); return; }
+    for (let j = i; j < lines.length; j++) if (lines[j].includes(t) || (t.includes(lines[j]) && lines[j])) { i = j; out.push({ pos, size: node.nodeSize, line: j + 1, key: lines[j] }); return; }
   };
   doc.forEach((/** @type {any} */ node, /** @type {number} */ pos) => {
     if (LISTS.has(node.type.name)) node.forEach((/** @type {any} */ item, /** @type {number} */ off) => take(item, pos + 1 + off));
@@ -114,13 +114,25 @@ function blockLines(doc, md) {
   });
   return out;
 }
+/** BL-301 B, the margin ticks: the lines Find updates already sent (notes.sent_ids, from the server), keyed by their text as
+    `flat` reads it, so a line that moves keeps its tick and one edited since loses it. @param {{text: string, ids: string[]}[]} sent */
+function sentKeys(sent) {
+  /** @type {Map<string, string[]>} */
+  const m = new Map();
+  for (const x of sent || []) { const k = flat(x.text); if (k) m.set(k, [...(m.get(k) || []), ...(x.ids || [])]); }
+  return m;
+}
 /** The line decorations: `data-p` on every block that is a line, the Find updates marker (`data-fu-mk`), the hovered line
-    (`data-fu-hl`) and a line opened from a source link (`nflash`). Drawn only; never written.
-    @param {{pos: number, size: number, line: number}[]} L @param {Record<number, number>} markers @param {number} hover @param {number} flash */
-function lineDecos(L, markers, hover, flash) {
-  return L.map(({ pos, size, line }) => {
+    (`data-fu-hl`), a line opened from a source link (`nflash`) and a line already sent (`data-sent`: its item IDs, drawn as a tick
+    in the margin). Drawn only; never written.
+    @param {{pos: number, size: number, line: number, key?: string}[]} L @param {Record<number, number>} markers @param {number} hover
+    @param {number} flash @param {Map<string, string[]>} [sent] */
+function lineDecos(L, markers, hover, flash, sent) {
+  return L.map(({ pos, size, line, key }) => {
     /** @type {Record<string, string>} */
     const a = { "data-p": String(line) };
+    const ids = sent && key ? sent.get(key) : null;
+    if (ids) a["data-sent"] = ids.join(", ") || "sent";
     if (markers[line]) a["data-fu-mk"] = String(markers[line]);
     if (markers[line] && hover === line) a["data-fu-hl"] = "";
     if (flash === line) a.class = "nflash";
@@ -143,8 +155,11 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   const pickRef = useRef(/** @type {PickState|null} */ (null));
   pickRef.current = pick;
   const marks = noteMarks.value, flashAt = noteFlash.value;
-  const lineState = useRef({ markers: marks.markers, hover: marks.hover, flash: 0, doc: /** @type {any} */ (null), L: /** @type {any[]} */ ([]) });
+  const cur = noteCur.value, sentList = cur && path && cur.path === path ? cur.sent : null;
+  const lineState = useRef({ markers: marks.markers, hover: marks.hover, flash: 0, doc: /** @type {any} */ (null), L: /** @type {any[]} */ ([]),
+    sentList: /** @type {any} */ (null), sent: /** @type {Map<string, string[]>} */ (new Map()) });
   lineState.current.markers = marks.markers; lineState.current.hover = marks.hover;
+  if (lineState.current.sentList !== sentList) { lineState.current.sentList = sentList; lineState.current.sent = sentKeys(sentList || []); }
   const flashDone = useRef(/** @type {any} */ (null));
   const props = useRef({ onInput, onOpenNote, onOpenItem, noteTitles, code, onHoverLine, path });
   props.current = { onInput, onOpenNote, onOpenItem, noteTitles, code, onHoverLine, path };
@@ -237,9 +252,10 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const deco = Extension.create({ name: "cxNoteDeco", addProseMirrorPlugins: () => [new Plugin({ key: new PluginKey("cxNoteDeco"),
       props: { decorations: state => {
         const ls = lineState.current;
-        if (ls.doc !== state.doc) { ls.doc = state.doc; ls.L = blockLines(state.doc, ed.current ? ed.current.value() : markdown); }
+        /* the Markdown of this state's doc: the handle's value() still answers the loaded text during the first edit's redraw */
+        if (ls.doc !== state.doc) { ls.doc = state.doc; ls.L = blockLines(state.doc, ed.current ? markdownOf(ed.current.editor, state.doc.toJSON()).markdown : markdown); }
         const d = decorate(state.doc, () => props.current.noteTitles());
-        return d.add(state.doc, lineDecos(ls.L, ls.markers, ls.hover, ls.flash));
+        return d.add(state.doc, lineDecos(ls.L, ls.markers, ls.hover, ls.flash, ls.sent));
       } } })] });
     /* BL-301 D: AI on selected text, the notes' options; a confidential note asks once (per note) before its text goes to Claude */
     const ai = { place: "notes", project: () => props.current.code,

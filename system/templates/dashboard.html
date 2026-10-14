@@ -2808,6 +2808,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nsplit.finding.collapsed{grid-template-columns:40px minmax(0,1fr) 360px}
 #noteFind.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .ned .nbody .nflash{background:var(--accent-soft);border-radius:3px;box-shadow:0 0 0 2px var(--accent-soft)}
+/* BL-301 B: a line Find updates already sent shows a tick in the note's left margin (data-sent holds its item IDs) */
+.ned .nbody [data-sent]{position:relative;--tick-x:-16px}
+.ned .nbody :is(ul,ol)>li[data-sent]{--tick-x:-38px}
+.ned .nbody ul[data-type=taskList]>li[data-sent]{--tick-x:-18px}
+.ned .nbody [data-sent]::after{content:"\2713" / "";position:absolute;left:var(--tick-x);top:.1em;font-size:12px;font-weight:700;line-height:1.5;color:var(--ok);pointer-events:none}
 .projtabs{margin:0 0 16px}
 .projtabs [role=tab]{min-height:32px}
 .nhh{margin-bottom:8px}
@@ -4689,6 +4694,7 @@ button.nchip{font:inherit;font-size:12px}
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
     noteSave: () => noteSave,
+    noteSetSent: () => noteSetSent,
     noteTyped: () => noteTyped,
     notesCode: () => notesCode,
     notesCodeOk: () => notesCodeOk,
@@ -47010,7 +47016,18 @@ ${d5.text}`);
     notesMsg.value = "";
     ses.changes = {};
     ses.dirty = false;
-    const cur = { path: r4.note.path, code: r4.code, note: r4.note, body: r4.body, meta: r4.meta || {}, base: r4.base, stale: null, load: ++loads, images: r4.images || {} };
+    const cur = {
+      path: r4.note.path,
+      code: r4.code,
+      note: r4.note,
+      body: r4.body,
+      meta: r4.meta || {},
+      base: r4.base,
+      stale: null,
+      load: ++loads,
+      images: r4.images || {},
+      sent: Array.isArray(r4.sent) ? r4.sent : []
+    };
     const d5 = r4.draft;
     if (d5 && !d5.stale && (d5.body !== null && d5.body !== void 0 && d5.body !== r4.body || Object.keys(d5.changes || {}).length)) {
       cur.body = d5.body ?? r4.body;
@@ -47160,6 +47177,10 @@ ${d5.text}`);
     /** @type {{markers: Record<number, number>, hover: number}} */
     { markers: {}, hover: 0 }
   );
+  function noteSetSent(path, sent) {
+    const c5 = noteCur.value;
+    if (c5 && c5.path === path && Array.isArray(sent)) noteCur.value = { ...c5, sent };
+  }
   var noteFlash = y3(
     /** @type {{path: string, line: number}} */
     { path: "", line: 0 }
@@ -49381,6 +49402,7 @@ ${d5.text}`);
       return;
     }
     fuLast.value = { apply_id: r4.apply_id, rows: picked };
+    noteSetSent(path, r4.sent);
     await reloadData();
     snack(oneLine(r4.message), () => fuUndo(), "Undo");
   }
@@ -49396,7 +49418,8 @@ ${d5.text}`);
   async function fuUndo() {
     const last = fuLast.value;
     if (!last) return;
-    const r4 = await api("/api/notes/undo", { path: fuPath.value, apply_id: last.apply_id });
+    const path = fuPath.value, r4 = await api("/api/notes/undo", { path, apply_id: last.apply_id });
+    noteSetSent(path, r4.sent);
     await reloadData();
     if (!r4.ok) {
       snack(oneLine(r4.message) || "Not undone");
@@ -49927,7 +49950,7 @@ ${d5.text}`);
       if (!t47) return;
       for (let j5 = i5; j5 < lines.length; j5++) if (lines[j5].includes(t47) || t47.includes(lines[j5]) && lines[j5]) {
         i5 = j5;
-        out.push({ pos, size: node.nodeSize, line: j5 + 1 });
+        out.push({ pos, size: node.nodeSize, line: j5 + 1, key: lines[j5] });
         return;
       }
     };
@@ -49937,9 +49960,19 @@ ${d5.text}`);
     });
     return out;
   }
-  function lineDecos(L3, markers, hover, flash) {
-    return L3.map(({ pos, size, line }) => {
+  function sentKeys(sent) {
+    const m5 = /* @__PURE__ */ new Map();
+    for (const x5 of sent || []) {
+      const k5 = flat(x5.text);
+      if (k5) m5.set(k5, [...m5.get(k5) || [], ...x5.ids || []]);
+    }
+    return m5;
+  }
+  function lineDecos(L3, markers, hover, flash, sent) {
+    return L3.map(({ pos, size, line, key }) => {
       const a5 = { "data-p": String(line) };
+      const ids = sent && key ? sent.get(key) : null;
+      if (ids) a5["data-sent"] = ids.join(", ") || "sent";
       if (markers[line]) a5["data-fu-mk"] = String(markers[line]);
       if (markers[line] && hover === line) a5["data-fu-hl"] = "";
       if (flash === line) a5.class = "nflash";
@@ -49990,15 +50023,34 @@ ${d5.text}`);
     );
     pickRef.current = pick;
     const marks = noteMarks.value, flashAt = noteFlash.value;
-    const lineState = A2({ markers: marks.markers, hover: marks.hover, flash: 0, doc: (
-      /** @type {any} */
-      null
-    ), L: (
-      /** @type {any[]} */
-      []
-    ) });
+    const cur = noteCur.value, sentList = cur && path && cur.path === path ? cur.sent : null;
+    const lineState = A2({
+      markers: marks.markers,
+      hover: marks.hover,
+      flash: 0,
+      doc: (
+        /** @type {any} */
+        null
+      ),
+      L: (
+        /** @type {any[]} */
+        []
+      ),
+      sentList: (
+        /** @type {any} */
+        null
+      ),
+      sent: (
+        /** @type {Map<string, string[]>} */
+        /* @__PURE__ */ new Map()
+      )
+    });
     lineState.current.markers = marks.markers;
     lineState.current.hover = marks.hover;
+    if (lineState.current.sentList !== sentList) {
+      lineState.current.sentList = sentList;
+      lineState.current.sent = sentKeys(sentList || []);
+    }
     const flashDone = A2(
       /** @type {any} */
       null
@@ -50137,10 +50189,10 @@ ${d5.text}`);
           const ls2 = lineState.current;
           if (ls2.doc !== state.doc) {
             ls2.doc = state.doc;
-            ls2.L = blockLines(state.doc, ed2.current ? ed2.current.value() : markdown);
+            ls2.L = blockLines(state.doc, ed2.current ? _1(ed2.current.editor, state.doc.toJSON()).markdown : markdown);
           }
           const d5 = decorate(state.doc, () => props.current.noteTitles());
-          return d5.add(state.doc, lineDecos(ls2.L, ls2.markers, ls2.hover, ls2.flash));
+          return d5.add(state.doc, lineDecos(ls2.L, ls2.markers, ls2.hover, ls2.flash, ls2.sent));
         } }
       })] });
       const ai2 = {
