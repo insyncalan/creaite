@@ -459,9 +459,17 @@ def sync_item(doc, item):
             t["text"] = "" if t.get("rows") else "None recorded."
 
 
-def save_record(path, doc, why, base_version=None, approver=None, via="dashboard"):
-    """Save the record as a new version (creaite_doc.save). Raises RecordError when it isn't saved."""
-    r = creaite_doc.save(path, doc, why, base_version=base_version, approver=approver, via=via)
+NEEDS_CARD = ("Saving over filed minutes needs your approval, and creaite's approval card can't show a save made from this page "
+              "yet, so nothing was changed. The filed minutes are as they were.")
+
+
+def save_record(path, doc, why, base_version=None, via="dashboard"):
+    """Save the record as a new version (creaite_doc.save, never with an approver: a save over filed minutes is sensitive and
+    waits for Alan's approval card, BL-141). Returns creaite_doc's answer; its code-3 answer (needs approval) comes back as it is,
+    with a plain message. Raises RecordError when it is refused."""
+    r = creaite_doc.save(path, doc, why, base_version=base_version, via=via)
+    if r.get("needs_approval"):
+        return {**r, "message": NEEDS_CARD}
     if not r.get("ok"):
         raise RecordError(r.get("message") or "The minutes weren't saved.")
     return r
@@ -712,6 +720,8 @@ def change(path, op, base_version=None, via="dashboard"):
         if f"@{it['n']}" in doc["items"]:
             doc["items"][f"@{it['n']}"] = item_snapshot(it)
     r = save_record(path, doc, f"Minutes: {kind}", base_version=base_version, via=via)
+    if r.get("needs_approval"):
+        return r
     return {"ok": True, "message": message, "version": r["version"], "doc": creaite_doc.read(path)}
 
 
@@ -759,7 +769,7 @@ def view(file=None, path=None):
             "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None}
 
 
-def save_page(path, page, base_version=None, approver=None, via="dashboard"):
+def save_page(path, page, base_version=None, via="dashboard"):
     """Save the page as Alan edited it (text, headings, order, hidden sections) as a new version. While the minutes are a draft the
     item rows stay as staged (they change only through `change`), and the record's items, meta and state are always kept."""
     rel, cur = record_at(path)
@@ -776,7 +786,7 @@ def save_page(path, page, base_version=None, approver=None, via="dashboard"):
             s = {**s, "rows": mine.get("rows") or [], "columns": mine.get("columns") or COLUMNS[s["id"]]}
         out["sections"].append(s)
     out["sections"] += [s for s in cur["sections"] if s.get("id") in COLUMNS and s["id"] not in seen]
-    r = save_record(rel, out, "Minutes saved", base_version=base_version, approver=approver, via=via)
+    r = save_record(rel, out, "Minutes saved", base_version=base_version, via=via)
     return {**r, "doc": creaite_doc.read(rel)}
 
 

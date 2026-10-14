@@ -311,6 +311,22 @@ class ThroughTheServer(unittest.TestCase):
         with urllib.request.urlopen(req, timeout=120) as r:
             return json.loads(r.read().decode())
 
+    def test_the_save_route_never_issues_an_approval(self):
+        """Jarvis, 15-10-2026: a save over filed minutes goes to the BL-141 card like any sensitive change; the route never passes
+        reach.APPROVALS.issue (or any approver) to creaite_doc.save."""
+        import ast
+        from test_tracker import REPO
+        src = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
+        tree = ast.parse(src)
+        for name in ("minutes_save_route", "minutes_draft_route", "minutes_approve_route", "minutes_export_route"):
+            fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
+            body = ast.get_source_segment(src, fn)
+            self.assertNotIn("APPROVALS", body, name)
+            self.assertNotIn("approver", body, name)
+        rec = (REPO / "system/scripts/minutes_record.py").read_text(encoding="utf-8")
+        self.assertNotIn("APPROVALS", rec)
+        self.assertNotIn("approver=", rec)
+
     def test_the_four_routes(self):
         view = self.post("/api/minutes/draft", {"file": self.name})
         self.assertTrue(view["ok"], view)
@@ -349,11 +365,17 @@ class ThroughTheServer(unittest.TestCase):
         self.assertEqual(filed["doc"]["meta"]["transcript"], f"{ABC}/transcripts/2026-10-14 Steering committee.vtt")
         self.assertEqual(len(filed["turns"]["turns"]), 2)                     # the pane reads the filed transcript
         doc = filed["doc"]
+        before = (self.v.root / FILED).read_bytes()
+        log = self.v.root / "system/config/files-log.jsonl"
+        logged = log.read_text() if log.exists() else ""
         doc["sections"][1]["text"] = "Edited again after approval."
         again = self.post("/api/minutes/save", {"path": FILED, "doc": doc, "base_version": doc["version"]})
-        self.assertTrue(again["ok"], again)                                     # sensitive, approved by Alan's own Save
-        self.assertEqual(again["version"], doc["version"] + 1)
-        self.assertEqual(again["doc"]["state"], "approved")
+        self.assertFalse(again["ok"], again)                                    # sensitive: it waits for the card, never approved here
+        self.assertEqual((again["code"], again["needs_approval"]), (3, True))
+        self.assertIn("needs your approval", again["message"])
+        self.assertEqual((self.v.root / FILED).read_bytes(), before)            # the filed minutes are untouched
+        self.assertEqual(log.read_text() if log.exists() else "", logged)       # and no change was made or logged
+        self.assertEqual(self.post("/api/minutes/draft", {"path": FILED})["doc"]["version"], doc["version"])
         refused = self.post("/api/minutes/save", {"path": FILED, "op": {"op": "remove", "n": 5}})
         self.assertIn("approved", refused["message"])
         for bad in ("../etc/passwd.html", "system/config/settings.json", f"{ABC}/CLAUDE.md"):
