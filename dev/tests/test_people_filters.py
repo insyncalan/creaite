@@ -41,6 +41,9 @@ class PeopleFilters(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         self.b.eval("try{ localStorage.removeItem('creaite-people-filters'); }catch(e){}")
+        # BL-327: the shared server's data is soon older than PAGE_FRESH, so each load re-reads /api/data after its first paint;
+        # under load that reload landed after SETUP and put the sample's people and items back. Wait for it (and any pulse) first.
+        self.b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
         self.b.eval(SETUP)
         self.b.wait("document.querySelector('#pmRows tr[data-pn]')")
 
@@ -246,6 +249,9 @@ class PeopleFilters(LiveBrowserCase):
     def test_phone_width_has_no_sideways_scroll(self):
         b = self.b
         b.resize(390, 800)
+        # the rail turns to icons on the media query's change event, which Chrome sends at the next frame, not on the resize;
+        # under load the check ran first, with the 212px rail still pushing the People card (and its menu) to the right
+        b.wait("innerWidth===390 && document.documentElement.classList.contains('railicons')")
         b.eval("pfOpen('org')")
         b.wait("document.getElementById('pmFMenu').classList.contains('on')")
         r = b.eval("(()=>{ const m=document.getElementById('pmFMenu').getBoundingClientRect(); return [m.left,m.right,innerWidth,document.documentElement.scrollWidth]; })()")
