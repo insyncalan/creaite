@@ -438,6 +438,57 @@ class ThreadCardScreens(LiveBrowserCase):
         b.eval("document.querySelector('dialog[open]').close()")
 
 
+class ThreadCardCounts(LiveBrowserCase):
+    """N1: the count chip and the card list follow Dismiss, Handled and Undo on the open page, without a reload. Two cards
+    (Go-live window, Licence numbers) sit on the same item."""
+
+    @classmethod
+    def load(cls, v):
+        thread_vault(v)
+
+    def chip(self, title):
+        return self.b.eval("""(()=>{ const r=[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes(%r));
+          return r?(r.querySelector('.tdcount')||{textContent:''}).textContent.replace(/\\s+/g,' ').trim():null; })()""" % title)
+
+    def aid(self, title):
+        return self.b.eval("""(()=>{ const r=[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes(%r));
+          return r?r.dataset.td.slice(2):null; })()""" % title)
+
+    def test_dismiss_handled_and_undo_update_the_other_cards_chip(self):
+        b = self.b
+        b.eval("go('today'); EXPAND.add('td'); renderToday()")
+        b.wait("document.querySelector('#tdList li.td-message')")
+        self.assertIn("also on 1 other thread", self.chip("Licence numbers"))
+        gid = self.aid("Go-live window")
+        b.eval(f"alertDismiss('{gid}')")                                                    # Dismiss one of the two
+        b.wait("!([...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Go-live window')))")
+        b.wait("!document.querySelector('#tdList')||!(%s)" % "[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Licence numbers')).textContent.includes('also on')")
+        self.assertNotIn("also on", self.chip("Licence numbers") or "")
+        b.click("#snackU")                                                                  # Undo: the chip is back
+        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Go-live window'))")
+        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Licence numbers')).textContent.includes('also on 1 other thread')")
+        lid = self.aid("Licence numbers")                                                   # Handled, then Undo, the same
+        b.click(f'#tdList [data-alertdo="handled"][data-id="{lid}"]')
+        b.wait("![...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
+        b.wait("!([...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Go-live window')).textContent.includes('also on'))")
+        b.click("#snackU")
+        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
+        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Go-live window')).textContent.includes('also on 1 other thread')")
+
+    def test_a_card_closed_as_replied_leaves_today_at_the_next_check(self):
+        b = self.b
+        b.eval("go('today'); EXPAND.add('td'); renderToday()")
+        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
+        vf = self.v.root / "system/staging/vip.json"
+        st = json.loads(vf.read_text())
+        a = next(x for x in st["alerts"] if x.get("title") == "Licence numbers")
+        a["state"], a["replied_at"] = "replied", f"{TODAY} 09:00"
+        vf.write_text(json.dumps(st))
+        b.eval("vipPoll()")                                                                 # the 30-second check, without waiting
+        b.wait("![...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
+        self.assertIn("you replied 09:00", b.eval("document.getElementById('tdList').textContent"))   # now the quiet Replied line
+
+
 class ThreadCardActions(LiveBrowserCase):
     """BL-342 Part 1: Handled (with Undo) and Log on the matched item, from the page."""
 

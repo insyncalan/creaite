@@ -816,7 +816,7 @@ export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&a.state!==
 /* BL-342: a thread Alan has answered (his own message after the last one) is one quiet "Replied" line the day he answered; a later message from someone else opens it again */
 export const VIPR=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.state==="replied"&&String(a.replied_at||"").slice(0,10)===TODAY);
 /** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
-const vipSig=()=>(VIPD().alerts||[]).filter(a=>!a.seen).map(a=>`${a.id}@${a.updated||""}`).join();
+const vipSig=()=>(VIPD().alerts||[]).map(a=>`${a.id}@${a.updated||""}@${a.seen?1:0}@${a.state||""}@${(a.match&&a.match.count)||0}`).join();
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
@@ -834,16 +834,16 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"), it=cand&&a?(a.candidates||[]).find(/** @param {any} x */x=>x.n===cand):null;
   if(it){ it.dismissed=r.at||nowStamp(); if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=r.at||nowStamp(); }   /* BL-334: that item only; nothing is staged */
   else if(a) a.seen=r.at||nowStamp();
-  vipBadge(); renderToday(); back();
+  await vipPoll(); vipBadge(); renderToday(); back();   /* BL-342 N1: the server's counts for the other cards on the same item */
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
 /* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
 export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
   const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
-  if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } vipBadge(); renderToday(); back();
+  if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } await vipPoll(); vipBadge(); renderToday(); back();
   snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
 /* BL-342 Part 2: Chase on a thread matched to an item that is waiting on someone else: BL-224's Draft email in Chase mode for that
    item's owner, the item ticked. Nothing is sent or written; the builder falls back to an update request when the item isn't past its date. */
 export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), m=a&&a.match, it=m&&m.id&&REC("actions",m.id);

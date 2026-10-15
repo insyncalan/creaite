@@ -30191,7 +30191,7 @@ ${s5}`;
   var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && !a5.quiet && a5.state !== "replied");
   var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && a5.state !== "replied" && String(a5.updated || "").slice(0, 10) === TODAY);
   var VIPR = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.state === "replied" && String(a5.replied_at || "").slice(0, 10) === TODAY);
-  var vipSig = () => (VIPD().alerts || []).filter((a5) => !a5.seen).map((a5) => `${a5.id}@${a5.updated || ""}`).join();
+  var vipSig = () => (VIPD().alerts || []).map((a5) => `${a5.id}@${a5.updated || ""}@${a5.seen ? 1 : 0}@${a5.state || ""}@${a5.match && a5.match.count || 0}`).join();
   var vipKind = (n4) => {
     const ppl = VIPD().people || {};
     return ppl[n4] || ppl[personOf(n4)] || "";
@@ -30245,6 +30245,7 @@ ${s5}`;
         (x5) => x5.made || x5.dismissed
       )) a5.seen = r4.at || nowStamp();
     } else if (a5) a5.seen = r4.at || nowStamp();
+    await vipPoll();
     vipBadge();
     renderToday();
     back2();
@@ -30262,6 +30263,7 @@ ${s5}`;
         delete a5.made;
       }
       VIPNOTED.add(id2);
+      await vipPoll();
       vipBadge();
       renderToday();
       snack("Back in To decide");
@@ -30282,6 +30284,7 @@ ${s5}`;
       a5.seen = r4.at || nowStamp();
       a5.state = "handled";
     }
+    await vipPoll();
     vipBadge();
     renderToday();
     back2();
@@ -30296,6 +30299,7 @@ ${s5}`;
         a5.state = "open";
       }
       VIPNOTED.add(id2);
+      await vipPoll();
       vipBadge();
       renderToday();
       snack("Back in To decide");
@@ -59547,6 +59551,7 @@ ${d5.text}`);
         "aiBar",
         "aiItems",
         "aiSug",
+        "alertDismiss",
         "allRows",
         "allViews",
         "anim",
