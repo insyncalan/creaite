@@ -109,8 +109,8 @@ def start_server(p):
     for _ in range(150):                                                 # up to 15 seconds
         if health(p):
             return True
-        if proc.poll() is not None:
-            return False
+        if proc.poll() is not None:                                      # BL-329: 0 is "this vault's server was already there"
+            return proc.returncode == 0 and health(p) == "this"
         time.sleep(0.1)
     return False
 
@@ -119,12 +119,19 @@ def launch():
     """Start the live server if it isn't running, then open the dashboard in a Chrome app window (BL-86)."""
     p = port()
     seen = health(p)
+    starting = None if seen else server_starting(p)
+    if starting:                                                         # BL-329: a server is starting: wait for it, start no other
+        print(f"The live server is starting on port {p}; waiting for it…")
+        seen = wait_for_server(p, pid=starting[0])
     if seen == "other":
         print(f"Port {p} is in use by another creaite vault. Change live_mode.port in this vault's settings, "
               "or stop the other server.")
         return 1
     if seen:
         print(f"The live server is already running on port {p}.")
+        if starting and starting[2]:                                     # the launch that started it opens the window
+            print("creaite is opening in the window that launch opens.")
+            return 0
     else:
         print(f"Starting the live server on port {p}…")
         if not start_server(p):
@@ -141,6 +148,57 @@ def launch():
         webbrowser.open(url)
         print(f"Chrome wasn't found, so creaite opened in your default browser: {url} (the dashboard needs Chrome or Edge to remember the vault)")
     return 0
+
+
+# ===== BL-329 (v194-one-server): one server, however quickly creaite is opened twice =====
+# A server writes system/staging/live-server-starting.json (its pid and port) once it holds the port, and clears it once it
+# answers /health. A launch that finds a server starting waits for it instead of starting another; a server that finds the
+# port held by this vault's own server says "already running" and exits 0.
+STARTING_FILE = paths.STAGING / "live-server-starting.json"   # written by live_server.py only
+STARTING_WAIT = 20                                             # seconds a launch waits for a starting server
+
+
+def live_server_pid(pid):
+    """True if `pid` is a running live_server.py (not a number reused by another program)."""
+    if pid <= 1:
+        return False
+    try:
+        os.kill(pid, 0)
+    except PermissionError:   # it exists, run by another user: ps says what it is
+        pass
+    except OSError:
+        return False
+    if shutil.which("ps"):
+        r = subprocess.run(["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True)
+        return "live_server.py" in r.stdout
+    return True
+
+
+def server_starting(p=None):
+    """(pid, port, launched) of another of this vault's servers that is starting, else None: the starting mark, or else
+    live-server.json while its server restarts in place after an update (the same pid, not answering for a moment). A mark
+    left by a server that has gone is ignored."""
+    for f in (STARTING_FILE, SERVER_FILE):
+        try:
+            info = json.loads(f.read_text(encoding="utf-8"))
+            pid, sp = int(info["pid"]), int(info["port"])
+        except (OSError, ValueError, KeyError, TypeError):  # no mark, or not one: nothing is starting by it
+            continue
+        if pid != os.getpid() and (p is None or sp == p) and live_server_pid(pid):
+            return pid, sp, bool(info.get("launched"))
+    return None
+
+
+def wait_for_server(p, seconds=STARTING_WAIT, pid=None):
+    """Wait up to `seconds` for a creaite server on port `p` to answer /health (sooner if the starting server `pid` goes);
+    what health() last said."""
+    end = time.monotonic() + seconds
+    while True:
+        seen = health(p)
+        if seen or time.monotonic() >= end or (pid and not live_server_pid(pid)):
+            return seen
+        time.sleep(0.2)
+# ===== end BL-329 =====
 
 
 # ===== BL-248 (sprint-portability): the right Python, natively, however creaite is started =====

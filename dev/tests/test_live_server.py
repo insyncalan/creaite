@@ -315,7 +315,8 @@ class LiveServerTests(unittest.TestCase):
         self.assertEqual(evs[-1]["type"], "done")
         after = sorted(p.name for p in (self.v.root / "system/staging/ask").glob("*.json")) \
             if (self.v.root / "system/staging/ask").exists() else []
-        self.assertEqual(before, after)                                          # not a chat
+        # not a chat of Alan's: BL-326 keeps a run creaite started only in the day's runs-YYYY-MM-DD history chat
+        self.assertEqual(before, [n for n in after if not n.startswith("runs-")])
         self.post("/api/ask/ack", {"run": "gen-test-1"})
         self.assertEqual(self.post("/api/current/generate", {"code": "abc"})[0], 400)
         self.assertEqual(self.post("/api/current/generate", {"code": "ABC", "from": "01-10-2026"})[0], 400)

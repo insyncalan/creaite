@@ -101,7 +101,7 @@ class OutsideRoot(Checks, OneDriveCase):
         touch(self.eng("ABC", "02 Meetings", "Agendas", WORD))
         touch(self.eng("ABC", "02 Meetings", "Agendas", "Older", "Notes.docx"))
         touch(self.eng("ABC", "00 Admin", "Contract", "Plan.md"), "plan")
-        touch(self.eng("ABC", "zz Archive", "Agendas", "Never.docx"))                                              # never indexed, whatever the kind
+        touch(self.eng("ABC", "_Archive", "Agendas", "Never.docx"))                                              # never indexed, whatever the kind
 
     def files(self, show):
         return run_py(self.v, FILES % show)

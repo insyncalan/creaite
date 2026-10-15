@@ -1260,6 +1260,7 @@ def ui_settings(s):
             "slipOff": g("health", "off_track_milestone_slip_weeks_over", d=2),
             "urgentOff": g("health", "off_track_urgent_risks_min", d=2), "dailyBackup": g("backups", "daily", d=True),
             "filesDocs": g("dashboard", "files_show_documents", d=False),   # BL-87
+            "showArchived": g("dashboard", "show_archived", d=False),     # BL-09: archived projects' items in the views
             "undatedGrace": g("dashboard", "undated_grace_days", d=3),      # BL-95
             "flowWeeks": flow_weeks(s),                                     # BL-91
             "weekPrios": list(g("dashboard", "week_ahead_priorities", d=None) or []),   # BL-235 (fix-small-17): empty means every priority
@@ -1295,14 +1296,136 @@ def clock():
     return datetime.strptime(fixed, "%Y-%m-%d %H:%M") if fixed else datetime.now()
 
 
-def collect(now=None):
+# ===== BL-304 (v1.9.4 instant edits) ===== one row of each kind in the page's shape, shared by collect() and records()
+def action_row(a):
+    """An actions row as the page holds it."""
+    return {"id": a["id"], "p": a["project"], "t": a["description"], "ws": a["workstream"] or "", "o": a["owner"],
+            "pr": a["priority"], "due": a["due_date"], "st": a["status"], "raised": a["raised"], "closed": a["closed"],
+            "upd": a["latest_update"] or "", "client": bool(a["client_visible"]), "cm": a["client_message"],
+            "src": a["source"], "upd_at": (a["updated_at"] or "")[:16], "updated_at": a["updated_at"],
+            "ms": a.get("milestone")}
+
+
+def raid_row(r):
+    """A raid row as the page holds it (the stored priority; the page recalculates it from impact and likelihood)."""
+    return {"id": r["id"], "p": r["project"], "type": r["type"], "t": r["description"], "ws": r["workstream"] or "",
+            "o": r["owner"], "resp": r["response_action"] or "", "due": r["due_date"], "imp": r["impact"],
+            "lik": r["likelihood"], "st": r["status"], "raised": r["raised"], "closed": r["closed"],
+            "client": bool(r["client_visible"]), "cm": r["client_message"], "src": r["source"],
+            "upd_at": (r["updated_at"] or "")[:16], "updated_at": r["updated_at"], "ms": r.get("milestone"),
+            "pr": r.get("priority")}
+
+
+def replaced_by_map(con):
+    """{decision ID: the ID of the decision that replaces it}."""
+    return {r["replaces"]: r["id"] for r in rows(con, "SELECT id, replaces FROM decisions WHERE replaces IS NOT NULL ORDER BY id")}
+
+
+def decision_row(d, replaced_by):
+    """A decisions row as the page holds it."""
+    return {"id": d["id"], "p": d["project"], "t": d["decision"], "by": d["made_by"] or "", "date": d["date"] or "",
+            "st": d["status"], "due": d["needed_by"], "why": d["reasoning"], "opts": d["options"], "revisit": d["revisit"],
+            "replaces": d["replaces"], "rby": replaced_by.get(d["id"]),
+            "client": bool(d["client_visible"]), "cmd": d["client_message"], "src": d["source"],
+            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"]}
+
+
+RECORD_TABLES = ("actions", "raid", "decisions")
+RECORD_MAX = 200
+
+
+def records_of(con, ids):
+    """({table: [row]}, [IDs found in none of the tables]) for these actions, RAID and decisions."""
+    out = {t: [] for t in RECORD_TABLES}
+    if not ids:
+        return out, []
+    marks = ",".join("?" * len(ids))
+    out["actions"] = [action_row(a) for a in rows(con, f"SELECT * FROM actions WHERE id IN ({marks}) ORDER BY id", *ids)]
+    out["raid"] = [raid_row(r) for r in rows(con, f"SELECT * FROM raid WHERE id IN ({marks}) ORDER BY id", *ids)]
+    rby = replaced_by_map(con)
+    out["decisions"] = decision_waits(con, [decision_row(d, rby) for d in
+                                            rows(con, f"SELECT * FROM decisions WHERE id IN ({marks}) ORDER BY id", *ids)])
+    found = {x["id"] for t in RECORD_TABLES for x in out[t]}
+    return out, [i for i in ids if i not in found]
+
+
+def records(ids, now=None):
+    """BL-304: just these items (actions, RAID, decisions) in the page's shape, for the page's targeted refresh after a save
+    or a live update, with the parts an apply always changes (Review, Activity, the latest apply's time, the peek's staged
+    changes, milestone names). Read only; the IDs are only looked up, never written. {"records": {table: [row]},
+    "missing": [IDs in none of the tables], ...}."""
+    now = now or clock()
+    ids = list(dict.fromkeys(i for i in ids if isinstance(i, str) and i))[:RECORD_MAX]
+    con = ro_db()                        # BL-09: an archived item stays out of the views
+    con.row_factory = sqlite3.Row
+    try:
+        recs, missing = records_of(con, ids)
+        last_apply = con.execute("SELECT max(at) FROM applies WHERE undone_at IS NULL").fetchone()[0]
+        flags, settings, rq = {}, paths.load_settings(), review_queue(con)
+        first = con.execute("SELECT min(at) FROM applies").fetchone()[0]
+        return {"records": recs, "missing": missing,
+                "data_at": (last_apply or now.strftime("%Y-%m-%d %H:%M"))[:16],
+                "review": rq, "review_focus": review.focus_queue(rq, review.spot_rate(settings, first, now.date().isoformat())),
+                "peek_staged": peek_staged(), "activity": activity(con, flags), "activity_capped": flags.get("capped", False),
+                "activity_older": flags.get("older", {}),
+                "milestone_names": {m["id"]: [m["name"], m["status"], m["forecast_date"] or m["baseline_date"]]
+                                    for m in rows(con, "SELECT * FROM milestones")}}
+    finally:
+        con.close()
+# ===== end BL-304 =====
+
+
+def ro_db():
+    """A read-only connection to tracker.db in which archived projects and their items are left out (BL-09: they leave the
+    default views), unless Settings shows them (dashboard.show_archived)."""
+    import tracker
+    return tracker.hide_archived(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True))
+
+
+def project_states(con):
+    """[{code, name, state}] for Settings › Projects (BL-09): every project, archived ones included (main.projects is the table
+    itself, never the view that hides them). state is active, closed or archived."""
+    try:
+        found = con.execute("SELECT code, name, active, archived FROM main.projects ORDER BY code").fetchall()
+    except sqlite3.OperationalError:                # a database from before BL-09: no archived column until migrate
+        return []
+    return [{"code": c, "name": n, "state": "archived" if ar else "active" if a else "closed"} for c, n, a, ar in found]
+
+
+def records_version(con=None):
+    """BL-327: a short version of the records: the last change_log row, the last apply and how many were undone. Every change
+    to the record goes through tracker.py apply (or undo), which logs it, so this moves with every one; a search-index refresh
+    doesn't. Read only; "" when there is no database yet."""
+    own = con is None
+    try:
+        con = con or sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+        a = con.execute("SELECT max(rowid) FROM change_log").fetchone()[0]
+        b, c = con.execute("SELECT max(apply_id), count(undone_at) FROM applies").fetchone()
+        return f"{a}:{b}:{c}"
+    except sqlite3.Error:
+        return ""
+    finally:
+        if own and con is not None:
+            con.close()
+
+
+def collect(now=None, timings=None):
     """Everything the dashboard shows, as one dict (embedded in dashboard.html): projects, work, review, files, Today,
     the Week ahead, the meeting hub, flow, settings and the rest, read from the tracker (read only) and the vault's
-    files at `now`."""
+    files at `now`. BL-327: `timings`, a dict, gets the seconds its slower parts took (the file lists, the hub…)."""
     now = now or clock()
+    took, started = (timings if timings is not None else {}), time.monotonic()
+
+    def timed(part, fn):
+        """fn(), its time added to `took`."""
+        t0 = time.monotonic()
+        try:
+            return fn()
+        finally:
+            took[part] = took.get(part, 0.0) + time.monotonic() - t0
     today = now.date()
     settings = paths.load_settings()
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     con.row_factory = sqlite3.Row
     project_rows = rows(con, "SELECT * FROM projects WHERE active = 1 ORDER BY code")
     folders = {}
@@ -1312,26 +1435,10 @@ def collect(now=None):
         except LookupError:  # BL-228: a project without a folder simply has no files to list
             pass
 
-    actions = [{"id": a["id"], "p": a["project"], "t": a["description"], "ws": a["workstream"] or "", "o": a["owner"],
-                "pr": a["priority"], "due": a["due_date"], "st": a["status"], "raised": a["raised"], "closed": a["closed"],
-                "upd": a["latest_update"] or "", "client": bool(a["client_visible"]), "cm": a["client_message"],
-                "src": a["source"], "upd_at": (a["updated_at"] or "")[:16], "updated_at": a["updated_at"],
-                "ms": a.get("milestone")}
-               for a in rows(con, "SELECT * FROM actions ORDER BY id")]
-    raid = [{"id": r["id"], "p": r["project"], "type": r["type"], "t": r["description"], "ws": r["workstream"] or "",
-             "o": r["owner"], "resp": r["response_action"] or "", "due": r["due_date"], "imp": r["impact"],
-             "lik": r["likelihood"], "st": r["status"], "raised": r["raised"], "closed": r["closed"],
-             "client": bool(r["client_visible"]), "cm": r["client_message"], "src": r["source"],
-             "upd_at": (r["updated_at"] or "")[:16], "updated_at": r["updated_at"], "ms": r.get("milestone"),
-             "pr": r.get("priority")}       # the stored priority (the page recalculates it from impact and likelihood)
-            for r in rows(con, "SELECT * FROM raid ORDER BY id")]
-    replaced_by = {r["replaces"]: r["id"] for r in rows(con, "SELECT id, replaces FROM decisions WHERE replaces IS NOT NULL ORDER BY id")}
-    decisions = [{"id": d["id"], "p": d["project"], "t": d["decision"], "by": d["made_by"] or "", "date": d["date"] or "",
-                  "st": d["status"], "due": d["needed_by"], "why": d["reasoning"], "opts": d["options"], "revisit": d["revisit"],
-                  "replaces": d["replaces"], "rby": replaced_by.get(d["id"]),
-                  "client": bool(d["client_visible"]), "cmd": d["client_message"], "src": d["source"],
-                  "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"]}
-                 for d in rows(con, "SELECT * FROM decisions ORDER BY date DESC, id DESC")]
+    actions = [action_row(a) for a in rows(con, "SELECT * FROM actions ORDER BY id")]
+    raid = [raid_row(r) for r in rows(con, "SELECT * FROM raid ORDER BY id")]
+    replaced_by = replaced_by_map(con)
+    decisions = [decision_row(d, replaced_by) for d in rows(con, "SELECT * FROM decisions ORDER BY date DESC, id DESC")]
 
     import tracker      # the highest number used across actions, RAID, decisions and promises
     projects = []
@@ -1347,7 +1454,8 @@ def collect(now=None):
                          "seq": int(tracker.next_id(con, "promises", p["code"])[-3:]) - 1,   # shared numbering
                          "ev": saved_evidence(p["code"])})                                   # BL-207
 
-    file_list = files(folders, bool(_dig(settings, ("dashboard", "files_show_documents"), False)))
+    took["tracker"] = time.monotonic() - started                 # the rows and each project's memory
+    file_list = timed("files", lambda: files(folders, bool(_dig(settings, ("dashboard", "files_show_documents"), False))))
     cal = calendar(projects) if _dig(settings, ("sweep", "sources", "calendar"), True) else None
     last_apply = con.execute("SELECT max(at) FROM applies WHERE undone_at IS NULL").fetchone()[0]
     sweep = paths.SWEEP_STATE.read_text(encoding="utf-8").strip().splitlines()[0] if paths.SWEEP_STATE.exists() and \
@@ -1355,10 +1463,12 @@ def collect(now=None):
     act_flags = {}                                           # BL-164: whether Activity's list is capped
     out = {
         "built_at": now.strftime("%Y-%m-%d %H:%M"), "data_at": (last_apply or now.strftime("%Y-%m-%d %H:%M"))[:16],
+        "records_v": records_version(con),                     # BL-327: what the live server checks before reusing this data
         "last_sweep": sweep, "live": False, "vault_path": None,
         "settings": ui_settings(settings), "people": settings.get("people", {"added": [], "hidden": []}),
         "workstreams": settings.get("workstreams", {"added": [], "hidden": []}),
         "projects": projects, "actions": actions, "raid": raid, "decisions": decision_waits(con, decisions),
+        "project_states": project_states(con),                 # BL-09: Settings › Projects' Archive and Restore
         "review": (rq := review_queue(con)),
         "review_focus": review.focus_queue(rq, review.spot_rate(settings, con.execute("SELECT min(at) FROM applies").fetchone()[0], today.isoformat())),   # BL-208
         "peek_staged": peek_staged(), "activity": activity(con, act_flags), "activity_capped": act_flags.get("capped", False),
@@ -1367,29 +1477,29 @@ def collect(now=None):
         "folders": {c: f.name for c, f in folders.items()},
         "image_dirs": {c: paths.rel(paths.folder(c, "images")) for c in folders},     # BL-85: where the editor files new pictures
         "stakeholders": stakeholders(),
-        "inbox": inbox(projects),
+        "inbox": timed("inbox", lambda: inbox(projects)),
         "milestone_names": {m["id"]: [m["name"], m["status"], m["forecast_date"] or m["baseline_date"]]   # BL-27
                             for m in rows(con, "SELECT * FROM milestones")},
         "commands": commands(),
-        "reminders": reminders(settings, projects, file_list, today, now),
+        "reminders": timed("reminders", lambda: reminders(settings, projects, file_list, today, now)),
         "help": help_sections(),
         "dismissed": settings.get("reminders", {}).get("dismissed_forever", []),
         "calendar": cal,
-        "warnings": early_warnings(settings, today, con),          # BL-51
+        "warnings": timed("warnings", lambda: early_warnings(settings, today, con)),          # BL-51
         "warn_settings": warn_settings(settings),
-        "prep": prep(settings, projects, file_list, today, (actions, raid, decisions), con),   # BL-49, BL-98
+        "prep": timed("prep", lambda: prep(settings, projects, file_list, today, (actions, raid, decisions), con)),   # BL-49, BL-98
         "people_register": propose.people_view(),    # BL-55
         "leads": workstream_leads(con),              # BL-56
         "ws_table": workstreams(con),                # BL-58 (the "workstreams" key above is settings' old lists)
         "search": {"debounce_ms": int((settings.get("search") or {}).get("debounce_ms", 150))},       # BL-07
-        "meetings": inbox_meetings(settings, projects, today),                                       # BL-42 phase 2
-        "hub": meeting_hub(settings, projects, today, cal, actions, raid, decisions, folders),       # BL-209
+        "meetings": timed("meetings", lambda: inbox_meetings(settings, projects, today)),            # BL-42 phase 2
+        "hub": timed("hub", lambda: meeting_hub(settings, projects, today, cal, actions, raid, decisions, folders)),   # BL-209
         "day": day_plan_facts(day_close(settings, con, today, cal), settings, today),                 # BL-206, BL-295
         "promises": promises_data(con, project_rows, today),                                         # BL-125 A
-        "week": week_ahead(today, actions, raid, projects, file_list, settings, cal, decisions),                  # BL-72
+        "week": timed("week", lambda: week_ahead(today, actions, raid, projects, file_list, settings, cal, decisions)),   # BL-72
         "dev": (paths.ROOT / ".creaite-dev").exists(),     # the development repository: a discreet DEV marker
         "sweep_alerts": sweep_alerts(settings),             # BL-97, BL-99, BL-98
-        "flow": flow_data(con, today, flow_weeks(settings), flow_snapshots((today - timedelta(weeks=flow_weeks(settings) + 1)).isoformat())),   # BL-91
+        "flow": timed("flow", lambda: flow_data(con, today, flow_weeks(settings), flow_snapshots((today - timedelta(weeks=flow_weeks(settings) + 1)).isoformat()))),   # BL-91
     }
     out["days"] = calendar_days(out, now)                     # BL-293: Today's day line
     return out
@@ -1652,14 +1762,8 @@ def build_lock():
 
 
 def write_atomic(path, text):
-    """Write to a temporary name, then rename, so a reader never sees half a page."""
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        if tmp.exists():
-            tmp.unlink()
+    """Write to a temporary name, then rename, so a reader never sees half a page (paths.write_text_atomic)."""
+    paths.write_text_atomic(path, text)
 
 
 def build(now=None):
@@ -1749,7 +1853,7 @@ def early_warnings(settings, today, con=None):
     cfg = warn_settings(settings)
     own = con is None
     if own:
-        con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+        con = ro_db()
     q = lambda sql, *a: con.execute(sql, a).fetchall()  # noqa: E731
     out = []
     try:
@@ -2058,7 +2162,7 @@ def decision_revisit_reminders(today):
     """A reminder for each made decision whose revisit date (YYYY-MM-DD) has come."""
     if not paths.DB.exists():
         return []
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     try:
         found = con.execute("SELECT id, decision, revisit FROM decisions WHERE status = 'Made' AND revisit GLOB "
                             "'[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND revisit <= ? ORDER BY revisit, id",
@@ -2517,7 +2621,7 @@ def files_view(now=None):
     """{files, inbox, at}: the file lists alone (BL-87), for the live server's /api/files."""
     now = now or clock()
     settings = paths.load_settings()
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     try:
         codes = [r[0] for r in con.execute("SELECT code FROM projects WHERE active = 1 ORDER BY code")]
     finally:
@@ -2681,7 +2785,7 @@ def flow_summary(this, now_over, last_over, oldest_action):
 
 def flow_line(code, today=None, settings=None):
     """The one-line flow summary of a project's week (for the weekly report): "12 opened, 9 closed; 3 overdue, down from 5; …"."""
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = ro_db()
     con.row_factory = sqlite3.Row
     try:
         settings = settings or paths.load_settings()
@@ -2874,14 +2978,17 @@ review_queue = _review_queue_with_done
 _collect_before_quality = collect
 
 
-def _collect_with_quality(now=None):
-    """The dashboard's data, with the Quality figures."""
-    data = _collect_before_quality(now)
+def _collect_with_quality(now=None, timings=None):
+    """The dashboard's data, with the Quality figures (BL-327: `timings` as collect's, Quality's time added)."""
+    data = _collect_before_quality(now, timings)
+    t0 = time.monotonic()
     try:
         import quality
         data["quality"] = quality.measure()
     except (ImportError, OSError, ValueError) as e:      # the tab says it couldn't count; the rest of the page is unaffected
         data["quality"] = {"error": type(e).__name__}
+    if timings is not None:
+        timings["quality"] = time.monotonic() - t0
     return data
 
 

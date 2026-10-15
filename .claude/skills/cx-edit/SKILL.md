@@ -1,6 +1,6 @@
 ---
 name: cx-edit
-description: creaite plain-English changes. Changes or adds tracker items, project details, projects themselves, project memory and the project register, from a plain-English instruction. Every change is shown before and after, confirmed by Alan, then waits for "apply". Use for requests like "mark ABC-A-003 done", "Sara owns the SOW action", "add an action for ABC…", "log a risk…", "record a decision…", "move ABC go-live to 2026-11-20", "ABC is at risk because…", "close all of Omar's ABC actions due before 2026-10-01", "add to ABC memory…", "add client.com to ABC's domains", "add project DEF…", "close project ABC", "change the code ABC to XYZ", "make ABC-002 client-visible", "ABC client report fortnightly".
+description: creaite plain-English changes. Changes or adds tracker items, project details, projects themselves, project memory and the project register, from a plain-English instruction. Every change is shown before and after, confirmed by Alan, then waits for "apply". Use for requests like "mark ABC-A-003 done", "Sara owns the SOW action", "add an action for ABC…", "log a risk…", "record a decision…", "move ABC go-live to 2026-11-20", "ABC is at risk because…", "close all of Omar's ABC actions due before 2026-10-01", "add to ABC memory…", "add client.com to ABC's domains", "add project DEF…", "close project ABC", "archive project ABC", "restore project ABC", "change the code ABC to XYZ", "make ABC-002 client-visible", "ABC client report fortnightly".
 ---
 
 # cx-edit
@@ -26,13 +26,13 @@ Use each table's field names exactly; never guess one (a milestone has `name` an
 <!-- BL-249 fields: generated from schema.sql by `python3 dev/tools/skill_fields.py`; don't edit by hand -->
 | Table | Fields (`*` needed for a new item) |
 |-------|--------|
-| projects | `code`*, `name`*, `sponsor`, `phase`, `health`, `health_reason`, `next_milestone`, `milestone_date`, `active` |
-| milestones | `project`*, `name`*, `description`, `baseline_date`, `forecast_date`, `status`, `sort_order`, `percent_complete`, `state`, `state_set`, `state_reason`, `owner`, `actual_date`, `client_visible`, `client_message`, `internal_note`, `source`* |
-| workstreams | `project`*, `name`*, `lead`, `keywords`, `aliases`, `channel`, `status`, `created`, `source`* |
-| actions | `project`*, `description`*, `workstream`, `owner`, `priority`, `due_date`, `status`, `raised`*, `closed`, `latest_update`, `client_visible`, `client_message`, `milestone`, `source`* |
-| raid | `project`*, `type`*, `workstream`, `description`*, `owner`, `response_action`, `due_date`, `impact`, `likelihood`, `priority`, `status`, `raised`*, `closed`, `client_visible`, `client_message`, `milestone`, `source`* |
-| decisions | `project`*, `decision`*, `made_by`, `client_visible`, `client_message`, `date`, `status`, `needed_by`, `reasoning`, `options`, `revisit`, `replaces`, `source`* |
-| promises | `project`*, `promised_by`*, `promised_to`*, `description`*, `due_date`, `status`, `raised`*, `closed`, `source`* |
+| projects | `code`*, `name`*, `sponsor`, `phase`, `health`, `health_reason`, `next_milestone`, `milestone_date`, `active`, `archived` |
+| milestones | `project`*, `name`*, `description`, `baseline_date`, `forecast_date`, `status`, `sort_order`, `percent_complete`, `state`, `state_set`, `state_reason`, `owner`, `actual_date`, `client_visible`, `client_message`, `internal_note`, `source`*, `archived` |
+| workstreams | `project`*, `name`*, `lead`, `keywords`, `aliases`, `channel`, `status`, `created`, `source`*, `archived` |
+| actions | `project`*, `description`*, `workstream`, `owner`, `priority`, `due_date`, `status`, `raised`*, `closed`, `latest_update`, `client_visible`, `client_message`, `milestone`, `source`*, `archived` |
+| raid | `project`*, `type`*, `workstream`, `description`*, `owner`, `response_action`, `due_date`, `impact`, `likelihood`, `priority`, `status`, `raised`*, `closed`, `client_visible`, `client_message`, `milestone`, `source`*, `archived` |
+| decisions | `project`*, `decision`*, `made_by`, `client_visible`, `client_message`, `date`, `status`, `needed_by`, `reasoning`, `options`, `revisit`, `replaces`, `source`*, `archived` |
+| promises | `project`*, `promised_by`*, `promised_to`*, `description`*, `due_date`, `status`, `raised`*, `closed`, `source`*, `archived` |
 | links | `from_item`*, `to_item`*, `kind`, `source`*, `created` |
 | labels | `name`*, `colour`, `note`, `behaviour`, `default_choice`, `builtin` |
 <!-- end BL-249 fields -->
@@ -61,6 +61,8 @@ Use each table's field names exactly; never guess one (a milestone has `name` an
 | People register (BL-55) | "add Sara Khan to the people register, sara.khan@northgate.example, Northgate, sponsor", "Sara K is also SK", "Sara's role is programme sponsor", "rename Sara Kahn to Sara Khan", "merge S. Khan into Sara Khan" | `propose.py people add \| edit \| rename \| merge` stage a file change to `projects/_portfolio/people-register.md` (a rename or merge also updates every item that person owns, and a merge keeps the old name as an alias) |
 | New project | "add project DEF, Digital Enablement, sponsor Omar" | Creates the folder `projects/DEF Digital Enablement/` with `minutes/`, `transcripts/`, `documents/` and `reports/` (with a projects folder outside the vault: a copy of its template skeleton, under the engagement's name); a `CLAUDE.md` from `system/templates/project-CLAUDE-template.md` with the brief filled from what Alan said; a register row; and a `projects` row (`op: new`) |
 | Recode a project (BL-111) | "change ORX to FAL, Kestrel Energy AI", "rename the ORX project and its code" | Changes the code (and name) everywhere in one step: every item ID keeps its number under the new code, history and links follow, the old code is retired. Run `propose.py recode ORX FAL --name "Kestrel Energy AI" --dry-run`, show Alan the preview and the "Check:" lines, then (after his yes) run it without `--dry-run`; it stages an approved proposal that is applied **on its own**. Creaite never renames the engagement folder: if Alan renames it, add `--folder "<new name>"`. Relay the "Check:" lines (people register, `PORTFOLIO.md`, dismissed reminders, the old name as an alias). Undo is "undo last apply" |
+| Archive a project (BL-09) | "archive project ABC" | `propose.py archive ABC --out archive.json`: the folder moves to `_Archive/`, the register row to Retired codes, the project closes and it and its items are marked archived (they leave the views, the export, the reminders and matching; search still finds the items, marked Archived). With open items it stops and lists them: show them and ask **Cancel them all and archive** (then `--cancel-open`, which cancels them in the same proposal) or **Stop**. Preview, confirm, stage, apply; undo reverses it. Never move a folder into or out of `_Archive` any other way, and never put `archived` (in the field lists below) in a spec: only archive and restore set it |
+| Restore an archived project (BL-09) | "restore project ABC" | `propose.py restore ABC --out restore.json`: the folder back (a number if its name is taken), the register row back, its items live again, `active` as it was. Preview, confirm, stage, apply |
 | Close a project | "close project ABC" | Sets `active = 0` on `projects`. Nothing is deleted or moved, and the register row stays. Open items are listed so Alan can decide whether to close them too |
 
 ## Flow

@@ -757,6 +757,44 @@ def build(key, reply_text, ctx=None):
     return rel, page
 
 
+# ===== BL-326 (v1.9.5): what ask creaite shows for a Prep page run: the ask, then the closure (never the prompt or the reply) =====
+def long_day(iso):
+    """YYYY-MM-DD → "Thursday 15th October" (the year only when it isn't this year), as the Today page writes a day."""
+    import build_dashboard
+    from datetime import date
+    try:
+        d = date.fromisoformat(str(iso or "")[:10])
+    except ValueError:
+        return str(iso or "")
+    year = "" if d.year == now().year else f" {d.year}"
+    return f"{build_dashboard.DAYS[d.weekday()]} {build_dashboard.ordinal(d.day)} {d.strftime('%B')}{year}"
+
+
+def ask_line(ctx):
+    """The one plain line ask creaite shows for the run, as if Alan had typed it: "Prep page for <meeting>, <day> <time>"."""
+    m = ctx.get("meeting") or {}
+    title = " ".join(str(m.get("title") or "the meeting").split())[:160]
+    when = " ".join(x for x in (long_day(ctx.get("day")), str(m.get("start") or "")) if x)
+    return f"Prep page for {title}, {when}" if when else f"Prep page for {title}"
+
+
+def dated_key(ctx):
+    """The meeting's key with its day ("YYYY-MM-DD|HH:MM|title"), for the in-app prep page's address."""
+    key = str(ctx.get("key") or "")
+    return key if re.match(r"\d{4}-\d{2}-\d{2}\|", key) else f"{ctx.get('day')}|{key}"
+
+
+def closure(ctx, rel):
+    """The closure line for a saved page and the link to it: "Saved the prep page in <project> › <folders>", Open."""
+    from urllib.parse import quote
+    parts = str(rel or "").split("/")
+    folders = parts[2:-1] if len(parts) > 3 and parts[0] == "projects" else []
+    where = " › ".join([ctx.get("project_name") or "the project"] + folders)
+    return {"ok": True, "line": f"Saved the prep page in {where}", "href": "#prep=" + quote(dated_key(ctx), safe=""),
+            "link": "Open"}
+# ===== end BL-326 =====
+
+
 def main(argv):
     """The command line: context prints the meeting's context as JSON; build renders the page from Claude's reply and saves it through
     filechange.py (BL-271), then deletes the reply file (BL-118); latest prints the newest pages."""

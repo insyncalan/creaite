@@ -546,6 +546,23 @@ def offsite_backup():
     return (None, f"last copy {shown}, {age} days ago: is OneDrive running?{tail}") if age >= 2 else (None if tail else True, f"last copy {shown}{tail}")
 
 
+# ===== BL-328: a sweep lock held with no sweep running =====
+def sweep_lock():
+    """The sweep lock (sweep.py lock): fine when none is held or a sweep holds it; a warning, with Release, when it is held with
+    no sweep running (its run ended, or its server stopped) and would refuse the next sweep."""
+    import sweep
+    info = sweep.lock_info()
+    state = sweep.lock_state(info)
+    if state is None:
+        return True, "no sweep lock held"
+    since = info["started"].strftime("%d-%m-%Y %H:%M")
+    if state == "running":
+        return True, f"a sweep is running (since {since})"
+    held_by = f" by run {info['run']}" if info.get("run") else ""
+    return None, (f"a sweep lock is held{held_by} since {since} with no sweep running: the next sweep replaces it, or "
+                  f"Release it (system/scripts/run sweep.py unlock --if-idle)")
+
+
 # ===== BL-323: the weekly restore check and the last Tidy up, from backup.py's state (read only) =====
 def backup_check():
     """The weekly restore check (backup.verify): when it last ran and what it found; a problem says what to do."""
@@ -683,6 +700,28 @@ def script_policy():
 # ===== end BL-255 =====
 
 
+# ===== BL-09: folders still called zz Archive (both names are skipped for one release) =====
+def old_archive_folders():
+    """Folders still called zz Archive in the projects folder: a warning naming them; Health's Fix it renames them to _Archive."""
+    found = paths.old_archive_folders()
+    if not found:
+        return True, "none: archive folders are called _Archive"
+    names = ", ".join(paths.rel(f) for f in found[:5]) + (f" and {len(found) - 5} more" if len(found) > 5 else "")
+    return None, (f"{len(found)} folder{'s are' if len(found) != 1 else ' is'} still called zz Archive ({names}): skipped as before; "
+                  "rename to _Archive (Settings › Health › Fix it, or say \"rename the old archive folders\")")
+
+
+def skeleton_archive():
+    """The project skeleton (locations.skeleton) still holding a zz Archive folder: a folder listing only; Alan renames it in Finder."""
+    found = paths.skeleton_old_archive()
+    if not found:
+        return True, "no zz Archive in the project skeleton" if paths.external() else "no project skeleton (projects in the vault)"
+    sk = str(paths.locations().get("skeleton") or "_Templates/_Skeleton")
+    return None, (f"{sk} still holds {', '.join(found)}: rename it to _Archive in Finder (creaite never writes in _Templates; "
+                  "a new project gets _Archive either way)")
+# ===== end BL-09 =====
+
+
 def main():
     """Run every check in order and print the results; exits non-zero on any failure. --read-only makes no test files;
     --json prints one JSON object ({checks: [{id, name, status, detail}], passed, failed}) instead of the lines (BL-320)."""
@@ -716,6 +755,8 @@ def run_checks():
     check("ask creaite's reach and guard", assistant_guard)
     check("Vault is local, not synced", vault_not_synced)
     check("Online-only files", online_only)
+    check("Archive folders called _Archive", old_archive_folders)       # BL-09
+    check("Project skeleton's archive folder", skeleton_archive)      # BL-09
     check("Extraction never reads documents/ or reports/", extraction_scope)
     check("No absolute paths stored", no_absolute_paths)
     check("Config files present", config_files)
@@ -725,6 +766,7 @@ def run_checks():
     check("Off-laptop backup copy", offsite_backup)
     check("Backup restore check", backup_check)            # BL-323
     check("Tidy up of old backups", tidy_up)               # BL-323
+    check("Sweep lock", sweep_lock)                           # BL-328
     check("Debug log", debug_log)
     check("Staged minutes have their Word draft", minutes_drafts)   # BL-260
     check("ask creaite's refused commands", refused_commands)     # BL-252 (fix-small-17)

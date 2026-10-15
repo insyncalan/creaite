@@ -127,7 +127,7 @@ def db():
     """A read-only connection to tracker.db, rows by column name; exits with a message if it is missing."""
     if not paths.DB.exists():
         sys.exit(f"creaite: {paths.rel(paths.DB)} not found. Run: python3 system/scripts/tracker.py init")
-    con = sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)
+    con = tracker.hide_archived(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True))   # BL-09: unless Show archived
     con.row_factory = sqlite3.Row
     return con
 

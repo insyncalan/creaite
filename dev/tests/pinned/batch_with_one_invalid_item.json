@@ -38,6 +38,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,
@@ -143,6 +144,7 @@
    "projects": [
     {
      "active": 1,
+     "archived": 0,
      "code": "ABC",
      "health": null,
      "health_reason": null,

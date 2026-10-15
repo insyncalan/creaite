@@ -129,7 +129,7 @@ export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrit
   for(;;){ let c; try{ c=await rd.read(); }catch(e){ stopped=true; break; } if(c.done) break; buf+=dec.decode(c.value,{stream:true}); let i;
     while((i=buf.indexOf("\n\n"))>=0){ const ch=buf.slice(0,i); buf=buf.slice(i+2); if(!ch.startsWith("data: ")) continue; let ev; try{ ev=JSON.parse(ch.slice(6)); }catch(e){ continue; }
       if(ev.type==="text") said.push(ev.text); else if(ev.type==="step"){ steps++; show(); } else if(ev.type==="stopped") stopped=true; else if(ev.type==="error"){ shared.RBOUT="failed"; snack(ev.message); } } }
-  shared.GEN.run=null; genStatus(""); if(stopped){ shared.RBOUT="stopped"; snack("Stopped; nothing changed"); return; }
+  shared.GEN.run=null; genStatus(""); api("/api/ask/ack",{run:id}).catch(()=>{});   /* BL-326: seen here, so ask creaite doesn't draw it again */ if(stopped){ shared.RBOUT="stopped"; snack("Stopped; nothing changed"); return; }
   const text=said.join("\n\n"), [draft,src=""]=text.split(/^SOURCES:\s*$/m); if(!draft.trim()){ snack("No draft came back"); return; }
   if(kind==="rewrite"){ execResult(body.code,body.text,fdMd(draft.trim())); return; }
   genDraft(body.code,fdMd(draft.trim()),src.trim(),{audience:body.audience,length:body.length,from:body.from,to:body.to}); }

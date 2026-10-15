@@ -96,10 +96,10 @@ class VendorManifest(unittest.TestCase):
         finally:
             v.cleanup()
 
-    def test_doctor_has_30_checks(self):
+    def test_doctor_has_35_checks(self):
         text = (REPO / "system/scripts/doctor.py").read_text(encoding="utf-8")
         main = text[text.index("def main():"):]
-        self.assertEqual(len(re.findall(r"^    check\(", main, re.M)), 32)   # BL-323: restore check, Tidy up; BL-260: staged minutes have their Word draft; BL-252: refused commands; BL-267: record changes refused; BL-255: script policy reports; BL-305: the launcher
+        self.assertEqual(len(re.findall(r"^    check\(", main, re.M)), 35)   # BL-328: the sweep lock; BL-09: folders still called zz Archive, and the skeleton's; BL-323: restore check, Tidy up; BL-260: staged minutes have their Word draft; BL-252: refused commands; BL-267: record changes refused; BL-255: script policy reports; BL-305: the launcher
 # ===== end BL-239 =====
 
 
@@ -690,7 +690,7 @@ class RunEnv(unittest.TestCase):
     def test_every_child_the_server_starts_gets_it(self):
         src = (REPO / "system/scripts/live_server.py").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"claude_path\(\), \"-p\"", src)), 2)                 # ask runs and the VIP check
-        self.assertEqual(len(re.findall(r"env=run_env\(\)", src)), 2)
+        self.assertEqual(len(re.findall(r"env ?= ?run_env\(\)", src)), 2)       # BL-328: a run's adds its run ID to it
 
     def test_a_script_that_never_started_is_named_a_creaite_fault(self):
         import live_server
