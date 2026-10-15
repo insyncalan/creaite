@@ -144,10 +144,11 @@ class HeldRunBash(unittest.TestCase):
         return r.returncode, r.stdout + r.stderr
 
     def write(self, rel, content):
-        """The run writing its input file: the hook's decision on the Write, then the write itself."""
-        code, why = self.hook("Write", {"file_path": str(self.root / rel), "content": "x"})
-        self.assertEqual(code, 0, why)
-        self.assertTrue(self.permitted("Edit", rel), rel)            # Edit(system/staging/**) in the shipped settings
+        """The command's input file, planted. Since F2 on main (#116: a held run's --tools is Read, Grep, Glob, Bash, ToolSearch,
+        and Edit and Write are denied by name) the run can't write it itself, so the test puts it there, as an earlier chat or a
+        sweep could have left a file in system/staging/drafts/; what is proved is that the held run's Bash can't act on it."""
+        self.assertFalse(self.permitted("Edit", rel), rel)           # denied by name in a held run (live_server, F2)
+        self.assertFalse(self.permitted("Write", rel), rel)
         f = self.root / rel
         f.parent.mkdir(parents=True, exist_ok=True)
         (f.write_bytes if isinstance(content, bytes) else f.write_text)(content)
