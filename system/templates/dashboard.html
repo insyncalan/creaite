@@ -5570,7 +5570,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const r4 = e4.target.closest("[data-row]");
       if (r4) {
         PRESS.key = r4.dataset.row;
-        PRESS.el = e4.target;
+        PRESS.el = r4;
       }
     }, true);
     document.addEventListener("mouseup", (e4) => {
@@ -5579,7 +5579,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const landed = e4.target.closest("[data-row]");
       if (!landed || landed.dataset.row !== key) return;
       PRESS.sent = true;
-      setTimeout(() => e4.target.isConnected && e4.target.dispatchEvent(new MouseEvent("click", {
+      const tgt = (
+        /** @type {Element} */
+        e4.target
+      );
+      setTimeout(() => tgt.isConnected && tgt.dispatchEvent(new MouseEvent("click", {
         bubbles: true,
         cancelable: true,
         view: window,

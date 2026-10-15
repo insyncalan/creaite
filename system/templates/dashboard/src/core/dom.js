@@ -134,12 +134,13 @@ export function tipUp(root){ const L=root.matches&&root.matches("button")?[root]
 const PRESS={key:null,el:null,sent:false};
 export function bootLostClick(){
 document.addEventListener("mousedown",e=>{ PRESS.key=null; PRESS.el=null; PRESS.sent=false; if(e.button!==0||!e.target.closest) return;
-  const r=e.target.closest("[data-row]"); if(r){ PRESS.key=r.dataset.row; PRESS.el=e.target; } },true);
+  const r=e.target.closest("[data-row]"); if(r){ PRESS.key=r.dataset.row; PRESS.el=r; } },true);
 document.addEventListener("mouseup",e=>{ const el=PRESS.el, key=PRESS.key;
   if(!e.isTrusted||e.button!==0||el==null||key==null||el.isConnected||!e.target.closest) return;
   const landed=e.target.closest("[data-row]"); if(!landed||landed.dataset.row!==key) return;
   PRESS.sent=true;
-  setTimeout(()=>e.target.isConnected&&e.target.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window,detail:e.detail||1,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
+  const tgt=/** @type {Element} */(e.target);
+  setTimeout(()=>tgt.isConnected&&tgt.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window,detail:e.detail||1,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
     ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,button:0})),0); },true);
 document.addEventListener("click",e=>{ if(PRESS.sent&&e.isTrusted){ PRESS.sent=false; e.stopImmediatePropagation(); } },true);   /* a click the browser did send is not handled twice */
 }
