@@ -127,15 +127,19 @@ def forms(root, home):
         ("validate by name, a symlink", "system/scripts/run tracker.py validate link.json", VALIDATE),
         ("validate a missing file", "system/scripts/run tracker.py validate nothing-here.json", VALIDATE),
         ("validate two files", "system/scripts/run tracker.py validate proposed-held.json .claude/settings.json", VALIDATE),
+        # drafts.py result stages a bulk draft; the server runs it, never a held run (reach.HELD_NOT_READ)
+        ("drafts.py result", "system/scripts/run drafts.py result", KIND),
+        ("drafts.py result, python3 form", "python3 system/scripts/drafts.py result --x", KIND),
+    ] + TILDE_FORMS + REVIEW_FORMS
+
+
+# #116 A5 review F2, F3 and F5: the shell's =cmd, read commands that still write, a bare --.
+REVIEW_FORMS = [
         # #116 (A6 review F1, the same rule here): a ~ or a wildcard whose name also matches a file in system/staging/
         ("validate ~ (a namesake in staging)", "system/scripts/run tracker.py validate ~/.claude/proposed-held.json", VALIDATE),
         ("validate ~/ (a namesake in staging)", "system/scripts/run tracker.py validate ~/proposed-held.json", VALIDATE),
         ("validate a quoted wildcard", "system/scripts/run tracker.py validate 'proposed-hel?.json'", VALIDATE),
         ("validate validate", "system/scripts/run tracker.py validate validate", VALIDATE),
-        # drafts.py result stages a bulk draft; the server runs it, never a held run (reach.HELD_NOT_READ)
-        ("drafts.py result", "system/scripts/run drafts.py result", KIND),
-        ("drafts.py result, python3 form", "python3 system/scripts/drafts.py result --x", KIND),
-    ] + TILDE_FORMS + [
         # #116 A5 F2: zsh's =cmd turns into a program's path
         ("=cmd", "python3 system/scripts/docx_tools.py text =security", FORM),
         ("=cmd, wrapper form", f"{T} =ls", FORM),
@@ -149,8 +153,7 @@ def forms(root, home):
         # #116 A5 F5: after a bare -- the read flag is a plain word
         ("bare -- before --dry-run", "system/scripts/run minutes.py baseline --all -- --dry-run", FORM),
         ("bare --, python3 form", f"{P} -- x.vtt", FORM),
-    ]
-
+]
 
 # #116 A5 F1 (Jarvis): a piece starting with ~ and anything but / is refused, so only ~ and ~/ pass. zsh expands ~NAME to any
 # variable holding a folder (~HOME, ~TMPDIR, ~PWD, ~OLDPWD), ~user to a login's home, ~+ ~- ~N to the shell's own folders. Shared
