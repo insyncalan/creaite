@@ -5,6 +5,8 @@
 import { openDialog } from "./components/Dialog.jsx";
 import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { mountAiMenu } from "./components/AiSelect.jsx";
+import { mountEditorBar, unmountEditorBar } from "./components/EditorBar.jsx";
+import { HEAD_SHIFT, runTool } from "./core/editorProfiles.js";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, paintIcons, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
@@ -213,7 +215,7 @@ shared.CURED=null;   /* {code, orig (Markdown), src1, src2 (each pane's Markdown
    node, drawn as before (figure.cimg, an editable caption, ×). Paste keeps only what Current state supports (from Word,
    Outlook or a web page), and a pasted or dropped picture is added as before (BL-63). */
 export const CUR_PROPS={
-  transformPastedHTML:h=>mdHtml(htmlToMd(new DOMParser().parseFromString(h,"text/html").body)),
+  transformPastedHTML:h=>mdHtml(htmlToMd(new DOMParser().parseFromString(h,"text/html").body)).replace(/<(\/?)h([345])>/g,(m,close,n)=>"<"+close+"h"+(n-HEAD_SHIFT)+">"),   /* #122: stored ### #### ##### are the editor's Heading 1 to 3 */
   handlePaste:(view,e)=>{ const pics=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//.test(f.type)); if(!pics.length) return false;
     (async()=>{ for(const f of pics) await insertImage(f,view.dom); })(); return true; },
   handleDrop:(view,e)=>{ const files=[...((e.dataTransfer&&e.dataTransfer.files)||[])]; if(!files.length) return false; e.preventDefault();
@@ -222,13 +224,10 @@ export const CUR_PROPS={
 export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#curEd"), k=n===2?"ed2":"ed1"; if(!c||!slot) return;
   if(c[k]&&!c[k].editor.isDestroyed){ for(const a of ["aria-label","data-ph"]) c[k].el.setAttribute(a,slot.getAttribute(a)); slot.replaceWith(c[k].el); return; }
   const imgs=(P.find(x=>x.code===c.code)||{}).images;
-  c[k]=creaiteEditor(slot,{features:"current",markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
+  c[k]=creaiteEditor(slot,{features:"current",headShift:HEAD_SHIFT,markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
     ai:{place:"current",project:()=>(shared.CURED&&shared.CURED.code)||""}}); }   /* BL-301 D: AI on selected text */
 /** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
 export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
-export const RTE_TOOLS=[["bold","B","Bold (⌘B)"],["italic","I","Italic (⌘I)"],["strikeThrough","S","Strikethrough (⌘⇧X)"],["formatBlock:h3","H","Sub-heading"],["|"],
-  ["insertUnorderedList","• List","Bulleted list"],["insertOrderedList","1. List","Numbered list"],["outdent","⇤","Outdent"],["indent","⇥","Indent (nested list)"],["formatBlock:blockquote","❝","Quote"],["image","Image","Add an image here (PNG or JPEG, up to 2 MB); or paste or drop one"],["|"],
-  ["link","Link","Add or edit a link (⌘K)"],["unlink","Unlink","Remove the link"],["removeFormat","Clear","Clear formatting"],["|"],["undo","↶","Undo (⌘Z)"],["redo","↷","Redo (⌘⇧Z)"]];
 export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; const p=P.find(x=>x.code===code); if(!p) return; const [l,r]=splitPanes(p.current||"");
   if(pane===2) store.set("creaite-cur-collapsed",false);
   shared.CURED={code,orig:p.current||"",src1:l,src2:r,ed1:null,ed2:null,dirty:false,uploads:{},removed:new Set(),last:pane||1}; mountCurEdit();
@@ -238,17 +237,18 @@ export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; 
     if(Object.keys(set).length){ shared.CURED.claims=set; claimPaint("ed"); } }
 export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=card&&card.querySelector(".curtext"); if(!shared.CURED||!box||shared.COCK!==shared.CURED.code) return;
   card.classList.add("editing"); card.querySelectorAll(".pencil").forEach(b=>b.hidden=true);
-  putHTML(box,html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map(t=>t[0]==="|"?html`<span class="rtesep"></span>`:html`<button type="button" data-rc="${t[0]}" title="${t[2]}" aria-label="${t[2]}">${t[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
+  curBarOff();
+  putHTML(box,html`<div class="rte inplace"><div id="curBar" class="curbar"></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`,`<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`,"edit",!!splitPanes(shared.CURED.orig)[1]||!!String(shared.CURED.ed2?edValue(shared.CURED.ed2.el):shared.CURED.src2||"").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
     ${shared.CURED.sources?html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>`:""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts?"":"hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
-  curAttach(1); curAttach(2); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
+  curAttach(1); curAttach(2); curBar(); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
   if(shared.CURED){ const t=csTitle(shared.CURED.code);
     $("#curEd")?.setAttribute("aria-label",`${t}, left pane`); $("#curEd2")?.setAttribute("aria-label",`${t}, right pane`); csHead(shared.CURED.code); }
   if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); } }
-export function endCurEdit(){ evPanelClose(); curDrop(); DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
+export function endCurEdit(){ curBarOff(); evPanelClose(); curDrop(); DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
 export const figRefs=ed=>[...ed.querySelectorAll("figure.cimg")].map(f=>f.dataset.ref).filter(r=>r&&!r.startsWith("new:"));
 /* BL-76: an image taken out with its × stays out when saved; one that merely isn't in a drafted text is kept. (Only the × removes a
    picture: Backspace and Delete don't remove one, because its caption is editable.) */
@@ -298,21 +298,14 @@ export let DISCARD=null;
 export function askDiscard(then){ DISCARD=then; $("#discardBar").classList.add("on"); $("#discardBar [data-dis=keep]").focus(); }
 export const PKN={seq:0};   /* BL-179: declared before curGuard, which runs at load (navBlocked) and reads it */
 export function curGuard(retry){ if(!PKN.force&&pkNewPending()){ pkNewAsk(retry); return true; } if(shared.CURED&&shared.CURED.dirty){ askDiscard(retry); return true; } if(shared.CURED) curDrop(); return false; }
-export let RTESEL=null;
-/* the toolbar's commands, on the pane the cursor is in */
-export const RTE_RUN={bold:c=>c.toggleBold(),italic:c=>c.toggleItalic(),strikeThrough:c=>c.toggleStrike(),"formatBlock:h3":c=>c.toggleHeading({level:3}),
-  insertUnorderedList:c=>c.toggleBulletList(),insertOrderedList:c=>c.toggleOrderedList(),outdent:c=>c.liftListItem("listItem"),indent:c=>c.sinkListItem("listItem"),
-  "formatBlock:blockquote":c=>c.toggleBlockquote(),unlink:c=>c.extendMarkRange("link").unsetLink(),removeFormat:c=>c.unsetAllMarks().clearNodes(),undo:c=>c.undo(),redo:c=>c.redo()};
-export function rteCmd(cmd){ const ed=curPane(), h=edOf(ed); if(!ed||!h) return;
-  if(cmd==="image"){ pickImage(); return; }
-  if(cmd==="link"){ const sel=h.editor.state.selection; RTESEL={el:ed,from:sel.from,to:sel.to}; const box=$(".curcard .rtelink"); box.hidden=false;
-    box.querySelector("input").value=h.editor.getAttributes("link").href||""; box.querySelector("input").focus(); return; }
-  const run=RTE_RUN[cmd]; if(run) run(h.editor.chain().focus()).run(); }
-export function rteLink(add){ const ed=(RTESEL&&RTESEL.el)||curPane(), h=edOf(ed), box=$(".curcard .rtelink"), url=box.querySelector("input").value.trim(); box.hidden=true; if(!h) return;
-  const c=h.editor.chain().focus(); if(RTESEL) c.setTextSelection({from:RTESEL.from,to:RTESEL.to});
-  if(add&&/^(https?:\/\/|mailto:)\S+$/i.test(url)){ if(RTESEL&&RTESEL.from===RTESEL.to&&!h.editor.isActive("link")) c.insertContent({type:"text",text:url,marks:[{type:"link",attrs:{href:url}}]}).run();
-    else c.extendMarkRange("link").setLink({href:url}).run(); }
-  else { c.run(); if(add&&url) snack("Use a web (https) or mail (mailto) link"); } }
+/* #122 step A: the toolbar is the shared EditorBar (components/EditorBar.jsx, profile "current"): its buttons, keys, link form and
+   ⌘⇧K / ⌘⇧X come from there. The bar acts on the pane the cursor is in. */
+export function curBar(){ const el=$("#curBar"); if(!el) return;
+  mountEditorBar(el,{profile:"current",legacyRc:true,handle:()=>edOf(curPane()),host:{image:pickImage}}); }
+/** the bar is taken out of the page when the card is drawn again or editing ends (its listeners go with it) */
+export function curBarOff(){ const el=$("#curBar"); if(el) unmountEditorBar(el); }
+/* the pane the cursor is in, for the keys below */
+export function rteCmd(cmd){ const h=edOf(curPane()); if(h) runTool(h,cmd); }
 shared.DRH=null;                                          /* the health form's draft: {code, html, d, used} */
 shared.PKDRC=null;   /* declared before closePanel, which runs at load */
 export const PK={wide:false,key:null};   /* declared before closePanel, which runs at load */
@@ -348,14 +341,10 @@ document.addEventListener("click",e=>{ const d=e.target.closest("[data-dis]"); i
 document.addEventListener("click",e=>{ const c=e.target.closest("[data-cure]"); if(c){ c.dataset.cure==="save"?saveCurEdit():cancelCurEdit(); } });
 document.addEventListener("input",e=>{ if(shared.CURED&&e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes")){ shared.CURED.dirty=true; paneBlank(e.target); } });
 document.addEventListener("focusin",e=>{ const ed=e.target.closest&&e.target.closest(".curpanes .rted"); if(ed&&shared.CURED) shared.CURED.last=ed.id==="curEd2"?2:1; });
-document.addEventListener("mousedown",e=>{ const b=e.target.closest(".inplace [data-rc]"); if(!b) return; e.preventDefault(); rteCmd(b.dataset.rc); });
-document.addEventListener("click",e=>{ const b=e.target.closest(".inplace [data-rl]"); if(b){ e.preventDefault(); rteLink(b.dataset.rl==="add"); } });
-document.addEventListener("keydown",e=>{ if(e.target.closest&&e.target.closest(".rtelink")){ if(e.key==="Enter"){ e.preventDefault(); rteLink(true); } if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); rteLink(false); } return; }
-  if(!(e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes"))) return; const mod=e.metaKey||e.ctrlKey;
+document.addEventListener("keydown",e=>{
+  if(!(e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes"))) return; const mod=e.metaKey||e.ctrlKey;   /* ⌘K stays the palette; ⌘⇧K and ⌘⇧X are the shared bar's (#122) */
   if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); cancelCurEdit(); }
   else if(mod&&e.key==="Enter"){ e.preventDefault(); saveCurEdit(); }
-  else if(mod&&e.key.toLowerCase()==="k"){ e.preventDefault(); e.stopPropagation(); rteCmd("link"); }
-  else if(mod&&e.shiftKey&&e.key.toLowerCase()==="x"){ e.preventDefault(); rteCmd("strikeThrough"); }
   else if(e.key==="Tab"&&getSelection().anchorNode&&(getSelection().anchorNode.parentElement||{}).closest&&getSelection().anchorNode.parentElement.closest("li")){ e.preventDefault(); rteCmd(e.shiftKey?"outdent":"indent"); } },true);
 /* a caption is one line of plain text (the editor itself pastes in the text: CUR_PROPS) */
 document.addEventListener("paste",e=>{ if(e.target.closest&&e.target.closest(".curpanes figcaption")){ e.preventDefault(); document.execCommand("insertText",false,e.clipboardData.getData("text/plain").replace(/\s+/g," ")); } });

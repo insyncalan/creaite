@@ -15,6 +15,7 @@ import { A, DEC, R } from "../../core/data.js";
 import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { noteCur, noteFlash, noteLines, noteMarks } from "../../stores/notes.js";
+import { EditorBar } from "../EditorBar.jsx";
 import { Icon } from "../Icon.jsx";
 
 /** @typedef {{id: string, label: string, sub?: string, icon?: string}} PickOption */
@@ -140,12 +141,6 @@ function lineDecos(L, markers, hover, flash, sent) {
   });
 }
 
-/** The toolbar's commands. @type {[string, string, string][]} */
-const TOOLS = [["h", "H", "Sub-heading"], ["b", "B", "Bold (⌘B)"], ["i", "I", "Italic (⌘I)"], ["s", "S", "Strikethrough"], ["code", "</>", "Code"],
-  ["|", "", ""], ["ul", "•", "Bulleted list"], ["ol", "1.", "Numbered list"], ["task", "☑", "Checklist"], ["quote", "❝", "Quote"],
-  ["|", "", ""], ["note", "[[ ]]", "Link to a note ([[)"], ["person", "@", "Mention a person (@)"], ["item", "#ID", "Link a work item (#)"],
-  ["table", "▦", "Table"], ["image", "Image", "Add a picture here (PNG or JPEG, up to 2 MB)"], ["|", "", ""], ["undo", "↶", "Undo (⌘Z)"], ["redo", "↷", "Redo (⌘⇧Z)"]];
-
 /** The note's body on the one editor. @param {Props} props */
 export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
@@ -220,17 +215,6 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     else if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (what === "item" || what === "person" || what === "note") c.insertContent(what === "item" ? "#" : what === "person" ? "@" : "[[").run();
     else if (what.startsWith("tpl:")) { const t = /** @type {any} */ (D).note_templates?.[what.slice(4)]; if (t) c.insertContent(t, { contentType: "markdown" }).run(); }
-  };
-  /** @param {string} cmd */
-  const tool = cmd => {
-    const h = ed.current;
-    if (!h) return;
-    const c = h.editor.chain().focus();
-    ({ h: () => c.toggleHeading({ level: 2 }), b: () => c.toggleBold(), i: () => c.toggleItalic(), s: () => c.toggleStrike(), code: () => c.toggleCode(),
-      ul: () => c.toggleBulletList(), ol: () => c.toggleOrderedList(), task: () => c.toggleTaskList(), quote: () => c.toggleBlockquote(),
-      undo: () => c.undo(), redo: () => c.redo() })[cmd]?.().run();
-    if (["note", "person", "item", "table"].includes(cmd)) insert(cmd);
-    if (cmd === "image" && fileIn.current) fileIn.current.click();
   };
   /** BL-301 B gaps: pictures, as BL-63's in Current state (the image node shown as creaite's figure, the caption its alt text).
       Each is filed in the notes folder's _images/ as it is added, then put after the block holding the cursor (else at the end),
@@ -315,13 +299,11 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
   const optId = /** @param {number} i */ i => `ntp-${loadKey.replace(/[^\w-]/g, "")}-${i}`;
   return (
     <div class="ned">
-      <div class="rtebar nbar" role="toolbar" aria-label="Formatting" onMouseDown={e => { if (/** @type {Element} */ (e.target).closest("button")) e.preventDefault(); }}>
-        {TOOLS.map(([id, txt, name], i) => id === "|" ? <span key={`s${i}`} class="rtesep" aria-hidden="true" /> :
-          <button key={id} type="button" data-nt={id} aria-label={name} data-tip={name} onClick={() => tool(id)}>{txt}</button>)}
-        {toolbarExtra}
-        <input ref={fileIn} type="file" class="nimgfile" accept="image/png,image/jpeg" multiple hidden aria-hidden="true" tabIndex={-1}
-          onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); await addImages(i.files); i.value = ""; }} />
-      </div>
+      <EditorBar profile="notes" cls="nbar" handle={() => ed.current}
+        host={{ note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() }}
+        extra={<>{toolbarExtra}
+          <input ref={fileIn} type="file" class="nimgfile" accept="image/png,image/jpeg" multiple hidden aria-hidden="true" tabIndex={-1}
+            onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); await addImages(i.files); i.value = ""; }} /></>} />
       <div ref={box} class="nbody rted" role="textbox" aria-multiline="true" aria-label={label} spellcheck data-ph="Write here… [[ links a note, @ a person, # a work item, / inserts"
         aria-controls={pick ? "ntpick" : undefined} aria-activedescendant={pick && pick.opts[pick.i] ? optId(pick.i) : undefined} />
       {pick ? (

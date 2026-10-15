@@ -1,0 +1,93 @@
+// @ts-check
+/* ===== #122 step A ===== the editor's chrome profiles: which toolbar each kind of editor shows, and what each button does.
+   core/editor.js shares the document (the schema, loading and saving); this file shares what is drawn above it. A host asks
+   for a profile (components/EditorBar.jsx draws it) and the same buttons then show, and do the same, wherever that profile is
+   used (Alan, 15-10-2026: "all editors should be consistent").
+
+   - notes:   Notes and the capture drawer. Headings 1 to 3, B I S code, lists, checklist, quote, link, [[ @ #, table, image.
+   - current: Current state's two panes. The same, minus what its storage can't hold yet: no checklist (v2.2.0), no code (Word can't
+              show it), no table, and no [[ @ # (item links come with the shared chips, #122 step C).
+   - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
+              selection bar (#117) and links (v2.2.0), never headings or checklists.
+   - none:    a host that sets its own frame (the report sheets) and draws nothing.
+
+   The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
+   says it can do it, so the capture drawer, which has no pickers yet, shows the shared buttons alone.
+
+   Heading levels: the editor always has Heading 1 to 3. Where the text is stored decides what they are written as: Notes keeps
+   `#`, `##`, `###`; Current state is read to the next `## ` line (build_dashboard.py, report.py), so its levels are written
+   `###`, `####`, `#####` (HEAD_SHIFT; creaiteEditor `headShift`; Alan, 15-10-2026). */
+
+/** How many `#` Current state adds to the editor's heading level when it writes them (and takes off when it reads them). */
+export const HEAD_SHIFT = 2;
+
+/** @typedef {{id: string, label: string, name: string, tip?: string, rc?: string, host?: boolean,
+    run?: (c: any, e: any) => any, on?: (e: any) => boolean, can?: (e: any) => boolean}} ToolDef */
+/** The tools. `run` gets a focused Tiptap chain (and the editor) and returns the chain; `on` says whether it is in force at the cursor (aria-pressed).
+    `rc` is the name Current state's buttons have always carried in data-rc (kept so the tests and the dashboard spec still find them).
+    @type {Record<string, ToolDef>} */
+export const ED_TOOLS = {
+  h1: { id: "h1", label: "H1", name: "Heading 1", run: c => c.toggleHeading({ level: 1 }), on: e => e.isActive("heading", { level: 1 }) },
+  h2: { id: "h2", label: "H2", name: "Heading 2", run: c => c.toggleHeading({ level: 2 }), on: e => e.isActive("heading", { level: 2 }) },
+  h3: { id: "h3", label: "H3", name: "Heading 3", run: c => c.toggleHeading({ level: 3 }), on: e => e.isActive("heading", { level: 3 }) },
+  b: { id: "b", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: c => c.toggleBold(), on: e => e.isActive("bold") },
+  i: { id: "i", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: c => c.toggleItalic(), on: e => e.isActive("italic") },
+  s: { id: "s", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: c => c.toggleStrike(), on: e => e.isActive("strike") },
+  code: { id: "code", label: "</>", name: "Code", run: c => c.toggleCode(), on: e => e.isActive("code") },
+  ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: c => c.toggleBulletList(), on: e => e.isActive("bulletList") },
+  ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: c => c.toggleOrderedList(), on: e => e.isActive("orderedList") },
+  task: { id: "task", label: "☑", name: "Checklist", run: c => c.toggleTaskList(), on: e => e.isActive("taskList") },
+  outdent: { id: "outdent", label: "⇤", name: "Outdent", tip: "Outdent (⇧Tab)", rc: "outdent", run: (c, e) => c.liftListItem(itemType(e)),
+    can: e => e.isActive("listItem") || e.isActive("taskItem") },
+  indent: { id: "indent", label: "⇥", name: "Indent", tip: "Indent: a nested list (Tab)", rc: "indent", run: (c, e) => c.sinkListItem(itemType(e)),
+    can: e => e.isActive("listItem") || e.isActive("taskItem") },
+  quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: c => c.toggleBlockquote(), on: e => e.isActive("blockquote") },
+  link: { id: "link", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: e => e.isActive("link") },
+  unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: c => c.extendMarkRange("link").unsetLink(), can: e => e.isActive("link") },
+  clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: c => c.unsetAllMarks().clearNodes() },
+  note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
+  person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
+  item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
+  table: { id: "table", label: "▦", name: "Table", host: true },
+  image: { id: "image", label: "Image", name: "Add a picture", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
+  undo: { id: "undo", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: c => c.undo() },
+  redo: { id: "redo", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: c => c.redo() },
+};
+/** The list-item node a sink or lift acts on at the cursor: a checklist's item in a checklist, else a list's. @param {any} e */
+function itemType(e) { return e.isActive("taskItem") ? "taskItem" : "listItem"; }
+
+/** @typedef {{tools: string[], tip: string}} Profile */
+/** Each profile's toolbar, in order ("|" is a divider). What a profile leaves out is left out on purpose (see the top).
+    @type {Record<string, Profile>} */
+export const ED_PROFILES = {
+  notes: { tip: "Notes and the capture drawer",
+    tools: ["h1", "h2", "h3", "|", "b", "i", "s", "code", "|", "ul", "ol", "task", "outdent", "indent", "quote", "|", "link", "unlink", "clear", "|",
+      "note", "person", "item", "table", "image", "|", "undo", "redo"] },
+  current: { tip: "Current state",
+    tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"] },
+  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+  none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
+};
+
+/** The tools a profile shows, with the dividers tidied (none first, last or doubled), for a host that can do `hostTools`.
+    @param {string} profile @param {string[]} [hostTools] @returns {(ToolDef|"|")[]} */
+export function profileTools(profile, hostTools = []) {
+  const want = (ED_PROFILES[profile] || ED_PROFILES.none).tools.filter(id => id === "|" || (ED_TOOLS[id] && (!ED_TOOLS[id].host || hostTools.includes(id))));
+  /** @type {(ToolDef|"|")[]} */
+  const out = [];
+  for (const id of want) {
+    if (id === "|") { if (out.length && out[out.length - 1] !== "|") out.push("|"); } else out.push(ED_TOOLS[id]);
+  }
+  while (out.length && out[out.length - 1] === "|") out.pop();
+  return out;
+}
+
+/** Run a shared tool on an editor: true when it was one. A link is the bar's own form, so `link` is left to the caller.
+    @param {{editor: any}} h @param {string} id */
+export function runTool(h, id) {
+  const t = ED_TOOLS[id];
+  if (!h || !t || !t.run) return false;
+  const e = h.editor;
+  t.run(e.chain().focus(), e).run();
+  return true;
+}

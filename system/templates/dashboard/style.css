@@ -682,9 +682,11 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .msrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.msrow .msn{flex:1;min-width:12ch}
 .prog{display:inline-block;width:80px;height:6px;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;vertical-align:middle}.prog i{display:block;height:100%;background:var(--accent)}
 .curcard p{margin:0 0 8px}.curcard ul,.curcard ol,.rted ul,.rted ol{margin:0 0 8px;padding-left:24px}
-.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px}
+/* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
+.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
-.rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
+.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
@@ -700,6 +702,10 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
 .rte{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)} .rte:focus-within{border-color:var(--accent,var(--ink))}
 .rtebar{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line)} .rtebar button{border:0;background:none;color:var(--muted);padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font:inherit;font-size:var(--fs-sm)} .rtebar button:hover{background:var(--sunk);color:var(--ink)}
+/* #122: the shared formatting bar's states and targets (components/EditorBar.jsx): 24px at least, pressed = in force at the cursor */
+.rtebar button{min-width:28px;min-height:26px} .rtebar button[aria-pressed=true]{background:var(--accent-soft);color:var(--ink)} .rtebar button[aria-disabled=true]{opacity:.4;cursor:default}
+.rtebar button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+@media (forced-colors:active){.rtebar button[aria-pressed=true]{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar button[aria-disabled=true]{opacity:1;color:GrayText} .rtesep{background:CanvasText}}
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
@@ -2884,7 +2890,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
 .capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
 .capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody p{margin:0 0 6px} .capbody h1{font-size:16px;margin:12px 0 4px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
 .capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
 .capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
 .capfoot .btn[aria-disabled="true"]{opacity:.55}
@@ -2979,13 +2985,20 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .ned{position:relative}
 .ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:1}
 .ndoc:focus-within .ned .nbar{visibility:visible}
-.ned .nbar button{min-width:28px;min-height:26px}
+.ned .nbar button,.capbar button{min-width:26px;min-height:26px;padding:4px 5px} .capbar{flex-wrap:wrap;margin-bottom:6px}
 .ned .nbody{min-height:280px;height:auto;resize:none;overflow:visible;padding:4px 0;max-width:72ch;position:relative}
-.ned .nbody h2{font-size:15px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;margin:14px 0 4px}
-.ned .nbody ul[data-type=taskList]{list-style:none;padding-left:2px}
-.ned .nbody ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
-.ned .nbody ul[data-type=taskList] li>label{flex:none;margin-top:2px}
-.ned .nbody ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+.ned .nbody h1{font-size:19px;margin:18px 0 6px} .ned .nbody h2{font-size:16px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;font-weight:600;margin:14px 0 4px}
+/* #122: the aligned checklist, for every rich editor that takes one. The 18px box is centred on the first line of text: the label is
+   one line tall (1lh) and centres the box, whose 26px element (a 4px invisible border round the 18px box) is the click target. */
+.ProseMirror ul[data-type=taskList]{list-style:none;padding-left:2px}
+.ProseMirror ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
+.ProseMirror ul[data-type=taskList] li>label{flex:none;display:flex;align-items:center;height:1lh;min-height:1lh;margin:0}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:26px;height:26px;margin:0 -4px}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]:checked::after{left:6px;top:2px}
+.ProseMirror ul[data-type=taskList] li>div{flex:1;min-width:0}
+.ProseMirror ul[data-type=taskList] li>div>p{margin:0}
+.ProseMirror ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+@media (forced-colors:active){.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:16px;height:16px;margin:0 4px}}
 .ned .nbody table{border-collapse:collapse;margin:8px 0;max-width:100%} .ned .nbody td,.ned .nbody th{border:1px solid var(--line);padding:4px 8px;min-width:60px;vertical-align:top}
 .ned .nbody a{color:var(--accent)}
 .wl{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}

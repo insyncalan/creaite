@@ -87,7 +87,7 @@ export function msChoices(code,cur){ const L=(P.find(p=>p.code===code)||{ms:[]})
   const dup=n=>L.filter(m=>m[1].toLowerCase()===n.toLowerCase()).length>1;
   return [["","None"],...L.map(([id,n,d])=>[id,dup(n)&&d?`${n} · ${fd(d)}`:n])]; }
 /* BL-22: Current state is Markdown in CLAUDE.md (paragraphs, **bold**, *italic*, "- " and "1. " lists) */
-/* Current state is Markdown in CLAUDE.md (BL-22, BL-47): paragraphs, "### " sub-headings, "> " quotes, "- " and "1. "
+/* Current state is Markdown in CLAUDE.md (BL-22, BL-47): paragraphs, "### ", "#### " and "##### " headings (#122), "> " quotes, "- " and "1. "
    lists nested two spaces per level, **bold**, *italic*, ~~strikethrough~~ and [links](web or mail address). The same subset is
    rendered here, in the Word reports (docx_tools.py) and read back from Word. */
 export const MD_LIST=/^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$/, MD_MAX=3, MD_IMG=/^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$/;
@@ -120,6 +120,8 @@ export function mdBlocks(text){ const /** @type {any[]} */ B=[]; let para=[], qu
       if(tops.length&&!(item[0]===0&&tops[tops.length-1][1]!==item[1])) last[1].push(item); else B.push(["list",[item]]); }
     else if(!line.trim()) flush();
     else if(line.startsWith("### ")){ flush(); B.push(["h",line.slice(4).trim()]); }
+    else if(line.startsWith("#### ")){ flush(); B.push(["h2",line.slice(5).trim()]); }       /* #122: the two deeper levels (Heading 2, Heading 3) */
+    else if(line.startsWith("##### ")){ flush(); B.push(["h3",line.slice(6).trim()]); }
     else if(line.trimStart().startsWith(">")){ if(para.length) flush(); quote.push(line.trimStart().slice(1).trim()); }
     else { if(quote.length) flush(); para.push(line.trim()); } }
   return B; }
@@ -134,7 +136,7 @@ export function listHtml(items){ let h=""; const stack=[];
 /* BL-63: images sit in Current state where Alan placed them; imgs is the project's embedded images ({ref, src}) */
 export const imgSrc=(imgs,ref)=>String(ref).startsWith("new:")?((shared.CURED&&shared.CURED.uploads||{})[ref.slice(4)]||{}).src:((imgs||[]).find(i=>i.ref===ref)||{}).src;
 export const figHtml=(cap,ref,src)=>`<figure class="cimg" data-ref="${esc(ref)}">${src?`<img src="${src}" alt="${esc(cap)}">`:`<div class="sub">Image not found: ${esc(ref)}</div>`}<figcaption>${esc(cap)}</figcaption></figure>`;
-export function mdHtml(text,imgs){ return mdBlocks(text).map(([k,b])=>k==="img"?figHtml(b[0],b[1],imgSrc(imgs,b[1])):k==="p"?`<p>${mdInline(b)}</p>`:k==="h"?`<h3>${mdInline(b)}</h3>`:k==="q"?`<blockquote>${mdInline(b)}</blockquote>`:listHtml(b)).join(""); }
+export function mdHtml(text,imgs){ return mdBlocks(text).map(([k,b])=>k==="img"?figHtml(b[0],b[1],imgSrc(imgs,b[1])):k==="p"?`<p>${mdInline(b)}</p>`:k==="h"?`<h3>${mdInline(b)}</h3>`:k==="h2"?`<h4>${mdInline(b)}</h4>`:k==="h3"?`<h5>${mdInline(b)}</h5>`:k==="q"?`<blockquote>${mdInline(b)}</blockquote>`:listHtml(b)).join(""); }
 export function htmlToMd(root){ const blocks=[]; let cur="";
   const inl=n=>{ if(n.nodeType===3) return n.nodeValue.replace(/ /g," ").replace(/\s+/g," "); if(n.nodeType!==1) return ""; const tag=n.tagName;
     if(tag==="UL"||tag==="OL") return ""; const inner=[...n.childNodes].map(inl).join("");
@@ -153,7 +155,7 @@ export function htmlToMd(root){ const blocks=[]; let cur="";
   const flush=()=>{ const t=flat(cur); if(t) blocks.push(t); cur=""; };
   const walk=el=>{ for(const n of el.childNodes){ const tag=n.nodeType===1?n.tagName:"";
     if(tag==="UL"||tag==="OL"){ flush(); const lines=listMd(n,0,[]); if(lines.length) blocks.push(lines.join("\n")); }
-    else if(/^H[1-6]$/.test(tag)){ flush(); const t=flat(inl(n)); if(t) blocks.push("### "+t); }
+    else if(/^H[1-6]$/.test(tag)){ flush(); const t=flat(inl(n)); if(t) blocks.push(("#".repeat(Math.min(+tag[1],3)+2))+" "+t); }   /* #122: H1 is ###, H2 ####, H3 and deeper #####, Current state's three levels */
     else if(tag==="BLOCKQUOTE"){ flush(); const t=flat(inl(n)); if(t) blocks.push("> "+t); }
     else if(tag==="FIGURE"&&n.dataset.ref){ flush(); const c=flat((n.querySelector("figcaption")||{}).textContent||"").replace(/[\[\]]/g,""); blocks.push(`![${c}](${n.dataset.ref})`); }
     else if(/^(P|DIV|LI|SECTION|ARTICLE)$/.test(tag)){ flush(); walk(n); flush(); }

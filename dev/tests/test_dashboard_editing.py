@@ -63,7 +63,7 @@ SCRIPT = r"""
     ed.innerHTML="<div>Build is <b>late</b> and <i>risky</i>.</div><ul><li>Data access</li><li>UAT <b>prep</b></li></ul><ol><li>Escalate</li></ol>";
     ed.dispatchEvent(new Event("input",{bubbles:true})); out.md=htmlToMd(ed);
     out.inplace=[!!ed.closest(".curcard.editing"),document.getElementById("panel").classList.contains("on"),[...document.querySelectorAll(".inplace .rtebar [data-rc]")].length];
-    ed.innerHTML="<h3>Next steps</h3><blockquote>Hold the date</blockquote><p>Was <s>late</s>, see <a href=\"https://example.com/p\">the plan</a>.</p><ul><li>Data<ul><li>Masked extract</li></ul></li><li>UAT</li></ul>";
+    ed.innerHTML="<h1>Next steps</h1><h2>Detail</h2><h3>Fine print</h3><blockquote>Hold the date</blockquote><p>Was <s>late</s>, see <a href=\"https://example.com/p\">the plan</a>.</p><ul><li>Data<ul><li>Masked extract</li></ul></li><li>UAT</li></ul>";
     out.mdNew=htmlToMd(ed);
     // unsaved changes: leaving asks first; Keep editing stays, Discard goes
     ed.dispatchEvent(new Event("input",{bubbles:true})); go("work"); out.guard=[VIEW,document.getElementById("discardBar").classList.contains("on")];
@@ -391,7 +391,7 @@ class DashboardEditingTests(unittest.TestCase):
         r = self.result
         self.assertEqual(r["inplace"][:2], [True, False])                 # BL-47: in the card, no side panel
         self.assertGreaterEqual(r["inplace"][2], 14)                      # the fuller toolbar
-        self.assertEqual(r["mdNew"], "### Next steps\n\n> Hold the date\n\nWas ~~late~~, see [the plan](https://example.com/p)."
+        self.assertEqual(r["mdNew"], "### Next steps\n\n#### Detail\n\n##### Fine print\n\n> Hold the date\n\nWas ~~late~~, see [the plan](https://example.com/p)."
                                      "\n\n- Data\n  - Masked extract\n- UAT")
         self.assertEqual(r["guard"], ["cockpit", True])                   # unsaved: Work waits
         self.assertEqual(r["kept"], ["cockpit", True])

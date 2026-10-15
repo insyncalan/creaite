@@ -692,9 +692,11 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .msrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.msrow .msn{flex:1;min-width:12ch}
 .prog{display:inline-block;width:80px;height:6px;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;vertical-align:middle}.prog i{display:block;height:100%;background:var(--accent)}
 .curcard p{margin:0 0 8px}.curcard ul,.curcard ol,.rted ul,.rted ol{margin:0 0 8px;padding-left:24px}
-.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px}
+/* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
+.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
-.rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
+.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
@@ -710,6 +712,10 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
 .rte{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)} .rte:focus-within{border-color:var(--accent,var(--ink))}
 .rtebar{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line)} .rtebar button{border:0;background:none;color:var(--muted);padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font:inherit;font-size:var(--fs-sm)} .rtebar button:hover{background:var(--sunk);color:var(--ink)}
+/* #122: the shared formatting bar's states and targets (components/EditorBar.jsx): 24px at least, pressed = in force at the cursor */
+.rtebar button{min-width:28px;min-height:26px} .rtebar button[aria-pressed=true]{background:var(--accent-soft);color:var(--ink)} .rtebar button[aria-disabled=true]{opacity:.4;cursor:default}
+.rtebar button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+@media (forced-colors:active){.rtebar button[aria-pressed=true]{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar button[aria-disabled=true]{opacity:1;color:GrayText} .rtesep{background:CanvasText}}
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
@@ -2894,7 +2900,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
 .capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
 .capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody p{margin:0 0 6px} .capbody h1{font-size:16px;margin:12px 0 4px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
 .capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
 .capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
 .capfoot .btn[aria-disabled="true"]{opacity:.55}
@@ -2989,13 +2995,20 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .ned{position:relative}
 .ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:1}
 .ndoc:focus-within .ned .nbar{visibility:visible}
-.ned .nbar button{min-width:28px;min-height:26px}
+.ned .nbar button,.capbar button{min-width:26px;min-height:26px;padding:4px 5px} .capbar{flex-wrap:wrap;margin-bottom:6px}
 .ned .nbody{min-height:280px;height:auto;resize:none;overflow:visible;padding:4px 0;max-width:72ch;position:relative}
-.ned .nbody h2{font-size:15px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;margin:14px 0 4px}
-.ned .nbody ul[data-type=taskList]{list-style:none;padding-left:2px}
-.ned .nbody ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
-.ned .nbody ul[data-type=taskList] li>label{flex:none;margin-top:2px}
-.ned .nbody ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+.ned .nbody h1{font-size:19px;margin:18px 0 6px} .ned .nbody h2{font-size:16px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;font-weight:600;margin:14px 0 4px}
+/* #122: the aligned checklist, for every rich editor that takes one. The 18px box is centred on the first line of text: the label is
+   one line tall (1lh) and centres the box, whose 26px element (a 4px invisible border round the 18px box) is the click target. */
+.ProseMirror ul[data-type=taskList]{list-style:none;padding-left:2px}
+.ProseMirror ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
+.ProseMirror ul[data-type=taskList] li>label{flex:none;display:flex;align-items:center;height:1lh;min-height:1lh;margin:0}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:26px;height:26px;margin:0 -4px}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]:checked::after{left:6px;top:2px}
+.ProseMirror ul[data-type=taskList] li>div{flex:1;min-width:0}
+.ProseMirror ul[data-type=taskList] li>div>p{margin:0}
+.ProseMirror ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+@media (forced-colors:active){.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:16px;height:16px;margin:0 4px}}
 .ned .nbody table{border-collapse:collapse;margin:8px 0;max-width:100%} .ned .nbody td,.ned .nbody th{border:1px solid var(--line);padding:4px 8px;min-width:60px;vertical-align:top}
 .ned .nbody a{color:var(--accent)}
 .wl{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
@@ -3393,7 +3406,9 @@ button.nchip{font:inherit;font-size:12px}
     EBAREA: () => EBAREA,
     EBKEY: () => EBKEY,
     ED_HOOKS: () => ED_HOOKS,
+    ED_PROFILES: () => ED_PROFILES,
     ED_QUIET: () => ED_QUIET,
+    ED_TOOLS: () => ED_TOOLS,
     EVS: () => EVS,
     EVWHAT: () => EVWHAT,
     EV_FULL: () => EV_FULL,
@@ -3429,6 +3444,7 @@ button.nchip{font:inherit;font-size:12px}
     GREET: () => GREET,
     GROUPS: () => GROUPS,
     HD: () => HD,
+    HEAD_SHIFT: () => HEAD_SHIFT,
     HEALTH_SHAPES: () => HEALTH_SHAPES,
     HI: () => HI,
     HINTS: () => HINTS,
@@ -3608,9 +3624,6 @@ button.nchip{font:inherit;font-size:12px}
     RHL: () => RHL,
     ROWKEY: () => ROWKEY,
     RR: () => RR,
-    RTESEL: () => RTESEL,
-    RTE_RUN: () => RTE_RUN,
-    RTE_TOOLS: () => RTE_TOOLS,
     RTKINDS: () => RTKINDS,
     RUNNING: () => RUNNING,
     RVF: () => RVF,
@@ -4179,6 +4192,8 @@ button.nchip{font:inherit;font-size:12px}
     csWrite: () => csWrite,
     curAiMenu: () => curAiMenu,
     curAttach: () => curAttach,
+    curBar: () => curBar,
+    curBarOff: () => curBarOff,
     curCheck: () => curCheck,
     curDrop: () => curDrop,
     curGuard: () => curGuard,
@@ -4501,6 +4516,8 @@ button.nchip{font:inherit;font-size:12px}
     handOver: () => handOver,
     handle: () => handle,
     hashOf: () => hashOf,
+    headsIn: () => headsIn,
+    headsOut: () => headsOut,
     health: () => health,
     healthEvidence: () => healthEvidence,
     healthFacts: () => healthFacts,
@@ -5122,6 +5139,7 @@ button.nchip{font:inherit;font-size:12px}
     prio: () => prio,
     processInbox: () => processInbox,
     processMeetings: () => processMeetings,
+    profileTools: () => profileTools,
     projArchive: () => projArchive,
     projArchiveBind: () => projArchiveBind,
     projArchiveHtml: () => projArchiveHtml,
@@ -5313,13 +5331,13 @@ button.nchip{font:inherit;font-size:12px}
     rtOK: () => rtOK,
     rtOpen: () => rtOpen,
     rteCmd: () => rteCmd,
-    rteLink: () => rteLink,
     runAsk: () => runAsk,
     runCk: () => runCk,
     runClosure: () => runClosure,
     runGen: () => runGen,
     runReminder: () => runReminder,
     runSearch: () => runSearch,
+    runTool: () => runTool,
     rvActive: () => rvActive,
     rvAdvance: () => rvAdvance,
     rvApplied: () => rvApplied,
@@ -23163,6 +23181,22 @@ ${s5}`;
     if (out.content) out.content = out.content.map(dropClaims);
     return out;
   }
+  function mapHeads(md2, to2) {
+    let fence = false;
+    return String(md2).split("\n").map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) {
+        fence = !fence;
+        return line;
+      }
+      if (fence) return line;
+      const m5 = /^(#{1,6})([ \t].*|)$/.exec(line);
+      if (!m5) return line;
+      const n4 = to2(m5[1].length);
+      return n4 === m5[1].length ? line : "#".repeat(n4) + m5[2];
+    }).join("\n");
+  }
+  var headsIn = (md2, shift) => shift ? mapHeads(md2, (n4) => n4 > shift && n4 <= shift + 3 ? n4 - shift : n4) : md2;
+  var headsOut = (md2, shift) => shift ? mapHeads(md2, (n4) => n4 <= 3 ? n4 + shift : n4) : md2;
   var plainDoc = (t47) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => l6 ? { type: "paragraph", content: [{ type: "text", text: l6 }] } : { type: "paragraph" }) });
   var plainText = (doc) => {
     const L3 = [];
@@ -23172,7 +23206,7 @@ ${s5}`;
     return L3.join("\n");
   };
   function creaiteEditor(el2, o5 = {}) {
-    const features = o5.features || "current", plain = features === "plain", multiline = o5.multiline !== false;
+    const features = o5.features || "current", plain = features === "plain", multiline = o5.multiline !== false, headShift = plain ? 0 : o5.headShift | 0;
     if (
       /** @type {any} */
       el2.cxed
@@ -23190,7 +23224,7 @@ ${s5}`;
       }
       orig = String(v5 ?? "");
       env = B1(orig);
-      return { markdown: env.inner };
+      return { markdown: headsIn(env.inner, headShift) };
     };
     const content = load2(plain ? o5.text : o5.markdown);
     const props = {
@@ -23231,10 +23265,11 @@ ${s5}`;
       editor,
       features,
       multiline,
+      headShift,
       value: () => {
         if (!touched && orig !== null) return orig;
         if (plain) return plainText(editor.state.doc);
-        const md2 = _1(editor, dropClaims(editor.getJSON())).markdown;
+        const md2 = headsOut(_1(editor, dropClaims(editor.getJSON())).markdown, headShift);
         return env ? H1(env, md2) : md2;
       },
       setValue: (v5) => {
@@ -23331,11 +23366,11 @@ ${s5}`;
     if ($f2.sameParent($t2) && $f2.parent.isTextblock) {
       const cut = $f2.parent.cut($f2.parentOffset, $t2.parentOffset);
       const json = { type: "doc", content: [{ type: "paragraph", ...cut.content.size ? { content: cut.content.toJSON() } : {} }] };
-      const text2 = _1(ed3, dropClaims(json)).markdown;
+      const text2 = headsOut(_1(ed3, dropClaims(json)).markdown, h5.headShift);
       return text2.trim() ? { from, to: to2, text: text2, inline: true } : null;
     }
     const a5 = $f2.depth ? $f2.before(1) : from, b5 = $t2.depth ? $t2.after(1) : to2;
-    const text = _1(ed3, dropClaims({ type: "doc", content: doc.slice(a5, b5).content.toJSON() })).markdown;
+    const text = headsOut(_1(ed3, dropClaims({ type: "doc", content: doc.slice(a5, b5).content.toJSON() })).markdown, h5.headShift);
     return text.trim() ? { from: a5, to: b5, text, inline: false } : null;
   }
   var edSelection = (h5) => {
@@ -23353,7 +23388,7 @@ ${s5}`;
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
-      const blocks = ed3.schema.nodeFromJSON(ed3.markdown.parse(String(text))).toJSON().content || [];
+      const blocks = ed3.schema.nodeFromJSON(ed3.markdown.parse(headsIn(String(text), h5.headShift))).toJSON().content || [];
       content = r4.inline && blocks.length === 1 && blocks[0].type === "paragraph" ? blocks[0].content || [] : blocks;
     }
     const chain = ed3.chain().focus();
@@ -24479,6 +24514,345 @@ ${s5}`;
     R(/* @__PURE__ */ u2(AiLayer, {}), box);
   }
 
+  // core/editorProfiles.js
+  var HEAD_SHIFT = 2;
+  var ED_TOOLS = {
+    h1: { id: "h1", label: "H1", name: "Heading 1", run: (c5) => c5.toggleHeading({ level: 1 }), on: (e4) => e4.isActive("heading", { level: 1 }) },
+    h2: { id: "h2", label: "H2", name: "Heading 2", run: (c5) => c5.toggleHeading({ level: 2 }), on: (e4) => e4.isActive("heading", { level: 2 }) },
+    h3: { id: "h3", label: "H3", name: "Heading 3", run: (c5) => c5.toggleHeading({ level: 3 }), on: (e4) => e4.isActive("heading", { level: 3 }) },
+    b: { id: "b", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: (c5) => c5.toggleBold(), on: (e4) => e4.isActive("bold") },
+    i: { id: "i", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: (c5) => c5.toggleItalic(), on: (e4) => e4.isActive("italic") },
+    s: { id: "s", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: (c5) => c5.toggleStrike(), on: (e4) => e4.isActive("strike") },
+    code: { id: "code", label: "</>", name: "Code", run: (c5) => c5.toggleCode(), on: (e4) => e4.isActive("code") },
+    ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: (c5) => c5.toggleBulletList(), on: (e4) => e4.isActive("bulletList") },
+    ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: (c5) => c5.toggleOrderedList(), on: (e4) => e4.isActive("orderedList") },
+    task: { id: "task", label: "☑", name: "Checklist", run: (c5) => c5.toggleTaskList(), on: (e4) => e4.isActive("taskList") },
+    outdent: {
+      id: "outdent",
+      label: "⇤",
+      name: "Outdent",
+      tip: "Outdent (⇧Tab)",
+      rc: "outdent",
+      run: (c5, e4) => c5.liftListItem(itemType(e4)),
+      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
+    },
+    indent: {
+      id: "indent",
+      label: "⇥",
+      name: "Indent",
+      tip: "Indent: a nested list (Tab)",
+      rc: "indent",
+      run: (c5, e4) => c5.sinkListItem(itemType(e4)),
+      can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
+    },
+    quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: (c5) => c5.toggleBlockquote(), on: (e4) => e4.isActive("blockquote") },
+    link: { id: "link", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: (e4) => e4.isActive("link") },
+    unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: (c5) => c5.extendMarkRange("link").unsetLink(), can: (e4) => e4.isActive("link") },
+    clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: (c5) => c5.unsetAllMarks().clearNodes() },
+    note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
+    person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
+    item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
+    table: { id: "table", label: "▦", name: "Table", host: true },
+    image: { id: "image", label: "Image", name: "Add a picture", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
+    undo: { id: "undo", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
+    redo: { id: "redo", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
+  };
+  function itemType(e4) {
+    return e4.isActive("taskItem") ? "taskItem" : "listItem";
+  }
+  var ED_PROFILES = {
+    notes: {
+      tip: "Notes and the capture drawer",
+      tools: [
+        "h1",
+        "h2",
+        "h3",
+        "|",
+        "b",
+        "i",
+        "s",
+        "code",
+        "|",
+        "ul",
+        "ol",
+        "task",
+        "outdent",
+        "indent",
+        "quote",
+        "|",
+        "link",
+        "unlink",
+        "clear",
+        "|",
+        "note",
+        "person",
+        "item",
+        "table",
+        "image",
+        "|",
+        "undo",
+        "redo"
+      ]
+    },
+    current: {
+      tip: "Current state",
+      tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"]
+    },
+    plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+    none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
+  };
+  function profileTools(profile, hostTools = []) {
+    const want = (ED_PROFILES[profile] || ED_PROFILES.none).tools.filter((id2) => id2 === "|" || ED_TOOLS[id2] && (!ED_TOOLS[id2].host || hostTools.includes(id2)));
+    const out = [];
+    for (const id2 of want) {
+      if (id2 === "|") {
+        if (out.length && out[out.length - 1] !== "|") out.push("|");
+      } else out.push(ED_TOOLS[id2]);
+    }
+    while (out.length && out[out.length - 1] === "|") out.pop();
+    return out;
+  }
+  function runTool(h5, id2) {
+    const t47 = ED_TOOLS[id2];
+    if (!h5 || !t47 || !t47.run) return false;
+    const e4 = h5.editor;
+    t47.run(e4.chain().focus(), e4).run();
+    return true;
+  }
+
+  // components/EditorBar.jsx
+  var BARS = /* @__PURE__ */ new Set();
+  function editorBarFor(t47) {
+    const el2 = (
+      /** @type {Element|null} */
+      t47 && /** @type {Element} */
+      t47.closest ? t47 : null
+    );
+    if (!el2) return null;
+    for (const b5 of BARS) {
+      const h5 = b5.handle();
+      if (h5 && h5.el && (h5.el === el2 || h5.el.contains(el2) || el2.closest(".ProseMirror") === h5.editor.view.dom)) return b5;
+    }
+    return null;
+  }
+  var keysOn = false;
+  function keysInit() {
+    if (keysOn) return;
+    keysOn = true;
+    document.addEventListener("keydown", (e4) => {
+      if (!(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey) return;
+      const k5 = e4.key.toLowerCase();
+      if (k5 !== "k" && k5 !== "x") return;
+      const b5 = editorBarFor(e4.target);
+      if (!b5) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      if (k5 === "k") b5.link();
+      else {
+        const h5 = b5.handle();
+        if (h5) runTool(h5, "s");
+      }
+    }, true);
+  }
+  var okUrl = (u5) => /^(https?:\/\/|mailto:)\S+$/i.test(u5);
+  function EditorBar({ profile, handle: handle2, host: host2, cls, label, legacyRc, extra }) {
+    const bar = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const form = A2(
+      /** @type {HTMLSpanElement|null} */
+      null
+    );
+    const [link, setLink] = d2(
+      /** @type {{from: number, to: number, url: string}|null} */
+      null
+    );
+    const [cur, setCur] = d2(0);
+    const tools = profileTools(profile, Object.keys(host2 || {}));
+    const buttons = (
+      /** @type {import("../core/editorProfiles.js").ToolDef[]} */
+      tools.filter((t47) => t47 !== "|")
+    );
+    const refresh = () => {
+      const root = bar.current, h5 = handle2();
+      if (!root || !h5 || h5.editor.isDestroyed) return;
+      for (
+        const b5 of
+        /** @type {NodeListOf<HTMLElement>} */
+        root.querySelectorAll("button[data-nt]")
+      ) {
+        const t47 = ED_TOOLS[b5.dataset.nt || ""];
+        if (!t47) continue;
+        if (t47.on) b5.setAttribute("aria-pressed", t47.on(h5.editor) ? "true" : "false");
+        if (t47.can) {
+          if (t47.can(h5.editor)) b5.removeAttribute("aria-disabled");
+          else b5.setAttribute("aria-disabled", "true");
+        }
+      }
+    };
+    const openLink = () => {
+      const h5 = handle2();
+      if (!h5) return;
+      const s5 = h5.editor.state.selection;
+      setLink({ from: s5.from, to: s5.to, url: h5.editor.getAttributes("link").href || "" });
+    };
+    h2(() => {
+      const me2 = { handle: handle2, link: openLink };
+      BARS.add(me2);
+      keysInit();
+      document.addEventListener("selectionchange", refresh);
+      document.addEventListener("focusin", refresh);
+      refresh();
+      return () => {
+        BARS.delete(me2);
+        document.removeEventListener("selectionchange", refresh);
+        document.removeEventListener("focusin", refresh);
+      };
+    }, [profile]);
+    h2(() => {
+      if (link && form.current) {
+        const i5 = form.current.querySelector("input");
+        if (i5) {
+          i5.focus();
+          i5.select();
+        }
+      }
+    }, [link !== null]);
+    const run = (id2) => {
+      const h5 = handle2(), t47 = ED_TOOLS[id2];
+      if (!h5 || !t47) return;
+      if (id2 === "link") {
+        openLink();
+        return;
+      }
+      if (t47.host) {
+        const f5 = host2 && host2[id2];
+        if (f5) f5();
+        return;
+      }
+      runTool(h5, id2);
+      refresh();
+    };
+    const finish = (add) => {
+      const h5 = handle2(), l6 = link;
+      setLink(null);
+      if (!h5 || !l6) return;
+      const c5 = h5.editor.chain().focus().setTextSelection({ from: l6.from, to: l6.to }), url = (form.current?.querySelector("input")?.value || "").trim();
+      if (add && okUrl(url)) {
+        if (l6.from === l6.to && !h5.editor.isActive("link")) c5.insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
+        else c5.extendMarkRange("link").setLink({ href: url }).run();
+      } else {
+        c5.run();
+        if (add && url) snack("Use a web (https) or mail (mailto) link");
+      }
+    };
+    const keys = (e4) => {
+      const t47 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (t47.closest && t47.closest(".rtelink")) {
+        if (e4.key === "Enter" && t47.tagName === "INPUT") {
+          e4.preventDefault();
+          finish(true);
+        } else if (e4.key === "Escape") {
+          e4.preventDefault();
+          e4.stopPropagation();
+          finish(false);
+        }
+        return;
+      }
+      const b5 = (
+        /** @type {HTMLElement|null} */
+        t47.closest ? t47.closest("button[data-nt]") : null
+      );
+      if (!b5) return;
+      const i5 = buttons.findIndex((x5) => x5.id === b5.dataset.nt);
+      let to2 = -1;
+      if (e4.key === "ArrowRight") to2 = (i5 + 1) % buttons.length;
+      else if (e4.key === "ArrowLeft") to2 = (i5 + buttons.length - 1) % buttons.length;
+      else if (e4.key === "Home") to2 = 0;
+      else if (e4.key === "End") to2 = buttons.length - 1;
+      else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        const h5 = handle2();
+        if (h5) h5.focus();
+        return;
+      }
+      if (to2 < 0) return;
+      e4.preventDefault();
+      e4.stopPropagation();
+      setCur(to2);
+      requestAnimationFrame(() => {
+        const n4 = bar.current && bar.current.querySelector(`button[data-nt="${buttons[to2].id}"]`);
+        if (n4) n4.focus();
+      });
+    };
+    if (!buttons.length) return null;
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        ref: bar,
+        class: `rtebar ${cls || ""}`.trim(),
+        role: "toolbar",
+        "aria-label": label || "Formatting",
+        "data-profile": profile,
+        onKeyDown: keys,
+        onMouseDown: (e4) => {
+          const b5 = (
+            /** @type {HTMLElement|null} */
+            /** @type {Element} */
+            e4.target.closest("button[data-nt]")
+          );
+          if (!b5) return;
+          e4.preventDefault();
+          if (e4.button === 0 && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        onClick: (e4) => {
+          const b5 = (
+            /** @type {HTMLElement|null} */
+            /** @type {Element} */
+            e4.target.closest("button[data-nt]")
+          );
+          if (b5 && e4.detail === 0 && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        children: [
+          tools.map((t47, i5) => t47 === "|" ? /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }, `s${i5}`) : /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              "data-nt": t47.id,
+              ...legacyRc && t47.rc ? { "data-rc": t47.rc } : {},
+              "aria-label": t47.tip || t47.name,
+              "data-tip": t47.tip || t47.name,
+              tabIndex: buttons[cur] && buttons[cur].id === t47.id ? 0 : -1,
+              ...t47.on ? { "aria-pressed": "false" } : {},
+              children: t47.label
+            },
+            t47.id
+          )),
+          /* @__PURE__ */ u2("span", { class: "rtelink", ref: form, hidden: !link, children: [
+            /* @__PURE__ */ u2("input", { type: "url", placeholder: "Paste a web or mail link", "aria-label": "Link address", value: link ? link.url : "", onInput: (e4) => link && setLink({ ...link, url: (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            ) }) }),
+            /* @__PURE__ */ u2("button", { type: "button", "data-rl": "add", onClick: () => finish(true), children: "Add" }),
+            /* @__PURE__ */ u2("button", { type: "button", "data-rl": "cancel", onClick: () => finish(false), children: "Cancel" })
+          ] }),
+          extra
+        ]
+      }
+    );
+  }
+  function mountEditorBar(el2, props) {
+    R(/* @__PURE__ */ u2(EditorBar, { ...props }), el2);
+  }
+  function unmountEditorBar(el2) {
+    R(null, el2);
+  }
+
   // stores/rail.js
   var RAIL_ITEMS = [
     { id: "today", title: "Today", icon: "today", badge: "vipBadge", group: "top", fixed: true },
@@ -25492,6 +25866,7 @@ ${s5}`;
         /* @__PURE__ */ u2("span", { children: "Confidential" }),
         n4.confidential ? /* @__PURE__ */ u2("span", { class: "sub", children: "Kept out of prep pages and client reports; Claude reads it only if you say yes" }) : null
       ] }),
+      /* @__PURE__ */ u2(EditorBar, { profile: "notes", cls: "capbar", handle: () => ed2 }),
       /* @__PURE__ */ u2(
         "div",
         {
@@ -41831,7 +42206,8 @@ ${s5}`;
   }
   shared.CURED = null;
   var CUR_PROPS = {
-    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)),
+    transformPastedHTML: (h5) => mdHtml(htmlToMd(new DOMParser().parseFromString(h5, "text/html").body)).replace(/<(\/?)h([345])>/g, (m5, close, n4) => "<" + close + "h" + (n4 - HEAD_SHIFT) + ">"),
+    /* #122: stored ### #### ##### are the editor's Heading 1 to 3 */
     handlePaste: (view, e4) => {
       const pics = [...e4.clipboardData && e4.clipboardData.files || []].filter((f5) => /^image\//.test(f5.type));
       if (!pics.length) return false;
@@ -41862,6 +42238,7 @@ ${s5}`;
     const imgs = (P4.find((x5) => x5.code === c5.code) || {}).images;
     c5[k5] = creaiteEditor(slot, {
       features: "current",
+      headShift: HEAD_SHIFT,
       markdown: (n4 === 2 ? c5.src2 : c5.src1) || "",
       imageSrc: (ref) => imgSrc(imgs, ref),
       editorProps: CUR_PROPS,
@@ -41879,26 +42256,6 @@ ${s5}`;
     if (n4 === 2) c5.src2 = md2;
     else c5.src1 = md2;
   }
-  var RTE_TOOLS = [
-    ["bold", "B", "Bold (⌘B)"],
-    ["italic", "I", "Italic (⌘I)"],
-    ["strikeThrough", "S", "Strikethrough (⌘⇧X)"],
-    ["formatBlock:h3", "H", "Sub-heading"],
-    ["|"],
-    ["insertUnorderedList", "• List", "Bulleted list"],
-    ["insertOrderedList", "1. List", "Numbered list"],
-    ["outdent", "⇤", "Outdent"],
-    ["indent", "⇥", "Indent (nested list)"],
-    ["formatBlock:blockquote", "❝", "Quote"],
-    ["image", "Image", "Add an image here (PNG or JPEG, up to 2 MB); or paste or drop one"],
-    ["|"],
-    ["link", "Link", "Add or edit a link (⌘K)"],
-    ["unlink", "Unlink", "Remove the link"],
-    ["removeFormat", "Clear", "Clear formatting"],
-    ["|"],
-    ["undo", "↶", "Undo (⌘Z)"],
-    ["redo", "↷", "Redo (⌘⇧Z)"]
-  ];
   function startCurEdit(code, pane) {
     if (shared.CURED || navBlocked()) return;
     const p6 = P4.find((x5) => x5.code === code);
@@ -41926,7 +42283,8 @@ ${s5}`;
       if (!shared.CURED || !box || shared.COCK !== shared.CURED.code) return;
       card.classList.add("editing");
       card.querySelectorAll(".pencil").forEach((b5) => b5.hidden = true);
-      putHTML(box, html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map((t47) => t47[0] === "|" ? html`<span class="rtesep"></span>` : html`<button type="button" data-rc="${t47[0]}" title="${t47[2]}" aria-label="${t47[2]}">${t47[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
+      curBarOff();
+      putHTML(box, html`<div class="rte inplace"><div id="curBar" class="curbar"></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`, `<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`, "edit", !!splitPanes(shared.CURED.orig)[1] || !!String(shared.CURED.ed2 ? edValue(shared.CURED.ed2.el) : shared.CURED.src2 || "").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
     ${shared.CURED.sources ? html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>` : ""}
@@ -41934,6 +42292,7 @@ ${s5}`;
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
       curAttach(1);
       curAttach(2);
+      curBar();
       curAiMenu();
       $$(".curpanes .rted").forEach((e4) => {
         paneBlank(e4);
@@ -41954,6 +42313,7 @@ ${s5}`;
     }
   }
   function endCurEdit() {
+    curBarOff();
     evPanelClose();
     curDrop();
     DISCARD = null;
@@ -42103,54 +42463,18 @@ ${s5}`;
     if (shared.CURED) curDrop();
     return false;
   }
-  var RTESEL = null;
-  var RTE_RUN = {
-    bold: (c5) => c5.toggleBold(),
-    italic: (c5) => c5.toggleItalic(),
-    strikeThrough: (c5) => c5.toggleStrike(),
-    "formatBlock:h3": (c5) => c5.toggleHeading({ level: 3 }),
-    insertUnorderedList: (c5) => c5.toggleBulletList(),
-    insertOrderedList: (c5) => c5.toggleOrderedList(),
-    outdent: (c5) => c5.liftListItem("listItem"),
-    indent: (c5) => c5.sinkListItem("listItem"),
-    "formatBlock:blockquote": (c5) => c5.toggleBlockquote(),
-    unlink: (c5) => c5.extendMarkRange("link").unsetLink(),
-    removeFormat: (c5) => c5.unsetAllMarks().clearNodes(),
-    undo: (c5) => c5.undo(),
-    redo: (c5) => c5.redo()
-  };
-  function rteCmd(cmd) {
-    const ed3 = curPane(), h5 = edOf(ed3);
-    if (!ed3 || !h5) return;
-    if (cmd === "image") {
-      pickImage();
-      return;
-    }
-    if (cmd === "link") {
-      const sel = h5.editor.state.selection;
-      RTESEL = { el: ed3, from: sel.from, to: sel.to };
-      const box = $(".curcard .rtelink");
-      box.hidden = false;
-      box.querySelector("input").value = h5.editor.getAttributes("link").href || "";
-      box.querySelector("input").focus();
-      return;
-    }
-    const run = RTE_RUN[cmd];
-    if (run) run(h5.editor.chain().focus()).run();
+  function curBar() {
+    const el2 = $("#curBar");
+    if (!el2) return;
+    mountEditorBar(el2, { profile: "current", legacyRc: true, handle: () => edOf(curPane()), host: { image: pickImage } });
   }
-  function rteLink(add) {
-    const ed3 = RTESEL && RTESEL.el || curPane(), h5 = edOf(ed3), box = $(".curcard .rtelink"), url = box.querySelector("input").value.trim();
-    box.hidden = true;
-    if (!h5) return;
-    const c5 = h5.editor.chain().focus();
-    if (RTESEL) c5.setTextSelection({ from: RTESEL.from, to: RTESEL.to });
-    if (add && /^(https?:\/\/|mailto:)\S+$/i.test(url)) {
-      if (RTESEL && RTESEL.from === RTESEL.to && !h5.editor.isActive("link")) c5.insertContent({ type: "text", text: url, marks: [{ type: "link", attrs: { href: url } }] }).run();
-      else c5.extendMarkRange("link").setLink({ href: url }).run();
-    } else {
-      c5.run();
-      if (add && url) snack("Use a web (https) or mail (mailto) link");
-    }
+  function curBarOff() {
+    const el2 = $("#curBar");
+    if (el2) unmountEditorBar(el2);
+  }
+  function rteCmd(cmd) {
+    const h5 = edOf(curPane());
+    if (h5) runTool(h5, cmd);
   }
   shared.DRH = null;
   shared.PKDRC = null;
@@ -42287,32 +42611,7 @@ ${s5}`;
       const ed3 = e4.target.closest && e4.target.closest(".curpanes .rted");
       if (ed3 && shared.CURED) shared.CURED.last = ed3.id === "curEd2" ? 2 : 1;
     });
-    document.addEventListener("mousedown", (e4) => {
-      const b5 = e4.target.closest(".inplace [data-rc]");
-      if (!b5) return;
-      e4.preventDefault();
-      rteCmd(b5.dataset.rc);
-    });
-    document.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest(".inplace [data-rl]");
-      if (b5) {
-        e4.preventDefault();
-        rteLink(b5.dataset.rl === "add");
-      }
-    });
     document.addEventListener("keydown", (e4) => {
-      if (e4.target.closest && e4.target.closest(".rtelink")) {
-        if (e4.key === "Enter") {
-          e4.preventDefault();
-          rteLink(true);
-        }
-        if (e4.key === "Escape") {
-          e4.preventDefault();
-          e4.stopPropagation();
-          rteLink(false);
-        }
-        return;
-      }
       if (!(e4.target.classList && e4.target.classList.contains("rted") && e4.target.closest(".curpanes"))) return;
       const mod = e4.metaKey || e4.ctrlKey;
       if (e4.key === "Escape") {
@@ -42322,13 +42621,6 @@ ${s5}`;
       } else if (mod && e4.key === "Enter") {
         e4.preventDefault();
         saveCurEdit();
-      } else if (mod && e4.key.toLowerCase() === "k") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        rteCmd("link");
-      } else if (mod && e4.shiftKey && e4.key.toLowerCase() === "x") {
-        e4.preventDefault();
-        rteCmd("strikeThrough");
       } else if (e4.key === "Tab" && getSelection().anchorNode && (getSelection().anchorNode.parentElement || {}).closest && getSelection().anchorNode.parentElement.closest("li")) {
         e4.preventDefault();
         rteCmd(e4.shiftKey ? "outdent" : "indent");
@@ -45467,6 +45759,12 @@ ${d5.text}`);
       else if (line.startsWith("### ")) {
         flush();
         B4.push(["h", line.slice(4).trim()]);
+      } else if (line.startsWith("#### ")) {
+        flush();
+        B4.push(["h2", line.slice(5).trim()]);
+      } else if (line.startsWith("##### ")) {
+        flush();
+        B4.push(["h3", line.slice(6).trim()]);
       } else if (line.trimStart().startsWith(">")) {
         if (para.length) flush();
         quote.push(line.trimStart().slice(1).trim());
@@ -45497,7 +45795,7 @@ ${d5.text}`);
   var imgSrc = (imgs, ref) => String(ref).startsWith("new:") ? ((shared.CURED && shared.CURED.uploads || {})[ref.slice(4)] || {}).src : ((imgs || []).find((i5) => i5.ref === ref) || {}).src;
   var figHtml = (cap, ref, src) => `<figure class="cimg" data-ref="${esc(ref)}">${src ? `<img src="${src}" alt="${esc(cap)}">` : `<div class="sub">Image not found: ${esc(ref)}</div>`}<figcaption>${esc(cap)}</figcaption></figure>`;
   function mdHtml(text, imgs) {
-    return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
+    return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "h2" ? `<h4>${mdInline(b5)}</h4>` : k5 === "h3" ? `<h5>${mdInline(b5)}</h5>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
   }
   function htmlToMd(root) {
     const blocks = [];
@@ -45556,7 +45854,7 @@ ${d5.text}`);
         } else if (/^H[1-6]$/.test(tag)) {
           flush();
           const t47 = flat2(inl(n4));
-          if (t47) blocks.push("### " + t47);
+          if (t47) blocks.push("#".repeat(Math.min(+tag[1], 3) + 2) + " " + t47);
         } else if (tag === "BLOCKQUOTE") {
           flush();
           const t47 = flat2(inl(n4));
@@ -52615,27 +52913,6 @@ ${d5.text}`);
       return Z.node(pos, pos + size, a5);
     });
   }
-  var TOOLS = [
-    ["h", "H", "Sub-heading"],
-    ["b", "B", "Bold (⌘B)"],
-    ["i", "I", "Italic (⌘I)"],
-    ["s", "S", "Strikethrough"],
-    ["code", "</>", "Code"],
-    ["|", "", ""],
-    ["ul", "•", "Bulleted list"],
-    ["ol", "1.", "Numbered list"],
-    ["task", "☑", "Checklist"],
-    ["quote", "❝", "Quote"],
-    ["|", "", ""],
-    ["note", "[[ ]]", "Link to a note ([[)"],
-    ["person", "@", "Mention a person (@)"],
-    ["item", "#ID", "Link a work item (#)"],
-    ["table", "▦", "Table"],
-    ["image", "Image", "Add a picture here (PNG or JPEG, up to 2 MB)"],
-    ["|", "", ""],
-    ["undo", "↶", "Undo (⌘Z)"],
-    ["redo", "↷", "Redo (⌘⇧Z)"]
-  ];
   function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
@@ -52783,26 +53060,6 @@ ${d5.text}`);
         if (t47) c5.insertContent(t47, { contentType: "markdown" }).run();
       }
     };
-    const tool = (cmd) => {
-      const h5 = ed3.current;
-      if (!h5) return;
-      const c5 = h5.editor.chain().focus();
-      ({
-        h: () => c5.toggleHeading({ level: 2 }),
-        b: () => c5.toggleBold(),
-        i: () => c5.toggleItalic(),
-        s: () => c5.toggleStrike(),
-        code: () => c5.toggleCode(),
-        ul: () => c5.toggleBulletList(),
-        ol: () => c5.toggleOrderedList(),
-        task: () => c5.toggleTaskList(),
-        quote: () => c5.toggleBlockquote(),
-        undo: () => c5.undo(),
-        redo: () => c5.redo()
-      })[cmd]?.().run();
-      if (["note", "person", "item", "table"].includes(cmd)) insert(cmd);
-      if (cmd === "image" && fileIn.current) fileIn.current.click();
-    };
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
         const ref = onImage ? await onImage(f5) : null, h5 = ed3.current;
@@ -52946,36 +53203,39 @@ ${d5.text}`);
       (i5) => `ntp-${loadKey.replace(/[^\w-]/g, "")}-${i5}`
     );
     return /* @__PURE__ */ u2("div", { class: "ned", children: [
-      /* @__PURE__ */ u2("div", { class: "rtebar nbar", role: "toolbar", "aria-label": "Formatting", onMouseDown: (e4) => {
-        if (
-          /** @type {Element} */
-          e4.target.closest("button")
-        ) e4.preventDefault();
-      }, children: [
-        TOOLS.map(([id2, txt, name], i5) => id2 === "|" ? /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }, `s${i5}`) : /* @__PURE__ */ u2("button", { type: "button", "data-nt": id2, "aria-label": name, "data-tip": name, onClick: () => tool(id2), children: txt }, id2)),
-        toolbarExtra,
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            ref: fileIn,
-            type: "file",
-            class: "nimgfile",
-            accept: "image/png,image/jpeg",
-            multiple: true,
-            hidden: true,
-            "aria-hidden": "true",
-            tabIndex: -1,
-            onChange: async (e4) => {
-              const i5 = (
-                /** @type {HTMLInputElement} */
-                e4.target
-              );
-              await addImages2(i5.files);
-              i5.value = "";
-            }
-          }
-        )
-      ] }),
+      /* @__PURE__ */ u2(
+        EditorBar,
+        {
+          profile: "notes",
+          cls: "nbar",
+          handle: () => ed3.current,
+          host: { note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() },
+          extra: /* @__PURE__ */ u2(S2, { children: [
+            toolbarExtra,
+            /* @__PURE__ */ u2(
+              "input",
+              {
+                ref: fileIn,
+                type: "file",
+                class: "nimgfile",
+                accept: "image/png,image/jpeg",
+                multiple: true,
+                hidden: true,
+                "aria-hidden": "true",
+                tabIndex: -1,
+                onChange: async (e4) => {
+                  const i5 = (
+                    /** @type {HTMLInputElement} */
+                    e4.target
+                  );
+                  await addImages2(i5.files);
+                  i5.value = "";
+                }
+              }
+            )
+          ] })
+        }
+      ),
       /* @__PURE__ */ u2(
         "div",
         {
@@ -59682,8 +59942,10 @@ ${d5.text}`);
         "DIAG",
         "DRAFTKIND",
         "Dialog",
+        "ED_PROFILES",
         "EVS",
         "EXPAND",
+        "EditorBar",
         "Essentials",
         "FDEFS",
         "FILES",
@@ -59821,6 +60083,7 @@ ${d5.text}`);
         "claimState",
         "claimsNote",
         "clearAllFilters",
+        "closeCapture",
         "closeChat",
         "closeCombobox",
         "closeDialog",
@@ -59993,6 +60256,7 @@ ${d5.text}`);
         "nowHM",
         "nowIso",
         "open",
+        "openCapture",
         "openChat",
         "openCk",
         "openContextMenu",
@@ -60064,6 +60328,7 @@ ${d5.text}`);
         "prepTimed",
         "previewInbox",
         "prio",
+        "profileTools",
         "projPeople",
         "publish",
         "pulseCheck",

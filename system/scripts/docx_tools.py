@@ -112,7 +112,8 @@ def drawing(rid, n, w_px, h_px, name):
 
 
 # ── Markdown (BL-22, BL-47): the subset Current state uses ────────────────────
-# Paragraphs, "### " sub-headings, "> " quotes, "- " and "1. " lists nested two spaces per level, **bold**, *italic*
+# Paragraphs, "### ", "#### " and "##### " headings (the editor's Heading 1 to 3, #122), "> " quotes, "- " and "1. " lists
+# nested two spaces per level, **bold**, *italic*
 # (or _italic_), ~~strikethrough~~ and [links](https://…); an image is a line of its own, ![caption](images/x.png)
 # (BL-63). Everything else is plain text.
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
@@ -120,6 +121,9 @@ IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
                     r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)")
 MAX_LEVEL = 3
+HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
+HEADING = re.compile(r"^#{3,5} ")
+HASHES = {v: "#" * k for k, v in HEADS.items()}
 # BL-89: Current state has two writing panes, one message. They are stored in the one `## Current state` section with this line
 # between them; a text without it is just the left pane. Every reader except the dashboard's editor sees one continuous
 # message: the left pane's content, then the right pane's, with the marker removed and nothing added.
@@ -182,7 +186,8 @@ def one_message(text):
 
 
 def md_blocks(text, panes=False):
-    """[("p", text) | ("h", text) | ("q", text) | ("list", [(level, ordered, text)]) | ("img", (caption, ref))].
+    """[("p", text) | ("h" | "h2" | "h3", text) (### #### #####) | ("q", text) | ("list", [(level, ordered, text)])
+    | ("img", (caption, ref))].
     List items stay together across blank lines; a quote's lines join into one paragraph; an image is its own block.
     The pane marker ends the paragraph before it and is dropped (a ("pane", None) block with panes=True, for md_normalise)."""
     blocks, para, quote = [], [], []
@@ -218,9 +223,9 @@ def md_blocks(text, panes=False):
                 blocks.append(("list", [item]))
         elif not line.strip():
             flush()
-        elif line.startswith("### "):
+        elif HEADING.match(line):                           # #122: three levels ("## " would end the section)
             flush()
-            blocks.append(("h", line[4:].strip()))
+            blocks.append((HEADS[len(line.split(" ")[0])], line.split(" ", 1)[1].strip()))
         elif line.lstrip().startswith(">"):
             if para:
                 flush()
@@ -255,8 +260,8 @@ def md_normalise(text):
             continue
         if kind == "p":
             out.append(body)
-        elif kind == "h":
-            out.append("### " + body)
+        elif kind in HASHES:
+            out.append(HASHES[kind] + " " + body)
         elif kind == "q":
             out.append("> " + body)
         elif kind == "img":
@@ -385,6 +390,10 @@ def md_paras(para, name, text):
             out += one("", body)
         elif kind == "h":
             out += one("", body, use=topic) if topic else one("", f"**{body}**")
+        elif kind == "h2":                  # #122: the second level, bold; the third, bold italic: each a step quieter than the one above
+            out += one("", f"**{body}**")
+        elif kind == "h3":
+            out += one("", f"**{body}**", italic=True)
         elif kind == "q":
             out += one("", body, "quote", italic=True)
         elif kind == "img":                 # images are filled as image entries (current_entries); a stray one shows its caption

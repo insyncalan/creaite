@@ -60,6 +60,18 @@ function dropClaims(json){ if(!json||typeof json!=="object") return json; const 
   if(out.marks){ out.marks=out.marks.filter(m=>m.type!=="claim"); if(!out.marks.length) delete out.marks; }
   if(out.content) out.content=out.content.map(dropClaims); return out; }
 
+/* #122: Current state's heading levels. The editor has Heading 1 to 3; Current state's text is read to the next `## ` line, so it
+   writes them `###`, `####`, `#####` (`headShift` 2: Alan, 15-10-2026). These map a Markdown text between the two, line by line,
+   leaving fenced code alone. Only the levels the mapping owns move: on the way in `###` to `#####`, on the way out `#` to `###`. */
+/** @param {string} md @param {(level: number) => number} to @returns {string} */
+function mapHeads(md,to){ let fence=false;
+  return String(md).split("\n").map(line=>{ if(/^\s*(```|~~~)/.test(line)){ fence=!fence; return line; } if(fence) return line;
+    const m=/^(#{1,6})([ \t].*|)$/.exec(line); if(!m) return line; const n=to(m[1].length); return n===m[1].length?line:"#".repeat(n)+m[2]; }).join("\n"); }
+/** A stored text into the editor's levels (headShift 2: `###` `####` `#####` become 1 2 3). @param {string} md @param {number} shift */
+export const headsIn=(md,shift)=>shift?mapHeads(md,n=>n>shift&&n<=shift+3?n-shift:n):md;
+/** The editor's Markdown into the stored levels (1 2 3 become `###` `####` `#####`). @param {string} md @param {number} shift */
+export const headsOut=(md,shift)=>shift?mapHeads(md,n=>n<=3?n+shift:n):md;
+
 /** Plain text as a document: one paragraph a line. */
 const plainDoc=t=>({ type:"doc", content:String(t??"").split("\n").map(l=>l?{ type:"paragraph", content:[{ type:"text", text:l }] }:{ type:"paragraph" }) });
 /** A document's plain text: its paragraphs, one a line. */
@@ -72,21 +84,21 @@ const plainText=doc=>{ const L=[]; doc.forEach(p=>{ L.push(p.textContent); }); r
  * @typedef {{place: string, project?: () => string, confidential?: () => boolean, key?: () => string}} EdAi
  * @typedef {{features?: "current"|"plain"|"notes", markdown?: string, html?: string, text?: string, multiline?: boolean,
  *   imageSrc?: (ref: string) => (string|null|undefined), editorProps?: object, extensions?: any[], prop?: "textContent"|"value",
- *   ai?: EdAi}} EdOptions
- * @typedef {{el: HTMLElement, editor: any, features: string, multiline?: boolean, value: () => string, setValue: (v: string) => void,
+ *   ai?: EdAi, headShift?: number}} EdOptions
+ * @typedef {{el: HTMLElement, editor: any, features: string, multiline?: boolean, headShift: number, value: () => string, setValue: (v: string) => void,
  *   touched: () => boolean, focus: (at?: any) => void, destroy: () => void}} EdHandle
  */
 /**
  * The one editor on `el` (BL-301 A). `el` itself becomes the editable root.
  * @param {HTMLElement} el @param {EdOptions} [o] @returns {EdHandle}
  */
-export function creaiteEditor(el,o={}){ const features=o.features||"current", plain=features==="plain", multiline=o.multiline!==false;
+export function creaiteEditor(el,o={}){ const features=o.features||"current", plain=features==="plain", multiline=o.multiline!==false, headShift=plain?0:(o.headShift|0);
   if(/** @type {any} */ (el).cxed) /** @type {any} */ (el).cxed.destroy();
   let orig="", env=null, touched=false;
   const load=v=>{ touched=false;
     if(plain){ orig=String(v??""); return { json:plainDoc(orig) }; }
     if(o.html!==undefined&&v===undefined){ orig=null; return { html:o.html }; }
-    orig=String(v??""); env=envelope(orig); return { markdown:env.inner }; };
+    orig=String(v??""); env=envelope(orig); return { markdown:headsIn(env.inner,headShift) }; };
   const content=load(plain?o.text:o.markdown);
   const props={ ...(o.editorProps||{}),
     handleKeyDown:(view,e)=>{ if(!multiline&&e.key==="Enter") return true; const f=/** @type {any} */ (o.editorProps||{}).handleKeyDown; return f?f(view,e):false; },
@@ -99,10 +111,10 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
     el.dispatchEvent(new Event("input",{ bubbles:true })); });
   blank();
   /** @type {EdHandle} */
-  const h={ el, editor, features, multiline,
+  const h={ el, editor, features, multiline, headShift,
     value:()=>{ if(!touched&&orig!==null) return orig;
       if(plain) return plainText(editor.state.doc);
-      const md=markdownOf(editor,dropClaims(editor.getJSON())).markdown; return env?wrap(env,md):md; },
+      const md=headsOut(markdownOf(editor,dropClaims(editor.getJSON())).markdown,headShift); return env?wrap(env,md):md; },
     setValue:v=>{ const c=load(v); editor.chain().setMeta(ED_QUIET,true).setMeta("addToHistory",false)
       .setContent(c.json??c.html??c.markdown,{ emitUpdate:false, ...(c.markdown!==undefined?{ contentType:"markdown" }:{}) }).run(); touched=false; blank(); },
     touched:()=>touched,
@@ -152,9 +164,9 @@ export function edRange(h,from,to){ const ed=h.editor, doc=ed.state.doc; if(to<=
   const $f=doc.resolve(from), $t=doc.resolve(to);
   if($f.sameParent($t)&&$f.parent.isTextblock){ const cut=$f.parent.cut($f.parentOffset,$t.parentOffset);
     const json={ type:"doc", content:[{ type:"paragraph", ...(cut.content.size?{ content:cut.content.toJSON() }:{}) }] };
-    const text=markdownOf(ed,dropClaims(json)).markdown; return text.trim()?{ from, to, text, inline:true }:null; }
+    const text=headsOut(markdownOf(ed,dropClaims(json)).markdown,h.headShift); return text.trim()?{ from, to, text, inline:true }:null; }
   const a=$f.depth?$f.before(1):from, b=$t.depth?$t.after(1):to;
-  const text=markdownOf(ed,dropClaims({ type:"doc", content:doc.slice(a,b).content.toJSON() })).markdown;
+  const text=headsOut(markdownOf(ed,dropClaims({ type:"doc", content:doc.slice(a,b).content.toJSON() })).markdown,h.headShift);
   return text.trim()?{ from:a, to:b, text, inline:false }:null; }
 /** The editor's selection as an EdRange, or null when nothing (or only spaces) is selected. @param {EdHandle} h */
 export const edSelection=h=>{ const s=h.editor.state.selection; return s.empty?null:edRange(h,s.from,s.to); };
@@ -168,7 +180,7 @@ export function edReplace(h,r,text){ const ed=h.editor; if(ed.isDestroyed) retur
   let content;
   if(h.multiline===false) text=String(text).replace(/\s*[\r\n]+\s*/g," ").trim();   /* a one-line field stays one line (the peek's title) */
   if(h.features==="plain"){ const L=String(text).replace(/\r\n?/g,"\n").split("\n"); content=L.length===1?(L[0]?[{ type:"text", text:L[0] }]:[]):plainDoc(L.join("\n")).content; }
-  else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(String(text))).toJSON().content)||[];
+  else { const blocks=(ed.schema.nodeFromJSON(ed.markdown.parse(headsIn(String(text),h.headShift))).toJSON().content)||[];
     content=r.inline&&blocks.length===1&&blocks[0].type==="paragraph"?(blocks[0].content||[]):blocks; }
   const chain=ed.chain().focus();
   return (content.length?chain.insertContentAt({ from:r.from, to:r.to },content,{ updateSelection:true }):chain.deleteRange({ from:r.from, to:r.to })).run(); }

@@ -13,6 +13,7 @@
      calendar) and the project Prep matched.
    - Recent notes are listed at the foot. It replaces FR-71's Quick capture form (old quick notes stay in minutes/).
    Text only through JSX. */
+import { EditorBar } from "../EditorBar.jsx";
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { signal } from "@preact/signals";
@@ -237,6 +238,7 @@ export function CaptureDrawer() {
         <span>Confidential</span>
         {n.confidential ? <span class="sub">Kept out of prep pages and client reports; Claude reads it only if you say yes</span> : null}
       </label>
+      <EditorBar profile="notes" cls="capbar" handle={() => ed} />
       <div ref={box} id="capBody" class="capbody" role="textbox" aria-multiline="true" aria-label="Note" aria-describedby="capSaved"
         data-ph="Type the note: what was said, what you think, who to follow up…" spellcheck />
       <div class="capfoot">

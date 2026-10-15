@@ -12,3 +12,4 @@ export * from "./fields.js";
 export * from "./keys.js";
 export * from "./motion.js";
 export * from "./editor.js";
+export * from "./editorProfiles.js";
