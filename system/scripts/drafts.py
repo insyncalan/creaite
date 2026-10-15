@@ -73,6 +73,9 @@ FEATURES = {
     "shape": ("Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's "
               "carried over, each line cited"),
 }
+# BL-342 Part 5: counted like a feature, with no switch of its own (Alan, 15-10-2026): the promises a thread's card offers
+# from Alan's own messages. Activity › Quality lists it by this label; Settings › AI drafts lists only FEATURES (the switches).
+COUNTED = {"promise": "Promises from your own messages"}
 # BL-286 (sprint-prep-server): the kind "shape" counts under the feature "shape" (draft-stats.json takes any lower-case feature
 # name) and is on unless settings.json `drafting.shape` is false. Its Settings switch is in FEATURES above (sprint-prep-shape).
 ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")

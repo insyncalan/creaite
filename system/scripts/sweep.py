@@ -1256,6 +1256,7 @@ def conv_record(st, m, vips, how, held, checked=None):
             _bump(checked.setdefault("counts", {}), "replied")
     if checked is not None:
         vip_closes(a, m, checked)                                      # BL-342 Part 3 B, step 9: a close suggestion
+        vip_promises(a, m, checked)                                    # BL-342 Part 5: Alan's promises and a kept promise
     return a
 
 
@@ -1277,12 +1278,9 @@ def card_unchanged(st, a, replied, m=None, checked=None):
     if replied and (a.get("state") or "open") == "open" and replied >= (a.get("last") or ""):
         st["_dirty"] = True
         got = replied_set(a, replied)
-    if checked is not None and m is not None and "closes" in m:
-        before = json.dumps(a.get("closes"), sort_keys=True)
-        vip_closes(a, m, checked, reply_only=True)
-        if json.dumps(a.get("closes"), sort_keys=True) != before:
-            st["_dirty"] = True
-            got = a
+    if checked is not None and m is not None and card_suggestions(a, m, checked):
+        st["_dirty"] = True
+        got = a
     return got
 
 
@@ -1546,6 +1544,7 @@ def card_merge(st, keep, drop):
     keep["candidates"] = conv_merge(older.get("candidates") or [], newer.get("candidates") or [])
     merge_marks(keep, drop)
     merge_closes(keep, drop)
+    merge_promises(keep, drop)                                         # BL-342 Part 5
     merge_state(keep, drop, newer)
     st["alerts"].remove(drop)
     st["_dirty"] = True
@@ -1849,6 +1848,7 @@ def vip_made_refresh():
             if isinstance(m, dict) and not m.get("id"):
                 made_state(m)
                 changed = changed or bool(m.get("id"))
+    changed = promises_refresh(st["alerts"]) or changed               # BL-342 Part 5: a kept promise no longer open
     if changed:
         vip_save(st)
     return st
@@ -2617,16 +2617,19 @@ def vip_open_work():
 def vip_prompt_parts(st=None, zone=None):
     """What the check's prompt is filled with (plain code; the server only formats it): {"open": the open and replied cards as
     JSON ({conversation, kind, subject (mail only), last} in the named zone), "open_work": each project's open actions as JSON,
-    "offered": the action IDs in open_work, "cards": the IDs of the cards in open}. References vip.json already holds and the
-    tracker's own rows; never message text."""
+    "offered": the action IDs in open_work, "cards": the IDs of the cards in open, "open_promises": each project's open
+    promises as JSON (Part 5), "offered_promises": their IDs}. References vip.json already holds and the tracker's own rows;
+    never message text."""
     st, zone = st or vip_state(), zone or local_zone()
     cards = vip_open_cards(st["alerts"])
     asked = [{"conversation": a.get("conv") or a["id"], "kind": a.get("kind") or "teams",
               **({"subject": a.get("subject")} if a.get("kind") == "mail" and a.get("subject") else {}),
               "last": zoned_out(a.get("last"), zone)} for a in cards]
     work, offered = vip_open_work()
+    proms, offered_p = vip_open_promises()                            # BL-342 Part 5
     return {"open": json.dumps(asked, ensure_ascii=False), "open_work": json.dumps(work, ensure_ascii=False),
-            "offered": offered, "cards": [a["id"] for a in cards]}
+            "offered": offered, "cards": [a["id"] for a in cards],
+            "open_promises": json.dumps(proms, ensure_ascii=False), "offered_promises": offered_p}
 
 
 def card_lookup(alerts, keys, ref=None):
@@ -2745,6 +2748,7 @@ def _clean_one(m, ctx):
         _bump(ctx["counts"], "bad_id")
     card = card_lookup(ctx["asked"], conv_keys(m), ref)
     replied = _zoned_field(m, "replied", ctx)
+    promise_times(m, card, ctx)                                        # BL-342 Part 5: each promise's `at`, as `last` is
     if not any(k in m for k in ("summary", "items", "gist")):        # a reply-only object: Alan's newest message in an open card
         return _reply_only(m, card, replied, kind, ctx["counts"])
     return _full_object(m, card, replied, ctx)
@@ -2769,8 +2773,9 @@ def _reply_only(m, card, replied, kind, counts):
         return _bump(counts, "no_reply")
     out = {"kind": card.get("kind") or kind, "_reply": card["id"], "replied": replied,
            "_alan_last": replied >= (card.get("last") or "")}
-    if "closes" in m:
-        out["closes"] = m["closes"]
+    for k in ("closes", "promises", "kept"):                          # BL-342 Part 5: promises and kept, as closes
+        if k in m:
+            out[k] = m[k]
     return out
 
 
@@ -2831,14 +2836,24 @@ def _zoned_field(m, field, ctx):
 def vip_check_line(counts, new, seconds, cost, failed=False):
     """The check's one debug-log line (BL-102): counts, seconds and dollars only, never a subject, address, ID or text."""
     drops = ", ".join(f"{k} {v}" for k, v in sorted(counts.items())
-                      if k not in ("returned", "kept", "replied") and not k.startswith("closes_") and v)
-    closes = ", ".join(f"{k[7:]} {v}" for k, v in sorted(counts.items()) if k.startswith("closes_") and v)
+                      if k not in ("returned", "kept", "replied") and not k.startswith(SUGGESTION_COUNTS) and v)
     money = f"${float(cost):.4f}" if isinstance(cost, (int, float)) else "cost unknown"
     if failed:
         return f"check failed after {seconds:.1f}s, {money}"
+    more = "".join(f", {label} {got}" for label, got in ((label, _prefixed(counts, pre)) for pre, label in SUGGESTION_LABELS)
+                   if got)
     return (f"check: {counts.get('returned', 0)} returned, {counts.get('kept', 0)} kept"
             + (f", dropped {drops}" if drops else "") + f", {len(new)} new or updated, {counts.get('replied', 0)} replied"
-            + (f", closes {closes}" if closes else "") + f", {seconds:.1f}s, {money}")
+            + more + f", {seconds:.1f}s, {money}")
+
+
+SUGGESTION_COUNTS = ("closes_", "promises_", "promisekept_")      # counted on their own part of the line, not as drops
+SUGGESTION_LABELS = (("closes_", "closes"), ("promises_", "promises"), ("promisekept_", "promise kept"))
+
+
+def _prefixed(counts, prefix):
+    """ "kept 1, not_alan 2": the counts under one prefix, by reason."""
+    return ", ".join(f"{k[len(prefix):]} {v}" for k, v in sorted(counts.items()) if k.startswith(prefix) and v)
 
 
 def reply_record(st, m, checked):
@@ -2853,9 +2868,7 @@ def reply_record(st, m, checked):
         changed = a.get("state") == "replied"
         if changed:
             _bump(checked.setdefault("counts", {}), "replied")
-    before = json.dumps(a.get("closes"), sort_keys=True)
-    vip_closes(a, m, checked, reply_only=True)
-    if changed or json.dumps(a.get("closes"), sort_keys=True) != before:
+    if card_suggestions(a, m, checked) or changed:
         st["_dirty"] = True
         return a
     return None
@@ -3168,6 +3181,669 @@ def _take_status(item, before):
     elif item["changes"].get("status") == tracker.CLOSED_STATUSES[0]:
         item["changes"].pop("status")
 # ===== end BL-342 Part 3 B, step 9 =====
+
+
+# ===== BL-342 Part 5: promises from Alan's own messages, and a promise that looks kept =====
+# The one check (live_server.vip_check) also reads, in Alan's own messages in a thread it reports, a commitment he made in
+# passing ("I'll send the revised plan by Friday"), and whether a message shows one of the project's open promises kept.
+# Plain code keeps them only when its rules agree (vip_promises; each drop counted by reason, never with text). Nothing is
+# staged until Alan clicks: "Add a promise" stages one new promise and "Looks kept: mark kept" one change to Done, each a
+# pending proposal for Review (vip_promise_stage, vip_kept_stage), taken back by Undo while it is still pending. Promises
+# made TO Alan are left out (Alan, 15-10-2026). No switch of their own: the kept suggestion follows drafting.done, and
+# Activity › Quality counts the card's promises as the AI-draft feature "promise" (counts only). A confidential thread's
+# promise is staged in neutral words; a private card has none.
+VIP_PROMISES_PER_PROJECT, VIP_PROMISES_MAX = 10, 30
+PROMISES_A_CARD = 3
+PROMISE_WHAT, PROMISE_TITLE, PROMISE_TO = 100, 80, 80
+PROMISE_NEUTRAL = "Follow up on a confidential thread"     # Part 4: a confidential promise is staged in neutral words
+PROMISE_WHY = "From a thread: you promised it in a message you sent"
+PROMISE_WHY_CONFIDENTIAL = "From a confidential thread"
+KEPT_FIXED = "The thread shows it done."                    # a confidential card's kept evidence, never the model's words
+STAGED_NAME = re.compile(r"proposed-[\w.-]+\.json")
+
+
+def _confidential(a):
+    """Whether a card is a confidential thread's."""
+    return a.get("marker") == "confidential" or bool(a.get("confidential"))
+
+
+def _open_promises(con, project):
+    """{id: row} of a project's open promises."""
+    return {r["id"]: dict(r) for r in con.execute(
+        "SELECT id, project, promised_by, promised_to, description, due_date, raised, updated_at FROM promises "
+        "WHERE project = ? AND status = 'Open'", (project,))}
+
+
+def vip_open_promises():
+    """({code: [{id, t, by, to, due}]}, the set of IDs offered): each active project's open promises, soonest due first (no
+    date last), at most VIP_PROMISES_PER_PROJECT a project and VIP_PROMISES_MAX in all. Read only; the tracker's own rows."""
+    out, offered = {}, set()
+    try:
+        with closing(vip_ro()) as con:
+            codes = [r[0] for r in con.execute("SELECT code FROM projects WHERE active = 1 ORDER BY code")]
+            for code in codes:
+                room = min(VIP_PROMISES_PER_PROJECT, VIP_PROMISES_MAX - len(offered))
+                if room <= 0:
+                    break
+                rows = sorted(_open_promises(con, code).values(),
+                              key=lambda r: (r["due_date"] is None, r["due_date"] or "", r["id"]))[:room]
+                if rows:
+                    out[code] = [{"id": r["id"], "t": _clean(r["description"], PROMISE_TITLE), "by": r["promised_by"],
+                                  "to": r["promised_to"], "due": r["due_date"]} for r in rows]
+                    offered.update(r["id"] for r in rows)
+    except Exception:  # noqa: BLE001  no database or no promises: the check runs with none
+        return {}, set()
+    return out, offered
+
+
+def promise_times(m, card, ctx):
+    """In vip_clean: each promise's `at` checked and converted as `last` is (an offset needed, not in the future, not before
+    the window unless the card is an open one); a promise whose time fails is dropped, counted promises_<reason>. What
+    isn't a dict is left for vip_promises to count."""
+    raw = m.get("promises")
+    if not isinstance(raw, list):
+        return
+    kept = []
+    for p in raw:
+        if not isinstance(p, dict):
+            kept.append(p)
+            continue
+        why, at = _promise_at(p.get("at"), card, ctx)
+        if why:
+            _bump(ctx["counts"], "promises_" + why)
+        else:
+            kept.append({**p, "at": at})
+    m["promises"] = kept
+
+
+def _promise_at(text, card, ctx):
+    """(why it fails, "") or ("", the local "YYYY-MM-DD HH:MM")."""
+    got = zoned_in(text, ctx["zone"])
+    if got is None:
+        return "no_zone", ""
+    if got[0] > ctx["limit"]:
+        return "future", ""
+    if ctx["floor"] and got[0] < ctx["floor"] and card is None:
+        return "old", ""
+    return "", got[0]
+
+
+def card_suggestions(a, m, checked):
+    """An object that doesn't make the card new (a reply-only object, or a thread with nothing newer): its close (Part 3 B)
+    and its promises (Part 5) are still read. True when either changed the card."""
+    before = json.dumps([a.get(k) for k in ("closes", "promises", "kept")], sort_keys=True)
+    vip_closes(a, m, checked, reply_only=True)
+    vip_promises(a, m, checked, reply_only=True)
+    return json.dumps([a.get(k) for k in ("closes", "promises", "kept")], sort_keys=True) != before
+
+
+def vip_promises(a, found, checked, reply_only=False):
+    """Part 5: keep the model's promises (Alan's own, new) and its kept promise on a card only when code agrees (plain code;
+    each drop counted by reason as promises_<why> or promisekept_<why>, never with text). Rules for a new promise:
+      1. a private card: none (and an offered one goes); a card with no project: none ("no_project");
+      2. a list of dicts ("shape"), at most PROMISES_A_CARD, the first by time ("over");
+      3. `what` in creaite's words: at least three words ("vague"), no quotation of more than eight words ("quoted");
+      4. `to` a person (the people register's full name where known), not Alan himself ("self"), not empty ("no_to");
+      5. `at` (checked in vip_clean) is Alan's own message: the reply's `replied`, or the newest message's when Alan sent it
+         ("not_alan");
+      6. `due` a real date on or after that message's day, else none (the staged promise is flagged no-due-date);
+      7. not a repeat of an open promise of the project or of one the card holds or held ("repeat");
+      8. kept on the card as a["promises"] = [{key, what, to, due, at, state: offered | staged | dismissed | done}].
+    The kept promise: vip_kept_checked. Nothing is staged here."""
+    counts = checked.setdefault("counts", {})
+    if a.get("marker") == "private":
+        _promises_private(a, found, counts)
+        return
+    _new_promises(a, found, counts)
+    _kept_one(a, found, checked, reply_only)
+
+
+def _promises_private(a, found, counts):
+    """A private card holds no promise and no kept one (a staged one stays, so Undo still reaches it)."""
+    raw = found.get("promises")
+    n = len(raw) if isinstance(raw, list) else 0
+    if n:
+        _bump(counts, "promises_private", n)
+    if isinstance(found.get("kept"), dict):
+        _bump(counts, "promisekept_private")
+    staged = [p for p in a.get("promises") or [] if isinstance(p, dict) and p.get("state") in ("staged", "done")]
+    a.pop("promises", None)
+    if staged:
+        a["promises"] = staged
+    if isinstance(a.get("kept"), dict) and not a["kept"].get("staged"):
+        a.pop("kept")
+
+
+def _promise_list(a, raw, counts):
+    """Rules 1 and 2: the reply's promises as a list of dicts, the first PROMISES_A_CARD by time; [] when there are none to
+    check (none given, not a list, or a card with no project)."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        _bump(counts, "promises_shape")
+        return []
+    items = [p for p in raw if isinstance(p, dict)]
+    if len(items) < len(raw):
+        _bump(counts, "promises_shape", len(raw) - len(items))
+    if items and not a.get("p"):
+        _bump(counts, "promises_no_project", len(items))
+        return []
+    if len(items) > PROMISES_A_CARD:
+        _bump(counts, "promises_over", len(items) - PROMISES_A_CARD)
+    return sorted(items, key=lambda p: str(p.get("at") or ""))[:PROMISES_A_CARD]
+
+
+def _new_promises(a, found, counts):
+    """Rules 1 to 8 for the promises the reply gives (vip_promises)."""
+    items = _promise_list(a, found.get("promises"), counts)
+    if not items:
+        return
+    have = [p for p in a.get("promises") or [] if isinstance(p, dict)]
+    known = {p.get("key") for p in have} | {norm(p.get("what")) for p in have}
+    opened = _open_norms(a["p"])
+    for p in items:
+        why, got = _promise_checked(a, found, p, opened | known)
+        if why:
+            _bump(counts, "promises_" + why)
+            continue
+        have.append(got)
+        known |= {got["key"], norm(got["what"])}
+        _bump(counts, "promises_offered")
+        extraction.count("promise", "offered")
+    if have:
+        a["promises"] = have
+
+
+def _promise_checked(a, found, p, seen):
+    """(why it is dropped, None) or ("", the card's promise): rules 3 to 7."""
+    what = _clean(p.get("what"), PROMISE_WHAT) if isinstance(p.get("what"), str) else ""
+    if len(what.split()) < 3:
+        return "vague", None
+    if _quotes_long(what):
+        return "quoted", None
+    to, why = _promise_to(p.get("to"))
+    if why:
+        return why, None
+    at = str(p.get("at") or "")
+    if not _alan_said_at(found, at):
+        return "not_alan", None
+    key = _pkey(a["id"], what)
+    if key in seen or norm(what) in seen:
+        return "repeat", None
+    return "", {"key": key, "what": what, "to": to, "due": _promise_due(p.get("due"), at), "at": at, "state": "offered"}
+
+
+def _promise_to(raw):
+    """(the full name, "") or ("", why not): a name the people register knows becomes its full name; one it doesn't is kept as
+    written (Review flags it); Alan himself is "self"; empty is "no_to"."""
+    name = _clean(raw, PROMISE_TO) if isinstance(raw, str) else ""
+    if not name:
+        return "", "no_to"
+    try:
+        import propose
+        res = propose.resolve_person(name, *propose.people_pool())
+    except Exception:  # noqa: BLE001  no register: the name stays as written
+        res = {}
+    full = res.get("name") if res.get("status") in ("known", "alias", "email") and res.get("name") else name
+    return ("", "self") if _is_alan(full) else (full, "")
+
+
+def _is_alan(name):
+    """Whether a name is Alan's: his full name from identity, or a sender the full-name rule says is him."""
+    me = my_name()
+    return bool(me and str(name or "").strip().lower() == me.lower()) or _alan_wrote(name)
+
+
+def _alan_said_at(found, at):
+    """Whether the message at `at` is Alan's: the reply's `replied`, or the newest message's time when he sent it (to the
+    minute)."""
+    if not at:
+        return False
+    if found.get("replied") and _when(found["replied"]) == at:
+        return True
+    return bool(found.get("last")) and _when(found["last"]) == at and _alan_wrote(found.get("last_from"))
+
+
+def _promise_due(raw, at):
+    """A real date on or after the message's day, else None."""
+    d = real_date(raw)
+    return d if d and d >= str(at)[:10] else None
+
+
+def _pkey(aid, what):
+    """A promise's key on its card: the card ID and the promise's words, normalised."""
+    import hashlib
+    return hashlib.sha1(f"{aid}|{norm(what)}".encode("utf-8")).hexdigest()[:12]
+
+
+def _open_norms(project):
+    """The normalised words of a project's open promises (a repeat of one is never offered)."""
+    try:
+        with closing(vip_ro()) as con:
+            return {norm(r["description"]) for r in _open_promises(con, project).values()}
+    except Exception:  # noqa: BLE001  no database: nothing to compare with
+        return set()
+
+
+def _promise_row(project, pid):
+    """The open promise pid of the project, or None."""
+    if "-P-" not in str(pid) or not project:
+        return None
+    try:
+        with closing(vip_ro()) as con:
+            return _open_promises(con, project).get(pid)
+    except Exception:  # noqa: BLE001  no database: nothing can be checked, so nothing is suggested
+        return None
+
+
+def _kept_one(a, found, checked, reply_only):
+    """The kept promise the reply gives, checked (vip_kept_checked); kept as a["kept"] = {id, evidence, who, at}. A full object
+    without one takes back an unstaged one (the thread moved on); a staged one is never changed."""
+    counts = checked["counts"]
+    raw, old = found.get("kept"), a.get("kept") if isinstance(a.get("kept"), dict) else None
+    if old and old.get("staged"):
+        return old
+    why, new = ("", None) if raw is None else vip_kept_checked(a, found, raw, checked, reply_only)
+    if new is None:
+        if why:
+            _bump(counts, "promisekept_" + why)
+        if not reply_only:
+            a.pop("kept", None)
+        return None
+    if not (old and (old.get("id"), old.get("evidence")) == (new["id"], new["evidence"])):
+        extraction.count("done", "offered")                            # it follows Spot items that are probably done
+    a["kept"] = new
+    _bump(counts, "promisekept_offered")
+    return new
+
+
+def vip_kept_checked(a, found, raw, checked, reply_only):
+    """(why it is dropped, None) or ("", {id, evidence, who, at}). Rules: 1. a dict with a string id and evidence ("shape"),
+    drafting.done on ("off"); 2. an open promise of the card's own project ("not_open") that this check offered
+    ("not_offered"); 3. kept by Alan's own message when he made it, or by the newest message from whoever made it
+    ("not_owner"), raised on or before that day ("raised_after"); 4. evidence in creaite's own words ("no_evidence",
+    "quoted"; a confidential card's is the fixed KEPT_FIXED)."""
+    if not (isinstance(raw, dict) and isinstance(raw.get("id"), str) and isinstance(raw.get("evidence"), str)):
+        return "shape", None
+    if not extraction.switched_on("done"):
+        return "off", None
+    pid = raw["id"].strip().upper()
+    row = _promise_row(a.get("p"), pid)
+    if row is None:
+        return "not_open", None
+    if pid not in (checked.get("offered_promises") or set()):
+        return "not_offered", None
+    who, at = _kept_who(a, found, row, reply_only)
+    if not who:
+        return "not_owner", None
+    if (row.get("raised") or "") > at[:10]:
+        return "raised_after", None
+    ev, why = _close_evidence(a, raw["evidence"], found.get("summary"))
+    if why:
+        return why, None
+    return "", {"id": pid, "evidence": KEPT_FIXED if _confidential(a) else ev, "who": who, "at": at}
+
+
+def _kept_who(a, found, row, reply_only):
+    """(who kept it, when): Alan, by his own newest message, for a promise he made; the person who made it, by the newest
+    message being theirs, for anyone else's; (None, "") otherwise."""
+    by = str(row.get("promised_by") or "")
+    if _is_alan(by):
+        alan_last = found.get("_alan_last") or (not reply_only and _alan_wrote(found.get("last_from")))
+        return (my_name() or "Alan", found.get("replied") or a.get("last") or "") if alan_last else (None, "")
+    if not reply_only and found.get("last_from") and extraction.is_person(found["last_from"], by, extraction.people()):
+        return by, a.get("last") or ""
+    return None, ""
+
+
+def merge_promises(keep, drop):
+    """Two cards for one thread (card_merge): the kept card holds both cards' promises (one of each) and a kept promise; a
+    staged one wins over an unstaged one, and when both are staged the dropped one's is carried in kept_more, so Undo on the
+    kept card takes both back. A staged promise's proposal names the dropped card, which is in keep["ids"]."""
+    have = [p for p in keep.get("promises") or [] if isinstance(p, dict)]
+    seen = {p.get("key") for p in have} | {norm(p.get("what")) for p in have}
+    for p in drop.get("promises") or []:
+        if isinstance(p, dict) and p.get("key") not in seen and norm(p.get("what")) not in seen:
+            have.append(p)
+            seen |= {p.get("key"), norm(p.get("what"))}
+    if have:
+        keep["promises"] = have
+    merge_kept(keep, drop)
+
+
+def merge_kept(keep, drop):
+    """merge_promises's kept promise: a staged one wins over an unstaged one; both staged, the dropped one's goes in
+    kept_more."""
+    kk = keep.get("kept") if isinstance(keep.get("kept"), dict) else None
+    dk = drop.get("kept") if isinstance(drop.get("kept"), dict) else None
+    more = [k for k in (keep.get("kept_more") or []) + (drop.get("kept_more") or []) if isinstance(k, dict)]
+    if dk and (not kk or (dk.get("staged") and not kk.get("staged"))):
+        keep["kept"] = dk
+    elif dk and dk.get("staged"):
+        more.append({**dk, "staged": {**dk["staged"], "card": dk["staged"].get("card") or drop.get("id")}})
+    if more:
+        keep["kept_more"] = more
+
+
+# ----- Part 5: staging on Alan's click (hold LOCK then VIP_WRITE around each; the route does) -----
+
+def _card_ready(st, aid):
+    """The card, ready for a click that stages: it exists, isn't private, handled or seen. Raises LookupError or ValueError."""
+    a = _card_any(st, aid)
+    if a.get("marker") == "private":
+        raise ValueError("No promises for a private conversation.")
+    if a.get("state") == "handled":
+        raise ValueError("This thread is handled: nothing to stage.")
+    if a.get("seen"):
+        raise ValueError("This thread was marked seen: nothing to stage.")
+    return a
+
+
+def _card_any(st, aid):
+    """The card with this ID (any state); raises LookupError."""
+    a = next((x for x in st["alerts"] if x.get("id") == aid), None)
+    if a is None:
+        raise LookupError("That thread isn't on Today any more.")
+    return a
+
+
+def _card_promise(a, key):
+    """The card's promise with this key; raises ValueError."""
+    p = next((x for x in a.get("promises") or [] if isinstance(x, dict) and x.get("key") == key and key), None)
+    if p is None:
+        raise ValueError("That promise isn't on this thread any more.")
+    return p
+
+
+def _not_staged_yet(staged, state):
+    """Raise when a staged proposal is still pending or was decided; a gone one may be staged again."""
+    if not isinstance(staged, dict):
+        return
+    got = state(staged)
+    if got == "staged":
+        raise ValueError("Already staged for Review.")
+    if got in ("decided", "applied"):
+        raise ValueError("Already decided in Review.")
+
+
+def _promise_item(data, key):
+    """The new promise a card staged in a proposal (by its key), or None."""
+    return next((i for i in data.get("items") or [] if i.get("op") == "new" and i.get("table") == "promises"
+                 and (i.get("suggested") or {}).get("key") == key), None)
+
+
+def promise_state(staged, key):
+    """Where a staged promise is: "staged" (pending in Review), "decided", "applied" or "gone"."""
+    name = str((staged or {}).get("proposal") or "")
+    if not STAGED_NAME.fullmatch(name):
+        return "gone"
+    for d, state in ((paths.STAGING, None), (paths.APPLIED, "applied")):
+        try:
+            data = json.loads((d / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):                              # not in this folder (or unreadable): look in the other
+            continue
+        item = _promise_item(data, key)
+        if item is None:
+            return "gone"
+        return state or ("staged" if item.get("decision") == "pending" else "decided")
+    return "gone"
+
+
+def _open_like(project, what):
+    """The ID of an open promise of the project with the same words, or None."""
+    try:
+        with closing(vip_ro()) as con:
+            return next((pid for pid, r in _open_promises(con, project).items() if norm(r["description"]) == norm(what)), None)
+    except Exception:  # noqa: BLE001  no database: propose.check still validates the proposal
+        return None
+
+
+def _map_people(item):
+    """The promise's two people as the people register names them; one it doesn't know is flagged unknown-owner for Review."""
+    if not paths.PEOPLE_REGISTER.is_file():
+        return
+    try:
+        import propose
+        _, unknown = propose.map_owner_fields(item, *propose.people_pool())
+    except Exception:  # noqa: BLE001  mapping is a nicety: Review still shows the name as written
+        return
+    if unknown:
+        item["flags"] = list(dict.fromkeys(item["flags"] + ["unknown-owner"]))
+
+
+def _new_promise_spec(a, p, key, me):
+    """One pending new promise for Review: Alan's, to the person named, from the thread (neutral words for a confidential
+    thread), suggested.feature "promise" with the card and the key."""
+    import propose
+    conf = _confidential(a)
+    values = {"project": a["p"], "promised_by": me, "promised_to": p["to"],
+              "description": PROMISE_NEUTRAL if conf else p["what"],
+              "raised": (_when(p.get("at")) or now().strftime("%Y-%m-%d %H:%M"))[:10], "source": _thread_source(a)}
+    if p.get("due"):
+        values["due_date"] = p["due"]
+    item = {"n": 1, "op": "new", "table": "promises", "values": values,
+            "why": PROMISE_WHY_CONFIDENTIAL if conf else PROMISE_WHY,
+            "suggested": {"feature": "promise", "threads": [a["id"]], "key": key}, "match": "strong",
+            "flags": [] if p.get("due") else ["no-due-date"], "decision": "pending", "edited_in": "dashboard"}
+    _map_people(item)
+    spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [], "items": [item]}
+    return propose.complete(spec)
+
+
+def _write_new(spec):
+    """Write a proposal to a new file in staging; its name."""
+    out = _free_name()
+    paths.STAGING.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return out.name
+
+
+def vip_promise_stage(aid, key):
+    """"Add a promise" on a card (Alan's click): one pending new promise for Review, checked by propose.check (an invalid one
+    is refused with the reason). Returns {"proposal", "key", "state": "staged", "message"}; raises LookupError or ValueError
+    with a reason to show (private, handled, seen, dismissed, already staged or decided, no name in Settings, no project,
+    already an open promise)."""
+    st = vip_state()
+    a = _card_ready(st, aid)
+    p = _card_promise(a, key)
+    if p.get("state") == "dismissed":
+        raise ValueError("That promise was dismissed: Undo the dismiss first.")
+    _not_staged_yet(p.get("staged"), lambda s: promise_state(s, key))
+    me = my_name()
+    if not me:
+        raise ValueError("Add your name in Settings first: a promise needs who made it.")
+    if not a.get("p"):
+        raise ValueError("This thread has no project, so there's nothing to add the promise to.")
+    dup = _open_like(a["p"], p.get("what"))
+    if dup:
+        raise ValueError(f"{dup} is already open for this.")
+    spec = _new_promise_spec(a, p, key, me)
+    _checked(spec)
+    name = _write_new(spec)
+    p.update({"state": "staged", "staged": {"proposal": name, "at": now().strftime("%Y-%m-%d %H:%M")}})
+    vip_save(st)
+    return {"proposal": name, "key": key, "state": "staged", "message": "Staged the promise for Review."}
+
+
+def _take_item(out, match, cards):
+    """Take the card's own pending item out of a proposal file (the first item `match` accepts whose suggested.threads names
+    one of `cards`); an empty file is deleted. Refused when Alan changed it in Review (it is his to decide there)."""
+    spec = json.loads(out.read_text(encoding="utf-8"))
+    item = next((i for i in spec.get("items") or [] if match(i) and set((i.get("suggested") or {}).get("threads") or []) & cards),
+                None)
+    if item is None:
+        return
+    if item.get("as_proposed"):
+        raise ValueError("You changed it in Review, so decide it there.")
+    spec["items"].remove(item)
+    for n, it in enumerate(spec["items"], 1):
+        it["n"] = n
+    if spec["items"]:
+        out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    else:
+        out.unlink()
+
+
+def _card_ids(a, *more):
+    """The card's own ID, the IDs of cards merged into it, and any more given."""
+    return {x for x in [a["id"], *(a.get("ids") or []), *more] if x}
+
+
+def vip_promise_unstage(aid, key):
+    """Undo "Add a promise" while it is still pending in Review: takes out exactly the item the click staged (an empty file
+    is deleted) and the card's promise is offered again. Raises ValueError ("Already decided in Review" once decided)."""
+    st = vip_state()
+    a = _card_any(st, aid)
+    p = _card_promise(a, key)
+    was = p.get("staged") if isinstance(p.get("staged"), dict) else None
+    if not was:
+        raise ValueError("Nothing staged to undo.")
+    state = promise_state(was, key)
+    if state in ("decided", "applied"):
+        raise ValueError("Already decided in Review.")
+    if state == "staged":
+        _take_item(paths.STAGING / str(was["proposal"]), lambda i: _promise_item({"items": [i]}, key) is not None,
+                   _card_ids(a))
+    p.pop("staged", None)
+    p["state"] = "offered"
+    vip_save(st)
+    return {"proposal": str(was.get("proposal") or ""), "key": key, "state": "undone",
+            "message": "Took the promise back out of Review."}
+
+
+def vip_promise_dismiss(aid, key, undo=False):
+    """Dismiss a card's promise (nothing is staged), or with undo put it back."""
+    st = vip_state()
+    a = _card_any(st, aid)
+    p = _card_promise(a, key)
+    if undo:
+        p["state"] = "offered" if p.get("state") == "dismissed" else p.get("state")
+    elif p.get("state") == "staged":
+        raise ValueError("It's staged for Review: Undo that first.")
+    else:
+        p["state"] = "dismissed"
+    vip_save(st)
+    return {"key": key, "state": p["state"], "message": "Promise back on the card." if undo else "Promise dismissed."}
+
+
+def _kept_spec(a, k, row):
+    """One pending change of the promise to Done, marked as a probably-done update (suggested.feature "done"), so Review
+    holds it on its own and shows it as Looks done in creaite's words."""
+    import propose
+    conf = _confidential(a)
+    said = KEPT_FIXED if conf else _clean(k.get("evidence"), CLOSE_EVIDENCE).rstrip(". ")
+    ev = {"kind": "teams" if a.get("kind") == "teams" else "mail", "at": str(k.get("at") or "")[:16],
+          **({} if conf else {"who": str(k.get("who") or "")[:80]}), "said": said, "source": _thread_source(a)[:500]}
+    item = {"n": 1, "op": "update", "table": "promises", "id": k["id"], "changes": {"status": "Done"},
+            "based_on": row["updated_at"], "source": _thread_source(a),
+            "why": "Looks kept: from a confidential thread" if conf else f"Looks kept: {said}"[:200],
+            "suggested": {"feature": "done", "strength": "Looks done", "reason": "", "evidence": ev, "threads": [a["id"]]},
+            "match": "strong", "flags": [], "decision": "pending", "edited_in": "dashboard"}
+    spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [], "items": [item]}
+    return propose.complete(spec)
+
+
+def _pending_kept(pid):
+    """Whether a pending change of this promise to Done or Dropped is already staged (from any card or anywhere else)."""
+    for f in sorted(paths.STAGING.glob("proposed-*.json")):
+        try:
+            spec = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue                                                    # an unreadable proposal isn't one to match
+        if any(i.get("op") == "update" and i.get("table") == "promises" and i.get("id") == pid
+               and i.get("decision") == "pending" and (i.get("changes") or {}).get("status") in ("Done", "Dropped")
+               for i in spec.get("items") or []):
+            return True
+    return False
+
+
+def vip_kept_stage(aid):
+    """"Looks kept: mark kept" (Alan's click): one pending change of the promise to Done for Review. Checked again at the
+    click: not private, handled or seen; Spot items that are probably done still on; the promise still open in the card's
+    project; nothing pending for it already. Returns {"proposal", "id", "state": "staged", "message"}."""
+    st = vip_state()
+    a = _card_ready(st, aid)
+    k = a.get("kept") if isinstance(a.get("kept"), dict) else None
+    if not k or not isinstance(k.get("id"), str) or not k["id"]:
+        raise ValueError("Nothing on this thread looks kept.")
+    if not extraction.switched_on("done"):
+        raise ValueError("Looks done suggestions are switched off in Settings.")
+    _not_staged_yet(k.get("staged"), lambda s: logged_state(s, k["id"]))
+    row = _promise_row(a.get("p"), k["id"])
+    if row is None:
+        raise ValueError(f"{k['id']} isn't open any more.")
+    if _pending_kept(k["id"]):
+        raise ValueError("Already staged for Review.")
+    spec = _kept_spec(a, k, row)
+    _checked(spec)
+    name = _write_new(spec)
+    k["staged"] = {"proposal": name, "at": now().strftime("%Y-%m-%d %H:%M"), "card": aid}
+    vip_save(st)
+    return {"proposal": name, "id": k["id"], "state": "staged", "message": f"Staged {k['id']} as kept for Review."}
+
+
+def _kept_take(k, cards):
+    """Take one staged kept change out of Review (vip_kept_unstage); raises ValueError once it was decided."""
+    was = k.get("staged") if isinstance(k.get("staged"), dict) else None
+    if not was:
+        return
+    state = logged_state(was, k.get("id"))
+    if state in ("decided", "applied"):
+        raise ValueError("Already decided in Review.")
+    if state == "staged":
+        _take_item(paths.STAGING / str(was["proposal"]),
+                   lambda i: i.get("op") == "update" and i.get("table") == "promises" and i.get("id") == k.get("id"),
+                   cards | {was.get("card")})
+
+
+def vip_kept_unstage(aid):
+    """Undo "mark kept" while it is still pending in Review: takes out exactly the item the click staged (and one carried from
+    a card merged into this one); an empty file is deleted. Raises ValueError ("Already decided in Review")."""
+    st = vip_state()
+    a = _card_any(st, aid)
+    k = a.get("kept") if isinstance(a.get("kept"), dict) else {}
+    if not isinstance(k.get("staged"), dict):
+        raise ValueError("Nothing staged to undo.")
+    cards = _card_ids(a)
+    for one in [k] + [m for m in a.get("kept_more") or [] if isinstance(m, dict)]:
+        _kept_take(one, cards)
+    k.pop("staged", None)
+    a.pop("kept_more", None)
+    vip_save(st)
+    return {"id": k.get("id"), "state": "undone", "message": f"Took {k.get('id')} back out of Review."}
+
+
+PROMISE_ACTIONS = {("add", False): vip_promise_stage, ("add", True): vip_promise_unstage,
+                   ("kept", False): lambda aid, key: vip_kept_stage(aid), ("kept", True): lambda aid, key: vip_kept_unstage(aid),
+                   ("dismiss", False): vip_promise_dismiss,
+                   ("dismiss", True): lambda aid, key: vip_promise_dismiss(aid, key, undo=True)}
+
+
+def vip_promise_action(aid, what, key="", undo=False):
+    """The route's one entry (/api/alerts/promise): what is "add", "kept" or "dismiss", by the card's ID and the promise's key
+    (never its position or words); undo takes it back. Raises LookupError or ValueError with a reason to show."""
+    fn = PROMISE_ACTIONS.get((str(what or ""), bool(undo)))
+    if fn is None:
+        raise ValueError("Add, kept or dismiss?")
+    return fn(str(aid or ""), str(key or ""))
+
+
+def promises_refresh(alerts):
+    """What the page shows follows the tracker: a kept promise no longer open is marked open: False (the card hides it), and a
+    staged promise decided or applied in Review is done. Returns whether anything changed (the caller saves)."""
+    changed = False
+    for a in alerts:
+        k = a.get("kept") if isinstance(a.get("kept"), dict) else None
+        if k and k.get("id"):
+            still = _promise_row(a.get("p"), k["id"]) is not None
+            changed = changed or k.get("open", True) != still
+            k["open"] = still
+        for p in a.get("promises") or []:
+            if isinstance(p, dict) and p.get("state") == "staged" and promise_state(p.get("staged"), p.get("key")) in (
+                    "decided", "applied"):
+                p["state"], changed = "done", True
+    return changed
+# ===== end BL-342 Part 5 =====
 
 
 if __name__ == "__main__":

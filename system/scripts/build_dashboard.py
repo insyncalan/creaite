@@ -2513,6 +2513,7 @@ def sweep_alerts(settings):
     seen (Today's VIP block) and the VIP settings."""
     import sweep                                    # read only: the rules and the alerts as sweep.py keeps them
     st, vs = sweep.vip_state(), sweep.vip_settings()
+    sweep.promises_refresh(st["alerts"])           # BL-342 Part 5: a kept promise no longer open is hidden (not saved here)
     import prep_page
     return {"ignore": sweep.ignore_rules(),
             "prep_pages": prep_page.latest(),                  # BL-98: Open last prep page

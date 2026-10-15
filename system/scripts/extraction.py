@@ -530,6 +530,8 @@ def count_decision(item, decision):
     sg = item.get("suggested") or {}
     if (sg.get("feature") == "done" or sg.get("done")) and decision in ("approved", "rejected"):   # BL-342: a thread's close too
         count("done", "rejected" if decision == "rejected" else "edited" if item.get("as_proposed") else "used")
+    if sg.get("feature") == "promise" and decision in ("approved", "rejected"):           # BL-342 Part 5: a card's promise
+        count("promise", "rejected" if decision == "rejected" else "edited" if item.get("as_proposed") else "used")
 
 
 # ===== BL-297 (sprint-smart-updates) ===== Smarter updates: the signals that tie a message or meeting to an item already open, used by
