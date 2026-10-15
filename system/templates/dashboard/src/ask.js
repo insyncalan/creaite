@@ -2,6 +2,8 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openSpace } from "./components/reporting/ReportingSpace.jsx";
+import { clientReportHref, needsMe, thisWeek, weeklyHref } from "./stores/reporting.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
 import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
@@ -923,11 +925,14 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gowork]")
 /* ======================= command palette ======================= */
 shared.CK=[]; shared.CKI=0;
 export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const add=(g,l,h,fn,kw)=>{ if(!q||(l+" "+h+" "+(kw||"")).toLowerCase().includes(q)) out.push({g,l,h,fn}); };   /* kw: words that find it without showing (a project's code) */
-  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length;
-  [["today","Today",""],["inbox","Intake",nNew?`${nNew} new`:""],["projects","Projects",""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["review","Review",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
+  const nNew=(D.inbox||[]).filter(f=>f.state==="new").length, nRep=needsMe().length;   /* BL-337 */
+  [["today","Today",""],["inbox","Intake",nNew?`${nNew} new`:""],["projects","Projects",""],["reports","Reports",nRep?`${nRep} need${nRep===1?"s":""} you`:""],["work","Work",""],["people","People",""],["mine","Your commitments",""],["review","Review",""],["files","Files",""],["activity","Activity",""],["settings","Settings",""],["help","Help",""]].forEach(([v,l,h])=>add("Go to",l,h,()=>go(v)));
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
+  if(q) P.forEach(p=>add("Reporting",`Weekly report: ${p.name}`,"this week's weekly view",()=>{ location.hash=weeklyHref(p.code,thisWeek()); },`weekly report ${p.code}`));   /* P6's address; opens once P6 merges */
+  if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
+  if(q) P.forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>{ location.hash=clientReportHref(p.code,thisWeek(),(p.client||"").trim()||"Client"); },`client report ${p.code}`));   /* P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });
   add("Actions","Add files to Intake","",()=>{ go("inbox"); $("#inboxFile").click(); });
   if(nNew) add("Actions","Process new Intake files",`${nNew} new`,()=>{ go("inbox"); $("#inboxNew").click(); });

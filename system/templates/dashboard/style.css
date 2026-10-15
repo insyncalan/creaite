@@ -3381,3 +3381,34 @@ tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
 #v-clientreport .sheet-a4 .page .cropts button{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
 #v-clientreport .sheet-a4 .page .cropts button[aria-pressed="true"]{border-color:var(--paper-link);background:var(--paper-sunk)}
 /* ===== end v2.1.0 P8 ===== */
+/* ===== BL-337 (v2.1.0 P9) ===== Reports, the reporting space and the cockpit's Reporting card (components/reporting/) */
+.rp .chip{display:inline-flex;align-items:center;gap:4px;min-height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font:500 var(--fs-xs)/16px var(--font);white-space:nowrap}
+.rp .chip.ok,.rp-cockcard .chip.ok{background:var(--ok-soft);color:var(--ok)} .rp .chip.warn,.rp-cockcard .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.rp .chip.plan,.rp-cockcard .chip.plan{background:var(--accent-soft);color:var(--accent)}
+.rp-cockcard .chip{display:inline-flex;align-items:center;min-height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font:500 var(--fs-xs)/16px var(--font);white-space:nowrap}
+.rp .btn.sm,.rp-cockcard .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary,.rp-cockcard .btn.primary{color:var(--accent-ink)}
+.rp-both{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;border:1px dashed var(--accent);border-radius:var(--r-md);padding:10px 14px;background:var(--accent-soft);margin-bottom:16px}
+.rp-both a.btn{text-decoration:none}
+.rp-both.solid{border-style:solid}
+.rp-tbl{overflow-x:auto} .rp-tbl td{vertical-align:top} .rp-cl{display:grid;gap:4px}
+.rp-grow{flex:1}
+.rp-space{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.rp-space{grid-template-columns:minmax(0,1fr)}}
+.rp-weeks{display:grid;gap:4px;align-content:start}
+.rp-wk{display:grid;gap:4px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:8px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.rp-wk[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)} .rp-wk .l{font-weight:600;font-size:var(--fs-sm)} .rp-wk .s{display:flex;gap:4px;flex-wrap:wrap}
+.rp-main{display:grid;gap:12px;min-width:0}
+.rp-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:700px){.rp-pair{grid-template-columns:minmax(0,1fr)}}
+.rp-card{border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface);align-content:start;min-width:0}
+.rp-card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .rp-card .top b{font-size:var(--fs-lg)}
+.rp-card .acts,.rp-cockcard .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rp-thumb{height:150px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:10px 12px;display:grid;gap:6px;align-content:start}
+.rp-thumb i{display:block;height:8px;border-radius:2px;background:var(--line-strong)}
+.rp-thumb .rp-flag{height:18px;width:60px} .rp-flag[data-kind="internal"]{background:var(--warn)} .rp-flag[data-kind="client"]{background:var(--ok)}
+i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:80%} i.w85{width:85%} i.w90{width:90%} i.tall{height:26px}
+.rp-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:var(--fs-sm)} .rp-kv span:nth-child(odd){color:var(--muted)}
+.rp-files h2{margin-bottom:8px} .rp-files>div{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .rp-files>div:last-child{border-bottom:0}
+.rp-files .g{flex:1;min-width:0;overflow-wrap:anywhere}
+.rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
+.rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
+/* ===== end BL-337 ===== */

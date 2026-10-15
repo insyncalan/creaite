@@ -56,7 +56,7 @@ export function revGroupTitle(file,items){ const w=file.match(/^proposed-(\d{4}-
 export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-319 (Alan, 14-10-2026): proposals are To decide's alone, so Needs attention has no per-meeting groups (nor their Approve n routine); a followed person's messages lead To decide too (BL-288) */
   if(S.remindersOn){ const hide=[...dismissedF(),...dismissedS()];
     REMINDERS.filter(r=>!hide.includes(r.id)).forEach(r=>out.push({reminder:r.id,html:n=>tl(n,
-      tLink(r.id.startsWith("client:")?`data-cock="${r.id.split(":")[1]}"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:'data-go="projects"',esc(longText(r.text))),
+      tLink(r.id.startsWith("client:")?`data-cock="${r.id.split(":")[1]}"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:r.id.startsWith("weekly:")?'data-go="reports"':'data-go="projects"',esc(longText(r.text))),
       `${remBody(r)}${RUNNING.has(r.id)?' <span class="tag">Running…</span>':""}${r.vip?` ${r.vip} message${r.vip===1?"":"s"} about it not yet seen: check ${r.vip===1?"it":"them"} first.`:""}`,
       `${remBtn(r)}<span class="rm"><button class="dots" type="button" aria-label="Options: ${esc(r.text)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
       `class="rem" data-id="${r.id}"`)})); }

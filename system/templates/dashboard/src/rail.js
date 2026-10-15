@@ -51,7 +51,7 @@ function railCustClosed() { railCustOpen.value = false; const o = RAILOPENER; RA
 /** The current page's rail key, from the view (a project page is Projects, a person People, Help Settings). */
 export function renderRail() {
   let cur = "";
-  try { cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today" }[shared.VIEW] || shared.VIEW; } catch (x) { /* VIEW not set yet */ }
+  try { cur = { cockpit: "projects", mine: "work", help: "settings", person: "people", milestones: "projects", meeting: "today", reporting: "projects" }[shared.VIEW] || shared.VIEW; } catch (x) { /* VIEW not set yet */ }
   setRailView(cur);
 }
 

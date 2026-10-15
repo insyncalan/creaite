@@ -92,6 +92,11 @@ SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.qu
 # v2.1.0 P6: the weekly report view (the snapshot vault's ABC project; the report is built by /api/report/draft, nothing is written).
 SCREENS["weekly"] = ("go('weekly',{code:'ABC'})", "document.querySelector('#v-weekly section[data-id=current_state]')", "#v-weekly")
 
+# BL-337 (v2.1.0 P9): Reports, a project's reporting space, and its editor view (Side by side), so the sweep reaches them
+SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.click()",
+                      "document.querySelector('#v-reports tbody tr')", "#v-reports")
+SCREENS["reporting"] = ("openSpace('ABC')", "document.querySelector('#v-reporting .rp-card')", "#v-reporting")
+
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
 # (arrow keys on the grip); the project page's flow chart bars (the same counts are links in the card's table).

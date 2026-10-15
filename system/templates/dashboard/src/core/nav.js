@@ -19,6 +19,9 @@ import { HUB, renderMeeting } from "../meetings.js";
 import { renderPrep } from "../components/prep/PrepPage.jsx";
 import { parseWeekly, renderWeekly, weeklyKey } from "../components/report/weekly/WeeklyView.jsx";
 import { clientReportKey, parseKey, renderClientReport } from "../components/report/ClientView.jsx";
+import { renderReports } from "../components/reporting/ReportsPage.jsx";   /* BL-337 */
+import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
+import { parseReporting, repWeek, reportingHref, spaceCode, spaceWeek } from "../stores/reporting.js";
 import { notesCodeOk, notesLeave, renderNotes } from "../notes.js";
 import { noteCur, noteFind } from "../stores/notes.js";
 import { minutesPath, renderMinutes } from "../components/minutes/MinutesView.jsx";
@@ -44,6 +47,8 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
   if(shared.VIEW==="meeting") st.arg=shared.MEETING;   /* BL-233 */
   if(shared.VIEW==="prep") st.arg=prepViewKey.value;   /* BL-286 D */
   if(shared.VIEW==="clientreport") st.arg=clientReportKey();   /* v2.1.0 P8: CODE/week ending/client */
+  if(shared.VIEW==="reports") st.arg=repWeek.value||null;   /* BL-337 */
+  if(shared.VIEW==="reporting"){ st.arg=spaceCode.value; st.rw=spaceWeek.value; }
   if(shared.VIEW==="notes"){ st.arg=shared.NOTECODE; const c=noteCur.value; st.note=c&&c.code===shared.NOTECODE?c.note.file:null; st.find=!!(st.note&&noteFind.value); }   /* BL-301 B */
   if(shared.VIEW==="minutes") st.arg=minutesPath();   /* v2.1.0 P7: the minutes record's stored path */
   if(shared.VIEW==="weekly") st.arg=weeklyKey();   /* v2.1.0 P6 */
@@ -51,6 +56,8 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
 export function hashOf(st){ if(st&&st.v==="weekly") return `#weekly=${st.arg||""}`;   /* v2.1.0 P6: #weekly=<code>&week=<Friday> */
   if(st&&st.v==="meeting") return `#meeting=${st.arg||""}`;   /* BL-233 */
   if(st&&st.v==="notes") return `#notes=${st.arg||""}${st.note?`&n=${encodeURIComponent(st.note)}`:""}${st.note&&st.find?"&find=1":""}`;   /* BL-301 B */
+  if(st&&st.v==="reporting") return reportingHref(st.arg,st.rw);   /* BL-337 */
+  if(st&&st.v==="reports") return "#reports"+(st.arg?`&w=${st.arg}`:"");
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
   if(st&&st.v==="minutes") return `#minutes=${encodeURIComponent(typeof st.arg==="string"?st.arg:"")}`;   /* v2.1.0 P7 */
   if(st&&st.v==="clientreport") return `#client-report=${typeof st.arg==="string"?st.arg:""}`;   /* v2.1.0 P8 */
@@ -63,6 +70,7 @@ export function hashOf(st){ if(st&&st.v==="weekly") return `#weekly=${st.arg||""
     if(a.from) p.push("from="+a.from); if(a.to) p.push("to="+a.to); if(p.length) h+="&"+p.join("&"); } return h; }
 export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")); if(mm&&parseWeekly(mm[1])) return {v:"weekly",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* v2.1.0 P6 */
   { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm) return {v:"meeting",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-233 */
+  { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
   { const mm=/^#?client-report=(.+)$/.exec(String(h||"")); if(mm){ const a=parseKey(mm[1]); return a&&P.some(p=>p.code===a.code)?{v:"clientreport",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P8: #client-report=CODE/week/client */
   { const mm=/^#?notes=([^&]+)(?:&n=([^&]*))?/.exec(String(h||"")); if(mm){ let code="", n=null; try{ code=decodeURIComponent(mm[1]); n=mm[2]?decodeURIComponent(mm[2]):null; }catch(e){ return null; }
@@ -84,9 +92,10 @@ export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")); 
     if(kv.s){ const [col,dir]=kv.s.split("."); st.sort={col,dir:dir==="desc"?"desc":"asc"}; }
     st.lay=kv.lay==="board"?"board":"list"; if(groupsOf(st.wt).some(g=>g[0]===kv.g)) st.g=kv.g;
     st.lg=groupsOf(st.wt).some(g=>g[0]===kv.lg)?kv.lg:"none"; st.sg=groupsOf(st.wt).some(g=>g[0]===kv.sg)?kv.sg:"none"; }   /* BL-129 */
+  else if(v==="reports"){ st.arg=/^\d{4}-\d{2}-\d{2}$/.test(kv.w||"")?kv.w:null; }   /* BL-337 */
   else if(v==="person"){ if(!PERS().some(x=>x.name===arg)) return null; st.arg=arg; }
   else if(v==="item"){ const id=arg, k=A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null; if(!k) return null; return {v:"work",arg:null,wt:k,wv:null,p:[],from:null,item:{k,id},scroll:0}; }
-  else if(!["today","projects","people","review","inbox","intake","files","activity","settings","help","mine"].includes(v)) return null;
+  else if(!["today","projects","reports","people","review","inbox","intake","files","activity","settings","help","mine"].includes(v)) return null;
   if(v==="intake") st.v="inbox";      /* BL-70: #intake is the address; #inbox still opens the screen */
   const id=kv.item; if(id){ const k=A.some(x=>x.id===id)?"actions":R.some(x=>x.id===id)?"raid":DEC.some(x=>x.id===id)?"decisions":null; if(k) st.item={k,id}; }
   return st; })(x);
@@ -106,6 +115,8 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
     PROJF.clear(); (st.p||[]).forEach(c=>PROJF.add(c)); shared.WQ=st.q||""; SORT[shared.WT]=st.sort||null;
     if(st.lay){ shared.LAYCHOSEN=true; WLAY[shared.WT]=st.lay; if(st.g) WGRP[shared.WT]=st.g; }   /* BL-103: the layout and grouping are in the address */
     if(st.lg) WLGRP[shared.WT]=st.lay==="board"?(WLGRP[shared.WT]||"none"):st.lg; if(st.sg) WSUB[shared.WT+"|"+(st.lay||"list")]=st.sg; }   /* BL-129: the List's grouping and the sub-group too */
+  if(st.v==="reports") repWeek.value=st.arg||"";   /* BL-337 */
+  if(st.v==="reporting"){ spaceWeek.value=st.rw||""; }
   go(st.v,st.arg,{restore:true,from:st.from});
   if(st.item){ const k=st.item.k; if(st.v==="work"&&shared.WT!==k&&shared.WT!=="all"){ shared.WT=k; renderWork(); }   /* BL-134: All items opens the item where it is */ openRecord(k,st.item.id); }
   const sc=st.scroll||0; requestAnimationFrame(()=>{ const el=viewEl(); if(el) el.scrollTop=sc; }); shared.NAVSTATE=navState(); shared.NAVSTATE.scroll=sc; }
@@ -125,11 +136,11 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
   shared.FROMPROJ=(v==="work"&&opt.from)||null;
   closePanel(true); closeDisp(false); shared.VIEW=v; $$(".view").forEach(s=>s.hidden=true);
   const id={cockpit:"v-cockpit",mine:"v-work"}[v]||"v-"+v; $("#"+id).hidden=false; $("#"+id).scrollTop=0;
-  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
+  const railKey={cockpit:"projects",mine:"work",help:"settings",person:"people",prep:"today",notes:"projects",minutes:"review",weekly:"projects",clientreport:"projects",reporting:"projects"}[v]||v;   /* BL-286 D: the prep page sits under Today; v2.1.0 P7: the minutes under Review */
   setRailView(railKey);   /* BL-163, BL-319: the sidebar marks the page (through its store) */
   if(v==="mine"){ shared.WT="actions"; applyView("mine"); } if(v==="work"&&!arg) {} if(v==="cockpit") shared.COCK=arg; if(v==="person") shared.PERSON=arg; if(v==="notes") shared.NOTECODE=arg;
   if(v==="settings"&&arg) STAB=arg;      /* BL-115: a category, a section or an old tab name */
-  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),weekly:()=>renderWeekly(arg),clientreport:()=>renderClientReport(arg),notes:()=>renderNotes(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
+  ({today:renderToday,projects:renderProjects,people:renderPeople,person:()=>renderPerson(arg),cockpit:()=>renderCockpit(arg),work:renderWork,mine:renderWork,review:renderReview,inbox:renderInbox,files:renderFiles,activity:renderActivity,settings:renderSettings,help:()=>renderHelp(arg),prep:()=>renderPrep(arg),weekly:()=>renderWeekly(arg),clientreport:()=>renderClientReport(arg),notes:()=>renderNotes(arg),reports:()=>renderReports(arg),reporting:()=>renderReporting(arg),minutes:()=>renderMinutes(arg)}[v]||(()=>{}))();
   if(!opt.restore) navWrite(true); return true; })(v,arg,opt);
   if(r!==false&&(v==="files"||v==="inbox")) filesOpened();
   tabTitle();
@@ -190,14 +201,14 @@ document.addEventListener("click",e=>{ const a=e.target.closest("[data-go]"); if
 /* ===== BL-152 (sprint-ux) ===== the browser tab says where you are and what is waiting: "creaite · Work", "creaite · <Project
    name>", "creaite · Review (4)" (the count is what waits in Review, not Intake). The finished-run mark (BL-139) and the VIP count
    (BL-99) still go first, and "DEV · " in the development repository. It follows the page, the project or person shown and the count. */
-export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Work",mine:"Work",people:"People",review:"Review",files:"Files",activity:"Activity",settings:"Settings",help:"Help"};
+export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Work",mine:"Work",reports:"Reports",people:"People",review:"Review",files:"Files",activity:"Activity",settings:"Settings",help:"Help"};
 export function tabTitle(){ if(shared.VIEW==="meeting"){ const m=HUB()[shared.MEETING]; TABNAME.meeting=m?m.title:"Meeting"; }   /* BL-233 */
   if(shared.VIEW==="prep"){ const v=prepView.value, t=v&&v.ok&&v.model?v.model.meeting.title:""; TABNAME.prep=t?`Prep · ${t}`:"Prep"; }   /* BL-286 D */
   if(shared.VIEW==="minutes") TABNAME.minutes="Minutes";   /* v2.1.0 P7 */
   if(shared.VIEW==="weekly") TABNAME.weekly="Weekly report";   /* v2.1.0 P6 */
   if(shared.VIEW==="clientreport") TABNAME.clientreport="Client report";   /* v2.1.0 P8 */
   const n=REV.filter(r=>!r.done).length, vips=VIPS().length;
-  const where=shared.VIEW==="notes"&&shared.NOTECODE?(shared.NOTECODE==="_portfolio"?"Portfolio notes":`${pName(shared.NOTECODE)} notes`):shared.VIEW==="cockpit"&&shared.COCK?pName(shared.COCK):shared.VIEW==="person"&&shared.PERSON?shared.PERSON:TABNAME[shared.VIEW]||"";
+  const where=shared.VIEW==="notes"&&shared.NOTECODE?(shared.NOTECODE==="_portfolio"?"Portfolio notes":`${pName(shared.NOTECODE)} notes`):shared.VIEW==="cockpit"&&shared.COCK?pName(shared.COCK):shared.VIEW==="person"&&shared.PERSON?shared.PERSON:shared.VIEW==="reporting"&&spaceCode.value?`${pName(spaceCode.value)} reporting`:TABNAME[shared.VIEW]||"";
   const t=(shared.RBMARKED?RBMARK:"")+(vips?`(${vips}) `:"")+BASETITLE+(where?` · ${where}`:"")+(shared.VIEW==="review"&&n?` (${n})`:"");
   if(document.title!==t) document.title=t; 
   if(shared.VIEW==="milestones"&&shared.MSCODE){ const t=document.title.replace(/ · [^·]*$/,"").replace(/ \(\d+\)$/,"")+` · ${pName(shared.MSCODE)} milestones`; if(document.title!==t) document.title=t; } }   /* BL-245 */
