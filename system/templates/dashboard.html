@@ -2874,6 +2874,31 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   #tBrief .wkwhy{margin-left:0}
 }
 /* ===== end BL-319 ===== */
+/* ===== BL-301 C (v20-capture): the capture drawer (components/notes/CaptureDrawer.jsx), at the right of any page, not modal ===== */
+.capdrawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);box-sizing:border-box;z-index:47;background:var(--surface);color:var(--ink);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(0,0,0,.12);padding:16px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.capdrawer[hidden]{display:none}
+.caphead{display:flex;align-items:center;gap:8px} .caphead h2{margin:0;font-size:15px;line-height:24px} .caphead .sp,.capfoot .sp,.caprow .sp{flex:1}
+.capwhere{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px}
+.capwhere select{min-height:28px;max-width:100%;border:1px solid var(--line);border-radius:6px;padding:0 8px;background:var(--surface);color:var(--ink);font:inherit}
+.capwhere .sub,.capmeet{font-size:12px;overflow-wrap:anywhere}
+.capconf{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;font-size:13px;cursor:pointer}
+.capconf .sub{font-size:12px;overflow-wrap:anywhere}
+.capconf .switch{height:24px;border-radius:12px;flex:none} .capconf .switch::after{top:4px}   /* 24 high, like every control in the drawer */
+.captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
+.capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
+.capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
+.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
+.capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
+.capfoot .btn[aria-disabled="true"]{opacity:.55}
+.caprecent{border-top:1px solid var(--line);padding-top:8px} .caprecent h3{margin:0 0 4px;font-size:12px;font-weight:600;color:var(--muted)}
+.caprecent ul{list-style:none;margin:0;padding:0}
+.caprow{display:flex;align-items:center;gap:8px;width:100%;min-height:28px;border:0;background:none;color:var(--ink);font:inherit;font-size:13px;text-align:left;padding:2px 4px;border-radius:6px;cursor:pointer}
+.caprow:hover,.caprow:focus-visible{background:var(--sunk)} .caprow b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0} .caprow .sub{white-space:nowrap;font-size:12px}
+.capdiscard{font-size:12px;min-height:24px}
+.dm .mnote{min-height:24px}
+@media (max-width:480px){.capdrawer{padding:12px 16px} .caprow{flex-wrap:wrap} .caprow .sp{display:none}}
+/* ===== end BL-301 C ===== */
 /* ===== BL-301 B (v20-notes-tab): the Notes tab ===== */
 .nside{min-width:0;position:sticky;top:0}
 .nsplit.finding{grid-template-columns:260px minmax(0,1fr) 360px}
@@ -3127,8 +3152,6 @@ button.nchip{font:inherit;font-size:12px}
         <div class="toolbar" style="margin-top:12px"><button class="btn" id="inboxNew">Select new</button><span class="sp"></span><button class="btn primary" id="inboxGo" disabled>Process selected</button></div>
         <div class="tbl"><table id="inboxTbl"></table></div>
         </section>
-        <section class="card isec" id="isecQuick" aria-labelledby="isecQuickH"><header class="ish"><h2 id="isecQuickH">Quick capture</h2></header>
-          <p class="sub ipurpose">Type rough notes from a call or conversation that has no transcript.</p><div id="isecQuickBody"></div></section>
       </div></section>
       <section class="view" id="v-files" hidden><div class="wrapmax">
         <h1>Files</h1>
@@ -3289,6 +3312,7 @@ button.nchip{font:inherit;font-size:12px}
     CST_MAX: () => CST_MAX,
     CUR_PROPS: () => CUR_PROPS,
     CXKEYAT: () => CXKEYAT,
+    CaptureDrawer: () => CaptureDrawer,
     ChaseEmail: () => ChaseEmail,
     ChasePane: () => ChasePane,
     Chip: () => Chip,
@@ -3520,7 +3544,6 @@ button.nchip{font:inherit;font-size:12px}
     Peek: () => Peek,
     PeekBar: () => PeekBar,
     PrepPage: () => PrepPage,
-    QCK: () => QCK,
     QUEUE: () => QUEUE,
     QUIPMAX: () => QUIPMAX,
     QUIPMIN: () => QUIPMIN,
@@ -3971,8 +3994,10 @@ button.nchip{font:inherit;font-size:12px}
     cantGo: () => cantGo,
     capChips: () => capChips,
     capChipsDraw: () => capChipsDraw,
+    capNote: () => capNote,
+    capOpen: () => capOpen,
     capped: () => capped,
-    captureNote: () => captureNote,
+    captureDone: () => captureDone,
     cardHtml: () => cardHtml,
     cardProps: () => cardProps,
     catName: () => catName,
@@ -4066,6 +4091,7 @@ button.nchip{font:inherit;font-size:12px}
     clearAllFilters: () => clearAllFilters,
     clockOf: () => clockOf,
     closeCal: () => closeCal,
+    closeCapture: () => closeCapture,
     closeChat: () => closeChat,
     closeCombobox: () => closeCombobox,
     closeContextMenu: () => closeContextMenu,
@@ -4750,6 +4776,7 @@ button.nchip{font:inherit;font-size:12px}
     noteFlash: () => noteFlash,
     noteFlush: () => noteFlush,
     noteFlushOnExit: () => noteFlushOnExit,
+    noteHref: () => noteHref,
     noteImageSrc: () => noteImageSrc,
     noteLines: () => noteLines,
     noteLoading: () => noteLoading,
@@ -4757,6 +4784,7 @@ button.nchip{font:inherit;font-size:12px}
     noteMeta: () => noteMeta,
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
+    noteRequest: () => noteRequest,
     noteSave: () => noteSave,
     noteTyped: () => noteTyped,
     notesCode: () => notesCode,
@@ -4800,6 +4828,7 @@ button.nchip{font:inherit;font-size:12px}
     openNewMilestone: () => openNewMilestone,
     openNote: () => openNote,
     openNoteAt: () => openNoteAt,
+    openNoteFull: () => openNoteFull,
     openOnly: () => openOnly,
     openPath: () => openPath,
     openPicker: () => openPicker,
@@ -5082,12 +5111,6 @@ button.nchip{font:inherit;font-size:12px}
     qNR: () => qNR,
     qOK: () => qOK,
     qRow: () => qRow,
-    qcChipsDraw: () => qcChipsDraw,
-    qcClear: () => qcClear,
-    qcFill: () => qcFill,
-    qcLine: () => qcLine,
-    qcOpen: () => qcOpen,
-    qcProcess: () => qcProcess,
     questionLike: () => questionLike,
     queueAdd: () => queueAdd,
     queueDraw: () => queueDraw,
@@ -5746,8 +5769,8 @@ button.nchip{font:inherit;font-size:12px}
   function swapHTML(el2, h5) {
     el2.outerHTML = htmlPart(h5);
   }
-  function addHTML(el2, where, h5) {
-    el2.insertAdjacentHTML(where, htmlPart(h5));
+  function addHTML(el2, where2, h5) {
+    el2.insertAdjacentHTML(where2, htmlPart(h5));
   }
   function writeDoc(w6, h5) {
     w6.document.write(htmlPart(h5));
@@ -6762,7 +6785,7 @@ button.nchip{font:inherit;font-size:12px}
       if (o5 && o5.isConnected && typeof o5.focus === "function" && (!a5 || a5 === document.body || d5.contains(a5))) o5.focus();
       if (onClose && (open2 || !owned)) onClose();
     };
-    const typed = () => {
+    const typed2 = () => {
       if (ref.current) TYPED.set(ref.current, true);
     };
     const scrim = (e4) => {
@@ -6789,7 +6812,7 @@ button.nchip{font:inherit;font-size:12px}
         onCancel: cancel,
         onClose: closed,
         onClick: scrim,
-        onInput: typed,
+        onInput: typed2,
         children
       }
     );
@@ -7045,7 +7068,7 @@ button.nchip{font:inherit;font-size:12px}
   // components/Combobox.jsx
   var OPEN = null;
   function Combobox({ id: id2, name, value = "", label, placeholder, empty = "Type a name to add it.", options, onPick, onInput }) {
-    const [open2, setOpen2] = d2(false), [typed, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw] = d2(0);
+    const [open2, setOpen2] = d2(false), [typed2, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw] = d2(0);
     const field = A2(
       /** @type {HTMLInputElement | null} */
       null
@@ -7053,8 +7076,8 @@ button.nchip{font:inherit;font-size:12px}
       /** @type {HTMLDivElement | null} */
       null
     );
-    const listId = `${id2}-list`, q5 = typed && field.current ? field.current.value.trim() : "";
-    const L3 = open2 ? options(q5, typed) : [];
+    const listId = `${id2}-list`, q5 = typed2 && field.current ? field.current.value.trim() : "";
+    const L3 = open2 ? options(q5, typed2) : [];
     const ai2 = Math.min(act, Math.max(0, L3.length - 1));
     const close = () => {
       setOpen2(false);
@@ -7298,9 +7321,9 @@ button.nchip{font:inherit;font-size:12px}
       onPick(o5.v, false, o5);
     };
     const pickNew = () => {
-      const typed = q5.trim();
+      const typed2 = q5.trim();
       closePicker("pick");
-      onPick(typed, true);
+      onPick(typed2, true);
     };
     const keys = (e4) => {
       const L3 = optionsIn(box.current), i5 = L3.indexOf(
@@ -7406,12 +7429,12 @@ button.nchip{font:inherit;font-size:12px}
     const box = A2(
       /** @type {HTMLDivElement | null} */
       null
-    ), typed = A2(
+    ), typed2 = A2(
       /** @type {HTMLInputElement | null} */
       null
     );
     _2(() => {
-      if (typed.current) typed.current.value = fd(value || "");
+      if (typed2.current) typed2.current.value = fd(value || "");
     }, []);
     const [y5, m5] = ym2, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
     const days2 = Array.from({ length: n4 }, (_6, i5) => isoOf(y5, m5, i5 + 1));
@@ -7523,7 +7546,7 @@ button.nchip{font:inherit;font-size:12px}
         {
           class: `pkdt${bad ? " bad" : ""}`,
           type: "text",
-          ref: typed,
+          ref: typed2,
           placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
           "aria-label": `${label}, typed`,
           "aria-invalid": bad ? "true" : void 0,
@@ -23075,7 +23098,7 @@ ${s5}`;
       el2.cxed
     ) el2.cxed.destroy();
     let orig = "", env = null, touched = false;
-    const load = (v5) => {
+    const load2 = (v5) => {
       touched = false;
       if (plain) {
         orig = String(v5 ?? "");
@@ -23089,7 +23112,7 @@ ${s5}`;
       env = B1(orig);
       return { markdown: env.inner };
     };
-    const content = load(plain ? o5.text : o5.markdown);
+    const content = load2(plain ? o5.text : o5.markdown);
     const props = {
       ...o5.editorProps || {},
       handleKeyDown: (view, e4) => {
@@ -23112,17 +23135,17 @@ ${s5}`;
         return [...out, ...plain ? [] : [ClaimMark], ...o5.extensions || []];
       }
     });
-    const blank = () => {
+    const blank2 = () => {
       el2.classList.toggle("blank", editor.isEmpty);
     };
     editor.on("transaction", ({ transaction: tr2 }) => {
       if (!tr2.docChanged) return;
-      blank();
+      blank2();
       if (tr2.getMeta(ED_QUIET)) return;
       touched = true;
       el2.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    blank();
+    blank2();
     const h5 = {
       el: el2,
       editor,
@@ -23135,10 +23158,10 @@ ${s5}`;
         return env ? H1(env, md2) : md2;
       },
       setValue: (v5) => {
-        const c5 = load(v5);
+        const c5 = load2(v5);
         editor.chain().setMeta(ED_QUIET, true).setMeta("addToHistory", false).setContent(c5.json ?? c5.html ?? c5.markdown, { emitUpdate: false, ...c5.markdown !== void 0 ? { contentType: "markdown" } : {} }).run();
         touched = false;
-        blank();
+        blank2();
       },
       touched: () => touched,
       focus: (at2) => {
@@ -23191,8 +23214,8 @@ ${s5}`;
   function edClaim(el2, runs) {
     const h5 = edOf(el2);
     if (!h5 || !runs.length) return false;
-    const ed2 = h5.editor, view = ed2.view, type = ed2.schema.marks.claim;
-    let tr2 = ed2.state.tr;
+    const ed3 = h5.editor, view = ed3.view, type = ed3.schema.marks.claim;
+    let tr2 = ed3.state.tr;
     for (const [node, x5, y5, n4] of runs) {
       let a5, b5;
       try {
@@ -23218,7 +23241,7 @@ ${s5}`;
   }
   var ED_HOOKS = { ai: null };
   function edRange(h5, from, to2) {
-    const ed2 = h5.editor, doc = ed2.state.doc;
+    const ed3 = h5.editor, doc = ed3.state.doc;
     if (to2 <= from) return null;
     if (h5.features === "plain") {
       const text2 = doc.textBetween(from, to2, "\n");
@@ -23228,11 +23251,11 @@ ${s5}`;
     if ($f2.sameParent($t2) && $f2.parent.isTextblock) {
       const cut = $f2.parent.cut($f2.parentOffset, $t2.parentOffset);
       const json = { type: "doc", content: [{ type: "paragraph", ...cut.content.size ? { content: cut.content.toJSON() } : {} }] };
-      const text2 = _1(ed2, dropClaims(json)).markdown;
+      const text2 = _1(ed3, dropClaims(json)).markdown;
       return text2.trim() ? { from, to: to2, text: text2, inline: true } : null;
     }
     const a5 = $f2.depth ? $f2.before(1) : from, b5 = $t2.depth ? $t2.after(1) : to2;
-    const text = _1(ed2, dropClaims({ type: "doc", content: doc.slice(a5, b5).content.toJSON() })).markdown;
+    const text = _1(ed3, dropClaims({ type: "doc", content: doc.slice(a5, b5).content.toJSON() })).markdown;
     return text.trim() ? { from: a5, to: b5, text, inline: false } : null;
   }
   var edSelection = (h5) => {
@@ -23240,9 +23263,9 @@ ${s5}`;
     return s5.empty ? null : edRange(h5, s5.from, s5.to);
   };
   function edReplace(h5, r4, text) {
-    const ed2 = h5.editor;
-    if (ed2.isDestroyed) return false;
-    const now = r4.to <= ed2.state.doc.content.size ? edRange(h5, r4.from, r4.to) : null;
+    const ed3 = h5.editor;
+    if (ed3.isDestroyed) return false;
+    const now = r4.to <= ed3.state.doc.content.size ? edRange(h5, r4.from, r4.to) : null;
     if (!now || now.text !== r4.text) return false;
     let content;
     if (h5.multiline === false) text = String(text).replace(/\s*[\r\n]+\s*/g, " ").trim();
@@ -23250,10 +23273,10 @@ ${s5}`;
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
-      const blocks = ed2.schema.nodeFromJSON(ed2.markdown.parse(String(text))).toJSON().content || [];
+      const blocks = ed3.schema.nodeFromJSON(ed3.markdown.parse(String(text))).toJSON().content || [];
       content = r4.inline && blocks.length === 1 && blocks[0].type === "paragraph" ? blocks[0].content || [] : blocks;
     }
-    const chain = ed2.chain().focus();
+    const chain = ed3.chain().focus();
     return (content.length ? chain.insertContentAt({ from: r4.from, to: r4.to }, content, { updateSelection: true }) : chain.deleteRange({ from: r4.from, to: r4.to })).run();
   }
 
@@ -24045,16 +24068,16 @@ ${s5}`;
     return !!(l6 && l6.contains(document.activeElement));
   };
   function aiAttach(h5, ai2) {
-    const ed2 = h5.editor;
+    const ed3 = h5.editor;
     const update = () => {
       setTimeout(() => {
         if (!h5.editor.isDestroyed && (h5.editor.view.hasFocus() || h5.el.contains(document.activeElement))) barFor(h5, ai2);
       }, 0);
     };
-    ed2.on("selectionUpdate", update);
-    ed2.on("focus", update);
+    ed3.on("selectionUpdate", update);
+    ed3.on("focus", update);
     h5.el.addEventListener("focus", update);
-    ed2.on("blur", () => {
+    ed3.on("blur", () => {
       setTimeout(() => {
         if (aiBar.value && aiBar.value.h === h5 && !barBusy() && document.activeElement !== h5.el) aiBar.value = null;
       }, 0);
@@ -24087,7 +24110,7 @@ ${s5}`;
       return;
     }
     if (!AI_OPTIONS[option]) return;
-    const where = aiPlace(b5.h, range.from, range.to, 480);
+    const where2 = aiPlace(b5.h, range.from, range.to, 480);
     aiHome(b5.h);
     aiBar.value = null;
     const s5 = {
@@ -24098,7 +24121,7 @@ ${s5}`;
       instruction,
       label: option === "custom" ? instruction : AI_OPTIONS[option][0],
       status: "running",
-      ...where
+      ...where2
     };
     const key = b5.ai.key ? b5.ai.key() : b5.ai.place;
     if (b5.ai.confidential && b5.ai.confidential() && !AI_ASKED.has(key)) {
@@ -24399,10 +24422,10 @@ ${s5}`;
     c5 = c5 && typeof c5 === "object" ? c5 : {};
     const known = new Set(RAIL_ITEMS.map((i5) => i5.id));
     const seen = /* @__PURE__ */ new Set(["today"]);
-    const keep = (a5) => (Array.isArray(a5) ? a5 : []).filter((id2) => typeof id2 === "string" && known.has(id2) && !seen.has(id2) && !!seen.add(id2));
+    const keep2 = (a5) => (Array.isArray(a5) ? a5 : []).filter((id2) => typeof id2 === "string" && known.has(id2) && !seen.has(id2) && !!seen.add(id2));
     const hidden = Array.isArray(c5.hidden) ? c5.hidden : [];
-    const more = keep(Array.isArray(c5.more) ? [...c5.more, ...hidden] : [...RAIL_DEF.more, ...hidden]);
-    const order = ["today", ...keep(c5.order)];
+    const more = keep2(Array.isArray(c5.more) ? [...c5.more, ...hidden] : [...RAIL_DEF.more, ...hidden]);
+    const order = ["today", ...keep2(c5.order)];
     for (const it2 of RAIL_ITEMS) if (!seen.has(it2.id)) {
       seen.add(it2.id);
       (it2.group === "more" ? more : order).push(it2.id);
@@ -25075,6 +25098,416 @@ ${s5}`;
   }
   function drawNewTile(host2, props) {
     R(/* @__PURE__ */ u2(NewTile, { ...props }), host2);
+  }
+
+  // stores/capture.js
+  var capOpen = y3(false);
+  var noteRequest = y3(
+    /** @type {NoteRequest|null} */
+    null
+  );
+  function noteHref(r4) {
+    const file = String(r4.path || "").split("/").pop() || "";
+    return `#notes=${encodeURIComponent(r4.code || "_portfolio")}&n=${encodeURIComponent(file)}${r4.find ? "&find=1" : ""}`;
+  }
+
+  // components/notes/CaptureDrawer.jsx
+  var WAIT = 600;
+  var newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  var blank = () => ({ id: newId(), code: "", chosen: false, how: "", reason: "", title: "", body: "", template: "blank", date: "", with: [], confidential: false, saved: "" });
+  var capNote = y3(blank());
+  var capRecent = y3(
+    /** @type {{notes: Recent[], drafts: Draft[]}} */
+    { notes: [], drafts: [] }
+  );
+  var capMsg = y3("");
+  var capBusy = y3(false);
+  var capHostEl = (
+    /** @type {HTMLElement|null} */
+    null
+  );
+  var ed2 = (
+    /** @type {import("../../core/editor.js").EdHandle|null} */
+    null
+  );
+  var timer = 0, opener = (
+    /** @type {Element|null} */
+    null
+  ), seq = 0;
+  var where = (code) => code && code !== "_portfolio" ? pName(code) : "Unfiled";
+  var hasText = (n4) => !!(n4.title.trim() || n4.body.trim());
+  var typed = (n4) => hasText(n4) && `${n4.title}\0${n4.body}` !== (n4.loaded ?? "\0");
+  function patchNote(patch) {
+    capNote.value = { ...capNote.value, ...patch };
+  }
+  function capSoon() {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      keep();
+      guess();
+    }, WAIT);
+  }
+  async function keep() {
+    const n4 = capNote.value;
+    if (!viaServer() || !typed(n4)) return;
+    const r4 = await api("/api/notes/capture/draft", { id: n4.id, code: n4.code, title: n4.title, body: n4.body, template: n4.template, date: n4.date, with: n4.with, confidential: n4.confidential });
+    if (capNote.value.id !== n4.id) return;
+    if (r4.ok) patchNote({ saved: r4.at || "" });
+    else capMsg.value = oneLine(r4.message || "The draft wasn't kept.");
+  }
+  async function guess() {
+    const n4 = capNote.value;
+    if (!viaServer() || n4.chosen || n4.how === "meeting" || !(n4.title.trim() || n4.body.trim())) return;
+    const mine = ++seq, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
+    if (mine !== seq || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
+    const code = r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "";
+    patchNote({ code, how: "guess", reason: r4.reason || "" });
+  }
+  async function loadRecent() {
+    if (!viaServer()) {
+      capRecent.value = { notes: [], drafts: [] };
+      return;
+    }
+    const r4 = await api("/api/notes/capture/recent", {});
+    if (r4.ok) capRecent.value = { notes: r4.notes || [], drafts: r4.drafts || [] };
+  }
+  function load(n4) {
+    capNote.value = { ...n4, loaded: n4.loaded ?? `${n4.title}\0${n4.body}` };
+    capMsg.value = "";
+    if (ed2) ed2.setValue(n4.body);
+  }
+  async function openCapture(o5 = {}) {
+    if (!capHostEl) {
+      capHostEl = document.createElement("div");
+      capHostEl.id = "capHost";
+      document.body.appendChild(capHostEl);
+      R(/* @__PURE__ */ u2(CaptureDrawer, {}), capHostEl);
+    }
+    if (!capOpen.value) opener = document.activeElement;
+    capOpen.value = true;
+    if (o5.meeting) {
+      const m5 = o5.meeting;
+      const n4 = { ...blank(), template: "working-session", title: m5.title, date: m5.day, how: "", reason: "" };
+      if (viaServer()) {
+        const r4 = await api("/api/notes/capture/start", { meeting: m5 });
+        if (r4.ok) Object.assign(n4, {
+          body: r4.body || "",
+          with: r4.with || [],
+          date: r4.date || m5.day,
+          title: r4.title || m5.title,
+          code: r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "",
+          how: r4.code ? "meeting" : "",
+          reason: r4.code ? "from the meeting's title" : ""
+        });
+        else capMsg.value = oneLine(r4.message || "");
+      }
+      load(n4);
+      if (!n4.code) guess();
+    } else if (o5.body != null) {
+      load({ ...blank(), body: o5.body });
+      guess();
+    }
+    loadRecent();
+    requestAnimationFrame(() => {
+      if (ed2) ed2.focus("end");
+    });
+  }
+  function closeCapture() {
+    if (!capOpen.value) return;
+    clearTimeout(timer);
+    const n4 = capNote.value;
+    if (typed(n4)) {
+      keep();
+      snack("Note kept as a draft: ⌘⇧N to carry on");
+    }
+    capOpen.value = false;
+    const back2 = opener;
+    opener = null;
+    if (back2 && back2 instanceof HTMLElement && back2.isConnected) back2.focus();
+  }
+  function openNoteFull(r4) {
+    noteRequest.value = r4;
+    if (r4.code && r4.code !== "_portfolio" && P4.some((p6) => p6.code === r4.code)) go2("cockpit", r4.code);
+    else go2("projects");
+    try {
+      history.replaceState(history.state, "", noteHref(r4));
+    } catch (e4) {
+    }
+  }
+  async function captureDone(find) {
+    clearTimeout(timer);
+    const n4 = capNote.value;
+    if (!viaServer()) {
+      capMsg.value = "Saving a note needs the live server.";
+      return false;
+    }
+    if (!hasText(n4)) {
+      capMsg.value = "Write the note first.";
+      return false;
+    }
+    capBusy.value = true;
+    try {
+      const r4 = await api("/api/notes/capture/done", {
+        id: n4.id,
+        code: n4.code || "_portfolio",
+        title: n4.title,
+        body: n4.body,
+        template: n4.template,
+        date: n4.date,
+        with: n4.with,
+        confidential: n4.confidential
+      });
+      if (!r4.ok) {
+        capMsg.value = oneLine(r4.message || "The note wasn't saved.");
+        return false;
+      }
+      capNote.value = blank();
+      if (ed2) ed2.setValue("");
+      capOpen.value = false;
+      opener = null;
+      snack(`Note saved: ${r4.title} (${where(r4.code)})`);
+      if (find && r4.path) openNoteFull({ code: r4.code, path: r4.path, find: true });
+      return true;
+    } finally {
+      capBusy.value = false;
+    }
+  }
+  function resume(d5) {
+    load({
+      ...blank(),
+      id: d5.id,
+      code: d5.code === "_portfolio" ? "" : d5.code || "",
+      chosen: !!d5.code && d5.code !== "_portfolio",
+      how: d5.code && d5.code !== "_portfolio" ? "chosen" : "",
+      reason: "",
+      title: d5.title || "",
+      body: d5.body || "",
+      template: d5.template || "blank",
+      date: d5.date || "",
+      with: d5.with || [],
+      confidential: !!d5.confidential,
+      saved: d5.at || "",
+      loaded: ""
+    });
+    requestAnimationFrame(() => {
+      if (ed2) ed2.focus("end");
+    });
+  }
+  async function discard() {
+    const n4 = capNote.value;
+    clearTimeout(timer);
+    if (viaServer()) await api("/api/notes/capture/discard", { id: n4.id });
+    load(blank());
+    loadRecent();
+  }
+  var capWhen = (at2) => !at2 ? "" : at2.slice(0, 10) === TODAY ? at2.slice(11, 16) : fd(at2.slice(0, 10));
+  function CaptureDrawer() {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [, redraw] = d2(0);
+    const open2 = capOpen.value, n4 = capNote.value, recent = capRecent.value, live = viaServer();
+    h2(() => {
+      const el2 = box.current;
+      if (!el2) return void 0;
+      ed2 = creaiteEditor(
+        el2,
+        /** @type {any} */
+        { features: "notes", markdown: capNote.value.body }
+      );
+      if (capOpen.value) ed2.focus("end");
+      const input = () => {
+        if (!ed2) return;
+        patchNote({ body: ed2.value() });
+        capSoon();
+      };
+      el2.addEventListener("input", input);
+      return () => {
+        el2.removeEventListener("input", input);
+        if (ed2) ed2.destroy();
+        ed2 = null;
+      };
+    }, []);
+    h2(() => {
+      const t47 = window.setInterval(() => redraw((x5) => x5 + 1), 3e4);
+      return () => clearInterval(t47);
+    }, []);
+    const keys = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closeCapture();
+        return;
+      }
+      if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        captureDone(e4.shiftKey);
+      }
+    };
+    const why = n4.chosen ? "chosen by you" : n4.reason;
+    const off = live ? void 0 : "Saving a note needs the live server";
+    const meeting = n4.template === "working-session";
+    const drafts = recent.drafts.filter((d5) => d5.id !== n4.id);
+    return /* @__PURE__ */ u2("aside", { id: "capDrawer", class: "capdrawer", role: "dialog", "aria-modal": "false", "aria-labelledby": "capH", hidden: !open2, onKeyDown: keys, children: [
+      /* @__PURE__ */ u2("div", { class: "caphead", children: [
+        /* @__PURE__ */ u2("h2", { id: "capH", children: meeting ? "Note for this meeting" : "New note" }),
+        /* @__PURE__ */ u2("span", { class: "sp" }),
+        typed(n4) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn capdiscard", onClick: () => discard(), children: "Discard" }) : null,
+        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close", name: "Close the note (the draft is kept)", onClick: () => closeCapture() })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "capwhere", children: [
+        /* @__PURE__ */ u2("label", { for: "capProj", children: "Project" }),
+        /* @__PURE__ */ u2(
+          "select",
+          {
+            id: "capProj",
+            value: n4.code,
+            "aria-describedby": "capWhy",
+            onChange: (e4) => {
+              const code = (
+                /** @type {HTMLSelectElement} */
+                e4.currentTarget.value
+              );
+              patchNote({ code, chosen: true, how: "chosen" });
+              capSoon();
+            },
+            children: [
+              /* @__PURE__ */ u2("option", { value: "", children: "Unfiled" }),
+              P4.map((p6) => /* @__PURE__ */ u2("option", { value: p6.code, children: p6.name }))
+            ]
+          }
+        ),
+        /* @__PURE__ */ u2("span", { class: "sub", id: "capWhy", children: why ? why : n4.code ? "" : "Unfiled until something names a project" })
+      ] }),
+      meeting ? /* @__PURE__ */ u2("div", { class: "sub capmeet", children: [
+        "Working session",
+        n4.date ? ` · ${fd(n4.date)}` : "",
+        n4.with.length ? ` · with ${n4.with.join(", ")}` : ""
+      ] }) : null,
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          id: "capTitle",
+          class: "captitle",
+          type: "text",
+          "aria-label": "Title",
+          placeholder: "Title (or the first line)",
+          value: n4.title,
+          autocomplete: "off",
+          onInput: (e4) => {
+            patchNote({ title: (
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            ) });
+            capSoon();
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("label", { class: "capconf", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            class: "switch",
+            role: "switch",
+            id: "capConf",
+            checked: n4.confidential,
+            onChange: (e4) => {
+              patchNote({ confidential: (
+                /** @type {HTMLInputElement} */
+                e4.currentTarget.checked
+              ) });
+              capSoon();
+            }
+          }
+        ),
+        /* @__PURE__ */ u2("span", { children: "Confidential" }),
+        n4.confidential ? /* @__PURE__ */ u2("span", { class: "sub", children: "Kept out of prep pages and client reports; Claude reads it only if you say yes" }) : null
+      ] }),
+      /* @__PURE__ */ u2(
+        "div",
+        {
+          ref: box,
+          id: "capBody",
+          class: "capbody",
+          role: "textbox",
+          "aria-multiline": "true",
+          "aria-label": "Note",
+          "aria-describedby": "capSaved",
+          "data-ph": "Type the note: what was said, what you think, who to follow up…",
+          spellcheck: true
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "capfoot", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Draft saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need the live server") }),
+        /* @__PURE__ */ u2("span", { class: "sp" }),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn ai",
+            id: "capFind",
+            disabled: capBusy.value,
+            "aria-disabled": off ? "true" : void 0,
+            "data-tip": off || "Save it, then open it with Find updates",
+            onClick: () => captureDone(true),
+            children: "Done and find updates"
+          }
+        ),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "btn primary",
+            id: "capDone",
+            disabled: capBusy.value,
+            "aria-disabled": off ? "true" : void 0,
+            "data-tip": off,
+            "data-key": "⌘↵",
+            onClick: () => captureDone(false),
+            children: "Done"
+          }
+        )
+      ] }),
+      drafts.length || recent.notes.length ? /* @__PURE__ */ u2("div", { class: "caprecent", "aria-labelledby": "capRecentH", role: "region", children: [
+        /* @__PURE__ */ u2("h3", { id: "capRecentH", children: "Recent notes" }),
+        /* @__PURE__ */ u2("ul", { children: [
+          drafts.map((d5) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("button", { type: "button", class: "caprow", onClick: () => resume(d5), "aria-label": `Carry on with the draft ${d5.title || "Untitled"}`, children: [
+            /* @__PURE__ */ u2("b", { children: d5.title || (d5.body || "").trim().split("\n")[0].slice(0, 60) || "Untitled" }),
+            /* @__PURE__ */ u2("span", { class: "sp" }),
+            /* @__PURE__ */ u2("span", { class: "sub", children: [
+              "Draft · ",
+              where(d5.code),
+              " · ",
+              capWhen(d5.at)
+            ] })
+          ] }) })),
+          recent.notes.map((r4) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "caprow",
+              onClick: () => {
+                capOpen.value = false;
+                openNoteFull({ code: r4.code, path: r4.path, find: false });
+              },
+              "aria-label": `Open the note ${r4.title}`,
+              children: [
+                /* @__PURE__ */ u2("b", { children: r4.title }),
+                /* @__PURE__ */ u2("span", { class: "sp" }),
+                /* @__PURE__ */ u2("span", { class: "sub", children: [
+                  where(r4.code),
+                  " · ",
+                  capWhen(r4.at)
+                ] })
+              ]
+            }
+          ) }))
+        ] })
+      ] }) : null
+    ] });
   }
 
   // stores/settings.js
@@ -26173,9 +26606,20 @@ ${s5}`;
             ] }) : null
           ] }),
           wh2 ? /* @__PURE__ */ u2("div", { class: "wh", children: wh2 }) : null,
-          acts22 || e4.hub && !hidden ? /* @__PURE__ */ u2("div", { class: "acts", children: [
+          acts22 || e4.hub && !hidden || acts2.note && !e4.private ? /* @__PURE__ */ u2("div", { class: "acts", children: [
             acts22,
-            e4.hub && !hidden ? /* @__PURE__ */ u2("a", { href: `#meeting=${e4.hub}`, class: "linkbtn mhlink", "data-meeting": e4.hub, title: "Everything about this meeting, from invite to follow-up", children: "Meeting" }) : null
+            e4.hub && !hidden ? /* @__PURE__ */ u2("a", { href: `#meeting=${e4.hub}`, class: "linkbtn mhlink", "data-meeting": e4.hub, title: "Everything about this meeting, from invite to follow-up", children: "Meeting" }) : null,
+            acts2.note && !e4.private ? /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "linkbtn mnote",
+                "aria-label": `Note for this meeting: ${e4.title ?? ""}`,
+                "data-tip": "Note for this meeting",
+                onClick: () => acts2.note && acts2.note(e4, day),
+                children: "Note"
+              }
+            ) : null
           ] }) : null
         ] });
       }) }) : null,
@@ -26812,7 +27256,9 @@ ${s5}`;
     dayProcess(m5);
   }, check: (m5) => {
     dayCheck(m5);
-  }, review: () => go2("review"), name: (c5) => pName(c5) };
+  }, review: () => go2("review"), name: (c5) => pName(c5), note: (m5, day) => {
+    openCapture({ meeting: { day, start: m5.start, title: m5.title } });
+  } };
   function calFoot(cal) {
     const f5 = $("#calFoot");
     if (!f5) return;
@@ -28150,8 +28596,8 @@ ${s5}`;
     }
     const src = r4.releases && (!r4.downloads || vnum(r4.releases.version) >= vnum(r4.downloads.version)) ? "releases" : r4.downloads ? "downloads" : null;
     const z4 = src && r4[src], newer = !!z4 && vnum(z4.version) > vnum(r4.installed);
-    const where = src === "releases" ? "system/releases" : "Downloads";
-    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z4.name)} in ${where}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
+    const where2 = src === "releases" ? "system/releases" : "Downloads";
+    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z4.name)} in ${where2}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
     const b5 = (id2) => document.getElementById(id2);
     if (b5("updReview")) b5("updReview").onclick = () => updReview(src, false);
     if (b5("updFile")) b5("updFile").onclick = () => b5("updPick").click();
@@ -28216,7 +28662,7 @@ ${s5}`;
       snack(res.ok ? `creaite ${p6.to} installed; restart the live server` : "The update didn't install");
     };
   }
-  async function updUndo(btn, keep) {
+  async function updUndo(btn, keep2) {
     if (!btn.dataset.armed) {
       btn.dataset.armed = "1";
       btn.textContent = "Confirm undo";
@@ -28224,7 +28670,7 @@ ${s5}`;
       return;
     }
     btn.disabled = true;
-    const r4 = await api("/api/update/undo", { keep_database: keep });
+    const r4 = await api("/api/update/undo", { keep_database: keep2 });
     if (!r4.ok && /--keep-database/.test(r4.message || "")) {
       updOut(updMsg("The database has changed since the update; undoing it would lose those changes.", true) + '<div style="margin-top:8px"><button class="btn" id="updKeep">Undo engine and settings only</button></div>');
       document.getElementById("updKeep").onclick = (e4) => {
@@ -28281,12 +28727,12 @@ ${s5}`;
     if (!to2 || to2 === nm3) return;
     const touched = [], merge = wsFor(pc2).includes(to2);
     const items2 = [...A4.map((x5) => ["actions", x5]), ...R3.map((x5) => ["raid", x5])].filter(([, x5]) => x5.p === pc2 && x5.ws === nm3).map(([t47, x5]) => ({ op: "update", table: t47, id: x5.id, changes: { workstream: to2 }, based_on: x5.updated_at }));
-    const keep = () => {
+    const keep2 = () => {
       if (!WSL.added.includes(wsKey(pc2, to2))) WSL.added.push(wsKey(pc2, to2));
       WSL.added = WSL.added.filter((k5) => k5 !== key);
     };
     if (!items2.length) {
-      keep();
+      keep2();
       WSL.hidden = [.../* @__PURE__ */ new Set([...WSL.hidden, key])];
       saveWs();
       renderSettings();
@@ -28301,7 +28747,7 @@ ${s5}`;
             touched.push(x5);
           }
         });
-        keep();
+        keep2();
         saveWs();
       },
       () => {
@@ -28669,13 +29115,13 @@ ${s5}`;
   }
   function askPerson(o5) {
     const pr2 = new Promise((res) => {
-      const dlg = $("#personDlg"), cands = (o5.candidates || []).map((n4) => pFind(personPool().pool, n4) || { name: n4, org: "", role: "" }), typed = o5.typed || "", p6 = o5.person || {};
-      const isMail = /@/.test(typed), set = (id2, v5) => {
+      const dlg = $("#personDlg"), cands = (o5.candidates || []).map((n4) => pFind(personPool().pool, n4) || { name: n4, org: "", role: "" }), typed2 = o5.typed || "", p6 = o5.person || {};
+      const isMail = /@/.test(typed2), set = (id2, v5) => {
         $("#pd_" + id2).value = v5 || "";
       };
       $("#pdTitle").textContent = o5.edit ? `Edit ${p6.name}` : o5.details ? `Details for ${p6.name}` : "New person";
-      set("name", p6.name || (isMail ? "" : typed));
-      set("email", p6.email || (isMail ? typed : ""));
+      set("name", p6.name || (isMail ? "" : typed2));
+      set("email", p6.email || (isMail ? typed2 : ""));
       set("aliases", (p6.aliases || []).join(", "));
       set("org", p6.org);
       set("role", p6.role);
@@ -28691,8 +29137,8 @@ ${s5}`;
         $("#pdFields").hidden = true;
         $("#pdSave").hidden = true;
         $("#pdMatch").hidden = false;
-        putHTML($("#pdMatch"), html`<p style="margin:0 0 8px">Is “${typed}” one of these?</p>${cands.map((c5) => html`<button type="button" class="btn pdc" data-use="${c5.name}">Yes, it’s ${c5.name}${c5.org || c5.role ? html` <small>${[c5.org, c5.role].filter(Boolean).join(" · ")}</small>` : ""}</button>`)}
-        <label class="sub" style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="checkbox" id="pdRemember" checked> Remember “${typed}” as an alias, so it maps next time</label><button type="button" class="btn" id="pdNew">No, add a new person</button>`);
+        putHTML($("#pdMatch"), html`<p style="margin:0 0 8px">Is “${typed2}” one of these?</p>${cands.map((c5) => html`<button type="button" class="btn pdc" data-use="${c5.name}">Yes, it’s ${c5.name}${c5.org || c5.role ? html` <small>${[c5.org, c5.role].filter(Boolean).join(" · ")}</small>` : ""}</button>`)}
+        <label class="sub" style="display:flex;gap:6px;align-items:center;margin:8px 0"><input type="checkbox" id="pdRemember" checked> Remember “${typed2}” as an alias, so it maps next time</label><button type="button" class="btn" id="pdNew">No, add a new person</button>`);
       } else showForm();
       let done = false;
       const onClose = () => {
@@ -28709,7 +29155,7 @@ ${s5}`;
       };
       $("#pdMatch").onclick = (e4) => {
         const u5 = e4.target.closest("[data-use]");
-        if (u5) return fin({ use: u5.dataset.use, alias: $("#pdRemember").checked ? typed : null });
+        if (u5) return fin({ use: u5.dataset.use, alias: $("#pdRemember").checked ? typed2 : null });
         if (e4.target.closest("#pdNew")) showForm();
       };
       $("#pdSave").onclick = () => {
@@ -28727,7 +29173,7 @@ ${s5}`;
           }
         }
         const aliases = f5("aliases").split(",").map((a5) => a5.trim()).filter(Boolean);
-        if (typed && !isMail && !o5.edit && !o5.details && pKey(typed) !== pKey(name) && !aliases.some((a5) => pKey(a5) === pKey(typed))) aliases.push(typed);
+        if (typed2 && !isMail && !o5.edit && !o5.details && pKey(typed2) !== pKey(name) && !aliases.some((a5) => pKey(a5) === pKey(typed2))) aliases.push(typed2);
         fin({ person: { name, email: f5("email"), aliases, org: f5("org"), role: f5("role") } });
       };
       $("#personForm").onsubmit = (e4) => {
@@ -28742,21 +29188,21 @@ ${s5}`;
       };
       openDialog(dlg);
     });
-    const keep = !!(o5 && (o5.edit || o5.details)), cur = (o5 && o5.person && o5.person.extra || {}).VIP || "";
-    $$(".pdvip").forEach((el2) => el2.hidden = !keep);
+    const keep2 = !!(o5 && (o5.edit || o5.details)), cur = (o5 && o5.person && o5.person.extra || {}).VIP || "";
+    $$(".pdvip").forEach((el2) => el2.hidden = !keep2);
     const sel = $("#pd_vip");
     sel.value = [...sel.options].some((x5) => x5.value === cur.toLowerCase()) ? cur.toLowerCase() : cur ? "yes" : "";
     return pr2.then((res) => {
-      if (res && res.person && keep) res.person.extra = { ...o5.person && o5.person.extra || {}, VIP: sel.value };
+      if (res && res.person && keep2) res.person.extra = { ...o5.person && o5.person.extra || {}, VIP: sel.value };
       return res;
     });
   }
-  async function ownerFinal(typed, opt = {}) {
-    typed = String(typed || "").trim();
-    if (!typed || typed === "TBC") return typed || "TBC";
-    const r4 = resolvePerson(typed);
+  async function ownerFinal(typed2, opt = {}) {
+    typed2 = String(typed2 || "").trim();
+    if (!typed2 || typed2 === "TBC") return typed2 || "TBC";
+    const r4 = resolvePerson(typed2);
     if (r4.status === "known" || r4.status === "alias" || r4.status === "email") return r4.name;
-    const res = await askPerson({ typed, candidates: opt.skipMatch ? [] : r4.candidates });
+    const res = await askPerson({ typed: typed2, candidates: opt.skipMatch ? [] : r4.candidates });
     if (!res) return null;
     if (res.use) {
       if (res.alias && pKey(res.alias) !== pKey(res.use) && !await regAddAlias(res.use, res.alias)) return null;
@@ -29055,13 +29501,13 @@ ${s5}`;
         pfDraw("#pmFBtn");
         return;
       }
-      const ed2 = t47.closest("[data-pfedit]");
-      if (ed2) {
+      const ed3 = t47.closest("[data-pfedit]");
+      if (ed3) {
         e4.stopPropagation();
-        if (ed2.dataset.pfedit === "q") {
+        if (ed3.dataset.pfedit === "q") {
           $("#pmQ").focus();
           $("#pmQ").select();
-        } else pfOpen(ed2.dataset.pfedit);
+        } else pfOpen(ed3.dataset.pfedit);
         return;
       }
       const qk2 = t47.closest("[data-pfquick]");
@@ -29367,11 +29813,11 @@ ${s5}`;
   }
   function drawWsMgr() {
     const L3 = WSD().filter((w6) => (WSM.closed || w6.st === "Active" || WSM.edit === w6.id) && (!WSM.proj || w6.p === WSM.proj)), nClosed = WSD().filter((w6) => w6.st === "Closed").length;
-    const ed2 = (w6, isNew) => `<tr class="wsedit" data-wsid="${esc(w6.id || "")}"><td>${isNew ? `<select data-wf="project">${P4.map((p6) => `<option value="${p6.code}" ${p6.code === w6.p ? "selected" : ""}>${esc(p6.name)}</option>`).join("")}</select>` : `<span class="pcode">${esc(pName(w6.p))}</span>`}</td><td><input type="text" data-wf="name" value="${esc(w6.name || "")}" aria-label="Workstream"></td>${WS_FIELDS.map(([f5, l6]) => `<td><input type="text" data-wf="${f5}" value="${esc(w6[f5] || "")}" aria-label="${l6}"></td>`).join("")}<td colspan="2"></td><td class="mgract"><button class="mini" data-wsm="save">Save</button><button class="mini" data-wsm="cancel">Cancel</button></td></tr>`;
+    const ed3 = (w6, isNew) => `<tr class="wsedit" data-wsid="${esc(w6.id || "")}"><td>${isNew ? `<select data-wf="project">${P4.map((p6) => `<option value="${p6.code}" ${p6.code === w6.p ? "selected" : ""}>${esc(p6.name)}</option>`).join("")}</select>` : `<span class="pcode">${esc(pName(w6.p))}</span>`}</td><td><input type="text" data-wf="name" value="${esc(w6.name || "")}" aria-label="Workstream"></td>${WS_FIELDS.map(([f5, l6]) => `<td><input type="text" data-wf="${f5}" value="${esc(w6[f5] || "")}" aria-label="${l6}"></td>`).join("")}<td colspan="2"></td><td class="mgract"><button class="mini" data-wsm="save">Save</button><button class="mini" data-wsm="cancel">Cancel</button></td></tr>`;
     putHTML($("#wsMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">Workstreams</h2><select id="wsmP" aria-label="Project"><option value="">All projects</option>${P4.map((p6) => html`<option value="${p6.code}" ${WSM.proj === p6.code ? "selected" : ""}>${p6.name}</option>`)}</select><input id="wsmName" type="text" placeholder="New workstream" aria-label="New workstream"><button class="btn" data-wsm="add">Add…</button>${nClosed ? html`<label class="sub"><input type="checkbox" id="wsmClosed" ${WSM.closed ? "checked" : ""}> Show closed (${raw(nClosed)})</label>` : ""}</div>
     <p class="sub" style="margin:6px 0 10px">Each project's own workstreams. A lead, keywords and aliases (e.g. UAT for Testing) help creaite match items from minutes and mail. Renaming one renames its items too; closing one stops it being chosen for new items. Every change is a proposal, with Undo.</p>
     <div class="tbl"><table class="mgr"><thead><tr><th>Project</th><th>Workstream</th>${raw(WS_FIELDS.map(([, l6]) => `<th>${l6}</th>`).join(""))}<th class="num">Open</th><th>Status</th><th></th></tr></thead><tbody>
-    ${WSM.edit === "new" ? raw(ed2(WSM.draft, true)) : ""}${raw(L3.map((w6) => WSM.edit === w6.id ? ed2(w6, false) : `<tr class="${w6.st === "Closed" ? "off" : ""}"><td><span class="pcode">${esc(pName(w6.p))}</span></td><td>${esc(w6.name)}</td>${wsCells(w6)}<td class="num">${w6.nA + w6.nR}</td><td>${w6.st}</td><td class="mgract"><button class="mini" data-wsm="edit" data-wsid="${w6.id}">Edit</button><button class="mini" data-wsm="${w6.st === "Active" ? "close" : "reopen"}" data-wsid="${w6.id}">${w6.st === "Active" ? "Close" : "Reopen"}</button></td></tr>`).join("") || `<tr><td colspan="9" class="sub">No workstreams yet${WSM.proj ? ` for ${WSM.proj}` : ""}. Add one, or say “setup” to bring them in from the items.</td></tr>`)}</tbody></table></div>`);
+    ${WSM.edit === "new" ? raw(ed3(WSM.draft, true)) : ""}${raw(L3.map((w6) => WSM.edit === w6.id ? ed3(w6, false) : `<tr class="${w6.st === "Closed" ? "off" : ""}"><td><span class="pcode">${esc(pName(w6.p))}</span></td><td>${esc(w6.name)}</td>${wsCells(w6)}<td class="num">${w6.nA + w6.nR}</td><td>${w6.st}</td><td class="mgract"><button class="mini" data-wsm="edit" data-wsid="${w6.id}">Edit</button><button class="mini" data-wsm="${w6.st === "Active" ? "close" : "reopen"}" data-wsid="${w6.id}">${w6.st === "Active" ? "Close" : "Reopen"}</button></td></tr>`).join("") || `<tr><td colspan="9" class="sub">No workstreams yet${WSM.proj ? ` for ${WSM.proj}` : ""}. Add one, or say “setup” to bring them in from the items.</td></tr>`)}</tbody></table></div>`);
   }
   async function wsmSave(tr2) {
     const v5 = Object.fromEntries([...tr2.querySelectorAll("[data-wf]")].map((i5) => [i5.dataset.wf, i5.value.trim()])), id2 = tr2.dataset.wsid;
@@ -29699,7 +30145,7 @@ ${s5}`;
   }
   var ALERTTYPES = [["action", "Action"], ["risk", "Risk"], ["issue", "Issue"], ["decision", "Decision"]];
   var alertTypeOf = (k5, x5) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(x5 && x5.type || "risk").toLowerCase();
-  async function alertMake(id2, type, keep, cand) {
+  async function alertMake(id2, type, keep2, cand) {
     if (!viaServer()) {
       snack("Create work item needs the live server");
       return;
@@ -29717,19 +30163,19 @@ ${s5}`;
     pkNewOffer("");
     const x5 = shared.CUR.draft;
     x5.p = pre.project || "";
-    x5.t = keep && keep.t ? keep.t : String(v5.description ?? v5.decision ?? "");
+    x5.t = keep2 && keep2.t ? keep2.t : String(v5.description ?? v5.decision ?? "");
     if (k5 === "decisions") {
       x5.by = v5.made_by || "";
       x5.srcIn = pre.source || "";
-      if (keep && keep.due) x5.due = keep.due;
+      if (keep2 && keep2.due) x5.due = keep2.due;
     } else {
       x5.o = v5.owner || "";
       if (v5.type) x5.type = v5.type;
-      if (keep && keep.due) x5.due = keep.due;
+      if (keep2 && keep2.due) x5.due = keep2.due;
     }
     if (pre.raised) x5.raised = pre.raised;
-    if (!keep && k5 !== "decisions" && v5.due_date) x5.due = v5.due_date;
-    if (!keep && k5 === "decisions" && v5.needed_by) x5.due = v5.needed_by;
+    if (!keep2 && k5 !== "decisions" && v5.due_date) x5.due = v5.due_date;
+    if (!keep2 && k5 === "decisions" && v5.needed_by) x5.due = v5.needed_by;
     shared.CUR.alert = { id: id2, type, cand: cand || 0, link: pre.link || "", who: pre.who || "", sent: pre.sent || "", kind: pre.kind || "mail", marker: pre.marker || "", source: pre.source || "" };
     shared.CUR.blank = { ...x5 };
     drawPanel();
@@ -29865,8 +30311,8 @@ ${s5}`;
         return;
       }
       if (k5 === "save") {
-        const name = $("#igName").value.trim(), text = $("#igText").value.trim(), where = $$("#igForm [data-igw]").filter((c5) => c5.checked).map((c5) => c5.dataset.igw);
-        if (!name || !text || !where.length) {
+        const name = $("#igName").value.trim(), text = $("#igText").value.trim(), where2 = $$("#igForm [data-igw]").filter((c5) => c5.checked).map((c5) => c5.dataset.igw);
+        if (!name || !text || !where2.length) {
           snack(!name ? "Give the rule a name" : !text ? "Say what text to match" : "Choose where it applies");
           return;
         }
@@ -29874,7 +30320,7 @@ ${s5}`;
           snack("Another rule has that name");
           return;
         }
-        const rule = { name, where, field: $("#igField").value, how: $("#igHow").value, text, on: IGEDIT >= 0 ? L3[IGEDIT].on !== false : true };
+        const rule = { name, where: where2, field: $("#igField").value, how: $("#igHow").value, text, on: IGEDIT >= 0 ? L3[IGEDIT].on !== false : true };
         if (IGEDIT >= 0) L3[IGEDIT] = rule;
         else L3.push(rule);
         if (await saveIgnore(L3, `Rule “${name}” saved`)) {
@@ -30113,7 +30559,7 @@ ${s5}`;
       /** @type {import("../../stores/rejects.js").RjCandidate[] | null} */
       null
     );
-    const [typed, setTyped] = d2("");
+    const [typed2, setTyped] = d2("");
     const [bad, setBad] = d2("");
     _2(() => {
       setStage("reasons");
@@ -30158,7 +30604,7 @@ ${s5}`;
       m5.candidates().then((L3) => setCands(L3 || []), () => setCands([]));
     };
     const useTyped = () => {
-      const id2 = typed.trim().toUpperCase();
+      const id2 = typed2.trim().toUpperCase();
       if (!ID.test(id2)) {
         setBad("Type an item ID, like ABC-A-009");
         return;
@@ -30292,7 +30738,7 @@ ${s5}`;
                 placeholder: "Or type its ID",
                 "aria-label": "The item it duplicates, by ID",
                 autocomplete: "off",
-                value: typed,
+                value: typed2,
                 "aria-invalid": bad ? "true" : void 0,
                 "aria-describedby": bad ? "rjDupBad" : void 0,
                 onInput: (e4) => {
@@ -31923,7 +32369,7 @@ ${s5}`;
       } : null);
       return true;
     }
-    const keep = was || quiet ? null : await rvItemState(r4);
+    const keep2 = was || quiet ? null : await rvItemState(r4);
     const res = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code });
     if (!res.ok) {
       snack(oneLine(res.message) || "Not moved");
@@ -31933,15 +32379,15 @@ ${s5}`;
     if (quiet) return true;
     const sig = learnable(r4);
     if (!was && !sig) {
-      snack(`Moved to ${pName(code)} — still waiting for review`, keep ? async () => {
+      snack(`Moved to ${pName(code)} — still waiting for review`, keep2 ? async () => {
         try {
           await editProposal(r4.file, (data) => {
             const it2 = (data.items || []).find((i5) => i5.n === r4.ref);
             if (!it2 || it2.applied) throw new Error("it has been decided since");
-            it2.values = { ...it2.values || {}, ...keep.values };
+            it2.values = { ...it2.values || {}, ...keep2.values };
             ["match", "moved_from", "edited_in"].forEach((f5) => {
-              if (keep[f5] === void 0) delete it2[f5];
-              else it2[f5] = keep[f5];
+              if (keep2[f5] === void 0) delete it2[f5];
+              else it2[f5] = keep2[f5];
             });
           });
         } catch (e4) {
@@ -32793,7 +33239,7 @@ ${s5}`;
   } };
 
   // core/keys.js
-  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip";
+  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer";
   function bootCopyCommand() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-copycmd]");
@@ -32826,6 +33272,11 @@ ${s5}`;
   };
   function bootKeyboard() {
     document.addEventListener("keydown", (e4) => {
+      if ((e4.metaKey || e4.ctrlKey) && e4.shiftKey && !e4.altKey && e4.key.toLowerCase() === "n") {
+        e4.preventDefault();
+        openCapture();
+        return;
+      }
       if ((e4.metaKey || e4.ctrlKey) && e4.key.toLowerCase() === "k") {
         e4.preventDefault();
         openCk();
@@ -32866,6 +33317,11 @@ ${s5}`;
       if (e4.key === "/") {
         e4.preventDefault();
         openChat();
+        return;
+      }
+      if ((e4.key === "n" || e4.key === "N") && !e4.shiftKey && !document.querySelector("dialog[open]")) {
+        e4.preventDefault();
+        openCapture();
         return;
       }
       if ((e4.key === "f" || e4.key === "F") && (shared.VIEW === "work" || shared.VIEW === "mine")) {
@@ -33085,7 +33541,7 @@ ${s5}`;
     const input = A2(
       /** @type {HTMLInputElement|null} */
       null
-    ), seq = A2(0), timer = A2(0);
+    ), seq2 = A2(0), timer2 = A2(0);
     const draftRef = A2(
       /** @type {SneakDraft|null} */
       null
@@ -33096,12 +33552,12 @@ ${s5}`;
     }, []);
     h2(() => () => {
       SNEAK_CMD.fn = null;
-      clearTimeout(timer.current);
+      clearTimeout(timer2.current);
       const d5 = draftRef.current;
       if (d5 && d5.d) draftStat(d5.feature, "rejected");
     }, []);
     async function read(t47, pk2) {
-      const n4 = ++seq.current;
+      const n4 = ++seq2.current;
       if (!t47.trim()) {
         setReply(null);
         return null;
@@ -33119,40 +33575,40 @@ ${s5}`;
         /** @type {SneakReply} */
         await api("/api/sneak/read", body2)
       );
-      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq.current; i5++) {
+      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq2.current; i5++) {
         await new Promise((res) => setTimeout(res, 300));
         r5 = /** @type {SneakReply} */
         await api("/api/sneak/read", body2);
       }
-      if (n4 !== seq.current) return null;
+      if (n4 !== seq2.current) return null;
       setReply(r5);
       return r5;
     }
-    function typed(t47, at0) {
+    function typed2(t47, at0) {
       const el2 = input.current, caret = at0 != null ? at0 : el2 && document.activeElement === el2 && el2.selectionStart != null ? el2.selectionStart : t47.length;
       const a5 = atQuery(t47, caret), list = a5 ? atMatches(acts2.people(), a5.q) : [];
       setAt(a5 && (list.length || !a5.q.includes(" ")) ? { start: a5.start, end: caret, list, i: 0 } : null);
       if (a5 && (list.length || !a5.q.includes(" "))) {
         setText(t47);
         setDone(null);
-        clearTimeout(timer.current);
+        clearTimeout(timer2.current);
         return;
       }
       setText(t47);
       setDone(null);
       setShown(false);
       setFlash(false);
-      clearTimeout(timer.current);
+      clearTimeout(timer2.current);
       if (draftRef.current && !draftRef.current.status) {
         if (draftRef.current.d) draftStat(draftRef.current.feature, "rejected");
         setDraft(null);
       }
       if (t47.trim().length < 2) {
-        seq.current++;
+        seq2.current++;
         setReply(null);
         return;
       }
-      timer.current = /** @type {any} */
+      timer2.current = /** @type {any} */
       setTimeout(() => read(t47, picks), SP_DEBOUNCE);
     }
     function again(t47, pk2) {
@@ -33160,7 +33616,7 @@ ${s5}`;
       setPicks(pk2);
       setDone(null);
       setShown(true);
-      clearTimeout(timer.current);
+      clearTimeout(timer2.current);
       read(t47, pk2);
       input.current?.focus();
     }
@@ -33185,7 +33641,7 @@ ${s5}`;
         setDone({ text: res.message || "Not changed.", ok: false });
         return;
       }
-      seq.current++;
+      seq2.current++;
       setText("");
       setReply(null);
       setClosing("");
@@ -33244,7 +33700,7 @@ ${s5}`;
       }
       draftStat(d5.feature, "used");
       setDraft(null);
-      seq.current++;
+      seq2.current++;
       setText("");
       setReply(null);
       const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
@@ -33267,7 +33723,7 @@ ${s5}`;
       SNEAK_HIST.length = Math.min(SNEAK_HIST.length, 20);
     }
     async function enter(cmd) {
-      clearTimeout(timer.current);
+      clearTimeout(timer2.current);
       if (draftRef.current) {
         if (draftRef.current.d) useDraft();
         return;
@@ -33306,7 +33762,7 @@ ${s5}`;
     function pickPerson(p6) {
       if (!at2) return;
       const t47 = `${text.slice(0, at2.start)}@${p6.name} ${text.slice(at2.end).replace(/^ /, "")}`, caret = at2.start + p6.name.length + 2;
-      typed(t47, caret);
+      typed2(t47, caret);
       setAt(null);
       setTimeout(() => {
         const el2 = input.current;
@@ -33364,7 +33820,7 @@ ${s5}`;
       }
       if (e4.key === "ArrowUp" && !text && SNEAK_HIST.length) {
         e4.preventDefault();
-        typed(SNEAK_HIST[0]);
+        typed2(SNEAK_HIST[0]);
       }
     }
     SNEAK_CMD.fn = () => {
@@ -33398,7 +33854,7 @@ ${s5}`;
           setClosing,
           onMake: () => make(r4, closing),
           onNot: () => {
-            seq.current++;
+            seq2.current++;
             setReply(null);
             setText("");
             setShown(false);
@@ -33469,7 +33925,7 @@ ${s5}`;
             "aria-controls": "spPeople",
             "aria-activedescendant": at2 && at2.list.length ? `spP${at2.i}` : void 0,
             placeholder: `Change ${id2}… e.g. due Friday, owner to @Sam`,
-            onInput: (e4) => typed(
+            onInput: (e4) => typed2(
               /** @type {HTMLInputElement} */
               e4.currentTarget.value
             ),
@@ -34966,7 +35422,7 @@ ${s5}`;
       return;
     }
     const st2 = m5.state, ach = st2 === "achieved", F5 = shared.MV.flow && shared.MV.flow.id === m5.id ? shared.MV.flow : null, PD = shared.MV.pend && shared.MV.pend.id === m5.id ? shared.MV.pend : null;
-    const keep = document.activeElement && p6.contains(document.activeElement) ? document.activeElement.id : null;
+    const keep2 = document.activeElement && p6.contains(document.activeElement) ? document.activeElement.id : null;
     let h5 = `<div class="mv-pkbar"><span class="id">${m5.id} · ${esc(pn2)}</span><span class="sp"></span><span class="mv-hint">Each change saves on its own, with Undo</span>${ibtn("x", "Close", 'data-mvpk="close"', "mv-ib")}</div><div class="mv-pkbody">`;
     h5 += `<input class="mv-ttl" id="mvName" type="text" value="${esc(m5.n)}" aria-label="Milestone name">`;
     h5 += `<div class="mv-dchips"><span>${mvTag(st2)}</span><span>${ach ? `Achieved <b>${fd(m5.actual) || "—"}</b>` : `Agreed <b>${fd(m5.agr) || "not set"}</b>`}</span>${ach ? "" : `<span>Forecast <b>${fd(m5.fc) || "not set"}</b></span>`}<span>Progress <b>${m5.pct == null ? "not set" : m5.pct + "%"}</b></span></div>`;
@@ -34998,7 +35454,7 @@ ${s5}`;
     paintIcons(p6);
     const d5 = $("#mvDesc");
     if (d5 && typeof autoGrow === "function") autoGrow(d5);
-    if (keep && document.getElementById(keep)) document.getElementById(keep).focus();
+    if (keep2 && document.getElementById(keep2)) document.getElementById(keep2).focus();
     drFcDraw();
   }
   function mvShake() {
@@ -35215,7 +35671,7 @@ ${s5}`;
     if (p6 !== null) A5.pct = p6 === "" ? null : +p6;
   }
   function mvAddDraw(p6, pn2) {
-    const A5 = shared.MV.add, sug = mvAddSug(A5), st2 = A5.st || sug, keep = document.activeElement && p6.contains(document.activeElement) ? document.activeElement.id : null;
+    const A5 = shared.MV.add, sug = mvAddSug(A5), st2 = A5.st || sug, keep2 = document.activeElement && p6.contains(document.activeElement) ? document.activeElement.id : null;
     const need = !!A5.st && A5.st !== "achieved" && MVRANK[A5.st] < MVRANK[sug];
     let h5 = `<div class="mv-pkbar"><span class="id">New milestone · ${esc(pn2)}</span><span class="sp"></span><span class="mv-hint">Saved when you press Create milestone</span>${ibtn("x", "Close", 'data-mvpk="close"', "mv-ib")}</div><div class="mv-pkbody">`;
     h5 += `<input class="mv-ttl" id="mvName" type="text" value="${esc(A5.name)}" placeholder="Name the milestone" aria-label="Milestone name"><div class="mv-err" id="mvAddErr" role="alert"></div>`;
@@ -35235,7 +35691,7 @@ ${s5}`;
     paintIcons(p6);
     const d5 = $("#mvDesc");
     if (d5 && typeof autoGrow === "function") autoGrow(d5);
-    if (keep && document.getElementById(keep)) document.getElementById(keep).focus();
+    if (keep2 && document.getElementById(keep2)) document.getElementById(keep2).focus();
   }
   function mvAddState(s5) {
     const A5 = shared.MV.add;
@@ -35480,14 +35936,14 @@ ${s5}`;
         if (sw3 && k5 === "st") sw3.scrollTo({ left: Math.max(0, (+sw3.dataset.today || 0) - sw3.clientWidth / 3), behavior: reduced() ? "instant" : "smooth" });
         return;
       }
-      const ed2 = t47.closest("[data-mvedit]");
-      if (ed2) {
+      const ed3 = t47.closest("[data-mvedit]");
+      if (ed3) {
         e4.preventDefault();
-        if (shared.MV.peek && (shared.MV.flow || shared.MV.pend) && ed2.dataset.mvedit !== shared.MV.peek || shared.MV.add && mvAddDirty()) {
+        if (shared.MV.peek && (shared.MV.flow || shared.MV.pend) && ed3.dataset.mvedit !== shared.MV.peek || shared.MV.add && mvAddDirty()) {
           mvShake();
           return;
         }
-        mvEdOpen(ed2.dataset.mvedit, ed2);
+        mvEdOpen(ed3.dataset.mvedit, ed3);
         return;
       }
       const vw2 = t47.closest("[data-mvview]");
@@ -40329,7 +40785,7 @@ ${s5}`;
       /** @type {HTMLDivElement|null} */
       null
     );
-    const ed2 = A2(
+    const ed3 = A2(
       /** @type {import("../core/editor.js").EdHandle|null} */
       null
     );
@@ -40338,7 +40794,7 @@ ${s5}`;
     h2(() => {
       const el2 = box.current;
       const h5 = creaiteEditor(el2, { features: "plain", text: value, multiline, prop: "value", ...ai2 ? { ai: ai2 } : {} });
-      ed2.current = h5;
+      ed3.current = h5;
       const blur = () => {
         if (on2.current.onCommit) on2.current.onCommit(h5.value());
       };
@@ -40351,11 +40807,11 @@ ${s5}`;
         el2.removeEventListener("blur", blur);
         el2.removeEventListener("input", input);
         h5.destroy();
-        ed2.current = null;
+        ed3.current = null;
       };
     }, []);
     h2(() => {
-      const h5 = ed2.current;
+      const h5 = ed3.current;
       if (h5 && document.activeElement !== h5.el && h5.value() !== value) h5.setValue(value);
     }, [value]);
     return /* @__PURE__ */ u2(
@@ -41378,10 +41834,10 @@ ${s5}`;
     $("#discardBar").classList.remove("on");
     if (shared.VIEW === "cockpit") renderCockpit(shared.COCK);
   }
-  var figRefs = (ed2) => [...ed2.querySelectorAll("figure.cimg")].map((f5) => f5.dataset.ref).filter((r4) => r4 && !r4.startsWith("new:"));
-  function noteRemoved(ed2) {
+  var figRefs = (ed3) => [...ed3.querySelectorAll("figure.cimg")].map((f5) => f5.dataset.ref).filter((r4) => r4 && !r4.startsWith("new:"));
+  function noteRemoved(ed3) {
     if (!shared.CURED) return;
-    const now = new Set(figRefs(ed2));
+    const now = new Set(figRefs(ed3));
     (shared.CURED.shown || []).forEach((r4) => {
       if (!now.has(r4)) shared.CURED.removed.add(r4);
     });
@@ -41473,8 +41929,8 @@ ${s5}`;
     if (i5) i5.click();
   }
   async function insertImage(file, at2, pos) {
-    const ed2 = curPane(at2), h5 = edOf(ed2);
-    if (!ed2 || !h5 || !shared.CURED) return;
+    const ed3 = curPane(at2), h5 = edOf(ed3);
+    if (!ed3 || !h5 || !shared.CURED) return;
     if (!/^image\/(png|jpeg)$/.test(file.type)) {
       snack(`${file.name} can't be added: only PNG or JPEG images`);
       return;
@@ -41490,11 +41946,11 @@ ${s5}`;
     });
     const id2 = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     (shared.CURED.uploads = shared.CURED.uploads || {})[id2] = { file, src };
-    const st2 = h5.editor.state, end = st2.doc.content.size, sel = getSelection(), inside = sel && sel.rangeCount && ed2.contains(sel.anchorNode);
+    const st2 = h5.editor.state, end = st2.doc.content.size, sel = getSelection(), inside = sel && sel.rangeCount && ed3.contains(sel.anchorNode);
     const at0 = typeof pos === "number" ? pos : inside ? st2.selection.from : end, $p2 = st2.doc.resolve(Math.min(at0, end)), after = $p2.depth ? $p2.after(1) : end;
     const nodes = [{ type: "image", attrs: { src: `new:${id2}`, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []];
     h5.editor.chain().insertContentAt(after, nodes).run();
-    const cap = ed2.querySelector(`figure[data-ref="new:${id2}"] figcaption`);
+    const cap = ed3.querySelector(`figure[data-ref="new:${id2}"] figcaption`);
     if (cap) cap.focus();
   }
   function cancelCurEdit() {
@@ -41538,15 +41994,15 @@ ${s5}`;
     redo: (c5) => c5.redo()
   };
   function rteCmd(cmd) {
-    const ed2 = curPane(), h5 = edOf(ed2);
-    if (!ed2 || !h5) return;
+    const ed3 = curPane(), h5 = edOf(ed3);
+    if (!ed3 || !h5) return;
     if (cmd === "image") {
       pickImage();
       return;
     }
     if (cmd === "link") {
       const sel = h5.editor.state.selection;
-      RTESEL = { el: ed2, from: sel.from, to: sel.to };
+      RTESEL = { el: ed3, from: sel.from, to: sel.to };
       const box = $(".curcard .rtelink");
       box.hidden = false;
       box.querySelector("input").value = h5.editor.getAttributes("link").href || "";
@@ -41557,7 +42013,7 @@ ${s5}`;
     if (run) run(h5.editor.chain().focus()).run();
   }
   function rteLink(add) {
-    const ed2 = RTESEL && RTESEL.el || curPane(), h5 = edOf(ed2), box = $(".curcard .rtelink"), url = box.querySelector("input").value.trim();
+    const ed3 = RTESEL && RTESEL.el || curPane(), h5 = edOf(ed3), box = $(".curcard .rtelink"), url = box.querySelector("input").value.trim();
     box.hidden = true;
     if (!h5) return;
     const c5 = h5.editor.chain().focus();
@@ -41641,11 +42097,11 @@ ${s5}`;
       const b5 = e4.target.closest(".curpanes .cimgdel");
       if (!b5) return;
       e4.preventDefault();
-      const ed2 = b5.closest(".rted"), f5 = b5.closest("figure");
+      const ed3 = b5.closest(".rted"), f5 = b5.closest("figure");
       if (f5.cxRemove) f5.cxRemove();
       else f5.remove();
       noteRemoved($(".curpanes"));
-      ed2.focus();
+      ed3.focus();
     });
     document.addEventListener("input", (e4) => {
       if (shared.CURED && e4.target.closest && e4.target.closest(".curpanes figcaption")) shared.CURED.dirty = true;
@@ -41702,8 +42158,8 @@ ${s5}`;
       }
     });
     document.addEventListener("focusin", (e4) => {
-      const ed2 = e4.target.closest && e4.target.closest(".curpanes .rted");
-      if (ed2 && shared.CURED) shared.CURED.last = ed2.id === "curEd2" ? 2 : 1;
+      const ed3 = e4.target.closest && e4.target.closest(".curpanes .rted");
+      if (ed3 && shared.CURED) shared.CURED.last = ed3.id === "curEd2" ? 2 : 1;
     });
     document.addEventListener("mousedown", (e4) => {
       const b5 = e4.target.closest(".inplace [data-rc]");
@@ -41804,10 +42260,10 @@ ${pre}**Current state title:** ${title}`);
     i5.focus();
     i5.select();
     let done = false;
-    const end = async (keep) => {
+    const end = async (keep2) => {
       if (done) return;
       done = true;
-      if (keep) await csSave(code, i5.value);
+      if (keep2) await csSave(code, i5.value);
       else {
         csHead(code);
         $("#v-cockpit .cstbtn")?.focus();
@@ -42184,7 +42640,7 @@ ${pre}**Current state title:** ${title}`);
     const found = [];
     if (!root || !ev) return found;
     let n4 = n02 || 0;
-    const ed2 = edOf(root), runs = [];
+    const ed3 = edOf(root), runs = [];
     for (const bl2 of root.querySelectorAll("p,li,blockquote")) {
       if (bl2.closest("figure")) continue;
       const tw2 = document.createTreeWalker(bl2, NodeFilter.SHOW_TEXT, { acceptNode: (t47) => t47.parentElement.closest("p,li,blockquote,figure") === bl2 && !t47.parentElement.closest(".claim") ? 1 : 2 });
@@ -42226,7 +42682,7 @@ ${pre}**Current state title:** ${title}`);
           mine.push([t47, Math.max(s5, a5) - a5, Math.min(e4, b5) - a5]);
         }
         for (const [t47, x5, y5] of mine) {
-          if (ed2) {
+          if (ed3) {
             runs.push([t47, x5, y5, n4]);
             continue;
           }
@@ -42242,7 +42698,7 @@ ${pre}**Current state title:** ${title}`);
         found.push({ n: n4, h: h5 });
       }
     }
-    if (ed2) edClaim(root, runs);
+    if (ed3) edClaim(root, runs);
     return found;
   }
   var evSaved = (code) => (P4.find((x5) => x5.code === code) || {}).ev || null;
@@ -42287,7 +42743,7 @@ ${pre}**Current state title:** ${title}`);
     if (!root || !shared.CURED) return 0;
     const set = shared.CURED.claims || (shared.CURED.claims = {});
     let n4 = Math.max(0, ...Object.keys(set).map(Number)), added = 0;
-    const ed2 = edOf(root), runs = [], made = [];
+    const ed3 = edOf(root), runs = [], made = [];
     for (const bl2 of root.querySelectorAll("p,li,blockquote")) {
       if (bl2.closest("figure")) continue;
       const tw2 = document.createTreeWalker(bl2, NodeFilter.SHOW_TEXT, { acceptNode: (t47) => t47.parentElement.closest("p,li,blockquote,figure") === bl2 && !t47.parentElement.closest(".claim") ? 1 : 2 });
@@ -42300,7 +42756,7 @@ ${pre}**Current state title:** ${title}`);
         n4++;
         added++;
         made.push(n4);
-        if (ed2) {
+        if (ed3) {
           runs.push([t47, lead, txt.length - tail, n4]);
           continue;
         }
@@ -42314,7 +42770,7 @@ ${pre}**Current state title:** ${title}`);
         sp2.appendChild(node);
       }
     }
-    if (ed2) edClaim(root, runs);
+    if (ed3) edClaim(root, runs);
     made.forEach((k5) => {
       set[k5] = { text: claimText(root, k5), ids: [], how: "", edited: true, touched: true };
     });
@@ -42673,13 +43129,13 @@ ${pre}**Current state title:** ${title}`);
     if (b5) return b5;
     return $(shared.CURED && shared.CURED.last === 2 ? "#curEd2" : "#curEd");
   }
-  var paneBlank = (ed2) => ed2.classList.toggle("blank", !ed2.textContent.trim() && !ed2.querySelector("figure"));
-  function setSplit(box, pct, keep) {
+  var paneBlank = (ed3) => ed3.classList.toggle("blank", !ed3.textContent.trim() && !ed3.querySelector("figure"));
+  function setSplit(box, pct, keep2) {
     pct = Math.round(Math.min(100 - SPLITMIN, Math.max(SPLITMIN, pct)) * 10) / 10;
     box.style.setProperty("--split", pct);
     const d5 = box.querySelector(".curdiv");
     if (d5) d5.setAttribute("aria-valuenow", Math.round(pct));
-    if (keep) store.set("creaite-cur-split", pct);
+    if (keep2) store.set("creaite-cur-split", pct);
     return pct;
   }
   function bootProjects0083() {
@@ -43506,20 +43962,6 @@ ${pre}**Current state title:** ${title}`);
     }, true);
   }
   function bootDrafts0160() {
-    {
-      const el2 = $("#qcNotes");
-      if (el2) {
-        const d5 = store.get(QCK, "");
-        if (d5 && !el2.value) {
-          el2.value = d5;
-          qcOpen(true);
-        }
-        el2.addEventListener("input", () => {
-          clearTimeout(shared.QCT);
-          shared.QCT = setTimeout(() => store.set(QCK, el2.value), 250);
-        });
-      }
-    }
   }
   var DRAFTFEATURES = [
     ["update", "Draft the latest update", "An action's latest update from what happened since the last one, and Draft updates for actions with no recent update"],
@@ -43876,21 +44318,6 @@ ${pre}**Current state title:** ${title}`);
     const v5 = vagueWhy(c5.new.t);
     return `${c5.chips.length ? `<div class="ckchips" role="group" aria-label="Suggested fields">${c5.chips.map((x5, i5) => `<button type="button" class="chip capchip" data-ckchip="${i5}" title="Suggested ${esc(x5.why)}; click to set it">+ ${esc(x5.label)}</button>`).join("")}</div>` : ""}${v5 ? `<div class="sub ckvague">The title is vague (${esc(v5)}): write what is to be done, or stage it and Sharpen it in the item.</div>` : ""}`;
   }
-  function qcLine() {
-    const ta2 = $("#qcNotes"), v5 = ta2.value, at2 = ta2.selectionStart ?? v5.length, a5 = v5.lastIndexOf("\n", at2 - 1) + 1, b5 = v5.indexOf("\n", at2);
-    return { a: a5, b: b5 < 0 ? v5.length : b5, text: v5.slice(a5, b5 < 0 ? v5.length : b5) };
-  }
-  function qcChipsDraw() {
-    const ln2 = qcLine(), code = $("#qcProj").value || (P4.find((p6) => new RegExp(`\\b${p6.code}\\b`).test(ln2.text)) || {}).code || "";
-    const words = { o: "owner", due: "due", ws: "workstream", ms: "milestone", pr: "priority" };
-    capChipsDraw($("#qcChips"), ln2.text.trim().split(/\s+/).length >= 3 ? capChips(ln2.text, code, {}).filter((c5) => !new RegExp(`\\b${words[c5.f]}\\b`, "i").test(ln2.text)) : [], (c5) => {
-      const ta2 = $("#qcNotes"), cur = qcLine(), v5 = ta2.value, show = c5.f === "due" ? fd(c5.v) : c5.f === "ms" ? c5.label.replace(/^Milestone: /, "") : c5.v, add = ` (${words[c5.f]} ${show})`;
-      ta2.value = v5.slice(0, cur.b) + add + v5.slice(cur.b);
-      ta2.focus();
-      ta2.selectionStart = ta2.selectionEnd = cur.b + add.length;
-      qcChipsDraw();
-    });
-  }
   function bootDrafts0204() {
     Object.assign(DRAFTKIND, { sharpen: "sharpen" });
     {
@@ -43945,15 +44372,6 @@ ${pre}**Current state title:** ${title}`);
       drawCk();
       $("#cmdkIn").focus();
     }, true);
-    {
-      const host2 = document.createElement("div");
-      host2.id = "qcChips";
-      host2.className = "qcchips";
-      host2.setAttribute("role", "group");
-      host2.setAttribute("aria-label", "Suggested fields for this line");
-      $("#qcNotes").after(host2);
-    }
-    ["input", "click", "keyup"].forEach((ev) => $("#qcNotes").addEventListener(ev, () => qcChipsDraw()));
   }
 
   // components/peek/ChasePane.jsx
@@ -44071,7 +44489,7 @@ ${pre}**Current state title:** ${title}`);
     );
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
-    const seq = A2(0), mail = A2(
+    const seq2 = A2(0), mail = A2(
       /** @type {HTMLDivElement | null} */
       null
     ), back2 = A2(
@@ -44096,10 +44514,10 @@ ${pre}**Current state title:** ${title}`);
         setErr("Draft chase needs the live server: start it, then try again.");
         return void 0;
       }
-      const n4 = ++seq.current;
+      const n4 = ++seq2.current;
       const t47 = setTimeout(async () => {
         const r4 = await api("/api/chase/pane", { id: id2, hour: (/* @__PURE__ */ new Date()).getHours(), ...opts });
-        if (n4 !== seq.current) return;
+        if (n4 !== seq2.current) return;
         if (!r4 || r4.ok === false) {
           setErr(r4 && r4.message || "The item couldn't be read.");
           return;
@@ -45942,11 +46360,11 @@ ${d5.text}`);
   function pkStOpt(k5, x5, s5) {
     return shared.CUR && shared.CUR.mode === "new" && k5 === "decisions" && s5 === "Withdrawn" ? { disabled: true, hint: "A new decision is pending or made" } : k5 === "decisions" && x5.st === "Made" && s5 === "Pending" ? { disabled: true, hint: "A made decision can't go back to pending; record a new one that replaces it" } : {};
   }
-  async function pkOwner(k5, id2, v5, typed) {
+  async function pkOwner(k5, id2, v5, typed2) {
     const x5 = pkX(k5, id2), f5 = pkOwnF(k5);
     if (!x5) return;
     let n4 = v5;
-    if (typed) {
+    if (typed2) {
       n4 = await ownerFinal(v5);
       if (n4 === null) return;
     }
@@ -46191,20 +46609,20 @@ ${d5.text}`);
       if (!shared.PKS.length) return;
       if (PKREC) return PKREC;
       PKREC = (async () => {
-        const keep = [], gone = [];
+        const keep2 = [], gone = [];
         for (const s5 of shared.PKS) {
           let there = true;
           try {
             there = await shared.VW.exists("system/staging/" + s5.name);
           } catch (e4) {
           }
-          (there ? keep : gone).push(s5);
+          (there ? keep2 : gone).push(s5);
         }
         if (gone.length) {
           PKAPPLIED.add(D.latest_apply);
           gone.forEach((s5) => shared.PKDONE.push({ ...s5, state: "applied", apply_id: D.latest_apply, at: nowStamp() }));
         }
-        shared.PKS = keep;
+        shared.PKS = keep2;
         shared.PKS.forEach((s5) => {
           const x5 = pkX(s5.k, s5.id);
           if (x5) {
@@ -46328,7 +46746,7 @@ ${d5.text}`);
       } catch (e4) {
       }
       if (!Array.isArray(L3)) L3 = [];
-      const keep = [];
+      const keep2 = [];
       for (const s5 of L3) {
         if (!s5 || !s5.name || !s5.k || !s5.id) continue;
         let there = true;
@@ -46336,9 +46754,9 @@ ${d5.text}`);
           there = await shared.VW.exists("system/staging/" + s5.name);
         } catch (e4) {
         }
-        if (there) keep.push(s5);
+        if (there) keep2.push(s5);
       }
-      shared.PKS = keep;
+      shared.PKS = keep2;
       pkFromVault();
       if (!shared.PKS.length) return;
       shared.PKS.forEach((s5) => {
@@ -46512,8 +46930,8 @@ ${d5.text}`);
       }
       pkCommit(k5, id2, patch, "Project", pName(x5.p), pName(v5), { note: notes.join("; ") });
     } });
-    PKPROP.ws = (a5, x5, k5, id2) => openPicker(a5, { label: "Workstream", search: true, allowNew: true, value: x5.ws || "", onClose: pkPopDone(a5), options: [...wsFor(x5.p).map((w6) => ({ v: w6, label: w6, icon: "layers" })), { v: "", label: "None" }], onPick: (v5, typed) => {
-      if (typed) {
+    PKPROP.ws = (a5, x5, k5, id2) => openPicker(a5, { label: "Workstream", search: true, allowNew: true, value: x5.ws || "", onClose: pkPopDone(a5), options: [...wsFor(x5.p).map((w6) => ({ v: w6, label: w6, icon: "layers" })), { v: "", label: "None" }], onPick: (v5, typed2) => {
+      if (typed2) {
         const m5 = wsFor(x5.p).find((w6) => w6.toLowerCase() === v5.toLowerCase());
         if (!m5) {
           pkNote(`“${v5}” isn't one of ${pName(x5.p)}'s workstreams yet. Add it in Settings › People and projects › Workstreams, then choose it here.`);
@@ -47184,7 +47602,7 @@ ${d5.text}`);
       onClose: pkPopDone(anchor),
       options: pkOwnerOpts(x5, k5, ""),
       filter: (q5) => pkOwnerOpts(x5, k5, q5),
-      onPick: async (v5, typed, o5) => {
+      onPick: async (v5, typed2, o5) => {
         if (v5 === "\0page") {
           closePanel();
           isMe(cur) ? go2("mine") : go2("person", cur);
@@ -47258,7 +47676,7 @@ ${d5.text}`);
       const wsOld = PKPROP.ws;
       PKPROP.ws = (a5, x5, k5, id2) => {
         if (!pkWsAddOK()) return wsOld(a5, x5, k5, id2);
-        openPicker(a5, { label: "Workstream", search: true, value: x5.ws || "", onClose: pkPopDone(a5), options: pkWsOpts(x5, ""), filter: (q5) => pkWsOpts(x5, q5), onPick: (v5, typed, o5) => {
+        openPicker(a5, { label: "Workstream", search: true, value: x5.ws || "", onClose: pkPopDone(a5), options: pkWsOpts(x5, ""), filter: (q5) => pkWsOpts(x5, q5), onPick: (v5, typed2, o5) => {
           if (v5 === "\0add") return pkWsForm(a5, x5, k5, id2, o5 && o5.name || "");
           return pkCommit(k5, id2, { ws: v5 }, "Workstream", x5.ws || "none", v5 || "none");
         } });
@@ -47474,8 +47892,8 @@ ${d5.text}`);
         snack(draftWhyNot("update-bulk"));
         return;
       }
-      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where = b5.parentElement.querySelector(".drbst");
-      draftBulk(ids, where);
+      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where2 = b5.parentElement.querySelector(".drbst");
+      draftBulk(ids, where2);
     });
     if (shared.VIEW === "today") renderToday();
   }
@@ -49610,8 +50028,8 @@ ${d5.text}`);
       TABNAME.prep = t48 ? `Prep · ${t48}` : "Prep";
     }
     const n4 = REV.filter((r4) => !r4.done).length, vips = VIPS().length;
-    const where = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
-    const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where ? ` · ${where}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
+    const where2 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
+    const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where2 ? ` · ${where2}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
     if (document.title !== t47) document.title = t47;
     if (shared.VIEW === "milestones" && shared.MSCODE) {
       const t48 = document.title.replace(/ · [^·]*$/, "").replace(/ \(\d+\)$/, "") + ` · ${pName(shared.MSCODE)} milestones`;
@@ -49835,75 +50253,6 @@ ${d5.text}`);
     drawPrep();
     if (kept) snack("Remembered for this series");
   }
-  function qcFill() {
-    const sel = $("#qcProj"), cur = sel.value;
-    putHTML(sel, html`<option value="">Match from the note</option>${P4.map((p6) => html`<option value="${p6.code}">${p6.name}</option>`)}`);
-    sel.value = cur;
-  }
-  function qcOpen(show) {
-    const was = $("#qcMore").hidden;
-    $("#qcMore").hidden = !show;
-    if (show && (was || !$("#qcDate").value)) $("#qcDate").value = fd(TODAY);
-    qcFill();
-    $("#qcGo").disabled = !viaServer() || !!shared.RUN;
-    $("#qcMsg").textContent = !viaServer() ? "Quick capture needs the live server." : shared.RUN ? "ask creaite is busy; process when it's finished." : "";
-  }
-  var QCK = "creaite-qc-draft";
-  shared.QCT = null;
-  function qcClear() {
-    clearTimeout(shared.QCT);
-    store.set(QCK, "");
-    ["qcNotes", "qcWho", "qcTitle"].forEach((id2) => $("#" + id2).value = "");
-    $("#qcProj").value = "";
-    $("#qcDate").value = fd(TODAY);
-    $("#qcMsg").textContent = "";
-    qcOpen(false);
-  }
-  function openCapture(notes) {
-    go2("inbox");
-    if (notes != null) $("#qcNotes").value = notes;
-    qcOpen(true);
-    $("#qcDate").value = fd(TODAY);
-    $("#qcNotes").focus();
-  }
-  async function captureNote(f5) {
-    const r4 = await api("/api/capture", f5);
-    if (!r4.ok) {
-      openCapture(f5.notes);
-      if (f5.date) $("#qcDate").value = fd(f5.date);
-      $("#qcMsg").textContent = oneLine(r4.message || "The note wasn't saved.");
-      if (r4.candidates) $("#qcProj").focus();
-      return false;
-    }
-    openChat();
-    addEl("msg u", html`${`Quick capture: ${r4.title} (${pName(r4.code)}${r4.matched ? ", matched from the note" : ""})`}`);
-    try {
-      await askLive(`process ${r4.path}`, `Process the quick note "${r4.title}" (${pName(r4.code)}) into proposed items, without Word minutes`);
-    } finally {
-      await reloadData();
-    }
-    return true;
-  }
-  async function qcProcess() {
-    const notes = $("#qcNotes").value.trim(), dd2 = $("#qcDate").value.trim();
-    if (!notes) {
-      $("#qcMsg").textContent = "Write the note first.";
-      return;
-    }
-    if (dd2 && (!DDATE.test(dd2) || toIso(dd2) > TODAY)) {
-      $("#qcMsg").textContent = DDATE.test(dd2) ? "The date can't be after today." : "Not a date creaite knows. " + DATE_HELP;
-      $("#qcDate").focus();
-      return;
-    }
-    if (!viaServer() || shared.RUN) {
-      qcOpen(true);
-      return;
-    }
-    const f5 = { notes, code: $("#qcProj").value, date: dd2 && DDATE.test(dd2) && toIso(dd2) <= TODAY ? toIso(dd2) : TODAY, who: $("#qcWho").value.trim(), title: $("#qcTitle").value.trim() };
-    $("#qcGo").disabled = true;
-    if (await captureNote(f5)) qcClear();
-    else $("#qcGo").disabled = false;
-  }
   function bootMeetings0126() {
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("[data-preppage]")) {
@@ -49948,25 +50297,6 @@ ${d5.text}`);
     document.addEventListener("click", (e4) => {
       if (e4.target.closest("#prepDlg [data-nav], #prepDlg [data-proj]")) $("#prepDlg").close();
     }, true);
-    putHTML($("#isecQuickBody"), html`<div class="qcap" id="qcap"><label for="qcNotes" class="vh">Quick capture notes</label>
-  <textarea id="qcNotes" rows="2" placeholder="Notes from a call or a conversation: what was agreed, who will do what by when, any new risk…"></textarea>
-  <div class="qcrow" id="qcMore" hidden><label>Project <select id="qcProj"></select></label><div class="qcf"><label for="qcDate">Date</label><span class="dwrap qcdate"><input id="qcDate" type="text" data-max="today" data-noclear size="12" autocomplete="off" aria-describedby="qcMsg"><button type="button" class="dbtn" data-cal="qcDate" aria-label="Choose date">${raw(CALI)}</button></span></div>
-    <label>Who was there <input id="qcWho" placeholder="Sara, Omar"></label><label class="qct">Title <input id="qcTitle" placeholder="From the first line"></label><span class="sp"></span>
-    <button class="btn" id="qcCancel" type="button">Clear</button><button class="btn primary" id="qcGo" type="button">Process</button></div>
-  <div class="sub" id="qcMsg" aria-live="polite"></div></div>`);
-    qcFill();
-    $("#qcNotes").addEventListener("focus", () => qcOpen(true));
-    $("#qcNotes").addEventListener("click", () => {
-      if ($("#qcMore").hidden) qcOpen(true);
-    });
-    $("#qcNotes").addEventListener("keydown", (e4) => {
-      if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
-        e4.preventDefault();
-        qcProcess();
-      }
-    });
-    $("#qcGo").onclick = qcProcess;
-    $("#qcCancel").onclick = qcClear;
   }
   var decPending = () => DEC.filter((d5) => d5.st === "Pending");
   var decLate = (d5) => d5.st === "Pending" && !!d5.due && d5.due < TODAY;
@@ -50629,7 +50959,7 @@ ${d5.text}`);
     return null;
   }
   var dateSaid = (iso) => `${(/* @__PURE__ */ new Date(iso + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso)}`;
-  var isDateField = (el2) => !!(el2 && el2.tagName === "INPUT" && !el2.readOnly && el2.matches('[data-date],[placeholder="DD-MM-YYYY"],#qcDate,#bdDate,[data-und]'));
+  var isDateField = (el2) => !!(el2 && el2.tagName === "INPUT" && !el2.readOnly && el2.matches('[data-date],[placeholder="DD-MM-YYYY"],#bdDate,[data-und]'));
   var dueField = (el2) => /(^|_)due$/.test(el2.name || el2.id || "") || el2.dataset.cf === "due" || el2.dataset.bf === "due" || ["rvDate", "bdDate", "bkDate", "deReply"].includes(el2.id) || el2.dataset.und != null || el2.name === "fc";
   function dateRead(el2) {
     const v5 = el2.value.trim();
@@ -50737,8 +51067,8 @@ ${d5.text}`);
     if (q5 && rs2 && (rs2.status === "likely" || rs2.status === "unknown")) items2.push({ n: q5, t: "new" });
     return { L: L3, items: items2 };
   }
-  function ownerOptions(q5, typed) {
-    const code = formProject(), mine = projPeople(code), pool = projFirst(peopleAll(), mine), split2 = new Set(mine), { L: L3, items: items2 } = ownerMatches(typed ? q5 : "", pool);
+  function ownerOptions(q5, typed2) {
+    const code = formProject(), mine = projPeople(code), pool = projFirst(peopleAll(), mine), split2 = new Set(mine), { L: L3, items: items2 } = ownerMatches(typed2 ? q5 : "", pool);
     const nMine = L3.filter((n4) => split2.has(n4)).length, head = (i5) => !code || !nMine || nMine === L3.length ? "" : i5 === 0 ? code : i5 === nMine ? "Everyone else" : "";
     return items2.map((it2, i5) => it2.t === "new" ? { v: it2.n, t: "new", label: `＋ New person “${it2.n}”…`, cls: "new", head: head(i5) } : it2.t === "alias" ? { v: it2.n, t: "alias", typed: it2.typed, label: `Is “${it2.typed}” ${it2.n}?`, sub: "Yes, and remember it", head: head(i5) } : { v: it2.n, t: "pick", label: `${it2.n}${isMe(it2.n) ? " (you)" : ""}`, fill: it2.n, sub: String(useCount(it2.n)), head: head(i5), removeLabel: `Remove ${it2.n} from the list`, remove: () => regSetHidden(it2.n, true) });
   }
@@ -50785,15 +51115,15 @@ ${d5.text}`);
   function bootCmdEnter() {
     window.addEventListener("keydown", (e4) => {
       if (!(e4.key === "Enter" && (e4.metaKey || e4.ctrlKey))) return;
-      const ed2 = CMDENTER.find((x5) => x5.when(e4.target));
-      if (!ed2) return;
+      const ed3 = CMDENTER.find((x5) => x5.when(e4.target));
+      if (!ed3) return;
       if (cmdEnterPicker()) {
-        if (!e4.repeat) setTimeout(() => ed2.save(), 0);
+        if (!e4.repeat) setTimeout(() => ed3.save(), 0);
         return;
       }
       e4.preventDefault();
       e4.stopImmediatePropagation();
-      if (!e4.repeat) ed2.save();
+      if (!e4.repeat) ed3.save();
     }, true);
     onCmdEnter("panel", (t47) => !!shared.CUR && shared.EDITING && !pkOn() && (t47 === document.body || !!(t47.closest && t47.closest("#panel"))), saveAndClose);
   }
@@ -50833,8 +51163,8 @@ ${d5.text}`);
     const cs2 = getComputedStyle(el2), bdr = parseFloat(cs2.borderTopWidth) + parseFloat(cs2.borderBottomWidth), minH = Math.max(parseFloat(cs2.minHeight) || 0, el2._agMin || 0);
     max = Math.max(minH, max ?? Math.floor(window.innerHeight * AG_CAP));
     const top = el2.scrollTop, atEnd = el2.selectionEnd >= el2.value.length, focused = document.activeElement === el2;
-    const keep = [];
-    for (let a5 = el2.parentElement; a5 && a5 !== document.body; a5 = a5.parentElement) if (a5.scrollTop) keep.push([a5, a5.scrollTop]);
+    const keep2 = [];
+    for (let a5 = el2.parentElement; a5 && a5 !== document.body; a5 = a5.parentElement) if (a5.scrollTop) keep2.push([a5, a5.scrollTop]);
     el2.style.height = "auto";
     const need = el2.scrollHeight + bdr, h5 = Math.min(max, Math.max(minH, need));
     el2.style.height = h5 + "px";
@@ -50842,7 +51172,7 @@ ${d5.text}`);
     el2._agW = el2.offsetWidth;
     el2.classList.add("agfit");
     el2.classList.toggle("agscroll", need > max + 1);
-    keep.forEach(([a5, t47]) => a5.scrollTop = t47);
+    keep2.forEach(([a5, t47]) => a5.scrollTop = t47);
     if (focused) {
       el2.scrollTop = atEnd ? el2.scrollHeight : top;
       if (!atEnd && need > max + 1) chCaret(el2);
@@ -51763,7 +52093,7 @@ ${d5.text}`);
       /** @type {HTMLInputElement|null} */
       null
     );
-    const ed2 = A2(
+    const ed3 = A2(
       /** @type {import("../../core/editor.js").EdHandle|null} */
       null
     );
@@ -51846,7 +52176,7 @@ ${d5.text}`);
       return INSERTS.filter(([, l6]) => !ql2 || l6.toLowerCase().includes(ql2)).map(([id2, l6, k5]) => ({ id: id2, label: l6, sub: k5 }));
     };
     const choose = (o5) => {
-      const h5 = ed2.current, p6 = pickRef.current;
+      const h5 = ed3.current, p6 = pickRef.current;
       if (!h5 || !p6) return;
       setPick(null);
       const c5 = h5.editor.chain().focus().deleteRange({ from: p6.from, to: p6.to });
@@ -51867,7 +52197,7 @@ ${d5.text}`);
       insert(o5.id);
     };
     const insert = (what) => {
-      const h5 = ed2.current;
+      const h5 = ed3.current;
       if (!h5) return;
       const c5 = h5.editor.chain().focus();
       if (what === "heading") c5.toggleHeading({ level: 2 }).run();
@@ -51883,7 +52213,7 @@ ${d5.text}`);
       }
     };
     const tool = (cmd) => {
-      const h5 = ed2.current;
+      const h5 = ed3.current;
       if (!h5) return;
       const c5 = h5.editor.chain().focus();
       ({
@@ -51904,7 +52234,7 @@ ${d5.text}`);
     };
     const addImages2 = async (files) => {
       for (const f5 of [...files || []]) {
-        const ref = onImage ? await onImage(f5) : null, h5 = ed2.current;
+        const ref = onImage ? await onImage(f5) : null, h5 = ed3.current;
         if (!ref || !h5) continue;
         const st2 = h5.editor.state, end = st2.doc.content.size, $p2 = st2.doc.resolve(Math.min(st2.selection.from, end)), after = $p2.depth ? $p2.after(1) : end;
         h5.editor.chain().insertContentAt(after, [{ type: "image", attrs: { src: ref, alt: "" } }, ...after >= end ? [{ type: "paragraph" }] : []]).run();
@@ -51924,7 +52254,7 @@ ${d5.text}`);
           const ls2 = lineState.current;
           if (ls2.doc !== state.doc) {
             ls2.doc = state.doc;
-            ls2.L = blockLines(state.doc, ed2.current ? ed2.current.value() : markdown);
+            ls2.L = blockLines(state.doc, ed3.current ? ed3.current.value() : markdown);
           }
           const d5 = decorate(state.doc, () => props.current.noteTitles());
           return d5.add(state.doc, lineDecos(ls2.L, ls2.markers, ls2.hover, ls2.flash));
@@ -51979,7 +52309,7 @@ ${d5.text}`);
           return false;
         }
       } });
-      ed2.current = h5;
+      ed3.current = h5;
       const input = () => {
         props.current.onInput();
       };
@@ -52013,12 +52343,12 @@ ${d5.text}`);
         el2.removeEventListener("mouseleave", out);
         onBody(null);
         h5.destroy();
-        ed2.current = null;
+        ed3.current = null;
         lineState.current.doc = null;
       };
     }, [loadKey]);
     h2(() => {
-      const h5 = ed2.current, el2 = box.current;
+      const h5 = ed3.current, el2 = box.current;
       if (!h5 || !el2 || !path || flashAt.path !== path || !flashAt.line || flashDone.current === flashAt) return;
       flashDone.current = flashAt;
       const line = flashAt.line;
@@ -52032,12 +52362,12 @@ ${d5.text}`);
       setTimeout(() => {
         if (lineState.current.flash !== line) return;
         lineState.current.flash = 0;
-        const e22 = ed2.current;
+        const e22 = ed3.current;
         if (e22) e22.editor.view.dispatch(e22.editor.state.tr.setMeta("cxNoteDecoRedraw", true).setMeta("addToHistory", false));
       }, 4e3);
     }, [flashAt, loadKey, path]);
     h2(() => {
-      const h5 = ed2.current;
+      const h5 = ed3.current;
       if (h5) h5.editor.view.dispatch(h5.editor.state.tr.setMeta("cxNoteDecoRedraw", true).setMeta("addToHistory", false));
     });
     const optId = (
@@ -53252,10 +53582,10 @@ ${d5.text}`);
   function railToggle() {
     if (!railNarrow.value) railSave({ ...railCfg.value, display: railCollapsed.value ? "titles" : "icons" });
   }
-  function railCustomise(opener) {
+  function railCustomise(opener2) {
     railMoreOpen.value = false;
     RAILOPENER = /** @type {HTMLElement | null} */
-    opener || document.querySelector('.rail button[aria-current="page"]') || $("#railMore");
+    opener2 || document.querySelector('.rail button[aria-current="page"]') || $("#railMore");
     railCustOpen.value = true;
   }
   var railPopOpen = railCustomise;
@@ -54048,15 +54378,15 @@ ${d5.text}`);
       $("#vsChips").textContent = "";
       return;
     }
-    const seq = ++SRCH.seq;
+    const seq2 = ++SRCH.seq;
     $("#vsNote").textContent = "Searching…";
     try {
       const res = await searchFetch(q5, SRCH.skip);
-      if (seq !== SRCH.seq) return;
+      if (seq2 !== SRCH.seq) return;
       SRCH.res = res;
       vsRender();
     } catch (e4) {
-      if (seq === SRCH.seq) {
+      if (seq2 === SRCH.seq) {
         $("#vsNote").textContent = oneLine(e4.message);
       }
     }
@@ -54788,34 +55118,34 @@ ${d5.text}`);
   };
   var mdFileLink = (p6, inner) => `<a href="#" class="mdref" data-mdfile="${esc(p6)}">${inner}</a>`, mdItemLink = (id2) => `<a href="#" class="mdref" data-mditem="${id2}">${id2}</a>`;
   function chatMdInline(s5, st2, noLinks) {
-    const keep = (h5) => {
+    const keep2 = (h5) => {
       st2.push(h5);
       return "" + (st2.length - 1) + "";
     };
     s5 = s5.replace(/(`{1,2})([^`\n]+?)\1(?!`)/g, (m5, t47, c5) => {
       const p6 = mdPaths().find((f5) => f5.e === c5.trim());
-      return keep(p6 ? mdFileLink(p6.path, `<code>${c5}</code>`) : ITEMCODE(c5) ? `<a href="#" class="mdref" data-mditem="${c5.trim()}"><code>${c5.trim()}</code></a>` : `<code>${c5}</code>`);
+      return keep2(p6 ? mdFileLink(p6.path, `<code>${c5}</code>`) : ITEMCODE(c5) ? `<a href="#" class="mdref" data-mditem="${c5.trim()}"><code>${c5.trim()}</code></a>` : `<code>${c5}</code>`);
     });
     if (!noLinks) {
       s5 = s5.replace(new RegExp("!\\[([^\\]\\n]*)\\]\\(" + MDC.URL + "\\)", "g"), (m5, alt) => alt);
-      s5 = s5.replace(new RegExp("\\[([^\\]\\n]+)\\]\\(" + MDC.URL + "\\)", "g"), (m5, text, url) => mdSafeUrl(url) ? keep(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text, st2, true)}</a>`) : m5);
+      s5 = s5.replace(new RegExp("\\[([^\\]\\n]+)\\]\\(" + MDC.URL + "\\)", "g"), (m5, text, url) => mdSafeUrl(url) ? keep2(`<a href="${url}" target="_blank" rel="noopener">${chatMdInline(text, st2, true)}</a>`) : m5);
       if (/projects\/|inbox\//.test(s5)) {
-        for (const f5 of mdPaths()) if (s5.includes(f5.e)) s5 = s5.split(f5.e).join(keep(mdFileLink(f5.path, f5.e)));
+        for (const f5 of mdPaths()) if (s5.includes(f5.e)) s5 = s5.split(f5.e).join(keep2(mdFileLink(f5.path, f5.e)));
       }
-      s5 = s5.replace(MDC.ITEM, (id2) => itemTable(id2) ? keep(mdItemLink(id2)) : id2);
+      s5 = s5.replace(MDC.ITEM, (id2) => itemTable(id2) ? keep2(mdItemLink(id2)) : id2);
     }
     return s5.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g, "$1<strong>$2</strong>").replace(/~~(?=\S)([\s\S]*?\S)~~/g, "<del>$1</del>").replace(/(^|[^\w*\u0001])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?!\*)/g, "$1<em>$2</em>").replace(/(^|[^\w])_(?=[^\s_])([^_\n]*?[^\s_])_(?!\w)/g, "$1<em>$2</em>");
   }
   var ITEMCODE = (c5) => /^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/.test(c5.trim()) && !!itemTable(c5.trim());
   function chatMdBlocks(lines, st2, depth) {
-    const out = [], n4 = lines.length, blank = (l6) => /^\s*$/.test(l6), inl = (t47) => chatMdInline(t47, st2);
+    const out = [], n4 = lines.length, blank2 = (l6) => /^\s*$/.test(l6), inl = (t47) => chatMdInline(t47, st2);
     const cells = (l6) => l6.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c5) => c5.trim().replace(/\\\|/g, "|"));
     const tableAt = (i6) => i6 + 1 < n4 && lines[i6].includes("|") && MDC.SEP.test(lines[i6 + 1]) && lines[i6 + 1].includes("-") && cells(lines[i6]).length === cells(lines[i6 + 1]).length;
     const startsBlock = (i6) => MDC.FENCE.test(lines[i6]) || MDC.HEAD.test(lines[i6]) || MDC.HR.test(lines[i6]) || MDC.QUOTE.test(lines[i6]) || MDC.LI.test(lines[i6]) || tableAt(i6);
     let i5 = 0;
     while (i5 < n4) {
       const l6 = lines[i5];
-      if (blank(l6)) {
+      if (blank2(l6)) {
         i5++;
         continue;
       }
@@ -54838,7 +55168,7 @@ ${d5.text}`);
         const head = cells(lines[i5]), al2 = cells(lines[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
         i5 += 2;
         const rows2 = [];
-        while (i5 < n4 && !blank(lines[i5]) && lines[i5].includes("|")) rows2.push(cells(lines[i5++]));
+        while (i5 < n4 && !blank2(lines[i5]) && lines[i5].includes("|")) rows2.push(cells(lines[i5++]));
         const td2 = (t47, k5, tag) => `<${tag}${al2[k5] ? ` class="ta-${al2[k5]}"` : ""}>${inl(t47 || "")}</${tag}>`;
         out.push(`<div class="mdtable"><table><thead><tr>${head.map((c5, k5) => td2(c5, k5, "th")).join("")}</tr></thead><tbody>${rows2.map((r4) => `<tr>${head.map((_6, k5) => td2(r4[k5], k5, "td")).join("")}</tr>`).join("")}</tbody></table></div>`);
         continue;
@@ -54864,9 +55194,9 @@ ${d5.text}`);
             i5++;
             continue;
           }
-          if (blank(x5)) {
+          if (blank2(x5)) {
             let j5 = i5;
-            while (j5 < n4 && blank(lines[j5])) j5++;
+            while (j5 < n4 && blank2(lines[j5])) j5++;
             if (items2.length && j5 < n4 && (MDC.LI.test(lines[j5]) || /^ {2,}\S/.test(lines[j5]))) {
               if (!MDC.LI.test(lines[j5])) items2[items2.length - 1].lines.push("");
               i5 = j5;
@@ -54914,7 +55244,7 @@ ${d5.text}`);
       }
       const para = [l6];
       i5++;
-      while (i5 < n4 && !blank(lines[i5]) && !startsBlock(i5)) para.push(lines[i5++]);
+      while (i5 < n4 && !blank2(lines[i5]) && !startsBlock(i5)) para.push(lines[i5++]);
       out.push(`<p>${inl(para.join("\n")).replace(/\n/g, "<br>")}</p>`);
     }
     return out.join("");
@@ -55039,11 +55369,11 @@ ${d5.text}`);
     log.querySelectorAll(".mday").forEach((x5) => x5.remove());
     const msgs = [...log.children].filter((e4) => e4.classList.contains("msg"));
     if (!msgs.length) return;
-    const seq = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
-    if (head) seq.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
-    if (!seq.length || !head && new Set(seq.map((x5) => x5.day)).size < 2) return;
+    const seq2 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
+    if (head) seq2.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
+    if (!seq2.length || !head && new Set(seq2.map((x5) => x5.day)).size < 2) return;
     let prev = null;
-    seq.forEach((x5) => {
+    seq2.forEach((x5) => {
       if (x5.day === prev) return;
       prev = x5.day;
       const m5 = document.createElement("div");
@@ -55200,10 +55530,16 @@ ${d5.text}`);
     const m5 = /^note:\s*([\s\S]+)/i.exec(q5);
     if (m5) {
       if (!viaServer()) {
-        await say("Quick capture needs the live server.");
+        await say("Saving a note needs the live server.");
         return;
       }
-      if (!await captureNote({ notes: m5[1].trim(), date: TODAY })) await say("Pick the project in Quick capture on the Inbox page, then press Process.");
+      const r4 = await api("/api/notes/capture/done", { code: "auto", body: m5[1].trim(), template: "blank" });
+      if (!r4.ok) {
+        await say(oneLine(r4.message || "The note wasn't saved."));
+        return;
+      }
+      const un2 = r4.code === "_portfolio";
+      await say(`Saved the note “${r4.title}” in ${un2 ? "Unfiled" : pName(r4.code)}${r4.reason ? un2 ? `: ${r4.reason}` : ` (${r4.reason})` : ""}. Find updates on the note turns it into tracker changes.`);
       return;
     }
     if (!viaServer()) {
@@ -55303,18 +55639,18 @@ ${d5.text}`);
       const t47 = document.createElement("span");
       t47.className = "chqtext";
       t47.textContent = it2.text + ((it2.images || []).length ? ` (${it2.images.length} image${it2.images.length === 1 ? "" : "s"})` : "");
-      const ed2 = document.createElement("button");
-      ed2.type = "button";
-      ed2.className = "mini";
-      ed2.dataset.qedit = it2.id;
-      ed2.textContent = "Edit";
+      const ed3 = document.createElement("button");
+      ed3.type = "button";
+      ed3.className = "mini";
+      ed3.dataset.qedit = it2.id;
+      ed3.textContent = "Edit";
       const rm2 = document.createElement("button");
       rm2.type = "button";
       rm2.className = "mini";
       rm2.dataset.qrm = it2.id;
       rm2.textContent = "Remove";
       rm2.setAttribute("aria-label", `Remove the queued message: ${it2.text.slice(0, 60)}`);
-      row2.append(tag, t47, ed2, rm2);
+      row2.append(tag, t47, ed3, rm2);
       box.appendChild(row2);
     });
     chatScroll();
@@ -55337,15 +55673,15 @@ ${d5.text}`);
   }
   function bootAsk0102() {
     $("#chQueue").addEventListener("click", async (e4) => {
-      const rm2 = e4.target.closest("[data-qrm]"), ed2 = e4.target.closest("[data-qedit]"), go3 = e4.target.closest("[data-qgo]");
+      const rm2 = e4.target.closest("[data-qrm]"), ed3 = e4.target.closest("[data-qedit]"), go3 = e4.target.closest("[data-qgo]");
       if (rm2) {
         const r4 = await api("/api/ask/queue", { op: "remove", id: rm2.dataset.qrm });
         if (r4.ok) queueDraw(r4);
         return;
       }
-      if (ed2) {
-        const it2 = QUEUE.items.find((x5) => x5.id === ed2.dataset.qedit);
-        const r4 = await api("/api/ask/queue", { op: "remove", id: ed2.dataset.qedit });
+      if (ed3) {
+        const it2 = QUEUE.items.find((x5) => x5.id === ed3.dataset.qedit);
+        const r4 = await api("/api/ask/queue", { op: "remove", id: ed3.dataset.qedit });
         if (!r4.ok || !it2) return;
         queueDraw(r4);
         const inp = $("#chIn");
@@ -56303,8 +56639,8 @@ ${d5.text}`);
     const all = store.get(DRAFTK, {}), t47 = $("#chIn").value, imgs = shared.PIMG.map((p6) => p6.name).filter(Boolean);
     if (t47.trim() || imgs.length) all[draftKey()] = { text: t47, images: imgs, at: Date.now() };
     else delete all[draftKey()];
-    const keep = Object.entries(all).sort((a5, b5) => b5[1].at - a5[1].at).slice(0, 10);
-    store.set(DRAFTK, Object.fromEntries(keep));
+    const keep2 = Object.entries(all).sort((a5, b5) => b5[1].at - a5[1].at).slice(0, 10);
+    store.set(DRAFTK, Object.fromEntries(keep2));
   }
   function draftRestore() {
     const el2 = $("#chIn"), d5 = store.get(DRAFTK, {})[draftKey()];
@@ -56337,13 +56673,13 @@ ${d5.text}`);
         }, () => snack("Couldn't copy"));
         return;
       }
-      const ed2 = e4.target.closest("[data-msgedit]");
-      if (ed2) {
+      const ed3 = e4.target.closest("[data-msgedit]");
+      if (ed3) {
         if (shared.RUN || shared.BUSY) {
           snack("Wait for ask creaite to finish, or stop it");
           return;
         }
-        chPut(msgText(ed2.closest(".msg")));
+        chPut(msgText(ed3.closest(".msg")));
         return;
       }
       const r4 = e4.target.closest("[data-retry]");
@@ -56490,7 +56826,7 @@ ${d5.text}`);
       const hk3 = helpCk(q6), hfirst = /^(help|how)/.test(q6.trim());
       return [...hfirst ? hk3 : [], ...out2.slice(0, 60), ...hfirst ? [] : hk3, ...searchCkItems()];
     })(q5);
-    if (!q5 || "quick capture note".includes(q5.toLowerCase())) out.splice(out.findIndex((x5) => x5.g === "Actions") + 1 || out.length, 0, { g: "Actions", l: "Quick capture", h: "", fn: () => openCapture() });
+    if (!q5 || "new note quick capture".includes(q5.toLowerCase())) out.splice(out.findIndex((x5) => x5.g === "Actions") + 1 || out.length, 0, { g: "Actions", l: "New note", h: "⌘⇧N", fn: () => openCapture() });
     MTG().filter((m5) => mtgCanPick(m5)).forEach((m5) => {
       const l6 = `Intake: process meeting ${m5.title}`;
       if (!q5 || l6.toLowerCase().includes(q5.toLowerCase())) out.push({ g: "Actions", l: l6, h: fd(m5.day), fn: () => {
@@ -58402,7 +58738,6 @@ ${d5.text}`);
   }
   function refreshAll() {
     const cells = mCells(), cnts = mCounts(), hp2 = new Map(P4.map((p6) => [p6.code, p6.health])), wt2 = typeof shared.WT === "undefined" ? "" : shared.WT, v5 = shared.VIEW;
-    if (typeof qcFill === "function") qcFill();
     status();
     renderBadge();
     inboxBadge();
@@ -59115,12 +59450,11 @@ ${d5.text}`);
         "noteCur",
         "noteFind",
         "noteFlush",
+        "noteRequest",
         "noteSave",
         "nowHM",
         "nowIso",
         "open",
-        "openCal",
-        "openCapture",
         "openChat",
         "openCk",
         "openContextMenu",
@@ -59194,7 +59528,6 @@ ${d5.text}`);
         "projPeople",
         "publish",
         "pulseCheck",
-        "qcProcess",
         "query",
         "quip",
         "quipNow",
