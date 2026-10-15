@@ -4,10 +4,7 @@
  "Help": [
   "unreached: dialog Opener idend:KeysMenu (src/help.js)"
  ],
- "Milestones": [
-  "unreached: listbox Opener label:Add person (src/milestones.js)",
-  "unreached: listbox Opener label:Owner, (src/milestones.js)"
- ],
+ "Milestones": [],
  "Peek": [
   "keys: work-panel button.chip.pk-chip “Due date: 06-10-2026 overdue”: Tab leaves it open",
   "unreached: dialog Picker class:pkws (src/panel.js)",
