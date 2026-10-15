@@ -1,67 +1,96 @@
 <!doctype html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Generate current state</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@600;700;800&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
 <style>
-/* #110: the Generate current state dialog, 460px today -> 736px (+60%). Option A is the recommendation. Demo data only. */
-:root{--bg:#F3F6F7;--surface:#fff;--ink:#14212A;--muted:#4D5C66;--line:#D7DFE3;--accent:#0B6E7F;--accent-soft:#DCEFF2;--sunk:#F6F9FA;
---font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif}
-@media (prefers-color-scheme:dark){:root{--bg:#0F1518;--surface:#171E22;--ink:#E4EAED;--muted:#A2AEB5;--line:#2A343A;--accent:#5FC4D6;--accent-soft:#16363C;--sunk:#1B2428}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--font);padding:32px 16px 80px}
-.wrap{max-width:1560px;margin:0 auto}h1{font:800 32px/1.1 var(--display);margin:0 0 6px}.lede{color:var(--muted);margin:0 0 24px;max-width:70ch}
-.opts{display:flex;gap:32px;flex-wrap:wrap;align-items:flex-start}.opt h2{font:700 18px var(--display);margin:0 0 4px}.opt p{margin:0 0 12px;color:var(--muted);max-width:60ch;font-size:15px}
-.scrim{background:rgba(20,33,42,.35);padding:24px;border-radius:12px}
-.dlg{width:736px;max-width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);display:flex;flex-direction:column}
-.dlg>header{padding:18px 24px 0}.dlg h3{font:700 22px var(--display);margin:0}.proj{color:var(--muted);font-size:15px}
-.body{padding:14px 24px 6px}.foot{position:sticky;bottom:0;display:flex;align-items:center;gap:12px;padding:12px 24px;border-top:1px solid var(--line);background:var(--surface);border-radius:0 0 14px 14px}
-.sum{flex:1;color:var(--muted);font-size:14px}.sum b{color:var(--ink);font-weight:600}
-.btn{font:600 15px var(--font);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 16px}.btn.p{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.kbd{font:500 11px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 5px;margin-left:6px;opacity:.8}
-.row{display:grid;grid-template-columns:96px 1fr;gap:4px 16px;padding:10px 0;border-top:1px solid var(--line);align-items:start}.row:first-child{border-top:0}
-.row>.l{font-weight:600;padding-top:6px;font-size:15px}.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 14px;font:500 15px var(--font)}.chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
-.hint{grid-column:2;color:var(--muted);font-size:14px;margin-top:2px}
-.src{display:grid;grid-template-columns:1fr 1fr;gap:2px 20px}.src label{display:flex;gap:8px;align-items:center;font-size:15px;padding:3px 0}
-.src input{accent-color:var(--accent);width:16px;height:16px;margin:0}
-textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--sunk);color:var(--ink);font:inherit;resize:vertical}
-.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}.fs{padding:10px 0;border-top:1px solid var(--line)}.fs:first-child{border-top:0}.fs h4{font:600 15px var(--font);margin:0 0 6px}
-.note{margin-top:28px;max-width:80ch}.note h2{font:700 20px var(--display)}.note li{margin:4px 0}
-</style></head><body><div class="wrap">
-<h1>Generate current state</h1>
-<p class="lede">#110. Today's dialog is 460px wide: five stacked sections, six rows of chips, and the Generate button below the fold. Both options are 736px (460 × 1.6), keep every control and every rule it has now, and use demo data.</p>
-<div class="opts">
-
-<div class="opt"><h2>A. One line per setting (recommended)</h2><p>Each choice sits on one line with its label on the left, so Period, Form, Audience and Length take four lines instead of eight. Draw on becomes a two-column list. The footer stays in view and says what you are about to make.</p>
-<div class="scrim"><div class="dlg">
-<header><h3>Generate current state</h3><div class="proj">Falcon Data Platform</div></header>
-<div class="body">
-<div class="row"><div class="l">Period</div><div class="chips"><span class="chip on">Last 7 days</span><span class="chip">Last 14 days</span><span class="chip">Last 30 days</span><span class="chip">Dates…</span></div></div>
-<div class="row"><div class="l">Form</div><div class="chips"><span class="chip on">Current state</span><span class="chip">Steering note</span><span class="chip">Three-line update</span><span class="chip">Email paragraph</span><span class="chip">Teams message</span></div><div class="hint">Into the editor, for you to edit and save.</div></div>
-<div class="row"><div class="l">Audience</div><div class="chips"><span class="chip on">Internal</span><span class="chip">Client-safe</span><span class="chip">Steering committee</span><span class="chip">Sponsor</span></div><div class="hint">Candid: the internal view of every item.</div></div>
-<div class="row"><div class="l">Length</div><div class="chips"><span class="chip">Short</span><span class="chip on">Standard</span><span class="chip">Fuller</span></div></div>
-<div class="row"><div class="l">Draw on</div><div class="src"><label><input type="checkbox" checked>Tracker changes and open items</label><label><input type="checkbox" checked>Weekly and client reports</label><label><input type="checkbox" checked>Minutes and transcripts</label><label><input type="checkbox" checked>Weekly updates</label><label><input type="checkbox" checked>Mail and Teams items already swept</label><label><input type="checkbox">Project documents <span class="proj">(internal)</span></label></div></div>
-<div class="row"><div class="l">Steer it</div><div><textarea rows="2" placeholder="Optional. For example: focus on the pilot results"></textarea></div></div>
+/* #110, revision 2 (Alan, 15-10-2026: "not big buttons; discreet for what changes irregularly; Steer it sizeable").
+   Built from the creaite theme: ground #F3F6F7, white paper, hairlines, 12px cards, Schibsted Grotesk headings, Source Sans 3 text,
+   JetBrains Mono small caps for labels, 32px controls at 13px (--ctl-h, --ctl-fs). Demo data only. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--warn:#8A5A00;--warn-soft:#FBF0DA;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;--scrim:rgba(0,0,0,.25)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--warn:#F0C66B;--warn-soft:#3A2C10;--scrim:rgba(0,0,0,.5)}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:28px 16px 80px}
+.page{max-width:1000px;margin:0 auto}h1{font:800 26px/1.15 var(--display);letter-spacing:-.01em;margin:0 0 6px}.lede{color:var(--muted);max-width:72ch;margin:0 0 14px}
+.states{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;align-items:center}.states .sub{margin-right:4px}.sub{color:var(--muted);font-size:12px}
+.st{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--r,8px);height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer}.st[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.stage{background:var(--scrim);border-radius:12px;padding:28px 16px;display:flex;justify-content:center}
+/* the dialog: 736px = 460 x 1.6 */
+.dlg{width:736px;max-width:100%;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.26);padding:20px 24px 16px}
+.dlg h2{font:800 20px/1.2 var(--display);letter-spacing:-.01em;margin:0}.proj{color:var(--muted);font-size:13px;margin:2px 0 0}
+/* the settings strip: quiet fields, label above in mono small caps; nothing is a button until you point at it */
+.strip{display:grid;grid-template-columns:1.15fr 1.35fr 1fr .9fr;gap:0 18px;margin:16px 0 0;padding:12px 0 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.f label{display:block;font:500 11px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+.q{appearance:none;-webkit-appearance:none;width:100%;height:32px;border:1px solid transparent;border-radius:8px;background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%236F7D86' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E") no-repeat right 8px center;color:var(--ink);font:500 14px var(--font);padding:0 24px 0 8px;margin-left:-8px;width:calc(100% + 8px);cursor:pointer}
+.q:hover{border-color:var(--line);background-color:var(--sunk)}.q:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--line)}
+.hint{color:var(--muted);font-size:13px;margin:8px 0 0;min-height:20px}
+.range{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--muted);font-size:13px}.range[hidden]{display:none}
+.in{height:32px;width:130px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);color:var(--ink);padding:0 10px;font:14px var(--font)}.in::placeholder{color:var(--faint)}
+/* Steer it: the body of the dialog */
+.steer{margin-top:16px}.steer label{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;font-size:14px;margin-bottom:6px}.steer label span{font-weight:400;color:var(--muted);font-size:12px}
+.steer textarea{display:block;width:100%;min-height:148px;border:1px solid var(--line);border-radius:8px;background:var(--sunk);color:var(--ink);font:14px/1.5 var(--font);padding:10px 12px;resize:vertical}
+.steer textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px;background:var(--surface)}
+.ex{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.ex button{border:0;background:none;color:var(--accent);font:13px var(--font);padding:2px 0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}.ex .sub{padding-top:3px}
+/* Draw on: one quiet line until you want to change it */
+.src{margin-top:14px;font-size:13px;color:var(--muted)}.src>button{border:0;background:none;color:var(--ink);font:500 13px var(--font);padding:2px 0;cursor:pointer;display:inline-flex;align-items:center;gap:6px}.src>button:hover{color:var(--accent)}
+.src>button svg{transition:transform .15s}.src>button[aria-expanded=true] svg{transform:rotate(90deg)}
+.srcl{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:8px 0 0 16px}.srcl[hidden]{display:none}.srcl label{display:flex;gap:8px;align-items:center;color:var(--ink);font-size:13px;min-height:26px}.srcl input{accent-color:var(--accent);width:15px;height:15px;margin:0}
+.srcl .dim{color:var(--faint)}
+.off{margin-top:8px;background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px}.off[hidden]{display:none}
+/* footer: ordinary 32px buttons, not big ones */
+.foot{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}.foot .sub{flex:1}
+.btn{height:32px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:0 14px;font:500 13px var(--font);cursor:pointer}.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.kbd{font:500 10px var(--mono);opacity:.75;margin-left:6px;border:1px solid currentColor;border-radius:3px;padding:0 4px}
+.notes{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px}.card h3{font:700 14px var(--display);margin:0 0 6px}.card ul{margin:0;padding-left:18px}.card li{margin:3px 0}
+@media (max-width:900px){.notes{grid-template-columns:1fr}}
+</style></head><body><div class="page">
+<h1>Generate current state, revised</h1>
+<p class="lede">#110. 736px wide (460 × 1.6). What you change often is in front; what changes rarely is quiet. Steer it is the body of the dialog. Built from the creaite theme and the dashboard's own control sizes (32px, 13px), so nothing here is a new component. The four states below are live: try the controls.</p>
+<div class="states" role="group" aria-label="Show state"><span class="sub">Show:</span>
+<button class="st" data-s="def" aria-pressed="true">Default</button><button class="st" data-s="dates" aria-pressed="false">Dates chosen</button><button class="st" data-s="src" aria-pressed="false">Draw on open</button><button class="st" data-s="client" aria-pressed="false">Client-safe</button></div>
+<div class="stage"><div class="dlg" role="dialog" aria-labelledby="t">
+<h2 id="t">Generate current state</h2><div class="proj">Falcon Data Platform</div>
+<div class="strip">
+<div class="f"><label for="period">Period</label><select class="q" id="period"><option value="7" selected>Last 7 days</option><option value="14">Last 14 days</option><option value="30">Last 30 days</option><option value="d">Dates…</option></select></div>
+<div class="f"><label for="form">Form</label><select class="q" id="form"><option value="cs" selected>Current state</option><option value="sn">Steering note</option><option value="t3">Three-line update</option><option value="em">Email paragraph</option><option value="tm">Teams message</option></select></div>
+<div class="f"><label for="aud">Audience</label><select class="q" id="aud"><option value="int" selected>Internal</option><option value="cli">Client-safe</option><option value="sc">Steering committee</option><option value="sp">Sponsor</option></select></div>
+<div class="f"><label for="len">Length</label><select class="q" id="len"><option value="s">Short</option><option value="m" selected>Standard</option><option value="f">Fuller</option></select></div>
 </div>
-<div class="foot"><div class="sum"><b>Current state</b> · last 7 days · Internal · Standard · 5 sources</div><button class="btn">Cancel</button><button class="btn p">Generate<span class="kbd">⌘↵</span></button></div>
-</div></div></div>
-
-<div class="opt"><h2>B. Two columns</h2><p>The choices on the left, the sources and steering on the right. Shorter still, but the eye has to move between columns and chips wrap more.</p>
-<div class="scrim"><div class="dlg">
-<header><h3>Generate current state</h3><div class="proj">Falcon Data Platform</div></header>
-<div class="body"><div class="cols"><div>
-<div class="fs"><h4>Period</h4><div class="chips"><span class="chip on">7 days</span><span class="chip">14 days</span><span class="chip">30 days</span><span class="chip">Dates…</span></div></div>
-<div class="fs"><h4>Form</h4><div class="chips"><span class="chip on">Current state</span><span class="chip">Steering note</span><span class="chip">Three-line</span><span class="chip">Email</span><span class="chip">Teams</span></div></div>
-<div class="fs"><h4>Audience</h4><div class="chips"><span class="chip on">Internal</span><span class="chip">Client-safe</span><span class="chip">Steering</span><span class="chip">Sponsor</span></div></div>
-<div class="fs"><h4>Length</h4><div class="chips"><span class="chip">Short</span><span class="chip on">Standard</span><span class="chip">Fuller</span></div></div></div>
-<div><div class="fs"><h4>Draw on</h4><div class="src" style="grid-template-columns:1fr"><label><input type="checkbox" checked>Tracker changes and open items</label><label><input type="checkbox" checked>Minutes and transcripts</label><label><input type="checkbox" checked>Weekly and client reports</label><label><input type="checkbox" checked>Weekly updates</label><label><input type="checkbox" checked>Mail and Teams already swept</label><label><input type="checkbox">Project documents (internal)</label></div></div>
-<div class="fs"><h4>Steer it</h4><textarea rows="4" placeholder="Optional. For example: focus on the pilot results"></textarea></div></div></div></div>
-<div class="foot"><div class="sum">Into the editor, for you to edit and save.</div><button class="btn">Cancel</button><button class="btn p">Generate<span class="kbd">⌘↵</span></button></div>
-</div></div></div>
-</div>
-
-<div class="note"><h2>What stays the same, and what is new (both options)</h2><ul>
-<li><b>Same:</b> every control, default, hint and rule (the Length chips lock for the forms that fix their length; Client-safe still draws on client-visible items only; Project documents off by default; the sweep note and the result area below the form).</li>
-<li><b>Width:</b> 736px (460 × 1.6) on desktop; at 900px it stays 736px, with side margins.</li>
-<li><b>New:</b> a live summary line in the footer, a footer that stays in view when the dialog is taller than the window, and the ⌘↵ hint on Generate (with #101, Cmd+Enter generates here).</li>
-<li><b>After Generate:</b> the result opens under the form as today. Open point: should the form fold to its summary line while the draft shows? Recommended yes, with "Change settings" to reopen it.</li></ul></div>
-</div></body></html>
+<div class="range" id="range" hidden><input class="in" placeholder="DD-MM-YYYY" aria-label="From"><span>to</span><input class="in" placeholder="DD-MM-YYYY" aria-label="To"></div>
+<p class="hint" id="hint" aria-live="polite">Into the editor, for you to edit and save. Candid: the internal view of every item.</p>
+<div class="steer"><label for="steer">Steer it <span>Optional. Say what to lead with, what to leave out, or the tone.</span></label>
+<textarea id="steer" placeholder="For example: focus on the pilot results and the data-sharing delay"></textarea>
+<div class="ex"><span class="sub">Try:</span><button type="button">Lead with risks</button><button type="button">Lead with decisions needed</button><button type="button">Plain words, no jargon</button></div></div>
+<div class="src"><button type="button" id="srcb" aria-expanded="false" aria-controls="srcl"><svg width="8" height="10" viewBox="0 0 8 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1.5 1l4 4-4 4"/></svg><span id="srcsum">Drawing on 5 sources</span></button><span id="srcnames"> · tracker, minutes and transcripts, reports, weekly updates, swept mail and Teams</span>
+<div class="srcl" id="srcl" hidden><label><input type="checkbox" checked>Tracker changes and open items</label><label><input type="checkbox" checked>Weekly and client reports</label><label><input type="checkbox" checked>Minutes and transcripts</label><label><input type="checkbox" checked>Weekly updates</label><label><input type="checkbox" checked>Mail and Teams items already swept</label><label class="dim"><input type="checkbox">Project documents (internal; off by default)</label></div>
+<div class="off" id="off" hidden>Client-safe uses only client-visible items, in their client wording. The sources are switched off.</div></div>
+<div class="foot"><span class="sub">Mail and Teams last swept today at 07:12.</span><button class="btn" type="button">Cancel</button><button class="btn primary" type="button">Generate<span class="kbd">⌘↵</span></button></div>
+</div></div>
+<div class="notes">
+<div class="card"><h3>What changed, and why</h3><ul>
+<li><b>No chip rows.</b> The four choices are quiet fields in one strip. They look like text until pointed at, then show a hairline and open a menu: discreet, and still one click.</li>
+<li><b>Steer it is the body:</b> full width, about six lines, resizable, with three one-click starters (never filled in for you).</li>
+<li><b>Draw on is one line</b> ("Drawing on 5 sources") that opens the ticks. It changes rarely, so it costs one line, not six.</li>
+<li><b>Dates…</b> opens its two date boxes under the strip, only when chosen.</li>
+<li><b>The hint</b> under the strip follows the Form and Audience you pick, so it is read once, in one place.</li>
+<li><b>Buttons</b> are the ordinary 32px ones. Generate shows ⌘↵ (with #101).</li></ul></div>
+<div class="card"><h3>Kept exactly as built</h3><ul>
+<li>Period default from <code>dashboard.generate_days</code>; Audience and Length remembered in the browser; Internal and Standard the defaults.</li>
+<li>Length locks for the forms that fix it (the field dims, with its reason on hover).</li>
+<li>Client-safe switches the sources off and says so; Project documents off by default.</li>
+<li>The sweep note; the result opens in the editor as today.</li>
+<li>Desktop and 900px only: at 900px the strip stays four across (each field is about 150px).</li></ul>
+<p class="sub" style="margin:8px 0 0">Open: after Generate, fold the form to one summary line while the draft shows?</p></div>
+</div></div>
+<script>
+const $=s=>document.querySelector(s),on=(a,e,f)=>a.addEventListener(e,f);
+const HINT={cs:"Into the editor, for you to edit and save.",sn:"A short note for a steering committee, into the editor.",t3:"Three lines, into the editor.",em:"One paragraph to paste into an email.",tm:"One short message to paste into Teams."},AUD={int:"Candid: the internal view of every item.",cli:"Client-visible items only, in their client wording.",sc:"What a steering committee needs to see.",sp:"A sponsor's view: outcomes, risks and asks."};
+function hint(){$("#hint").textContent=HINT[$("#form").value]+" "+AUD[$("#aud").value];}
+on($("#period"),"change",()=>{$("#range").hidden=$("#period").value!=="d"});on($("#form"),"change",()=>{hint();const fixed=$("#form").value==="t3"||$("#form").value==="tm";$("#len").disabled=fixed;$("#len").title=fixed?"This form has a fixed length":""});
+on($("#aud"),"change",()=>{hint();client($("#aud").value==="cli")});
+function client(c){$("#off").hidden=!c;document.querySelectorAll("#srcl input").forEach(i=>{i.disabled=c});$("#srcsum").textContent=c?"Drawing on client-visible items":"Drawing on 5 sources";$("#srcnames").hidden=c}
+on($("#srcb"),"click",()=>{const o=$("#srcb").getAttribute("aria-expanded")==="true";$("#srcb").setAttribute("aria-expanded",String(!o));$("#srcl").hidden=o});
+document.querySelectorAll(".ex button").forEach(b=>on(b,"click",()=>{const t=$("#steer");t.value=(t.value?t.value.trim()+"\n":"")+b.textContent+".";t.focus()}));
+document.querySelectorAll(".st").forEach(b=>on(b,"click",()=>{document.querySelectorAll(".st").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+ $("#period").value=b.dataset.s==="dates"?"d":"7";$("#range").hidden=b.dataset.s!=="dates";$("#aud").value=b.dataset.s==="client"?"cli":"int";client(b.dataset.s==="client");hint();
+ const open=b.dataset.s==="src";$("#srcb").setAttribute("aria-expanded",String(open));$("#srcl").hidden=!open}));
+</script></body></html>
