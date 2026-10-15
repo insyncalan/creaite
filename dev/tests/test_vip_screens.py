@@ -414,7 +414,8 @@ class ThreadCardScreens(LiveBrowserCase):
         b.wait("document.querySelector('dialog[open] #deTitle, #deTitle')&&document.getElementById('deTitle').textContent.includes('Sara Example')")
         self.assertEqual(b.eval("shared.DE.mode"), "chase")
         self.assertEqual(b.eval("shared.DE.name"), "Sara Example")
-        self.assertTrue(b.eval("/^ABC-A-/.test(shared.DE.only)"))                                # the matched item
+        self.assertEqual(b.eval("shared.DE.only"), b.eval("(SA().vip.alerts.find(a=>a.title==='Licence numbers')).match.id"))   # N2: the card's own match
+        self.assertTrue(b.eval("/^ABC-A-/.test(shared.DE.only)"))
         self.assertTrue(b.eval("[...shared.DE.picked].every(k=>k==='actions:'+shared.DE.only)"))   # at most it is ticked (the outside-address rule)
         b.eval("document.querySelector('dialog[open]').close()")
 
