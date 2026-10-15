@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | Confidential notes, three follow-ups (#60): every run creaite starts itself (generate: Shape the meeting, Current state, AI drafts) gets the Prep run's confidential guard; Prep's search hides confidential notes entirely (no title, link or match); search.py context fails closed. ask creaite unchanged. v2.0.0, Team Stark | Some generated output can leave the laptop; a title is itself a leak; the guard fails closed everywhere |
 | 15-10-2026 | Alan | #56 the notes guard change (v20-notes-guard f906213) is signed off as is; listing the notes folder (names only) becomes a follow-up only if runs get marked in practice | His comment on #56, confirmed to Jarvis directly |
 | 15-10-2026 | Alan | #65 P2: two defaults for filing an export beside its source, reports off (BL-335) and minutes on (BL-338) | His comment on #65, confirmed to Jarvis directly |
 | 15-10-2026 | Jarvis | #60's guard diff (v20-confidential-prep cccb49b) reviewed against option (a) and pushed: Prep runs only, fail closed, hook_decision unchanged, guard tests pass. Three security follow-ups (generate runs, Prep search titles, search context failing open) put to Alan | Guard changes are checked against Alan's decision before merge |
