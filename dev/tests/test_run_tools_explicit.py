@@ -8,7 +8,10 @@ permissions.KNOWN_BUILTINS, the one list, that the run's --tools doesn't name). 
 A kind that calls an MCP tool lists ToolSearch (`--tools ""` hides deferred MCP tools; #116, Alan's live check). F4: Search's
 answer also has `--strict-mcp-config`. The VIP check keeps main's command line; its deny list adds run_deny_extras() (#116 M1).
 
-Each kind is started through the run engine with a stand-in `claude` (CREAITE_CLAUDE) that records its argv; nothing calls Claude.
+Each kind is started through the run engine with a stand-in `claude` (CREAITE_CLAUDE) that records its argv, its working folder
+and its auto-memory switch; nothing calls Claude.
+#126: the tool-less kinds start in an empty folder outside the vault, with `--setting-sources ""` and auto-memory off, so no
+CLAUDE.md (the vault's or ~/.claude's) and no auto-memory reaches them; every kind with tools keeps the vault as its folder.
 
 Run: python3 dev/tests/test_run_tools_explicit.py
 """
@@ -55,8 +58,13 @@ PREVIOUS_NEVER_BUILTINS = ["EnterWorktree", "ExitWorktree", "RemoteTrigger", "Wo
                            "ListMcpResourcesTool", "ReadMcpResourceTool", "ReadMcpResourceDirTool"]
 
 FAKE = r'''#!/usr/bin/env python3
-import json, sys
+import json, os, sys
+from pathlib import Path
 open(__file__ + ".calls", "a", encoding="utf-8").write(json.dumps(sys.argv[1:]) + "\n")
+cwd = os.getcwd()
+up = [str(d) for d in [Path(cwd), *Path(cwd).parents] if (d / "CLAUDE.md").exists()]
+open(__file__ + ".ctx", "a", encoding="utf-8").write(json.dumps({"cwd": os.path.realpath(cwd), "files": os.listdir(cwd),
+    "claude_md": up, "no_memory": os.environ.get("CLAUDE_CODE_DISABLE_AUTO_MEMORY")}) + "\n")
 print(json.dumps({"type": "system", "subtype": "init", "session_id": "sess-t"}), flush=True)
 print(json.dumps({"type": "result", "result": "{}", "session_id": "sess-t"}), flush=True)
 '''
@@ -113,11 +121,17 @@ class Table(unittest.TestCase):
         fake = v.root / "fake_claude.py"
         fake.write_text(FAKE)
         fake.chmod(0o755)
-        env = {**{k: x for k, x in os.environ.items() if k != "CREAITE_RUN_KIND"}, "CREAITE_CLAUDE": str(fake)}
+        (v.root / "CLAUDE.md").write_text("Marker: the vault's own notes.\n")   # #126: a tool-less run never sees it
+        drop = ("CREAITE_RUN_KIND", "CLAUDE_CODE_DISABLE_AUTO_MEMORY")
+        env = {**{k: x for k, x in os.environ.items() if k not in drop}, "CREAITE_CLAUDE": str(fake)}
         r = subprocess.run([sys.executable, "-c", RUNS], cwd=v.root, env=env, capture_output=True, text=True, timeout=300)
         assert r.returncode == 0, r.stderr[-2000:]
         names = json.loads(r.stdout.strip().splitlines()[-1])
         cls.calls = dict(zip(names, [json.loads(x) for x in Path(str(fake) + ".calls").read_text().splitlines()]))
+        cls.ctx = dict(zip(names, [json.loads(x) for x in Path(str(fake) + ".ctx").read_text().splitlines()]))
+        cls.vault = os.path.realpath(v.root)
+        import live_server
+        cls.L = live_server
 
     @classmethod
     def tearDownClass(cls):
@@ -168,6 +182,26 @@ class Table(unittest.TestCase):
                 self.assertIn(t, denied, kind)
                 self.assertNotIn(t, tools, kind)
                 self.assertFalse(any(x == t or x.startswith(t + "(") for x in allowed), kind)
+
+    def test_tool_less_kinds_see_no_claude_md_and_no_memory(self):
+        # #126: per kind, the launch's working folder and its context switches
+        toolless = {"edit-ai", "shape-closed", "notes-find"}
+        self.assertEqual(set(self.L.TOOLLESS_KINDS), toolless)
+        for kind, *_ in TABLE:
+            a, c = self.calls[kind], self.ctx[kind]
+            before = a[:a.index("--")]
+            if kind in toolless:
+                self.assertEqual(flag(a, "--setting-sources"), "", kind)
+                self.assertEqual(c["no_memory"], "1", kind)
+                self.assertNotEqual(c["cwd"], self.vault, kind)
+                self.assertFalse(c["cwd"].startswith(self.vault + os.sep), kind)
+                self.assertEqual(c["files"], [], kind)                     # an empty folder of its own
+                self.assertEqual(c["claude_md"], [], kind)                 # no CLAUDE.md in it or above it
+                self.assertNotIn("--add-dir", before, kind)
+            else:                                                          # the kinds with tools read the vault on purpose
+                self.assertEqual(c["cwd"], self.vault, kind)
+                self.assertNotIn("--setting-sources", before, kind)
+                self.assertIsNone(c["no_memory"], kind)
 
     def test_prompt_still_last(self):
         for kind, *_ in TABLE:
