@@ -29,15 +29,9 @@
   "unreached: menu Menu class:cxmenu (src/review.js)"
  ],
  "Shell": [
-  "unreached: dialog Dialog id:actDlg (src/components/dialogs/PageDialogs.jsx)",
   "unreached: dialog Dialog id:boardDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:deDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:genDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:inPrev (src/components/dialogs/PageDialogs.jsx)",
   "unreached: dialog Dialog id:llDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:personDlg (src/components/dialogs/PageDialogs.jsx)",
   "unreached: dialog Dialog id:prepDlg (src/components/dialogs/PageDialogs.jsx)",
-  "unreached: dialog Dialog id:rvDlg (src/components/dialogs/PageDialogs.jsx)",
   "unreached: dialog Dialog id:searchPrev (src/components/dialogs/PageDialogs.jsx)"
  ],
  "Today": [
