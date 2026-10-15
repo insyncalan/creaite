@@ -194,7 +194,7 @@ def chrome(v, script, name="probe"):
     import re
     # A headless Chrome on a runner running a dozen other browsers can outlast any one timeout (and then prints no page at all):
     # give each try three minutes and try again, once more, only if it printed nothing.
-    for attempt in range(3):
+    for _ in range(3):
         profile = tempfile.mkdtemp(prefix="creaite-chrome-")
         cmd = [str(CHROME), "--headless", "--disable-gpu", f"--user-data-dir={profile}", "--no-first-run",
                "--disable-component-update", "--disable-background-networking", "--enable-logging=stderr", "--v=0",
