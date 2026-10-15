@@ -58423,6 +58423,7 @@ ${d5.text}`);
       );
     }) });
   }
+  var docKey = (d5) => [d5.kind, d5.project, d5.date, d5.client || "", d5.version || 0].join("|");
   var DRAGGING = (
     /** @type {string|null} */
     null
@@ -58434,6 +58435,8 @@ ${d5.text}`);
       /** @type {any} */
       null
     );
+    const docNow = docKey(doc), liveKey = A2(docNow), used = A2(false);
+    liveKey.current = docNow;
     const [name, setName] = d2(s5.heading);
     const [over, setOver] = d2(
       /** @type {""|"above"|"below"} */
@@ -58463,10 +58466,12 @@ ${d5.text}`);
     const ownRender = (p6.renderers.byId || {})[s5.id] || (p6.renderers.byType || {})[s5.type];
     const sparkOn = !!p6.onRedraft && !exported && (s5.type === "text" || s5.type === "panes");
     const spark2 = p6.onRedraft && !exported ? async () => {
-      setRd({ status: "running" });
+      const from = docNow;
+      used.current = false;
+      setRd({ status: "running", from });
       try {
         const a5 = await p6.onRedraft?.(s5);
-        setRd({ status: "ready", answer: a5 });
+        setRd(from === liveKey.current ? { status: "ready", answer: a5, from } : { status: "stale", from });
       } catch (e4) {
         setRd({ status: "failed", message: String(e4 && /** @type {any} */
         e4.message || "No draft came back") });
@@ -58630,7 +58635,13 @@ ${d5.text}`);
               p6.match.differs(s5.id) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => p6.match?.one(s5.id), children: "Match internal" }) : null
             ] }) : null
           ] }),
-          rd2 ? /* @__PURE__ */ u2(Redraft, { rd: rd2, s: s5, readOnly: !editing, close: () => setRd(null), onUse: (choice, a5) => {
+          rd2 ? /* @__PURE__ */ u2(Redraft, { rd: rd2.from && rd2.from !== docNow ? { status: "stale" } : rd2, s: s5, readOnly: !editing, close: () => setRd(null), onUse: (choice, a5) => {
+            if (rd2.from && rd2.from !== liveKey.current) {
+              setRd({ status: "stale", from: rd2.from });
+              return;
+            }
+            if (used.current) return;
+            used.current = true;
             if (choice === "use") update({ ...a5.text != null ? { text: a5.text } : {}, ...a5.panes ? { panes: a5.panes } : {} }, "Redraft used");
             else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
             onEvent({ type: "redraft", id: s5.id, choice });
@@ -58646,6 +58657,10 @@ ${d5.text}`);
       "Drafting ",
       s5.heading,
       "…"
+    ] });
+    if (rd2.status === "stale") return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "alert", children: [
+      "This suggestion was made from an earlier version.",
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
     ] });
     if (rd2.status === "failed") return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "alert", children: [
       rd2.message,

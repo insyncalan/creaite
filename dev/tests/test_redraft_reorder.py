@@ -88,5 +88,60 @@ class ReorderTests(SheetCase):
         self.assertIsNone(self.where()["summary"])
 
 
+class StaleTests(SheetCase):
+    """A suggestion belongs to the document it was made from: after a new version loads, or another report is shown (same section
+    ids, no remount), "Use this" never applies it; and a double click applies once."""
+
+    def ready(self, sid="summary"):
+        b = self.b
+        b.eval(PENDING)
+        b.wait("document.querySelectorAll('#shFix .sheet-spark').length===4")
+        b.click(f"#shFix section[data-id='{sid}'] .sheet-spark")
+        b.wait(f"SH.asked.includes('{sid}')")
+
+    def settle(self, sid="summary"):
+        self.sh(f"settle('{sid}')")
+        self.b.wait(f"document.querySelector('#shFix section[data-id=\"{sid}\"] .sheet-redraft')?.textContent.length>0")
+
+    def assert_stale_and_unapplied(self, sid, text):
+        b = self.b
+        b.wait(f"/earlier version/.test(document.querySelector('#shFix section[data-id=\"{sid}\"] .sheet-redraft')?.textContent||'')")
+        self.assertEqual(b.eval(f"document.querySelectorAll('#shFix section[data-id=\"{sid}\"] .sheet-redraft button').length"), 1)   # Close only
+        self.assertEqual(self.b.eval(f"SH.doc.sections.find(s=>s.id==='{sid}').text"), text)
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').length"), 0)
+
+    def test_a_suggestion_pending_while_a_new_version_loads_is_not_used(self):
+        b = self.b
+        self.ready()
+        b.eval("SH.doc = {...SH.doc, version: SH.doc.version + 1, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Newer words.'} : s)}; SH.draw();")
+        self.settle()
+        self.assert_stale_and_unapplied("summary", "Newer words.")
+
+    def test_it_goes_stale_when_the_version_changes_after_the_draft_is_shown(self):
+        b = self.b
+        self.ready()
+        self.settle()
+        b.wait("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft button.primary')")
+        b.eval("SH.doc = {...SH.doc, version: SH.doc.version + 1, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Newer words.'} : s)}; SH.draw();")
+        self.assert_stale_and_unapplied("summary", "Newer words.")
+
+    def test_another_report_shown_without_a_remount_keeps_no_suggestion_for_the_same_section_id(self):
+        b = self.b
+        self.ready()
+        self.settle()
+        b.eval("SH.doc = {...SH.doc, project: 'DEF', project_name: 'Other', date: '2026-10-23', sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Another report.'} : s)}; SH.draw();")
+        self.assert_stale_and_unapplied("summary", "Another report.")
+
+    def test_a_double_click_on_use_this_applies_and_counts_once(self):
+        b = self.b
+        self.ready()
+        self.settle()
+        b.eval("""(() => { const u = [...document.querySelectorAll('#shFix section[data-id="summary"] .sheet-redraft button')].find(x => x.textContent === 'Use this');
+          u.click(); u.click(); return true; })()""")
+        b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
+        self.assertEqual(self.sh("changes.filter(c => c === 'Redraft used').length"), 1)
+        self.assertEqual(self.sh("events.filter(e => e.type === 'redraft').length"), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

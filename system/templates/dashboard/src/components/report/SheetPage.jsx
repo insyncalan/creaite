@@ -153,6 +153,9 @@ function Figures({ ctx }) {
   })}</div>;
 }
 
+/** Which document is shown (#90): a suggestion is only used on the one it was made from. @param {any} d */
+const docKey = d => [d.kind, d.project, d.date, d.client || "", d.version || 0].join("|");
+
 let DRAGGING = /** @type {string|null} */ (null);
 
 /** One section with its chrome. @param {{s: SheetSection, i: number, p: PageProps, peer: SheetSection|null}} props */
@@ -160,6 +163,8 @@ function SectionBlock({ s, i, p, peer }) {
   const { doc, exported, readOnly, onChange, onEvent } = p;
   const editing = !exported && !readOnly;
   const [rd, setRd] = useState(/** @type {any} */ (null));
+  const docNow = docKey(doc), liveKey = useRef(docNow), used = useRef(false);        // #90: which document a suggestion was made from
+  liveKey.current = docNow;
   const [name, setName] = useState(s.heading);
   const [over, setOver] = useState(/** @type {""|"above"|"below"} */ (""));
   const box = useRef(/** @type {HTMLElement|null} */ (null));
@@ -174,8 +179,10 @@ function SectionBlock({ s, i, p, peer }) {
   const ownRender = (p.renderers.byId || {})[s.id] || (p.renderers.byType || {})[s.type];
   const sparkOn = !!p.onRedraft && !exported && (s.type === "text" || s.type === "panes");
   const spark = p.onRedraft && !exported ? async () => {
-    setRd({ status: "running" });
-    try { const a = await p.onRedraft?.(s); setRd({ status: "ready", answer: a }); } catch (e) { setRd({ status: "failed", message: String((e && /** @type {any} */ (e).message) || "No draft came back") }); }
+    const from = docNow;
+    used.current = false;
+    setRd({ status: "running", from });
+    try { const a = await p.onRedraft?.(s); setRd(from === liveKey.current ? { status: "ready", answer: a, from } : { status: "stale", from }); } catch (e) { setRd({ status: "failed", message: String((e && /** @type {any} */ (e).message) || "No draft came back") }); }
   } : null;
   const fixed = s.type === "header" && ((p.renderers.byId || {}).header || {}).fixed !== false;
   const grip = (/** @type {KeyboardEvent} */ e) => {
@@ -233,7 +240,10 @@ function SectionBlock({ s, i, p, peer }) {
         {p.side === "right" && !readOnly && !exported && p.match && !p.match.readOnly ? <span class="sheet-match">{p.match.label(s.id)}
           {p.match.differs(s.id) ? <button type="button" class="linkbtn" onClick={() => p.match?.one(s.id)}>Match internal</button> : null}</span> : null}
       </h2>}
-      {rd ? <Redraft rd={rd} s={s} readOnly={!editing} close={() => setRd(null)} onUse={(choice, a) => {
+      {rd ? <Redraft rd={rd.from && rd.from !== docNow ? { status: "stale" } : rd} s={s} readOnly={!editing} close={() => setRd(null)} onUse={(choice, a) => {
+        if (rd.from && rd.from !== liveKey.current) { setRd({ status: "stale", from: rd.from }); return; }       // never applied from an earlier version
+        if (used.current) return;                                                                          // a double click counts and applies once
+        used.current = true;
         if (choice === "use") update({ ...(a.text != null ? { text: a.text } : {}), ...(a.panes ? { panes: a.panes } : {}) }, "Redraft used");
         else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a.lines || []).map((/** @type {string} */ l) => `- ${l}`).join("\n")}` }, "New lines added");
         onEvent({ type: "redraft", id: s.id, choice }); setRd(null); }} /> : null}
@@ -245,6 +255,7 @@ function SectionBlock({ s, i, p, peer }) {
     @param {{rd: any, s: SheetSection, readOnly: boolean, close: () => void, onUse: (choice: "keep"|"use"|"add", a: any) => void}} props */
 function Redraft({ rd, s, readOnly, close, onUse }) {
   if (rd.status === "running") return <div class="sheet-redraft" role="status">Drafting {s.heading}…</div>;
+  if (rd.status === "stale") return <div class="sheet-redraft" role="alert">This suggestion was made from an earlier version.<button type="button" class="btn sm" onClick={close}>Close</button></div>;
   if (rd.status === "failed") return <div class="sheet-redraft" role="alert">{rd.message}<button type="button" class="btn sm" onClick={close}>Close</button></div>;
   const a = rd.answer || {};
   return <div class="sheet-redraft" role="region" aria-label={`A fresh draft of ${s.heading}`}>
