@@ -10,10 +10,10 @@ import { snack } from "../../core/server.js";
 import { noteCur, noteMeta } from "../../stores/notes.js";
 import { Icon } from "../Icon.jsx";
 
-const DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const z2 = /** @param {number} n */ n => String(n).padStart(2, "0");
-/** @param {Date} d */ const isoOf = d => `${d.getFullYear()}-${z2(d.getMonth() + 1)}-${z2(d.getDate())}`;
+const NH_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const NH_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const nhPad = /** @param {number} n */ n => String(n).padStart(2, "0");
+/** @param {Date} d */ const nhIso = d => `${d.getFullYear()}-${nhPad(d.getMonth() + 1)}-${nhPad(d.getDate())}`;
 /** "Monday 12-10-2026". @param {string} iso */
 export const sayDate = iso => `${new Date(`${iso}T12:00:00`).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso)}`;
 
@@ -41,12 +41,12 @@ export function NoteDate({ date }) {
   const y = +view.slice(0, 4), m = +view.slice(5, 7) - 1;
   const first = (new Date(y, m, 1).getDay() + 6) % 7, start = new Date(y, m, 1 - first);
   const cells = Array.from({ length: 42 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
-  const step = /** @param {number} n */ n => { const d = new Date(y, m + n, 1); setView(`${d.getFullYear()}-${z2(d.getMonth() + 1)}`); };
+  const step = /** @param {number} n */ n => { const d = new Date(y, m + n, 1); setView(`${d.getFullYear()}-${nhPad(d.getMonth() + 1)}`); };
   const focusDay = /** @param {string} iso */ iso => { setView(iso.slice(0, 7)); setTimeout(() => { const b = grid.current && grid.current.querySelector(`[data-d="${iso}"]`); if (b) /** @type {HTMLElement} */ (b).focus(); }, 0); };
   const arrow = /** @param {KeyboardEvent} e @param {string} iso */ (e, iso) => {
     const d = new Date(`${iso}T12:00:00`), s = /** @type {Record<string, number>} */ ({ ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 })[e.key];
     if (s === undefined) return;
-    e.preventDefault(); d.setDate(d.getDate() + s); focusDay(isoOf(d));
+    e.preventDefault(); d.setDate(d.getDate() + s); focusDay(nhIso(d));
   };
   return (
     <span class="nprop" ref={box} onFocusOut={e => { const to = /** @type {Node|null} */ (e.relatedTarget); if (open && (!to || !(box.current && box.current.contains(to)))) settle(); }}>
@@ -69,11 +69,11 @@ export function NoteDate({ date }) {
           <div class={`typed${bad ? " bad" : ""}`} id="noteDateRead" role="status" aria-live="polite">
             {!t ? "Type a date or words like last monday." : read ? <>Reads as <b>{sayDate(read)}</b> · Enter to use</> : "Not a date I can read. Try 12-10-2026 or last monday."}
           </div>
-          <div class="mh"><button type="button" id="noteDatePrev" aria-label="Previous month" onClick={() => step(-1)}>‹</button><b>{MONTHS[m]} {y}</b>
+          <div class="mh"><button type="button" id="noteDatePrev" aria-label="Previous month" onClick={() => step(-1)}>‹</button><b>{NH_MONTHS[m]} {y}</b>
             <button type="button" id="noteDateNext" aria-label="Next month" onClick={() => step(1)}>›</button></div>
           <div class="g" ref={grid}>
-            {DAYS.map(d => <div key={d} class="dn" aria-hidden="true">{d}</div>)}
-            {cells.map(d => { const iso = isoOf(d), on = iso === chosen;
+            {NH_DAYS.map(d => <div key={d} class="dn" aria-hidden="true">{d}</div>)}
+            {cells.map(d => { const iso = nhIso(d), on = iso === chosen;
               return <button key={iso} type="button" data-d={iso} class={`${d.getMonth() !== m ? "o " : ""}${iso === TODAY ? "t " : ""}${on ? "s" : ""}`}
                 aria-label={sayDate(iso)} aria-pressed={on ? "true" : "false"} tabIndex={iso === (chosen && chosen.slice(0, 7) === view ? chosen : `${view}-01`) ? 0 : -1}
                 onKeyDown={e => arrow(e, iso)} onClick={() => commit(iso)}>{d.getDate()}</button>; })}

@@ -50939,7 +50939,7 @@ ${d5.text}`);
     const r4 = btn.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
-    const pad = (n4) => String(n4).padStart(2, "0"), isoOf3 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+    const pad = (n4) => String(n4).padStart(2, "0"), isoOf2 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
     const draw2 = (focus) => {
       const f5 = new Date(y5, m5, 1), st2 = (f5.getDay() + 6) % 7, dn2 = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st2);
@@ -51008,7 +51008,7 @@ ${d5.text}`);
         d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
       } else return;
       e4.preventDefault();
-      goTo(isoOf3(d5));
+      goTo(isoOf2(d5));
     });
     if (shared.CAL && wkField(inp)) {
       wkMark(shared.CAL);
@@ -52058,13 +52058,13 @@ ${d5.text}`);
   }
 
   // components/notes/NoteHeader.jsx
-  var DAYS2 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  var MONTHS2 = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var z23 = (
+  var NH_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var NH_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var nhPad = (
     /** @param {number} n */
     (n4) => String(n4).padStart(2, "0")
   );
-  var isoOf2 = (d5) => `${d5.getFullYear()}-${z23(d5.getMonth() + 1)}-${z23(d5.getDate())}`;
+  var nhIso = (d5) => `${d5.getFullYear()}-${nhPad(d5.getMonth() + 1)}-${nhPad(d5.getDate())}`;
   var sayDate = (iso) => `${(/* @__PURE__ */ new Date(`${iso}T12:00:00`)).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso)}`;
   function NoteDate({ date }) {
     const [text, setText] = d2(date ? fd(date) : ""), [open2, setOpen2] = d2(false);
@@ -52110,7 +52110,7 @@ ${d5.text}`);
       /** @param {number} n */
       (n4) => {
         const d5 = new Date(y5, m5 + n4, 1);
-        setView(`${d5.getFullYear()}-${z23(d5.getMonth() + 1)}`);
+        setView(`${d5.getFullYear()}-${nhPad(d5.getMonth() + 1)}`);
       }
     );
     const focusDay = (
@@ -52133,7 +52133,7 @@ ${d5.text}`);
         if (s5 === void 0) return;
         e4.preventDefault();
         d5.setDate(d5.getDate() + s5);
-        focusDay(isoOf2(d5));
+        focusDay(nhIso(d5));
       }
     );
     return /* @__PURE__ */ u2("span", { class: "nprop", ref: box, onFocusOut: (e4) => {
@@ -52237,16 +52237,16 @@ ${d5.text}`);
             /* @__PURE__ */ u2("div", { class: "mh", children: [
               /* @__PURE__ */ u2("button", { type: "button", id: "noteDatePrev", "aria-label": "Previous month", onClick: () => step2(-1), children: "‹" }),
               /* @__PURE__ */ u2("b", { children: [
-                MONTHS2[m5],
+                NH_MONTHS[m5],
                 " ",
                 y5
               ] }),
               /* @__PURE__ */ u2("button", { type: "button", id: "noteDateNext", "aria-label": "Next month", onClick: () => step2(1), children: "›" })
             ] }),
             /* @__PURE__ */ u2("div", { class: "g", ref: grid, children: [
-              DAYS2.map((d5) => /* @__PURE__ */ u2("div", { class: "dn", "aria-hidden": "true", children: d5 }, d5)),
+              NH_DAYS.map((d5) => /* @__PURE__ */ u2("div", { class: "dn", "aria-hidden": "true", children: d5 }, d5)),
               cells.map((d5) => {
-                const iso = isoOf2(d5), on2 = iso === chosen;
+                const iso = nhIso(d5), on2 = iso === chosen;
                 return /* @__PURE__ */ u2(
                   "button",
                   {
