@@ -960,7 +960,7 @@ VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240        # BL-342 Part 3 B: each check 
 def vip_settings():
     """The VIP alert settings (BL-99), with defaults: enabled, check_minutes, notify. check_minutes is held between
     VIP_MIN_MINUTES and VIP_MAX_MINUTES (a value under 10 is read as 10, over 240 as 240; not a number, 30)."""
-    vs = {"enabled": True, "check_minutes": 30, "notify": True, **(paths.load_settings().get("vip") or {})}
+    vs = {"enabled": True, "check_minutes": 30, "notify": True, **extraction.section("vip")}   # "off", null, []: the defaults
     try:
         mins = float(vs.get("check_minutes") or 30)
     except (TypeError, ValueError):
@@ -1160,7 +1160,7 @@ def one_hit(hits, codes):
 
 def people_hits(people):
     """Codes whose register signals name one of the people: a sender address, an email domain or a key stakeholder."""
-    own = {str(d).lower() for d in (paths.load_settings().get("identity") or {}).get("own_domains") or []}
+    own = {str(d).lower() for d in extraction.section("identity").get("own_domains") or []}
     addrs = {address_of(p) for p in people} - {""}
     names = {_person(p).lower() for p in people} - {""}
     return {cells[0] for cells in register_rows() if row_names(cells, addrs, names, own)}
@@ -1765,7 +1765,7 @@ def active_projects():
 
 def my_name():
     """Alan's full name, from settings identity (the owner of what he makes)."""
-    return str((paths.load_settings().get("identity") or {}).get("name") or "").strip()
+    return str(extraction.section("identity").get("name") or "").strip()
 
 
 def made_state(made):

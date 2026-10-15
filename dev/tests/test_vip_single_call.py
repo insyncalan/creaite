@@ -767,6 +767,62 @@ class FailedCheckTests(ServerCheck, unittest.TestCase):
             self.stop()
 
 
+TIMER = """import sys, json, time
+sys.path.insert(0, 'system/scripts')
+import live_server
+sleeps = []
+def nap(s):
+    sleeps.append(s)
+    if len(sleeps) >= 2:
+        raise KeyboardInterrupt        # not an Exception: it ends the loop after its second wait
+time.sleep = nap
+try:
+    live_server.vip_timer()
+except KeyboardInterrupt:
+    pass
+print("RESULT " + json.dumps({"sleeps": sleeps, "error": live_server.VIP_STATUS["last_error"]}))
+"""
+
+
+class HandEditedSettingsTests(Base):
+    """Review point 4: a hand-edited "vip" or "drafting" that isn't a block reads as the defaults; the timer never dies."""
+
+    def loop(self, **blocks):
+        cfg = self.v.root / "system/config/settings.json"
+        self.orig = getattr(self, "orig", None) or cfg.read_text()
+        d = {**json.loads(self.orig), **blocks}                                              # only this case's blocks
+        cfg.write_text(json.dumps(d))
+        for f in self.v.root.glob("vip-call-*.json"):
+            f.unlink()
+        check_since(self.v)                                                                  # a fresh vip.json each time
+        fake = self.v.root / "fake_claude.py"
+        fake.write_text(FAKE)
+        fake.chmod(0o755)
+        (self.v.root / "vip-replies.json").write_text(json.dumps([[owner_done()]]))
+        r = subprocess.run([sys.executable, "-c", TIMER], cwd=self.v.root, capture_output=True, text=True, timeout=120,
+                           env={**os.environ, "CREAITE_CLAUDE": str(fake), "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": OFF})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        return json.loads(r.stdout.split("RESULT ", 1)[1]), len(list(self.v.root.glob("vip-call-*.json")))
+
+    def test_vip_or_drafting_off_null_or_a_list_runs_the_check_with_the_defaults(self):
+        for name, blocks in (("vip off", {"vip": "off"}), ("drafting off", {"drafting": "off"}), ("vip null", {"vip": None}),
+                             ("vip list", {"vip": []}), ("both off", {"vip": "off", "drafting": "off"})):
+            with self.subTest(name):
+                got, calls = self.loop(**blocks)
+                self.assertEqual(calls, 2)                                                   # it survived a loop
+                self.assertEqual(got, {"sleeps": [1800.0, 1800.0], "error": None})           # check_minutes 30
+                self.assertEqual(self.cards()[0]["closes"]["id"], "ABC-A-007")               # drafting.done on
+
+    def test_the_readers_take_a_non_block_as_empty(self):
+        cfg = self.v.root / "system/config/settings.json"
+        d = json.loads(cfg.read_text())
+        d.update({"vip": "off", "drafting": [], "identity": "x"})
+        cfg.write_text(json.dumps(d))
+        got = py(self.v, "import extraction\nprint(json.dumps([sweep.vip_settings(), extraction.switched_on('done'), "
+                         "sweep.my_name(), extraction.is_alan('Alan Carter')]))")
+        self.assertEqual(got, [{"enabled": True, "check_minutes": 30, "notify": True}, True, "", False])
+
+
 DEEP = "[" * 100000 + "]" * 100000
 
 

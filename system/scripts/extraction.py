@@ -52,9 +52,15 @@ def count(feature, event, n=1):
         return
 
 
+def section(name):
+    """settings.json's `name` block as a dict ({} when missing or hand-edited to something else, such as "off" or [])."""
+    got = paths.load_settings().get(name)
+    return got if isinstance(got, dict) else {}
+
+
 def switched_on(feature):
     """settings.json `drafting.<feature>` (on when missing): the switch in Settings › General › AI drafts."""
-    return (paths.load_settings().get("drafting") or {}).get(feature, True) is not False
+    return section("drafting").get(feature, True) is not False
 
 
 # ===== BL-221 (sprint-drafts-extraction) ===== "Looks like": a new proposal that repeats an existing item. At staging each new
@@ -256,7 +262,7 @@ def is_alan(sender, folder=""):
     """Whether Alan sent it: Sent Items, or his name or a short form from settings.json `identity`."""
     if str(folder).lower() in ("sent", "sent items"):
         return True
-    ident = paths.load_settings().get("identity") or {}
+    ident = section("identity")
     return any(is_person(sender, n) for n in [ident.get("name") or ""] + list(ident.get("short_forms") or []) if len(n) > 2)
 
 

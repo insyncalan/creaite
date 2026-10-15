@@ -3385,7 +3385,8 @@ def vip_note(new):
 
 
 def vip_timer():
-    """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it)."""
+    """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it).
+    Nothing in a check or in working out the wait can end the thread: a wait that can't be worked out is 30 minutes."""
     import sweep
     how = "start-up"
     while True:
@@ -3394,7 +3395,11 @@ def vip_timer():
         except Exception as e:  # noqa: BLE001  never stops the server
             print(f"Note: the VIP check failed: {e}", flush=True)
         how = "check"
-        time.sleep(max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds())))
+        try:
+            wait = max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds()))
+        except Exception:  # noqa: BLE001  a hand-edited setting never stops the timer
+            wait = 60 * 30.0
+        time.sleep(wait)
 
 
 def vip_wait_seconds():
