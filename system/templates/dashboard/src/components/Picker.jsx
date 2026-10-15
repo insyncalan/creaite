@@ -15,11 +15,9 @@
    calendar does), kept inside the window, above ask creaite. While it is open `shared.PKPOP` is {el, anchor} for code not yet
    moved; `closePicker`, `pickerOpenFor`. `onClose(how)` is told after it closes: return true when the owner has put focus
    somewhere itself (a redraw). Keys other than Esc stop at the popup, so the page's own shortcuts don't run under it.
-   Text only through JSX; the one exception is `htmlPopover`, a transitional shim for Review's move preview (an HTML string), to go
-   when Review moves (BL-316). */
+   Text only through JSX. */
 import { render } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import { putHTML, raw } from "../core/dom.js";
 import { fd, TODAY } from "../core/page.js";
 import { shared } from "../core/state.js";
 import { Icon } from "./Icon.jsx";
@@ -273,13 +271,4 @@ function bootPicker() {
     if (PICK && !(PICK.el && PICK.el.contains(t)) && !PICK.anchor.contains(t)) closePicker("away");
   }, true);
   addEventListener("resize", () => closePicker("away"));
-}
-
-/* ---- transitional (BL-316): a popover filled with an HTML string, for Review's move preview until Review moves; new code
-   passes `content` to openPopover ---- */
-/** @param {HTMLElement} anchor @param {string} cls @param {string} htmlText @returns {HTMLElement} */
-export function htmlPopover(anchor, cls, htmlText) {
-  const el = openPopover(anchor, { label: "", cls, role: "" });
-  putHTML(el, raw(htmlText)); placePicker(el, anchor);
-  return el;
 }

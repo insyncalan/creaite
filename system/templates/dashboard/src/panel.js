@@ -7,7 +7,7 @@ import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
 import { CHASE_ICON, mountChase, unmountChase } from "./components/peek/ChasePane.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
-import { closePicker, htmlPopover, openPicker, pickerOpenFor } from "./components/Picker.jsx";
+import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
 import { openNewWorkstream } from "./components/peek/NewWorkstream.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { statusDotNodes } from "./components/StatusDot.jsx";
@@ -438,11 +438,6 @@ shared.PKPOP=null;
    came in while it was open (PK.redraw), with focus back on the same control. */
 export function pkPopDone(anchor){ const f=anchor&&anchor.dataset?anchor.dataset.pkp:null;
   return how=>{ if(!PK.redraw) return false; PK.redraw=false; if(pkOn()) pkDraw(); if(how!=="away"&&f) $(`#panel [data-pkp="${f}"]`)?.focus(); return true; }; }
-/* Deprecated (BL-316): the old names, for Review, Today and Prep until they move; the coordinator removes them after the merge */
-/** @deprecated use openPicker */ export const pkList=openPicker;
-/** @deprecated use closePicker */ export const pkPopClose=(ret=true)=>closePicker("owner",ret);
-/** @deprecated use openPopover */ export const pkMk=htmlPopover;
-/** @deprecated use itemDatePicker */ export const pkDate=itemDatePicker;
 export const PKMON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 export const pkDow=iso=>(new Date(iso+"T00:00:00Z").getUTCDay()+6)%7;
 /* ---- committing ---- */

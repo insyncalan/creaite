@@ -4196,7 +4196,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     hlToggle: () => hlToggle,
     html: () => html,
     htmlPart: () => htmlPart,
-    htmlPopover: () => htmlPopover,
     htmlToMd: () => htmlToMd,
     hubFor: () => hubFor,
     hubLink: () => hubLink,
@@ -4617,7 +4616,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkClient: () => pkClient,
     pkCommit: () => pkCommit,
     pkCommit1: () => pkCommit1,
-    pkDate: () => pkDate,
     pkDepDraw: () => pkDepDraw,
     pkDescF: () => pkDescF,
     pkDescL: () => pkDescL,
@@ -4647,8 +4645,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkLabel: () => pkLabel,
     pkLast: () => pkLast,
     pkLate: () => pkLate,
-    pkList: () => pkList,
-    pkMk: () => pkMk,
     pkMsgF: () => pkMsgF,
     pkMsgOK: () => pkMsgOK,
     pkNav: () => pkNav,
@@ -4686,7 +4682,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkOwnerList: () => pkOwnerList,
     pkOwnerOpts: () => pkOwnerOpts,
     pkPersist: () => pkPersist,
-    pkPopClose: () => pkPopClose,
     pkPopDone: () => pkPopDone,
     pkPropDraw: () => pkPropDraw,
     pkPropSave: () => pkPropSave,
@@ -7291,12 +7286,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (PICK && !(PICK.el && PICK.el.contains(t5)) && !PICK.anchor.contains(t5)) closePicker("away");
     }, true);
     addEventListener("resize", () => closePicker("away"));
-  }
-  function htmlPopover(anchor, cls, htmlText) {
-    const el = openPopover(anchor, { label: "", cls, role: "" });
-    putHTML(el, raw(htmlText));
-    placePicker(el, anchor);
-    return el;
   }
 
   // components/Chip.jsx
@@ -29334,10 +29323,6 @@ ${d5.text}`);
       return true;
     };
   }
-  var pkList = openPicker;
-  var pkPopClose = (ret = true) => closePicker("owner", ret);
-  var pkMk = htmlPopover;
-  var pkDate = itemDatePicker;
   var PKMON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   var pkDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
   var pkSame = (a5, b5) => typeof b5 === "boolean" ? !!a5 === b5 : String(a5 ?? "").trim() === String(b5 ?? "").trim();
@@ -40220,7 +40205,6 @@ ${d5.text}`);
         "hlPaint",
         "hlToggle",
         "html",
-        "htmlPopover",
         "htmlToMd",
         "ibtn",
         "ic",
@@ -40337,7 +40321,6 @@ ${d5.text}`);
         "pkCid",
         "pkClient",
         "pkCommit",
-        "pkDate",
         "pkDescL",
         "pkDraw",
         "pkFeed",
@@ -40412,6 +40395,7 @@ ${d5.text}`);
         "rkText",
         "row",
         "rows",
+        "rtOK",
         "runGen",
         "runSearch",
         "rvAdvance",

@@ -104,7 +104,7 @@ class PickerBlock(LiveBrowserCase):
         b.wait("!document.querySelector('.pkpop')")
         self.assertEqual(b.eval("document.activeElement.id"), "pbtn")
 
-    def test_popover_focus_escape_and_the_html_shim(self):
+    def test_popover_focus_and_escape(self):
         b = self.b
         b.eval(FIX)
         b.eval("const el=openPopover(document.getElementById('pbtn'),{label:'New one',id:'popX',cls:'pkws'});"
@@ -115,10 +115,6 @@ class PickerBlock(LiveBrowserCase):
         b.key("Escape")
         b.wait("!document.getElementById('popX')")
         self.assertEqual(b.eval("document.activeElement.id"), "pbtn")
-        b.eval("htmlPopover(document.getElementById('pbtn'),'rvmv','<p class=\"z\">Hi</p>')")
-        self.assertTrue(b.eval("!!document.querySelector('.pkpop.rvmv p.z')"))
-        b.eval("closePicker('owner',false)")
-        self.assertFalse(b.eval("!!document.querySelector('.pkpop')"))
 
 
 class ComboboxBlock(LiveBrowserCase):
