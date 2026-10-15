@@ -379,6 +379,20 @@ def archived_files():
     return sorted(out, key=lambda x: (x["date"], x["n"]), reverse=True)
 
 
+def _archived_hit(path):
+    """(kind, archived path, original path) of the archived file `path` names: by its own place in _Archive first (unique), else by
+    the stored path it came from (the first such, as before #124); (None, None, None) when the archive didn't move it."""
+    first = (None, None, None)
+    for k in ("reports", NOTE):
+        moved = archived_moves(kind=k)
+        if path in moved:
+            return k, path, moved[path]
+        hit = next((a for a, o in moved.items() if o == path), None)
+        if hit and first[0] is None:
+            first = (k, hit, path)
+    return first
+
+
 def back_spec(path):
     """(spec, None) that moves an archived file back, or (None, why not). `path` is the archived file's own stored path (Files'
     `at`, #124: unique, where two deleted notes may share one first name), or, as before, the stored path it came from."""
@@ -386,15 +400,7 @@ def back_spec(path):
     path = str(path or "")
     if not path.startswith("projects/") or ".." in Path(path).parts:
         return None, "that isn't a stored project path"
-    kind, at, original = None, None, None
-    for k in ("reports", NOTE):
-        moved = archived_moves(kind=k)
-        if path in moved:
-            kind, at, original = k, path, moved[path]
-            break
-        hit = next((a for a, o in moved.items() if o == path), None)
-        if hit and kind is None:
-            kind, at, original = k, hit, path
+    kind, at, original = _archived_hit(path)
     if not at:
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)

@@ -4308,19 +4308,9 @@ def edit_apply(c):
 def edit_answer(handler, req, how):
     """POST /api/edit/approve | reject | stage {card}: Alan's answer on a change card, used once."""
     c = EDITS.get(str(req.get("card") or ""))
-    if not c or c["state"] != "pending":
-        return handler.send(200, {"ok": False, "message": "That card has been answered already, or a later change replaced it: "
-                                                          "ask creaite again."})
-    if c["expires"] < time.time():
-        c["state"] = "expired"
-        c.pop("_data", None)
-        return handler.send(200, {"ok": False, "message": "That card has expired (30 minutes): nothing was changed; ask creaite again."})
-    if how == "reject":
-        c["state"] = "rejected"
-        c.pop("_data", None)
-        return handler.send(200, {"ok": True, "message": "Rejected: nothing was staged or changed."})
-    if how == "stage" and c.get("kind") in NO_STAGE:      # #124: only Approve moves a note, on this card, within its 30 minutes
-        return handler.send(200, {"ok": False, "message": "A note's move can't be staged for review: Approve or Reject it here."})
+    early = edit_early(c, how)
+    if early:
+        return handler.send(200, early)
     if not LOCK.acquire(blocking=False):
         return handler.send(200, {"ok": False, "busy": True, "message": "Another job is writing just now, so it can't be applied "
                                   "at once: " + ("try again in a moment." if c.get("kind") in NO_STAGE else
@@ -4343,6 +4333,23 @@ def edit_answer(handler, req, how):
                                                               "you approve it there." if name else f"Not staged: {why}"})
     finally:
         LOCK.release()
+
+
+def edit_early(c, how):
+    """The answer to a card that is answered before LOCK is needed (gone, expired, rejected, a note's move staged), or None."""
+    if not c or c["state"] != "pending":
+        return {"ok": False, "message": "That card has been answered already, or a later change replaced it: ask creaite again."}
+    if c["expires"] < time.time():
+        c["state"] = "expired"
+        c.pop("_data", None)
+        return {"ok": False, "message": "That card has expired (30 minutes): nothing was changed; ask creaite again."}
+    if how == "reject":
+        c["state"] = "rejected"
+        c.pop("_data", None)
+        return {"ok": True, "message": "Rejected: nothing was staged or changed."}
+    if how == "stage" and c.get("kind") in NO_STAGE:      # #124: only Approve moves a note, on this card, within its 30 minutes
+        return {"ok": False, "message": "A note's move can't be staged for review: Approve or Reject it here."}
+    return None
 
 
 def note_card_apply(c):
