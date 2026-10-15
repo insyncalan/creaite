@@ -1140,8 +1140,11 @@ class Handler(BaseHTTPRequestHandler):
             p.write_bytes(raw)
             return self.send(200, {"ok": True})
         p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "a" if op == "append" else "w", encoding="utf-8") as f:
-            f.write(req.get("text", ""))
+        if op == "append":
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(req.get("text", ""))
+        else:                                      # a reader (the page, a script) never sees a half-written file
+            paths.write_text_atomic(p, req.get("text", ""))
         return self.send(200, {"ok": True})
 
     def apply(self, req):
