@@ -87,7 +87,10 @@ SCREENS = {
     "today": ("go('today')", "!document.getElementById('v-today').hidden", "#v-today"),
     "work": ("go('work')", "document.querySelector('#workTbl tbody tr')", "#v-work"),
     "work-panel": (open_first_item, "document.getElementById('panel').classList.contains('on')", "#panel"),
-    "review": ("go('review')", "!document.getElementById('v-review').hidden", "#v-review"),
+    # BL-315's guesses come from /api/review/guesses, fetched when Review opens (two scripts under the server's lock): under load
+    # they landed after the reads below agreed, and the "Possible match" row lost its guess. Wait for them (the sample has one).
+    "review": ("go('review')", "!document.getElementById('v-review').hidden && Object.keys(rjGuesses.value).length > 0",
+               "#v-review"),
     "intake": ("go('inbox')", "!document.getElementById('v-inbox').hidden", "#v-inbox"),
     "files": ("go('files')", "!document.getElementById('v-files').hidden", "#v-files"),
     "activity": ("go('activity')", "!document.getElementById('v-activity').hidden", "#v-activity"),
