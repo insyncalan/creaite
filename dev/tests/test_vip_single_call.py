@@ -406,6 +406,24 @@ class CloseTests(Base):
         self.assertNotRegex(text.replace('"vip', ""), r"\bVIP\b")
 
 
+class CheckMinutesTests(Base):
+    def test_check_minutes_is_held_between_10_and_240(self):
+        cfg = self.v.root / "system/config/settings.json"
+        for given, read in ((1, 10), (0.02, 10), (45, 45), (1000, 240), ("often", 30), (None, 30), (30, 30)):
+            with self.subTest(given):
+                d = json.loads(cfg.read_text())
+                d.setdefault("vip", {})["check_minutes"] = given
+                cfg.write_text(json.dumps(d))
+                self.assertEqual(py(self.v, "print(json.dumps(sweep.vip_settings()['check_minutes']))"), read)
+        self.assertEqual(py(self.v, "print(json.dumps([sweep.VIP_MIN_MINUTES, sweep.VIP_MAX_MINUTES]))"), [10, 240])
+
+    def test_the_settings_field_takes_10_to_240(self):
+        src = (Path(__file__).resolve().parents[2] / "system/templates/dashboard/src/components/settings/Essentials.jsx").read_text()
+        block = src[src.index('case "vip.check_minutes":'):][:700]
+        self.assertIn("min={10} max={240}", block)
+        self.assertIn("v < 10 || v > 240", block)
+
+
 TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
 FAKE = r"""#!/usr/bin/env python3

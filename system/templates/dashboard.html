@@ -25851,7 +25851,8 @@ ${s5}`;
             {
               type: "number",
               ...named,
-              min: 5,
+              min: 10,
+              max: 240,
               step: 5,
               value: val(k5) ?? 30,
               style: "width:80px",
@@ -25860,8 +25861,8 @@ ${s5}`;
                   /** @type {HTMLInputElement} */
                   e4.currentTarget
                 ), v5 = Math.round(Number(el2.value));
-                if (!Number.isFinite(v5) || v5 < 5) {
-                  snack("Use a number of minutes, 5 or more");
+                if (!Number.isFinite(v5) || v5 < 10 || v5 > 240) {
+                  snack("Use a number of minutes from 10 to 240");
                   el2.value = String(val(k5) ?? 30);
                   return;
                 }

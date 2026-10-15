@@ -954,9 +954,20 @@ VIP_FILE = paths.STAGING / "vip.json"
 GIST = 140
 
 
+VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240        # BL-342 Part 3 B: each check is a paid call, so a slip can't run it every minute
+
+
 def vip_settings():
-    """The VIP alert settings (BL-99), with defaults: enabled, check_minutes, notify."""
-    return {"enabled": True, "check_minutes": 30, "notify": True, **(paths.load_settings().get("vip") or {})}
+    """The VIP alert settings (BL-99), with defaults: enabled, check_minutes, notify. check_minutes is held between
+    VIP_MIN_MINUTES and VIP_MAX_MINUTES (a value under 10 is read as 10, over 240 as 240; not a number, 30)."""
+    vs = {"enabled": True, "check_minutes": 30, "notify": True, **(paths.load_settings().get("vip") or {})}
+    try:
+        mins = float(vs.get("check_minutes") or 30)
+    except (TypeError, ValueError):
+        mins = 30.0
+    mins = min(VIP_MAX_MINUTES, max(VIP_MIN_MINUTES, mins)) if mins == mins else 30.0      # NaN reads as the default
+    vs["check_minutes"] = int(mins) if mins == int(mins) else mins
+    return vs
 
 
 def vip_state():

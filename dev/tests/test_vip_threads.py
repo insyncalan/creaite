@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_live_server import free_port  # noqa: E402
-from test_sweep_alerts import TZ, check_since, run, vip_file, vip_vault, zoned  # noqa: E402
+from test_sweep_alerts import TZ, check_since, fast_checks, run, vip_file, vip_vault, zoned  # noqa: E402
 
 MIA = "Mia Hale <mia@client.example>"
 OMAR = "Omar Ali <omar@company.example>"
@@ -428,6 +428,7 @@ class ThreadServerTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d.setdefault("vip", {})["check_minutes"] = 0.02
         cfg.write_text(json.dumps(d, indent=2))
+        fast_checks(v)
         (v.root / "vip-replies.json").write_text(json.dumps([zoned([CHAT, HELLO])]))
         check_since(v)
         fake = v.root / "fake_claude.py"

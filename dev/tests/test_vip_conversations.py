@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_live_server import free_port  # noqa: E402
-from test_sweep_alerts import TZ, check_since, record, run, vip_file, vip_vault, zoned  # noqa: E402
+from test_sweep_alerts import TZ, check_since, fast_checks, record, run, vip_file, vip_vault, zoned  # noqa: E402
 
 TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
@@ -78,6 +78,7 @@ class ConversationServerTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d.setdefault("vip", {})["check_minutes"] = 0.02                                   # every ~1 s
         cfg.write_text(json.dumps(d, indent=2))
+        fast_checks(v)
         (v.root / "vip-replies.json").write_text(json.dumps([zoned([CHAT, HELLO]), zoned([CHAT, HELLO]), zoned([LATER, HELLO])]))
         check_since(v)
         fake = v.root / "fake_claude.py"

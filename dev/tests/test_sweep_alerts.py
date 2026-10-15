@@ -251,6 +251,15 @@ def zoned(found):
     return [one(m) if isinstance(m, dict) else m for m in found]
 
 
+def fast_checks(v):
+    """Let a test's server check about every second: the vault's own copy of sweep.py gets a lower floor (the constant the
+    real one holds at 10 minutes; tests change the copy, never an environment variable)."""
+    f = v.root / "system/scripts/sweep.py"
+    text = f.read_text()
+    assert "VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240" in text
+    f.write_text(text.replace("VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240", "VIP_MIN_MINUTES, VIP_MAX_MINUTES = 0.01, 240"))
+
+
 def check_since(v, since="2026-10-08 07:00"):
     """The window the first check reads from (vip.json's last_check), so a fixture's earlier messages are inside it."""
     f = v.root / "system/staging/vip.json"
@@ -415,6 +424,7 @@ class VipLiveTests(unittest.TestCase):
         v = vip_vault()
         try:
             settings(v, lambda d: d["vip"].__setitem__("check_minutes", 0.02))                # every ~1 s
+            fast_checks(v)
             check_since(v)
             fake = v.root / "fake_vip.py"
             fake.write_text(FAKE_VIP_CLAUDE)
