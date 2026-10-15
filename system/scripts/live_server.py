@@ -1947,6 +1947,17 @@ KIND_ARGS = {"edit-ai": ["--tools", "", "--strict-mcp-config"]}
 KIND_PROMPTS["edit-ai"] = ("You are creaite's editor assistant (BL-301 D). You have no tools. Reply only with the suggestion the "
                            "message asks for, between its marker lines; never anything else.")
 # ===== end BL-301 D =====
+# Search's answer (kind "search", BL-07): the server gathers the passages and tracker rows (search.py context) and Claude answers
+# from them, reading more vault files if it needs to. It has no guard hook (Alan, #60: like ask creaite, so a confidential note
+# stays readable here), so the vault's .claude/settings.json allow rules (tracker.py, review.py, propose.py, filechange.py, Edit
+# projects/**, Edit system/config/settings.json) would apply to anything it may use: it is started with only the three reading
+# built-ins (`--tools "Read,Grep,Glob"`), and every tool that runs, writes, delegates or reaches the web is denied by name as well.
+# What it can do: Read, Grep and Glob in the vault and the projects root, and the Microsoft 365 reading tools, as before. No Bash
+# (a deny beats an allow, so a narrow `tracker.py read` allow can't sit beside a Bash deny; the tracker rows come in the material).
+SEARCH_TOOLS = ["Read", "Grep", "Glob"]
+KIND_TOOLS["search"] = SEARCH_TOOLS + list(vault_permissions.m365_read_tools())
+KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill"]
+KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS)]
 
 
 def run_prompt(kind, confirmed):
