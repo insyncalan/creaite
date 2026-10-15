@@ -71,5 +71,5 @@ jobs:
             for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
             exit $fail
           else
-            python3 dev/tools/run_tests.py -j "$JOBS"
+            python3 dev/tools/run_tests.py -j "$JOBS" --max-fail 25
           fi
