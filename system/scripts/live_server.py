@@ -306,14 +306,21 @@ def hook_runner():
 # Started from creaite.app the server has launchd's bare PATH, where `python3` is Apple's /usr/bin/python3 stub (and, under
 # Rosetta, an xcrun error). So every run, the hook inside it and the VIP check get this Python's folder first on PATH, and
 # CREAITE_PYTHON, which system/scripts/run uses before it searches PATH.
-def run_env():
-    """The environment for everything the server starts (ask creaite and other headless runs, the guard hook, the VIP check)."""
+def run_env(kind=None):
+    """The environment for everything the server starts (ask creaite and other headless runs, the guard hook, the VIP check).
+    #60 option (a): a Prep page run's also says so (CREAITE_RUN_KIND=prep), for search.py; set here only, never by the run."""
     import launch as launcher
     env = dict(os.environ)
+    env.pop(PREP_ENV, None)                 # #60: only a Prep page run says it is one
     env["PATH"] = launcher.run_path(env.get("PATH", ""))
     env["CREAITE_PYTHON"] = sys.executable
     env["CREAITE_HEADLESS_RUN"] = "1"       # BL-323: a headless run's tools never run Tidy up (backup.ask_run)
+    if kind == "prep":
+        env[PREP_ENV] = "prep"
     return env
+
+
+PREP_ENV = "CREAITE_RUN_KIND"               # #60 option (a): search.py's sign that it runs inside a Prep page run
 
 
 PRESTART = re.compile(r"xcrun: error|dlopen\(|No module named|command not found|bad interpreter|found no Python 3\.9|creaite start-up fault")
@@ -1932,6 +1939,8 @@ class Run:
             mode = guard_mode(policy, None if sweep else confirmed)
             cmd += ["--settings", guard_settings(run_id, mode)]
             reach.start_run(run_id, mode, OUTSIDE_CONTENT, session)
+        elif policy == "prep":                                  # #60 option (a): the hook refuses a confidential note, nothing else
+            cmd += ["--settings", guard_settings(run_id, "prep")]
         self.guarded = guarded
         if session:
             cmd += ["--resume", session]
@@ -1947,7 +1956,7 @@ class Run:
         self.stop = self.deferred = self.done = self.seen = False
         self.started, self.recorded = time.time(), 0       # BL-262: how many events the chat's history reaches
         try:
-            env = run_env()                                                            # BL-248
+            env = run_env(policy)                                                      # BL-248; #60: a Prep run's kind
             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
             self.proc = subprocess.Popen(cmd, cwd=paths.ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                          bufsize=1, env=env)

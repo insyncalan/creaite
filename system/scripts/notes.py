@@ -125,6 +125,17 @@ def is_confidential(p):
     return bool(read(p)[0].get("confidential"))
 
 
+def held(p):
+    """#60 option (a) (Alan, 15-10-2026): whether a Prep run must treat the note file `p` as confidential. Fail closed: marked
+    confidential, online only (reading it would download it) or unreadable all count; only a note read and not marked is ordinary."""
+    try:
+        if paths.is_online_only(Path(p)):
+            return True
+        return bool(parse(Path(p).read_text(encoding="utf-8", errors="ignore"))[0].get("confidential"))
+    except Exception:  # noqa: BLE001  fail closed
+        return True
+
+
 def index_text(p):
     """A note's text for the search index: its title and tags, then the body (the rest of the front matter left out)."""
     meta, body = read(p)

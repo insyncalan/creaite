@@ -2610,6 +2610,130 @@
    true,
    ""
   ],
+  "ask | notes | Bash | {\"command\": \"CREAITE_RUN_KIND= system/scripts/run search.py query x\"}": [
+   false,
+   "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
+  ],
+  "ask | notes | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "ask | notes | Bash | {\"command\": \"python3 system/scripts/tracker.py read ABC\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Bash | {\"command\": \"rm -rf projects\"}": [
+   false,
+   "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
+  ],
+  "ask | notes | Bash | {\"command\": \"system/scripts/run search.py preview 'projects/ABC Example Programme/notes/Closed.md'\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Bash | {\"command\": \"system/scripts/run search.py preview 'projects/ABC Example Programme/notes/Open.md'\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Edit | {\"file_path\": \".claude/settings.json\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   false,
+   ".claude/settings.json: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/drafts/ and run python3 system/scripts/filechange.py"
+  ],
+  "ask | notes | Edit | {\"file_path\": \"system/staging/drafts/new.md\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Glob | {\"path\": \"<HOME>\", \"pattern\": \"**/*.md\"}": [
+   false,
+   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+  ],
+  "ask | notes | Glob | {\"path\": \"projects/ABC Example Programme\", \"pattern\": \"*.md\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Glob | {\"path\": \"projects/ABC Example Programme/notes\", \"pattern\": \"*.md\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Grep | {\"path\": \"<HOME>/Documents\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Grep | {\"path\": \"projects/ABC Example Programme/minutes\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Grep | {\"path\": \"projects/ABC Example Programme/notes\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Grep | {\"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | LS | {\"path\": \"<HOME>\"}": [
+   false,
+   "the search folder holds ~/.ssh, which is never read: search a folder below it instead"
+  ],
+  "ask | notes | LS | {\"path\": \"system/backups\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | MultiEdit | {\"edits\": [], \"file_path\": \"system/scripts/tracker.py\"}": [
+   false,
+   "system/scripts/tracker.py: the database, the engine and creaite's rules change only through their own commands (tracker.py apply; an update)"
+  ],
+  "ask | notes | NotebookEdit | {\"notebook_path\": \"projects/ABC Example Programme/x.ipynb\"}": [
+   false,
+   "projects/ABC Example Programme/x.ipynb: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/drafts/ and run python3 system/scripts/filechange.py"
+  ],
+  "ask | notes | Read | {\"file_path\": \"/etc/hosts\"}": [
+   false,
+   "/etc/hosts: it is part of the operating system"
+  ],
+  "ask | notes | Read | {\"file_path\": \"<HOME>/.ssh/id_rsa\"}": [
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
+  ],
+  "ask | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes/Closed.md\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes/Open.md\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Read | {\"file_path\": \"system/tracker.db\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | WebFetch | {\"url\": \"https://example.com\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Write | {\"content\": \"x\", \"file_path\": \"<HOME>/.zshrc\"}": [
+   false,
+   "<HOME>/.zshrc: it runs commands when you log in or open Terminal"
+  ],
+  "ask | notes | Write | {\"content\": \"x\", \"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   false,
+   "projects/ABC Example Programme/notes.md: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the new content in system/staging/drafts/ and run python3 system/scripts/filechange.py"
+  ],
+  "ask | notes | Write | {\"content\": \"x\", \"file_path\": \"system/staging/drafts/new.md\"}": [
+   true,
+   ""
+  ],
+  "ask | notes | Write | {\"content\": \"x\", \"file_path\": \"system/staging/proposed-x.json\"}": [
+   false,
+   "system/staging/proposed-x.json: it is creaite's own record or a generated file, written only by creaite's scripts"
+  ],
+  "ask | notes | mcp__claude_ai_Microsoft_365__outlook_email_search | {\"query\": \"x\"}": [
+   true,
+   ""
+  ],
   "confirmed | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
    false,
    "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
@@ -2691,6 +2815,130 @@
    "system/staging/proposed-x.json: it is creaite's own record or a generated file, written only by creaite's scripts"
   ],
   "confirmed | mcp__claude_ai_Microsoft_365__outlook_email_search | {\"query\": \"x\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Bash | {\"command\": \"CREAITE_RUN_KIND= system/scripts/run search.py query x\"}": [
+   false,
+   "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
+  ],
+  "prep | notes | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Bash | {\"command\": \"python3 system/scripts/tracker.py read ABC\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Bash | {\"command\": \"rm -rf projects\"}": [
+   false,
+   "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
+  ],
+  "prep | notes | Bash | {\"command\": \"system/scripts/run search.py preview 'projects/ABC Example Programme/notes/Closed.md'\"}": [
+   false,
+   "projects/ABC Example Programme/notes/Closed.md: this note is confidential, and a Prep page never reads a confidential note"
+  ],
+  "prep | notes | Bash | {\"command\": \"system/scripts/run search.py preview 'projects/ABC Example Programme/notes/Open.md'\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Edit | {\"file_path\": \".claude/settings.json\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Edit | {\"file_path\": \"system/staging/drafts/new.md\", \"new_string\": \"b\", \"old_string\": \"a\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Glob | {\"path\": \"<HOME>\", \"pattern\": \"**/*.md\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Glob | {\"path\": \"projects/ABC Example Programme\", \"pattern\": \"*.md\"}": [
+   false,
+   "projects/ABC Example Programme: this folder holds a confidential note, and a Prep page never reads a confidential note: search a folder without one"
+  ],
+  "prep | notes | Glob | {\"path\": \"projects/ABC Example Programme/notes\", \"pattern\": \"*.md\"}": [
+   false,
+   "projects/ABC Example Programme/notes: this folder holds a confidential note, and a Prep page never reads a confidential note: search a folder without one"
+  ],
+  "prep | notes | Grep | {\"path\": \"<HOME>/Documents\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Grep | {\"path\": \"projects/ABC Example Programme/minutes\", \"pattern\": \"x\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Grep | {\"path\": \"projects/ABC Example Programme/notes\", \"pattern\": \"x\"}": [
+   false,
+   "projects/ABC Example Programme/notes: this folder holds a confidential note, and a Prep page never reads a confidential note: search a folder without one"
+  ],
+  "prep | notes | Grep | {\"pattern\": \"x\"}": [
+   false,
+   "<VAULT>: this folder holds a confidential note, and a Prep page never reads a confidential note: search a folder without one"
+  ],
+  "prep | notes | LS | {\"path\": \"<HOME>\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | LS | {\"path\": \"system/backups\"}": [
+   false,
+   "system/backups: this holds a copy of a confidential note's text, and a Prep page never reads a confidential note"
+  ],
+  "prep | notes | MultiEdit | {\"edits\": [], \"file_path\": \"system/scripts/tracker.py\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | NotebookEdit | {\"notebook_path\": \"projects/ABC Example Programme/x.ipynb\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Read | {\"file_path\": \"/etc/hosts\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Read | {\"file_path\": \"<HOME>/.ssh/id_rsa\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes/Closed.md\"}": [
+   false,
+   "projects/ABC Example Programme/notes/Closed.md: this note is confidential, and a Prep page never reads a confidential note"
+  ],
+  "prep | notes | Read | {\"file_path\": \"projects/ABC Example Programme/notes/Open.md\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Read | {\"file_path\": \"system/tracker.db\"}": [
+   false,
+   "system/tracker.db: this holds a copy of a confidential note's text, and a Prep page never reads a confidential note"
+  ],
+  "prep | notes | WebFetch | {\"url\": \"https://example.com\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Write | {\"content\": \"x\", \"file_path\": \"<HOME>/.zshrc\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Write | {\"content\": \"x\", \"file_path\": \"projects/ABC Example Programme/notes.md\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Write | {\"content\": \"x\", \"file_path\": \"system/staging/drafts/new.md\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | Write | {\"content\": \"x\", \"file_path\": \"system/staging/proposed-x.json\"}": [
+   true,
+   ""
+  ],
+  "prep | notes | mcp__claude_ai_Microsoft_365__outlook_email_search | {\"query\": \"x\"}": [
    true,
    ""
   ]
