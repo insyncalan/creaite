@@ -49,7 +49,7 @@
 
 **Editing (replaces click-to-edit cells and the centred dialog; for actions, RAID items and decisions itself replaced by the peek, BL-176, below):** a single click selects a row and opens a **non-modal detail panel** on the right; the list stays visible. **E**, the Edit button, or a **double-click on a cell** switches the panel into a **visibly different edit mode** (half the window wide, an "Editing" banner, form fields, Save and Cancel; the ground stays the panel's normal surface, BL-80), focusing that field. **Save** applies immediately (auto-apply) with Undo in the snackbar. Every field from the previous edit dialog is in the panel, including client messaging, owner picker and source.
 
-**Review (replaces Pending review):** grouped by project; keyboard triage — **J/K** move, **A** approve, **R** reject, **E** edit (opens the proposal in the detail panel), **X** select; batch Approve/Reject selected; Approve all routine; items needing individual approval are labelled and excluded from batch and routine approval.
+**Review (replaces Pending review):** grouped by project; keyboard triage — **J/K** move, **A** approve, **R** reject, **E** edit (opens the proposal in the detail panel), **X** select; batch Approve/Reject selected (#114: the selection bar floats fixed at the bottom edge of the window, centred in the column, under the peek and dialogs, the page padded so the last row clears it); Approve all routine; items needing individual approval are labelled and excluded from batch and routine approval.
 
 **Activity (new):** the change log, newest first — when, what changed, by whom (you in the dashboard, an approval, Claude Code, the assistant) — with Undo per change (reverses that apply).
 

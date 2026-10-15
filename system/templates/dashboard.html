@@ -1004,6 +1004,11 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 .rvtools{flex-wrap:wrap} #rvQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px;font-size:var(--ctl-fs)}
 .rvdisp{position:relative} .rvbar .rvsplit{font-size:var(--fs-sm);color:var(--muted)} .rvwhy{text-decoration:underline dotted;cursor:help} .rvbar .rvset{display:inline-flex;gap:8px;flex-wrap:wrap}
 .rvbar select,.rvbar .dwrap input{height:30px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px;font:inherit;font-size:var(--fs-sm)} .rvbar .dwrap input{width:116px} .rvbar select:disabled,.rvbar input:disabled{opacity:.55;cursor:not-allowed}
+/* #114: the multi-select bar floats at the bottom edge, in Review's column, under the peek and the dialogs (--z-menu < --z-panel); fixed, so the list never moves */
+.rvbar{position:fixed;bottom:16px;left:var(--rvl,50%);width:var(--rvw,min(1100px,94vw));box-sizing:border-box;margin:0;z-index:var(--z-menu);box-shadow:var(--shadow-md);max-height:40vh;overflow:auto}
+#v-review.rvfloat{padding-bottom:calc(40px + var(--rvh,0px) + 16px);scroll-padding-bottom:calc(var(--rvh,0px) + 32px)}
+.rvbar .btn,.rvbar .linkbtn,.rvbar select,.rvbar .dbtn{min-height:24px}
+@media (forced-colors:active){.rvbar{border:1px solid CanvasText}}
 .rvresult{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0;font-size:var(--fs-sm)} .rvresult:empty{display:none} .rvlearn{padding:10px 14px;border:1px solid var(--accent);border-radius:var(--r-md);background:color-mix(in srgb,var(--accent) 8%,var(--surface));display:grid;gap:6px}
 .rgroup h2 .rgtick{margin-right:6px;vertical-align:-2px} .rgroup h2 .rgc{font-weight:400;font-size:var(--fs-sm);margin-left:6px}
 .tag.stale{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--ink)}
@@ -5311,6 +5316,7 @@ button.nchip{font:inherit;font-size:12px}
     rvDecideMany: () => rvDecideMany,
     rvDef: () => rvDef,
     rvDispClose: () => rvDispClose,
+    rvDock: () => rvDock,
     rvDrawDisp: () => rvDrawDisp,
     rvDup: () => rvDup,
     rvEmptyHtml: () => rvEmptyHtml,
@@ -31722,12 +31728,27 @@ ${s5}`;
       return [f5, l6, opts, w6];
     });
   }
+  function rvDock() {
+    const bar = $("#rvbar"), view = $("#v-review");
+    if (!bar || !view) return;
+    if (bar.hidden) {
+      view.classList.remove("rvfloat");
+      return;
+    }
+    const r4 = view.getBoundingClientRect(), w6 = Math.min(view.clientWidth - 48, 1500);
+    bar.style.setProperty("--rvw", `${w6}px`);
+    bar.style.setProperty("--rvl", `${Math.round(r4.left + (view.clientWidth - w6) / 2)}px`);
+    view.style.setProperty("--rvh", `${bar.offsetHeight}px`);
+    view.classList.add("rvfloat");
+  }
+  window.addEventListener("resize", rvDock);
   function rvBar() {
     const bar = $("#rvbar");
     if (!bar) return;
     const L3 = rvSel();
     if (!L3.length) {
       bar.hidden = true;
+      rvDock();
       $("#bulkApprove").disabled = $("#bulkReject").disabled = true;
       if (rjMenu.value && rjMenu.value.anchor === $("#bulkReject")) rjCloseMenu(false);
       return;
@@ -31753,6 +31774,7 @@ ${s5}`;
     $("#bulkReject").setAttribute("aria-label", `Reject ${rej.length === 1 ? "1 proposal" : rej.length + " proposals"} with a reason`);
     $("#bulkReject").title = rej.length < L3.length ? "Minutes, reports and file changes are rejected one at a time" : "";
     putHTML($("#rvSet"), html`${rvSetFields(L3).map(([f5, label, opts, why]) => f5 === "due" ? html`<span class="bkf"><label class="bklab" for="rvDate">${label}</label><span class="dwrap"><input type="text" id="rvDate" data-pick="1" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off" ${raw(why ? "disabled" : "")} aria-label="Set the due date of ${L3.length} proposals" title="${why}"><button type="button" class="dbtn" data-cal="rvDate" ${raw(why ? "disabled" : "")} aria-label="Choose date">${raw(CALI)}</button></span></span>` : html`<span class="bkf"><label class="bklab">${label}<select data-rvset="${f5}" ${why ? html`disabled aria-disabled="true"` : ""} title="${why}"><option value="">Set…</option>${ceOpts(opts).map((o5) => html`<option value="${o5[0]}">${o5[1]}</option>`)}</select></label></span>`)}`);
+    rvDock();
   }
   async function rvDecideMany(list, v5) {
     list = list.filter((r4) => r4 && !r4.done);
