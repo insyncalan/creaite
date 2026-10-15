@@ -558,8 +558,9 @@ class Judgement2(HandcheckCase):
 
         def alerts(bb):
             bb.wait("document.querySelector('#tdList .td-message') && document.querySelector('#tdList .td-quiet')", 10)
-            bb.eval("""(()=>{ const ys=[...document.querySelectorAll('#tdList .td-message, #tdList .td-quiet')].map(e=>e.getBoundingClientRect().top);
-              scrollBy(0, Math.min(...ys) - 70); return true; })()""")      # the first of the two at the top, under the bar
+            bb.pump(0.3)                                   # Today settles (the day band redraws) before it is scrolled
+            bb.eval("""(()=>{ const e=document.querySelector('#tdList .td-message, #tdList .td-quiet');   // the first of the two
+              e.scrollIntoView({block:'start'}); scrollBy(0, -70); return true; })()""")
 
         archiving_li = "[...document.querySelectorAll('#v-help li')].find(e=>e.offsetParent&&/^Archiving \\(Settings/.test(e.innerText))"
 
