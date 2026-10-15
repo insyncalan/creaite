@@ -1128,6 +1128,9 @@ def to_stored(field, value):
 def cmd_edit(n, pairs):
     """Change fields of a pending item ('field=value', dates DD-MM-YYYY), validate it and approve it if valid."""
     p, data, ref, item = lookup(int(n))
+    if ref == "meeting" and str(item.get("draft") or "").lower().endswith(".html"):     # v2.1.0 P4: a minutes record
+        sys.exit("creaite: these minutes are a creaite record, not a Word file: "
+                 "edit their items by their own numbers, then approve.")
     if ref in ("meeting", "report", "file_changes"):
         sys.exit("creaite: edit drafts in Word (or ask Claude to change a file change), then approve.")
     target = item.setdefault("values", {}) if item.get("op") == "new" else item.setdefault("changes", {})

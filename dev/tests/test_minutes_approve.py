@@ -227,7 +227,7 @@ class RefusedSave(Base):
                         f"r = minutes_record.save_record({FILED!r}, d, 'Minutes saved', base_version=d['version'])\n"
                         "print(json.dumps({k: r.get(k) for k in ('ok', 'code', 'needs_approval', 'message')}))")
             self.assertEqual((r["ok"], r["code"], r["needs_approval"]), (False, 3, True))
-            self.assertIn("needs your approval", r["message"])
+            self.assertIn("never saved over", r["message"])
             self.assertEqual(self.drafts(), [older.name])
         self.assertEqual((self.v.root / FILED).read_bytes(), before)
 
@@ -322,7 +322,7 @@ class ReviewEditFollows(Base):
         return self.js(f"import minutes_record\nprint(json.dumps(minutes_record.follow({self.name!r})))")
 
     def review_n(self, item_n):
-        return self.js(f"import review\nprint(json.dumps(review.numbers()[1][({self.name!r}, {item_n})]))")
+        return self.js(f"import review\nprint(json.dumps(review.numbers()[1][({self.name!r}, {item_n!r})]))")
 
     def test_nothing_changed_makes_no_new_version(self):
         self.assertIsNone(self.follow())
@@ -349,6 +349,12 @@ class ReviewEditFollows(Base):
         self.assertEqual((row["ref"], row["cells"]["description"]), ("@2", "Test data must be anonymised first"))
         self.assertEqual(self.rows(self.doc(), "actions")[0]["cells"]["action"], "Book the UAT environment today")
         self.assertIsNone(self.follow())                                    # in step: nothing more to do
+
+    def test_review_edit_of_the_minutes_names_the_record_not_word(self):
+        self.v.run("list", script="review.py")
+        r = self.v.run("edit", str(self.review_n("meeting")), "title=x", script="review.py", ok=False)
+        self.assertIn("a creaite record, not a Word file: edit their items by their own numbers", r.stderr)
+        self.assertNotIn("in Word", r.stderr)
 
     def test_a_removed_row_stays_removed(self):
         self.assertTrue(self.change({"op": "remove", "n": 2})["ok"])
@@ -461,7 +467,8 @@ class ThroughTheServer(unittest.TestCase):
         again = self.post("/api/minutes/save", {"path": FILED, "doc": doc, "base_version": doc["version"]})
         self.assertFalse(again["ok"], again)                                    # refused (Alan, 15-10-2026): never approved here
         self.assertEqual((again["code"], again["needs_approval"]), (3, True))
-        self.assertIn("needs your approval", again["message"])
+        self.assertEqual(again["message"], "Filed minutes are never saved over, so nothing was changed. "
+                                           "The filed minutes are as they were.")
         self.assertEqual((self.v.root / FILED).read_bytes(), before)            # the filed minutes are untouched
         self.assertEqual(log.read_text() if log.exists() else "", logged)       # and no change was made or logged
         self.assertEqual(self.post("/api/minutes/draft", {"path": FILED})["doc"]["version"], doc["version"])

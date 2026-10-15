@@ -459,8 +459,7 @@ def sync_item(doc, item):
             t["text"] = "" if t.get("rows") else "None recorded."
 
 
-NEEDS_CARD = ("Saving over filed minutes needs your approval, and creaite's approval card can't show a save made from this page "
-              "yet, so nothing was changed. The filed minutes are as they were.")
+REFUSED_FILED = "Filed minutes are never saved over, so nothing was changed. The filed minutes are as they were."
 
 
 UNSAVED = re.compile(r"creaite-doc \d{4}-\d{2}-\d{2} \d{6}(-\d+)?\.html")
@@ -507,7 +506,7 @@ def save_record(path, doc, why, base_version=None, via="dashboard"):
     if r.get("needs_approval"):
         for left in sorted(set(_save_drafts()) - before):
             _drop_unsaved(left)
-        return {**r, "message": NEEDS_CARD}
+        return {**r, "message": REFUSED_FILED}
     if not r.get("ok"):
         raise RecordError(r.get("message") or "The minutes weren't saved.")
     return r
