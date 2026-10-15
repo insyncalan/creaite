@@ -3566,12 +3566,15 @@ def _index_write(con, everything, gone, entries):
     con.execute("COMMIT")
 
 
-def build_index(full=False):
+def build_index(full=False, wait=True):
     """Bring vault_search up to date and return how many entries it holds. Only the files whose stamp changed since the last
     build are read again (BL-327); `full`, a change of readers or layout, or a recreated table rebuild it all. A meeting's
     or report's summary and tags (its sidecar) are part of its content, so keyword search matches them. The time, the files
-    read and removed are in the debug log."""
-    with INDEX_LOCK:
+    read and removed are in the debug log. #95: `wait` False returns None at once when a build is already running in this
+    process (the caller searches the index as it stands)."""
+    if not INDEX_LOCK.acquire(blocking=wait):
+        return None
+    try:
         t0, started = time.monotonic(), datetime.now().timestamp()
         con = connect()
         try:
@@ -3595,6 +3598,8 @@ def build_index(full=False):
                                  f"{time.monotonic() - t0:.2f}s: {len(entries)} entr{'y' if len(entries) == 1 else 'ies'} "
                                  f"read again, {removed} file(s) removed, {total} indexed")
         return total
+    finally:
+        INDEX_LOCK.release()
 # ===== end BL-327 (index) =====
 
 
