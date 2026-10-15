@@ -60,10 +60,11 @@
 | BL-183 | Health evidence and calibration: a banner when the declared health is better than the evidence, and your own health calls scored afterwards | S | On hold | Normal | Unassigned | #26 |
 | BL-203 | A project as it stood on any day: an "as of" date on the project page, and what changed between two dates | M | On hold | Low | Unassigned | #30 |
 | BL-204 | People with contact rhythm, and a one-click 1:1 prep page | M | On hold | Low | Unassigned | #29 |
-| BL-255 | **A hash-based script policy:** a `Content-Security-Policy` that allows only the app script's hash, in a header and a `<meta>` tag; report-only shipped in v1.9.0 (FR-230) | S | Needs decision | Normal | Unassigned | #33 |
+| BL-255 | **A hash-based script policy:** a `Content-Security-Policy` that allows only the app script's hash, in a header and a `<meta>` tag; report-only shipped in v1.9.0 (FR-230) | S | On hold | Normal | Unassigned | #33 |
 | BL-313 | **Plain words:** with automatic apply on, nothing on screen or in ask creaite says "staged", "apply" or "proposal"; your own change is "Saved" (with Undo); what creaite suggests "waits for you in Review" | M | On hold | Normal | Unassigned | #25 |
 | BL-317 | **Reports you live in:** one living Status page per project (health, Current state, milestones, top risks, help needed), edited in place with evidence; each week a snapshot; Client view; Export to Word from it | L | On hold | Normal | Unassigned | #27 |
 | BL-340 | **Notes transcripts in the minutes editor:** how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes | M | On hold | Low | Unassigned | #24 |
+| BL-341 | Automated release hand checks | L | Ready | High | Team Stark | #81 |
 
 ## Write-ups
 
@@ -765,3 +766,29 @@ Raised 2026-10-15 (Alan). **In v2.1.0 (Alan, 15-10-2026)**, with BL-338. Alan: t
 **Plan (as imported):** **Not scheduled. Priority Low (Alan, 15-10-2026):** to look at after BL-338
 
 Raised 2026-10-15 (Alan). **Not scheduled, Priority Low (Alan, 15-10-2026).** To look at after BL-338: how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes and BL-54's quick notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes (no attendees or agenda, one speaker, perhaps no Word export). Design first; nothing decided yet.
+
+### BL-341 — Automated release hand checks
+
+<!-- creaite-plan BL-341 -->
+**Backlog summary** (Unscheduled; Priority High)
+
+| ID | Item | Source | Size | Plan |
+|----|------|--------|------|------|
+| BL-341 | **Automated release hand checks:** `just handchecks vX.Y.Z` sets up a fresh vault from the release zip with demo data, runs that release's checks in the browser harness, measures the visual checks, makes one screenshot sheet for the judgement checks, and fills in the Results table | Alan, 15-10-2026 (via the Product Manager) | L | Unscheduled, High; prototyped on v1.9.5's 56 checks. Not a release gate |
+
+Raised 15-10-2026 (Alan: "yes please - make it a priority"). **No Playwright** (agreed): extend the existing zero-dependency CDP harness (`dev/tools/cdp.py`, `dev/tests/live_browser.py` LiveBrowserCase, used by 129 test files and in CI). No new runtime dependency; demo data only.
+
+**Scope**
+1. **`dev/tools/handcheck.py vX.Y.Z`** (and `just handchecks vX.Y.Z`): scripts the hand-check Setup (`build_release.py` zip → `update.py` new vault → `demo_data.py load` → register → stand-in Claude → calendar → `CREAITE_NOW` → live server on a free port), runs that release's checks file (for example `dev/tests/handchecks/test_v195.py` on LiveBrowserCase), and writes the Results table back with Pass or Fail and notes.
+2. **Measurable visual checks through CDP:** `Emulation.setEmulatedMedia` (prefers-color-scheme dark, forced-colors); a 320px width with scrollWidth against innerWidth; computed sizes (32px controls, 24px targets); scrollHeight equal to innerHeight; contrast from computed colours (or a vendored axe-core, a licence check first); `Accessibility.getFullAXTree` in place of VoiceOver (an approximation, not VoiceOver).
+3. **Judgement checks** go on one HTML screenshot sheet (every theme × light and dark × 1400 and 320px), like `dev/reviews/bl325-before-after/`, for Alan to flick through.
+4. **The rule for writing hand checks:** each check names its automated test, or is marked `judgement` or `live only` with a reason.
+
+**Rough split for v1.9.5** (an estimate): about 40 fully scriptable (1, 2, 13–15, 17, 21–52, 55), 9 measurable (3, 5–9, 12, 16, 19), 6 judgement for the sheet (4, 10, 11, 18, 20, 56), and 1–2 staying manual (53, live Microsoft 365; a final VoiceOver spot check).
+
+## Done when
+- [ ] `just handchecks v1.9.5` runs unattended from a clean checkout and fills the Results table
+- [ ] Every 1.9.5 check is automated, on the screenshot sheet, or marked live only with a reason
+- [ ] The screenshot sheet is made for the judgement checks
+- [ ] `dev/HOW-WE-WORK.md` (or the hand-check template) carries the "each check names its test" rule
+- [ ] No new runtime dependency, nothing installed for the runtime, demo data only
