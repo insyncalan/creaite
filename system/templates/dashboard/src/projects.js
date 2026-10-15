@@ -34,7 +34,7 @@ import { allBucket, boardMove, hit, isoAdd, PRIOS, rows } from "./work.js";
 export function renderProjects(){ putHTML($("#projTbl"),raw(portfolioTable("pj"))); pfResize($("#projTbl")); if(!shared.LOADING&&!P.length) putHTML($("#projTbl"),html`<div class="empty">No projects yet. <button type="button" class="btn primary" data-setup="proj">Add a project</button> <span class="sub">or say “add project ABC …” to ask creaite</span></div>`); }
 export const DRAFTKIND={};                                   /* kind → feature; each kind's block adds its own */
 /* BL-300: Top risks and issues: the text under each item is its latest update, falling back to the response (Alan,
-   13-10-2026), cut at five lines (.rk-txt); a cut one gets a quiet "More" and its full text as a tooltip, and the row
+   13-10-2026), cut at two lines (.rk-txt; #107, Alan 15-10-2026, was five); a cut one gets a quiet "More" and its full text as a tooltip, and the row
    opens the peek with all of it */
 export const rkText=r=>String(r.upd||"").trim()||String(r.resp||"").trim()||"No response yet";
 export function rkClamp(v){ if(!v) return;
