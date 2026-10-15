@@ -4,64 +4,37 @@
    Each change tells the store (stores/notes.js), which keeps a draft and writes the file once per editing session.
 
    Pickers, typed in the text: `[[` a note, `@` a person from the people register, `#` a work item, `/` at the start of a line or after a space the
-   insert menu (components/SlashMenu.jsx, #122 B; the [[ @ # lists are placed at the caret too, core/caretPlace.js). A note link is written `[[Title]]`, a person `@[Name](creaite:person/<name>)`, a work item `[ABC-A-003](creaite:item/ABC-A-003)`:
+   insert menu (components/SlashMenu.jsx, #122 B; the [[ @ # lists are placed at the caret too, core/caretPlace.js). A note link is written `[[Title]]`, a person `@[Name](creaite:person/<name>)`, a work item `[ABC-A-003 · Action: Send the plan](creaite:item/ABC-A-003)` (core/itemLink.js; older links, whose words are only the ID, still work):
    plain Markdown, readable in Finder and OneDrive. Item chips show the item's live state; a click opens it (a note link opens that
    note). Decorations draw them; nothing drawn is written. The picker is a listbox the editor drives (focus stays in the text:
    ↑ ↓ move, Enter or Tab picks, Esc closes). */
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Decoration, DecorationSet, Extension, Plugin, PluginKey, markdownOf } from "tiptap";
 import { creaiteEditor } from "../../core/editor.js";
-import { A, DEC, R } from "../../core/data.js";
-import { D, fd, TODAY } from "../../core/page.js";
+import { D } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { noteCur, noteFlash, noteLines, noteMarks } from "../../stores/notes.js";
 import { EditorBar } from "../EditorBar.jsx";
 import { attachSlash } from "../SlashMenu.jsx";
 import { placeAtCaret } from "../../core/caretPlace.js";
+import { attachItemPick, insertHash } from "../ItemPicker.jsx";
+import { chipClicked, itemChip, ITEM_HREF, itemOf, itemState } from "../../core/itemLink.js";
 import { Icon } from "../Icon.jsx";
 
 /** @typedef {{id: string, label: string, sub?: string, icon?: string}} PickOption */
-/** @typedef {{kind: "note"|"person"|"item", from: number, to: number, q: string, opts: PickOption[], i: number}} PickState */
+/** @typedef {{kind: "note"|"person", from: number, to: number, q: string, opts: PickOption[], i: number}} PickState */
 /** @typedef {{markdown: string, code: string, label: string, loadKey: string, noteTitles: () => string[],
     onInput: () => void, onBody: (get: (() => string|null) | null) => void, onOpenNote: (title: string) => void,
     onOpenItem: (id: string) => void, restored?: boolean, toolbarExtra?: import("preact").ComponentChildren,
     path?: string, onHoverLine?: (line: number) => void,
     imageSrc?: (ref: string) => (string|null), onImage?: (file: File) => Promise<string|null>}} Props */
 
-const ITEM_HREF = /^creaite:item\/(.+)$/, PERSON_HREF = /^creaite:person\//;
+const PERSON_HREF = /^creaite:person\//;
 const WIKI = /\[\[([^[\]\n|]{1,160})(?:\|[^[\]\n]*)?\]\]/g;
 
-/** The tracker row for an ID and its kind ("actions", "raid", "decisions"), or null. @param {string} id */
-export function itemOf(id) {
-  const a = A.find(x => x.id === id); if (a) return { k: "actions", x: a };
-  const r = R.find(x => x.id === id); if (r) return { k: "raid", x: r };
-  const d = DEC.find(x => x.id === id); if (d) return { k: "decisions", x: d };
-  return null;
-}
-/** An item's live state for its chip: the dot's tone ("bad", "warn", "ok", "off") and a few words.
-    @param {string} id @returns {{tone: string, words: string, title: string}} */
-export function itemState(id) {
-  const hit = itemOf(id);
-  if (!hit) return { tone: "off", words: "not in the tracker", title: `${id}: not in the tracker` };
-  const x = /** @type {any} */ (hit.x), st = String(x.st || ""), open = /^(Open|Delayed|Pending|Proposed)$/i.test(st);
-  let tone = open ? "warn" : "ok", words = st;
-  if (hit.k === "actions") {
-    if (open && x.due && x.due < TODAY) { tone = "bad"; words = `${st}, overdue ${fd(x.due)}`; }
-    else if (open && x.due) words = `${st}, due ${fd(x.due)}`;
-    if (x.o) words += ` · ${x.o}`;
-  } else if (hit.k === "raid") { if (open && x.pr === "Urgent") tone = "bad"; words = `${x.type || "Risk"} · ${st}${x.pr ? ` · ${x.pr}` : ""}`; }
-  else words = `Decision · ${st}`;
-  return { tone, words, title: `${id} · ${x.t || ""} · ${words}` };
-}
+/* The item link helpers (itemOf, itemState, the `#` list and the chip) are shared with Current state: core/itemLink.js, components/ItemPicker.jsx. */
+export { itemOf, itemState };
 
-/** The project's open work items and the rest, for `#`. @param {string} code @param {string} q @returns {PickOption[]} */
-function itemOptions(code, q) {
-  const ql = q.toLowerCase(), L = [];
-  for (const [rows, icon] of /** @type {[any[], string][]} */ ([[A, "check"], [R, "alert"], [DEC, "flag"]]))
-    for (const x of rows) if ((code === "_portfolio" || x.p === code) && (!ql || x.id.toLowerCase().includes(ql) || String(x.t || "").toLowerCase().includes(ql)))
-      L.push({ id: x.id, label: x.id, sub: x.t || "", icon, open: /^(Open|Delayed|Pending)$/i.test(x.st || "") });
-  return L.sort((a, b) => Number(b.open) - Number(a.open)).slice(0, 8);
-}
 /** People from the register (never labelled VIP, BL-288), for `@`. @param {string} q @returns {PickOption[]} */
 function personOptions(q) {
   const ql = q.toLowerCase(), seen = new Set(), L = [];
@@ -80,8 +53,8 @@ function decorate(doc, titles) {
   doc.descendants((/** @type {any} */ node, /** @type {number} */ pos) => {
     if (!node.isText) return;
     const link = node.marks.find((/** @type {any} */ m) => m.type.name === "link"), href = link ? String(link.attrs.href || "") : "";
-    const im = ITEM_HREF.exec(href);
-    if (im) { const s = itemState(im[1]); out.push(Decoration.inline(pos, pos + node.nodeSize, { class: `nchip ${s.tone}`, "data-item": im[1], title: `${s.title} (click to open)` })); return; }
+    const chip = ITEM_HREF.test(href) ? itemChip(node, pos) : null;
+    if (chip) { out.push(chip); return; }
     if (PERSON_HREF.test(href)) { out.push(Decoration.inline(pos, pos + node.nodeSize, { class: "nper" })); return; }
     const text = String(node.text || "");
     for (const m of text.matchAll(WIKI)) {
@@ -163,11 +136,9 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     if (!s.empty) return setPick(null);
     const $f = s.$from, before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), start = s.from - $f.parentOffset;
     let kind = /** @type {PickState["kind"]|null} */ (null), q = "", at = 0;
-    const mn = /\[\[([^[\]\n]{0,60})$/.exec(before), mp = /(^|\s)@([\w .'’-]{0,40})$/.exec(before),
-      mi = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before);
+    const mn = /\[\[([^[\]\n]{0,60})$/.exec(before), mp = /(^|\s)@([\w .'’-]{0,40})$/.exec(before);          /* `#` is the shared item list (components/ItemPicker.jsx) */
     if (mn) { kind = "note"; q = mn[1]; at = mn.index; }
     else if (mp && !/\s{2}$/.test(mp[2])) { kind = "person"; q = mp[2]; at = mp.index + mp[1].length; }
-    else if (mi) { kind = "item"; q = mi[2]; at = mi.index + mi[1].length; }
     if (!kind) return setPick(null);
     const opts = optionsFor(kind, q);
     if (!opts.length && kind !== "note") return setPick(null);
@@ -183,8 +154,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       if (q.trim() && !L.some(o => o.label.toLowerCase() === ql.trim())) L.push({ id: "\u0000" + q.trim(), label: `Link to “${q.trim()}”`, sub: "a new note, made when you click it", icon: "plus" });
       return L;
     }
-    if (kind === "person") return personOptions(q);
-    return itemOptions(props.current.code, q);
+    return personOptions(q);
   };
 
   /** What the host does for the `/` menu's and the toolbar's rows. */
@@ -203,7 +173,6 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const c = h.editor.chain().focus().deleteRange({ from: p.from, to: p.to });
     if (p.kind === "note") { const t = o.id.startsWith("\u0000") ? o.id.slice(1) : o.id; c.insertContent(`[[${t}]] `).run(); return; }
     if (p.kind === "person") { c.insertContent([{ type: "text", text: "@" }, { type: "text", text: o.id, marks: [{ type: "link", attrs: { href: `creaite:person/${encodeURIComponent(o.id)}` } }] }, { type: "text", text: " " }]).run(); return; }
-    if (p.kind === "item") { c.insertContent([{ type: "text", text: o.id, marks: [{ type: "link", attrs: { href: `creaite:item/${o.id}` } }] }, { type: "text", text: " " }]).run(); return; }
   };
   /** The `/` menu's and the toolbar's inserts. @param {string} what */
   const insert = what => {
@@ -211,7 +180,8 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     if (!h) return;
     const c = h.editor.chain().focus();
     if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-    else if (what === "item" || what === "person" || what === "note") c.insertContent(what === "item" ? "#" : what === "person" ? "@" : "[[").run();
+    else if (what === "item") insertHash(h);
+    else if (what === "person" || what === "note") c.insertContent(what === "person" ? "@" : "[[").run();
     else if (what.startsWith("tpl:")) { const t = /** @type {any} */ (D).note_templates?.[what.slice(4)]; if (t) c.insertContent(t, { contentType: "markdown" }).run(); }
   };
   /** BL-301 B gaps: pictures, as BL-63's in Current state (the image node shown as creaite's figure, the caption its alt text).
@@ -254,13 +224,14 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       },
       handleClick: (/** @type {any} */ _v, /** @type {number} */ _pos, /** @type {MouseEvent} */ e) => {
         if (e.altKey) return false;
-        const t = /** @type {Element} */ (e.target), item = t.closest && t.closest("[data-item]"), wl = t.closest && t.closest("[data-wl]");
-        if (item) { props.current.onOpenItem(item.getAttribute("data-item") || ""); return true; }
+        const t = /** @type {Element} */ (e.target), item = chipClicked(e), wl = t.closest && t.closest("[data-wl]");
+        if (item) { props.current.onOpenItem(item); return true; }
         if (wl) { props.current.onOpenNote(wl.getAttribute("data-wl") || ""); return true; }
         return false;
       } } });
     ed.current = h;
     const slashOff = attachSlash(h, { profile: "notes", host: hostRows() });
+    const itemOff = attachItemPick(h, { code: () => props.current.code });          /* #122 C: the shared `#` list */
     const input = () => { props.current.onInput(); };
     el.addEventListener("input", input);
     h.editor.on("selectionUpdate", () => look(h.editor));
@@ -274,7 +245,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     el.addEventListener("mouseleave", out);
     onBody(() => (h.touched() || restored ? h.value() : null));
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
-      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); h.destroy(); ed.current = null; lineState.current.doc = null; };
+      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); itemOff(); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
 
   useEffect(() => {          /* BL-301 E: a note opened at a line (a source link): that line in view, highlighted for a few seconds */
@@ -312,9 +283,9 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       <div ref={box} class="nbody rted" role="textbox" aria-multiline="true" aria-label={label} spellcheck data-ph="Write here… [[ links a note, @ a person, # a work item, / inserts"
         aria-controls={pick ? "ntpick" : undefined} aria-activedescendant={pick && pick.opts[pick.i] ? optId(pick.i) : undefined} />
       {pick ? (
-        <div ref={list} class="ntpick" id="ntpick" role="listbox" aria-label={{ note: "Link to a note", person: "Mention a person", item: "Link a work item" }[pick.kind]}
+        <div ref={list} class="ntpick" id="ntpick" role="listbox" aria-label={{ note: "Link to a note", person: "Mention a person" }[pick.kind]}
           onMouseDown={e => e.preventDefault()}>
-          <div class="h" aria-hidden="true">{{ note: "Link to a note", person: "People", item: "Work items" }[pick.kind]}</div>
+          <div class="h" aria-hidden="true">{{ note: "Link to a note", person: "People" }[pick.kind]}</div>
           {pick.opts.length ? pick.opts.map((o, i) => (
             <div key={o.id} id={optId(i)} role="option" aria-selected={i === pick.i ? "true" : "false"} class={`r${i === pick.i ? " on" : ""}`} onClick={() => choose(o)}>
               {o.icon ? <Icon name={o.icon} /> : null}<span class="l">{o.label}</span>{o.sub ? <small>{o.sub}</small> : null}

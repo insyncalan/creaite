@@ -6,7 +6,7 @@
 
    - notes:   Notes and the capture drawer. Headings 1 to 3, B I S code, lists, checklist, quote, link, [[ @ #, table, image.
    - current: Current state's two panes. The same, minus what its storage can't hold yet: no checklist (v2.2.0), no code (Word can't
-              show it), no table, and no [[ @ # (item links come with the shared chips, #122 step C).
+              show it), no table, and no [[ @ (notes and people are Notes'); `#` work-item links are there (#122 step C: stored as plain Markdown, drawn as a chip).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
               selection bar (#117) and links (v2.2.0), never headings or checklists.
    - none:    a host that sets its own frame (the report sheets) and draws nothing.
@@ -85,7 +85,7 @@ export const ED_SLASH = {
 export const ED_SLASH_ROWS = {
   notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
-  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
+  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"],
   plain: [], none: [],
 };
 /** The rows of a profile's `/` menu for a host that can do `hostRows` and an editor whose schema is `schema`, filtered by what is typed:
@@ -108,7 +108,7 @@ export const ED_PROFILES = {
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "code", "|", "ul", "ol", "task", "outdent", "indent", "quote", "|", "link", "unlink", "clear", "|",
       "note", "person", "item", "table", "image", "|", "undo", "redo"] },
   current: { tip: "Current state",
-    tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"] },
+    tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"] },
   plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
   none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
 };

@@ -7,6 +7,8 @@ import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { mountAiMenu } from "./components/AiSelect.jsx";
 import { mountEditorBar, unmountEditorBar } from "./components/EditorBar.jsx";
 import { attachSlash } from "./components/SlashMenu.jsx";
+import { attachItemPick, insertHash } from "./components/ItemPicker.jsx";
+import { chipClicked, itemChips, itemOf } from "./core/itemLink.js";
 import { HEAD_SHIFT, runTool } from "./core/editorProfiles.js";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
@@ -221,15 +223,19 @@ export const CUR_PROPS={
   transformPastedHTML:h=>mdHtml(htmlToMd(new DOMParser().parseFromString(h,"text/html").body)).replace(/<(\/?)h([345])>/g,(m,close,n)=>"<"+close+"h"+(n-HEAD_SHIFT)+">"),   /* #122: stored ### #### ##### are the editor's Heading 1 to 3 */
   handlePaste:(view,e)=>{ const pics=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>/^image\//.test(f.type)); if(!pics.length) return false;
     (async()=>{ for(const f of pics) await insertImage(f,view.dom); })(); return true; },
+  handleClick:(view,pos,e)=>{ const id=chipClicked(e), hit=id&&itemOf(id); if(!hit) return false; curOpenItem(hit.k,id); return true; },   /* #122 C: an item link is a chip; a click opens it, Alt-click edits inside it */
   handleDrop:(view,e)=>{ const files=[...((e.dataTransfer&&e.dataTransfer.files)||[])]; if(!files.length) return false; e.preventDefault();
     const at=view.posAtCoords({left:e.clientX,top:e.clientY}); (async()=>{ for(const f of files) await insertImage(f,view.dom,at?at.pos:undefined); })(); return true; } };
+/** #122 C: a chip in the editor opens its item in the peek beside the text; the editor and its unsaved changes stay (openRecord alone would ask to discard them) */
+export function curOpenItem(k,id){ const c=shared.CURED; shared.CURED=null; try{ openRecord(k,id); } finally{ shared.CURED=c; } }
 /** pane n's editor, made from its text (shared.CURED.srcN) or, made before, moved into the card just drawn */
 export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#curEd"), k=n===2?"ed2":"ed1"; if(!c||!slot) return;
   if(c[k]&&!c[k].editor.isDestroyed){ for(const a of ["aria-label","data-ph"]) c[k].el.setAttribute(a,slot.getAttribute(a)); slot.replaceWith(c[k].el); return; }
   const imgs=(P.find(x=>x.code===c.code)||{}).images;
-  c[k]=creaiteEditor(slot,{features:"current",headShift:HEAD_SHIFT,markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
+  c[k]=creaiteEditor(slot,{features:"current",headShift:HEAD_SHIFT,extensions:[itemChips()],markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
     ai:{place:"current",project:()=>(shared.CURED&&shared.CURED.code)||""}});   /* BL-301 D: AI on selected text */
-  attachSlash(c[k],{profile:"current",host:{image:pickImage}}); }   /* #122 B: the / menu (taken away with the editor) */
+  attachSlash(c[k],{profile:"current",host:{image:pickImage,item:()=>insertHash(c[k])}});   /* #122 B: the / menu (taken away with the editor) */
+  attachItemPick(c[k],{code:()=>(shared.CURED&&shared.CURED.code)||""}); }   /* #122 C: the shared # list, this project's items (taken away with the editor) */
 /** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
 export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
 export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; const p=P.find(x=>x.code===code); if(!p) return; const [l,r]=splitPanes(p.current||"");
@@ -305,7 +311,7 @@ export function curGuard(retry){ if(!PKN.force&&pkNewPending()){ pkNewAsk(retry)
 /* #122 step A: the toolbar is the shared EditorBar (components/EditorBar.jsx, profile "current"): its buttons, keys, link form and
    ⌘⇧K / ⌘⇧X come from there. The bar acts on the pane the cursor is in. */
 export function curBar(){ const el=$("#curBar"); if(!el) return;
-  mountEditorBar(el,{profile:"current",legacyRc:true,handle:()=>edOf(curPane()),host:{image:pickImage}}); }
+  mountEditorBar(el,{profile:"current",legacyRc:true,handle:()=>edOf(curPane()),host:{image:pickImage,item:()=>{ const h=edOf(curPane()); if(h) insertHash(h); }}}); }
 /** the bar is taken out of the page when the card is drawn again or editing ends (its listeners go with it) */
 export function curBarOff(){ const el=$("#curBar"); if(el) unmountEditorBar(el); }
 /* the pane the cursor is in, for the keys below */

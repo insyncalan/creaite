@@ -114,12 +114,13 @@ def drawing(rid, n, w_px, h_px, name):
 # ── Markdown (BL-22, BL-47): the subset Current state uses ────────────────────
 # Paragraphs, "### ", "#### " and "##### " headings (the editor's Heading 1 to 3, #122), "> " quotes, "- " and "1. " lists
 # nested two spaces per level, **bold**, *italic*
-# (or _italic_), ~~strikethrough~~ and [links](https://…); an image is a line of its own, ![caption](images/x.png)
+# (or _italic_), ~~strikethrough~~ and [links](https://…) (a work-item link, [ABC-A-012 · Action: title](creaite:item/ABC-A-012), is its words); an image is a line of its own, ![caption](images/x.png)
 # (BL-63). Everything else is plain text.
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
-                    r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)")
+                    r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)"
+                    r"|\[([^\]\n]+)\]\(creaite:item/[A-Za-z0-9-]{3,30}\)")          # #122 C: a work-item link is its words (group 7)
 MAX_LEVEL = 3
 HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
 HEADING = re.compile(r"^#{3,5} ")
@@ -286,6 +287,8 @@ def md_runs(text):
             out.append((m.group(3), True, False, False, None))
         elif m.group(4) is not None:
             out.append((m.group(4), False, False, True, None))
+        elif m.group(7) is not None:
+            out.append((m.group(7), False, False, False, None))
         else:
             out.append((m.group(5) or m.group(6), False, True, False, None))
         at = m.end()

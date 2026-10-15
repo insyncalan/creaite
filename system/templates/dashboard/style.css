@@ -3009,6 +3009,12 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
+/* #122 C: a chip in an editor carries the whole 'ID · Designation: title', so it flows and wraps with the text (Notes and Current state) */
+.rted .nchip{display:inline;white-space:normal;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone;line-height:1.5}
+.rted .nchip::before{display:inline-block;vertical-align:middle;margin:-2px 5px 0 0}
+.rted a .nchip,.rted .nchip a{color:var(--ink);text-decoration:none}
+.itemref{white-space:normal}
+.ntpick.items{width:440px} .ntpick.items .r .l{flex:1;min-width:0}
 .ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
