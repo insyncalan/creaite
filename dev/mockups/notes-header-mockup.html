@@ -48,10 +48,19 @@ button,input{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--a
 .g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}.g .dn{font:500 10px var(--mono);color:var(--faint);padding:4px 0;text-transform:uppercase}
 .g button{height:32px;border:0;border-radius:8px;background:none;cursor:pointer;font-size:13px}.g button:hover{background:var(--sunk)}.g button.o{color:var(--faint)}.g button.t{box-shadow:inset 0 0 0 1px var(--accent)}.g button.s{background:var(--accent);color:var(--accent-ink)}
 .foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}.foot button{border:0;background:none;color:var(--accent);font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:2px 4px}
+
+/* focus mode: the note lifted over the page */
+.xb{border:0;background:none;width:28px;height:28px;border-radius:6px;color:var(--faint);display:grid;place-items:center;cursor:pointer;flex:none;opacity:.8}.xb:hover,.xb:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}.xb svg{width:16px;height:16px}
+.sv{color:var(--faint);font-size:12px;white-space:nowrap;margin-right:4px}
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50;display:none;align-items:center;justify-content:center;padding:4vh 4vw}.scrim.on{display:flex}
+.focus{width:min(1040px,82vw);height:88vh;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.3);display:flex;flex-direction:column;overflow:hidden}
+.focus .doc{border:0;border-radius:0;min-height:0;flex:1;overflow:auto;padding:22px 0 40px}.focus .doc>*{margin-left:auto;margin-right:auto;max-width:780px;width:calc(100% - 64px)}
+.focus .ntitle{font-size:26px}.focus .bodytext{display:block;font-size:16px;line-height:1.65}.bodytext{display:none}
+.fbar{display:none}.focus .fbar{display:flex;gap:2px;align-items:center;border-bottom:1px solid var(--line);padding:6px 12px;color:var(--muted);font-size:13px;margin:0;max-width:none;width:auto}.fbar b{width:30px;height:28px;display:grid;place-items:center;border-radius:6px;font-weight:600;cursor:default}.fbar b:hover{background:var(--sunk)}.fbar i{width:1px;height:18px;background:var(--line);margin:0 6px}.fbar .sp{flex:1}.fbar .hint{font-size:12px;color:var(--faint)}
 .notes{max-width:1500px;margin:0 auto;padding:0 24px 80px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px}.card h3{font:700 14px var(--display);margin:0 0 6px}.card ul{margin:0;padding-left:18px}.card li{margin:3px 0}
 @media (max-width:1100px){.split,.split.collapsed{grid-template-columns:220px minmax(0,1fr)}.split.collapsed{grid-template-columns:44px minmax(0,1fr)}.ctx{grid-column:1/-1}.notes{grid-template-columns:1fr}}
 </style></head><body>
-<div class="bar" role="group" aria-label="Show"><span class="sub">Show:</span><button class="st" id="b1" aria-pressed="false">List open</button><button class="st" id="b2" aria-pressed="true">List collapsed</button><button class="st" id="b3" aria-pressed="false">New note button expanded</button><button class="st" id="b4" aria-pressed="false">Date picker open</button><span class="sub" style="margin-left:8px">Try: type "last monday" in the date, or press + Tags.</span></div>
+<div class="bar" role="group" aria-label="Show"><span class="sub">Show:</span><button class="st" id="b1" aria-pressed="false">List open</button><button class="st" id="b2" aria-pressed="true">List collapsed</button><button class="st" id="b3" aria-pressed="false">New note button expanded</button><button class="st" id="b4" aria-pressed="false">Date picker open</button><button class="st" id="b5" aria-pressed="false">Focus mode</button><span class="sub" style="margin-left:8px">Try: type "last monday" in the date, or press + Tags.</span></div>
 <div class="page">
 <div class="crumb">Projects<span>›</span>Falcon Data Platform<span>›</span>Notes</div>
 <div class="hhead"><div style="flex:1"><h1>Falcon Data Platform</h1><div class="sub">Northgate Energy</div></div>
@@ -61,20 +70,21 @@ button,input{font:inherit;color:inherit}:focus-visible{outline:2px solid var(--a
 <aside><div class="lhead"><b>Notes</b><span class="sp"></span><button class="col" id="col" type="button" aria-expanded="false" aria-label="Show the notes list" title="Show the notes list (⌘\)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="colsvg"><path d="M13 6l6 6-6 6M5 6l6 6-6 6"/></svg></button><span class="vl">1 notes</span></div>
 <div class="lbody"><input class="search" type="search" placeholder="Search Falcon Data Platform notes" aria-label="Search notes"><div class="grp">Recent</div><button class="ni" type="button"><b>Working session</b><small>Today, 09:42 · Working session</small></button></div></aside>
 <article class="doc" aria-labelledby="nt">
-<div class="trow"><input class="ntitle" id="nt" aria-label="Title" value="Working session">
+<div class="trow"><button class="xb" id="xb" type="button" aria-label="Focus on this note" title="Focus on this note (⌘⇧F)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" id="xsvg"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button><input class="ntitle" id="nt" aria-label="Title" value="Working session"><span class="sv" id="sv" role="status" aria-live="polite">Saved 14:02</span>
 <button class="btn" type="button"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.2 6.3L21 10l-6.8 1.7L12 18l-2.2-6.3L3 10l6.8-1.7z"/></svg>Find updates</button><button class="btn ib" type="button" aria-label="More">⋯</button></div>
 <div class="props"><span>Created 15-10-2026</span>
 <span class="pf"><span class="k">Date</span><span class="dwrap"><input class="in date" id="d" value="15-10-2026" placeholder="Date, or e.g. last monday" aria-label="Date of the session, a date or words like last monday" autocomplete="off"><button class="dbtn" id="dc" type="button" aria-label="Choose date" title="Choose a date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button></span>
 <div class="pop" id="pop" hidden role="dialog" aria-label="Choose a date"><div class="typed" id="typed"></div><div class="mh"><button type="button" id="pm" aria-label="Previous month">‹</button><b id="mt"></b><button type="button" id="nm" aria-label="Next month">›</button></div><div class="g" id="g"></div><div class="foot"><button type="button" data-q="today">Today</button><button type="button" data-q="last monday">Last Monday</button><button type="button" data-q="yesterday">Yesterday</button></div></div></span>
 <span class="pf"><span class="k">With</span><input class="in who" placeholder="Names, separated by commas" aria-label="With, names separated by commas"></span></div>
 <div class="labels" id="labels"><span class="chip int">Internal</span><span id="chips" style="display:contents"></span><button class="addl" id="addl" type="button">+ Tags</button><span class="sugg" id="sugg">Suggested: <button type="button">stakeholder</button><button type="button">decision</button><button type="button">follow-up</button></span></div>
-<div class="body"><h2>Purpose</h2><h2>Notes</h2><h2>Agreed</h2><h2>Follow-ups</h2></div></article>
+<div class="fbar" aria-label="Formatting"><b>H1</b><b>H2</b><b>H3</b><i></i><b>B</b><b><em>I</em></b><b>S</b><i></i><b>•</b><b>1.</b><b>☑</b><b>❝</b><i></i><b>[[</b><b>@</b><b>#</b><span class="sp"></span><span class="hint">Esc to leave focus</span></div><div class="body"><h2>Purpose</h2><h2>Notes</h2><div class="bodytext"><p>Agreed the approach for the data-sharing agreement. The client's legal team will review the revised draft this week, and production access depends on that sign-off. Two open questions remain on retention and on who can approve exceptions.</p><p>Next session: walk through the UAT entry criteria with the sponsor.</p></div><h2>Agreed</h2><h2>Follow-ups</h2></div></article>
 <aside class="ctx"><div class="box"><h2>Mentioned in</h2><p>No other note links here yet.</p></div><div class="box"><h2>Linked work</h2><p>No work items mentioned. Type # to link one.</p></div><div class="box"><h2>People</h2><p>Nobody mentioned. Type @ to mention someone.</p></div></aside>
 </div></div>
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-label="Focused editing"><div class="focus" id="focus"></div></div>
 <div class="notes"><div class="card"><h3>What changed</h3><ul>
 <li><b>+ New note</b> is the Work page's own tonal "+" button: quiet until pointed at, then it shows its word. Same component, nothing new.</li>
 <li><b>The collapse control</b> is a small quiet double-chevron at the right edge of the list header (it flips when collapsed); it sits away from the word Notes.</li>
-<li><b>The title row</b> carries Find updates and "…" at the far right. Nothing else wraps onto a second line.</li>
+<li><b>The title row</b> carries Find updates and "…" at the far right, and a quiet "Saved 14:02" before them. Nothing wraps onto a second line.</li><li><b>Focus (new):</b> a small expand icon at the top left of the note lifts the same note over the page (82% wide, 88% tall, dimmed page behind): a reading column, a slim formatting bar, nothing else. Esc, the same icon, or a click outside brings it back. The note, its cursor and its date, tags and save line are the same element, not a copy.</li><li><b>Saving:</b> typing is saved to the note on its own after a short pause and the line says "Saved 14:02". There is no draft step and no "Draft kept".</li>
 <li><b>Under the title, one line of properties:</b> Created, the Date (with the site's calendar) and With. The word "Working session" is no longer repeated there: it is the note's kind, already in the title and the list.</li>
 <li><b>Tags</b> sit on their own line: Internal (fixed), then your tags as chips, then "+ Tags". Click a tag's text to rename it; × removes it. A few suggestions show until you have some.</li></ul></div>
 <div class="card"><h3>The date</h3><ul>
@@ -124,5 +134,15 @@ function setList(open){const s=$("#split");s.classList.toggle("collapsed",!open)
 on($("#col"),"click",()=>setList($("#split").classList.contains("collapsed")));on($("#b1"),"click",()=>setList(true));on($("#b2"),"click",()=>setList(false));
 on($("#b3"),"click",()=>{$("#newb").classList.toggle("show");$("#b3").setAttribute("aria-pressed",String($("#newb").classList.contains("show")))});
 on($("#b4"),"click",()=>{open();$("#d").value="last monday";typed()});
+
+/* focus mode: the same note element is moved into the overlay, so nothing is copied or lost */
+const doc=document.querySelector(".doc"),home=doc.parentNode,nxt=doc.nextSibling;
+function focusOn(on){const sc=$("#scrim");if(on){$("#focus").appendChild(doc);sc.classList.add("on");$("#xsvg").innerHTML='<path d="M20 10h-6V4M4 14h6v6M14 10l7-7M10 14l-7 7"/>';$("#xb").title="Leave focus (Esc)";$("#xb").setAttribute("aria-label","Leave focus");$("#nt").focus()}
+ else{home.insertBefore(doc,nxt);sc.classList.remove("on");$("#xsvg").innerHTML='<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>';$("#xb").title="Focus on this note (⌘⇧F)";$("#xb").setAttribute("aria-label","Focus on this note")}
+ $("#b5").setAttribute("aria-pressed",String(on))}
+doc.addEventListener("click",e=>{if(e.target.closest("#xb"))focusOn(!$("#scrim").classList.contains("on"))});
+on($("#scrim"),"mousedown",e=>{if(e.target===$("#scrim"))focusOn(false)});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#scrim").classList.contains("on")&&$("#pop").hidden)focusOn(false)});
+on($("#b5"),"click",()=>focusOn(!$("#scrim").classList.contains("on")));
 chips();setList(true);
 </script></body></html>
