@@ -16,7 +16,11 @@
 
    Heading levels: the editor always has Heading 1 to 3. Where the text is stored decides what they are written as: Notes keeps
    `#`, `##`, `###`; Current state is read to the next `## ` line (build_dashboard.py, report.py), so its levels are written
-   `###`, `####`, `#####` (HEAD_SHIFT; creaiteEditor `headShift`; Alan, 15-10-2026). */
+   `###`, `####`, `#####` (HEAD_SHIFT; creaiteEditor `headShift`; Alan, 15-10-2026).
+
+   ===== #122 step B ===== the `/` menu. Each profile also names the rows its `/` menu offers (`slash`, in order, grouped by ED_SLASH);
+   components/SlashMenu.jsx draws it at the caret. A row writes no heading level itself: Heading 1 to 3 are the editor's levels, and
+   the host's `headShift` writes them (Notes `#`, Current state `###`). */
 
 /** How many `#` Current state adds to the editor's heading level when it writes them (and takes off when it reads them). */
 export const HEAD_SHIFT = 2;
@@ -53,6 +57,46 @@ export const ED_TOOLS = {
   undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: c => c.undo() },
   redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: c => c.redo() },
 };
+/** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, node?: string,
+    run?: (c: any, e: any) => any}} SlashDef */
+/** The rows of the `/` menu. `run` gets a focused chain that has already removed the typed "/query". `host` rows are done by the host
+    (it owns the pickers, the table's template and the file input) and show only when it can; `node` names a schema node the row needs.
+    @type {Record<string, SlashDef>} */
+export const ED_SLASH = {
+  text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", run: c => c.setParagraph() },
+  h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", run: c => c.setHeading({ level: 1 }) },
+  h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", run: c => c.setHeading({ level: 2 }) },
+  h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", run: c => c.setHeading({ level: 3 }) },
+  ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", run: c => c.toggleBulletList() },
+  ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", run: c => c.toggleOrderedList() },
+  task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", node: "taskList", run: c => c.toggleTaskList() },
+  quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", run: c => c.toggleBlockquote() },
+  codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", node: "codeBlock", run: c => c.toggleCodeBlock() },
+  table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", host: true },
+  image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", host: true },
+  item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", host: true },
+  person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
+  note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
+  "tpl:stakeholder": { id: "tpl:stakeholder", group: "Templates", name: "Stakeholder", desc: "Role, what matters to them, how they work", icon: "◇", host: true },
+  "tpl:lessons-learned": { id: "tpl:lessons-learned", group: "Templates", name: "Lessons learned", desc: "What happened, what to change", icon: "◇", host: true },
+  "tpl:working-session": { id: "tpl:working-session", group: "Templates", name: "Working session", desc: "A conversation: its date and who it was with", icon: "◇", host: true },
+};
+/** The `/` menu's rows per profile, in order; a profile with none has no menu (plain: its fields store plain text). @type {Record<string, string[]>} */
+export const ED_SLASH_ROWS = {
+  notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note",
+    "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
+  current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
+  plain: [], none: [],
+};
+/** The rows of a profile's `/` menu for a host that can do `hostRows` and an editor whose schema is `schema`, filtered by what is typed:
+    a row matches on its name or description (and "h" lists the headings). @param {string} profile @param {string[]} hostRows
+    @param {any} schema @param {string} [q] @returns {SlashDef[]} */
+export function slashRows(profile, hostRows, schema, q = "") {
+  const ql = q.trim().toLowerCase();
+  return (ED_SLASH_ROWS[profile] || []).map(id => ED_SLASH[id]).filter(r => r && (!r.host || hostRows.includes(r.id)) && (!r.node || !schema || schema.nodes[r.node])
+    && (!ql || r.name.toLowerCase().includes(ql) || r.desc.toLowerCase().includes(ql) || (ql === "h" && r.id[0] === "h" && r.id.length === 2)));
+}
+
 /** The list-item node a sink or lift acts on at the cursor: a checklist's item in a checklist, else a list's. @param {any} e */
 function itemType(e) { return e.isActive("taskItem") ? "taskItem" : "listItem"; }
 

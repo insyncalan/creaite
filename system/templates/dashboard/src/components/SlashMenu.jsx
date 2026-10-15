@@ -1,0 +1,125 @@
+// @ts-check
+/* SlashMenu (#122 step B): the one `/` menu every rich editor offers, drawn from core/editorProfiles.js (ED_SLASH, ED_SLASH_ROWS).
+   `attachSlash(handle, {profile, host})` wires it to an editor and returns what undoes it; Notes and Current state call it, so the
+   same rows do the same wherever the profile is used. The rows a host does itself (its [[ @ # pickers, the table, the templates, the
+   file input for a picture) are `host` callbacks: a row shows only if the host can do it.
+
+   Opens at the caret when a `/` is typed at the start of a line or after a space, in a paragraph (never in a code block or code,
+   a link, a heading, or inside a word or an address such as and/or or https://x). It is drawn position:fixed from the editor's own
+   coordsAtPos (core/caretPlace.js): below the caret, above when there is no room, clamped to the window, moved again on scroll and
+   resize. Typing narrows it (name and description); ↑ ↓ move, Enter or Tab insert, Esc closes and leaves the text; a click on a row
+   inserts. The "/query" is removed and the row's block written in its place. A composition (IME) never opens it or is read by it.
+   Focus stays in the text; the editor carries aria-activedescendant for the screen reader, and the list is a listbox of groups
+   of options. Nothing is written until a row is chosen. */
+import { render } from "preact";
+import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
+import { slashRows } from "../core/editorProfiles.js";
+import { placeAtCaret } from "../core/caretPlace.js";
+
+/** @typedef {import("../core/editorProfiles.js").SlashDef} SlashDef */
+/** @typedef {{from: number, to: number, q: string, rows: SlashDef[], i: number}} SlashState */
+
+let seq = 0;
+/** The text before the caret in a paragraph where a `/` menu may open, else null: the "/query" and where it starts. @param {any} editor */
+export function slashAt(editor) {
+  const s = editor.state.selection;
+  if (!s.empty) return null;
+  const $f = s.$from;
+  if ($f.parent.type.name !== "paragraph") return null;
+  if ($f.marks().some(/** @param {any} m */ m => m.type.name === "code" || m.type.name === "link")) return null;
+  const before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), m = /(^|\s)\/([\w-]{0,20})$/.exec(before);
+  if (!m) return null;
+  return { from: s.from - m[2].length - 1, to: s.from, q: m[2] };
+}
+
+/** @param {{state: SlashState, id: string, view: any, pick: (r: SlashDef) => void, hover: (i: number) => void}} p */
+function SlashList({ state, id, view, pick, hover }) {
+  const box = useRef(/** @type {HTMLDivElement|null} */ (null));
+  useLayoutEffect(() => {          /* at the caret again after every redraw (the list got shorter or longer) */
+    const el = box.current;
+    if (!el) return undefined;
+    return placeAtCaret(view, state.from, el);
+  }, [state.rows.length, state.from, state.q]);
+  useEffect(() => { const on = box.current && box.current.querySelector(".r.on"); if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest" }); }, [state.i]);
+  /** @type {{g: string, rows: {r: SlashDef, i: number}[]}[]} */
+  const groups = [];
+  state.rows.forEach((r, i) => { let g = groups[groups.length - 1]; if (!g || g.g !== r.group) { g = { g: r.group, rows: [] }; groups.push(g); } g.rows.push({ r, i }); });
+  return (
+    <div ref={box} class="slashmenu" id={id} role="listbox" aria-label="Insert" onMouseDown={e => e.preventDefault()}>
+      {state.rows.length ? groups.map(g => (
+        <div key={g.g} role="group" aria-label={g.g}>
+          <div class="g" aria-hidden="true">{g.g}</div>
+          {g.rows.map(({ r, i }) => (
+            <div key={r.id} id={`${id}-${i}`} role="option" data-slash={r.id} aria-selected={i === state.i ? "true" : "false"} class={`r${i === state.i ? " on" : ""}`}
+              onMouseMove={() => { if (i !== state.i) hover(i); }} onClick={() => pick(r)}>
+              <span class="ic" aria-hidden="true">{r.icon}</span>
+              <span class="tx"><span class="t">{r.name}</span><span class="d">{r.desc}</span></span>
+              {r.key ? <span class="k" aria-hidden="true">{r.key}</span> : null}
+            </div>))}
+        </div>)) : <div class="r none" role="option" aria-disabled="true" aria-selected="false">No match</div>}
+      <div class="foot" aria-hidden="true">↑↓ to move · Enter to insert · Esc to close</div>
+    </div>
+  );
+}
+
+/** Give an editor its `/` menu. `host` maps a row id to what the host does for it. Returns what takes it away again.
+    @param {import("../core/editor.js").EdHandle} h @param {{profile: string, host?: Record<string, () => void>}} o */
+export function attachSlash(h, { profile, host }) {
+  const id = `slash-${++seq}`, editor = h.editor, view = editor.view, el = h.el;
+  const hostRows = Object.keys(host || {});
+  if (!slashRows(profile, hostRows, editor.schema).length) return () => {};
+  const root = document.createElement("div");
+  root.className = "slashroot";
+  (el.closest("dialog[open]") || document.body).appendChild(root);
+  /** @type {SlashState|null} */
+  let st = null;
+  let dismissed = -1;
+  const draw = () => {
+    render(st ? <SlashList state={st} id={id} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
+    const dom = /** @type {HTMLElement} */ (view.dom);
+    if (st) { dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-expanded", "true"); dom.setAttribute("aria-controls", id);
+      if (st.rows[st.i]) dom.setAttribute("aria-activedescendant", `${id}-${st.i}`); else dom.removeAttribute("aria-activedescendant"); }
+    else { dom.removeAttribute("aria-expanded"); dom.removeAttribute("aria-controls"); dom.removeAttribute("aria-activedescendant"); }
+  };
+  const close = () => { if (!st) return; st = null; draw(); };
+  /** Open, narrow or close the menu from what is at the caret. */
+  const look = () => {
+    if (editor.isDestroyed || view.composing) return;
+    const a = slashAt(editor);
+    if (!a || a.from === dismissed) { if (!a) dismissed = -1; return close(); }
+    const rows = slashRows(profile, hostRows, editor.schema, a.q);
+    if (!rows.length && !a.q) return close();
+    st = { ...a, rows, i: st && st.from === a.from ? Math.min(st.i, Math.max(0, rows.length - 1)) : 0 };
+    draw();
+  };
+  /** @param {SlashDef} r */
+  const choose = r => {
+    const s = st;
+    if (!s) return;
+    close();
+    const c = editor.chain().focus().deleteRange({ from: s.from, to: s.to });
+    if (r.host) { c.run(); const f = host && host[r.id]; if (f) f(); return; }
+    if (r.run) r.run(c, editor).run();
+  };
+  /** @param {KeyboardEvent} e */
+  const keys = e => {
+    if (!st || e.isComposing || view.composing) return;
+    const n = st.rows.length;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); if (n) { st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); } }
+    else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) { if (n) { e.preventDefault(); e.stopPropagation(); choose(st.rows[st.i]); } else close(); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dismissed = st.from; close(); }
+  };
+  const blur = () => setTimeout(() => { if (!el.contains(document.activeElement)) close(); }, 120);
+  const comp = () => look();          /* a composition ended: read the text it left */
+  editor.on("selectionUpdate", look); editor.on("update", look);
+  el.addEventListener("keydown", keys, true); el.addEventListener("focusout", blur); el.addEventListener("compositionend", comp);
+  const off = () => {
+    editor.off("destroy", off);
+    editor.off("selectionUpdate", look); editor.off("update", look);
+    el.removeEventListener("keydown", keys, true); el.removeEventListener("focusout", blur); el.removeEventListener("compositionend", comp);
+    st = null; render(null, root); root.remove();
+    if (!editor.isDestroyed) for (const a of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a);
+  };
+  editor.on("destroy", off);          /* a host that destroys the editor needs no extra step */
+  return off;
+}
