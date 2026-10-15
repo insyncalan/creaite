@@ -1229,7 +1229,8 @@ def hook_decision(tool, inp, mode, run):
     if tool == "Bash":
         command = str((inp or {}).get("command") or "")
         why = (bash_refusal(command, mode) or ask_never_reason(command)    # ask-hook-fix: every argument form,
-               or handover_refusal(command))                              # never reach.py wrap or hook
+               or handover_refusal(command)                               # never reach.py wrap or hook,
+               or read_write_refusal(command))                            # validate only in system/staging
         if why:
             return False, why
     return True, ""
@@ -1307,6 +1308,36 @@ def handover_refusal(command):
     return (f"{name} hands over to another command, and ask creaite never runs it: run the creaite script itself, "
             f"`system/scripts/run <name>.py …`")
 # ===== end ask-hook-fix: hand-over commands =====
+
+
+# ===== ask-hook-fix (15-10-2026): the read commands that write =====
+# The read commands that write a file (ask-hook-fix audit, 15-10-2026): every one writes a fixed file in system/staging/, or a bare
+# --out name directly in system/staging/drafts/ (propose.emit_spec), but one: `tracker.py validate <proposal>` writes its
+# findings back into the file it is given, and finds it as tracker.resolve_proposal does (the path as given, then from the vault
+# root, then by its name in system/staging/), so any JSON file in reach (a settings or permission file) could be rewritten. It
+# runs only on a proposal in system/staging/, which is where cx-review, cx-minutes and the sweep validate (ask creaite's
+# modes; a held run's rule is A5's).
+def read_write_refusal(command):
+    """Why this read command would write outside system/staging/, or None."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", vault_relative(command))
+    if not m or m.group(1) != "tracker.py":
+        return None
+    words = bash_args(command)
+    if command_kind("tracker.py", words)[1] != "tracker.py validate":
+        return None
+    staging = Path(os.path.realpath(paths.STAGING))
+    try:
+        for arg in [w for w in words if w != "validate"]:
+            for cand in (Path(arg), paths.ROOT / arg, paths.STAGING / Path(arg).name):   # tracker.resolve_proposal's order
+                if cand.exists() and parts_under(Path(os.path.realpath(cand)), staging) is None:
+                    _debug("warn", "read command refused: tracker.py validate outside system/staging")
+                    return (f"{arg}: tracker.py validate writes its findings back into the file, so it runs only on a "
+                            f"proposal in system/staging/")
+    except (OSError, ValueError, RuntimeError) as e:  # fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+# ===== end ask-hook-fix: read commands that write =====
 
 
 def bash_refusal(command, mode):
