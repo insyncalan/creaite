@@ -48,7 +48,7 @@ SCREENS["work-decisions"] = ("go('work'); document.querySelector('#wtabs [data-t
                              "document.querySelector('#newBtn[aria-haspopup]') && document.querySelector('#workTbl tbody tr')", "#v-work")
 SCREENS["work-views"] = ("go('work'); document.querySelector('#wtabs [data-t=actions]').click(); setLayout(WT,'list'); "
                          "SAVED.actions=[{name:'Due soon',f:{}},{name:'Mine',f:{}}]; renderWork()",
-                         "document.querySelector('#wviews [data-vmenu]') && document.querySelector('#workTbl tbody tr')", "#v-work")
+                         "document.querySelector('#wviews .vchip') && document.querySelector('#workTbl tbody tr')", "#v-work")
 SCREENS["prep-popup"] = ("D.calendar={fetched:TODAY+' 07:00',days:{[TODAY]:[{id:'e1',start:'10:00',end:'11:00',title:'ABC Steering',"
                          "teams:true}]}}; D.prep.meetings['10:00|ABC Steering']={series:'abc steering',p:'ABC',how:'matched',day:TODAY}; "
                          "openPrep(prepTimed()[0],TODAY)",

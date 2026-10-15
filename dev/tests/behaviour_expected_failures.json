@@ -8,7 +8,6 @@
  "Peek": [
   "keys: work-panel button.chip.pk-chip “Due date: 06-10-2026 overdue”: Tab leaves it open",
   "unreached: dialog Picker class:pkws (src/panel.js)",
-  "unreached: listbox Combobox class:combo (src/panel.js)",
   "unreached: listbox Opener label:Type: (src/panel.js)",
   "unreached: listbox Picker label:Milestone (src/panel.js)",
   "unreached: listbox Picker label:Replaces (src/panel.js)",
