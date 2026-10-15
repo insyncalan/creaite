@@ -3326,40 +3326,52 @@ def vip_check(how="check"):
         found, why, cost, began = None, "no reply", None, time.monotonic()
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
-            why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
-            reply = json.loads(r.stdout or "{}")
-            reply = reply if isinstance(reply, dict) else {}
-            cost = reply.get("total_cost_usd")
-            result = reply.get("result") or ""
-            m = re.search(r"\[.*\]", result, re.S)
-            found = json.loads(m.group(0)) if m else None
-            why = why if m else result or why
-        except (OSError, ValueError, subprocess.TimeoutExpired) as e:
+            found, why, cost = vip_reply(r)
+        except (OSError, subprocess.TimeoutExpired) as e:
             why = str(e)
         took = time.monotonic() - began
         if not isinstance(found, list):
             VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {why[:160]}"
             print(VIP_STATUS["last_error"], flush=True)
-            if debuglog is not None:
-                debuglog.info("vip", sweep.vip_check_line({}, [], took, cost, failed=True))
+            vip_debug(sweep.vip_check_line({}, [], took, cost, failed=True))
             return VIP_STATUS["last_error"]
         if sweep_running():                               # a sweep began during the call: it records these people itself
-            if debuglog is not None:
-                debuglog.info("vip", f"check dropped: a sweep started during it, {took:.1f}s")
+            vip_debug(f"check dropped: a sweep started during it, {took:.1f}s")
             return "skipped: a sweep started during the check"
         with VIP_WRITE:
             clean, counts = sweep.vip_clean(found, since, zone, sweep.vip_state()["alerts"], invites=bool(VIP_INVITES))
             checked = {"offered": parts["offered"], "counts": counts}
             new = sweep.vip_record(clean, how, checked=checked)
         VIP_STATUS["last_error"] = None
-        if debuglog is not None:
-            debuglog.info("vip", sweep.vip_check_line(checked["counts"], new, took, cost))
+        vip_debug(sweep.vip_check_line(checked["counts"], new, took, cost))
         note = vip_note(new)
         print(f"{datetime.now():%H:%M:%S} {note}", flush=True)
         return note
     finally:
         VIP_STATUS["running"] = False
         VIP_LOCK.release()
+
+
+def vip_reply(r):
+    """(the reply's JSON array or None, why it didn't finish, its total_cost_usd or None) from a finished `claude -p` call."""
+    why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
+    try:
+        reply = json.loads(r.stdout or "{}")
+    except ValueError as e:
+        return None, str(e), None
+    reply = reply if isinstance(reply, dict) else {}
+    result, cost = str(reply.get("result") or ""), reply.get("total_cost_usd")
+    m = re.search(r"\[.*\]", result, re.S)
+    try:
+        return (json.loads(m.group(0)) if m else None), (why if m else result or why), cost
+    except ValueError as e:
+        return None, str(e), cost
+
+
+def vip_debug(line):
+    """One line in the debug log's vip area (BL-102): counts, seconds and dollars only."""
+    if debuglog is not None:
+        debuglog.info("vip", line)
 
 
 def vip_note(new):
