@@ -2560,13 +2560,27 @@ def watch_for_close(httpd):
             return
 
 
+class LocalServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without the reverse DNS lookup at bind (#83). http.server's server_bind calls
+    socket.getfqdn(host), which on some Macs (GitHub's macOS runner) stalls in gethostbyaddr for 30 s or more
+    before the server answers anything. The server only ever listens on 127.0.0.1 and nothing reads server_name,
+    so the name is set without a lookup."""
+
+    def server_bind(self):
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = host
+        self.server_port = port
+
+
 def main():
     """Start the live server on 127.0.0.1 (live_mode.port, or CREAITE_PORT) and serve until stopped; ends any run on the
     way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
     the search index, the VIP check and, when launched, the close watcher (BL-07, BL-99, BL-86)."""
     port = int(os.environ.get("CREAITE_PORT") or paths.load_settings().get("live_mode", {}).get("port", 8765))
     try:
-        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        httpd = LocalServer(("127.0.0.1", port), Handler)
     except OSError as e:
         sys.exit(f"Can't use port {port} ({e.strerror}). Is the live server already running? "
                  f"Change live_mode.port in settings.json if another app uses it.")
