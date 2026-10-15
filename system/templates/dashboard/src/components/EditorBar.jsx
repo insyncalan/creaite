@@ -35,7 +35,7 @@ function keysInit() {
   if (keysOn) return;
   keysOn = true;
   document.addEventListener("keydown", e => {
-    if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey) return;
+    if (e.isComposing || !(e.metaKey || e.ctrlKey) || !e.shiftKey || e.altKey) return;      // not while an input method is composing
     const k = e.key.toLowerCase();
     if (k !== "k" && k !== "x") return;
     const b = editorBarFor(e.target);
@@ -128,21 +128,26 @@ export function EditorBar({ profile, handle, host, cls, label, legacyRc, extra }
     requestAnimationFrame(() => { const n = bar.current && bar.current.querySelector(`button[data-nt="${buttons[to].id}"]`); if (n) /** @type {HTMLElement} */ (n).focus(); });
   };
   if (!buttons.length) return null;
+  /* the tools in their groups (between the dividers): a group wraps as one, so a divider never ends a line */
+  const groups = tools.reduce((out, t) => { if (t === "|") out.push([]); else out[out.length - 1].push(t); return out; }, /** @type {any[][]} */ ([[]])).filter(g => g.length);
   return (
     <div ref={bar} class={`rtebar ${cls || ""}`.trim()} role="toolbar" aria-label={label || "Formatting"} data-profile={profile} onKeyDown={keys}
       onMouseDown={e => {          /* keep the cursor in the text; the press itself runs the tool (a click with no mouse, from a key, runs it below) */
         const b = /** @type {HTMLElement|null} */ ((/** @type {Element} */ (e.target)).closest("button[data-nt]"));
         if (!b) return;
         e.preventDefault();
+        if (e.button === 0) setCur(Math.max(0, buttons.findIndex(x => x.id === b.dataset.nt)));      // the one Tab stop follows the mouse
         if (e.button === 0 && b.getAttribute("aria-disabled") !== "true") run(b.dataset.nt || "");
       }}
       onClick={e => {
         const b = /** @type {HTMLElement|null} */ ((/** @type {Element} */ (e.target)).closest("button[data-nt]"));
         if (b && e.detail === 0 && b.getAttribute("aria-disabled") !== "true") run(b.dataset.nt || "");
       }}>
-      {tools.map((t, i) => t === "|" ? <span key={`s${i}`} class="rtesep" aria-hidden="true" /> :
-        <button key={t.id} type="button" data-nt={t.id} {...(legacyRc && t.rc ? { "data-rc": t.rc } : {})} aria-label={t.tip || t.name} data-tip={t.tip || t.name}
+      {groups.map((g, gi) => <span key={`g${gi}`} class="rtegrp">
+        {gi > 0 && <span class="rtesep" aria-hidden="true" />}
+        {g.map(t => <button key={t.id} type="button" data-nt={t.id} {...(legacyRc && t.rc ? { "data-rc": t.rc } : {})} aria-label={t.tip || t.name} data-tip={t.tip || t.name} {...(t.keys ? { "aria-keyshortcuts": t.keys } : {})}
           tabIndex={buttons[cur] && buttons[cur].id === t.id ? 0 : -1} {...(t.on ? { "aria-pressed": "false" } : {})}>{t.label}</button>)}
+      </span>)}
       <span class="rtelink" ref={form} hidden={!link}>
         <input type="url" placeholder="Paste a web or mail link" aria-label="Link address" value={link ? link.url : ""} onInput={e => link && setLink({ ...link, url: /** @type {HTMLInputElement} */ (e.currentTarget).value })} />
         <button type="button" data-rl="add" onClick={() => finish(true)}>Add</button>

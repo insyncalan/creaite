@@ -168,12 +168,59 @@ class Bars(LiveBrowserCase):
         b.key("Enter")
         b.wait("document.querySelector('.nbody ul')", 5)
 
+    def test_shortcut_hints_are_announced_the_tab_stop_follows_a_click_and_composing_is_left_alone(self):
+        b = self.b
+        self.make_note("Small")
+        keys = b.eval("Object.fromEntries([...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.hasAttribute('aria-keyshortcuts')).map(x=>[x.dataset.nt,x.getAttribute('aria-keyshortcuts')]))")
+        self.assertEqual(keys["b"], "Meta+B Control+B")
+        self.assertEqual(keys["s"], "Meta+Shift+X Control+Shift+X")
+        self.assertEqual(keys["link"], "Meta+Shift+K Control+Shift+K")
+        self.assertEqual(keys["indent"], "Tab")
+        self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=h1]').getAttribute('aria-keyshortcuts')"), None)
+        b.type("word")
+        b.click(".nbar [data-nt=i]")
+        self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"), ["i"])
+        # a key pressed while an input method is composing is not ⌘⇧K / ⌘⇧X
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        mac = "true" if b.is_mac() else "false"
+        b.eval("""document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:%s,ctrlKey:%s,shiftKey:true,isComposing:true,bubbles:true,cancelable:true}))""" % (mac, "false" if b.is_mac() else "true"))
+        b.pump(0.2)
+        self.assertTrue(b.eval("document.querySelector('.nbar .rtelink').hidden"))
+        b.eval("(()=>{ const d=document.getElementById('cmdk'); if(d.open) d.close(); })()")        # (the palette's own key handler is not ours)
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.eval("""document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'k',metaKey:%s,ctrlKey:%s,shiftKey:true,bubbles:true,cancelable:true}))""" % (mac, "false" if b.is_mac() else "true"))
+        b.wait("!document.querySelector('.nbar .rtelink').hidden", 5)       # and the same key not composing does open it
+
     def test_targets_are_24px_and_the_bar_names_every_button(self):
         b = self.b
         self.make_note("Targets")
         small = b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>{ const r=x.getBoundingClientRect(); return r.width<24||r.height<24; }).map(x=>x.dataset.nt)")
         self.assertEqual(small, [])
         self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>!x.getAttribute('aria-label')).length"), 0)
+
+    def test_a_wrapping_bar_wraps_by_group_so_no_divider_ends_a_line(self):
+        b = self.b
+        probe = """(sel=>{ const bar=document.querySelector(sel), out=[]; for(const sep of bar.querySelectorAll('.rtesep')){
+          const next=sep.parentElement.querySelector('button'), prev=sep.parentElement.previousElementSibling.querySelector('button:last-of-type');
+          out.push({ sep:sep.getBoundingClientRect().top, next:next.getBoundingClientRect().top, hh:sep.getBoundingClientRect().height }); }
+          const tops=new Set([...bar.querySelectorAll('button[data-nt]')].map(x=>Math.round(x.getBoundingClientRect().top)));
+          return { seps:out, lines:tops.size, small:[...bar.querySelectorAll('button[data-nt]')].filter(x=>{ const r=x.getBoundingClientRect(); return r.width<24||r.height<24; }).length }; })(%s)"""
+        self.make_note("Wrap")
+        b.eval("openCapture()")
+        b.wait("!document.getElementById('capDrawer').hidden && !!document.querySelector('.capbar [data-nt]')", 10)
+        for width in (1400, 900):
+            b.resize(width, 1000)
+            b.pump(0.3)
+            for sel in (".nbar", ".capbar"):
+                got = b.eval(probe % json.dumps(sel))
+                self.assertGreaterEqual(len(got["seps"]), 3, got)
+                for sep in got["seps"]:
+                    self.assertAlmostEqual(sep["sep"], sep["next"], delta=5, msg=f"{width} {sel}: a divider is on the line of the button after it ({got})")
+                    self.assertGreater(sep["hh"], 8, got)
+                self.assertEqual(got["small"], 0)               # targets are not shrunk to make it fit
+        self.assertEqual(self.b.eval(probe % json.dumps(".nbar"))["small"], 0)
 
     # ---- the keys ------------------------------------------------------------------------------------------------------
 

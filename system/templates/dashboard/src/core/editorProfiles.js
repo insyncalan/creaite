@@ -21,7 +21,7 @@
 /** How many `#` Current state adds to the editor's heading level when it writes them (and takes off when it reads them). */
 export const HEAD_SHIFT = 2;
 
-/** @typedef {{id: string, label: string, name: string, tip?: string, rc?: string, host?: boolean,
+/** @typedef {{id: string, label: string, name: string, tip?: string, keys?: string, rc?: string, host?: boolean,
     run?: (c: any, e: any) => any, on?: (e: any) => boolean, can?: (e: any) => boolean}} ToolDef */
 /** The tools. `run` gets a focused Tiptap chain (and the editor) and returns the chain; `on` says whether it is in force at the cursor (aria-pressed).
     `rc` is the name Current state's buttons have always carried in data-rc (kept so the tests and the dashboard spec still find them).
@@ -30,19 +30,19 @@ export const ED_TOOLS = {
   h1: { id: "h1", label: "H1", name: "Heading 1", run: c => c.toggleHeading({ level: 1 }), on: e => e.isActive("heading", { level: 1 }) },
   h2: { id: "h2", label: "H2", name: "Heading 2", run: c => c.toggleHeading({ level: 2 }), on: e => e.isActive("heading", { level: 2 }) },
   h3: { id: "h3", label: "H3", name: "Heading 3", run: c => c.toggleHeading({ level: 3 }), on: e => e.isActive("heading", { level: 3 }) },
-  b: { id: "b", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: c => c.toggleBold(), on: e => e.isActive("bold") },
-  i: { id: "i", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: c => c.toggleItalic(), on: e => e.isActive("italic") },
-  s: { id: "s", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: c => c.toggleStrike(), on: e => e.isActive("strike") },
+  b: { id: "b", keys: "Meta+B Control+B", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: c => c.toggleBold(), on: e => e.isActive("bold") },
+  i: { id: "i", keys: "Meta+I Control+I", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: c => c.toggleItalic(), on: e => e.isActive("italic") },
+  s: { id: "s", keys: "Meta+Shift+X Control+Shift+X", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: c => c.toggleStrike(), on: e => e.isActive("strike") },
   code: { id: "code", label: "</>", name: "Code", run: c => c.toggleCode(), on: e => e.isActive("code") },
   ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: c => c.toggleBulletList(), on: e => e.isActive("bulletList") },
   ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: c => c.toggleOrderedList(), on: e => e.isActive("orderedList") },
   task: { id: "task", label: "☑", name: "Checklist", run: c => c.toggleTaskList(), on: e => e.isActive("taskList") },
-  outdent: { id: "outdent", label: "⇤", name: "Outdent", tip: "Outdent (⇧Tab)", rc: "outdent", run: (c, e) => c.liftListItem(itemType(e)),
+  outdent: { id: "outdent", keys: "Shift+Tab", label: "⇤", name: "Outdent", tip: "Outdent (⇧Tab)", rc: "outdent", run: (c, e) => c.liftListItem(itemType(e)),
     can: e => e.isActive("listItem") || e.isActive("taskItem") },
-  indent: { id: "indent", label: "⇥", name: "Indent", tip: "Indent: a nested list (Tab)", rc: "indent", run: (c, e) => c.sinkListItem(itemType(e)),
+  indent: { id: "indent", keys: "Tab", label: "⇥", name: "Indent", tip: "Indent: a nested list (Tab)", rc: "indent", run: (c, e) => c.sinkListItem(itemType(e)),
     can: e => e.isActive("listItem") || e.isActive("taskItem") },
   quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: c => c.toggleBlockquote(), on: e => e.isActive("blockquote") },
-  link: { id: "link", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: e => e.isActive("link") },
+  link: { id: "link", keys: "Meta+Shift+K Control+Shift+K", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: e => e.isActive("link") },
   unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: c => c.extendMarkRange("link").unsetLink(), can: e => e.isActive("link") },
   clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: c => c.unsetAllMarks().clearNodes() },
   note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
@@ -50,8 +50,8 @@ export const ED_TOOLS = {
   item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
   table: { id: "table", label: "▦", name: "Table", host: true },
   image: { id: "image", label: "Image", name: "Add a picture", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
-  undo: { id: "undo", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: c => c.undo() },
-  redo: { id: "redo", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: c => c.redo() },
+  undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: c => c.undo() },
+  redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: c => c.redo() },
 };
 /** The list-item node a sink or lift acts on at the cursor: a checklist's item in a checklist, else a list's. @param {any} e */
 function itemType(e) { return e.isActive("taskItem") ? "taskItem" : "listItem"; }

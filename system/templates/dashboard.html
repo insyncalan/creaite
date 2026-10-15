@@ -696,7 +696,7 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 /* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
 .curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
-.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
+.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
@@ -24526,15 +24526,16 @@ ${s5}`;
     h1: { id: "h1", label: "H1", name: "Heading 1", run: (c5) => c5.toggleHeading({ level: 1 }), on: (e4) => e4.isActive("heading", { level: 1 }) },
     h2: { id: "h2", label: "H2", name: "Heading 2", run: (c5) => c5.toggleHeading({ level: 2 }), on: (e4) => e4.isActive("heading", { level: 2 }) },
     h3: { id: "h3", label: "H3", name: "Heading 3", run: (c5) => c5.toggleHeading({ level: 3 }), on: (e4) => e4.isActive("heading", { level: 3 }) },
-    b: { id: "b", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: (c5) => c5.toggleBold(), on: (e4) => e4.isActive("bold") },
-    i: { id: "i", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: (c5) => c5.toggleItalic(), on: (e4) => e4.isActive("italic") },
-    s: { id: "s", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: (c5) => c5.toggleStrike(), on: (e4) => e4.isActive("strike") },
+    b: { id: "b", keys: "Meta+B Control+B", label: "B", name: "Bold", tip: "Bold (⌘B)", rc: "bold", run: (c5) => c5.toggleBold(), on: (e4) => e4.isActive("bold") },
+    i: { id: "i", keys: "Meta+I Control+I", label: "I", name: "Italic", tip: "Italic (⌘I)", rc: "italic", run: (c5) => c5.toggleItalic(), on: (e4) => e4.isActive("italic") },
+    s: { id: "s", keys: "Meta+Shift+X Control+Shift+X", label: "S", name: "Strikethrough", tip: "Strikethrough (⌘⇧X)", rc: "strikeThrough", run: (c5) => c5.toggleStrike(), on: (e4) => e4.isActive("strike") },
     code: { id: "code", label: "</>", name: "Code", run: (c5) => c5.toggleCode(), on: (e4) => e4.isActive("code") },
     ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: (c5) => c5.toggleBulletList(), on: (e4) => e4.isActive("bulletList") },
     ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: (c5) => c5.toggleOrderedList(), on: (e4) => e4.isActive("orderedList") },
     task: { id: "task", label: "☑", name: "Checklist", run: (c5) => c5.toggleTaskList(), on: (e4) => e4.isActive("taskList") },
     outdent: {
       id: "outdent",
+      keys: "Shift+Tab",
       label: "⇤",
       name: "Outdent",
       tip: "Outdent (⇧Tab)",
@@ -24544,6 +24545,7 @@ ${s5}`;
     },
     indent: {
       id: "indent",
+      keys: "Tab",
       label: "⇥",
       name: "Indent",
       tip: "Indent: a nested list (Tab)",
@@ -24552,7 +24554,7 @@ ${s5}`;
       can: (e4) => e4.isActive("listItem") || e4.isActive("taskItem")
     },
     quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: (c5) => c5.toggleBlockquote(), on: (e4) => e4.isActive("blockquote") },
-    link: { id: "link", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: (e4) => e4.isActive("link") },
+    link: { id: "link", keys: "Meta+Shift+K Control+Shift+K", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: (e4) => e4.isActive("link") },
     unlink: { id: "unlink", label: "Unlink", name: "Remove the link", rc: "unlink", run: (c5) => c5.extendMarkRange("link").unsetLink(), can: (e4) => e4.isActive("link") },
     clear: { id: "clear", label: "Clear", name: "Clear formatting", rc: "removeFormat", run: (c5) => c5.unsetAllMarks().clearNodes() },
     note: { id: "note", label: "[[ ]]", name: "Link to a note", tip: "Link to a note ([[)", host: true },
@@ -24560,8 +24562,8 @@ ${s5}`;
     item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
     table: { id: "table", label: "▦", name: "Table", host: true },
     image: { id: "image", label: "Image", name: "Add a picture", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
-    undo: { id: "undo", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
-    redo: { id: "redo", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
+    undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
+    redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
   };
   function itemType(e4) {
     return e4.isActive("taskItem") ? "taskItem" : "listItem";
@@ -24646,7 +24648,7 @@ ${s5}`;
     if (keysOn) return;
     keysOn = true;
     document.addEventListener("keydown", (e4) => {
-      if (!(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey) return;
+      if (e4.isComposing || !(e4.metaKey || e4.ctrlKey) || !e4.shiftKey || e4.altKey) return;
       const k5 = e4.key.toLowerCase();
       if (k5 !== "k" && k5 !== "x") return;
       const b5 = editorBarFor(e4.target);
@@ -24797,6 +24799,15 @@ ${s5}`;
       });
     };
     if (!buttons.length) return null;
+    const groups = tools.reduce(
+      (out, t47) => {
+        if (t47 === "|") out.push([]);
+        else out[out.length - 1].push(t47);
+        return out;
+      },
+      /** @type {any[][]} */
+      [[]]
+    ).filter((g5) => g5.length);
     return /* @__PURE__ */ u2(
       "div",
       {
@@ -24814,6 +24825,7 @@ ${s5}`;
           );
           if (!b5) return;
           e4.preventDefault();
+          if (e4.button === 0) setCur(Math.max(0, buttons.findIndex((x5) => x5.id === b5.dataset.nt)));
           if (e4.button === 0 && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
         },
         onClick: (e4) => {
@@ -24825,20 +24837,24 @@ ${s5}`;
           if (b5 && e4.detail === 0 && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
         },
         children: [
-          tools.map((t47, i5) => t47 === "|" ? /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }, `s${i5}`) : /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              "data-nt": t47.id,
-              ...legacyRc && t47.rc ? { "data-rc": t47.rc } : {},
-              "aria-label": t47.tip || t47.name,
-              "data-tip": t47.tip || t47.name,
-              tabIndex: buttons[cur] && buttons[cur].id === t47.id ? 0 : -1,
-              ...t47.on ? { "aria-pressed": "false" } : {},
-              children: t47.label
-            },
-            t47.id
-          )),
+          groups.map((g5, gi2) => /* @__PURE__ */ u2("span", { class: "rtegrp", children: [
+            gi2 > 0 && /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }),
+            g5.map((t47) => /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                "data-nt": t47.id,
+                ...legacyRc && t47.rc ? { "data-rc": t47.rc } : {},
+                "aria-label": t47.tip || t47.name,
+                "data-tip": t47.tip || t47.name,
+                ...t47.keys ? { "aria-keyshortcuts": t47.keys } : {},
+                tabIndex: buttons[cur] && buttons[cur].id === t47.id ? 0 : -1,
+                ...t47.on ? { "aria-pressed": "false" } : {},
+                children: t47.label
+              },
+              t47.id
+            ))
+          ] }, `g${gi2}`)),
           /* @__PURE__ */ u2("span", { class: "rtelink", ref: form, hidden: !link, children: [
             /* @__PURE__ */ u2("input", { type: "url", placeholder: "Paste a web or mail link", "aria-label": "Link address", value: link ? link.url : "", onInput: (e4) => link && setLink({ ...link, url: (
               /** @type {HTMLInputElement} */
