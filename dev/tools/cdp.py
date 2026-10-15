@@ -310,8 +310,8 @@ class Browser:
         codes = {"Enter": 13, "Escape": 27, "Backspace": 8, "Tab": 9, "ArrowLeft": 37, "ArrowUp": 38, "ArrowRight": 39,
                  "ArrowDown": 40, "Delete": 46, "Home": 36, "End": 35, "PageUp": 33, "PageDown": 34}
         code = codes.get(name) or ord(name.upper())
-        if name.lower() == "a" and modifiers & 4 and not self.is_mac():
-            modifiers = (modifiers & ~4) | 2                # select all is ⌘A on a Mac and Control+A elsewhere (Chrome on Linux, as on CI)
+        if name.lower() in ("a", "z", "y") and modifiers & 4 and not self.is_mac():
+            modifiers = (modifiers & ~4) | 2                # ⌘A, ⌘Z, ⇧⌘Z are Control+A, +Z, +⇧Z elsewhere (Chrome on Linux)
         base = {"key": name if len(name) > 1 else name, "windowsVirtualKeyCode": code, "modifiers": modifiers}
         text = "\r" if name == "Enter" else None
         self.call("Input.dispatchKeyEvent", type="keyDown", **base, **({"text": text} if text else {}))
