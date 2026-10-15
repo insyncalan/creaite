@@ -4,6 +4,8 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | #79 closed (macOS finishes in 28 min, not 2 h); the real macOS fault, the live server not answering /health within 30s, raised as #83 (Unscheduled, Normal, Team Stark) | macOS isn't a required check; the fault is now visible |
+| 15-10-2026 | Jarvis | BL-341's findings all fixed in v1.9.5: People's sort focus, the toast under a menu, past-time contrast, 23 controls off 32px (the last two signed off by Alan from shots), Files › Archived at 320px, `_portfolio` names, the alert card's time (the last message's). release-200's integration (#61) moves to Team Stark, which ran the rehearsal | Defects in the release being built; visible ones go to Alan |
 | 15-10-2026 | Alan | Confidential notes, three follow-ups (#60): every run creaite starts itself (generate: Shape the meeting, Current state, AI drafts) gets the Prep run's confidential guard; Prep's search hides confidential notes entirely (no title, link or match); search.py context fails closed. ask creaite unchanged. v2.0.0, Team Stark | Some generated output can leave the laptop; a title is itself a leak; the guard fails closed everywhere |
 | 15-10-2026 | Alan | #56 the notes guard change (v20-notes-guard f906213) is signed off as is; listing the notes folder (names only) becomes a follow-up only if runs get marked in practice | His comment on #56, confirmed to Jarvis directly |
 | 15-10-2026 | Alan | #65 P2: two defaults for filing an export beside its source, reports off (BL-335) and minutes on (BL-338) | His comment on #65, confirmed to Jarvis directly |
