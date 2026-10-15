@@ -431,3 +431,27 @@ and `partner` drawn as two columns (no levelling, no ≠). It ignores `checks`, 
    plans `src/stores/data.js`). P5 adds it unless the Scrum Master prefers the views to reload through their routes.
 6. **The editor isn't on `sprint-reporting` yet** (v2.0.0's `core/editor.js`, `TextEditor.jsx`, `AiSelect.jsx` are on
    `v20-base`), so the stub cannot use it and P5 waits for v2.0.0's merge, as the plan says.
+
+## Integration notes (v2.1.0)
+
+When P6, P7 and P8 merge into one page, the dashboard's source is bundled into one script and `dev/tools/check.py`'s JSDUP
+fails a top-level name declared in two modules. Each part's top-level name must therefore be unique across the bundle, and
+the old name must not come back at the merge. Status is as at `eb10dd4a` (`origin/v210-integration-rehearsal`).
+
+| Part | Old name | New name | Where it is now | Status |
+|------|----------|----------|-----------------|--------|
+| P6 | `Bar` | `WeeklyBar` | `components/report/weekly/WeeklyView.jsx:41` | done |
+| P6 | `RENDER` | `WEEKLY_RENDER` | `components/report/weekly/WeeklyView.jsx:25` | done |
+| P6 | `FLAGS` | `HEALTH_FLAGS` | `components/report/weekly/Top.jsx:42` | done |
+| P6 | `MON` | `TL_MONTHS` | `components/report/weekly/Timeline.jsx:11` | done (`MON` in `core/datewords.js` is a different, core name) |
+| P6 | `take` | `takeWeekly` | `stores/weekly.js:43` | done |
+| P7 | `MONTHS` | `MONTH_WORDS` | not in the minutes files; the only `MONTHS` is `components/Picker.jsx:134` (shared, not P7) | **check**: `MONTH_WORDS` already exists in `core/datewords.js:17`, so this would clash |
+| P7 | `where` | `filedAt` | `components/minutes/ApprovePopup.jsx:17` | done; no top-level `where` in the minutes files |
+| P8 | `Bar` | `ClientBar` | `components/report/ClientView.jsx:42` | done |
+| P8 | `Pop` | `ClientPop` | `components/report/ClientParts.jsx:50` | done |
+| P8 | `FLAGS` | `CLIENT_FLAGS` | `components/report/clientDoc.js:11` | done |
+| P8 | `withSection` | `withClientSection` | `components/report/clientDoc.js:20` | done (P6's `withSection` in `weeklyDoc.js` stays) |
+| P8 | `matchSection`, `matchAll` | `matchClientSection`, `matchClientAll` | `components/report/clientDoc.js:58, 79` | done (`sheetLib.js` keeps `matchSection`, `matchAll` for Sheet) |
+
+The P6 and P8 names are already in the tree; the table is kept so a merge does not bring the old names back. The P7 row for
+`MONTHS` needs Team Stark to say where that name lives before the merge.
