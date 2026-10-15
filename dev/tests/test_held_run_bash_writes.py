@@ -105,7 +105,8 @@ class HeldRunBash(unittest.TestCase):
                      "tools, deny, guarded = L.run_policy('generate', None)\n"
                      "held = L.held_run('generate', None, None, False, tools)\n"
                      f"args = L.guard_args({RUN!r}, None, held, None)\n"
-                     "print(json.dumps({'tools': tools, 'deny': deny, 'guarded': guarded, 'held': held, 'args': args,"
+                     "held_deny = L.held_deny(deny, held, guarded)\n"
+                     "print(json.dumps({'tools': tools, 'deny': deny, 'held_deny': held_deny, 'guarded': guarded, 'held': held, 'args': args,"
                      " 'env': {k: v for k, v in L.run_env('generate').items() if k.startswith('CREAITE_')}}))")
         cls.policy = json.loads(out.strip().splitlines()[-1])
         settings = json.loads(cls.policy["args"][1])
@@ -168,8 +169,12 @@ class HeldRunBash(unittest.TestCase):
         self.assertFalse(run_json.exists())                                   # nor can the server's observe (no run to mark)
         self.rows["held run marked?"] = "no: no system/guard/run.json; hook and Run.observe mark nothing"
         code, _ = self.hook("Write", {"file_path": str(self.root / ABC / "CLAUDE.md"), "content": "x"})
+        # The direct-Write gap (the hook lets a held run's Write through, and the shipped Edit(projects/**) allows it) is closed on
+        # main by live_server.HELD_DENIES: a held run is started with Edit, Write, MultiEdit and NotebookEdit denied by name.
+        denied = [t for t in ("Edit", "Write", "MultiEdit", "NotebookEdit") if t in self.policy["held_deny"]]
+        self.assertEqual(denied, ["Edit", "Write", "MultiEdit", "NotebookEdit"])
         self.rows["direct Write projects/** (held)"] = f"hook {'allow' if code == 0 else 'refuse'}; " \
-            f"permitted={self.permitted('Edit', ABC + '/CLAUDE.md')} (Edit(projects/**) shipped)"
+            f"denied by name in the run ({', '.join(denied)}: live_server.HELD_DENIES), so Edit(projects/**) can't apply"
 
     # ---- each hostile call: the hook, the rules, then the real command ----
     def land(self, name, setup, landed):
