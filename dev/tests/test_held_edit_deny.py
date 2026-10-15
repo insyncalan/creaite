@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import ABC, Vault  # noqa: E402
 
 WRITERS = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
+CHAT_WRITERS = ["Edit", "Write", "MultiEdit"]     # F2: NotebookEdit is denied in every run (NEVER_BUILTINS); no kind uses it
 HELD = ["prep", "generate", "check", "load"]
 TARGETS = [f"{ABC}/notes.md", f"{ABC}/minutes/2026-10-01 Steering.docx", "system/config/settings.json",
            "system/staging/proposed-x.json", "system/staging/drafts/x.json", "inbox/forward.txt"]
@@ -123,7 +124,7 @@ class HeldRuns(unittest.TestCase):
     def test_close_the_day_sweep_keeps_its_drafts_writes(self):
         self.assertEqual(self.mode("sweep"), "sweep")
         deny, allow = self.deny("sweep"), self.allow("sweep")
-        for t in WRITERS:
+        for t in CHAT_WRITERS:
             self.assertNotIn(t, deny)
         self.assertIn("Write(system/staging/drafts/**)", allow)
 
@@ -131,7 +132,7 @@ class HeldRuns(unittest.TestCase):
         self.assertIn("Write(system/staging/drafts/**)", self.allow("ask"))
         self.assertIn("Write(system/staging/**)", self.allow("confirmed"))
         for name in ("ask", "confirmed", "typed sweep"):                # search denies its writers itself (run-search-tools-fix)
-            self.assertFalse(set(WRITERS) & set(self.deny(name)), name)
+            self.assertFalse(set(CHAT_WRITERS) & set(self.deny(name)), name)
         self.assertNotIn("MultiEdit", self.deny("narrow"))           # its own ONLY_DENIES, as before
         self.assertIsNone(self.mode("narrow"))
 
