@@ -26,7 +26,7 @@ FAKE = r'''#!/usr/bin/env python3
 import json, re, sys
 args = sys.argv[1:]
 open(__file__ + ".argv.json", "w", encoding="utf-8").write(json.dumps(args))
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 open(__file__ + ".prompt", "w", encoding="utf-8").write(p)
 text = re.search(r"<<<TEXT\n(.*?)\nTEXT>>>", p, re.S).group(1)
 if "The text is one line" in p:
