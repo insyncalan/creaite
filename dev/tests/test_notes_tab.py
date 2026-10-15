@@ -4,9 +4,8 @@ Run: python3 dev/tests/test_notes_tab.py
 
   - a note is created from each template in the project's notes folder (made on the first note) through filechange.py, logged
     as a dashboard change and undoable; a taken title gets a number;
-  - a draft is kept in system/staging/drafts/notes/ (no project file changes) and comes back when the note is opened again;
-  - a save writes the file once through filechange.py (front matter kept, `updated` stamped, the draft dropped); an unchanged save
-    writes nothing; a note changed outside creaite since it was opened is never overwritten (the draft is kept);
+  - a save writes the file once through filechange.py (front matter kept, `updated` stamped); an unchanged save writes nothing;
+    a note changed outside creaite since it was opened is never overwritten; no draft is kept (#119: the draft route is gone);
   - the list carries front matter and references (links, items, people), never text; portfolio notes are listed too;
   - the dashboard's data carries each project's notes and the templates; Files lists notes as their own folder (the portfolio's too);
   - paths outside a notes folder are refused;
@@ -97,19 +96,15 @@ class NotesServer(unittest.TestCase):
         again = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "T blank"})
         self.assertTrue(again["note"]["file"].startswith("T blank-2"), again["note"]["file"])
 
-    def test_2_draft_then_save_once_and_undo(self):
+    def test_2_save_once_and_undo(self):
         r = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "Data access"})
         rel, base = r["note"]["path"], r["base"]
         p = self.v.root / rel
         before = p.read_text()
         body = "See [[Data access]] and [ABC-A-001](creaite:item/ABC-A-001), with @[Sara Example](creaite:person/Sara%20Example).\n"
-        d = self.post("/api/notes/draft", {"path": rel, "body": body, "changes": {"tags": ["data"]}, "base": base})
-        self.assertTrue(d["ok"])
-        self.assertEqual(p.read_text(), before, "a draft never touches the project file")
-        drafts = list((self.v.root / "system/staging/drafts/notes").glob("*.json"))
-        self.assertEqual(len(drafts), 1)
-        got = self.post("/api/notes/get", {"path": rel})
-        self.assertEqual(got["draft"]["body"], body)
+        gone = self.post("/api/notes/draft", {"path": rel, "body": body, "base": base})
+        self.assertEqual(gone["status"], 404, "#119: no draft route")
+        self.assertNotIn("draft", self.post("/api/notes/get", {"path": rel}))
         n_before = len(self.log())
         s = self.post("/api/notes/save", {"path": rel, "body": body, "changes": {"tags": ["data"], "pinned": True}, "base": base})
         self.assertTrue(s["ok"], s)
@@ -121,7 +116,7 @@ class NotesServer(unittest.TestCase):
         self.assertEqual(s["note"]["items"], ["ABC-A-001"])
         self.assertEqual(s["note"]["links"], ["Data access"])
         self.assertEqual(s["note"]["people"], ["Sara Example"])
-        self.assertFalse(list((self.v.root / "system/staging/drafts/notes").glob("*.json")), "the draft goes once written")
+        self.assertFalse((self.v.root / "system/staging/drafts/notes").is_dir(), "no draft is kept")
         same = self.post("/api/notes/save", {"path": rel, "body": body, "base": s["base"]})
         self.assertTrue(same.get("unchanged"))
         self.assertEqual(len(self.log()), n_before + 1)
@@ -139,7 +134,8 @@ class NotesServer(unittest.TestCase):
         self.assertFalse(s["ok"])
         self.assertTrue(s["conflict"])
         self.assertIn("Typed in Finder.", p.read_text())
-        self.assertTrue(self.post("/api/notes/get", {"path": rel})["draft"]["stale"])
+        self.assertNotIn("draft", s["message"])
+        self.assertFalse((self.v.root / "system/staging/drafts/notes").is_dir(), "no draft is kept")
 
     def test_3b_a_list_item_with_newlines_cannot_break_the_front_matter(self):
         # L3: a malformed tags item (a newline, a front-matter fence, a flag) stays one tag on one line (throwaway vault).
