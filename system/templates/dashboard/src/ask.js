@@ -6,6 +6,7 @@ import { openDialog } from "./components/Dialog.jsx";
 import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
+import { recordsRefresh } from "./core/instant.js";
 import { mWords } from "./core/motion.js";
 import { go, navBlocked, parseHash, pLink, restoreNav } from "./core/nav.js";
 import { anim, applyTheme, copied, D, days, fd, fdText, hk, ico, MOD, MTICK, nowStamp, OPENST, reduced, S, store, themeFade, themeOf, THEMES, TODAY, VAULT_PATH, who } from "./core/page.js";
@@ -56,8 +57,13 @@ export let runSearch = async function(){ const q=$("#vsInput").value.trim(); SRC
   try{ const res=await searchFetch(q,SRCH.skip); if(seq!==SRCH.seq) return; SRCH.res=res; vsRender(); }catch(e){ if(seq===SRCH.seq){ $("#vsNote").textContent=oneLine(e.message); } } };
 export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.res.groups[g]&&SRCH.res.groups[g][+i]; if(r) openFound(r); }
 /* where a result belongs: an item in its panel, a meeting in the preview, a report or document in the system viewer */
-export function openFound(r){ const o=r.opens;
-  if(o.type==="item"&&o.archived&&!S.showArchived){ snack("Its project is archived: Settings › Advanced › Show archived projects opens it"); return; }   /* BL-09 */
+const SHOWARCH="Show archived projects (Settings › People and projects › Projects and register)";
+export async function openFound(r){ const o=r.opens;
+  if(o.type==="item"&&o.archived&&!S.showArchived){
+    if(o.project_archived||!["actions","raid"].includes(o.table)){ snack(`Its project is archived: ${SHOWARCH} brings it back`); return; }   /* BL-09 */
+    /* BL-10: archived for its age, in a live project: fetched past the views that hide it, and opened as any item (an edit un-archives it) */
+    if(!REC(o.table,o.id)) await recordsRefresh([o.id],{aged:true});
+    if(!REC(o.table,o.id)){ snack(`Archived for its age: ${SHOWARCH} shows it`); return; } }
   if(o.type==="item"){ if(o.table==="milestones"){ openMilestone(o.id); return; }   /* BL-186: the Milestones page, its editor open */ const k=o.table; shared.WT=k; go("work"); openRecord(k,o.id); return; }
   if(o.type==="preview") return searchPreview(o.path,o.q);
   openPath(o.path); }

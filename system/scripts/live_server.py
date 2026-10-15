@@ -18,7 +18,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          X-Creaite-Vault to learn whether this is its own vault ({"this_vault": bool})
 - GET  /api/data         fresh dashboard data
 - GET  /api/records?ids=A,B  BL-304: just those actions, RAID items and decisions (the page's shape), with Review, Activity
-                         and the latest apply: the page's targeted refresh after a save or a live update. Read only
+                         and the latest apply: the page's targeted refresh after a save or a live update. Read only.
+                         &aged=1 (BL-10): an item archived for its age too, for search to open it
 - GET  /api/events       BL-253: one server-sent events stream per page: `hello` (the fingerprint), then `changed` {seq, parts, v}
                          (BL-304: and `ids`, {table: [item IDs]} from the change log, when the tracker changed)
                          within about a second of a change on disk (at once for a save through the server), `ping` every 25 s.
@@ -733,7 +734,8 @@ def records_route(handler):
     ids = [x.strip() for v in q.get("ids", []) for x in v.split(",") if x.strip()]
     if len(ids) > build_dashboard.RECORD_MAX or any(not RECORD_ID.fullmatch(i) for i in ids):
         return handler.send(400, {"ok": False, "message": "Bad item IDs"})
-    return handler.send(200, {"ok": True, **build_dashboard.records(ids), "latest_apply": latest_apply()})
+    aged = q.get("aged", [""])[0] == "1"              # BL-10: search opening an item archived for its age
+    return handler.send(200, {"ok": True, **build_dashboard.records(ids, aged=aged), "latest_apply": latest_apply()})
 # ===== end BL-304 =====
 
 

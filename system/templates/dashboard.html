@@ -28613,7 +28613,7 @@ ${d5.text}`);
     try {
       const hold = o5.hold ? o5.hold() : null;
       try {
-        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
+        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o5.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
         if (r4.ok) n4 = await r4.json();
       } catch (e4) {
         n4 = null;
@@ -35857,11 +35857,19 @@ ${d5.text}`);
     const [g5, i5] = key.split(":"), r4 = SRCH.res && SRCH.res.groups[g5] && SRCH.res.groups[g5][+i5];
     if (r4) openFound(r4);
   }
-  function openFound(r4) {
+  var SHOWARCH = "Show archived projects (Settings › People and projects › Projects and register)";
+  async function openFound(r4) {
     const o5 = r4.opens;
     if (o5.type === "item" && o5.archived && !S.showArchived) {
-      snack("Its project is archived: Settings › Advanced › Show archived projects opens it");
-      return;
+      if (o5.project_archived || !["actions", "raid"].includes(o5.table)) {
+        snack(`Its project is archived: ${SHOWARCH} brings it back`);
+        return;
+      }
+      if (!REC(o5.table, o5.id)) await recordsRefresh([o5.id], { aged: true });
+      if (!REC(o5.table, o5.id)) {
+        snack(`Archived for its age: ${SHOWARCH} shows it`);
+        return;
+      }
     }
     if (o5.type === "item") {
       if (o5.table === "milestones") {
@@ -40895,6 +40903,7 @@ ${d5.text}`);
         "openDisp",
         "openDraftEmail",
         "openFollowup",
+        "openFound",
         "openGen",
         "openMenu",
         "openMilestone",
@@ -41030,6 +41039,7 @@ ${d5.text}`);
         "savesSettled",
         "say",
         "sayMd",
+        "searchFetch",
         "seeAll",
         "send",
         "setChatWidth",

@@ -32,6 +32,7 @@ import html
 import json
 import os
 import re
+import sqlite3
 import sys
 from datetime import date, timedelta
 from pathlib import Path
@@ -310,8 +311,18 @@ def item_rows(con, vocab, terms, flt, any_term=False):
     return out
 
 
-def item_result(table, r, text, terms):
-    """One tracker row as a search result: its ID, kind, text, details and link."""
+def archived_projects(con):
+    """BL-10: the codes of archived projects (empty on a database from before BL-09), so search can tell an archived
+    project's item from one archived for its age."""
+    try:
+        return {r[0] for r in con.execute("SELECT code FROM main.projects WHERE archived = 1")}
+    except sqlite3.Error:
+        return set()
+
+
+def item_result(table, r, text, terms, gone=frozenset()):
+    """One tracker row as a search result: its ID, kind, text, details and link. `gone`: the archived projects' codes; an
+    archived item of one of them opens with project_archived (BL-10), one archived for its age without."""
     kind = {"actions": "action", "decisions": "decision", "milestones": "milestone"}.get(table) or (r.get("type") or "Risk").lower()
     meta = []
     if table == "actions":
@@ -324,7 +335,8 @@ def item_result(table, r, text, terms):
         meta = [r["status"], f"forecast {tracker.shown(r['forecast_date'] or r['baseline_date'])}"]
     if r.get("archived"):                      # BL-09: an archived project's items are still found, marked Archived
         meta.append("Archived")
-    opens = {"type": "item", "table": table, "id": r["id"], **({"archived": True} if r.get("archived") else {})}
+    opens = {"type": "item", "table": table, "id": r["id"], **({"archived": True} if r.get("archived") else {}),
+             **({"project_archived": True} if r.get("archived") and r["project"] in gone else {})}
     return {"group": "items", "kind": kind, "id": r["id"], "title": r[text], "snippet": mark(r[text], terms, 220),
             "archived": bool(r.get("archived")),
             "project": r["project"], "date": r["_date"] or "", "date_shown": tracker.shown(r["_date"]) if r["_date"] else "",
@@ -446,7 +458,8 @@ def search(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), par
             out["rebuilt"] = True
         found = {g: [] for g in GROUPS}
         if flt["groups"] is None or "items" in flt["groups"]:
-            found["items"] = [item_result(t, r, x, terms) for t, r, x in item_rows(con, vocab, terms, flt)]
+            gone = archived_projects(con)
+            found["items"] = [item_result(t, r, x, terms, gone) for t, r, x in item_rows(con, vocab, terms, flt)]
             ids = [t.lower() for t in terms]
             found["items"].sort(key=lambda r: (r["id"].lower() not in ids,))      # an exact ID first; then newest (stable)
         if flt["groups"] is None or flt["groups"] - {"items"}:

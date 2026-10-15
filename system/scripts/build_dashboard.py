@@ -1362,17 +1362,37 @@ def records_of(con, ids):
     return out, [i for i in ids if i not in found]
 
 
-def records(ids, now=None):
+def aged_records(con, ids):
+    """BL-10: {table: [row]} for those of `ids` that are archived for their age (actions and RAID; their project is live),
+    read from the tables themselves (main.<table>), past the views that hide them. Never an archived project's item."""
+    out = {}
+    if not ids:
+        return out
+    marks = ",".join("?" * len(ids))
+    live = "project NOT IN (SELECT code FROM main.projects WHERE archived = 1)"
+    for t, make in (("actions", action_row), ("raid", raid_row)):
+        out[t] = [make(r) for r in rows(con, f"SELECT * FROM main.{t} WHERE archived = 1 AND {live} AND id IN ({marks}) "
+                                             "ORDER BY id", *ids)]
+    return out
+
+
+def records(ids, now=None, aged=False):
     """BL-304: just these items (actions, RAID, decisions) in the page's shape, for the page's targeted refresh after a save
     or a live update, with the parts an apply always changes (Review, Activity, the latest apply's time, the peek's staged
     changes, milestone names). Read only; the IDs are only looked up, never written. {"records": {table: [row]},
-    "missing": [IDs in none of the tables], ...}."""
+    "missing": [IDs in none of the tables], ...}. `aged` (BL-10): an item archived for its age is handed over too (marked
+    "ar"), so search can open it with Show archived off; an archived project's item stays missing."""
     now = now or clock()
     ids = list(dict.fromkeys(i for i in ids if isinstance(i, str) and i))[:RECORD_MAX]
     con = ro_db()                        # BL-09: an archived item stays out of the views
     con.row_factory = sqlite3.Row
     try:
         recs, missing = records_of(con, ids)
+        if aged and missing:
+            for t, got in aged_records(con, missing).items():
+                recs[t] += got
+            found = {x["id"] for t in RECORD_TABLES for x in recs[t]}
+            missing = [i for i in missing if i not in found]
         last_apply = con.execute("SELECT max(at) FROM applies WHERE undone_at IS NULL").fetchone()[0]
         flags, settings, rq = {}, paths.load_settings(), review_queue(con)
         first = con.execute("SELECT min(at) FROM applies").fetchone()[0]
