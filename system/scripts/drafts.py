@@ -1879,7 +1879,8 @@ def _shape_research(conf):
         return ("\nThis meeting is confidential: use only the sources below. Do not search, open or read anything else, and "
                 "never look for the invite.")
     return ("\nYou may read the meeting records and documents listed below (read-only) to understand them, but cite only the "
-            "numbered sources.")
+            "numbered sources. Never open, read or search a file in a notes folder: Alan's notes are not sources here, and one "
+            "marked confidential is kept out of prep.")             # BL-301 (v20-confidential-prep)
 
 
 def _known_ids(con, codes):
