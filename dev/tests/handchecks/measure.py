@@ -171,3 +171,84 @@ def shot(b, path, quality=72):
     data = b.call("Page.captureScreenshot", format="jpeg", quality=quality)["data"]
     path.write_bytes(base64.b64decode(data))
     return path
+
+
+# ── BL-341 phase 2 (Measured2: checks 6, 7, 8, 9, 16, 19) ──
+
+PAINT_JS = r"""(sel, scope, prop) => {
+  const parse = c => { const m = (c||"").match(/[\d.]+/g); if (!m || /^none|url/.test(c||"")) return null; const v = m.map(Number);
+    return {r:v[0], g:v[1], b:v[2], a:v.length > 3 ? v[3] : 1}; };
+  const over = (top, under) => { const a = top.a + under.a*(1-top.a); if (!a) return {r:0,g:0,b:0,a:0};
+    const mix = k => (top[k]*top.a + under[k]*under.a*(1-top.a))/a; return {r:mix("r"), g:mix("g"), b:mix("b"), a}; };
+  const lum = c => { const f = u => { u/=255; return u<=0.03928 ? u/12.92 : ((u+0.055)/1.055)**2.4; };
+    return 0.2126*f(c.r) + 0.7152*f(c.g) + 0.0722*f(c.b); };
+  const ratio = (x, y) => { const [lo, hi] = [lum(x), lum(y)].sort((p, q) => p - q); return (hi+0.05)/(lo+0.05); };
+  const behind = el => { const layers = []; for (let e = el; e; e = e.parentElement) { const c = parse(getComputedStyle(e).backgroundColor);
+      if (c && c.a > 0) { layers.push(c); if (c.a >= 1) break; } }
+    let bg = parse(getComputedStyle(document.documentElement).backgroundColor); if (!bg || bg.a < 1) bg = {r:255,g:255,b:255,a:1};
+    for (const c of layers.reverse()) bg = over(c, bg); return bg; };
+  const opacity = el => { let o = 1; for (let e = el; e; e = e.parentElement) o *= Number(getComputedStyle(e).opacity || 1); return o; };
+  const root = scope ? document.querySelector(scope) : document; if (!root) return [];
+  return [...root.querySelectorAll(sel)].filter(e => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 &&
+      getComputedStyle(e).visibility !== "hidden" && !e.closest("[hidden],[inert]"); })
+    .map(e => { const s = getComputedStyle(e), bg = behind(e), p0 = parse(s[prop]); if (!p0) return null;
+      const o = opacity(e) * (prop === "fill" ? Number(s.fillOpacity || 1) : prop === "stroke" ? Number(s.strokeOpacity || 1) : 1);
+      const fg = over({...p0, a: p0.a*o}, bg);
+      return {sig: e.tagName.toLowerCase()+(e.id?"#"+e.id:"")+((e.getAttribute("class")||"").trim()?"."+e.getAttribute("class").trim().split(/\s+/).join("."):""),
+              text: (e.innerText||e.textContent||"").trim().slice(0, 30), paint: s[prop], opacity: Math.round(o*100)/100,
+              background: `rgb(${Math.round(bg.r)}, ${Math.round(bg.g)}, ${Math.round(bg.b)})`,
+              ratio: Math.round(ratio(fg, bg)*100)/100, size: parseFloat(s.fontSize), weight: Number(s.fontWeight)}; }).filter(Boolean);
+}"""
+
+
+def paint_contrast(b, selector, prop="color", scope=None):
+    """Like contrast(), for any paint: "color" (text), "fill" or "stroke" (SVG marks), against what is behind, with the
+    opacity of the element and every ancestor multiplied in (contrast() takes the element's own only). For text WCAG AA is
+    4.5 (3 when large); for a mark that has to be seen (a non-text graphic, WCAG 1.4.11) it is 3."""
+    return b.eval(f"({PAINT_JS})({json.dumps(selector)}, {json.dumps(scope)}, {json.dumps(prop)})")
+
+
+def hit_box(b, selector, scope="document"):
+    """The pointer target of each visible match: its own box, or its <label>'s when it is inside one or named by one (a
+    click on the label works the control). [{sig, w, h, label_w, label_h, text}]: DevTools › Inspect's box, and the label's."""
+    return b.eval("""(()=>{ const root=%s==="document"?document:document.querySelector(%s); if(!root) return [];
+      const size=e=>{ const r=e.getBoundingClientRect(); return [Math.round(r.width*10)/10, Math.round(r.height*10)/10]; };
+      return [...root.querySelectorAll(%s)].filter(e=>{ const r=e.getBoundingClientRect(), s=getComputedStyle(e);
+          return r.width>0&&r.height>0&&s.visibility!=="hidden"&&!e.closest("[hidden],[inert]"); })
+        .map(e=>{ const [w,h]=size(e), l=e.closest("label")||(e.id&&document.querySelector('label[for="'+CSS.escape(e.id)+'"]'));
+          const [lw,lh]=l?size(l):[0,0];
+          return {sig:e.tagName.toLowerCase()+(e.id?"#"+e.id:"")+(typeof e.className==="string"&&e.className.trim()?"."+e.className.trim().split(/\\s+/).join("."):""),
+                  w, h, label_w:lw, label_h:lh, text:(e.getAttribute("aria-label")||(l&&l.innerText)||"").trim().slice(0,40)}; }); })()"""
+                  % (json.dumps(scope), json.dumps(scope), json.dumps(selector)))
+
+
+STACK_JS = r"""(topSel, underSel) => {
+  const vis = e => { if (!e) return false; const r = e.getBoundingClientRect(), s = getComputedStyle(e);
+    return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
+  const pick = sel => [...document.querySelectorAll(sel)].find(vis) || null;
+  const top = pick(topSel), under = pick(underSel); if (!top || !under) return {top: !!top, under: !!under, ok: null};
+  const rootZ = e => { let z = 0, at = null; for (let x = e; x && x !== document.documentElement; x = x.parentElement) {
+      const s = getComputedStyle(x); if (s.zIndex !== "auto" && s.position !== "static") { z = Number(s.zIndex); at = x; } }
+    return {z, at}; };
+  const a = top.getBoundingClientRect(), b = under.getBoundingClientRect();
+  const l = Math.max(a.left, b.left), r = Math.min(a.right, b.right), t = Math.max(a.top, b.top), bo = Math.min(a.bottom, b.bottom);
+  const zt = rootZ(top), zu = rootZ(under);
+  const out = {top_z: zt.z, under_z: zu.z};
+  if (r - l >= 2 && bo - t >= 2) {
+    const x = (l + r) / 2, y = (t + bo) / 2, hit = document.elementFromPoint(x, y);
+    out.how = "hit"; out.at = [Math.round(x), Math.round(y)]; out.ok = !!hit && top.contains(hit);
+    out.hit = hit ? hit.tagName.toLowerCase() + (hit.id ? "#" + hit.id : "") + (typeof hit.className === "string" && hit.className ? "." + hit.className.trim().split(/\s+/)[0] : "") : null;
+  } else {
+    out.how = "z";
+    out.ok = zt.z > zu.z || (zt.z === zu.z && !!zt.at && !!zu.at && !!(zu.at.compareDocumentPosition(zt.at) & Node.DOCUMENT_POSITION_FOLLOWING));
+  }
+  return out;
+}"""
+
+
+def on_top(b, top, under):
+    """Is the first visible match of `top` drawn over the first visible match of `under`? Where their boxes overlap, the
+    point in the middle of the overlap is hit-tested (what is really on top there); where they don't, their stacking order
+    decides: the z-index of each one's outermost positioned ancestor with a z-index (the root stacking context), a tie going
+    to the later one in the page. {ok, how: "hit" | "z", top_z, under_z, at?, hit?}; ok None when either isn't showing."""
+    return b.eval(f"({STACK_JS})({json.dumps(top)}, {json.dumps(under)})")
