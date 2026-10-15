@@ -445,8 +445,8 @@ the old name must not come back at the merge. Status is as at `eb10dd4a` (`origi
 | P6 | `FLAGS` | `HEALTH_FLAGS` | `components/report/weekly/Top.jsx:42` | done |
 | P6 | `MON` | `TL_MONTHS` | `components/report/weekly/Timeline.jsx:11` | done (`MON` in `core/datewords.js` is a different, core name) |
 | P6 | `take` | `takeWeekly` | `stores/weekly.js:43` | done |
-| P7 | `MONTHS` | `MONTH_WORDS` | not in the minutes files; the only `MONTHS` is `components/Picker.jsx:134` (shared, not P7) | **check**: `MONTH_WORDS` already exists in `core/datewords.js:17`, so this would clash |
-| P7 | `where` | `filedAt` | `components/minutes/ApprovePopup.jsx:17` | done; no top-level `where` in the minutes files |
+| P7 | `MONTHS` | `MONTH_WORDS` | `core/datewords.js:17` (P7 adds this file) | done (clashed with `MONTHS` in `components/Picker.jsx`) |
+| P7 | `where` | `filedAt` | `components/minutes/ApprovePopup.jsx:17` | done |
 | P8 | `Bar` | `ClientBar` | `components/report/ClientView.jsx:42` | done |
 | P8 | `Pop` | `ClientPop` | `components/report/ClientParts.jsx:50` | done |
 | P8 | `FLAGS` | `CLIENT_FLAGS` | `components/report/clientDoc.js:11` | done |
@@ -454,4 +454,3 @@ the old name must not come back at the merge. Status is as at `eb10dd4a` (`origi
 | P8 | `matchSection`, `matchAll` | `matchClientSection`, `matchClientAll` | `components/report/clientDoc.js:58, 79` | done (`sheetLib.js` keeps `matchSection`, `matchAll` for Sheet) |
 
 The P6 and P8 names are already in the tree; the table is kept so a merge does not bring the old names back. The P7 row for
-`MONTHS` needs Team Stark to say where that name lives before the merge.
