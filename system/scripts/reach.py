@@ -1056,15 +1056,16 @@ WILDCARDS = set("*?[")
 
 def held_arg_paths(command):
     """Every path a held run's Bash call could hand a script: prep_paths' (each path-like argument, `--x=path` too), every
-    path-like piece of an argument after = : or , a piece with $ as a script could expand it, and, for a piece with a wildcard,
-    what the shell would expand it to."""
+    path-like piece of an argument after = : or , (`//…` too, unless it follows http: or https:), a piece
+    with $ as a script could expand it, and, for a piece with a wildcard, what the shell would expand it to."""
     import glob
     import re
     out = list(prep_paths("Bash", {"command": command}))
-    for a in bash_args(command):
-        for piece in [a, *re.split(HELD_SPLIT, a)[1:]]:
-            if ("/" in piece or piece.startswith(("~", "."))) and not piece.startswith("//") and piece not in out:   # not a URL's
-                out.append(piece)
+    for piece, before in held_pieces(command):
+        if piece.startswith("//") and before is not None and re.search(r"(?i)\bhttps?:$", before):
+            continue                                       # a web address's host (https://…); `//Users/…` is a path (review N4)
+        if ("/" in piece or piece.startswith(("~", "."))) and piece not in out:
+            out.append(piece)
     for p in list(out):
         if "$" in p and os.path.expandvars(p) not in out:   # quoted from the shell, but a script could still expand it
             out.append(os.path.expandvars(p))
@@ -1076,12 +1077,31 @@ def held_arg_paths(command):
     return out
 
 
+def held_pieces(command):
+    """(piece, the text just before it in the same argument with its separator, or None for the whole argument): each argument,
+    and each part of it after = : or ,."""
+    import re
+    out = []
+    for a in bash_args(command):
+        out.append((a, None))
+        parts = re.split(f"({HELD_SPLIT})", a)          # [text, separator, text, …]
+        out += [(parts[i], parts[i - 2] + parts[i - 1]) for i in range(2, len(parts), 2)]
+    return out
+
+
 def held_form_reason(command):
     """Why a held run's Bash call has a form only the shell reads, or None (review N1, 15-10-2026). A `#` starts a shell comment
     that bash_args' split doesn't drop, so `review.py assign … # --dry-run` would be classed by a flag the shell never passes.
-    No held prompt's command needs one (docx_tools.py text, minutes.py transcript), so any `#` at all is refused."""
+    No held prompt's command needs one (docx_tools.py text, minutes.py transcript), so any `#` at all is refused. Review N2:
+    ~- ~+ and ~ with a number at the start of any piece, and $PWD or $OLDPWD in any form, name folders the hook can't resolve."""
+    import re
     if "#" in command:
         return "the command has a #, which the shell reads as a comment: run the script on its own, without it"
+    if re.search(r"\$\{?(OLD)?PWD\b", command):    # review N2: these name a folder the hook can't see the run's value of
+        return "the command names $PWD or $OLDPWD: name the file by its path in the vault"
+    for piece, _ in held_pieces(command):
+        if re.match(r"~[-+0-9]", piece):              # review N2: ~- ~+ ~1 are the shell's folders (cd's last, this one, the stack)
+            return "the command has ~-, ~+ or ~ and a number, which the shell turns into a folder: name the file by its path"
     return None
 
 

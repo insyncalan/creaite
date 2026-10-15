@@ -92,6 +92,23 @@ def forms(root, home):
         ("# at the start of the arguments", f"{T} #x ~/.ssh/id_rsa", FORM),
         ("a#b inside a word", f"{T} a#b.vtt", FORM),
         ("quoted '#'", f"{T} '#' x.vtt", FORM),
+        # review N2: the shell's own folders, which the hook can't resolve (reach.held_form_reason)
+        ("~-", f"{T} ~-/.ssh/id_rsa", FORM),
+        ("~+", f"{T} ~+/../.ssh/id_rsa", FORM),
+        ("~ and a number", f"{T} ~1/.ssh/id_rsa", FORM),
+        ("--opt=~-", f"{T} --from=~-/.ssh/id_rsa", FORM),
+        ("~+ after :", f"{T} a:~+/x", FORM),
+        ("~- after ,", f"{T} a.vtt,~-/x", FORM),
+        ("single-quoted $OLDPWD", f"{T} '$OLDPWD/.ssh/id_rsa'", FORM),
+        ("single-quoted ${PWD}", f"{T} '${{PWD}}/../.ssh/id_rsa'", FORM),
+        ("$PWD after =", f"{T} --from='$PWD'/x", FORM),
+        ("$OLDPWD after ,", f"{T} a,'$OLDPWD'/x", FORM),
+        # review N4: // then a path is the root on macOS; only a web address's host is skipped (reach.held_arg_paths)
+        ("// path", f"{T} /{home}/.ssh/id_rsa", NEVER),
+        ("// path after :", f"{T} a:/{home}/.ssh/id_rsa", NEVER),
+        ("// path after =", f"{T} file=/{home}/.ssh/id_rsa", NEVER),
+        ("// path after ,", f"{T} a.vtt,/{home}/.ssh/id_rsa", NEVER),
+        ("file:// URL", f"{T} file://{home}/.ssh/id_rsa", NEVER),
     ]
 
 
@@ -131,7 +148,7 @@ class HeldArgForms(unittest.TestCase):
             return NEVER
         if "isn't a read command" in why:
             return KIND
-        if "which the shell reads as a comment" in why:
+        if "which the shell reads as a comment" in why or "$PWD or $OLDPWD" in why or "~-, ~+" in why:
             return FORM
         if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
             return SHELL
@@ -165,6 +182,16 @@ class HeldArgForms(unittest.TestCase):
             command = "system/scripts/run " + cmd
             self.assertEqual(reach.command_kind(script, reach.bash_args(command))[0], reach.READ, cmd)
             self.assertIn("comment", reach.held_form_reason(command) or "", cmd)
+
+    def test_double_slash_pieces(self):
+        """Review N4, as a pure function: `//` then a path is checked; a web address's host after http: or https: isn't."""
+        sys.path.insert(0, str(self.root / "system/scripts"))
+        import reach
+        self.assertIn("//Users/x/.ssh/id_rsa", reach.held_arg_paths(f"{T} a://Users/x/.ssh/id_rsa"))
+        self.assertIn("///Users/x/.ssh/id_rsa", reach.held_arg_paths(f"{T} file:///Users/x/.ssh/id_rsa"))
+        self.assertIn("//Users/x", reach.held_arg_paths(f"{T} https=//Users/x"))   # not a web address: = isn't a scheme's :
+        for url in ("https://example.com/a", "see http://example.com/a", "HTTPS://example.com/a"):
+            self.assertNotIn("//example.com/a", reach.held_arg_paths(f"{T} '{url}'"), url)
 
     def test_an_ordinary_read_still_passes(self):
         for mode in ("held", "prep"):
