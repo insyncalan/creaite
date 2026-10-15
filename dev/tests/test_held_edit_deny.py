@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import ABC, Vault  # noqa: E402
 
 WRITERS = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
-CHAT_WRITERS = ["Edit", "Write", "MultiEdit"]     # F2: NotebookEdit is denied in every run (EVERY_RUN_DENIES); no kind uses it
+CHAT_WRITERS = ["Edit", "Write"]     # F2: a known built-in a run's --tools doesn't name (NotebookEdit, MultiEdit) is denied by name
 HELD = ["prep", "generate", "check", "load"]
 TARGETS = [f"{ABC}/notes.md", f"{ABC}/minutes/2026-10-01 Steering.docx", "system/config/settings.json",
            "system/staging/proposed-x.json", "system/staging/drafts/x.json", "inbox/forward.txt"]
@@ -133,7 +133,7 @@ class HeldRuns(unittest.TestCase):
         self.assertIn("Write(system/staging/**)", self.allow("confirmed"))
         for name in ("ask", "confirmed", "typed sweep"):                # search denies its writers itself (run-search-tools-fix)
             self.assertFalse(set(CHAT_WRITERS) & set(self.deny(name)), name)
-        self.assertNotIn("MultiEdit", self.deny("narrow"))           # its own ONLY_DENIES, as before
+        self.assertIn("MultiEdit", self.deny("narrow"))              # F2: not in its --tools (ToolSearch), so denied by name
         self.assertIsNone(self.mode("narrow"))
 
     def test_the_function(self):

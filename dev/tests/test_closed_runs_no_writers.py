@@ -84,7 +84,9 @@ class ClosedRuns(unittest.TestCase):
         self.assertEqual(L.KIND_DENIES["notes-find"], L.KIND_DENIES["shape-closed"])
         self.assertEqual(L.KIND_TOOLS["shape-closed"], [])
         self.assertEqual(L.KIND_TOOLS["notes-find"], [])
-        self.assertNotIn("Edit", L.run_policy("generate", None)[1])   # other kinds unchanged here
+        self.assertNotIn("Edit", L.KIND_DENIES.get("generate", []))   # other kinds unchanged here (F2 denies Edit in generate only
+        self.assertIn("Edit", L.run_policy("generate", None)[1])       # because its --tools doesn't name it)
+        self.assertNotIn("Edit", L.run_policy("ask", None)[1])
 
 
 if __name__ == "__main__":
