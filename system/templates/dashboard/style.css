@@ -926,7 +926,7 @@ body.resizing{cursor:col-resize;user-select:none}
 .cmdbox{display:flex;align-items:center;gap:8px;margin:6px 0;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 6px 6px 10px} .cmdbox code{flex:1;font:500 var(--fs-sm)/18px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:nowrap}
 .livealert code{font-family:ui-monospace,Menlo,monospace}
 .sample{font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px}
-@media (max-width:1100px){.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.panel.on.pwide,.panel.pwide .pin{width:max(360px,50vw)}.files{grid-template-columns:1fr}}
+@media (max-width:1100px){.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.panel.on.pwide,.panel.pwide .pin{width:max(360px,50vw)}.files{grid-template-columns:1fr}.tree{position:static}}   /* v1.9.5 hand checks (plan #81): stacked, a sticky folder list drew over the table as the page scrolled */
 /* ===== Search (BL-07) ===== */
 .vsearch{margin:10px 0 14px} .vsearch input[type=search]{width:100%;height:var(--ctl-h-lg);border:1px solid var(--line);border-radius:var(--ctl-r-lg);padding:0 14px;background:var(--surface);color:var(--ink);font-size:var(--fs-md)}   /* BL-325: the large search, a deliberate variant (the page's centred bar, beside the 40px ask creaite button; test_pages SearchBarTests) */
 .vschips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0;min-height:0} .vschip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--accent-soft);border-radius:var(--r-pill);padding:2px 4px 2px 10px;font-size:var(--fs-xs)}
