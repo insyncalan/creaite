@@ -18,13 +18,14 @@ import { shared } from "./core/state.js";
 import { deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./intake.js";
 import { HUB, hubLink, withdrawDecision } from "./meetings.js";
-import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkList, pkPopClose, pkStatuses, pkWho, REC } from "./panel.js";
+import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkStatuses, pkWho, REC } from "./panel.js";
 import { closePanel, pkOn } from "./projects.js";
 import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
 import { conflictHtml, isConflict, kindLabel, pkAdd, plur, revGroupTitle } from "./today.js";
 import { mountRejectMenu } from "./components/review/RejectMenu.jsx";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { contextMenuOpen, openContextMenu, openContextMenuAt } from "./components/review/ContextMenu.jsx";
+import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
 import { rjAddGone, rjCloseMenu, rjDropGone, rjGone, rjGuesses, rjGuessFor, rjMenu, rjOpenMenu, rjReasons, rjRecent, rjSetGone } from "./stores/rejects.js";
 import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, cell, ceOpts, funnelTip, hit, HL, hlOnly, items, kOfId, msLabel, recordFromBoard, rows, rvfCount, rvOnly, rvPaint, rvPick, srcKind, thisFriday } from "./work.js";
 /* ======================= Review ======================= */
@@ -410,7 +411,7 @@ export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ sna
    project can be pointed at an open item of its project and kind, whether or not Looks like marked one. The proposal's peek has the
    button (beside the Looks like note, when there is one) and the row's right-click menu the same command. It asks the live server
    for the candidates (/api/review/candidates: review.py ranks them, the marked item first, then by BL-297 B's signals; strength in
-   words, never a percentage) and opens Work's picker (pkList: listbox, search over seven, ↑ ↓ Home End, Enter, Esc back to the
+   words, never a percentage) and opens the Picker block (openPicker: a listbox, search over seven, ↑ ↓ Home End, Enter, Esc back to the
    button). Choosing one retargets the proposal (/api/review/retarget: it becomes an update carrying its date and latest update or
    response, as Merge; with nothing new it is rejected as its duplicate). The message offers Undo (review.py unmerge, by file and
    item, so it works after either). Nothing reaches the tracker until the update is approved and applied. */
@@ -428,7 +429,7 @@ export async function rtOpen(anchor,r){ if(!rtOK(r)) return;
   const L=res.items||[]; if(!L.length){ snack(`No open ${RTKINDS[r.kind]} in ${pName(r.p)} for it to update`); return; }
   if(!anchor.isConnected){   /* the list or the peek was drawn again while the server answered: open on the new one, never silently not at all */
     const tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`); anchor=document.querySelector(`[data-rvrt="${r.n}"]`)||(tr&&(tr.querySelector('[data-act="e"]')||tr)); if(!anchor) return; }
-  pkList(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
+  openPicker(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
 export async function rtGo(r,id){ const at={file:r.file,ref:r.ref};
   const res=await api("/api/review/retarget",{...at,id}); if(!res||!res.ok){ snack(oneLine(res&&res.message)||"Not changed"); return; }
   if(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===r.n) closePanel(); await reloadData();
@@ -439,7 +440,7 @@ export async function rtGo(r,id){ const at={file:r.file,ref:r.ref};
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootReview0065(){
 document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-rvrt]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  const r=REV.find(x=>x.n===+b.dataset.rvrt); if(shared.PKPOP&&shared.PKPOP.anchor===b){ pkPopClose(); return; } rtOpen(b,r); },true);   /* BL-297 D */
+  const r=REV.find(x=>x.n===+b.dataset.rvrt); if(pickerOpenFor(b)){ closePicker(); return; } rtOpen(b,r); },true);   /* BL-297 D */
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-rvll]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const [how,n]=b.dataset.rvll.split(":"), r=REV.find(x=>x.n===+n); if(!r||!rvDup(r)) return; if(how==="cmp") llCompare(r); else llAct(how,r); },true);
 $("#llDlg").addEventListener("click",e=>{ const dlg=$("#llDlg"), r=REV.find(x=>x.n===+dlg.dataset.n); if(e.target.id==="llClose") dlg.close();
@@ -479,11 +480,18 @@ export async function rvMoveItem(r,code,quiet){ const was=r.p;
     r.p=code; r.edited=true; refreshAll();
     if(!quiet) snack(`Moved to ${pName(code)} — still waiting for review`,was&&was!==code?async()=>{ if(await rvMoveItem(r,was,true)) snack(`Moved back to ${pName(was)}`); }:null);   /* BL-316: Undo, as with the server */
     return true; }
+  const keep=was||quiet?null:await rvItemState(r);   /* BL-316: an item with no project yet goes back to none, as it was */
   const res=await api("/api/review/assign",{file:r.file,ref:r.ref,code}); if(!res.ok){ snack(oneLine(res.message)||"Not moved"); return false; }
   await reloadData(); if(quiet) return true; const sig=learnable(r);
+  if(!was&&!sig){ snack(`Moved to ${pName(code)} — still waiting for review`,keep?async()=>{ try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("it has been decided since");
+      it.values={...(it.values||{}),...keep.values}; ["match","moved_from","edited_in"].forEach(f=>{ if(keep[f]===undefined) delete it[f]; else it[f]=keep[f]; }); }); }
+    catch(e){ snack("Not moved back: "+e.message); return; } await reloadData(); snack("Moved back: no project yet"); }:null); return true; }
   if(sig) snack(`Moved to ${pName(code)} — still waiting for review`,()=>learnSignal(code,sig.kind,sig.value),`Remember ${sig.value}`);   /* BL-28: the signal is offered for the new project */
   else snack(`Moved to ${pName(code)} — still waiting for review`,was?async()=>{ const back=REV.find(x=>x.file===r.file&&x.ref===r.ref&&!x.done); if(back) await rvMoveItem(back,was,true); snack(`Moved back to ${pName(was)}`); }:null);
   return true; }
+/** a pending item's project fields as its proposal holds them, for Undo (null when it can't be read) */
+export async function rvItemState(r){ try{ const data=JSON.parse(await shared.VW.read("system/staging/"+r.file)), it=(data.items||[]).find(i=>i.n===r.ref); if(!it) return null;
+  const v=it.values||{}; return {values:{project:v.project??null,milestone:v.milestone??null,workstream:v.workstream??null},match:it.match,moved_from:it.moved_from,edited_in:it.edited_in}; }catch(e){ return null; } }
 export function rvMoveMinutes(b,r,g){ if(!viaServer()){ snack(`Moving minutes needs the live server, which refiles them; or say “minutes ${r.n} is DEF” in Claude Code`); return; }
   const projs=(r.projects||[r.p]).filter(Boolean);
   const to=frm=>openMenu(b,{label:`Move ${pName(frm)}'s items to`,id:"rvMoveTo",items:rvActive().filter(p=>p.code!==frm).map(p=>({id:p.code,name:p.name,icon:"projects",line:projs.includes(p.code)?"These minutes are filed here too":""})),onPick:v=>rvMovePreview(b,r,frm,v)});
