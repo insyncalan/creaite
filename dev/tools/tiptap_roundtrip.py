@@ -380,6 +380,18 @@ def vendored_js(path=tiptap.VENDOR / tiptap.MODULE):
     return "(()=>{" + text[:m.start()] + f"window.CreaiteTiptap={{{names}}};}})();"
 
 
+def _round_trip_group(b, texts, features, html, shift, mode):
+    """The page's roundTripAll for `texts`; with `shift` (Current state) each text goes in through headsIn and what the editor
+    wrote comes out through headsOut, as the dashboard's editor loads and saves it."""
+    if shift:
+        texts = b.eval(f"{json.dumps(texts)}.map(t=>CxHeads.headsIn(t,{shift}))")
+    got = b.eval(f"CreaiteTiptap.roundTripAll({json.dumps(texts)}, {json.dumps(features)}, {json.dumps(mode)}, {json.dumps(html)})")
+    if shift:
+        outs = b.eval(f"{json.dumps([r.get('out') for r in got])}.map(t=>typeof t==='string'?CxHeads.headsOut(t,{shift}):t)")
+        got = [{**r, "out": o} for r, o in zip(got, outs)]
+    return got
+
+
 def run(cases, bundle_js, mode="exact", pinned=None):
     """[(case, out, error)] for each case: the text the editor gives back (or the error), from one headless Chrome page
     that loads `bundle_js` (it must set window.CreaiteTiptap.roundTripAll(texts, features, mode)). `mode`: "exact"
@@ -400,14 +412,7 @@ def run(cases, bundle_js, mode="exact", pinned=None):
                 results[i] = result
             for features, html, shift in sorted({(c.features, c.html, c.shift) for c in cases if not c.script}):
                 idx = [i for i, c in enumerate(cases) if (c.features, c.html, c.shift) == (features, html, shift) and not c.script]
-                texts = [cases[i].text for i in idx]
-                if shift:                       # Current state: the stored text goes in through headsIn
-                    texts = b.eval(f"{json.dumps(texts)}.map(t=>CxHeads.headsIn(t,{shift}))")
-                got = b.eval(f"CreaiteTiptap.roundTripAll({json.dumps(texts)}, "
-                             f"{json.dumps(features)}, {json.dumps(mode)}, {json.dumps(html)})")
-                if shift:                       # and what the editor wrote comes out through headsOut
-                    outs = b.eval(f"{json.dumps([r.get('out') for r in got])}.map(t=>typeof t==='string'?CxHeads.headsOut(t,{shift}):t)")
-                    got = [{**r, "out": o} for r, o in zip(got, outs)]
+                got = _round_trip_group(b, [cases[i].text for i in idx], features, html, shift, mode)
                 for i, r in zip(idx, got):
                     unfaithful = r.get("faithful") is False and UNFAITHFUL   # the writer's own check (exact only)
                     results[i] = (cases[i], r.get("out"), r.get("error") or unfaithful or None)
