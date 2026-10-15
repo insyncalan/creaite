@@ -39,6 +39,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from test_tracker import ABC, Vault  # noqa: E402
+from test_held_bash_arg_forms import TILDE_FORMS  # noqa: E402  the held table's ~ rows: the same forms go through ask mode
 
 NEVER, SHELL, HANDOVER, WORDS = "never list", "shell form", "a hand-over command", "the shell's own words"
 MODES = ("ask", "confirmed", "sweep")
@@ -265,6 +266,8 @@ class ValidateOnlyInStaging(unittest.TestCase):
         cls.outside.mkdir()
         cls.env = {**os.environ, "HOME": str(cls.home)}
         (cls.outside / "spec.json").write_text('{"items": [], "note": "kept as it is"}')
+        (cls.outside / cls.prop.name).write_text('{"items": []}')      # what the shell's ~/Documents/<name> would hand over
+        (cls.home / cls.prop.name).write_text('{"items": []}')
         os.symlink(cls.outside / "spec.json", cls.root / "system/staging/proposed-link.json")
         os.symlink(cls.root / ".claude/settings.json", cls.root / "system/staging/link.json")
 
@@ -301,6 +304,12 @@ class ValidateOnlyInStaging(unittest.TestCase):
             ("link.json", "a symlink to a permission file, by name"),
             ("proposed-missing.json", "a missing file"),
             (f"{self.prop.name} .claude/settings.json", "two files"),
+            # #116 A6 F1: the shell expands these after the hook has looked, so a namesake in staging must not pass
+            (f"~/Documents/{self.prop.name}", "~ with a namesake in staging (the shell's file is outside)"),
+            (f"~/{self.prop.name}", "~/ with a namesake in staging"),
+            ("proposed-*.json", "an unquoted wildcard"),
+            ("'proposed-*.json'", "a quoted wildcard"),
+            ("validate", "a file named validate (the command word dropped once only)"),
         )
         for target, name in targets:
             for mode in MODES:
@@ -397,6 +406,87 @@ SHELL_WORDS_ALLOWED = [
     f"{SR} search.py query 'a ~ b'",
     f"{SR} minutes.py transcript '{ABC}/transcripts/2026-10-0*.vtt'",
 ]
+
+
+# #116 A6 F2 (Jarvis): a ~ followed by anything but / is refused unquoted in every ask mode, as A5's F1 refuses it in held runs:
+# zsh's ~NAME (~HOME, ~TMPDIR, ~PWD, ~OLDPWD), ~user (~root, any name), ~+ ~- ~N, at the start of a word or after = : or ,.
+# Quoted, the shell leaves it as text, so the quoted row is held-only. ~root may be refused first by the never list (its home is
+# outside the reach); either refusal is right.
+ASK_TILDE = [(n, c, WORDS) for n, c, _ in TILDE_FORMS if "quoted" not in n]
+
+
+class Tilde(HookCase):
+    def test_every_tilde_form_is_refused(self):
+        self.refused_by(ASK_TILDE, classify=lambda why: WORDS if by(why) in (WORDS, NEVER) else by(why))
+
+    def test_plain_tilde_still_passes(self):
+        for cmd in (f"{T} ~/Documents/notes.vtt", f"{SR} search.py query 'a ~ b'", f"{SR} search.py query '~HOME ~root'"):
+            for mode in MODES:
+                with self.subTest(cmd=cmd, mode=mode):
+                    self.assertEqual(self.hook(mode, cmd), (0, ""))
+
+
+# #116 A6 F3: a wildcard the shell expands with hidden files matched (zsh GLOB_DOTS, bash dotglob) is checked as such.
+HIDDEN = [
+    ("* matching a hidden folder", f"{T} ~/*/id_rsa", NEVER),
+    ("? matching a hidden folder", f"{T} ~/?ssh/id_rsa", NEVER),
+    ("[ ] matching a hidden folder", f"{T} ~/[.]ssh/id_rsa", NEVER),
+    ("* after =", f"{T} --from=~/*/id_rsa", NEVER),
+]
+
+
+class HiddenWildcards(HookCase):
+    def test_a_wildcard_reaching_a_hidden_folder_is_refused(self):
+        self.refused_by(HIDDEN)
+
+    def test_too_many_entries_is_refused(self):
+        sys.path.insert(0, str(self.root / "system/scripts"))
+        import reach
+        many = self.root / "system/staging/drafts/many"
+        many.mkdir(exist_ok=True)
+        for i in range(reach.ASK_GLOB_LIMIT + 2):
+            (many / f"{i}.vtt").write_text("")
+        old = reach.paths.ROOT
+        reach.paths.ROOT = self.root
+        try:
+            self.assertIn("too many files", reach.ask_never_reason(f"{T} system/staging/drafts/many/*.vtt") or "")
+        finally:
+            reach.paths.ROOT = old
+            shutil.rmtree(many)
+
+
+# The ask helpers deliberately duplicate the held ones (ask mode never depends on held code), so the two copies can drift (#116
+# A6 F1 and F3 were drift). One shared table goes through both decisions, the real hook in held, prep, ask, confirmed and sweep:
+# every form must be refused in every mode, so a change that opens one copy fails here. One difference is deliberate and left out:
+# `a://path` (any scheme's colon, then //) is a URL to ask mode, whose search text holds ftp:// and other addresses, and a path
+# to a held run, which skips only http: and https: (a script is handed `a://…` as text either way).
+def shared_forms(root, home):
+    return [(n, c) for n, c, _ in ASK_TILDE] + [(n, c) for n, c, _ in HIDDEN] + [
+        ("plain ~", f"{P} ~/.ssh/id_rsa"), ("absolute", f"{T} {home}/.ssh/id_rsa"),
+        ("relative ../..", f"{T} {os.path.relpath(home / '.ssh/id_rsa', root)}"),
+        ("--opt=PATH", f"{T} --from=~/.ssh/id_rsa"), ("after :", f"{T} a:~/.ssh/id_rsa"), ("after ,", f"{T} a.vtt,~/.ssh/id_rsa"),
+        ("single-quoted $HOME", f"{T} '$HOME/.ssh/id_rsa'"), ("bare $HOME", f"{T} $HOME/.ssh/id_rsa"),
+        ("symlink to the file", f"{T} system/staging/drafts/key.vtt"), ("wildcard ?", f"{T} ~/.ss?/id_rsa"),
+        ("wildcard, absolute", f"{T} {home}/.*/id_rsa"), ("// path after =", f"{T} a=/{home}/.ssh/id_rsa"),
+        ("** unquoted", f"{T} ~/**/id_rsa"), ("~-", f"{T} ~-/.ssh/id_rsa"), ("~+ after :", f"{T} a:~+/x"),
+        ("# comment", f"{SR} review.py assign ABC-A-001 Sara # --dry-run"),
+        ("reach.py wrap", f"{SR} reach.py wrap tracker.py apply"), ("reach.py hook", f"{SR} reach.py hook --run r --mode confirmed"),
+        ("validate a permission file", f"{SR} tracker.py validate .claude/settings.json"),
+        ("validate ~ (shell's)", f"{SR} tracker.py validate ~/.claude/settings.json"),
+        ("validate a wildcard", f"{SR} tracker.py validate 'proposed-*.json'"),
+        ("validate a missing file", f"{SR} tracker.py validate nothing-here.json"),
+        ("; chain", f"{T} x.vtt; cat ~/.ssh/id_rsa"), ("$(…)", f"{T} $(echo ~/.ssh/id_rsa)"),
+    ]
+
+
+class HeldAndAskAgree(HookCase):
+    def test_both_copies_refuse_the_shared_table(self):
+        for name, cmd in shared_forms(self.root, self.home):
+            for mode in ("held", "prep") + MODES:
+                with self.subTest(form=name, mode=mode):
+                    code, why = self.hook(mode, cmd)
+                    self.assertEqual(code, 2, f"{mode}: {cmd!r}: {why}")
+                    self.assertNotIn("FAKE-PRIVATE-KEY", why)
 
 
 class ShellWords(HookCase):
