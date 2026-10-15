@@ -3112,7 +3112,7 @@ button.nchip{font:inherit;font-size:12px}
 .ndocgh{min-height:40vh}
 .nscrim{position:fixed;inset:0;z-index:var(--z-popup-scrim);background:var(--scrim)}
 .ndoc.nfocus{position:fixed;z-index:var(--z-popup);top:6vh;left:0;right:0;margin:0 auto;width:min(1040px,82vw);height:88vh;box-sizing:border-box;overflow:auto;
-  padding:52px 0 40px;box-shadow:var(--shadow-lg);border-radius:14px}
+  padding:52px 0 40px;box-shadow:var(--shadow-lg);border-radius:var(--r-lg)}
 .ndoc.nfocus>*{max-width:780px;margin-left:auto;margin-right:auto;width:calc(100% - 64px);box-sizing:border-box}
 .ndoc.nfocus .nexpand{position:absolute;left:14px;top:14px;z-index:var(--z-raised-2)}
 .ndoc.nfocus .nslot,.ndoc.nfocus .nmorewrap{display:none}
@@ -3122,6 +3122,8 @@ button.nchip{font:inherit;font-size:12px}
 #noteLeaveDlg{width:min(480px,calc(100vw - 32px));padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} #noteLeaveDlg::backdrop{background:var(--scrim)}
 .nleave{display:grid;gap:12px} .nleave h2{margin:0;font-size:16px} .nleave p{margin:0;color:var(--muted);font-size:13px}
 .nlfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.nlalt{margin:0;display:flex;gap:16px;justify-content:flex-end;flex-wrap:wrap} .nlalt .linkbtn{font-size:13px}
+.ndoc.nfocus .nmsg{margin-top:0}
 /* ===== end BL-301 B ===== */
 /* ===== BL-301 E (v20-find-updates): Find updates, the panel beside a note (components/notes/FindUpdates.jsx). Tokens only. ===== */
 .fu{background:var(--surface);border:1px solid var(--accent);border-radius:10px;overflow:hidden;min-width:0;font-size:13px}
