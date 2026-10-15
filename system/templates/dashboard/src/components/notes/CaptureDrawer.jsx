@@ -24,6 +24,7 @@ import { api, oneLine, snack, viaServer } from "../../core/server.js";
 import { openNoteAt } from "../../notes.js";
 import { capOpen } from "../../stores/capture.js";
 import { IconButton } from "../IconButton.jsx";
+import { attachSlash } from "../SlashMenu.jsx";
 
 /** @typedef {{id: string, code: string, chosen: boolean, how: string, reason: string, title: string, body: string,
     template: string, date: string, with: string[], confidential: boolean, saved: string, loaded?: string}} Note
@@ -198,13 +199,17 @@ export function CaptureDrawer() {
     if (!el) return undefined;
     ed = creaiteEditor(el, /** @type {any} */ ({ features: "notes", markdown: capNote.value.body }));
     if (capOpen.value) ed.focus("end");
+    /* #122 B: the same / menu as Notes, from the notes profile. The drawer does none of the host rows (no [[ @ # lists, table, image
+       or templates yet: step C), so the menu shows Text, Headings 1 to 3, the lists, Checklist, Quote and Code. */
+    const slashOff = attachSlash(ed, { profile: "notes", host: {} });
     const input = () => { if (!ed) return; patchNote({ body: ed.value() }); capSoon(); };
     el.addEventListener("input", input);
-    return () => { el.removeEventListener("input", input); if (ed) ed.destroy(); ed = null; };
+    return () => { el.removeEventListener("input", input); slashOff(); if (ed) ed.destroy(); ed = null; };
   }, []);
   useEffect(() => { const t = window.setInterval(() => redraw(x => x + 1), 30000); return () => clearInterval(t); }, []);
   /** @param {KeyboardEvent} e */
   const keys = e => {
+    if (box.current && box.current.getAttribute("aria-expanded") === "true") return;      // the / menu is open: it takes Esc and ⌘↵ first (SlashMenu stops them)
     if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeCapture(); return; }
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); captureDone(e.shiftKey); }
   };

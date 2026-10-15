@@ -107,6 +107,7 @@ export function attachSlash(h, { profile, host }) {
     const n = st.rows.length;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); if (n) { st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); } }
     else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) { if (n) { e.preventDefault(); e.stopPropagation(); choose(st.rows[st.i]); } else close(); }
+    else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); }      /* ⌘↵ waits: the host's save (the capture drawer's Done) and the editor's own ⌘↵ must not fire under an open menu */
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dismissed = st.from; close(); }
   };
   const blur = () => setTimeout(() => { if (!el.contains(document.activeElement)) close(); }, 120);

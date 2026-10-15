@@ -25123,6 +25123,9 @@ ${s5}`;
           e4.stopPropagation();
           choose(st2.rows[st2.i]);
         } else close();
+      } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
+        e4.preventDefault();
+        e4.stopPropagation();
       } else if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
@@ -26059,6 +26062,7 @@ ${s5}`;
         { features: "notes", markdown: capNote.value.body }
       );
       if (capOpen.value) ed2.focus("end");
+      const slashOff = attachSlash(ed2, { profile: "notes", host: {} });
       const input = () => {
         if (!ed2) return;
         patchNote({ body: ed2.value() });
@@ -26067,6 +26071,7 @@ ${s5}`;
       el2.addEventListener("input", input);
       return () => {
         el2.removeEventListener("input", input);
+        slashOff();
         if (ed2) ed2.destroy();
         ed2 = null;
       };
@@ -26076,6 +26081,7 @@ ${s5}`;
       return () => clearInterval(t47);
     }, []);
     const keys = (e4) => {
+      if (box.current && box.current.getAttribute("aria-expanded") === "true") return;
       if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();

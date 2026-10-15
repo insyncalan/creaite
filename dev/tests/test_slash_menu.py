@@ -51,11 +51,11 @@ class Slash(LiveBrowserCase):
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
 
-    def open_current(self):
+    def open_current(self, state=STATE):
         b = self.b
         mem = self.memory()
         text = mem.read_text(encoding="utf-8")
-        mem.write_text(re.sub(r"(## Current state\n).*?(?=\n## |\Z)", lambda m: m.group(1) + f"\n{STATE}\n", text, flags=re.S), encoding="utf-8")
+        mem.write_text(re.sub(r"(## Current state\n).*?(?=\n## |\Z)", lambda m: m.group(1) + f"\n{state}\n", text, flags=re.S), encoding="utf-8")
         self.v.run(script="build_dashboard.py")
         b.reload("typeof go==='function' && LIVE")
         b.eval("go('cockpit','ABC')")
@@ -427,6 +427,47 @@ class Slash(LiveBrowserCase):
             self.assertRegex(value, rf"(?m)^{'#' * (n + 2)} Slash {n}$")
         self.assertFalse(re.search(r"(?m)^#{1,2} ", value), "never a line that would end the section")
         self.assertNotIn("/", value.replace("</", ""))
+
+    def test_current_state_menu_headings_leave_stray_hash_lines_byte_identical(self):
+        """With the reversible mapping (headsIn/headsOut): a stored `# ` or `######` line is plain text, and the menu's headings go through
+        the editor's commands so they are written ###, #### and ##### beside it; nothing stray is turned into a heading or lost."""
+        b = self.b
+        stray = "# Stray one\n\n###### Six hashes\n\n## Stray two"
+        self.open_current(f"{STATE}\n\n{stray}")
+        before = b.eval("edValue(curEd)")
+        for line in ("# Stray one", "###### Six hashes", "## Stray two"):
+            self.assertIn(line, before.split("\n"), "untouched, an odd line is saved as it was")
+        b.key("Enter"); b.key("Enter")
+        for n in (1, 2, 3):
+            b.type("/")
+            b.wait(f"!!{MENU}", 5)
+            b.click(f".slashmenu [data-slash=h{n}]")
+            b.wait(f"!{MENU}", 5)
+            b.type(f"Menu {n}")
+            b.key("Enter")
+        value = b.eval("edValue(curEd)")
+        lines = value.split("\n")
+        for line in ("# Stray one", "###### Six hashes", "## Stray two"):
+            self.assertIn(line, lines, f"{line!r} stays byte for byte after the menu is used elsewhere")
+        for n in (1, 2, 3):
+            self.assertIn(f"{'#' * (n + 2)} Menu {n}", lines)
+        self.assertEqual(b.eval("edValue(curEd).includes('\\u200b')"), False, "the escape never leaks into the saved text")
+        self.assertEqual(b.eval("document.querySelectorAll('#curEd h1, #curEd h2, #curEd h3').length"), 6, "three from the state text, three from the menu")
+
+    def test_notes_menu_headings_leave_a_stray_hash_line_alone_and_store_one_to_three(self):
+        b = self.b
+        self.make_note("Strays", "Intro paragraph")
+        b.key("Enter")
+        for n in (1, 2, 3):
+            b.type("/")
+            b.wait(f"!!{MENU}", 5)
+            b.click(f".slashmenu [data-slash=h{n}]")
+            b.wait(f"!{MENU}", 5)
+            b.type(f"Note {n}")
+            b.key("Enter")
+        lines = b.eval("document.querySelector('.nbody').cxed.value()").split("\n")
+        for n in (1, 2, 3):
+            self.assertIn(f"{'#' * n} Note {n}", lines)
 
     def test_keyboard_markdown_shortcuts_still_make_headings(self):
         b = self.b
