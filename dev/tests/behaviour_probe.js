@@ -36,15 +36,20 @@ window.SB = (() => {
     L = [...root.querySelectorAll("[aria-haspopup]:not([aria-haspopup=false])")].filter(el => vis(el) && !el.disabled
       && el.getAttribute("aria-disabled") !== "true" && !el.closest(".ddmenu.on,[role=menu],[role=listbox]"));
     return L.map((el, i) => ({ i, sig: sig(el), name: name(el), kind: el.getAttribute("aria-haspopup"), role: el.getAttribute("role") || el.tagName.toLowerCase() })); };
-  /** what is open: visible popups, ignoring the page's permanent regions */
-  const popups = () => [...document.querySelectorAll(POP)].filter(el => vis(el) && !el.matches("#panel,#chat") && !el.closest("[role=tablist]"));
+  /** what is open: visible popups, ignoring the page's permanent regions and what was already showing when the opener
+      took focus (the test has closed every popup by then): the dialog a screen is (the Prep popup, the milestone editor)
+      and a list that is part of the page (Movement's open milestones) */
+  let base = new Set(), baseModal = null;
+  const popups = () => [...document.querySelectorAll(POP)].filter(el => vis(el) && !el.matches("#panel,#chat") && !el.closest("[role=tablist]")
+    && !base.has(el));
   const inPop = el => !!el && popups().some(p => p.contains(el) && p !== document.body);
   const state = i => { const o = L[i], a = document.activeElement, ad = a && a.getAttribute && a.getAttribute("aria-activedescendant");
     return { expanded: o ? o.getAttribute("aria-expanded") : null, connected: !!(o && o.isConnected),
       open: popups().length, focusOnOpener: a === o, focusInPopup: inPop(a) || (!!ad && !!document.getElementById(ad)),
-      active: a ? sig(a) + "|" + name(a) + (ad ? "|" + ad : "") : "", modal: !!document.querySelector("dialog:modal"),
+      active: a ? sig(a) + "|" + name(a) + (ad ? "|" + ad : "") : "", modal: !![...document.querySelectorAll("dialog:modal")].some(d => d !== baseModal),
       items: popups().reduce((n, p) => n + p.querySelectorAll('[role^="menuitem"]:not([aria-disabled="true"]),[role="option"]:not([aria-disabled="true"])').length, 0) }; };
-  const focus = i => { const o = L[i]; if (!o) return false; o.scrollIntoView({ block: "center" }); o.focus(); return document.activeElement === o; };
+  const focus = i => { const o = L[i]; if (!o) return false; base = new Set(); base = new Set(popups());
+    baseModal = document.querySelector("dialog:modal"); o.scrollIntoView({ block: "center" }); o.focus(); return document.activeElement === o; };
   /** close whatever is still open, without pressing anything that changes data */
   const reset = () => { document.querySelectorAll("dialog[open]").forEach(d => d.close());
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return popups().length; };

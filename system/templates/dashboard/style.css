@@ -983,7 +983,7 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 /* ===== BL-131 (sprint-work-views) ===== saved views: the unsaved dot, the chip menu, More views */
 #wviews{flex-wrap:nowrap;overflow:hidden;align-items:center;padding:2px 0} #wviews .vwrap{display:inline-flex;align-items:center;flex:0 0 auto} #wviews .vchip,#wviews .dd{flex:0 0 auto;white-space:nowrap}
 .vdot{margin-left:6px;font-size:var(--fs-2xs);vertical-align:2px} .vchip.dirty{border-style:dashed}
-.vmenu{border:0;background:none;color:var(--muted);cursor:pointer;padding:0 4px;font-size:var(--fs-xs);height:28px} .vmenu:hover,.vmenu:focus-visible{color:var(--ink)}
+.vmenu{border:0;background:none;color:var(--muted);cursor:pointer;padding:0 4px;font-size:var(--fs-xs);height:28px;min-width:24px} .vmenu:hover,.vmenu:focus-visible{color:var(--ink)}
 #vmoreMenu{min-width:200px}
 .vren input{height:28px;border:1px solid var(--accent);border-radius:var(--r-lg);padding:0 10px;font:inherit;font-size:var(--fs-sm);width:150px;margin-right:4px}
 /* ===== BL-133 (sprint-work-views) ===== Review: toolbar, bar, result, preview, stale tags, empty queue */
@@ -2269,7 +2269,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .mv-sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface)}
 .mv-sw[aria-checked="true"]{background:var(--accent)} .mv-sw[aria-checked="true"]::after{left:19px} .mv-sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .mv-swrow{display:flex;gap:10px;align-items:center;margin:0 0 8px}
-.mv-rng{display:flex;gap:12px;align-items:center} .mv-rng input[type=range]{flex:1;accent-color:var(--accent)} .mv-rng input[type=number]{width:84px}
+.mv-rng{display:flex;gap:12px;align-items:center} .mv-rng input[type=range]{flex:1;accent-color:var(--accent);height:24px;margin:0} .mv-rng input[type=number]{width:84px}
 .mv-empty{color:var(--muted);font-size:var(--fs-sm);padding:8px 0}
 .mv-range{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:var(--fs-sm);margin:6px 0 2px} .mv-range .mv-lbl{margin:0}   /* BL-184 */
 /* ===== end BL-186 (CSS) ===== */

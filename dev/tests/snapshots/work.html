@@ -3,47 +3,50 @@
 <nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden="">
 </nav>
 <h1>Work</h1>
-<div class="tabs" role="tablist" id="wtabs">
-<button role="tab" data-t="actions" aria-selected="true">Actions</button>
-<button role="tab" data-t="raid" aria-selected="false">RAID</button>
-<button role="tab" data-t="decisions" aria-selected="false">Decisions</button>
-<button role="tab" data-t="all" aria-selected="false">All items</button>
+<div class="tabhost" id="wtabsHost">
+<div class="tabs" id="wtabs" role="tablist" aria-label="Work">
+<button type="button" role="tab" aria-selected="true" tabindex="0" data-tab="actions" data-t="actions">Actions</button>
+<button type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="raid" data-t="raid">RAID</button>
+<button type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="decisions" data-t="decisions">Decisions</button>
+<button type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="all" data-t="all">All items</button>
 </div>
+</div>
+<!-- BL-316: Work's tabs (#wtabs), the Tabs building block -->
 <div class="toolbar">
 <input id="workQ" type="search" placeholder="Search this list" aria-label="Search this list" autocomplete="off">
 <span class="wfilters" id="wfilters">
 <span class="dd">
-<button class="btn fbtn on" id="stBtn" data-open-fk="st" aria-haspopup="true">Status: Open</button>
+<button type="button" class="btn fbtn on" id="stBtn" data-open-fk="st" aria-haspopup="listbox" aria-expanded="false" aria-controls="stMenu">Status: Open</button>
 <div class="ddmenu left" id="stMenu">
 </div>
 </span>
 <span class="dd">
-<button class="btn fbtn " id="dueBtn" data-open-fk="due" aria-haspopup="true">Due</button>
+<button type="button" class="btn fbtn" id="dueBtn" data-open-fk="due" aria-haspopup="listbox" aria-expanded="false" aria-controls="dueMenu">Due</button>
 <div class="ddmenu left" id="dueMenu">
 </div>
 </span>
 <span class="dd">
-<button class="btn fbtn " id="ownBtn" data-open-fk="o" aria-haspopup="true">All owners</button>
+<button type="button" class="btn fbtn" id="ownBtn" data-open-fk="o" aria-haspopup="listbox" aria-expanded="false" aria-controls="ownMenu">All owners</button>
 <div class="ddmenu left" id="ownMenu">
 </div>
 </span>
 <span class="dd">
-<button class="btn fbtn " id="projBtn" data-open-fk="p" aria-haspopup="true">All projects</button>
+<button type="button" class="btn fbtn" id="projBtn" data-open-fk="p" aria-haspopup="listbox" aria-expanded="false" aria-controls="projMenu">All projects</button>
 <div class="ddmenu left" id="projMenu">
 </div>
 </span>
 <span class="dd">
-<button class="btn fbtn " id="priBtn" data-open-fk="pr" aria-haspopup="true">All priorities</button>
+<button type="button" class="btn fbtn" id="priBtn" data-open-fk="pr" aria-haspopup="listbox" aria-expanded="false" aria-controls="priMenu">All priorities</button>
 <div class="ddmenu left" id="priMenu">
 </div>
 </span>
 <span class="dd">
-<button class="ib bd fbtn " id="moreBtn" aria-haspopup="dialog" aria-label="Add a filter: 1 on" data-tip="Add a filter: 1 on" data-key="F">
+<button type="button" class="ib bd fbtn" id="moreBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="moreMenu" data-key="F" aria-label="Add a filter: 1 on" data-tip="Add a filter: 1 on">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel">
 <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
 </path>
 </svg>
-<span class="dot" aria-hidden="true">1</span>
+<span class="fcount" aria-hidden="true">1</span>
 </button>
 <div class="ddmenu left fpmenu" id="moreMenu" role="dialog" aria-label="Add a filter">
 </div>
@@ -185,42 +188,22 @@
 <!-- BL-128 (sprint-work-views): one Display menu -->
 <span class="sp">
 </span>
-<span class="dd newdd">
+<span class="newdd" id="newHost">
+<span class="dd">
 <button type="button" class="newb" id="newBtn" aria-label="New action" data-tip="New action">
-<svg data-ic="plus" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="plus" aria-hidden="true">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="plus">
 <path d="M12 5v14M5 12h14">
 </path>
 </svg>
 <span class="w">New action</span>
-<svg data-ic="chevdown" class="i nch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="chevdown" aria-hidden="true">
+<svg class="i nch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="chevdown">
 <path d="m6 9 6 6 6-6">
 </path>
 </svg>
 </button>
-<div class="ddmenu newmenu" id="newMenu" role="menu" aria-label="New decision" hidden="">
-<button type="button" role="menuitem" data-newd="made" tabindex="-1">
-<svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="check" aria-hidden="true">
-<path d="M20 6 9 17l-5-5">
-</path>
-</svg>
-<span>
-<b>Record a decision</b>
-<small>Already taken. Opens as Made, dated today.</small>
 </span>
-</button>
-<button type="button" role="menuitem" data-newd="needed" tabindex="-1">
-<svg data-ic="flag" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="flag" aria-hidden="true">
-<path d="M4 22V4M4 4h13l-2 4 2 4H4">
-</path>
-</svg>
-<span>
-<b>Ask for a decision</b>
-<small>Waiting on someone. Opens as Pending, with a needed-by date.</small>
 </span>
-</button>
-</div>
-</span>
-<!-- BL-159: the New tile; on Decisions, a menu -->
+<!-- BL-159: the New tile; on Decisions, a menu (components/work/NewTile.jsx) -->
 </div>
 <div class="views" id="wviews" aria-label="Views">
 <span class="vwrap">
@@ -243,9 +226,6 @@
 </span>
 <span class="dd vmorewrap">
 <button class="vchip" type="button" id="vmore" aria-haspopup="menu" aria-expanded="false">More views (1) ▾</button>
-<div class="ddmenu left" id="vmoreMenu" role="menu">
-<button type="button" role="menuitem" class="vmitem" data-wv="overdue">Overdue</button>
-</div>
 </span>
 </div>
 <div class="wapplied" id="wapplied">
