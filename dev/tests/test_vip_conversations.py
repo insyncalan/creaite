@@ -172,7 +172,7 @@ class ConversationServerTests(unittest.TestCase):
         self.assertEqual(len(after), len(before) + 1)                                        # one proposal
         spec = json.loads((self.v.root / "system/staging" / made["proposal"]).read_text())
         self.assertEqual(len(spec["items"]), 1)
-        self.assertEqual(spec["items"][0]["table"], "decisions")
+        self.assertEqual((spec["items"][0]["table"], spec["items"][0]["decision"]), ("decisions", "pending"))   # for Review (check 45)
         self.assertIn("Chat: Project Falcon go-live", spec["items"][0]["values"]["source"])
         st = vip_file(self.v)
         card = next(a for a in st["alerts"] if a["id"] == card["id"])
@@ -187,6 +187,10 @@ class ConversationServerTests(unittest.TestCase):
         back = next(a for a in vip_file(self.v)["alerts"] if a["id"] == card["id"])
         self.assertIsNone(back["seen"])
         self.assertNotIn("dismissed", back["candidates"][2])
+        (self.v.root / "system/staging" / made["proposal"]).unlink()                         # the page's Undo: unstaged first
+        u = self.post("/api/alerts/undo", {"ids": [card["id"]], "cand": 2})
+        self.assertEqual(u["restored"], 1)                                                   # then the item is back on the card
+        self.assertNotIn("made", next(a for a in vip_file(self.v)["alerts"] if a["id"] == card["id"])["candidates"][1])
 
     def test_5_no_message_text_and_no_label(self):
         self.wait_for(lambda g: len(g["alerts"]) == 2, "two conversations")

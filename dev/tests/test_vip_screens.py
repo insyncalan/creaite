@@ -225,7 +225,7 @@ class AlertActions(LiveBrowserCase):
         b.key("Enter", 4)                                                                  # ⌘↵ from the title
         self.staged_for_review(aid, "[ABC] Steer on UAT", "https://x/m1")
         b.click("#snackU")                                                                 # Undo: unstaged, the message back
-        b.wait(f"!REV.some(r=>JSON.stringify(r).includes('[ABC] Steer on UAT'))", 20)
+        b.wait("!REV.some(r=>JSON.stringify(r).includes('[ABC] Steer on UAT'))", 20)
         b.wait(f"document.querySelector('#tdList li[data-td=\"al{aid}\"]')", 20)
         left = [p for p in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
                 if "[ABC] Steer on UAT" in p.read_text()]

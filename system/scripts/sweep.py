@@ -1361,7 +1361,8 @@ def cand_of(a, cand):
 
 
 def cand_dismiss(ids, cand, on):
-    """BL-334: dismiss (on) or put back one candidate item of the conversations named. Nothing is staged. Returns the IDs."""
+    """BL-334: dismiss (on) or put back one candidate item of the conversations named (a made one whose proposal has gone is
+    forgotten, as vip_undismiss does for a message). Nothing is staged. Returns the IDs."""
     st, done = vip_state(), []
     for a in st["alerts"]:
         c = cand_of(a, cand) if a["id"] in ids else None
@@ -1369,8 +1370,10 @@ def cand_dismiss(ids, cand, on):
             c["dismissed"] = now().strftime("%Y-%m-%d %H:%M")
             cand_settled(a)
             done.append(a["id"])
-        elif c and not on and c.get("dismissed"):
-            c.pop("dismissed")
+        elif c and not on and (c.get("dismissed") or (isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone")):
+            c.pop("dismissed", None)
+            if isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone":
+                c.pop("made")                                          # its proposal was removed before an apply (Undo)
             a["seen"] = None
             done.append(a["id"])
     if done:
@@ -1534,8 +1537,9 @@ def made_day(pre, v):
 
 
 def vip_make(aid, kind=None, values=None, cand=None):
-    """Stage a work item made from an alert as the dashboard's own approved proposal (proposed-…-dashboard.json; nothing is
-    applied here), dismiss the alert and record the proposal on it. Returns {"proposal", "n", "table", "values"}; raises
+    """Stage a work item made from an alert as a pending proposal for Review (proposed-…-dashboard.json; BL-334: "Create work
+    item stages that item as a proposal for Review", check 45; nothing is applied here or by the page's Save), dismiss the
+    alert and record the proposal on it. Returns {"proposal", "n", "table", "values"}; raises
     LookupError, or ValueError with a reason to show (no project, no description, a field that fails validation)."""
     import propose
     pre = vip_prefill(aid, kind, cand)
@@ -1549,7 +1553,7 @@ def vip_make(aid, kind=None, values=None, cand=None):
         raise ValueError("Give it a description.")
     spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [],
             "items": [{"n": 1, "op": "new", "table": pre["table"], "values": v, "match": "strong", "flags": [],
-                       "decision": "approved", "edited_in": "dashboard"}]}
+                       "decision": "pending", "edited_in": "dashboard"}]}
     propose.complete(spec)
     propose.people_check_spec(spec)                                     # BL-55: a registered name as the register has it
     bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
