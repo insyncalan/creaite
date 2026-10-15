@@ -9,7 +9,9 @@ Run: python3 dev/tests/test_notes_tab.py
     writes nothing; a note changed outside creaite since it was opened is never overwritten (the draft is kept);
   - the list carries front matter and references (links, items, people), never text; portfolio notes are listed too;
   - the dashboard's data carries each project's notes and the templates; Files lists notes as their own folder (the portfolio's too);
-  - paths outside a notes folder are refused.
+  - paths outside a notes folder are refused;
+  - #119: saves naming one editing session keep one backup, and one Undo puts back the text from before it; a save without a
+    session, or with a malformed one, is backed up on its own.
 """
 import json
 import os
@@ -158,6 +160,37 @@ class NotesServer(unittest.TestCase):
         kinds = {(f["p"], f["f"]) for f in data["files"]}
         self.assertIn(("ABC", "notes"), kinds)
         self.assertIn(("_portfolio", "notes"), kinds)
+
+    def test_6_saves_in_one_editing_session_keep_one_backup(self):
+        # #119: the page names its editing session; filechange.py keeps one backup per session, one per save without it
+        r = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "Autosaved"})
+        rel, base = r["note"]["path"], r["base"]
+        p = self.v.root / rel
+        before = p.read_text()
+        n = len(self.log())
+        sid = "0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0"
+        for i in range(4):
+            s = self.post("/api/notes/save", {"path": rel, "body": f"typed {i}\n", "base": base, "session": sid})
+            self.assertTrue(s["ok"], s)
+            base = s["base"]
+        edits = [e for e in self.log()[n:] if e.get("op") == "edit"]
+        self.assertEqual(len(edits), 4)
+        self.assertEqual(len({e["backup"] for e in edits}), 1, "one backup for the session")
+        self.assertNotIn(sid, (self.v.root / "system/config/files-log.jsonl").read_text(), "the session id is never logged")
+        for bad in ("short", "x" * 65, "has space in it", 12345678, None):
+            s = self.post("/api/notes/save", {"path": rel, "body": f"bad {bad}\n", "base": base, "session": bad})
+            self.assertTrue(s["ok"], s)
+            base = s["base"]
+        tail = [e for e in self.log()[n:] if e.get("op") == "edit"][4:]
+        self.assertEqual(len({e["backup"] for e in tail}), 5, "no session, or a malformed one: a backup for each save")
+        self.assertTrue(all("session" not in e for e in tail))
+        for _ in tail:
+            self.assertEqual(subprocess.run([sys.executable, str(self.v.root / "system/scripts/filechange.py"), "undo"],
+                                            cwd=self.v.root, capture_output=True, text=True).returncode, 0)
+        u = subprocess.run([sys.executable, str(self.v.root / "system/scripts/filechange.py"), "undo"], cwd=self.v.root,
+                           capture_output=True, text=True)
+        self.assertEqual(u.returncode, 0, u.stdout + u.stderr)
+        self.assertEqual(p.read_text(), before, "one Undo puts back the text from before the session")
 
 
 if __name__ == "__main__":

@@ -6355,7 +6355,9 @@ main = main_with_restart
 # POST /api/notes/get   {path}                                  one note: its body, front matter, the text's fingerprint and any draft
 # POST /api/notes/new   {code, template, title, date?, with?}   a new note from one of the four templates, created through filechange.py
 # POST /api/notes/draft {path, body?, changes?, base}           what Alan has typed, kept in system/staging/drafts/notes/ (no project file)
-# POST /api/notes/save  {path, body?, changes?, base}           the note's file written through filechange.py: backed up, logged, undoable
+# POST /api/notes/save  {path, body?, changes?, base, session?} the note's file written through filechange.py: backed up, logged, undoable
+# #119: `session` is the page's editing-session id (a new one each time a note is opened and after 5 minutes idle); with it,
+# filechange.py keeps ONE backup per session, not one per save. Without one (or a malformed one) each save has its own, as before.
 # The page saves a draft as Alan types and the file once per editing session (on leaving the note, or after 30 seconds without
 # typing). A note changed outside creaite since it was opened is never overwritten: the draft is kept and the page says so. The
 # search index is refreshed after a save, in the background. Notes are internal and passive: nothing here extracts or stages.
@@ -6363,6 +6365,7 @@ NOTES_LOCK = threading.Lock()
 NOTES_INDEX = {"busy": False, "again": False}
 NOTE_BODY_LIMIT = 400_000
 NOTE_WHY = "a note saved in the Notes tab"
+NOTE_SESSION = re.compile(r"[A-Za-z0-9-]{8,64}")   # #119: the page's editing-session id (a UUID); anything else is no session
 
 
 def notes_code(code):
@@ -6507,7 +6510,8 @@ def notes_draft_route(handler, req):
 
 def notes_save_route(handler, req):
     """Write the note's file through filechange.py (backed up, logged, undoable), unless it changed outside creaite since it was
-    opened (`base`): then nothing is written and the draft is kept."""
+    opened (`base`): then nothing is written and the draft is kept. #119: `session`, the page's editing-session id, lets
+    filechange.py keep one backup per session; a missing or malformed one means a backup for this save alone."""
     import filechange
     t = notes_target(handler, req)
     if not t:
@@ -6516,6 +6520,8 @@ def notes_save_route(handler, req):
     body = notes_body(req)
     if body is False:
         return handler.send(400, {"ok": False, "message": "That note is too long to save."})
+    sid = req.get("session")
+    session = {"session": f"{rel}:{sid}"} if isinstance(sid, str) and NOTE_SESSION.fullmatch(sid) else {}
     with NOTES_LOCK:
         text = p.read_text(encoding="utf-8", errors="ignore")
         if str(req.get("base") or "") != notes.text_sha(text):
@@ -6527,7 +6533,8 @@ def notes_save_route(handler, req):
         if new is None:
             notes.drop_draft(rel)
             return handler.send(200, {"ok": True, "unchanged": True, "note": notes.summary(p, code), "base": notes.text_sha(text)})
-        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY}, via="dashboard")
+        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY, **session},
+                                       via="dashboard")
         if done != 0:
             return handler.send(200, {"ok": False, "wait": done == filechange.NEEDS, "message": msg})
         notes.drop_draft(rel)
