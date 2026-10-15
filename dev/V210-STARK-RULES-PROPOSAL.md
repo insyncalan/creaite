@@ -45,3 +45,37 @@ No other change; the Word path stays for a spec without `"minutes"`.
 - Same replacement: the draft opens in the client view (`#client-report=ABC/<week>/client`) beside the internal week, not as a Word file.
 - Add the two P8 rules: "the client's health may differ from the internal health but needs a reason, kept in the draft and never filed" and "every client export is preceded by the left-out check; it waits for the internal week's approval".
 - Keep: client-visible items only, confidential material left out, never sends, never creates an email draft.
+
+## P1 to P3 (Team Cap's parts, written by Team Stark; issue #74)
+
+Not applied: `system/creaite-rules.md` and the skills are not edited here. Paths are the ones on `sprint-reporting` (P1 `creaite_doc.py`, P2 its export, P3 `report_doc.py`, `report_server.py`, `client_leak.py`) and `v210-p3-relock`. None of them adds a script command line, a permission rule, an approval or a guard change: the libraries have no command line (so no `reach.SCRIPT_COMMANDS` entry), the routes are the live server's own, and `reach.py` is unchanged.
+
+### creaite-rules.md
+
+**Folder map, `system/scripts/` row** (after the entries above):
+> `creaite_doc.py` (v2.1.0 P1: creaite's document format: a weekly report, a client report or a meeting's minutes as one `.html` file holding the A4 page and its data; read, save through `filechange.py`, versions, undo, and the exports to HTML, Word and PDF, P2; library only, no command line); `report_doc.py` / `report_server.py` / `client_leak.py` (P3, BL-335, BL-336: the reports built from the tracker as creaite documents, the live server's `/api/report/*` routes, and the check that nothing Sensitive, partner-only or not client-visible reaches a client report; no command line).
+
+**Folder map, `projects/<CODE> <Name>/` row (reports and minutes folders):**
+> Weekly and client reports are filed as `YYYY-MM-DD Weekly report - <Project name>.html` and `YYYY-MM-DD Client report - <Project name> (<Client>).html` (creaite's own format, one per client) when drafted in creaite; older reports stay Word. A filed report or minutes is never saved over: a change is a new draft or a new version, filed only on approval (one apply, with Undo).
+
+**Folder map, `system/branding/` row:** add "`logos/` holds the report logos (`firm.<ext>`, `<CODE>-client.<ext>`, `<CODE>-partner.<ext>`); local only, kept out of git".
+
+**Folder map, `system/config/settings.json` row:** add "`report_layouts.<CODE>` keeps each project's weekly layout and each client's layout; `reports.file_exports_beside` (reports, off) and `reports.file_minutes_exports_beside` (minutes, on) decide whether an export is filed beside its source".
+
+**Non-negotiables, "Confidential material" bullet:** one sentence:
+> A client report holds only client-visible items; an item labelled Sensitive or partner-only never appears in one (a partner-only label can only withhold, never add), and a client report is approved or exported only after that week's internal report is approved. Nothing is sent.
+
+**Dashboard editing section, a new bullet after the Minutes and reports bullet P4 to P9 proposes:**
+> **Report routes (v2.1.0):** `/api/report/draft|save|approve|export` (page token, under the live server's lock, none passes an approver). A draft is the filed report if there is no draft, else a new one built from the tracker; Save writes the draft, and on a filed report writes a new draft and leaves the filed file as it is (Alan, 15-10-2026); Approve stages one proposal and applies it with `tracker.py apply`, so Undo puts the filed report back exactly (the proposal stays in Review); Approving the internal week re-locks the project's unfiled client drafts to its approved facts, withholding only. Export is made from the data (HTML, Word, PDF) and is filed beside the report only when `reports.file_exports_beside` is on.
+
+**Skills and commands table, `cx-weekly-report` and `cx-client-report` rows:** already proposed above ("a draft report in the editor, filed in `reports/` on approval"); add "as a creaite page (`.html`)" and, for `cx-client-report`, "only after the week's internal report is approved".
+
+**Retention:** nothing from P1 to P3 adds a kept or deleted file beyond file-change backups (90 days, already listed): a report's earlier versions are backups of its saves.
+
+### Skills
+
+The P3 lines under cx-weekly-report and cx-client-report above hold. Add only the P1 to P3 facts:
+
+- **cx-weekly-report:** the draft is `/api/report/draft` (`report_doc.weekly_doc`); Approve is `/api/report/approve` (`report_doc.stage_weekly`, one proposal applied with `tracker.py apply`); the Word build step (`report.py weekly_stage`) stays only for the old flow until Team Cap retires it. "To correct a filed report, edit it: that starts a new draft and the filed report stays as it was until it is approved."
+- **cx-client-report:** `report_doc.client_doc` and `stage_client`; "Approve the internal week first" is a hard refusal, not a warning; one report per client, named `… (<Client>).html`; the leak check (`client_leak.findings`) runs at Approve and Export, and a finding stops both. "A partner-only label (Partner only, partner-only or partner) keeps an item out."
+- **Both:** exports are HTML, Word or PDF from the data (`creaite_doc.export`); filing them beside the report is Alan's setting (reports off, minutes on), never the skill's choice.
