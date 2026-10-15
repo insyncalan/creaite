@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
-ROW = '#workTbl tr[data-row="ABC-A-002"] td[data-f="t"]'
+ROW = '#workTbl tr[data-row="ABC-A-002"] td[data-f="due"]'   # a cell that stays clear of the collapsed rail at 900 px
 REDRAW = "renderWork()"
 
 
@@ -69,6 +69,11 @@ class LostClick(LiveBrowserCase):
         b.call("Input.dispatchMouseEvent", type="mouseReleased", x=o["x"], y=o["y"], button="left", buttons=0, clickCount=1)
         b.pump(0.1)
         self.assertEqual(b.eval("[...HL.keys()]"), [])
+
+
+class LostClick900(LostClick):
+    """The same at 900 px wide (desktop and 900 only)."""
+    width = 900
 
 
 if __name__ == "__main__":
