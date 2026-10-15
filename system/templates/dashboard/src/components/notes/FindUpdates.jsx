@@ -33,7 +33,7 @@ import { fuApply, fuConfirm, fuEdit, fuFind, fuHover, fuMarkers, fuMsg, fuOpen, 
 const FU_GROUPS = [["new", "New"], ["update", "Updates to existing items"], ["milestone", "Milestones"], ["info", "Project information"]];
 
 /** DD-MM-YYYY (or YYYY-MM-DD) as YYYY-MM-DD, or null. @param {string} v */
-function isoOf(v) {
+function fuIsoOf(v) {
   const s = String(v || "").trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
@@ -42,7 +42,7 @@ function isoOf(v) {
   return d.getMonth() === +m[2] - 1 ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : null;
 }
 /** @param {string} v */
-const shown = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? `${v.slice(8, 10)}-${v.slice(5, 7)}-${v.slice(0, 4)}` : v || "";
+const fuShown = v => /^\d{4}-\d{2}-\d{2}$/.test(v || "") ? `${v.slice(8, 10)}-${v.slice(5, 7)}-${v.slice(0, 4)}` : v || "";
 
 /** A field's value on a row's item. @param {PanelRow} row @param {PanelField} f */
 function valueOf(row, f) {
@@ -69,9 +69,9 @@ function Field({ row, f }) {
   if (f.kind === "date") {
     return (
       <span class="fu-date">
-        <input id={id} class="fu-in" type="text" inputMode="numeric" placeholder="DD-MM-YYYY" value={shown(v)} aria-invalid={bad ? "true" : undefined}
+        <input id={id} class="fu-in" type="text" inputMode="numeric" placeholder="DD-MM-YYYY" value={fuShown(v)} aria-invalid={bad ? "true" : undefined}
           aria-describedby={bad ? `${id}-e` : undefined}
-          onChange={e => { const t = /** @type {HTMLInputElement} */ (e.currentTarget).value, iso = t.trim() ? isoOf(t) : "";
+          onChange={e => { const t = /** @type {HTMLInputElement} */ (e.currentTarget).value, iso = t.trim() ? fuIsoOf(t) : "";
             if (iso === null) { setBad("Write the date as DD-MM-YYYY"); return; } setBad(""); fuEdit(row.key, f, iso); }} />
         {bad && <span class="fu-bad" id={`${id}-e`} role="alert">{bad}</span>}
       </span>

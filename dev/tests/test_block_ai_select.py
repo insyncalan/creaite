@@ -106,7 +106,7 @@ class AiBlocks(LiveBrowserCase):
         b = self.b
         had = b.eval("AI_ACTIONS.length")                       # the Notes tab's own item (fu-line) is registered at load
         b.eval("window.GOT=null; aiAction({id:'mkact', name:'Make this an action…', places:['plain'], run:(r,h,ai)=>{ GOT=[r.text, ai.place, h===AIM]; }})")
-        self.addCleanup(lambda: self.b and self.b.eval("(AI_ACTIONS.splice(AI_ACTIONS.findIndex(a=>a.id==='mkact'),1), true)"))
+        self.addCleanup(lambda: self.b and self.b.eval("AI_ACTIONS.splice(AI_ACTIONS.findIndex(a=>a.id==='mkact'),1); true"))
         self.select_all("#aiMany")
         b.click(f"{LAYER} .aibar button[aria-haspopup]")
         b.wait(f"document.querySelector('{LAYER} [role=menu]')")
@@ -117,7 +117,7 @@ class AiBlocks(LiveBrowserCase):
         self.assertEqual(b.eval("GOT"), [MANY, "plain", True])
         self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aisug')"))   # no Claude run, no suggestion
         self.assertEqual(b.eval("aiItems('line').map(x=>x.id).includes('mkact')"), False)   # only where it said
-        self.assertEqual(b.eval("(aiAction({id:'rewrite',name:'x',run:()=>{}}), AI_ACTIONS.some(a=>a.id==='rewrite'))"), False)   # never an option's id
+        self.assertEqual(b.eval("(aiAction({id:'rewrite',name:'x',run:()=>{}}), AI_ACTIONS.length)"), had + 1)   # never an option's id
 
     # ----- AiSuggestion -----
 

@@ -7304,7 +7304,7 @@ button.nchip{font:inherit;font-size:12px}
     );
     const item = role === "menu" ? "menuitem" : "option", t47 = q5.trim().toLowerCase();
     const cur = filter ? filter(q5.trim()) : options;
-    const shown3 = cur.map((o5, i5) => (
+    const shown2 = cur.map((o5, i5) => (
       /** @type {[PickerOption, number]} */
       [o5, i5]
     )).filter(([o5]) => filter || !t47 || o5.label.toLowerCase().includes(t47));
@@ -7375,8 +7375,8 @@ button.nchip{font:inherit;font-size:12px}
           }
         }
       ) : null,
-      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown3.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
-        shown3.map(([o5, i5]) => /* @__PURE__ */ u2(
+      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown2.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
+        shown2.map(([o5, i5]) => /* @__PURE__ */ u2(
           "button",
           {
             type: "button",
@@ -23033,8 +23033,8 @@ ${s5}`;
         d5.textContent = `Image not found: ${cur.attrs.src || ""}`;
         return d5;
       };
-      let shown3 = pic();
-      fig.appendChild(shown3);
+      let shown2 = pic();
+      fig.appendChild(shown2);
       const cap = document.createElement("figcaption");
       cap.contentEditable = "true";
       cap.setAttribute("aria-label", "Caption");
@@ -23066,9 +23066,9 @@ ${s5}`;
           fig.dataset.ref = n4.attrs.src || "";
           if (n4.attrs.src !== was.attrs.src) {
             const p6 = pic();
-            shown3.replaceWith(p6);
-            shown3 = p6;
-          } else if (shown3.tagName === "IMG") shown3.setAttribute("alt", n4.attrs.alt || "");
+            shown2.replaceWith(p6);
+            shown2 = p6;
+          } else if (shown2.tagName === "IMG") shown2.setAttribute("alt", n4.attrs.alt || "");
           if (document.activeElement !== cap && cap.textContent !== (n4.attrs.alt || "")) cap.textContent = n4.attrs.alt || "";
           return true;
         },
@@ -24742,9 +24742,9 @@ ${s5}`;
     const a5 = document.activeElement;
     if (had && a5 && a5.matches('[role="option"] input')) a5.closest('[role="option"]')?.focus({ preventScroll: true });
   }
-  function fbAct(s5, f5, what, shown3) {
+  function fbAct(s5, f5, what, shown2) {
     const sel = [...f5.selected || []];
-    s5.props.onSelect(f5.id, what === "me" ? [...f5.onlyMe || []] : what === "all" ? [.../* @__PURE__ */ new Set([...sel, ...shown3.map((o5) => o5.value)])] : []);
+    s5.props.onSelect(f5.id, what === "me" ? [...f5.onlyMe || []] : what === "all" ? [.../* @__PURE__ */ new Set([...sel, ...shown2.map((o5) => o5.value)])] : []);
     if (s5.ui.q[f5.id]) (fbMenu(s5, f5.id)?.querySelector("input.mq") || null)?.focus();
   }
   function fbSetNot(s5, f5, not, box) {
@@ -24807,8 +24807,8 @@ ${s5}`;
     }) });
   }
   function FbFieldMenu({ f: f5, s: s5, folded }) {
-    const isOpen = s5.ui.open === f5.id, shown3 = isOpen || s5.ui.keep === f5.id, mid = fbMenuId(f5);
-    const all = shown3 && f5.options ? f5.options() : [], q5 = (s5.ui.q[f5.id] || "").toLowerCase();
+    const isOpen = s5.ui.open === f5.id, shown2 = isOpen || s5.ui.keep === f5.id, mid = fbMenuId(f5);
+    const all = shown2 && f5.options ? f5.options() : [], q5 = (s5.ui.q[f5.id] || "").toLowerCase();
     const opts = q5 ? all.filter((o5) => o5.label.toLowerCase().includes(q5)) : all;
     const box = () => document.getElementById(mid);
     return /* @__PURE__ */ u2("span", { class: `dd${folded ? " wfold" : ""}`, children: [
@@ -24836,7 +24836,7 @@ ${s5}`;
           children: f5.button ?? f5.label
         }
       ),
-      /* @__PURE__ */ u2("div", { class: `ddmenu left${isOpen ? " on" : ""}`, id: mid, tabIndex: shown3 ? -1 : void 0, onKeyDown: (e4) => fbListKeys(s5, f5, e4), children: shown3 ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `ddmenu left${isOpen ? " on" : ""}`, id: mid, tabIndex: shown2 ? -1 : void 0, onKeyDown: (e4) => fbListKeys(s5, f5, e4), children: shown2 ? /* @__PURE__ */ u2(S2, { children: [
         f5.not === void 0 ? null : /* @__PURE__ */ u2(FbIsNot, { f: f5, s: s5, box }),
         all.length > 6 ? /* @__PURE__ */ u2(
           "input",
@@ -24966,7 +24966,7 @@ ${s5}`;
     ] });
   }
   function FbFunnel({ s: s5, more }) {
-    const isOpen = s5.ui.open === FB_MORE, shown3 = isOpen || s5.ui.keep === FB_MORE, n4 = s5.ui.fold.length;
+    const isOpen = s5.ui.open === FB_MORE, shown2 = isOpen || s5.ui.keep === FB_MORE, n4 = s5.ui.fold.length;
     const tip = more.label + (n4 ? `. ${n4} more filter${n4 === 1 ? " is" : "s are"} here` : "");
     const inner = /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2(
@@ -24992,7 +24992,7 @@ ${s5}`;
           ]
         }
       ),
-      /* @__PURE__ */ u2("div", { class: `ddmenu left fpmenu${isOpen ? " on" : ""}`, id: more.menuId, role: "dialog", "aria-label": more.menuLabel, onKeyDown: (e4) => fbPickKeys(s5, e4), children: shown3 ? /* @__PURE__ */ u2(FbPicker, { s: s5, more }) : null })
+      /* @__PURE__ */ u2("div", { class: `ddmenu left fpmenu${isOpen ? " on" : ""}`, id: more.menuId, role: "dialog", "aria-label": more.menuLabel, onKeyDown: (e4) => fbPickKeys(s5, e4), children: shown2 ? /* @__PURE__ */ u2(FbPicker, { s: s5, more }) : null })
     ] });
     return s5.props.bare ? inner : /* @__PURE__ */ u2("span", { class: "dd", children: inner });
   }
@@ -29339,7 +29339,7 @@ ${s5}`;
     const h5 = $("#pmFdd");
     if (!h5) return;
     if (F5.length && !F5.some((f5) => f5[0] === PF.pk)) PF.pk = F5[0][0];
-    const shown3 = L3.filter((x5) => pfPass(x5, F5)).length;
+    const shown2 = L3.filter((x5) => pfPass(x5, F5)).length;
     drawFilterBar(h5, {
       bare: true,
       fields: F5.map((f5) => {
@@ -29392,7 +29392,7 @@ ${s5}`;
           PF.pk = k5;
           pfDraw();
         },
-        result: `Showing ${shown3} of ${L3.length}`,
+        result: `Showing ${shown2} of ${L3.length}`,
         resultId: "pmFpResult",
         doneId: "pmFpDone",
         clearAll: pfAny(F5) ? { id: "pmFpClear", run: () => {
@@ -29425,16 +29425,16 @@ ${s5}`;
       if (pfOn(k5)) chips.push(fchipHtml(pfChip(f5), k5, `Remove the ${f5[1].toLowerCase()} filter`, { neg: PF.neg.has(k5), edit: "pfedit", attr: "data-pfclr" }));
     });
     if (PF.q.trim()) chips.push(fchipHtml(`Search: “${PF.q.trim()}”`, "q", "Clear the search", { edit: "pfedit", attr: "data-pfclr" }));
-    const shown3 = L3.filter((x5) => pfPass(x5, F5)).length, remF = F5.some((f5) => f5[0] === "rem"), hid = remF && PF.rem === "hide" ? L3.filter((x5) => pfPass(x5, F5, "rem") && x5.off).length : 0;
+    const shown2 = L3.filter((x5) => pfPass(x5, F5)).length, remF = F5.some((f5) => f5[0] === "rem"), hid = remF && PF.rem === "hide" ? L3.filter((x5) => pfPass(x5, F5, "rem") && x5.off).length : 0;
     const att = F5.find((f5) => f5[0] === "att"), need = att && !PF.f.att.size ? L3.filter((x5) => pfPass(x5, F5) && att[3].some(([v5]) => att[4](x5, v5))).length : 0;
-    const bits = [html`Showing ${shown3} of ${pfWord(L3.length)}`];
+    const bits = [html`Showing ${shown2} of ${pfWord(L3.length)}`];
     if (hid) bits.push(html`${hid} removed hidden <button type="button" class="linkbtn" data-pfquick="showrem">Show</button>`);
     if (remF && PF.rem === "show") bits.push(html`removed shown <button type="button" class="linkbtn" data-pfquick="hiderem">Hide</button>`);
     if (need) bits.push(html`${need} need${need === 1 ? "s" : ""} attention <button type="button" class="linkbtn" data-pfquick="att">Show</button>`);
     const extra = !!PF.q.trim() || F5.some((f5) => f5[0] !== "rem" && pfOn(f5[0])) || remF && PF.rem !== "hide";
     putHTML(el2, html`${raw(chips.join(""))}${extra ? html`<button type="button" class="linkbtn" id="pmClearF">Clear all</button>` : ""}<span class="sp"></span><span class="sub" id="pmCount">${bits.map((b5, i5) => html`${i5 ? " · " : ""}${b5}`)}</span>`);
     const live = $("#pmLive");
-    if (live && live.textContent !== `Showing ${shown3} of ${pfWord(L3.length)}`) live.textContent = `Showing ${shown3} of ${pfWord(L3.length)}`;
+    if (live && live.textContent !== `Showing ${shown2} of ${pfWord(L3.length)}`) live.textContent = `Showing ${shown2} of ${pfWord(L3.length)}`;
   }
   function pfDraw(focus) {
     if (!$("#peopleMgr") || !$("#pmRows")) return;
@@ -31603,13 +31603,13 @@ ${s5}`;
     const h5 = $("#rvfilters");
     if (h5) drawFilterBar(h5, rvBarProps());
   }
-  function rvApplied(shown3, total) {
+  function rvApplied(shown2, total) {
     const chips = RVFIELDS.filter((f5) => RVF[f5[0]].size).map((f5) => {
       const neg = RVNEG.has(f5[0]), lab = (v5) => (f5[2]().find((o5) => o5[0] === v5) || [v5, v5])[1];
       return html`<span class="fchip${neg ? " neg" : ""}">${f5[1]}: ${neg ? "not " : ""}${[...RVF[f5[0]]].map(lab).join(", ")}<button data-rvclr="${f5[0]}" aria-label="Remove the ${f5[1].toLowerCase()} filter">${raw(ic("x"))}</button></span>`;
     });
     if (RVQ.trim()) chips.push(html`<span class="fchip">Search: “${RVQ.trim()}”<button data-rvclr="q" aria-label="Clear the search">${raw(ic("x"))}</button></span>`);
-    putHTML($("#rvapplied"), html`${chips.length ? html`${chips}<button class="linkbtn" id="rvClearF">Clear all</button><span class="sp"></span><span class="sub" id="rvcount">Showing ${shown3} of ${total}</span>` : ""}`);
+    putHTML($("#rvapplied"), html`${chips.length ? html`${chips}<button class="linkbtn" id="rvClearF">Clear all</button><span class="sp"></span><span class="sub" id="rvcount">Showing ${shown2} of ${total}</span>` : ""}`);
   }
   function rvRoutineBtn() {
     const n4 = rvMatching().filter(rvBulkOK).length, b5 = $("#routineBtn");
@@ -31903,9 +31903,9 @@ ${s5}`;
       });
       renderReview();
     };
-    const lab = { p: "Project", o: "Owner", due: "Due date", ws: "Workstream", ms: "Milestone", pr: "Priority", st: "Status", imp: "Impact", lik: "Likelihood" }[f5], shown3 = f5 === "p" ? pName(v5) : f5 === "due" ? v5 ? fd(v5) : "none" : f5 === "ms" ? v5 ? msLabel(v5) : "none" : v5 || "none";
+    const lab = { p: "Project", o: "Owner", due: "Due date", ws: "Workstream", ms: "Milestone", pr: "Priority", st: "Status", imp: "Impact", lik: "Likelihood" }[f5], shown2 = f5 === "p" ? pName(v5) : f5 === "due" ? v5 ? fd(v5) : "none" : f5 === "ms" ? v5 ? msLabel(v5) : "none" : v5 || "none";
     renderReview();
-    snack(`${lab} set to ${shown3} on ${ok2.length} proposal${ok2.length === 1 ? "" : "s"}${left.length ? `. Left out: ${left.join("; ")}` : ""}`, undo);
+    snack(`${lab} set to ${shown2} on ${ok2.length} proposal${ok2.length === 1 ? "" : "s"}${left.length ? `. Left out: ${left.join("; ")}` : ""}`, undo);
     if (f5 === "p") rvLearnCard(ok2.map((o5) => o5.r), v5);
   }
   function rvLearnCard(L3, code) {
@@ -33512,7 +33512,7 @@ ${s5}`;
       /** @type {Record<string, string>} */
       {}
     );
-    const [shown3, setShown] = d2(false);
+    const [shown2, setShown] = d2(false);
     const [done, setDone] = d2(
       /** @type {{text: string, ok: boolean, applyId?: any}|null} */
       null
@@ -33837,7 +33837,7 @@ ${s5}`;
         {
           r: r4,
           id: id2,
-          shown: shown3,
+          shown: shown2,
           busy,
           flash,
           closing,
@@ -33975,7 +33975,7 @@ ${s5}`;
       ] })
     ] });
   }
-  function Card({ r: r4, id: id2, text, shown: shown3, busy, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
+  function Card({ r: r4, id: id2, text, shown: shown2, busy, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
     if (!r4.ok) return /* @__PURE__ */ u2("div", { class: "sp-card warn", role: "alert", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: r4.message || "That couldn't be read." }) });
     if (r4.refused) {
       const btn = POINT[r4.refused.point_to], to2 = r4.refused.point_to;
@@ -34072,7 +34072,7 @@ ${s5}`;
         ] })
       ] });
       if (r4.problems.length) return /* @__PURE__ */ u2("div", { class: "sp-card warn", id: "spProblems", role: "alert", children: r4.problems.map((p6, i5) => /* @__PURE__ */ u2("div", { class: "sp-msg", children: p6 }, i5)) });
-      if (!shown3) return null;
+      if (!shown2) return null;
       return /* @__PURE__ */ u2("div", { class: "sp-card", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: [
         "I couldn't match that to ",
         id2,
@@ -36543,7 +36543,7 @@ ${s5}`;
   function workBarProps() {
     const R4 = FPRANGES(), main = defs().filter((d5) => !d5[4]), more = defs().filter((d5) => d5[4]);
     if (![...defs().map((d5) => d5[0]), ...R4.map((r4) => r4[0])].includes(shared.FPK)) shared.FPK = (more.find((d5) => setOf(d5[0]).size) || more[0] || main[0])[0];
-    const rng = (k5) => k5 === "dr" ? shared.DR : k5 === "rr" ? RR : shared.CR, rOn = (k5) => !!(rng(k5).from || rng(k5).to), total = items().length, shown3 = items().filter((x5) => passes(x5)).length;
+    const rng = (k5) => k5 === "dr" ? shared.DR : k5 === "rr" ? RR : shared.CR, rOn = (k5) => !!(rng(k5).from || rng(k5).to), total = items().length, shown2 = items().filter((x5) => passes(x5)).length;
     const fields = [
       ...defs().map((d5) => {
         const k5 = d5[0], on2 = !!setOf(k5).size, id2 = BTNID[k5] || k5;
@@ -36607,7 +36607,7 @@ ${s5}`;
           if (vis.length && !vis.some((f5) => f5[0] === shared.FPK)) shared.FPK = vis[0][0];
           drawWorkFilters();
         },
-        result: `Result: ${shown3} of ${total} shown`,
+        result: `Result: ${shown2} of ${total} shown`,
         resultId: "fpResult",
         doneId: "fpDone"
       },
@@ -36646,7 +36646,7 @@ ${s5}`;
   function fchipHtml(label, k5, clr, { neg = false, def = false, edit = "", attr: attr2 = "data-clr" } = {}) {
     return `<span class="fchip${neg ? " neg" : ""}${def ? " def" : ""}">${edit ? `<button type="button" class="cl" data-${edit}="${esc(k5)}" aria-label="Change: ${esc(label)}">${esc(label)}</button>` : esc(label)}<button ${attr2}="${esc(k5)}" aria-label="${esc(clr)}">${ic("x")}</button></span>`;
   }
-  function renderApplied(total, shown3) {
+  function renderApplied(total, shown2) {
     const chips = [];
     defs().forEach((d5) => {
       const v5 = [...setOf(d5[0])];
@@ -36659,7 +36659,7 @@ ${s5}`;
     if (shared.WT !== "decisions" && (RR.from || RR.to)) chips.push(`<span class="fchip">Raised: ${RR.from ? fd(RR.from) : "…"} to ${RR.to ? fd(RR.to) : "…"}<button data-clr="rr" aria-label="Remove the raised date range">${ic("x")}</button></span>`);
     if (shared.WT !== "decisions" && (shared.CR.from || shared.CR.to)) chips.push(`<span class="fchip">Closed: ${shared.CR.from ? fd(shared.CR.from) : "…"} to ${shared.CR.to ? fd(shared.CR.to) : "…"}<button data-clr="cr" aria-label="Remove the closed date range">${ic("x")}</button></span>`);
     if (shared.WQ.trim()) chips.push(fchipHtml(`Search: “${shared.WQ.trim()}”`, "q", "Clear the search"));
-    putHTML($("#wapplied"), html`${raw(chips.join(""))}${chips.length ? html`<button class="linkbtn" id="clearF">Clear all</button>` : ""}${!shared.WVIEW && chips.length || !shared.WVIEW && WB[shared.WT] ? raw(viewSaveBtns()) : ""}<span class="sp"></span><span class="sub"><span id="wcount">Showing ${raw(shown3)} of ${raw(total)}</span><span id="whidden"></span></span>`);
+    putHTML($("#wapplied"), html`${raw(chips.join(""))}${chips.length ? html`<button class="linkbtn" id="clearF">Clear all</button>` : ""}${!shared.WVIEW && chips.length || !shared.WVIEW && WB[shared.WT] ? raw(viewSaveBtns()) : ""}<span class="sp"></span><span class="sub"><span id="wcount">Showing ${raw(shown2)} of ${raw(total)}</span><span id="whidden"></span></span>`);
   }
   var COLS = {
     actions: [["id", "ID"], ["t", "Action"], ["o", "Owner"], ["due", "Due"], ["pr", "Priority"], ["st", "Status"], ["ws", "Workstream"], ["ms", "Milestone"], ["src", "Source"], ["upd", "Last updated"]],
@@ -36733,15 +36733,15 @@ ${s5}`;
       sizeList();
     })();
     {
-      const total = items().length, shown3 = items().filter((x5) => passes(x5)).length, h5 = hiddenCount();
+      const total = items().length, shown2 = items().filter((x5) => passes(x5)).length, h5 = hiddenCount();
       const ht2 = h5.n ? ` · ${h5.n} ${h5.closed ? "closed " : ""}hidden${h5.closed ? "" : " by the status filter"}` : "", hs2 = $("#whidden");
       if (hs2) hs2.textContent = ht2;
       const e4 = $(layoutOf(shared.WT) === "board" ? "#workBoard .empty" : "#workTbl .empty");
-      if (!shown3 && e4) {
+      if (!shown2 && e4) {
         putHTML(e4, raw(emptyHtml()));
         const F5 = activeFilters();
         workAnnounce(F5.length ? e4.querySelector("h2").textContent + ". " + [...e4.querySelectorAll(".relax > div")].map((d5) => d5.querySelector("span").textContent + ": " + d5.querySelector(".sub").textContent).join("; ") : "Nothing here yet");
-      } else workAnnounce(`Showing ${shown3} of ${total}${ht2}`);
+      } else workAnnounce(`Showing ${shown2} of ${total}${ht2}`);
     }
     $$("#v-work tr[data-row], #v-mine tr[data-row]").forEach((tr2) => {
       const td2 = tr2.querySelector("td.title");
@@ -36866,8 +36866,8 @@ ${s5}`;
   function dispProps() {
     const ord = orderedCols().map((c5) => c5[0]), rest = COLS[shared.WT].filter((c5) => !ord.includes(c5[0]));
     return [...orderedCols(), ...rest].map((c5) => {
-      const shown3 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]);
-      return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown3 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown3 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+      const shown2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]);
+      return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown2 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
     }).join("");
   }
   shared.RZ = store.get("creaite-colwidths", {});
@@ -38965,7 +38965,7 @@ ${s5}`;
       {
         const bar = $("#wbulk");
         if (bar && !bar.hidden && shared.VIEW === "work") {
-          const all = rows(), shown3 = new Set(hlOrder().map((o5) => o5.id)), hid = [...HL.keys()].filter((id2) => !shown3.has(id2)).length;
+          const all = rows(), shown2 = new Set(hlOrder().map((o5) => o5.id)), hid = [...HL.keys()].filter((id2) => !shown2.has(id2)).length;
           const n4 = bar.querySelector(".bkn");
           if (n4) n4.textContent = `${HL.size} selected${hid ? ` (${hid} in collapsed groups)` : ""}${HLNOTE ? ` · ${HLNOTE}` : ""}`;
           if (HL.size < all.length) n4 && addHTML(n4, "afterend", html`<button type="button" class="linkbtn" data-bq="all" title="Highlights every item the filters show, in collapsed groups too">Select all ${all.length} matching</button>`);
@@ -39423,13 +39423,13 @@ ${s5}`;
       return;
     }
     $("#mtgNew").disabled = !L3.some((m5) => mtgCanPick(m5) && !m5.private);
-    const shown3 = mtgShown, nTx = L3.filter(mtgHasTx).length;
+    const shown2 = mtgShown, nTx = L3.filter(mtgHasTx).length;
     putHTML($("#mtgChips"), html`<button type="button" class="vchip" data-show="all" aria-pressed="${String(MTGSHOW !== "tx")}">All</button><button type="button" class="vchip" data-show="tx" aria-pressed="${String(MTGSHOW === "tx")}">With transcripts · ${nTx}</button>`);
-    const days2 = [...new Set(L3.filter(shown3).map((m5) => m5.day))], org = (m5) => m5.organiser === true ? "You" : m5.organiser ? m5.organiser : html`<span class="sub">—</span>`;
+    const days2 = [...new Set(L3.filter(shown2).map((m5) => m5.day))], org = (m5) => m5.organiser === true ? "You" : m5.organiser ? m5.organiser : html`<span class="sub">—</span>`;
     const sel = (on2) => raw(on2 ? "selected" : ""), off = (on2) => raw(on2 ? "disabled" : "");
     const projSel = (m5, i5) => html`<select class="mtgp" data-mi="${i5}" aria-label="Project for ${m5.title}"><option value="" ${sel(!m5.p)}>Not sure</option>${P4.map((p6) => html`<option value="${p6.code}" ${sel(m5.p === p6.code)}>${p6.name}</option>`)}<option value="_portfolio" ${sel(m5.p === "_portfolio")}>Portfolio</option></select>`;
     const noIds = L3.some((m5) => !m5.id);
-    putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L3.filter((m5) => m5.day === d5 && shown3(m5)).length}</button></div></td></tr>${L3.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown3(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
+    putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L3.filter((m5) => m5.day === d5 && shown2(m5)).length}</button></div></td></tr>${L3.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown2(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
     if (!shared.LOADING) {
       const L4 = MTG();
       $$("#mtgBody tr[data-mid]").forEach((tr2) => {
@@ -39858,9 +39858,9 @@ ${s5}`;
   shared.FLAST = 0;
   shared.FBUSY = false;
   var clockOf = (at2) => String(at2 || "").slice(11, 16);
-  function filesStatus(shown3) {
+  function filesStatus(shown2) {
     const n4 = FNEW.size, tot = FILES.length;
-    $("#filesCount").textContent = `${shown3 === void 0 ? tot : shown3} of ${tot} files${n4 ? ` · ${n4} new` : ""}`;
+    $("#filesCount").textContent = `${shown2 === void 0 ? tot : shown2} of ${tot} files${n4 ? ` · ${n4} new` : ""}`;
     $("#filesAt").textContent = FERR ? FERR : shared.FBUSY && shared.FBUSY === "slow" ? "Checking…" : SERVED && (FAT || D.built_at) ? `Updated ${clockOf(FAT || D.built_at)}.` : "File list as of the last build.";
   }
   async function refreshFiles(force) {
@@ -50802,7 +50802,7 @@ ${d5.text}`);
     const r4 = btn.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
-    const pad = (n4) => String(n4).padStart(2, "0"), isoOf3 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+    const pad = (n4) => String(n4).padStart(2, "0"), isoOf2 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
     const draw2 = (focus) => {
       const f5 = new Date(y5, m5, 1), st2 = (f5.getDay() + 6) % 7, dn2 = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st2);
@@ -50871,7 +50871,7 @@ ${d5.text}`);
         d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
       } else return;
       e4.preventDefault();
-      goTo(isoOf3(d5));
+      goTo(isoOf2(d5));
     });
     if (shared.CAL && wkField(inp)) {
       wkMark(shared.CAL);
@@ -51581,7 +51581,7 @@ ${d5.text}`);
 
   // components/notes/FindUpdates.jsx
   var FU_GROUPS = [["new", "New"], ["update", "Updates to existing items"], ["milestone", "Milestones"], ["info", "Project information"]];
-  function isoOf2(v5) {
+  function fuIsoOf(v5) {
     const s5 = String(v5 || "").trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(s5)) return s5;
     const m5 = s5.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
@@ -51589,7 +51589,7 @@ ${d5.text}`);
     const d5 = new Date(+m5[3], +m5[2] - 1, +m5[1]);
     return d5.getMonth() === +m5[2] - 1 ? `${m5[3]}-${m5[2].padStart(2, "0")}-${m5[1].padStart(2, "0")}` : null;
   }
-  var shown2 = (v5) => /^\d{4}-\d{2}-\d{2}$/.test(v5 || "") ? `${v5.slice(8, 10)}-${v5.slice(5, 7)}-${v5.slice(0, 4)}` : v5 || "";
+  var fuShown = (v5) => /^\d{4}-\d{2}-\d{2}$/.test(v5 || "") ? `${v5.slice(8, 10)}-${v5.slice(5, 7)}-${v5.slice(0, 4)}` : v5 || "";
   function valueOf(row2, f5) {
     const it2 = row2.item || {}, part = f5.part === "person" ? it2.person : f5.part === "memory" ? it2.memory : it2[f5.part];
     return String((part || {})[f5.f] ?? "");
@@ -51634,14 +51634,14 @@ ${d5.text}`);
             type: "text",
             inputMode: "numeric",
             placeholder: "DD-MM-YYYY",
-            value: shown2(v5),
+            value: fuShown(v5),
             "aria-invalid": bad ? "true" : void 0,
             "aria-describedby": bad ? `${id2}-e` : void 0,
             onChange: (e4) => {
               const t47 = (
                 /** @type {HTMLInputElement} */
                 e4.currentTarget.value
-              ), iso = t47.trim() ? isoOf2(t47) : "";
+              ), iso = t47.trim() ? fuIsoOf(t47) : "";
               if (iso === null) {
                 setBad("Write the date as DD-MM-YYYY");
                 return;
@@ -53881,7 +53881,7 @@ ${d5.text}`);
   }
   function LooseEnds({ loose, places, all, onPick, onAll, onMore, sweeping }) {
     if (!loose.length) return /* @__PURE__ */ u2("p", { class: "sub", children: sweeping ? "Nothing is open yet; anything the sweep finds is added here." : "Nothing is left open. Everything has a place." });
-    const shown3 = all ? loose : loose.slice(0, SHOWN), common = loose.every((x5) => places[x5.ref] === places[loose[0].ref]) ? places[loose[0].ref] : "";
+    const shown2 = all ? loose : loose.slice(0, SHOWN), common = loose.every((x5) => places[x5.ref] === places[loose[0].ref]) ? places[loose[0].ref] : "";
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2("section", { children: [
         /* @__PURE__ */ u2("h4", { children: "Give each a place" }),
@@ -53889,13 +53889,13 @@ ${d5.text}`);
           /* @__PURE__ */ u2("span", { class: "sub", children: loose.length > 1 ? `All ${loose.length}:` : "It:" }),
           /* @__PURE__ */ u2(Place, { label: `Place for all ${plur(loose.length, "loose end")}`, value: common, onPick: onAll })
         ] }),
-        /* @__PURE__ */ u2("ul", { class: "dclist cdloose", children: shown3.map((x5) => /* @__PURE__ */ u2("li", { "data-ref": x5.ref, children: [
+        /* @__PURE__ */ u2("ul", { class: "dclist cdloose", children: shown2.map((x5) => /* @__PURE__ */ u2("li", { "data-ref": x5.ref, children: [
           /* @__PURE__ */ u2(LooseWords, { x: x5 }),
           /* @__PURE__ */ u2(Place, { label: `Place for ${x5.type}: ${x5.t}`, value: places[x5.ref], onPick: (v5) => onPick(x5.ref, v5) })
         ] })) }),
-        loose.length > shown3.length ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-cdmore": "1", onClick: onMore, children: [
+        loose.length > shown2.length ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-cdmore": "1", onClick: onMore, children: [
           "and ",
-          loose.length - shown3.length,
+          loose.length - shown2.length,
           " more"
         ] }) : null
       ] }),
@@ -55550,14 +55550,14 @@ ${d5.text}`);
     if (c5 !== shared.ASKCHAT) loadChat(c5);
   } });
   async function drawHistory() {
-    let shown3 = false;
+    let shown2 = false;
     const t47 = setTimeout(() => {
-      shown3 = true;
+      shown2 = true;
       histOpen([], true);
     }, 150);
     try {
       const res = await api("/api/chats"), L3 = (res.chats || []).slice(0, 10);
-      if (shown3 && !menuOpenFor($("#chHist"))) return;
+      if (shown2 && !menuOpenFor($("#chHist"))) return;
       histOpen([{ id: "rc", note: "Recent chats" }, ...L3.length ? L3.map((c5) => ({
         id: c5.chat,
         name: c5.title || "Untitled",

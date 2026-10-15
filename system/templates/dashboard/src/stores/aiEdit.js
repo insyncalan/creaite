@@ -120,7 +120,7 @@ function barFor(h, ai) {
   aiHome(h);
   aiBar.value = { h, ai, ...aiPlace(h, s.from, s.to, 120) };
 }
-/** The layer goes where the editor is: inside its open modal <dialog> (the Prep popup), which is in the top layer and makes the
+/** The layer goes where the editor is: inside its open modal dialog element (the Prep popup), which is in the top layer and makes the
     rest of the page inert, else on the body (COMPONENTS.md: popovers inside a dialog render inside it). @param {AiHandle} h */
 export function aiHome(h) {
   const l = document.getElementById("aiLayer");
