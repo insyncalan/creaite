@@ -2695,6 +2695,41 @@
    ""
   ]
  },
+ "outside": {
+  "<HOME>/Documents/notes.txt | notes_exempt=False": "read a file outside the vault",
+  "<HOME>/Documents/notes.txt | notes_exempt=True": "read a file outside the vault",
+  "inbox/forward.txt | notes_exempt=False": "read inbox/",
+  "inbox/forward.txt | notes_exempt=True": "read inbox/",
+  "projects/ABC Example Programme/documents/notes/d.md | notes_exempt=False": "read a project document",
+  "projects/ABC Example Programme/documents/notes/d.md | notes_exempt=True": "read a project document",
+  "projects/ABC Example Programme/documents/plan.md | notes_exempt=False": "read a project document",
+  "projects/ABC Example Programme/documents/plan.md | notes_exempt=True": "read a project document",
+  "projects/ABC Example Programme/notes.md | notes_exempt=False": null,
+  "projects/ABC Example Programme/notes.md | notes_exempt=True": null,
+  "projects/ABC Example Programme/notes/_images/a.md | notes_exempt=False": null,
+  "projects/ABC Example Programme/notes/_images/a.md | notes_exempt=True": null,
+  "projects/ABC Example Programme/notes/_images/a.png | notes_exempt=False": null,
+  "projects/ABC Example Programme/notes/_images/a.png | notes_exempt=True": null,
+  "projects/ABC Example Programme/notes/c.txt | notes_exempt=False": null,
+  "projects/ABC Example Programme/notes/c.txt | notes_exempt=True": null,
+  "projects/ABC Example Programme/notes/kickoff.md | notes_exempt=False": null,
+  "projects/ABC Example Programme/notes/kickoff.md | notes_exempt=True": null,
+  "projects/ABC Example Programme/notes/old/b.md | notes_exempt=False": null,
+  "projects/ABC Example Programme/notes/old/b.md | notes_exempt=True": null,
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | notes_exempt=False": "read a transcript",
+  "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt | notes_exempt=True": "read a transcript",
+  "projects/_portfolio/notes/themes.md | notes_exempt=False": null,
+  "projects/_portfolio/notes/themes.md | notes_exempt=True": null
+ },
+ "outside_table": {
+  "folders": [
+   "inbox",
+   "transcripts",
+   "documents"
+  ],
+  "notes_exempt": true,
+  "outside_vault": true
+ },
  "preview_list": {
   "local add allow Edit(inbox/**)": {
    "after": [

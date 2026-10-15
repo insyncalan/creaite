@@ -431,6 +431,22 @@ LIVE_SCRIPT = r"""
 """
 
 
+class OutsideContentTable(unittest.TestCase):
+    """BL-141's table of what marks a run, as the server hands it to reach.start_run. BL-301 (Alan, 15-10-2026): one of Alan's
+    notes is exempt; nothing else changed (test_notes_guard.py reads notes, pictures and transcripts through the hook)."""
+
+    def test_the_table(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import live_server
+        import permissions
+        t = live_server.OUTSIDE_CONTENT
+        self.assertEqual(sorted(t), ["folders", "notes_exempt", "outside_vault", "tools"])
+        self.assertEqual(t["folders"], ["inbox", "transcripts", "documents"])
+        self.assertIs(t["outside_vault"], True)
+        self.assertIs(t["notes_exempt"], True)
+        self.assertEqual(t["tools"], [*permissions.m365_read_tools(), "WebFetch", "WebSearch"])
+
+
 @unittest.skipUnless(CHROME.exists(), "Google Chrome not installed")
 class LivePageTests(unittest.TestCase):
     """The page served live, in headless Chrome: saves applied at once, undo, review checks. (ask creaite's stream is

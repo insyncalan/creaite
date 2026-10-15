@@ -63,7 +63,7 @@ paths = ["system/tracker.db", "system/scripts/tracker.py", "system/scripts/new.p
          H + "/.claude/settings.json", H + "/Documents/new.txt", "/etc/hosts", "/usr/bin/python3", "/System/Library/x",
          "/tmp/x.txt", "~/Documents/notes.txt"]
 out = {"classify": {}, "tier": {}, "bash": {}, "hook": {}, "rules": {}, "settings_problem": {}, "validate_edit": {},
-       "preview_list": {}}
+       "preview_list": {}, "outside": {}}
 for p in paths:
     for op in reach.OPERATIONS:
         variants = [(False, 0)] if op == "read" else [(False, 0), (True, 0), (False, 11)]
@@ -107,6 +107,16 @@ calls = [("Read", {"file_path": ABC + "/notes.md"}), ("Read", {"file_path": H + 
 for mode in ("ask", "confirmed"):
     for tool, inp in calls:
         out["hook"][f"{mode} | {tool} | {short(json.dumps(inp, sort_keys=True), 140)}"] = list(reach.hook_decision(tool, inp, mode, ""))
+# BL-301 (Alan, 15-10-2026, re-pinned deliberately): what a read marks under the server's table, with and without the notes
+# exemption. Only a .md directly in a notes folder is exempt; its _images, a subfolder, transcripts and documents still mark.
+import live_server
+out["outside_table"] = {k: v for k, v in live_server.OUTSIDE_CONTENT.items() if k != "tools"}
+for p in [ABC + "/notes/kickoff.md", ABC + "/notes/_images/a.png", ABC + "/notes/_images/a.md", ABC + "/notes/old/b.md",
+          ABC + "/notes/c.txt", ABC + "/notes.md", ABC + "/transcripts/2026-10-01 Steering.vtt", ABC + "/documents/plan.md",
+          ABC + "/documents/notes/d.md", "projects/_portfolio/notes/themes.md", "inbox/forward.txt", H + "/Documents/notes.txt"]:
+    for exempt in (True, False):
+        t = {**live_server.OUTSIDE_CONTENT, "notes_exempt": exempt}
+        out["outside"][f"{short(p, 80)} | notes_exempt={exempt}"] = reach.outside_reason("Read", {"file_path": p}, t)
 for r in ["Bash(python3 system/scripts/tracker.py *)", "Bash(python3 system/scripts/tracker.py:*)",
           "Bash(python3 system/scripts/report.py *)", "Bash(python3 system/scripts/permissions.py *)", "Bash(rm *)",
           "Bash(*)", "Bash", "Bash(python3 *)", "Bash(system/scripts/run tracker.py *)", "Edit(**)", "Edit(inbox/**)",
