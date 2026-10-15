@@ -10,13 +10,16 @@ Run: python3 dev/tests/test_drafts_report.py      (quick tier: no Chrome, no mod
 """
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_reports as R  # noqa: E402  (its fixture: populate, ReportVault, NOW; the data is fictional)
+import test_minutes_approve as M  # noqa: E402
 
 HEAD = "import sys, json; sys.path.insert(0, 'system/scripts')\nimport drafts\n"
 CLIENT_TEXT = "Phase two can start once the paperwork is signed."
@@ -117,6 +120,131 @@ class Weekly(ReportBase):
         self.assertEqual(got["text"], "")
         self.assertNotIn("VIP", json.dumps(got))
         self.assertNotIn("VIP", json.dumps(ctx))
+
+
+class ClientSection(ReportBase):
+    """Privacy by construction: the facts are the client version's, line by line through client_leak."""
+
+    def seed_withheld(self):
+        """One of each kind of withheld content, on top of the fixture's internal-only items: a client-visible item that is
+        Sensitive, one that is partner-only, one a label excludes, and the memory line marked Client-safe: no."""
+        self.new_label("Partner only")
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("INSERT OR IGNORE INTO labels (name, behaviour) VALUES ('Exclude from client', 'exclude')")
+            con.commit()
+        self.label("ABC-006", "Sensitive")           # Test licences (client-visible)
+        self.label("ABC-D-007", "Partner only")      # Go-live stays on 20 November (client-visible)
+        self.label("ABC-A-002", "Exclude from client")   # Sign the statement of work (client-visible)
+
+    WITHHELD = ("Test licences", "Go-live stays", "Go-live remains", "statement of work", *INTERNAL_ONLY)
+
+    def test_control_the_client_sheet_does_hold_these_before_they_are_withheld(self):
+        ctx = self.ctx(CLIENT)
+        text = everything(ctx)
+        self.assertIn("Test licences are not yet ordered", text)                      # client-visible: in the client version
+        self.assertIn("Go-live remains on 20 November", text)
+        self.assertIn("statement of work", text)
+        for internal in INTERNAL_ONLY:
+            self.assertNotIn(internal, text)                                            # never client-visible
+
+    def test_nothing_withheld_is_in_the_prompt_or_the_facts(self):
+        self.seed_withheld()
+        ctx = self.ctx(CLIENT)
+        self.assertIn("prompt", ctx, ctx)
+        text = everything(ctx)
+        for gone in self.WITHHELD:
+            self.assertNotIn(gone, text)
+        self.assertNotIn("ABC-006", text)
+        self.assertNotIn("ABC-D-007", text)
+        self.assertEqual(ctx["extra"]["audience"], "client")
+        self.assertIn("Audience: client-safe", ctx["prompt"])
+
+    def test_each_kind_of_withheld_line_is_dropped_by_client_leak_itself(self):
+        """The second check, apart from the client sheet: a line resting on a withheld item is dropped whatever the sheet held."""
+        self.seed_withheld()
+        lines = {"internal-only": {"text": "Confirm tester names", "src": ["ABC-A-004"]},
+                 "sensitive": {"text": "Licences", "src": ["ABC-006"]}, "partner-only": {"text": "Go-live", "src": ["ABC-D-007"]},
+                 "excluded": {"text": "Sign it", "src": ["ABC-A-002"]},
+                 "memory line": {"text": "Budget overrun on phase one is being absorbed", "src": []},
+                 "internal wording": {"text": "See documents/plan for the confidential detail", "src": []},
+                 "client-visible": {"text": "Send the revised plan", "src": ["ABC-A-003"]}}
+        got = py(self.v, f"import client_leak\ncon = client_leak.connect()\nb = client_leak.blocking_labels(con)\n"
+                         f"print(json.dumps({{k: drafts.client_line_ok(con, 'ABC', ln, b) for k, ln in {lines!r}.items()}}))")
+        self.assertEqual(got, {"internal-only": False, "sensitive": False, "partner-only": False, "excluded": False,
+                               "memory line": False, "internal wording": False, "client-visible": True})
+
+    def test_a_section_that_already_holds_internal_wording_is_not_sent(self):
+        got = self.ctx({**CLIENT, "text": "Vendor exits the market before go-live."})
+        self.assertIn("isn't client-safe", got["refused"])
+        self.assertNotIn("prompt", got)
+
+    def test_a_reply_that_brings_in_internal_wording_is_dropped(self):
+        ctx = self.ctx(CLIENT)
+        reply = "The vendor exits the market before go-live, so we absorb the phase one overrun. [S1]"
+        got = py(self.v, f"print(json.dumps(drafts.result({CLIENT!r}, {ctx!r}, {reply!r})))")
+        self.assertEqual(got["text"], "")
+        self.assertIn("isn't client-safe", got["message"])
+        ok = py(self.v, f"print(json.dumps(drafts.result({CLIENT!r}, {ctx!r}, 'Testing could start late. [S1]')))")
+        self.assertEqual(ok["text"], "Testing could start late.")
+
+
+def _minutes_vault_case():
+    class MinutesSection(M.Base):
+        """A distributed version never holds an Internal only line or row, nor a Sensitive, partner-only or excluded item."""
+        GONE = M.FollowUp.GONE
+        seed = M.FollowUp.seed
+
+        def ctx(self, **extra):
+            req = {"kind": "minutes-section", "path": M.DRAFT, "section": "summary", "action": "polish", "version": "distributed",
+                   "text": "The committee met.\n\nSECRETLINE is for us only.", **extra}
+            return self.js("import drafts\nprint(json.dumps(drafts.context(" + repr(req) + "), ensure_ascii=False))")
+
+        def test_the_distributed_prompt_and_facts_hold_nothing_withheld(self):
+            self.seed()
+            ctx = self.ctx()
+            self.assertIn("prompt", ctx, ctx)
+            text = everything(ctx)
+            for gone in self.GONE:
+                self.assertNotIn(gone, text)
+            self.assertIn("The committee met.", ctx["prompt"])                      # the version's own words
+            self.assertIn("Book the UAT environment", text)                          # what everyone may see is a source
+            self.assertIn("Shared action", text)
+            self.assertIn("distributed version", ctx["prompt"])
+            self.assertEqual(ctx["extra"]["audience"], "distributed")
+
+        def test_the_distributed_words_come_from_the_record_never_from_the_page(self):
+            self.seed()
+            ctx = self.ctx(text="SECRETLINE is for us only. Internal-only row action.")      # a page that sent the internal words
+            text = everything(ctx)
+            self.assertNotIn("SECRETLINE", text)
+            self.assertNotIn("Internal-only row action", text)
+
+        def test_the_internal_version_keeps_them_and_says_so(self):
+            self.seed()
+            ctx = self.ctx(version="internal")
+            text = everything(ctx)
+            for kept in ("SECRETLINE", "Sensitive action", "Sensitive decision"):
+                self.assertIn(kept, text)
+            self.assertIn("This is the internal version.", ctx["prompt"])
+
+        def test_other_versions_sections_and_paths_are_refused(self):
+            self.seed()
+            self.assertIn("internal or the distributed", self.ctx(version="client")["refused"])
+            self.assertIn("can't be redrafted", self.ctx(section="actions")["refused"])          # a table
+            self.assertIn("can't be redrafted", self.ctx(section="nope")["refused"])
+            self.assertIn("minutes creaite can open", self.ctx(path="../../etc/passwd")["refused"])
+
+        def test_the_reply_is_checked_and_a_vip_is_dropped(self):
+            self.seed()
+            ctx = self.ctx()
+            got = self.js("import drafts\nprint(json.dumps(drafts.result({}, " + repr(ctx) + ", 'The committee met and agreed. [S1]')))")
+            self.assertEqual((got["section"], got["text"]), ("summary", "The committee met and agreed."))
+            bad = self.js("import drafts\nprint(json.dumps(drafts.result({}, " + repr(ctx) + ", 'A VIP joined. [S1]')))")
+            self.assertEqual(bad["text"], "")
+    return MinutesSection
+
+
+MinutesSection = _minutes_vault_case()
 
 
 class Counts(ReportBase):
