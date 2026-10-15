@@ -2377,7 +2377,7 @@ def _add_line(item, a, line, source):
     (the hash of kind and conversation), not on the newest message's link, so a thread with a new message adds nothing. When
     Part 1's `keys` land, any of the card's keys should count here too."""
     sg = item["suggested"]
-    ids = {a["id"], *(a.get("ids") or []), *(a.get("keys") or [])}
+    ids = {a["id"], *(a.get("ids") or [])}
     if ids & set(sg.get("threads") or []):
         return False
     sg["threads"] = list(sg.get("threads") or []) + [a["id"]]
