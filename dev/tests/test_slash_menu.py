@@ -432,10 +432,10 @@ class Slash(LiveBrowserCase):
         """With the reversible mapping (headsIn/headsOut): a stored `# ` or `######` line is plain text, and the menu's headings go through
         the editor's commands so they are written ###, #### and ##### beside it; nothing stray is turned into a heading or lost."""
         b = self.b
-        stray = "# Stray one\n\n###### Six hashes\n\n## Stray two"
+        stray = "# Stray one\n\n###### Six hashes\n\n####### Seven"      # a `## ` line would end the section in the memory file itself
         self.open_current(f"{STATE}\n\n{stray}")
         before = b.eval("edValue(curEd)")
-        for line in ("# Stray one", "###### Six hashes", "## Stray two"):
+        for line in ("# Stray one", "###### Six hashes", "####### Seven"):
             self.assertIn(line, before.split("\n"), "untouched, an odd line is saved as it was")
         b.key("Enter"); b.key("Enter")
         for n in (1, 2, 3):
@@ -447,7 +447,7 @@ class Slash(LiveBrowserCase):
             b.key("Enter")
         value = b.eval("edValue(curEd)")
         lines = value.split("\n")
-        for line in ("# Stray one", "###### Six hashes", "## Stray two"):
+        for line in ("# Stray one", "###### Six hashes", "####### Seven"):
             self.assertIn(line, lines, f"{line!r} stays byte for byte after the menu is used elsewhere")
         for n in (1, 2, 3):
             self.assertIn(f"{'#' * (n + 2)} Menu {n}", lines)
