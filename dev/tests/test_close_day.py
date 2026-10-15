@@ -12,6 +12,7 @@ import subprocess
 import sys
 import unittest
 from contextlib import closing
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -26,13 +27,15 @@ PREP = ABC + "/agendas/2026-10-19 ABC Steering prep.html"
 
 
 def load(v):
-    populate(v)
+    with mock.patch.dict(os.environ, {"CREAITE_STAMP_DAY": "2026-10-10"}):    # the shared fixture's applies are stamped with the real date: keep them off the fixed day
+        populate(v)
     st = v.root / "system/staging"
     v.propose("today", [{"n": 1, "op": "update", "table": "actions", "id": "ABC-A-002", "changes": {"status": "Closed", "closed": "2026-10-16"},
                          "decision": "approved"},
                         {"n": 2, "op": "new", "table": "decisions", "values": {"project": "ABC", "decision": "Keep the pilot scope", "made_by": "Alan Carter",
                                                                                "date": "2026-10-16", "source": "s"}, "match": "strong", "flags": [], "decision": "approved"}])
-    v.run("apply")
+    with mock.patch.dict(os.environ, {"CREAITE_STAMP_DAY": "2026-10-16"}):
+        v.run("apply")
     with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:
         last = con.execute("SELECT max(apply_id) FROM applies").fetchone()[0]
         con.execute("UPDATE change_log SET at = '2026-10-16 15:00:00' WHERE apply_id = ?", (last,))
