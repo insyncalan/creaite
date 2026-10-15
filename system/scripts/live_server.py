@@ -3205,14 +3205,9 @@ def mark_interrupted():
 
 VIP_TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
              "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
-# Every built-in tool name Claude Code is known to have: the default set of 2.1.300 (`claude -p --output-format stream-json
-# --verbose`, the init event's tools, no --tools) and the names other versions use (Grep, Glob, LS, MultiEdit, Agent).
-# dev/tests/test_vip_tools_pinned.py keeps a copy of the 2.1.300 list; refresh both when Claude Code adds a built-in.
-KNOWN_BUILTINS = ["Task", "Agent", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList",
-                  "DesignSync", "Edit", "MultiEdit", "EnterWorktree", "ExitWorktree", "Glob", "Grep", "LS", "ListAgents",
-                  "ListMcpResourcesTool", "Monitor", "NotebookEdit", "PushNotification", "Read", "ReadMcpResourceDirTool",
-                  "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill",
-                  "TaskStop", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write"]
+# Every built-in tool name Claude Code is known to have: permissions.KNOWN_BUILTINS, the one list (Jarvis, 15-10-2026), kept
+# under this name for the VIP check and its tests.
+KNOWN_BUILTINS = list(vault_permissions.KNOWN_BUILTINS)
 VIP_BUILTIN_ALLOWED = ["ToolSearch"]       # loads deferred tools' schemas only; reads, runs and writes nothing
 VIP_BUILTIN_DENIES = [t for t in KNOWN_BUILTINS if t not in VIP_BUILTIN_ALLOWED]
 # BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
