@@ -2821,6 +2821,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand .ct{flex:1;min-width:0;font-size:var(--fs-sm);line-height:20px;overflow-wrap:anywhere}
 .tdcand .cs{color:var(--day-muted,var(--muted))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
+.tdmark{vertical-align:2px;height:18px}
 #tBrief .tdrow.td-quiet .tb .t{font-weight:400;color:var(--day-muted,var(--muted))}
 #tBrief ol.bl>li{min-height:44px;padding:8px 0;align-items:flex-start}
 #tBrief .tacts{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto;opacity:.55;transition:opacity var(--d1)}
@@ -3888,6 +3889,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     colResizer: () => colResizer,
     comboboxOpen: () => comboboxOpen,
     commitRecord: () => commitRecord,
+    confMark: () => confMark,
     confirmCard: () => confirmCard,
     conflictChoice: () => conflictChoice,
     conflictHtml: () => conflictHtml,
@@ -10226,6 +10228,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       r4.tag ? /* @__PURE__ */ u2("span", { class: `tag tdtag${r4.tone ? " " + r4.tone : ""}`, children: r4.tag }) : null,
       /* @__PURE__ */ u2("div", { class: "tb", children: [
         r4.kind === "quiet" ? /* @__PURE__ */ u2("span", { class: "t", children: r4.t }) : r4.link ? /* @__PURE__ */ u2("a", { class: "t", href: r4.link, target: "_blank", rel: "noopener", children: r4.t }) : /* @__PURE__ */ u2("a", { class: "t", href: "#", onClick: open2, children: r4.t }),
+        r4.mark ? /* @__PURE__ */ u2(S2, { children: [
+          " ",
+          /* @__PURE__ */ u2("span", { class: "tag tdctag tdmark", children: r4.mark })
+        ] }) : null,
         /* @__PURE__ */ u2("p", { children: r4.meta }),
         r4.summary ? /* @__PURE__ */ u2("p", { class: "tdsum", children: r4.summary }) : null,
         r4.cands && r4.cands.length ? /* @__PURE__ */ u2("ul", { class: "tdcands", "aria-label": "What it came to", children: r4.cands.map((c5) => /* @__PURE__ */ u2("li", { class: "tdcand", "data-tdc": c5.key, children: [
@@ -11233,7 +11239,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       });
     });
     VIPS().forEach((a5) => {
-      if ("summary" in a5 && !a5.marker) {
+      if ("summary" in a5 && a5.marker !== "private") {
         tdl.push(convRow(a5));
         return;
       }
@@ -11247,7 +11253,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         tone: "warn",
         t: `${a5.who ?? ""}: ${a5.subject ?? ""}`,
         link: a5.link || "",
-        meta: [`${VIPKIND[a5.kind] || "Message"}${vipWhen(a5) ? " " + vipWhen(a5) : ""}`, a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project", a5.marker || "", a5.found === "start-up" ? `found on start-up, received ${vipWhen(a5)}` : ""].filter(Boolean).join(" · ") + (a5.gist ? `. ${a5.gist}` : ""),
+        mark: confMark(a5),
+        meta: [`${VIPKIND[a5.kind] || "Message"}${vipWhen(a5) ? " " + vipWhen(a5) : ""}`, a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project", confMark(a5) ? "" : a5.marker || "", a5.found === "start-up" ? `found on start-up, received ${vipWhen(a5)}` : ""].filter(Boolean).join(" · ") + (a5.gist ? `. ${a5.gist}` : ""),
         acts: [
           { id: "make", icon: "plus", label: "Make a work item", name: `Create work item from: ${name}`, data: { alertdo: "make", id: a5.id } },
           { id: "dismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss: ${name}`, data: { alertdo: "dismiss", id: a5.id } }
@@ -11261,6 +11268,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     /** @type {Record<string,string>} */
     { action: "Action", decision: "Decision", risk: "Risk" }
   );
+  var confMark = (a5) => a5.confidential || a5.marker === "confidential" ? "Confidential" : "";
   var convAt = (a5) => String(a5.last || a5.sent || "").replace("T", " ").slice(0, 16);
   var convWhen = (a5) => String(a5.last || a5.updated || "").replace("T", " ").slice(0, 16);
   var convMeta = (a5) => [
@@ -11286,7 +11294,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ]
       })
     );
-    return { key: "al" + a5.id, kind: "message", id: a5.id, at: convAt(a5), tag: "Message", tone: "warn", t: t5, link: a5.link || "", meta: convMeta(a5), summary: String(a5.summary || ""), cands, acts: [] };
+    return { key: "al" + a5.id, kind: "message", id: a5.id, at: convAt(a5), tag: "Message", tone: "warn", t: t5, link: a5.link || "", mark: confMark(a5), meta: convMeta(a5), summary: String(a5.summary || ""), cands, acts: [] };
   }
   function quietRow(a5) {
     const others = (a5.people || []).filter(

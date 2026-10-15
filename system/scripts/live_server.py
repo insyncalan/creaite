@@ -3116,9 +3116,10 @@ VIP_PROMPT = ("creaite VIP check. Read-only: search Alan's Microsoft 365 for mes
               "\"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own words\", "
               "\"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else null\"}}]}}. Report "
               "the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a conversation with "
-              "nothing actionable has \"items\": []. For a private or confidential conversation give only \"summary\": "
-              "\"private\" and no items. Never use the word VIP in a gist, a summary, an item or anywhere in the reply "
-              "(BL-288). Reply [] if there are none.")
+              "nothing actionable has \"items\": []. For a private conversation give only \"summary\": \"private\" and no "
+              "items. A confidential one is summarised like any other, in your own words, with its sensitivity "
+              "\"confidential\" (it stays inside creaite, internal only, never quoted). Never use the word VIP in a gist, "
+              "a summary, an item or anywhere in the reply (BL-288). Reply [] if there are none.")
 VIP_LOCK = threading.Lock()       # one check at a time
 VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never write at once
 VIP_STATUS = {"running": False, "last_error": None}
