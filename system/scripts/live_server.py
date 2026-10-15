@@ -1934,7 +1934,10 @@ PANEL_SWEEP_PROMPT = (
     "message's text. End with the sweep's one-line summary and \"n items staged for Review\".")
 PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
 # ===== end BL-309 =====
-KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools()]}
+# The file writers are denied by name too: an empty allow list doesn't stop the vault's .claude/settings.json allow rules (Edit
+# projects/**, Edit system/config/settings.json, Edit system/staging/**, Edit inbox/**) from applying. The run only replies.
+KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools(),
+                                "Edit", "Write", "MultiEdit", "NotebookEdit"]}
 # ===== BL-301 D (v20-ai-select) ===== AI on selected text (/api/edit/ai): Claude sees only the prompt edit_ai.py builds (the selected
 # text, the option, the project's name, people and open item IDs). The run "edit-ai" has no tools at all: its allow list is empty,
 # Claude Code is started with no built-in tools (`--tools ""`) and no MCP servers (`--strict-mcp-config`), no --add-dir, and every
@@ -6717,7 +6720,7 @@ def swallowed(where, e):
 #                                          notes-sent.json records the lines (fingerprints and IDs, never text).
 #   /api/notes/undo {path, apply_id}       Undo: tracker.py undo of that apply when it is still the latest; its lines are new again.
 KIND_TOOLS["notes-find"] = []
-KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])
+KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])           # every reading tool and every file writer: it only replies
 
 
 class FindJob:
