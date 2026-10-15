@@ -29,7 +29,7 @@ export function noteCodeOf(path) {
 }
 /** Whether a stored path is a note (a .md file in a notes folder the page knows of). @param {string} path */
 export const isNotePath = path => !!path && (noteCodeOf(path) !== null || (/\/(08 Notes|notes)\/[^/]+\.md$/i.test(path)
-  && !(/** @type {any} */ (D).files_archived || []).some((/** @type {{path: string}} */ f) => f.path === path)));   /* #124: a deleted note opens as a file */
+  && !/\/_Archive\//.test(path)));   /* #124: a deleted note (Files › Archived opens it by its place in _Archive) opens as a file */
 
 /** A valid code for the Notes tab. @param {string} code */
 export const notesCodeOk = code => code === "_portfolio" || P.some(p => p.code === code);

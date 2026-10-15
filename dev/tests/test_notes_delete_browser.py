@@ -7,7 +7,12 @@ Run: python3 dev/tests/test_notes_delete_browser.py   (needs Google Chrome; skip
   - Delete note puts exactly one card up in ask creaite (the move into the archive, the file named); Reject leaves the note;
   - doing it again and Approve moves it into _Archive: the note closes, the list drops it, a toast says "Moved … to the archive";
   - the toast's Undo brings it back into the list;
-  - nothing scrolls sideways at 900 px with the box open.
+  - nothing scrolls sideways at 900 px with the box open;
+  - while the card waits the note is read only, with a line saying why, and Reject makes it editable again (M1);
+  - the toast after Undo says what happened (back, or back under another name: L3, Jarvis 16-10-2026);
+  - Files › Archived: two deleted notes of one name are two rows keyed by their own place in _Archive (Move back, Open), and Open
+    of a deleted note opens that file, never the Notes tab (M2).
+Each runs at 1400 px and again at 900 px.
 """
 import json
 import sys
@@ -105,6 +110,49 @@ class NotesDeleteBrowser(LiveBrowserCase):
         self.assertTrue(f.is_file())                                                       # Undo: back in its notes folder
         b.wait(f"[...document.querySelectorAll('.nlist .ni b')].some(x=>x.textContent==={json.dumps(WS)})", 15)
 
+    def held(self, title):
+        b = self.b
+        self.make(title)
+        b.eval("noteFlush()")
+        b.wait("noteSave.value.state==='saved'", 15)
+        self.open_box()
+        b.click("#ndelGo")
+        b.wait("[...document.querySelectorAll('#chLog .edcard')].pop().querySelector('[data-ed=\"approve\"]')", 15)
+        acts = b.eval("[...[...document.querySelectorAll('#chLog .edcard')].pop().querySelectorAll('[data-ed]')].map(x=>x.dataset.ed)")
+        self.assertEqual(acts, ["reject", "approve"])                                       # L2: never Stage for review
+        b.wait("!!document.querySelector('.nheld')", 10)
+        self.assertEqual(b.eval("document.querySelector('.nbody.ProseMirror').getAttribute('contenteditable')"), "false")
+        self.assertIn("Waiting on the approval card", b.eval("document.querySelector('.nheld').textContent"))
+        self.shot("held")
+        b.click("#chLog .edcard:last-of-type [data-ed=\"reject\"]")
+        b.wait("!document.querySelector('.nheld')", 10)
+        self.assertEqual(b.eval("document.querySelector('.nbody.ProseMirror').getAttribute('contenteditable')"), "true")
+        words = b.eval("[undoWords({ok:true,moves:[]},'A'), undoWords({ok:true,moves:['restored x as A-2.md: a note took its name']},'A'),"
+                       "undoWords({ok:true,moves:['skipped moving y back: x is there again']},'A')]")
+        self.assertEqual(words, ["“A” is back in its notes folder", "Restored “A” as A-2.md: a note has its old name",
+                                 "Not restored: a note with that name exists"])
+        b.click("#chatClose")
+        b.wait("!document.getElementById('chat').classList.contains('on')")
+
+    def archived_rows(self, title):
+        b = self.b
+        for word in ("one", "two"):
+            r = self.post_api("/api/notes/new", {"code": "ABC", "template": "blank", "title": title})
+            d = self.post_api("/api/notes/delete", {"path": r["note"]["path"], "base": r["base"]})
+            self.assertTrue(self.post_api("/api/edit/approve", {"card": d["card"]["card"]})["ok"], word)
+        b.eval("go('files')")
+        b.wait("!!document.getElementById('filesTbl')", 15)
+        b.eval("refreshFiles(true)")
+        b.wait(f"(D.files_archived||[]).filter(f=>f.n.startsWith({json.dumps(title)})).length===2", 20)
+        rows = b.eval(f"D.files_archived.filter(f=>f.n.startsWith({json.dumps(title)})).map(f=>[f.path,f.at])")
+        self.assertEqual(len({r[0] for r in rows}), 1)                                        # one first name …
+        self.assertEqual(len({r[1] for r in rows}), 2)                                        # … two places, two keys
+        self.assertFalse(b.eval(f"isNotePath({json.dumps(rows[0][1])})"))                      # Open: the file, not the Notes tab
+        self.assertTrue(b.eval(f"isNotePath({json.dumps(rows[0][0])})"))
+
+    def post_api(self, path, body):
+        return json.loads(self.b.eval(f"(async()=>JSON.stringify(await api({json.dumps(path)},{json.dumps(body)})))()"))
+
     def test_delete_note_confirm_then_card_then_undo(self):
         self.flow()
 
@@ -112,6 +160,22 @@ class NotesDeleteBrowser(LiveBrowserCase):
         self.b.resize(900, 1000)
         self.b.wait("innerWidth===900")
         self.flow()
+
+    def test_read_only_while_the_card_waits(self):
+        self.held("Held at 1400")
+
+    def test_read_only_while_the_card_waits_at_900(self):
+        self.b.resize(900, 1000)
+        self.b.wait("innerWidth===900")
+        self.held("Held at 900")
+
+    def test_archived_rows_keyed_by_their_place(self):
+        self.archived_rows("Same at 1400")
+
+    def test_archived_rows_keyed_by_their_place_at_900(self):
+        self.b.resize(900, 1000)
+        self.b.wait("innerWidth===900")
+        self.archived_rows("Same at 900")
 
 
 del NotesTab

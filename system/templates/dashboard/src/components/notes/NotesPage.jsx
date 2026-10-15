@@ -10,7 +10,7 @@ import { DDATE, fd, TODAY, toIso } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNotes, noteBodyFrom, noteCur, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading,
-  noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
+  noteHeld, noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
   useStaleDraft } from "../../stores/notes.js";
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
 import { aiAction } from "../../stores/aiEdit.js";
@@ -209,7 +209,9 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
       {noteSave.value.state === "conflict" ? (
         <div class="nstale" role="alert"><span>{noteSave.value.msg}</span>
           <button type="button" class="btn sm" onClick={() => openNote(cur.path)}>Open the file's version</button></div>) : null}
-      <NoteEditor key={`${cur.path}|${cur.load}`} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
+      {noteHeld.value === cur.path ? (
+        <div class="nstale nheld" role="status"><span>Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card.</span></div>) : null}
+      <NoteEditor key={`${cur.path}|${cur.load}`} readOnly={noteHeld.value === cur.path} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
         noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} restored={!!cur.restored} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
         onHoverLine={l => { if (noteFind.value && fuHover.value !== l) fuHover.value = l; }}
         onOpenItem={onOpenItem} onOpenNote={t => { const hit = noteByTitle(code, t); if (hit) onOpen(hit.path); else onNew(t); }} />

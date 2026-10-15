@@ -87,6 +87,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         d = self.delete(r)
         done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
         self.assertTrue(done["ok"], done)
+        self.assertEqual(done["message"], "Moved “Working session” to the archive.")                # L4: the note named
         self.assertFalse(f.exists())
         self.assertTrue((self.archive() / "Working session.md").is_file())
         self.assertNotIn("Working session", self.titles())                                             # the list drops it

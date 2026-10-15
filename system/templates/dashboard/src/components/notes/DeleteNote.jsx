@@ -6,12 +6,14 @@
       Reject leaves it where it is. The confirm box never replaces the card.
    On Approve the note closes, the list drops it and a toast says "Moved … to the archive" with Undo (tracker.py undo of that
    apply). Files › Archived lists it with Move back. Links to it in other notes show as missing until it is back. A confidential
-   note is deleted the same way: nothing of its text is sent anywhere. Text only through JSX. */
+   note is deleted the same way: nothing of its text is sent anywhere. Text only through JSX.
+   While the card waits the note is read only here (noteHeld); on Approve the server checks again that the note is the version
+   confirmed, with no typing waiting (another window's included), and moves nothing if not: "Delete it again". */
 import { signal } from "@preact/signals";
 import { navWrite } from "../../core/nav.js";
 import { api, oneLine, reloadData, snack, viaServer } from "../../core/server.js";
 import { serverCardFlow } from "../../ask.js";
-import { closeNote, loadNotes, noteCur, noteFlush, notesCode, notesMsg } from "../../stores/notes.js";
+import { loadNotes, noteCur, noteFlush, noteGone, noteHeld, notesCode, notesMsg } from "../../stores/notes.js";
 import { Dialog } from "../Dialog.jsx";
 
 /** The note the confirm box asks about, or null when it is closed. @type {import("@preact/signals").Signal<{path: string, title: string, code: string} | null>} */
@@ -38,18 +40,34 @@ export async function deleteNote(n) {
     noteDeleting.value = null;
     if (!r || !r.ok || !r.card) { snack(oneLine((r && r.message) || "Not deleted.")); return false; }
     snack(oneLine(r.message));
-    const done = await serverCardFlow(r.card);          /* the one approval card: only Approve moves it */
+    const unhold = () => { if (noteHeld.value === n.path) noteHeld.value = null; };
+    noteHeld.value = n.path;                            /* read only while the card waits */
+    const left = Date.parse(r.card.expires || "") - Date.now();
+    const t = setTimeout(unhold, Number.isFinite(left) && left > 0 ? left : 30 * 60000);
+    let done;
+    try { done = await serverCardFlow(r.card, { onStale: unhold }); } finally { clearTimeout(t); unhold(); }   /* only Approve moves it */
     if (!done) return false;
-    if (noteCur.value && noteCur.value.path === n.path) { await closeNote(); navWrite(false); }
+    if (noteCur.value && noteCur.value.path === n.path) { noteGone(n.path); navWrite(false); }   /* its file has gone: nothing to save */
     await loadNotes(notesCode.value || n.code);
     const id = done.apply;
     snack(`Moved “${n.title}” to the archive`, id ? async () => {
       const u = await api("/api/undo", { apply_id: id });
-      snack(u && u.ok ? `“${n.title}” is back in its notes folder` : oneLine((u && u.message) || "Not undone"));
+      snack(undoWords(u, n.title));
       if (u && u.ok) { await reloadData(); await loadNotes(notesCode.value || n.code); }
     } : null);
     return true;
   } finally { busy.value = false; }
+}
+
+/** What the toast says after Undo: back, back under another name, or not back (a note has the name). Exported for the tests.
+    @param {any} u /api/undo's answer @param {string} title */
+export function undoWords(u, title) {
+  if (!u || !u.ok) return oneLine((u && u.message) || "Not undone");
+  const moves = /** @type {string[]} */ (u.moves || []);
+  const as = moves.map(m => /^restored .* as (.+): a note took its name$/.exec(m)).find(Boolean);
+  if (as) return `Restored “${title}” as ${as[1]}: a note has its old name`;
+  if (moves.some(m => m.startsWith("skipped moving"))) return "Not restored: a note with that name exists";
+  return `“${title}” is back in its notes folder`;
 }
 
 /** The confirm box. */

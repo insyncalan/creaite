@@ -245,18 +245,20 @@ export function editCardHtml(c){ const n=c.lines.filter(l=>!/^\s/.test(l)).lengt
     `<div class="acts"></div></div>`; }
 export function edActs(acts,kinds){ const word={reject:"Reject",stage:"Stage for review",approve:"Approve"};
   acts.replaceChildren(...kinds.map(k=>{ const b=document.createElement("button"); b.type="button"; b.className="btn"+(k===kinds[kinds.length-1]&&k!=="reject"?" primary":""); b.dataset.ed=k; b.textContent=word[k]; return b; })); }
-export async function editFlow(c){
+export async function editFlow(c,o={}){
   if(!c.card){ addEl("msg a info",html`${`The change wasn't put on a card: ${c.refused}.`}`); return; }
   if(document.querySelector(`#chLog [data-ecard="${CSS.escape(c.card)}"]`)) return;
   const d=addEl("confirm-wrap",raw(editCardHtml(c))), acts=d.querySelector(".acts"); chatScroll();
-  edActs(acts,!c.valid?["reject"]:(c.clash||[]).length?["reject","stage"]:["reject","approve"]);
+  const later=c.stage===false?"approve":"stage";   /* #124: a note's move is never staged for review: Approve or Reject only */
+  edActs(acts,!c.valid?["reject"]:(c.clash||[]).length?["reject",later]:["reject","approve"]);
   for(;;){ const how=await new Promise(res=>acts.querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>res(b.dataset.ed)));
     acts.textContent="Working…"; const r=await api(`/api/edit/${how}`,{card:c.card});
     if(r.ok){ acts.textContent=how==="approve"?"✓ Approved":how==="stage"?"Staged for review":"Rejected";
       if(how==="reject"){ addEl("step stopped","Rejected: nothing was staged or changed"); return; }
       const m=addEl("msg a",html`${r.message}${how==="approve"&&r.apply_id?html` <button class="mini" data-edundo="${String(r.apply_id)}">Undo</button>`:""}`);
       if(how==="approve") snack(oneLine(r.message)); await reloadData(); return m; }
-    if(r.busy||(r.clash||[]).length){ addEl("msg a info",html`${r.message}`); edActs(acts,["reject","stage"]); continue; }
+    if(r.busy||(r.clash||[]).length){ addEl("msg a info",html`${r.message}`); edActs(acts,["reject",later]); continue; }
+    if(r.stale){ addEl("msg a info",html`${oneLine(r.message)}`); if(o.onStale) o.onStale(r); edActs(acts,["reject"]); continue; }   /* #124: the card stays; nothing moved */
     acts.textContent="Not applied"; addEl("msg a info",html`${oneLine(r.message||"Not applied")}`); return; } }
 export async function pendingEdit(){ if(!viaServer()) return; const r=await api("/api/edit/pending",{}); if(!r.ok||!r.card) return;
   if(r.card.chat&&r.card.chat!==shared.ASKCHAT){ setChat(r.card.chat,r.card.chat); await loadChat(r.card.chat,true); }
@@ -264,7 +266,7 @@ export async function pendingEdit(){ if(!viaServer()) return; const r=await api(
 /* #124 Delete note: a card the server made for the page's own action (a note's move into _Archive), shown in ask creaite and
    answered there like any change card. Resolves to {apply} (the apply's number, for Undo) once Approve has applied it, else
    null (rejected, failed, or only staged for Review when another job was writing). */
-export async function serverCardFlow(card){ openChat(); const m=await editFlow(card);
+export async function serverCardFlow(card,o={}){ openChat(); const m=await editFlow(card,o);
   const b=m&&m.querySelector?m.querySelector("[data-edundo]"):null; return b?{apply:+b.dataset.edundo||null}:null; }
 /* ===== BL-314 (v191-ask-routing) ===== a field change asked in the chat runs through the dashboard's own action. The server checked
    each EDIT line against the tracker and sent the preview's before → after lines and, per item, the patch in the dashboard's own field

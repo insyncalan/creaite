@@ -3368,6 +3368,7 @@ button.nchip{font:inherit;font-size:12px}
     DayCurve: () => DayCurve,
     DayMeetings: () => DayMeetings,
     DayTabs: () => DayTabs,
+    DeleteNoteDialog: () => DeleteNoteDialog,
     Dialog: () => Dialog,
     EASE: () => EASE,
     EBAREA: () => EBAREA,
@@ -3812,6 +3813,7 @@ button.nchip{font:inherit;font-size:12px}
     approveGroup: () => approveGroup,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
+    askDeleteNote: () => askDeleteNote,
     askDiscard: () => askDiscard,
     askFinished: () => askFinished,
     askLive: () => askLive,
@@ -4272,6 +4274,7 @@ button.nchip{font:inherit;font-size:12px}
     defOf: () => defOf,
     defaultView: () => defaultView,
     defs: () => defs,
+    deleteNote: () => deleteNote,
     deleteView: () => deleteView,
     depFormDraw: () => depFormDraw,
     depHash: () => depHash,
@@ -4789,12 +4792,15 @@ button.nchip{font:inherit;font-size:12px}
     noteBodyFrom: () => noteBodyFrom,
     noteCodeOf: () => noteCodeOf,
     noteCur: () => noteCur,
+    noteDeleting: () => noteDeleting,
     noteDirty: () => noteDirty,
     noteFind: () => noteFind,
     noteFindP: () => noteFindP,
     noteFlash: () => noteFlash,
     noteFlush: () => noteFlush,
     noteFlushOnExit: () => noteFlushOnExit,
+    noteGone: () => noteGone,
+    noteHeld: () => noteHeld,
     noteImageSrc: () => noteImageSrc,
     noteLines: () => noteLines,
     noteLoading: () => noteLoading,
@@ -5513,6 +5519,7 @@ button.nchip{font:inherit;font-size:12px}
     undatedRecount: () => undatedRecount,
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
+    undoWords: () => undoWords,
     uniq: () => uniq,
     unknownOwner: () => unknownOwner,
     unmountChase: () => unmountChase,
@@ -39893,10 +39900,10 @@ ${s5}`;
     if (shared.FSEL.quick === "inbox") L3 = FILES.filter((f5) => f5.p === "inbox");
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (!q5 || f5.n.toLowerCase().includes(q5)) && (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}" data-hp="${f5.path}" class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
     if (!shared.LOADING) $$("#filesTbl tr[data-fp]").forEach((tr2) => {
-      const t48 = hubFor({ path: tr2.dataset.fp }), td2 = tr2.querySelector("td");
+      const t48 = hubFor({ path: tr2.dataset.hp || tr2.dataset.fp }), td2 = tr2.querySelector("td");
       if (t48 && td2 && !td2.querySelector(".mhlink")) addHTML(td2, "beforeend", hubLink(t48, "Meeting"));
     });
   }
@@ -49283,6 +49290,10 @@ ${d5.text}`);
   );
   var noteLoading = y3(false);
   var notesMsg = y3("");
+  var noteHeld = y3(
+    /** @type {string | null} */
+    null
+  );
   var notesListOpen = y3((() => {
     try {
       return localStorage.getItem(LIST_KEY) !== "0";
@@ -49399,6 +49410,16 @@ ${d5.text}`);
     noteCur.value = null;
     noteSave.value = { state: "" };
   }
+  function noteGone(path) {
+    if (noteHeld.value === path) noteHeld.value = null;
+    if (!noteCur.value || noteCur.value.path !== path) return;
+    clearTimeout(ses.draftT);
+    clearTimeout(ses.idleT);
+    ses.dirty = false;
+    ses.changes = {};
+    noteCur.value = null;
+    noteSave.value = { state: "" };
+  }
   function idleSoon() {
     clearTimeout(ses.idleT);
     ses.idleT = setTimeout(() => {
@@ -49416,6 +49437,10 @@ ${d5.text}`);
   function noteMeta(changes, now) {
     const c5 = noteCur.value;
     if (!c5) return;
+    if (noteHeld.value === c5.path) {
+      notesMsg.value = "This note waits on the approval card to be deleted: answer the card first.";
+      return;
+    }
     ses.changes = { ...ses.changes, ...changes };
     noteCur.value = { ...c5, meta: { ...c5.meta, ...changes } };
     if (now) {
@@ -52027,17 +52052,29 @@ ${d5.text}`);
         return false;
       }
       snack(oneLine(r4.message));
-      const done = await serverCardFlow(r4.card);
+      const unhold = () => {
+        if (noteHeld.value === n4.path) noteHeld.value = null;
+      };
+      noteHeld.value = n4.path;
+      const left = Date.parse(r4.card.expires || "") - Date.now();
+      const t47 = setTimeout(unhold, Number.isFinite(left) && left > 0 ? left : 30 * 6e4);
+      let done;
+      try {
+        done = await serverCardFlow(r4.card, { onStale: unhold });
+      } finally {
+        clearTimeout(t47);
+        unhold();
+      }
       if (!done) return false;
       if (noteCur.value && noteCur.value.path === n4.path) {
-        await closeNote();
+        noteGone(n4.path);
         navWrite(false);
       }
       await loadNotes(notesCode.value || n4.code);
       const id2 = done.apply;
       snack(`Moved “${n4.title}” to the archive`, id2 ? async () => {
         const u5 = await api("/api/undo", { apply_id: id2 });
-        snack(u5 && u5.ok ? `“${n4.title}” is back in its notes folder` : oneLine(u5 && u5.message || "Not undone"));
+        snack(undoWords(u5, n4.title));
         if (u5 && u5.ok) {
           await reloadData();
           await loadNotes(notesCode.value || n4.code);
@@ -52047,6 +52084,17 @@ ${d5.text}`);
     } finally {
       busy.value = false;
     }
+  }
+  function undoWords(u5, title) {
+    if (!u5 || !u5.ok) return oneLine(u5 && u5.message || "Not undone");
+    const moves = (
+      /** @type {string[]} */
+      u5.moves || []
+    );
+    const as2 = moves.map((m5) => /^restored .* as (.+): a note took its name$/.exec(m5)).find(Boolean);
+    if (as2) return `Restored “${title}” as ${as2[1]}: a note has its old name`;
+    if (moves.some((m5) => m5.startsWith("skipped moving"))) return "Not restored: a note with that name exists";
+    return `“${title}” is back in its notes folder`;
   }
   function DeleteNoteDialog() {
     const n4 = noteDeleting.value;
@@ -52255,7 +52303,7 @@ ${d5.text}`);
     ["undo", "↶", "Undo (⌘Z)"],
     ["redo", "↷", "Redo (⌘⇧Z)"]
   ];
-  function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
+  function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -52537,6 +52585,10 @@ ${d5.text}`);
         lineState.current.doc = null;
       };
     }, [loadKey]);
+    h2(() => {
+      const h5 = ed3.current;
+      if (h5 && h5.editor) h5.editor.setEditable(!readOnly);
+    }, [readOnly, loadKey]);
     h2(() => {
       const h5 = ed3.current, el2 = box.current;
       if (!h5 || !el2 || !path || flashAt.path !== path || !flashAt.line || flashDone.current === flashAt) return;
@@ -52961,9 +53013,11 @@ ${d5.text}`);
         /* @__PURE__ */ u2("span", { children: noteSave.value.msg }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => openNote(cur.path), children: "Open the file's version" })
       ] }) : null,
+      noteHeld.value === cur.path ? /* @__PURE__ */ u2("div", { class: "nstale nheld", role: "status", children: /* @__PURE__ */ u2("span", { children: "Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card." }) }) : null,
       /* @__PURE__ */ u2(
         NoteEditor,
         {
+          readOnly: noteHeld.value === cur.path,
           loadKey: `${cur.path}|${cur.load}`,
           markdown: cur.body,
           code,
@@ -53180,8 +53234,7 @@ ${d5.text}`);
     for (const [code, L3] of Object.entries(allNotes())) if ((L3 || []).some((n4) => n4.path === path)) return code;
     return null;
   }
-  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/** @type {any} */
-  (D.files_archived || []).some((f5) => f5.path === path));
+  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/_Archive\//.test(path));
   var notesCodeOk = (code) => code === "_portfolio" || P4.some((p6) => p6.code === code);
   function renderNotes(code) {
     const el2 = $("#v-notes");
@@ -55066,7 +55119,7 @@ ${d5.text}`);
       return b5;
     }));
   }
-  async function editFlow(c5) {
+  async function editFlow(c5, o5 = {}) {
     if (!c5.card) {
       addEl("msg a info", html`${`The change wasn't put on a card: ${c5.refused}.`}`);
       return;
@@ -55074,7 +55127,8 @@ ${d5.text}`);
     if (document.querySelector(`#chLog [data-ecard="${CSS.escape(c5.card)}"]`)) return;
     const d5 = addEl("confirm-wrap", raw(editCardHtml(c5))), acts2 = d5.querySelector(".acts");
     chatScroll();
-    edActs(acts2, !c5.valid ? ["reject"] : (c5.clash || []).length ? ["reject", "stage"] : ["reject", "approve"]);
+    const later2 = c5.stage === false ? "approve" : "stage";
+    edActs(acts2, !c5.valid ? ["reject"] : (c5.clash || []).length ? ["reject", later2] : ["reject", "approve"]);
     for (; ; ) {
       const how = await new Promise((res) => acts2.querySelectorAll("[data-ed]").forEach((b5) => b5.onclick = () => res(b5.dataset.ed)));
       acts2.textContent = "Working…";
@@ -55092,7 +55146,13 @@ ${d5.text}`);
       }
       if (r4.busy || (r4.clash || []).length) {
         addEl("msg a info", html`${r4.message}`);
-        edActs(acts2, ["reject", "stage"]);
+        edActs(acts2, ["reject", later2]);
+        continue;
+      }
+      if (r4.stale) {
+        addEl("msg a info", html`${oneLine(r4.message)}`);
+        if (o5.onStale) o5.onStale(r4);
+        edActs(acts2, ["reject"]);
         continue;
       }
       acts2.textContent = "Not applied";
@@ -55111,9 +55171,9 @@ ${d5.text}`);
     openChat();
     editFlow(r4.card);
   }
-  async function serverCardFlow(card) {
+  async function serverCardFlow(card, o5 = {}) {
     openChat();
-    const m5 = await editFlow(card);
+    const m5 = await editFlow(card, o5);
     const b5 = m5 && m5.querySelector ? m5.querySelector("[data-edundo]") : null;
     return b5 ? { apply: +b5.dataset.edundo || null } : null;
   }
@@ -59611,6 +59671,7 @@ ${d5.text}`);
         "invitees",
         "isMe",
         "isMin",
+        "isNotePath",
         "itemDatePicker",
         "items",
         "jobLive",
@@ -59766,6 +59827,7 @@ ${d5.text}`);
         "reattach",
         "reduced",
         "refreshAll",
+        "refreshFiles",
         "refreshRecords",
         "regAddAlias",
         "regSetHidden",
@@ -59862,6 +59924,7 @@ ${d5.text}`);
         "typing",
         "undatedCard",
         "undoApply",
+        "undoWords",
         "updReview",
         "validate",
         "viaServer",
