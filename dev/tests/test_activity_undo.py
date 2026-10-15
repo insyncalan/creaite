@@ -299,9 +299,14 @@ class ActivityPage(LiveBrowserCase):
     def test_type_chips_dates_and_the_address_round_trip(self):
         b = self.b
         self.go_activity()
-        b.click('#actTypes [data-acttype="Risk"]')
+        # BL-316: Kind is the FilterBar block's list (was a row of toggles)
+        b.click("#actTypeBtn")
+        b.wait("document.getElementById('actTypeMenu').classList.contains('on')")
+        b.click('#actTypeMenu [role=option]:has(input[value="Risk"])')
         self.assertTrue(all("ABC-004" in r for r in self.rows()), self.rows())
-        self.assertEqual(b.eval("document.querySelector('#actTypes [data-acttype=\"Risk\"]').getAttribute('aria-pressed')"), "true")
+        self.assertEqual(b.eval("document.querySelector('#actTypeMenu [role=option]:has(input[value=\"Risk\"])').getAttribute('aria-selected')"), "true")
+        self.assertEqual(b.eval("document.getElementById('actTypeBtn').textContent.trim()"), "Kind: Risk")
+        b.key("Escape")
         b.eval("document.getElementById('actQ').value='data'; document.getElementById('actQ').dispatchEvent(new Event('input',{bubbles:true}))")
         self.assertIn("q=data", b.eval("location.hash"))
         self.assertIn("type=Risk", b.eval("location.hash"))
@@ -325,7 +330,10 @@ class ActivityPage(LiveBrowserCase):
         self.assertTrue(all("ABC-004" in r for r in self.rows()))
         # dates: from after everything shows nothing, and says so
         b.eval("ACTF={}; renderActivity()")
-        b.eval("document.getElementById('actFrom').value='01-01-2099'; document.getElementById('actFrom').dispatchEvent(new Event('change',{bubbles:true}))")
+        b.click("#actFunnel")                                    # the funnel's picker: When is two date boxes
+        b.click('#actPick .fpf[data-fpk="when"]')
+        b.wait("!!document.querySelector('#actPick input[data-when=from]')")
+        b.eval("const i=document.querySelector('#actPick input[data-when=from]'); i.value='01-01-2099'; i.dispatchEvent(new Event('change',{bubbles:true}))")
         self.assertIn("Nothing matches", b.eval("document.getElementById('actTbl').textContent"))
         self.assertIn("from=2099-01-01", b.eval("location.hash"))
 
