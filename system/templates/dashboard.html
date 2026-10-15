@@ -2128,6 +2128,7 @@ svg .flk text{text-decoration:underline dotted}
 .mv-card.client{border:2px solid var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .mv-head{display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap} .mv-head h2{margin:0}
 .mv-head .sp{flex:1}
+.mv-head .mv-tag{white-space:normal;min-width:0}   /* v1.9.5: Movement's "Internal only: never in client output" wraps at 320 px rather than run past the card */
 .mv-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:var(--r-pill);padding:4px 10px;white-space:nowrap}
 .mv-pill svg{width:13px;height:13px}
 .mv-pill.int{background:var(--ink);color:var(--surface)} .mv-pill.cli{background:var(--accent);color:var(--accent-ink)}
