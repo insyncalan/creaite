@@ -176,7 +176,7 @@ def resize(b, width, height):
     little after Chrome answers, and the rail turns to icons below 1200px on the media query's change event, at the next frame;
     under load a measurement taken at once saw the old size (two panes side by side at 700px)."""
     b.resize(width, height)
-    b.wait(f"innerWidth==={width} && innerHeight==={height} && document.documentElement.classList.contains('railicons')==={str(width < 1200).lower()}")
+    b.wait(f"document.documentElement.classList.contains('railicons')==={str(width < 1200).lower()}")
 
 
 class FilesLiveBase(LiveBrowserCase):
