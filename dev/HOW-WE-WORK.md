@@ -16,6 +16,27 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 - **Alan** decides what the charter keeps for him. A default Jarvis raises goes ahead at the second digest after it was raised, never overnight.
 - **Digests:** four a day (full at 08:00 and 16:00, lite at 12:00 and 20:00), and on demand.
 
+## How sessions talk to each other
+
+**The board is the only channel between laptops.** Sessions on the same laptop may also message each other directly, for speed, but anything that matters goes on the board too. SPRINTCOMMS is frozen.
+
+| From | To | How |
+|---|---|---|
+| A team lead | Jarvis | A comment on the item's issue, starting "Team Cap, HH:MM:" or "Team Stark, HH:MM:" (the time from `date`). On Jarvis's laptop, a direct message as well |
+| Jarvis | A team lead | A comment on the item's issue (or #34 for anything general), starting "Jarvis, HH:MM, to Team …:". On the same laptop, a direct message as well |
+| Anyone | Alan | Only through Jarvis: the digests (07:57 and 15:57 full, 11:57 and 19:57 lite), or straight away for a security or guard problem, possible data loss or a broken release |
+| Alan | Anyone | He tells Jarvis, or comments on the issue. A team lead hearing a decision from Alan passes it to Jarvis, who records it once Alan confirms it directly |
+
+**What a comment carries:**
+- **Progress:** what was done, the % of Done-when points met, and an ETA (HH:MM).
+- **A question:** "For Jarvis:" (order, defects, tests, docs, wording) or "For Alan:" (scope, visible changes, guard, security, permissions, confidential material), with a recommendation. Set the item to **Needs decision**. Jarvis answers within the hour, or takes it to Alan.
+- **A push:** "push <branch> <sha>" once it's verified (new root, `test_no_real_names`, `check.py`, nothing uncommitted). On Jarvis's laptop, Jarvis checks and pushes. On the other laptop, the lead pushes from the main checkout, by branch name only (never `--tags`), and comments "pushed <branch> <sha>" for Jarvis to check.
+- **Stopping:** a one-line "paused" or "back" on #34 when a lead stops for more than half an hour, so Jarvis doesn't move its work.
+
+**Jarvis reads the board every hour at :17,** and acts on every new comment. Done-when boxes: the lead lists the points met, and Jarvis ticks them. Jarvis closes items.
+
+**Decisions:** Jarvis records each one in `dev/HEAD-LOG.md`. A relayed decision isn't a decision until Alan confirms it to Jarvis directly. Guard, security, permission, scope and visible-change decisions are always Alan's.
+
 ## Rules
 
 - **Pull requests close plan items:** put `closes insyncalan/creaite-plan#N` in the description.
