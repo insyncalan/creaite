@@ -688,13 +688,35 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
-#genDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(460px,92vw);background:var(--surface);color:var(--ink)} #genDlg fieldset{border:0;padding:0;margin:0 0 12px} #genDlg legend{font-weight:500;margin-bottom:6px}
-#genDlg textarea{width:100%;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;background:var(--bg);color:var(--ink);margin:4px 0 8px} .genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
+/* #110 (part A): Generate is 736px wide (460 x 1.6), 92vw at most; the body scrolls and the footer stays in view. Four quiet settings in one strip
+   (a hairline and the sunk ground show only on hover or focus), Steer it as the body, Draw on a line, ordinary 32px buttons. */
+#genDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:0;width:min(736px,92vw);max-height:calc(100vh - 32px);background:var(--surface);color:var(--ink)}
+#genDlg[open]{display:flex;flex-direction:column;overflow:hidden} #genForm{display:flex;flex-direction:column;min-height:0;flex:1}
+.genbody{overflow:auto;min-height:0;padding:20px 24px 4px} .genfoot{display:flex;align-items:center;gap:8px;padding:12px 24px 16px;border-top:1px solid var(--line)} .genfoot .sub{flex:1}
+#genGo .kbd{margin-left:4px} #genGo[aria-disabled="true"]{opacity:.55;cursor:default}
+.genstrip{display:grid;grid-template-columns:1fr 1.25fr 1.3fr .8fr;gap:0 16px;margin-top:16px;padding:12px 0 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.genf{min-width:0} .genf label{display:block;font:500 var(--fs-xs)/16px var(--mono,var(--font));letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.genq{display:flex;align-items:center;justify-content:space-between;gap:4px;width:calc(100% + 8px);margin-left:-8px;height:var(--ctl-h);border:1px solid transparent;border-radius:var(--ctl-r);background:transparent;color:var(--ink);font:500 var(--fs-md)/18px var(--font);padding:0 8px;cursor:pointer;text-align:left}
+.genq .gv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .genq svg{width:14px;height:14px;flex:none;color:var(--muted)}
+.genq:not([aria-disabled="true"]):hover,.genq:focus-visible,.genq[aria-expanded="true"]{border-color:var(--line);background:var(--sunk)} .genq[aria-disabled="true"]{opacity:.55;cursor:default}
+#genCustom{padding:8px 0 0} #genCustom[hidden]{display:none} #genCustom input{width:132px;height:var(--ctl-h);border-radius:var(--ctl-r);background:var(--sunk)}
+.genhint{margin:8px 0 0;min-height:20px}
+.gensteer{margin-top:16px} .gensteer label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600;margin-bottom:4px} .gensteer label .sub{font-weight:400}
+#genDlg textarea{display:block;width:100%;min-height:148px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--sunk);color:var(--ink);margin:0;resize:vertical;font:inherit;line-height:1.5} #genDlg textarea:focus-visible{background:var(--surface)}
+.genstart{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:6px} #genStart{display:flex;gap:12px;flex-wrap:wrap}
+.genlink{border:0;background:none;color:var(--accent);font:var(--fs-sm)/18px var(--font);padding:2px 0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.gendraw{margin-top:12px;font-size:var(--fs-sm);color:var(--muted)} .gendrawb{border:0;background:none;color:var(--ink);font:500 var(--fs-sm)/18px var(--font);padding:2px 0;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+#genSrcNames{margin-left:6px} .gendrawb:hover{color:var(--accent)} .gendrawb svg{width:14px;height:14px;transform:rotate(-90deg)} .gendrawb[aria-expanded="true"] svg{transform:none}
+#genSrc{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:8px 0 0 20px} #genSrc[hidden]{display:none} #genSrc label{display:flex;gap:8px;align-items:center;color:var(--ink);min-height:28px} #genSrc.off{opacity:.55}
+.genoff{margin-top:8px;background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px} .genoff[hidden]{display:none}
+.gensum{display:flex;align-items:center;gap:12px;margin-top:16px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)} .gensum[hidden]{display:none} .gensum b{color:var(--ink);font-weight:500}
+.genlink:focus-visible,.gendrawb:focus-visible{border-radius:var(--r-sm)}
+.genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
 .gensrc{margin-top:10px;font-size:var(--fs-sm);color:var(--muted)} .gensrc summary{cursor:pointer}
 /* ===== Executive Current state (BL-106) ===== */
 .gennotes{margin-top:8px;font-size:var(--fs-sm);color:var(--muted)} .gennotes ul,.genrewrite .rwnotes{margin:4px 0 6px;padding-left:16px} .gennotes li,.genrewrite .rwnotes li{color:var(--warn)} .oknote{color:var(--ok)}
 .genrewrite{margin-top:10px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md)} .genrewrite .rwhead{margin-bottom:6px} .genrewrite .rwbody{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 10px;margin-bottom:6px}
-.gensrc .factblk ul{margin:2px 0 6px;padding-left:16px} #genDlg fieldset .sub{margin-top:4px}
+.gensrc .factblk ul{margin:2px 0 6px;padding-left:16px}
 .evidence{grid-column:1/-1;font-size:var(--fs-sm);color:var(--muted);padding:8px 10px;border-radius:var(--r-md);background:var(--sunk)} .evidence.warn{color:var(--ink);border-left:3px solid var(--warn)}
 .dropzone{border:2px dashed var(--line);border-radius:var(--r-lg);padding:24px;text-align:center;color:var(--muted);cursor:pointer} .dropzone.over,.dropzone:focus-visible{border-color:var(--ink);color:var(--ink);background:var(--sunk)}
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
@@ -2298,7 +2320,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drbtn svg{width:14px;height:14px;flex:none} .drbtn:hover{background:var(--accent-soft)} .drbtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .drbtn[aria-disabled="true"]{color:var(--faint);cursor:default;background:var(--surface)}
 /* BL-290: a switched-off draft greys its controls, never hides them: Generate's other forms, Draft email's tone chips */
-#genFormKind .vchip[aria-disabled="true"],.detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
+.detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
 .drcard{margin:8px 0 4px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md);color:var(--ink)}
 .drhead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px} .drhead svg{width:16px;height:16px;color:var(--accent);flex:none} .drhead .sub{font-size:var(--fs-xs)}
 .drtext{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;white-space:pre-wrap;line-height:1.5}

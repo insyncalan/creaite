@@ -10,12 +10,13 @@ import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./cor
 import { $, $$, addHTML, esc, html, ibtn, ic, paintIcons, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
 import { creaiteEditor, curDrop, ED_QUIET, edClaim, edOf, edValue } from "./core/editor.js";
 import { closeCombobox } from "./components/Combobox.jsx";
-import { CALI, closeCal, DATE_HELP, formProject, WK, wkAsk } from "./core/fields.js";
+import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
+import { CALI, closeCal, DATE_HELP, formProject, onCmdEnter, WK, wkAsk } from "./core/fields.js";
 import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll, tabTitle } from "./core/nav.js";
-import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
+import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, MOD, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { draftBtn, draftStat, genFormDraft, genFormOptions } from "./drafts.js";
+import { draftBtn, draftStat, draftWhyNot, genFormDraft, genFormOptions, genReset } from "./drafts.js";
 import { FOPEN } from "./files.js";
 import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
@@ -110,21 +111,35 @@ window.addEventListener("resize",()=>{ if(shared.VIEW==="cockpit") rkClamp($("#v
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-edcur]"); if(b){ startCurEdit(b.dataset.edcur); } const h=e.target.closest("[data-edproj]"); if(h) openProject(h.dataset.edproj,"health"); const f=e.target.closest("[data-files]"); if(f){ shared.FSEL={p:f.dataset.files,f:"All",sub:"",quick:"all"}; FOPEN.add(f.dataset.files); go("files"); } const a=e.target.closest("[data-ask]"); if(a){ openChat(); send(a.dataset.ask); } });
 }
 /* ======================= Generate current state with Claude (BL-46) ======================= */
-export const GEN_SRC=[["tracker","Tracker changes and open items",1],["minutes","Minutes and transcripts",1],["reports","Weekly and client reports",1],["updates","Weekly updates",1],["swept","Mail and Teams items already swept",1],["documents","Project documents (internal; off by default)",0]];
+export const GEN_SRC=[["tracker","Tracker changes and open items",1,"tracker"],["minutes","Minutes and transcripts",1,"minutes and transcripts"],["reports","Weekly and client reports",1,"reports"],["updates","Weekly updates",1,"weekly updates"],["swept","Mail and Teams items already swept",1,"swept mail and Teams"],["documents","Project documents (internal; off by default)",0,"project documents"]];   /* #110: the fourth is the short name for the Draw on line */
+export const GEN_STARTERS=[["risks","Lead with risks"],["decisions","Lead with decisions needed"],["plain","Plain words, no jargon"]];   /* #110: a click appends the sentence to Steer it; keyed by id, never by the words */
 export const GEN_FORMS=[["current","Current state"],["steering","Steering note"],["three","Three-line update"],["email","Email paragraph"],["teams","Teams message"]];   /* BL-227 */
 export const GEN_AUDNOTE={internal:"Candid: the internal view of every item.",client:"Only items marked client-visible, in their client wording. Nothing else from the vault is used.",
   steering:"Internal wording for the steering committee, decisions and asks first; nothing confidential, restricted or marked Client-safe: no.",sponsor:"Internal wording for the sponsor, what is needed from them first; nothing confidential, restricted or marked Client-safe: no."};
 export const GEN_AUD=[["internal","Internal"],["client","Client-safe"],["steering","Steering committee"],["sponsor","Sponsor"]], GEN_LEN=[["short","Short"],["standard","Standard"],["fuller","Fuller"]];   /* BL-106 */
+/* #110: the four settings are quiet fields, each a button that opens the Picker block's list (↑ ↓ Home End, Enter, Esc, Tab); the buttons are
+   drawn once in PageDialogs and only their words change, so a pick never loses the one you are on. Everything acts by data-gpick. */
+const GEN_PICKS={days:()=>({label:"Period",value:shared.GEN.days,options:[...[7,14,30].map(n=>({v:n,label:`Last ${n} days`})),{v:"custom",label:"Dates…"}],
+    set:v=>{ shared.GEN.days=v; $("#genCustom").hidden=v!=="custom"; if(v==="custom") $("#genFrom").focus(); }}),
+  form:()=>{ const off=!draftOn("forms"), why=off?draftWhyNot("status-form"):""; return {label:"Form",value:shared.GEN.form,
+    options:GEN_FORMS.map(([k,l])=>({v:k,label:l,...(why&&k!=="current"?{disabled:true,hint:why}:{})})),set:v=>{ shared.GEN.form=v; }}; },
+  aud:()=>({label:"Audience",value:shared.GEN.aud,options:GEN_AUD.map(([k,l])=>({v:k,label:l})),set:v=>{ shared.GEN.aud=v; }}),
+  len:()=>({label:"Length",value:shared.GEN.len,options:GEN_LEN.map(([k,l])=>({v:k,label:l})),set:v=>{ shared.GEN.len=v; }})};
+export function genPick(btn){ if(btn.getAttribute("aria-disabled")==="true") return; if(pickerOpenFor(btn)){ closePicker("owner"); return; }
+  const g=GEN_PICKS[btn.dataset.gpick]; if(!g) return; const c=g();
+  openPicker(btn,{label:c.label,value:c.value,options:c.options,onPick:v=>{ c.set(v); genOptions(); }}); }
 shared.GEN={code:null,days:S.genDays||7,aud:store.get("creaite-gen-aud","internal"),len:store.get("creaite-gen-len","standard"),form:store.get("creaite-gen-form","current"),run:null,ctl:null};
   
 export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Generate needs the live server"); return; } if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; }
   shared.GEN.code=code; $("#genWho").textContent=pName(code);
-  putHTML($("#genDays"),html`${[7,14,30].map(n=>html`<button type="button" class="vchip" data-gd="${raw(n)}" aria-pressed="${String(shared.GEN.days===n)}">Last ${raw(n)} days</button>`)}<button type="button" class="vchip" data-gd="custom" aria-pressed="${String(shared.GEN.days==="custom")}">Dates…</button>`);
+  genReset();   /* a dialog opened again starts as a new one: setup showing, no draft, Draw on folded */
   $("#genCustom").hidden=shared.GEN.days!=="custom";
-  putHTML($("#genSrc"),raw(GEN_SRC.map(([k,l,on])=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" value="${k}" ${on?"checked":""}> ${l}</label>`).join("")));
+  putHTML($("#genStart"),raw(GEN_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-gstart="${k}">${l}</button>`).join(" ")));
+  putHTML($("#genSrc"),raw(GEN_SRC.map(([k,l,on])=>`<label><input type="checkbox" value="${k}" ${on?"checked":""}> ${l}</label>`).join("")));
+  genSrcOpen(false); $("#genKbd").textContent=MOD+"↵";
   $("#genSweep").textContent=SWEPT&&SWEPT!=="never"?`Mail and Teams last swept ${fd(SWEPT)}; anything newer isn't in the vault yet.`:"Mail and Teams haven't been swept yet.";
   genOptions(); openDialog("genDlg"); })();
-  const ttl=csTitle(code), h=ttl===CST_DEF?"Generate current state":`Generate: ${ttl}`; $("#genTitle").textContent=h; }   /* the dialog's title, which names it, names the status (BL-274) */
+  const ttl=csTitle(code), h=ttl===CST_DEF?"Generate current state":`Generate: ${ttl}`; if(shared.GEN.form==="current") $("#genTitle").textContent=h; }   /* a remembered other form keeps its own "Write an …" title */   /* the dialog's title, which names it, names the status (BL-274) */
 export function genStatus(html){ const el=$("#genStatus"); if(!el) return; el.hidden=!html; putHtml(el,html||""); }
 export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrite"?"Rewriting in the executive voice":"Drafting the current state"); try{
   const id=`g-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.GEN.run=id; shared.GEN.ctl=ctl;
@@ -151,9 +166,17 @@ export function bootProjects0054(){
 if(!GEN_AUD.some(a=>a[0]===shared.GEN.aud)) shared.GEN.aud="internal";
 if(!GEN_FORMS.some(a=>a[0]===shared.GEN.form)) shared.GEN.form="current";
 if(!GEN_LEN.some(a=>a[0]===shared.GEN.len)) shared.GEN.len="standard";
-$("#genDays").addEventListener("click",e=>{ const b=e.target.closest("[data-gd]"); if(!b) return; shared.GEN.days=b.dataset.gd==="custom"?"custom":+b.dataset.gd;
-  $$("#genDays [data-gd]").forEach(x=>x.setAttribute("aria-pressed",x===b)); $("#genCustom").hidden=shared.GEN.days!=="custom"; });
-$("#genForm").addEventListener("submit",e=>{ if(e.submitter&&e.submitter.value!=="go") return; e.preventDefault();
+$("#genDlg").addEventListener("click",e=>{ const b=e.target.closest("[data-gpick]"); if(b) genPick(b); });
+$("#genDlg").addEventListener("keydown",e=>{ const b=e.target.closest&&e.target.closest("[data-gpick]"); if(b&&(e.key==="ArrowDown"||e.key==="ArrowUp")&&!pickerOpenFor(b)){ e.preventDefault(); genPick(b); } });
+/* Steer it's starters append one sentence on a new line and never fill the box or send; the Draw on line opens its ticks */
+$("#genDlg").addEventListener("click",e=>{ const st=e.target.closest("[data-gstart]"); if(st){ const x=GEN_STARTERS.find(a=>a[0]===st.dataset.gstart), t=$("#genNote"); if(!x) return;
+    const v=t.value.replace(/\s+$/,""); t.value=(v?v+"\n":"")+x[1]+"."; t.dispatchEvent(new Event("input",{bubbles:true})); t.focus(); return; }
+  if(e.target.closest("#genSrcBtn")) genSrcOpen($("#genSrcBtn").getAttribute("aria-expanded")!=="true");
+  if(e.target.closest("#genChange")){ genReset(); $("#genDays").focus(); } });
+$("#genSrc").addEventListener("change",()=>genSrcLine());
+/* ⌘↵ generates here (#101 has not built the shared dialog key yet; this is the one on this dialog) */
+onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t)); },()=>{ closePicker("owner",false); $("#genGo").click(); });
+$("#genForm").addEventListener("submit",e=>{ if(e.submitter&&e.submitter.value!=="go") return; e.preventDefault(); if($("#genGo").getAttribute("aria-disabled")==="true") return;   /* a draft is being written */
   let from, to=TODAY; if(shared.GEN.days==="custom"){ const f=$("#genFrom").value.trim(), t=$("#genTo").value.trim(); if(!DDATE.test(f)||(t&&!DDATE.test(t))){ snack("Not a date creaite knows. "+DATE_HELP); return; } from=toIso(f); if(t) to=toIso(t); }
   else from=new Date(Date.now()-shared.GEN.days*864e5).toISOString().slice(0,10);
   const sources=[...$$("#genSrc input:checked")].map(i=>i.value); store.set("creaite-gen-aud",shared.GEN.aud); store.set("creaite-gen-len",shared.GEN.len); store.set("creaite-gen-form",shared.GEN.form);
@@ -164,10 +187,21 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-gen]"); i
   if(e.target.closest("[data-genstop]")&&shared.GEN.run){ api("/api/ask/stop",{run:shared.GEN.run}).then(r=>{ if(!r.ok&&shared.GEN.ctl) shared.GEN.ctl.abort(); }); } });
 }
 /* ===== Executive Current state (BL-106) ===== */
-export function genOptions(){ putHTML($("#genAud"),raw(GEN_AUD.map(([k,l])=>`<button type="button" class="vchip" data-ga="${k}" aria-pressed="${shared.GEN.aud===k}">${l}</button>`).join("")));
-  putHTML($("#genLen"),raw(GEN_LEN.map(([k,l])=>`<button type="button" class="vchip" data-gl="${k}" aria-pressed="${shared.GEN.len===k}">${l}</button>`).join("")));
-  const c=shared.GEN.aud!=="internal"||shared.GEN.form!=="current"; $("#genAudNote").textContent=GEN_AUDNOTE[shared.GEN.aud];
-  $$("#genSrc input").forEach(i=>{ i.disabled=c; }); $("#genSrc").style.opacity=c?".5":""; genFormOptions(); }
+export function genOptions(){ genFormOptions(); genStrip(); genSrcLine(); }   /* the Form first: a remembered form that is switched off falls back to Current state */
+/* #110: the words of the four fields (their value too, as data-v), the Draw on line and the fold's summary */
+export function genStrip(){ const g=shared.GEN, set=(id,v,t)=>{ const b=$("#"+id); b.dataset.v=String(v); b.querySelector(".gv").textContent=t; };
+  set("genDays",g.days,g.days==="custom"?"Dates…":`Last ${g.days} days`); set("genFormKind",g.form,(GEN_FORMS.find(x=>x[0]===g.form)||GEN_FORMS[0])[1]);
+  set("genAud",g.aud,(GEN_AUD.find(x=>x[0]===g.aud)||GEN_AUD[0])[1]); set("genLen",g.len,(GEN_LEN.find(x=>x[0]===g.len)||GEN_LEN[1])[1]); }
+export function genSrcOpen(on){ const b=$("#genSrcBtn"); b.setAttribute("aria-expanded",String(on)); $("#genSrc").hidden=!on; }
+export function genSrcLine(){ const c=shared.GEN.aud==="client", off=shared.GEN.aud!=="internal"||shared.GEN.form!=="current";
+  const on=[...$$("#genSrc input:checked")].map(i=>i.value), names=GEN_SRC.filter(x=>on.includes(x[0])).map(x=>x[3]);
+  $$("#genSrc input").forEach(i=>{ i.disabled=off; }); $("#genSrc").classList.toggle("off",off); $("#genOff").hidden=!c;
+  $("#genSrcSum").textContent=c?"Drawing on client-visible items":on.length?`Drawing on ${plur(on.length,"source")}`:"Drawing on no sources";
+  $("#genSrcNames").textContent=c||!names.length?"":`· ${names.join(", ")}`; }
+/* the fold's summary: Form, period, Audience, sources (#110 addendum) */
+export function genSummary(){ const g=shared.GEN, f=$("#genFrom").value.trim(), t=$("#genTo").value.trim();
+  const per=g.days==="custom"?`${f||"the start"} to ${t||"today"}`:`last ${g.days} days`, n=$$("#genSrc input:checked").length;
+  return [(GEN_FORMS.find(x=>x[0]===g.form)||GEN_FORMS[0])[1],per,(GEN_AUD.find(x=>x[0]===g.aud)||GEN_AUD[0])[1],g.aud==="client"?"client-visible items":plur(n,"source")]; }
 export const execOpts=()=>{ const o=(shared.CURED&&shared.CURED.opts)||{}; return {audience:o.audience||shared.GEN.aud,length:o.length||shared.GEN.len,...(o.from?{from:o.from}:{}),...(o.to?{to:o.to}:{})}; };
 export function notesHtml(){ const h=(()=>{ const n=shared.CURED&&shared.CURED.notes; if(shared.CURED&&shared.CURED.checking) return '<span class="sub">Checking the wording…</span>';
   if(!n) return viaServer()?'<button class="mini" data-chk="1">Check the wording</button>':"";
@@ -200,7 +234,6 @@ export function curAiMenu(){ const el=$("#curAi"); if(!el||!shared.CURED) return
 export function setRewrite(){ const el=$("#genRewrite"); if(el) swapHTML(el,raw(rewriteHtml())); rwWrap(); evRefresh(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0055(){
-$("#genDlg").addEventListener("click",e=>{ const a=e.target.closest("[data-ga]"), l=e.target.closest("[data-gl]"), f=e.target.closest("[data-gf]"); if(a) shared.GEN.aud=a.dataset.ga; else if(l&&!l.disabled) shared.GEN.len=l.dataset.gl; else if(f){ if(f.getAttribute("aria-disabled")==="true"){ snack(f.dataset.tip||"That form is off"); return; } shared.GEN.form=f.dataset.gf; } else return; genOptions(); });
 document.addEventListener("click",e=>{ if(!shared.CURED) return;
   if(e.target.closest("[data-chk]")){ curCheck(); return; }
   const rw=e.target.closest("[data-rw]"); if(rw&&shared.CURED.rewrite){ const md=shared.CURED.rewrite.md; shared.CURED.rewrite=null;

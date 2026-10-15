@@ -698,13 +698,35 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
-#genDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(460px,92vw);background:var(--surface);color:var(--ink)} #genDlg fieldset{border:0;padding:0;margin:0 0 12px} #genDlg legend{font-weight:500;margin-bottom:6px}
-#genDlg textarea{width:100%;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;background:var(--bg);color:var(--ink);margin:4px 0 8px} .genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
+/* #110 (part A): Generate is 736px wide (460 x 1.6), 92vw at most; the body scrolls and the footer stays in view. Four quiet settings in one strip
+   (a hairline and the sunk ground show only on hover or focus), Steer it as the body, Draw on a line, ordinary 32px buttons. */
+#genDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:0;width:min(736px,92vw);max-height:calc(100vh - 32px);background:var(--surface);color:var(--ink)}
+#genDlg[open]{display:flex;flex-direction:column;overflow:hidden} #genForm{display:flex;flex-direction:column;min-height:0;flex:1}
+.genbody{overflow:auto;min-height:0;padding:20px 24px 4px} .genfoot{display:flex;align-items:center;gap:8px;padding:12px 24px 16px;border-top:1px solid var(--line)} .genfoot .sub{flex:1}
+#genGo .kbd{margin-left:4px} #genGo[aria-disabled="true"]{opacity:.55;cursor:default}
+.genstrip{display:grid;grid-template-columns:1fr 1.25fr 1.3fr .8fr;gap:0 16px;margin-top:16px;padding:12px 0 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.genf{min-width:0} .genf label{display:block;font:500 var(--fs-xs)/16px var(--mono,var(--font));letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.genq{display:flex;align-items:center;justify-content:space-between;gap:4px;width:calc(100% + 8px);margin-left:-8px;height:var(--ctl-h);border:1px solid transparent;border-radius:var(--ctl-r);background:transparent;color:var(--ink);font:500 var(--fs-md)/18px var(--font);padding:0 8px;cursor:pointer;text-align:left}
+.genq .gv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .genq svg{width:14px;height:14px;flex:none;color:var(--muted)}
+.genq:not([aria-disabled="true"]):hover,.genq:focus-visible,.genq[aria-expanded="true"]{border-color:var(--line);background:var(--sunk)} .genq[aria-disabled="true"]{opacity:.55;cursor:default}
+#genCustom{padding:8px 0 0} #genCustom[hidden]{display:none} #genCustom input{width:132px;height:var(--ctl-h);border-radius:var(--ctl-r);background:var(--sunk)}
+.genhint{margin:8px 0 0;min-height:20px}
+.gensteer{margin-top:16px} .gensteer label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600;margin-bottom:4px} .gensteer label .sub{font-weight:400}
+#genDlg textarea{display:block;width:100%;min-height:148px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--sunk);color:var(--ink);margin:0;resize:vertical;font:inherit;line-height:1.5} #genDlg textarea:focus-visible{background:var(--surface)}
+.genstart{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:6px} #genStart{display:flex;gap:12px;flex-wrap:wrap}
+.genlink{border:0;background:none;color:var(--accent);font:var(--fs-sm)/18px var(--font);padding:2px 0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.gendraw{margin-top:12px;font-size:var(--fs-sm);color:var(--muted)} .gendrawb{border:0;background:none;color:var(--ink);font:500 var(--fs-sm)/18px var(--font);padding:2px 0;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+#genSrcNames{margin-left:6px} .gendrawb:hover{color:var(--accent)} .gendrawb svg{width:14px;height:14px;transform:rotate(-90deg)} .gendrawb[aria-expanded="true"] svg{transform:none}
+#genSrc{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:8px 0 0 20px} #genSrc[hidden]{display:none} #genSrc label{display:flex;gap:8px;align-items:center;color:var(--ink);min-height:28px} #genSrc.off{opacity:.55}
+.genoff{margin-top:8px;background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px} .genoff[hidden]{display:none}
+.gensum{display:flex;align-items:center;gap:12px;margin-top:16px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)} .gensum[hidden]{display:none} .gensum b{color:var(--ink);font-weight:500}
+.genlink:focus-visible,.gendrawb:focus-visible{border-radius:var(--r-sm)}
+.genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
 .gensrc{margin-top:10px;font-size:var(--fs-sm);color:var(--muted)} .gensrc summary{cursor:pointer}
 /* ===== Executive Current state (BL-106) ===== */
 .gennotes{margin-top:8px;font-size:var(--fs-sm);color:var(--muted)} .gennotes ul,.genrewrite .rwnotes{margin:4px 0 6px;padding-left:16px} .gennotes li,.genrewrite .rwnotes li{color:var(--warn)} .oknote{color:var(--ok)}
 .genrewrite{margin-top:10px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md)} .genrewrite .rwhead{margin-bottom:6px} .genrewrite .rwbody{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 10px;margin-bottom:6px}
-.gensrc .factblk ul{margin:2px 0 6px;padding-left:16px} #genDlg fieldset .sub{margin-top:4px}
+.gensrc .factblk ul{margin:2px 0 6px;padding-left:16px}
 .evidence{grid-column:1/-1;font-size:var(--fs-sm);color:var(--muted);padding:8px 10px;border-radius:var(--r-md);background:var(--sunk)} .evidence.warn{color:var(--ink);border-left:3px solid var(--warn)}
 .dropzone{border:2px dashed var(--line);border-radius:var(--r-lg);padding:24px;text-align:center;color:var(--muted);cursor:pointer} .dropzone.over,.dropzone:focus-visible{border-color:var(--ink);color:var(--ink);background:var(--sunk)}
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
@@ -2308,7 +2330,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drbtn svg{width:14px;height:14px;flex:none} .drbtn:hover{background:var(--accent-soft)} .drbtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .drbtn[aria-disabled="true"]{color:var(--faint);cursor:default;background:var(--surface)}
 /* BL-290: a switched-off draft greys its controls, never hides them: Generate's other forms, Draft email's tone chips */
-#genFormKind .vchip[aria-disabled="true"],.detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
+.detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
 .drcard{margin:8px 0 4px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md);color:var(--ink)}
 .drhead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px} .drhead svg{width:16px;height:16px;color:var(--accent);flex:none} .drhead .sub{font-size:var(--fs-xs)}
 .drtext{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;white-space:pre-wrap;line-height:1.5}
@@ -3403,6 +3425,7 @@ button.nchip{font:inherit;font-size:12px}
     GEN_FORMS: () => GEN_FORMS,
     GEN_LEN: () => GEN_LEN,
     GEN_SRC: () => GEN_SRC,
+    GEN_STARTERS: () => GEN_STARTERS,
     GREET: () => GREET,
     GROUPS: () => GROUPS,
     HD: () => HD,
@@ -4456,13 +4479,21 @@ button.nchip{font:inherit;font-size:12px}
     fuUndo: () => fuUndo,
     funnelTip: () => funnelTip,
     genDraft: () => genDraft,
+    genFold: () => genFold,
+    genFolded: () => genFolded,
     genFormCard: () => genFormCard,
     genFormCopy: () => genFormCopy,
     genFormDraft: () => genFormDraft,
     genFormOptions: () => genFormOptions,
     genFormText: () => genFormText,
     genOptions: () => genOptions,
+    genPick: () => genPick,
+    genReset: () => genReset,
+    genSrcLine: () => genSrcLine,
+    genSrcOpen: () => genSrcOpen,
     genStatus: () => genStatus,
+    genStrip: () => genStrip,
+    genSummary: () => genSummary,
     go: () => go2,
     goDay: () => goDay,
     greet: () => greet,
@@ -6956,44 +6987,59 @@ button.nchip{font:inherit;font-size:12px}
         ] })
       ] }) }),
       /* @__PURE__ */ u2(Dialog, { id: "genDlg", labelledBy: "genTitle", children: /* @__PURE__ */ u2("form", { method: "dialog", id: "genForm", children: [
-        /* @__PURE__ */ u2("h2", { id: "genTitle", style: "margin:0 0 10px", children: "Generate current state" }),
-        /* @__PURE__ */ u2("div", { class: "sub", id: "genWho" }),
-        /* @__PURE__ */ u2("fieldset", { children: [
-          /* @__PURE__ */ u2("legend", { children: "Period" }),
-          /* @__PURE__ */ u2("div", { class: "views", id: "genDays" }),
-          /* @__PURE__ */ u2("div", { class: "drange", id: "genCustom", hidden: true, children: [
-            /* @__PURE__ */ u2("input", { type: "text", id: "genFrom", placeholder: "DD-MM-YYYY", "aria-label": "From" }),
-            /* @__PURE__ */ u2("span", { children: "to" }),
-            /* @__PURE__ */ u2("input", { type: "text", id: "genTo", placeholder: "DD-MM-YYYY", "aria-label": "To" })
+        /* @__PURE__ */ u2("div", { class: "genbody", children: [
+          /* @__PURE__ */ u2("h2", { id: "genTitle", style: "margin:0", children: "Generate current state" }),
+          /* @__PURE__ */ u2("div", { class: "sub", id: "genWho" }),
+          /* @__PURE__ */ u2("div", { id: "genSetup", children: [
+            /* @__PURE__ */ u2("div", { class: "genstrip", role: "group", "aria-label": "Settings", children: [["days", "genDays", "Period"], ["form", "genFormKind", "Form"], ["aud", "genAud", "Audience"], ["len", "genLen", "Length"]].map(([k5, id2, word]) => /* @__PURE__ */ u2("div", { class: "genf", "data-gfield": k5, children: [
+              /* @__PURE__ */ u2("label", { id: `${id2}L`, for: id2, children: word }),
+              /* @__PURE__ */ u2("button", { type: "button", class: "genq", id: id2, "data-gpick": k5, "aria-haspopup": "listbox", "aria-expanded": "false", "aria-labelledby": `${id2}L ${id2}`, children: [
+                /* @__PURE__ */ u2("span", { class: "gv" }),
+                /* @__PURE__ */ u2(Icon, { name: "chevdown" })
+              ] })
+            ] }, k5)) }),
+            /* @__PURE__ */ u2("div", { class: "drange", id: "genCustom", hidden: true, children: [
+              /* @__PURE__ */ u2("input", { type: "text", id: "genFrom", placeholder: "DD-MM-YYYY", "aria-label": "From" }),
+              /* @__PURE__ */ u2("span", { children: "to" }),
+              /* @__PURE__ */ u2("input", { type: "text", id: "genTo", placeholder: "DD-MM-YYYY", "aria-label": "To" })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "sub genhint", id: "genHint", "aria-live": "polite" }),
+            /* @__PURE__ */ u2("div", { class: "gensteer", children: [
+              /* @__PURE__ */ u2("label", { for: "genNote", children: [
+                "Steer it ",
+                /* @__PURE__ */ u2("span", { class: "sub", children: "Optional. Say what to lead with, what to leave out, or the tone." })
+              ] }),
+              /* @__PURE__ */ u2("textarea", { id: "genNote", rows: 6, placeholder: "For example: focus on the pilot results and the data-sharing delay" }),
+              /* @__PURE__ */ u2("div", { class: "genstart", children: [
+                /* @__PURE__ */ u2("span", { class: "sub", children: "Try:" }),
+                /* @__PURE__ */ u2("span", { id: "genStart" })
+              ] })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "gendraw", children: [
+              /* @__PURE__ */ u2("button", { type: "button", class: "gendrawb", id: "genSrcBtn", "aria-expanded": "false", "aria-controls": "genSrc", children: [
+                /* @__PURE__ */ u2(Icon, { name: "chevdown" }),
+                /* @__PURE__ */ u2("span", { id: "genSrcSum" })
+              ] }),
+              /* @__PURE__ */ u2("span", { class: "sub", id: "genSrcNames" }),
+              /* @__PURE__ */ u2("div", { id: "genSrc", hidden: true }),
+              /* @__PURE__ */ u2("div", { class: "genoff", id: "genOff", hidden: true, children: "Client-safe uses only client-visible items, in their client wording. The sources are switched off." })
+            ] })
+          ] }),
+          /* @__PURE__ */ u2("div", { class: "gensum", id: "genSum", hidden: true, children: [
+            /* @__PURE__ */ u2("span", { id: "genSumTxt" }),
+            /* @__PURE__ */ u2("span", { class: "sp" }),
+            /* @__PURE__ */ u2("button", { type: "button", class: "genlink", id: "genChange", children: "Change settings" })
+          ] }),
+          /* @__PURE__ */ u2("div", { id: "genOut", class: "fmout" })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "genfoot", children: [
+          /* @__PURE__ */ u2("span", { class: "sub", id: "genSweep" }),
+          /* @__PURE__ */ u2("button", { class: "btn", id: "genCancel", value: "cancel", formnovalidate: true, children: "Cancel" }),
+          /* @__PURE__ */ u2("button", { class: "btn primary", id: "genGo", value: "go", children: [
+            /* @__PURE__ */ u2("span", { id: "genGoT", children: "Generate" }),
+            /* @__PURE__ */ u2("span", { class: "kbd", id: "genKbd", "aria-hidden": "true" })
           ] })
-        ] }),
-        /* @__PURE__ */ u2("fieldset", { children: [
-          /* @__PURE__ */ u2("legend", { children: "Form" }),
-          /* @__PURE__ */ u2("div", { class: "views", id: "genFormKind" }),
-          /* @__PURE__ */ u2("div", { class: "sub", id: "genFormNote" })
-        ] }),
-        /* @__PURE__ */ u2("fieldset", { children: [
-          /* @__PURE__ */ u2("legend", { children: "Audience" }),
-          /* @__PURE__ */ u2("div", { class: "views", id: "genAud" }),
-          /* @__PURE__ */ u2("div", { class: "sub", id: "genAudNote" })
-        ] }),
-        /* @__PURE__ */ u2("fieldset", { children: [
-          /* @__PURE__ */ u2("legend", { children: "Length" }),
-          /* @__PURE__ */ u2("div", { class: "views", id: "genLen" })
-        ] }),
-        /* @__PURE__ */ u2("fieldset", { children: [
-          /* @__PURE__ */ u2("legend", { children: "Draw on" }),
-          /* @__PURE__ */ u2("div", { id: "genSrc" })
-        ] }),
-        /* @__PURE__ */ u2("label", { class: "sub", for: "genNote", children: "Steer it (optional)" }),
-        /* @__PURE__ */ u2("textarea", { id: "genNote", rows: 2, placeholder: "For example: focus on the pilot results" }),
-        /* @__PURE__ */ u2("div", { class: "sub", id: "genSweep" }),
-        /* @__PURE__ */ u2("div", { class: "curacts", children: [
-          /* @__PURE__ */ u2("span", { class: "sp" }),
-          /* @__PURE__ */ u2("button", { class: "btn", value: "cancel", formnovalidate: true, children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { class: "btn primary", id: "genGo", value: "go", children: "Generate" })
-        ] }),
-        /* @__PURE__ */ u2("div", { id: "genOut", class: "fmout" })
+        ] })
       ] }) }),
       /* @__PURE__ */ u2(Dialog, { id: "personDlg", labelledBy: "pdTitle", children: /* @__PURE__ */ u2("form", { method: "dialog", id: "personForm", children: [
         /* @__PURE__ */ u2("h2", { id: "pdTitle", style: "margin:0 0 10px", children: "New person" }),
@@ -41403,7 +41449,8 @@ ${s5}`;
       }
     });
   }
-  var GEN_SRC = [["tracker", "Tracker changes and open items", 1], ["minutes", "Minutes and transcripts", 1], ["reports", "Weekly and client reports", 1], ["updates", "Weekly updates", 1], ["swept", "Mail and Teams items already swept", 1], ["documents", "Project documents (internal; off by default)", 0]];
+  var GEN_SRC = [["tracker", "Tracker changes and open items", 1, "tracker"], ["minutes", "Minutes and transcripts", 1, "minutes and transcripts"], ["reports", "Weekly and client reports", 1, "reports"], ["updates", "Weekly updates", 1, "weekly updates"], ["swept", "Mail and Teams items already swept", 1, "swept mail and Teams"], ["documents", "Project documents (internal; off by default)", 0, "project documents"]];
+  var GEN_STARTERS = [["risks", "Lead with risks"], ["decisions", "Lead with decisions needed"], ["plain", "Plain words, no jargon"]];
   var GEN_FORMS = [["current", "Current state"], ["steering", "Steering note"], ["three", "Three-line update"], ["email", "Email paragraph"], ["teams", "Teams message"]];
   var GEN_AUDNOTE = {
     internal: "Candid: the internal view of every item.",
@@ -41412,6 +41459,49 @@ ${s5}`;
     sponsor: "Internal wording for the sponsor, what is needed from them first; nothing confidential, restricted or marked Client-safe: no."
   };
   var GEN_AUD = [["internal", "Internal"], ["client", "Client-safe"], ["steering", "Steering committee"], ["sponsor", "Sponsor"]], GEN_LEN = [["short", "Short"], ["standard", "Standard"], ["fuller", "Fuller"]];
+  var GEN_PICKS = {
+    days: () => ({
+      label: "Period",
+      value: shared.GEN.days,
+      options: [...[7, 14, 30].map((n4) => ({ v: n4, label: `Last ${n4} days` })), { v: "custom", label: "Dates…" }],
+      set: (v5) => {
+        shared.GEN.days = v5;
+        $("#genCustom").hidden = v5 !== "custom";
+        if (v5 === "custom") $("#genFrom").focus();
+      }
+    }),
+    form: () => {
+      const off = !draftOn("forms"), why = off ? draftWhyNot("status-form") : "";
+      return {
+        label: "Form",
+        value: shared.GEN.form,
+        options: GEN_FORMS.map(([k5, l6]) => ({ v: k5, label: l6, ...why && k5 !== "current" ? { disabled: true, hint: why } : {} })),
+        set: (v5) => {
+          shared.GEN.form = v5;
+        }
+      };
+    },
+    aud: () => ({ label: "Audience", value: shared.GEN.aud, options: GEN_AUD.map(([k5, l6]) => ({ v: k5, label: l6 })), set: (v5) => {
+      shared.GEN.aud = v5;
+    } }),
+    len: () => ({ label: "Length", value: shared.GEN.len, options: GEN_LEN.map(([k5, l6]) => ({ v: k5, label: l6 })), set: (v5) => {
+      shared.GEN.len = v5;
+    } })
+  };
+  function genPick(btn) {
+    if (btn.getAttribute("aria-disabled") === "true") return;
+    if (pickerOpenFor(btn)) {
+      closePicker("owner");
+      return;
+    }
+    const g5 = GEN_PICKS[btn.dataset.gpick];
+    if (!g5) return;
+    const c5 = g5();
+    openPicker(btn, { label: c5.label, value: c5.value, options: c5.options, onPick: (v5) => {
+      c5.set(v5);
+      genOptions();
+    } });
+  }
   shared.GEN = { code: null, days: S.genDays || 7, aud: store.get("creaite-gen-aud", "internal"), len: store.get("creaite-gen-len", "standard"), form: store.get("creaite-gen-form", "current"), run: null, ctl: null };
   function openGen(code) {
     (() => {
@@ -41429,15 +41519,18 @@ ${s5}`;
       }
       shared.GEN.code = code;
       $("#genWho").textContent = pName(code);
-      putHTML($("#genDays"), html`${[7, 14, 30].map((n4) => html`<button type="button" class="vchip" data-gd="${raw(n4)}" aria-pressed="${String(shared.GEN.days === n4)}">Last ${raw(n4)} days</button>`)}<button type="button" class="vchip" data-gd="custom" aria-pressed="${String(shared.GEN.days === "custom")}">Dates…</button>`);
+      genReset();
       $("#genCustom").hidden = shared.GEN.days !== "custom";
-      putHTML($("#genSrc"), raw(GEN_SRC.map(([k5, l6, on2]) => `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" value="${k5}" ${on2 ? "checked" : ""}> ${l6}</label>`).join("")));
+      putHTML($("#genStart"), raw(GEN_STARTERS.map(([k5, l6]) => `<button type="button" class="genlink" data-gstart="${k5}">${l6}</button>`).join(" ")));
+      putHTML($("#genSrc"), raw(GEN_SRC.map(([k5, l6, on2]) => `<label><input type="checkbox" value="${k5}" ${on2 ? "checked" : ""}> ${l6}</label>`).join("")));
+      genSrcOpen(false);
+      $("#genKbd").textContent = MOD + "↵";
       $("#genSweep").textContent = SWEPT && SWEPT !== "never" ? `Mail and Teams last swept ${fd(SWEPT)}; anything newer isn't in the vault yet.` : "Mail and Teams haven't been swept yet.";
       genOptions();
       openDialog("genDlg");
     })();
     const ttl = csTitle(code), h5 = ttl === CST_DEF ? "Generate current state" : `Generate: ${ttl}`;
-    $("#genTitle").textContent = h5;
+    if (shared.GEN.form === "current") $("#genTitle").textContent = h5;
   }
   function genStatus(html2) {
     const el2 = $("#genStatus");
@@ -41559,16 +41652,46 @@ ${s5}`;
     if (!GEN_AUD.some((a5) => a5[0] === shared.GEN.aud)) shared.GEN.aud = "internal";
     if (!GEN_FORMS.some((a5) => a5[0] === shared.GEN.form)) shared.GEN.form = "current";
     if (!GEN_LEN.some((a5) => a5[0] === shared.GEN.len)) shared.GEN.len = "standard";
-    $("#genDays").addEventListener("click", (e4) => {
-      const b5 = e4.target.closest("[data-gd]");
-      if (!b5) return;
-      shared.GEN.days = b5.dataset.gd === "custom" ? "custom" : +b5.dataset.gd;
-      $$("#genDays [data-gd]").forEach((x5) => x5.setAttribute("aria-pressed", x5 === b5));
-      $("#genCustom").hidden = shared.GEN.days !== "custom";
+    $("#genDlg").addEventListener("click", (e4) => {
+      const b5 = e4.target.closest("[data-gpick]");
+      if (b5) genPick(b5);
+    });
+    $("#genDlg").addEventListener("keydown", (e4) => {
+      const b5 = e4.target.closest && e4.target.closest("[data-gpick]");
+      if (b5 && (e4.key === "ArrowDown" || e4.key === "ArrowUp") && !pickerOpenFor(b5)) {
+        e4.preventDefault();
+        genPick(b5);
+      }
+    });
+    $("#genDlg").addEventListener("click", (e4) => {
+      const st2 = e4.target.closest("[data-gstart]");
+      if (st2) {
+        const x5 = GEN_STARTERS.find((a5) => a5[0] === st2.dataset.gstart), t47 = $("#genNote");
+        if (!x5) return;
+        const v5 = t47.value.replace(/\s+$/, "");
+        t47.value = (v5 ? v5 + "\n" : "") + x5[1] + ".";
+        t47.dispatchEvent(new Event("input", { bubbles: true }));
+        t47.focus();
+        return;
+      }
+      if (e4.target.closest("#genSrcBtn")) genSrcOpen($("#genSrcBtn").getAttribute("aria-expanded") !== "true");
+      if (e4.target.closest("#genChange")) {
+        genReset();
+        $("#genDays").focus();
+      }
+    });
+    $("#genSrc").addEventListener("change", () => genSrcLine());
+    onCmdEnter("generate", (t47) => {
+      const d5 = $("#genDlg");
+      return !!d5 && d5.open && (t47 === d5 || d5.contains(t47));
+    }, () => {
+      closePicker("owner", false);
+      $("#genGo").click();
     });
     $("#genForm").addEventListener("submit", (e4) => {
       if (e4.submitter && e4.submitter.value !== "go") return;
       e4.preventDefault();
+      if ($("#genGo").getAttribute("aria-disabled") === "true") return;
       let from, to2 = TODAY;
       if (shared.GEN.days === "custom") {
         const f5 = $("#genFrom").value.trim(), t47 = $("#genTo").value.trim();
@@ -41604,15 +41727,41 @@ ${s5}`;
     });
   }
   function genOptions() {
-    putHTML($("#genAud"), raw(GEN_AUD.map(([k5, l6]) => `<button type="button" class="vchip" data-ga="${k5}" aria-pressed="${shared.GEN.aud === k5}">${l6}</button>`).join("")));
-    putHTML($("#genLen"), raw(GEN_LEN.map(([k5, l6]) => `<button type="button" class="vchip" data-gl="${k5}" aria-pressed="${shared.GEN.len === k5}">${l6}</button>`).join("")));
-    const c5 = shared.GEN.aud !== "internal" || shared.GEN.form !== "current";
-    $("#genAudNote").textContent = GEN_AUDNOTE[shared.GEN.aud];
-    $$("#genSrc input").forEach((i5) => {
-      i5.disabled = c5;
-    });
-    $("#genSrc").style.opacity = c5 ? ".5" : "";
     genFormOptions();
+    genStrip();
+    genSrcLine();
+  }
+  function genStrip() {
+    const g5 = shared.GEN, set = (id2, v5, t47) => {
+      const b5 = $("#" + id2);
+      b5.dataset.v = String(v5);
+      b5.querySelector(".gv").textContent = t47;
+    };
+    set("genDays", g5.days, g5.days === "custom" ? "Dates…" : `Last ${g5.days} days`);
+    set("genFormKind", g5.form, (GEN_FORMS.find((x5) => x5[0] === g5.form) || GEN_FORMS[0])[1]);
+    set("genAud", g5.aud, (GEN_AUD.find((x5) => x5[0] === g5.aud) || GEN_AUD[0])[1]);
+    set("genLen", g5.len, (GEN_LEN.find((x5) => x5[0] === g5.len) || GEN_LEN[1])[1]);
+  }
+  function genSrcOpen(on2) {
+    const b5 = $("#genSrcBtn");
+    b5.setAttribute("aria-expanded", String(on2));
+    $("#genSrc").hidden = !on2;
+  }
+  function genSrcLine() {
+    const c5 = shared.GEN.aud === "client", off = shared.GEN.aud !== "internal" || shared.GEN.form !== "current";
+    const on2 = [...$$("#genSrc input:checked")].map((i5) => i5.value), names = GEN_SRC.filter((x5) => on2.includes(x5[0])).map((x5) => x5[3]);
+    $$("#genSrc input").forEach((i5) => {
+      i5.disabled = off;
+    });
+    $("#genSrc").classList.toggle("off", off);
+    $("#genOff").hidden = !c5;
+    $("#genSrcSum").textContent = c5 ? "Drawing on client-visible items" : on2.length ? `Drawing on ${plur(on2.length, "source")}` : "Drawing on no sources";
+    $("#genSrcNames").textContent = c5 || !names.length ? "" : `· ${names.join(", ")}`;
+  }
+  function genSummary() {
+    const g5 = shared.GEN, f5 = $("#genFrom").value.trim(), t47 = $("#genTo").value.trim();
+    const per = g5.days === "custom" ? `${f5 || "the start"} to ${t47 || "today"}` : `last ${g5.days} days`, n4 = $$("#genSrc input:checked").length;
+    return [(GEN_FORMS.find((x5) => x5[0] === g5.form) || GEN_FORMS[0])[1], per, (GEN_AUD.find((x5) => x5[0] === g5.aud) || GEN_AUD[0])[1], g5.aud === "client" ? "client-visible items" : plur(n4, "source")];
   }
   var execOpts = () => {
     const o5 = shared.CURED && shared.CURED.opts || {};
@@ -41729,19 +41878,6 @@ ${s5}`;
     evRefresh();
   }
   function bootProjects0055() {
-    $("#genDlg").addEventListener("click", (e4) => {
-      const a5 = e4.target.closest("[data-ga]"), l6 = e4.target.closest("[data-gl]"), f5 = e4.target.closest("[data-gf]");
-      if (a5) shared.GEN.aud = a5.dataset.ga;
-      else if (l6 && !l6.disabled) shared.GEN.len = l6.dataset.gl;
-      else if (f5) {
-        if (f5.getAttribute("aria-disabled") === "true") {
-          snack(f5.dataset.tip || "That form is off");
-          return;
-        }
-        shared.GEN.form = f5.dataset.gf;
-      } else return;
-      genOptions();
-    });
     document.addEventListener("click", (e4) => {
       if (!shared.CURED) return;
       if (e4.target.closest("[data-chk]")) {
@@ -44203,17 +44339,43 @@ ${pre}**Current state title:** ${title}`);
   function genFormOptions() {
     const off = !draftOn("forms");
     if (off && shared.GEN.form !== "current") shared.GEN.form = "current";
-    const cur = shared.GEN.form === "current", why = off ? draftWhyNot("status-form") : "";
-    putHtml($("#genFormKind"), GEN_FORMS.map(([k5, l6]) => `<button type="button" class="vchip" data-gf="${k5}" aria-pressed="${shared.GEN.form === k5}"${why && k5 !== "current" ? ` aria-disabled="true" data-tip="${esc(why)}"` : ""}>${l6}</button>`).join(""));
-    $("#genFormNote").textContent = cur ? `Into the editor, for you to edit and save.${why ? ` The other forms: ${why[0].toLowerCase() + why.slice(1)}.` : ""}` : "Shown here to copy; never saved.";
-    $$("#genLen [data-gl]").forEach((b5) => {
-      b5.disabled = !!GEN_FIXEDLEN[shared.GEN.form];
-    });
-    $("#genLen").title = GEN_FIXEDLEN[shared.GEN.form] || "";
+    const cur = shared.GEN.form === "current", why = off ? draftWhyNot("status-form") : "", fx2 = GEN_FIXEDLEN[shared.GEN.form] || "", len = $("#genLen");
+    $("#genHint").textContent = `${cur ? `Into the editor, for you to edit and save.${why ? ` The other forms: ${why[0].toLowerCase() + why.slice(1)}.` : ""}` : "Shown here to copy; never saved."} ${GEN_AUDNOTE[shared.GEN.aud] || ""}`.trim();
+    if (fx2) len.setAttribute("aria-disabled", "true");
+    else len.removeAttribute("aria-disabled");
+    len.title = fx2;
     const h5 = $("#genDlg h2");
-    if (h5) h5.textContent = cur ? "Generate current state" : `Write a ${GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1].toLowerCase()}`;
-    $("#genGo").textContent = cur ? "Generate" : "Write it";
+    if (h5) h5.textContent = cur ? "Generate current state" : `Write ${/^[aeiou]/i.test(GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1]) ? "an" : "a"} ${GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1].toLowerCase()}`;
+    genFooter();
     if (!GENFM || GENFM.form !== shared.GEN.form) putHtml($("#genOut"), "");
+  }
+  var genFolded = () => !$("#genSum").hidden;
+  function genFooter() {
+    const fold = genFolded(), cur = shared.GEN.form === "current";
+    $("#genGoT").textContent = fold ? "Generate again" : cur ? "Generate" : "Write it";
+    $("#genGo").classList.toggle("primary", !fold);
+    $("#genCancel").textContent = fold ? "Close" : "Cancel";
+  }
+  function genFold() {
+    const [form, ...rest] = genSummary(), el2 = $("#genSumTxt"), b5 = document.createElement("b");
+    b5.textContent = form;
+    el2.replaceChildren(b5, document.createTextNode(` · ${rest.join(" · ")}`));
+    $("#genSetup").hidden = true;
+    $("#genSum").hidden = false;
+    genFooter();
+  }
+  function genReset() {
+    if (GENFM && !GENFM.used) draftStat("forms", "rejected");
+    GENFM = null;
+    putHtml($("#genOut"), "");
+    $("#genSetup").hidden = false;
+    $("#genSum").hidden = true;
+    genBusy(false);
+    genFooter();
+  }
+  function genBusy(on2) {
+    if (on2) $("#genGo").setAttribute("aria-disabled", "true");
+    else $("#genGo").removeAttribute("aria-disabled");
   }
   function genFormCard(d5) {
     const name = (GEN_FORMS.find((x5) => x5[0] === d5.form) || [])[1] || "Status", aud = (GEN_AUD.find((x5) => x5[0] === d5.audience) || [])[1] || "", loose = d5.unsourced || 0;
@@ -44236,13 +44398,25 @@ ${pre}**Current state title:** ${title}`);
     if (GENFM && !GENFM.used) draftStat("forms", "rejected");
     GENFM = null;
     const form = shared.GEN.form;
-    const res = await draftAsk({ kind: "status-form", ...body2, form }, { label: "Writing it from the facts", status: (h5) => putHtml(out, h5 ? `<div class="drstatus" role="status">${h5}</div>` : "") });
+    genFold();
+    genBusy(true);
+    let res;
+    try {
+      res = await draftAsk({ kind: "status-form", ...body2, form }, { label: "Writing it from the facts", status: (h5) => putHtml(out, h5 ? `<div class="drstatus" role="status">${h5}</div>` : "") });
+    } finally {
+      genBusy(false);
+    }
+    if (!$("#genDlg").open && res.ok) {
+      draftStat("forms", "rejected");
+      return;
+    }
     if (res.nothing) {
       putHtml(out, `<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`);
       return;
     }
     if (!res.ok) {
       putHtml(out, "");
+      genReset();
       snack(res.message || "No draft came back");
       return;
     }
@@ -44277,17 +44451,15 @@ ${pre}**Current state title:** ${title}`);
       if (!b5 || !GENFM) return;
       e4.preventDefault();
       if (b5.dataset.gfdo === "discard") {
-        if (!GENFM.used) draftStat("forms", "rejected");
-        GENFM = null;
-        putHtml($("#genOut"), "");
+        genReset();
+        $("#genDays").focus();
         return;
       }
       genFormCopy(b5.dataset.gfdo === "rich", b5);
     });
     $("#genDlg").addEventListener("close", () => {
-      if (GENFM && !GENFM.used) draftStat("forms", "rejected");
-      GENFM = null;
-      putHtml($("#genOut"), "");
+      closePicker("owner", false);
+      genReset();
     });
   }
   function bootDrafts0203() {
