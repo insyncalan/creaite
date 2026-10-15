@@ -1816,47 +1816,305 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
 
 
 class Bl334And316(HandcheckCase):
-    """Phase 2: BL-334 alerts read the conversation (42 to 47) and BL-316's consistency (49, 50). Own vault."""
-    own_vault = True
+    """Phase 2: BL-334 alerts read the conversation (42 to 47) and BL-316's consistency (49, 50). Own vault.
 
-    @phase2()
+    42 to 47 build on each other, as the hand checks do: `ensure(step)` records (or does) each earlier step once, so any of
+    them runs on its own with --only. Recording is the check's own command (`sweep.py vip record <file> --found sweep`,
+    hcbase.vip_found) with the clock at the time the check names, so "updated HH:MM" is that time (the card says when it was
+    recorded, which by hand is when the tester ran the command)."""
+    own_vault = True
+    CONV = "19:hc-falcon@thread.v2"
+    RASHID = "Rashid Al Suwaidi <rashid@northgate.example>"
+    SECRET = "HC MESSAGE TEXT NEVER KEPT"          # a message's own text, sent with each conversation: vip.json must not keep it
+
+    @classmethod
+    def setUpClass(cls):
+        cls.steps = set()
+        super().setUpClass()
+
+    # ── the conversations (fictional: the demo's people) ──
+    def day(self):
+        return (self.now or "")[:10]
+
+    def falcon(self, later=False):
+        from datetime import date, timedelta
+        due = (date.fromisoformat(self.day()) + timedelta(days=7)).isoformat()
+        items = [{"type": "action", "text": "Take the platform from production to live", "owner": "Rashid Al Suwaidi", "due": due},
+                 {"type": "decision", "text": "Go-live work falls under the existing contract"}]
+        if later:
+            items.append({"type": "risk", "text": "Test licences may not arrive before go-live"})
+        return {"kind": "teams", "conversation": self.CONV, "title": "Falcon go-live", "from": self.RASHID,
+                "people": [self.RASHID, "Lena Fischer"], "last": f"{self.day()} {'09:05' if later else '08:40'}",
+                "link": "https://teams.microsoft.com/l/chat/hc", "sensitivity": "normal", "attachments": [],
+                "summary": "Northgate will take the platform from production to live; go-live work falls under the existing contract.",
+                "items": items, "messages": [{"text": self.SECRET}], "body": self.SECRET}
+
+    def hello(self):
+        return {"kind": "teams", "conversation": "19:hc-hello@thread.v2", "title": "Group chat", "from": self.RASHID,
+                "people": [self.RASHID, "Lena Fischer"], "last": f"{self.day()} 08:44",
+                "link": "https://teams.microsoft.com/l/chat/hc-hello", "sensitivity": "normal", "attachments": [],
+                "summary": "Greetings only.", "items": [], "messages": [{"text": self.SECRET}]}
+
+    def ensure(self, step):
+        """Do the hand checks' steps up to `step` once each: first (42), quiet (43), update (44)."""
+        import hcbase
+        order = {"first": (8, 40, [lambda: self.falcon()]),
+                 "quiet": (8, 45, [lambda: self.falcon(), self.hello]),
+                 "update": (9, 5, [lambda: self.falcon(later=True), self.hello])}
+        for name in order:
+            if name not in self.steps:
+                h, m, make = order[name]
+                code, out = hcbase.vip_found(self.vault, [f() for f in make], f"{self.day()} {h:02d}:{m:02d}")
+                self.assertEqual(code, 0, out[-500:])
+                type(self).steps.add(name)
+            if name == step:
+                break
+        self.b.eval("vipPoll().then(()=>{ go('today'); renderToday(); return true; })")
+        self.screen("today")
+
+    def vip(self):
+        return json.loads((self.vault / "system/staging/vip.json").read_text(encoding="utf-8"))
+
+    def alert(self, conv=None):
+        return next(a for a in self.vip()["alerts"] if a.get("conv") == (conv or self.CONV))
+
+    def proposals(self):
+        return sorted(p.name for p in (self.vault / "system/staging").glob("proposed-*.json"))
+
+    def page_card(self):
+        """Today's card for the Falcon conversation, as drawn: shown (To decide's "+n more" opened if it sits below the top
+        five), its title, its text, its candidates (tag, the item, and each button's action and item number)."""
+        b = self.b
+        b.eval("(()=>{ const m=document.querySelector('#v-today [data-more=td][aria-expanded=false]'); if(m) m.click(); return true; })()")
+        b.pump(0.3)
+        return b.eval("""(()=>{ const L=[...document.querySelectorAll('#tdList>li.td-message')];
+          return L.map(li=>({title:li.querySelector('.t').textContent, hidden:li.hidden||!li.offsetParent,
+            text:li.textContent.replace(/\\s+/g,' ').trim(), rowButtons:li.querySelectorAll(':scope>.tacts button').length,
+            cands:[...li.querySelectorAll('.tdcand')].map(c=>({tag:c.querySelector('.tdctag').textContent, t:c.querySelector('.ct').textContent,
+              buttons:[...c.querySelectorAll('button')].map(x=>[x.dataset.alertdo, x.dataset.cand, x.getAttribute('aria-label')||x.dataset.tip||''])}))})); })()""")
+
+    def falcon_cards(self):
+        return [c for c in self.page_card() if c["title"] == "Falcon go-live"]
+
+    @staticmethod
+    def labels(cand):
+        return [x[0] for x in cand["buttons"]]
+
     def test_c42_one_card_per_conversation(self):
         """42. Today → one card titled "Falcon go-live" (not "Group chat"), "updated 08:40", the summary, and two candidates,
         each with **Create work item** and **Dismiss**. The project is Falcon Data Platform, matched from the title."""
+        self.ensure("first")
+        cards = self.falcon_cards()
+        self.assertEqual(len(cards), 1, f"one card: {[c['title'] for c in self.page_card()]}")
+        c = cards[0]
+        self.assertFalse(c["hidden"], "the card is on show")
+        self.assertNotIn("Group chat", c["text"])
+        self.assertIn("updated 08:40", c["text"])
+        self.assertIn("Northgate will take the platform from production to live", c["text"])
+        self.assertIn("Falcon Data Platform", c["text"], "the project, by name")
+        self.assertEqual([x["tag"] for x in c["cands"]], ["Action", "Decision"])
+        for x in c["cands"]:
+            self.assertEqual(self.labels(x), ["make", "dismiss"], x)
+        self.assertEqual(c["rowButtons"], 0, "the buttons are per item")
+        a = self.alert()
+        self.assertEqual(a["p"], "FAL", "matched from the title")
+        names = [x[2] for x in c["cands"][0]["buttons"]]
+        self.note(42, f"card \"{c['title']}\", updated 08:40 (recorded at 08:40), Falcon Data Platform (p=FAL); "
+                      f"Action + Decision, each {' / '.join(n.split(':')[0] for n in names)}")
 
-    @phase2()
     def test_c43_quiet_line(self):
         """43. A second conversation titled "Group chat" with nothing in it → one quiet line ("… : nothing for you"), with no
         buttons and no count. Its title is the people in it, never "Group chat"."""
+        self.ensure("quiet")
+        b = self.b
+        quiet = b.eval("""[...document.querySelectorAll('#tdList>li.td-quiet')].map(li=>({text:li.textContent.replace(/\\s+/g,' ').trim(),
+          buttons:li.querySelectorAll('button').length, tag:!!li.querySelector('.tdtag')}))""")
+        self.assertEqual(len(quiet), 1, quiet)
+        q = quiet[0]
+        self.assertIn("Rashid Al Suwaidi with Lena Fischer: nothing for you", q["text"])
+        self.assertEqual(q["buttons"], 0, "no buttons")
+        self.assertFalse(q["tag"], "no tag")
+        page = b.eval("document.getElementById('tdList').textContent")
+        self.assertNotIn("Group chat", page)
+        a = self.alert("19:hc-hello@thread.v2")
+        self.assertTrue(a["quiet"])
+        self.assertEqual(a["title"], "Rashid Al Suwaidi, Lena Fischer", "the people, never Group chat")
+        open_ = [x for x in self.vip()["alerts"] if not x.get("seen") and not x.get("quiet")]
+        rail = b.eval("(()=>{ const e=document.querySelector('.rail button[data-v=\"today\"] .badge'); return e&&e.offsetParent?e.textContent.trim():''; })()")
+        self.assertEqual(rail, str(len(open_)) if open_ else "", "the rail counts the card, not the quiet line")
+        self.assertEqual(len(self.falcon_cards()), 1, "the first card is still one card")
+        self.note(43, f"\"{q['text']}\", 0 buttons; title in vip.json \"{a['title']}\"; Today's count {rail or '0'} (the card only)")
 
-    @phase2()
     def test_c44_same_card_updated(self):
         """44. Record the first conversation again at 09:05 with a third item → the same card is updated ("updated 09:05", three
         candidates). No second card."""
+        self.ensure("quiet")
+        before = self.alert()["id"]
+        self.ensure("update")
+        cards = self.falcon_cards()
+        self.assertEqual(len(cards), 1, "no second card")
+        c = cards[0]
+        self.assertIn("updated 09:05", c["text"])
+        self.assertEqual([x["tag"] for x in c["cands"]], ["Action", "Decision", "Risk"])
+        a = self.alert()
+        self.assertEqual(a["id"], before, "the same alert")
+        self.assertEqual(len([x for x in self.vip()["alerts"] if x.get("conv") == self.CONV]), 1)
+        self.note(44, "same alert id, updated 09:05, Action + Decision + Risk; one card")
 
-    @phase2()
     def test_c45_dismiss_create(self):
         """45. Dismiss the risk → it goes; nothing in Review. Create work item on the action → one proposal in Review, for
         Falcon Data Platform."""
+        self.ensure("update")
+        b = self.b
+        before = self.proposals()
+        b.eval("document.querySelector('#tdList [data-alertdo=dismiss][data-cand=\"3\"]').click()")
+        b.wait("!document.querySelector('#tdList [data-alertdo=dismiss][data-cand=\"3\"]')", 10)
+        b.pump(0.5)
+        self.assertEqual(self.proposals(), before, "Dismiss stages nothing")
+        self.assertTrue(self.alert()["candidates"][2].get("dismissed"))
+        self.assertEqual([x["tag"] for x in self.falcon_cards()[0]["cands"]], ["Action", "Decision"], "the risk goes")
+        b.eval("document.querySelector('#tdList [data-alertdo=make][data-cand=\"1\"]').click()")
+        b.wait("document.getElementById('panel').classList.contains('on') && document.querySelector('[data-alertpeek=save]')", 15)
+        b.pump(0.4)
+        filled = b.eval("(document.getElementById('pkTitle')||{}).textContent||''")
+        says = b.eval("(document.getElementById('panel').innerText.match(/Save \\(.\\S*\\) [^\\n]*/)||[''])[0]")
+        b.eval("document.querySelector('[data-alertpeek=save]').click()")
+        b.wait("!document.querySelector('#tdList [data-alertdo=make][data-cand=\"1\"]')", 15)
+        b.pump(0.8)
+        after = self.proposals()
+        new = sorted(set(after) - set(before))
+        made = self.alert()["candidates"][0].get("made") or {}
+        applied = (self.vault / "system/staging/applied" / str(made.get("proposal"))).exists()
+        self.assertEqual(len(new), 1, f"one proposal in Review: none; the peek says \"{says}\", but Save applied it at once "
+                                      f"(made {made.get('id')} from {made.get('proposal')}, now in staging/applied/: {applied})")
+        spec = json.loads((self.vault / "system/staging" / new[0]).read_text(encoding="utf-8"))
+        self.assertEqual(len(spec["items"]), 1)
+        item = spec["items"][0]
+        self.assertEqual(item["table"], "actions")
+        self.assertEqual(item["values"]["project"], "FAL")
+        self.assertEqual(item["values"]["description"], "Take the platform from production to live")
+        self.screen("review")
+        rev = b.eval("document.getElementById('v-review').innerText")
+        self.assertIn("Take the platform from production to live", rev)
+        self.assertIn("Falcon Data Platform", rev)
+        self.assertEqual(b.errors, [], "page errors")
+        self.note(45, f"Dismiss: 0 proposals, risk gone; Create work item (peek \"{filled}\", saved): "
+                      f"1 proposal {new[0]} (actions, FAL), shown in Review under Falcon Data Platform")
 
-    @phase2()
     def test_c46_sweep_skips_it(self):
         """46. Stage a sweep file whose item carries that conversation and a time before 09:05 → nothing proposed for it:
         "skipped (that conversation is summarised on Today …)"."""
+        self.ensure("update")
+        before = self.proposals()
+        src = (f"Teams · Chat: Falcon go-live · From: Rashid Al Suwaidi · Sent: {self.day()} 08:50 · "
+               "Link: https://teams.microsoft.com/l/message/hc-a1")
+        f = self.vault / "system/staging/drafts/hc-sweep.json"
+        f.write_text(json.dumps({"items": [{"table": "actions", "conversation": self.CONV,
+                                            "values": {"project": "FAL", "description": "Take the platform from production to live",
+                                                       "owner": "Alan Carter", "source": src}}]}), encoding="utf-8")
+        code, out = self.run_in_vault("sweep.py", "stage", f)
+        self.assertEqual(code, 0, out[-500:])
+        self.assertEqual(self.proposals(), before, "nothing proposed")
+        line = next((ln.strip() for ln in out.splitlines() if "summarised on Today" in ln), "")
+        self.assertIn("skipped (that conversation is summarised on Today", line)
+        self.note(46, f"no proposal; \"{line[:120]}\"")
 
-    @phase2()
     def test_c47_no_message_text_no_vip(self):
         """47. `system/staging/vip.json` → the summary and candidates only; no message text. Nothing on screen says "VIP"."""
+        self.ensure("update")
+        text = (self.vault / "system/staging/vip.json").read_text(encoding="utf-8")
+        self.assertNotIn(self.SECRET, text, "no message text")
+        for a in self.vip()["alerts"]:
+            self.assertFalse({"messages", "body", "text"} & set(a), f"message fields kept: {sorted(a)}")
+        a = self.alert()
+        self.assertTrue(a["summary"])
+        self.assertTrue(a["candidates"])
+        self.assertNotIn("VIP", text.replace('"vip"', ""), "vip.json says VIP")
+        b = self.b
+        shown = b.eval("document.body.innerText + ' ' + document.title")
+        self.assertNotIn("VIP", shown, "on Today")
+        names = b.eval("[...document.querySelectorAll('#v-today [aria-label],#v-today [data-tip],#v-today [title]')]"
+                       ".map(e=>(e.getAttribute('aria-label')||'')+(e.getAttribute('data-tip')||'')+(e.getAttribute('title')||'')).join(' ')")
+        self.assertNotIn("VIP", names, "in Today's labels and tips")
+        self.note(47, f"vip.json: {len(self.vip()['alerts'])} alerts, keys {sorted(a)[:6]}…, no message text (a sentinel "
+                      "message text was sent with each conversation and isn't kept); no \"VIP\" in Today's text, labels, tips or the window title")
 
-    @phase2()
     def test_c49_shared_behaviour(self):
         """49. On every screen, open each menu, picker and dialog: ↑ ↓ move, Enter chooses, Esc closes and returns focus, Tab
         stays inside a dialog. (dev/tests/test_shared_behaviour.py's probe, against this vault.)"""
+        import os
+        import sqlite3
+        from contextlib import closing
+        import hcbase
+        import test_shared_behaviour as tsb
+        with closing(sqlite3.connect(self.vault / "system/tracker.db")) as con:
+            ms = con.execute("SELECT id FROM milestones WHERE project='FAL' AND status<>'Done' ORDER BY id LIMIT 1").fetchone()[0]
+        screens = hcbase.behaviour_screens(ms)
+        if os.environ.get("SB_ONLY"):                  # as test_shared_behaviour: only those screens (unreached isn't judged)
+            screens = {k: v for k, v in screens.items() if k in os.environ["SB_ONLY"].split(",")}
+        d = hcbase.behaviour_driver(self, screens)
+        keys, undo, shown, missing, n_open = set(), set(), [], [], 0
+        for name in screens:
+            try:
+                d.goto(name)
+            except (TimeoutError, RuntimeError) as e:
+                missing.append(f"{name} ({str(e).splitlines()[0][:60]})")
+                continue
+            shown.append(name)
+            for o, bad in d.each_opener(name, lambda i, o: d.drive(i, o["kind"])):
+                n_open += 1
+                if bad:
+                    keys.add((tsb.screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
+        for screen, script, sig, area, _how, label in tsb.SharedBehaviour.KEYED:
+            if screen in shown:
+                bad = getattr(d, script)()
+                if bad:
+                    keys.add((area, f"keys: {sig} “{label}”: {'; '.join(bad)}"))
+        n_undo = 0
+        for name in shown:
+            done = set()
 
-    @phase2()
+            def once(i, o, done=done):
+                g = (o["sig"], tsb.undo_group(o["name"]))
+                if g in done:
+                    return None
+                done.add(g)
+                return d.pick(i, o)
+            try:
+                for o, bad in d.each_opener(name, once):
+                    if bad is None:
+                        continue
+                    n_undo += 1
+                    if bad:
+                        undo.add((tsb.screen_area(name), f"undo: {name} {o['sig']} “{tsb.undo_group(o['name'])}”: {'; '.join(bad)}"))
+            except (TimeoutError, RuntimeError) as e:
+                missing.append(f"{name} for Undo ({str(e).splitlines()[0][:60]})")
+        unreached = {(s["area"], "unreached: " + tsb.site_name(s)) for s in tsb.inventory() if not tsb.reached(s, d.seen)}
+        known = tsb.expected("unreached")
+        # Unreached is noted, not judged: it depends on the states a vault shows, and the demo's differ from the snapshot
+        # sample's, where test_shared_behaviour judges it (run_tests.py).
+        self.note(49, (f"screens the demo doesn't show: {', '.join(missing)}; " if missing else "")
+                      + f"{len(shown)} screens, {n_open} openers driven (Enter, ↓ ↑, Esc and focus back, Tab), ⌘K and the Archive "
+                      f"prompt; {n_undo} choices that save checked for Undo"
+                      + (f"; {len(keys)} key failures" if keys else "; no key failures")
+                      + (f"; {len(undo)} without Undo" if undo else "; each saved change offers Undo")
+                      + f"; unreached {len(unreached)} (known {len(known)}"
+                      + (f"; not reached on the demo: {', '.join(x.split(': ', 1)[1].split(' (')[0] for _, x in sorted(unreached - known))}" if unreached - known else "") + ")"
+                      + "; wording and empty states not re-read here (checks 13, 14 and BL-325's tests)")
+        self.assertFalse(keys, "\n".join(sorted(x for _, x in keys)))
+        self.assertFalse(undo, "\n".join(sorted(x for _, x in undo)))
+
     def test_c50_old_helpers_zero(self):
         """50. `python3 dev/tools/check.py` from the repository → the old-helper count (newMenu, pkList, drawPicker, snackAdd and
         the rest) is 0."""
+        import subprocess
+        repo = Path(__file__).resolve().parents[3]
+        r = subprocess.run([sys.executable, str(repo / "dev/tools/check.py")], cwd=repo, capture_output=True, text=True, timeout=900)
+        out = r.stdout + r.stderr
+        m = re.search(r"Old helpers \(BL-316, falling to 0\): (\d+) in all \(baseline (\d+)\): (.*)", out)
+        self.assertTrue(m, f"check.py printed no old-helper line: {out[-400:]}")
+        self.assertEqual(int(m.group(1)), 0, m.group(0))
+        self.note(50, f"check.py exit {r.returncode}; \"Old helpers: {m.group(1)} in all (baseline {m.group(2)})\"; {m.group(3)[:120]}")
 
 
 if __name__ == "__main__":
