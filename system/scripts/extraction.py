@@ -357,6 +357,8 @@ def evidence_line(ev):
     when = f"{tracker.shown(at[:10])}{' ' + at[11:16] if len(at) >= 16 else ''}" if at else ""
     kind = {"mail": "Mail", "teams": "Teams message", "meeting": "Said in the meeting"}.get(ev.get("kind"), "Message")
     who = f" by {ev['who']}" if ev.get("who") else ""
+    if ev.get("said") and not ev.get("quote"):                  # BL-342: creaite's own words for a thread, so no quotation marks
+        return f"{kind}{' ' + when if when else ''}{who}: {str(ev['said']).strip()[:240]}"
     return f"{kind}{' ' + when if when else ''}{who}: “{str(ev.get('quote') or '').strip()[:240]}”"
 
 
@@ -519,7 +521,8 @@ def count_decision(item, decision):
     ll = item.get("looks_like") or {}
     if ll and decision == "rejected" and item.get("duplicate_of") == ll.get("id"):
         count("repeat", "used")
-    if (item.get("suggested") or {}).get("feature") == "done" and decision in ("approved", "rejected"):
+    sg = item.get("suggested") or {}
+    if (sg.get("feature") == "done" or sg.get("done")) and decision in ("approved", "rejected"):   # BL-342: a thread's close too
         count("done", "rejected" if decision == "rejected" else "edited" if item.get("as_proposed") else "used")
 
 

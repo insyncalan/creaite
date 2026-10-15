@@ -2827,6 +2827,170 @@ def vip_closes(a, found, checked, reply_only=False):
 # ===== end BL-342 Part 3 B =====
 
 
+# ===== BL-342 Part 3 B, step 9: stage a close for Review on Alan's click =====
+# "Looks done: close ABC-A-007" stages one pending close of the action (status Closed, a "Looks done" line on its latest
+# update, the thread as source) in the SAME pending thread proposal Log uses for that item (two pending updates of one
+# action would conflict at apply). Nothing is applied: Review holds a closing update on its own (review.individual_only).
+# A confidential card's close carries only fixed words. Undo takes back exactly what the click added.
+CLOSE_LINE = "{day}: Looks done: {said} (from a {how})"
+CLOSE_LINE_CONFIDENTIAL = "{day}: Looks done (from a confidential thread)"
+
+
+def _close_parts(a, c, row):
+    """(the line, the why, the suggested.done block) a card's close adds to its item."""
+    confidential = a.get("marker") == "confidential" or bool(a.get("confidential"))
+    day, how = _day_shown(c.get("at") or now().strftime("%Y-%m-%d")), "Teams chat" if a.get("kind") == "teams" else "mail thread"
+    said = CLOSE_FIXED if confidential else _clean(c.get("evidence"), CLOSE_EVIDENCE).rstrip(". ")
+    line = CLOSE_LINE_CONFIDENTIAL.format(day=day) if confidential else CLOSE_LINE.format(day=day, said=said, how=how)
+    ev = {"kind": "teams" if a.get("kind") == "teams" else "mail", "at": str(c.get("at") or "")[:16],
+          **({} if confidential else {"who": str(c.get("who") or "")[:80]}), "said": said, "source": _thread_source(a)[:500]}
+    why = "Looks done: from a confidential thread" if confidential else f"Looks done: {said}"[:200]
+    return line, why, {"strength": "Looks done", "reason": "", "evidence": ev}
+
+
+def _close_target(a):
+    """(the card's close, the open action's row); raises ValueError with a reason to show."""
+    c = a.get("closes") if isinstance(a.get("closes"), dict) else None
+    if a.get("marker") == "private":
+        raise ValueError("Nothing to close for a private conversation.")
+    if not c or not c.get("id"):
+        raise ValueError("Nothing on this thread looks done.")
+    try:
+        with closing(vip_ro()) as con:
+            row = _open_actions(con, a.get("p")).get(c["id"])
+    except Exception:  # noqa: BLE001  no database: the item can't be checked
+        row = None
+    if row is None:
+        raise ValueError(f"{c['id']} isn't open any more.")
+    return c, row
+
+
+def _new_close_spec(a, c, row, line, why, done):
+    """A fresh pending proposal that closes the action: status Closed and the Looks-done line after its latest update."""
+    import propose
+    sg = {"feature": "thread", "threads": [], "lines": [], "base": row.get("latest_update") or "", "closes": [a["id"]],
+          "close_lines": [line], "done": done}
+    spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [],
+            "items": [{"n": 1, "op": "update", "table": "actions", "id": c["id"],
+                       "changes": {"status": tracker.CLOSED_STATUSES[0],
+                                   "latest_update": "\n".join(([sg["base"]] if sg["base"] else []) + [line])},
+                       "why": why, "source": _thread_source(a), "suggested": sg, "match": "strong", "flags": [],
+                       "decision": "pending", "edited_in": "dashboard"}]}
+    propose.complete(spec)
+    spec["items"][0]["based_on"] = row["updated_at"]
+    return spec
+
+
+def _checked(spec):
+    """Raise ValueError when the proposal would fail validation (nothing is written)."""
+    import propose
+    bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
+    if bad:
+        raise ValueError(f"Not staged: {bad[0]}")
+
+
+def vip_close_stage(aid):
+    """Stage the close a card offers (step 9, on Alan's click): one pending close of the matched action for Review, in the
+    item's pending thread proposal when there is one (Log's), else a new one. Returns {"proposal", "id", "line", "state":
+    "staged"}; raises LookupError (no such card) or ValueError with a reason to show (private, nothing looks done, no longer
+    open, already staged, fails validation). Hold LOCK then VIP_WRITE around it (the route does)."""
+    st = vip_state()
+    a = next((x for x in st["alerts"] if x.get("id") == aid), None)
+    if a is None:
+        raise LookupError("That thread isn't on Today any more.")
+    c, row = _close_target(a)
+    was = c.get("staged")
+    if isinstance(was, dict):
+        state = logged_state(was, c["id"])
+        if state == "staged":
+            raise ValueError("Already staged for Review.")
+        if state in ("decided", "applied"):
+            raise ValueError("Already decided in Review.")
+    line, why, done = _close_parts(a, c, row)
+    found = _pending_for(c["id"])
+    if found:
+        out, spec, item = found
+        sg = item["suggested"]
+        sg.setdefault("why_before", item.get("why") or "")
+        item["changes"]["status"] = tracker.CLOSED_STATUSES[0]
+        _append_line(item, line)
+        sg["closes"] = list(sg.get("closes") or []) + [aid]
+        sg["close_lines"] = list(sg.get("close_lines") or []) + [line]
+        sg["done"], item["why"] = done, why
+        if _source_new(item, a):
+            item["source"] = f"{item.get('source') or ''} ; {_thread_source(a)}"
+    else:
+        spec, out = _new_close_spec(a, c, row, line, why, done), _free_name()
+    _checked(spec)
+    paths.STAGING.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    c["staged"] = {"proposal": out.name, "at": now().strftime("%Y-%m-%d %H:%M"), "line": line}
+    vip_save(st)
+    return {"proposal": out.name, "id": c["id"], "line": line, "state": "staged"}
+
+
+def _source_new(item, a):
+    """Whether this card's thread isn't in the item's source yet (Log may have put it there)."""
+    return _thread_source(a) not in str(item.get("source") or "")
+
+
+def vip_close_unstage(aid):
+    """Undo a staged close while it is still pending in Review: takes out exactly what the click added (status, the line,
+    suggested.done and this card in suggested.closes); an item with nothing of Log's left is removed, and an empty proposal
+    file deleted. Returns {"proposal", "id", "state": "undone"}; raises LookupError or ValueError ("Already decided in
+    Review" once approved, rejected or applied). Hold LOCK then VIP_WRITE around it."""
+    st = vip_state()
+    a = next((x for x in st["alerts"] if x.get("id") == aid), None)
+    if a is None:
+        raise LookupError("That thread isn't on Today any more.")
+    c = a.get("closes") if isinstance(a.get("closes"), dict) else {}
+    was = c.get("staged") if isinstance(c.get("staged"), dict) else None
+    if not was:
+        raise ValueError("Nothing staged to undo.")
+    state = logged_state(was, c.get("id"))
+    if state in ("decided", "applied"):
+        raise ValueError("Already decided in Review.")
+    out = paths.STAGING / str(was["proposal"])
+    if state == "staged":
+        spec = json.loads(out.read_text(encoding="utf-8"))
+        item = next(i for i in spec["items"] if i.get("op") == "update" and i.get("id") == c["id"])
+        if aid in ((item.get("suggested") or {}).get("closes") or []):
+            _take_close(spec, item, aid, was.get("line") or "")
+            if spec["items"]:
+                out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            else:
+                out.unlink()
+    c.pop("staged", None)
+    vip_save(st)
+    return {"proposal": out.name, "id": c.get("id"), "state": "undone"}
+
+
+def _take_close(spec, item, aid, line):
+    """Take one card's close out of a pending item (vip_close_unstage)."""
+    sg = item["suggested"]
+    sg["closes"] = [x for x in sg.get("closes") or [] if x != aid]
+    lines = list(sg.get("close_lines") or [])
+    if line in lines:
+        lines.remove(line)
+    sg["close_lines"] = lines
+    cur = str(item["changes"].get("latest_update") or "").split("\n")
+    if line in cur:                                                     # the exact line it added, wherever Alan left it
+        cur.remove(line)
+    item["changes"]["latest_update"] = "\n".join(cur)
+    if sg["closes"]:
+        return
+    item["changes"].pop("status", None)
+    for k in ("done", "closes", "close_lines"):
+        sg.pop(k, None)
+    before = sg.pop("why_before", None)
+    item["why"] = before or ("Logged from a thread" if sg.get("lines") else item.get("why"))
+    if not sg.get("lines"):                                             # nothing of Log's left: the item goes
+        spec["items"].remove(item)
+        for n, it in enumerate(spec["items"], 1):
+            it["n"] = n
+# ===== end BL-342 Part 3 B, step 9 =====
+
+
 if __name__ == "__main__":
     code = debuglog.main("sweep.py", main, sys.argv[1:])
     if code == 0 and sys.argv[1:2] and sys.argv[1] in REBUILD_AFTER:

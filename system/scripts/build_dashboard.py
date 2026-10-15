@@ -3025,7 +3025,10 @@ def _review_queue_with_done(con):
         if r.get("kind") != "update" or not r.get("file"):
             continue
         sg = (staged_items(cache, r["file"]).get(r.get("ref")) or {}).get("suggested") or {}
-        if sg.get("feature") == "done":
+        closing_thread = sg.get("feature") == "thread" and isinstance(sg.get("done"), dict)
+        if closing_thread:
+            sg = sg["done"]                                          # BL-342: a thread card's close, staged on Alan's click
+        if sg.get("feature") == "done" or closing_thread:
             ev = sg.get("evidence") or {}
             r["dn"] = {"strength": sg.get("strength") or "Maybe done", "ev": extraction.evidence_line(ev)[:400],
                        "reason": str(sg.get("reason") or "")[:200], "src": str(ev.get("source") or "")[:500]}

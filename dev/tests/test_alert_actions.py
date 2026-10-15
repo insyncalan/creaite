@@ -292,6 +292,15 @@ class AlertActionTests(unittest.TestCase):
         self.assertEqual(len([p for p in self.proposals() if p not in before]), 1)          # nothing new the second time
         self.assertEqual(self.alert("Go-live window")["match"]["id"], item)
 
+    def test_6c_close_needs_a_close_suggestion_and_never_applies(self):
+        """BL-342 Part 3 B, step 9: /api/alerts/close refuses a card the check offered no close on, and stages nothing."""
+        before = self.proposals()
+        no = self.post("/api/alerts/close", {"id": self.ids["Go-live window"]})
+        self.assertEqual((no["ok"], no["error"]), (False, "Nothing on this thread looks done."))
+        self.assertFalse(self.post("/api/alerts/close", {"id": "nope"})["ok"])
+        self.assertFalse(self.post("/api/alerts/close", {"id": self.ids["Go-live window"], "undo": True})["ok"])
+        self.assertEqual(self.proposals(), before)
+
     def test_7_no_vip_in_any_response(self):
         self.assertTrue(self.said)
         for text in self.said:

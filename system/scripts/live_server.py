@@ -112,6 +112,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
 - POST /api/alerts/handled {ids | id}: a thread's card is handled (Dismiss's effect; /api/alerts/undo puts it back);
                          /api/alerts/log {id}: log the thread on its matched item, one pending update for Review (BL-342)
+- POST /api/alerts/close {id, undo}: "Looks done: close <ID>": one pending close of the thread's matched action for Review,
+                         or with undo the staged one taken back (BL-342 Part 3 B); nothing is applied
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
 - POST /api/prep/brief, /chips, /shape, /filter, /focus, /focus/save, /focus/clear, /view {key, …}: meeting prep, reimagined
@@ -3748,6 +3750,29 @@ def alert_log_route(handler, req):
 
 SWEEP_ALERT_ROUTES.update({"/api/alerts/handled": alert_handled_route, "/api/alerts/log": alert_log_route})
 # ===== end BL-342 =====
+
+# ===== BL-342 Part 3 B, step 9: "Looks done: close <ID>" on a thread's card (a route, not a run) =====
+# /api/alerts/close {id, undo}: stages one pending close of the card's matched action for Review (the same pending thread
+# proposal Log uses for that item), or with undo takes a staged one back while it is still pending. Nothing is applied.
+
+
+def alert_close_route(handler, req):
+    """POST /api/alerts/close {id, undo}: stage the card's close of its matched action for Review, or undo it."""
+    import sweep
+    aid = str(req.get("id") or "")
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_close_unstage(aid) if req.get("undo") else sweep.vip_close_stage(aid)
+            card = sweep.vip_find(aid) or {}
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "error": str(e), "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "closes": card.get("closes"),
+                              "message": f"Staged a close of {got['id']} for Review." if got["state"] == "staged"
+                              else f"Took the close of {got['id']} back out of Review."})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/close": alert_close_route})
+# ===== end BL-342 Part 3 B, step 9 =====
 
 
 # ===== Chat and sweep (BL-108, BL-109, BL-110; sprint-chat-sweep) =====

@@ -424,6 +424,148 @@ class CheckMinutesTests(Base):
         self.assertIn("v < 10 || v > 240", block)
 
 
+class StageTests(Base):
+    """Step 9: one click stages one pending close for Review; nothing is applied; Undo leaves nothing."""
+
+    def setUp(self):
+        super().setUp()
+        self.check([owner_done()])
+        self.aid = self.cards()[0]["id"]
+
+    def call(self, fn, aid=None):
+        return py(self.v, f"import sys\ntry:\n    print(json.dumps(sweep.{fn}({json.dumps(aid or self.aid)})))\n"
+                          "except (LookupError, ValueError) as e:\n    print(json.dumps({'refused': str(e)}))")
+
+    def staged(self):
+        out = []
+        for f in sorted((self.v.root / "system/staging").glob("proposed-*-dashboard*.json")):
+            out += [(f.name, i) for i in json.loads(f.read_text())["items"]]
+        return out
+
+    def test_the_click_stages_one_pending_close_with_based_on_and_the_thread_as_source(self):
+        got = self.call("vip_close_stage")
+        self.assertEqual((got["id"], got["state"]), ("ABC-A-007", "staged"))
+        [(name, item)] = self.staged()
+        self.assertEqual(name, got["proposal"])
+        self.assertEqual((item["op"], item["table"], item["id"], item["decision"]), ("update", "actions", "ABC-A-007", "pending"))
+        self.assertEqual(item["changes"]["status"], "Closed")
+        self.assertTrue(item["based_on"])
+        self.assertEqual(item["changes"]["latest_update"].splitlines()[-1],
+                         "08-10-2026: Looks done: Sara says the revised plan went out (from a mail thread)")
+        done = item["suggested"]["done"]
+        self.assertEqual((done["strength"], done["evidence"]["said"], done["evidence"]["who"], done["evidence"]["kind"]),
+                         ("Looks done", "Sara says the revised plan went out", "Sara Example", "mail"))
+        self.assertIn("https://outlook.example/owa/?ItemID=t1", item["source"])
+        self.assertEqual(item["suggested"]["closes"], [self.aid])
+        self.assertEqual(item["why"], "Looks done: Sara says the revised plan went out")
+        self.assertEqual(self.cards()[0]["closes"]["staged"]["proposal"], name)
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "Already staged for Review."})   # again: nothing new
+        self.assertEqual(len(self.staged()), 1)
+        self.assertEqual(self.v.rows("actions")[6]["status"], "Open")                                # nothing applied
+
+    def test_review_holds_it_on_its_own_and_shows_looks_done_in_creaites_words(self):
+        self.call("vip_close_stage")
+        [(name, item)] = self.staged()
+        rule = py(self.v, "import review\nprint(json.dumps(review.individual_only(json.load(open('system/staging/" + name + "'))['items'][0])))")
+        self.assertEqual(rule, "closing update")
+        self.v.run("bulk", script="review.py")                                              # Approve routine leaves it
+        self.assertEqual(self.staged()[0][1]["decision"], "pending")
+        rows = py(self.v, "import build_dashboard, tracker\ncon = tracker.connect()\n"
+                          "print(json.dumps([r.get('dn') for r in build_dashboard.review_queue(con) if r.get('dn')]))")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["strength"], "Looks done")
+        self.assertEqual(rows[0]["ev"], "Mail 08-10-2026 09:00 by Sara Example: Sara says the revised plan went out")
+        self.assertNotRegex(rows[0]["ev"], "[“”\"]")                                        # creaite's words, not a quote
+
+    def test_undo_leaves_nothing_and_a_decided_one_is_refused(self):
+        self.call("vip_close_stage")
+        self.assertEqual(self.call("vip_close_unstage")["state"], "undone")
+        self.assertEqual(self.staged(), [])
+        self.assertNotIn("staged", self.cards()[0]["closes"])
+        self.call("vip_close_stage")
+        [(name, item)] = self.staged()
+        f = self.v.root / "system/staging" / name
+        spec = json.loads(f.read_text())
+        spec["items"][0]["decision"] = "approved"
+        f.write_text(json.dumps(spec))
+        self.assertEqual(self.call("vip_close_unstage"), {"refused": "Already decided in Review."})
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "Already decided in Review."})
+
+    def test_log_and_close_make_one_pending_proposal_either_way(self):
+        self.call("vip_log")
+        self.call("vip_close_stage")
+        [(name, item)] = self.staged()
+        lines = item["changes"]["latest_update"].splitlines()
+        self.assertEqual(len([ln for ln in lines if "Looks done" in ln]), 1)
+        self.assertEqual(len(item["suggested"]["lines"]), 1)                                 # Log's line kept
+        self.assertEqual(item["changes"]["status"], "Closed")
+        self.call("vip_close_unstage")                                                       # back to Log's line only
+        [(name2, item)] = self.staged()
+        self.assertEqual(name2, name)
+        self.assertNotIn("status", item["changes"])
+        self.assertNotIn("done", item["suggested"])
+        self.assertFalse(any("Looks done" in ln for ln in item["changes"]["latest_update"].splitlines()))
+        self.assertTrue(item["why"].startswith("Logged from a thread"))
+        for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json"):
+            f.unlink()
+        st = vip_file(self.v)
+        st["alerts"][0]["match"].pop("logged", None)
+        st["alerts"][0]["closes"].pop("staged", None)
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
+        self.call("vip_close_stage")                                                         # close then Log: the same
+        self.call("vip_log")
+        [(name, item)] = self.staged()
+        self.assertEqual(item["changes"]["status"], "Closed")
+        self.assertEqual(len(item["suggested"]["lines"]), 1)
+        self.call("vip_close_unstage")
+        [(name, item)] = self.staged()
+        self.assertTrue(item["why"].startswith("Logged from a thread"))
+
+    def test_a_second_card_on_the_same_item_adds_its_line_to_the_same_item(self):
+        self.call("vip_close_stage")
+        self.check([owner_done(conversation=MAIL_ID + "2", subject="Project Falcon plan, the other thread",
+                               title="Project Falcon plan, the other thread", link="https://outlook.example/owa/?ItemID=t2",
+                               closes={"id": "ABC-A-007", "evidence": "Sara confirms the plan reached Mia"})])
+        other = next(a["id"] for a in self.cards() if a["id"] != self.aid)
+        self.call("vip_close_stage", other)
+        [(name, item)] = self.staged()
+        self.assertEqual(item["suggested"]["closes"], [self.aid, other])
+        self.assertEqual(len([ln for ln in item["changes"]["latest_update"].splitlines() if "Looks done" in ln]), 2)
+        self.call("vip_close_unstage", other)
+        [(name, item)] = self.staged()
+        self.assertEqual((item["suggested"]["closes"], item["changes"]["status"]), ([self.aid], "Closed"))
+
+    def test_handled_before_a_click_stages_nothing_and_a_private_card_none(self):
+        py(self.v, "print(json.dumps(sweep.vip_handled([" + json.dumps(self.aid) + "])))")
+        self.assertEqual(self.staged(), [])
+        self.assertEqual(self.call("vip_close_stage", "nope"), {"refused": "That thread isn't on Today any more."})
+
+    def test_a_closed_item_is_refused(self):
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("UPDATE actions SET status = 'Closed', closed = '2026-10-08' WHERE id = 'ABC-A-007'")
+            con.commit()
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "ABC-A-007 isn't open any more."})
+
+
+class ConfidentialStageTests(Base):
+    def test_a_confidential_close_holds_no_thread_words(self):
+        subject = "Project Falcon board secrets"
+        self.check([owner_done(sensitivity="confidential", subject=subject, title=subject,
+                               summary="The board discussed the secret plan figures.")])
+        aid = self.cards()[0]["id"]
+        py(self.v, f"print(json.dumps(sweep.vip_close_stage({json.dumps(aid)})))")
+        [item] = [i for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
+                  for i in json.loads(f.read_text())["items"]]
+        staged = json.dumps({k: item[k] for k in ("why", "source", "changes", "suggested")})
+        for word in ("board", "secret", "Board", "Sara says", subject):
+            self.assertNotIn(word, staged)
+        self.assertEqual(item["why"], "Looks done: from a confidential thread")
+        self.assertEqual(item["changes"]["latest_update"].splitlines()[-1], "08-10-2026: Looks done (from a confidential thread)")
+        self.assertEqual(item["suggested"]["done"]["evidence"]["said"], "The thread shows it finished.")
+        self.assertNotIn("who", item["suggested"]["done"]["evidence"])
+        self.assertNotRegex(staged, r"\bVIP\b")
+
+
 TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
 FAKE = r"""#!/usr/bin/env python3
@@ -561,6 +703,23 @@ class SingleCallServerTests(unittest.TestCase):
                                r"\d+\.\ds, \$0\.3027")
         for word in ("Falcon", "mia@", "AAQk", "DX123", "Sara", SECRET, "Project"):
             self.assertNotIn(word, line)
+
+    def test_z_the_close_route_stages_and_undoes_and_says_no_label(self):
+        aid = next(a["id"] for a in vip_file(self.s.v)["alerts"] if a.get("closes"))
+        said = [self.s.post("/api/alerts/close", {"id": aid})]
+        self.assertEqual((said[0]["ok"], said[0]["state"], said[0]["id"]), (True, "staged", "ABC-A-007"))
+        self.assertEqual(said[0]["closes"]["staged"]["proposal"], said[0]["proposal"])
+        said.append(self.s.post("/api/alerts/close", {"id": aid}))
+        self.assertEqual((said[1]["ok"], said[1]["error"]), (False, "Already staged for Review."))
+        said.append(self.s.post("/api/vip", {}))
+        card = next(a for a in said[-1]["alerts"] if a["id"] == aid)
+        self.assertIn("staged", card["closes"])
+        said.append(self.s.post("/api/alerts/close", {"id": aid, "undo": True}))
+        self.assertEqual((said[-1]["ok"], said[-1]["state"]), (True, "undone"))
+        self.assertEqual(list((self.s.v.root / "system/staging").glob("proposed-*-dashboard*.json")), [])
+        said.append(self.s.post("/api/alerts/close", {"id": "nope"}))
+        self.assertFalse(said[-1]["ok"])
+        self.assertNotRegex(json.dumps(said), r"\bVIP\b")
 
 
 class SweepDuringTheCallTests(ServerCheck, unittest.TestCase):
