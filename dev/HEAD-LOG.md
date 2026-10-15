@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | v2.0.0 defect: `openNoteFull` doesn't open the note from the capture drawer; Team Stark fixes it on its own branch (#60). Whether confidential notes are filtered out of Prep pages goes to Alan | A defect inside a release is the Head's; confidential material is Alan's |
 | 15-10-2026 | Jarvis | The macOS CI hang raised as plan #79: v1.9.5, Normal, S, Team Cap | Two macOS jobs ran to the 2-hour timeout; not a required check, but it hides real failures |
 | 15-10-2026 | Jarvis | #47 (Team Cap's v1.9.5 screens) moves to Team Stark for the night (04:32); Team Cap can reclaim it with a comment | Team Cap silent since 02:26; Stark had an agent free |
 | 15-10-2026 | Jarvis | #49's points: the stale hand-check lines fixed on `v195-notes`; doctor's count checked at #48; the first day's archive gets a dry-run hint, not a count. v1.9.5's guard pieces (`ARCHIVE_MOVES`, `archive.py`, `/api/files/move-back`) to be confirmed by Alan directly | Docs are the Head's; guard is Alan's |
