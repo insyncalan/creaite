@@ -5,7 +5,7 @@ BL-288: no screen says "VIP" except the person form's own field and Settings ›
 goldens (quick) and on every snapshot screen of a vault where someone is followed, has sent a message and owns an overdue
 item (Chrome), plus the window title, the rail badge's name, the notification, the Work filter and the Draft email.
 BL-296: Dismiss with Undo; Create work item opens the new-item peek filled from the message's references, Cancel leaves the
-message, Save stages and applies it and clears the row; a message with no project asks for one; "Draft from the message" is
+message, Save (or ⌘↵) only stages it for Review (check 45, BL-334), clears the row and Undo puts both back; a message with no project asks for one; "Draft from the message" is
 refused for a confidential message.
 
 Run: python3 dev/tests/test_vip_screens.py
@@ -192,14 +192,47 @@ class AlertActions(LiveBrowserCase):
         b.click('#pkAlert [data-alerttype="action"]')
         b.wait("CUR && CUR.k==='actions'")
         b.click('#pkAlert [data-alertpeek="save"]')
-        b.wait("A.some(a=>a.t==='[ABC] Licence count')", 20)
-        x = b.eval("A.find(a=>a.t==='[ABC] Licence count')")
-        self.assertEqual(x["p"], "ABC")
-        self.assertIn("Link: https://x/m2", x["src"])
+        self.staged_for_review(aid, "[ABC] Licence count", "https://x/m2")
+
+    def staged_for_review(self, aid, title, link):
+        """Check 45 (BL-334, Jarvis option (a)): Save stages one proposal for Review and dismisses the message; nothing reaches
+        the tracker, the pill stays empty, and the peek closes saying so."""
+        b = self.b
+        b.wait("!document.getElementById('panel').classList.contains('on')", 20)
+        b.wait(f"REV.some(r=>JSON.stringify(r).includes({json.dumps(title)}))", 20)                   # in Review
+        props = [json.loads(p.read_text()) for p in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")]
+        mine = [i for d in props for i in d.get("items", []) if i["values"].get("description") == title]
+        self.assertEqual(len(mine), 1)
+        self.assertEqual((mine[0]["op"], mine[0]["decision"], mine[0].get("applied")), ("new", "pending", None))
+        self.assertEqual(mine[0]["values"]["project"], "ABC")
+        self.assertIn(f"Link: {link}", mine[0]["values"]["source"])
+        b.pump(1.0)                                                                        # nothing applies behind it
+        self.assertFalse(b.eval(f"A.some(a=>a.t==={json.dumps(title)})"))                 # not in Work
+        self.assertEqual([r for r in self.v.rows("actions") if r["description"] == title], [])   # not in tracker.db
+        self.assertEqual(b.eval("PKS.length"), 0)                                     # not in the pill either
+        self.assertIn("Review", b.eval("document.getElementById('snackT').textContent"))
         b.eval("go('today')")
-        self.assertIsNone(self.row("[ABC] Licence count"))
+        self.assertIsNone(self.row(title))                                                   # the message is dismissed
         made = json.loads((self.v.root / "system/staging/vip.json").read_text())
         self.assertTrue(next(a for a in made["alerts"] if a["id"] == aid)["made"])
+
+    def test_cmd_enter_stages_for_review_and_undo_puts_it_back(self):
+        b = self.b
+        b.eval("go('today')")
+        aid = self.row("[ABC] Steer on UAT")
+        b.click(f'#tdList [data-alertdo="make"][data-id="{aid}"]')
+        b.wait("document.getElementById('pkAlert') && !document.getElementById('pkAlert').hidden")
+        b.key("Enter", 4)                                                                  # ⌘↵ from the title
+        self.staged_for_review(aid, "[ABC] Steer on UAT", "https://x/m1")
+        b.click("#snackU")                                                                 # Undo: unstaged, the message back
+        b.wait(f"!REV.some(r=>JSON.stringify(r).includes('[ABC] Steer on UAT'))", 20)
+        b.wait(f"document.querySelector('#tdList li[data-td=\"al{aid}\"]')", 20)
+        left = [p for p in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
+                if "[ABC] Steer on UAT" in p.read_text()]
+        self.assertEqual(left, [])
+        made = json.loads((self.v.root / "system/staging/vip.json").read_text())
+        self.assertNotIn("made", next(a for a in made["alerts"] if a["id"] == aid))
+        self.assertEqual([r for r in self.v.rows("actions") if r["description"] == "[ABC] Steer on UAT"], [])
 
     def test_no_project_asks_for_one_and_confidential_has_no_draft(self):
         b = self.b
