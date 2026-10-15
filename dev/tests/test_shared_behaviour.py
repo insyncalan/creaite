@@ -12,7 +12,7 @@ the peek, its staging bar's Undo last) must offer Undo (and Undo is pressed, so 
 
 **Every popup in the code is counted.** inventory() reads the dashboard's source (src/ and shell.html, the building blocks'
 own files left out, as check.py's OLD count does) for every place that makes a menu, picker or dialog: a Dialog, openMenu,
-a Menu or MenuPanel, a FilterBar, the old pickers (the peek's list, popover and date helpers in panel.js), the right-click menu (cxOpen), the owner
+a Menu or MenuPanel, a FilterBar, the Picker block's lists, calendars and popovers, the old pickers (the peek's list, popover and date helpers in panel.js), the right-click menu (cxOpen), the owner
 combobox, a hand-made popover (aria-controls) and a control in markup that says aria-haspopup with its own name. Each one
 must be reached by the keyboard script on some screen; one that isn't is a finding ("unreached": no control on the sample's
 screens opens it with aria-haspopup, so a keyboard or screen-reader user isn't told it is there).
@@ -54,7 +54,8 @@ ON_SCREEN = {"work-display": "VIEW==='work'"}
 VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
-SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek",
+SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
+                "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
                 "review": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
@@ -162,6 +163,37 @@ def _old_pickers(path, text):
         yield _site("listbox", "Combobox", [("class", "combo")] + ([("id", lit)] if lit else []), path, text, m.start())
 
 
+def _block_lists(path, text):
+    """The Picker block's lists (openPicker), by their literal label, else any .pkpop."""
+    for m in re.finditer(r"(?<![\w.])openPicker\(", text):
+        if _defined_here(text, m.start()):
+            continue
+        lab = re.search(r"\blabel:\s*([^,]+)", _call(text, m.end()))
+        lit = _literal(lab.group(1)) if lab else ""
+        if not lit and lab and PK_OWNER in lab.group(1):
+            lit = "Owner"
+        yield _site("listbox", "Picker", [("label", lit)] if lit else [("class", "pkpop")], path, text, m.start())
+
+
+def _block_calendars(path, text):
+    """The Picker block's calendars (openDatePicker, and core's itemDatePicker), by their label and .pkcal."""
+    for m in re.finditer(r"(?<![\w.])(?:openDatePicker|itemDatePicker)\(", text):
+        if _defined_here(text, m.start()):
+            continue
+        lab = re.search(r"\blabel:\s*([^,]+)", _call(text, m.end()))
+        lit = _literal(lab.group(1)) if lab else ""
+        yield _site("dialog", "Picker", ([("label", lit)] if lit else []) + [("class", "pkcal")], path, text, m.start())
+
+
+def _block_popovers(path, text):
+    """The Picker block's popovers (openPopover), by their id and the option they are opened from (`via`). An empty box
+    that old code fills (htmlPopover) has no id and is counted by its caller."""
+    for m in re.finditer(r"(?<![\w.])openPopover\(", text):
+        args = _call(text, m.end())
+        if not _defined_here(text, m.start()) and re.search(r'\bid:\s*"', args):
+            yield _site("dialog", "Picker", [("id", x) for x in re.findall(r'\b(?:id|via):\s*"([\w-]+)"', args)], path, text, m.start())
+
+
 def _markup_openers(path, text):
     """A control in markup that says aria-haspopup: by the popup it controls, else by its own literal name (four
     characters at least); one with neither is left to the screens' sweep (it is reached there or nowhere)."""
@@ -191,7 +223,7 @@ def inventory():
     ("label", x) a name's start, ("class", x) a class."""
     out = []
     for path, text in check.old_sources().items():
-        for find in (_dialogs, _menus, _filter_bars, _old_lists, _old_pickers, _markup_openers):
+        for find in (_dialogs, _menus, _filter_bars, _old_lists, _old_pickers, _block_lists, _block_calendars, _block_popovers, _markup_openers):
             out += [s for s in find(path, text) if s["keys"]]
     return out
 

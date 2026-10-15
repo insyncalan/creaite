@@ -102,7 +102,7 @@ SCRIPT = r"""
     hsel.value="Off track"; hsel.dispatchEvent(new Event("change")); out.evidenceOk=document.getElementById("hEvidence").classList.contains("warn"); EDITING=false; closePanel();
     // 5b2. milestone picker shows names, keeps IDs as values (BL-27); nothing saved
     const linked=A.find(a=>a.ms==="ABC-M-001"); openRecord("actions",linked.id); PK.det[linked.id]=true; drawPanel(); document.querySelector('#pkDet [data-pkp="ms"]').click();   /* BL-176: Details' list */
-    out.msOpts=[...document.querySelectorAll(".pkpop .pkopt")].map(o=>o.querySelector("span").textContent); out.msSel=(document.querySelector('.pkpop .pkopt[aria-selected="true"] span')||{}).textContent; pkPopClose(false); closePanel();
+    out.msOpts=[...document.querySelectorAll(".pkpop .pkopt")].map(o=>o.querySelector("span").textContent); out.msSel=(document.querySelector('.pkpop .pkopt[aria-selected="true"] span')||{}).textContent; closePicker("owner",false); closePanel();
     // 5b3. learn from a project choice (BL-28): the option names the signal and follows the chosen project
     const lr=REV.find(r=>r.kind==="actions"&&!r.done); lr.signals=[{kind:"keyword",value:"pilot",ok:false,owners:[]},{kind:"sender",value:"sam@client.com",ok:true,owners:[]}];
     openProposal(lr.n); await pkCommit("actions","rv"+lr.n,{p:"DEF"},"Project","","");   /* BL-177: the peek's Project, held in the proposal */
@@ -116,13 +116,13 @@ SCRIPT = r"""
       openRecord("actions",a1.id); PK.det[a1.id]=true; drawPanel(); document.querySelector('#pkDet [data-pkp="ws"]').click();   /* BL-176: Details' list, this project's only */
       out.wsList=[...document.querySelectorAll(".pkpop .pkopt span")].map(o=>o.textContent).filter(t=>t!=="None"&&!t.startsWith("Add ")).every(v=>wsFor("ABC").includes(v));
       const wq=document.querySelector(".pkpop .pkq"); wq.value="Brand new stream"; wq.dispatchEvent(new Event("input")); [...document.querySelectorAll(".pkpop .pkopt")].find(o=>o.textContent.startsWith("Add “")).click();
-      out.wsAsk=[(document.querySelector(".pkws .pkws-h")||{}).textContent,(document.querySelector('.pkws [data-wsn="name"]')||{}).value]; pkPopClose(false); closePanel();   /* BL-187: the new workstream's form */
+      out.wsAsk=[(document.querySelector(".pkws .pkws-h")||{}).textContent,(document.querySelector('.pkws [data-wsn="name"]')||{}).value]; closePicker("owner",false); closePanel();   /* BL-187: the new workstream's form */
       go("settings","people");
       out.wsMgr=[...document.querySelectorAll("#wsMgr tbody tr td:first-child")].map(td=>td.textContent.trim()).filter(t=>t.endsWith("Cut-over"));
       a1.ws=keep[0]; d1.ws=keep[1]; }
     // 5c. owner picker lists the project's own people first (BL-18 A; BL-179: the new item's owner chip); nothing saved
     openNew("actions"); await pkCommit("actions",CUR.nid,{p:"DEF"},"Project","",""); document.querySelector('#panel [data-pkp="o"]').click();
-    out.defPeople=projPeople("DEF"); out.firstNames=[...document.querySelectorAll(".pkpop .pkopt")].slice(0,out.defPeople.length).map(o=>o.querySelector("span").firstChild.textContent.trim()); pkPopClose(false); closePanel();
+    out.defPeople=projPeople("DEF"); out.firstNames=[...document.querySelectorAll(".pkpop .pkopt")].slice(0,out.defPeople.length).map(o=>o.querySelector("span").firstChild.textContent.trim()); closePicker("owner",false); closePanel();
     // 5d. ask creaite autocomplete (BL-24)
     openChat(); const ci=document.getElementById("chIn"), type=v=>{ ci.value=v; ci.dispatchEvent(new Event("input",{bubbles:true})); },
       key=k=>ci.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true})), opts=()=>[...document.querySelectorAll("#acMenu .aco span")].map(x=>x.textContent);
