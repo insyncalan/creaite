@@ -425,6 +425,75 @@ class Distributed(Base):
         self.assertFalse(bad["ok"])
 
 
+class FollowUp(Base):
+    """v2.1.0 P7 (Alan, 15-10-2026): the follow-up email is drawn from the version shown. The distributed version's facts come
+    through distributed_of, so a seeded Internal only line, Internal only row, Sensitive, partner-only and excluded item are not
+    in them; the internal version is marked internal and keeps them."""
+    GONE = ("SECRETLINE", "Internal-only row action", "Sensitive action", "Partner action", "Excluded action", "Sensitive decision")
+
+    def seed(self):
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:     # a tracker label that excludes (test vault only)
+            con.execute("INSERT OR IGNORE INTO labels (name, behaviour) VALUES ('Exclude from client', 'exclude')")
+            con.commit()
+        doc = self.doc()
+        add = {"@8": ("Sensitive action", {"flags": ["sensitive"]}), "@9": ("Partner action", {"values": {"labels": ["Partner only"]}}),
+               "@10": ("Internal-only row action", {}), "@11": ("Excluded action", {"values": {"labels": "Exclude from client"}}),
+               "@12": ("Shared action", {})}
+        acts = next(s for s in doc["sections"] if s["id"] == "actions")
+        for ref, (text, extra) in add.items():
+            n = int(ref[1:])
+            item = {"table": "actions", "op": "new", "n": n, "flags": [], "decision": "pending",
+                    "values": {"project": "ABC", "description": text, "owner": "Omar Ali", "due_date": "2026-10-21", **extra.get("values", {})}}
+            item["flags"] = extra.get("flags", [])
+            doc["items"][ref] = item
+            acts["rows"].append({"ref": ref, "n": n, "cells": {"owner": "Omar Ali", "action": text, "due": "21-10-2026"}, "shown": True, "does": "New action"})
+        decs = next(s for s in doc["sections"] if s["id"] == "decisions")
+        doc["items"]["@13"] = {"table": "decisions", "op": "new", "n": 13, "flags": ["sensitive"], "decision": "pending",
+                               "values": {"project": "ABC", "decision": "Sensitive decision", "made_by": "Jane Doe"}}
+        decs["rows"].append({"ref": "@13", "n": 13, "cells": {"decision": "Sensitive decision", "by": "Jane Doe"}, "shown": True, "does": "New decision"})
+        next(s for s in doc["sections"] if s["id"] == "summary")["text"] = "The committee met.\n\nSECRETLINE is for us only."
+        doc["layout"] = {"distributed": True, "internal_only": [{"section": "summary", "text": "SECRETLINE is for us only."},
+                                                                {"section": "actions", "ref": "@10"}]}
+        r = self.js("import minutes_record, creaite_doc\n"
+                    f"doc = {doc!r}\nr = minutes_record.save_record({DRAFT!r}, doc, 'seed')\nprint(json.dumps({{'ok': r.get('ok')}}))")
+        self.assertTrue(r["ok"], r)
+
+    def facts(self, version):
+        return self.js("import minutes_record\ntry:\n    r = minutes_record.followup_facts(" + repr(DRAFT) + ", " + repr(version) + ")\n"
+                       "except minutes_record.RecordError as e:\n    r = {'ok': False, 'message': str(e)}\nprint(json.dumps(r))")
+
+    def test_the_distributed_facts_hold_nothing_internal(self):
+        self.seed()
+        out = self.facts("distributed")
+        self.assertTrue(out["ok"], out)
+        text = json.dumps(out)
+        for gone in self.GONE:
+            self.assertNotIn(gone, text)
+        self.assertEqual((out["version"], out["marked_internal"]), ("distributed", False))
+        self.assertIn("Shared action", text)
+        self.assertIn("Book the UAT environment", text)
+        self.assertIn("Go-live stays on 20 November", text)
+        self.assertIn("The committee met.", out["summary"])
+        self.assertGreaterEqual(out["left_out"], 3)
+        same = self.js(f"import minutes_record\nd = minutes_record.distributed_of(minutes_record.record_at({DRAFT!r})[1])\n"
+                       "print(json.dumps([r['cells'].get('action') or r['cells'].get('decision') for s in d['sections'] if s['id'] in ('actions','decisions') for r in s['rows']]))")
+        got = [i["t"] for i in out["items"]]
+        self.assertEqual(sorted(got), sorted(x for x in same if x and not x.startswith("ABC-")), "the same rule as distributed_of")
+
+    def test_the_internal_facts_are_marked_internal_and_keep_everything(self):
+        self.seed()
+        out = self.facts("internal")
+        text = json.dumps(out)
+        self.assertEqual((out["version"], out["marked_internal"]), ("internal", True))
+        for kept in self.GONE:
+            self.assertIn(kept, text)
+        self.assertEqual(out["left_out"], 0)
+
+    def test_another_version_is_refused(self):
+        out = self.facts("client")
+        self.assertFalse(out["ok"])
+
+
 class ThroughTheServer(unittest.TestCase):
     """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
     the filed minutes reopened and a save over them refused (Alan, 15-10-2026), leaving no draft behind."""

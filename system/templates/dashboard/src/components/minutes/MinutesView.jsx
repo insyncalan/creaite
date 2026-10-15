@@ -25,6 +25,7 @@ import { openPath } from "../../core/fields.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
 import { fd } from "../../core/page.js";
 import { snack } from "../../core/server.js";
+import { openMinutesFollowup } from "../../drafts.js";
 import { openProposal } from "../../panel.js";
 import { unknownOwner } from "../../settings.js";
 import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc, minutesMode,
@@ -80,6 +81,12 @@ function Bar({ doc, checks }) {
   const dist = !!(doc.layout || {}).distributed, mode = minutesMode.value;
   const setDist = (/** @type {boolean} */ on) => { onDoc({ ...doc, layout: { ...(doc.layout || {}), distributed: on } }, on ? "Distributed version on" : "One version"); if (!on) minutesMode.value = "internal"; };
   const exp = async (/** @type {string} */ id) => {
+    if (id.startsWith("followup")) {            // Draft the follow-up email, from the version shown (saved edits first)
+      const d = minutesDoc.value;
+      if (dirty && d) { const s = await saveMinutesPage({ doc: d, base_version: minutesBase.value }); if (!s.ok) { snack(s.message || "The minutes weren't saved"); return; } dirty = false; }
+      openMinutesFollowup(v && v.path, id.endsWith(":distributed") ? "distributed" : "internal");
+      return;
+    }
     const [fmt, which] = id.split(":"), version = which === "distributed" ? "distributed" : "internal";
     const out = version === "distributed" ? leftOut(doc, v && v.withheld) : [];
     const r = await exportMinutes(fmt, version);
@@ -91,6 +98,10 @@ function Bar({ doc, checks }) {
   const exports = dist ? [...formats.map(f => ({ ...f, id: `${f.id}:internal`, name: `Internal: ${f.name}` })),
     ...formats.map(f => ({ ...f, id: `${f.id}:distributed`, name: `Distributed: ${f.name}`,
       line: draft ? "Once the internal minutes are approved" : `${f.line}, under a new name` }))] : formats;
+  const follow = { id: "followup", name: "Draft the follow-up email", line: "From this version; copied, never sent" };
+  const shown = mode === "distributed" ? ["distributed"] : mode === "side" ? ["internal", "distributed"] : ["internal"];
+  const mails = !dist ? [follow] : shown.map(w => ({ ...follow, id: `followup:${w}`, name: `${w === "distributed" ? "Distributed" : "Internal"}: Draft the follow-up email`,
+    line: w === "distributed" ? "Without Internal only lines or withheld items" : "Marked Internal" }));
   return (
     <span class="mnbarr">
       <Menu label={`Version ${doc.version || 1}`} icon="history" btnCls="btn sm" menuLabel="Versions of these minutes" data={{ mnversions: "" }}
@@ -108,7 +119,7 @@ function Bar({ doc, checks }) {
       <button type="button" class="btn sm" aria-pressed={paneOpen.value ? "true" : "false"} onClick={() => { paneOpen.value = !paneOpen.value; }}>Transcript</button>
       {draft && checks.length ? <span class="tag mnckcount" role="status">{checks.length} check{checks.length === 1 ? "" : "s"} open</span> : null}
       <Menu label="Export" icon="filetext" btnCls="btn sm" menuLabel="Export the minutes" data={{ mnexport: "" }}
-        items={exports} onPick={exp} />
+        items={[...exports, ...mails]} onPick={exp} />
       {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan)} data-tip={v && v.plan ? undefined : "Nothing pending to approve"}
         onClick={() => { approveOpen.value = true; }}>Approve minutes</button> : null}
     </span>

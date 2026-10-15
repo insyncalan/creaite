@@ -54,10 +54,10 @@ export function deRowHtml(i,o){ const C=DE_COLOURS, e=esc, d=deDue(i.due,o.today
   const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br><span style="color:${C.muted};">Response: ${e(String(i.resp||"").trim()||"none recorded yet")}</span>`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
   const upd=o.includeUpdate&&String(i.upd||"").trim()?`<br><span style="color:${C.muted};">Latest update: ${e(i.upd)}</span>`:"";
   const ch=o.chased&&o.chased[i.id]?`<br><span style="color:${C.muted};">${e(deChasedWords(o.chased[i.id]))}</span>`:"";
-  return `<tr style="vertical-align:top;">${deTd(e(i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`<span style="color:${colour};${strong}">${e(d.date)}</span>${d.words?`<br><span style="color:${colour};${strong}">${e(d.words)}</span>`:""}`,"white-space:nowrap;")}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
+  return `<tr style="vertical-align:top;">${deTd(e(i.noid?"":i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`<span style="color:${colour};${strong}">${e(d.date)}</span>${d.words?`<br><span style="color:${colour};${strong}">${e(d.words)}</span>`:""}`,"white-space:nowrap;")}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
 export function deTableHtml(list,o){ return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID","9%")}${deTh("Item")}${deTh("Due","18%")}${deTh("Priority","10%")}</tr>${list.map(i=>deRowHtml(i,o)).join("")}</table>`; }
-export function deTextRows(list,o){ const w=Math.max(...list.map(i=>i.id.length)), out=[], pad="".padEnd(w);
-  list.forEach(i=>{ const d=deDue(i.due,o.today,o.dueSoon??7); out.push(`  ${i.id.padEnd(w)}  ${i.k==="raid"?`${i.type||"Risk"}: `:i.k==="decisions"?"Decision needed: ":""}${i.t}  |  ${d.date}${d.words?` (${d.words})`:""}  |  ${i.pr||""}`);
+export function deTextRows(list,o){ const w=Math.max(...list.map(i=>(i.noid?"":i.id).length)), out=[], pad="".padEnd(w);
+  list.forEach(i=>{ const d=deDue(i.due,o.today,o.dueSoon??7); out.push(`  ${(i.noid?"":i.id).padEnd(w)}  ${i.k==="raid"?`${i.type||"Risk"}: `:i.k==="decisions"?"Decision needed: ":""}${i.t}  |  ${d.date}${d.words?` (${d.words})`:""}  |  ${i.pr||""}`);
     if(i.k==="raid") out.push(`  ${pad}  Response: ${String(i.resp||"").trim()||"none recorded yet"}`);
     if(o.includeUpdate&&String(i.upd||"").trim()) out.push(`  ${pad}  Latest update: ${i.upd}`);
     if(o.chased&&o.chased[i.id]) out.push(`  ${pad}  ${deChasedWords(o.chased[i.id])}`); });
@@ -94,20 +94,21 @@ export function deChase(o){ const e=esc, today=o.today, first=o.first||String(o.
 /* Follow-up: the actions grouped by owner, the lead recipient's own first, then the other attendees', then the rest */
 export function deOwners(acts,o){ const names=[o.lead,...(o.attendees||[]).map(a=>a.name)].filter(Boolean), all=[...new Set(acts.map(i=>i.o||"No owner"))];
   return [...names.filter(n=>all.includes(n)).filter((n,i,a)=>a.indexOf(n)===i),...all.filter(n=>!names.includes(n)).sort()]; }
+export const DE_INTERNAL="Internal: not for distribution.";
 export function deFollowup(o){ const e=esc, today=o.today, items=dePicked(o), acts=items.filter(i=>i.k==="actions"), decs=items.filter(i=>i.k==="decisions"), codes=[...new Set(items.map(i=>i.p).concat(o.codes||[]))].sort();
   const att=o.attendees||[], first=att.length===1?String(att[0].name).split(/\s+/)[0]:"all";
   const when=o.day?` on ${new Date(o.day+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(o.day)}`:"";
   const open=o.cover||`Thank you for your time at the ${o.title||"meeting"}${when}. Here is a short summary, the decisions we made and the actions we agreed.`;
   const ask=`Please let me know if I have missed or misrecorded anything.${deReplyBy(o.replyBy)} ${DE_THANKS}`, [endH,endT]=deClose(o), owners=deOwners(acts,o), mine=n=>acts.filter(i=>(i.o||"No owner")===n).sort((a,b)=>deSort(a,b,today));
-  const html=`<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e(deGreeting(o.now,first)))}${deP(e(open))}`
+  const html=`<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o.internal?deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`):""}${deP(e(deGreeting(o.now,first)))}${deP(e(open))}`
     +(o.summary?deHead("Summary")+deP(e(o.summary)):"")+(decs.length?deHead("Decisions")+decs.map(d=>deP(`• ${e(d.t)}${d.by?` <span style="color:${DE_COLOURS.muted};">(${e(d.by)})</span>`:""}`,"margin:0 0 4px 0;")).join(""):"")
     +(acts.length?deHead("Actions")+owners.map(n=>deP(`<b style="font-weight:bold;">${e(n)}</b>`,"margin:10px 0 4px 0;")+deTableHtml(mine(n),o)).join(""):"")+`${deP(e(ask),"margin-top:16px;")}${endH}</div>`;
-  const lines=[deGreeting(o.now,first),"",open,""];
+  const lines=[...(o.internal?[DE_INTERNAL,""]:[]),deGreeting(o.now,first),"",open,""];
   if(o.summary) lines.push("Summary",o.summary,"");
   if(decs.length) lines.push("Decisions",...decs.map(d=>`  • ${d.t}${d.by?` (${d.by})`:""}`),"");
   if(acts.length){ lines.push("Actions"); owners.forEach(n=>lines.push(n,...deTextRows(mine(n),o),"")); }
   lines.push(ask,...endT);
-  return {to:att.map(a=>a.email).filter(Boolean).join("; "),subject:`${codes.join(" / ")}${codes.length?" · ":""}${o.title||"Meeting"}: follow-up and actions`,html,text:lines.join("\n"),items}; }
+  return {to:att.map(a=>a.email).filter(Boolean).join("; "),subject:`${o.internal?"[Internal] ":""}${codes.join(" / ")}${codes.length?" · ":""}${o.title||"Meeting"}: follow-up and actions`,html,text:lines.join("\n"),items}; }
 /* The popup. Opening, copying and changing it write nothing; the only record is "I sent it" in Chase (system/staging/chases.json,
    item IDs, the date and the mode, through the live server). Nothing is sent and no Outlook draft is made. */
 shared.DE=null;   /* {mode, name, email, items, picked:Set, includeUpdate, replyBy, edited, subjEdited, outside, cover, polish; followup: token, title, day, attendees, lead, summary, note} */
@@ -145,13 +146,26 @@ export function openFollowup(t){ const m=HUB()[t]; if(!m){ snack("That meeting i
   shared.DE={mode:"followup",token:t,title:m.title,day:m.day,codes:m.p||[],items:ok,left:all.length-ok.length,attendees:[],lead:"",summary:"",note:viaServer()?"Reading the attendees and the minutes' summary…":"The attendees and the minutes' summary need the live server.",
     picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:true,cover:"",polish:null};
   shared.DE.picked=deDefaults(ok,true); deShow(`Follow-up: ${m.title}`); if(viaServer()) deFollowFacts(shared.DE,m); }
+/* v2.1.0 P7: from the minutes view's Export menu, for the version shown ("internal" or "distributed"). The server builds the content
+   (minutes_record.followup_facts: the distributed version through distributed_of, so no Internal only, Sensitive, partner-only or
+   excluded content reaches the draft); the Internal version is marked Internal. The same popup, builder and Polish as the meeting's. */
+export async function openMinutesFollowup(path,version){ const r=await api("/api/minutes/followup",{path,version});
+  if(!r||!r.ok){ snack(oneLine((r&&r.message)||"")||"Couldn't read the minutes for the email"); return; }
+  const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred(i));
+  if(!ok.length){ snack(version==="distributed"?"The distributed version has no actions or decisions to put in an email":"The minutes have no actions or decisions to put in an email"); return; }
+  const outside=version==="distributed"?deOutsideAll(r.attendees||[]):false;
+  const de={mode:"followup",token:"",title:r.title,day:r.day,codes:r.codes||[],items:ok,left:all.length-ok.length,attendees:r.attendees||[],lead:"",summary:r.summary||"",
+    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal.",
+    picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:false,cover:"",polish:null,internal:version!=="distributed",version};
+  shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.map(i=>i.k+":"+i.id));
+  deShow(`${version==="distributed"?"Distributed":"Internal"} follow-up: ${r.title}`); }
 export async function deFollowFacts(de,m){ const r=await api("/api/email/followup",{key:m.key,eid:m.eid||"",day:m.day,start:m.start,title:m.title,files:[...(m.files||[]),...(m.draft?[m.draft]:[])]});
   if(shared.DE!==de) return; if(!r.ok){ de.note=oneLine(r.message)||"Couldn't read the attendees and the summary"; drawDraftEmail(true); return; }
   de.attendees=r.attendees||[]; de.summary=r.summary||""; de.note=r.note||""; de.outside=deOutsideAll(de.attendees);
   const owners=new Set(de.items.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=deDefaults(de.items,de.outside); drawDraftEmail(true); }
 export function deBuild(){ return draftEmail({mode:shared.DE.mode,name:shared.DE.name,email:shared.DE.email,items:shared.DE.items,picked:shared.DE.picked,includeUpdate:shared.DE.includeUpdate,replyBy:shared.DE.replyBy,now:new Date(),today:TODAY,dueSoon:S.dueSoon,
   names:Object.fromEntries(P.map(p=>[p.code,p.name])),from:String(S.me||"").split(/\s+/)[0],cover:shared.DE.cover,chased:SA().chases||{},
-  title:shared.DE.title,day:shared.DE.day,codes:shared.DE.codes,attendees:shared.DE.attendees,lead:shared.DE.lead,summary:shared.DE.summary}); }
+  title:shared.DE.title,day:shared.DE.day,codes:shared.DE.codes,attendees:shared.DE.attendees,lead:shared.DE.lead,summary:shared.DE.summary,internal:!!shared.DE.internal}); }
 /* the parts of the popup that differ by mode */
 export function deModesHtml(){ if(shared.DE.mode==="followup") return "";
   return `<div class="demodes" role="group" aria-label="Kind of email"><button type="button" class="vchip" data-demode="update" aria-pressed="${shared.DE.mode==="update"}">Update request</button><button type="button" class="vchip" data-demode="chase" aria-pressed="${shared.DE.mode==="chase"}" ${shared.DE.canChase?"":'disabled data-tip="Nothing of theirs is overdue"'}>Chase overdue items</button></div>`; }
@@ -169,7 +183,7 @@ export function dePolishHtml(){ const tone=shared.DE.tone||"neutral", off=!draft
   return `<div class="detone${off?" off":""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm","neutral","firm"].map(t=>`<button type="button" class="vchip" data-detone="${t}" aria-pressed="${tone===t}"${off?" disabled":""}>${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}${draftBtn("polish","Polish","Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched",'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish?shared.DE.polish.html:""}</div>`; }
 /* redraw the whole popup (first: build it) or just the preview and subject */
 export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(shared.DE.items.map(i=>i.p))].sort();
-  if(first){ const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${esc(i.id)} · ${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
+  if(first){ const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${i.noid?"":esc(i.id)+" · "}${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
     const outsideNote=shared.DE.mode==="followup"?(shared.DE.attendees.length?"An attendee's address is outside your own domains":"There are no attendee addresses on record"):shared.DE.email?"This address is outside your own domains":"There's no email address on record";
     putHtml($("#deBody"),`${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>

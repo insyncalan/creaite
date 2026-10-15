@@ -888,6 +888,67 @@ def export(path, fmt, file_beside=True, version="internal"):
     return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False)
 
 
+def _followup_rows(use, doc, sid):
+    """The rows of section `sid` in `use` that are new in the minutes (not an update, a closure or a record of an existing item)."""
+    sec = next((s for s in use.get("sections") or [] if s.get("id") == sid), None) or {}
+    out = []
+    for r in sec.get("rows") or []:
+        it = (doc.get("items") or {}).get(r.get("ref")) or {}
+        if it.get("op", "new") == "new" and not str(r.get("does") or "").startswith(("Updates", "Closes", "Records")):
+            out.append((r, it))
+    return out
+
+
+def _followup_items(use, doc):
+    """[{k, id, t, ...}]: the new decisions, then the new actions, of the version `use`."""
+    out = []
+    for r, _ in _followup_rows(use, doc, "decisions"):
+        c = r.get("cells") or {}
+        if c.get("decision"):
+            out.append({"k": "decisions", "id": str(r.get("ref") or ""), "t": c["decision"], "by": c.get("by") or ""})
+    for r, it in _followup_rows(use, doc, "actions"):
+        c, due = r.get("cells") or {}, str((it.get("values") or {}).get("due_date") or "")
+        if c.get("action"):
+            out.append({"k": "actions", "id": str(r.get("ref") or ""), "t": c["action"], "o": c.get("owner") or "",
+                        "due": due if re.fullmatch(r"\d{4}-\d\d-\d\d", due) else None})
+    return out
+
+
+def _followup_text(use, sid):
+    """A text section's words as one paragraph (no bullets or bold), empty for 'None recorded.'."""
+    sec = next((s for s in use.get("sections") or [] if s.get("id") == sid), None) or {}
+    words = " ".join(line_text(ln) for ln in str(sec.get("text") or "").splitlines() if ln.strip())
+    return "" if words == "None recorded." else words
+
+
+def _followup_names(use):
+    """The attendees' names from the header section (no organisation in brackets)."""
+    header = next((s for s in use.get("sections") or [] if s.get("id") == "header"), None) or {}
+    raw = re.split(r"[;,]", str((header.get("data") or {}).get("attendees") or ""))
+    return [n for n in (re.sub(r"\s*\([^)]*\)\s*", "", x).strip() for x in raw) if n]
+
+
+def followup_facts(path, version="internal"):
+    """The follow-up email's content from the version shown (v2.1.0 P7; Alan, 15-10-2026): the meeting, its summary, the new
+    decisions and actions, and the attendees. The Distributed version is built by distributed_of, the one rule: no Internal only
+    line or row, no Sensitive, partner-only or excluded item, so none of it can reach the draft. The Internal version is marked
+    internal. Plain code; nothing is sent."""
+    import drafts
+    if version not in (None, "", "internal", "distributed"):
+        raise RecordError("Draft from the internal or the distributed version.")
+    rel, doc = record_at(path)
+    dist = version == "distributed"
+    held = withheld(doc)
+    use = distributed_of(doc, held) if dist else doc
+    summary = _followup_text(use, "summary")
+    codes = (use.get("meta") or {}).get("projects") or [c for c in [use.get("project")] if c]
+    return {"ok": True, "path": rel, "version": "distributed" if dist else "internal", "title": use.get("title") or "Meeting",
+            "day": use.get("date") or "", "codes": codes,
+            "summary": "" if drafts.secret(summary) else drafts.short(summary, 1500),
+            "attendees": drafts.attendees_of({"attendees": [{"name": n, "email": ""} for n in _followup_names(use)]}),
+            "items": _followup_items(use, doc), "left_out": len(held) if dist else 0, "marked_internal": not dist}
+
+
 # ── The distributed version (BL-338 point 13; Jarvis, 15-10-2026 on plan #70) ──
 # The view shows it as a preview (minutesDoc.js distributedOf); these build the same thing on the server, for its export. What it
 # never holds: a line or row marked Internal only (layout.internal_only), and an item that is Sensitive, partner-only or carries a

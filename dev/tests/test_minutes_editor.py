@@ -17,6 +17,7 @@ one deadline said as "by Friday"), a decision and a risk. The view opens from Re
 Run: python3 dev/tests/test_minutes_editor.py      (Chrome tier; skipped without Chrome)
 """
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -34,6 +35,7 @@ TURNS = [(0, 1, "Alan Carter", "Morning all, first the SOW."), (0, 20, "Omar Ali
          (2, 10, "Omar Ali", "Data access is still late, that's the risk."),
          (3, 0, "Sara Example", "I'll book the UAT test environment by Friday."), (4, 30, "Alan Carter", "Thanks all.")]
 VTT = "WEBVTT\n\n" + "".join(f"00:{m:02d}:{s:02d}.000 --> 00:{m:02d}:{s + 5:02d}.000\n<v {who}>{text}</v>\n\n" for m, s, who, text in TURNS)
+SHOTS = (Path.home() / "dev.env/team-stark-shots/p7-followup") if os.environ.get("P7_SHOTS") else None
 DRAFT = f"system/staging/drafts/{DAY} Steering committee.html"
 
 
@@ -331,6 +333,89 @@ class MinutesEditor(LiveBrowserCase):
         self.assertEqual(self.ev("[...document.querySelectorAll('#mnApprove [data-own]')].map(x=>[+x.dataset.own,x.checked])"),
                          [[4, False], [5, False]], "a new decision and a new risk: one tick each, not ticked")
         self.assertIn("check", self.ev("document.querySelector('#mnApprove .mnap-ck').textContent"))
+
+    # ── v2.1.0 P7 follow-up (Alan, 15-10-2026): Draft the follow-up email, in the Export menu ──
+    def seed_secrets(self):
+        """A Sensitive decision (flag) and an Internal only action row, on the stored record; reloads the view."""
+        doc = self.record()
+        dec = next(s for s in doc["sections"] if s["id"] == "decisions")["rows"][0]
+        act = next(s for s in doc["sections"] if s["id"] == "actions")["rows"][0]
+        doc["items"][dec["ref"]]["flags"] = ["sensitive"]
+        doc["layout"] = {**(doc.get("layout") or {}), "distributed": True, "internal_only": [{"section": "actions", "ref": act["ref"]}]}
+        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import minutes_record; "
+                            f"r = minutes_record.save_record({DRAFT!r}, json.loads({json.dumps(json.dumps(doc))}), 'seed'); print(json.dumps({{'ok': r.get('ok')}}))"],
+                           cwd=self.v.root, capture_output=True, text=True, check=True)
+        self.assertTrue(json.loads(r.stdout.strip().splitlines()[-1])["ok"])
+        self.b.eval("go('review')")
+        self.b.eval(f"go('minutes',{{file:{json.dumps(self.proposal)}}})")
+        self.b.wait("document.querySelector('#v-minutes .mnrow')", 15)
+        return dec["cells"]["decision"], act["cells"]["action"]
+
+    def shots(self, name):
+        """With P7_SHOTS set: the open draft at 1400 and 900 px."""
+        if not SHOTS:
+            return
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        for w in (1400, 900):
+            self.b.resize(w, 900)
+            self.b.pump(0.4)
+            self.b.screenshot(str(SHOTS / f"{name}-{w}.png"))
+        self.b.resize(1400, 900)
+
+    def menu_names(self):
+        self.b.click("#v-minutes [data-mnexport]")
+        self.b.wait("document.querySelector('#v-minutes .ddmenu.on')")
+        return self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].map(x=>x.textContent)")
+
+    def pick(self, label):
+        self.b.eval("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].find(x=>x.textContent.includes(%s)).click()" % json.dumps(label))
+        self.b.wait("document.getElementById('deDlg') && document.getElementById('deDlg').open && document.querySelector('#dePrev').textContent.length>20", 15)
+        self.b.pump(0.4)
+
+    def test_7_follow_up_email_internal_version_is_marked_internal(self):
+        names = self.menu_names()
+        self.assertTrue(any("Draft the follow-up email" in n for n in names), names)
+        self.assertEqual(sum("follow-up" in n for n in names), 1, "one version: one entry")
+        self.pick("Draft the follow-up email")
+        self.assertEqual(self.ev("document.querySelector('#deSubj').value").startswith("[Internal] "), True)
+        prev = self.ev("document.querySelector('#dePrev').textContent")
+        self.assertIn("Internal: not for distribution.", prev)
+        self.assertIn("Send the revised SOW", self.ev("document.getElementById('deDlg').textContent"))
+        self.shots("internal")
+
+    def test_8_follow_up_email_distributed_version_holds_nothing_internal(self):
+        b = self.b
+        decision, action = self.seed_secrets()
+        b.click("#v-minutes .seg button:nth-child(2)")
+        b.wait("document.querySelector('[data-mnmode=side]')")
+        names = self.menu_names()
+        self.assertEqual([n for n in names if "follow-up" in n].__len__(), 1, names)          # Internal shown: one entry
+        self.assertTrue(any(n.startswith("Internal:") and "follow-up" in n for n in names), names)
+        b.key("Escape")
+        b.click("[data-mnmode=side]")
+        b.wait("document.querySelector('.sheet-pair')")
+        names = self.menu_names()
+        self.assertEqual(sum("follow-up" in n for n in names), 2, "side by side: both versions offered")
+        b.key("Escape")
+        b.click("[data-mnmode=distributed]")
+        b.wait("!document.querySelector('.sheet-pair')")
+        names = self.menu_names()
+        self.assertEqual([n for n in names if "follow-up" in n], [n for n in names if n.startswith("Distributed:") and "follow-up" in n])
+        self.pick("Distributed: Draft the follow-up email")
+        whole = self.ev("document.getElementById('deDlg').textContent + ' ' + document.querySelector('#deSubj').value")
+        self.assertNotIn(decision, whole, "a Sensitive decision never reaches the distributed draft")
+        self.assertNotIn(action, whole, "an Internal only row never reaches it")
+        self.assertNotIn("[Internal]", whole)
+        self.assertNotIn("Internal: not for distribution", whole)
+        self.assertIn("Distributed", self.ev("document.querySelector('#deTitle').textContent"))
+        self.shots("distributed")
+        b.key("Escape")
+        b.click("[data-mnmode=internal]")
+        self.menu_names()
+        self.pick("Internal: Draft the follow-up email")
+        both = self.ev("document.getElementById('deDlg').textContent")
+        self.assertIn(action, both, "the Internal draft keeps it")
+        self.assertIn("Internal: not for distribution.", self.ev("document.querySelector('#dePrev').textContent"))
 
 
 if __name__ == "__main__":

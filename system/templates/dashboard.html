@@ -3199,6 +3199,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     DE_COLOURS: () => DE_COLOURS,
     DE_DECIDE: () => DE_DECIDE,
     DE_FONT: () => DE_FONT,
+    DE_INTERNAL: () => DE_INTERNAL,
     DE_OPEN: () => DE_OPEN,
     DE_THANKS: () => DE_THANKS,
     DGROUPS: () => DGROUPS,
@@ -4549,6 +4550,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     openFromAddress: () => openFromAddress,
     openGen: () => openGen,
     openMilestone: () => openMilestone,
+    openMinutesFollowup: () => openMinutesFollowup,
     openNew: () => openNew,
     openNewMilestone: () => openNewMilestone,
     openOnly: () => openOnly,
@@ -25363,16 +25365,16 @@ ${pre}**Current state title:** ${title}`);
     const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C4.muted};">Response: ${e4(String(i5.resp || "").trim() || "none recorded yet")}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
     const upd = o5.includeUpdate && String(i5.upd || "").trim() ? `<br><span style="color:${C4.muted};">Latest update: ${e4(i5.upd)}</span>` : "";
     const ch = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C4.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
-    return `<tr style="vertical-align:top;">${deTd(e4(i5.id), "white-space:nowrap;")}${deTd(what + upd + ch)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
+    return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
   function deTableHtml(list, o5) {
     return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID", "9%")}${deTh("Item")}${deTh("Due", "18%")}${deTh("Priority", "10%")}</tr>${list.map((i5) => deRowHtml(i5, o5)).join("")}</table>`;
   }
   function deTextRows(list, o5) {
-    const w5 = Math.max(...list.map((i5) => i5.id.length)), out = [], pad3 = "".padEnd(w5);
+    const w5 = Math.max(...list.map((i5) => (i5.noid ? "" : i5.id).length)), out = [], pad3 = "".padEnd(w5);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
-      out.push(`  ${i5.id.padEnd(w5)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
+      out.push(`  ${(i5.noid ? "" : i5.id).padEnd(w5)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
       if (i5.k === "raid") out.push(`  ${pad3}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
       if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad3}  Latest update: ${i5.upd}`);
       if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad3}  ${deChasedWords(o5.chased[i5.id])}`);
@@ -25419,14 +25421,15 @@ ${pre}**Current state title:** ${title}`);
     const names = [o5.lead, ...(o5.attendees || []).map((a5) => a5.name)].filter(Boolean), all = [...new Set(acts2.map((i5) => i5.o || "No owner"))];
     return [...names.filter((n4) => all.includes(n4)).filter((n4, i5, a5) => a5.indexOf(n4) === i5), ...all.filter((n4) => !names.includes(n4)).sort()];
   }
+  var DE_INTERNAL = "Internal: not for distribution.";
   function deFollowup(o5) {
     const e4 = esc, today = o5.today, items2 = dePicked(o5), acts2 = items2.filter((i5) => i5.k === "actions"), decs = items2.filter((i5) => i5.k === "decisions"), codes = [...new Set(items2.map((i5) => i5.p).concat(o5.codes || []))].sort();
     const att = o5.attendees || [], first = att.length === 1 ? String(att[0].name).split(/\s+/)[0] : "all";
     const when = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
+    const lines = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
     if (o5.summary) lines.push("Summary", o5.summary, "");
     if (decs.length) lines.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
     if (acts2.length) {
@@ -25434,7 +25437,7 @@ ${pre}**Current state title:** ${title}`);
       owners.forEach((n4) => lines.push(n4, ...deTextRows(mine(n4), o5), ""));
     }
     lines.push(ask, ...endT);
-    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
+    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${o5.internal ? "[Internal] " : ""}${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
   }
   shared.DE = null;
   var deHost = (addr) => String(addr || "").split("@")[1]?.trim().toLowerCase() || "";
@@ -25531,6 +25534,47 @@ ${pre}**Current state title:** ${title}`);
     deShow(`Follow-up: ${m5.title}`);
     if (viaServer()) deFollowFacts(shared.DE, m5);
   }
+  async function openMinutesFollowup(path, version) {
+    const r4 = await api("/api/minutes/followup", { path, version });
+    if (!r4 || !r4.ok) {
+      snack(oneLine(r4 && r4.message || "") || "Couldn't read the minutes for the email");
+      return;
+    }
+    const all = (r4.items || []).map((x5) => ({ ...x5, p: (r4.codes || [])[0] || "", due: x5.due || null, pr: "", client: version === "distributed", noid: /^@/.test(x5.id), by: x5.by || "", o: x5.o || x5.by || "" })), ok = all.filter((i5) => !deBarred(i5));
+    if (!ok.length) {
+      snack(version === "distributed" ? "The distributed version has no actions or decisions to put in an email" : "The minutes have no actions or decisions to put in an email");
+      return;
+    }
+    const outside = version === "distributed" ? deOutsideAll(r4.attendees || []) : false;
+    const de = {
+      mode: "followup",
+      token: "",
+      title: r4.title,
+      day: r4.day,
+      codes: r4.codes || [],
+      items: ok,
+      left: all.length - ok.length,
+      attendees: r4.attendees || [],
+      lead: "",
+      summary: r4.summary || "",
+      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal.",
+      picked: /* @__PURE__ */ new Set(),
+      includeUpdate: false,
+      replyBy: "",
+      edited: false,
+      subjEdited: false,
+      outside: false,
+      cover: "",
+      polish: null,
+      internal: version !== "distributed",
+      version
+    };
+    shared.DE = de;
+    const owners = new Set(ok.map((i5) => i5.o));
+    de.lead = (de.attendees.find((a5) => owners.has(a5.name)) || {}).name || "";
+    de.picked = new Set(ok.map((i5) => i5.k + ":" + i5.id));
+    deShow(`${version === "distributed" ? "Distributed" : "Internal"} follow-up: ${r4.title}`);
+  }
   async function deFollowFacts(de, m5) {
     const r4 = await api("/api/email/followup", { key: m5.key, eid: m5.eid || "", day: m5.day, start: m5.start, title: m5.title, files: [...m5.files || [], ...m5.draft ? [m5.draft] : []] });
     if (shared.DE !== de) return;
@@ -25569,7 +25613,8 @@ ${pre}**Current state title:** ${title}`);
       codes: shared.DE.codes,
       attendees: shared.DE.attendees,
       lead: shared.DE.lead,
-      summary: shared.DE.summary
+      summary: shared.DE.summary,
+      internal: !!shared.DE.internal
     });
   }
   function deModesHtml() {
@@ -25606,7 +25651,7 @@ ${pre}**Current state title:** ${title}`);
     if (first) {
       const row2 = (i5) => {
         const w5 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
-        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${esc(i5.id)} · ${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w5.date)}${w5.words ? " · " + w5.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
+        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w5.date)}${w5.words ? " · " + w5.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
       };
       const outsideNote = shared.DE.mode === "followup" ? shared.DE.attendees.length ? "An attendee's address is outside your own domains" : "There are no attendee addresses on record" : shared.DE.email ? "This address is outside your own domains" : "There's no email address on record";
       putHtml($("#deBody"), `${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
@@ -32512,6 +32557,19 @@ ${d5.text}`);
       if (!on) minutesMode.value = "internal";
     };
     const exp = async (id) => {
+      if (id.startsWith("followup")) {
+        const d5 = minutesDoc.value;
+        if (dirty && d5) {
+          const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
+          if (!s5.ok) {
+            snack(s5.message || "The minutes weren't saved");
+            return;
+          }
+          dirty = false;
+        }
+        openMinutesFollowup(v4 && v4.path, id.endsWith(":distributed") ? "distributed" : "internal");
+        return;
+      }
       const [fmt, which] = id.split(":"), version = which === "distributed" ? "distributed" : "internal";
       const out = version === "distributed" ? leftOut(doc, v4 && v4.withheld) : [];
       const r4 = await exportMinutes(fmt, version);
@@ -32532,6 +32590,14 @@ ${d5.text}`);
         line: draft ? "Once the internal minutes are approved" : `${f5.line}, under a new name`
       }))
     ] : formats;
+    const follow = { id: "followup", name: "Draft the follow-up email", line: "From this version; copied, never sent" };
+    const shown = mode === "distributed" ? ["distributed"] : mode === "side" ? ["internal", "distributed"] : ["internal"];
+    const mails = !dist ? [follow] : shown.map((w5) => ({
+      ...follow,
+      id: `followup:${w5}`,
+      name: `${w5 === "distributed" ? "Distributed" : "Internal"}: Draft the follow-up email`,
+      line: w5 === "distributed" ? "Without Internal only lines or withheld items" : "Marked Internal"
+    }));
     return /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
       /* @__PURE__ */ u2(
         Menu,
@@ -32577,7 +32643,7 @@ ${d5.text}`);
           btnCls: "btn sm",
           menuLabel: "Export the minutes",
           data: { mnexport: "" },
-          items: exports,
+          items: [...exports, ...mails],
           onPick: exp
         }
       ),

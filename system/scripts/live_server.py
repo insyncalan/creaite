@@ -96,6 +96,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
 - POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
                          approve_minutes, through tracker.py apply); unticked items wait in Review
+- POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (read only)
 - POST /api/minutes/export {path, format, file_beside, version}: HTML, Word or PDF through creaite_doc.export (P2), opened once
                          made; version "distributed" exports the distributed version (approved minutes only; never overwriting)
 - POST /api/day/close    {choices, prep}: close the day: the time and BL-295's plan (First thing tomorrow, Review now: references
@@ -4139,7 +4140,19 @@ def minutes_export_route(handler, req):
     return handler.send(200, out)
 
 
-MINUTES_ROUTES = {"/api/minutes/draft": minutes_draft_route, "/api/minutes/save": minutes_save_route,
+def minutes_followup_route(handler, req):
+    """POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (followup_facts); the
+    distributed version goes through distributed_of: no Internal only, Sensitive, partner-only or excluded content. Read only."""
+    import minutes_record
+    try:
+        out = minutes_record.followup_facts(req.get("path"), str(req.get("version") or "internal"))
+    except minutes_record.RecordError as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, out)
+
+
+MINUTES_ROUTES = {"/api/minutes/followup": minutes_followup_route,
+                  "/api/minutes/draft": minutes_draft_route, "/api/minutes/save": minutes_save_route,
                   "/api/minutes/approve": minutes_approve_route, "/api/minutes/export": minutes_export_route}
 REVIEW_WORK_ROUTES.update(MINUTES_ROUTES)        # dispatched with Review's work, so do_POST gains no branch
 # ===== end v2.1.0 P4 =====
