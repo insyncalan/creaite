@@ -11,6 +11,7 @@ import { useState } from "preact/hooks";
 import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
 import { matchClientAll, matchClientSection } from "./clientDoc.js";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
+import { countRedraft, redrafter } from "./redraft.js";
 import { Sheet } from "./Sheet.jsx";
 import { INTERNAL_RENDERERS } from "./WeeklyPartner.jsx";
 import { $ } from "../../core/dom.js";
@@ -97,7 +98,9 @@ export function ClientView() {
           partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed, match: id => setClientDoc(matchFor(id)),
             onChange: setClientDoc, onSave: saveClientPage } : null}
           onChange={side ? () => {} : setClientDoc} onSave={side ? undefined : saveClientPage}
-          onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); }}
+          ai={{ place: "report", project: () => doc.project, confidential: () => false }}
+          onRedraft={side ? undefined : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report")}
+          onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); else countRedraft(ev, "report"); }}
           toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
       </div>
       <LeftOutDialog client={doc.client || ""} onExport={doExport} />

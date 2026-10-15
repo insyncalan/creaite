@@ -5126,12 +5126,25 @@ class DraftJob:
         return {"status": None, "files": [], "message": ""}
 
 
+def section_request(req):
+    """#90: the keys the ✦ on a report or minutes section sends (kinds "report-section" and "minutes-section"): known keys, short
+    strings, the section's words and its panes, each cut to a size."""
+    keep = {k: req[k] for k in ("report", "week_ending", "section", "action", "heading", "version")
+            if isinstance(req.get(k), str) and len(req[k]) <= 80}
+    keep.update({k: req[k][:n] for k, n in (("path", 300), ("instruction", 400), ("text", 6000)) if isinstance(req.get(k), str)})
+    if isinstance(req.get("panes"), list):
+        keep["panes"] = [{"title": str(x.get("title") or "")[:60], "text": str(x.get("text") or "")[:6000]}
+                         for x in req["panes"][:6] if isinstance(x, dict)]
+    return keep
+
+
 def draft_request(req):
     """The request as drafts.py takes it: known keys, short strings and short lists only."""
     keep = {}
     for k in ("kind", "id", "field", "code", "to", "fc"):
         if isinstance(req.get(k), str) and len(req[k]) <= 80:
             keep[k] = req[k]
+    keep.update(section_request(req))
     if isinstance(req.get("title"), str):                  # BL-220 (sprint-drafts-extraction): the words Sharpen rewords
         keep["title"] = req["title"][:300]
     if isinstance(req.get("ids"), list):
@@ -6110,6 +6123,7 @@ DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/repo
 # "status-form" on the same run engine, shown with Copy and never saved. The audiences gain "steering" and "sponsor" (internal
 # wording with nothing sensitive), for Generate's Current state too.
 DRAFT_KINDS |= {"status-form"}
+DRAFT_KINDS |= {"report-section", "minutes-section"}      # #90: the ✦ on the weekly, client and minutes sheets
 _generate_before_forms = Handler.generate
 _exec_options_before_forms = Handler.exec_options
 

@@ -72,6 +72,11 @@ FEATURES = {
     # ===== BL-286 C (sprint-prep-shape): its switch, with the page's DRAFTFEATURES (stores/prepShape.js) =====
     "shape": ("Shape the meeting", "Prep: reads your focus and aim, then drafts the objective, talking points, ask and what's "
               "carried over, each line cited"),
+    # ===== v2.1.0 #90: the sheet's ✦ =====
+    "report-section": ("Redraft a report section", "The weekly or client report's ✦, and Polish, Shorter, Executive or your own words on "
+                       "one section, from the week's facts (a client report: client-visible facts only)"),
+    "minutes-section": ("Redraft a minutes section", "The minutes' ✦, and Polish, Shorter, Executive or your own words on one section "
+                        "(the distributed version: nothing marked Internal only or withheld)"),
 }
 # BL-286 (sprint-prep-server): the kind "shape" counts under the feature "shape" (draft-stats.json takes any lower-case feature
 # name) and is on unless settings.json `drafting.shape` is false. Its Settings switch is in FEATURES above (sprint-prep-shape).
@@ -2077,6 +2082,255 @@ def run_closure(ctx, got):
         out.update(href=lines["href"], link=lines.get("link") or "Open")
     return out
 # ===== end BL-326 =====
+
+
+# ===== v2.1.0 #90: the ✦ on the weekly, client and minutes sheets. Two kinds on /api/draft: "report-section" (a section of a weekly
+# or client report) and "minutes-section" (a section of a minutes record). Plain code gathers the facts; the model words one section
+# in one of four ways (Polish, Shorter, Executive, or Alan's own instruction: edit_ai's actions). A suggestion, never a write: the
+# sheet shows it beside Alan's words and he keeps his, or uses it. Privacy by construction:
+#   - a client report's section draws only on the facts that make up the client version (status_facts' client sheet), and each line
+#     is checked again with client_leak (item_problem for every item it rests on, text_findings for its words); the reply is too;
+#   - a minutes draft from the distributed version is built from minutes_record.distributed_of, so no Internal only line or row,
+#     and no Sensitive, partner-only or excluded item, is ever in its facts or prompt; its section's words are read from that
+#     version, never from what the page sent.
+# Counts (offered, used, edited, rejected) are under the two feature names; counts only, never text.
+SECTION_ACTIONS = ("polish", "shorter", "executive", "custom")
+SECTION_TEXT_MAX = 6000
+VIP_RE = re.compile(r"\bVIPs?\b", re.I)
+
+
+def section_task(req):
+    """(action, the instruction Claude is given) for a section draft: edit_ai's own wording for the action."""
+    import edit_ai
+    action = str(req.get("action") or "")
+    if action not in SECTION_ACTIONS:
+        raise Refused("Choose Polish, Shorter, Executive or your own words.")
+    instruction = " ".join(str(req.get("instruction") or "").split())[:400]
+    if action == "custom":
+        if not instruction:
+            raise Refused("Say what you want done with the section.")
+        return action, "Do what Alan asks with the section, and only that. His instruction: " + instruction
+    task = edit_ai.OPTIONS[action][2]
+    if action == "executive":
+        import report
+        task += "\n\nThe executive voice:\n" + report.style_guide()
+    return action, task
+
+
+def section_panes(req):
+    """The section's panes as [{title, text}] when the page sent them, else []."""
+    out = []
+    for x in (req.get("panes") if isinstance(req.get("panes"), list) else [])[:6]:
+        if isinstance(x, dict):
+            out.append({"title": short(x.get("title"), 60), "text": str(x.get("text") or "")[:SECTION_TEXT_MAX]})
+    return out
+
+
+def section_current(req):
+    """(the section as it stands, its panes) as the page sent them."""
+    panes = section_panes(req)
+    if panes:
+        return "\n\n".join(f"### {p['title']}\n{p['text']}" for p in panes), panes
+    return str(req.get("text") or "")[:SECTION_TEXT_MAX], panes
+
+
+def client_line_ok(con, code, ln, blocking):
+    """Whether a facts-sheet line may reach a client section: every item it rests on passes client_leak.item_problem, and its words
+    pass client_leak.text_findings (so an internal-only item, a Sensitive or partner-only one, a label that excludes it, a memory
+    line marked Client-safe: no and the words confidential or restricted all drop it)."""
+    import client_leak
+    if secret(ln["text"]) or VIP_RE.search(ln["text"]):
+        return False
+    for ref in ln.get("src") or []:
+        if ID_RE.fullmatch(str(ref)) and client_leak.item_problem(con, ref, blocking):
+            return False
+    return not client_leak.text_findings(con, code, ln["text"])
+
+
+def report_facts(con, code, fri, client):
+    """The numbered facts for a report section (a Draft's sources): the week's sheet, and for a client report only the lines
+    client_leak passes. [] when there is nothing to draw on."""
+    import contextlib
+    from datetime import timedelta
+    import client_leak
+    import status_facts
+    blocking = client_leak.blocking_labels(con) if client else None
+    start, end = (date.fromisoformat(fri) - timedelta(days=4)).isoformat(), fri
+    with contextlib.redirect_stdout(sys.stderr):
+        f = status_facts.facts(code, start, end, "client" if client else "internal")
+    src = []
+    for part in f["parts"]:
+        for ln in part["lines"]:
+            ok = client_line_ok(con, code, ln, blocking) if client else not (secret(ln["text"]) or VIP_RE.search(ln["text"]))
+            if ok:
+                src.append({"id": ln["fid"], "kind": part["title"], "text": ln["text"]})
+    return src, start, end
+
+
+def section_shape(panes):
+    """The reply's shape: panes under their own headings, or the section's words only."""
+    return ("In panes: reply with each pane under its own “### Title” line, in the same order, and nothing else."
+            if panes else "Reply with the section's words only.")
+
+
+def report_request(con, req):
+    """(code, is it a client report, the week ending, action, task, the section's words, its panes) for a report section, or the
+    refusal. A client section that already holds wording a client mustn't see is refused: nothing is sent to a draft."""
+    import client_leak
+    import report_doc
+    code, which = str(req.get("code") or ""), req.get("report")
+    if which not in ("weekly", "client"):
+        raise Refused("Say which report: weekly or client.")
+    if not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
+        raise Refused("Not a project.")
+    action, task = section_task(req)
+    try:
+        fri = report_doc.friday(req.get("week_ending") or None)
+    except ValueError:
+        raise Refused("The week ending must be a date.") from None
+    current, panes = section_current(req)
+    if not current.strip():
+        raise Nothing("This section has no words to redraft.")
+    client = which == "client"
+    if client and (VIP_RE.search(current) or client_leak.text_findings(con, code, current)):
+        raise Refused("This section already holds wording that isn't client-safe. Fix it first; nothing was sent to a draft.")
+    return code, client, fri, action, task, current, panes
+
+
+@kind("report-section", "report-section")
+def build_report_section(con, req):
+    """The facts for one section of a weekly or client report. A client report's facts are the client sheet's, kept line by line
+    only when client_leak passes them; the section's own words are refused when they already hold something a client mustn't see."""
+    import report
+    code, client, fri, action, task, current, panes = report_request(con, req)
+    src, start, end = report_facts(con, code, fri, client)
+    if not src:
+        raise Nothing("There are no facts for this week to redraft from" + (" that a client may see." if client else "."))
+    kept, listed = number(src)
+    sid = str(req.get("section") or "")[:60]
+    return Draft({"task": task, "name": tracker.project_label(code), "start": tracker.shown(start), "end": tracker.shown(end),
+                  "heading": short(req.get("heading"), 80) or "the section",
+                  "audience_note": report.AUDIENCE_NOTES["client" if client else "internal"], "current": current,
+                  "shape": section_shape(panes), "sources": listed},
+                 kept, item={"code": code, "section": sid},
+                 extra={"template": "report-section", "section": sid, "action": action, "original": current,
+                        "panes": [p["title"] for p in panes], "audience": "client" if client else "internal", "code": code,
+                        "people": people_names()})
+
+
+def _record_lines(use, skip_id, per=8):
+    """[(heading, line)] of a minutes record's other sections, the summary and the decisions first."""
+    import minutes_record
+    order = {"summary": 0, "decisions": 1, "actions": 2, "updates": 3}
+    secs = [s for s in use.get("sections") or [] if s.get("id") not in (skip_id, "header", "source")]
+    out = []
+    for s in sorted(secs, key=lambda s: order.get(s.get("id"), 9)):
+        if s.get("type") == "table":
+            lines = [" · ".join(str(v) for v in (r.get("cells") or {}).values() if v) for r in s.get("rows") or []]
+        else:
+            lines = [minutes_record.line_text(ln) for ln in str(s.get("text") or "").splitlines() if ln.strip()]
+        out += [(s.get("heading") or s.get("id"), ln) for ln in lines[:per] if ln and ln != "None recorded."]
+    return out
+
+
+def minutes_current(req, sec, dist):
+    """(the section as it stands, its panes): the distributed version's words come from the record, never from the page."""
+    if dist or not (str(req.get("text") or "").strip() or section_panes(req)):
+        return str(sec.get("text") or "")[:SECTION_TEXT_MAX], []
+    return section_current(req)
+
+
+def minutes_version(req):
+    """(the version to draw on, is it the distributed one, the section) for a minutes section, or the refusal. The distributed
+    version is minutes_record.distributed_of: nothing marked Internal only or withheld is in it."""
+    import minutes_record
+    version = req.get("version") or "internal"
+    if version not in ("internal", "distributed"):
+        raise Refused("Redraft from the internal or the distributed version.")
+    try:
+        doc = minutes_record.record_at(req.get("path"))[1]
+    except minutes_record.RecordError as e:
+        raise Refused(str(e)) from None
+    dist = version == "distributed"
+    use = minutes_record.distributed_of(doc) if dist else doc
+    sec = next((s for s in use.get("sections") or [] if s.get("id") == str(req.get("section") or "")), None)
+    if not sec or sec.get("type") in ("header", "table"):
+        raise Refused("That section can't be redrafted" + (" in this version." if dist else "."))
+    return use, dist, sec
+
+
+@kind("minutes-section", "minutes-section")
+def build_minutes_section(con, req):
+    """The facts for one section of a meeting's minutes. The distributed version is built by minutes_record.distributed_of and the
+    section's words are read from it, so nothing marked Internal only or withheld is in the prompt or the facts."""
+    action, task = section_task(req)
+    use, dist, sec = minutes_version(req)
+    sid = sec["id"]
+    current, panes = minutes_current(req, sec, dist)
+    if not current.strip() or current.strip() == "None recorded.":
+        raise Nothing("This section has no words to redraft.")
+    if dist and VIP_RE.search(current):
+        raise Refused("This section can't be redrafted.")
+    kept, listed = number([{"id": "", "kind": h, "text": f"{h}: {short(ln, 300)}"} for h, ln in _record_lines(use, sid)
+                           if not (secret(ln) or VIP_RE.search(ln))])
+    return Draft({"task": task, "title": use.get("title") or "the meeting", "day": tracker.shown(use.get("date") or "") or "",
+                  "version_note": ("This is the distributed version, sent to everyone who was invited: use only what is in the facts "
+                                   "below." if dist else "This is the internal version."),
+                  "heading": short(sec.get("heading"), 80) or "the section", "current": current,
+                  "shape": section_shape(panes), "sources": listed},
+                 kept, item={"section": sid, "version": "distributed" if dist else "internal"},
+                 extra={"template": "minutes-section", "section": sid, "action": action, "original": current,
+                        "panes": [p["title"] for p in panes], "audience": "distributed" if dist else "internal", "code": "",
+                        "people": people_names()})
+
+
+def split_panes(text, titles):
+    """A reply split by its “### Title” lines into [{title, text}] in the sheet's order; [] when the panes can't be matched."""
+    parts = re.split(r"^###\s*(.+?)\s*$", text or "", flags=re.M)
+    got = {parts[i].strip().lower(): parts[i + 1].strip() for i in range(1, len(parts) - 1, 2)}
+    if not titles or any(t.strip().lower() not in got for t in titles):
+        return []
+    return [{"title": t, "text": got[t.strip().lower()]} for t in titles]
+
+
+@parser("report-section")
+def parse_section(reply, ctx):
+    """The redrafted section: its words, its sources, and edit_ai's plain-code check of what it lost or added. A draft that fails
+    the privacy check (client_leak on a client report's reply) or names a VIP comes back with no text and a plain reason."""
+    import edit_ai
+    out = default_parse(reply, ctx)
+    ex = ctx.get("extra") or {}
+    text = out["text"]
+    out.update(section=ex.get("section") or "", action=ex.get("action"), notes=[])
+    dropped = {**out, "text": "", "sentences": []}
+    if VIP_RE.search(text):
+        return {**dropped, "message": "The draft named something private, so it was dropped. Try again."}
+    if ex.get("audience") == "client":
+        import client_leak
+        con = ro()
+        try:
+            bad = client_leak.text_findings(con, ex.get("code") or "", text)
+        finally:
+            con.close()
+        if bad:
+            return {**dropped, "message": "The draft was dropped: it held wording that isn't client-safe."}
+    elif secret(text) and not secret(ex.get("original")):
+        return {**dropped, "message": "The draft was dropped: it brought in something marked confidential."}
+    out["notes"] = edit_ai.check(ex.get("original") or "", text, ex.get("people") or [])
+    if ex.get("panes"):
+        out["panes"] = split_panes(text, ex["panes"])
+        if not out["panes"]:
+            return {**dropped, "message": "The draft didn't keep the section's panes. Try again."}
+    return out
+
+
+PARSERS["minutes-section"] = parse_section
+RUN_LINES.update({
+    "report-section": ("Redraft a section of {project}'s report", "Redrafted the section: keep yours or use this"),
+    "minutes-section": ("Redraft a section of the minutes", "Redrafted the section: keep yours or use this"),
+})
+# ===== end #90 =====
+
 
 
 def context(req):

@@ -9,6 +9,7 @@
    change, so the record and its proposal never part. Nothing here sends anything. */
 import { render } from "preact";
 import { Menu } from "../Menu.jsx";
+import { countRedraft, redrafter } from "../report/redraft.js";
 import { Sheet } from "../report/Sheet.jsx";
 import { ApprovePopup } from "./ApprovePopup.jsx";
 import { MinutesCtx } from "./context.js";
@@ -144,7 +145,9 @@ export function MinutesView() {
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
               partner={side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {} } : null} leftReadOnly={false}
               onChange={onDoc} onSave={async req => { const r = await saveMinutesPage(req); if (r.ok) dirty = false; return r; }}
-              onEvent={ev => { if (ev.type === "reload") loadMinutes({ path: v.path }); }}
+              ai={{ place: "minutes", project: () => String((doc.meta || {}).projects ? doc.meta.projects[0] : doc.project || ""), confidential: () => false }}
+              onRedraft={side ? undefined : redrafter(() => ({ path: v.path, version: dist && mode === "distributed" ? "distributed" : "internal" }), "minutes")}
+              onEvent={ev => { if (ev.type === "reload") loadMinutes({ path: v.path }); else countRedraft(ev, "minutes"); }}
               toolbar={<Bar doc={doc} checks={checks} />} />
           </MinutesCtx.Provider>
         </div>
