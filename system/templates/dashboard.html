@@ -33356,6 +33356,7 @@ ${s5}`;
         }
         if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person")) {
           hlClear();
+          if ($("#panel").classList.contains("on")) closePanel();
           return;
         }
         if (shared.VIEW === "review" && (RHL.size || CHK.size) && !$("#panel").classList.contains("on")) {
@@ -42135,6 +42136,10 @@ ${s5}`;
     if (was) {
       PK.wide = false;
       PK.key = null;
+    }
+    {
+      const o5 = document.activeElement;
+      if (o5 && o5 !== document.body && !$("#panel").contains(o5) && o5.closest("[data-open],tr[data-row],.bcard[data-row]")) o5.blur();
     }
     if (shared.PREPPEEK && shared.PREPPEEK !== "swap") prepPeekEnd();
   }
