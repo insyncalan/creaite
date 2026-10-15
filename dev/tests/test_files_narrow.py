@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 from test_archive_move_back import ENV, archive_old_files  # noqa: E402
+from test_onedrive_projects import touch  # noqa: E402
 
 ROWS_ON_TOP = """(()=>{ const rows=[...document.querySelectorAll('#filesTbl tr[data-fp]')], out=[];
   rows.forEach(tr=>{ const r=tr.getBoundingClientRect(); if(r.bottom<=0||r.top>=innerHeight) return;
@@ -34,6 +35,7 @@ class FilesNarrow(LiveBrowserCase):
         from test_dashboard import populate
         populate(v)
         archive_old_files(v.root)
+        touch(v.root / "projects/_portfolio/minutes/2026-10-12 Portfolio review.md", "the bilby review\n")   # a current portfolio file
 
     @classmethod
     def server_env(cls):
@@ -86,6 +88,23 @@ class FilesNarrow(LiveBrowserCase):
         b.eval("document.querySelector('#tree [data-p=\"_portfolio\"]').click()")
         self.assertEqual(b.eval("document.querySelector('#tree [data-p=\"_portfolio\"]').firstChild.textContent"), "Portfolio")
         self.assertNotIn("_portfolio", b.eval("document.getElementById('v-files').innerText"))
+
+    def test_the_command_palette_names_the_portfolio_and_the_projects(self):
+        b = self.b
+        b.eval("go('files')")
+        b.wait("FILES.some(f=>f.p==='_portfolio')")
+        files = b.eval("ckItems('review').filter(x=>x.g==='Files').map(x=>[x.l,x.h])")
+        self.assertIn(["2026-10-12 Portfolio review.md", "Portfolio › minutes"], files)
+        every = b.eval("['minutes','reports','transcripts'].flatMap(q=>ckItems(q).filter(x=>x.g==='Files').map(x=>x.h))")
+        self.assertTrue(every)
+        self.assertFalse([h for h in every if "_portfolio" in h], every)
+        self.assertTrue(any(h.startswith("Example Programme › ") for h in every), every)    # projects by name too (BL-101)
+        self.assertTrue(b.eval("ckItems('ABC').some(x=>x.g==='Files')"))                    # the code still finds them
+        b.eval("openCk(); const i=document.getElementById('cmdkIn'); i.value='review'; i.dispatchEvent(new Event('input',{bubbles:true}))")
+        b.wait("document.querySelector('#cmdkList button')")
+        self.assertNotIn("_portfolio", b.eval("document.getElementById('cmdkList').innerText"))
+        self.assertIn("Portfolio › minutes", b.eval("document.getElementById('cmdkList').innerText"))
+        b.eval("document.getElementById('cmdk').close()")
 
 
 if __name__ == "__main__":

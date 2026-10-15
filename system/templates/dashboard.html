@@ -23306,7 +23306,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var FOPEN = new Set(store.get("creaite-files-open", []));
   var farch = () => D.files_archived || [];
   var FNAME = Object.assign({ _portfolio: "projects/_portfolio", inbox: "inbox" }, D.folders);
-  var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   function renderFiles() {
     const cnt = (f5) => FILES.filter(f5).length;
     const pr = (b5) => b5 ? "true" : "false";
@@ -38258,7 +38257,7 @@ ${d5.text}`);
           go("inbox");
           previewInbox(f5.path);
         }));
-        FILES.filter((f5) => f5.p !== "inbox").forEach((f5) => add("Files", f5.n, [f5.p, f5.f, f5.sub].filter(Boolean).join(" › "), () => openPath(f5.path)));
+        FILES.filter((f5) => f5.p !== "inbox").forEach((f5) => add("Files", f5.n, [fpName(f5.p), f5.f, f5.sub].filter(Boolean).join(" › "), () => openPath(f5.path), f5.p));
       }
       if (q5.length > 1) {
         A4.forEach((a5) => add("Items", `${a5.id} · ${a5.t}`, who(a5.o), () => {
@@ -40517,6 +40516,7 @@ ${d5.text}`);
   var P3 = D.projects, A4 = D.actions, R2 = D.raid, DEC = D.decisions, REV = D.review, FILES = D.files, REMINDERS = D.reminders;
   shared.ACT = D.activity;
   var pName = (c5) => (P3.find((p6) => p6.code === c5) || {}).name || c5;
+  var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   var LASTVISIT = store.get("creaite-lastvisit", D.data_at);
   var SWEPT = D.last_sweep || "never";
   var WEEKSTART = (() => {

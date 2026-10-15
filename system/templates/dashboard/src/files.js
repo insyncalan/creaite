@@ -2,7 +2,7 @@
 /* files.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0068-files.js, 0069-dashboard-pages-bl-87-to-bl-95.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
-import { FILES, P, pName, WEEKSTART } from "./core/data.js";
+import { FILES, fpName, P, pName, WEEKSTART } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
 import { D, DDATE, fd, S, store, toIso } from "./core/page.js";
 import { api, oneLine, SERVED, snack, viaServer } from "./core/server.js";
@@ -15,8 +15,6 @@ shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(sto
 /* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
 export const farch=()=>D.files_archived||[];
 export const FNAME=Object.assign({_portfolio:"projects/_portfolio",inbox:"inbox"},D.folders);
-/* BL-101 (v1.9.5 hand checks, plan #81): people see names, never folder names; the portfolio is "Portfolio" everywhere Files shows it */
-export const fpName=c=>c==="_portfolio"?"Portfolio":pName(c);
 export function renderFiles(){ const cnt=f=>FILES.filter(f).length; const pr=(b)=>b?"true":"false";
   const h=[html`<button data-p="All" data-f="All" aria-pressed="${pr(shared.FSEL.p==="All")}">All files<span class="n">${FILES.length}</span></button><button class="l1" data-p="inbox" data-f="All" aria-pressed="${pr(shared.FSEL.p==="inbox")}">Intake<span class="n">${cnt(x=>x.p==="inbox")}</span></button><button class="l1" data-p="_portfolio" data-f="All" aria-pressed="${pr(shared.FSEL.p==="_portfolio")}"><span title="${FNAME._portfolio}">Portfolio</span><span class="n">${cnt(x=>x.p==="_portfolio")}</span></button>`];
   P.forEach(p=>{ const c=p.code, op=FOPEN.has(c); h.push(html`<button class="l1" data-p="${c}" data-f="All" data-toggle="${c}" aria-expanded="${pr(op)}" aria-pressed="${pr(shared.FSEL.p===c&&shared.FSEL.f==="All")}"><span class="chev">${raw(ic("chevdown","chev turn"))}</span><span title="${FNAME[c]}">${pName(c)}</span><span class="n">${cnt(x=>x.p===c)}</span></button>`);
