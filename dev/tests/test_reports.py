@@ -353,17 +353,12 @@ class ClientTests(unittest.TestCase):
 
 
 # ===== v2.1.0 P3 (BL-335, BL-336): the reports in creaite, through the live server's routes =====
-STUB_EXPORT = """
-def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True):
-    return {"ok": True, "format": fmt, "path": str(path), "draft": str(path), "filed": bool(file_beside),
-            "message": "stub export " + fmt}
-"""
 WEEKLY_FILE = f"{ABC}/reports/2026-10-09 Weekly report - Example Programme.html"
 WEEKLY_DRAFT = "system/staging/drafts/2026-10-09 Weekly report - Example Programme.html"
 
 
 class ReportRoutes(unittest.TestCase):
-    """/api/report/draft, save, approve and export on a live server in a throwaway vault (P2's export stubbed as doc_export.py)."""
+    """/api/report/draft, save, approve and export on a live server in a throwaway vault (P2's real export, creaite_doc.export)."""
 
     @classmethod
     def setUpClass(cls):
@@ -372,7 +367,6 @@ class ReportRoutes(unittest.TestCase):
         import urllib.request
         cls.v = v = ReportVault()
         populate(v)
-        (v.root / "system/scripts/doc_export.py").write_text(STUB_EXPORT)
         with socket.socket() as sock:
             sock.bind(("127.0.0.1", 0))
             cls.port = sock.getsockname()[1]
@@ -467,7 +461,8 @@ class ReportRoutes(unittest.TestCase):
         self.section(doc, "summary")["text"] = "Testing starts on plan."
         self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 1})["ok"])
         e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "docx"})
-        self.assertEqual((e["ok"], e["message"], e["filed"], e["launched"]), (True, "stub export docx", False, False))
+        self.assertEqual((e["ok"], e["filed"], e["launched"]), (True, False, False), e)   # BL-335: not filed beside unless ticked
+        self.assertIn("Client report - Example Programme (Example Client Ltd).docx", e["message"])
         a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
         self.assertIn("awaiting review", a["message"])           # test_1's Undo left its proposal waiting in Review
         a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "force": True})
