@@ -12,7 +12,7 @@ import { CALI, closeCal, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { HUB, putHtml } from "./meetings.js";
+import { putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
 import { DRAFTKIND, GEN_AUD, GEN_FORMS } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
@@ -142,7 +142,7 @@ export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().f
   deShow(`Draft email: ${name}`); })();
  }   /* BL-288: the note about a followed person is dropped (Alan) */
 /* from a meeting's page (and Review): the follow-up, with what the meeting produced that is in the tracker */
-export function openFollowup(t){ const m=HUB()[t]; if(!m){ snack("That meeting isn't in creaite's records any more"); return; }
+export function openFollowup(t){ const m=(D.hub||{})[t]; if(!m){ snack("That meeting isn't in creaite's records any more"); return; }
   const all=(m.items||[]).filter(x=>x.id&&(x.k==="actions"||x.k==="decisions")).map(x=>REC(x.k,x.id)&&deItem(x.k,REC(x.k,x.id))).filter(Boolean), ok=all.filter(i=>!deBarred(i));
   if(!ok.length){ snack("The meeting has no actions or decisions in the tracker yet: approve and apply them first"); return; }
   shared.DE={mode:"followup",token:t,title:m.title,day:m.day,codes:m.p||[],items:ok,left:all.length-ok.length,attendees:[],lead:"",summary:"",note:viaServer()?"Reading the attendees and the minutes' summary…":"The attendees and the minutes' summary need the live server.",

@@ -869,7 +869,7 @@ export function drawPrep(){ popupRev.value++; { const key=prepKey(shared.PREPEV,
       +(rev.length?sec("prepDecRevisit","Decisions to revisit",rev,d=>`<div data-open="decisions:${d.id}" tabindex="0">${pc(d)}${ico("decision")}${esc(d.t)}<span class="sub">revisit date ${fd(d.revisit)} reached${d.by?" · "+esc(d.by):""}</span>${why(d.id)}</div>`,"",`decisions:all:${code}`):"")+`</div>`;
     const at=[...body.querySelectorAll(".prepsec")].find(s=>/^Decisions since/.test((s.querySelector("h3")||{}).textContent||""));
     if(at) addHTML(at,"afterend",raw(html)); else addHTML(body,"beforeend",raw(html)); } }   /* BL-113 */
-  if(shared.PREPPEEK) prepPeekMark(); }   /* the meeting page link is in the header (PrepHead) */
+  if(shared.PREPPEEK) prepPeekMark(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0124(){
 document.addEventListener("click",e=>{ if(e.target.closest("[data-wjump]")) mScroll($("#warnCard"),{block:"start"}); });

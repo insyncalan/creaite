@@ -15,7 +15,7 @@ import { setRailView } from "../stores/rail.js";
 import { filesOpened, renderFiles } from "../files.js";
 import { helpNorm, renderHelp } from "../help.js";
 import { renderInbox } from "../intake.js";
-import { HUB, renderMeeting } from "../meetings.js";
+import { meetingRoute } from "../meetings.js";
 import { renderPrep } from "../components/prep/PrepPage.jsx";
 import { parseWeekly, renderWeekly, weeklyKey } from "../components/report/weekly/WeeklyView.jsx";
 import { clientReportKey, parseKey, renderClientReport } from "../components/report/ClientView.jsx";
@@ -44,7 +44,6 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
   if(shared.VIEW==="activity") st.aq={...shared.ACTF,types:[...(shared.ACTF.types||[])]};
   if(st.v==="people") st.arg=shared.PTAB;   /* BL-190 */
   if(shared.VIEW==="milestones"){ st.arg=shared.MSCODE; st.mv=shared.MV.view; st.ms=shared.MV.peek||null; }   /* BL-245 */
-  if(shared.VIEW==="meeting") st.arg=shared.MEETING;   /* BL-233 */
   if(shared.VIEW==="prep") st.arg=prepViewKey.value;   /* BL-286 D */
   if(shared.VIEW==="clientreport") st.arg=clientReportKey();   /* v2.1.0 P8: CODE/week ending/client */
   if(shared.VIEW==="reports") st.arg=repWeek.value||null;   /* BL-337 */
@@ -54,7 +53,6 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
   if(shared.VIEW==="weekly") st.arg=weeklyKey();   /* v2.1.0 P6 */
   return st; }
 export function hashOf(st){ if(st&&st.v==="weekly") return `#weekly=${st.arg||""}`;   /* v2.1.0 P6: #weekly=<code>&week=<Friday> */
-  if(st&&st.v==="meeting") return `#meeting=${st.arg||""}`;   /* BL-233 */
   if(st&&st.v==="notes") return `#notes=${st.arg||""}${st.note?`&n=${encodeURIComponent(st.note)}`:""}${st.note&&st.find?"&find=1":""}`;   /* BL-301 B */
   if(st&&st.v==="reporting") return reportingHref(st.arg,st.rw);   /* BL-337 */
   if(st&&st.v==="reports") return "#reports"+(st.arg?`&w=${st.arg}`:"");
@@ -69,7 +67,7 @@ export function hashOf(st){ if(st&&st.v==="weekly") return `#weekly=${st.arg||""
     if((a.q||"").trim()) p.push("q="+encodeURIComponent(a.q.trim())); if((a.types||[]).length) p.push("type="+a.types.map(encodeURIComponent).join(","));
     if(a.from) p.push("from="+a.from); if(a.to) p.push("to="+a.to); if(p.length) h+="&"+p.join("&"); } return h; }
 export function parseHash(h){ { const mm=/^#?weekly=(.+)$/.exec(String(h||"")); if(mm&&parseWeekly(mm[1])) return {v:"weekly",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* v2.1.0 P6 */
-  { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm) return {v:"meeting",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-233 */
+  { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm){ const to=meetingRoute(mm[1]), st=to&&parseHash(to); if(st) return st; snack("That meeting isn't in creaite's records any more"); return {v:"today",arg:null,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* v2.1.0 P10: the retired meeting page (BL-233) opens its Prep or its minutes */
   { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
   { const mm=/^#?client-report=(.+)$/.exec(String(h||"")); if(mm){ const a=parseKey(mm[1]); return a&&P.some(p=>p.code===a.code)?{v:"clientreport",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}:null; } }   /* v2.1.0 P8: #client-report=CODE/week/client */
@@ -122,7 +120,6 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
   const sc=st.scroll||0; requestAnimationFrame(()=>{ const el=viewEl(); if(el) el.scrollTop=sc; }); shared.NAVSTATE=navState(); shared.NAVSTATE.scroll=sc; }
 export const mPageOf=v=>v==="work"||v==="mine"||v==="person"?"work":v==="review"?"review":v==="today"?"today":null;   /* declared before go, which runs at load */
 export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   /* BL-206 */
-  if(v==="meeting") shared.MEETING=arg;   /* BL-233 */
   if(v==="milestones"){ if(!P.some(p=>p.code===arg)) return false; shared.MSNEXT=arg; }
   if(shared.MVREADY&&(shared.MV.peek||shared.MV.add)) mvEdClose(true);   /* BL-245 */
   const from=shared.VIEW, fromPage=mPageOf(shared.VIEW);
@@ -149,7 +146,6 @@ export function go(v,arg,opt){ if(shared.RF&&v!=="review"){ shared.RF=null; }   
     if(v==="review"&&r!==false){ const seen=store.get(SETUPK,{}); if(!seen.review){ seen.review=true; store.set(SETUPK,seen); } } }   /* BL-155 */
   if(v==="milestones"){ if(r!==false&&shared.MSNEXT!==null) shared.MSCODE=shared.MSNEXT; shared.MSNEXT=null; }
     if(r!==false&&v==="milestones"){ setRailView("projects"); renderMilestones(); mvAfter(); tabTitle(); }   /* BL-245 */
-  if(r&&v==="meeting"){ renderMeeting(arg); setRailView("today"); tabTitle(); }   /* BL-233 */
   return r; }
 /* links from a project page into Work set the project filter; the rail leaves Work's filters as they were */
 export const seeAll=(n,what,nav)=>n?`<a href="#" class="seeall" data-nav="${nav}">All ${n} ${what}${n===1?"":"s"} ›</a>`:"";
@@ -163,7 +159,8 @@ export function openWork(code,wt,view,extra){ if(navBlocked(()=>openWork(code,wt
 export function bootNav(){
 window.addEventListener("popstate",e=>{ if((shared.EDITING&&shared.CUR)||(shared.CURED&&shared.CURED.dirty)){ try{ history.pushState(shared.NAVSTATE,"",hashOf(shared.NAVSTATE)); }catch(x){} if(shared.EDITING&&shared.CUR) shakeEdit(); else askDiscard(()=>history.back()); return; }
   curDrop();
-  restoreNav(e.state||parseHash(location.hash)); });
+  const old=!e.state&&/^#meeting=/.test(location.hash);   /* v2.1.0 P10: the retired meeting page's address becomes its Prep's or minutes' */
+  restoreNav(e.state||parseHash(location.hash)); if(old){ shared.NAVSTATE=navState(); try{ history.replaceState(shared.NAVSTATE,"",hashOf(shared.NAVSTATE)); }catch(x){} } });
 document.addEventListener("click",e=>{ const n=e.target.closest("[data-nav]"); if(n){ e.preventDefault(); e.stopPropagation(); const {wt,view,code,extra}=navParse(n.dataset.nav); openWork(code,wt,view,extra); return; }   /* BL-190: an optional fourth part adds filters */
   const pj=e.target.closest("[data-proj]"); if(pj){ e.preventDefault(); e.stopPropagation(); go("cockpit",pj.dataset.proj); return; }
   const sw=e.target.closest("[data-psw]"); if(sw) switchProject(+sw.dataset.psw); },true);
@@ -202,8 +199,7 @@ document.addEventListener("click",e=>{ const a=e.target.closest("[data-go]"); if
    name>", "creaite · Review (4)" (the count is what waits in Review, not Intake). The finished-run mark (BL-139) and the VIP count
    (BL-99) still go first, and "DEV · " in the development repository. It follows the page, the project or person shown and the count. */
 export const TABNAME={today:"Today",inbox:"Intake",projects:"Projects",work:"Work",mine:"Work",reports:"Reports",people:"People",review:"Review",files:"Files",activity:"Activity",settings:"Settings",help:"Help"};
-export function tabTitle(){ if(shared.VIEW==="meeting"){ const m=HUB()[shared.MEETING]; TABNAME.meeting=m?m.title:"Meeting"; }   /* BL-233 */
-  if(shared.VIEW==="prep"){ const v=prepView.value, t=v&&v.ok&&v.model?v.model.meeting.title:""; TABNAME.prep=t?`Prep · ${t}`:"Prep"; }   /* BL-286 D */
+export function tabTitle(){ if(shared.VIEW==="prep"){ const v=prepView.value, t=v&&v.ok&&v.model?v.model.meeting.title:""; TABNAME.prep=t?`Prep · ${t}`:"Prep"; }   /* BL-286 D */
   if(shared.VIEW==="minutes") TABNAME.minutes="Minutes";   /* v2.1.0 P7 */
   if(shared.VIEW==="weekly") TABNAME.weekly="Weekly report";   /* v2.1.0 P6 */
   if(shared.VIEW==="clientreport") TABNAME.clientreport="Client report";   /* v2.1.0 P8 */

@@ -17,7 +17,7 @@ import { api, apply, applyNow, applySoon, conflictChoice, editProposal, hideSnac
 import { shared } from "./core/state.js";
 import { deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./intake.js";
-import { HUB, hubLink, withdrawDecision } from "./meetings.js";
+import { withdrawDecision } from "./meetings.js";
 import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkStatuses, pkWho, REC } from "./panel.js";
 import { closePanel, pkOn } from "./projects.js";
 import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
@@ -118,7 +118,7 @@ export function renderReview(){ { const v=r=>(r.flags||[]).includes("vip")?0:1; 
   mDots("review");
     REV.filter(x=>x.kind==="draft"&&x.ref==="meeting"&&!x.done&&(x.mt||(x.cov||[]).length)).forEach(x=>{ const el=document.querySelector(`#v-review [data-n="${x.n}"]`); if(!el||el.nextElementSibling&&el.nextElementSibling.classList.contains("mhcovrow")) return;
       const cov=(x.cov||[]), miss=cov.filter(c=>c.verdict!=="Covered").length;
-      const body=html`${cov.length?html`<details class="mhcovrev"><summary>Coverage: ${miss?`${miss} of ${cov.length} agenda points not fully discussed`:`all ${cov.length} agenda points discussed`}</summary><ul class="mhcov">${cov.map(c=>html`<li><span class="tag ${c.verdict==="Covered"?"ok":c.verdict==="Not discussed"?"warn":""}">${c.verdict}</span> ${c.point}</li>`)}</ul></details>`:""}${HUB()[x.mt]?hubLink(x.mt):""}`;
+      const body=html`${cov.length?html`<details class="mhcovrev"><summary>Coverage: ${miss?`${miss} of ${cov.length} agenda points not fully discussed`:`all ${cov.length} agenda points discussed`}</summary><ul class="mhcov">${cov.map(c=>html`<li><span class="tag ${c.verdict==="Covered"?"ok":c.verdict==="Not discussed"?"warn":""}">${c.verdict}</span> ${c.point}</li>`)}</ul></details>`:""}`;
       if(!String(body)) return; addHTML(el,"afterend",el.tagName==="TR"?html`<tr class="mhcovrow"><td></td><td colspan="20">${body}</td></tr>`:html`<div class="mhcovrow">${body}</div>`); });   /* BL-233 */
   const bar=$("#rvfilters"); if(bar&&!$("#rvFocusBtn")) addHTML(bar,"afterend",html`<button type="button" class="btn rvfocusbtn" id="rvFocusBtn" data-rvfocus="1" title="Decide one proposal at a time, with its source beside it">One at a time</button>`);
     if(shared.RF) rfDraw(); } }   /* BL-206 */   /* BL-133 (sprint-work-views): filters, grouping and order are in rvRender; grouped by project it draws as before */

@@ -609,7 +609,6 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dm .acts .lk:disabled{color:var(--day-muted);cursor:default}
 .dm .acts .lk.open{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--r-sm);color:var(--day-muted)}
 .dm .acts .lk.open:hover:not(:disabled){color:var(--accent);background:var(--surface)} .dm .acts .lk.open svg{width:14px;height:14px}
-.dm .acts .mhlink{padding:0 2px}
 .dm .acts button:focus-visible,.dm .acts a:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .dayaway{margin:14px 0 0;font-size:var(--fs-sm);color:var(--day-muted);font-style:italic}
 @media (max-width:640px){ .daytabs .dy:not([aria-selected="true"]){letter-spacing:.04em;padding:4px 4px} }
@@ -2374,17 +2373,9 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evkeep{display:flex;gap:6px;margin-top:8px} .evkeep input{flex:1;min-width:0}
 .evlost{margin-top:8px;font-size:var(--fs-sm)}
 #curText .claim:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
-/* ===== BL-209 (sprint-insight) ===== the meeting hub's strip: each step says its state in words and a mark, never colour alone */
-.mhstrip{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 16px;padding:0}
-.mhstrip li{flex:1 1 120px;min-width:110px;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
-.mhstrip .mhl{font-weight:600;font-size:var(--fs-sm)} .mhstrip .mht{font-size:var(--fs-xs);color:var(--muted)}
-.mhstrip .mhdot{font-size:var(--fs-sm);line-height:1;color:var(--muted)}
-.mhstrip .mh-done .mhdot{color:var(--ok)} .mhstrip .mh-current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
-.mhstrip .mh-current .mhdot{color:var(--accent)} .mhstrip .mh-skip{opacity:.7;border-style:dashed}
-.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
-.mhgrid .card{margin:0} .mhnext .btn{margin-top:4px}
-.mhitems,.mhcov,.mhfiles{list-style:none;margin:8px 0 0;padding:0} .mhitems li,.mhcov li,.mhfiles li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
-.mhitem.you{font-weight:500} .tag.ok{color:var(--ok);font-weight:500}
+/* ===== BL-209 (sprint-insight) ===== (v2.1.0 P10: the hub page and its strip are gone; Review's Coverage list keeps these two rules) */
+.mhcov{list-style:none;margin:8px 0 0;padding:0} .mhcov li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
+.tag.ok{color:var(--ok);font-weight:500}
 .mhlink{margin-left:6px;font-size:var(--fs-xs)}
 /* ===== BL-205 (sprint-insight) ===== ⌘K's change: marked Change, and its preview with the sign as well as the colour */
 #cmdkList button.ckchg{font-weight:600}
@@ -2602,7 +2593,6 @@ dialog#prepDlg[open]{display:flex;flex-direction:column}
 .prepmeta .avs{display:inline-flex}
 .prepmeta .av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--sunk);color:var(--muted);font-size:var(--fs-2xs);font-weight:700;border:2px solid var(--surface);margin-left:-6px}
 .prepmeta .av:first-child{margin-left:0}
-.prepmeta .mhlink{font-size:var(--fs-xs)}
 .preptb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg)}
 .preptb .sp{flex:1}
 .preptb .btn{min-height:32px}
@@ -3475,7 +3465,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
             <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
       <section class="view" id="v-person" hidden></section>
-      <section class="view" id="v-meeting" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
       <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
       <section class="view" id="v-weekly" hidden aria-labelledby="wrTitle"></section><!-- v2.1.0 P6: a weekly report (components/report/weekly/WeeklyView.jsx) -->
@@ -3774,8 +3763,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     HLTICK: () => HLTICK,
     HRANK: () => HRANK,
     HTABS: () => HTABS,
-    HUB: () => HUB,
-    HUBIX: () => HUBIX,
     ICONS: () => ICONS,
     IDLE_MS: () => IDLE_MS,
     ID_RE: () => ID_RE,
@@ -3812,8 +3799,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     MD_LIST: () => MD_LIST,
     MD_MAX: () => MD_MAX,
     MFIRST: () => MFIRST,
-    MHKIND: () => MHKIND,
-    MHSTATE: () => MHSTATE,
     MLV: () => MLV,
     MLVAT: () => MLVAT,
     MM: () => MM,
@@ -4266,7 +4251,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     bootMeetings0144: () => bootMeetings0144,
     bootMeetings0145: () => bootMeetings0145,
     bootMeetings0201: () => bootMeetings0201,
-    bootMeetings0206: () => bootMeetings0206,
     bootMilestones0051: () => bootMilestones0051,
     bootMilestones0172: () => bootMilestones0172,
     bootMilestones0184: () => bootMilestones0184,
@@ -4874,8 +4858,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     html: () => html,
     htmlPart: () => htmlPart,
     htmlToMd: () => htmlToMd,
-    hubFor: () => hubFor,
-    hubLink: () => hubLink,
     ibtn: () => ibtn,
     ic: () => ic,
     icTick: () => icTick,
@@ -5005,13 +4987,13 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     mdSafeUrl: () => mdSafeUrl,
     mdView: () => mdView,
     meNames: () => meNames,
+    meetingOfFile: () => meetingOfFile,
+    meetingRoute: () => meetingRoute,
     memPath: () => memPath,
     menuItemsIn: () => menuItemsIn,
     menuMove: () => menuMove,
     menuOpenFor: () => menuOpenFor,
     mgrLink: () => mgrLink,
-    mhAct: () => mhAct,
-    mhItem: () => mhItem,
     mins: () => mins,
     minsOf: () => minsOf,
     moreHasValue: () => moreHasValue,
@@ -5584,7 +5566,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     renderIgnore: () => renderIgnore,
     renderInbox: () => renderInbox,
     renderLayoutBar: () => renderLayoutBar,
-    renderMeeting: () => renderMeeting,
     renderMeetings: () => renderMeetings,
     renderMgr: () => renderMgr,
     renderMilestones: () => renderMilestones,
@@ -6151,7 +6132,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     RUNLABEL: void 0,
     SHOWN: void 0,
     // meetings: set where its `let` was
-    MEETING: void 0,
     PREPRUN: void 0,
     QCT: void 0,
     // help: set where its `let` was
@@ -8392,691 +8372,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     if (!m5 || !known2(m5[1])) return null;
     const kv = Object.fromEntries(m5[2].split("&").filter(Boolean).map((x5) => x5.split("=")));
     return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "" };
-  }
-
-  // core/datewords.js
-  var DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-  var MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-  var MONTH_WORDS = "january february march april may june july august september sept october november december".split(" ");
-  var DAYNAMES = "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ");
-  var pad = (n4) => String(n4).padStart(2, "0");
-  var iso = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
-  function shift(today, n4, unit) {
-    const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
-    if (unit === "m") {
-      const day = d5.getDate();
-      d5.setDate(1);
-      d5.setMonth(d5.getMonth() + n4);
-      d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
-    } else d5.setDate(d5.getDate() + n4 * (unit === "w" ? 7 : 1));
-    return iso(d5);
-  }
-  function real(y5, m5, d5) {
-    if (y5 < 100) y5 += 2e3;
-    const x5 = new Date(y5, m5 - 1, d5, 12);
-    return x5.getFullYear() === y5 && x5.getMonth() === m5 - 1 && x5.getDate() === d5 ? iso(x5) : null;
-  }
-  function monthOf(w6) {
-    const i5 = MON.indexOf(w6.slice(0, 3));
-    return i5 >= 0 && (MONTH_WORDS.some((n4) => n4.startsWith(w6)) || w6.length === 3) ? i5 + 1 : 0;
-  }
-  function weekdayOf(w6) {
-    return DAYS.findIndex((d5) => w6.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w6)));
-  }
-  function workingDay(day, weekend = [0, 6]) {
-    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
-    if (!off(day)) return day;
-    for (let n4 = 1; n4 < 7; n4++) {
-      const back2 = shift(day, -n4, "d"), on2 = shift(day, n4, "d");
-      if (!off(back2)) return back2;
-      if (!off(on2)) return on2;
-    }
-    return day;
-  }
-  function lastWorkingDay(day, weekend) {
-    const d5 = /* @__PURE__ */ new Date(day + "T12:00:00");
-    let s5 = iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
-    for (let n4 = 0; n4 < 7 && weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
-    return s5;
-  }
-  function deadlineOnly(s5, today, weekend) {
-    const dow2 = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), monday = (1 - dow2 + 7) % 7 || 7;
-    if (s5 === "next week") return shift(today, monday + 4, "d");
-    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend);
-    const m5 = s5.match(/^next ([a-z]{3,9})$/), w6 = m5 ? weekdayOf(m5[1]) : -1;
-    if (w6 >= 0) return shift(today, monday + (w6 + 6) % 7, "d");
-    return null;
-  }
-  function dayMonth(s5, today, due) {
-    const dm2 = (d5, m6, y5) => {
-      if (y5 != null) return real(+y5, +m6, +d5);
-      const yr2 = +today.slice(0, 4);
-      let r4 = real(yr2, +m6, +d5);
-      if (r4 && due && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
-      return r4;
-    };
-    let m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (m5) return real(+m5[1], +m5[2], +m5[3]);
-    m5 = s5.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/);
-    if (m5) return dm2(m5[1], m5[2], m5[3]);
-    m5 = s5.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/);
-    if (m5 && monthOf(m5[2])) return dm2(m5[1], monthOf(m5[2]), m5[3]);
-    m5 = s5.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/);
-    if (m5 && monthOf(m5[1])) return dm2(m5[2], monthOf(m5[1]), m5[3]);
-    return null;
-  }
-  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
-    let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
-    if (!s5) return null;
-    const deadline = mode === "deadline";
-    if (deadline) {
-      due = true;
-      s5 = s5.replace(/^(?:by|on) /, "");
-      const d5 = deadlineOnly(s5, today, weekend);
-      if (d5) return d5;
-    }
-    const dow2 = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend) : r4;
-    if (s5 === "today" || s5 === "now") return today;
-    if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return shift(today, 1, "d");
-    if (s5 === "yesterday") return shift(today, -1, "d");
-    let m5 = s5.match(/^(next |this )?([a-z]{3,9})$/);
-    if (m5) {
-      const w6 = weekdayOf(m5[2]);
-      if (w6 >= 0) return shift(today, ((w6 - dow2 + 7) % 7 || 7) + (m5[1] === "next " ? 7 : 0), "d");
-    }
-    if (s5 === "next week") return shift(today, (1 - dow2 + 7) % 7 || 7, "d");
-    if (s5 === "end of week" || s5 === "eow") return shift(today, (5 - dow2 + 7) % 7, "d");
-    if (s5 === "end of month" || s5 === "eom") {
-      const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
-      return iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
-    }
-    if (s5 === "end of next week") return shift(today, (5 - dow2 + 7) % 7 + 7, "d");
-    m5 = s5.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/);
-    if (m5) return period(shift(today, +m5[1], m5[2][0]));
-    m5 = s5.match(/^\+(\d{1,3})$/);
-    if (m5) return period(shift(today, +m5[1], "d"));
-    return dayMonth(s5, today, due);
-  }
-
-  // components/Combobox.jsx
-  var OPEN = null;
-  function Combobox({ id: id2, name, value = "", label, placeholder, empty = "Type a name to add it.", options, onPick, onInput }) {
-    const [open2, setOpen2] = d2(false), [typed2, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw] = d2(0);
-    const field = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    ), box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    const listId = `${id2}-list`, q5 = typed2 && field.current ? field.current.value.trim() : "";
-    const L3 = open2 ? options(q5, typed2) : [];
-    const ai2 = Math.min(act, Math.max(0, L3.length - 1));
-    const close = () => {
-      setOpen2(false);
-      if (OPEN && OPEN.close === close) OPEN = null;
-    };
-    const show = () => {
-      if (OPEN && OPEN.close !== close) OPEN.close();
-      OPEN = { close };
-      setOpen2(true);
-    };
-    h2(() => {
-      if (field.current && field.current.value !== value) field.current.value = value;
-    }, [value]);
-    h2(() => {
-      if (!open2) return;
-      const away = (e4) => {
-        if (!box.current?.contains(
-          /** @type {Node} */
-          e4.target
-        )) close();
-      };
-      document.addEventListener("mousedown", away, true);
-      return () => document.removeEventListener("mousedown", away, true);
-    }, [open2]);
-    const pick = async (o5) => {
-      close();
-      const r4 = await onPick(o5);
-      if (r4 !== false && field.current) field.current.value = o5.fill ?? o5.label;
-    };
-    const keys = (e4) => {
-      if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        if (!open2) show();
-        else setAct(Math.min(ai2 + 1, L3.length - 1));
-      } else if (e4.key === "ArrowUp") {
-        e4.preventDefault();
-        setAct(Math.max(ai2 - 1, 0));
-      } else if (e4.key === "Enter" && open2 && L3[ai2] && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        pick(L3[ai2]);
-      } else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        if (open2) close();
-        else if (field.current) {
-          field.current.value = "";
-          onInput && onInput("");
-        }
-      } else if (e4.key === "Tab") close();
-    };
-    return /* @__PURE__ */ u2("div", { class: `combo${open2 ? " open" : ""}`, ref: box, children: [
-      /* @__PURE__ */ u2(
-        "input",
-        {
-          type: "text",
-          id: id2,
-          name,
-          ref: field,
-          role: "combobox",
-          "aria-label": label,
-          "aria-autocomplete": "list",
-          "aria-expanded": open2 ? "true" : "false",
-          "aria-controls": listId,
-          "aria-activedescendant": open2 && L3[ai2] ? `${id2}-o${ai2}` : void 0,
-          placeholder,
-          autocomplete: "off",
-          onKeyDown: keys,
-          onFocus: () => {
-            setTyped(false);
-            setAct(0);
-            show();
-          },
-          onInput: (e4) => {
-            setTyped(true);
-            setAct(0);
-            if (!open2) show();
-            else redraw((n4) => n4 + 1);
-            onInput && onInput(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value
-            );
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("div", { class: "combo-list", id: listId, role: "listbox", "aria-label": label, children: open2 ? L3.length ? L3.map((o5, i5) => /* @__PURE__ */ u2(S2, { children: [
-        o5.head ? /* @__PURE__ */ u2("div", { class: "cgrp", role: "presentation", children: o5.head }) : null,
-        /* @__PURE__ */ u2(
-          "div",
-          {
-            id: `${id2}-o${i5}`,
-            role: "option",
-            "aria-selected": i5 === ai2 ? "true" : "false",
-            class: `copt${o5.cls ? " " + o5.cls : ""}${i5 === ai2 ? " act" : ""}`,
-            "data-n": o5.v,
-            onMouseDown: (e4) => {
-              e4.preventDefault();
-              pick(o5);
-            },
-            children: [
-              /* @__PURE__ */ u2("span", { children: o5.label }),
-              o5.sub ? /* @__PURE__ */ u2("small", { children: o5.sub }) : null,
-              o5.remove ? /* @__PURE__ */ u2(
-                "button",
-                {
-                  type: "button",
-                  class: "cdel",
-                  "aria-label": o5.removeLabel || `Remove ${o5.label}`,
-                  tabIndex: -1,
-                  onMouseDown: (e4) => {
-                    e4.preventDefault();
-                    e4.stopPropagation();
-                    Promise.resolve(o5.remove && o5.remove()).then(() => redraw((n4) => n4 + 1));
-                  },
-                  children: /* @__PURE__ */ u2(Icon, { name: "x" })
-                }
-              ) : null
-            ]
-          }
-        )
-      ] }, `${i5}:${o5.v}`)) : /* @__PURE__ */ u2("div", { class: "copt", role: "presentation", children: empty }) : null })
-    ] });
-  }
-  function mountCombobox(host2, props) {
-    R(/* @__PURE__ */ u2(Combobox, { ...props }), host2);
-  }
-  function closeCombobox() {
-    if (OPEN) OPEN.close();
-  }
-  function comboboxOpen() {
-    return !!OPEN;
-  }
-
-  // components/IconButton.jsx
-  function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm: sm2 = true, cls, data, haspopup, keyHint, id: id2, hidden }) {
-    const c5 = ["ib", sm2 ? "sm" : "", primary ? "pri" : "", cls].filter(Boolean).join(" ");
-    const extra = {};
-    for (const k5 of Object.keys(data || {})) extra[`data-${k5}`] = String((data || {})[k5]);
-    const click = (e4) => {
-      if (why) {
-        e4.preventDefault();
-        if (onBlocked) onBlocked(e4);
-        return;
-      }
-      if (onClick) onClick(e4);
-    };
-    return /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        class: c5,
-        id: id2,
-        hidden,
-        "aria-label": name || label,
-        "data-tip": why || label,
-        "data-key": keyHint,
-        "aria-disabled": why ? "true" : void 0,
-        "aria-haspopup": (
-          /** @type {any} */
-          haspopup
-        ),
-        onClick: click,
-        ...extra,
-        children: /* @__PURE__ */ u2(Icon, { name: icon })
-      }
-    );
-  }
-  function drawIconButton(host2, props) {
-    R(/* @__PURE__ */ u2(IconButton, { ...props }), host2);
-  }
-
-  // components/Picker.jsx
-  var PICK = null;
-  function flushPicker() {
-    if (PICK) R(PICK.make(), PICK.host);
-  }
-  function placePicker(el2, anchor) {
-    const r4 = anchor.getBoundingClientRect(), w6 = el2.offsetWidth, h5 = el2.offsetHeight;
-    let x5 = r4.left, y5 = r4.bottom + 4;
-    x5 = Math.max(8, Math.min(x5, innerWidth - w6 - 8));
-    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
-    el2.style.left = `${x5}px`;
-    el2.style.top = `${y5}px`;
-  }
-  var focusables = (el2) => (
-    /** @type {HTMLElement[]} */
-    [...el2.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
-  );
-  function tabOut(e4, el2) {
-    if (e4.key !== "Tab" || !el2) return;
-    const L3 = focusables(el2), first = L3[0], last = L3[L3.length - 1];
-    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L3.length) closePicker("tab");
-  }
-  function Frame({ cls, role, label, id: id2, anchor, onKey, boxRef, children }) {
-    _2(() => {
-      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
-    });
-    const keys = (e4) => {
-      if (onKey) onKey(e4);
-      if (e4.key !== "Escape") e4.stopPropagation();
-    };
-    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
-      /** @type {any} */
-      role || void 0
-    ), "aria-label": role ? label : void 0, id: id2, ref: boxRef, onKeyDown: keys, children });
-  }
-  var optionsIn = (el2) => el2 ? (
-    /** @type {HTMLElement[]} */
-    [...el2.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
-  ) : [];
-  function PickerList({ anchor, props }) {
-    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
-    const [q5, setQ] = d2("");
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), field = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
-    const item = role === "menu" ? "menuitem" : "option", t47 = q5.trim().toLowerCase();
-    const cur = filter ? filter(q5.trim()) : options;
-    const shown2 = cur.map((o5, i5) => (
-      /** @type {[PickerOption, number]} */
-      [o5, i5]
-    )).filter(([o5]) => filter || !t47 || o5.label.toLowerCase().includes(t47));
-    const useNew = !!(allowNew && !filter && t47 && !options.some((o5) => o5.label.toLowerCase() === t47));
-    _2(() => {
-      const el2 = box.current;
-      if (!el2) return;
-      if (field.current) {
-        field.current.focus();
-        return;
-      }
-      /** @type {HTMLElement | null} */
-      (el2.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el2)[0])?.focus();
-    }, []);
-    const pick = (o5) => {
-      if (o5.disabled) return;
-      closePicker("pick");
-      onPick(o5.v, false, o5);
-    };
-    const pickNew = () => {
-      const typed2 = q5.trim();
-      closePicker("pick");
-      onPick(typed2, true);
-    };
-    const keys = (e4) => {
-      const L3 = optionsIn(box.current), i5 = L3.indexOf(
-        /** @type {HTMLElement} */
-        document.activeElement
-      );
-      if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        (L3[i5 + 1] || L3[0])?.focus();
-      } else if (e4.key === "ArrowUp") {
-        e4.preventDefault();
-        (i5 <= 0 && field.current ? field.current : L3[i5 - 1] || L3[L3.length - 1])?.focus();
-      } else if (e4.key === "Home" && i5 >= 0) {
-        e4.preventDefault();
-        L3[0]?.focus();
-      } else if (e4.key === "End" && i5 >= 0) {
-        e4.preventDefault();
-        L3[L3.length - 1]?.focus();
-      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        L3[0]?.click();
-      } else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-      } else if (e4.key === "Tab") closePicker("tab");
-    };
-    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
-      search ? /* @__PURE__ */ u2(
-        "input",
-        {
-          class: "pkq",
-          type: "search",
-          placeholder: "Search",
-          "aria-label": `Search: ${label}`,
-          autocomplete: "off",
-          ref: field,
-          value: q5,
-          onInput: (e4) => {
-            setQ(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value
-            );
-            flushPicker();
-          }
-        }
-      ) : null,
-      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown2.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
-        shown2.map(([o5, i5]) => /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "pkopt",
-            role: item,
-            "data-i": String(i5),
-            id: o5.id,
-            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
-            "aria-disabled": o5.disabled ? "true" : void 0,
-            onClick: () => pick(o5),
-            children: [
-              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
-              /* @__PURE__ */ u2("span", { children: [
-                o5.label,
-                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
-              ] }),
-              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
-            ]
-          },
-          `${i5}:${o5.v}`
-        )),
-        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
-          /* @__PURE__ */ u2(Icon, { name: "plus" }),
-          /* @__PURE__ */ u2("span", { children: [
-            "Use “",
-            q5.trim(),
-            "”"
-          ] })
-        ] }) : null
-      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
-    ] });
-  }
-  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  var calAdd = (iso2, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00Z");
-    d5.setUTCDate(d5.getUTCDate() + n4);
-    return d5.toISOString().slice(0, 10);
-  };
-  var dow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
-  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
-  function DateCalendar({ anchor, props }) {
-    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
-    const base = value || TODAY;
-    const [ym2, setYm] = d2(
-      /** @type {[number, number]} */
-      [+base.slice(0, 4), +base.slice(5, 7) - 1]
-    );
-    const [focusIso, setFocusIso] = d2(
-      /** @type {string | null} */
-      value || TODAY
-    );
-    const [bad, setBad] = d2(false), [note, setNote] = d2("");
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), typed2 = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
-    _2(() => {
-      if (typed2.current) typed2.current.value = fd(value || "");
-    }, []);
-    const [y5, m5] = ym2, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
-    const days2 = Array.from({ length: n4 }, (_6, i5) => isoOf(y5, m5, i5 + 1));
-    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
-    _2(() => {
-      if (focusIso === null || !box.current) return;
-      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
-    }, [focusIso, ym2]);
-    const pick = (iso2) => {
-      closePicker("pick");
-      onPick(iso2);
-    };
-    const month = (by2) => {
-      let mm2 = m5 + by2, yy2 = y5;
-      if (mm2 < 0) {
-        mm2 = 11;
-        yy2--;
-      }
-      if (mm2 > 11) {
-        mm2 = 0;
-        yy2++;
-      }
-      setFocusIso(null);
-      setYm([yy2, mm2]);
-      flushPicker();
-    };
-    const keys = (e4) => {
-      const tg2 = (
-        /** @type {HTMLElement} */
-        e4.target
-      );
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-        return;
-      }
-      if (tg2.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
-        e4.preventDefault();
-        const to2 = calAdd(
-          tg2.dataset.d || TODAY,
-          /** @type {Record<string, number>} */
-          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
-        );
-        setYm([+to2.slice(0, 4), +to2.slice(5, 7) - 1]);
-        setFocusIso(to2);
-        flushPicker();
-        return;
-      }
-      if (e4.key === "Enter" && tg2.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        const t47 = (
-          /** @type {HTMLInputElement} */
-          tg2.value.trim()
-        );
-        if (!t47) {
-          pick("");
-          return;
-        }
-        const iso2 = parse(t47);
-        if (iso2) pick(iso2);
-        else {
-          setBad(true);
-          flushPicker();
-        }
-        return;
-      }
-      tabOut(e4, box.current);
-    };
-    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
-    const quick = (
-      /** @type {[string, string][]} */
-      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
-    );
-    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
-      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
-        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
-        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
-          MONTHS[m5],
-          " ",
-          y5
-        ] }),
-        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
-        DOW.map((w6) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w6 }, w6)),
-        Array.from({ length: lead }, (_6, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
-        days2.map((iso2) => {
-          const we2 = !!(weekend && weekend(iso2));
-          return /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: `pkday${iso2 === TODAY ? " today" : ""}${iso2 === value ? " on" : ""}${we2 ? " wkend" : ""}`,
-              "data-d": iso2,
-              "aria-label": `${fd(iso2)}${we2 ? ", weekend" : ""}`,
-              "aria-pressed": iso2 === value ? "true" : void 0,
-              tabIndex: iso2 === tabDay ? 0 : -1,
-              onClick: () => pick(iso2),
-              children: +iso2.slice(8)
-            },
-            iso2
-          );
-        })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w6, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w6 }, w6)) }),
-      /* @__PURE__ */ u2(
-        "input",
-        {
-          class: `pkdt${bad ? " bad" : ""}`,
-          type: "text",
-          ref: typed2,
-          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
-          "aria-label": `${label}, typed`,
-          "aria-invalid": bad ? "true" : void 0,
-          autocomplete: "off",
-          onInput: (e4) => {
-            setBad(false);
-            if (typedNote) setNote(typedNote(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value.trim()
-            ));
-            flushPicker();
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
-      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
-    ] });
-  }
-  function Popover({ anchor, props }) {
-    const { label, content, cls, id: id2, role = "dialog", focus } = props;
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      const el2 = box.current;
-      if (!el2 || !content) return;
-      const f5 = (
-        /** @type {HTMLElement | null} */
-        focus ? el2.querySelector(focus) : focusables(el2)[0] || null
-      );
-      if (f5) {
-        f5.focus();
-        if (f5 instanceof HTMLInputElement) f5.select();
-      }
-    }, []);
-    const keys = (e4) => {
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-        return;
-      }
-      tabOut(e4, box.current);
-    };
-    return /* @__PURE__ */ u2(Frame, { cls, role, label, id: id2, anchor, boxRef: box, onKey: keys, children: typeof content === "function" ? content() : content });
-  }
-  function popupMount(anchor, make, onClose) {
-    closePicker("owner", false);
-    bootPicker();
-    const host2 = document.createElement("div");
-    host2.className = "pophost";
-    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
-    PICK = { host: host2, el: null, anchor, make, onClose };
-    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    R(make(), host2);
-    PICK.el = /** @type {HTMLElement} */
-    host2.firstElementChild;
-    shared.PKPOP = { el: PICK.el, anchor };
-    return PICK.el;
-  }
-  function openPicker(anchor, props) {
-    return popupMount(anchor, () => /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
-  }
-  function openDatePicker(anchor, props) {
-    return popupMount(anchor, () => /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
-  }
-  function openPopover(anchor, props) {
-    return popupMount(anchor, () => /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
-  }
-  function closePicker(how = "owner", focus = true) {
-    const p6 = PICK;
-    if (!p6) return;
-    PICK = null;
-    shared.PKPOP = null;
-    R(null, p6.host);
-    p6.host.remove();
-    const a5 = p6.anchor;
-    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
-    const done = p6.onClose ? p6.onClose(how) : false;
-    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
-  }
-  function pickerOpenFor(anchor) {
-    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
-  }
-  var BOOTED = false;
-  function bootPicker() {
-    if (BOOTED) return;
-    BOOTED = true;
-    document.addEventListener("mousedown", (e4) => {
-      const t47 = (
-        /** @type {Node} */
-        e4.target
-      );
-      if (PICK && !(PICK.el && PICK.el.contains(t47)) && !PICK.anchor.contains(t47)) closePicker("away");
-    }, true);
-    addEventListener("resize", () => closePicker("away"));
   }
 
   // components/Menu.jsx
@@ -26140,6 +25435,44 @@ ${s5}`;
   // stores/capture.js
   var capOpen = y3(false);
 
+  // components/IconButton.jsx
+  function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm: sm2 = true, cls, data, haspopup, keyHint, id: id2, hidden }) {
+    const c5 = ["ib", sm2 ? "sm" : "", primary ? "pri" : "", cls].filter(Boolean).join(" ");
+    const extra = {};
+    for (const k5 of Object.keys(data || {})) extra[`data-${k5}`] = String((data || {})[k5]);
+    const click = (e4) => {
+      if (why) {
+        e4.preventDefault();
+        if (onBlocked) onBlocked(e4);
+        return;
+      }
+      if (onClick) onClick(e4);
+    };
+    return /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: c5,
+        id: id2,
+        hidden,
+        "aria-label": name || label,
+        "data-tip": why || label,
+        "data-key": keyHint,
+        "aria-disabled": why ? "true" : void 0,
+        "aria-haspopup": (
+          /** @type {any} */
+          haspopup
+        ),
+        onClick: click,
+        ...extra,
+        children: /* @__PURE__ */ u2(Icon, { name: icon })
+      }
+    );
+  }
+  function drawIconButton(host2, props) {
+    R(/* @__PURE__ */ u2(IconButton, { ...props }), host2);
+  }
+
   // components/notes/CaptureDrawer.jsx
   var WAIT = 600;
   var newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -27015,6 +26348,549 @@ ${s5}`;
     box.id = "aiLayer";
     document.body.appendChild(box);
     R(/* @__PURE__ */ u2(AiLayer, {}), box);
+  }
+
+  // components/Combobox.jsx
+  var OPEN = null;
+  function Combobox({ id: id2, name, value = "", label, placeholder, empty = "Type a name to add it.", options, onPick, onInput }) {
+    const [open2, setOpen2] = d2(false), [typed2, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw] = d2(0);
+    const field = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    ), box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const listId = `${id2}-list`, q5 = typed2 && field.current ? field.current.value.trim() : "";
+    const L3 = open2 ? options(q5, typed2) : [];
+    const ai2 = Math.min(act, Math.max(0, L3.length - 1));
+    const close = () => {
+      setOpen2(false);
+      if (OPEN && OPEN.close === close) OPEN = null;
+    };
+    const show = () => {
+      if (OPEN && OPEN.close !== close) OPEN.close();
+      OPEN = { close };
+      setOpen2(true);
+    };
+    h2(() => {
+      if (field.current && field.current.value !== value) field.current.value = value;
+    }, [value]);
+    h2(() => {
+      if (!open2) return;
+      const away = (e4) => {
+        if (!box.current?.contains(
+          /** @type {Node} */
+          e4.target
+        )) close();
+      };
+      document.addEventListener("mousedown", away, true);
+      return () => document.removeEventListener("mousedown", away, true);
+    }, [open2]);
+    const pick = async (o5) => {
+      close();
+      const r4 = await onPick(o5);
+      if (r4 !== false && field.current) field.current.value = o5.fill ?? o5.label;
+    };
+    const keys = (e4) => {
+      if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        if (!open2) show();
+        else setAct(Math.min(ai2 + 1, L3.length - 1));
+      } else if (e4.key === "ArrowUp") {
+        e4.preventDefault();
+        setAct(Math.max(ai2 - 1, 0));
+      } else if (e4.key === "Enter" && open2 && L3[ai2] && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        pick(L3[ai2]);
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (open2) close();
+        else if (field.current) {
+          field.current.value = "";
+          onInput && onInput("");
+        }
+      } else if (e4.key === "Tab") close();
+    };
+    return /* @__PURE__ */ u2("div", { class: `combo${open2 ? " open" : ""}`, ref: box, children: [
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          id: id2,
+          name,
+          ref: field,
+          role: "combobox",
+          "aria-label": label,
+          "aria-autocomplete": "list",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-controls": listId,
+          "aria-activedescendant": open2 && L3[ai2] ? `${id2}-o${ai2}` : void 0,
+          placeholder,
+          autocomplete: "off",
+          onKeyDown: keys,
+          onFocus: () => {
+            setTyped(false);
+            setAct(0);
+            show();
+          },
+          onInput: (e4) => {
+            setTyped(true);
+            setAct(0);
+            if (!open2) show();
+            else redraw((n4) => n4 + 1);
+            onInput && onInput(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            );
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "combo-list", id: listId, role: "listbox", "aria-label": label, children: open2 ? L3.length ? L3.map((o5, i5) => /* @__PURE__ */ u2(S2, { children: [
+        o5.head ? /* @__PURE__ */ u2("div", { class: "cgrp", role: "presentation", children: o5.head }) : null,
+        /* @__PURE__ */ u2(
+          "div",
+          {
+            id: `${id2}-o${i5}`,
+            role: "option",
+            "aria-selected": i5 === ai2 ? "true" : "false",
+            class: `copt${o5.cls ? " " + o5.cls : ""}${i5 === ai2 ? " act" : ""}`,
+            "data-n": o5.v,
+            onMouseDown: (e4) => {
+              e4.preventDefault();
+              pick(o5);
+            },
+            children: [
+              /* @__PURE__ */ u2("span", { children: o5.label }),
+              o5.sub ? /* @__PURE__ */ u2("small", { children: o5.sub }) : null,
+              o5.remove ? /* @__PURE__ */ u2(
+                "button",
+                {
+                  type: "button",
+                  class: "cdel",
+                  "aria-label": o5.removeLabel || `Remove ${o5.label}`,
+                  tabIndex: -1,
+                  onMouseDown: (e4) => {
+                    e4.preventDefault();
+                    e4.stopPropagation();
+                    Promise.resolve(o5.remove && o5.remove()).then(() => redraw((n4) => n4 + 1));
+                  },
+                  children: /* @__PURE__ */ u2(Icon, { name: "x" })
+                }
+              ) : null
+            ]
+          }
+        )
+      ] }, `${i5}:${o5.v}`)) : /* @__PURE__ */ u2("div", { class: "copt", role: "presentation", children: empty }) : null })
+    ] });
+  }
+  function mountCombobox(host2, props) {
+    R(/* @__PURE__ */ u2(Combobox, { ...props }), host2);
+  }
+  function closeCombobox() {
+    if (OPEN) OPEN.close();
+  }
+  function comboboxOpen() {
+    return !!OPEN;
+  }
+
+  // components/Picker.jsx
+  var PICK = null;
+  function flushPicker() {
+    if (PICK) R(PICK.make(), PICK.host);
+  }
+  function placePicker(el2, anchor) {
+    const r4 = anchor.getBoundingClientRect(), w6 = el2.offsetWidth, h5 = el2.offsetHeight;
+    let x5 = r4.left, y5 = r4.bottom + 4;
+    x5 = Math.max(8, Math.min(x5, innerWidth - w6 - 8));
+    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
+    el2.style.left = `${x5}px`;
+    el2.style.top = `${y5}px`;
+  }
+  var focusables = (el2) => (
+    /** @type {HTMLElement[]} */
+    [...el2.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
+  );
+  function tabOut(e4, el2) {
+    if (e4.key !== "Tab" || !el2) return;
+    const L3 = focusables(el2), first = L3[0], last = L3[L3.length - 1];
+    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L3.length) closePicker("tab");
+  }
+  function Frame({ cls, role, label, id: id2, anchor, onKey, boxRef, children }) {
+    _2(() => {
+      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
+    });
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.key !== "Escape") e4.stopPropagation();
+    };
+    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
+      /** @type {any} */
+      role || void 0
+    ), "aria-label": role ? label : void 0, id: id2, ref: boxRef, onKeyDown: keys, children });
+  }
+  var optionsIn = (el2) => el2 ? (
+    /** @type {HTMLElement[]} */
+    [...el2.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function PickerList({ anchor, props }) {
+    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
+    const [q5, setQ] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), field = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    const item = role === "menu" ? "menuitem" : "option", t47 = q5.trim().toLowerCase();
+    const cur = filter ? filter(q5.trim()) : options;
+    const shown2 = cur.map((o5, i5) => (
+      /** @type {[PickerOption, number]} */
+      [o5, i5]
+    )).filter(([o5]) => filter || !t47 || o5.label.toLowerCase().includes(t47));
+    const useNew = !!(allowNew && !filter && t47 && !options.some((o5) => o5.label.toLowerCase() === t47));
+    _2(() => {
+      const el2 = box.current;
+      if (!el2) return;
+      if (field.current) {
+        field.current.focus();
+        return;
+      }
+      /** @type {HTMLElement | null} */
+      (el2.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el2)[0])?.focus();
+    }, []);
+    const pick = (o5) => {
+      if (o5.disabled) return;
+      closePicker("pick");
+      onPick(o5.v, false, o5);
+    };
+    const pickNew = () => {
+      const typed2 = q5.trim();
+      closePicker("pick");
+      onPick(typed2, true);
+    };
+    const keys = (e4) => {
+      const L3 = optionsIn(box.current), i5 = L3.indexOf(
+        /** @type {HTMLElement} */
+        document.activeElement
+      );
+      if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        (L3[i5 + 1] || L3[0])?.focus();
+      } else if (e4.key === "ArrowUp") {
+        e4.preventDefault();
+        (i5 <= 0 && field.current ? field.current : L3[i5 - 1] || L3[L3.length - 1])?.focus();
+      } else if (e4.key === "Home" && i5 >= 0) {
+        e4.preventDefault();
+        L3[0]?.focus();
+      } else if (e4.key === "End" && i5 >= 0) {
+        e4.preventDefault();
+        L3[L3.length - 1]?.focus();
+      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        L3[0]?.click();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+      } else if (e4.key === "Tab") closePicker("tab");
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
+      search ? /* @__PURE__ */ u2(
+        "input",
+        {
+          class: "pkq",
+          type: "search",
+          placeholder: "Search",
+          "aria-label": `Search: ${label}`,
+          autocomplete: "off",
+          ref: field,
+          value: q5,
+          onInput: (e4) => {
+            setQ(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            );
+            flushPicker();
+          }
+        }
+      ) : null,
+      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown2.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
+        shown2.map(([o5, i5]) => /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "pkopt",
+            role: item,
+            "data-i": String(i5),
+            id: o5.id,
+            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
+            "aria-disabled": o5.disabled ? "true" : void 0,
+            onClick: () => pick(o5),
+            children: [
+              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
+              /* @__PURE__ */ u2("span", { children: [
+                o5.label,
+                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
+              ] }),
+              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
+            ]
+          },
+          `${i5}:${o5.v}`
+        )),
+        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
+          /* @__PURE__ */ u2(Icon, { name: "plus" }),
+          /* @__PURE__ */ u2("span", { children: [
+            "Use “",
+            q5.trim(),
+            "”"
+          ] })
+        ] }) : null
+      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
+    ] });
+  }
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var calAdd = (iso2, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00Z");
+    d5.setUTCDate(d5.getUTCDate() + n4);
+    return d5.toISOString().slice(0, 10);
+  };
+  var dow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
+  function DateCalendar({ anchor, props }) {
+    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
+    const base = value || TODAY;
+    const [ym2, setYm] = d2(
+      /** @type {[number, number]} */
+      [+base.slice(0, 4), +base.slice(5, 7) - 1]
+    );
+    const [focusIso, setFocusIso] = d2(
+      /** @type {string | null} */
+      value || TODAY
+    );
+    const [bad, setBad] = d2(false), [note, setNote] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), typed2 = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    _2(() => {
+      if (typed2.current) typed2.current.value = fd(value || "");
+    }, []);
+    const [y5, m5] = ym2, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
+    const days2 = Array.from({ length: n4 }, (_6, i5) => isoOf(y5, m5, i5 + 1));
+    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
+    _2(() => {
+      if (focusIso === null || !box.current) return;
+      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
+    }, [focusIso, ym2]);
+    const pick = (iso2) => {
+      closePicker("pick");
+      onPick(iso2);
+    };
+    const month = (by2) => {
+      let mm2 = m5 + by2, yy2 = y5;
+      if (mm2 < 0) {
+        mm2 = 11;
+        yy2--;
+      }
+      if (mm2 > 11) {
+        mm2 = 0;
+        yy2++;
+      }
+      setFocusIso(null);
+      setYm([yy2, mm2]);
+      flushPicker();
+    };
+    const keys = (e4) => {
+      const tg2 = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      if (tg2.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
+        e4.preventDefault();
+        const to2 = calAdd(
+          tg2.dataset.d || TODAY,
+          /** @type {Record<string, number>} */
+          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
+        );
+        setYm([+to2.slice(0, 4), +to2.slice(5, 7) - 1]);
+        setFocusIso(to2);
+        flushPicker();
+        return;
+      }
+      if (e4.key === "Enter" && tg2.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        const t47 = (
+          /** @type {HTMLInputElement} */
+          tg2.value.trim()
+        );
+        if (!t47) {
+          pick("");
+          return;
+        }
+        const iso2 = parse(t47);
+        if (iso2) pick(iso2);
+        else {
+          setBad(true);
+          flushPicker();
+        }
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
+    const quick = (
+      /** @type {[string, string][]} */
+      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
+    );
+    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
+      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
+        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
+        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
+          MONTHS[m5],
+          " ",
+          y5
+        ] }),
+        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
+        DOW.map((w6) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w6 }, w6)),
+        Array.from({ length: lead }, (_6, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
+        days2.map((iso2) => {
+          const we2 = !!(weekend && weekend(iso2));
+          return /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: `pkday${iso2 === TODAY ? " today" : ""}${iso2 === value ? " on" : ""}${we2 ? " wkend" : ""}`,
+              "data-d": iso2,
+              "aria-label": `${fd(iso2)}${we2 ? ", weekend" : ""}`,
+              "aria-pressed": iso2 === value ? "true" : void 0,
+              tabIndex: iso2 === tabDay ? 0 : -1,
+              onClick: () => pick(iso2),
+              children: +iso2.slice(8)
+            },
+            iso2
+          );
+        })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w6, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w6 }, w6)) }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          class: `pkdt${bad ? " bad" : ""}`,
+          type: "text",
+          ref: typed2,
+          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
+          "aria-label": `${label}, typed`,
+          "aria-invalid": bad ? "true" : void 0,
+          autocomplete: "off",
+          onInput: (e4) => {
+            setBad(false);
+            if (typedNote) setNote(typedNote(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value.trim()
+            ));
+            flushPicker();
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
+      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
+    ] });
+  }
+  function Popover({ anchor, props }) {
+    const { label, content, cls, id: id2, role = "dialog", focus } = props;
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el2 = box.current;
+      if (!el2 || !content) return;
+      const f5 = (
+        /** @type {HTMLElement | null} */
+        focus ? el2.querySelector(focus) : focusables(el2)[0] || null
+      );
+      if (f5) {
+        f5.focus();
+        if (f5 instanceof HTMLInputElement) f5.select();
+      }
+    }, []);
+    const keys = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, role, label, id: id2, anchor, boxRef: box, onKey: keys, children: typeof content === "function" ? content() : content });
+  }
+  function popupMount(anchor, make, onClose) {
+    closePicker("owner", false);
+    bootPicker();
+    const host2 = document.createElement("div");
+    host2.className = "pophost";
+    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
+    PICK = { host: host2, el: null, anchor, make, onClose };
+    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    R(make(), host2);
+    PICK.el = /** @type {HTMLElement} */
+    host2.firstElementChild;
+    shared.PKPOP = { el: PICK.el, anchor };
+    return PICK.el;
+  }
+  function openPicker(anchor, props) {
+    return popupMount(anchor, () => /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
+  }
+  function openDatePicker(anchor, props) {
+    return popupMount(anchor, () => /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
+  }
+  function openPopover(anchor, props) {
+    return popupMount(anchor, () => /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
+  }
+  function closePicker(how = "owner", focus = true) {
+    const p6 = PICK;
+    if (!p6) return;
+    PICK = null;
+    shared.PKPOP = null;
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    const done = p6.onClose ? p6.onClose(how) : false;
+    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
+  }
+  function pickerOpenFor(anchor) {
+    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
+  }
+  var BOOTED = false;
+  function bootPicker() {
+    if (BOOTED) return;
+    BOOTED = true;
+    document.addEventListener("mousedown", (e4) => {
+      const t47 = (
+        /** @type {Node} */
+        e4.target
+      );
+      if (PICK && !(PICK.el && PICK.el.contains(t47)) && !PICK.anchor.contains(t47)) closePicker("away");
+    }, true);
+    addEventListener("resize", () => closePicker("away"));
   }
 
   // components/work/NewTile.jsx
@@ -33058,9 +32934,8 @@ ${s5}`;
             ] }) : null
           ] }),
           wh2 ? /* @__PURE__ */ u2("div", { class: "wh", children: wh2 }) : null,
-          acts22 || e4.hub && !hidden || acts2.note && !e4.private ? /* @__PURE__ */ u2("div", { class: "acts", children: [
+          acts22 || acts2.note && !e4.private ? /* @__PURE__ */ u2("div", { class: "acts", children: [
             acts22,
-            e4.hub && !hidden ? /* @__PURE__ */ u2("a", { href: `#meeting=${e4.hub}`, class: "linkbtn mhlink", "data-meeting": e4.hub, title: "Everything about this meeting, from invite to follow-up", children: "Meeting" }) : null,
             acts2.note && !e4.private ? /* @__PURE__ */ u2(
               "button",
               {
@@ -33220,10 +33095,6 @@ ${s5}`;
             }
           ),
           /* @__PURE__ */ u2("span", { class: "tag ok prepmade", children: "Prep page made" })
-        ] }) : null,
-        r4.hub ? /* @__PURE__ */ u2(S2, { children: [
-          " ",
-          /* @__PURE__ */ u2("a", { href: `#meeting=${r4.hub}`, class: "linkbtn mhlink", "data-meeting": r4.hub, title: "Everything about this meeting, from invite to follow-up", children: "Meeting" })
         ] }) : null
       ] }),
       /* @__PURE__ */ u2("span", { class: `wkwhy${r4.whyTone ? " " + r4.whyTone : ""}`, children: r4.why }),
@@ -33561,7 +33432,6 @@ ${s5}`;
       ...m5,
       page: m5.prep ? (SA().prep_pages || {})[m5.prep.key] || m5.prep.page || null : null,
       pageWhen: m5.prep ? (prepPageOf(m5, iso2) || {}).when || m5.prep.page_at_shown || "" : "",
-      hub: m5.private || m5.confidential || shared.LOADING ? null : hubFor({ eid: m5.id, day: iso2, start: m5.start, title: m5.title }) || null,
       running: m5.id ? DAYRUN.get(m5.id) : void 0
     });
     if (raw2) {
@@ -34431,7 +34301,7 @@ ${s5}`;
       acts: workActs(i5.kind, i5).map((a5) => ({ ...a5, data: { k: i5.kind, id: i5.id, ...i5.kind === "milestone" ? { p: i5.p } : {} } }))
     });
     const meeting = (e4, day) => {
-      const can = day !== TODAY && !!prepOf(e4, day), pg2 = can ? prepPageOf(e4, day) : null, hub = hubFor({ eid: e4.id, day, start: e4.start, title: e4.title });
+      const can = day !== TODAY && !!prepOf(e4, day), pg2 = can ? prepPageOf(e4, day) : null;
       return {
         key: `m${day}${e4.start}${e4.title}`,
         kind: "meeting",
@@ -34445,7 +34315,6 @@ ${s5}`;
         why: e4.plan ? `worth preparing: ${e4.plan}` : "in your calendar",
         whyTone: "",
         prepgo: pg2 ? { key: pg2.key, day, when: pg2.when, live } : void 0,
-        hub: hub || void 0,
         acts: can ? [{ id: "prep", icon: "filetext", label: "Make a prep page", name: `Prepare for ${e4.title ?? "the meeting"}`, primary: !!e4.plan, data: { prepday: day, start: e4.start || "", title: e4.title || "" } }] : []
       };
     };
@@ -35278,7 +35147,7 @@ ${s5}`;
         const el2 = document.querySelector(`#v-review [data-n="${x5.n}"]`);
         if (!el2 || el2.nextElementSibling && el2.nextElementSibling.classList.contains("mhcovrow")) return;
         const cov = x5.cov || [], miss = cov.filter((c5) => c5.verdict !== "Covered").length;
-        const body2 = html`${cov.length ? html`<details class="mhcovrev"><summary>Coverage: ${miss ? `${miss} of ${cov.length} agenda points not fully discussed` : `all ${cov.length} agenda points discussed`}</summary><ul class="mhcov">${cov.map((c5) => html`<li><span class="tag ${c5.verdict === "Covered" ? "ok" : c5.verdict === "Not discussed" ? "warn" : ""}">${c5.verdict}</span> ${c5.point}</li>`)}</ul></details>` : ""}${HUB()[x5.mt] ? hubLink(x5.mt) : ""}`;
+        const body2 = html`${cov.length ? html`<details class="mhcovrev"><summary>Coverage: ${miss ? `${miss} of ${cov.length} agenda points not fully discussed` : `all ${cov.length} agenda points discussed`}</summary><ul class="mhcov">${cov.map((c5) => html`<li><span class="tag ${c5.verdict === "Covered" ? "ok" : c5.verdict === "Not discussed" ? "warn" : ""}">${c5.verdict}</span> ${c5.point}</li>`)}</ul></details>` : ""}`;
         if (!String(body2)) return;
         addHTML(el2, "afterend", el2.tagName === "TR" ? html`<tr class="mhcovrow"><td></td><td colspan="20">${body2}</td></tr>` : html`<div class="mhcovrow">${body2}</div>`);
       });
@@ -37875,14 +37744,6 @@ ${s5}`;
     const projSel = (m5, i5) => html`<select class="mtgp" data-mi="${i5}" aria-label="Project for ${m5.title}"><option value="" ${sel(!m5.p)}>Not sure</option>${P3.map((p6) => html`<option value="${p6.code}" ${sel(m5.p === p6.code)}>${p6.name}</option>`)}<option value="_portfolio" ${sel(m5.p === "_portfolio")}>Portfolio</option></select>`;
     const noIds = L3.some((m5) => !m5.id);
     putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L3.filter((m5) => m5.day === d5 && shown2(m5)).length}</button></div></td></tr>${L3.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown2(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
-    if (!shared.LOADING) {
-      const L4 = MTG();
-      $$("#mtgBody tr[data-mid]").forEach((tr2) => {
-        const m5 = L4.find((x5) => x5.id && x5.id === tr2.dataset.mid), t47 = m5 && hubFor({ eid: m5.id, day: m5.day, start: m5.start, title: m5.title });
-        const cell2 = tr2.children[1];
-        if (t47 && cell2 && !cell2.querySelector(".mhlink")) addHTML(cell2, "beforeend", hubLink(t47, "Meeting"));
-      });
-    }
   }
   var MTGI = ic("video", { size: 14, w: 2 });
   var mtgBusy = () => !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
@@ -38265,10 +38126,6 @@ ${s5}`;
     L3 = L3.filter((f5) => (!q5 || f5.n.toLowerCase().includes(q5)) && (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
     putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${pName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
-    if (!shared.LOADING) $$("#filesTbl tr[data-fp]").forEach((tr2) => {
-      const t48 = hubFor({ path: tr2.dataset.fp }), td2 = tr2.querySelector("td");
-      if (t48 && td2 && !td2.querySelector(".mhlink")) addHTML(td2, "beforeend", hubLink(t48, "Meeting"));
-    });
   }
   function bootFiles0068() {
     $("#tree").addEventListener("click", (e4) => {
@@ -38683,7 +38540,6 @@ ${s5}`;
     const code = m5.p || "", conf = !!(m5.invite && m5.invite.confidential);
     const series = brief && brief.series ? brief.series.text : [cadence(m5.invite && m5.invite.recurrence), m5.last ? `last ${fd(m5.last)}` : ""].filter(Boolean).join(" · ");
     const inv = conf ? [] : invitees(m5, brief);
-    const hub = hubFor({ eid: e4.id, day, start: e4.start, title: e4.title });
     const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
     const pickProject = (ev) => {
       const btn = (
@@ -38741,8 +38597,7 @@ ${s5}`;
               inv.length > 3 ? /* @__PURE__ */ u2("span", { class: "av", children: `+${inv.length - 3}` }) : null
             ] }),
             /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: `${inv.length} invited` })
-          ] }) : null,
-          hub ? /* @__PURE__ */ u2("a", { href: `#meeting=${hub}`, class: "linkbtn mhlink", "data-meeting": hub, "data-tip": "Everything about this meeting, from invite to follow-up", children: "Meeting page" }) : null
+          ] }) : null
         ] })
       ] }),
       /* @__PURE__ */ u2("button", { type: "button", class: "iconbtn", id: "prepClose", "aria-label": "Close", children: /* @__PURE__ */ u2(Icon, { name: "x" }) })
@@ -48490,7 +48345,7 @@ ${d5.text}`);
     })();
   }
   function openFollowup(t47) {
-    const m5 = HUB()[t47];
+    const m5 = (D.hub || {})[t47];
     if (!m5) {
       snack("That meeting isn't in creaite's records any more");
       return;
@@ -49296,6 +49151,86 @@ ${d5.text}`);
     }, true);
   }
 
+  // stores/prep.js
+  var PREP_KEY = /^(\d{4}-\d{2}-\d{2}\|)?\d{2}:\d{2}\|.{1,200}$/;
+  function prepDated(key, day) {
+    const k5 = String(key || "");
+    return /^\d{4}-\d{2}-\d{2}\|/.test(k5) ? k5 : `${day || TODAY}|${k5}`;
+  }
+  function prepHref(key, day) {
+    return `#prep=${encodeURIComponent(prepDated(key, day))}`;
+  }
+  function prepKeyOf(hash) {
+    const m5 = /^#?prep=(.+)$/.exec(String(hash || ""));
+    if (!m5) return null;
+    let k5 = "";
+    try {
+      k5 = decodeURIComponent(m5[1]);
+    } catch (e4) {
+      return null;
+    }
+    return PREP_KEY.test(k5) ? k5 : null;
+  }
+  var prepViewKey = y3(
+    /** @type {string | null} */
+    null
+  );
+  var prepView = y3(
+    /** @type {PrepViewResult | null} */
+    null
+  );
+  var prepLoading = y3(false);
+  var prepTab = y3("prep");
+  var prepSaving = y3(
+    /** @type {string} */
+    ""
+  );
+  var pageAsked = 0;
+  async function loadPrep(key, o5 = {}) {
+    const mine = ++pageAsked, same2 = prepViewKey.value === key;
+    prepViewKey.value = key;
+    if (!o5.keepTab && !same2) prepTab.value = "prep";
+    if (!viaServer()) {
+      prepView.value = { ok: false, message: "The prep page needs the live server." };
+      return;
+    }
+    prepLoading.value = true;
+    if (!same2) prepView.value = null;
+    const r4 = await api("/api/prep/view", { key });
+    if (mine !== pageAsked) return;
+    prepLoading.value = false;
+    prepView.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't load the prep page" };
+  }
+  async function saveFocus(part, what) {
+    const key = prepViewKey.value;
+    if (!key) return false;
+    if (!viaServer()) {
+      snack("Saving needs the live server");
+      return false;
+    }
+    prepSaving.value = what;
+    const r4 = await api("/api/prep/focus/save", { key, ...part });
+    prepSaving.value = "";
+    if (!r4 || !r4.ok) {
+      snack(oneLine(r4 && r4.message || "") || "Not saved");
+      return false;
+    }
+    const v5 = prepView.value;
+    if (v5 && v5.model && key === prepViewKey.value) {
+      if (part.reading || part.excluded || "questions" in part) await loadPrep(key, { keepTab: true });
+      else prepView.value = { ...v5, model: { ...v5.model, focus: r4.focus } };
+    }
+    snack(r4.page ? "Saved, and the Agendas page was updated" : "Saved");
+    return true;
+  }
+  function linesFrom(text, before) {
+    const old = before || [];
+    return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t47, i5) => {
+      const same2 = old.find((x5) => x5.text === t47) || old[i5];
+      return { text: t47.slice(0, 600), sources: same2 && same2.sources || [] };
+    });
+  }
+
   // meetings.js
   function prepReports(code, all, sec, pc2) {
     const RP = (D.prep || {}).reports || {}, list = all ? P3.flatMap((p6) => RP[p6.code] || []) : RP[code] || [];
@@ -49822,131 +49757,125 @@ ${d5.text}`);
       }
     });
   }
-  shared.MEETING = null;
-  function HUB() {
-    return D.hub || {};
+  function meetingRoute(token) {
+    const m5 = (D.hub || {})[token];
+    if (!m5 || !m5.day) return null;
+    const now = /* @__PURE__ */ new Date();
+    const clockNow = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+    const over = m5.day < TODAY || m5.day === TODAY && !!(m5.end || m5.start) && (m5.end || m5.start) <= clockNow;
+    const minFile = (m5.filed || []).find((f5) => String(f5).toLowerCase().endsWith(".html"));
+    if (over && minFile) return "#minutes=" + encodeURIComponent(minFile);
+    if (over && (m5.counts || {}).pending) return "#review";
+    const ev = (((D.calendar || {}).days || {})[m5.day] || []).find((e4) => e4.start === m5.start && e4.title === m5.title);
+    return ev ? prepHref(prepKey(ev, m5.day), m5.day) : null;
   }
-  function HUBIX() {
-    if (HUBIX.d === D) return HUBIX.ix;
-    const ix2 = { eid: {}, slot: {}, file: {}, key: {} };
-    for (const [t47, m5] of Object.entries(HUB())) {
-      if (m5.eid) ix2.eid[m5.eid] = t47;
-      if (m5.day && m5.start) ix2.slot[`${m5.day}|${m5.start}|${m5.title}`] = t47;
-      (m5.files || []).forEach((f5) => {
-        ix2.file[f5] = t47;
-      });
-      ix2.key[m5.key] = t47;
+  function meetingOfFile(path) {
+    const found = Object.entries(D.hub || {}).find(([, m5]) => (m5.files || []).includes(path));
+    return found ? found[0] : null;
+  }
+
+  // core/datewords.js
+  var DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  var MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  var MONTH_WORDS = "january february march april may june july august september sept october november december".split(" ");
+  var DAYNAMES = "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ");
+  var pad = (n4) => String(n4).padStart(2, "0");
+  var iso = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+  function shift(today, n4, unit) {
+    const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
+    if (unit === "m") {
+      const day = d5.getDate();
+      d5.setDate(1);
+      d5.setMonth(d5.getMonth() + n4);
+      d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
+    } else d5.setDate(d5.getDate() + n4 * (unit === "w" ? 7 : 1));
+    return iso(d5);
+  }
+  function real(y5, m5, d5) {
+    if (y5 < 100) y5 += 2e3;
+    const x5 = new Date(y5, m5 - 1, d5, 12);
+    return x5.getFullYear() === y5 && x5.getMonth() === m5 - 1 && x5.getDate() === d5 ? iso(x5) : null;
+  }
+  function monthOf(w6) {
+    const i5 = MON.indexOf(w6.slice(0, 3));
+    return i5 >= 0 && (MONTH_WORDS.some((n4) => n4.startsWith(w6)) || w6.length === 3) ? i5 + 1 : 0;
+  }
+  function weekdayOf(w6) {
+    return DAYS.findIndex((d5) => w6.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w6)));
+  }
+  function workingDay(day, weekend = [0, 6]) {
+    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
+    if (!off(day)) return day;
+    for (let n4 = 1; n4 < 7; n4++) {
+      const back2 = shift(day, -n4, "d"), on2 = shift(day, n4, "d");
+      if (!off(back2)) return back2;
+      if (!off(on2)) return on2;
     }
-    HUBIX.d = D;
-    HUBIX.ix = ix2;
-    return ix2;
+    return day;
   }
-  function hubFor(o5) {
-    const ix2 = HUBIX();
-    return o5.eid && ix2.eid[o5.eid] || o5.day && o5.start && ix2.slot[`${o5.day}|${o5.start}|${o5.title}`] || o5.path && ix2.file[o5.path] || o5.key && ix2.key[o5.key] || null;
+  function lastWorkingDay(day, weekend) {
+    const d5 = /* @__PURE__ */ new Date(day + "T12:00:00");
+    let s5 = iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
+    for (let n4 = 0; n4 < 7 && weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
+    return s5;
   }
-  function hubLink(t47, label = "Meeting page") {
-    return t47 ? html` <a href="#meeting=${t47}" class="linkbtn mhlink" data-meeting="${t47}" title="Everything about this meeting, from invite to follow-up">${label}</a>` : "";
+  function deadlineOnly(s5, today, weekend) {
+    const dow2 = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), monday = (1 - dow2 + 7) % 7 || 7;
+    if (s5 === "next week") return shift(today, monday + 4, "d");
+    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend);
+    const m5 = s5.match(/^next ([a-z]{3,9})$/), w6 = m5 ? weekdayOf(m5[1]) : -1;
+    if (w6 >= 0) return shift(today, monday + (w6 + 6) % 7, "d");
+    return null;
   }
-  var MHSTATE = { done: ["✓", "Done"], current: ["●", "Now"], todo: ["○", "To do"], skip: ["–", "Not needed"] };
-  var MHKIND = { actions: "Action", raid: "RAID item", decisions: "Decision" };
-  function mhItem(x5) {
-    const st2 = x5.state === "pending" ? "Waiting for you" : x5.state === "approved" ? "Approved, not applied" : x5.state === "rejected" ? "Rejected" : x5.state === "applied" ? "Applied" : x5.state;
-    const what = x5.id ? `<a href="#" class="hlink" data-open="${x5.k}:${esc(x5.id)}">${esc(x5.id)}</a>` : `<span class="sub">${esc(MHKIND[x5.k] || "Item")}, proposed</span>`;
-    return `<li class="mhitem${x5.you ? " you" : ""}">${what} ${esc(x5.t)}${x5.o ? ` <span class="sub">— ${esc(x5.o)}</span>` : ""}${x5.due ? ` <span class="sub">· ${x5.k === "decisions" ? "needed by" : "due"} ${fd(x5.due)}</span>` : ""} <span class="tag${x5.you ? " warn" : ""}">${esc(st2)}</span></li>`;
+  function dayMonth(s5, today, due) {
+    const dm2 = (d5, m6, y5) => {
+      if (y5 != null) return real(+y5, +m6, +d5);
+      const yr2 = +today.slice(0, 4);
+      let r4 = real(yr2, +m6, +d5);
+      if (r4 && due && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
+      return r4;
+    };
+    let m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m5) return real(+m5[1], +m5[2], +m5[3]);
+    m5 = s5.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/);
+    if (m5) return dm2(m5[1], m5[2], m5[3]);
+    m5 = s5.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/);
+    if (m5 && monthOf(m5[2])) return dm2(m5[1], monthOf(m5[2]), m5[3]);
+    m5 = s5.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/);
+    if (m5 && monthOf(m5[1])) return dm2(m5[2], monthOf(m5[1]), m5[3]);
+    return null;
   }
-  function renderMeeting(t47) {
-    shared.MEETING = t47;
-    const el2 = $("#v-meeting"), m5 = HUB()[t47];
-    if (!m5) {
-      putHTML(el2, html`<div class="phead"><h1>Meeting</h1></div><div class="card"><p>This meeting isn't in creaite's records any more: it may be older than ${45} days, or its calendar entry has gone.</p><button class="btn" data-go="today">Back to Today</button></div>`);
-      return;
+  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
+    let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
+    if (!s5) return null;
+    const deadline = mode === "deadline";
+    if (deadline) {
+      due = true;
+      s5 = s5.replace(/^(?:by|on) /, "");
+      const d5 = deadlineOnly(s5, today, weekend);
+      if (d5) return d5;
     }
-    const when2 = m5.day ? `${longDay(m5.day)}${m5.start ? `, ${m5.start}${m5.end ? ` – ${m5.end}` : ""}` : ""}` : "No date";
-    const strip = `<ol class="mhstrip" aria-label="Where this meeting is">${m5.steps.map(([k5, l6, s5, txt]) => `<li class="mh-${s5}" data-step="${k5}"${s5 === "current" ? ' aria-current="step"' : ""}><span class="mhdot" aria-hidden="true">${MHSTATE[s5][0]}</span><span class="mhl">${esc(l6)}</span><span class="mht">${esc(txt)}</span><span class="vh">${MHSTATE[s5][1]}</span></li>`).join("")}</ol>`;
-    const nx2 = m5.next, nextCard = `<div class="card mhnext"><h2>Next step</h2>${nx2 ? `<p>${esc((m5.steps.find((s5) => s5[2] === "current") || [])[3] || "")}</p><button class="btn primary" data-mhact="${nx2.act}">${esc(nx2.label)}</button>${nx2.act === "prep" && draftOn("agenda") ? ' <button class="btn" data-mhact="agenda">Draft agenda</button>' : ""}${!viaServer() && ["prep"].includes(nx2.act) ? '<div class="sub">Needs the live server.</div>' : ""}` : '<p class="sub">Nothing is waiting on this meeting.</p>'}</div>`;
-    const c5 = m5.counts, items2 = m5.items.filter((x5) => x5.state !== "rejected");
-    const produced = `<div class="card"><h2>What it produced</h2>${items2.some((x5) => x5.id && (x5.k === "actions" || x5.k === "decisions")) ? `<button type="button" class="btn" data-defollow="${t47}" aria-haspopup="dialog">${ic("mail")}Draft the follow-up email</button>` : ""}<p class="sub">${[c5.items ? plur(c5.items, "item") : "", c5.updates ? plur(c5.updates, "update") + " to items already open" : "", c5.pending ? `${c5.pending} waiting for you` : "", c5.rejected ? `${c5.rejected} rejected` : ""].filter(Boolean).join(" · ") || "Nothing yet: items appear once the transcript is processed."}</p>${items2.length ? `<ul class="mhitems">${items2.map(mhItem).join("")}</ul>` : ""}</div>`;
-    const cov = m5.coverage && m5.coverage.length ? `<div class="card"><h2>Coverage: was the agenda discussed?</h2><ul class="mhcov">${m5.coverage.map((x5, i5) => `<li><span class="tag ${x5.verdict === "Covered" ? "ok" : x5.verdict === "Not discussed" ? "warn" : ""}">${esc(x5.verdict)}</span> ${esc(x5.point)}${x5.verdict !== "Covered" ? ` <button type="button" class="mini" data-mhcarry="${i5}" aria-pressed="${!!x5.carried}">${x5.carried ? "Carried ✓" : "Carry to the next agenda"}</button>` : ""}</li>`).join("")}</ul><p class="sub">The agenda's own points; the transcript isn't stored. A carried point shows on the next ${esc(m5.title)} prep page as "Not covered last time".</p></div>` : "";
-    const promised = m5.promised.length ? `<div class="card"><h2>Promised to you</h2><ul class="mhitems">${m5.promised.map((id2) => {
-      const x5 = REC("actions", id2);
-      return x5 ? `<li><a href="#" class="hlink" data-open="actions:${esc(id2)}">${esc(id2)}</a> ${esc(x5.t)} <span class="sub">— ${esc(x5.o)}${x5.due ? ` · due ${fd(x5.due)}` : ""}</span></li>` : "";
-    }).join("")}</ul></div>` : "";
-    const files = [m5.prep ? `<li>Prep page: <a href="#" data-mhprep="${esc(m5.prep)}">${esc(m5.prep.split("/").pop())}</a></li>` : "", ...(m5.filed || []).map((f5) => `<li><a href="#" data-openfile="${esc(f5)}">${esc(f5.split("/").pop())}</a> <span class="sub">${esc(f5.slice(0, f5.lastIndexOf("/")))}</span></li>`)].join("");
-    putHTML(el2, html`<div class="phead"><h1>${m5.title}</h1><div class="sub">${when2}${m5.p.length ? raw(" · " + m5.p.map(pLink).join(" ")) : ""}${m5.quick ? " · quick note" : ""}</div></div>${raw(strip)}
-    <div class="mhgrid">${raw(nextCard)}${raw(produced)}${raw(cov)}${raw(promised)}${files ? html`<div class="card"><h2>Files</h2><ul class="mhfiles">${raw(files)}</ul></div>` : ""}</div>`);
-  }
-  async function mhAct(act) {
-    const m5 = HUB()[shared.MEETING];
-    if (!m5) return;
-    if (act === "intake") {
-      go2("inbox");
-      return;
+    const dow2 = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend) : r4;
+    if (s5 === "today" || s5 === "now") return today;
+    if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return shift(today, 1, "d");
+    if (s5 === "yesterday") return shift(today, -1, "d");
+    let m5 = s5.match(/^(next |this )?([a-z]{3,9})$/);
+    if (m5) {
+      const w6 = weekdayOf(m5[2]);
+      if (w6 >= 0) return shift(today, ((w6 - dow2 + 7) % 7 || 7) + (m5[1] === "next " ? 7 : 0), "d");
     }
-    if (act === "review") {
-      go2("review");
-      return;
+    if (s5 === "next week") return shift(today, (1 - dow2 + 7) % 7 || 7, "d");
+    if (s5 === "end of week" || s5 === "eow") return shift(today, (5 - dow2 + 7) % 7, "d");
+    if (s5 === "end of month" || s5 === "eom") {
+      const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
+      return iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
     }
-    if (act === "work") {
-      const id2 = (m5.due || [])[0];
-      if (id2) openRecord("actions", id2);
-      return;
-    }
-    if (act === "prep" || act === "agenda") {
-      const days2 = (D.calendar || {}).days || {}, ev = (days2[m5.day] || []).find((e4) => e4.start === m5.start && e4.title === m5.title);
-      const tom = Object.keys(days2).filter((d5) => d5 > TODAY).sort()[0] || "";
-      if (!ev || m5.day !== TODAY && m5.day !== tom) {
-        snack("A prep page is made for today's or the next day's meetings: open it then.");
-        return;
-      }
-      if (m5.day === TODAY) go2("today");
-      openPrep(ev, m5.day);
-      if (act === "agenda") draftAgenda();
-    }
-  }
-  function bootMeetings0206() {
-    document.addEventListener("click", async (e4) => {
-      const a5 = e4.target.closest("[data-meeting]");
-      if (a5) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        go2("meeting", a5.dataset.meeting);
-        return;
-      }
-      const b5 = e4.target.closest("[data-mhact]");
-      if (b5) {
-        mhAct(b5.dataset.mhact);
-        return;
-      }
-      const pp2 = e4.target.closest("[data-mhprep]");
-      if (pp2) {
-        e4.preventDefault();
-        prepOpen(pp2.dataset.mhprep);
-        return;
-      }
-      const g5 = e4.target.closest("#v-meeting [data-go]");
-      if (g5) {
-        go2(g5.dataset.go);
-        return;
-      }
-      const c5 = e4.target.closest("[data-mhcarry]");
-      if (c5) {
-        const m5 = HUB()[shared.MEETING], x5 = m5 && m5.coverage[+c5.dataset.mhcarry];
-        if (!x5) return;
-        if (!viaServer()) {
-          snack("Carrying a point needs the live server");
-          return;
-        }
-        const r4 = await api("/api/meeting/carry", { key: m5.key, point: x5.point, on: !x5.carried });
-        if (!r4.ok) {
-          snack(oneLine(r4.message) || "Not carried");
-          return;
-        }
-        x5.carried = !x5.carried;
-        renderMeeting(shared.MEETING);
-        snack(oneLine(r4.message));
-      }
-    }, true);
+    if (s5 === "end of next week") return shift(today, (5 - dow2 + 7) % 7 + 7, "d");
+    m5 = s5.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/);
+    if (m5) return period(shift(today, +m5[1], m5[2][0]));
+    m5 = s5.match(/^\+(\d{1,3})$/);
+    if (m5) return period(shift(today, +m5[1], "d"));
+    return dayMonth(s5, today, due);
   }
 
   // core/fields.js
@@ -49977,8 +49906,8 @@ ${d5.text}`);
     const o5 = srcParse(x5);
     if (!o5) return "—";
     if (o5.type === "File") {
-      const t47 = !shared.LOADING && hubFor({ path: o5.path });
-      return `<a href="#" class="srclink" data-openfile="${esc(o5.path)}"${o5.line ? ` data-noteline="${o5.line}"` : ""}>${esc(o5.name)}</a>${o5.section ? ` <span class="sub">· ${esc(o5.section)}</span>` : ""}<div class="sub">${esc(o5.path.slice(0, o5.path.lastIndexOf("/")))}</div>${t47 ? `<div>${hubLink(t47)}</div>` : ""}`;
+      const mt2 = !shared.LOADING && meetingOfFile(o5.path);
+      return `<a href="#" class="srclink" data-openfile="${esc(o5.path)}"${o5.line ? ` data-noteline="${o5.line}"` : ""}>${esc(o5.name)}</a>${o5.section ? ` <span class="sub">· ${esc(o5.section)}</span>` : ""}<div class="sub">${esc(o5.path.slice(0, o5.path.lastIndexOf("/")))}</div>${mt2 && meetingRoute(mt2) ? `<div><a href="#meeting=${mt2}" class="linkbtn mhlink" title="Open this meeting's minutes, or its Review or Prep">Meeting</a></div>` : ""}`;
     }
     if (o5.type === "Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o5.From || "—")}</dd><dt>Subject</dt><dd>${esc(o5.Subject || "—")}</dd><dt>Sent</dt><dd>${esc(fd(o5.Sent || "—"))}</dd></dl>${o5.Link ? `<a href="${esc(o5.Link)}" target="_blank" rel="noopener" class="srclink">Open in Outlook</a>` : '<span class="sub">No message link stored</span>'}`;
     if (o5.type === "Teams") return `<dl class="srcmeta"><dt>${o5.Channel ? "Channel" : "Chat"}</dt><dd>${esc(o5.Channel || o5.Chat)}</dd><dt>From</dt><dd>${esc(o5.From || "—")}</dd><dt>Sent</dt><dd>${esc(fd(o5.Sent || "—"))}</dd></dl>${o5.Link ? `<a href="${esc(o5.Link)}" target="_blank" rel="noopener" class="srclink">Open in Teams</a>` : '<span class="sub">No message link stored</span>'}`;
@@ -57383,86 +57312,6 @@ ${d5.text}`);
     actTabsDraw(false);
   }
 
-  // stores/prep.js
-  var PREP_KEY = /^(\d{4}-\d{2}-\d{2}\|)?\d{2}:\d{2}\|.{1,200}$/;
-  function prepDated(key, day) {
-    const k5 = String(key || "");
-    return /^\d{4}-\d{2}-\d{2}\|/.test(k5) ? k5 : `${day || TODAY}|${k5}`;
-  }
-  function prepHref(key, day) {
-    return `#prep=${encodeURIComponent(prepDated(key, day))}`;
-  }
-  function prepKeyOf(hash) {
-    const m5 = /^#?prep=(.+)$/.exec(String(hash || ""));
-    if (!m5) return null;
-    let k5 = "";
-    try {
-      k5 = decodeURIComponent(m5[1]);
-    } catch (e4) {
-      return null;
-    }
-    return PREP_KEY.test(k5) ? k5 : null;
-  }
-  var prepViewKey = y3(
-    /** @type {string | null} */
-    null
-  );
-  var prepView = y3(
-    /** @type {PrepViewResult | null} */
-    null
-  );
-  var prepLoading = y3(false);
-  var prepTab = y3("prep");
-  var prepSaving = y3(
-    /** @type {string} */
-    ""
-  );
-  var pageAsked = 0;
-  async function loadPrep(key, o5 = {}) {
-    const mine = ++pageAsked, same2 = prepViewKey.value === key;
-    prepViewKey.value = key;
-    if (!o5.keepTab && !same2) prepTab.value = "prep";
-    if (!viaServer()) {
-      prepView.value = { ok: false, message: "The prep page needs the live server." };
-      return;
-    }
-    prepLoading.value = true;
-    if (!same2) prepView.value = null;
-    const r4 = await api("/api/prep/view", { key });
-    if (mine !== pageAsked) return;
-    prepLoading.value = false;
-    prepView.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't load the prep page" };
-  }
-  async function saveFocus(part, what) {
-    const key = prepViewKey.value;
-    if (!key) return false;
-    if (!viaServer()) {
-      snack("Saving needs the live server");
-      return false;
-    }
-    prepSaving.value = what;
-    const r4 = await api("/api/prep/focus/save", { key, ...part });
-    prepSaving.value = "";
-    if (!r4 || !r4.ok) {
-      snack(oneLine(r4 && r4.message || "") || "Not saved");
-      return false;
-    }
-    const v5 = prepView.value;
-    if (v5 && v5.model && key === prepViewKey.value) {
-      if (part.reading || part.excluded || "questions" in part) await loadPrep(key, { keepTab: true });
-      else prepView.value = { ...v5, model: { ...v5.model, focus: r4.focus } };
-    }
-    snack(r4.page ? "Saved, and the Agendas page was updated" : "Saved");
-    return true;
-  }
-  function linesFrom(text, before) {
-    const old = before || [];
-    return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t47, i5) => {
-      const same2 = old.find((x5) => x5.text === t47) || old[i5];
-      return { text: t47.slice(0, 600), sources: same2 && same2.sources || [] };
-    });
-  }
-
   // components/prep/PrepPage.jsx
   var SECTIONS = [["objective", "Objective"], ["talking_points", "Talking points"], ["ask", "Ask"], ["carried_over", "Carried over"]];
   var OUTLINE = [
@@ -57519,7 +57368,6 @@ ${d5.text}`);
   }
   function Header({ v: v5, researching }) {
     const mo2 = v5.model, mt2 = mo2.meeting, people = (mo2.brief || {}).people || {}, series = (mo2.brief || {}).series || {};
-    const hub = hubFor({ day: mt2.day, start: mt2.start, title: mt2.title });
     const ev = eventOf(mt2), past = mt2.day < TODAY;
     const inv = people.invitees || [];
     const popup = (agenda) => {
@@ -57561,7 +57409,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
         /* @__PURE__ */ u2("a", { href: "#", "data-go": "today", children: "Today" }),
         " › ",
-        hub ? /* @__PURE__ */ u2("a", { href: `#meeting=${hub}`, "data-meeting": hub, children: "Meetings" }) : /* @__PURE__ */ u2("span", { children: "Meetings" }),
+        /* @__PURE__ */ u2("span", { children: "Meetings" }),
         " › ",
         /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Prep" })
       ] }),
@@ -62473,7 +62321,6 @@ ${d5.text}`);
       st2.mv = shared.MV.view;
       st2.ms = shared.MV.peek || null;
     }
-    if (shared.VIEW === "meeting") st2.arg = shared.MEETING;
     if (shared.VIEW === "prep") st2.arg = prepViewKey.value;
     if (shared.VIEW === "clientreport") st2.arg = clientReportKey();
     if (shared.VIEW === "reports") st2.arg = repWeek.value || null;
@@ -62493,7 +62340,6 @@ ${d5.text}`);
   }
   function hashOf(st2) {
     if (st2 && st2.v === "weekly") return `#weekly=${st2.arg || ""}`;
-    if (st2 && st2.v === "meeting") return `#meeting=${st2.arg || ""}`;
     if (st2 && st2.v === "notes") return `#notes=${st2.arg || ""}${st2.note ? `&n=${encodeURIComponent(st2.note)}` : ""}${st2.note && st2.find ? "&find=1" : ""}`;
     if (st2 && st2.v === "reporting") return reportingHref(st2.arg, st2.rw);
     if (st2 && st2.v === "reports") return "#reports" + (st2.arg ? `&w=${st2.arg}` : "");
@@ -62523,7 +62369,12 @@ ${d5.text}`);
     {
       const q5 = (h5 || "").replace(/^#/, "");
       const mm2 = /^meeting=([0-9a-f]{6,20})/.exec(q5);
-      if (mm2) return { v: "meeting", arg: mm2[1], wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+      if (mm2) {
+        const to2 = meetingRoute(mm2[1]), st3 = to2 && parseHash(to2);
+        if (st3) return st3;
+        snack("That meeting isn't in creaite's records any more");
+        return { v: "today", arg: null, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+      }
     }
     {
       const r4 = parseReporting(h5, (c5) => P3.some((p6) => p6.code === c5));
@@ -62747,7 +62598,6 @@ ${d5.text}`);
     if (shared.RF && v5 !== "review") {
       shared.RF = null;
     }
-    if (v5 === "meeting") shared.MEETING = arg;
     if (v5 === "milestones") {
       if (!P3.some((p6) => p6.code === arg)) return false;
       shared.MSNEXT = arg;
@@ -62828,11 +62678,6 @@ ${d5.text}`);
       mvAfter();
       tabTitle();
     }
-    if (r4 && v5 === "meeting") {
-      renderMeeting(arg);
-      setRailView("today");
-      tabTitle();
-    }
     return r4;
   }
   var seeAll = (n4, what, nav) => n4 ? `<a href="#" class="seeall" data-nav="${nav}">All ${n4} ${what}${n4 === 1 ? "" : "s"} ›</a>` : "";
@@ -62882,7 +62727,15 @@ ${d5.text}`);
         return;
       }
       curDrop();
+      const old = !e4.state && /^#meeting=/.test(location.hash);
       restoreNav(e4.state || parseHash(location.hash));
+      if (old) {
+        shared.NAVSTATE = navState();
+        try {
+          history.replaceState(shared.NAVSTATE, "", hashOf(shared.NAVSTATE));
+        } catch (x5) {
+        }
+      }
     });
     document.addEventListener("click", (e4) => {
       const n4 = e4.target.closest("[data-nav]");
@@ -62967,10 +62820,6 @@ ${d5.text}`);
   }
   var TABNAME = { today: "Today", inbox: "Intake", projects: "Projects", work: "Work", mine: "Work", reports: "Reports", people: "People", review: "Review", files: "Files", activity: "Activity", settings: "Settings", help: "Help" };
   function tabTitle() {
-    if (shared.VIEW === "meeting") {
-      const m5 = HUB()[shared.MEETING];
-      TABNAME.meeting = m5 ? m5.title : "Meeting";
-    }
     if (shared.VIEW === "prep") {
       const v5 = prepView.value, t48 = v5 && v5.ok && v5.model ? v5.model.meeting.title : "";
       TABNAME.prep = t48 ? `Prep · ${t48}` : "Prep";
@@ -64258,7 +64107,6 @@ ${d5.text}`);
         if (shared.MV.peek && !shared.MV.add && !(document.activeElement && document.activeElement.closest && document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw();
       }
     }
-    if (shared.VIEW === "meeting") renderMeeting(shared.MEETING);
     if (shared.PREPEV && $("#prepDlg") && $("#prepDlg").open) drawPrep();
   }
   function renderBadge() {
@@ -64894,6 +64742,8 @@ ${d5.text}`);
         "mdBlocks",
         "mdChat",
         "mdHtml",
+        "meetingOfFile",
+        "meetingRoute",
         "menuOpenFor",
         "mins",
         "mount",
@@ -65202,7 +65052,6 @@ ${d5.text}`);
         "LOADING",
         "MCREATED",
         "MCREATEDOF",
-        "MEETING",
         "MKEYHELD",
         "MNEWIO",
         "MREVLEFT",
@@ -65424,7 +65273,7 @@ ${d5.text}`);
   shared.HADHASH = !!location.hash && !/^#openfile=/.test(location.hash);
   openFromAddress();
   shared.HASH0 = location.hash;
-  restoreNav(/^#?(milestones|meeting)=/.test(location.hash || "") ? null : parseHash(location.hash));
+  restoreNav(/^#?milestones=/.test(location.hash || "") ? null : parseHash(location.hash));
   navWrite(false);
   firstHelp();
   shared.LOADING = false;
@@ -65479,7 +65328,6 @@ ${d5.text}`);
   bootDrafts0203();
   bootDrafts0204();
   bootActivity0205();
-  bootMeetings0206();
   bootAsk0207();
   bootAsk0208();
   bootReview0209();

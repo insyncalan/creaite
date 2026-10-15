@@ -131,11 +131,11 @@ export function reportsBadge() {
 export const spaceCode = signal("");
 export const spaceWeek = signal("");
 
-/** P6's weekly view (origin/v210-p6-weekly; not on this base, so the address does nothing until P6 merges): #weekly=<code>&week=<Friday>.
+/** P6's weekly view: #weekly=<code>&week=<Friday>.
     @param {string} code @param {string} week */
 export const weeklyHref = (code, week) => `#weekly=${code}&week=${week}`;
 
-/** P8's client view (origin/v210-p8-client; not on this base, so the address does nothing until P8 merges): #client-report=CODE/week/client.
+/** P8's client view: #client-report=CODE/week/client.
     @param {string} code @param {string} week @param {string} client */
 export const clientReportHref = (code, week, client) => `#client-report=${code}/${week}/${encodeURIComponent(client)}`;
 

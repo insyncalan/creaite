@@ -599,7 +599,6 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dm .acts .lk:disabled{color:var(--day-muted);cursor:default}
 .dm .acts .lk.open{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--r-sm);color:var(--day-muted)}
 .dm .acts .lk.open:hover:not(:disabled){color:var(--accent);background:var(--surface)} .dm .acts .lk.open svg{width:14px;height:14px}
-.dm .acts .mhlink{padding:0 2px}
 .dm .acts button:focus-visible,.dm .acts a:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .dayaway{margin:14px 0 0;font-size:var(--fs-sm);color:var(--day-muted);font-style:italic}
 @media (max-width:640px){ .daytabs .dy:not([aria-selected="true"]){letter-spacing:.04em;padding:4px 4px} }
@@ -2364,17 +2363,9 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evkeep{display:flex;gap:6px;margin-top:8px} .evkeep input{flex:1;min-width:0}
 .evlost{margin-top:8px;font-size:var(--fs-sm)}
 #curText .claim:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
-/* ===== BL-209 (sprint-insight) ===== the meeting hub's strip: each step says its state in words and a mark, never colour alone */
-.mhstrip{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 16px;padding:0}
-.mhstrip li{flex:1 1 120px;min-width:110px;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
-.mhstrip .mhl{font-weight:600;font-size:var(--fs-sm)} .mhstrip .mht{font-size:var(--fs-xs);color:var(--muted)}
-.mhstrip .mhdot{font-size:var(--fs-sm);line-height:1;color:var(--muted)}
-.mhstrip .mh-done .mhdot{color:var(--ok)} .mhstrip .mh-current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
-.mhstrip .mh-current .mhdot{color:var(--accent)} .mhstrip .mh-skip{opacity:.7;border-style:dashed}
-.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
-.mhgrid .card{margin:0} .mhnext .btn{margin-top:4px}
-.mhitems,.mhcov,.mhfiles{list-style:none;margin:8px 0 0;padding:0} .mhitems li,.mhcov li,.mhfiles li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
-.mhitem.you{font-weight:500} .tag.ok{color:var(--ok);font-weight:500}
+/* ===== BL-209 (sprint-insight) ===== (v2.1.0 P10: the hub page and its strip are gone; Review's Coverage list keeps these two rules) */
+.mhcov{list-style:none;margin:8px 0 0;padding:0} .mhcov li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
+.tag.ok{color:var(--ok);font-weight:500}
 .mhlink{margin-left:6px;font-size:var(--fs-xs)}
 /* ===== BL-205 (sprint-insight) ===== ⌘K's change: marked Change, and its preview with the sign as well as the colour */
 #cmdkList button.ckchg{font-weight:600}
@@ -2592,7 +2583,6 @@ dialog#prepDlg[open]{display:flex;flex-direction:column}
 .prepmeta .avs{display:inline-flex}
 .prepmeta .av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--sunk);color:var(--muted);font-size:var(--fs-2xs);font-weight:700;border:2px solid var(--surface);margin-left:-6px}
 .prepmeta .av:first-child{margin-left:0}
-.prepmeta .mhlink{font-size:var(--fs-xs)}
 .preptb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg)}
 .preptb .sp{flex:1}
 .preptb .btn{min-height:32px}

@@ -25,7 +25,7 @@ import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
-import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, hubFor, hubLink, prepOpen, prepPageOf, renderDn } from "./meetings.js";
+import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
@@ -176,7 +176,7 @@ const isConf=e=>String((e&&e.sensitivity)||"").toLowerCase()==="confidential";
 /** One day's meetings for the band, from the page's calendar where it has the day (today always), else from D.days. */
 export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=dayList().find(d=>d.date===iso), srv=(rec&&rec.meetings)||[];
   const extra=m=>({...m,page:m.prep?((SA().prep_pages||{})[m.prep.key]||m.prep.page||null):null,pageWhen:m.prep?((prepPageOf(m,iso)||{}).when||m.prep.page_at_shown||""):"",
-    hub:m.private||m.confidential||shared.LOADING?null:hubFor({eid:m.id,day:iso,start:m.start,title:m.title})||null,running:m.id?DAYRUN.get(m.id):undefined});
+    running:m.id?DAYRUN.get(m.id):undefined});
   if(raw){ const timed=raw.filter(e=>!e.all_day);
     return {known:true, allDay:raw.filter(e=>e.all_day).map(e=>({title:e.private?"Busy":e.title??"",p:e.private||isConf(e)?null:e.p||null})),
       meetings:timed.map((e,i)=>{ const priv=!!e.private, s=srv.find(m=>m.start===e.start&&(priv?m.private:m.title===e.title)), conf=!!(s&&s.confidential)||isConf(e);
@@ -529,10 +529,10 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
   const item=(i,key,further,undated=false)=>({key,kind:i.kind,tag:tagOf(i),tone:toneOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.od?"bad":i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
-  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, hub=hubFor({eid:e.id,day,start:e.start,title:e.title});
+  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null;
     return {key:`m${day}${e.start}${e.title}`,kind:"meeting",tag:"Meeting",tone:e.plan?"acc":"",t:`${e.start} ${e.title??""}`,
       open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",
-      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,hub:hub||undefined,
+      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,
       acts:can?[{id:"prep",icon:"filetext",label:"Make a prep page",name:`Prepare for ${e.title??"the meeting"}`,primary:!!e.plan,data:{prepday:day,start:e.start||"",title:e.title||""}}]:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
   group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));

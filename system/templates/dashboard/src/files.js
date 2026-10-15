@@ -9,7 +9,6 @@ import { api, oneLine, SERVED, snack, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { pendingEdit } from "./ask.js";
 import { inboxBadge, renderInbox } from "./intake.js";
-import { hubFor, hubLink } from "./meetings.js";
 /* ======================= Files ======================= */
 shared.FSEL={p:"All",f:"All",sub:"",quick:"all"}; export const FOPEN=new Set(store.get("creaite-files-open",[]));
 /* BL-331: the reports and minutes BL-03 archived (still in their _Archive), listed only under the Archived chip, each with Move back */
@@ -31,7 +30,7 @@ export function renderFiles(){ const cnt=f=>FILES.filter(f).length; const pr=(b)
   if(shared.FSEL.quick==="archived") L=farch().slice();   /* BL-331 */
   L=L.filter(f=>(!q||f.n.toLowerCase().includes(q))&&(t==="All"||f.type===t)&&(!fr||f.date>=fr)&&(!to||f.date<=to)).sort((a,b)=>(b.date||"0").localeCompare(a.date||"0"));
   putHTML($("#filesTbl"),html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L.length?L.map(f=>html`<tr data-fp="${f.path}" class="${shared.FSELFILE===f.path?"sel":""}"><td><span class="ftype">${f.type}</span><a href="#" data-openfile="${f.path}">${f.n}</a>${FNEW.has(f.path)&&html` <span class="tag new">New</span>`}${f.archived&&html` <span class="tag">Archived</span>`}</td><td class="x">${f.p==="inbox"?"Intake":`${pName(f.p)} › ${f.f}${f.sub?" › "+f.sub:""}`}</td><td style="white-space:nowrap">${f.date?fd(f.date):"—"}</td><td class="x">${f.kb>=1000?(f.kb/1000).toFixed(1)+" MB":f.kb+" KB"}</td><td style="text-align:right">${f.archived?html`<button class="mini" data-moveback="${f.path}" aria-label="Move back ${f.n}">Move back</button>`:raw(ibtn("folderopen","Open folder",html`data-openfile="${f.path.slice(0,f.path.lastIndexOf("/")+1)}"`,"sm"))}</td></tr>`):html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`); filesStatus(L.length);
-  if(!shared.LOADING) $$("#filesTbl tr[data-fp]").forEach(tr=>{ const t=hubFor({path:tr.dataset.fp}), td=tr.querySelector("td"); if(t&&td&&!td.querySelector(".mhlink")) addHTML(td,"beforeend",hubLink(t,"Meeting")); }); }
+}
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootFiles0068(){
 $("#tree").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; if(b.dataset.toggle){ const c=b.dataset.toggle; if(FOPEN.has(c)&&shared.FSEL.p===c&&shared.FSEL.f==="All") FOPEN.delete(c); else FOPEN.add(c); store.set("creaite-files-open",[...FOPEN]); } shared.FSEL={p:b.dataset.p,f:b.dataset.f,sub:b.dataset.s||"",quick:b.dataset.p==="inbox"?"inbox":"all"}; renderFiles(); });
