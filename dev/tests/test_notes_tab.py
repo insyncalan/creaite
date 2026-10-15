@@ -139,6 +139,29 @@ class NotesServer(unittest.TestCase):
         self.assertIn("Typed in Finder.", p.read_text())
         self.assertTrue(self.post("/api/notes/get", {"path": rel})["draft"]["stale"])
 
+    def test_3b_a_list_item_with_newlines_cannot_break_the_front_matter(self):
+        # L3: a malformed tags item (a newline, a front-matter fence, a flag) stays one tag on one line (throwaway vault).
+        r = self.post("/api/notes/new", {"code": "ABC", "template": "blank", "title": "Malformed"})
+        rel, base = r["note"]["path"], r["base"]
+        p = self.v.root / rel
+        bad = ["a\n---\nconfidential: true", "line\r\nbreak", "x,y", "\n---\n"]
+        s = self.post("/api/notes/save", {"path": rel, "body": "Body.\n", "base": base,
+                                          "changes": {"tags": bad, "with": ["Omar\nAli"]}})
+        self.assertTrue(s["ok"], s)
+        text = p.read_text()
+        self.assertEqual(text.count("\n---\n"), 1, text)          # one closing fence only
+        self.assertTrue(text.endswith("\n\nBody.\n"), text)
+        import notes
+        meta, body = notes.parse(text)
+        self.assertEqual(body, "Body.\n")
+        self.assertFalse(meta.get("confidential"), meta)
+        self.assertEqual(meta["tags"], ["a --- confidential: true", "line break", "x y", "---"])
+        self.assertEqual(meta["with"], ["Omar Ali"])
+        self.assertEqual(notes.clean_changes({"tags": bad})["tags"], meta["tags"])
+        self.assertEqual(notes._written(["p\nq"]), "[p q]")        # the writer is safe on its own too
+        self.assertEqual(text.count("\nconfidential:"), 1, text)    # the template's own line, still false
+        self.assertIn("\nconfidential: false\n", text)
+
     def test_4_list_portfolio_and_refusals(self):
         self.post("/api/notes/new", {"code": "_portfolio", "template": "blank", "title": "Across projects"})
         L = self.post("/api/notes/list", {"code": "_portfolio"})
