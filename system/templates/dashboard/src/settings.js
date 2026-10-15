@@ -844,6 +844,13 @@ export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs t
   if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } vipBadge(); renderToday(); back();
   snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
     if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+/* BL-342 Part 2: Chase on a thread matched to an item that is waiting on someone else: BL-224's Draft email in Chase mode for that
+   item's owner, the item ticked. Nothing is sent or written; the builder falls back to an update request when the item isn't past its date. */
+export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), m=a&&a.match, it=m&&m.id&&REC("actions",m.id);
+  if(!it){ snack("That item isn't open any more"); return; }
+  const owner=String(it.o||"");
+  if(!owner||!PERS().some(y=>y.name===owner)){ snack(`${owner||"The owner"} isn't on the People page, so there's no one to draft to`); return; }
+  openDraftEmail(owner,"chase",m.id); }
 export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live server"); return; }
   const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a&&a.match) a.match.logged=r.logged;
@@ -951,7 +958,7 @@ export function vipSectionHtml(){ const v=VIPD();
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
-  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id);
+  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
   else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
   else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */

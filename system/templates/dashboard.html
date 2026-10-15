@@ -2825,6 +2825,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdmark{vertical-align:2px;height:18px}
 /* BL-342: a thread card's ask, owners and due date (an overdue one in the warning colour, and said in words) */
 #tBrief .tdrow .tb p.tdask,#tBrief .tdrow .tb p.tdwho,#tBrief .tdrow .tb p.tdfiles{margin-top:4px;font-size:var(--fs-sm)}
+#tBrief .tdrow .tb p.tdrel{margin-top:4px;font-size:var(--fs-sm);display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.tdrelchip{font-weight:600}
+.tdrel-new{background:var(--sunk);color:var(--ink)}
+.tdrel-update{background:var(--accent-soft);color:var(--ink)}
+.tdrel-chase{background:var(--warn-soft);color:var(--ink)}
+.tdrelitem{color:var(--day-ink,var(--ink))}
+.tdwhy{flex-basis:100%;color:var(--day-muted,var(--muted));font-size:var(--fs-xs)}
 .tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .tddue{color:var(--day-muted,var(--muted))}
 .tdover{color:var(--bad);font-weight:600}
@@ -3545,6 +3552,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     agendaInvitedPart: () => agendaInvitedPart,
     agendaSave: () => agendaSave,
     agendaStyle: () => agendaStyle,
+    alertChase: () => alertChase,
     alertDismiss: () => alertDismiss,
     alertDraft: () => alertDraft,
     alertDraftWhy: () => alertDraftWhy,
@@ -10245,6 +10253,21 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ] }) : null,
         /* @__PURE__ */ u2("p", { children: r4.meta }),
         r4.summary ? /* @__PURE__ */ u2("p", { class: "tdsum", children: r4.summary }) : null,
+        r4.rel ? /* @__PURE__ */ u2("p", { class: "tdrel", children: [
+          /* @__PURE__ */ u2("span", { class: `tag tdctag tdrelchip tdrel-${r4.rel.toLowerCase()}`, children: r4.rel }),
+          r4.relId ? /* @__PURE__ */ u2(S2, { children: [
+            " ",
+            /* @__PURE__ */ u2("span", { class: "tdrelitem", children: [
+              r4.relId,
+              r4.relT ? `: ${r4.relT}` : ""
+            ] })
+          ] }) : null,
+          r4.count ? /* @__PURE__ */ u2(S2, { children: [
+            " ",
+            /* @__PURE__ */ u2("span", { class: "tag tdctag tdcount", children: r4.count })
+          ] }) : null,
+          r4.relWhy ? /* @__PURE__ */ u2("span", { class: "tdwhy", children: r4.relWhy }) : null
+        ] }) : null,
         r4.ask ? /* @__PURE__ */ u2("p", { class: "tdask", children: [
           /* @__PURE__ */ u2("span", { class: "tdlab", children: "Ask" }),
           " ",
@@ -11310,6 +11333,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     a5.found === "start-up" ? "found on start-up" : "",
     a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
+  var RELCHIP = (
+    /** @type {Record<string,string>} */
+    { new: "New", update: "Update", chase: "Chase" }
+  );
   var cardDue = (a5) => a5.due ? { text: `due ${longDay(a5.due)}`, over: a5.due < TODAY } : null;
   function convRow(a5) {
     const t5 = String(a5.title || a5.subject || "Conversation");
@@ -11332,6 +11359,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const due = cardDue(a5), name = `${a5.who ?? ""}, ${t5}`, acts2 = [{ id: "handled", icon: "done", label: "Handled", name: `Handled: ${name}`, data: { alertdo: "handled", id: a5.id } }];
     const m5 = a5.match && a5.match.id && a5.match.relation !== "new" ? String(a5.match.id) : "";
     if (m5 && !(a5.match && a5.match.logged)) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t5}`, data: { alertdo: "log", id: a5.id } });
+    const mt = a5.match && a5.match.relation ? a5.match : null, rel2 = mt ? RELCHIP[mt.relation] || "" : "", others = mt && mt.id && mt.count > 1 ? mt.count - 1 : 0;
+    if (mt && mt.relation === "chase" && mt.id) acts2.push({ id: "chase", icon: "chasemail", label: "Chase", name: `Chase the owner of ${mt.id}: ${t5}`, data: { alertdo: "chase", id: a5.id } });
     const files = a5.type === "fyi" && (a5.attachments || []).length ? `Files: ${(a5.attachments || []).slice(0, 4).join(", ")}${a5.attachments.length > 4 ? ` and ${a5.attachments.length - 4} more` : ""}` : "";
     return {
       key: "al" + a5.id,
@@ -11347,6 +11376,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       summary: String(a5.summary || ""),
       cands,
       acts: acts2,
+      rel: rel2,
+      relId: mt && mt.id && mt.relation !== "new" ? String(mt.id) : "",
+      relT: mt && mt.id && mt.relation !== "new" ? String(mt.t || "") : "",
+      relWhy: mt ? String(mt.why || "") : "",
+      count: others ? `also on ${others} other thread${others === 1 ? "" : "s"}` : "",
       ask: String(a5.ask || ""),
       due: a5.due || "",
       overdue: !!(due && due.over),
@@ -13792,6 +13826,19 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       snack("Back in To decide");
     });
   }
+  function alertChase(id) {
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id), m5 = a5 && a5.match, it = m5 && m5.id && REC("actions", m5.id);
+    if (!it) {
+      snack("That item isn't open any more");
+      return;
+    }
+    const owner = String(it.o || "");
+    if (!owner || !PERS().some((y5) => y5.name === owner)) {
+      snack(`${owner || "The owner"} isn't on the People page, so there's no one to draft to`);
+      return;
+    }
+    openDraftEmail(owner, "chase", m5.id);
+  }
   async function alertLog(id) {
     if (!viaServer()) {
       snack("Log needs the live server");
@@ -14103,6 +14150,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const cand = Number(b5.dataset.cand || 0) || void 0;
       if (b5.dataset.alertdo === "handled") alertHandled(b5.dataset.id);
       else if (b5.dataset.alertdo === "log") alertLog(b5.dataset.id);
+      else if (b5.dataset.alertdo === "chase") alertChase(b5.dataset.id);
       else if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
       else if (b5.dataset.alertdo === "make") alertMake(b5.dataset.id, b5.dataset.ctype || "", void 0, cand);
       else if (b5.dataset.alerttype && shared.CUR && shared.CUR.alert) {

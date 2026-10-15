@@ -257,7 +257,7 @@ class AlertActions(LiveBrowserCase):
 
 
 # ===== BL-342 Part 1: a thread's card in the real browser =====
-SHOTS = Path.home() / "dev.env" / "team-stark-shots" / "bl342-p1"
+SHOTS = Path.home() / "dev.env" / "team-stark-shots" / "bl342-ui"
 YESTERDAY = date.fromordinal(date.today().toordinal() - 1).isoformat()
 LATER = date.fromordinal(date.today().toordinal() + 5).isoformat()
 OMAR = "Omar Ali <omar@company.example>"
@@ -290,7 +290,10 @@ def thread_vault(v):
     item = next(r["id"] for r in v.rows("actions") if r["description"] == "Send the data access letter")
     vf = v.root / "system/staging/vip.json"
     st = json.loads(vf.read_text())
-    next(a for a in st["alerts"] if a.get("title") == "Go-live window")["match"] = {"id": item, "relation": "update", "why": "test"}
+    by = {a.get("title"): a for a in st["alerts"]}
+    by["Go-live window"]["match"] = {"id": item, "relation": "update", "why": "The thread moves it forward.", "count": 2, "t": "Send the data access letter"}
+    by["Licence numbers"]["match"] = {"id": item, "relation": "chase", "why": "Waiting on a reply.", "count": 2, "t": "Send the data access letter"}
+    by["Board pack"]["match"] = {"id": None, "relation": "new", "why": "Nothing open matches."}
     vf.write_text(json.dumps(st))
     run(v, "build_dashboard.py")
 
@@ -360,6 +363,60 @@ class ThreadCardScreens(LiveBrowserCase):
                     b.pump(0.3)
                     b.screenshot(str(SHOTS / f"today-card-{width}-{mode.lower()}.png"))
         self.show(1400, "Light")
+
+
+    def test_the_relation_chips_the_count_and_chase(self):
+        """Part 2: the New / Update / Chase chip with the matched item, the count chip, the hint, and Chase for the owner."""
+        b = self.b
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        for width in (1400, 900):
+            for mode in ("Light", "Dark"):
+                with self.subTest(width=width, mode=mode):
+                    self.show(width, mode)
+                    o = b.eval("""(()=>{ %s
+                      const row=t=>[...document.querySelectorAll('#tdList>li.td-message')].find(r=>r.textContent.includes(t)), out={};
+                      for(const [k,t] of [['update','Go-live window'],['chase','Licence numbers'],['new','Board pack']]){
+                        const r=row(t), rel=r.querySelector('.tdrel');
+                        out[k]={chip:rel.querySelector('.tdrelchip').textContent, text:rel.textContent.replace(/\\s+/g,' '),
+                          buttons:[...r.querySelectorAll(':scope>.tacts button')].map(x=>x.getAttribute('aria-label')),
+                          contrast:[...rel.querySelectorAll('.tdrelchip,.tdrelitem,.tdcount,.tdwhy')].map(e=>ratio(e)),
+                          tabbable:[...r.querySelectorAll(':scope>.tacts button')].every(x=>x.tabIndex>=0)}; }
+                      out.scroll=[document.documentElement.scrollWidth, innerWidth];
+                      return out; })()""" % CONTRAST)
+                    self.assertEqual(o["update"]["chip"], "Update")
+                    self.assertIn("ABC-A-", o["update"]["text"])
+                    self.assertIn("Send the data access letter", o["update"]["text"])
+                    self.assertIn("also on 1 other thread", o["update"]["text"])
+                    self.assertEqual(o["chase"]["chip"], "Chase")
+                    self.assertIn("Waiting on a reply.", o["chase"]["text"])
+                    self.assertTrue(any(x.startswith("Chase") for x in o["chase"]["buttons"]), o["chase"]["buttons"])
+                    self.assertFalse(any(x.startswith("Chase") for x in o["update"]["buttons"]))
+                    self.assertEqual(o["new"]["chip"], "New")
+                    self.assertFalse(any(x.startswith("Log") for x in o["new"]["buttons"]))          # New: no Log
+                    self.assertNotIn("also on", o["new"]["text"])
+                    for k in ("update", "chase", "new"):
+                        self.assertTrue(o[k]["tabbable"])
+                        for r in o[k]["contrast"]:
+                            self.assertGreaterEqual(r, 4.5, f"{k} contrast {r:.2f}")
+                    self.assertLessEqual(o["scroll"][0], o["scroll"][1])
+                    self.assertIsNone(says_vip(b.eval("document.getElementById('tdList').outerHTML")))
+                    b.eval("document.querySelector('#tdList>li.td-message').scrollIntoView({block:'center'})")
+                    b.pump(0.3)
+                    b.screenshot(str(SHOTS / f"chips-{width}-{mode.lower()}.png"))
+        self.show(1400, "Light")
+
+    def test_chase_opens_the_draft_email_in_chase_mode_for_the_owner(self):
+        b = self.b
+        self.show(1400, "Light")
+        b.eval("""(()=>{ const r=[...document.querySelectorAll('#tdList>li.td-message')].find(r=>r.textContent.includes('Licence numbers'));
+          r.querySelector('[data-alertdo="chase"]').focus(); })()""")
+        b.eval("document.activeElement.click()")
+        b.wait("document.querySelector('dialog[open] #deTitle, #deTitle')&&document.getElementById('deTitle').textContent.includes('Sara Example')")
+        self.assertEqual(b.eval("shared.DE.mode"), "chase")
+        self.assertEqual(b.eval("shared.DE.name"), "Sara Example")
+        self.assertTrue(b.eval("/^ABC-A-/.test(shared.DE.only)"))                                # the matched item
+        self.assertTrue(b.eval("[...shared.DE.picked].every(k=>k==='actions:'+shared.DE.only)"))   # at most it is ticked (the outside-address rule)
+        b.eval("document.querySelector('dialog[open]').close()")
 
 
 class ThreadCardActions(LiveBrowserCase):

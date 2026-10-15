@@ -20,7 +20,7 @@ import { IconButton } from "../IconButton.jsx";
 /** @typedef {{key: string, tag: string, t: string, sub?: string, acts: TdAct[]}} TdCand */
 /** @typedef {{key: string, kind: "review"|"transcript"|"message"|"quiet", tag: string, tone?: string, t: string, meta: string, link?: string,
     mark?: string, summary?: string, cands?: TdCand[], acts: TdAct[], ask?: string, due?: string, overdue?: boolean, dueText?: string,
-    owners?: string, files?: string}} TdRow */
+    owners?: string, files?: string, rel?: string, relId?: string, relT?: string, relWhy?: string, count?: string}} TdRow */
 /** @typedef {{rows: TdRow[], total: number, cap: number, open: boolean, onAct: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
     onOpen: (row: TdRow) => void, onReview: () => void, blocked: (why: string) => void}} ToDecideProps */
 
@@ -46,6 +46,14 @@ function TdLine({ r, hidden, p }) {
         {r.mark ? <>{" "}<span class="tag tdctag tdmark">{r.mark}</span></> : null}
         <p>{r.meta}</p>
         {r.summary ? <p class="tdsum">{r.summary}</p> : null}
+        {r.rel ? (
+          <p class="tdrel">
+            <span class={`tag tdctag tdrelchip tdrel-${r.rel.toLowerCase()}`}>{r.rel}</span>
+            {r.relId ? <>{" "}<span class="tdrelitem">{r.relId}{r.relT ? `: ${r.relT}` : ""}</span></> : null}
+            {r.count ? <>{" "}<span class="tag tdctag tdcount">{r.count}</span></> : null}
+            {r.relWhy ? <span class="tdwhy">{r.relWhy}</span> : null}
+          </p>
+        ) : null}
         {r.ask ? <p class="tdask"><span class="tdlab">Ask</span>{" "}{r.ask}</p> : null}
         {r.owners || r.dueText ? (
           <p class="tdwho">
