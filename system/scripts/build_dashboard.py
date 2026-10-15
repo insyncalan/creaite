@@ -1310,7 +1310,13 @@ def action_row(a):
             "pr": a["priority"], "due": a["due_date"], "st": a["status"], "raised": a["raised"], "closed": a["closed"],
             "upd": a["latest_update"] or "", "client": bool(a["client_visible"]), "cm": a["client_message"],
             "src": a["source"], "upd_at": (a["updated_at"] or "")[:16], "updated_at": a["updated_at"],
-            "ms": a.get("milestone")}
+            "ms": a.get("milestone"), **archived_mark(a)}
+
+
+def archived_mark(r):
+    """BL-10: {"ar": True} on an archived row (its own age or its project's), shown only with Show archived on; else nothing,
+    so a page without archived items is unchanged."""
+    return {"ar": True} if r.get("archived") else {}
 
 
 def raid_row(r):
@@ -1320,7 +1326,7 @@ def raid_row(r):
             "lik": r["likelihood"], "st": r["status"], "raised": r["raised"], "closed": r["closed"],
             "client": bool(r["client_visible"]), "cm": r["client_message"], "src": r["source"],
             "upd_at": (r["updated_at"] or "")[:16], "updated_at": r["updated_at"], "ms": r.get("milestone"),
-            "pr": r.get("priority")}
+            "pr": r.get("priority"), **archived_mark(r)}
 
 
 def replaced_by_map(con):
@@ -1334,7 +1340,7 @@ def decision_row(d, replaced_by):
             "st": d["status"], "due": d["needed_by"], "why": d["reasoning"], "opts": d["options"], "revisit": d["revisit"],
             "replaces": d["replaces"], "rby": replaced_by.get(d["id"]),
             "client": bool(d["client_visible"]), "cmd": d["client_message"], "src": d["source"],
-            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"]}
+            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"], **archived_mark(d)}
 
 
 RECORD_TABLES = ("actions", "raid", "decisions")
