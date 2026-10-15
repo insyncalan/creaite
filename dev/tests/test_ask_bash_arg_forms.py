@@ -14,6 +14,11 @@ The read commands that write a file: propose.py new-project, close-project, arch
 only a bare file name directly in system/staging/drafts/; tracker.py validate, which writes its findings back into the file it is
 given, runs only on a proposal in system/staging/ in every ask mode.
 
+What the shell does to a word that the guard's own reading doesn't, refused unquoted in every ask mode (reach.ask_shell_refusal):
+a `#` comment (the guard read the words after it, so `review.py assign … # --dry-run` was classed read and ran for real),
+`~+` `~-` `~N` ($PWD, $OLDPWD, the directory stack) and `**` (recursive in zsh). Quoted, each is text and runs. Only benign
+commands are sent here: no secret path is needed to show the gap.
+
 `reach.py wrap` and `reach.py hook` are refused in every ask mode: wrap ran the command it wrapped after the record gate had
 judged the wrapper (`reach.py wrap tracker.py apply` passed a plain chat). `reach.py classify` and `never` still run.
 
@@ -35,7 +40,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from test_tracker import ABC, Vault  # noqa: E402
 
-NEVER, SHELL, HANDOVER = "never list", "shell form", "a hand-over command"
+NEVER, SHELL, HANDOVER, WORDS = "never list", "shell form", "a hand-over command", "the shell's own words"
 MODES = ("ask", "confirmed", "sweep")
 T = "system/scripts/run minutes.py transcript"
 P = "python3 system/scripts/minutes.py transcript"
@@ -134,6 +139,8 @@ def by(why):
         return NEVER
     if "hands over to another command" in why:
         return HANDOVER
+    if "# comment" in why or "turns into another folder" in why or "through every folder" in why:
+        return WORDS
     if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
         return SHELL
     return "other: " + why
@@ -351,6 +358,51 @@ class ReadCommandsWriteOnlyDrafts(unittest.TestCase):
         arch = (self.root / "system/scripts/archive.py").read_text(encoding="utf-8")       # archive.py reports --out
         at = arch.index('argv.index("--out") + 1]')
         self.assertIn("return propose.emit_spec(spec, out)", arch[at:at + 300], "archive.py reports --out saves through emit_spec")
+
+
+
+SR = "system/scripts/run"
+SHELL_WORDS = [
+    ("# then a read flag (record command)", f"{SR} review.py assign ABC-A-001 'Sara Khan' # --dry-run", WORDS),
+    ("# then a read flag (recode)", f"{SR} propose.py recode ABC XYZ # --dry-run", WORDS),
+    ("# then --check (learn)", f"{SR} propose.py learn ABC sender a@b.example # --check", WORDS),
+    ("# then --dry-run (baseline)", f"{SR} minutes.py baseline # --dry-run", WORDS),
+    ("# after a quoted word", f"{SR} tracker.py read 'ABC' #x", WORDS),
+    ("~- ($OLDPWD)", f"{SR} minutes.py transcript ~-/x.vtt", WORDS),
+    ("~+ ($PWD)", f"{SR} minutes.py transcript ~+/x.vtt", WORDS),
+    ("~1 (the directory stack)", f"{SR} minutes.py transcript ~1/x.vtt", WORDS),
+    ("~- after =", f"{SR} minutes.py transcript --from=~-/x.vtt", WORDS),
+    ("~+ after :", f"{SR} minutes.py transcript a:~+/x.vtt", WORDS),
+    ("** (recursive in zsh)", f"{SR} minutes.py transcript projects/**/x.vtt", WORDS),
+]
+SHELL_WORDS_ALLOWED = [
+    f"{SR} search.py query '#12 owner: Sara, ~-5 days, **bold**'",
+    f'{SR} search.py query "issue #4 ~+ ~1"',
+    f"{SR} tracker.py read ABC#1",
+    f"{SR} search.py query 'a ~ b'",
+    f"{SR} minutes.py transcript '{ABC}/transcripts/2026-10-0*.vtt'",
+]
+
+
+class ShellWords(HookCase):
+    def test_unquoted_shell_words_are_refused(self):
+        self.refused_by(SHELL_WORDS)
+
+    def test_quoted_they_are_text(self):
+        for cmd in SHELL_WORDS_ALLOWED:
+            for mode in MODES:
+                with self.subTest(cmd=cmd, mode=mode):
+                    self.assertEqual(self.hook(mode, cmd), (0, ""))
+
+    def test_the_comment_gap_in_the_pure_functions(self):
+        """Why the comment is refused: the guard's words go on after the #, so a (kind, flag) entry reads as read."""
+        sys.path.insert(0, str(self.root / "system/scripts"))
+        import reach
+        cmd = SHELL_WORDS[0][1]
+        self.assertEqual(reach.command_kind("review.py", reach.bash_args(cmd)), ("read", "review.py assign"))
+        self.assertIsNone(reach.record_problem(cmd))                       # the record gate alone let it through
+        self.assertIn("# comment", reach.ask_shell_refusal(cmd))
+        self.assertIsNone(reach.ask_shell_refusal(f"{SR} review.py assign ABC-A-001 'Sara Khan' --dry-run"))
 
 
 if __name__ == "__main__":

@@ -1227,13 +1227,18 @@ def hook_decision(tool, inp, mode, run):
             return False, (f"{p}: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the "
                            f"new content in {paths.rel(area)}/ and run python3 system/scripts/filechange.py")
     if tool == "Bash":
-        command = str((inp or {}).get("command") or "")
-        why = (bash_refusal(command, mode) or ask_never_reason(command)    # ask-hook-fix: every argument form,
-               or handover_refusal(command)                               # never reach.py wrap or hook,
-               or read_write_refusal(command))                            # validate only in system/staging
+        why = ask_bash_refusal(str((inp or {}).get("command") or ""), mode)    # ask-hook-fix: bash_refusal, then the rest
         if why:
             return False, why
     return True, ""
+
+
+def ask_bash_refusal(command, mode):
+    """Why an ask creaite Bash call is refused, or None: its form and the record gate (bash_refusal, as before), then
+    (ask-hook-fix, 15-10-2026) an unquoted comment, ~- ~+ ~N or ** (the shell's own words), a never-list path in any argument
+    form, reach.py wrap or hook, and tracker.py validate outside system/staging/."""
+    return (bash_refusal(command, mode) or ask_shell_refusal(command) or ask_never_reason(command)
+            or handover_refusal(command) or read_write_refusal(command))
 
 
 # ===== ask-hook-fix (15-10-2026): ask creaite's never list on every argument form =====
@@ -1284,6 +1289,36 @@ def ask_never_reason(command):
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
 # ===== end ask-hook-fix: argument forms =====
+
+
+# ===== ask-hook-fix (15-10-2026): what the shell does to a word that the guard's own reading doesn't =====
+# bash_problem lets through one creaite script on its own; three things the shell still does to its words were invisible to the
+# checks above, each refused in every ask mode when it is unquoted (quoted, the shell leaves it as text, so a search for "#12",
+# "~-5 days" or "**bold**" still runs):
+# - a `#` starting a word starts a comment: the shell drops the rest, while the guard (shlex, no comments) still read it, so
+#   `review.py assign … # --dry-run` was classed read (command_kind) and ran for real;
+# - `~+`, `~-` and `~N` at the start of a word (or after = or :) are $PWD, $OLDPWD and the directory stack, which expanduser
+#   leaves alone, so the guard judged a folder named `~-` in the vault;
+# - `**` recurses in zsh (and bash's globstar), where the guard's own expansion goes one folder deep.
+def ask_shell_refusal(command):
+    """Why an ask creaite Bash call has an unquoted comment, ~+ ~- ~N or ** the shell would act on, or None."""
+    cmd = vault_relative(command)
+    quote, prev = None, " "
+    for i, ch in enumerate(cmd):
+        if quote:
+            if ch == quote and not (quote == '"' and cmd[i - 1] == "\\"):
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        elif ch == "#" and prev in " \t":
+            return "the command has a # comment, which the shell would drop: run the script on its own, without one"
+        elif ch == "~" and prev in " \t=:" and cmd[i + 1:i + 2] in tuple("+-0123456789"):
+            return f"the command has {cmd[i:i + 2]}, which the shell turns into another folder: give the path itself"
+        elif ch == "*" and cmd[i + 1:i + 2] == "*":
+            return "the command has **, which the shell would expand through every folder: give the path itself"
+        prev = ch
+    return None
+# ===== end ask-hook-fix: shell words =====
 
 
 # ===== ask-hook-fix (15-10-2026): reach.py wrap and hook are never a Bash call =====
