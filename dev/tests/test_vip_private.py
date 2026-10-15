@@ -182,6 +182,39 @@ class ThreadCards(NoLabel, unittest.TestCase):
         finally:
             v.cleanup()
 
+    def test_a_confidential_card_with_a_match_never_says_vip_in_its_fields_its_reason_or_the_logged_update(self):
+        import os
+        import subprocess
+        from test_sweep_alerts import run, vip_file, vip_vault
+        from test_vip_threads import make_action
+        v = vip_vault()
+        try:
+            item = make_action(v)
+            (v.root / "system/staging/drafts").mkdir(parents=True, exist_ok=True)
+            found = [{"kind": "teams", "conversation": "19:k@thread.v2", "title": "Budget (VIP)", "from": "Mia Hale <mia@client.example>",
+                      "people": ["Mia Hale <mia@client.example>", "Omar Ali <omar@company.example>"], "last": "2026-10-08 08:40",
+                      "link": "https://teams.microsoft.com/l/chat/19:k", "sensitivity": "confidential",
+                      "summary": "A VIP asks for the date", "type": "action", "ask": "Tell the VIP the date", "due": "2026-10-20",
+                      "owners": ["VIP Mia Hale"], "match": {"id": item, "relation": "update", "why": "The VIP named it"},
+                      "items": [{"type": "action", "text": "Send the VIP the date", "owner": "Omar Ali"}]}]
+            f = v.root / "system/staging/drafts/found.json"
+            f.write_text(json.dumps(found))
+            run(v, "sweep.py", "vip", "record", str(f), "--found", "check", now="2026-10-08 09:30")
+            code = ("import json, sys; sys.path.insert(0, 'system/scripts'); import sweep, build_dashboard\n"
+                    "a = sweep.vip_state()['alerts'][0]\nlogged = sweep.vip_log(a['id'])\n"
+                    "print(json.dumps([build_dashboard.sweep_alerts({})['vip']['alerts'], logged]))\n")
+            r = subprocess.run([sys.executable, "-c", code], cwd=v.root, capture_output=True, text=True,
+                               env={**os.environ, "CREAITE_NOW": "2026-10-08 09:30"})
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertNoVip(r.stdout, "the confidential card and the Log result")
+            a = vip_file(v)["alerts"][0]
+            self.assertEqual((a["match"]["id"], a["owners"]), (item, ["Mia Hale"]))
+            self.assertNoVip((v.root / "system/staging/vip.json").read_text(), "vip.json")
+            for f in (v.root / "system/staging").glob("proposed-*.json"):
+                self.assertNoVip(f.read_text(), f.name)
+        finally:
+            v.cleanup()
+
     def test_the_two_route_handlers_say_nothing_of_the_label(self):
         import inspect
         import live_server

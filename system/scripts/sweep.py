@@ -2219,6 +2219,12 @@ def _checked_match(rel, item_id, why, rows, thread, found):
     return {"id": item_id, "relation": rel, "why": why or "The thread moves it forward.", "t": _clean(row["description"], 200)}
 
 
+# Part 4: a confidential card keeps its match (the item and the relation, which come from the tracker and code) but never the
+# model's reason, which can echo the thread; the card says it in these fixed words instead.
+MATCH_WHY_CONFIDENTIAL = {"new": "Nothing open matches.", "update": "The thread moves it forward.",
+                          "chase": "Waiting on a reply."}
+
+
 def vip_match(a, found, alerts=None):
     """Set a card's "match" from the model's suggestion in `found`, validated by code (Part 2). The model suggests
     {"id", "relation", "why"}; the code keeps it only when the ID is an open action of the card's project (else New), and
@@ -2237,6 +2243,8 @@ def vip_match(a, found, alerts=None):
         rows = {}
     thread = _match_thread(a, found)
     a["match"] = _checked_match(*_suggested(found, rows, thread), rows, thread, found)
+    if a.get("marker") == "confidential" or a.get("confidential"):
+        a["match"]["why"] = MATCH_WHY_CONFIDENTIAL.get(a["match"]["relation"], "")   # Part 4: the model's reason may echo the thread
     if old.get("logged") and old.get("id") == a["match"].get("id"):
         a["match"]["logged"] = old["logged"]                            # still the same item: still logged on it
     if alerts is not None:
