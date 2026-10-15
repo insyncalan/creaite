@@ -19,7 +19,7 @@ import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/do
 import { mDots } from "./core/motion.js";
 import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
-import { api, oneLine, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
+import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
@@ -353,7 +353,8 @@ if(shared.VIEW==="today") renderSetup();
    outside the vault by launch.py, which no allow list runs. Settings › System › Set-up holds them all; the first-run checklist's
    Connect Microsoft 365 row has Copy and Check again. Nothing here is a new permission. */
 export const SU={status:null,health:null,confirm:false,busy:""};
-export async function suStatus(){ if(!viaServer()) return null; const r=await api("/api/setup/status",{}); if(r&&r.ok){ SU.status=r; if(r.swept&&(!D.last_sweep||D.last_sweep==="never")) D.last_sweep=r.swept; } return SU.status; }
+const suRead=onceFor(2000,async()=>{ const r=await api("/api/setup/status",{}); if(r&&r.ok){ SU.status=r; if(r.swept&&(!D.last_sweep||D.last_sweep==="never")) D.last_sweep=r.swept; } return SU.status; });   /* #96: one read for callers that arrive together */
+export async function suStatus(force){ if(!viaServer()) return null; return suRead(force); }
 export async function suCopy(text,btn){ try{ if(!navigator.clipboard) throw 0; await navigator.clipboard.writeText(text); copied(btn); snack("Copied"); }catch(e){ prompt("Copy this:",text); } }
 export const suCmd=(text,id,check)=>`<div class="sucmd"><code>${esc(text)}</code><button type="button" class="mini" data-sucopy="${id}">Copy</button>${check?`<button type="button" class="mini" data-sucheck="${id}" ${viaServer()?"":'disabled title="Needs the live server"'}>Check again</button>`:""}</div>`;
 export const suText=id=>id==="m365"?SU_M365:id==="launch"?SU_LAUNCH():SU_SETUP;
@@ -374,7 +375,7 @@ export function suCardHtml(){ const st=SU.status||{}, live=viaServer(), off=live
    ${st.launcher?"":suCmd(SU_LAUNCH(),"launch",true)}
    ${row("The rest of set-up","","Your name and role, the projects folder, git and the optional schedules are a conversation: in Claude Code say")}${suCmd(SU_SETUP,"setup")}</div>`; }
 export function suRedraw(){ const c=$("#suCard"); if(c) swapHTML(c,raw(suCardHtml())); }
-export async function suCheck(what,btn){ if(btn) btn.disabled=true; const r=await suStatus(); if(btn&&btn.isConnected) btn.disabled=false;
+export async function suCheck(what,btn){ if(btn) btn.disabled=true; const r=await suStatus(true); if(btn&&btn.isConnected) btn.disabled=false;
   if(!r){ snack("Checking needs the live server"); return; }
   if(what==="m365") snack(r.swept?`Microsoft 365 is connected: the sweep last read your mail ${fd(String(r.swept).slice(0,10))}`:"Not confirmed yet: the first sweep confirms it, as it reads your mail");
   else snack(r.launcher?`The launcher is made: ${r.launcher}`:"No launcher yet: paste the command into Terminal, then check again");
