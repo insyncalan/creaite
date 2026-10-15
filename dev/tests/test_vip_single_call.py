@@ -560,6 +560,42 @@ class StageTests(Base):
         self.assertEqual(self.staged(), [])
         self.assertEqual(self.call("vip_close_stage", "nope"), {"refused": "That thread isn't on Today any more."})
 
+    def edit_card(self, **fields):
+        st = vip_file(self.v)
+        st["alerts"][0].update(fields)
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
+
+    def test_the_click_checks_the_card_again(self):
+        """Review point 5: the card may have changed since the check offered the close."""
+        card = self.cards()[0]
+        cases = {"handled": ({"state": "handled", "seen": "2026-10-08 09:20"}, "This thread is handled: nothing to stage."),
+                 "seen": ({"seen": "2026-10-08 09:20"}, "This thread was marked seen: nothing to stage."),
+                 "private": ({"marker": "private"}, "Nothing to close for a private conversation."),
+                 "other match": ({"match": {**card["match"], "id": "ABC-A-008"}}, "This thread isn't matched to ABC-A-007 any more."),
+                 "now new": ({"match": {"id": None, "relation": "new", "why": "x"}}, "This thread isn't matched to ABC-A-007 any more.")}
+        for name, (fields, said) in cases.items():
+            with self.subTest(name):
+                self.edit_card(**{k: card.get(k) for k in ("state", "seen", "marker", "match")})          # back as checked
+                self.edit_card(**fields)
+                self.assertEqual(self.call("vip_close_stage"), {"refused": said})
+                self.assertEqual(self.staged(), [])
+        self.edit_card(**{k: card.get(k) for k in ("state", "seen", "marker", "match")})
+        self.edit_card(match={**card["match"], "id": "abc-a-007"})                           # the same ID, any case
+        self.assertEqual(self.call("vip_close_stage")["state"], "staged")
+
+    def test_the_switch_turned_off_after_the_check_stages_nothing(self):
+        cfg = self.v.root / "system/config/settings.json"
+        d = json.loads(cfg.read_text())
+        d.setdefault("drafting", {})["done"] = False
+        cfg.write_text(json.dumps(d))
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "Looks done suggestions are switched off in Settings."})
+        self.assertEqual(self.staged(), [])
+
+    def test_handled_after_the_check_refuses_the_click(self):
+        py(self.v, "print(json.dumps(sweep.vip_handled([" + json.dumps(self.aid) + "])))")
+        self.assertEqual(self.call("vip_close_stage"), {"refused": "This thread is handled: nothing to stage."})
+        self.assertEqual(self.staged(), [])
+
     def test_a_closed_item_is_refused(self):
         with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
             con.execute("UPDATE actions SET status = 'Closed', closed = '2026-10-08' WHERE id = 'ABC-A-007'")

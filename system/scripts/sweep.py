@@ -2952,12 +2952,23 @@ def _close_parts(a, c, row):
 
 
 def _close_target(a):
-    """(the card's close, the open action's row); raises ValueError with a reason to show."""
+    """(the card's close, the open action's row); raises ValueError with a reason to show. Checked again at the click (the
+    card may have changed since the check offered it): not private, handled or seen; the AI drafts switch still on; the
+    close still names the card's Update or Chase match (the same ID); the action still open."""
     c = a.get("closes") if isinstance(a.get("closes"), dict) else None
     if a.get("marker") == "private":
         raise ValueError("Nothing to close for a private conversation.")
-    if not c or not c.get("id"):
+    if a.get("state") == "handled":
+        raise ValueError("This thread is handled: nothing to stage.")
+    if a.get("seen"):
+        raise ValueError("This thread was marked seen: nothing to stage.")
+    if not c or not isinstance(c.get("id"), str) or not c["id"]:
         raise ValueError("Nothing on this thread looks done.")
+    if not extraction.switched_on("done"):
+        raise ValueError("Looks done suggestions are switched off in Settings.")
+    m = a.get("match") if isinstance(a.get("match"), dict) else {}
+    if m.get("relation") not in ("update", "chase") or str(m.get("id") or "").strip().upper() != c["id"].strip().upper():
+        raise ValueError(f"This thread isn't matched to {c['id']} any more.")
     try:
         with closing(vip_ro()) as con:
             row = _open_actions(con, a.get("p")).get(c["id"])
