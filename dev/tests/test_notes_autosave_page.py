@@ -15,6 +15,8 @@ Closing rules (focus mode, the same live element):
   - Esc, a click on the scrim and the leave icon do the same thing: flush, then close, with no question when it saved;
   - a save that fails or a file changed outside creaite keeps the note open with the three-button dialog (Keep editing, Copy my text
     then close, Save again) and the typing; Copy really copies; Save again retries; another note is not opened over unsaved text;
+  - the "couldn't save" dialog (#noteLeaveDlg) opens only when a save fails, so no control on a sample screen opens it with
+    aria-haspopup: test_shared_behaviour lists it as a deliberate "unreached" exception and these tests drive it instead;
   - Esc closes the topmost overlay first (/ menu, [[ picker, AI bar and suggestion, a registered layer, the date pop-up, the tag box)
     and the next leaves; focus goes back to the control that opened focus mode, else the title.
 """

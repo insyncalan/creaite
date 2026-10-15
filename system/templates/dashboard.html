@@ -49669,7 +49669,7 @@ ${d5.text}`);
   function focusBack() {
     const o5 = focusOpener;
     focusOpener = null;
-    const go3 = () => setTimeout(() => {
+    const back2 = () => setTimeout(() => {
       const t47 = (
         /** @type {HTMLElement | null} */
         o5 && o5.isConnected && o5 !== document.body ? o5 : document.getElementById("noteTitle")
@@ -49680,8 +49680,8 @@ ${d5.text}`);
       /** @type {HTMLDialogElement | null} */
       document.getElementById("noteLeaveDlg")
     );
-    if (d5 && d5.open) d5.addEventListener("close", go3, { once: true });
-    else go3();
+    if (d5 && d5.open) d5.addEventListener("close", back2, { once: true });
+    else back2();
   }
   function leftFocus() {
     noteLeave.value = null;

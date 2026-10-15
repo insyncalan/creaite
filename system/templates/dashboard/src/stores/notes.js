@@ -252,12 +252,12 @@ export function noteEscape() {
     (the shared Dialog gives focus back to what had it), this waits for it to finish, so the last word is ours. */
 function focusBack() {
   const o = focusOpener; focusOpener = null;
-  const go = () => setTimeout(() => {
+  const back = () => setTimeout(() => {
     const t = /** @type {HTMLElement | null} */ (o && o.isConnected && o !== document.body ? o : document.getElementById("noteTitle"));
     if (t && typeof t.focus === "function") t.focus();
   }, 0);
   const d = /** @type {HTMLDialogElement | null} */ (document.getElementById("noteLeaveDlg"));
-  if (d && d.open) d.addEventListener("close", go, { once: true }); else go();
+  if (d && d.open) d.addEventListener("close", back, { once: true }); else back();
 }
 function leftFocus() { noteLeave.value = null; noteFocus.value = false; focusBack(); }
 
