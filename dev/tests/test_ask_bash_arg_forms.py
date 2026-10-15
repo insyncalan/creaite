@@ -266,6 +266,7 @@ class ValidateOnlyInStaging(unittest.TestCase):
         cls.env = {**os.environ, "HOME": str(cls.home)}
         (cls.outside / "spec.json").write_text('{"items": [], "note": "kept as it is"}')
         os.symlink(cls.outside / "spec.json", cls.root / "system/staging/proposed-link.json")
+        os.symlink(cls.root / ".claude/settings.json", cls.root / "system/staging/link.json")
 
     @classmethod
     def tearDownClass(cls):
@@ -286,16 +287,30 @@ class ValidateOnlyInStaging(unittest.TestCase):
         self.assertNotEqual(f.read_text(), '{"items": []}')
 
     def test_outside_staging_is_refused(self):
-        for target in (".claude/settings.json", "system/config/settings.json", str(self.outside / "spec.json"),
-                       "system/staging/proposed-link.json", "proposed-link.json"):
+        """A5's rule (reach.held_validate_reason), in ask creaite's own function: the first file found in
+        tracker.resolve_proposal's order must be in system/staging/; nothing found, or more than one file, is refused."""
+        targets = (
+            (".claude/settings.json", "a permission file"),
+            ("system/config/settings.json", "settings.json"),
+            (str(self.root / ".claude/settings.json"), "absolute"),
+            ("~/.claude/settings.json", "~ the shell expands (not found by the hook)"),
+            (str(self.outside / "spec.json"), "absolute, in the home folder"),
+            ("system/staging/proposed-link.json", "a symlink in staging, by path"),
+            ("proposed-link.json", "a symlink in staging, by name"),
+            ("system/staging/link.json", "a symlink to a permission file, by path"),
+            ("link.json", "a symlink to a permission file, by name"),
+            ("proposed-missing.json", "a missing file"),
+            (f"{self.prop.name} .claude/settings.json", "two files"),
+        )
+        for target, name in targets:
             for mode in MODES:
-                with self.subTest(target=target, mode=mode):
+                with self.subTest(target=name, mode=mode):
                     code, why = self.hook(mode, f"system/scripts/run tracker.py validate {target}")
                     self.assertEqual(code, 2, why)
                     self.assertIn("runs only on a proposal in system/staging/", why)
 
     def test_a_proposal_in_staging_runs(self):
-        for target in (str(self.prop.relative_to(self.root)), self.prop.name, "proposed-missing.json"):
+        for target in (str(self.prop.relative_to(self.root)), self.prop.name):
             for mode in MODES:
                 with self.subTest(target=target, mode=mode):
                     self.assertEqual(self.hook(mode, f"system/scripts/run tracker.py validate {target}"), (0, ""))
