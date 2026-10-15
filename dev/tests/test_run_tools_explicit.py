@@ -3,7 +3,8 @@
 A run started with no `--tools` gets every built-in tool in the installed Claude Code, including ones that run headless with no
 permission prompt and that neither the guard hook nor a deny list looks at (EnterWorktree, RemoteTrigger, CronCreate, Monitor,
 SendMessage, Workflow…). So each kind's `--tools` is pinned here, a new kind without an entry fails the test, and the built-ins no
-kind needs are denied by name in every run as well (EVERY_RUN_DENIES: F3's permissions.run_deny_extras() plus F2_ONLY_DENIES).
+kind needs are denied by name in every run as well (builtin_denies: F3's permissions.run_deny_extras() plus every name in
+permissions.KNOWN_BUILTINS, the one list, that the run's --tools doesn't name). No Task in a chat (#116 review).
 A kind that calls an MCP tool lists ToolSearch (`--tools ""` hides deferred MCP tools; #116, Alan's live check). F4: Search's
 answer also has `--strict-mcp-config`. The VIP check keeps main's command line (its own branch changes it).
 
@@ -24,12 +25,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
 from test_tracker import Vault  # noqa: E402
 
 SERVER = Path(__file__).resolve().parents[2] / "system/scripts/live_server.py"
-CHAT = "Read,Grep,Glob,Bash,Write,Edit,Skill,Task,ToolSearch"
+CHAT = "Read,Grep,Glob,Bash,Write,Edit,Skill,ToolSearch"
 SWEEP = "Read,Grep,Glob,Bash,Write,Edit,Skill,ToolSearch"
 HELD = "Read,Grep,Glob,Bash,ToolSearch"
 # kind (as started) | expected --tools | --strict-mcp-config | notes
 TABLE = [
-    ("ask", CHAT, False, "a chat: the guard hook checks every call; skills (cx-*, docx) need Skill; Task kept (a chat may delegate)"),
+    ("ask", CHAT, False, "a chat: the guard hook checks every call; skills (cx-*, docx) need Skill; no Task: nothing uses a subagent"),
     ("confirmed", CHAT, False, "a confirmed request: a chat's tools, plus the write rules"),
     ("typed sweep", SWEEP, False, "BL-309: cx-sweep under the hook's sweep mode; writes its input files in drafts"),
     ("sweep", SWEEP, False, "BL-295: Close the day's catch-up sweep"),
@@ -139,6 +140,16 @@ class Table(unittest.TestCase):
                 self.assertNotIn(t, tools, kind)
                 self.assertIn(t, denied, kind)
 
+    def test_each_run_denies_every_built_in_it_doesnt_name(self):
+        import live_server as L
+        import permissions as P
+        for kind, tools, *_ in TABLE:
+            denied = set(flag(self.calls[kind], "--disallowedTools").split(","))
+            allowed = {t for t in tools.split(",") if t}
+            self.assertTrue(set(P.run_deny_extras()) <= denied, kind)
+            self.assertTrue(set(P.KNOWN_BUILTINS) - allowed <= denied, kind)
+            self.assertFalse(allowed & denied, kind)                     # what --tools names is never denied as a whole
+
     def test_prompt_still_last(self):
         for kind, *_ in TABLE:
             a = self.calls[kind]
@@ -162,21 +173,47 @@ class Constants(unittest.TestCase):
         self.assertEqual(L.run_args("generate", None, L.ALERT_DRAFT_TOOLS), ["--tools", "ToolSearch"])
         self.assertEqual(L.run_args("ask", None, L.ALERT_DRAFT_TOOLS), L.KIND_ARGS["ask"])   # a chat is never narrowed
 
-    def test_every_run_denies_cover_the_dangerous_names(self):
+    def test_never_builtins_cover_the_dangerous_names(self):
         import live_server as L
-        for t in DANGEROUS:
-            self.assertIn(t, L.EVERY_RUN_DENIES)
+        for t in DANGEROUS + ["Task", "Agent"]:
+            self.assertIn(t, L.NEVER_BUILTINS)
         for k in L.KIND_ARGS:                                             # no kind's list names one
-            self.assertFalse(set(L.KIND_ARGS[k][1].split(",")) & set(L.EVERY_RUN_DENIES), k)
+            self.assertFalse(set(L.KIND_ARGS[k][1].split(",")) & set(L.NEVER_BUILTINS), k)
         self.assertEqual(L.vip_deny(), L.DENY_TOOLS + [t for t in L.VIP_BUILTIN_DENIES if t not in L.DENY_TOOLS])   # main's, unchanged
 
-    def test_the_deny_list_is_f3s_shared_list_plus_f2s_own(self):
+    def test_the_deny_lists_are_derived_from_the_one_list(self):
         import live_server as L
         import permissions as P
-        self.assertEqual(len(L.EVERY_RUN_DENIES), len(set(L.EVERY_RUN_DENIES)), "a name appears twice")
-        self.assertEqual(L.EVERY_RUN_DENIES[:len(P.run_deny_extras())], P.run_deny_extras())      # imported, not copied
-        self.assertFalse(set(L.F2_ONLY_DENIES) & set(P.run_deny_extras()), "an F2-only name is in F3's list already")
-        self.assertEqual(set(L.EVERY_RUN_DENIES), set(PREVIOUS_NEVER_BUILTINS) | set(P.NON_M365_MCP_DENY))
+        self.assertEqual(L.KNOWN_BUILTINS, list(P.KNOWN_BUILTINS))
+        self.assertEqual(L.NEVER_BUILTINS, [b for b in P.KNOWN_BUILTINS if not any(
+            b in a[1].split(",") for a in [*L.KIND_ARGS.values(), L.NARROW_BUILTINS])])
+        self.assertTrue(set(PREVIOUS_NEVER_BUILTINS) <= set(L.NEVER_BUILTINS))      # nothing F2 denied before is let in
+        for kind, tools, *_ in TABLE:
+            policy, kw = {"confirmed": ("ask", {"confirmed": "x"}), "typed sweep": ("ask", {}),
+                          "narrow": ("generate", {"only": L.ALERT_DRAFT_TOOLS})}.get(kind, (kind, {}))
+            d = L.builtin_denies(policy, kw.get("confirmed"), kw.get("only"))
+            self.assertEqual(len(d), len(set(d)), f"{kind}: a name appears twice")
+            self.assertEqual(d[:len(P.run_deny_extras())], P.run_deny_extras(), kind)          # F3's list, imported
+            allowed = [t for t in tools.split(",") if t]
+            self.assertEqual(set(d) - set(P.NON_M365_MCP_DENY), set(P.KNOWN_BUILTINS) - set(allowed), kind)
+            self.assertTrue(set(d) <= set(L.run_policy(policy, kw.get("confirmed"), kw.get("only"))[1]), kind)
+
+    def test_no_hand_written_list_names_an_unknown_built_in(self):
+        import live_server as L
+        import permissions as P
+        lists = {"CHAT_BUILTINS": L.CHAT_BUILTINS, "SWEEP_BUILTINS": L.SWEEP_BUILTINS, "HELD_BUILTINS": L.HELD_BUILTINS,
+                 "SEARCH_TOOLS": L.SEARCH_TOOLS, "ONLY_DENIES": L.ONLY_DENIES, "VIP_BUILTIN_ALLOWED": L.VIP_BUILTIN_ALLOWED,
+                 "READ_TOOLS": L.READ_TOOLS, "WRITE_TOOLS": L.WRITE_TOOLS, "OPEN_TOOLS": L.OPEN_TOOLS, "DENY_TOOLS": L.DENY_TOOLS,
+                 "ACTING_BUILTINS": P.ACTING_BUILTINS, "WRITING_BUILTINS": P.WRITING_BUILTINS,
+                 **{f"KIND_TOOLS[{k}]": v for k, v in L.KIND_TOOLS.items()},
+                 **{f"KIND_DENIES[{k}]": v for k, v in L.KIND_DENIES.items()},
+                 **{f"KIND_ARGS[{k}]": a[1].split(",") for k, a in L.KIND_ARGS.items()}}
+        for name, entries in lists.items():
+            for e in entries:
+                tool = re.match(r"^([A-Za-z_][\w-]*)", str(e))
+                if not tool or tool.group(1).startswith("mcp__"):
+                    continue
+                self.assertIn(tool.group(1), P.KNOWN_BUILTINS, f"{name}: {e}")
 
     def test_a_kind_that_calls_mcp_tools_lists_toolsearch(self):
         import live_server as L

@@ -1972,13 +1972,15 @@ KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS), "--strict-mcp-config"]
 # covers the built-in set only: the Microsoft 365 tools (MCP) stay loaded and are governed by --allowedTools and
 # --disallowedTools, as before. But with many MCP tools connected they are deferred behind the built-in ToolSearch, and
 # `--tools ""` removes it: Alan's live check on laptop 1 reached 0 Microsoft 365 tools that way (#116). So every kind that calls
-# an MCP tool lists ToolSearch, and only the kinds that need no MCP at all keep `--tools ""`. Kinds: a chat and a confirmed request ("ask"), a sweep ("sweep": Close the day's, and a typed sweep),
-# the held kinds creaite starts itself (Prep page, Current state, AI drafts, Shape, a transcript check or load), Search's answer,
+# an MCP tool lists ToolSearch, and only the kinds that need no MCP at all keep `--tools ""`. Kinds: a chat and a confirmed
+# request ("ask"), a sweep ("sweep": Close the day's, and a typed sweep), the held kinds creaite starts itself (Prep page, Current state, AI drafts, Shape, a transcript check or load), Search's answer,
 # the tool-less ones (AI on selected text, a closed meeting's Shape, Find updates in a note) and a narrowed run (`only`).
 # ToolSearch only loads deferred tools' schemas (the Microsoft 365 tools are deferred when it is there); it reads nothing.
 # A probe (Claude Code 2.1.300, 15-10-2026, `--tools ToolSearch --disallowedTools mcp__claude_ai_Todoist`): the Todoist server
 # connected but none of its tools was listed or reachable, and all 50 Microsoft 365 tools were: a whole-server deny entry works.
-CHAT_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "Task", "ToolSearch"]   # Task: a chat may delegate
+# No Task (Agent) in a chat (#116 review, Jarvis): no skill, prompt or code uses a subagent, and its worktree and remote modes
+# write into .git and .claude/worktrees/ or start a cloud agent, out of the guard hook's sight.
+CHAT_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]
 SWEEP_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]           # cx-sweep, its drafts' files
 HELD_BUILTINS = ["Read", "Grep", "Glob", "Bash", "ToolSearch"]       # read files and creaite's read scripts; the server writes
 NO_BUILTINS = ["--tools", ""]                                         # none at all: only for a kind that uses no MCP tool
@@ -1989,13 +1991,10 @@ for _k in ("prep", "generate", "check", "load"):
     KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
 for _k in ("shape-closed", "notes-find"):
     KIND_ARGS[_k] = list(NO_BUILTINS)
-# Belt and braces, in every run's --disallowedTools: the other connectors (whole server) and the built-ins no kind needs, by
-# their names in Claude Code 2.1.300, so a --tools list that drifts still can't reach them. The shared list is F3's
-# (permissions.run_deny_extras(): the same names no allow rule may grant), so the two cannot drift; F2 adds the read-only
-# built-ins no run needs either, which F3 leaves approvable.
-F2_ONLY_DENIES = ["ListAgents", "ReportFindings", "ListMcpResourcesTool", "ReadMcpResourceTool", "ReadMcpResourceDirTool"]
-EVERY_RUN_DENIES = vault_permissions.run_deny_extras() + [t for t in F2_ONLY_DENIES
-                                                          if t not in vault_permissions.run_deny_extras()]
+# Belt and braces, in every run's --disallowedTools: F3's permissions.run_deny_extras() (the other connectors, whole server, and
+# the acting and writing built-ins no allow rule may grant) and every known built-in the run's own --tools doesn't name
+# (permissions.KNOWN_BUILTINS minus the kind's set), so a --tools list that drifts, or a CLI that ignores it, still can't reach
+# them. No list of names is kept here: KNOWN_BUILTINS is the one list (Jarvis, 15-10-2026).
 
 
 def run_args(policy, confirmed=None, only=None):
@@ -2004,6 +2003,27 @@ def run_args(policy, confirmed=None, only=None):
     if only is not None and policy not in GUARDED_KINDS and not confirmed:
         return list(NARROW_BUILTINS)
     return list(KIND_ARGS.get(policy, NO_BUILTINS))
+
+
+def run_builtins(policy, confirmed=None, only=None):
+    """The built-in tools a run's --tools names."""
+    return [t for t in run_args(policy, confirmed, only)[1].split(",") if t]
+
+
+def builtin_denies(policy, confirmed=None, only=None):
+    """F2: what every run denies by name besides its kind's own list: run_deny_extras() and each known built-in its --tools
+    doesn't name, once each."""
+    allowed = run_builtins(policy, confirmed, only)
+    out = []
+    for t in vault_permissions.run_deny_extras() + [b for b in vault_permissions.KNOWN_BUILTINS if b not in allowed]:
+        if t not in out:
+            out.append(t)
+    return out
+
+
+# The built-ins no kind names at all (derived, never written out): denied in every run.
+NEVER_BUILTINS = [b for b in vault_permissions.KNOWN_BUILTINS
+                  if not any(b in a[1].split(",") for a in [*KIND_ARGS.values(), NARROW_BUILTINS])]
 # ===== end F2 =====
 
 
@@ -2037,7 +2057,7 @@ def run_policy(kind, confirmed, only=None):
     deny = deny_tools() + KIND_DENIES.get(kind, []) + (never_denies() if guarded else [])   # BL-286: a closed run
     if only is not None and not guarded and not confirmed:
         tools, deny = list(only), deny + [t for t in ONLY_DENIES if t not in deny]
-    deny = deny + [t for t in EVERY_RUN_DENIES if t not in deny]   # F2: other connectors and unneeded built-ins, in every run
+    deny = deny + [t for t in builtin_denies(kind, confirmed, only) if t not in deny]   # F2: other connectors, unneeded built-ins
     return tools, deny, guarded
 
 
