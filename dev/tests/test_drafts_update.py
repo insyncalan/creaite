@@ -192,6 +192,7 @@ class InThePage(DraftCase):
 
     def test_the_bar_and_todays_stale_line_offer_draft_updates(self):
         b = self.b
+        b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)       # BL-327: the page's own data reload would redraw the bar away
         b.eval("go('work'); WT='actions'; renderWork()")
         b.wait("document.querySelector('#workTbl tr[data-row]')")
         b.eval("HL.clear(); ['ABC-A-001','ABC-A-002'].forEach(i=>HL.set(i,'actions')); hlPaint(); hlBar()")
