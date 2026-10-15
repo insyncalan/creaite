@@ -274,6 +274,30 @@ class CardOnly(CardOnlyMoves):
         self.assertTrue((self.archive() / "Same bytes.md").is_file())
         self.assertEqual(after, [])
 
+    def test_j_the_marker_binds_the_bytes_the_apply_loaded(self):
+        """The SHA-256 compared is of the bytes the apply loaded (and so applies), not of a second read: a file swapped after
+        the load, back to the card's bytes, is refused; the card's bytes loaded and then swapped are still the card's."""
+        self.new("Loaded")
+        got = self.py_json(
+            "import hashlib, reach, tracker, paths\n"
+            f"src, dst = {f'{ABC}/notes/Loaded.md'!r}, {f'{ABC}/_Archive/notes/Loaded.md'!r}\n"
+            "fop, blk = {'op': 'move', 'from': src, 'to': dst}, {'archive': 'notes'}\n"
+            "prop = paths.STAGING / 'proposed-2026-10-16-loaded.json'\n"
+            "card = json.dumps({'items': [], 'file_changes': {**blk, 'file_ops': [fop]}}).encode()\n"
+            "other = card.replace(b'\"items\": []', b'\"items\": [], \"x\": 1')\n"
+            "m = reach.card_move_marker('notes', src, dst); paths.GUARD.mkdir(parents=True, exist_ok=True)\n"
+            "m.write_text(json.dumps({'proposal': prop.name, 'sha256': hashlib.sha256(card).hexdigest()}))\n"
+            "def p(): return tracker.card_move_problem(fop, blk, prop)\n"
+            "out = {}\n"
+            "prop.write_bytes(other); tracker.load(prop, bind=True); prop.write_bytes(card); out['swapped_back'] = p()\n"
+            "prop.write_bytes(card); tracker.load(prop, bind=True); prop.write_bytes(other); out['card_loaded'] = p()\n"
+            "prop.write_bytes(other); tracker.load(prop); out['unbound_read'] = p()\n"
+            "m.unlink(); prop.unlink(); tracker.READ_SHA.clear()\n"
+            "print(json.dumps(out))")
+        self.assertIn(REFUSED, got["swapped_back"] or "")
+        self.assertIsNone(got["card_loaded"])
+        self.assertIsNone(got["unbound_read"])                  # only the apply's own load binds (the last bound one: the card's)
+
     def test_f_the_lists_agree_and_nobody_else_writes_the_marker(self):
         got = self.py_json(
             "import propose, reach\n"

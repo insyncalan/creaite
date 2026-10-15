@@ -1187,9 +1187,15 @@ def milestone_events(con, ids=None):
 
 # ── Proposals ─────────────────────────────────────────────────────────────────
 
-def load(p):
-    """A proposal file's JSON."""
-    return json.loads(Path(p).read_text(encoding="utf-8"))
+READ_SHA = {}    # #124 F3: the SHA-256 of the bytes the apply loaded each proposal from (the card's marker is checked against it)
+
+
+def load(p, bind=False):
+    """A proposal file's JSON. bind: the apply's own read, whose bytes the card's marker must match (#124 F3)."""
+    raw = Path(p).read_bytes()
+    if bind:
+        READ_SHA[str(p)] = hashlib.sha256(raw).hexdigest()
+    return json.loads(raw.decode("utf-8"))
 
 
 def raised_for(values, created):
@@ -1872,8 +1878,8 @@ def _renamed_back(was, dst):
 def card_move_problem(fop, blk, prop):
     """#124 F3: why this move can't be applied here, or None. A move only the live server's card makes (reach.CARD_ONLY_MOVES)
     needs the marker the server writes on Approve (reach.card_move_marker): a regular file (never a symlink), under
-    reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and its SHA-256. Checked only by the apply, never by
-    check_move (propose.py check runs that for the card's preview, before Approve)."""
+    reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256 of the bytes load() read from it (so
+    of what is applied). Checked only by the apply, never by check_move (propose.py check runs that for the card's preview)."""
     import reach
     import stat
     if blk.get("archive") not in reach.CARD_ONLY_MOVES:
@@ -1889,7 +1895,7 @@ def card_move_problem(fop, blk, prop):
         finally:
             os.close(fd)
         ok = ok and isinstance(got, dict) and prop is not None and got.get("proposal") == Path(prop).name \
-            and got.get("sha256") == file_hash(prop)
+            and got.get("sha256") == (READ_SHA.get(str(prop)) or file_hash(prop))     # the bytes that were loaded and applied
     except (OSError, ValueError):                 # no marker, a symlink, unreadable: refused
         ok = False
     return None if ok else f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
@@ -2169,7 +2175,7 @@ def _load_work(args):
         props = sorted(p.resolve() for p in paths.STAGING.glob("proposed-*.json"))
     work = []
     for p in props:
-        data = load(p)
+        data = load(p, bind=True)
         for n, d in fill_raised(data):   # BL-26; kept in the proposal when it's saved after apply
             print(f"{p.name} item {n}: Raised set to {shown(d)} (source or staging date)")
         items, blks = decided(data)
