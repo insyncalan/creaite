@@ -11,7 +11,6 @@
 import { draftAsk, draftStat } from "../../drafts.js";
 
 /** @typedef {{id: string, heading: string, type: string, text?: string, panes?: {title: string, text: string}[]}} Sec */
-/** @typedef {import("./Sheet.jsx").Redraft} Redraft */
 
 /** The feature (and kind) each place counts under. */
 export const REDRAFT_KIND = /** @type {const} */ ({ report: "report-section", minutes: "minutes-section" });
@@ -24,7 +23,7 @@ export function redraftRequest(s, base, kind, action = "polish", instruction = "
 }
 
 /** The Redraft the Sheet shows for /api/draft's answer `r` to section `s`, or throws the words to show.
-    @param {any} r @param {Sec} s @returns {Redraft} */
+    @param {any} r @param {Sec} s @returns {import("./Sheet.jsx").Redraft} */
 export function redraftAnswer(r, s) {
   if (r.nothing) throw new Error(r.nothing);
   if (!r.ok || !r.text) throw new Error(r.message || "No draft came back");
@@ -37,7 +36,7 @@ export function redraftAnswer(r, s) {
 
 /** What the Sheet's onRedraft calls: asks for the draft and answers the Redraft, or throws the words to show.
     @param {() => Record<string, any>} base the report or minutes the section is in (read when ✦ is pressed)
-    @param {"report"|"minutes"} place @returns {(s: Sec) => Promise<Redraft>} */
+    @param {"report"|"minutes"} place @returns {(s: Sec) => Promise<import("./Sheet.jsx").Redraft>} */
 export function redrafter(base, place) {
   return async s => redraftAnswer(await draftAsk(redraftRequest(s, base(), REDRAFT_KIND[place]), { label: `Redrafting ${s.heading}` }), s);
 }
