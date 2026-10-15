@@ -77,6 +77,10 @@ export const viaServer=()=>SERVED&&shared.LIVE;
 shared.VW={ read:(...a)=>(viaServer()?SVW:FVW).read(...a), write:(...a)=>(viaServer()?SVW:FVW).write(...a), remove:(...a)=>(viaServer()?SVW:FVW).remove(...a),
   exists:(...a)=>(viaServer()?SVW:FVW).exists(...a), append:(...a)=>(viaServer()?SVW:FVW).append(...a), upload:(...a)=>(viaServer()?SVW:FVW).upload(...a) };
 export const oneLine=m=>String(m||"").split("\n").map(x=>x.trim()).filter(Boolean).join(" · ").slice(0,240);
+/* #92: tracker.py refuses an apply when a file changed after the item was staged ("write: <path> changed since this proposal was
+   made"); said in plain words, with what to do. Only the page's wording: tracker.py's refusal is unchanged. */
+export const applyWords=m=>{ const t=String(m||""), f=t.match(/write: (.+?) changed since this proposal was made/);
+  return f?`${f[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.`:t; };
 /* fresh data after an apply or undo */
 /* BL-216: Review keeps its selection and highlight across a reload (rvHold before, rvRestore after) */
 export function rvHold(){ const keys=[...RHL].map(n=>REV.find(x=>x.n===n)).filter(Boolean).map(rvKey), t=$$("#reviewBody tr[data-n]")[shared.RSEL], cr=t&&REV.find(x=>x.n===+t.dataset.n); return {keys,ck:cr&&rvKey(cr)}; }
@@ -100,7 +104,7 @@ export async function reloadData(){ PULSE.reloads++; try{   /* BL-253: reloads i
    that data is over a minute old the page fetches the rest straight after its first paint, through the usual reload */
 export function bootPageRefresh(){ if(SERVED&&D.page_refresh) reloadData(); }
 /* BL-189 (sprint-milestones): every apply but the peek's own leaves the peek's staged changes in staging (hold_peek); pkApply passes peek */
-export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); return r; }
+export async function applyNow(o){ const r=await api("/api/apply",o&&o.peek?{}:{hold_peek:true}); await reloadData(); if(!r.ok) r.message=applyWords(r.message); return r; }
 export let undoApply = async function(id,ids){ const u=await api("/api/undo",{apply_id:id}); if(!(ids&&await refreshRecords(ids))) await reloadData(); snack(u.ok?"Undone":oneLine(u.message)); };   /* BL-304: ids, just those items again */
 /* BL-304: just these items again (Review keeps its selection; the peek's staging is reconciled), or false */
 export async function refreshRecords(ids){ if(!SERVED) return false; return await recordsRefresh(ids,{hold:rvHold,restore:rvRestore,after:async()=>{ await pkReconcile(); }}); }
@@ -199,7 +203,7 @@ async function saveApply(op){ PULSE.reloads++;   /* its own change event waits f
     op.state="writing"; try{ op.name=await writeProposal(op.items,op.extra); }catch(e){ return await opFail(op,"Not saved: "+e.message); }
     if(op.cancel){ await opDropFile(op.name); op.state="cancelled"; return false; }
     op.state="applying"; const res=await api("/api/apply",{hold_peek:true});
-    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(res.message)); }
+    if(!res.ok){ await opDropFile(op.name); return await opFail(op,"Not saved: "+oneLine(applyWords(res.message))); }
     let held=false; try{ held=await shared.VW.exists("system/staging/"+op.name); }catch(e){ held=false; }
     if(held){ await opDropFile(op.name); const ids=opIds(op); return await opFail(op,`Not saved: ${ids.join(", ")||"it"} changed elsewhere; reloaded ${ids.length>1?"them":"it"}`); }   /* held as a conflict: not applied */
     op.state="done"; op.apply_id=res.apply_id; ovDrop(op.recs);

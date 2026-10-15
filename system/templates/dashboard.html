@@ -3571,6 +3571,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     applySoon: () => applySoon,
     applyTheme: () => applyTheme,
     applyView: () => applyView,
+    applyWords: () => applyWords,
     approveGroup: () => approveGroup,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
@@ -39699,6 +39700,10 @@ ${d5.text}`);
     upload: (...a5) => (viaServer() ? SVW : FVW).upload(...a5)
   };
   var oneLine = (m5) => String(m5 || "").split("\n").map((x5) => x5.trim()).filter(Boolean).join(" · ").slice(0, 240);
+  var applyWords = (m5) => {
+    const t5 = String(m5 || ""), f5 = t5.match(/write: (.+?) changed since this proposal was made/);
+    return f5 ? `${f5[1].split("/").pop()} changed after this item was staged, so nothing was written. Stage it again from the current file, or drop it in Review.` : t5;
+  };
   function rvHold() {
     const keys = [...RHL].map((n4) => REV.find((x5) => x5.n === n4)).filter(Boolean).map(rvKey), t5 = $$("#reviewBody tr[data-n]")[shared.RSEL], cr = t5 && REV.find((x5) => x5.n === +t5.dataset.n);
     return { keys, ck: cr && rvKey(cr) };
@@ -39768,6 +39773,7 @@ ${d5.text}`);
   async function applyNow(o5) {
     const r4 = await api("/api/apply", o5 && o5.peek ? {} : { hold_peek: true });
     await reloadData();
+    if (!r4.ok) r4.message = applyWords(r4.message);
     return r4;
   }
   var undoApply = async function(id, ids) {
@@ -40019,7 +40025,7 @@ ${d5.text}`);
       const res = await api("/api/apply", { hold_peek: true });
       if (!res.ok) {
         await opDropFile(op.name);
-        return await opFail(op, "Not saved: " + oneLine(res.message));
+        return await opFail(op, "Not saved: " + oneLine(applyWords(res.message)));
       }
       let held = false;
       try {
@@ -40778,8 +40784,10 @@ ${d5.text}`);
         "apply",
         "applyFilters",
         "applyMotion",
+        "applyNow",
         "applyTheme",
         "applyView",
+        "applyWords",
         "askLive",
         "askPerson",
         "askWorking",
