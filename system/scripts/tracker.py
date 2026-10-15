@@ -1270,8 +1270,13 @@ def resolve_proposal(arg):
 
 
 def via_for(prop_path, data):
-    """What change_log records as the source of an apply: the proposal's source_run, else its file name."""
+    """What change_log records as the source of an apply: the proposal's source_run, else its file name. The daily archiving
+    (BL-10: items only, each an archive_item) is recorded as "archive", so Activity names it; it is not one of Alan's own
+    edits (VIA_NAMES), and a report archive (files only) keeps its file name."""
     run = data.get("source_run", "")
+    items = data.get("items") or []
+    if run == AGE_SOURCE and items and all(i.get("op") == AGE_OP for i in items):
+        return AGE_SOURCE
     return run if run in VIA_NAMES else Path(prop_path).name
 
 
