@@ -28,7 +28,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 FAKE = r'''#!/usr/bin/env python3
 import json, os, subprocess, sys
 args = sys.argv[1:]
-message = args[args.index("-p") + 1].split("\n")[0]
+message = args[args.index("--") + 1].split("\n")[0]
 system = args[args.index("--append-system-prompt") + 1] if "--append-system-prompt" in args else ""
 confirmed = system.startswith("Alan has confirmed")
 out = lambda o: print(json.dumps(o), flush=True)

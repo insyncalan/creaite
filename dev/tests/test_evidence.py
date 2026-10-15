@@ -23,7 +23,7 @@ NOW = "2026-10-09 13:00"
 FAKE = r'''#!/usr/bin/env python3
 import json, sys
 args = sys.argv[1:]
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 open(__file__ + ".prompt", "w", encoding="utf-8").write(message)
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-x"})

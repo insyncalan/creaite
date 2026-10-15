@@ -27,7 +27,7 @@ FAKE = r'''#!/usr/bin/env python3
 import json, sys
 from pathlib import Path
 args = sys.argv[1:]
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 if p.startswith("creaite VIP check"):
     print(json.dumps({"type": "result", "result": "[]"}))
     sys.exit(0)
