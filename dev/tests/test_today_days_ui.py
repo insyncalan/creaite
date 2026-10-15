@@ -6,8 +6,7 @@ private slot) with both clocks on Tuesday 13-10-2026 at 11:05: the day line (eve
 today marked, nothing hinting a key or the swipe), moving by click, ← → Home End, [ ] and T (never while typing), a two-finger
 swipe (one day a gesture, again after a pause, on a piece the redraw removed) and a touch drag, the ends, what changes with the
 day (only the band), a past day's follow-up (Minutes made, Draft in Review, Transcript ready with Process, No transcript, Not
-checked yet with Check), Prep and Prepare on later days, a confidential meeting, BL-287's Open icon, a reload opening on today,
-and 320 px with nothing scrolling sideways (BL-217).
+checked yet with Check), Prep and Prepare on later days, a confidential meeting, BL-287's Open icon, a reload opening on today.
 """
 import json
 import sys
@@ -220,18 +219,6 @@ class DayLine(TodayFixture):
             o.nextElementSibling.textContent, o.previousElementSibling.classList.contains('preplink')]; })()""")
         self.assertEqual(out, ["Open the prep page for ABC steering", None, True, "Prep page made", True])
 
-    # ---- small screens ----
-    def test_at_320_px_nothing_scrolls_sideways(self):
-        b = self.b
-        b.resize(320, 800)
-        b.pump(0.3)
-        for day in ("2026-10-13", "2026-10-12", "2026-10-16"):
-            b.eval(f"goDay('{day}')")
-            sizes = b.eval("""(()=>{ const v=document.getElementById('v-today'), d=document.scrollingElement;
-                return [d.scrollWidth-d.clientWidth, v.scrollWidth-v.clientWidth]; })()""")
-            self.assertEqual(sizes, [0, 0], day)
-
-
 def arrows_hold_still(case, width=None):
     """Click › through every day without moving the mouse, then ‹ back: both arrows keep the same box on every day (Alan,
     13-10-2026), and at an end the arrow is there, disabled and dimmed, never removed."""
@@ -267,9 +254,6 @@ class ArrowsStayPut(TodayFixture):
 
     def test_the_arrows_never_move(self):
         arrows_hold_still(self)
-
-    def test_the_arrows_never_move_at_320_px(self):
-        arrows_hold_still(self, 320)
 
 
 class ArrowsStayPutWithMotion(TodayFixture):

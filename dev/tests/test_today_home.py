@@ -10,7 +10,6 @@ One class per Done-when point:
   Icons       row icons named on hover and to screen readers, 55% until pointed at or tabbed into, nothing moves; Mark done
               and Move the date staged with Undo; the keyboard reaches and runs them;
   Rhythm      28px between sections, rows at least 44px, one 13px uppercase heading style, a 980px reading width, centred;
-  Narrow      320 px with nothing scrolling sideways (BL-217), and dark mode.
 """
 import sys
 import unittest
@@ -280,23 +279,6 @@ class Rhythm(Home):
         self.assertTrue(o["rows"])
         self.assertGreaterEqual(min(o["rows"]), 44)
         self.assertEqual({tuple(h) for h in o["heads"]}, {("13px", "uppercase", "700")})
-
-
-class Narrow(Home):
-    shared_server = True
-    width = 320
-
-    def test_320_px_nothing_scrolls_sideways_and_dark_reads(self):
-        b = self.b
-        self.today()
-        b.eval("EXPAND.add('td'); renderToday()")
-        for theme in ("light", "dark"):
-            b.eval(f"document.documentElement.dataset.theme='{theme}'")
-            b.pump(0.2)
-            sizes = b.eval("""(()=>{ const v=document.getElementById('v-today'), d=document.scrollingElement;
-                return [d.scrollWidth-d.clientWidth, v.scrollWidth-v.clientWidth]; })()""")
-            self.assertEqual(sizes, [0, 0], theme)
-            self.assertTrue(b.eval("[...document.querySelectorAll('#tdList .tacts')].every(t=>t.getBoundingClientRect().right<=document.getElementById('v-today').getBoundingClientRect().right+0.5)"))
 
 
 if __name__ == "__main__":

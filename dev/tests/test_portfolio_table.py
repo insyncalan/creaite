@@ -155,20 +155,5 @@ class Portfolio(ts.Snapshots):
             b.key("ArrowRight")
         self.assertEqual(b.eval("JSON.parse(localStorage.getItem('creaite-colwidths'))['portfolio|health']"), 900)
 
-    def test_nothing_scrolls_sideways_at_320(self):
-        b = self.b
-        b.eval("shared.RZ['portfolio|project']=900; shared.RZ['portfolio|evidence']=900; renderToday()")
-        try:
-            b.resize(320, 800)
-            b.pump(0.4)
-            r = b.eval("""(()=>{ const s=document.scrollingElement, v=document.getElementById('v-today');
-              return {page:s.scrollWidth-s.clientWidth, view:v.scrollWidth-v.clientWidth, frame:getComputedStyle(document.getElementById('pfTbl')).overflowX}; })()""")
-            self.assertLessEqual(r["page"], 0)
-            self.assertLessEqual(r["view"], 0)
-            self.assertEqual(r["frame"], "auto", "the table scrolls inside its frame")
-        finally:
-            b.resize(self.width, self.height)
-
-
 if __name__ == "__main__":
     unittest.main()

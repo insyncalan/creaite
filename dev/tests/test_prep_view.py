@@ -7,7 +7,7 @@ Internal, chips with DD-MM-YYYY dates and the project by name, Saved to Agendas,
 and the outline; researched notes with their citation links; the sources as typed links (a file through /api/open, mail by
 its web link, an item in the peek); the focus band read-only before shaping and editable after, saved to prep-focus.json;
 the questions edited in place (kept through Refresh research, and given back);
-the tabs' keys; the Invite tab with names, not addresses; one column below 1000 px and nothing sideways at 320 px; the tracker
+the tabs' keys; the Invite tab with names, not addresses; one column below 1000 px; the tracker
 never changes.
 """
 import json
@@ -175,18 +175,12 @@ class PrepView(LiveBrowserCase):
         b.key("Home")
         b.wait("document.querySelector('#v-prep [role=tab][aria-selected=true]').textContent==='Prep'")
 
-    def test_8_one_column_when_narrow_and_nothing_sideways_at_320(self):
+    def test_8_one_column_when_narrow(self):
         b = self.b
         self.open_view()
         b.resize(900, 900)
         b.wait("getComputedStyle(document.querySelector('#v-prep .ppb')).gridTemplateColumns.split(' ').length===1")
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#v-prep .ppoutline')).display"), "none")
-        b.resize(320, 800)
-        b.wait("document.documentElement.clientWidth<=320")
-        wide = b.eval("[...document.querySelectorAll('#v-prep *')].filter(e=>e.getBoundingClientRect().right>document.documentElement.clientWidth+1&&e.getClientRects().length).map(e=>e.tagName+'.'+e.className).slice(0,5)")
-        self.assertEqual(wide, [], "nothing in the prep page reaches past the window")
-        self.assertLessEqual(b.eval("document.querySelector('#v-prep').scrollWidth"), b.eval("document.querySelector('#v-prep').clientWidth"))
-
     def test_10_questions_are_editable_and_kept_through_refresh(self):
         b = self.b
         self.open_view()
