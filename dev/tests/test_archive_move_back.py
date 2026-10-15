@@ -204,7 +204,7 @@ class MoveBack(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("already exists", r.stdout)
         self.v.propose("taken", [], file_changes={**spec["file_changes"], "file_changes_decision": "approved"})
-        r = self.run_at("apply", script="tracker.py", ok=False)
+        r = self.run_at("apply", "proposed-taken.json", script="tracker.py", ok=False)   # named: a full apply leaves it (#124 F3)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("never overwrites", r.stdout)
         self.assertEqual((self.abc / DUE[1]).read_text(), "a newer file with the same name\n")    # never overwritten
@@ -221,7 +221,7 @@ class MoveBack(unittest.TestCase):
         fc = {"title": "x", "archive": "reports_back", "file_changes_decision": "approved",
               "file_ops": [{"op": "move", "from": f"{self.base}/_Archive/{name}", "to": stored}]}
         self.v.propose("hand", [], file_changes=fc)
-        r = self.run_at("apply", script="tracker.py", ok=False)
+        r = self.run_at("apply", "proposed-hand.json", script="tracker.py", ok=False)    # named: a full apply leaves it (#124 F3)
         self.assertIn("isn't a file the archive moved there", r.stdout)
         self.assertTrue((self.abc / "_Archive" / name).is_file())
         self.assertEqual(self.spec(f"{self.base}/../x/{name}")[1], "that isn't a stored project path")
