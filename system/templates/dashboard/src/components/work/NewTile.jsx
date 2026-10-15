@@ -6,10 +6,10 @@ import { render } from "preact";
 import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
 
-/** @typedef {{word: string, decisions: boolean, hidden: boolean, onNew: () => void, onDecision: (how: "made" | "needed") => void}} NewTileProps */
+/** @typedef {{word: string, decisions: boolean, hidden: boolean, onNew: () => void, onDecision: (how: "made" | "needed") => void, id?: string}} NewTileProps */
 
 /** @param {NewTileProps} props */
-export function NewTile({ word, decisions, hidden, onNew, onDecision }) {
+export function NewTile({ word, decisions, hidden, onNew, onDecision, id = "newBtn" }) {
   if (decisions) {
     return (
       <Menu label={word} ariaLabel={word} tip={word} icon="plus" labelCls="w" id="newBtn" btnCls="newb hasmenu" hidden={hidden}
@@ -22,7 +22,7 @@ export function NewTile({ word, decisions, hidden, onNew, onDecision }) {
   }
   return (
     <span class="dd">
-      <button type="button" class="newb" id="newBtn" aria-label={word} data-tip={word} hidden={hidden} onClick={onNew}>
+      <button type="button" class="newb" id={id} aria-label={word} data-tip={word} hidden={hidden} onClick={onNew}>
         <Icon name="plus" /><span class="w">{word}</span><Icon name="chevdown" cls="nch" />
       </button>
     </span>

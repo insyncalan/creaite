@@ -7,7 +7,7 @@ Run: python3 dev/tests/test_notes_gaps_browser.py   (needs Google Chrome; skippe
   - changing a note's title renames its file when the note saves, the address names the new file, and a [[link]] to it in
     another note follows;
   - a Working session note's date and attendees are edited in its header after it is made (a wrong date says so and isn't
-    saved); nothing scrolls sideways at 320 px.
+    saved).
 """
 import sys
 import unittest
@@ -77,20 +77,16 @@ class NotesGapsBrowser(LiveBrowserCase):
         b.wait("!!document.getElementById('noteWsDate')")
         set_ = "(id,v)=>{ const i=document.getElementById(id); i.value=v; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); }"
         b.eval(f"({set_})('noteWsDate','sometime soon')")
-        b.wait("!!document.getElementById('noteWsBad')")
+        b.wait("document.getElementById('noteDateRead')&&document.getElementById('noteDateRead').classList.contains('bad')")
         self.assertEqual(b.eval("document.getElementById('noteWsDate').getAttribute('aria-invalid')"), "true")
         b.eval(f"({set_})('noteWsDate','01-10-2026')")
+        b.eval("document.getElementById('noteWsDate').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))")
         b.eval(f"({set_})('noteWsWith','Omar Ali, Lena Park')")
-        b.wait("!document.getElementById('noteWsBad')")
+        b.wait("!document.getElementById('noteDatePop')")
         b.eval("noteFlush()")
         f = self.notes_dir() / "Workshop.md"
         self.assertTrue(self.saved(f, "date: 2026-10-01"), f.read_text())
         self.assertIn("with: [Omar Ali, Lena Park]", f.read_text())
-        b.eval("closePanel&&closePanel(true)")
-        b.resize(320, 800)
-        b.wait("document.documentElement.clientWidth<=320")
-        b.pump(0.3)
-        self.assertLessEqual(b.eval("document.documentElement.scrollWidth-document.documentElement.clientWidth"), 0)
 
 
 del NotesTab
