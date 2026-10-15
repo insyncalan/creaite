@@ -1,9 +1,11 @@
-"""Search's answer (kind "search") is pinned to the three reading built-ins: no Bash, no writer, no web, no delegation.
+"""Search's answer (kind "search") is pinned to the three reading built-ins: no Bash, no writer, no web, no delegation, no
+Microsoft 365.
 
 The answer run has no guard hook (#60: like ask creaite), so the vault's .claude/settings.json allow rules (tracker.py, review.py,
 propose.py, filechange.py, Edit projects/**, Edit system/config/settings.json) must never apply in it: it is started with
 `--tools "Read,Grep,Glob"` and every tool that runs, writes, delegates or reaches the web denied by name as well. It still reads
-the vault (Read, Grep, Glob) and keeps the Microsoft 365 reading tools it had.
+the vault (Read, Grep, Glob); the Microsoft 365 reading tools are neither allowed nor available (least privilege: its prompt says
+never call Microsoft 365), every one denied by name.
 
 Run: python3 dev/tests/test_search_tools_pinned.py
 A throwaway vault and a stand-in `claude` (CREAITE_CLAUDE) that records its argv. No real Claude call.
@@ -51,9 +53,10 @@ class Policy(unittest.TestCase):
         import permissions
         tools, deny, guarded = L.run_policy("search", None)
         self.assertFalse(guarded)
-        self.assertEqual(tools, READERS + permissions.m365_read_tools())
-        for t in NEVER:
+        self.assertEqual(tools, READERS)
+        for t in NEVER + permissions.m365_read_tools():
             self.assertIn(t, deny)
+        self.assertFalse(any(t.startswith("mcp__") for t in tools))
         for t in L.DENY_TOOLS:                                         # Microsoft 365 actions and the rest, as before
             self.assertIn(t, deny)
         self.assertEqual(L.KIND_ARGS["search"], ["--tools", "Read,Grep,Glob"])
@@ -62,6 +65,8 @@ class Policy(unittest.TestCase):
 
     def test_other_kinds_unchanged(self):
         import live_server as L
+        import permissions
+        self.assertTrue(set(permissions.m365_read_tools()) <= set(L.run_policy("ask", None)[0]))   # a chat keeps them
         self.assertEqual(L.run_policy("ask", None)[0][:4], ["Read", "Grep", "Glob", "Skill"])
         self.assertNotIn("Bash", L.run_policy("prep", None)[1])
         self.assertNotIn("prep", L.KIND_ARGS)
@@ -103,12 +108,13 @@ class ServerCommand(unittest.TestCase):
 
     def test_only_the_reading_built_ins(self):
         self.assertEqual(flag(self.args, "--tools"), "Read,Grep,Glob")
-        self.assertNotIn("--strict-mcp-config", self.args)           # the Microsoft 365 reading tools stay
+        self.assertNotIn("--strict-mcp-config", self.args)           # denied by name instead (below)
 
     def test_allowed_has_no_command_or_writer(self):
         allowed = flag(self.args, "--allowedTools").split(",")
         self.assertEqual(allowed[:3], READERS)
-        self.assertTrue(all(t in READERS or t.startswith("mcp__claude_ai_Microsoft_365__") for t in allowed), allowed)
+        self.assertEqual(allowed, READERS)
+        self.assertFalse(any(t.startswith("mcp__") for t in allowed), allowed)
         for t in VAULT_ALLOWS:
             self.assertFalse(any(t in x for x in allowed), t)
 
@@ -117,6 +123,12 @@ class ServerCommand(unittest.TestCase):
         for t in NEVER:
             self.assertIn(t, denied)
         self.assertFalse(set(READERS) & set(denied))
+
+    def test_every_microsoft_365_tool_is_denied(self):
+        import permissions
+        denied = flag(self.args, "--disallowedTools").split(",")
+        for t in permissions.m365_read_tools() + permissions.m365_action_tools():
+            self.assertIn(t, denied)
 
     def test_no_guard_hook_and_no_permission_skips(self):
         self.assertNotIn("--settings", self.args)                     # #60: Search's answer is like ask creaite
