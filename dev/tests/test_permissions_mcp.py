@@ -1,6 +1,7 @@
 """F3 (review #116): no allow rule for an MCP server other than Microsoft 365's reading tools, nor for a built-in tool that acts
 outside the laptop, is written whatever is approved: not by the one card (settings_problem), not by a permission edit
-(validate_edit), not by a PERMISSION: line from a run. Doctor flags one already in .claude/settings.json.
+(validate_edit), not by a PERMISSION: line from a run. Doctor flags one already in .claude/settings.json,
+settings.local.json or ~/.claude/settings.json.
 
 Run: python3 dev/tests/test_permissions_mcp.py
 """
@@ -141,10 +142,16 @@ class Doctor(unittest.TestCase):
         self.v.run("init")
         self.addCleanup(self.v.cleanup)
         self.file = self.v.root / ".claude" / "settings.json"
+        import shutil
+        import tempfile
+        self.home = Path(tempfile.mkdtemp())                     # a fake HOME: the real ~/.claude/settings.json is never read
+        self.addCleanup(shutil.rmtree, self.home, True)
 
-    def line(self):
+    def line(self, home=None):
+        import os
+        env = dict(os.environ, HOME=str(home or self.home))
         out = subprocess.run([sys.executable, str(self.v.root / "system/scripts/doctor.py")], cwd=self.v.root,
-                             capture_output=True, text=True).stdout
+                             capture_output=True, text=True, env=env).stdout
         return next(line for line in out.splitlines() if "Assistant permissions" in line)
 
     def test_doctor_flags_another_connector_or_an_acting_builtin(self):
@@ -158,6 +165,27 @@ class Doctor(unittest.TestCase):
             self.assertIn(why, line)
             data["permissions"]["allow"].remove(rule)
             self.file.write_text(json.dumps(data))
+
+    def test_doctor_flags_them_in_the_local_and_user_files(self):
+        home = self.home
+        user = home / ".claude" / "settings.json"
+        user.parent.mkdir()
+        local = self.v.root / ".claude" / "settings.local.json"
+        self.assertNotIn("broader than creaite asks for", self.line(home))      # neither file: nothing to flag
+        user.write_text("not json")
+        self.assertNotIn("broader than creaite asks for", self.line(home))      # unreadable: skipped, no crash
+        user.write_text(json.dumps({"permissions": {"allow": ["mcp__claude_ai_Todoist__add-tasks", "Read(**)"]}}))
+        line = self.line(home)
+        self.assertIn("mcp__claude_ai_Todoist__add-tasks in ~/.claude/settings.json", line)
+        self.assertNotIn("Read(**)", line)
+        user.write_text(json.dumps({"permissions": {"allow": [M365 + "outlook_email_search"]}}))
+        self.assertNotIn("broader than creaite asks for", self.line(home))      # a Microsoft 365 reading tool is fine
+        local.write_text(json.dumps({"permissions": {"allow": ["CronCreate", M365 + "outlook_send_mail"]}}))
+        line = self.line(home)
+        self.assertIn("CronCreate in .claude/settings.local.json", line)
+        self.assertIn(M365 + "outlook_send_mail in .claude/settings.local.json", line)
+        local.write_text(json.dumps(["not", "a", "settings", "file"]))
+        self.assertNotIn("broader than creaite asks for", self.line(home))
 
 
 if __name__ == "__main__":
