@@ -21,4 +21,5 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 - **Pull requests close plan items:** put `closes insyncalan/creaite-plan#N` in the description.
 - **Worktrees** only for work in flight, in `.claude/worktrees/`. Whoever made one removes it, and its local branch, as soon as the work has landed.
 - **The repo is public.** No real client, company, project or person's name anywhere: use the fictional demo data. `dev/tests/test_no_real_names.py` guards it.
+- **Hand checks:** every hand check names the automated test that covers it (`file::test`), or is marked `judgement` (on the screenshot sheet) or `live only`, with the reason. `just handchecks vX.Y.Z` runs them (BL-341).
 - **Notes:** a note for an item lives on its issue. Notes for shipped releases are in `dev/archive/notes/<release>/`.
