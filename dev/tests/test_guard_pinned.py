@@ -6,7 +6,8 @@ Two parts, both in a throwaway vault with a fake home folder (a stand-in .ssh ke
 LaunchAgents, a shell start-up file, browser logins), so the home-folder rules are exercised for real and nothing touches
 the real home folder:
 - decisions: reach.classify (paths × operations, marked or not, a bulk count), reach.tier, reach.bash_problem,
-  reach.hook_decision (tool calls in both modes), permissions.check_full (rules), permissions.settings_problem and
+  reach.hook_decision (tool calls in both modes), reach.decide (#60 option (a): ask and the Prep page run's mode "prep",
+  with a notes folder holding a confidential note), permissions.check_full (rules), permissions.settings_problem and
   validate_edit (edited settings files), permissions.preview_list (list edits);
 - flows, end to end through the command lines: filechange.py create, edit, move, delete, a settings file, outside the
   vault, a never path, list and undo; permissions.py edit, list and undo; begin_file_edit and finish_file_edit (kept,
@@ -107,6 +108,21 @@ calls = [("Read", {"file_path": ABC + "/notes.md"}), ("Read", {"file_path": H + 
 for mode in ("ask", "confirmed"):
     for tool, inp in calls:
         out["hook"][f"{mode} | {tool} | {short(json.dumps(inp, sort_keys=True), 140)}"] = list(reach.hook_decision(tool, inp, mode, ""))
+# #60 option (a) (Alan, 15-10-2026): the Prep page run's mode, through reach.decide, as the hook calls it. The same calls, then
+# a notes folder with an ordinary note and a confidential one (made here, after every other decision, so none of them changes)
+os.makedirs(ABC + "/notes", exist_ok=True)
+open(ABC + "/notes/Open.md", "w").write("---\ntitle: Open\nconfidential: false\n---\n\nOrdinary.\n")
+open(ABC + "/notes/Closed.md", "w").write("---\ntitle: Closed\nconfidential: true\n---\n\nKept back.\n")
+prep_calls = calls + [("Read", {"file_path": ABC + "/notes/Open.md"}), ("Read", {"file_path": ABC + "/notes/Closed.md"}),
+                      ("Grep", {"pattern": "x", "path": ABC + "/notes"}), ("Grep", {"pattern": "x", "path": ABC + "/minutes"}),
+                      ("Glob", {"pattern": "*.md", "path": ABC + "/notes"}), ("Grep", {"pattern": "x"}),
+                      ("Read", {"file_path": "system/tracker.db"}), ("LS", {"path": "system/backups"}),
+                      ("Bash", {"command": "system/scripts/run search.py preview '" + ABC + "/notes/Closed.md'"}),
+                      ("Bash", {"command": "system/scripts/run search.py preview '" + ABC + "/notes/Open.md'"}),
+                      ("Bash", {"command": "CREAITE_RUN_KIND= system/scripts/run search.py query x"})]
+for mode in ("ask", "prep"):
+    for tool, inp in prep_calls:
+        out["hook"][f"{mode} | notes | {tool} | {short(json.dumps(inp, sort_keys=True), 140)}"] = list(reach.decide(tool, inp, mode, ""))
 for r in ["Bash(python3 system/scripts/tracker.py *)", "Bash(python3 system/scripts/tracker.py:*)",
           "Bash(python3 system/scripts/report.py *)", "Bash(python3 system/scripts/permissions.py *)", "Bash(rm *)",
           "Bash(*)", "Bash", "Bash(python3 *)", "Bash(system/scripts/run tracker.py *)", "Edit(**)", "Edit(inbox/**)",
