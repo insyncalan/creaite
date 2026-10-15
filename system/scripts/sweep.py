@@ -23,7 +23,7 @@ Commands:
   calendar-window          the days the calendar should cover, as JSON: from the start of settings.json
                            inbox.meetings_from ("monday" = Monday of this week, or a number of days back) to 7 days ahead
   transcripts todo|record <facts.json>|show
-                           BL-42 phase 3: which meetings in the Calendar Import window to look up for a transcript, and keep what
+                           BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
                            was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py
   vip addresses|record <found.json> [--found sweep|start-up|check]|seen <id…>|--all|list
                            VIPs (BL-99): the addresses to check, recording alerts in system/staging/vip.json (from a
@@ -340,6 +340,10 @@ def stage(spec_file):
         if rule:
             ignored[rule] = ignored.get(rule, 0) + 1
             notes.append(f"skipped (ignore rule “{rule}”): {text}")
+            continue
+        if summarised(v["source"], raw.get("conversation")):           # BL-334 C: on Today's card already, nothing newer
+            notes.append(f"skipped (that conversation is summarised on Today; Create work item there): {text}")
+            why["summarised on Today"] = why.get("summarised on Today", 0) + 1
             continue
         item = {"op": "new", "table": table, "values": v}
         if tracker.fingerprint(item) in rejected:
@@ -960,7 +964,8 @@ def vip_state():
         st = json.loads(VIP_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         st = {}
-    return {"last_check": st.get("last_check"), "alerts": [a for a in st.get("alerts") or [] if isinstance(a, dict)]}
+    return {"last_check": st.get("last_check"), "alerts": [a for a in st.get("alerts") or [] if isinstance(a, dict)],
+            **({"held": st["held"]} if isinstance(st.get("held"), dict) and st["held"] else {})}
 
 
 def vip_save(st):
@@ -993,34 +998,322 @@ def vip_project(m):
 
 
 def vip_record(found, how="sweep"):
-    """Record the VIP messages in found ([{kind, from, subject, sent, link, gist, sensitivity, project}]). Messages
-    not from a VIP address are left out; ignore rules and project matching don't apply. Returns the new alerts."""
+    """Record what the check or the sweep found. Each entry is a conversation (BL-334: {"conversation", "kind", "title",
+    "people", "from", "last", "link", "sensitivity", "attachments", "summary", "items"}; conv_record) or, as before, one
+    message ({kind, from, subject, sent, link, gist, sensitivity, project}). Only a conversation or a message from a followed
+    address is kept; ignore rules don't apply. Returns the new or updated alerts."""
     vips = vip_addresses()
     st = vip_state()
     have = {a["id"] for a in st["alerts"]}
+    held = st.setdefault("held", {}) if how in ("check", "start-up") else None
     new = []
     for m in found if isinstance(found, list) else []:
-        addr = address_of(m.get("from"))
-        if not isinstance(m, dict) or addr not in vips:
+        if not isinstance(m, dict):
             continue
-        aid = vip_id(m)
-        if aid in have:
-            continue
-        sens = str(m.get("sensitivity") or "").lower()
-        alert = {"id": aid, "who": vips[addr], "address": addr, "kind": m.get("kind") or "mail",
-                 "subject": " ".join(str(m.get("subject") or "(no subject)").split())[:200],
-                 "sent": str(m.get("sent") or "")[:16], "link": str(m.get("link") or "")[:1000] or None,
-                 "p": vip_project(m), "gist": " ".join(str(m.get("gist") or "").split())[:GIST],
-                 "marker": "private" if sens in ("private", "personal") else "confidential" if sens == "confidential" else None,
-                 "found": how, "at": now().strftime("%Y-%m-%d %H:%M"), "seen": None}
-        st["alerts"].append(alert)
-        have.add(aid)
-        new.append(alert)
+        is_conv = bool(m.get("conversation")) or "summary" in m or "items" in m
+        got = conv_record(st, m, vips, how, held) if is_conv else msg_record(st, m, vips, how, have)
+        if got:
+            new.append(got)
     if how in ("check", "start-up") or new:
-        if how in ("check", "start-up"):
-            st["last_check"] = now().strftime("%Y-%m-%d %H:%M")
+        if how in ("check", "start-up") and not st.get("held"):
+            st["last_check"] = now().strftime("%Y-%m-%d %H:%M")     # BL-334: not past a conversation still being waited for
+        if not st.get("held"):
+            st.pop("held", None)
         vip_save(st)
     return new
+
+
+def msg_record(st, m, vips, how, have):
+    """One message as its own alert (BL-99, the shape before BL-334), or None when it isn't from a followed address or is
+    alerted already."""
+    addr = address_of(m.get("from"))
+    if addr not in vips:
+        return None
+    aid = vip_id(m)
+    if aid in have:
+        return None
+    alert = {"id": aid, "who": vips[addr], "address": addr, "kind": m.get("kind") or "mail",
+             "subject": " ".join(str(m.get("subject") or "(no subject)").split())[:200],
+             "sent": str(m.get("sent") or "")[:16], "link": str(m.get("link") or "")[:1000] or None,
+             "p": vip_project(m), "gist": " ".join(str(m.get("gist") or "").split())[:GIST], "marker": marker_of(m),
+             **({"confidential": True} if marker_of(m) == "confidential" else {}),
+             "found": how, "at": now().strftime("%Y-%m-%d %H:%M"), "seen": None}
+    st["alerts"].append(alert)
+    have.add(aid)
+    return alert
+
+
+def marker_of(m):
+    """"private", "confidential" or None, from a message's or conversation's sensitivity."""
+    sens = str(m.get("sensitivity") or "").lower()
+    return "private" if sens in ("private", "personal") else "confidential" if sens == "confidential" else None
+
+# ===== BL-334: alerts read the conversation, not the message =====
+# The unit is the conversation (a Teams chat ID or a mail conversation ID): one card per conversation, updated in place when
+# it carries on ("updated HH:MM"). The check reads everyone's messages, the title, the people and the attachment names, and
+# returns Claude's own summary (at most about 300 characters) and the candidate items (actions with an owner and due date
+# where stated, decisions and risks). Greetings and chatter give no candidates: the card is one quiet line. A conversation
+# whose last message is under 15 minutes old is waited for, at most 15 minutes. The project is matched from the title first,
+# then the people, the attachment names and the content, against the register's signals. No message text is kept: the
+# summary and the candidates are Claude's words. Nothing reaches Review unless Alan asks: Create work item stages one
+# candidate; Dismiss stages nothing. The sweep skips a conversation already summarised unless newer messages came after it.
+
+SUMMARY = 300
+QUIET_WAIT = 15                                         # minutes: wait for a conversation to go quiet, at most this long
+CAND_TYPES = ("action", "decision", "risk")
+
+
+def conv_key(m):
+    """The alert ID of a conversation: from its kind and conversation ID (else its link, else its title and people)."""
+    import hashlib
+    cid = str(m.get("conversation") or m.get("link") or "|".join([str(m.get("title") or "")] + sorted(map(str, m.get("people") or []))))
+    return hashlib.sha1(f"conv:{m.get('kind') or 'teams'}:{cid}".encode("utf-8")).hexdigest()[:12]
+
+
+def _clean(text, limit):
+    """One line, at most limit characters, without the word that labels a followed person (BL-288)."""
+    t = re.sub(r"\s*[(\[]?\s*\bVIPs?\b\s*[)\]]?\s*", " ", " ".join(str(text or "").split()), flags=re.I).strip()
+    return t[:limit]
+
+
+def _when(text):
+    """A "YYYY-MM-DD HH:MM" time from text, or ""."""
+    m = re.match(r"(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})", str(text or ""))
+    return f"{m.group(1)} {m.group(2)}" if m else ""
+
+
+def _person(text):
+    """A participant as its name only (never the address)."""
+    t = str(text or "").strip()
+    return (t.split("<")[0].strip() or address_of(t)) if "<" in t else t
+
+
+def conv_title(m, people):
+    """The card's title: the chat's or thread's own title, never a generic "Group chat"; without one, the people in it."""
+    t = _clean(m.get("title") or m.get("subject"), 200)
+    if t and not re.fullmatch(r"(group )?chat|teams chat|meeting chat|\(no subject\)|no subject", t, re.I):
+        return t
+    return ", ".join(people[:4]) + (f" and {len(people) - 4} more" if len(people) > 4 else "") if people else "Conversation"
+
+
+def conv_project(m, title, people_raw, attachments, summary, cands):
+    """The project a conversation is about (BL-334 point 6): the title first, then the people (a register sender, an email
+    domain or a key stakeholder), then the attachment names, then the content; one match only, else None."""
+    try:
+        import build_dashboard
+        con = tracker.connect()
+        projects = [{"code": r[0], "name": r[1]} for r in con.execute("SELECT code, name FROM projects WHERE active = 1")]
+    except Exception:  # noqa: BLE001  a project is a nicety; the alert matters
+        return None
+    codes = {p["code"] for p in projects}
+    text = " ".join([summary] + [c["text"] for c in cands])
+    for hits in (lambda: build_dashboard.project_hits(title, projects), lambda: people_hits(people_raw),
+                 lambda: build_dashboard.project_hits(" · ".join(attachments), projects),
+                 lambda: build_dashboard.project_hits(text, projects)):
+        found = one_hit(hits(), codes)
+        if found:
+            return found
+    given = str(m.get("project") or "")
+    return given if given in codes else None
+
+
+def one_hit(hits, codes):
+    """The one active project among hits, else None (none, or more than one)."""
+    hits = {h for h in hits if h in codes}
+    return hits.pop() if len(hits) == 1 else None
+
+
+def people_hits(people):
+    """Codes whose register signals name one of the people: a sender address, an email domain or a key stakeholder."""
+    own = {str(d).lower() for d in (paths.load_settings().get("identity") or {}).get("own_domains") or []}
+    addrs = {address_of(p) for p in people} - {""}
+    names = {_person(p).lower() for p in people} - {""}
+    return {cells[0] for cells in register_rows() if row_names(cells, addrs, names, own)}
+
+
+def register_rows():
+    """The register's Projects rows with a code, as lists of cells."""
+    text = paths.REGISTER.read_text(encoding="utf-8") if paths.REGISTER.exists() else ""
+    section = ""
+    for line in text.splitlines():
+        if line.startswith("## "):
+            section = line[3:].strip()
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")] if line.startswith("|") else []
+        if section == "Projects" and len(cells) >= 9 and re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", cells[0]):
+            yield cells
+
+
+def row_names(cells, addrs, names, own):
+    """Whether a register row's senders, email domains (not Alan's own) or key stakeholders name one of the people."""
+    split = lambda c: {x.strip().lower() for x in c.split(",") if x.strip()}        # noqa: E731
+    domains = {d.lstrip("@") for d in split(cells[5])} - own
+    stake = {re.sub(r"\s*\(.*?\)", "", x).strip() for x in split(cells[4])}
+    return bool(addrs & split(cells[8]) or any(a.split("@")[-1] in domains for a in addrs) or names & stake)
+
+def conv_candidates(items):
+    """The candidate items, cleaned: [{n, type, text, owner, due}] (at most eight; Claude's words, never quoted text)."""
+    out = []
+    for it in items if isinstance(items, list) else []:
+        if not isinstance(it, dict):
+            continue
+        typ = str(it.get("type") or "action").lower()
+        text = _clean(it.get("text") or it.get("title") or it.get("description"), 200)
+        if typ not in CAND_TYPES or not text:
+            continue
+        due = str(it.get("due") or it.get("due_date") or "")[:10]
+        out.append({"type": typ, "text": text, "owner": _clean(it.get("owner"), 80) or None,
+                    "due": due if re.fullmatch(r"\d{4}-\d{2}-\d{2}", due) else None})
+        if len(out) == 8:
+            break
+    return out
+
+
+def conv_record(st, m, vips, how, held):
+    """Record or update one conversation's alert in st (BL-334). Returns the alert when it was added or changed, else None.
+    held: the conversations being waited for (a check or start-up only), {key: when first waited}; None for the sweep."""
+    people_raw = [str(p) for p in ([m.get("from")] + list(m.get("people") or [])) if p]
+    followed = followed_in(people_raw, vips)
+    if not followed:
+        return None
+    key, last = conv_key(m), conv_last(m)
+    if held is not None and still_talking(held, key, last):
+        return None
+    a = next((x for x in st["alerts"] if x.get("id") == key), None)
+    if a is not None and (a.get("last") or "") >= last:
+        return None                                                    # nothing newer: the card stays as it is
+    if a is None:
+        a = {"id": key, "conv": str(m.get("conversation") or "")[:300] or None, "kind": m.get("kind") or "teams",
+             "who": vips[followed], "address": followed, "found": how, "at": now().strftime("%Y-%m-%d %H:%M"),
+             "seen": None, "candidates": []}
+        st["alerts"].append(a)
+    a.pop("confidential", None)                                        # set again below while it is still confidential
+    a.update(conv_content(m, conv_people(people_raw, vips), people_raw))
+    return conv_finish(a, last, m.get("link"))
+
+
+def conv_last(m):
+    """When a conversation's last message was sent ("YYYY-MM-DD HH:MM"), else now."""
+    return _when(m.get("last") or m.get("sent")) or now().strftime("%Y-%m-%d %H:%M")
+
+
+def followed_in(people_raw, vips):
+    """The first followed address among a conversation's people, else ""."""
+    return next((a for a in (address_of(p) for p in people_raw) if a in vips), "")
+
+
+def conv_finish(a, last, link):
+    """Merge the candidates, set the quiet flag and the times; a card seen before comes back when there is something new."""
+    a["candidates"] = conv_merge(a.get("candidates") or [], a.pop("_cands"))
+    fresh = any(not (c.get("made") or c.get("dismissed")) for c in a["candidates"])
+    private = a["marker"] == "private"                                 # a confidential one is a card like any other
+    a.update({"quiet": not private and not fresh, "sent": last, "last": last,
+              "updated": now().strftime("%Y-%m-%d %H:%M"), "link": str(link or a.get("link") or "")[:1000] or None})
+    if a.get("seen") and (fresh or private):
+        a["seen"] = None                                               # carried on with something new: back on Today
+    return a
+
+
+def still_talking(held, key, last):
+    """Point 5: True while a conversation's last message is under 15 minutes old and it hasn't been waited for 15 minutes
+    (it is then held); False once it may be recorded."""
+    stamp = now().strftime("%Y-%m-%d %H:%M")
+    mins = lambda t: (now() - datetime.strptime(t, "%Y-%m-%d %H:%M")).total_seconds() / 60     # noqa: E731
+    try:
+        age = mins(last)
+    except ValueError:
+        age = QUIET_WAIT
+    since = held.get(key) or stamp
+    if age < QUIET_WAIT and mins(since) < QUIET_WAIT:
+        held[key] = since
+        return True
+    held.pop(key, None)
+    return False
+
+
+def conv_people(people_raw, vips):
+    """The people in a conversation by name (a followed address as the register names it), each once."""
+    people, seen = [], set()
+    for p in people_raw:
+        n = vips.get(address_of(p)) or _person(p)
+        if n and n.lower() not in seen:
+            seen.add(n.lower())
+            people.append(n)
+    return people
+
+
+def conv_content(m, people, people_raw):
+    """What a conversation's card shows: its title, people, attachment names, project, summary and marker, and its
+    candidates under "_cands". A private one keeps only a neutral line, the people as its title and no project or
+    candidates. A confidential one (Alan, 15-10-2026, plan #17) keeps Claude's own summary and candidates like any other,
+    marked "confidential": true: internal only, so no attachment names, and anything made from it is never client-visible
+    and carries the Sensitive label (vip_make); it never reaches a client report."""
+    marker = marker_of(m)
+    attachments = [_clean(x, 120) for x in (m.get("attachments") or []) if str(x or "").strip()][:20]
+    if marker == "private":
+        title = ", ".join(people[:4]) or "Conversation"
+        return {"subject": title, "title": title, "people": people[:12], "attachments": [], "p": None,
+                "summary": f"{marker} conversation", "gist": f"{marker} conversation", "marker": marker, "_cands": []}
+    closed = marker == "confidential"
+    if closed:
+        attachments = []
+    summary, cands = _clean(m.get("summary") or m.get("gist"), SUMMARY), conv_candidates(m.get("items"))
+    if closed and re.fullmatch(r"(private|confidential)( conversation)?", summary, re.I):
+        summary = ""                                                    # an older reply's placeholder is not a summary
+    title = conv_title(m, people)
+    return {"subject": title, "title": title, "people": people[:12], "attachments": attachments,
+            "p": conv_project(m, title, people_raw, attachments, summary, cands), "summary": summary,
+            "gist": summary[:GIST], "marker": marker, **({"confidential": True} if closed else {}), "_cands": cands}
+
+
+def conv_merge(old, cands):
+    """The new candidates, numbered, keeping each one's made or dismissed state; earlier ones already made or dismissed
+    stay so (they are not offered twice)."""
+    by = {norm(c["text"]): c for c in old}
+    merged = []
+    for c in cands:
+        prev = by.pop(norm(c["text"]), None) or {}
+        merged.append({**c, **{k: prev[k] for k in ("made", "dismissed") if prev.get(k)}})
+    merged += [c for c in by.values() if c.get("made") or c.get("dismissed")]
+    for i, c in enumerate(merged, 1):
+        c["n"] = i
+    return merged
+
+def vip_open(a):
+    """Whether an alert still waits for Alan: not seen, and not a quiet line."""
+    return not a.get("seen") and not a.get("quiet")
+
+
+def cand_settled(a):
+    """Mark a conversation seen once every candidate is made or dismissed (a private one has none: Dismiss settles it)."""
+    c = a.get("candidates") or []
+    if c and all(x.get("made") or x.get("dismissed") for x in c) and not a.get("seen"):
+        a["seen"] = now().strftime("%Y-%m-%d %H:%M")
+
+
+def summarised(source, conversation=None):
+    """BL-334 C: the alert that has already summarised the conversation an item comes from, with nothing newer since
+    (the item's Sent time is not after the summary's last message), else None. Matched by the conversation ID, else the
+    link, else the kind and the thread's own title."""
+    msg = message_of_source(source)
+    title = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[ext\]\s*)+", "", msg["subject"] or msg["channel"] or "", flags=re.I)
+    ref = {"conv": conversation, "link": link_of(source), "title": title.strip().lower(), "kind": msg["kind"]}
+    sent = _when((re.search(r"Sent: ([0-9: T-]+)", source or "") or [None, ""])[1]) or ""
+    for a in vip_state()["alerts"]:
+        if "summary" in a and same_conv(a, ref) and (not sent or sent <= (a.get("last") or "")):
+            return a
+    return None
+
+
+def same_conv(a, ref):
+    """Whether an alert is the conversation ref names: its conversation ID, its link, or its kind and own title."""
+    if ref["conv"] and a.get("conv") == ref["conv"]:
+        return True
+    if ref["link"] and a.get("link") == ref["link"]:
+        return True
+    return bool(ref["title"]) and a.get("kind") == ref["kind"] and str(a.get("title") or "").strip().lower() == ref["title"]
+
+# ===== end BL-334 =====
 
 
 def vip_seen(ids=None):
@@ -1049,6 +1342,10 @@ MADE_FIELDS = {"actions": ("description", "owner", "due_date", "priority", "work
                         "milestone"),
                "decisions": ("decision", "made_by", "needed_by", "options", "reasoning", "status")}
 LONG_FIELDS = ("options", "reasoning", "latest_update", "response_action")
+# A work item made from a confidential conversation (Alan, 15-10-2026, plan #17): internal only. It is never client-visible
+# (whatever the form sent) and carries the built-in Sensitive label, which keeps it out of a client report or a client-safe
+# one-pager unless Alan himself makes it client-visible and includes it.
+CONFIDENTIAL_MADE = {"client_visible": 0, "labels": ["Sensitive"], "label_reason": "Made from a confidential message"}
 
 
 def vip_find(aid):
@@ -1056,8 +1353,12 @@ def vip_find(aid):
     return next((a for a in vip_state()["alerts"] if a.get("id") == aid), None)
 
 
-def vip_dismiss(ids=None):
-    """Dismiss alerts (all of them when ids is None): out of Needs attention, kept in vip.json. Returns the IDs dismissed."""
+def vip_dismiss(ids=None, cand=None):
+    """Dismiss alerts (all of them when ids is None): out of Needs attention, kept in vip.json. Returns the IDs dismissed.
+    BL-334: with cand, only that candidate item of the one conversation named (nothing is staged); the conversation goes
+    once all of its candidates are made or dismissed."""
+    if cand is not None:
+        return cand_dismiss(ids or set(), cand, True)
     st, done = vip_state(), []
     for a in st["alerts"]:
         if not a.get("seen") and (ids is None or a["id"] in ids):
@@ -1068,9 +1369,37 @@ def vip_dismiss(ids=None):
     return done
 
 
-def vip_undismiss(ids):
+def cand_of(a, cand):
+    """Candidate number cand on an alert's card, or None."""
+    return next((x for x in (a or {}).get("candidates") or [] if x.get("n") == cand), None)
+
+
+def cand_dismiss(ids, cand, on):
+    """BL-334: dismiss (on) or put back one candidate item of the conversations named (a made one whose proposal has gone is
+    forgotten, as vip_undismiss does for a message). Nothing is staged. Returns the IDs."""
+    st, done = vip_state(), []
+    for a in st["alerts"]:
+        c = cand_of(a, cand) if a["id"] in ids else None
+        if c and on and not (c.get("dismissed") or c.get("made")):
+            c["dismissed"] = now().strftime("%Y-%m-%d %H:%M")
+            cand_settled(a)
+            done.append(a["id"])
+        elif c and not on and (c.get("dismissed") or (isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone")):
+            c.pop("dismissed", None)
+            if isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone":
+                c.pop("made")                                          # its proposal was removed before an apply (Undo)
+            a["seen"] = None
+            done.append(a["id"])
+    if done:
+        vip_save(st)
+    return done
+
+
+def vip_undismiss(ids, cand=None):
     """Undo a Dismiss: the alerts come back to Needs attention. A made item whose proposal has gone (removed before an
-    apply) is forgotten with it. Returns the IDs restored."""
+    apply) is forgotten with it. Returns the IDs restored. BL-334: with cand, that candidate item comes back."""
+    if cand is not None:
+        return cand_dismiss(ids, cand, False)
     st, done = vip_state(), []
     for a in st["alerts"]:
         if a["id"] in ids and a.get("seen"):
@@ -1133,10 +1462,10 @@ def vip_made_refresh():
     """Fill in the ID of each made item an apply has written since; saves only when one changed. Returns the state."""
     st, changed = vip_state(), False
     for a in st["alerts"]:
-        m = a.get("made")
-        if isinstance(m, dict) and not m.get("id"):
-            made_state(m)
-            changed = changed or bool(m.get("id"))
+        for m in [a.get("made")] + [c.get("made") for c in a.get("candidates") or []]:     # BL-334: each candidate's too
+            if isinstance(m, dict) and not m.get("id"):
+                made_state(m)
+                changed = changed or bool(m.get("id"))
     if changed:
         vip_save(st)
     return st
@@ -1151,29 +1480,44 @@ def made_view(made):
     return m
 
 
-def vip_prefill(aid, kind="action"):
+def vip_prefill(aid, kind=None, cand=None):
     """The new-item form's values for an alert, from its references only: the type, the project (code and name; none when
     the alert has no active project), the subject as the description, Alan as owner, no due date, raised on the sent date,
     the source in the sweep's format and the link. Raises LookupError for an unknown alert, ValueError for a wrong type."""
-    a = vip_find(aid)
-    if a is None:
-        raise LookupError("That message isn't in Needs attention any more.")
+    a, c = prefill_target(aid, cand)
+    kind = kind or (c or {}).get("type") or "action"                    # BL-334: a candidate's own type unless one is chosen
     if kind not in MADE_TYPES:
         raise ValueError("Make an action, a risk, an issue or a decision.")
     table, rtype = MADE_TYPES[kind]
     projects = active_projects()
     code = a.get("p") if a.get("p") in projects else None
-    me = my_name() or None
-    if table == "decisions":
-        v = {"decision": a.get("subject") or "", "made_by": me, "needed_by": None}
-    else:
-        v = {"description": a.get("subject") or "", "owner": me, "due_date": None, **({"type": rtype} if rtype else {})}
+    v = prefill_values(table, rtype, a, c or {})
     sent = str(a.get("sent") or "")[:10]
     return {"id": aid, "type": kind, "table": table, "project": code, "project_name": projects.get(code) if code else None,
             "needs_project": code is None, "values": v,
             "raised": sent if re.fullmatch(r"\d{4}-\d{2}-\d{2}", sent) else None,
             "source": alert_source(a), "link": a.get("link"), "who": a.get("who"), "sent": a.get("sent"),
-            "kind": a.get("kind") or "mail", "marker": a.get("marker"), "made": made_view(a.get("made"))}
+            "kind": a.get("kind") or "mail", "marker": a.get("marker"),
+            "made": made_view((c or a).get("made")), **({"cand": cand} if c else {})}
+
+
+def prefill_target(aid, cand):
+    """(alert, candidate or None) for a prefill; raises LookupError when either has gone."""
+    a = vip_find(aid)
+    if a is None:
+        raise LookupError("That message isn't in Needs attention any more.")
+    c = cand_of(a, cand) if cand is not None else None
+    if cand is not None and c is None:
+        raise LookupError("That item isn't on the card any more.")
+    return a, c
+
+
+def prefill_values(table, rtype, a, c):
+    """The form's first values: a candidate's words, owner and due date (BL-334), else the subject with Alan as owner."""
+    head, owner, due = c.get("text") or a.get("subject") or "", c.get("owner") or my_name() or None, c.get("due")
+    if table == "decisions":
+        return {"decision": head, "made_by": owner, "needed_by": due}
+    return {"description": head, "owner": owner, "due_date": due, **({"type": rtype} if rtype else {})}
 
 
 def made_values(pre, values):
@@ -1191,18 +1535,33 @@ def made_values(pre, values):
         elif isinstance(x, (int, float)) and not isinstance(x, bool):
             v[k] = x
     v["project"] = str(values.get("project") or pre.get("project") or "").strip()
-    v["raised"] = pre.get("raised") or now().strftime("%Y-%m-%d")
+    made_day(pre, v)
     v["source"] = pre["source"]
     return v
 
 
-def vip_make(aid, kind="action", values=None):
-    """Stage a work item made from an alert as the dashboard's own approved proposal (proposed-…-dashboard.json; nothing is
-    applied here), dismiss the alert and record the proposal on it. Returns {"proposal", "n", "table", "values"}; raises
+def made_day(pre, v):
+    """The made item's day: an action's or RAID item's raised date; a made decision's date (BL-334 found it: a decision has
+    no raised date), the day the message was sent."""
+    day = pre.get("raised") or now().strftime("%Y-%m-%d")
+    if pre["table"] != "decisions":
+        v["raised"] = day
+    elif (v.get("status") or "Made") != "Pending":
+        v.setdefault("date", day)
+
+
+def vip_make(aid, kind=None, values=None, cand=None):
+    """Stage a work item made from an alert as a pending proposal for Review (proposed-…-dashboard.json; BL-334: "Create work
+    item stages that item as a proposal for Review", check 45; nothing is applied here or by the page's Save), dismiss the
+    alert and record the proposal on it. Returns {"proposal", "n", "table", "values"}; raises
     LookupError, or ValueError with a reason to show (no project, no description, a field that fails validation)."""
     import propose
-    pre = vip_prefill(aid, kind)
+    pre = vip_prefill(aid, kind, cand)
+    if cand is not None and pre.get("made"):
+        raise ValueError("That item is already made.")
     v = made_values(pre, values)
+    if pre.get("marker") == "confidential":
+        v.update(CONFIDENTIAL_MADE)                                     # never client-visible; the Sensitive label carried
     if v["project"] not in active_projects():
         raise ValueError("Choose a project for it first.")
     head = "decision" if pre["table"] == "decisions" else "description"
@@ -1210,7 +1569,7 @@ def vip_make(aid, kind="action", values=None):
         raise ValueError("Give it a description.")
     spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [],
             "items": [{"n": 1, "op": "new", "table": pre["table"], "values": v, "match": "strong", "flags": [],
-                       "decision": "approved", "edited_in": "dashboard"}]}
+                       "decision": "pending", "edited_in": "dashboard"}]}
     propose.complete(spec)
     propose.people_check_spec(spec)                                     # BL-55: a registered name as the register has it
     bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
@@ -1222,13 +1581,22 @@ def vip_make(aid, kind="action", values=None):
         n += 1
     paths.STAGING.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    mark_made(aid, cand, {"proposal": out.name, "n": 1, "id": None, "at": now().strftime("%Y-%m-%d %H:%M")})
+    return {"proposal": out.name, "n": 1, "table": pre["table"], "values": spec["items"][0]["values"]}
+
+
+def mark_made(aid, cand, made):
+    """Record a made item on its alert (dismissing it), or on its one candidate (BL-334: the card goes once all are settled)."""
     st = vip_state()
     for a in st["alerts"]:
-        if a["id"] == aid:
+        c = cand_of(a, cand) if a["id"] == aid and cand is not None else None
+        if c:
+            c["made"] = made
+            cand_settled(a)
+        elif a["id"] == aid and cand is None:
             a["seen"] = a.get("seen") or now().strftime("%Y-%m-%d %H:%M")
-            a["made"] = {"proposal": out.name, "n": 1, "id": None, "at": now().strftime("%Y-%m-%d %H:%M")}
+            a["made"] = made
     vip_save(st)
-    return {"proposal": out.name, "n": 1, "table": pre["table"], "values": spec["items"][0]["values"]}
 # ===== end BL-296 =====
 
 

@@ -4,10 +4,12 @@
    with Alt and an arrow key on its row (↑ ↓ within the list, ← → across). Today always comes first in the sidebar;
    Settings can live in either. Icons only collapses the sidebar. Reset to default puts back the default lists.
    Nothing is saved until Done (Cancel, Esc or a click outside with nothing changed leave it as it was); Done saves to
-   dashboard.rail through the page's one settings route. A modal <dialog> (dev/COMPONENTS.md's Dialog): named by its
-   heading, focus to the first control, Esc closes, focus goes back to where it was opened from. Each move is said
+   dashboard.rail through the page's one settings route. The Dialog building block (dev/COMPONENTS.md §3): named by its
+   heading, focus to the first control, Esc closes, focus goes back to where it was opened from (the owner's onClose,
+   told once it has closed). Each move is said
    aloud (a polite live region). */
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { Dialog, closeDialog } from "../Dialog.jsx";
 import { RAIL_DEF, railCfg, railCustOpen, railItem } from "../../stores/rail.js";
 import { RailIcon } from "./RailIcon.jsx";
 
@@ -31,7 +33,6 @@ function placed(d, id, zone, at) {
 /** @param {CustomiseSidebarProps} props */
 export function CustomiseSidebar({ onSave, onClose }) {
   const open = railCustOpen.value;
-  const dlg = useRef(/** @type {HTMLDialogElement | null} */ (null));
   const zones = useRef(/** @type {Record<string, HTMLUListElement | null>} */ ({}));
   const focusNext = useRef(/** @type {[string, string] | null} */ (null));
   const [d, setD] = useState(() => draftOf(railCfg.value));
@@ -39,14 +40,12 @@ export function CustomiseSidebar({ onSave, onClose }) {
   const [drag, setDrag] = useState(/** @type {string | null} */ (null));
   const dRef = useRef(d); dRef.current = d;
 
-  useEffect(() => {
-    const el = dlg.current; if (!el) return;
-    if (open && !el.open) { setD(draftOf(railCfg.value)); setSaid(""); el.showModal(); el.querySelector("button:not(:disabled)")?.focus(); }
-    else if (!open && el.open) el.close();
+  useLayoutEffect(() => {          /* each opening starts from the saved sidebar (before the Dialog opens and focuses) */
+    if (open) { setD(draftOf(railCfg.value)); setSaid(""); }
   }, [open]);
   useLayoutEffect(() => {          /* after a move, focus stays on the control used (or its row, when that control is now disabled) */
-    const f = focusNext.current; if (!f || !dlg.current) return; focusNext.current = null;
-    const li = /** @type {HTMLElement | null} */ (dlg.current.querySelector(`li[data-rid="${f[0]}"]`));
+    const f = focusNext.current, box = document.getElementById("railCust"); if (!f || !box) return; focusNext.current = null;
+    const li = /** @type {HTMLElement | null} */ (box.querySelector(`li[data-rid="${f[0]}"]`));
     const b = /** @type {HTMLButtonElement | null} */ (li && li.querySelector(`[data-mv="${f[1]}"]`));
     (b && !b.disabled ? b : li)?.focus();
   });
@@ -85,7 +84,9 @@ export function CustomiseSidebar({ onSave, onClose }) {
     const how = { ArrowUp: "up", ArrowDown: "down", ArrowLeft: inTop ? null : "swap", ArrowRight: inTop ? "swap" : null }[e.key];
     if (!how) return; e.preventDefault(); mv(id, /** @type {"up"|"down"|"swap"} */ (how));
   };
-  const done = () => { onSave({ order: d.top, more: d.more, hidden: [], display: d.icons ? "icons" : "titles" }); dlg.current?.close(); };
+  const done = () => { onSave({ order: d.top, more: d.more, hidden: [], display: d.icons ? "icons" : "titles" }); closeDialog("railCust"); };
+  /* Esc and the scrim close it; the owner is told (onClose) once it has closed, so its focus return lands outside the modal */
+  const shut = () => { const el = /** @type {HTMLDialogElement | null} */ (document.getElementById("railCust")); if (el && el.open) el.close(); else onClose(); };
 
   /** @param {string} id @param {"top"|"more"} zone @param {number} i @param {number} n */
   const row = (id, zone, i, n) => {
@@ -109,8 +110,8 @@ export function CustomiseSidebar({ onSave, onClose }) {
     );
   };
   return (
-    <dialog id="railCust" ref={dlg} aria-labelledby="railCustH" aria-describedby="railCustSub"
-      onClose={onClose} onClick={e => { if (e.target === dlg.current && same(d, draftOf(railCfg.value))) dlg.current.close(); }}>
+    <Dialog open={open} onClose={shut} id="railCust" labelledBy="railCustH" describedBy="railCustSub"
+      dirty={!same(d, draftOf(railCfg.value))}>
       <h2 id="railCustH">Customise sidebar</h2>
       <p class="sub" id="railCustSub">Drag a handle between the two lists, or use the arrows (Alt with an arrow key on a row). Today always comes first; Settings can live in either.</p>
       <div class="rccols" onKeyDown={rowKeys}>
@@ -127,9 +128,9 @@ export function CustomiseSidebar({ onSave, onClose }) {
         <button type="button" class="btn quiet" id="railCustReset"
           onClick={() => { setD(draftOf(RAIL_DEF)); setSaid("Back to the default sidebar"); }}>Reset to default</button>
         <span class="grow"></span>
-        <button type="button" class="btn" id="railCustCancel" onClick={() => dlg.current?.close()}>Cancel</button>
+        <button type="button" class="btn" id="railCustCancel" onClick={() => closeDialog("railCust")}>Cancel</button>
         <button type="button" class="btn primary" id="railCustDone" onClick={done}>Done</button>
       </div>
-    </dialog>
+    </Dialog>
   );
 }

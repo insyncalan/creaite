@@ -408,12 +408,18 @@ def parse_reply(text):
 
 # ── the page ──────────────────────────────────────────────────────────────────
 
+# v1.9.5 (UI audit, prep page drift): the status colours are the dashboard's (creaite theme, light and dark) and the type is
+# its stacks (Source Sans 3 text, Schibsted Grotesk headings). The page embeds no font (one file, no url(): BL-98), so the
+# named faces show where installed and the system font otherwise.
 CSS = """
-:root{--bg:#f6f7f8;--card:#fff;--ink:#16202a;--muted:#55616b;--line:#dde3e7;--accent:#0b6e7f;--warn:#8a5a00;--warnbg:#fbf0da;--ok:#1b6b3a;--bad:#a52a2a}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1518;--card:#171e22;--ink:#e4eaed;--muted:#9aa7af;--line:#2a343a;--accent:#5fc4d6;--warn:#f0c46a;--warnbg:#3a2e12;--ok:#6fd49a;--bad:#ff9b8f}}
-*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-main{max-width:860px;margin:0 auto;padding:24px 16px 48px} h1{font-size:24px;line-height:1.25;margin:6px 0 4px} h2{font-size:17px;margin:0}
-.internal{display:inline-block;font:700 11px/1 sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warnbg);border:1px solid var(--warn);border-radius:4px;padding:4px 7px}
+:root{--bg:#f6f7f8;--card:#fff;--ink:#16202a;--muted:#4d5c66;--line:#dde3e7;--accent:#0b6e7f;--warn:#8a5a00;--warnbg:#fbf0da;--ok:#2e6b3a;--bad:#b3261e;
+  --font:"Source Sans 3","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  --display:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1518;--card:#171e22;--ink:#e4eaed;--muted:#a2aeb5;--line:#2a343a;--accent:#5fc4d6;--warn:#f0c66b;--warnbg:#3a2c10;--ok:#9fd6a5;--bad:#f2b8b5}}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--font)}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px} h1,h2,.rep h3{font-family:var(--display)}
+h1{font-size:24px;line-height:1.25;margin:6px 0 4px} h2{font-size:17px;margin:0}
+.internal{display:inline-block;font:700 11px/1 var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--warn);background:var(--warnbg);border:1px solid var(--warn);border-radius:4px;padding:4px 7px}
 .meta{color:var(--muted);margin:0} .warn{background:var(--warnbg);color:var(--warn);border-radius:8px;padding:8px 12px;margin:12px 0}
 details{background:var(--card);border:1px solid var(--line);border-radius:10px;margin:14px 0;padding:10px 14px} summary{cursor:pointer;list-style:none} summary::-webkit-details-marker{display:none}
 summary h2::before{content:"▾ ";color:var(--muted)} details:not([open]) summary h2::before{content:"▸ "}
@@ -426,7 +432,7 @@ footer{color:var(--muted);font-size:12px;margin-top:24px}
 .rep .upd{color:var(--ink)} .rep details.full,.rep details.more{background:none;border:0;border-top:1px solid var(--line);border-radius:0;padding:8px 0 0;margin:12px 0 0}
 .rep details.full summary,.rep details.more summary{color:var(--accent);font-size:14px} .rep details.full summary::before,.rep details.more summary::before{content:"▸ "} .rep details[open] > summary::before{content:"▾ "}
 .rep details ul,.rep details ol{margin:8px 0;padding-left:22px} .rep details li{margin:6px 0;line-height:1.5}
-.health{display:inline-block;font:600 12px/1 sans-serif;border:1px solid currentColor;border-radius:999px;padding:4px 8px;vertical-align:middle;margin-left:4px}
+.health{display:inline-block;font:600 12px/1 var(--font);border:1px solid currentColor;border-radius:999px;padding:4px 8px;vertical-align:middle;margin-left:4px}
 .health.ok{color:var(--ok)} .health.warnh{color:var(--warn)} .health.bad{color:var(--bad)}
 ul.reps{list-style:none;padding:0;margin:6px 0 12px} ul.reps li{margin:6px 0} .rn{margin:10px 0 0}
 @media print{body{background:#fff;color:#000;font-size:12px} main{max-width:none;padding:0} details{border:0;padding:0;margin:10px 0;page-break-inside:avoid} summary h2::before{content:""} a{color:#000;text-decoration:none} .internal{border-color:#000;color:#000;background:none}}

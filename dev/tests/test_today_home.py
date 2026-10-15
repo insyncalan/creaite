@@ -279,7 +279,8 @@ class Rhythm(Home):
         self.assertEqual(set(o["gaps"]), {"28px"})
         self.assertTrue(o["rows"])
         self.assertGreaterEqual(min(o["rows"]), 44)
-        self.assertEqual({tuple(h) for h in o["heads"]}, {("13px", "uppercase", "700")})
+        self.assertEqual({tuple(h)[:2] for h in o["heads"]}, {("16px", "none")})      # BL-325: the shared h2, sentence case
+        self.assertEqual(len({tuple(h) for h in o["heads"]}), 1)                     # one heading style
 
 
 class Narrow(Home):

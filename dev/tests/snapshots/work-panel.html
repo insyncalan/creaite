@@ -91,8 +91,8 @@
 </div>
 <div class="pk-props" id="pkProps" role="group" aria-label="Key fields">
 <div class="pk-prop">
-<button type="button" class="pk-chip" data-pkp="st" aria-haspopup="listbox" aria-label="Status: Open" data-tip="Status">
-<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" style="color:var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+<button type="button" class="chip pk-chip" aria-label="Status: Open" data-tip="Status" data-pkp="st" aria-haspopup="listbox">
+<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: var(--accent);">
 <circle cx="12" cy="12" r="8">
 </circle>
 <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none">
@@ -102,7 +102,7 @@
 </button>
 </div>
 <div class="pk-prop">
-<button type="button" class="pk-chip" data-pkp="pr" aria-haspopup="listbox" aria-label="Priority: Urgent" data-tip="Priority">
+<button type="button" class="chip pk-chip" aria-label="Priority: Urgent" data-tip="Priority" data-pkp="pr" aria-haspopup="listbox">
 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
 <rect x="3" y="16" width="3.4" height="4" rx="1" fill="var(--bad)" opacity="1">
 </rect>
@@ -117,7 +117,7 @@
 </button>
 </div>
 <div class="pk-prop">
-<button type="button" class="pk-chip" data-pkp="o" aria-haspopup="listbox" aria-label="Owner: Alan Carter (you)" data-tip="Owner">
+<button type="button" class="chip pk-chip" aria-label="Owner: Alan Carter (you)" data-tip="Owner" data-pkp="o" aria-haspopup="listbox">
 <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
 <circle cx="12" cy="12" r="10" fill="var(--accent-soft)">
 </circle>
@@ -128,7 +128,7 @@
 </button>
 </div>
 <div class="pk-prop">
-<button type="button" class="pk-chip late" data-pkp="due" aria-haspopup="listbox" aria-label="Due date: 06-10-2026 overdue" data-tip="Due date">
+<button type="button" class="chip pk-chip late" aria-label="Due date: 06-10-2026 overdue" data-tip="Due date" data-pkp="due" aria-haspopup="dialog">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="calendar">
 <rect x="3.5" y="5" width="17" height="15" rx="2">
 </rect>
@@ -189,11 +189,13 @@
 </div>
 </section>
 <section aria-label="Activity">
-<div class="pk-tabs" role="tablist" aria-label="Activity" id="pkTabs">
-<button type="button" class="pk-tab" role="tab" data-pktab="all" aria-selected="true" tabindex="0" id="pkTabSel">All</button>
-<button type="button" class="pk-tab" role="tab" data-pktab="act" aria-selected="false" tabindex="-1">Activity</button>
-<button type="button" class="pk-tab" role="tab" data-pktab="upd" aria-selected="false" tabindex="-1">Updates</button>
-<button type="button" class="pk-tab" role="tab" data-pktab="src" aria-selected="false" tabindex="-1">Source</button>
+<div class="tabhost" id="pkTabsHost">
+<div class="pk-tabs" id="pkTabs" role="tablist" aria-label="Activity">
+<button type="button" role="tab" class="pk-tab" aria-selected="true" id="pkTabSel" tabindex="0" data-tab="all" data-pktab="all">All</button>
+<button type="button" role="tab" class="pk-tab" aria-selected="false" tabindex="-1" data-tab="act" data-pktab="act">Activity</button>
+<button type="button" role="tab" class="pk-tab" aria-selected="false" tabindex="-1" data-tab="upd" data-pktab="upd">Updates</button>
+<button type="button" role="tab" class="pk-tab" aria-selected="false" tabindex="-1" data-tab="src" data-pktab="src">Source</button>
+</div>
 </div>
 <div class="pk-feed" id="pkFeed" role="tabpanel" aria-labelledby="pkTabSel">
 <div class="pk-fe" data-t="src">

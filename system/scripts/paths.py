@@ -50,7 +50,7 @@ PERMISSIONS_LOG = SYSTEM / "config" / "permissions-log.jsonl"   # every rule add
 SWEEP_STATE = STAGING / "last-sweep.txt"            # time of last successful sweep
 CALENDAR    = STAGING / "calendar.json"             # Alan's meetings, today and the week ahead (cx-sweep); Today's day view
 MENTIONS    = STAGING / "mentions.jsonl"            # open items raised again in a later meeting or sweep (BL-51 early warnings)
-INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intake's Calendar Import (BL-104 Clear day); never processed.txt
+INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intake's Calendar import (BL-104 Clear day); never processed.txt
 TRANSCRIPTS = STAGING / "transcripts.json"       # each meeting's transcript status from the sweep (BL-42 phase 3): never text, a passcode or a PIN
 MINUTES_TEMPLATE = TEMPLATES / "minutes-template.docx"
 WEEKLY_TEMPLATE  = TEMPLATES / "weekly-report-template.docx"
@@ -112,7 +112,7 @@ def write_text_atomic(path, text: str) -> None:
         try:
             os.chmod(tmp, path.stat().st_mode & 0o7777)
         except FileNotFoundError:
-            pass
+            pass  # a new file: no old mode to keep
         os.replace(tmp, path)
     finally:
         if tmp.exists():
@@ -215,7 +215,8 @@ def resolve(stored, archived=True) -> Path:
         return Path(s)
     if external():
         if s == LOGICAL_PORTFOLIO or s.startswith(LOGICAL_PORTFOLIO + "/"):
-            return portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/")
+            p = portfolio_dir() / s[len(LOGICAL_PORTFOLIO):].lstrip("/")
+            return archived_file(portfolio_dir(), p.relative_to(portfolio_dir()).parts, p) if archived else p   # BL-03
         if s == LOGICAL or s.startswith(LOGICAL + "/"):
             p = projects_root() / s[len(LOGICAL):].lstrip("/")
             return archived_path(p) if archived else p
@@ -240,9 +241,32 @@ def archived_path(p: Path) -> Path:
         parts = Path(p).relative_to(root).parts
     except ValueError:
         return p
-    if not parts or parts[0] in (ARCHIVE, OLD_ARCHIVE) or parts[0].startswith((".", "_")) or (root / parts[0]).exists():
+    if parts and parts[0] == portfolio_dir().name and (root / parts[0]) == portfolio_dir():
+        return archived_file(root / parts[0], parts[1:], p)              # BL-03: portfolio minutes in _Portfolio/_Archive
+    if not parts or parts[0] in (ARCHIVE, OLD_ARCHIVE) or parts[0].startswith((".", "_")):
         return p
+    if (root / parts[0]).exists():
+        return archived_file(root / parts[0], parts[1:], p)              # BL-03: a report or minutes moved into its own _Archive
     return root / ARCHIVE / Path(*parts) if (root / ARCHIVE / parts[0]).is_dir() else p
+
+
+def archived_file(base: Path, rest, p: Path) -> Path:
+    """BL-03: p (base/rest, in a project folder that is in place), or, when p isn't there but base/_Archive/rest is, that: a
+    report, minutes or Steerco one-pager archived into the engagement's own _Archive keeps its stored path (Alan, 14-10-2026)."""
+    if not rest or rest[0] in (ARCHIVE, OLD_ARCHIVE) or os.path.lexists(p):
+        return p
+    moved = base / ARCHIVE / Path(*rest)
+    return moved if moved.is_file() else p
+
+
+ARCHIVED_FILE_KINDS = ("minutes", "weekly_reports", "client_reports", "steerco")    # BL-03: what moves into an engagement's _Archive
+
+
+def archivable_folders() -> list:
+    """BL-03: the folders, relative to an engagement (or project) folder, whose dated files move into its own _Archive after
+    archive.reports_after_months: minutes, weekly and client reports and Steerco one-pagers (never transcripts, agendas or
+    documents)."""
+    return sorted({folder_name(k).strip("/") for k in ARCHIVED_FILE_KINDS})
 
 
 def old_archive_folders() -> list:

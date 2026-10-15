@@ -2,6 +2,10 @@
 /* settings.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0073-settings-page-bl-115-sprint-settings.js, 0074-bl-214-sprint-ui-audit.js, 0075-after-bl-214.js, 0076-bl-235-fix-small-17.js, 0078-after-bl-163-settings-row.js, 0079-people-bl-55-bl-56.js, 0127-workstreams-bl-58-bl-56.js, 0138-sweep-and-alerts-bl-97-bl-99-bl-98.js, 0140-after-bl-152.js, 0153-bl-252-fix-small-17.js, 0154-bl-263-fix-doctor-errors.js, 0155-after-bl-263.js, 0163-bl-165-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { closeDialog, openDialog } from "./components/Dialog.jsx";
+import { makeArchiveAskDialog } from "./components/dialogs/PageDialogs.jsx";
+import { closeFilterBar, drawFilterBar, filterBarOpen, openFilterBar } from "./components/FilterBar.jsx";
+
 import { mdView, pendingEdit, RBMARK, SEARCHCFG } from "./ask.js";
 import { A, DEC, open, openOnly, P, PEOPLE, peopleAll, pName, R, REGD, REV, saveWs, SWEPT, wsFor, wsHidden, wsKey, WSL, wsParts, wsUsed } from "./core/data.js";
 import { effect } from "@preact/signals";
@@ -9,6 +13,7 @@ import { h, render } from "preact";
 import { Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
 import { MoreSettings } from "./components/settings/MoreSettings.jsx";
+import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { openPath } from "./core/fields.js";
 import { typing } from "./core/keys.js";
@@ -21,12 +26,12 @@ import { catalogue, changedOnly, checkHealth, lastCheckAt, loadCatalogue, query,
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
 import { refreshFiles } from "./files.js";
 import { decLate, decLateWords, decRank } from "./meetings.js";
-import { drawPanel, ebMarkSeen, errBanner, openNew, pkArr, pkDots, pkDraw, PKDRAW, pkNewOffer, pkNote, pkPersist, pkSaveAndClose, pkSaving, REC } from "./panel.js";
+import { drawPanel, ebMarkSeen, errBanner, openNew, markStagedRows, pkDraw, PKDRAW, pkNewOffer, pkNote, pkSaveAndClose, pkSaving, REC } from "./panel.js";
 import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG } from "./projects.js";
 import { draftOn, renderReview } from "./review.js";
 import { setRailCount } from "./stores/rail.js";
 import { PEOPLE_MOVE, personPromises, plur, projLink, renderToday, tl } from "./today.js";
-import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, isNotSeg, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, relaxHtml, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
+import { cell, fchipHtml, FDEFS, funnelTip, FX, groupsOf, hit, hlPrune, items, latesOf, ownersOf, personFlags, personLinks, personRedraw, personTbl, personWork, relaxHtml, renderPeople, rows, sizeList, viewsList, xcueSoon } from "./work.js";
 /* ===== Settings page (BL-115, sprint-settings) ===== */
 /* One page: the categories on the left, the settings on the right. SETSECTIONS is the one list the page is built from.
    An entry has an id, a category, a title, search keywords (`kw`) and `render()`, which returns what goes inside the card.
@@ -72,8 +77,6 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
     if(one) return `<${tag} aria-labelledby="${id}"${h?` aria-describedby="${id}h"`:""}${rest}>`;
     const ex=(rest.match(/placeholder="([^"]*)"/)||rest.match(/title="([^"]*)"/)||[])[1]||"";
     return `<${tag} aria-label="${esc(srText(l)+(ex?": "+ex:""))}"${rest}>`; }); }
-/* ⌘K's search box had only its placeholder; named here rather than on its line, which sprint-insight is changing */
-(()=>{ const i=document.getElementById("cmdkIn"); if(i&&!i.hasAttribute("aria-label")&&!i.hasAttribute("aria-labelledby")) i.setAttribute("aria-label","Search projects, items and commands"); })();
 /* ===== BL-09: Archive and Restore in Settings › Projects =====
    Each project has Archive (Restore for an archived one, listed with Show archived). The live server builds the change with
    propose.py (the folder to _Archive, the register row to Retired codes, the project and its items marked archived) and puts it on
@@ -81,12 +84,13 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
    lists them first: Cancel them all and archive, or Stop. */
 const PSTATE={active:"Active",closed:"Closed",archived:"Archived"};
 export function projArchiveHtml(){ const L=(D.project_states||[]).filter(p=>p.state!=="archived"||S.showArchived);
-  return row("Show archived projects",sw("showArchived"),"Their items in Work, Today and the Excel export. Search finds them either way, marked Archived")
+  return row("Show archived projects",sw("showArchived"),"Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived")
     +`<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L.map(p=>{ const back=p.state==="archived";
       return `<tr><td>${esc(p.name)}</td><td>${PSTATE[p.state]||esc(p.state)}</td><td class="mgract"><button class="mini" data-parch="${back?"restore":"archive"}" data-pcode="${esc(p.code)}" aria-label="${back?"Restore":"Archive"} ${esc(p.name)}">${back?"Restore":"Archive"}</button></td></tr>`; }).join("")||'<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`; }
-export function openItemsAsk(name,open){ return new Promise(res=>{ let dlg=$("#parchDlg"); if(!dlg){ addHTML(document.body,"beforeend",html`<dialog id="parchDlg" aria-labelledby="parchH"></dialog>`); dlg=$("#parchDlg"); }
-  putHTML(dlg,html`<h2 id="parchH">${name} has ${open.length} open item${open.length===1?"":"s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open.slice(0,30).map(o=>html`<li><b>${o.id}</b> ${o.text}</li>`)}</ul>${open.length>30?html`<p class="sub">and ${open.length-30} more</p>`:""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
-  const fin=v=>{ dlg.close(); res(v); }; dlg.querySelector('[data-a="stop"]').onclick=()=>fin(false); dlg.querySelector('[data-a="go"]').onclick=()=>fin(true); dlg.oncancel=()=>res(false); dlg.showModal(); }); }
+/* BL-316: the Dialog block (made the first time it opens, components/dialogs/PageDialogs.jsx); Esc or the scrim is Stop */
+export function openItemsAsk(name,open){ return new Promise(res=>{ const dlg=$("#parchDlg")||makeArchiveAskDialog();
+  putHTML($("#parchBody"),html`<h2 id="parchH">${name} has ${open.length} open item${open.length===1?"":"s"}</h2><p class="sub">Nothing is archived with an item still open.</p><ul class="parchlist">${open.slice(0,30).map(o=>html`<li><b>${o.id}</b> ${o.text}</li>`)}</ul>${open.length>30?html`<p class="sub">and ${open.length-30} more</p>`:""}<div class="acts"><button class="btn" data-a="stop">Stop</button><button class="btn primary" data-a="go">Cancel them all and archive</button></div>`);
+  const fin=v=>{ res(v); closeDialog(dlg); }; dlg.querySelector('[data-a="stop"]').onclick=()=>fin(false); dlg.querySelector('[data-a="go"]').onclick=()=>fin(true); dlg.addEventListener("close",()=>res(false),{once:true}); openDialog(dlg); }); }
 export async function projArchive(code,action,cancel){ if(!viaServer()){ snack("Archiving needs the live server"); return; }
   const r=await api("/api/project/archive",{code,action,cancel_open:!!cancel});
   if(!r.ok&&(r.open||[]).length&&!cancel){ if(await openItemsAsk(pName(code),r.open)) return projArchive(code,action,true); snack("Stopped: nothing was archived"); return; }
@@ -237,7 +241,8 @@ export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) share
   query.value=shared.SQ.trim(); changedOnly.value=CHANGED;
   const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.checked=CHANGED;
   if(SERVED&&!catalogue.value) loadCatalogue();
-  putHTML($("#setcats"),raw(SETCATS.map(([id,t])=>`<button data-scat="${id}" aria-selected="${!searching&&id===shared.SCAT}">${esc(t)}</button>`).join("")));
+  drawTabs($("#setcatsHost"),{id:"setcats",className:"setcats",label:"Settings categories",vertical:true,controls:"settingsBody",
+    items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
   putHTML($("#setcatsel"),raw((searching?`<option value="">${CHANGED&&!shared.SQ.trim()?"Changed settings":"Search results"}</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
   const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT);
   const head=s=>searching?(s.mount&&s.id!=="more"?"":`<div class="setcrumb">${esc(catName(catOf(s)))} › ${esc(s.id==="more"?OLDCATS.advanced:s.title)}</div>`)
@@ -345,7 +350,6 @@ export async function renameWs(key,to,also){ const [pc,nm]=wsParts(key); if(!to|
   if(others.length) snack(`${pc} done. ${others.join(", ")} also ${others.length===1?"has":"have"} “${nm}”.`,async()=>{ for(const o of others) await renameWs(wsKey(o,nm),to,false); },`Also rename in ${others.join(", ")}`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0078(){
-$("#setcats").onclick=e=>{ const t=e.target.closest("[data-scat]"); if(t) setOpen(t.dataset.scat); };
 $("#setcatsel").onchange=e=>{ if(e.target.value) setOpen(e.target.value); };
 $("#setq").oninput=e=>setSearch(e.target.value);
 $("#setq").onkeydown=e=>{ if(e.key==="Escape"&&shared.SQ){ e.stopPropagation(); e.target.value=""; setSearch(""); } };
@@ -467,7 +471,7 @@ export function askPerson(o){ const pr=new Promise(res=>{ const dlg=$("#personDl
       const aliases=f("aliases").split(",").map(a=>a.trim()).filter(Boolean); if(typed&&!isMail&&!o.edit&&!o.details&&pKey(typed)!==pKey(name)&&!aliases.some(a=>pKey(a)===pKey(typed))) aliases.push(typed);   /* what was typed maps to them next time */
       fin({person:{name,email:f("email"),aliases,org:f("org"),role:f("role")}}); };
     $("#personForm").onsubmit=e=>{ if(e.submitter&&e.submitter.value==="cancel") return; e.preventDefault(); if(!$("#pdSave").hidden) $("#pdSave").click(); };
-    dlg.addEventListener("close",onClose); $("#personForm [value=cancel]").onclick=e=>{ e.preventDefault(); fin(null); }; dlg.showModal(); });
+    dlg.addEventListener("close",onClose); $("#personForm [value=cancel]").onclick=e=>{ e.preventDefault(); fin(null); }; openDialog(dlg); });
   const keep=!!(o&&(o.edit||o.details)), cur=((o&&o.person&&o.person.extra)||{}).VIP||"";
     $$(".pdvip").forEach(el=>el.hidden=!keep); const sel=$("#pd_vip"); sel.value=[...sel.options].some(x=>x.value===cur.toLowerCase())?cur.toLowerCase():cur?"yes":"";
     return pr.then(res=>{ if(res&&res.person&&keep) res.person.extra={...((o.person&&o.person.extra)||{}),VIP:sel.value}; return res; }); }
@@ -480,10 +484,10 @@ export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); 
 
 /* Settings › People: the register, with each person's open work. Edit, rename, merge, remove from the owner list. */
 export function renderPeopleMgr(){ pfLoad();
-  putHTML($("#peopleMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd">Add a person</button></div>
+  putHTML($("#peopleMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd" aria-haspopup="dialog">Add a person</button></div>
    <p class="sub" style="margin:4px 0 8px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
    ${PEOPLE.added.length||PEOPLE.hidden.length?html`<p class="sub" id="pmLegacy"><span class="tag warn">${PEOPLE.added.length+PEOPLE.hidden.length} name${PEOPLE.added.length+PEOPLE.hidden.length===1?"":"s"} still in settings.json</span> ${viaServer()?html`<button class="mini" data-ask="${PEOPLE_MOVE}">Move them into the register</button> <span class="sub">(ask creaite does it, asking first)</span>`:"Say “setup” in Claude Code to move them into the register."}</p>`:""}
-   <div class="toolbar pmtools" role="search"><input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="${PF.q}"><span class="dd" id="pmFdd"><button type="button" class="ib bd fbtn" id="pmFBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="pmFMenu" data-key="F"></button><div class="ddmenu left fpmenu" id="pmFMenu" role="dialog" aria-label="Filter people"></div></span></div>
+   <div class="toolbar pmtools" role="search"><input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="${PF.q}"><span class="dd" id="pmFdd"></span></div>
    <div class="wapplied" id="pmApplied"></div><div class="vh" id="pmLive" role="status" aria-live="polite"></div>
    <div class="tbl"><table class="mgr"><thead><tr><th>Name</th><th>Email</th><th>Organisation · role</th><th>Aliases</th><th class="num" id="pmHA">Actions</th><th class="num" id="pmHR">RAID</th><th></th></tr></thead><tbody id="pmRows"></tbody></table></div>`);
   pfDraw(); }
@@ -497,8 +501,10 @@ export function renderPeopleMgr(){ pfLoad();
    The filters are remembered until cleared (Alan, 12-10-2026), in this browser's storage as Work's remembered display choices are
    (store, "creaite-people-filters"); the search box is not. */
 export const PF_KEY="creaite-people-filters", PF_MULTI=["proj","inv","org","vip","reg","att"], PF_REM=["hide","show","only"];
-/** @type {{q:string, rem:string, neg:Set<string>, f:Object<string,Set<string>>, open:boolean, pk:string, loaded:boolean}} */
-export const PF={q:"",rem:"hide",neg:new Set(),f:Object.fromEntries(PF_MULTI.map(k=>[k,new Set()])),open:false,pk:"proj",loaded:false};
+/** @type {{q:string, rem:string, neg:Set<string>, f:Object<string,Set<string>>, open?:boolean, pk:string, loaded:boolean}} */
+export const PF={q:"",rem:"hide",neg:new Set(),f:Object.fromEntries(PF_MULTI.map(k=>[k,new Set()])),pk:"proj",loaded:false};
+Object.defineProperty(PF,"open",{get:()=>filterBarOpen($("#pmFdd"))==="more"});   /* BL-316: whether the picker is open is the FilterBar's own state */
+
 export function pfReset(){ PF_MULTI.forEach(k=>PF.f[k]=new Set()); PF.rem="hide"; PF.neg=new Set(); PF.q=""; }
 export function pfLoad(){ if(PF.loaded) return; PF.loaded=true; const s=store.get(PF_KEY,null); if(!s||typeof s!=="object") return;
   PF_MULTI.forEach(k=>{ if(Array.isArray(s[k])) PF.f[k]=new Set(s[k].map(String)); });
@@ -548,26 +554,26 @@ export function pfRow(x,sc,active){ const {n,p,me,off}=x, a=sc?sc.reduce((s,c)=>
   return html`<tr class="${off?"off":""}" data-pn="${n}"><td>${pfHl(n)}${me?raw(' <span class="tag">(you)</span>'):""}${p||me?"":raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p&&!p.email?raw(' <span class="tag warn" title="Add email">no email</span>'):""}${off?raw(' <span class="tag warn">removed from list</span>'):""}${via?html`<span class="sub pmvia">named in the project’s stakeholders</span>`:""}</td>
      <td>${p&&p.email?pfHl(p.email):raw('<span class="sub">—</span>')}</td><td>${p&&(p.org||p.role)?html`${p.org||""}${p.org&&p.role?" · ":""}${pfHl(p.role)}`:raw('<span class="sub">—</span>')}</td><td class="sub">${p&&p.aliases.length?p.aliases.map((s,i)=>html`${i?", ":""}${pfHl(s)}`):"—"}</td>
      <td class="num">${raw(pfLink(n,"actions",a,sc))}</td><td class="num">${raw(pfLink(n,"raid",r,sc))}</td>
-     <td class="mgract">${me?raw('<span class="x">Change in Settings › Essentials › You</span>'):html`${raw(ibtn("pencil",p?"Edit details":"Add details",`data-pm="edit" data-n="${esc(n)}"`,"sm"))}${raw(ibtn("type","Rename",`data-pm="ren" data-n="${esc(n)}"`,"sm"))}<select class="mgsel pmsel" data-n="${n}" aria-label="Merge ${n} into"><option value="">Merge into…</option>${mergeTo.map(y=>html`<option value="${y}">${y}</option>`)}</select>${raw(off?ibtn("undo","Restore",`data-pm="restore" data-n="${esc(n)}"`,"sm"):ibtn("trash","Remove from list",`data-pm="hide" data-n="${esc(n)}"`,"sm no"))}`}</td></tr>`; }
+     <td class="mgract">${me?raw('<span class="x">Change in Settings › Essentials › You</span>'):html`${raw(ibtn("pencil",p?"Edit details":"Add details",`data-pm="edit" data-n="${esc(n)}" aria-haspopup="dialog"`,"sm"))}${raw(ibtn("type","Rename",`data-pm="ren" data-n="${esc(n)}"`,"sm"))}<select class="mgsel pmsel" data-n="${n}" aria-label="Merge ${n} into"><option value="">Merge into…</option>${mergeTo.map(y=>html`<option value="${y}">${y}</option>`)}</select>${raw(off?ibtn("undo","Restore",`data-pm="restore" data-n="${esc(n)}"`,"sm"):ibtn("trash","Remove from list",`data-pm="hide" data-n="${esc(n)}"`,"sm no"))}`}</td></tr>`; }
 export function pfEmpty(L,F){ const act=F.filter(f=>f[0]==="rem"?PF.rem==="only":pfOn(f[0])).map(f=>({k:f[0],label:pfChip(f)}));
   if(PF.q.trim()) act.push({k:"q",label:`Search “${PF.q.trim()}”`});
   const ways=act.map(r=>({...r,n:L.filter(x=>pfPass(x,F,r.k)&&(r.k!=="rem"||!x.off)).length}));
   const head=act.length===1&&act[0].k==="q"?`Nobody matches “${esc(PF.q.trim())}”`:`Nobody matches ${act.length===1?"this filter":`these ${act.length} filters`}`;
   return relaxHtml(head,ways,pfWord,"","people"); }
-export function pfPicker(L,F){ const m=$("#pmFMenu"); if(!m) return; if(!PF.open){ m.classList.remove("on"); putHTML(m,""); return; }
-  if(!F.some(f=>f[0]===PF.pk)) PF.pk=F[0][0];
-  const list=F.map((f,i)=>{ const k=f[0], mark=k==="rem"?(PF.rem==="hide"?"default":PF.rem==="only"?"only":"shown"):pfOn(k)?(PF.neg.has(k)?"not · ":"")+PF.f[k].size:"";
-    const sec=!i||f[2]!==F[i-1][2]?html`<div class="fsec2" role="presentation">${f[2]}</div>`:"";
-    return html`${sec}<button type="button" role="option" class="fpf${pfOn(k)?" on":""}" data-pfk="${k}" aria-selected="${k===PF.pk}" tabindex="${k===PF.pk?0:-1}">${f[1]}${mark?html`<small>${mark}</small>`:""}</button>`; });
-  const f=F.find(x=>x[0]===PF.pk), k=f[0];
-  const opts=f[3].map(([v,l])=>{ const n=k==="rem"?L.filter(x=>pfPass(x,F,"rem")&&pfRemOK(x,v)).length:L.filter(x=>pfPass(x,F,k)&&f[4](x,v)).length;
-    if(k==="rem") return html`<label class="${n?"":"dim"}"><input type="radio" name="pmrem" data-pfrem="${v}" ${PF.rem===v?"checked":""}>${l}${v==="hide"?html` <span class="sub">default</span>`:""}<small>${n}</small></label>`;
-    return html`<label class="${n||PF.f[k].has(v)?"":"dim"}"><input type="checkbox" data-pfv="${v}" ${PF.f[k].has(v)?"checked":""}>${l}<small>${n}</small></label>`; });
-  const shown=L.filter(x=>pfPass(x,F)).length;
-  putHTML(m,html`<div class="fpick"><div class="fpl"><div class="fplist" role="listbox" aria-label="Filters">${list}</div></div>
-    <div class="fpr"><h3 id="pmFph">${f[1]}</h3>${f[5]?html`<p class="sub" style="margin:0 0 6px">${f[5]}</p>`:""}${k==="proj"||k==="org"?raw(isNotSeg(k,PF.neg.has(k))):""}<div class="fpopts" role="group" aria-labelledby="pmFph">${opts}</div>
-    <div class="fpfoot"><span class="sub" id="pmFpResult">Showing ${shown} of ${L.length}</span><span class="sp"></span>${pfAny(F)?html`<button type="button" class="mini" id="pmFpClear">Clear all</button>`:""}<button type="button" class="btn primary" id="pmFpDone">Done</button></div></div></div>`);
-  m.classList.add("on"); }
+/* BL-316: the funnel and its field picker are the FilterBar building block, drawn bare into #pmFdd (the funnel's own .dd) */
+export let PFASK=null;   /* the field pfOpen asked for, read once as the picker opens */
+export function pfBar(L,F,n){ const h=$("#pmFdd"); if(!h) return; if(F.length&&!F.some(f=>f[0]===PF.pk)) PF.pk=F[0][0]; const shown=L.filter(x=>pfPass(x,F)).length;
+  drawFilterBar(h,{bare:true,fields:F.map(f=>{ const k=f[0], rem=k==="rem";
+      return {id:k,label:f[1],section:f[2],note:f[5]||undefined,on:pfOn(k),single:rem,selected:rem?[PF.rem]:PF.f[k],not:k==="proj"||k==="org"?PF.neg.has(k):undefined,
+        mark:rem?(PF.rem==="hide"?"default":PF.rem==="only"?"only":"shown"):pfOn(k)?(PF.neg.has(k)?"not · ":"")+PF.f[k].size:"",
+        options:()=>f[3].map(([v,l])=>({value:v,label:l,extra:rem&&v==="hide"?"default":undefined,
+          count:rem?L.filter(x=>pfPass(x,F,"rem")&&pfRemOK(x,v)).length:L.filter(x=>pfPass(x,F,k)&&f[4](x,v)).length}))}; }),
+    onSelect:(k,vals)=>{ if(k==="rem") PF.rem=vals[0]||"hide"; else { const set=PF.f[k]; if(!set) return; set.clear(); vals.forEach(v=>set.add(v)); if(!set.size) PF.neg.delete(k); } pfDraw(); },
+    onNot:(k,neg)=>{ neg?PF.neg.add(k):PF.neg.delete(k); pfDraw(); },
+    more:{id:"pmFBtn",menuId:"pmFMenu",label:funnelTip(n,"Filter people"),menuLabel:"Filter people",count:n,on:!!n,key:"F",listLabel:"Filters",headId:"pmFph",
+      field:PF.pk,onField:k=>{ PF.pk=k; pfDraw(); },result:`Showing ${shown} of ${L.length}`,resultId:"pmFpResult",doneId:"pmFpDone",
+      clearAll:pfAny(F)?{id:"pmFpClear",run:()=>{ pfClearAll(); pfDraw(); }}:null,
+      onOpen:()=>{ const k=PFASK; PFASK=null; if(k) PF.pk=k; else if(!pfOn(PF.pk)){ const L2=pfPeople(), F2=pfFields(L2); PF.pk=(F2.find(f=>f[0]!=="rem"&&pfOn(f[0]))||F2[0]||["proj"])[0]; } pfDraw(); }}}); }
 export function pfApplied(L,F){ const el=$("#pmApplied"); if(!el) return; const chips=[];
   F.forEach(f=>{ const k=f[0];
     if(k==="rem"){ if(PF.rem!=="show") chips.push(fchipHtml(pfChip(f),k,PF.rem==="hide"?"Show removed people":"Stop showing only removed people",{def:PF.rem==="hide",edit:"pfedit",attr:"data-pfclr"})); return; }
@@ -583,47 +589,29 @@ export function pfApplied(L,F){ const el=$("#pmApplied"); if(!el) return; const 
   putHTML(el,html`${raw(chips.join(""))}${extra?html`<button type="button" class="linkbtn" id="pmClearF">Clear all</button>`:""}<span class="sp"></span><span class="sub" id="pmCount">${bits.map((b,i)=>html`${i?" · ":""}${b}`)}</span>`);
   const live=$("#pmLive"); if(live&&live.textContent!==`Showing ${shown} of ${pfWord(L.length)}`) live.textContent=`Showing ${shown} of ${pfWord(L.length)}`; }
 /* draws everything below the search box from PF, then puts focus on `focus` (a selector) if given */
-export function pfDraw(focus){ if(!$("#peopleMgr")||!$("#pmRows")) return; const L=pfPeople(), F=pfFields(L), n=pfDot(F), b=$("#pmFBtn"), tip=funnelTip(n,"Filter people");
-  putHTML(b,html`${raw(ic("funnel"))}${n?html`<span class="dot" aria-hidden="true">${n}</span>`:""}`); b.classList.toggle("on",!!n); b.setAttribute("aria-label",tip); b.dataset.tip=tip; b.setAttribute("aria-expanded",String(PF.open));
-  pfPicker(L,F); pfApplied(L,F);
+export function pfDraw(focus){ if(!$("#peopleMgr")||!$("#pmRows")) return; const L=pfPeople(), F=pfFields(L), n=pfDot(F);
+  pfBar(L,F,n); pfApplied(L,F);
   const sc=pfScope(), tail=sc?` · ${sc.length===1?"this project":sc.length+" projects"}`:"", active=peopleAll(), list=L.filter(x=>pfPass(x,F));
   $("#pmHA").textContent="Actions"+tail; $("#pmHR").textContent="RAID"+tail; [$("#pmHA"),$("#pmHR")].forEach(h=>{ if(sc) h.title=`Counted in ${sc.map(pName).join(", ")}`; else h.removeAttribute("title"); });
   putHTML($("#pmRows"),list.length?list.map(x=>pfRow(x,sc,active)):html`<tr><td colspan="7">${raw(pfEmpty(L,F))}</td></tr>`);
   pfSave(); if(focus){ const el=$(focus); if(el) el.focus(); } }
-export function pfOpen(k){ if(!pfFields(pfPeople()).length) return; PF.open=true; if(k) PF.pk=k; else if(!pfOn(PF.pk)){ const L=pfPeople(), F=pfFields(L); PF.pk=(F.find(f=>f[0]!=="rem"&&pfOn(f[0]))||F[0]||["proj"])[0]; }
-  pfDraw(); ($("#pmFMenu .fpopts input")||$("#pmFMenu [data-pfk]"))?.focus(); }
-export function pfClose(back){ if(!PF.open) return; PF.open=false; pfDraw(back?"#pmFBtn":""); }
+export function pfOpen(k){ if(!pfFields(pfPeople()).length) return; PFASK=k||null; openFilterBar($("#pmFdd"),"more"); }
+export function pfClose(back){ closeFilterBar($("#pmFdd"),back); }
 export function pfClear(k){ if(k==="q"){ PF.q=""; const q=$("#pmQ"); if(q) q.value=""; } else if(k==="rem") PF.rem=PF.rem==="hide"?"show":"hide"; else if(PF.f[k]){ PF.f[k].clear(); PF.neg.delete(k); } }
 export function pfClearAll(){ pfReset(); const q=$("#pmQ"); if(q) q.value=""; }
 /* BL-231: the listeners, bound once from bootSettings0079 (the card is redrawn inside #settingsBody, which stays) */
 export function pfBind(){ const body=$("#settingsBody"), inMgr=e=>e.target.closest&&e.target.closest("#peopleMgr");
   body.addEventListener("click",e=>{ if(!inMgr(e)) return; const t=e.target;
-    if(t.closest("#pmFBtn")){ e.stopPropagation(); PF.open?pfClose(true):pfOpen(); return; }
-    if(t.closest("#pmFMenu")){ e.stopPropagation();
-      const f=t.closest("[data-pfk]"); if(f){ PF.pk=f.dataset.pfk; pfDraw(`#pmFMenu [data-pfk="${PF.pk}"]`); return; }
-      const ng=t.closest("[data-neg]"); if(ng){ ng.dataset.neg==="1"?PF.neg.add(PF.pk):PF.neg.delete(PF.pk); pfDraw(`#pmFMenu [data-neg="${ng.dataset.neg}"]`); return; }
-      if(t.id==="pmFpDone"){ pfClose(true); return; }
-      if(t.id==="pmFpClear"){ pfClearAll(); pfDraw(`#pmFMenu [data-pfk="${PF.pk}"]`); } return; }
+    if(t.closest("#pmFdd")) return;   /* the funnel and its picker: the FilterBar block's own */
     const c=t.closest("[data-pfclr]"); if(c){ pfClear(c.dataset.pfclr); pfDraw("#pmFBtn"); return; }
     const ed=t.closest("[data-pfedit]"); if(ed){ e.stopPropagation(); if(ed.dataset.pfedit==="q"){ $("#pmQ").focus(); $("#pmQ").select(); } else pfOpen(ed.dataset.pfedit); return; }
     const qk=t.closest("[data-pfquick]"); if(qk){ const w=qk.dataset.pfquick; if(w==="showrem") PF.rem="show"; else if(w==="hiderem") PF.rem="hide";
       else { const L=pfPeople(), a=pfFields(L).find(f=>f[0]==="att"); if(a) a[3].forEach(([v])=>PF.f.att.add(v)); } pfDraw("#pmFBtn"); return; }
     const rl=t.closest("[data-relax]"); if(rl){ const k=rl.dataset.relax; if(k==="all"){ pfClearAll(); snack("All filters cleared"); } else if(k==="rem") PF.rem="hide"; else pfClear(k); pfDraw("#pmQ"); return; }
     if(t.id==="pmClearF"){ pfClearAll(); pfDraw("#pmQ"); snack("Filters cleared"); } });
-  body.addEventListener("change",e=>{ const i=e.target; if(!i.closest||!i.closest("#pmFMenu")) return;
-    if(i.dataset.pfrem){ PF.rem=i.dataset.pfrem; pfDraw(`#pmFMenu [data-pfrem="${PF.rem}"]`); return; }
-    if(i.dataset.pfv!==undefined){ const v=i.dataset.pfv, set=PF.f[PF.pk]; if(!set) return; i.checked?set.add(v):set.delete(v); if(!set.size) PF.neg.delete(PF.pk); pfDraw(`#pmFMenu [data-pfv="${CSS.escape(v)}"]`); } });
   body.addEventListener("input",e=>{ if(e.target.id!=="pmQ") return; PF.q=e.target.value; pfDraw(); });
   body.addEventListener("keydown",e=>{ const t=e.target; if(!inMgr(e)) return;
-    if(t.id==="pmQ"&&e.key==="Escape"&&PF.q){ e.preventDefault(); e.stopPropagation(); pfClear("q"); pfDraw("#pmQ"); return; }
-    if(!t.closest("#pmFMenu")) return;
-    if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); pfClose(true); return; }
-    const f=t.closest("[data-pfk]");
-    if(f&&(e.key==="ArrowDown"||e.key==="ArrowUp")){ e.preventDefault(); const L=$$("#pmFMenu [data-pfk]"), i=L.indexOf(f), nx=L[(i+(e.key==="ArrowDown"?1:L.length-1))%L.length]; PF.pk=nx.dataset.pfk; pfDraw(`#pmFMenu [data-pfk="${PF.pk}"]`); return; }
-    if(f&&(e.key==="ArrowRight"||e.key==="Enter")){ e.preventDefault(); $("#pmFMenu .fpr .seg button,#pmFMenu .fpopts input")?.focus(); return; }
-    if(e.key==="ArrowLeft"&&t.closest(".fpopts,.seg")){ e.preventDefault(); $(`#pmFMenu [data-pfk="${PF.pk}"]`)?.focus(); } });
-  document.addEventListener("click",e=>{ if(PF.open&&!(e.target.closest&&e.target.closest("#pmFdd"))) pfClose(false); });
-  document.addEventListener("focusin",e=>{ if(PF.open&&!(e.target.closest&&e.target.closest("#pmFdd"))) pfClose(false); });
+    if(t.id==="pmQ"&&e.key==="Escape"&&PF.q){ e.preventDefault(); e.stopPropagation(); pfClear("q"); pfDraw("#pmQ"); } });   /* the picker's keys are the FilterBar block's */
   /* F opens the picker and / goes to the search, on Settings › People only (elsewhere / is still ask creaite), as Activity's / does */
   document.addEventListener("keydown",e=>{ if(shared.VIEW!=="settings"||e.metaKey||e.ctrlKey||e.altKey||typing()) return; const b=$("#pmFBtn");
     if(!b||!b.offsetParent||document.querySelector("dialog[open]")||$("#chat").classList.contains("on")) return;
@@ -655,7 +643,7 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}${p||isMe(name)?"":html` <span class="tag warn" title="Owns items but isn’t in the people register">not in register</span>`}</h1>
      <p class="sub" style="margin:2px 0">${p&&(p.org||p.role)?[p.org,p.role].filter(Boolean).join(" · "):"Organisation and role not recorded"}${p&&p.email?html` · <a href="mailto:${p.email}">${p.email}</a>`:""}</p>
      ${p&&p.aliases.length?html`<p class="sub" style="margin:2px 0">Also written as ${p.aliases.join(", ")}</p>`:""}</div>
-     ${raw(ibtn("pencil",p?"Edit details":"Add details",'id="ppEdit"',"bd"))}</div>
+     ${raw(ibtn("pencil",p?"Edit details":"Add details",'id="ppEdit" aria-haspopup="dialog"',"bd"))}</div>
    <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x.oo.length,"open action")} owned by ${name}`,x.oo.length,"actions:open:",{o:ownersOf(x.oo)},`<b>${x.oo.length}</b> open action${x.oo.length===1?"":"s"}`))}</span><span>${raw(countLink(`${plur(x.or.length,"open RAID item")} owned by ${name}`,x.or.length,"raid:open:",{o:ownersOf(x.or)},`<b>${x.or.length}</b> open risk${x.or.length===1?"":"s"} and issue${x.or.length===1?"":"s"}`))}</span><span class="${x.late?"late":""}">${raw(countLink(`${plur(x.late,"overdue item")} owned by ${name}`,x.late,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(latesOf(x))},`<b>${x.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ")||"—")}</span></div>
    <div class="card ppcard"><h2>Open work${items.length?html` <span class="sub">· ${items.length}</span>`:""}</h2>${items.length?raw(personLinks(x)+personWork(x,codes)):html`<p class="sub">Nothing open.</p>`}</div>
    <div class="card ppcard"><h2>Decisions made${recent.length?html` <span class="sub">· last ${raw(RECENT_DEC_DAYS)} days</span>`:""}</h2>${recent.length?raw(personTbl("decisions",recent)):html`<p class="sub">None in the last ${raw(RECENT_DEC_DAYS)} days.</p>`}</div>
@@ -664,7 +652,7 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
   { const el=$("#v-person"), x=PERS().find(y=>y.name===name); if(x){
     const open=[...x.oa.map(a=>["actions",a]),...x.or.map(r=>["raid",r])], cut=new Date(TODAY); cut.setDate(cut.getDate()-P1_DAYS); const since=cut.toISOString().slice(0,10);
     const closed=[...x.A.map(a=>["actions",a]),...x.R.map(r=>["raid",r])].filter(([,i])=>i.st==="Closed"&&i.closed&&i.closed>=since).sort((a,b)=>b[1].closed.localeCompare(a[1].closed));
-    addHTML(el.querySelector("#ppEdit"),"beforebegin",html`<button class="btn" id="ppEmail" data-tip="Draft an email with their open items" ${open.length?"":html`disabled aria-describedby="ppEmailNote"`}>${raw(ic("mail"))}Draft email</button>${open.length?html`<button class="btn" id="ppHand" data-tip="Hand their open items to someone else" ${shared.HAND?"disabled":""}>${raw(ic("handover"))}Hand over…</button>`:html`<span class="sub" id="ppEmailNote">Nothing open for ${name}, so no email is needed.</span>`}${raw(chaseNote(x))}`);   /* BL-83: Draft email replaces Prep 1:1; BL-224: when items were chased */
+    addHTML(el.querySelector("#ppEdit"),"beforebegin",html`<button class="btn" id="ppEmail" aria-haspopup="dialog" data-tip="Draft an email with their open items" ${open.length?"":html`disabled aria-describedby="ppEmailNote"`}>${raw(ic("mail"))}Draft email</button>${open.length?html`<button class="btn" id="ppHand" data-tip="Hand their open items to someone else" ${shared.HAND?"disabled":""}>${raw(ic("handover"))}Hand over…</button>`:html`<span class="sub" id="ppEmailNote">Nothing open for ${name}, so no email is needed.</span>`}${raw(chaseNote(x))}`);   /* BL-83: Draft email replaces Prep 1:1; BL-224: when items were chased */
     const kp=WARNS().filter(w=>w.sig==="key_person"&&w.who===name);
     if(kp.length) addHTML(el.querySelector(".ppcounts"),"afterend",html`<div class="wnote">${kp.map(w=>html`<div>${raw(WICO.replace("<svg",'<svg width="14" height="14" style="flex:none;margin-top:1px"'))}<span>${(w.k==="projects"?pName(w.id):w.id)}: ${w.text}</span></div>`)}</div>`);
     const work=el.querySelector(".ppcard");
@@ -680,7 +668,7 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
     addHTML(work,"afterend",html`<div class="card ppcard" id="decWaiting"><h2>Decisions we're waiting on from ${name.split(/\s+/)[0]} <span class="sub">· ${raw(countLink(`${plur(L.length,"decision")} waiting on ${name}`,L.length,"decisions:pending:",{o:ownersOf(L)}))}</span></h2><div class="mini-list">${L.map(d=>html`<div class="li" data-open="decisions:${d.id}" tabindex="0"><div class="t">${raw(ico("decision"))}${d.t}</div><div class="m">${raw(pLink(d.p))} ${d.id} · ${d.due?decLate(d)?html`needed by ${fd(d.due)}, <span class="late">${raw(decLateWords(d))}</span>`:html`needed by ${fd(d.due)}`:"no date needed by"}</div></div>`)}</div></div>`); } } } }   /* BL-53: decisions waiting on them */
   { const pc=personPromises(name,n=>resolver()(n).name||n), w=$("#v-person .wrapmax"); if(pc&&w&&!$("#ppPromises")){   /* BL-125 A: after Open work */
     const work=w.querySelector(".ppcard"); if(work) addHTML(work,"afterend",pc); else addHTML(w,"beforeend",pc); } }
-  if(!shared.LOADING){ mDots("work"); pkDots(); } }
+  if(!shared.LOADING){ mDots("work"); markStagedRows(); } }
 export function peopleCk(add){ PERS().forEach(x=>add("People",x.name,[x.p&&x.p.org,x.p&&x.p.role].filter(Boolean).join(" · "),()=>{ if(isMe(x.name)) go("mine"); else go("person",x.name); })); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0079(){
@@ -695,7 +683,7 @@ $("#settingsBody").addEventListener("click",async e=>{ const b=e.target.closest(
 $("#settingsBody").addEventListener("change",e=>{ const s=e.target.closest("select.pmsel"); if(s&&s.value){ e.stopPropagation(); renamePerson(s.dataset.n,s.value); } },true);
 document.addEventListener("click",e=>{ const a=e.target.closest("[data-person]"); if(!a) return; e.preventDefault(); e.stopPropagation(); const n=a.dataset.person; if(isMe(n)) go("mine"); else go("person",n); },true);
 /* renderPeople: BL-138 (sprint-all-items) draws the People view in two tabs, in its own section near the end */
-document.addEventListener("click",e=>{ const h=e.target.closest("[data-psort]"); if(h&&shared.VIEW==="people"){ const c=h.dataset.psort; shared.PSORT=shared.PSORT.col===c?{col:c,dir:shared.PSORT.dir==="asc"?"desc":"asc"}:{col:c,dir:c==="name"||c==="org"||c==="role"?"asc":"desc"}; renderPeople(); return; }
+document.addEventListener("click",e=>{ const h=e.target.closest("[data-psort]"); if(h&&shared.VIEW==="people"){ const c=h.dataset.psort; shared.PSORT=shared.PSORT.col===c?{col:c,dir:shared.PSORT.dir==="asc"?"desc":"asc"}:{col:c,dir:c==="name"||c==="org"||c==="role"?"asc":"desc"}; const kept=h.contains(document.activeElement); renderPeople(); if(kept){ const b=document.querySelector(`#peopleTbl th[data-psort="${c}"] button.thsort`); if(b) b.focus({preventScroll:true}); } return; }   /* v1.9.5 check 8: the redraw keeps focus on the same heading, so its new aria-sort is read and Enter again reverses */
   const r=e.target.closest("#peopleTbl tr[data-pp]"); if(r&&!e.target.closest("a,button")){ const n=r.dataset.pp; if(isMe(n)) go("mine"); else go("person",n); } });
 }
 /* ===== Workstreams (BL-58, BL-56) ===== */
@@ -822,7 +810,11 @@ export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.igno
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
    is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
-export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen);
+export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet);
+/* BL-334: a conversation with nothing for Alan is one quiet line on Today (no buttons, no count), shown the day it was updated */
+export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&String(a.updated||"").slice(0,10)===TODAY);
+/** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
+const vipSig=()=>(VIPD().alerts||[]).filter(a=>!a.seen).map(a=>`${a.id}@${a.updated||""}`).join();
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
@@ -835,17 +827,22 @@ export function alertFocus(id,what){ const vis=()=>$$("#tdList > li").filter(l=>
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
   const h=$("#hTd"); if(h&&h.offsetParent){ h.tabIndex=-1; h.focus(); return; } const h2=$("#hAttn"); if(h2){ h2.tabIndex=-1; h2.focus(); } }; }
-export async function alertDismiss(id){ if(!viaServer()){ snack("Dismiss needs the live server"); return; }
-  const r=await api("/api/alerts/dismiss",{ids:[id]}); if(!r.ok){ snack(r.message||"Not dismissed"); return; }
-  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"); if(a) a.seen=r.at||nowStamp(); vipBadge(); renderToday(); back();
-  snack("Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss needs the live server"); return; }
+  const c=cand?{cand}:{}, r=await api("/api/alerts/dismiss",{ids:[id],...c}); if(!r.ok){ snack(r.message||"Not dismissed"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"), it=cand&&a?(a.candidates||[]).find(/** @param {any} x */x=>x.n===cand):null;
+  if(it){ it.dismissed=r.at||nowStamp(); if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=r.at||nowStamp(); }   /* BL-334: that item only; nothing is staged */
+  else if(a) a.seen=r.at||nowStamp();
+  vipBadge(); renderToday(); back();
+  snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
-   stages it through /api/alerts/make, which dismisses the message; closing the peek leaves the message as it was. */
+   stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
+   leaves the message as it was. */
 export const ALERTTYPES=[["action","Action"],["risk","Risk"],["issue","Issue"],["decision","Decision"]];
 export const alertTypeOf=(k,x)=>k==="actions"?"action":k==="decisions"?"decision":String((x&&x.type)||"risk").toLowerCase();
-export async function alertMake(id,type="action",keep){ if(!viaServer()){ snack("Create work item needs the live server"); return; }
-  const r=await api("/api/alerts/prefill",{id,type}); if(!r.ok||!r.prefill){ snack(r.message||"That message can't be read"); return; }
+export async function alertMake(id,type,keep,cand){ if(!viaServer()){ snack("Create work item needs the live server"); return; }
+  const r=await api("/api/alerts/prefill",{id,...(type?{type}:{}),...(cand?{cand}:{})}); if(!r.ok||!r.prefill){ snack(r.message||"That message can't be read"); return; }
+  type=r.prefill.type||type||"action";
   const pre=r.prefill, k=pre.table, v=pre.values||{}; openNew(k,k==="decisions"?"needed":"");
   if(!shared.CUR||shared.CUR.mode!=="new"||shared.CUR.k!==k) return;
   PKN.offer=null; pkNewOffer("");                                               /* not a kept draft of another new item */
@@ -853,16 +850,36 @@ export async function alertMake(id,type="action",keep){ if(!viaServer()){ snack(
   if(k==="decisions"){ x.by=v.made_by||""; x.srcIn=pre.source||""; if(keep&&keep.due) x.due=keep.due; }
   else { x.o=v.owner||""; if(v.type) x.type=v.type; if(keep&&keep.due) x.due=keep.due; }
   if(pre.raised) x.raised=pre.raised;
-  shared.CUR.alert={id,type,link:pre.link||"",who:pre.who||"",sent:pre.sent||"",kind:pre.kind||"mail",marker:pre.marker||"",source:pre.source||""};
+  if(!keep&&k!=="decisions"&&v.due_date) x.due=v.due_date; if(!keep&&k==="decisions"&&v.needed_by) x.due=v.needed_by;   /* BL-334: a due date the conversation stated */
+  shared.CUR.alert={id,type,cand:cand||0,link:pre.link||"",who:pre.who||"",sent:pre.sent||"",kind:pre.kind||"mail",marker:pre.marker||"",source:pre.source||""};
   shared.CUR.blank={...x}; drawPanel(); const t=$("#pkTitle"); if(t){ t.textContent=x.t; t.focus(); } }
 export function alertValues(k,f){ const v=toDb(k,f); return {...v,project:f.p||""}; }
-/* the peek's first stage for an item made from a message: the server stages it and dismisses the message */
+/* the peek's first stage for an item made from a message: the server stages it as a pending proposal for Review and dismisses the
+   message. Check 45 (BL-334, Jarvis option (a)): it is never applied from here, and it isn't in the pill (staged = approved there);
+   pkSaveAndClose then closes the peek through alertStaged, with Undo. */
 export async function alertStage(k,nid,f){ const al=shared.CUR.alert, type=alertTypeOf(k,shared.CUR.draft); pkSaving("busy");
-  const r=await api("/api/alerts/make",{id:al.id,type,values:alertValues(k,f)});
+  const r=await api("/api/alerts/make",{id:al.id,type,values:alertValues(k,f),...(al.cand?{cand:al.cand}:{})});
   if(!r.ok){ pkSaving("fail"); pkNote(r.message||"Not staged"); return "wait"; }
-  const meta={k,id:nid,patch:{},prev:{},label:"Created",from:"",to:f.t,at:nowStamp(),note:"",type:"act",isNew:true,title:f.t,p:f.p,known:pkArr(k).map(y=>y.id),ms:Date.now()};
-  shared.PKS.push({name:r.proposal,...meta}); if(shared.CUR&&shared.CUR.nid===nid) shared.CUR.staged=r.proposal; pkPersist(); pkSaving("ok");
-  const a=(VIPD().alerts||[]).find(z=>z.id===al.id); if(a){ a.seen=nowStamp(); a.made=r.made||{proposal:r.proposal}; } vipBadge(); refreshAll(); return "ok"; }
+  if(shared.CUR&&shared.CUR.nid===nid){ shared.CUR.staged=r.proposal; shared.CUR.alertDone={al,name:r.proposal,word:pkNewWordOf(k,type),title:f.t}; } pkSaving("ok");
+  const a=(VIPD().alerts||[]).find(z=>z.id===al.id), it=a&&al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===al.cand):null;
+  if(it){ it.made=r.made||{proposal:r.proposal}; if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=nowStamp(); }   /* BL-334: that item only */
+  else if(a){ a.seen=nowStamp(); a.made=r.made||{proposal:r.proposal}; } vipBadge(); return "ok"; }
+const pkNewWordOf=(k,type)=>k==="actions"?"action":k==="decisions"?"decision":String(type||"item").toLowerCase();
+/* Save's end for an item made from a message: the peek closes, Review gets the proposal, and Undo removes it (if Review hasn't
+   decided it yet) and brings the message back */
+export async function alertStaged(){ const d=shared.CUR&&shared.CUR.alertDone; closePanel(); if(!d) return;
+  await reloadData(); renderToday();
+  snack(`Staged the new ${d.word} for Review: “${String(d.title).slice(0,60)}”`,()=>alertUnstage(d)); }
+export async function alertUnstage(d){ let ok=false;
+  try{ ok=await vq(async()=>{ const path="system/staging/"+d.name; if(!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d.name)||!await shared.VW.exists(path)) return false;
+      const data=JSON.parse(await shared.VW.read(path)); if((data.items||[]).some(/** @param {any} i */i=>i.applied||i.decision!=="pending")) return false;
+      await shared.VW.remove(path); return true; }); }catch(e){ ok=false; }
+  if(!ok){ snack("Already decided in Review: undo it in Activity"); return; }
+  const c=d.al.cand?{cand:d.al.cand}:{}, u=await api("/api/alerts/undo",{ids:[d.al.id],...c});
+  const a=(VIPD().alerts||[]).find(z=>z.id===d.al.id), it=a&&d.al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===d.al.cand):null;
+  if(it){ delete it.made; delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; }
+  VIPNOTED.add(d.al.id); vipBadge(); await reloadData(); renderToday();
+  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in To decide`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
 /* why Draft from the message can't run, or "" */
 export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs the live server":""; }
 /* the strip at the top of the peek: where it came from, the type, Draft from the message, Save and Cancel */
@@ -878,7 +895,7 @@ export function alertPeekDraw(x,k){ let el=$("#pkAlert"); const al=shared.CUR&&s
     <button type="button" class="btn" data-alertpeek="cancel">Cancel</button><button type="button" class="btn primary" data-alertpeek="save" data-tip="Stages it and dismisses the message (${MOD}↵)">Save</button></div>`); }
 export async function alertDraft(){ const al=shared.CUR&&shared.CUR.mode==="new"?shared.CUR.alert:null; if(!al) return;
   const why=alertDraftWhy(al); if(why){ snack(why); return; } const k=shared.CUR.k, nid=shared.CUR.nid, st=$("#pkAlertSt");
-  const d=await draftAsk({id:al.id,type:alertTypeOf(k,shared.CUR.draft)},{url:"/api/alerts/draft",label:"Reading the message",status:h=>{ if(st) putHTML(st,raw(h)); }});
+  const d=await draftAsk({id:al.id,type:alertTypeOf(k,shared.CUR.draft),...(al.cand?{cand:al.cand}:{})},{url:"/api/alerts/draft",label:"Reading the message",status:h=>{ if(st) putHTML(st,raw(h)); }});
   if(!shared.CUR||shared.CUR.nid!==nid) return;
   if(!d.ok||!d.prefill){ snack(d.message||"No draft came back"); return; }
   const v=d.prefill.values||{}, x=shared.CUR.draft, t=String(v.description??v.decision??"").trim(), due=v.due_date||v.needed_by||"", f=k==="actions"?"upd":k==="raid"?"resp":"why";
@@ -910,8 +927,8 @@ export function vipNotify(list){ if(VIPD().notify===false||!("Notification" in w
     if(Notification.permission==="granted"){ try{ const n=new Notification(String(a.who||"creaite"),{body:a.subject,tag:"creaite-vip-"+a.id}); n.onclick=()=>{ window.focus(); go("today"); n.close(); }; }catch(e){} } });
   if(Notification.permission==="default"&&list.length&&!store.get("creaite-vip-asked",false)){ store.set("creaite-vip-asked",true); try{ Notification.requestPermission(); }catch(e){} } }
 export async function vipPoll(){ if(!viaServer()) return; const r=await api("/api/vip"); if(!r.ok) return;
-  const before=VIPS().map(a=>a.id).join(); Object.assign(VIPD(),{alerts:r.alerts||[],last_check:r.last_check});
-  if(VIPS().map(a=>a.id).join()!==before){ vipNotify(VIPS()); vipBadge(); if(shared.VIEW==="today") renderToday(); } }
+  const before=vipSig(); Object.assign(VIPD(),{alerts:r.alerts||[],last_check:r.last_check});
+  if(vipSig()!==before){ vipNotify(VIPS()); vipBadge(); if(shared.VIEW==="today") renderToday(); } }
 /* Settings › VIP alerts: the switches, and what "always" can honestly mean */
 export function vipSectionHtml(){ const v=VIPD();
   return `<div class="srow"><div>Browser notification<small>When someone you follow writes, as well as the line on Today; your browser asks once. Whether to tell you, and how often to check, are in Essentials › People I follow. Choose who you follow in People and projects › People.</small></div><div><input type="checkbox" class="switch" data-vipk="notify" ${v.notify!==false?"checked":""} aria-label="Browser notification"></div></div>`; }
@@ -920,15 +937,15 @@ export function vipSectionHtml(){ const v=VIPD();
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id);
-  else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due}); }
+  const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
+  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
+  else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */
 PKDRAW.push(alertPeekDraw);
 setInterval(vipPoll,60*1000);
 vipBadge();
 /* Review: proposals from a VIP (flag "vip", set by sweep.py stage) first, labelled VIP */
 /* the VIP chip on a person's page and in Settings › People; the VIP field in the person dialog (when editing) */
-addHTML($("#pd_role"),"afterend",html`<label for="pd_vip" class="pdvip">VIP</label><select id="pd_vip" class="pdvip"><option value="">No</option><option value="management">Management</option><option value="client">Client</option><option value="yes">Yes</option></select>`);
 FX.vip=new Set();
 ["actions","raid","decisions"].forEach(t=>FDEFS[t].push(["vip","People I follow",()=>[["yes",t==="decisions"?"Made by someone I follow":"Owned by someone I follow"],["no","Not followed"]],x=>vipKind(x.o||x.by)?"yes":"no",1]));
 WSIG.push(["vip_overdue","Overdue item owned by someone you follow closely","days","Overdue by at least (days)"]);

@@ -1,9 +1,11 @@
 <section class="view" id="v-help">
 <div class="hp-shell">
+<div class="tabhost" id="helpTabsHost">
 <div class="tabs" id="helpTabs" role="tablist" aria-label="Help">
-<button role="tab" data-help="start" id="htab-start" aria-selected="true" tabindex="0">Start here</button>
-<button role="tab" data-help="howto" id="htab-howto" aria-selected="false" tabindex="-1">How do I…</button>
-<button role="tab" data-help="reference" id="htab-reference" aria-selected="false" tabindex="-1">Reference</button>
+<button type="button" role="tab" aria-selected="true" id="htab-start" tabindex="0" data-tab="start" data-help="start">Start here</button>
+<button type="button" role="tab" aria-selected="false" id="htab-howto" tabindex="-1" data-tab="howto" data-help="howto">How do I…</button>
+<button type="button" role="tab" aria-selected="false" id="htab-reference" tabindex="-1" data-tab="reference" data-help="reference">Reference</button>
+</div>
 </div>
 <div id="helpPane" role="tabpanel" data-tab="start" aria-labelledby="htab-start">
 <div class="hp-wrap hp-start">
@@ -40,9 +42,9 @@
 </path>
 </svg>Material arrives</h3>
 <ul>
-<li>Meetings picked from your calendar (Intake › Calendar Import)</li>
-<li>Transcripts and minutes you drop in (Upload Files)</li>
-<li>Notes from a call (Quick Capture)</li>
+<li>Meetings picked from your calendar (Intake › Calendar import)</li>
+<li>Transcripts and minutes you drop in (Upload files)</li>
+<li>Notes from a call (Quick capture)</li>
 <li>The daily mail and Teams sweep</li>
 </ul>
 <svg class="hp-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
@@ -153,7 +155,7 @@
 <div class="hp-beat">
 <span class="hp-when">After a meeting</span>
 <h3>Bring it in</h3>
-<p>On Intake, pick the meeting in Calendar Import or drop its transcript in Upload Files, then process it into minutes and proposals.</p>
+<p>On Intake, pick the meeting in Calendar import or drop its transcript in Upload files, then process it into minutes and proposals.</p>
 </div>
 <div class="hp-beat">
 <span class="hp-when">Whenever it suits</span>
@@ -180,7 +182,7 @@
 </div>
 <div class="hp-view">
 <b>Intake</b>
-<span>Three ways in: Calendar Import, Upload Files and Quick Capture</span>
+<span>Three ways in: Calendar import, Upload files and Quick capture</span>
 </div>
 <div class="hp-view">
 <b>Projects</b>

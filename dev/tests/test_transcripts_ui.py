@@ -1,4 +1,4 @@
-"""BL-42 phase 3 and BL-104 in the browser (Sprint 4b): Calendar Import shows what the sweep found for each meeting, highlights the
+"""BL-42 phase 3 and BL-104 in the browser (Sprint 4b): Calendar import shows what the sweep found for each meeting, highlights the
 meetings with a transcript, and loads them through the run engine. A real browser against the real live server; the run is a
 stand-in `claude` replaying fixture tool results (dev/tests/test_transcripts.py), so Microsoft 365 is never called.
 
@@ -220,7 +220,7 @@ class Loading(Case):
 
 
 class UploadList(Case):
-    """BL-137: Upload Files lists only uploaded files; a file Calendar Import loaded is known by its recorded event ID and its state,
+    """BL-137: Upload files lists only uploaded files; a file Calendar import loaded is known by its recorded event ID and its state,
     Preview and Remove are on its meeting row."""
 
     def stage(self, processed=False):

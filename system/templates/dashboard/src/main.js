@@ -44,13 +44,19 @@ export * from "./drafts.js";
 
 export * from "./components/StatusDot.jsx";   /* BL-256: the components (dev/COMPONENTS.md) */
 export * from "./components/Menu.jsx";
+export * from "./components/Picker.jsx";   /* BL-316: choose a value, a calendar, a small popover */
+export * from "./components/Combobox.jsx";   /* BL-316 */
+export * from "./components/Peek.jsx";   /* BL-316: a side peek's frame */
 export * from "./components/mount.js";
 export * from "./components/Icon.jsx";
 export * from "./components/Dialog.jsx";
+export * from "./components/dialogs/PageDialogs.jsx";   /* BL-316: the page's dialogs, each a Dialog */
 export * from "./components/Chip.jsx";
 
 export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft chase in the peek */
 export * from "./components/Tabs.jsx";
+export * from "./components/FilterBar.jsx";   /* BL-316: the filter bars of Work, Review and Settings › People */
+export * from "./components/Toast.jsx";   /* BL-316: the message at the foot of the page */
 export * from "./components/prep/PrepPage.jsx";   /* BL-286 D: Meetings › Prep */
 export * from "./stores/prep.js";
 export * from "./components/today/DayTabs.jsx";
@@ -64,18 +70,21 @@ export * from "./components/today/ToDecide.jsx";
 export * from "./components/today/WeekAhead.jsx";
 
 export * from "./components/review/RejectMenu.jsx";   /* BL-315 */
+export * from "./components/review/ContextMenu.jsx";   /* BL-316: the right-click menu */
 
 export * from "./components/review/RejectsList.jsx";
 
 export * from "./stores/rejects.js";
 
 export * from "./components/peek/SneakPeek.jsx";   /* BL-322: Sneak peek */
+export * from "./components/peek/PeekProps.jsx";   /* BL-316: the peek's properties as Chips */
 
 export * from "./sneak.js";
 
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";
 import { bootData } from "./core/data.js";
+import { bootDialogs } from "./components/dialogs/PageDialogs.jsx";
 import { bootTooltips } from "./core/dom.js";
 import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources, bootTickBoxes, bootWeekendNote } from "./core/fields.js";
 import { publish } from "./core/globals.js";
@@ -83,7 +92,7 @@ import { bootCopyCommand, bootKeyboard } from "./core/keys.js";
 import { bootMotionHooks } from "./core/motion.js";
 import { bootCountLinks, bootGoLinks, bootNav, bootOpenAll, bootTabTitle, navWrite, parseHash, restoreNav } from "./core/nav.js";
 import { bootDevTag, bootMotion, bootTheme, bootThemeButton, S } from "./core/page.js";
-import { bootDebugLog, bootEventStream, bootLive, bootPageRefresh, bootPulse, bootSnackKeys, bootSnackUndo, checkLive, renderBadge, status, vaultInit } from "./core/server.js";
+import { bootDebugLog, bootEventStream, bootLive, bootPageRefresh, bootPulse, bootToast, checkLive, renderBadge, status, vaultInit } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { bootDrafts0129, bootDrafts0160, bootDrafts0196, bootDrafts0202, bootDrafts0203, bootDrafts0204 } from "./drafts.js";
 import { bootFiles0068, bootFiles0069 } from "./files.js";
@@ -99,19 +108,19 @@ import { bootRail0007, bootRail0077 } from "./rail.js";
 import { bootReview0060, bootReview0061, bootReview0063, bootReview0064, bootReview0065, bootReview0067, bootReview0193, bootReview0195, bootReview0209, bootReview0315 } from "./review.js";
 import { bootSettings0073, bootSettings0076, bootSettings0078, bootSettings0079, bootSettings0127, bootSettings0138, bootSettings0140, bootSettings0155, bootSettings0163 } from "./settings.js";
 import { bootToday0026, bootToday0027, bootToday0028, bootToday0159, bootToday0164, bootToday319 } from "./today.js";
-import { bootWork0031, bootWork0032, bootWork0034, bootWork0035, bootWork0036, bootWork0038, bootWork0039, bootWork0040, bootWork0041, bootWork0130, bootWork0132, bootWork0133, bootWork0147, bootWork0148, bootWork0150 } from "./work.js";
+import { bootWork0031, bootWork0034, bootWork0035, bootWork0036, bootWork0038, bootWork0039, bootWork0040, bootWork0041, bootWork0130, bootWork0132, bootWork0133, bootWork0147, bootWork0148, bootWork0150 } from "./work.js";
 
 publish(page);
 
 /* ======================= the load-time steps and the start-up, in today's order ======================= */
+bootDialogs();   /* BL-316: first, so every step after finds the dialogs' inner ids */
 bootTooltips();
 bootDevTag();
 bootRail0007();
 bootTheme();
 bootMotion();
 bootData();
-bootSnackUndo();
-bootSnackKeys();
+bootToast();
 bootLive();
 bootNav();
 bootCountLinks();
@@ -122,7 +131,6 @@ bootToday0028();
 bootToday319();   /* BL-319 */
 bootProjects0029();
 bootWork0031();
-bootWork0032();
 bootWork0034();
 bootWork0035();
 bootWork0036();

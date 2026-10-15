@@ -33,7 +33,7 @@ import sys
 import threading
 import time
 import zipfile
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -115,8 +115,12 @@ class Conflict(Exception):
 # ── Small helpers ─────────────────────────────────────────────────────────────
 
 def now():
-    """Local time to the millisecond, so based_on catches changes made within the same second."""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    """Local time to the millisecond, so based_on catches changes made within the same second. Tests only: CREAITE_STAMP_DAY
+    ("YYYY-MM-DD") fixes the date part of these stamps (an apply's time, change_log, updated_at); the time of day stays real,
+    so stamps still differ and keep their order within a day."""
+    t = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    day = os.environ.get("CREAITE_STAMP_DAY")
+    return f"{day[:10]}{t[10:]}" if day and len(day) >= 10 else t
 
 
 def today():
@@ -775,6 +779,8 @@ def write_item(con, item, apply_id, via):
         return recode_project(con, item, apply_id, via)        # BL-111
     if op in ARCHIVE_OPS and table == "projects":
         return archive_project(con, item, apply_id, via)       # BL-09
+    if op == AGE_OP:
+        return archive_item(con, item, apply_id, via)          # BL-10
     refuse_archived_field(item)
     if op not in ("new", "update", "cancel"):
         raise Invalid(f"op must be new, update or cancel (got {op!r})")
@@ -998,6 +1004,13 @@ def _write_rebaseline(con, table, key, item, rebase, apply_id, via):
     log(con, apply_id, table, key, "note", None, f"{why}. Agreed with {rebase['made_by']}. Decision {did}", "update", via)
 
 
+def _unarchive_on_edit(current, diff, want):
+    """BL-10: editing an item archived for its age (its fields or its labels) un-archives it, in place in `diff`. An archived
+    project's items never get here: they refuse edits."""
+    if current.get("archived") and (diff or want is not None):
+        diff["archived"] = 0
+
+
 def _update_row(con, table, item, key, current, changes, cols, apply_id, via):
     """An update (or a cancel, as the update it makes): checked, the changed fields written and logged."""
     extras = _take_extras(table, changes)
@@ -1012,6 +1025,7 @@ def _update_row(con, table, item, key, current, changes, cols, apply_id, via):
     diff = {f: row[f] for f in cols if f != "updated_at" and row.get(f) != current.get(f)}
     if want is not None:      # the item's labels; a label change alone leaves the item's own row (and updated_at) alone
         set_labels(con, key, want, extras.get("label_reason"), extras.get("label_suggested"), apply_id, via)
+    _unarchive_on_edit(current, diff, want)
     if not diff:
         return key
     if "updated_at" in cols:
@@ -1256,8 +1270,13 @@ def resolve_proposal(arg):
 
 
 def via_for(prop_path, data):
-    """What change_log records as the source of an apply: the proposal's source_run, else its file name."""
+    """What change_log records as the source of an apply: the proposal's source_run, else its file name. The daily archiving
+    (BL-10: items only, each an archive_item) is recorded as "archive", so Activity names it; it is not one of Alan's own
+    edits (VIA_NAMES), and a report archive (files only) keeps its file name."""
     run = data.get("source_run", "")
+    items = data.get("items") or []
+    if run == AGE_SOURCE and items and all(i.get("op") == AGE_OP for i in items):
+        return AGE_SOURCE
     return run if run in VIA_NAMES else Path(prop_path).name
 
 
@@ -1599,8 +1618,11 @@ def archive_project(con, item, apply_id, via):
     if row is None:
         raise Invalid(f"{code} is not a project in the tracker")
     flags, active = _archive_target(con, item, row)
+    keep = set() if flags else age_archived_before(con, code)       # BL-10: a restore leaves items archived for their age alone
     for t in ARCHIVABLE:
         for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND archived = ? ORDER BY id", (code, 1 - flags)).fetchall():
+            if (t, i) in keep:
+                continue
             con.execute(f"UPDATE {t} SET archived = ? WHERE id = ?", (flags, i))
             log(con, apply_id, t, i, "archived", 1 - flags, flags, "update", via)
     for field, new in (("active", active), ("archived", flags)) if flags else (("archived", flags), ("active", active)):
@@ -1632,6 +1654,23 @@ def _archive_target(con, item, row):
     if active not in (0, 1):
         raise Invalid("a restore's active is 0 or 1")
     return flags, active
+
+
+def age_archived_before(con, code):
+    """{(table, id)} of the project's archived items that its latest archive (not undone) didn't flag: those were archived for
+    their age (BL-10) before it, so a restore leaves them archived. Read from change_log; without an archive record, none."""
+    r = con.execute("SELECT c.apply_id FROM change_log c JOIN applies a ON a.apply_id = c.apply_id WHERE c.tbl = 'projects' "
+                    "AND c.item_id = ? AND c.field = 'archived' AND c.new_value = '1' AND c.op = 'update' "
+                    "AND a.undone_at IS NULL ORDER BY c.rowid DESC LIMIT 1", (code,)).fetchone()
+    if not r:
+        return set()
+    flagged = {(t, i) for t, i in con.execute("SELECT tbl, item_id FROM change_log WHERE apply_id = ? AND field = 'archived' "
+                                              "AND new_value = '1' AND tbl != 'projects'", (r[0],))}
+    out = set()
+    for t in ARCHIVABLE:
+        out |= {(t, i) for (i,) in con.execute(f"SELECT id FROM {t} WHERE project = ? AND archived = 1", (code,))
+                if (t, i) not in flagged}
+    return out
 
 
 def last_archive(con, code):
@@ -1669,6 +1708,105 @@ def _moves_its_folder(item, blk):
     return len(moves) == 1 and (not want or (moves[0].get("from"), moves[0].get("to")) == (want.get("from"), want.get("to")))
 
 
+# ===== BL-10: items archived for their age (Alan, 14-10-2026) =====
+# Once a day (archive.py daily) closed or cancelled actions and RAID items, and done or dropped promises, whose closed date is
+# archive.after_months.<table> months ago or more (6 by default) are flagged archived, through this apply: one item each,
+# {"op": "archive_item", "table": "actions", "id": "ABC-A-001"}. The rule is checked again here, so no proposal can archive an
+# open item, a decision, a milestone, or one closed too recently. Each flag is logged (undo reverses it); updated_at is left alone.
+# An edit un-archives the item (_update_row), and it then stays live for another period from that edit. Client-visible items and
+# those a client report cited follow the same rule (Alan, 14-10-2026): the report is a saved file and doesn't change.
+AGE_OP = "archive_item"
+AGE_SOURCE = "archive"          # the daily run's proposals (source_run)
+AGE_ARCHIVABLE = ("actions", "raid", "promises")
+AGE_DEFAULT_MONTHS = 6
+
+
+def clock_day():
+    """Today as a date; CREAITE_NOW ("YYYY-MM-DD HH:MM") fixes it for tests, as elsewhere."""
+    fixed = os.environ.get("CREAITE_NOW")
+    return datetime.strptime(fixed[:10], "%Y-%m-%d").date() if fixed else date.today()
+
+
+def months_before(day, n):
+    """The date n calendar months before `day` (the 31st becomes the month's last day)."""
+    y, m = divmod(day.year * 12 + day.month - 1 - int(n), 12)
+    m += 1
+    last = (date(y + (m == 12), m % 12 + 1, 1) - timedelta(days=1)).day
+    return date(y, m, min(day.day, last))
+
+
+def age_months(table, settings=None):
+    """archive.after_months.<table> (6 by default); 0 or less means that kind is never archived for its age."""
+    try:
+        s = settings if settings is not None else paths.load_settings()
+        v = ((s.get("archive") or {}).get("after_months") or {}).get(table, AGE_DEFAULT_MONTHS)
+        return int(v)
+    except (OSError, ValueError, TypeError):
+        return AGE_DEFAULT_MONTHS
+
+
+def unarchived_since(con, table, item_id, cutoff):
+    """Whether an edit un-archived the item on or after `cutoff` (an apply not undone): it stays live a full period from then."""
+    r = con.execute("SELECT 1 FROM change_log c JOIN applies a ON a.apply_id = c.apply_id WHERE c.tbl = ? AND c.item_id = ? "
+                    "AND c.field = 'archived' AND c.old_value = '1' AND c.new_value = '0' AND a.undone_at IS NULL "
+                    "AND substr(c.at, 1, 10) >= ? LIMIT 1", (table, item_id, cutoff)).fetchone()
+    return bool(r)
+
+
+def age_archive_problem(con, table, row, on=None, settings=None):
+    """None when the item may be archived for its age on day `on` (today), else why not."""
+    if table not in AGE_ARCHIVABLE:
+        return "only actions, RAID items and promises are archived for their age (never decisions or milestones)"
+    if row["archived"]:
+        return f"{row['id']} is archived already"
+    if is_archived(con, row["project"]):
+        return f"{project_label(row['project'])} is archived"
+    if row["status"] not in CLOSING[table]:
+        return f"{row['id']} is {row['status']}: an open item is never archived"
+    months = age_months(table, settings)
+    if months <= 0:
+        return f"{table} are never archived for their age (archive.after_months.{table} is {months})"
+    cutoff = months_before(on or clock_day(), months).isoformat()
+    if not row["closed"] or row["closed"] > cutoff:
+        return f"{row['id']} closed {shown(row['closed']) if row['closed'] else 'on no date'}: not {months} months ago yet"
+    if unarchived_since(con, table, row["id"], cutoff):
+        return f"{row['id']} was edited within {months} months, which un-archived it"
+    return None
+
+
+def due_for_age_archive(con, on=None, settings=None):
+    """[(table, id)] of the items the daily run would archive on day `on`, in table and ID order."""
+    out = []
+    for t in AGE_ARCHIVABLE:
+        months = age_months(t, settings)
+        if months <= 0:
+            continue
+        cutoff = months_before(on or clock_day(), months).isoformat()
+        q = (f"SELECT * FROM main.{t} WHERE archived = 0 AND closed IS NOT NULL AND closed <= ? "
+             f"AND status IN ({','.join('?' * len(CLOSING[t]))}) ORDER BY id")
+        for r in con.execute(q, (cutoff, *CLOSING[t])).fetchall():
+            if age_archive_problem(con, t, dict(r), on, settings) is None:
+                out.append((t, r["id"]))
+    return out
+
+
+def archive_item(con, item, apply_id, via):
+    """Write one archive_item (see the block's note): the rule checked again, the flag set and logged. Returns the item's ID."""
+    table, key = item.get("table"), item.get("id")
+    if table not in AGE_ARCHIVABLE:
+        raise Invalid("only actions, RAID items and promises are archived for their age (never decisions or milestones)")
+    current = fetch(con, table, key) if key else None
+    if current is None:
+        raise Invalid(f"{key} is not in {table}")
+    problem = age_archive_problem(con, table, dict(current))
+    if problem:
+        raise Invalid(problem)
+    con.execute(f"UPDATE {table} SET archived = 1 WHERE id = ?", (key,))
+    log(con, apply_id, table, key, "archived", 0, 1, "update", via)
+    return key
+# ===== end BL-10 =====
+
+
 def hide_archived(con, settings=None):
     """BL-09: the default views leave archived projects and their items out. Temporary views named like the tables (projects, the
     item tables, links, item_labels, updates) shadow them for this connection only, read-only connections included; the
@@ -1694,8 +1832,9 @@ def hide_archived(con, settings=None):
 
 # ===== BL-09: the `move` file operation (archive, restore, and renaming an old zz Archive folder) =====
 # {"op": "move", "from": "projects/<folder>", "to": "projects/_Archive/<folder>"} in a file block whose "archive" says which kind
-# of move it is ("archive", "restore" or "rename"). reach.archive_move_problem is the one exception to _Archive's never rule: only
-# this apply calls it. The paths are stored paths, never mapped into _Archive (paths.resolve(…, archived=False)). Undo moves the
+# of move it is ("archive", "restore" or "rename"; one file: "reports", BL-03, and its reverse "reports_back", BL-331).
+# reach.archive_move_problem is the one exception to _Archive's never rule: only this apply calls it. The paths are stored paths,
+# never mapped into _Archive (paths.resolve(…, archived=False)). Undo moves the
 # folder back, and removes the _Archive folder this move made if it is empty again.
 
 def check_move(fop, blk):
@@ -1711,27 +1850,40 @@ def check_move(fop, blk):
     problem = reach.archive_move_problem(src, dst, kind)
     if problem:
         raise Invalid(f"move: {problem}")
+    if kind == "reports_back":                    # BL-331: only a file an archive moved there, back to where it came from
+        import archive
+        if archive.archived_moves().get(src) != dst:
+            raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
 
 
 def _op_move(apply_id, fop, blk, done):
     a, b = paths.resolve(fop["from"], archived=False), paths.resolve(fop["to"], archived=False)
-    made = not b.parent.exists()
+    made = b.parent
+    while not made.parent.exists():               # BL-03: the highest folder this move makes (_Archive/04 Reporting/Weekly)
+        made = made.parent
+    made = made if not made.exists() else None
     b.parent.mkdir(parents=True, exist_ok=True)
     os.rename(a, b)
-    done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(b.parent) if made else None})
+    done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(made) if made else None,
+                 "kind": blk.get("archive")})
 
 
 def _reverse_move(rec, report):
+    import reach
     a, b = paths.resolve(rec["from"], archived=False), paths.resolve(rec["to"], archived=False)
-    if not b.is_dir():
+    want = b.is_file() if rec.get("kind") in reach.FILE_MOVES else b.is_dir()   # BL-03, BL-331 move one file; BL-09 a folder
+    if not want:
         report.append(f"skipped moving {rec['to']} back: it isn't there")
     elif a.exists():
         report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
     else:
+        a.parent.mkdir(parents=True, exist_ok=True)
         os.rename(b, a)
         made = paths.resolve(rec["made"], archived=False) if rec.get("made") else None
-        if made is not None and made.is_dir() and not any(made.iterdir()):
-            made.rmdir()
+        here = b.parent
+        while made is not None and here.is_dir() and not any(here.iterdir()) and (here == made or made in here.parents):
+            here.rmdir()                          # the folders this move made, once they are empty again
+            here = here.parent
 # ===== end BL-09 =====
 
 
@@ -2367,6 +2519,20 @@ def _mark_card_undone(p, data, apply_id):
     save(p, data)
 
 
+def _kept_out_of_review(p, data, apply_id, report):
+    """True (and the proposal marked undone) for one that was never in Review, so undoing it leaves nothing there: a change
+    approved on ask creaite's card (BL-289), or the daily archiving (BL-10)."""
+    if data.get(CARD_MARK) == apply_id and not isinstance(data.get(CARD_MARK), bool):
+        why = "was approved on ask creaite's card"
+    elif data.get("source_run") == AGE_SOURCE and all(i.get("op") == AGE_OP for i in data.get("items", [])):
+        why = "was the daily archiving"
+    else:
+        return False
+    _mark_card_undone(p, data, apply_id)
+    report.append(f"proposal {p.name} {why}: not returned to Review")
+    return True
+
+
 def _return_proposals(proposals, apply_id, later, report):
     """Return the apply's proposals to staging with the undone items (and file blocks) pending again. BL-289: a change
     approved on ask creaite's card was never in Review, so undoing it leaves nothing there: its proposal stays in
@@ -2378,9 +2544,7 @@ def _return_proposals(proposals, apply_id, later, report):
             report.append(f"proposal {name} not found; items not returned to pending")
             continue
         data = load(p)
-        if data.get(CARD_MARK) == apply_id and not isinstance(data.get(CARD_MARK), bool):
-            _mark_card_undone(p, data, apply_id)
-            report.append(f"proposal {name} was approved on ask creaite's card: not returned to Review")
+        if _kept_out_of_review(p, data, apply_id, report):
             continue
         for item in data.get("items", []):
             if item.get("applied") != apply_id:
@@ -2473,6 +2637,20 @@ def why_not(con, r, reverted, done_ids):
     return None
 
 
+def age_archive_refusal(r):
+    """BL-10: why the daily archiving's change can't be chosen (its own Undo, or an edit, brings the item back), or None."""
+    if r["field"] == "archived" and is_age_archive_via(r["via"]):
+        return "archived for its age: use Undo on the archive apply, or edit the item to bring it back"
+    return None
+
+
+def is_age_archive_via(via):
+    """BL-10: whether a change_log source is the daily archiving: "archive" (via_for), or its proposal's file name as
+    recorded before v1.9.5's fix (proposed-<stamp>-archive.json)."""
+    via = str(via or "")
+    return via == AGE_SOURCE or bool(re.fullmatch(r"proposed-[\d-]+-archive(-\d+)?\.json", via))
+
+
 def revert_plan(con, rowids, apply_id, via):
     """Put back the chosen rows inside the caller's transaction. Returns (done, skipped): lists of dicts."""
     reverted = reverted_rowids(con)
@@ -2483,7 +2661,7 @@ def revert_plan(con, rowids, apply_id, via):
     groups = {}                                        # (apply, table, item) → the chosen rows of that apply on that item
     for rid in sorted(set(rowids), reverse=True):     # newest first, so two changes to one field go back in turn
         r = found.get(rid)
-        why = why_not(con, r, reverted, done_ids)
+        why = why_not(con, r, reverted, done_ids) or age_archive_refusal(r)
         if why:
             skipped.append({"rowid": rid, "id": r["item_id"] if r else "", "field": r["field"] if r else "", "why": why})
             continue

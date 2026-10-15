@@ -2,7 +2,10 @@
 /* drafts.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0128-draft-email-bl-83.js, 0129-bl-224-sprint-drafts-writing.js, 0160-bl-157-sprint-ux.js, 0196-ai-drafts-the-scaffold-sprint-drafts-fie.js, 0202-bl-227-sprint-drafts-writing.js, 0203-bl-224-sprint-drafts-writing.js, 0204-bl-220-sprint-drafts-extraction.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
+import { makeDraftEmailDialog } from "./components/dialogs/PageDialogs.jsx";
 import { drawCk, rbEnd, rbStart } from "./ask.js";
+import { drawChips } from "./components/Chip.jsx";
 import { A, open, P, pName, soon, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { CALI, closeCal, parseWhen } from "./core/fields.js";
@@ -122,10 +125,9 @@ export const deOverdue=i=>!!i.due&&i.due<TODAY;
 /* the default tick set: all of them for an address on an own domain; for anyone else only what is client-visible */
 export const deDefaults=(items,outside)=>new Set(items.filter(i=>!outside||i.client).map(i=>i.k+":"+i.id));
 export const deMe=n=>String(n||"").trim().toLowerCase()===String(S.me||"").trim().toLowerCase();
-export function deDialog(){ let d=$("#deDlg"); if(d) return d;
-  addHTML(document.body,"beforeend",html`<dialog id="deDlg" class="prepdlg" aria-labelledby="deTitle"><div class="prephead"><div style="flex:1"><div class="sub">Nothing is sent: copy it and paste it into Outlook</div><h2 id="deTitle"></h2></div><button class="iconbtn" id="deClose" aria-label="Close">${raw(ic("x"))}</button></div><div class="prepbody" id="deBody"></div></dialog>`);
-  d=$("#deDlg"); d.addEventListener("click",e=>{ if(e.target===d||e.target.closest("#deClose")) d.close(); }); d.addEventListener("close",()=>{ if(d.open) return; closeCal(); if(shared.DE&&shared.DE.polish) draftStat("email","rejected"); shared.DE=null; }); return d; }   /* the close event is queued: a popup opened again meanwhile keeps its email */
-export function deShow(title){ const d=deDialog(); $("#deTitle").textContent=title; drawDraftEmail(true); if(!d.open) d.showModal(); }
+export function deDlgEl(){ let d=$("#deDlg"); if(d) return d;
+  d=makeDraftEmailDialog(); d.addEventListener("click",e=>{ if(e.target.closest("#deClose")) d.close(); });   /* a click on the scrim is the Dialog's: it closes when nothing is typed */ d.addEventListener("close",()=>{ if(d.open) return; closeCal(); if(shared.DE&&shared.DE.polish) draftStat("email","rejected"); shared.DE=null; }); return d; }   /* the close event is queued: a popup opened again meanwhile keeps its email */
+export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=title; drawDraftEmail(true); openDialog(d); }
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
 export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
@@ -251,7 +253,7 @@ document.addEventListener("click",e=>{ if(!shared.DE) return; const t=e.target;
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-defollow]"); if(b){ e.preventDefault(); e.stopPropagation(); openFollowup(b.dataset.defollow); } },true);
 }
 /* ===== BL-157 (sprint-ux) ===== fixes from the one-off UX sweep (each under an hour; the rest are BL-165 onwards):
-   an empty Activity and an empty Projects page say what to do next (baseline check 6), and Quick Capture's unsent note is kept
+   an empty Activity and an empty Projects page say what to do next (baseline check 6), and Quick capture's unsent note is kept
    in this browser across a reload and cleared by Process or Clear (check 3). */
 /* ===== end BL-157 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -399,10 +401,10 @@ Object.assign(DRAFTKIND,{polish:"email","polish-help":"email"});   /* BL-298: th
 DRAFTFEATURES.push(["email","Polish the email wording","Draft email's opening paragraph reworded in a warm, neutral or firm tone; the table, subject and addresses are untouched"]);
 }
 /* ===== BL-220 (sprint-drafts-extraction) ===== Sharpen on capture. When an action is typed (the new-item form, ⌘K's "add an action",
-   Quick Capture) plain code offers chips, never set until clicked: Owner (a named person from the register, or "I'll…" as you), Due
+   Quick capture) plain code offers chips, never set until clicked: Owner (a named person from the register, or "I'll…" as you), Due
    (from the words, through parseWhen), Workstream and Milestone (named in the words, else as the closest past item in the project was
    filed) and Priority (urgent, asap, critical; important). A click changes that one field: the peek's own staging (pkCommit), ⌘K's
-   pending change, or a clause added to the note's line in Quick Capture. A vague title (under four words, or no verb: plain code, as
+   pending change, or a clause added to the note's line in Quick capture. A vague title (under four words, or no verb: plain code, as
    extraction.vague) offers Sharpen (drafts.py kind "sharpen", the run engine): a verb-first title beside the original, Use or
    Discard; the original is kept (as_proposed, BL-232, for a proposal). Review marks a vague new action as shaky (BL-208) with Sharpen. */
 export const SHVERBS=new Set(("accept add agree align allocate amend analyse analyze appoint approve arrange ask assess assign attend audit book brief build buy "
@@ -434,11 +436,12 @@ export function capChips(t,code,have={}){ const out=[], low=String(t||"").toLowe
     const msv=ms?ms[0]:sim&&sim.ms; add("ms",msv,`Milestone: ${ms?ms[1]:((D.milestone_names||{})[msv]||[msv])[0]}`,ms?"named in the words":`as ${sim&&sim.id} was filed`); }
   const pr=/\b(urgent|asap|critical|blocker|immediately)\b/.test(low)?"Urgent":/\b(important|high priority)\b/.test(low)?"High":null; add("pr",pr,`Priority: ${pr}`,"from the words");
   return out; }
-export function chipEls(host,chips,onPick){ host.replaceChildren(); chips.forEach((c,i)=>{ const b=document.createElement("button"); b.type="button"; b.className="chip capchip"; b.dataset.chip=i;
-    b.textContent=`+ ${c.label}`; b.title=`Suggested ${c.why}; click to set it`; b.addEventListener("click",e=>{ e.preventDefault(); e.stopPropagation(); onPick(c); }); host.append(b); }); }
+/* BL-316: the suggested fields are Chip building blocks (class capchip), drawn into their row with drawChips */
+export function capChipsDraw(host,chips,onPick){ drawChips(host,chips.map((c,i)=>({cls:"capchip","data-chip":String(i),title:`Suggested ${c.why}; click to set it`,children:`+ ${c.label}`,
+  onClick:e=>{ e.preventDefault(); e.stopPropagation(); onPick(c); }}))); }
 export function pkChipsDraw(){ const list=$("#pkChips .pkchipl"), x=shared.CUR&&curObj(); if(!list) return; const on=x&&shared.CUR.k==="actions"&&shared.CUR.mode==="new";
   const sb=$("#pkChips [data-draft=sharpen]"), tt=x?String((shared.CUR.mode==="new"?pkNewTitle():"")||x.t||"").trim():""; if(sb) sb.hidden=!tt||!vagueWhy(tt);   /* only while the title is vague */
-  chipEls(list,on?capChips(pkNewTitle()||x.t,x.p,{o:x.o===S.me?"":x.o,due:x.due,ws:x.ws,ms:x.ms,pr:x.pr}):[],c=>{ const y=curObj(); if(!y) return; pkCommit(shared.CUR.k,pkCid(),{[c.f]:c.v},PKFL[c.f]||pkLabel(shared.CUR.k,c.f,y),c.f==="due"?fd(y[c.f])||"none":y[c.f]||"none",c.f==="due"?fd(c.v):c.v); }); }
+  capChipsDraw(list,on?capChips(pkNewTitle()||x.t,x.p,{o:x.o===S.me?"":x.o,due:x.due,ws:x.ws,ms:x.ms,pr:x.pr}):[],c=>{ const y=curObj(); if(!y) return; pkCommit(shared.CUR.k,pkCid(),{[c.f]:c.v},PKFL[c.f]||pkLabel(shared.CUR.k,c.f,y),c.f==="due"?fd(y[c.f])||"none":y[c.f]||"none",c.f==="due"?fd(c.v):c.v); }); }
 /* Review: a new action with a vague title is shaky (staging marks it); Sharpen opens the proposal and asks */
 export function shRvHtml(r){ if(!r||r.done||r.kind!=="actions"||(S.drafting&&S.drafting.sharpen===false)||!(r.inferred||[]).some(x=>x.field==="description")) return "";   /* not draftOn: Review can draw before the scaffold loads */
   return ` · <button type="button" class="linkbtn" data-shrv="${r.n}">Sharpen</button>`; }
@@ -449,7 +452,7 @@ export function ckChipsHtml(c){ if(c.k!=="actions"||!c.new) return ""; c.chips=c
 export function qcLine(){ const ta=$("#qcNotes"), v=ta.value, at=ta.selectionStart??v.length, a=v.lastIndexOf("\n",at-1)+1, b=v.indexOf("\n",at); return {a,b:b<0?v.length:b,text:v.slice(a,b<0?v.length:b)}; }
 export function qcChipsDraw(){ const ln=qcLine(), code=$("#qcProj").value||(P.find(p=>new RegExp(`\\b${p.code}\\b`).test(ln.text))||{}).code||"";
   const words={o:"owner",due:"due",ws:"workstream",ms:"milestone",pr:"priority"};
-  chipEls($("#qcChips"),ln.text.trim().split(/\s+/).length>=3?capChips(ln.text,code,{}).filter(c=>!new RegExp(`\\b${words[c.f]}\\b`,"i").test(ln.text)):[],c=>{
+  capChipsDraw($("#qcChips"),ln.text.trim().split(/\s+/).length>=3?capChips(ln.text,code,{}).filter(c=>!new RegExp(`\\b${words[c.f]}\\b`,"i").test(ln.text)):[],c=>{
     const ta=$("#qcNotes"), cur=qcLine(), v=ta.value, show=c.f==="due"?fd(c.v):c.f==="ms"?c.label.replace(/^Milestone: /,""):c.v, add=` (${words[c.f]} ${show})`;
     ta.value=v.slice(0,cur.b)+add+v.slice(cur.b); ta.focus(); ta.selectionStart=ta.selectionEnd=cur.b+add.length; qcChipsDraw(); }); }
 /* ===== end BL-220 ===== */
@@ -470,7 +473,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-shrv]"); 
   setTimeout(()=>{ const t=$('#pkChips [data-draft="sharpen"]'); if(t) t.click(); else snack("This title isn't vague any more"); },0); },true);
 document.addEventListener("click",e=>{ const b=e.target.closest("#cmdk [data-ckchip]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const it=shared.CK[shared.CKI], c=it&&it.change, ch=c&&c.chips&&c.chips[+b.dataset.ckchip]; if(!ch||!c.new) return; c.new[ch.f]=ch.v; drawCk(); $("#cmdkIn").focus(); },true);
-/* Quick Capture: chips for the line being written; a click adds that field to the line, in words cx-minutes reads */
+/* Quick capture: chips for the line being written; a click adds that field to the line, in words cx-minutes reads */
 { const host=document.createElement("div"); host.id="qcChips"; host.className="qcchips"; host.setAttribute("role","group"); host.setAttribute("aria-label","Suggested fields for this line"); $("#qcNotes").after(host); }
 ["input","click","keyup"].forEach(ev=>$("#qcNotes").addEventListener(ev,()=>qcChipsDraw()));
 }

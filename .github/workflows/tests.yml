@@ -15,7 +15,7 @@
 # BL-234 is parked (Alan): this runs only by hand. To run it on pull requests and pushes to main as well, swap the active
 # `on:` line below for the commented one under it. That one line is the whole change.
 # on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}}
-on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
+on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}, macos: {description: "Add the macOS job (#83)", type: boolean, required: false, default: false}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
 #
 # ===== #89: who runs what =====
 # Python 3.14 runs every test file (the browser tests included); Python 3.9, the floor, runs the files that never start Chrome
@@ -92,11 +92,12 @@ jobs:
 
 
   macos:
-    # macOS (3.14, every file, 3 shards) runs on release branches only (release-*; Alan, 15-10-2026, #89). It needs about 2
+    # macOS (3.14, every file, 3 shards) runs on release branches only (release-*; Alan, 15-10-2026, #89), or when a hand-started run sets macos=true (#83). It needs about 2
     # hours and GitHub runs only five macOS jobs at once, so on a push to main or a pull request it held the run open for
     # nothing; Linux decides those. It is a job of its own, continue-on-error, and "Tests passed" does not wait for it, so
     # a release run is green with Linux while macOS is still running. A macOS runner that fails never blocks a cut.
-    if: startsWith(github.head_ref || github.ref_name, 'release-')
+    # A hand-started run can add it too (#83): gh workflow run Tests --ref <branch> -f macos=true
+    if: startsWith(github.head_ref || github.ref_name, 'release-') || (github.event_name == 'workflow_dispatch' && github.event.inputs.macos == 'true')
     name: macos-latest · Python 3.14 · shard ${{ matrix.shard }}/3
     runs-on: macos-latest
     continue-on-error: true

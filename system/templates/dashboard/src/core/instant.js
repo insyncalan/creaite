@@ -69,14 +69,15 @@ export function undatedRecount() {
     p.undated = { actions: a, raid: r, total: a + r }; } }
 /** counts for tests: how often each way of refreshing ran */
 export const RECSTAT = { records: 0, full: 0 };
-/** fetch just these items (and Review, Activity) and redraw; false when the server couldn't answer (the caller reloads all) */
+/** fetch just these items (and Review, Activity) and redraw; false when the server couldn't answer (the caller reloads all).
+    o.aged (BL-10): an item archived for its age is fetched too, for search to open it */
 export async function recordsRefresh(ids, o = {}) {
   const list = [...new Set(ids || [])].filter(Boolean);
   if (list.length > 200) return false;
   PULSE.reloads++; let n = null;
   try {
     const hold = o.hold ? o.hold() : null;
-    try { const r = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
+    try { const r = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
       if (r.ok) n = await r.json(); } catch (e) { n = null; }
     if (!n || !n.ok) return false;
     RECSTAT.records++; recMerge(n); refreshAll(); if (o.restore) o.restore(hold);

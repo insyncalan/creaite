@@ -2,10 +2,13 @@
 <div class="wrapmax">
 <h1>Activity</h1>
 <p class="sub" style="margin:#px 0 #px">Every change, newest first. Undo any of them.</p>
+<div class="tabhost" id="actTabsHost">
 <div class="acttabs" role="tablist" aria-label="Activity">
-<button type="button" role="tab" id="actTabCh" aria-selected="true" aria-controls="actTbl">Changes</button>
-<button type="button" role="tab" id="actTabQ" aria-selected="false" aria-controls="actQuality" tabindex="-1">Quality</button>
+<button type="button" role="tab" aria-selected="true" id="actTabCh" aria-controls="actTbl" tabindex="0" data-tab="ch">Changes</button>
+<button type="button" role="tab" aria-selected="false" id="actTabQ" aria-controls="actQuality" tabindex="-1" data-tab="q">Quality</button>
 </div>
+</div>
+<!-- BL-316: Changes and Quality, the Tabs building block -->
 <!-- BL-233 (sprint-drafts-extraction) -->
 <div id="actQuality" role="tabpanel" aria-labelledby="actTabQ" hidden="">
 <p class="sub" id="qPeriod">
@@ -109,61 +112,25 @@
 <input type="search" id="actQ" placeholder="Search Activity: ID, words, project, person, date" aria-label="Search Activity" autocomplete="off">
 <kbd aria-hidden="true">/</kbd>
 </label>
+<span class="wfilters" id="actFbar">
+<span class="dd">
+<button type="button" class="btn fbtn" id="actTypeBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="actTypeMenu">Kind</button>
+<div class="ddmenu left" id="actTypeMenu">
+</div>
+</span>
+<span class="dd">
+<button type="button" class="ib bd fbtn" id="actFunnel" aria-haspopup="dialog" aria-expanded="false" aria-controls="actPick" aria-label="Add a filter" data-tip="Add a filter">
+<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel">
+<path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
+</path>
+</svg>
+</button>
+<div class="ddmenu left fpmenu" id="actPick" role="dialog" aria-label="Filter Activity">
+</div>
+</span>
+</span>
 <span id="actCount" aria-live="polite">12 of 12</span>
 <button type="button" class="linkbtn" id="actClear" data-actclear="" hidden="">Clear</button>
-<span class="actdates">
-<label for="actFrom">From</label>
-<input type="text" id="actFrom" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off">
-<label for="actTo">to</label>
-<input type="text" id="actTo" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off">
-</span>
-<div id="actTypes" role="group" aria-label="Show only these types">
-<button type="button" class="vchip" data-acttype="action" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="action">
-<rect x="4" y="4" width="16" height="16" rx="3">
-</rect>
-<path d="m8 12.5 2.8 2.8L16.5 9.5">
-</path>
-</svg>Action</button>
-<button type="button" class="vchip" data-acttype="Risk" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="risk">
-<path d="M12 3 2.5 20h19z">
-</path>
-<path d="M12 10v4M12 17v.5">
-</path>
-</svg>Risk</button>
-<button type="button" class="vchip" data-acttype="Issue" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="issue">
-<circle cx="12" cy="12" r="9">
-</circle>
-<path d="M12 7.5v5.5M12 16.2v.4">
-</path>
-</svg>Issue</button>
-<button type="button" class="vchip" data-acttype="decision" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="decision">
-<path d="m13.5 3.5 7 7-3 3-7-7z">
-</path>
-<path d="m11.5 8.5-8 8 4 4 8-8">
-</path>
-</svg>Decision</button>
-<button type="button" class="vchip" data-acttype="milestone" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="milestone">
-<path d="M5 21V4h11l-2 4 2 4H5">
-</path>
-</svg>Milestone</button>
-<button type="button" class="vchip" data-acttype="project" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="projects">
-<path d="M4 13h6V4H4zM14 20h6v-9h-6zM4 20h6v-4H4zM14 4v4h6V4z">
-</path>
-</svg>Project</button>
-<button type="button" class="vchip" data-acttype="update" aria-pressed="false">
-<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="filetext">
-<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z">
-</path>
-<path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8">
-</path>
-</svg>Weekly update</button>
-</div>
 </div>
 </div>
 <div class="wbulk" id="actBar" hidden="">

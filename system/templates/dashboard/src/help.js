@@ -2,6 +2,7 @@
 /* help.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0091-help-bl-84.js, 0158-bl-155-sprint-ux.js, 0161-bl-169-sprint-polish-2.js, 0162-bl-167-sprint-polish-2.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { drawTabs } from "./components/Tabs.jsx";
 import { open } from "./core/data.js";
 import { $, $$, addHTML, esc, html, putHTML, raw } from "./core/dom.js";
 import { go, navWrite } from "./core/nav.js";
@@ -9,8 +10,7 @@ import { cmdBox, D, S, store } from "./core/page.js";
 import { snack, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { drawPanel, PDAGE, pdAll, pdPut, pkNew, REC } from "./panel.js";
-import { rvHintHtml } from "./review.js";
-import { hit, layoutOf, workHint } from "./work.js";
+import { hit } from "./work.js";
 /* ===== Help (BL-84) ===== */
 /* Three tabs from help.md (built by build_dashboard.help_sections): Start here, How do I… and Reference. Each has an
    address (#help-start, #help-howto, #help-howto-<task>, #help-reference, #help-reference-<section>), so Back and
@@ -24,7 +24,7 @@ export function helpNorm(a){ a=String(a||""); const i=a.indexOf("-"), tab=i<0?a:
 export function renderHelp(arg){ if(!HD.tabs.length){ putHTML($("#helpPane"),html`<div class="hp-wrap"><p>Help isn’t available: system/templates/help.md is missing.</p></div>`); return; }
   const a=helpNorm(arg)||helpNorm(store.get("creaite-help-tab","start"))||HTABS[0], i=a.indexOf("-"), tab=i<0?a:a.slice(0,i), rest=i<0?"":a.slice(i+1), changed=!$("#helpPane").dataset.tab||$("#helpPane").dataset.tab!==tab;
   shared.HELPARG=a; store.set("creaite-help-tab",tab);
-  putHTML($("#helpTabs"),HD.tabs.map(t=>html`<button role="tab" data-help="${t.id}" id="htab-${t.id}" aria-selected="${String(t.id===tab)}" tabindex="${t.id===tab?0:-1}">${t.title}</button>`));
+  drawTabs($("#helpTabsHost"),{items:HD.tabs.map(t=>({id:t.id,label:t.title,tabId:"htab-"+t.id,data:{help:t.id}})),selected:tab,onSelect:helpGo,label:"Help",className:"tabs",id:"helpTabs",wrap:true});   /* BL-316: the Tabs block */
   if(changed){ const html=HD.tabs.find(t=>t.id===tab).html.replace("<p>[start command]</p>",cmdBox());
     putHTML($("#helpPane"),raw(`<div class="hp-wrap hp-${tab}">${html}</div>`)); $("#helpPane").dataset.tab=tab; $("#helpPane").setAttribute("aria-labelledby","htab-"+tab); }
   $$("#helpPane .hp-task").forEach(t=>t.classList.toggle("hp-hl",!!rest&&tab==="howto"&&t.dataset.task===rest));
@@ -51,32 +51,18 @@ export function helpCk(q){ q=q.toLowerCase(); if(q.trim().length<2) return [];
   return out; }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootHelp0091(){
-document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help); });
-$("#helpTabs").addEventListener("keydown",e=>{ if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft") return; e.preventDefault(); const i=HTABS.indexOf(shared.HELPARG.split("-")[0]), j=(i+(e.key==="ArrowRight"?1:HTABS.length-1))%HTABS.length; helpGo(HTABS[j]); $(`#htab-${HTABS[j]}`)?.focus(); });
+document.addEventListener("click",e=>{ const l=e.target.closest("#v-help [data-help]:not([role=tab])"); if(!l) return; e.preventDefault(); helpGo(l.dataset.help); });   /* the tabs are the Tabs block's (BL-316) */
 document.addEventListener("input",e=>{ if(e.target.id!=="helpQ") return; const q=e.target.value.toLowerCase().trim(); $$("#helpPane .hp-ref").forEach(s=>s.classList.toggle("hidden",!!q&&!s.textContent.toLowerCase().includes(q))); });
 }
-/* ===== BL-155 (sprint-ux) ===== the key-hint line becomes a Keys chip. Work and Review each get a small Keys chip at the end of
-   their toolbar; it shows the same hints (workHint for the layout in use, rvHintHtml) in a popover, and Help's keyboard shortcuts
-   (the ? key) list them too. The permanent line under the list shows, as before, until the chip has been opened once in this
-   browser (localStorage creaite-keys-seen); from then on the hints are one tap away instead of always on screen. */
+/* ===== BL-155 (sprint-ux) ===== the key-hint line under Work's and Review's lists shows until the Keys chip was opened once in
+   this browser (localStorage creaite-keys-seen). BL-175 (sprint-peek) removed the chip: Help lists the keys (the ? key), and a
+   browser that had opened it keeps the line hidden. BL-316: the chip's own popover, which nothing drew any more, is gone. */
 export const KEYSK="creaite-keys-seen";
 export function keysSeen(){ try{ return localStorage.getItem(KEYSK)==="1"; }catch(e){ return false; } }
-export function keysMark(){ try{ localStorage.setItem(KEYSK,"1"); }catch(e){} document.body.classList.add("keys-seen"); }
-export function keysChip(where,after){ const host=document.querySelector(after); if(!host||$("#"+where+"Keys")) return;
-  addHTML(host,"afterend",html`<span class="dd keysdd"><button type="button" class="btn keyschip" id="${raw(where)}Keys" aria-haspopup="dialog" aria-expanded="false" aria-controls="${raw(where)}KeysMenu" title="Keyboard keys for this list">Keys</button><div class="ddmenu keysmenu" id="${raw(where)}KeysMenu" role="dialog" aria-label="Keys" hidden></div></span>`); }
-/* BL-175 (sprint-peek): no Keys chip on Work or Review any more; Help lists the keys */
-export function keysHtml(where){ const h=where==="w"?((layoutOf(shared.WT)==="board"?$("#whintBoard"):$("#whintList")).innerHTML||workHint(layoutOf(shared.WT))):($("#rvHint").innerHTML||String(rvHintHtml()));   /* the line's own words (All items has its own) */
-  return `<h3>Keys</h3><ul>${h.split(" · ").map(x=>`<li>${x}</li>`).join("")}</ul><p class="sub">Press <span class="kbd">?</span> for every shortcut.</p>`; }
-export function keysClose(){ $$(".keysmenu").forEach(m=>{ m.hidden=true; m.classList.remove("on"); m.previousElementSibling.setAttribute("aria-expanded","false"); }); }
 /* ===== end BL-155 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootHelp0158(){
 if(keysSeen()) document.body.classList.add("keys-seen");
-document.addEventListener("click",e=>{ const b=e.target.closest(".keyschip");
-  if(b){ e.stopPropagation(); const where=b.id.replace(/Keys$/,""), m=$("#"+where+"KeysMenu"), was=!m.hidden; keysClose(); if(was) return;
-    putHTML(m,raw(keysHtml(where))); m.hidden=false; m.classList.add("on"); b.setAttribute("aria-expanded","true"); keysMark(); return; }
-  if(!e.target.closest(".keysmenu")) keysClose(); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$$(".keysmenu").some(m=>!m.hidden)){ e.preventDefault(); e.stopPropagation(); const open=$$(".keysmenu").find(m=>!m.hidden); keysClose(); open?.previousElementSibling?.focus(); } },true);
 }
 /* ===== BL-169 (sprint-polish-2) ===== the "⌘↵ saves and closes · Esc cancels" line shows only when it helps: once a field
    has changed, or, for a new item, once its first field has focus (it opens there). It stays in its place under the fields,

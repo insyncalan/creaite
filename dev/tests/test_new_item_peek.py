@@ -33,7 +33,7 @@ class NewCase(LiveBrowserCase):
         b.click("#newBtn")
         if k == "decisions":
             b.wait("newMenuOpen()")
-            b.click(f'#newMenu [data-newd="{how or "made"}"]')
+            b.click(f'#newDecMenu [data-newd="{how or "made"}"]')
         b.wait("CUR&&CUR.mode==='new'&&document.getElementById('panel').classList.contains('peek')")
         b.pump(0.2)
 

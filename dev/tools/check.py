@@ -29,6 +29,10 @@ Ratchets (dev/check-baseline.json; a number may fall, never rise):
   JS       the dashboard's inline script: `innerHTML` uses, HTML-string sinks (`innerHTML`, `outerHTML`,
            `insertAdjacentHTML`, `document.write`), in-place function wrappers (`const a = f; f = …`) and empty `catch`
            blocks (and, with Chrome, that it compiles)
+  OLD      BL-316: the dashboard's own copies of a shared building block (dev/COMPONENTS.md §3), per block: the old
+           helpers (newMenu, pkList, drawPicker, snackAdd and the rest) and menus, dialogs, tab lists and status dots
+           made by hand outside the block's own file (OLD_HELPERS); each count falls to 0 as screens move onto the blocks.
+           Every run prints the total and the count per screen area (OLD_AREAS); only a rise over the baseline fails
   RUFF, BIOME, VULTURE  per-rule counts from those tools when they are installed (dev/tools/check_extras.py); skipped
            without them, and compared only for the version recorded in the baseline
   TSC      the type errors TypeScript's checkJs finds in the dashboard's modules (dev/tools/typecheck.py, BL-231 step 3),
@@ -284,6 +288,38 @@ def _fstring_312(src, tree):
 
 # ---------- metrics ----------
 KINDS = ("complexity", "length", "long_lines", "silent_except", "unexplained_swallow", "missing_docstrings")
+# BL-316: what each building block replaces (dev/COMPONENTS.md §3, "Replaces"), counted in the dashboard's source (src/ and
+# shell.html, the blocks' own files left out): a name of an old helper (its definition and every use), or markup made by
+# hand that a block makes. Per block, the count may fall, never rise; BL-316 is done when every one is 0.
+OLD_HELPERS = {
+    "Menu": (r"\b(?:newMenu|boardMenu|viewMenu|rvReasonMenu|rvMoveMenu|closeBoardMenu|closeViewMenu|cxOpen)\b",
+             r"\b(?:bmenu|dmenu)\b", r"""role(?:=\\?"|:\s*")menu\b"""),
+    "Dialog": (r"\.showModal\(", r"<dialog\b", r"\bdeDialog\b"),
+    "Picker": (r"\b(?:pkList|pkMk|pkPopClose|pkPlace|pkDate)\b",),
+    "Combobox": (r"\b(?:comboDraw|comboClose)\b",),
+    "FilterBar": (r"\b(?:renderFilterBar|drawMenu|drawPicker|wfFit|rvFilterBar|actFilter)\b",),
+    "Tabs": (r"""role(?:=\\?"|:\s*")tablist\b""", r"\b(?:actTab|feedTabsHtml)\b"),
+    "Toast": (r"\b(?:snackAdd|bootSnackUndo|bootSnackKeys)\b",),
+    "Peek": (r"\bmvPeekEl\b",),
+    "StatusDot": (r"""class=\\?"dot\b""", r"\b(?:hdot|pkDots)\b"),
+    "Chip": (r"\b(?:pkChip|chipEls|renderViewChips|depChips)\b",),
+}
+# BL-316 (v1.9.5 step 2): the screen area each source file belongs to, for the OLD count per area (the screen branches
+# split by area: Today, Intake, Review, ask creaite and Help; Projects, Work, Milestones, Files and Settings). The first
+# prefix that matches wins; a file matching none is its own area, named by its stem.
+OLD_AREAS = (("src/today.js", "Today"), ("src/components/today/", "Today"), ("src/components/closeday/", "Today"),
+             ("src/stores/today.js", "Today"), ("src/intake.js", "Intake"), ("src/review.js", "Review"),
+             ("src/components/review/", "Review"), ("src/stores/rejects.js", "Review"), ("src/ask.js", "ask creaite"),
+             ("src/help.js", "Help"), ("src/projects.js", "Projects"), ("src/components/prep/", "Projects"),
+             ("src/stores/prep", "Projects"), ("src/meetings.js", "Meetings"), ("src/work.js", "Work"),
+             ("src/components/work/", "Work"), ("src/milestones.js", "Milestones"), ("src/files.js", "Files"),
+             ("src/settings.js", "Settings"), ("src/components/settings/", "Settings"), ("src/stores/settings.js", "Settings"),
+             ("src/activity.js", "Activity"), ("src/panel.js", "Peek"), ("src/components/peek/", "Peek"),
+             ("src/sneak.js", "Peek"), ("src/drafts.js", "Drafts"), ("src/rail.js", "Shell"), ("src/main.js", "Shell"),
+             ("src/components/sidebar/", "Shell"), ("src/components/dialogs/", "Shell"), ("src/stores/rail.js", "Shell"),
+             ("shell.html", "Shell"), ("src/core/", "Core"), ("src/components/", "Core"))
+BLOCK_FILES = {"Menu.jsx", "Dialog.jsx", "Picker.jsx", "Combobox.jsx", "FilterBar.jsx", "Tabs.jsx", "Toast.jsx", "Peek.jsx",
+               "StatusDot.jsx", "Chip.jsx", "Icon.jsx", "IconButton.jsx"}
 TOOL_KINDS = ("ruff", "biome", "vulture", "tsc")
 SINK = re.compile(r"\.innerHTML\s*\+?=|\.outerHTML\s*=|insertAdjacentHTML\(|document\.write\(")
 DECLARATION = re.compile(r"\b(?:const|let|var)\s+([^;{}\n]*);")     # one declaration statement, on one line
@@ -480,6 +516,11 @@ def ratchet(cur, base, problems):
         limit = base.get("js", {}).get(k, 0)
         if v > limit:
             problems.append((rel(DASHBOARD), 0, "JS", f"{k} appears {v} times; the limit is {limit}"))
+    for k, v in sorted(cur.get("old_helpers", {}).items()):
+        limit = base.get("old_helpers", {}).get(k, 0)
+        if v > limit:
+            problems.append((rel(DASHBOARD), 0, "OLD", f"{v} copies of the {k} block's job outside {k} (dev/COMPONENTS.md); "
+                             f"the limit is {limit}: use the block"))
 
 
 def lowered(cur, base):
@@ -495,7 +536,8 @@ def lowered(cur, base):
                     continue                      # inside the limit for a new function: no entry needed
             else:
                 old = base.get(kind, {}).get(key, 0)
-            unmeasured = kind not in base or (kind == "js" and key not in base[kind])    # new to the baseline: recorded, not "worse"
+            # new to the baseline: recorded, not "worse"
+            unmeasured = kind not in base or (kind in ("js", "old_helpers") and key not in base[kind])
             if v > old and not unmeasured:
                 rose.append(f"{kind} {key}: {old} -> {v}")
             new[kind][key] = v
@@ -531,6 +573,57 @@ def update_baseline(cur, base, versions, allow_worse):
     print(f"Baseline written: {len(new['complexity'])} complex functions, {len(new['length'])} long"
           + (f"; re-recorded {', '.join(sorted(renewed))}" if renewed else "") + ".")
     return 0
+
+
+def old_sources():
+    """BL-316: {path relative to system/templates/dashboard/: text} of the dashboard's source the OLD count reads (src/ and
+    shell.html, the blocks' own files left out)."""
+    dash = DASHBOARD.parent / "dashboard"
+    out = {f.relative_to(dash).as_posix(): f.read_text(encoding="utf-8") for f in sorted((dash / "src").rglob("*"))
+           if f.suffix in (".js", ".jsx") and f.name not in BLOCK_FILES}
+    if (dash / "shell.html").exists():
+        out["shell.html"] = (dash / "shell.html").read_text(encoding="utf-8")
+    return out
+
+
+def old_area(path):
+    """The screen area a dashboard source file belongs to (OLD_AREAS), or its stem."""
+    return next((area for prefix, area in OLD_AREAS if path.startswith(prefix)), Path(path).stem)
+
+
+def old_counts(text):
+    """{block: count} of OLD_HELPERS in one text."""
+    return {block: sum(len(re.findall(rx, text)) for rx in rxs) for block, rxs in OLD_HELPERS.items()}
+
+
+def old_helpers():
+    """BL-316: {block: count} of the dashboard's own copies of each building block (OLD_HELPERS), in src/ and shell.html."""
+    return old_counts("\n".join(old_sources().values()))
+
+
+def old_by_area():
+    """BL-316: {area: {block: count}} of the old helpers, only the non-zero counts, per screen area (OLD_AREAS)."""
+    out = {}
+    for path, text in old_sources().items():
+        area = out.setdefault(old_area(path), {})
+        for block, n in old_counts(text).items():
+            if n:
+                area[block] = area.get(block, 0) + n
+    return {a: c for a, c in out.items() if c}
+
+
+def old_report(counts, by_area, base):
+    """The lines check.py always prints for BL-316: the total against the baseline's, then each area's count by block."""
+    total, was = sum(counts.values()), sum(base.get("old_helpers", {}).values())
+    lines = [f"Old helpers (BL-316, falling to 0): {total} in all (baseline {was}): " + old_line(counts)]
+    for area, c in sorted(by_area.items(), key=lambda kv: (-sum(kv[1].values()), kv[0])):
+        lines.append(f"  {area}: {sum(c.values())} ({old_line(c)})")
+    return lines
+
+
+def old_line(counts):
+    """"Chip 26, Combobox 12, …": the OLD counts on one line, for --report."""
+    return ", ".join(f"{k} {v}" for k, v in sorted(counts.items()))
 
 
 def built_page(problems):
@@ -583,6 +676,7 @@ def main(argv):
     sources = dashboard_sources()
     js = "\n".join(sources.values())
     cur["js"] = js_metrics(js, not a.no_js, problems, sources)
+    cur["old_helpers"] = old_helpers()
     versions = {} if a.no_extras else extras(sources, not a.no_js, cur, problems)
 
     base = json.loads(BASELINE.read_text(encoding="utf-8")) if BASELINE.exists() else {}
@@ -595,6 +689,7 @@ def main(argv):
 
     for f, ln, rule, msg in sorted(problems, key=lambda x: (x[0], x[1], x[2])):
         print(f"{f}:{ln}: {rule} {msg}" if ln else f"{f}: {rule} {msg}")
+    print("\n".join(old_report(cur["old_helpers"], old_by_area(), base)))
     if a.report:
         print("Most complex:")
         for key, v in sorted(cur["complexity"].items(), key=lambda kv: -kv[1])[:10]:

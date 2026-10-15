@@ -145,14 +145,14 @@ class WorkToolbar(LiveBrowserCase):
         b = self.b
         self.work()
         b.eval("OWN.clear(); PROJF.clear(); PRIF.clear(); Object.values(FX).forEach(x=>x&&x.clear&&x.clear()); renderWork()")
-        self.assertFalse(b.eval("!!document.querySelector('#moreBtn .dot')"))
+        self.assertFalse(b.eval("!!document.querySelector('#moreBtn .fcount')"))
         self.assertEqual(b.eval("$('#moreBtn').dataset.tip"), "Add a filter")
         self.assertEqual(b.eval("$('#moreBtn').dataset.key"), "F")
         b.click("#moreBtn")
         b.wait("$('#moreMenu').classList.contains('on')")
         b.key("Escape")
         b.eval("PRIF.add('Urgent'); renderWork()")
-        self.assertEqual(b.eval("$('#moreBtn .dot').textContent"), "1")
+        self.assertEqual(b.eval("$('#moreBtn .fcount').textContent"), "1")
         self.assertEqual(b.eval("$('#moreBtn').getAttribute('aria-label')"), "Add a filter: 1 on")
         b.eval("PRIF.clear(); renderWork()")
 
@@ -176,8 +176,8 @@ class WorkToolbar(LiveBrowserCase):
         self.assertFalse(b.eval("!!document.getElementById('newDecNeeded')"))
         b.click("#newBtn")
         b.wait("newMenuOpen()")
-        self.assertEqual(b.eval("$('#newMenu').getAttribute('role')"), "menu")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#newMenu [role=menuitem] b')].map(x=>x.textContent)"), ["Record a decision", "Ask for a decision"])
+        self.assertEqual(b.eval("$('#newDecMenu').getAttribute('role')"), "menu")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#newDecMenu [role=menuitem] b')].map(x=>x.textContent)"), ["Record a decision", "Ask for a decision"])
         self.assertEqual(b.eval("document.activeElement.dataset.newd"), "made")
         b.key("ArrowDown")
         self.assertEqual(b.eval("document.activeElement.dataset.newd"), "needed")
@@ -187,12 +187,12 @@ class WorkToolbar(LiveBrowserCase):
         b.eval("document.body.click()")                                     # a click away closes it
         self.assertFalse(b.eval("newMenuOpen()"))
         b.click("#newBtn")
-        b.click('#newMenu [data-newd="made"]')
+        b.click('#newDecMenu [data-newd="made"]')
         b.wait("CUR&&CUR.mode==='new'")
         self.assertEqual(b.eval("[CUR.draft.st, CUR.draft.date===TODAY]"), ["Made", True])   # BL-179: the peek's draft
         b.eval("EDITING=false; closePanel()")
         b.click("#newBtn")
-        b.click('#newMenu [data-newd="needed"]')
+        b.click('#newDecMenu [data-newd="needed"]')
         b.wait("CUR&&CUR.mode==='new'&&CUR.draft.st==='Pending'")
         self.assertEqual(b.eval("[CUR.draft.st, CUR.draft.date]"), ["Pending", ""])
 
@@ -210,7 +210,7 @@ class ReviewIcons(LiveBrowserCase):
         self.assertTrue(b.eval("/^Approve routine \\(\\d+\\)$/.test($('#routineBtn').textContent.trim()) && $('#routineBtn').querySelector('svg').dataset.icn==='checks'"))
         self.assertIn("Minutes, new decisions and new risks stay for you", b.eval("$('#routineBtn').dataset.tip"))
         b.eval("RVF.k.add('actions'); rvChanged()")
-        self.assertEqual(b.eval("$('#rvMore .dot').textContent"), "1")
+        self.assertEqual(b.eval("$('#rvMore .fcount').textContent"), "1")
         b.eval("RVF.k.clear(); rvChanged()")
         row = "#reviewBody tr[data-n]:not(.mparent)"
         b.eval(f"RHL.add(+document.querySelector('{row}').dataset.n); renderReview()")

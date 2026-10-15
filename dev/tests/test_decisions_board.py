@@ -226,7 +226,7 @@ class Moves(BoardCase):
     def test_move_to_made_from_the_menu_does_the_same(self):
         b = self.open_board()
         b.click(self.card("ABC-D-007") + " .bmv")
-        b.click('#bmenu [data-bto="Made"]')
+        b.click('#bdMoveMenu [data-bto="Made"]')
         b.wait(self.STAGED_MADE % "ABC-D-007", 15)
         self.assertEqual(b.eval("PKS[0].patch.st"), "Made")
 
@@ -234,14 +234,14 @@ class Moves(BoardCase):
         b = self.open_board()
         self.assertNotIn("Withdrawn", self.columns())                                                # no such column while empty: use the menu
         b.click(self.card("ABC-D-007") + " .bmv")
-        b.click('#bmenu [data-bto="Withdrawn"]')
+        b.click('#bdMoveMenu [data-bto="Withdrawn"]')
         b.wait("document.getElementById('boardDlg').open")
         self.assertEqual(b.eval("document.getElementById('bdOk').textContent"), "Withdraw")
         self.assertEqual(b.eval("document.getElementById('bdDateRow').hidden"), True)                # a question, not a date
         b.click("#bdCancel")
         self.assertEqual(self.row("ABC-D-007")["status"], "Pending")                                 # cancelling changes nothing
         b.click(self.card("ABC-D-007") + " .bmv")
-        b.click('#bmenu [data-bto="Withdrawn"]')
+        b.click('#bdMoveMenu [data-bto="Withdrawn"]')
         b.wait("document.getElementById('boardDlg').open")
         b.click("#bdOk")
         b.wait("/saved and applied/.test(document.getElementById('snackT').textContent)", 15)
@@ -265,9 +265,9 @@ class Moves(BoardCase):
         b = self.open_board()
         b.drag(self.card("ABC-D-008"), self.col("Made"))                                              # its own column: a no-op
         self.assertEqual(self.row("ABC-D-008")["status"], "Made")
-        b.eval("boardMenu(document.body, 'ABC-D-008')")
+        b.eval("boardMoveMenu(document.body, 'ABC-D-008')")
         b.wait("/can't be moved/.test(document.getElementById('snackT').textContent)", 10)
-        self.assertEqual(b.eval("!!document.getElementById('bmenu')"), False)
+        self.assertEqual(b.eval("!!document.getElementById('bdMoveMenu')"), False)
 
     def test_drag_to_a_decision_maker_changes_who_is_asked(self):
         b = self.open_board("owner")
