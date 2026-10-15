@@ -415,59 +415,480 @@ class Bl333And10(HandcheckCase):
 
 
 class Bl03And331(HandcheckCase):
-    """Phase 2: BL-03 archiving old reports and minutes (31 to 34) and BL-331 move back (35 to 41). Own vault."""
-    own_vault = True
+    """BL-03 archiving old reports and minutes (31 to 34) and BL-331 move back (35 to 41). Own vault.
 
-    @phase2()
+    Driven in the page as Alan would: Settings › Health's **Archive them**, the change card's **Approve** in ask creaite, Files'
+    Archived chip and **Move back**, Activity's Undo, Files' search box. Two stand-ins, both this class's own:
+    - CREAITE_NO_LAUNCH on its server, so opening a file reports the path the server would open instead of starting Word;
+    - a stand-in Claude that makes its tool calls the way Claude Code does: each one through the run's own PreToolUse guard
+      hook (reach.py hook, from the --settings the server passes) first, refused when the hook exits 2. What is refused is
+      the product's own guard and card, never the stand-in's.
+    The FAL weekly report and the portfolio's minutes get one made-up word each (WORD, PWORD), so search can be checked."""
+    own_vault = True
+    FAL = "projects/FAL Falcon Data Platform"
+    WEEKLY = f"{FAL}/reports/2025-08-29 Falcon Data Platform weekly report.docx"
+    CLIENT = f"{FAL}/reports/2025-09-05 Falcon Data Platform client report.docx"
+    STEER = f"{FAL}/minutes/2025-09-02 FAL steering minutes.docx"
+    PORTF = "projects/_portfolio/minutes/2025-09-10 Portfolio review minutes.docx"
+    DUE = (WEEKLY, CLIENT, STEER, PORTF)
+    KEPT = (f"{FAL}/transcripts/2025-09-02 FAL steering transcript.docx", f"{FAL}/reports/2025-09-05 Falcon data notes.docx")
+    WORD, PWORD = "kestrelquill", "ploverthistle"          # made-up words, one in each of two files
+    FAKE = r'''#!/usr/bin/env python3
+"""A stand-in Claude for BL-03/BL-331's hand checks: each tool call goes through the run's PreToolUse guard hook first, as
+Claude Code runs it (the command in --settings, the call as JSON on standard input; exit 2 refuses). Every call is logged
+beside this file (tool, input, exit, stderr). Nothing here decides what is refused."""
+import json, os, subprocess, sys
+args = sys.argv[1:]
+p = args[args.index("-p") + 1]
+out = lambda o: print(json.dumps(o), flush=True)
+if p.startswith("creaite VIP check"):
+    out({"type": "result", "result": "[]", "session_id": "sess-vip"})
+    sys.exit(0)
+LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fake_claude_guarded.jsonl")
+hook = None
+if "--settings" in args:
+    try:
+        hook = json.loads(args[args.index("--settings") + 1])["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    except (ValueError, KeyError, IndexError):
+        hook = None
+out({"type": "system", "subtype": "init", "session_id": "sess-hc-guard"})
+denied, n = [], [0]
+FAL = "projects/FAL Falcon Data Platform"
+
+def call(name, inp, do=None):
+    n[0] += 1
+    cid = f"t{n[0]}"
+    out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": cid, "name": name, "input": inp}]}})
+    if hook:
+        r = subprocess.run(["/bin/sh", "-c", hook], input=json.dumps({"hook_event_name": "PreToolUse", "tool_name": name,
+                           "tool_input": inp}), capture_output=True, text=True)
+        code, err = r.returncode, r.stderr
+    else:
+        code, err = 2, "no guard hook was given"
+    with open(LOG, "a") as f:
+        f.write(json.dumps({"tool": name, "input": inp, "exit": code, "stderr": err[-400:]}) + "\n")
+    if code == 2:
+        denied.append({"tool_name": name, "tool_use_id": cid, "tool_input": inp})
+        out({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": cid, "is_error": True, "content": err.strip()}]}})
+        return False, err.strip()
+    res = do() if do else "ok"
+    out({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": cid, "is_error": False, "content": res}]}})
+    return True, res
+
+low = p.lower()
+if "archived" in low and "read" in low:
+    ok, why = call("Read", {"file_path": os.path.join(os.getcwd(), FAL, "_Archive/reports/2025-08-29 Falcon Data Platform weekly report.docx")})
+    text = "Here it is." if ok else f"I can't read it: {why}"
+elif "archived" in low and "move" in low:
+    a, o = f"{FAL}/_Archive/minutes/2025-09-02 FAL steering minutes.docx", f"{FAL}/minutes/2025-09-02 FAL steering minutes.docx"
+    call("Bash", {"command": f'system/scripts/run filechange.py move "{a}" "{o}"'})
+    spec = {"source_run": "cx-edit", "items": [], "file_changes": {"title": "Move back 2025-09-02 FAL steering minutes.docx",
+            "project": "FAL", "archive": "reports_back", "file_ops": [{"op": "move", "from": a, "to": o}]}}
+    path = os.path.join(os.getcwd(), "system/staging/drafts/hc-move-back.json")
+    def write():
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        open(path, "w").write(json.dumps(spec))
+        return "written"
+    call("Write", {"file_path": path, "content": json.dumps(spec)}, write)
+    text = "I've prepared the move back.\nCHANGE: system/staging/drafts/hc-move-back.json | Move the FAL steering minutes back"
+else:
+    text = "Done."
+out({"type": "assistant", "message": {"content": [{"type": "text", "text": text}]}})
+out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permission_denials": denied})
+'''
+
+    @staticmethod
+    def add_word(path, word):
+        """Add one paragraph holding `word` to a .docx (its word/document.xml), so search has a word only that file holds."""
+        import zipfile
+        tmp = path.with_name(path.name + ".tmp")
+        with zipfile.ZipFile(path) as z, zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as w:
+            for item in z.infolist():
+                data = z.read(item.filename)
+                if item.filename == "word/document.xml":
+                    text = data.decode("utf-8")
+                    para = f"<w:p><w:r><w:t>The {word} budget line</w:t></w:r></w:p>"
+                    at = text.rfind("<w:sectPr")
+                    at = at if at != -1 else text.rfind("</w:body>")
+                    data = (text[:at] + para + text[at:]).encode("utf-8")
+                w.writestr(item, data)
+        tmp.replace(path)
+
+    # ── this class's set-up: its server's stand-ins ──
+
+    @classmethod
+    def start_server(cls):
+        import handcheck
+        env0, make0 = handcheck.Session.server_env, handcheck.Session.make_vault
+        fake = None
+
+        def make(s, name="vault"):
+            root = make0(s, name)
+            cls.add_word(root / cls.WEEKLY, cls.WORD)
+            cls.add_word(root / cls.PORTF, cls.PWORD)
+            return root
+
+        def env(s, root, port):
+            nonlocal fake
+            fake = s.dir / "fake_claude_guarded.py"
+            fake.write_text(cls.FAKE, encoding="utf-8")
+            fake.chmod(0o755)
+            return {**env0(s, root, port), "CREAITE_CLAUDE": str(fake), "CREAITE_NO_LAUNCH": "1"}
+        handcheck.Session.server_env, handcheck.Session.make_vault = env, make
+        try:
+            super().start_server()
+        finally:
+            handcheck.Session.server_env, handcheck.Session.make_vault = env0, make0
+        cls.guard_log = fake.parent / "fake_claude_guarded.jsonl"
+
+    def setUp(self):
+        super().setUp()
+        self.spy()
+
+    # ── helpers ──
+
+    @staticmethod
+    def archived(stored):
+        """The stored path's place below its engagement's (or the portfolio's) own _Archive."""
+        parts = stored.split("/")
+        return "/".join(parts[:2] + ["_Archive"] + parts[2:])
+
+    def at(self, stored):
+        return self.vault / stored
+
+    def spy(self):
+        """Record each /api/open, /api/files/move-back and /api/health/fix answer the page gets (window.__got)."""
+        self.b.eval("""(()=>{ if(window.__got) return true; window.__got=[]; const f0=window.fetch;
+          window.fetch=async(...a)=>{ const r=await f0(...a); const u=String(a[0]&&a[0].url||a[0]);
+            if(/\\/api\\/(open|files\\/move-back|health\\/fix|undo)/.test(u)) r.clone().json().then(j=>window.__got.push({u,j})).catch(()=>{});
+            return r; }; return true; })()""")
+
+    def got(self, route):
+        return [x["j"] for x in self.b.eval("window.__got") if route in x["u"]]
+
+    def wait_for(self, fn, timeout=30, what="the change"):
+        import time
+        end = time.time() + timeout
+        while time.time() < end:
+            if fn():
+                return
+            self.b.pump(0.2)
+        self.fail(f"timed out waiting for {what}")
+
+    def health(self):
+        """Settings › Health, once its check has answered: (the archive_reports problem row's text or None, the Archiving lines)."""
+        self.screen("settings-health")
+        self.b.wait("!!document.querySelector('#healthArchiving') || !!document.querySelector('#healthCard .hrow[data-check=archive_reports]')", 60)
+        self.b.pump(0.3)
+        return self.b.eval("""(()=>{ const r=document.querySelector('#healthCard .hrow[data-check=archive_reports]');
+          return [r?r.innerText:null, [...document.querySelectorAll('#healthArchiving li')].map(l=>l.innerText.trim())]; })()""")
+
+    def approve_card(self):
+        """The change card in ask creaite: (its title, its lines), then Approve, as Alan presses it."""
+        b = self.b
+        b.wait("!!document.querySelector('#chLog [data-ecard] [data-ed=approve]')", 60)
+        card = b.eval("(()=>{ const c=[...document.querySelectorAll('#chLog [data-ecard]')].pop(); "
+                      "return [c.querySelector('b').textContent, [...c.querySelectorAll('.edlines li')].map(l=>l.innerText.trim())]; })()")
+        b.eval("[...document.querySelectorAll('#chLog [data-ecard]')].pop().querySelector('[data-ed=approve]').click()")
+        b.wait("[...document.querySelectorAll('#chLog [data-ecard]')].pop().querySelector('.acts').textContent.includes('Approved')", 90)
+        return card
+
+    def archive_via_health(self):
+        """Health's Archive them, then Approve on the card; (the offer's text, the card's title, its lines)."""
+        row, _ = self.health()
+        self.assertTrue(row, "Health offers to archive the old reports and minutes")
+        self.b.eval("document.querySelector('#healthCard .hrow[data-check=archive_reports] .hact button').click()")
+        title, lines = self.approve_card()
+        self.wait_for(lambda: all(self.at(self.archived(f)).is_file() for f in self.DUE), what="the files in _Archive")
+        return row, title, lines
+
+    def ensure_archived(self, *stored):
+        """The four (or those named) in _Archive: archived through Health and the card if they aren't."""
+        if not all(self.at(self.archived(f)).is_file() for f in stored or self.DUE):
+            self.archive_via_health()
+
+    def files_archived(self):
+        """Files › the Archived chip: [(stored path, tagged Archived, has Move back, name)]."""
+        b = self.b
+        self.screen("files")
+        b.wait("!!document.querySelector('#fquick [data-q=\"archived\"]')", 20)
+        b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
+        b.pump(0.4)
+        return b.eval("[...document.querySelectorAll('#filesTbl tr[data-fp]')].map(tr=>[tr.dataset.fp, "
+                      "[...tr.querySelectorAll('.tag')].some(t=>t.textContent.trim()==='Archived'), "
+                      "!!tr.querySelector('[data-moveback]'), tr.querySelector('a[data-openfile]').textContent])")
+
+    def move_back(self, stored):
+        """Files' Move back on the archived file `stored`; the route's answer."""
+        rows = self.files_archived()
+        self.assertIn(stored, [r[0] for r in rows], "listed under Archived")
+        n = len(self.got("/api/files/move-back"))
+        self.b.eval(f"document.querySelector('#filesTbl [data-moveback={json.dumps(stored)}]').click()")
+        self.wait_for(lambda: len(self.got("/api/files/move-back")) > n, what="Move back's answer")
+        return self.got("/api/files/move-back")[-1]
+
+    def undo_latest(self):
+        """Undo the latest apply as Alan would: Activity's "Undo this apply" when Activity has a line for it; else the Undo
+        the card's "Approved" message carries (the same /api/undo {apply_id}), sent from the page. Returns how it was undone."""
+        b = self.b
+        self.screen("activity")
+        b.pump(0.5)
+        n = len(self.got("/api/undo"))
+        if b.eval("!!document.querySelector('#actTbl [data-undoapply]')"):
+            how = "Activity › Undo this apply"
+            b.eval("document.querySelector('#actTbl [data-undoapply]').click()")
+        else:
+            apply_id = b.eval("D.latest_apply")
+            self.assertTrue(apply_id, "an apply to undo")
+            how = f"the card's Undo (/api/undo apply {apply_id}; Activity has no line for a file-only apply)"
+            b.eval(f"api('/api/undo',{{apply_id:{json.dumps(apply_id)}}}).then(r=>{{ window.__got.push({{u:'/api/undo',j:r}}); return reloadData(); }})")
+        self.wait_for(lambda: len(self.got("/api/undo")) > n, what="the undo")
+        self.assertTrue(self.got("/api/undo")[-1].get("ok"), self.got("/api/undo")[-1])
+        return how
+
+    def search(self, words):
+        """Files' search box, as typed (its results drawn), and the same /api/search answer the box gets: the stored paths
+        of the results (reports, documents and meetings)."""
+        b = self.b
+        self.screen("files")
+        b.eval(f"(()=>{{ const i=document.getElementById('vsInput'); i.value={json.dumps(words)}; i.dispatchEvent(new Event('input',{{bubbles:true}})); return true; }})()")
+        b.wait("!document.getElementById('vsResults').hidden && document.getElementById('vsNote').textContent!=='Searching…' "
+               "&& !!document.getElementById('vsResults').textContent", 30)
+        found = b.eval(f"fetch('/api/search?'+new URLSearchParams({{q:{json.dumps(words)}}}),{{headers:{{'X-Creaite-Token':D.token||''}}}})"
+                       ".then(r=>r.json()).then(j=>Object.values(j.groups||{}).flat().map(r=>(r.opens&&r.opens.path)||r.path||r.title))")
+        b.eval("vsClear()")
+        return found
+
+    def opened(self, stored):
+        """Open `stored` the way a saved prep page's link does (#openfile=…, through /api/open); the server's answer."""
+        n = len(self.got("/api/open"))
+        self.b.eval(f"location.hash='#openfile='+encodeURIComponent({json.dumps(stored)})")
+        self.wait_for(lambda: len(self.got("/api/open")) > n, what="/api/open")
+        return self.got("/api/open")[-1]
+
+    def ask(self, text):
+        """Send `text` in ask creaite and wait for the run to end; the new part of the chat, as text."""
+        b = self.b
+        b.eval("openChat()")
+        b.wait("!!document.getElementById('chIn')")
+        before = b.eval("document.getElementById('chLog').innerText.length")
+        b.eval(f"(()=>{{ const i=document.getElementById('chIn'); i.value={json.dumps(text)}; i.dispatchEvent(new Event('input',{{bubbles:true}})); send(); return true; }})()")
+        b.wait("BUSY", 20)
+        b.wait("!BUSY", 120)
+        b.pump(0.5)
+        return b.eval(f"document.getElementById('chLog').innerText.slice({before})")
+
+    def guard_calls(self):
+        if not self.guard_log.exists():
+            return []
+        return [json.loads(x) for x in self.guard_log.read_text().splitlines() if x.strip()]
+
+    # ── the checks ──
+
     def test_c31_moved_incl_portfolio(self):
         """31. Approve → the files are in `projects/FAL Falcon Data Platform/_Archive/reports/` and `/_Archive/minutes/`, and
         the portfolio's in `projects/_portfolio/_Archive/minutes/`. Nothing is deleted."""
+        before = sorted(str(p.relative_to(self.vault)) for p in (self.vault / "projects").rglob("*") if p.is_file())
+        self.assertIn(self.WEEKLY, self.search(self.WORD), "before: search finds the weekly report by its word")
+        row, title, lines = self.archive_via_health()
+        self.assertIn("Archive 4 reports and minutes older than 12 months", row)
+        for f in self.DUE:
+            self.assertFalse(self.at(f).exists(), f)
+            self.assertTrue(self.at(self.archived(f)).is_file(), self.archived(f))
+            self.assertIn(f"Move file {f} → {self.archived(f)}", lines)
+        self.assertTrue((self.vault / self.FAL / "_Archive/reports").is_dir() and (self.vault / self.FAL / "_Archive/minutes").is_dir())
+        self.assertTrue((self.vault / "projects/_portfolio/_Archive/minutes").is_dir())
+        for f in self.KEPT:
+            self.assertTrue(self.at(f).is_file(), f"kept in place: {f}")
+        after = sorted(str(p.relative_to(self.vault)) for p in (self.vault / "projects").rglob("*") if p.is_file())
+        moved = {f: self.archived(f) for f in self.DUE}
+        self.assertEqual(sorted(moved.get(f, f) for f in before), after, "nothing deleted: every file is where it was or moved")
+        self.note(31, f"before: search \"{self.WORD}\" finds the weekly report; "
+                      f"Health › Archive them → card \"{title}\" ({len(lines)} moves) → Approve: 4 files in their _Archive "
+                      f"(FAL reports ×2, FAL minutes, portfolio minutes); {len(after)} files before and after, none deleted")
 
-    @phase2()
     def test_c32_links_not_indexed_guard(self):
         """32. Open FAL's latest-reports link for the moved report → it still opens. Search for its words → not found. In ask
         creaite, "read FAL's archived weekly report" → refused."""
+        self.ensure_archived()
+        link = self.opened(self.WEEKLY)
+        self.assertTrue(link.get("ok"), link)
+        self.assertEqual(link.get("path"), str((self.vault / self.archived(self.WEEKLY)).resolve()), "it opens the file in _Archive")
+        found = self.search(self.WORD)
+        self.assertEqual([f for f in found if "weekly report" in str(f) or "_Archive" in str(f)], [], f"not found: {found}")
+        chat = self.ask("read FAL's archived weekly report")
+        calls = [c for c in self.guard_calls() if c["tool"] == "Read" and "_Archive" in json.dumps(c["input"])]
+        self.assertTrue(calls, "the stand-in asked to Read the archived file")
+        self.assertEqual(calls[-1]["exit"], 2, f"the guard hook refuses it: {calls[-1]}")
+        self.assertIn("refused", chat.lower())
+        why = calls[-1]["stderr"].strip()
+        self.note(32, "the demo's Recent reports link FAL's newer reports, so the moved report's stored link is opened as a saved "
+                      f"prep page's link (#openfile=…) → /api/open opens {self.archived(self.WEEKLY).split('/', 2)[2]}; search \"{self.WORD}\" "
+                      f"→ {len(found)} results, not it; ask creaite: the guard hook (reach.py hook, as Claude Code runs it) exits 2: "
+                      f"\"…{why[-90:]}\" (stand-in Claude; a real model's wording by hand)")
 
-    @phase2()
     def test_c33_quiet_for_month(self):
         """33. Health → the line now says "Archived 4 reports and minutes on DD-MM-YYYY" and stays quiet for the rest of the
         month."""
+        self.ensure_archived()
+        row, lines = self.health()
+        day = self.now[:10]
+        want = f"Archived 4 reports and minutes on {day[8:10]}-{day[5:7]}-{day[:4]}"
+        self.assertIsNone(row, "no offer while archived this month")
+        self.assertTrue(any(want in ln for ln in lines), f"{want!r} in {lines}")
+        import calendar
+        y, m = int(day[:4]), int(day[5:7])
+        last = f"{day[:8]}{calendar.monthrange(y, m)[1]:02d} 18:00"
+        code, out = self.run_in_vault("archive.py", "status", "--json", env={"CREAITE_NOW": last})
+        st = json.loads(out.strip().splitlines()[-1])
+        self.assertEqual(code, 0, out)
+        self.assertFalse(st["reports"]["offer"], st)
+        self.assertTrue(st["reports_line"].startswith(want), st["reports_line"])
+        self.note(33, f"Health: \"{[ln for ln in lines if want in ln][0]}\", no Archive them; archive.py status on {last[:10]}: "
+                      f"offer false, same line")
 
-    @phase2()
     def test_c34_undo(self):
         """34. Undo → the files are back where they were, and the `_Archive` folders the move made are gone."""
+        self.ensure_archived()
+        how = self.undo_latest()
+        self.wait_for(lambda: all(self.at(f).is_file() for f in self.DUE), what="the files back")
+        for f in self.DUE:
+            self.assertFalse(self.at(self.archived(f)).exists(), f)
+        self.assertFalse((self.vault / self.FAL / "_Archive").exists(), "FAL's _Archive is gone")
+        self.assertFalse((self.vault / "projects/_portfolio/_Archive").exists(), "the portfolio's _Archive is gone")
+        self.note(34, f"Undo through {how} → 4 files back; both _Archive folders gone")
 
-    @phase2()
     def test_c35_archived_chip(self):
         """35. Archive them again (check 30). Files → an **Archived** chip; it lists the four moved files, each tagged Archived
         with **Move back**. No other row in Files has Move back. Clicking a name opens the file."""
+        b = self.b
+        again = not all(self.at(self.archived(f)).is_file() for f in self.DUE)
+        self.ensure_archived()
+        rows = self.files_archived()
+        self.assertEqual(sorted(r[0] for r in rows), sorted(self.DUE))
+        self.assertTrue(all(r[1] and r[2] for r in rows), rows)
+        others = {}
+        for q in b.eval("[...document.querySelectorAll('#fquick [data-q]')].map(e=>e.dataset.q)"):
+            if q == "archived":
+                continue
+            b.eval(f"document.querySelector('#fquick [data-q={json.dumps(q)}]').click()")
+            b.pump(0.3)
+            others[q] = b.eval("[document.querySelectorAll('#filesTbl tr[data-fp]').length, document.querySelectorAll('#filesTbl [data-moveback]').length]")
+        for code in b.eval("P.map(p=>p.code)") + ["_portfolio"]:
+            b.eval(f"document.querySelector('#tree [data-p={json.dumps(code)}][data-f=All]').click()")
+            b.pump(0.3)
+            others[code] = b.eval("[document.querySelectorAll('#filesTbl tr[data-fp]').length, document.querySelectorAll('#filesTbl [data-moveback]').length]")
+        self.assertEqual({k: v[1] for k, v in others.items() if v[1]}, {}, "Move back only under Archived")
+        self.files_archived()
+        n = len(self.got("/api/open"))
+        b.eval(f"document.querySelector('#filesTbl tr[data-fp={json.dumps(self.STEER)}] a[data-openfile]').click()")
+        self.wait_for(lambda: len(self.got("/api/open")) > n, what="/api/open")
+        o = self.got("/api/open")[-1]
+        self.assertTrue(o.get("ok"), o)
+        self.assertEqual(o.get("path"), str((self.vault / self.archived(self.STEER)).resolve()))
+        self.note(35, f"{'archived again through Health and the card' if again else 'already archived (check 34 not run)'}; Archived chip lists 4, each tagged Archived with Move back; no Move back under "
+                      f"{len(others)} other chips and folders ({sum(v[0] for v in others.values())} rows); clicking the steering "
+                      f"minutes' name → /api/open opens it in _Archive")
 
-    @phase2()
     def test_c36_move_back(self):
         """36. Move back the FAL weekly report → the change card. Approve → it is back in `reports/`, gone from the Archived
         list, and search finds it again."""
+        self.ensure_archived(self.WEEKLY)
+        r = self.move_back(self.WEEKLY)
+        self.assertTrue(r.get("ok") and r.get("card"), r)
+        title, lines = self.approve_card()
+        self.assertEqual(lines, [f"Move file {self.archived(self.WEEKLY)} → {self.WEEKLY}"])
+        self.wait_for(lambda: self.at(self.WEEKLY).is_file(), what="the report back")
+        self.assertFalse(self.at(self.archived(self.WEEKLY)).exists())
+        self.assertNotIn(self.WEEKLY, [x[0] for x in self.files_archived()], "gone from the Archived list")
+        found = self.search(self.WORD)
+        self.assertIn(self.WEEKLY, found, "search finds it again")
+        self.note(36, f"Move back → card \"{title}\", one line \"Move file …/_Archive/reports/… → …/reports/…\" → Approve: "
+                      f"back in reports/, 3 left under Archived, search \"{self.WORD}\" finds it")
 
-    @phase2()
     def test_c37_not_offered_again(self):
         """37. Health's monthly line → it does not offer that report again."""
+        if self.at(self.archived(self.WEEKLY)).is_file():
+            self.move_back(self.WEEKLY)
+            self.approve_card()
+            self.wait_for(lambda: self.at(self.WEEKLY).is_file(), what="the report back")
+        row, lines = self.health()
+        self.assertIsNone(row, "no offer this month")
+        from datetime import date
+        d = date.fromisoformat(self.now[:10])
+        nxt = date(d.year + (d.month == 12), d.month % 12 + 1, 2).isoformat() + " 09:00"
+        code, out = self.run_in_vault("archive.py", "status", "--json", env={"CREAITE_NOW": nxt})
+        st = json.loads(out.strip().splitlines()[-1])
+        self.assertEqual((st["reports"]["due"], st["reports"]["offer"]), (0, False), st)
+        code, out = self.run_in_vault("archive.py", "reports", env={"CREAITE_NOW": nxt})
+        self.assertEqual(code, 1, f"nothing to archive next month either: {out}")
+        self.assertNotIn(self.WEEKLY, out)
+        line = next((ln for ln in lines if "reports and minutes" in ln), "")
+        self.note(37, f"Health this month: \"{line}\", no offer; archive.py on {nxt[:10]}: 0 due, no offer, "
+                      f"reports exits 1 (\"{out.strip()[:60]}\")")
 
-    @phase2()
     def test_c38_undo(self):
         """38. Undo → the report is back in `_Archive`, unindexed."""
+        self.assertTrue(self.at(self.WEEKLY).is_file(), "needs check 36's move back")
+        how = self.undo_latest()
+        self.wait_for(lambda: self.at(self.archived(self.WEEKLY)).is_file(), what="the report in _Archive again")
+        self.assertFalse(self.at(self.WEEKLY).exists())
+        found = self.search(self.WORD)
+        self.assertEqual([f for f in found if "weekly report" in str(f)], [], f"unindexed: {found}")
+        self.assertIn(self.WEEKLY, [x[0] for x in self.files_archived()], "listed under Archived again")
+        self.note(38, f"Undo through {how} → in _Archive again, under Archived; search "
+                      f"\"{self.WORD}\" doesn't find it")
 
-    @phase2()
     def test_c39_taken_place_refused(self):
         """39. Put a file with the same name in `reports/`, then Move back that report → refused: "rename or move that file
         first". The file in `reports/` is unchanged."""
+        self.ensure_archived(self.WEEKLY)
+        taken = self.at(self.WEEKLY)
+        taken.write_bytes(b"a newer file with the same name\n")
+        try:
+            cards = self.b.eval("document.querySelectorAll('#chLog [data-ecard]').length")
+            r = self.move_back(self.WEEKLY)
+            self.assertFalse(r.get("ok"), r)
+            self.assertIn("rename or move that file first", r.get("message", ""))
+            self.b.pump(0.5)
+            self.assertEqual(self.b.eval("document.querySelectorAll('#chLog [data-ecard]').length"), cards, "no card")
+            self.assertEqual(taken.read_bytes(), b"a newer file with the same name\n", "unchanged")
+            self.assertTrue(self.at(self.archived(self.WEEKLY)).is_file())
+            toast = self.b.eval("document.body.innerText.includes('rename or move that file first')")
+            self.note(39, f"refused: \"…{r['message'][-90:]}\"{' (shown in the toast)' if toast else ''}; no card; the file in "
+                          "reports/ unchanged")
+        finally:
+            taken.unlink()
 
-    @phase2()
     def test_c40_portfolio_minutes(self):
         """40. Move back the portfolio's minutes → back in `projects/_portfolio/minutes/`."""
+        self.ensure_archived(self.PORTF)
+        r = self.move_back(self.PORTF)
+        self.assertTrue(r.get("ok") and r.get("card"), r)
+        title, lines = self.approve_card()
+        self.assertEqual(lines, [f"Move file {self.archived(self.PORTF)} → {self.PORTF}"])
+        self.wait_for(lambda: self.at(self.PORTF).is_file(), what="the minutes back")
+        self.assertFalse(self.at(self.archived(self.PORTF)).exists())
+        found = self.search(self.PWORD)
+        self.note(40, "card \"Move file projects/_portfolio/_Archive/minutes/… → projects/_portfolio/minutes/…\" → Approve: back in projects/_portfolio/minutes/"
+                      + ("; search finds it again" if self.PORTF in found else f"; search \"{self.PWORD}\": {found}"))
 
-    @phase2()
     def test_c41_ask_creaite_refused(self):
         """41. In ask creaite, "move the archived FAL steering minutes back" → refused: "an archived file is moved back from
         Files (Move back), never from ask creaite"."""
+        self.ensure_archived(self.STEER)
+        seen = len(self.guard_calls())
+        chat = self.ask("move the archived FAL steering minutes back")
+        self.assertIn("an archived file is moved back from Files (Move back), never from ask creaite", chat)
+        self.assertTrue(self.at(self.archived(self.STEER)).is_file(), "still in _Archive")
+        self.assertFalse(self.at(self.STEER).exists())
+        calls = self.guard_calls()[seen:]
+        bash = [c for c in calls if c["tool"] == "Bash"]
+        write = [c for c in calls if c["tool"] == "Write"]
+        self.assertTrue(bash and bash[-1]["exit"] == 2, f"filechange.py move on _Archive refused by the hook: {bash}")
+        self.note(41, "ask creaite: filechange.py move refused by the guard hook (exit 2); the move-back spec written in drafts "
+                      f"({'allowed' if write and write[-1]['exit'] == 0 else 'refused'}) and named on a CHANGE line → the server's "
+                      "card refuses it: \"…never from ask creaite\"; the minutes stay in _Archive (stand-in Claude)")
 
 
 class Bl334And316(HandcheckCase):
