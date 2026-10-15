@@ -11,15 +11,19 @@ owner or Alan, a confidential thread, the switch off.
 """
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
+import time
 import unittest
+import urllib.request
 from contextlib import closing
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from test_sweep_alerts import vip_file, vip_vault  # noqa: E402
+from test_live_server import free_port  # noqa: E402
+from test_sweep_alerts import check_since, vip_file, vip_vault  # noqa: E402
 from test_tracker import action  # noqa: E402
 
 NOW = "2026-10-08 09:30"
@@ -400,6 +404,177 @@ class CloseTests(Base):
         text = json.dumps(vip_file(self.v))
         self.assertNotIn(SECRET, text)
         self.assertNotRegex(text.replace('"vip', ""), r"\bVIP\b")
+
+
+TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
+         "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
+FAKE = r"""#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+args = sys.argv[1:]
+here = Path(__file__).parent
+n = len(list(here.glob("vip-call-*.json"))) + 1
+(here / f"vip-call-{n}.json").write_text(json.dumps({"args": args, "headless": os.environ.get("CREAITE_HEADLESS_RUN")}))
+if (here / "start-a-sweep").exists():
+    (here / "system/staging/sweep.lock").write_text(os.environ["CREAITE_NOW"] + "\n")
+replies = json.loads((here / "vip-replies.json").read_text())
+found = replies[min(n, len(replies)) - 1]
+print(json.dumps({"type": "result", "result": "Here they are: " + json.dumps(found), "total_cost_usd": 0.3027}))
+"""
+REPLY = [owner_done(), {**thread(2), "kind": "calendar"}, thread(3, subject="Accepted: Steering", title="Accepted: Steering"),
+         thread(4, conversation="<DX1234567890ABCDEF@EXAMPLE.OUTLOOK.COM>"), thread(5, last="2026-10-08 09:00"),
+         thread(6, **{"from": "Zed Other <zed@other.example>"})]
+
+
+class ServerCheck:
+    """The live server's own check, with a stand-in claude; check_minutes stays 30, so only the start-up check runs."""
+
+    def start(self, reply, sweep=False):
+        self.v = v = vip_vault()
+        seed(v)
+        check_since(v)
+        (v.root / "vip-replies.json").write_text(json.dumps([reply]))
+        if sweep:
+            (v.root / "start-a-sweep").write_text("1")
+        fake = v.root / "fake_claude.py"
+        fake.write_text(FAKE)
+        fake.chmod(0o755)
+        self.port = free_port()
+        self.base = f"http://127.0.0.1:{self.port}"
+        self.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], cwd=v.root,
+                                     env={**os.environ, "CREAITE_PORT": str(self.port), "CREAITE_CLAUDE": str(fake),
+                                          "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": OFF},
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            try:
+                urllib.request.urlopen(self.base + "/health", timeout=1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        html = urllib.request.urlopen(self.base + "/").read().decode()
+        self.token = json.loads(re.search(r'id="data">(.*?)</script>', html, re.S).group(1).replace("<\\/", "</"))["token"]
+
+    def stop(self):
+        self.proc.terminate()
+        self.proc.wait(timeout=10)
+        self.v.cleanup()
+
+    def post(self, path, body):
+        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode())
+
+    def calls(self):
+        return [json.loads(f.read_text()) for f in sorted(self.v.root.glob("vip-call-*.json"))]
+
+    def log(self):
+        return "\n".join(f.read_text() for f in (self.v.root / "system/logs").glob("debug-*.log"))
+
+    def wait(self, test, what):
+        for _ in range(150):
+            if test():
+                return
+            time.sleep(0.1)
+        self.fail(f"never {what}")
+
+
+class SingleCallServerTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.s = ServerCheck()
+        cls.s.fail = lambda what: (_ for _ in ()).throw(AssertionError(what))
+        cls.s.start(REPLY)
+        cls.s.wait(lambda: re.search(r"INFO\s+vip\s", cls.s.log()), "a check logged")
+        time.sleep(1.0)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.s.stop()
+
+    def test_one_call_per_check_with_the_read_only_tools_and_no_model(self):
+        calls = self.s.calls()
+        self.assertEqual(len(calls), 1)                                                      # one check, one call
+        args = calls[0]["args"]
+        self.assertEqual(args[0], "-p")
+        self.assertTrue(args[1].startswith("--"))                                            # an option follows -p
+        self.assertEqual(args[-2], "--")                                                     # #91: the prompt last
+        self.assertEqual(args.count("--"), 1)
+        self.assertEqual(args[args.index("--allowedTools") + 1].split(","), TOOLS)
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        import live_server
+        self.assertEqual(args[args.index("--disallowedTools") + 1].split(","), live_server.DENY_TOOLS)
+        self.assertEqual(live_server.VIP_TOOLS, TOOLS)
+        self.assertNotIn("--model", args)
+        self.assertEqual(calls[0]["headless"], "1")                                          # run_env()
+
+    def test_the_prompt_names_the_zone_leaves_invites_out_and_asks_for_the_fields(self):
+        prompt = self.s.calls()[0]["args"][-1]
+        self.assertIn("since 2026-10-08T07:00+04:00 (Alan's local time, UTC+04:00)", prompt)
+        self.assertIn("give every time in Alan's local time, UTC+04:00 as YYYY-MM-DDTHH:MM+04:00, never in any other zone", prompt)
+        self.assertIn("Leave out calendar invites, meeting requests, meeting updates and replies to them", prompt)
+        self.assertIn('"kind": "teams"|"mail",', prompt)
+        self.assertNotIn('"calendar"', prompt)
+        self.assertIn("copy every ID exactly as the tool gave it, character for character", prompt)
+        self.assertIn("never the message's internet message ID", prompt)
+        for field in ('"type"', '"ask"', '"due"', '"owners"', '"match"', '"last_from"', '"replied"', '"closes"'):
+            self.assertIn(field, prompt)
+        self.assertIn('"ABC-A-007"', prompt)                                                 # OPEN WORK filled
+        self.assertIn("OPEN: []", prompt)                                                    # no open cards yet
+        self.assertIn("Never for a private conversation", prompt)
+        self.assertEqual(re.findall(r"VIP", prompt.replace("creaite VIP check.", "").replace("Never use the word VIP", "")), [])
+
+    def test_the_reply_is_checked_before_it_is_recorded(self):
+        alerts = vip_file(self.s.v)["alerts"]
+        self.assertEqual(sorted(a["title"] for a in alerts),
+                         ["Project Falcon revised plan", "Project Falcon revised plan 4"])         # invites, no zone, unasked out
+        bad = next(a for a in alerts if a["title"].endswith(" 4"))
+        self.assertIsNone(bad["conv"])
+        good = next(a for a in alerts if a["title"] == "Project Falcon revised plan")
+        self.assertEqual(good["closes"]["id"], "ABC-A-007")
+        self.assertEqual(good["last"], "2026-10-08 09:00")
+        self.assertNotIn(SECRET, json.dumps(vip_file(self.s.v)))
+
+    def test_the_debug_log_has_one_line_of_counts_seconds_and_dollars(self):
+        lines = [ln for ln in self.s.log().splitlines() if re.search(r"\s+vip\s", ln)]
+        self.assertEqual(len(lines), 1, lines)
+        line = lines[0]
+        self.assertRegex(line, r"check: 6 returned, 2 kept, dropped .*invite 2.*, 2 new or updated, 0 replied, closes kept 1, "
+                               r"\d+\.\ds, \$0\.3027")
+        for word in ("Falcon", "mia@", "AAQk", "DX123", "Sara", SECRET, "Project"):
+            self.assertNotIn(word, line)
+
+
+class SweepDuringTheCallTests(ServerCheck, unittest.TestCase):
+    def test_a_sweep_starting_during_the_call_drops_the_result(self):
+        self.start([owner_done()], sweep=True)
+        try:
+            self.wait(lambda: "check dropped" in self.log(), "the result dropped")
+            st = vip_file(self.v)
+            self.assertEqual((st["alerts"], st["last_check"]), ([], "2026-10-08 07:00"))
+            self.assertEqual(len(self.calls()), 1)
+        finally:
+            self.stop()
+
+
+class InvitesFlipTests(unittest.TestCase):
+    def test_vip_invites_true_puts_the_bl334_sentence_back(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        import live_server
+        zone = {"tz": None, "offset": OFF, "zone": "Alan's local time, UTC+04:00"}
+        parts = {"open": "[]", "open_work": "{}"}
+        off = live_server.vip_prompt("2026-10-08 07:00", {"mia@client.example": "Mia Hale"}, zone, parts)
+        try:
+            live_server.VIP_INVITES = True
+            on = live_server.vip_prompt("2026-10-08 07:00", {"mia@client.example": "Mia Hale"}, zone, parts)
+        finally:
+            live_server.VIP_INVITES = False
+        self.assertIn("and calendar invites or updates", on)
+        self.assertIn('"kind": "teams"|"mail"|"calendar"', on)
+        self.assertNotIn("Leave out calendar invites", on)
+        self.assertIn("Leave out calendar invites", off)
+        self.assertIsInstance(live_server.VIP_INVITES, bool)
+        self.assertFalse(live_server.VIP_INVITES)
 
 
 if __name__ == "__main__":

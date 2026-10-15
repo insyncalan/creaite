@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_live_server import free_port  # noqa: E402
-from test_sweep_alerts import run, vip_file, vip_vault  # noqa: E402
+from test_sweep_alerts import TZ, check_since, run, vip_file, vip_vault, zoned  # noqa: E402
 
 MIA = "Mia Hale <mia@client.example>"
 OMAR = "Omar Ali <omar@company.example>"
@@ -428,7 +428,8 @@ class ThreadServerTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d.setdefault("vip", {})["check_minutes"] = 0.02
         cfg.write_text(json.dumps(d, indent=2))
-        (v.root / "vip-replies.json").write_text(json.dumps([[CHAT, HELLO]]))
+        (v.root / "vip-replies.json").write_text(json.dumps([zoned([CHAT, HELLO])]))
+        check_since(v)
         fake = v.root / "fake_claude.py"
         fake.write_text(FAKE)
         fake.chmod(0o755)
@@ -436,7 +437,7 @@ class ThreadServerTests(unittest.TestCase):
         cls.base = f"http://127.0.0.1:{cls.port}"
         cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], cwd=v.root,
                                     env={**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_CLAUDE": str(fake),
-                                         "CREAITE_NOW": "2026-10-08 09:30"},
+                                         "CREAITE_NOW": "2026-10-08 09:30", "CREAITE_TZ_OFFSET": TZ},
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:
