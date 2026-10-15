@@ -7,6 +7,7 @@
                            its edits become a new draft, and the filed file stays as it is until that draft is approved
   POST /api/report/approve {kind, code, week_ending, client?, force?, doc?, base_version?}: one proposal (report_doc.stage_weekly
                            or stage_client), applied at once with tracker.py apply, the one writer, so Undo works as always
+                           A weekly approval re-locks the project's client drafts to that week (relock_client_drafts; `relocked`)
   POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?}: P2's export (the contract's call), from the draft
                            or the filed report; a client report only once its internal week is approved and nothing would leak
 """
@@ -110,6 +111,58 @@ def handler_lock(handler):
     return HOST["lock"]
 
 
+def relock_client_drafts(code, fri):
+    """Re-lock the client drafts that depend on the internal week just approved (or approved again with changes): each draft of the
+    project dated on or after `fri` whose latest approved internal week is now a different one gets `based_on` and its facts
+    (meta.locked, facts_week, facts_on) from that week's approved facts (meta.client_facts), so a client draft saved before the
+    approval can be exported after it. It errs towards withholding: a row, tag, milestone or item the approved facts don't hold is
+    dropped, and nothing is ever added that the draft didn't have; wording Alan edited in a cell is left. Returns the stored paths
+    re-locked. A draft that can't be read or saved is left as it was. Filed client reports are never touched."""
+    done = []
+    for f in sorted(paths.DRAFTS.glob("* Client report*.html")):
+        try:
+            if _relock_one(f, code, fri):
+                done.append(paths.rel(f))
+        except (creaite_doc.DocError, report_doc.ReportError, OSError, KeyError):
+            continue          # left as it was: its Approve and export still check the baseline
+    return done
+
+
+def _relock_one(f, code, fri):
+    """Re-lock one client draft file (see relock_client_drafts); whether it was saved."""
+    doc = creaite_doc.read(f)
+    if doc.get("kind") != "client" or doc.get("project") != code or doc["date"] < fri or doc.get("state") == "approved":
+        return False
+    base = report_doc.baseline(code, doc["date"])
+    if not base or doc.get("based_on") == {"path": base["path"], "version": base["version"]}:
+        return False
+    facts = (creaite_doc.read(base["path"]).get("meta") or {}).get("client_facts") or {}
+    allowed = {x["id"]: x for t in ("actions", "decisions", "raid", "milestones") for x in facts.get(t) or []}
+    out = _held_to(doc, allowed)
+    out["based_on"] = {"path": base["path"], "version": base["version"]}
+    out["meta"] = {**(out.get("meta") or {}), "locked": bool(facts), "facts_week": base["date"], "facts_on": facts.get("on")}
+    return bool(creaite_doc.save(paths.rel(f), out, "Client draft re-locked to the approved internal week", via="dashboard").get("ok"))
+
+
+def _held_to(doc, allowed):
+    """A copy of a client draft holding only what the approved facts (`allowed`: {item id: fact}) hold: rows, tags and milestone
+    references to an item outside them are dropped, and the items it keeps take the approved facts' values."""
+    out = dict(doc)
+    out["sections"] = []
+    for s in doc.get("sections") or []:
+        s = dict(s)
+        if s.get("rows"):
+            s["rows"] = [r for r in s["rows"] if not r.get("ref") or r["ref"] in allowed]
+        if s.get("tags"):
+            s["tags"] = [t for t in s["tags"] if t.get("ref") in allowed]
+        if isinstance(s.get("data"), dict):
+            s["data"] = {k: ([m for m in v if m in allowed] if k in ("milestones", "timeline") and isinstance(v, list) else v)
+                         for k, v in s["data"].items()}
+        out["sections"].append(s)
+    out["items"] = {k: allowed[k] for k in (doc.get("items") or {}) if k in allowed}
+    return out
+
+
 def approve_route(handler, req):
     """POST /api/report/approve: save any edits sent, stage the one proposal and apply it (see the module's description)."""
     kind, code, fri, client = target(req)
@@ -126,8 +179,11 @@ def approve_route(handler, req):
         code_, out = HOST["run"]("tracker.py", "apply", prop.name)
         if code_ != 0 and prop.exists():
             prop.unlink()                    # nothing was written: the proposal this Approve staged goes, the draft stays
-        return answer(handler, {"ok": code_ == 0, "message": out, "apply_id": HOST["latest_apply"](),
-                                "path": report_doc.filed_path(kind, code, fri, client)})
+        answered = {"ok": code_ == 0, "message": out, "apply_id": HOST["latest_apply"](),
+                    "path": report_doc.filed_path(kind, code, fri, client)}
+        if code_ == 0 and kind == "weekly":
+            answered["relocked"] = relock_client_drafts(code, fri)         # the week's client drafts lock to what was approved
+        return answer(handler, answered)
 
 
 def export_call():
