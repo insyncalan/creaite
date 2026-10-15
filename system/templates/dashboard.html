@@ -11254,8 +11254,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     { action: "Action", decision: "Decision", risk: "Risk" }
   );
   var convAt = (a5) => String(a5.last || a5.sent || "").replace("T", " ").slice(0, 16);
+  var convWhen = (a5) => String(a5.last || a5.updated || "").replace("T", " ").slice(0, 16);
   var convMeta = (a5) => [
-    `${VIPKIND[a5.kind] || "Message"}${a5.updated ? " · updated " + whenWords(a5.updated) : ""}`,
+    `${VIPKIND[a5.kind] || "Message"}${convWhen(a5) ? " · updated " + whenWords(convWhen(a5)) : ""}`,
     a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project",
     a5.found === "start-up" ? "found on start-up" : ""
   ].filter(Boolean).join(" · ");

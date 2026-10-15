@@ -280,7 +280,7 @@ class ConversationRecordTests(unittest.TestCase):
 
 
 class ConversationPageTests(unittest.TestCase):
-    """Today: one card per conversation (its title, "updated HH:MM", the summary, each candidate with Create work item and
+    """Today: one card per conversation (its title, "updated HH:MM" at its last message, the summary, each candidate with Create work item and
     Dismiss), the quiet line with no buttons and no count, and never the word VIP."""
 
     @classmethod
@@ -314,12 +314,14 @@ class ConversationPageTests(unittest.TestCase):
         self.assertIsNotNone(o)
         self.assertNotIn("error", o, o)
         self.assertEqual(o["title"], "Project Falcon go-live")
-        self.assertIn("updated 09:30", o["card"])
+        self.assertIn("updated 08:40", o["card"])                                            # the last message, not when it was recorded
+        self.assertNotIn("09:30", o["card"])                                                 # (plan #81)
         self.assertIn("Example Programme", o["card"])                                        # the matched project, by name
         self.assertIn("Mia's team will take the solution from production to live", o["card"])
         self.assertEqual(o["cands"], [["Action", [["make", "1"], ["dismiss", "1"]]], ["Decision", [["make", "2"], ["dismiss", "2"]]]])
         self.assertEqual(o["cardButtons"], 0)                                                # the buttons are per item
         self.assertIn("Mia Hale with Omar Ali: nothing for you", o["quiet"])
+        self.assertIn("updated 08:20", o["quiet"])                                           # its own last message
         self.assertEqual(o["quietButtons"], 0)
         self.assertEqual(o["count"], "1")                                                    # the quiet line isn't counted
         self.assertNotIn("VIP", o["page"])                                                   # BL-288

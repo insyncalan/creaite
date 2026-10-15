@@ -444,7 +444,10 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
    conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
 const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
 const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
-const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${a.updated?" · updated "+whenWords(a.updated):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
+/* "updated" is when the conversation's last message was sent, not when the check recorded it (plan #81); an older record
+   without that time falls back to when it was recorded */
+const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
+const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
   a.found==="start-up"?"found on start-up":""].filter(Boolean).join(" · ");
 /** @param {any} a */
 export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
