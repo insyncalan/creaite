@@ -35,6 +35,9 @@ class Views(LiveBrowserCase):
                 for i, (id_,) in enumerate(con.execute(f"SELECT id FROM {t} ORDER BY id").fetchall()):
                     con.execute(f"UPDATE {t} SET updated_at=? WHERE id=?", (ago(20 if i % 2 else 1) + " 09:00:00", id_))
             con.commit()
+        # BL-327: the server's first page is the last built dashboard.html while the records' version (change_log, applies)
+        # is unchanged, and a direct edit doesn't move it; build the page again so it shows the edit
+        v.run("build_dashboard.py", script="build_dashboard.py")
 
     def setUp(self):
         super().setUp()
