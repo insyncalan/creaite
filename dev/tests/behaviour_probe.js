@@ -1,7 +1,27 @@
 /* BL-316: the one keyboard script every menu, picker and dialog answers to, on every screen (dev/tests/test_shared_behaviour.py).
    window.SB.openers(region) lists the visible controls that open a popup (aria-haspopup); SB.popups() lists what is open now;
    SB.state(i) says, for opener i, whether it says it is open, where focus is and what is active. The test presses the keys
-   (open with Enter, ↓ ↑, Esc, Tab) through Chrome itself and reads SB.state() after each. Development only. */
+   (open with Enter, ↓ ↑, Esc, Tab) through Chrome itself and reads SB.state() after each. SB.seen(i) says what opener i
+   opened (ids, names and classes, matched against the inventory read from the code); SB.writes() counts the page's saves
+   and SB.undo() says whether the message at the foot offers Undo (the Undo check). Development only. */
+/* The page's saves, counted, for the Undo check: a POST that changes the vault or the tracker. A POST that starts a run
+   (ask creaite, a prep page, a draft, an update, a restore…) is answered here and never reaches the server. Installed once. */
+if (!window.__SBW) {
+  window.__SBW = { writes: 0, runs: 0 };
+  const WRITE = /^\/api\/(apply|review(\/(reject|assign|retarget|repeat))?|settings(\/reset)?|intake\/clear|inbox\/(remove|restore|upload)|alerts\/(make|dismiss)|chases|day\/(card|close)|capture|meeting\/carry|agenda\/save|prep\/focus\/save|undo|undo-changes|changes\/undo|alerts\/undo)$/;
+  const RUN = /^\/api\/(ask(\/queue)?|prep\/(build|page)|draft|setup\/run|update\/(install|undo|upload)|backup\/restore|stop|current\/(generate|rewrite)|search\/ask|day\/catchup|transcripts\/load|email\/followup|changes\/(approve|decline)|health\/fix\/.*)$/;
+  const was = window.fetch.bind(window);
+  window.fetch = (url, o) => {
+    const path = String(url).replace(/^https?:\/\/[^/]+/, "").split("?")[0];
+    if (o && o.method === "POST") {
+      let op = ""; try { op = JSON.parse(o.body || "{}").op || ""; } catch (e) { /* not JSON: no op */ }
+      if (RUN.test(path)) { window.__SBW.runs++;
+        return Promise.resolve(new Response(JSON.stringify({ ok: false, message: "Not run in the behaviour test" }), { headers: { "Content-Type": "application/json" } })); }
+      if (WRITE.test(path) || (path === "/api/fs" && /^(write|remove|append|upload)$/.test(op))) window.__SBW.writes++;
+    }
+    return was(url, o);
+  };
+}
 window.SB = (() => {
   const vis = el => { if (!el || !el.isConnected) return false; if (el.closest("[hidden]")) return false;
     const cs = getComputedStyle(el); if (cs.display === "none" || cs.visibility === "hidden") return false;
@@ -28,5 +48,20 @@ window.SB = (() => {
   /** close whatever is still open, without pressing anything that changes data */
   const reset = () => { document.querySelectorAll("dialog[open]").forEach(d => d.close());
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); return popups().length; };
-  return { openers, popups: () => popups().map(sig), state, focus, reset };
+  /** what opener i opened, for the inventory: the opener's id, name and aria-controls, its ancestors' ids, and each open
+      popup's id, aria-label and classes (with the menus and lists inside it) */
+  const seen = i => { const o = L[i], out = { ids: [], labels: [], classes: [] }; if (!o) return out;
+    const add = el => { if (el.id) out.ids.push(el.id); const l = el.getAttribute("aria-label"); if (l) out.labels.push(l);
+      if (typeof el.className === "string") out.classes.push(...el.className.split(/\s+/).filter(Boolean)); };
+    if (o.id) out.ids.push(o.id); out.labels.push(name(o)); const c = o.getAttribute("aria-controls"); if (c) out.ids.push(c);
+    for (let a = o.parentElement; a; a = a.parentElement) if (a.id) out.ids.push(a.id);
+    popups().forEach(p => { add(p); p.querySelectorAll('[role="menu"],[role="listbox"],[role="dialog"],[id]').forEach(add); });
+    return out; };
+  const writes = () => ({ ...window.__SBW });
+  /** the Undo on offer: the message at the foot's (#snackU, with an undo behind it) or the peek's staging bar's "Undo last"
+      (#pkUndo: the peek stages each change until it is applied); null when there is none */
+  const UNDOS = ["#snackU", "#pkUndo"];
+  const undoEl = () => UNDOS.map(s => document.querySelector(s)).find(u => vis(u) && (u.id !== "snackU" || !!window.UNDO)) || null;
+  const undo = () => { const u = undoEl(); return u ? "#" + u.id : null; };
+  return { openers, popups: () => popups().map(sig), state, focus, reset, seen, writes, undo };
 })();

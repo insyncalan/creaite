@@ -1,0 +1,51 @@
+{
+ "_about": "BL-316: the shared behaviour test's known failures (dev/tests/test_shared_behaviour.py), by screen area (check.py's OLD_AREAS). Each line starts with its check: keys (Enter, focus, arrows, Esc, Tab), undo (a change offers Undo) or unreached (a popup the code makes that no control on the sample's screens opens with aria-haspopup). A screen branch that fixes one removes its line; the test fails on a new failure and on a listed one that passes. BL-316 is done when every area is empty.",
+ "_unreached": "An unreached line is a popup the code makes that the keyboard script found no way into on the sample's screens: its opener doesn't say aria-haspopup (most dialogs: a plain button or a key opens them), it opens by right-click (cxmenu), it is a form field that doesn't say it opens a list (the owner combobox), or it sits on a screen or state the sample doesn't show (the milestone editor, Prep, Close the day). The fix is the opener saying aria-haspopup (and aria-expanded), or a screen in test_ui_sweep.SCREENS that shows it.",
+ "Help": [
+  "unreached: dialog Opener idend:KeysMenu (src/help.js)"
+ ],
+ "Milestones": [
+  "unreached: listbox Opener label:Add person (src/milestones.js)",
+  "unreached: listbox Opener label:Owner, (src/milestones.js)"
+ ],
+ "Peek": [
+  "keys: work-panel button.chip.pk-chip “Due date: 06-10-2026 overdue”: Tab leaves it open",
+  "unreached: dialog Picker class:pkws (src/panel.js)",
+  "unreached: listbox Combobox class:combo (src/panel.js)",
+  "unreached: listbox Opener label:Project: (src/panel.js)",
+  "unreached: listbox Opener label:Type: (src/panel.js)",
+  "unreached: listbox Picker label:Milestone (src/panel.js)",
+  "unreached: listbox Picker label:Replaces (src/panel.js)",
+  "unreached: listbox Picker label:Type (src/panel.js)",
+  "unreached: listbox Picker label:Workstream (src/panel.js)"
+ ],
+ "Projects": [
+  "unreached: menu Menu label:Draft agenda (src/components/prep/PrepToolbar.jsx)"
+ ],
+ "Review": [
+  "undo: review button.mini.rvpj “Project”: a change is saved with no Undo",
+  "unreached: dialog Picker class:rvmv (src/review.js)",
+  "unreached: listbox Picker label:Update which  (src/review.js)",
+  "unreached: menu Menu class:cxmenu (src/review.js)"
+ ],
+ "Shell": [
+  "unreached: dialog Dialog id:actDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:boardDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:deDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:genDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:inPrev (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:llDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:personDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:prepDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:rvDlg (src/components/dialogs/PageDialogs.jsx)",
+  "unreached: dialog Dialog id:searchPrev (src/components/dialogs/PageDialogs.jsx)"
+ ],
+ "Today": [
+  "unreached: dialog Dialog id:closeDlg (src/components/closeday/CloseDay.jsx)"
+ ],
+ "Work": [
+  "unreached: menu Menu id:newBtn id:newDecMenu (src/components/work/NewTile.jsx)",
+  "unreached: menu Menu id:vmenuPop (src/work.js)",
+  "unreached: menu Opener label:Options for the (src/work.js)"
+ ]
+}
