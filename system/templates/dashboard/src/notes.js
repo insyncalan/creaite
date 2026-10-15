@@ -18,7 +18,7 @@ import { NotesPage, toggleFind } from "./components/notes/NotesPage.jsx";
 import { itemOf } from "./components/notes/NoteEditor.jsx";
 import { drawProjectTabs } from "./components/project/ProjectTabs.jsx";
 import { openRecord } from "./panel.js";
-import { allNotes, closeNote, loadNotes, noteCur, noteFind, noteFlash, noteFlush, noteFlushOnExit, notesCode, notesList, notesMentioning, openNote,
+import { allNotes, closeNote, loadNotes, noteCur, noteFind, noteFlash, noteFlush, noteFlushOnExit, noteFocus, noteLeave, notesCode, notesList, notesMentioning, openNote,
   toggleNotesList } from "./stores/notes.js";
 
 /** The project (or _portfolio) a stored note path belongs to, from the page's data; null when it isn't a known note.
@@ -69,7 +69,7 @@ export function openNoteAt(path, line, o = {}) {
 }
 
 /** The page is leaving the Notes tab: the open note's editing session ends (its file is written). */
-export function notesLeave() { noteFlush(); }
+export function notesLeave() { noteFlush(); noteFocus.value = false; noteLeave.value = null; }
 
 /** The cockpit's tabs (Overview, Notes). @param {string} code */
 export function drawCockpitTabs(code) {

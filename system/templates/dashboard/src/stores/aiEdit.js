@@ -201,6 +201,15 @@ export function aiAccept() {
   draftStat(AI_FEATURE, "used");
   snack("Suggestion used. ⌘Z undoes it.");
 }
+/** Esc on the bar over a selection: it goes, the selection collapses to its end and focus is in the text. Returns whether a bar was open. */
+export function aiBarClose() {
+  const b = aiBar.value;
+  if (!b) return false;
+  aiBar.value = null;
+  const ed = b.h.editor;
+  if (!ed.isDestroyed) ed.chain().setTextSelection(ed.state.selection.to).focus().run();
+  return true;
+}
 /** Discard: nothing changes; focus goes back to the text. */
 export function aiDiscard() {
   const s = aiSug.value;

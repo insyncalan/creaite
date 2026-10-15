@@ -1,7 +1,7 @@
 // @ts-check
 /* NoteEditor (BL-301 B): an open note's body on the one editor (core/editor.js, `features: "notes"`: headings, lists, checklists,
    tables, links). It is editable as soon as it opens: no Edit, Save or Cancel. The toolbar shows while the cursor is in the note.
-   Each change tells the store (stores/notes.js), which keeps a draft and writes the file once per editing session.
+   Each change tells the store (stores/notes.js), which writes the file about two seconds after the last key (#119).
 
    Pickers, typed in the text: `[[` a note, `@` a person from the people register, `#` a work item, `/` on an empty line an insert
    menu. A note link is written `[[Title]]`, a person `@[Name](creaite:person/<name>)`, a work item `[ABC-A-003](creaite:item/ABC-A-003)`:
@@ -22,7 +22,7 @@ import { Icon } from "../Icon.jsx";
     x: number, y: number}} PickState */
 /** @typedef {{markdown: string, code: string, label: string, loadKey: string, noteTitles: () => string[],
     onInput: () => void, onBody: (get: (() => string|null) | null) => void, onOpenNote: (title: string) => void,
-    onOpenItem: (id: string) => void, restored?: boolean, toolbarExtra?: import("preact").ComponentChildren,
+    onOpenItem: (id: string) => void, toolbarExtra?: import("preact").ComponentChildren,
     path?: string, onHoverLine?: (line: number) => void,
     imageSrc?: (ref: string) => (string|null), onImage?: (file: File) => Promise<string|null>}} Props */
 
@@ -147,7 +147,7 @@ const TOOLS = [["h", "H", "Sub-heading"], ["b", "B", "Bold (⌘B)"], ["i", "I", 
   ["table", "▦", "Table"], ["image", "Image", "Add a picture here (PNG or JPEG, up to 2 MB)"], ["|", "", ""], ["undo", "↶", "Undo (⌘Z)"], ["redo", "↷", "Redo (⌘⇧Z)"]];
 
 /** The note's body on the one editor. @param {Props} props */
-export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
+export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const fileIn = useRef(/** @type {HTMLInputElement|null} */ (null));
   const ed = useRef(/** @type {import("../../core/editor.js").EdHandle|null} */ (null));
@@ -289,7 +289,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const out = () => { const f = props.current.onHoverLine; if (f) f(0); };
     el.addEventListener("mouseover", over);
     el.addEventListener("mouseleave", out);
-    onBody(() => (h.touched() || restored ? h.value() : null));
+    onBody(() => (h.touched() ? h.value() : null));
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
       el.removeEventListener("mouseleave", out); onBody(null); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
