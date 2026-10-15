@@ -502,6 +502,53 @@ def preview(rel, q=""):
             "html": "".join(f"<p>{mark(line, terms)}</p>" for line in text[:PREVIEW_LIMIT].split("\n") if line.strip())}
 
 
+# ===== #60 option (a) (Alan, 15-10-2026): a Prep page run sees a confidential note as its title and link only =====
+# The live server starts the Prep page run with CREAITE_RUN_KIND=prep in its environment (live_server.run_env), and its guard hook
+# lets a Bash call through only as one creaite script on its own, so the run can't change it. There, query and preview give a
+# confidential note (notes.held: fail closed) without its text; everyone else's results are unchanged.
+HELD_MESSAGE = "This note is confidential: a Prep page never reads its text."
+
+
+def prep_run():
+    """Whether this command runs inside a Prep page run (set by the live server, never by the run)."""
+    return os.environ.get("CREAITE_RUN_KIND") == "prep"
+
+
+def held_note(rel):
+    """Whether the stored path `rel` is a note a Prep run must not read (marked confidential, or unreadable)."""
+    p = paths.resolve(rel)
+    return paths.is_note(p) and notes.held(p)
+
+
+def prep_query(res):
+    """search()'s results with each confidential note as its title and link only (no snippet, date or summary)."""
+    for g, rows in res.get("groups", {}).items():
+        res["groups"][g] = [{"group": r["group"], "kind": r["kind"], "title": r["title"], "path": r["path"], "opens": r["opens"],
+                             "project": r.get("project"), "snippet": "", "confidential": True}
+                            if r.get("path") and held_note(r["path"]) else r for r in rows]
+    return res
+
+
+def prep_preview(rel, q=""):
+    """preview() for a Prep run: a confidential note as its name and link only; anything else as preview() gives it."""
+    p = indexed(rel)
+    if p and held_note(rel):
+        return {"ok": True, "name": p.name, "path": str(rel), "confidential": True, "html": "", "cut": False, "empty": False,
+                "open": False, "message": HELD_MESSAGE}
+    return preview(rel, q)
+
+
+def query_for_run(res):
+    """The command line's query results: a Prep run's with confidential notes held back (prep_query), anyone else's as they are."""
+    return prep_query(res) if prep_run() else res
+
+
+def preview_for_run(rel, q=""):
+    """The command line's preview: a Prep run's through prep_preview, anyone else's through preview."""
+    return prep_preview(rel, q) if prep_run() else preview(rel, q)
+# ===== end #60 option (a) =====
+
+
 # ── Ask: what Claude reads first (BL-07) ───────────────────────────────────────
 
 HEADINGS = {"executive summary", "updates", "decisions", "action items", "open questions", "escalations",
@@ -731,6 +778,7 @@ def main(argv):
                 sys.exit(f"creaite search: unexpected {args[i]}")
         res = search(args[0], multi["--project"], multi["--person"], multi["--kind"], single.get("from"), single.get("to"),
                      multi["--skip"], single.get("parse", True))
+        res = query_for_run(res)                                         # #60 option (a)
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
     if cmd == "enrich":
@@ -781,7 +829,7 @@ def main(argv):
         print(json.dumps(res, ensure_ascii=False) if as_json else res["text"])
         return 0
     if cmd == "preview" and args:
-        print(json.dumps(preview(args[0], args[1] if len(args) > 1 else ""), ensure_ascii=False))
+        print(json.dumps(preview_for_run(args[0], args[1] if len(args) > 1 else ""), ensure_ascii=False))   # #60 option (a)
         return 0
     print(__doc__)
     return 2

@@ -823,6 +823,94 @@ def direct_write_area(mode):
     return paths.STAGING if mode == "confirmed" else paths.DRAFTS      # BL-295: the catch-up sweep ("sweep") as a plain chat
 
 
+# ===== #60 option (a) (Alan, 15-10-2026): a Prep page run never reads a confidential note =====
+# The live server starts the Prep page run (run kind "prep", BL-98) with this hook in mode "prep", set in the --settings it passes
+# on the command line, which the run can't change. In that mode the hook refuses any tool call that would read a confidential note:
+# Read of one (or of any Markdown file marked confidential), a search (Grep, Glob, LS) whose folder holds one, a creaite script given
+# one, and the places that keep a copy of one (its typed draft; the search index and the backups, while any note is confidential).
+# Fail closed: a note that can't be read counts as confidential, and so does anything this check can't finish. Prep keeps its own
+# allow list otherwise; a Bash call must still be one creaite script on its own (bash_refusal), so its environment, where the server
+# tells search.py it is a Prep run, can't be changed. ask creaite and every other run are unchanged: this mode is the Prep run's only.
+CONFIDENTIAL = "that note is confidential: a Prep page never reads a confidential note"
+
+
+def confidential_places():
+    """The real paths that hold a confidential note's text: every confidential note (notes.held, in every notes folder and below
+    it), the typed draft of one, and, while any exists, the search index (the database and its journal files) and the backups."""
+    import notes
+    held = []
+    for code, _folder in paths.project_folders():
+        try:
+            d = notes.folder(code)
+        except LookupError:                                 # a project without a folder has no notes
+            continue
+        if d.is_dir():
+            held += [f for f in d.rglob("*.md") if f.is_file() and notes.held(f)]
+    if notes.DRAFT_DIR.is_dir():
+        for f in notes.DRAFT_DIR.glob("*.json"):
+            try:
+                draft = json.loads(f.read_text(encoding="utf-8"))
+                bad = bool((draft.get("changes") or {}).get("confidential")) or notes.held(paths.resolve(draft["path"]))
+            except Exception:  # noqa: BLE001  an unreadable draft counts as confidential
+                bad = True
+            if bad:
+                held.append(f)
+    if held:
+        held += [paths.DB.with_name(paths.DB.name + x) for x in ("", "-wal", "-shm", "-journal")] + [paths.BACKUPS]
+    return [Path(os.path.realpath(x)) for x in held]
+
+
+def prep_paths(tool, inp):
+    """The paths a Prep run's tool call names (tool_paths), and for Bash every argument that looks like a path, `--x=path` too."""
+    out = tool_paths(tool, inp)
+    if tool == "Bash":
+        for a in bash_args(str((inp or {}).get("command") or "")):
+            a = a.split("=", 1)[1] if a.startswith("-") and "=" in a else a
+            if ("/" in a or a.startswith(("~", "."))) and not a.startswith("-") and a not in out:
+                out.append(a)
+    return out
+
+
+def confidential_reason(tool, inp):
+    """Why this call in a Prep run would read a confidential note, or None. Anything it can't check is refused."""
+    import notes
+    try:
+        places = confidential_places()
+        for p in prep_paths(tool, inp):
+            rp = real(p)
+            if rp.suffix.lower() == ".md" and rp.is_file() and notes.held(rp):
+                return f"{p}: {CONFIDENTIAL}"
+            for q in places:
+                if parts_under(rp, q) is not None:          # the place itself, or inside it (the backups)
+                    return f"{p}: {CONFIDENTIAL}, and this holds a copy of its text"
+                if parts_under(q, rp) is not None:          # a folder that holds one
+                    return (f"{p}: this folder holds a confidential note, and {CONFIDENTIAL}: search or read only the notes "
+                            "Prep was given")
+    except Exception as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call for confidential notes ({type(e).__name__})"
+    return None
+
+
+def prep_decision(tool, inp):
+    """(allow, reason) for one tool call in a Prep page run: refused if it would read a confidential note, or if it is a Bash call
+    that isn't one creaite script on its own; else let through to Prep's allow list, as before."""
+    why = confidential_reason(tool, inp)
+    if why:
+        return False, why
+    if tool == "Bash":
+        why = bash_refusal(str((inp or {}).get("command") or ""), "prep")
+        if why:
+            return False, why
+    return True, ""
+
+
+def decide(tool, inp, mode, run):
+    """(allow, reason) for one tool call, as the hook decides it: mode "prep" (the Prep page run, #60 option (a)) by
+    prep_decision, every other mode by hook_decision, unchanged."""
+    return prep_decision(tool, inp) if mode == "prep" else hook_decision(tool, inp, mode, run)
+# ===== end #60 option (a) =====
+
+
 def hook_decision(tool, inp, mode, run):
     """(allow, reason) for one tool call in an ask creaite run. Marks the run first when the call reads outside content."""
     data = guard_run()
@@ -898,14 +986,15 @@ def vault_relative(command):
 
 
 def hook_main(argv):
-    """`reach.py hook --run <id> --mode ask|confirmed`: Claude Code's PreToolUse hook for an ask creaite run. Reads the call as JSON
+    """`reach.py hook --run <id> --mode ask|confirmed|sweep|prep`: Claude Code's PreToolUse hook for an ask creaite run (prep: the
+    Prep page run, #60 option (a)). Reads the call as JSON
     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
     error refuses: the guard fails closed."""
     try:
         opts = dict(zip(argv[0::2], argv[1::2]))
         call = json.loads(sys.stdin.read() or "{}")
         tool, inp = str(call.get("tool_name") or ""), call.get("tool_input") or {}
-        ok, why = hook_decision(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""))
+        ok, why = decide(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""))     # #60 option (a): "prep" too
     except Exception as e:  # noqa: BLE001  fail closed
         ok, why = False, f"the guard couldn't check this call ({type(e).__name__})"
         tool = "?"
