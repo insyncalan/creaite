@@ -102,7 +102,7 @@ def boom(*a, **k): raise SystemExit('built everything')
 bd.collect = boom
 v = bd.files_view()
 print(json.dumps([sorted(v), len(v['files']), [f['f'] for f in v['files'] if f['f'] == 'documents'], bool(v['inbox'])]))""")
-        self.assertEqual(o[0], ["at", "files", "inbox"])
+        self.assertEqual(o[0], ["archived", "at", "files", "inbox"])        # BL-331: the files BL-03 archived, for Files' Archived
         self.assertGreater(o[1], 0)
         self.assertEqual(o[2], [])
         self.assertTrue(o[3])
@@ -169,6 +169,14 @@ print(json.dumps(len(bd.files({'ABC': paths.project_dir('ABC')}))))""")
 
 def settle(b, js, timeout=10):
     b.wait(js, timeout)
+
+
+def resize(b, width, height):
+    """Resize, then wait until the page has the new size and the rail has followed it. The renderer takes the new viewport a
+    little after Chrome answers, and the rail turns to icons below 1200px on the media query's change event, at the next frame;
+    under load a measurement taken at once saw the old size (two panes side by side at 700px)."""
+    b.resize(width, height)
+    b.wait(f"innerWidth==={width} && innerHeight==={height} && document.documentElement.classList.contains('railicons')==={str(width < 1200).lower()}")
 
 
 class FilesLiveBase(LiveBrowserCase):
@@ -258,7 +266,7 @@ class FilesLiveTests(FilesLiveBase):
         req = urllib.request.Request(self.base + "/api/files", headers={"X-Creaite-Token": token})
         with urllib.request.urlopen(req, timeout=30) as r:
             body = json.loads(r.read())
-        self.assertEqual(sorted(body), ["at", "files", "inbox", "ok"])                            # not the dashboard's whole data
+        self.assertEqual(sorted(body), ["archived", "at", "files", "inbox", "ok"])                          # not the dashboard's whole data
         self.assertTrue(body["ok"])
         self.assertNotIn("documents", {f["f"] for f in body["files"]})
 
@@ -391,7 +399,7 @@ class SearchBarTests(LiveBrowserCase):
 
     def test_the_bar_is_centred_about_half_the_page_with_the_button_beside_it(self):
         for width in (1400, 1700, 1100):
-            self.b.resize(width, 900)
+            resize(self.b, width, 900)
             self.b.eval("go('files')")
             page = self.box("#vsearch")[2]
             bar, col, btn = self.box("#vsInput"), self.box(".vscol"), self.box("#vsAskBtn")
@@ -479,7 +487,7 @@ class SearchBarTests(LiveBrowserCase):
 
     def test_narrow_windows_stack_the_button_under_the_bar(self):
         b = self.b
-        b.resize(700, 900)
+        resize(b, 700, 900)
         b.eval("go('files')")
         page = self.box("#vsearch")[2]
         bar, btn, col = self.box("#vsInput"), self.box("#vsAskBtn"), self.box(".vscol")
@@ -784,7 +792,7 @@ class PanesLive(LiveBrowserCase):
     def test_a_solo_read_view_is_full_width_in_a_narrow_window(self):
         b = self.b
         self.open_card()
-        b.resize(700, 900)
+        resize(b, 700, 900)
         b.eval("renderCockpit('ABC')")
         left = b.eval("document.querySelector('.curpane[data-pane=\"1\"]').getBoundingClientRect().toJSON()")
         box = b.eval("document.querySelector('.curpanes').getBoundingClientRect().width")
@@ -923,7 +931,7 @@ class PanesLive(LiveBrowserCase):
     def test_narrow_windows_stack_the_panes(self):
         b = self.b
         self.two_panes()
-        b.resize(700, 900)
+        resize(b, 700, 900)
         b.eval("renderCockpit('ABC')")
         left, right = (b.eval(f"document.querySelector('.curpane[data-pane=\"{n}\"]').getBoundingClientRect().toJSON()") for n in (1, 2))
         self.assertGreaterEqual(right["top"], left["bottom"] - 1)                                        # left on top
@@ -1575,7 +1583,7 @@ class DependencyPageTests(unittest.TestCase):
         i = self.ids
         o = self.probe(subst("""
           go("work"); WT="raid"; openNew("raid"); const out={}, set=(n,v)=>{ CUR.draft[n]=n==="due"&&DDATE.test(v)?toIso(v):v; pkDraw(); };   /* BL-179: the new item is the peek; its draft as the chips leave it */
-          const chips=()=>[...document.querySelectorAll("#depChips button")].map(b=>b.textContent);
+          const chips=()=>[...document.querySelectorAll("#depSug button")].map(b=>b.textContent);
           set("p","ABC"); out.risk=chips();                                                            // a Risk: no chips
           set("type","Dependency"); out.noDue=chips();                                                  // no due date: nothing to compare with
           set("t","Vendor access"); set("due","__D6__"); out.chips=chips();
@@ -1619,7 +1627,7 @@ class DependencyPageTests(unittest.TestCase):
           const out={}; for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); go("cockpit","ABC"); const c=document.getElementById("depCard"), bg=__bgOf(c), css=s=>getComputedStyle(c.querySelector(s));
             const m=document.querySelector("#mvCard .mv-prow.atrisk .waiting"); out[pal+"|"+mode]={warn:__ratio(css(".depwarn").color,bg), text:__ratio(css(".dept").color,bg), id:__ratio(css(".depid").color,bg), tag:__ratio(getComputedStyle(m).color,__bgOf(m))};
             go("work"); WT="raid"; openNew("raid"); Object.assign(CUR.draft,{p:"ABC",type:"Dependency",due:toIso("__D6__")}); pkDraw();   /* BL-179: the peek's suggestions */
-            const b=document.querySelector("#depChips .chipbtn"), cs=getComputedStyle(b); out[pal+"|"+mode].chip=__ratio(cs.color,cs.backgroundColor); out[pal+"|"+mode].chipEdge=__ratio(cs.borderTopColor,__bgOf(b.parentElement)); closePanel(); }
+            const b=document.querySelector("#depSug .chipbtn"), cs=getComputedStyle(b); out[pal+"|"+mode].chip=__ratio(cs.color,cs.backgroundColor); out[pal+"|"+mode].chipEdge=__ratio(cs.borderTopColor,__bgOf(b.parentElement)); closePanel(); }
           window.OUT=out;"""))
         self.assertEqual(len(o), theme_count() * 2)
         bad = {k: {n: round(x, 2) for n, x in v.items() if x < (3.0 if n == "chipEdge" else 4.5)} for k, v in o.items()}

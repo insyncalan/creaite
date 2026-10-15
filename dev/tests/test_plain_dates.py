@@ -103,7 +103,7 @@ class PlainDates(LiveBrowserCase):
         b = self.b
         b.eval("openCapture('note: words in the date')")
         b.pump(0.3)
-        self.assertFalse(b.eval("$('#qcDate').readOnly"))                     # Quick Capture's date can be typed now
+        self.assertFalse(b.eval("$('#qcDate').readOnly"))                     # Quick capture's date can be typed now
         b.eval("$('#qcDate').focus(); $('#qcDate').select()")
         b.type("yesterday")
         b.key("Tab")

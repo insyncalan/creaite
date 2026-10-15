@@ -2,10 +2,13 @@
 /* projects.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0029-projects-cockpit.js, 0054-generate-current-state-with-claude-bl-46.js, 0055-executive-current-state-bl-106.js, 0056-current-state-edited-in-place-bl-47.js, 0058-bl-162-sprint-rail.js, 0059-bl-207-sprint-insight.js, 0081-dashboard-pages-bl-87-to-bl-95.js, 0082-bl-190-sprint-links.js, 0083-after-bl-190-flow.js, 0124-insight-bl-51-bl-49-bl-54.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
+import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, paintIcons, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
-import { CALI, closeCal, comboClose, DATE_HELP, formProject, WK, wkAsk } from "./core/fields.js";
+import { closeCombobox } from "./components/Combobox.jsx";
+import { CALI, closeCal, DATE_HELP, formProject, WK, wkAsk } from "./core/fields.js";
 import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll, tabTitle } from "./core/nav.js";
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
@@ -16,6 +19,7 @@ import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
 import { mvBindScroll, mvCardHtml } from "./milestones.js";
 import { bl185Row, figHtml, htmlToMd, joinPanes, markSel, MD_IMG, mdHtml, openProject, openRecord, pkDrDrop, pkNewAsk, pkNewAskOff, pkNewKey, pkNewOffer, REC, saveCurrent, savePanel, splitPanes } from "./panel.js";
+import { drawChips } from "./components/Chip.jsx";
 import { mountPrepPopup } from "./components/prep/PrepPopup.jsx";
 import { mountPrepShape } from "./components/prep/PrepShape.jsx";
 import { loadBrief, popupRev } from "./stores/prepPopup.js";
@@ -54,7 +58,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
   putHTML($("#v-cockpit"),html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div>
      <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P.length<2?"disabled":""}>‹</button><select id="projSw" aria-label="Switch project">${P.map(x=>html`<option value="${x.code}" ${x.code===code?"selected":""}>${x.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P.length<2?"disabled":""}>›</button></div></div>
-   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}"${!viaServer()||shared.RUN||shared.GEN.run?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
+   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1,"actions:overdue"],["No due date",undatedWork(code).length,0,""],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1,"raid:urgentonly"],["Milestone slip",p.slip?p.slip+" days":"None",p.slip,""],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0,"actions:soon",{st:["Open","Delayed"]}]].map(([l,v,b,nav,ex])=>`<div class="evbox${nav?" click":""}" ${nav?`data-nav="${esc(navOf(`${nav}:${code}`,ex))}" role="link" tabindex="0" title="Open in Work"`:""}><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join(""))}</div></div>
@@ -115,8 +119,8 @@ export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run){ snack("ask
   $("#genCustom").hidden=shared.GEN.days!=="custom";
   putHTML($("#genSrc"),raw(GEN_SRC.map(([k,l,on])=>`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" value="${k}" ${on?"checked":""}> ${l}</label>`).join("")));
   $("#genSweep").textContent=SWEPT&&SWEPT!=="never"?`Mail and Teams last swept ${fd(SWEPT)}; anything newer isn't in the vault yet.`:"Mail and Teams haven't been swept yet.";
-  genOptions(); $("#genDlg").showModal(); })();
-  const ttl=csTitle(code), h=ttl===CST_DEF?"Generate current state":`Generate: ${ttl}`; $("#genDlg h2").textContent=h; $("#genDlg").setAttribute("aria-label",h); }   /* the dialog's title names the status (BL-274) */
+  genOptions(); openDialog("genDlg"); })();
+  const ttl=csTitle(code), h=ttl===CST_DEF?"Generate current state":`Generate: ${ttl}`; $("#genTitle").textContent=h; }   /* the dialog's title, which names it, names the status (BL-274) */
 export function genStatus(html){ const el=$("#genStatus"); if(!el) return; el.hidden=!html; putHtml(el,html||""); }
 export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrite"?"Rewriting in the executive voice":"Drafting the current state"); try{
   const id=`g-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}`, ctl=new AbortController(); shared.GEN.run=id; shared.GEN.ctl=ctl;
@@ -295,7 +299,7 @@ export function closePanel(quiet){ if(shared.DRH){ if(shared.DRH.d) draftStat("r
   PK.dirty=false; $("#panel").classList.remove("pkprop");   /* BL-250 A */
   const was=pkOn(), a=document.activeElement; if(a&&a!==document.body&&$("#panel").contains(a)) a.blur();   /* a text field commits as it closes, and no focus is left in a closed panel */   /* BL-166 */
   if(shared.EDITING&&shared.PDKEY) pdDrop(shared.PDKEY); shared.PDKEY=shared.PDBASE=shared.PDOFFER=null;   /* BL-169 */
-  const wasItem=shared.CUR&&shared.CUR.mode==="record"; $("#panel").classList.remove("on","pwide"); shared.CUR=null; shared.EDITING=false; closeCal(); comboClose(); if(shared.SEL){ shared.SEL=null; markSel(); } if(wasItem&&!quiet) navWrite(false); 
+  const wasItem=shared.CUR&&shared.CUR.mode==="record"; $("#panel").classList.remove("on","pwide"); shared.CUR=null; shared.EDITING=false; closeCal(); closeCombobox(); if(shared.SEL){ shared.SEL=null; markSel(); } if(wasItem&&!quiet) navWrite(false); 
   $("#panel").classList.remove("peek"); if(was){ PK.wide=false; PK.key=null; }
   if(shared.PREPPEEK&&shared.PREPPEEK!=="swap") prepPeekEnd(); }   /* BL-286 E: the Prep popup comes back, modal, with focus on the item */
    /* looked up when clicked, so Close runs every later step (as Cancel and Esc do) */
@@ -602,12 +606,15 @@ export function depsCard(code){ const L=R.filter(r=>r.p===code&&r.type==="Depend
 export const depHash=t=>[...String(t||"")].reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7);
 export function depSuggest(code,due){ const p=P.find(x=>x.code===code); if(!p||!due) return [];
   return p.ms.filter(m=>m[3]&&m[6]==="Planned"&&(m[8]||m[4])&&(m[8]||m[4])>due).sort((a,b)=>(a[8]||a[4]).localeCompare(b[8]||b[4])).slice(0,3); }
-export function depChips(){ $("#depChips")?.remove(); if(!shared.EDITING||!shared.CUR||shared.CUR.k!=="raid"||!["record","new"].includes(shared.CUR.mode)) return;
+/* BL-316: the suggestions are Chip building blocks (class chipbtn) in a group (#depSug), for the form here and the peek (pkDepDraw) */
+export function depSugDraw(parent,L,attr){ const g=document.createElement("div"); g.id="depSug"; g.className="depchips"; g.setAttribute("role","group"); g.setAttribute("aria-label","Suggested milestones"); parent.append(g);
+  drawChips(g,[...L.map(m=>({key:m[3],button:true,cls:"chipbtn",[`data-${attr}`]:m[3],children:`Attach to ${m[3]} (forecast ${fd(m[8]||m[4])})?`})),{key:"none",button:true,cls:"chipbtn quiet",[`data-${attr}none`]:"",children:"None needed"}]); }
+export function depFormDraw(){ $("#depSug")?.remove(); if(!shared.EDITING||!shared.CUR||shared.CUR.k!=="raid"||!["record","new"].includes(shared.CUR.mode)) return;
   const typ=$("#f_type"), ms=$("#f_ms"); if(!typ||!ms||typ.value!=="Dependency"||ms.value) return;
   const code=$("#f_p")?.value||formProject(), dueTxt=$("#f_due")?.value||"", due=DDATE.test(dueTxt)?toIso(dueTxt):"", key=shared.CUR.id||"new";
   if((store.get("creaite-dep-none",{})[key])===depHash($("#f_t")?.value)) return;
   const L=depSuggest(code,due); if(!L.length) return;
-  addHTML(ms.closest("dd"),"beforeend",html`<div id="depChips" class="depchips" role="group" aria-label="Suggested milestones">${L.map(m=>html`<button type="button" class="chipbtn" data-depms="${m[3]}">Attach to ${m[3]} (forecast ${fd(m[8]||m[4])})?</button>`)}<button type="button" class="chipbtn quiet" data-depnone>None needed</button></div>`); }
+  depSugDraw(ms.closest("dd"),L,"depms"); }
 /* BL-91: the Flow card, in inline SVG drawn to scale (a bar's height is its count times one scale per chart), in the theme's own
    colours: accent for opened, amber for closed, red for overdue and the oldest bucket. Every bar carries its number, and each
    chart a title, so colour is never the only signal. Counts only, never about a person. Data: D.flow[code] (build_dashboard.flow_data). */
@@ -638,10 +645,10 @@ $("#vsInput").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!questionLike(
 $("#vsAskBtn").addEventListener("click",()=>{ const st=$("#vsAskBtn").dataset.state; if(st==="idle"){ $("#vsInput").focus(); return; } if(st==="answering") return; askClaude(); });
 $("#vsAskStop").addEventListener("click",()=>{ if(shared.ASKQ.run) api("/api/ask/stop",{run:shared.ASKQ.run}).then(r=>{ if(!r.ok&&shared.ASKQ.ctl) shared.ASKQ.ctl.abort(); }); });
 vsAskSync();
-$("#pFields").addEventListener("input",e=>{ if(["f_due","f_type","f_p","f_t"].includes(e.target.id)) depChips(); });
-$("#pFields").addEventListener("change",e=>{ if(["f_due","f_type","f_p","f_ms"].includes(e.target.id)) depChips(); });
-$("#pFields").addEventListener("click",e=>{ const a=e.target.closest("[data-depms]"), n=e.target.closest("[data-depnone]"); if(a){ const ms=$("#f_ms"); ms.value=a.dataset.depms; ms.dispatchEvent(new Event("change",{bubbles:true})); depChips(); }
-  else if(n){ const d=store.get("creaite-dep-none",{}); d[shared.CUR.id||"new"]=depHash($("#f_t")?.value); store.set("creaite-dep-none",d); depChips(); } });
+$("#pFields").addEventListener("input",e=>{ if(["f_due","f_type","f_p","f_t"].includes(e.target.id)) depFormDraw(); });
+$("#pFields").addEventListener("change",e=>{ if(["f_due","f_type","f_p","f_ms"].includes(e.target.id)) depFormDraw(); });
+$("#pFields").addEventListener("click",e=>{ const a=e.target.closest("[data-depms]"), n=e.target.closest("[data-depnone]"); if(a){ const ms=$("#f_ms"); ms.value=a.dataset.depms; ms.dispatchEvent(new Event("change",{bubbles:true})); depFormDraw(); }
+  else if(n){ const d=store.get("creaite-dep-none",{}); d[shared.CUR.id||"new"]=depHash($("#f_t")?.value); store.set("creaite-dep-none",d); depFormDraw(); } });
 }
 /* ===== BL-190 (sprint-links) ===== the Flow card's figures open Work: a week's opened bars (Raised between that week, any status),
    its closed bars (Closed, Closed between that week), an ageing bucket (All items, open actions and RAID items raised in that span)
@@ -765,18 +772,17 @@ export const prepTimed=()=>(((D.calendar||{}).days||{})[TODAY]||[]).filter(e=>!e
 export function prepDlg(){ let d=$("#prepDlg"); if(d) return d;
   /* BL-286 A: the header and toolbar (#prepTop) and the facts line and invite (#prepLead) are Preact components; the agenda card
      (#prepAgenda), the Prep page run's status (#prepPgStat) and the lists (#prepBody) are drawn by the code below */
-  addHTML(document.body,"beforeend",html`<dialog id="prepDlg" aria-labelledby="prepTitle"><div id="prepTop"></div><div class="prepbody" id="prepScroll"><div class="sub" id="prepPgStat" role="status"></div><div id="prepShape"></div><div id="prepLead"></div><div id="prepAgenda" class="pkdrhost"></div><div id="prepBody"></div></div></dialog>`);
-  d=$("#prepDlg"); mountPrepPopup($("#prepTop"),$("#prepLead")); mountPrepShape($("#prepShape"));   /* BL-286 C: Shape the meeting */
-  d.addEventListener("click",e=>{ if(e.target===d&&shared.PREPPEEK) return;
+  d=makePrepDialog(); mountPrepPopup($("#prepTop"),$("#prepLead")); mountPrepShape($("#prepShape"));   /* BL-286 C: Shape the meeting */
+  d.addEventListener("click",e=>{   /* a click on the scrim is the Dialog's: it closes when nothing is typed */
     const o=e.target.closest("[data-open]"), inner=e.target.closest("button,input,select,a:not([data-open])");
     if(o&&prepPeekable(o)&&!(inner&&o.contains(inner))){ e.preventDefault(); e.stopPropagation(); prepPeek(o); return; }   /* BL-286 E: the full peek, over the popup */
-    if(e.target===d||e.target.closest("#prepClose")||e.target.closest("[data-open],[data-ms],[data-nav],[data-proj]")) d.close(); });
+    if(e.target.closest("#prepClose")||e.target.closest("[data-open],[data-ms],[data-nav],[data-proj]")) d.close(); });
   d.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-open]")&&prepPeekable(e.target)){ e.preventDefault(); e.stopPropagation(); prepPeek(e.target); } });
   d.addEventListener("close",()=>{ if(d.open||shared.PREPPEEK==="swap") return;   /* "close" comes as a task: after a swap the dialog is open again */ if(shared.PREPPEEK){ shared.PREPPEEK=null; shared.PKSRC=null; d.classList.remove("pknm"); if(pkOn()) closePanel(); } $("#prepScrim")?.remove(); });
   return d; }
-export function openPrep(e,day){ shared.PREPEV=e; shared.PREPDAY=day||TODAY; const d=prepDlg(); loadBrief(prepKey(e,shared.PREPDAY)); drawPrep(); if(!d.open) d.showModal(); $("#prepScroll").scrollTop=0; }
+export function openPrep(e,day){ shared.PREPEV=e; shared.PREPDAY=day||TODAY; const d=prepDlg(); loadBrief(prepKey(e,shared.PREPDAY)); drawPrep(); openDialog(d); $("#prepScroll").scrollTop=0; }
 /* ===== BL-286 E: the full Work peek over the Prep popup =====
-   The popup is a modal <dialog> in the top layer, so a peek (#panel, with its pickers and the staged pill) can't sit above it.
+   The popup is a modal dialog in the top layer, so a peek (#panel, with its pickers and the staged pill) can't sit above it.
    While an item is open the dialog becomes non-modal, over a scrim of its own, and the peek opens above it; ↑ ↓ step through
    the popup's items. Closing the peek makes the dialog modal again, with focus back on the item's line. */
 export const prepPeekable=el=>{ const [k,id]=String(el.dataset.open||"").split(":"); return ["actions","raid","decisions"].includes(k)&&!!REC(k,id); };
@@ -785,14 +791,14 @@ export const prepPeekRoot=()=>{ const d=$("#prepDlg"); return d&&d.classList.con
 export function prepPeekList(){ return $$(`${prepPeekRoot()} [data-open]`).filter(prepPeekable).map(el=>{ const [k,id]=el.dataset.open.split(":"); return {k,id}; }).filter((o,i,L)=>L.findIndex(x=>x.id===o.id)===i); }
 export function prepPeekMark(){ const id=shared.CUR&&shared.CUR.id; $$(`${prepPeekRoot()} [data-open]`).forEach(el=>el.classList.toggle("sel",!!id&&el.dataset.open.split(":")[1]===id)); }
 export function prepPeek(el){ const d=$("#prepDlg"), [k,id]=el.dataset.open.split(":"); if(!d||!d.open) return;
-  if(!shared.PREPPEEK){ shared.PREPPEEK="swap"; d.close(); d.classList.add("pknm"); d.show(); shared.PREPPEEK={el:el.dataset.open};
+  if(!shared.PREPPEEK){ shared.PREPPEEK="swap"; d.close(); d.classList.add("pknm"); openDialog(d,{modal:false,focus:false}); shared.PREPPEEK={el:el.dataset.open};
     if(!$("#prepScrim")){ addHTML(document.body,"beforeend",html`<div id="prepScrim" aria-hidden="true"></div>`); $("#prepScrim").addEventListener("click",()=>closePanel()); } }
   else shared.PREPPEEK.el=el.dataset.open;
   shared.PKSRC={order:prepPeekList,step:o=>{ openRecord(o.k,o.id); if(shared.PREPPEEK) shared.PREPPEEK.el=`${o.k}:${o.id}`; prepPeekMark(); }};
   openRecord(k,id); prepPeekMark(); if(!pkOn()) prepPeekEnd(); }
 export function prepPeekEnd(){ const d=$("#prepDlg"), was=shared.PREPPEEK; if(!was) return; shared.PKSRC=null; $("#prepScrim")?.remove();
   if(!d||!d.open){ shared.PREPPEEK=null; return; }
-  shared.PREPPEEK="swap"; d.close(); d.classList.remove("pknm"); d.showModal(); shared.PREPPEEK=null; drawPrep();
+  shared.PREPPEEK="swap"; d.close(); d.classList.remove("pknm"); openDialog(d,{focus:false}); shared.PREPPEEK=null; drawPrep();
   const back=was.el&&$$(`${prepPeekRoot()} [data-open]`).find(x=>x.dataset.open===was.el); if(back) back.focus(); }
 export function drawPrep(){ popupRev.value++; { const key=prepKey(shared.PREPEV,shared.PREPDAY); putHtml($("#prepAgenda"),AGD&&AGD.key===key?AGD.html:""); }   /* BL-286: the header, toolbar and facts line redraw too */
   (()=>{ const m=prepOf(shared.PREPEV)||{}, code=m.p, all=code==="_portfolio";

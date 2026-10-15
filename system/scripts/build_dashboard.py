@@ -312,6 +312,13 @@ def files(folders, documents=False):
     return out
 
 
+def archived_files(folders):
+    """BL-331: the reports and minutes BL-03 archived that are still in their _Archive, for the listed projects and the portfolio
+    (archive.archived_files: names, sizes and dates from the apply records; nothing in _Archive is read or indexed)."""
+    import archive
+    return [f for f in archive.archived_files() if f["p"] in folders or f["p"] == "_portfolio"]
+
+
 INBOX_TYPES = (".vtt", ".docx", ".txt", ".md", ".pdf")
 
 
@@ -367,7 +374,7 @@ def inbox(projects):
             state = "processed"
         out.append({"name": f.name, "path": rel, "ext": f.suffix.lower()[1:], "size": f.stat().st_size,
                     "date": datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d"), "p": likely, "state": state,
-                    "event": eid, "uploaded": eid is None})      # BL-137: Upload Files lists the uploaded files; one with a recorded event ID was loaded from the calendar
+                    "event": eid, "uploaded": eid is None})      # BL-137: Upload files lists the uploaded files; one with a recorded event ID was loaded from the calendar
     return out
 
 
@@ -614,7 +621,7 @@ LOG_SQL = ("SELECT c.rowid AS rowid, c.*, a.undone_at FROM change_log c LEFT JOI
            "WHERE c.tbl != 'rejected' AND c.field != 'updated_at' {where} ORDER BY c.rowid DESC {limit}")
 LINKED = {"links": "from_item", "item_labels": "item_id"}   # the one logged field that stands for a whole link or label row
 BY = {"dashboard": "You, in the dashboard", "cx-edit": "You, via cx-edit", "excel-import": "Excel import",
-      "assistant": "ask creaite", "undo": "Undo"}
+      "assistant": "ask creaite", "undo": "Undo", "archive": "Archived for age"}     # BL-10: the daily archiving
 
 
 def _act_context(con):
@@ -807,7 +814,7 @@ def vip_unseen_by_project():
     try:
         import sweep
         for a in sweep.vip_state()["alerts"]:
-            if not a.get("seen") and a.get("p"):
+            if sweep.vip_open(a) and a.get("p"):          # BL-334: a quiet line is not counted
                 vip_unseen[a["p"]] = vip_unseen.get(a["p"], 0) + 1
     except (ImportError, OSError, ValueError, LookupError, TypeError):  # no sweep helper or an odd VIP file: no VIP count
         pass
@@ -1303,7 +1310,13 @@ def action_row(a):
             "pr": a["priority"], "due": a["due_date"], "st": a["status"], "raised": a["raised"], "closed": a["closed"],
             "upd": a["latest_update"] or "", "client": bool(a["client_visible"]), "cm": a["client_message"],
             "src": a["source"], "upd_at": (a["updated_at"] or "")[:16], "updated_at": a["updated_at"],
-            "ms": a.get("milestone")}
+            "ms": a.get("milestone"), **archived_mark(a)}
+
+
+def archived_mark(r):
+    """BL-10: {"ar": True} on an archived row (its own age or its project's), shown only with Show archived on; else nothing,
+    so a page without archived items is unchanged."""
+    return {"ar": True} if r.get("archived") else {}
 
 
 def raid_row(r):
@@ -1313,7 +1326,7 @@ def raid_row(r):
             "lik": r["likelihood"], "st": r["status"], "raised": r["raised"], "closed": r["closed"],
             "client": bool(r["client_visible"]), "cm": r["client_message"], "src": r["source"],
             "upd_at": (r["updated_at"] or "")[:16], "updated_at": r["updated_at"], "ms": r.get("milestone"),
-            "pr": r.get("priority")}
+            "pr": r.get("priority"), **archived_mark(r)}
 
 
 def replaced_by_map(con):
@@ -1327,7 +1340,7 @@ def decision_row(d, replaced_by):
             "st": d["status"], "due": d["needed_by"], "why": d["reasoning"], "opts": d["options"], "revisit": d["revisit"],
             "replaces": d["replaces"], "rby": replaced_by.get(d["id"]),
             "client": bool(d["client_visible"]), "cmd": d["client_message"], "src": d["source"],
-            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"]}
+            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"], **archived_mark(d)}
 
 
 RECORD_TABLES = ("actions", "raid", "decisions")
@@ -1349,17 +1362,37 @@ def records_of(con, ids):
     return out, [i for i in ids if i not in found]
 
 
-def records(ids, now=None):
+def aged_records(con, ids):
+    """BL-10: {table: [row]} for those of `ids` that are archived for their age (actions and RAID; their project is live),
+    read from the tables themselves (main.<table>), past the views that hide them. Never an archived project's item."""
+    out = {}
+    if not ids:
+        return out
+    marks = ",".join("?" * len(ids))
+    live = "project NOT IN (SELECT code FROM main.projects WHERE archived = 1)"
+    for t, make in (("actions", action_row), ("raid", raid_row)):
+        out[t] = [make(r) for r in rows(con, f"SELECT * FROM main.{t} WHERE archived = 1 AND {live} AND id IN ({marks}) "
+                                             "ORDER BY id", *ids)]
+    return out
+
+
+def records(ids, now=None, aged=False):
     """BL-304: just these items (actions, RAID, decisions) in the page's shape, for the page's targeted refresh after a save
     or a live update, with the parts an apply always changes (Review, Activity, the latest apply's time, the peek's staged
     changes, milestone names). Read only; the IDs are only looked up, never written. {"records": {table: [row]},
-    "missing": [IDs in none of the tables], ...}."""
+    "missing": [IDs in none of the tables], ...}. `aged` (BL-10): an item archived for its age is handed over too (marked
+    "ar"), so search can open it with Show archived off; an archived project's item stays missing."""
     now = now or clock()
     ids = list(dict.fromkeys(i for i in ids if isinstance(i, str) and i))[:RECORD_MAX]
     con = ro_db()                        # BL-09: an archived item stays out of the views
     con.row_factory = sqlite3.Row
     try:
         recs, missing = records_of(con, ids)
+        if aged and missing:
+            for t, got in aged_records(con, missing).items():
+                recs[t] += got
+            found = {x["id"] for t in RECORD_TABLES for x in recs[t]}
+            missing = [i for i in missing if i not in found]
         last_apply = con.execute("SELECT max(at) FROM applies WHERE undone_at IS NULL").fetchone()[0]
         flags, settings, rq = {}, paths.load_settings(), review_queue(con)
         first = con.execute("SELECT min(at) FROM applies").fetchone()[0]
@@ -1474,6 +1507,7 @@ def collect(now=None, timings=None):
         "peek_staged": peek_staged(), "activity": activity(con, act_flags), "activity_capped": act_flags.get("capped", False),
         "activity_older": act_flags.get("older", {}),          # BL-250 (fix-history-feed): older changes, for the items' own feeds
         "files": file_list,
+        "files_archived": archived_files(folders),            # BL-331: Files' Archived, each with Move back
         "folders": {c: f.name for c, f in folders.items()},
         "image_dirs": {c: paths.rel(paths.folder(c, "images")) for c in folders},     # BL-85: where the editor files new pictures
         "stakeholders": stakeholders(),
@@ -2209,7 +2243,7 @@ def meetings_start(settings, today):
         return today - timedelta(days=today.weekday())
 
 
-# ── Clear day (BL-104): meetings set aside in Calendar Import ─────────────────
+# ── Clear day (BL-104): meetings set aside in Calendar import ─────────────────
 # system/staging/intake-cleared.json: {"cleared": [{key, day, start, title, cleared}]}. A cleared meeting is not a
 # processed one: nothing here touches processed.txt or the tracker. The key is the calendar event ID, or
 # "day|start|title" for a meeting without one. Entries older than the look-back window are dropped.
@@ -2313,7 +2347,7 @@ def inbox_meetings(settings, projects, today):
 # ===== BL-293 (sprint-today-days-server) ===== Today moves between the calendar's days. calendar_days gives every working day
 # the saved calendar holds (sweep.calendar_span: Monday of this week, or inbox.meetings_from, to seven days ahead), with a weekend
 # day only when it has a meeting. Each meeting carries its times, and: an ended one its follow-up (Minutes made, Transcript ready,
-# No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar Import reads them); today
+# No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar import reads them); today
 # and later its Prep key, whether it is worth preparing for (the Week ahead's plan) and its prep page (BL-286's records). A
 # confidential meeting keeps only its title, times, event ID and those states; a private one is "Busy" with its times.
 TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not transcribed yet", "no_access": "No access to the transcript"}
@@ -2341,7 +2375,7 @@ def calendar_days(d, now):
 
 
 def day_lookups(d, now):
-    """What every day's meetings are looked up in, read once: projects, Calendar Import's rows, filed minutes and prep pages."""
+    """What every day's meetings are looked up in, read once: projects, Calendar import's rows, filed minutes and prep pages."""
     today, rows_ = now.date(), import_rows(d)
     items = [x for x in d.get("actions") or [] if x["st"] in ("Open", "Delayed")] + [x for x in d.get("raid") or [] if x["st"] == "Open"]
     projects = d.get("projects") or []
@@ -2353,7 +2387,7 @@ def day_lookups(d, now):
 
 
 def import_rows(d):
-    """Calendar Import's meetings (inbox_meetings), the ones set aside with Clear day marked cleared."""
+    """Calendar import's meetings (inbox_meetings), the ones set aside with Clear day marked cleared."""
     mt = d.get("meetings") or {}
     return [dict(m, cleared=False) for m in mt.get("rows") or []] + [dict(m, cleared=True) for m in mt.get("cleared") or []]
 
@@ -2437,9 +2471,9 @@ def meeting_project(e, title, look):
 
 
 def follow_state(e, iso, title, look):
-    """An ended meeting's follow-up: {state: minutes|transcript|none, …}, as Calendar Import works it out (BL-42, BL-119).
+    """An ended meeting's follow-up: {state: minutes|transcript|none, …}, as Calendar import works it out (BL-42, BL-119).
     minutes: processed (processed.txt), a draft waiting in Review, or minutes filed for that day and series. transcript: loaded
-    into inbox/ or found by the sweep; `process` is what Process needs (cx-minutes, as Calendar Import). none: `why`, and
+    into inbox/ or found by the sweep; `process` is what Process needs (cx-minutes, as Calendar import). none: `why`, and
     `checked` False when the sweep hasn't looked yet."""
     start, eid = str(e.get("start") or ""), str(e.get("id") or "") or None
     row = (look["by_id"].get(eid) if eid else None) or look["by_time"].get((iso, start, title)) or {}
@@ -2633,7 +2667,8 @@ def files_view(now=None):
         except LookupError:  # BL-228: a project without a folder simply has no files to list
             pass
     shown = bool(_dig(settings, ("dashboard", "files_show_documents"), False))
-    return {"files": files(folders, shown), "inbox": inbox([{"code": c} for c in codes]), "at": now.strftime("%Y-%m-%d %H:%M")}
+    return {"files": files(folders, shown), "archived": archived_files(folders), "inbox": inbox([{"code": c} for c in codes]),
+            "at": now.strftime("%Y-%m-%d %H:%M")}
 
 
 # BL-91: Trends and flow. What the data shows over time, from dates already held: opened and closed per week, how long open items

@@ -267,7 +267,14 @@ def _whose_file(p):
 #   archive  <projects root>/<project folder>      -> <projects root>/_Archive/<same or numbered name>
 #   restore  <projects root>/_Archive/<folder>     -> <projects root>/<same or numbered name>
 #   rename   <projects root>[/<engagement>]/zz Archive -> the same folder's _Archive (Health's Fix it, BL-09)
-ARCHIVE_MOVES = ("archive", "restore", "rename")
+#   reports  <projects root>/<engagement>/<minutes, weekly, client or Steerco folder>/<file>
+#                                                  -> <projects root>/<engagement>/_Archive/<that folder>/<file> (BL-03; one file)
+#            <projects root>/<portfolio folder>/<its minutes folder>/<file>
+#                                                  -> <projects root>/<portfolio folder>/_Archive/<minutes folder>/<file> (BL-03)
+#   reports_back  exactly the reverse of a "reports" move: <…>/_Archive/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
+#                 the same folders, the same engagement or portfolio; tracker.check_move also requires that an archive moved it)
+ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back")
+FILE_MOVES = ("reports", "reports_back")             # one file, never a folder
 
 
 def _top_folder(name):
@@ -291,8 +298,31 @@ def _old_archive_rename(pa, pb):
     return same_place and pa[-1].lower() == paths.OLD_ARCHIVE.lower() and pb[-1] == paths.ARCHIVE
 
 
+def _report_archive(pa, pb):
+    """BL-03: pa is <engagement>/<a minutes, weekly, client or Steerco folder>/<file> and pb the same file in that engagement's own
+    _Archive, keeping its place below it (<engagement>/_Archive/<folder>/<file>). Nothing else: no deeper folder, no other folder."""
+    portfolio = _portfolio_folder(pa[0]) if pa else False
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+        return False
+    if pb[2:] != pa[1:] or pa[-1].startswith((".", "~$")):
+        return False
+    if portfolio:                                    # the portfolio: its minutes only (Alan, 14-10-2026)
+        return "/".join(pa[1:-1]) == paths.folder_name("minutes").strip("/")
+    return "/".join(pa[1:-1]) in paths.archivable_folders()
+
+
+def _portfolio_folder(name):
+    """name is the portfolio's own folder, directly in the projects root (_Portfolio, or projects/_portfolio in the vault)."""
+    pf = Path(os.path.realpath(paths.portfolio_dir()))
+    return pf.name == name and pf.parent == Path(os.path.realpath(paths.projects_root()))
+
+
 def _move_shape(kind, pa, pb):
-    """Whether the parts below the projects root (pa from, pb to) are the whole-folder move `kind`."""
+    """Whether the parts below the projects root (pa from, pb to) are the move `kind`: a whole folder, or (BL-03) one report file."""
+    if kind == "reports":
+        return _report_archive(pa, pb)
+    if kind == "reports_back":
+        return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":
@@ -300,9 +330,21 @@ def _move_shape(kind, pa, pb):
     return _old_archive_rename(pa, pb)
 
 
+def _not_the_shape(kind):
+    """Why a move isn't the `kind` it says it is."""
+    if kind == "reports":
+        return (f"that isn't a report or minutes file moved into its own engagement's {paths.ARCHIVE} (minutes, weekly and "
+                "client reports and Steerco one-pagers only)")
+    if kind == "reports_back":
+        return (f"that isn't a report or minutes file moved back from its own engagement's {paths.ARCHIVE} to the same "
+                "folder (minutes, weekly and client reports and Steerco one-pagers only)")
+    return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
+
+
 def archive_move_problem(src, dst, kind):
     """None when moving the folder `src` to `dst` (stored paths, never mapped into _Archive) is the `kind` of move above; else why
-    not. Neither end may be a symlink; the source must be a folder that exists and the destination must not exist."""
+    not. Neither end may be a symlink; the source must be a folder that exists (a file, for BL-03's "reports" kind) and the
+    destination must not exist."""
     if kind not in ARCHIVE_MOVES:
         return f"a folder move is an archive, a restore or a rename of an old archive folder (got {kind!r})"
     if any(".." in Path(str(x)).parts for x in (src, dst)):
@@ -316,8 +358,10 @@ def archive_move_problem(src, dst, kind):
     if not pa or not pb:
         return "a folder move stays inside the projects folder"
     if not _move_shape(kind, pa, pb):
-        return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
-    if not a.is_dir():
+        return _not_the_shape(kind)
+    if kind in FILE_MOVES and not a.is_file():
+        return f"{src} isn't a file that exists"
+    if kind not in FILE_MOVES and not a.is_dir():
         return f"{src} isn't a folder that exists"
     if b.exists():
         return f"{dst} already exists; a folder move never overwrites"
@@ -749,6 +793,7 @@ SCRIPT_COMMANDS = {
                   "install": RECORD, "undo": RECORD, "tidy": RECORD, "new-vault": RECORD},
     "reach.py": {"classify": READ, "never": READ, "hook": READ, "wrap": READ},
     "session.py": {"start": DERIVED, "backup": DERIVED},     # BL-320: backup is the part of start that copies the daily backup
+    "archive.py": {"daily": RECORD, "items": (RECORD, "--dry-run"), "reports": READ, "status": READ},   # BL-10, BL-03
     "doctor.py": {"": READ},
     # BL-323: check records its result for Health (derived); tidy removes old backups for good and restore replaces the
     # database, settings and staging, so both are record commands (a plain chat may only look: --dry-run)

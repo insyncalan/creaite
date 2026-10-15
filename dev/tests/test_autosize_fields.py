@@ -1,5 +1,5 @@
 """BL-146: every multi-line field grows to show what is typed, through the one shared helper (autoGrow, made from BL-145's chFit).
-A real browser against the real live server: the edit panel's Action and Latest update, Quick Capture's notes and Generate's
+A real browser against the real live server: the edit panel's Action and Latest update, Quick capture's notes and Generate's
 "Steer it" grow at three, six and thirty lines, stop at about 60% of the window with an inner scroll, shrink back, and are
 right after a paste and when a record is opened with long text already in it.
 
@@ -22,6 +22,12 @@ GEO = """(sel=>{ const el=document.querySelector(sel); return {h:el.getBoundingC
 class AutosizeFields(LiveBrowserCase):
     shared_server = True
     width, height = 1400, 900
+
+    def setUp(self):
+        super().setUp()
+        # BL-327: the shared server's data is soon older than PAGE_FRESH, so each load re-reads /api/data after its first paint;
+        # under load that reload redrew the open editor mid-test (a hand-dragged 260px box came back at its automatic 78px)
+        self.b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
 
     def geo(self, sel):
         return self.b.eval(f"{GEO}({sel!r})")
@@ -121,6 +127,7 @@ class AutosizeFields(LiveBrowserCase):
         b.pump(0.2)
         b.eval("mvOpenPage('ABC','plan','ABC-M-001')")                      # BL-186: the milestone editor's text box
         b.wait("document.getElementById('mvDesc')")
+        b.wait("document.getElementById('mvDesc').dataset.ag")              # fitted once (the next frame), as before any real drag
         self.fill("#mvDesc", 2)
         b.eval("$('#mvDesc').style.height='260px'")                          # as the drag handle does
         b.wait("($('#mvDesc')._agMin||0)>=258", 5)                           # its ResizeObserver has seen the drag (not a fixed 0.3 s)

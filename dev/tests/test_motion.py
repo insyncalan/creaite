@@ -615,7 +615,7 @@ class MotionPages(LiveBrowserCase):
     # ---- 15: skeleton ----
     def test_a_slow_load_shows_the_skeleton_and_a_fast_one_never_does(self):
         b = self.b
-        b.eval("openChat(); window.__api=api; window.__seen=false; new MutationObserver(()=>{ if(document.querySelector('#chHistMenu .msk')) __seen=true; }).observe(document.getElementById('chHistMenu'),{childList:true})")
+        b.eval("openChat(); window.__api=api; window.__seen=false; new MutationObserver(()=>{ if(document.querySelector('#chHistMenu .msk')) __seen=true; }).observe(document.body,{childList:true,subtree:true})")
         b.eval("api=async(u,x)=>u==='/api/chats'?{chats:[]}:__api(u,x); drawHistory()")
         b.wait("document.getElementById('chHistMenu').classList.contains('on')")
         b.pump(0.3)

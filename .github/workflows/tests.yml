@@ -15,7 +15,7 @@
 # BL-234 is parked (Alan): this runs only by hand. To run it on pull requests and pushes to main as well, swap the active
 # `on:` line below for the commented one under it. That one line is the whole change.
 # on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}}
-on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
+on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}, macos: {description: "Add the macOS job (#83)", type: boolean, required: false, default: false}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
 # ===== end BL-242 =====
 
 name: Tests
@@ -39,8 +39,9 @@ jobs:
       fail-fast: false
       # The macOS job runs only on pushes to main (Alan, 12-10-2026): it needs about 2 hours and GitHub runs only five macOS
       # jobs at once, so on every branch run it held the run open and queued the others. Branch and pull-request runs use Linux.
+      # A hand-started run can add it with the macos input (#83): gh workflow run tests.yml --ref <branch> -f macos=true
       matrix:
-        include: ${{ fromJSON(github.event_name == 'push' && github.ref == 'refs/heads/main' && '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4},{"os":"macos-latest","python":"3.14","optional":true,"jobs":3}]' || '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4}]') }}
+        include: ${{ fromJSON(((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.macos == 'true')) && '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4},{"os":"macos-latest","python":"3.14","optional":true,"jobs":3}]' || '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4}]') }}
     steps:
       - uses: actions/checkout@v5
         with:

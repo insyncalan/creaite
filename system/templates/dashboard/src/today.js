@@ -3,6 +3,9 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { dcIcon, openChat, say, send } from "./ask.js";
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+import { openDatePicker } from "./components/Picker.jsx";
+import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
@@ -17,14 +20,15 @@ import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
 import { api, oneLine, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
+import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, hubFor, hubLink, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
-import { chaseCan, chaseOpen, openRecord, pkCommit, pkDate, pkUndoLast, REC } from "./panel.js";
+import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
-import { nm, row, SA, SETSECTIONS, VIPKIND, VIPS, vipWhen } from "./settings.js";
+import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
@@ -53,7 +57,7 @@ export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-31
     REMINDERS.filter(r=>!hide.includes(r.id)).forEach(r=>out.push({reminder:r.id,html:n=>tl(n,
       tLink(r.id.startsWith("client:")?`data-cock="${r.id.split(":")[1]}"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:'data-go="projects"',esc(longText(r.text))),
       `${remBody(r)}${RUNNING.has(r.id)?' <span class="tag">Running…</span>':""}${r.vip?` ${r.vip} message${r.vip===1?"":"s"} about it not yet seen: check ${r.vip===1?"it":"them"} first.`:""}`,
-      `${remBtn(r)}<span class="rm"><button class="dots" aria-label="Options: ${esc(r.text)}" aria-haspopup="menu">…</button><span class="dmenu" role="menu">${r.cmd?`<button data-d="run" ${viaServer()&&!RUNNING.has(r.id)?"":`disabled title="${RUNNING.has(r.id)?"Already running":"Needs the live server"}"`}>Run report now</button>`:""}<button data-d="s">Dismiss for this session</button><button data-d="f">Dismiss forever</button></span></span>`,
+      `${remBtn(r)}<span class="rm"><button class="dots" type="button" aria-label="Options: ${esc(r.text)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
       `class="rem" data-id="${r.id}"`)})); }
   /* Work with no owner (TBC) or, for actions, no due date: one line, counted per project, each count opening Work filtered to it */
   const gap={}; [...A.filter(x=>x.st==="Open"||x.st==="Delayed").map(x=>["actions",x]),...R.filter(r=>r.st==="Open").map(r=>["raid",r])].forEach(([k,x])=>{
@@ -217,8 +221,8 @@ export function dayPrep(m){ const iso=dayShown(), raw=(((D.calendar||{}).days||{
   if(!D.prep) D.prep=/** @type {any} */({}); if(!D.prep.meetings) D.prep.meetings={}; const pm=D.prep.meetings;
   if(!pm[key]) pm[key]={series:seriesOf(m.title),p:m.confidential?null:m.p||null,how:m.p?"matched":"unsure",last:null,day:iso,since:pkAdd(iso,-7)};
   openPrep(e,iso); }
-/** Process an ended meeting's transcript, as Calendar Import does (load it unless it is loaded, then cx-minutes). */
-export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar Import to process this meeting"); return; }
+/** Process an ended meeting's transcript, as Calendar import does (load it unless it is loaded, then cx-minutes). */
+export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!row){ snack("Open Intake › Calendar import to process this meeting"); return; }
   DAYRUN.set(m.id,"Processing…"); renderDay(); MSEL.clear(); MSEL.add(m.id);
   try{ await processMeetings(); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
 /** Look for an ended meeting's transcript (Alan, 13-10-2026: a meeting not checked yet offers Check). */
@@ -234,7 +238,7 @@ export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!
 /* BL-34: a report reminder can run its report: the command goes to ask creaite, which drafts as usual (confirmed in
    the panel, held for review, filed on approval). The reminder stays until the report is filed. */
 export const RUNNING=new Set();
-export async function runReminder(r){ if(!r||!r.cmd||!viaServer()||RUNNING.has(r.id)) return; $$(".dmenu.on").forEach(m=>m.classList.remove("on"));
+export async function runReminder(r){ if(!r||!r.cmd||!viaServer()||RUNNING.has(r.id)) return; closeMenu();
   if(shared.BUSY){ snack("ask creaite is busy; try again when it's finished"); return; }
   RUNNING.add(r.id); renderToday(); openChat();
   try{ await send(r.cmd); } finally{ RUNNING.delete(r.id); renderToday(); }
@@ -290,18 +294,22 @@ export const spark=p=>`<span class="spark" title="Health, last 8 weeks (oldest f
    hover and on keyboard focus (the name is a button that opens the project), and read by screen readers from a hidden span
    (aria-describedby). The columns resize like Work's (pfResize), remembered under portfolio|<column>. */
 export const PFCOLS=[["project","Project"],["health","Health"],["evidence","Evidence"],["trend","8 weeks"],["next","Next milestone"]];
-/** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots) */
+/** @param {string} [id] @param {boolean} [dots] BL-256: Today's health markers are StatusDot components (placeholders, then mountStatusDots). BL-325: the next milestone's relative date is mid-sentence in brackets, so lower case ("(in 24 days)") */
 export function portfolioTable(id="pf",dots=false){ return `<table><thead><tr>${PFCOLS.map(([k,l])=>`<th data-col="${k}">${l}</th>`).join("")}</tr></thead><tbody>${P.map(p=>{ const nm=p.ms.find(m=>m[2]!=="done")||p.ms[p.ms.length-1]||["No milestones yet","",""], ds=(p.client||"").trim(), did=`${id}d-${p.code}`;
-  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1])})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
+  return `<tr class="click" data-cock="${p.code}"><td><button type="button" class="pfname"${ds?` data-tip="${esc(ds)}" aria-describedby="${did}"`:""}>${esc(p.name)}</button>${ds?`<span class="vh" id="${did}">${esc(ds)}</span>`:""}</td><td>${dots?`<span data-statusdot="${esc(p.health||"")}"></span>`:health(p.health)}<div class="sub" style="max-width:36ch">${esc(p.reason)}</div></td><td>${evidence(p)}</td><td>${spark(p)}</td><td>${esc(nm[0])}${nm[1]?`<div class="sub ${nm[2]==="slip"?"late":""}">${longDay(nm[1])} (${rel(nm[1]).replace(/^./,c=>c.toLowerCase())})</div>`:""}</td></tr>`; }).join("")}</tbody></table>`; }
 export function pfResize(box){ if(box) $$("thead th[data-col]",box).forEach(th=>colResizer(th,"portfolio|"+th.dataset.col)); }
+/* BL-316: a reminder's "…" menu is the Menu block's (openMenu): Run report now, Dismiss for this session, Dismiss forever */
+export function remMenu(b,id){ if(menuOpenFor(b)){ closeMenu(); return; } const r=REMINDERS.find(x=>x.id===id); if(!r) return; const why=RUNNING.has(id)?"Already running":viaServer()?"":"Needs the live server";
+  openMenu(b,{label:`Options: ${r.text}`,id:"remMenu",align:"right",onPick:d=>remPick(id,d),
+    items:[...(r.cmd?[{id:"run",name:"Run report now",disabled:!!why,tip:why||undefined,data:{d:"run"}}]:[]),{id:"s",name:"Dismiss for this session",data:{d:"s"}},{id:"f",name:"Dismiss forever",data:{d:"f"}}]}); }
+export function remPick(id,d){ if(d==="run"){ runReminder(REMINDERS.find(r=>r.id===id)); return; }
+  if(d==="s"){ const a=dismissedS(); a.push(id); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(a)); } else { const a=dismissedF(); a.push(id); store.set("creaite-dismiss",a); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...a])]}); }
+  renderToday(); snack(d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday0028(){
 $("#attnList").addEventListener("click",e=>{ const n=e.target.closest(".rem"); if(!n) return; const b=e.target.closest("button"); if(!b) return; e.stopPropagation();
-  if(!b.dataset.d){ n.querySelector(".dmenu").classList.toggle("on"); return; }
-  if(b.dataset.d==="run"){ runReminder(REMINDERS.find(r=>r.id===n.dataset.id)); return; }
-  const id=n.dataset.id; if(b.dataset.d==="s"){ const a=dismissedS(); a.push(id); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(a)); } else { const a=dismissedF(); a.push(id); store.set("creaite-dismiss",a); writeSettings({"reminders.dismissed_forever":[...new Set([...(D.dismissed||[]),...a])]}); }
-  renderToday(); snack(b.dataset.d==="s"?"Hidden for this session":"Hidden for good (this one)",()=>{ store.set("creaite-dismiss",dismissedF().filter(x=>x!==id)); sessionStorage.setItem("creaite-dismiss-s",JSON.stringify(dismissedS().filter(x=>x!==id))); renderToday(); }); });
-document.addEventListener("click",e=>{ if(!e.target.closest(".rem")) $$(".dmenu.on").forEach(m=>m.classList.remove("on")); });
+  if(b.classList.contains("dots")){ remMenu(b,n.dataset.id); return; }
+  if(b.dataset.d) remPick(n.dataset.id,b.dataset.d); });
 document.addEventListener("click",e=>{ if(e.target.closest&&e.target.closest(".colrz")) return; const r=e.target.closest("[data-cock]"); if(r) go("cockpit",r.dataset.cock); });   /* BL-285: a resize never opens the project */
 }
 /* ===== BL-156 (sprint-ux) ===== first run: a short checklist on Today. On a vault that hasn't finished set-up (no project, no
@@ -423,12 +431,38 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
     tdl.push({key:"tx"+m.id,kind:"transcript",id:m.id,at,tag:"Transcript",tone:"",t:m.title||"Meeting",
       meta:["Ready in Intake",m.p&&m.p!=="_portfolio"?pName(m.p):"",whenWords(at)].filter(Boolean).join(" · "),
       acts:[{id:"process",icon:"play",label:"Process the transcript",name:`Process the transcript of ${m.title||"the meeting"}`,primary:true,why}]}); });
-  VIPS().forEach(a=>{ const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
-    tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",
-      meta:[`${VIPKIND[a.kind]||"Message"}${vipWhen(a)?" "+vipWhen(a):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",a.marker||"",a.found==="start-up"?`found on start-up, received ${vipWhen(a)}`:""].filter(Boolean).join(" · ")+(a.gist?`. ${a.gist}`:""),
+  VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
+    const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
+    tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
+      meta:[`${VIPKIND[a.kind]||"Message"}${vipWhen(a)?" "+vipWhen(a):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",confMark(a)?"":a.marker||"",a.found==="start-up"?`found on start-up, received ${vipWhen(a)}`:""].filter(Boolean).join(" · ")+(a.gist?`. ${a.gist}`:""),
       acts:[{id:"make",icon:"plus",label:"Make a work item",name:`Create work item from: ${name}`,data:{alertdo:"make",id:a.id}},
             {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${name}`,data:{alertdo:"dismiss",id:a.id}}]}); });
+  VIPQ().forEach(a=>tdl.push(quietRow(a)));                                     /* BL-334: nothing for Alan: one quiet line */
   return tdl.map((x,i)=>({x,i})).sort((a,b)=>b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
+/* ----- BL-334: a conversation, not a message. One card per conversation: its own title (or the people in it), where it is,
+   "updated HH:MM", Claude's summary, then each candidate item with Create work item and Dismiss (Dismiss stages nothing). A
+   conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
+const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
+/** "Confidential" on a confidential conversation's card or message (Alan, 15-10-2026, plan #17): its summary is shown like any
+    other, internal only; never the word that says how the sender is followed (BL-288) @param {any} a */
+export const confMark=a=>a.confidential||a.marker==="confidential"?"Confidential":"";
+const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
+/* "updated" is when the conversation's last message was sent, not when the check recorded it (plan #81); an older record
+   without that time falls back to when it was recorded */
+const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
+const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
+  a.found==="start-up"?"found on start-up":""].filter(Boolean).join(" · ");
+/** @param {any} a */
+export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
+  const cands=(a.candidates||[]).filter(/** @param {any} c */c=>!c.made&&!c.dismissed).map(/** @param {any} c */c=>({key:`c${c.n}`,tag:CTYPE[c.type]||"Item",t:String(c.text||""),
+    sub:[c.owner||"",c.due?`due ${fd(c.due)}`:""].filter(Boolean).join(" · "),
+    acts:[{id:"make",icon:"plus",label:"Create work item",name:`Create work item: ${c.text}`,data:{alertdo:"make",id:a.id,cand:String(c.n),ctype:c.type}},
+          {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${c.text}`,data:{alertdo:"dismiss",id:a.id,cand:String(c.n)}}]}));
+  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts:[]}; }
+/** "Mia Hale with Omar Ali: nothing for you" @param {any} a */
+export function quietRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
+  return {key:"al"+a.id,kind:"quiet",id:a.id,at:convAt(a),tag:"",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: nothing for you`,
+    link:a.link||"",meta:convMeta(a),acts:[]}; }
 /** where focus goes after a row's action takes the row away: the same action on the row now in its place, else the heading */
 let TDFOCUS=/** @type {{i:number,what:string,at:number}|null} */(null);
 export function tdFocusAfter(){ const f=TDFOCUS; if(!f||Date.now()-f.at>8000){ TDFOCUS=null; return; }
@@ -448,12 +482,13 @@ export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
   if(act.id==="approve"){ if(!tdApprovable(r)){ tdToReview(r.n); return; } await decide(r.n,"approved"); return; }   /* Undo: the apply's (decide) */
   /* BL-315: the same reasons menu as Review (rjMenuFor: the seven reasons, Use each guess, No reason, Duplicate's item), through
      /api/review/reject, with its one message and Undo; the guesses are fetched first, so the row's guess is offered */
-  if(act.id==="reject"){ await rjLoadGuesses(); rjMenuFor([r],btn,()=>{ if(shared.VIEW==="today") renderToday(); }); return; }
+  if(act.id==="reject"){ const menu=()=>rjMenuFor([r],btn,()=>{ if(shared.VIEW==="today") renderToday(); }), was=rjGuesses.value;
+    menu(); await rjLoadGuesses(); if(rjGuesses.value!==was&&rjMenu.value&&rjMenu.value.anchor===btn) menu(); return; }   /* BL-316: open at once; again with the guesses when they arrive */
   if(act.id==="review") tdToReview(r.n); }
 export function tdOpen(row){ if(row.kind==="review") tdToReview(row.n); else if(row.kind==="transcript") go("inbox"); }
 export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return;
-  const L=toDecideRows(), total=REV.filter(r=>!r.done).length; sec.hidden=!L.length;
-  $("#nTd").textContent=L.length?String(L.length):"";
+  const L=toDecideRows(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length; sec.hidden=!L.length;
+  $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
   drawToDecide(body,{rows:L,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
@@ -475,9 +510,13 @@ export function itemActs(k,x){ return `<span class="tacts">${workActs(k,x).map(a
 export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="open") return;
   if(what==="done"){ const was=x.st; if(!await pkCommit(k,id,{st:"Closed",closed:TODAY},"Status",was,"Closed")) return;
     snack(`${id} marked done. Staged: nothing reaches the tracker until you apply`,()=>pkUndoLast()); return; }
-  if(what==="move"){ pkDate(btn,{value:x.due,due:true,label:`Due date of ${id}`,onPick:async v=>{ if(!v||v===x.due) return; const was=x.due;
+  if(what==="move"){ const commit=async v=>{ if(!v||v===x.due) return; const was=x.due;   /* BL-316: the Picker block's calendar */
       if(!await pkCommit(k,id,{due:v},"Due date",fd(was)||"none",fd(v)||"none")) return;
-      snack(`${id} moved to ${longDay(v)}. Staged until you apply`,()=>pkUndoLast()); }}); return; }
+      snack(`${id} moved to ${longDay(v)}. Staged until you apply`,()=>pkUndoLast()); };
+    openDatePicker(btn,{value:x.due||"",label:`Due date of ${id}`,parse:t=>parseWhen(t,TODAY,true),weekend:iso=>!!weekendNote(iso),
+      error:"Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d.",
+      typedNote:t=>{ const n=weekendNote(t?parseWhen(t,TODAY,true):null); return n?`${n.text} You'll be offered the nearest working days.`:""; },
+      onPick:v=>{ if(v&&!WK.ok&&wkAsk(v,btn,commit)) return; commit(v); }}); return; }
   if(what==="chase"){ if(k==="decisions"){ dnChase(id); return; } openRecord(k,id); if(chaseCan()) chaseOpen(); return; }
   if(what==="update"){ openRecord(k,id,k==="raid"?"resp":"upd"); return; }
   if(what==="decide"){ dnDecide(id); return; }

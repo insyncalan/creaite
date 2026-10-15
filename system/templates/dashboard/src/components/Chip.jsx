@@ -26,3 +26,10 @@ export function Chip({ icon, tone, tip, name, cls, className, disabled, button, 
 export function drawChip(host, props) {
   render(<Chip {...props} />, host);
 }
+
+/** Draw a row of Chips into `host`, which holds nothing else (BL-316: a row old code redraws by calling this again).
+    Each entry is a Chip's props; its `key` (else its place) keeps the same chip across redraws.
+    @param {Element} host @param {ChipProps[]} chips */
+export function drawChips(host, chips) {
+  render(<>{chips.map((p, i) => { const { key, ...props } = p; return <Chip key={key ?? i} {...props} />; })}</>, host);
+}

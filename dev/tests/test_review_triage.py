@@ -221,23 +221,23 @@ class Triage(LiveBrowserCase):
         self.assertEqual(stale, 4)
         self.assertIn("stale", b.eval("document.getElementById('rvSub').textContent"))
         b.click('#rvfilters [data-rvf="nd"]')
-        b.click('#rvPick input[data-rvv="stale"]')
+        b.click('#rvf-nd input[data-fk="nd"][value="stale"]')
         b.pump(0.2)
         self.assertEqual(sorted(b.eval("rvShown().map(r=>r.rec.t)")), sorted(f"Batch 0 item {i}" for i in range(4)))
         self.assertIn("Showing 4 of", b.eval("document.getElementById('rvapplied').textContent"))
-        b.click('#rvPick [data-rvneg="1"]')                                             # is not
+        b.click('#rvf-nd [data-neg="1"]')                                             # is not
         b.pump(0.2)
         self.assertFalse(any(t.startswith("Batch 0") for t in b.eval("rvShown().map(r=>r.rec.t)")))
         self.assertIn("not", b.eval("document.querySelector('#rvapplied .fchip.neg').textContent"))
         b.click("#rvClearF")
         b.click('#rvfilters [data-rvf="k"]')
-        b.click('#rvPick input[data-rvv="raid"]')
+        b.click('#rvf-k input[data-fk="k"][value="raid"]')
         b.pump(0.2)
         self.assertEqual(set(b.eval("rvShown().filter(r=>!isMin(r)).map(r=>r.kind)")), {"raid"})        # minutes stay as the heading of their items
         self.assertIn("(0)", b.eval("document.getElementById('routineBtn').textContent"))       # the routine count follows the filters
         b.click("#rvClearF")
         b.click('#rvfilters [data-rvf="src"]')
-        b.click('#rvPick input[data-rvv="Mail"]')
+        b.click('#rvf-src input[data-fk="src"][value="Mail"]')
         b.pump(0.2)
         self.assertTrue(b.eval("rvShown().every(r=>rvSrcKind(r)==='Mail')"))
         b.click("#rvClearF")

@@ -86,7 +86,7 @@ export function mLandRow(){ if(shared.VIEW==="review"){ landOn($("#reviewBody tr
   if(shared.VIEW!=="work"||shared.SEL==null) return; let tr=$(`#workTbl tr[data-row="${CSS.escape(String(shared.SEL))}"]`);
   if(!tr&&typeof LCOLL==="object"){ for(const h of $$("#workTbl tr.wgh.coll")){ const k=h.dataset.gk; grpToggle(k); tr=$(`#workTbl tr[data-row="${CSS.escape(String(shared.SEL))}"]`); if(tr) break; grpToggle(k); } }
   landOn(tr); }
-/* 15. Skeleton: shown only if a load takes more than 150ms (ask creaite's History, Calendar Import's Refresh), then the content rises in */
+/* 15. Skeleton: shown only if a load takes more than 150ms (ask creaite's History, Calendar import's Refresh), then the content rises in */
 export const MSKEL=html`<div class="msk" aria-hidden="true"><i></i><i></i><i></i></div>`;
 /* ---- Stage C: numbers, status, ask creaite and ambient ---- */
 /* First paint of each page, once per page load (never on a refresh, a live update or a return): 18 count-up, 19 bars, 20 sparks,

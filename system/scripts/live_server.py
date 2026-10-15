@@ -18,7 +18,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          X-Creaite-Vault to learn whether this is its own vault ({"this_vault": bool})
 - GET  /api/data         fresh dashboard data
 - GET  /api/records?ids=A,B  BL-304: just those actions, RAID items and decisions (the page's shape), with Review, Activity
-                         and the latest apply: the page's targeted refresh after a save or a live update. Read only
+                         and the latest apply: the page's targeted refresh after a save or a live update. Read only.
+                         &aged=1 (BL-10): an item archived for its age too, for search to open it
 - GET  /api/events       BL-253: one server-sent events stream per page: `hello` (the fingerprint), then `changed` {seq, parts, v}
                          (BL-304: and `ids`, {table: [item IDs]} from the change log, when the tracker changed)
                          within about a second of a change on disk (at once for a save through the server), `ping` every 25 s.
@@ -45,7 +46,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          never overwriting (BL-42)
 - POST /api/inbox/preview {path}: an inbox file's text (Word text extracted; PDFs open in their app); /api/inbox/remove
                          {path} moves it to system/backups/inbox-removed/; /api/inbox/restore {kept} undoes that
-- POST /api/intake/clear {op: clear|restore|restore_day, items|keys|day}: Clear day in Calendar Import (BL-104); saves
+- POST /api/intake/clear {op: clear|restore|restore_day, items|keys|day}: Clear day in Calendar import (BL-104); saves
                          system/staging/intake-cleared.json. Cleared is not processed
 - POST /api/current/generate {code, from, to, sources, note, audience, length}: draft a project's Current state from the vault
                          (report.py current-context, then Claude with read-only tools), streamed like /api/ask (BL-46). BL-106:
@@ -87,7 +88,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/update/upload   save a chosen release zip {name, data (base64)} to system/releases/
 - POST /api/update/inspect  {source: "releases" | "downloads"} what installing it would change (update.py inspect)
 - POST /api/update/install  {source, reinstall} update.py install; POST /api/update/undo {keep_database} update.py undo
-- GET  /api/files        the Files page's lists, rescanned (BL-87)
+- GET  /api/files        the Files page's lists, rescanned (BL-87); with the files BL-03 archived, for Files' Archived (BL-331)
+- POST /api/files/move-back {path}: one archived report or minutes back to its place, on the approval card (BL-331)
 - POST /api/ask/queue    {op: list|add|remove|resume}: messages typed while a run is going, run in order after it (BL-257)
 - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
                          {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
@@ -105,7 +107,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          form from the alert's references only; /api/alerts/draft {id, type, run} "Draft from the message":
                          one read-only Microsoft 365 read (its own allow list, no Bash or writes; never in the development
                          repository), streamed, ending in a "draft" event with the filled form; /api/alerts/make {id, type,
-                         values} stages the item as an approved dashboard proposal, dismisses the message and records the
+                         values} stages the item as a pending proposal for Review, dismisses the message and records the
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
@@ -155,7 +157,7 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -629,7 +631,11 @@ PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json",   #
 def page_inputs():
     """The files the page's data is built from, other than the database: every file directly in staging (proposals, the
     sweep, calendar, transcripts and the rest), its drafts and its evidence (BL-207: a saved Current state's links),
-    system/config, the registers, the portfolio and each project's memory, the page template and help. Files the build and the server write themselves (PAGE_IGNORE) are left out."""
+    system/config, the registers, the portfolio and each project's memory, the page template and help, processed.txt, inbox/
+    (its files and the folder itself: a file moved in keeps its older time) and each project's listed folders (page_folders).
+    Files the build and the server write themselves (PAGE_IGNORE) are left out, and so are system/staging/applied/ (a
+    proposal moves there only in an apply, which changes the records' version) and system/history/ (written by the build
+    itself, just after dashboard.html, so it would always look newer)."""
     def listed(d):
         """The files directly in `d` that count."""
         try:
@@ -638,10 +644,54 @@ def page_inputs():
             return []
     out = [f for d in (paths.STAGING, paths.DRAFTS, paths.EVIDENCE, paths.SETTINGS.parent) for f in listed(d)]
     out += [build_dashboard.TEMPLATE, paths.TEMPLATES / "help.md", paths.REGISTER, paths.PEOPLE_REGISTER, paths.PORTFOLIO_MEMORY]
+    out += [paths.PROCESSED] + listed(paths.INBOX) + [paths.INBOX]      # processed.txt (minutes.py baseline); inbox/, folder too
     try:
-        out += [d / "CLAUDE.md" for _c, d in paths.project_folders()]
+        documents = bool((paths.load_settings().get("dashboard") or {}).get("files_show_documents"))
+    except (OSError, ValueError, AttributeError):        # no settings yet: Files leaves documents out
+        documents = False
+    try:
+        for code, d in paths.project_folders():
+            out.append(d / "CLAUDE.md")
+            out += page_folders(code, d, documents)
     except Exception as e:  # noqa: BLE001  no projects folder yet: the key still works
         swallowed("page inputs", e)
+    return out
+
+
+PAGE_FOLDER_KINDS = ("minutes", "transcripts", "agendas", "weekly_reports", "client_reports", "adhoc_documents", "steerco")
+PAGE_FOLDER_DEPTH = 3    # levels of subfolders stamped below each listed folder
+PAGE_FOLDER_CAP = 200    # folders stamped per project at most
+
+
+def page_folders(code, base, documents=False):
+    """The folders whose listings the page shows for one project (Files, the Inbox's filed transcripts, Latest reports, Prep):
+    its meeting, agenda and report folders and, when Files shows documents, its document folders, each with its subfolders
+    PAGE_FOLDER_DEPTH deep, at most PAGE_FOLDER_CAP in all. Folders only: a file added, removed or renamed (OneDrive sync
+    included) changes its folder's time; no file is listed or read. never_index folders and hidden ones are skipped."""
+    kinds = ("minutes", "transcripts") if code == "_portfolio" else PAGE_FOLDER_KINDS
+    roots = [base / paths.folder_name(k) for k in kinds]
+    if documents and code != "_portfolio":
+        roots.append(base if paths.external() else base / "documents")
+    skip, out, seen = set(paths.skipped_names()), [], set()
+
+    def walk(d, depth):
+        """d and its subfolders, depth levels down, within the cap."""
+        if d in seen or len(out) >= PAGE_FOLDER_CAP:
+            return
+        seen.add(d)
+        out.append(d)
+        if depth <= 0:
+            return
+        try:
+            with os.scandir(d) as it:
+                subs = sorted(e.path for e in it if e.is_dir(follow_symlinks=False) and not e.name.startswith(".")
+                              and e.name not in skip)
+        except OSError:                                  # not there (yet): its stamp is a dash
+            return
+        for s in subs:
+            walk(Path(s), depth - 1)
+    for r in roots:
+        walk(r, PAGE_FOLDER_DEPTH)
     return out
 
 
@@ -732,7 +782,8 @@ def records_route(handler):
     ids = [x.strip() for v in q.get("ids", []) for x in v.split(",") if x.strip()]
     if len(ids) > build_dashboard.RECORD_MAX or any(not RECORD_ID.fullmatch(i) for i in ids):
         return handler.send(400, {"ok": False, "message": "Bad item IDs"})
-    return handler.send(200, {"ok": True, **build_dashboard.records(ids), "latest_apply": latest_apply()})
+    aged = q.get("aged", [""])[0] == "1"              # BL-10: search opening an item archived for its age
+    return handler.send(200, {"ok": True, **build_dashboard.records(ids, aged=aged), "latest_apply": latest_apply()})
 # ===== end BL-304 =====
 
 
@@ -1530,7 +1581,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # ===== Sprint 4a: Clear day (BL-104) =====
     def intake_clear(self, req):
-        """Set meetings aside in Intake's Calendar Import, or bring them back. {op: "clear", items: [{key, day, start,
+        """Set meetings aside in Intake's Calendar import, or bring them back. {op: "clear", items: [{key, day, start,
         title}]} sets aside exactly those; {op: "restore", keys: [...]} and {op: "restore_day", day} bring them
         back. Saved in system/staging/intake-cleared.json. Not processed: processed.txt and the tracker are never touched."""
         op = req.get("op")
@@ -2952,6 +3003,21 @@ def watch_for_close(httpd):
             return
 
 
+class LocalServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without the reverse DNS lookup at bind (#83). http.server's server_bind calls
+    socket.getfqdn(host), which on some Macs (GitHub's macOS runner) stalls in gethostbyaddr for 30 s or more
+    before the server answers anything. The server only ever listens on 127.0.0.1 and nothing reads server_name,
+    so the name is set without a lookup."""
+
+    def server_bind(self):
+        """Bind as TCPServer does, then name the server after its own address instead of looking the name up."""
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = host
+        self.server_port = port
+
+
 def main():
     """Start the live server on 127.0.0.1 (live_mode.port, or CREAITE_PORT) and serve until stopped; ends any run on the
     way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
@@ -2962,7 +3028,7 @@ def main():
     if held_by_this_vault(port):
         return already_running(port)
     try:
-        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        httpd = LocalServer(("127.0.0.1", port), Handler)
     except OSError as e:
         if held_by_this_vault(port):
             return already_running(port)
@@ -2990,7 +3056,7 @@ def main():
     threading.Thread(target=startup_index, daemon=True).start()     # BL-07: the search index is current from the start
     threading.Thread(target=after_apply_worker, daemon=True).start()  # BL-327: an apply's index and OneDrive copy, after it answers
     threading.Thread(target=vip_timer, daemon=True).start()         # BL-99: the VIP check, on start-up and every few minutes
-    threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly
+    threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly; then BL-10
     threading.Thread(target=clear_starting_when_up, args=(port,), daemon=True).start()   # BL-329
     delay = os.environ.get("CREAITE_START_DELAY")                   # tests only (BL-329): a slow-starting server
     if delay:
@@ -3098,14 +3164,28 @@ def mark_interrupted():
 
 VIP_TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
              "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
+# BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
+# what these people sent since the last check, then reads each whole conversation it belongs to (everyone's messages and a
+# few earlier ones for context, the title, the people and the attachment names) and reports the outcome in its own words.
 VIP_PROMPT = ("creaite VIP check. Read-only: search Alan's Microsoft 365 for messages SENT BY these addresses since {since} "
               "(local time): Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates. Addresses: "
-              "{addresses}. Search only for those senders; read nothing else, change nothing, write nothing. Reply with ONLY a "
-              "JSON array, one object per message: {{\"kind\": \"mail\"|\"teams\"|\"calendar\", \"from\": \"Name <address>\", "
-              "\"subject\": \"…\", \"sent\": \"YYYY-MM-DD HH:MM\", \"link\": \"the Microsoft 365 web link\", "
-              "\"sensitivity\": \"normal|personal|private|confidential\", \"gist\": \"what it is about or asks for, in your own "
-              "words, at most 140 characters, never quoted text\"}}. For a private or confidential message give only a neutral gist "
-              "(\"private message\"). Never use the word VIP in a gist (BL-288). Reply [] if there are none.")
+              "{addresses}. Then read each CONVERSATION one of those messages belongs to (the Teams chat, or the mail thread by "
+              "its conversation ID): everyone's messages since {since}, not only theirs, plus a few earlier ones for context; "
+              "its title, its participants and any attachment names. Read nothing else, change nothing, write nothing. Reply "
+              "with ONLY a JSON array, one object per conversation (never one per message): {{\"kind\": \"teams\"|\"mail\"|"
+              "\"calendar\", \"conversation\": \"the Teams chat ID or the mail conversation ID\", \"title\": \"the chat's "
+              "or thread's own title, or null when it has none (never a generic 'Group chat')\", \"from\": \"Name <address> of "
+              "the person above who wrote\", \"people\": [\"Name <address>\", …], \"last\": \"YYYY-MM-DD HH:MM of its last "
+              "message\", \"link\": \"the Microsoft 365 web link\", \"sensitivity\": \"normal|personal|private|"
+              "confidential\", \"attachments\": [\"file names only\"], \"summary\": \"what the conversation came to, in one "
+              "or two lines of your own words, at most 300 characters, never quoted text\", \"items\": [{{\"type\": "
+              "\"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own words\", "
+              "\"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else null\"}}]}}. Report "
+              "the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a conversation with "
+              "nothing actionable has \"items\": []. For a private conversation give only \"summary\": \"private\" and no "
+              "items. A confidential one is summarised like any other, in your own words, with its sensitivity "
+              "\"confidential\" (it stays inside creaite, internal only, never quoted). Never use the word VIP in a gist, "
+              "a summary, an item or anywhere in the reply (BL-288). Reply [] if there are none.")
 VIP_LOCK = threading.Lock()       # one check at a time
 VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never write at once
 VIP_STATUS = {"running": False, "last_error": None}
@@ -3147,12 +3227,20 @@ def vip_check(how="check"):
         with VIP_WRITE:
             new = sweep.vip_record(found, how)
         VIP_STATUS["last_error"] = None
-        note = f"VIP check: {len(new)} new alert{'s' if len(new) != 1 else ''}"
+        note = vip_note(new)
         print(f"{datetime.now():%H:%M:%S} {note}", flush=True)
         return note
     finally:
         VIP_STATUS["running"] = False
         VIP_LOCK.release()
+
+
+def vip_note(new):
+    """The check's one line for the server's output: how many alerts are new or updated, and any still being waited for."""
+    import sweep
+    held = len(sweep.vip_state().get("held") or {})
+    return (f"VIP check: {len(new)} new or updated alert{'s' if len(new) != 1 else ''}"
+            + (f", {held} waiting to go quiet" if held else ""))
 
 
 def vip_timer():
@@ -3165,7 +3253,39 @@ def vip_timer():
         except Exception as e:  # noqa: BLE001  never stops the server
             print(f"Note: the VIP check failed: {e}", flush=True)
         how = "check"
-        time.sleep(max(1.0, 60 * float(sweep.vip_settings().get("check_minutes") or 30)))
+        time.sleep(max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds())))
+
+
+def vip_wait_seconds():
+    """BL-334 point 5: when a conversation is being waited for, check again as soon as it may be quiet (its 15 minutes are
+    up), at least 30 seconds on; else no limit."""
+    import sweep
+    held = sweep.vip_state().get("held") or {}
+    if not held:
+        return float("inf")
+    try:
+        first = min(datetime.strptime(t, "%Y-%m-%d %H:%M") for t in held.values())
+    except ValueError:
+        return 60.0
+    due = first + timedelta(minutes=sweep.QUIET_WAIT)
+    return max(30.0, (due - sweep.now()).total_seconds() + 5)
+
+
+# ===== BL-10: the daily archiving, in the live server's daily slot =====
+# BL-323 shipped in v1.9.3, so the archiving runs in its daily job (backup_daily_job): after the daily backup, the zip and Tidy
+# up, under the same job lock, never while an ask creaite run is in progress (archive.py also refuses from inside one), never in
+# the development repository. archive.py daily runs at most once a day (archive-state.json). Session start keeps its own call,
+# after the daily backup (session.archive_today).
+def archive_after_backup():
+    """BL-10: archive.py daily in its own process, after the backup steps (the caller holds the job lock). Its line, or None
+    when there is nothing to say (already run today)."""
+    code, out = run("archive.py", "daily")
+    line = out.splitlines()[-1] if out else ""
+    if not line or (code == 0 and line.startswith("Archiving: already")):
+        return None
+    print(f"{datetime.now():%H:%M:%S} {line}", flush=True)
+    return line
+# ===== end BL-10 =====
 
 
 def vip_alerts_route(handler, req):
@@ -3318,6 +3438,12 @@ def alert_ids(req):
     return {str(i) for i in req.get("ids") or ([req["id"]] if isinstance(req.get("id"), str) else []) if isinstance(i, str)}
 
 
+def alert_cand(req):
+    """BL-334: the candidate item a request names on a conversation's card (its number), else None (the whole alert)."""
+    c = req.get("cand")
+    return c if isinstance(c, int) and not isinstance(c, bool) and 0 < c < 100 else None
+
+
 def alert_dismiss_route(handler, req):
     """POST /api/alerts/dismiss {ids | id | all}: take messages out of Needs attention (kept in the alert history)."""
     import sweep
@@ -3325,10 +3451,11 @@ def alert_dismiss_route(handler, req):
     if ids is not None and not ids:
         return handler.send(400, {"ok": False, "message": "Which message?"})
     with VIP_WRITE:
-        done = sweep.vip_dismiss(ids)
+        done = sweep.vip_dismiss(ids, alert_cand(req))
     n = len(done)
     return handler.send(200, {"ok": True, "dismissed": n, "ids": done, "at": sweep.now().strftime("%Y-%m-%d %H:%M"),
-                              "message": f"Dismissed {n} message{'s' if n != 1 else ''}." if n else "Nothing to dismiss."})
+                              "message": ("Dismissed the item. Nothing was staged." if alert_cand(req) else
+                                          f"Dismissed {n} message{'s' if n != 1 else ''}.") if n else "Nothing to dismiss."})
 
 
 def alert_undo_route(handler, req):
@@ -3338,7 +3465,7 @@ def alert_undo_route(handler, req):
     if not ids:
         return handler.send(400, {"ok": False, "message": "Which message?"})
     with VIP_WRITE:
-        done = sweep.vip_undismiss(ids)
+        done = sweep.vip_undismiss(ids, alert_cand(req))
     n = len(done)
     return handler.send(200, {"ok": True, "restored": n, "ids": done,
                               "message": f"Back in Needs attention: {n} message{'s' if n != 1 else ''}." if n
@@ -3350,7 +3477,7 @@ def alert_prefill_route(handler, req):
     import sweep
     try:
         with VIP_WRITE:
-            pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "action"))
+            pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "") or None, alert_cand(req))
     except (LookupError, ValueError) as e:
         return handler.send(200, {"ok": False, "message": str(e)})
     return handler.send(200, {"ok": True, "prefill": pre})
@@ -3407,7 +3534,7 @@ def alert_draft_check(req):
     if not drafts.enabled("sharpen"):
         return None, 200, {"ok": False, "off": True, "message": "AI drafts are off in Settings."}
     try:
-        pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "action"))
+        pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "") or None, alert_cand(req))
     except (LookupError, ValueError) as e:
         return None, 200, {"ok": False, "message": str(e)}
     if pre.get("marker"):
@@ -3444,19 +3571,19 @@ def alert_draft_route(handler, req):
 
 
 def alert_make_route(handler, req):
-    """POST /api/alerts/make {id, type, values}: stage the item as an approved proposal (nothing is applied here), dismiss
-    the message and record the proposal on it; with auto-apply the page applies it as it does any staged item."""
+    """POST /api/alerts/make {id, type, values}: stage the item as a pending proposal for Review (BL-334, check 45: nothing
+    is applied here, and the page's Save doesn't apply it), dismiss the message and record the proposal on it."""
     import sweep
     values = req.get("values") if isinstance(req.get("values"), dict) else {}
     try:
         with LOCK, VIP_WRITE:
-            got = sweep.vip_make(str(req.get("id") or ""), str(req.get("type") or "action"), values)
+            got = sweep.vip_make(str(req.get("id") or ""), str(req.get("type") or "") or None, values, alert_cand(req))
     except (LookupError, ValueError) as e:
         return handler.send(200, {"ok": False, "message": str(e)})
     word = {"actions": "action", "decisions": "decision"}.get(got["table"]) or str(got["values"].get("type") or "item").lower()
     return handler.send(200, {"ok": True, **got, "made": {"proposal": got["proposal"], "n": got["n"], "id": None,
                                                          "state": "staged"},
-                              "message": f"Staged the new {word}. It's written when you apply."})
+                              "message": f"Staged the new {word} for Review."})
 
 
 SWEEP_ALERT_ROUTES.update({"/api/alerts/dismiss": alert_dismiss_route, "/api/alerts/undo": alert_undo_route,
@@ -4012,6 +4139,8 @@ def build_edit_card(run, final):
     src = edit_spec_file(m.group(1))
     data = src.read_bytes() if src else None
     spec, why = edit_spec(data) if data is not None else (None, "the change file isn't a .json file in system/staging/drafts/")
+    if spec and (spec.get("file_changes") or {}).get("archive") == "reports_back":      # BL-331: Files' Move back only
+        spec, why = None, "an archived file is moved back from Files (Move back), never from ask creaite"
     if not spec:
         run.emit("editcard", card=None, title=title, refused=why)
         return None
@@ -4195,10 +4324,30 @@ def project_archive_card(code, action, cancel):
 # ===== end BL-09 =====
 
 
+# ===== BL-331: Files' Move back, on the same change card =====
+def move_back_route(handler, req):
+    """POST /api/files/move-back {path}: the stored path of a file Files shows as archived. archive.back_spec builds the move
+    (never the page): only a file an archive moved, back to the place it came from, never onto a file that is there. It goes on
+    the approval card (server_edit_card); tracker.py apply moves it on Approve, and undo puts it back in _Archive."""
+    import archive
+    path = req.get("path")
+    if not isinstance(path, str) or set(req) - {"path"}:
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    spec, why = archive.back_spec(path)
+    if not spec:
+        return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
+    card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    if not card:
+        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+    return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
+# ===== end BL-331 =====
+
+
 ADMIN_ROUTES.update({"/api/edit/approve": lambda h, r: edit_answer(h, r, "approve"),
                      "/api/edit/reject": lambda h, r: edit_answer(h, r, "reject"),
                      "/api/edit/stage": lambda h, r: edit_answer(h, r, "stage"), "/api/edit/pending": edit_pending_route,
-                     "/api/project/archive": project_archive_route})          # BL-09
+                     "/api/project/archive": project_archive_route,           # BL-09
+                     "/api/files/move-back": move_back_route})                # BL-331
 # ===== end BL-258 =====
 
 # ===== BL-314 (v191-ask-routing): a change asked in the chat runs through the dashboard's own action =====
@@ -5813,7 +5962,7 @@ BACKUP_EVERY = 3600
 
 
 def backup_daily_job():
-    """One pass of the daily backup steps; returns what it said (or why it didn't run)."""
+    """One pass of the daily backup steps, then (BL-10) the daily archiving; returns what they said (or why they didn't run)."""
     if (paths.ROOT / ".creaite-dev").exists():
         return ["skipped: the development repository"]
     if backup.ask_run():
@@ -5825,13 +5974,14 @@ def backup_daily_job():
         import sweep
         said = []
         made = session.backup_today(sweep.now(), said.append)
-        return ([f"daily backup made: {made}"] if made else []) + said
+        archived = archive_after_backup()                # BL-10: after Tidy up (backup.after_daily_backup), once a day
+        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else [])
     finally:
         LOCK.release()
 
 
 def backup_timer():
-    """The daily backup job a minute after start-up, then every hour (it does each step only once a day)."""
+    """The daily backup job (and BL-10's archiving after it) a minute after start-up, then every hour (each step once a day)."""
     time.sleep(60)
     while True:
         try:

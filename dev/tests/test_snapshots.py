@@ -141,6 +141,7 @@ def normalise(html, root):
         html = pat.sub(rep, html)
     html = renumber_ids(html)
     html = STYLE.sub(lambda m: 'style="' + re.sub(r"-?\d+(?:\.\d+)?(px|%|em|rem)", r"#\1", m.group(1)) + '"', html)
+    html = re.sub(r'aria-valuenow="\d+"', 'aria-valuenow="#"', html)   # v1.9.5: a resize handle's value is the column's measured width
     html = re.sub(r">\s*<", ">\n<", re.sub(r"[ \t]+", " ", html))
     return "\n".join(ln.rstrip() for ln in html.splitlines() if ln.strip()) + "\n"
 

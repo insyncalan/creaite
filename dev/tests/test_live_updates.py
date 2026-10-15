@@ -313,7 +313,14 @@ class StaleLoggedOnce(ServerCase):
             self.assertEqual(code, 403)
             self.assertTrue(body["stale"])
         pulse("another-old-page")
-        lines = [ln for ln in today_log(self.v).splitlines() if "/api/pulse 403" in ln]
+        # the server writes a request's log line once the reply has gone (log_request, in the handler's finally), so the last
+        # line can follow the reply; under load it hadn't been written when the log was read (5 != 6). Wait for it.
+        end = time.time() + 10
+        while True:
+            lines = [ln for ln in today_log(self.v).splitlines() if "/api/pulse 403" in ln]
+            if len(lines) >= 6 or time.time() > end:
+                break
+            time.sleep(0.05)
         self.assertEqual(len(lines), 6)
         self.assertEqual(sum("told to reload" in ln for ln in lines), 2)             # one for each page
         self.assertFalse([ln for ln in lines if "WARN" in ln.upper().split("/API")[0]], lines)

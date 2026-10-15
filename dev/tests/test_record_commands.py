@@ -120,7 +120,8 @@ class Classified(unittest.TestCase):
             "minutes.py baseline", "excel_sync.py import",
             "update.py install", "update.py undo", "update.py tidy", "update.py new-vault",
             "backup.py tidy", "backup.py restore",            # BL-323 (14-10-2026): removes old backups for good; restores the vault
-            "permissions.py", "live_server.py", "launch.py"]))
+            "permissions.py", "live_server.py", "launch.py",
+            "archive.py daily", "archive.py items"]))          # BL-10 (14-10-2026): the daily archiving writes the record
 
 
 class Hook(unittest.TestCase):

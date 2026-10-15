@@ -35,7 +35,9 @@
 </button>
 <button class="l1" data-p="inbox" data-f="All" aria-pressed="false">Intake<span class="n">3</span>
 </button>
-<button class="l1" data-p="_portfolio" data-f="All" aria-pressed="false">projects/_portfolio<span class="n">0</span>
+<button class="l1" data-p="_portfolio" data-f="All" aria-pressed="false">
+<span title="projects/_portfolio">Portfolio</span>
+<span class="n">0</span>
 </button>
 <button class="l1" data-p="ABC" data-f="All" data-toggle="ABC" aria-expanded="false" aria-pressed="false">
 <span class="chev">
@@ -70,8 +72,8 @@
 </div>
 <div class="toolbar" style="margin-top:0">
 <!-- BL-214 (sprint-ui-audit): each filter has a name -->
-<input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:#px;border:#px solid var(--line);border-radius:#px;padding:0 #px;min-width:#px;background:var(--surface)">
-<select id="fsType" aria-label="File type" style="height:#px;border:#px solid var(--line);border-radius:#px;background:var(--surface)">
+<input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;min-width:#px;background:var(--surface);font-size:var(--ctl-fs)">
+<select id="fsType" aria-label="File type" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;background:var(--surface);font-size:var(--ctl-fs)">
 <option value="All">All types</option>
 <option>docx</option>
 <option>pdf</option>
@@ -80,7 +82,7 @@
 </select>
 <label class="sub" for="fsFrom">From</label>
 <span class="dwrap" style="width:#px">
-<input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:#px;border:#px solid var(--line);border-radius:#px;padding:0 #px;width:#%;background:var(--surface)">
+<input id="fsFrom" type="text" placeholder="DD-MM-YYYY" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;width:#%;background:var(--surface);font-size:var(--ctl-fs)">
 <button class="dbtn" data-cal="fsFrom" aria-label="Choose from date" data-tip="Choose from date">
 <svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="calendar" aria-hidden="true">
 <rect x="3.5" y="5" width="17" height="15" rx="2">
@@ -92,7 +94,7 @@
 </span>
 <label class="sub" for="fsTo">To</label>
 <span class="dwrap" style="width:#px">
-<input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:#px;border:#px solid var(--line);border-radius:#px;padding:0 #px;width:#%;background:var(--surface)">
+<input id="fsTo" type="text" placeholder="DD-MM-YYYY" style="height:var(--ctl-h);border:#px solid var(--line);border-radius:var(--ctl-r);padding:0 #px;width:#%;background:var(--surface);font-size:var(--ctl-fs)">
 <button class="dbtn" data-cal="fsTo" aria-label="Choose to date" data-tip="Choose to date">
 <svg data-ic="calendar" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" data-icn="calendar" aria-hidden="true">
 <rect x="3.5" y="5" width="17" height="15" rx="2">

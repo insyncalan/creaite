@@ -14,6 +14,8 @@ sample vault (test_snapshots: fixed day, UTC, en-GB).
 - BL-270: Today's header has no calendar note and no Close the day line; the note is a footnote at the page's bottom
   right, only when the calendar is from an earlier day; Close the day is a 32 by 32 door icon at the band's bottom right
   whose name and tooltip follow its three states, with a dot for the nudge, and it opens the card.
+- BL-333: no screen scrolls past its own bottom: on every screen, Meetings › Prep and the Prep popup, at desktop and 320 px,
+  the window never scrolls and each scroll box ends at its last visible content (visually hidden text stays inside it).
 
 The measuring helpers are dev/tests/ui_probe.js (window.AUD), from the audit.
 
@@ -22,6 +24,7 @@ Run: python3 dev/tests/test_ui_sweep.py   (needs Google Chrome; skipped otherwis
 import json
 import sys
 import unittest
+from datetime import timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -36,8 +39,50 @@ SCREENS["work-board"] = ("go('work'); setLayout(WT,'board')",
                          "#v-work")
 SCREENS["work-panel"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), ts.open_first_item(b)),
                          ts.SCREENS["work-panel"][1], ts.SCREENS["work-panel"][2])
+# BL-316: Activity with a change ticked, so its selection bar's Undo (which opens the Undo changes dialog) shows
+SCREENS["activity-selected"] = ("go('activity'); setTimeout(()=>document.querySelector('#actTbl tr[data-row] input[type=checkbox]').click(),30)",
+                                "!!document.getElementById('actUndoSel')", "#v-activity")
+# BL-316: the peek's other states, so every picker it makes is reached: Details open (Project, Workstream, Milestone), a RAID
+# item (Type, Impact and Likelihood), a made decision (Date made, Replaces) and a new item (its Project).
+DETAILS = "{ const t=document.getElementById('pkDetT'); if(t.getAttribute('aria-expanded')!=='true') t.click(); }"
+PEEK_ON = "document.getElementById('panel').classList.contains('on') && !document.getElementById('pkDet').hidden"
+SCREENS["work-panel-details"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), ts.open_first_item(b),
+                                            b.wait("document.getElementById('panel').classList.contains('on')"), b.eval(DETAILS)),
+                                 PEEK_ON, "#panel")
+SCREENS["work-panel-raid"] = (f"go('work'); openRecord('raid',(R.find(r=>r.st==='Open')||R[0]).id); {DETAILS}", PEEK_ON, "#panel")
+SCREENS["work-panel-decision"] = (f"go('work'); openRecord('decisions',(DEC.find(d=>d.st==='Made')||DEC[0]).id); {DETAILS}", PEEK_ON, "#panel")
+SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
+                             "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#pkId [data-pkp=\"p\"]')", "#panel")
+# BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached; plan
+# #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
+SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
+                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
+# BL-316: the meeting page (Meetings), the sample's one meeting
+SCREENS["meeting"] = ("go('meeting',Object.keys(D.hub||{})[0])", "!document.getElementById('v-meeting').hidden", "#v-meeting")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
+# BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a
+# menu there), a saved view's ▾, the Prep popup with its project chosen (Draft agenda), the milestone editor (Owner) and
+# Movement's rebaseline (Agreed with: Add person). Each is set up in the page only: nothing is saved.
+SCREENS["work-decisions"] = ("go('work'); document.querySelector('#wtabs [data-t=decisions]').click(); setLayout(WT,'list')",
+                             "document.querySelector('#newBtn[aria-haspopup]') && document.querySelector('#workTbl tbody tr')", "#v-work")
+SCREENS["work-views"] = ("go('work'); document.querySelector('#wtabs [data-t=actions]').click(); setLayout(WT,'list'); "
+                         "SAVED.actions=[{name:'Due soon',f:{}},{name:'Mine',f:{}}]; renderWork()",
+                         "document.querySelector('#wviews .vchip') && document.querySelector('#workTbl tbody tr')", "#v-work")
+SCREENS["prep-popup"] = ("D.calendar={fetched:TODAY+' 07:00',days:{[TODAY]:[{id:'e1',start:'10:00',end:'11:00',title:'ABC Steering',"
+                         "teams:true}]}}; D.prep.meetings['10:00|ABC Steering']={series:'abc steering',p:'ABC',how:'matched',day:TODAY}; "
+                         "openPrep(prepTimed()[0],TODAY)",
+                         "document.getElementById('prepDlg').open && document.querySelector('#prepDlg .agbtn')", "#prepDlg")
+SCREENS["milestone-editor"] = ("MVAUD='int'; mvOpenPage('ABC','plan'); setTimeout(()=>mvEdOpen('ABC-M-001'),30)",
+                               "!document.getElementById('mvPeek')?.hidden && document.getElementById('mvOwner')", "#mvPeek")
+SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='ABC-M-001'; "
+                              "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
+                              "document.getElementById('mvRbAdd')", "#v-milestones")
+# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
+# ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
+SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=document.querySelector('#projArch [data-parch=archive][data-pcode=ABC]'); "
+                          "b ? (b.focus(), b.click()) : n && setTimeout(()=>t(n-1),50); })(100)",
+                          "document.getElementById('parchDlg')?.open && document.querySelector('#parchDlg .parchlist li')", "#parchDlg")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
@@ -53,7 +98,10 @@ class UiSweepCase(ts.Snapshots):
         go, ready, region = SCREENS[name]
         b = self.b
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
-               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today')")
+               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
+               "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
+               "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
+               "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)
         last = None
@@ -142,6 +190,28 @@ class Reflow(UiSweepCase):
                             cov = [c for c in r["covered"] if not any(x in c["sig"] for x in REFLOW_SKIP)
                                    and "a.cntl" not in c["sig"]]       # a count link in a sentence, under the sticky first column
                             self.assertEqual(cov, [], "controls under another")
+        finally:
+            b.resize(self.width, self.height)
+
+    def test_the_proposal_peeks_actions_are_on_screen_at_320(self):
+        """Plan #80: at 320 px the proposal peek's Save and approve ran about 50 px off the screen. Every button in its
+        action row is inside the window and is what a press at its middle reaches; the wide layout keeps one row."""
+        b = self.b
+        try:
+            for w in (320, self.width):
+                b.resize(w, 800)
+                with self.subTest(width=w):
+                    self.goto("review-peek")
+                    r = b.eval("""(()=>{ const bs=[...document.querySelectorAll('#pkFoot2 button')].filter(e=>e.offsetParent);
+                      return {vw:innerWidth, vh:innerHeight, rows:new Set(bs.map(e=>Math.round(e.getBoundingClientRect().top))).size,
+                        bs:bs.map(e=>{ const r=e.getBoundingClientRect(), hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+                          return {id:e.id, l:r.left, r:r.right, t:r.top, b:r.bottom, hit:!!hit&&e.contains(hit)}; })}; })()""")
+                    self.assertEqual(len(r["bs"]), 4, "Reject, Cancel, Save and Save and approve")
+                    for x in r["bs"]:
+                        self.assertTrue(x["l"] >= 0 and x["r"] <= r["vw"] and x["t"] >= 0 and x["b"] <= r["vh"], f"{x['id']} off the screen: {x}")
+                        self.assertTrue(x["hit"], f"{x['id']} can't be pressed")
+                    if w > 480:
+                        self.assertEqual(r["rows"], 1, "the wide peek keeps its actions in one row")
         finally:
             b.resize(self.width, self.height)
 
@@ -307,6 +377,78 @@ class TodayHeader(UiSweepCase):
         self.assertEqual([x["closed"] for x in states], [False, False, True])
         b.click("#dayClose")
         b.wait("document.getElementById('closeDlg')&&document.getElementById('closeDlg').open")
+
+
+# BL-333: how far a scroll box can scroll, and where its last visible content ends (both in its own scroll coordinates). The
+# content is every rendered descendant but visually hidden text (.vh) and fixed layers, by its margin box; a descendant that
+# clips (overflow not visible) counts by its own box, not by what it hides. Chrome ends the scrollable area at that content
+# plus the box's bottom padding.
+SCROLL_END = """(sel=>{ const box=document.querySelector(sel); if(!box) return null; const B=box.getBoundingClientRect(), s=getComputedStyle(box);
+  const top=B.top+parseFloat(s.borderTopWidth)-box.scrollTop; let end=0, last='';
+  const walk=el=>{ for(const c of el.children){ if(c.matches('.vh')) continue; const cs=getComputedStyle(c);
+      if(cs.display==='none'||cs.position==='fixed'||!c.getClientRects().length) continue;
+      const r=c.getBoundingClientRect(), b=r.bottom+Math.max(0,parseFloat(cs.marginBottom)||0)-top;
+      if(r.height>0&&b>end){ end=b; last=c.tagName+(c.id?'#'+c.id:'')+(c.className&&c.className.baseVal===undefined?'.'+c.className.trim().split(/\\s+/).join('.'):''); }
+      if(cs.overflowY==='visible'&&cs.overflowX==='visible') walk(c); } };
+  walk(box);
+  return {sh:box.scrollHeight, ch:box.clientHeight, end:Math.ceil(end+parseFloat(s.paddingBottom)), last}; })"""
+
+# The fixture calendar for Meetings › Prep and the Prep popup: a meeting on the snapshot day and one the day after.
+PREP_CAL = {"fetched": f"{ts.FIXED} 07:00", "days": {
+    str(ts.FIXED): [{"id": "e1", "start": "10:00", "end": "11:00", "title": "ABC Steering", "teams": True,
+                     "attendees": ["Sara Example", "Nobody Known <nobody@example.com>"]}],
+    str(ts.FIXED + timedelta(days=1)): [{"id": "e2", "start": "10:00", "end": "11:00", "title": "ABC weekly", "teams": True}]}}
+
+
+class ScrollEnd(UiSweepCase):
+    """BL-333: no screen scrolls past its own bottom. Visually hidden text (.vh, position:absolute) used to take body as its
+    containing block, escape its screen's scroll box and stretch the window (Today's project description, Intake's quick
+    capture label). On every screen, Meetings › Prep and the Prep popup, at desktop and 320 px: the window never scrolls,
+    and each scroll box ends at its last visible content (1 px allowed)."""
+
+    @classmethod
+    def load(cls, v):
+        super().load(v)
+        (v.root / "system/staging/calendar.json").write_text(json.dumps(PREP_CAL))
+
+    def check(self, label, *boxes):
+        b = self.b
+        page = b.eval("[document.scrollingElement.scrollHeight, innerHeight, document.scrollingElement.scrollWidth, innerWidth]")
+        self.assertLessEqual(page[0], page[1] + 1, f"{label}: the window scrolls down {page[0] - page[1]} px")
+        for sel in boxes:
+            r = b.eval(f"({SCROLL_END})({json.dumps(sel)})")
+            self.assertIsNotNone(r, f"{label}: no {sel}")
+            if r["sh"] > r["ch"] + 1:
+                self.assertLessEqual(r["sh"], r["end"] + 1, f"{label}: {sel} scrolls past its last content ({r['last']}): {r}")
+
+    def test_no_screen_scrolls_past_its_bottom(self):
+        b = self.b
+        try:
+            for w in (self.width, 320):
+                b.resize(w, 900)
+                for name in SCREENS:
+                    if name in ("cmdk", "ask", "work-display"):
+                        continue
+                    with self.subTest(width=w, screen=name):
+                        region = self.goto(name)
+                        self.check(name, region if region.startswith("#v-") else ".view:not([hidden])")
+                with self.subTest(width=w, screen="meeting"):
+                    self.goto("today")
+                    t = b.eval("Object.entries(D.hub||{}).find(([t,m])=>m.key==='calendar:e1')?.[0]||''")
+                    self.assertTrue(t, "the fixture meeting has a page")
+                    b.eval(f"go('meeting',{json.dumps(t)})")
+                    b.wait("/ABC Steering/.test(document.querySelector('#v-meeting h1').textContent)")
+                    b.pump(0.5)
+                    self.check("meeting", "#v-meeting")
+                with self.subTest(width=w, screen="prep-popup"):
+                    self.goto("today")
+                    b.click("[data-prep]")
+                    b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open&&document.getElementById('prepBody').children.length")
+                    b.pump(1)
+                    self.check("prep popup", "#v-today", "#prepDlg", "#prepBody")
+                    b.eval("document.getElementById('prepDlg').close()")
+        finally:
+            b.resize(self.width, self.height)
 
 
 if __name__ == "__main__":

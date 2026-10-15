@@ -5,6 +5,8 @@
 import { chatScroll, nowIso, stampMsg, step } from "../ask.js";
 import { A, DEC, peopleAll, R, REV, useCount } from "./data.js";
 import { $, addHTML, esc, html, ic, putHTML, raw } from "./dom.js";
+import { mountCombobox } from "../components/Combobox.jsx";
+import { openDatePicker } from "../components/Picker.jsx";
 import { D, DATE, DDATE, fd, isMe, S, TODAY, toIso } from "./page.js";
 import { api, apply, editProposal, needVault, oneLine, refreshAll, save, snack, split, viaServer } from "./server.js";
 import { shared } from "./state.js";
@@ -92,7 +94,7 @@ export function parseWhen(text,today=TODAY,due=false){ let s=String(text||"").tr
   return null; }
 export const dateSaid=iso=>`${new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(iso)}`;
 /* which fields: every typed date field (item forms, inline cells, the project page's No due date card, filters' From and To,
-   Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick Capture); read-only ones are picker only */
+   Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick capture); read-only ones are picker only */
 export const isDateField=el=>!!(el&&el.tagName==="INPUT"&&!el.readOnly&&el.matches('[data-date],[placeholder="DD-MM-YYYY"],#qcDate,#bdDate,[data-und]'));
 export const dueField=el=>/(^|_)due$/.test(el.name||el.id||"")||el.dataset.cf==="due"||el.dataset.bf==="due"||["rvDate","bdDate","bkDate","deReply"].includes(el.id)||el.dataset.und!=null||el.name==="fc";
 export function dateRead(el){ const v=el.value.trim(); if(!v) return {empty:true}; const iso=parseWhen(v,TODAY,dueField(el)); if(!iso) return {bad:true};
@@ -123,7 +125,6 @@ document.addEventListener("focusout",e=>{ if(isDateField(e.target)){ dateSettle(
 addEventListener("scroll",()=>{ const a=document.activeElement; if(isDateField(a)&&!$("#dateHint")?.hidden) dateHint(a); },true);
 }
 /* ======================= owner combobox ======================= */
-shared.COMBO=null; shared.CI=0;
 /* BL-18 A: the project in hand's own people and workstreams come first (derived from its items and the register) */
 export const formProject=()=>$("#f_p")?.value||(shared.CUR&&(shared.CUR.draft&&shared.CUR.draft.p||(shared.CUR.mode==="record"&&(REC(shared.CUR.k,shared.CUR.id)||{}).p)||shared.CUR.code))||"";
 export const projPeople=code=>{ if(!code) return []; const s=new Set([...A.filter(a=>a.p===code).map(a=>a.o),...R.filter(r=>r.p===code).map(r=>r.o),...DEC.filter(d=>d.p===code).map(d=>d.by),...((D.stakeholders||{})[code]||[])]);
@@ -136,30 +137,23 @@ export function ownerMatches(q,pool){ q=String(q||"").trim(); const ql=q.toLower
   const L=pool.filter(n=>!q||n.toLowerCase().includes(ql)); if(rs&&rs.name&&!L.includes(rs.name)&&pool.includes(rs.name)) L.unshift(rs.name);
   const items=L.map(n=>({n,t:"pick"})); if(rs&&rs.status==="likely") rs.candidates.filter(c=>!L.includes(c)).forEach(c=>items.push({n:c,t:"alias",typed:q})); if(q&&rs&&(rs.status==="likely"||rs.status==="unknown")) items.push({n:q,t:"new"});
   return {L,items}; }
-export function comboDraw(box){ const inp=box.querySelector("input"), q=box.dataset.typed==="1"?inp.value.trim():"", ql=q.toLowerCase(), code=formProject();
-  const mine=projPeople(code), pool=projFirst(peopleAll(),mine), split=new Set(mine), {L,items}=ownerMatches(q,pool);   /* BL-187: the one matcher, shared with the peek's owner list */
-  const nMine=L.filter(n=>split.has(n)).length, head=(i)=>!code||!nMine||nMine===L.length?"":i===0?`<div class="cgrp">${esc(code)}</div>`:i===nMine?'<div class="cgrp">Everyone else</div>':"";
-  if(box.dataset.typed!=="1"){ const i=items.findIndex(it=>it.n===inp.value.trim()); if(i>=0&&shared.CI===0) shared.CI=i; } shared.CI=Math.min(shared.CI,Math.max(0,items.length-1));
-  putHTML(box.querySelector(".combo-list"),raw(items.map((it,i)=>head(i)+(it.t==="new"?`<div class="copt new ${i===shared.CI?"act":""}" data-n="${esc(it.n)}" data-t="new">＋ New person “${esc(it.n)}”…</div>`:it.t==="alias"?`<div class="copt ${i===shared.CI?"act":""}" data-n="${esc(it.n)}" data-t="alias" data-typed="${esc(it.typed)}"><span>Is “${esc(it.typed)}” ${esc(it.n)}?</span><small>Yes, and remember it</small></div>`:`<div class="copt ${i===shared.CI?"act":""}" data-n="${esc(it.n)}" data-t="pick"><span>${esc(it.n)}${isMe(it.n)?" <small>(you)</small>":""}</span><small>${useCount(it.n)}</small><button type="button" class="cdel" data-del="${esc(it.n)}" aria-label="Remove ${esc(it.n)} from the list">${ic("x")}</button></div>`)).join("")||'<div class="copt">Type a name to add it.</div>'));
-  box.classList.add("open"); shared.COMBO=box; }
-export function comboClose(){ if(shared.COMBO){ shared.COMBO.classList.remove("open"); shared.COMBO=null; } }
-/* picking: a name fills the box; "Is Sara Sara Khan?" also remembers the alias; "New person" asks for the details */
-export async function comboPick(box,o){ const inp=box.querySelector("input"), n=o.dataset.n, t=o.dataset.t; comboClose();
-  if(t==="new"){ const name=await ownerFinal(n,{skipMatch:true}); if(name!==null) inp.value=name; return; }
-  if(t==="alias"){ if(await regAddAlias(n,o.dataset.typed)) inp.value=n; return; }
-  inp.value=n; }
+/* BL-316: the form's owner field is the Combobox block (components/Combobox.jsx): the project in hand's people first, under its
+   name, then everyone else; an alias or an email finds the person; "Is “Sara” Sara Khan?" remembers the alias; a stranger is a
+   new person (the details dialog); each name's × hides it from the list. The one matcher is ownerMatches (BL-187). */
+export function ownerOptions(q,typed){ const code=formProject(), mine=projPeople(code), pool=projFirst(peopleAll(),mine), split=new Set(mine), {L,items}=ownerMatches(typed?q:"",pool);
+  const nMine=L.filter(n=>split.has(n)).length, head=i=>!code||!nMine||nMine===L.length?"":i===0?code:i===nMine?"Everyone else":"";
+  return items.map((it,i)=>it.t==="new"?{v:it.n,t:"new",label:`＋ New person “${it.n}”…`,cls:"new",head:head(i)}
+    :it.t==="alias"?{v:it.n,t:"alias",typed:it.typed,label:`Is “${it.typed}” ${it.n}?`,sub:"Yes, and remember it",head:head(i)}
+    :{v:it.n,t:"pick",label:`${it.n}${isMe(it.n)?" (you)":""}`,fill:it.n,sub:String(useCount(it.n)),head:head(i),removeLabel:`Remove ${it.n} from the list`,remove:()=>regSetHidden(it.n,true)}); }
+/** Draw each owner field (`.combohost` placeholders from the form) as a Combobox. @param {Element} root */
+export function mountOwnerFields(root){ root.querySelectorAll(".combohost[data-combo]").forEach(host=>{ const h=/** @type {HTMLElement} */(host), n=h.dataset.combo||"o", id="f_"+n;
+  mountCombobox(h,{id,name:n,value:h.dataset.v||"",label:h.dataset.label||"Owner",placeholder:"Choose or type a name",options:ownerOptions,
+    onPick:async o=>{ const inp=/** @type {HTMLInputElement|null} */(document.getElementById(id)); if(!inp) return false;
+      if(o.t==="new"){ const name=await ownerFinal(o.v,{skipMatch:true}); if(name!==null) inp.value=name; return false; }
+      if(o.t==="alias"){ if(await regAddAlias(o.v,o.typed)) inp.value=o.v; return false; }
+      return true; }}); }); }
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0045's place) */
-export function bootOwnerCombo(){
-document.addEventListener("focusin",e=>{ const box=e.target.closest&&e.target.closest(".combo"); if(box&&e.target.tagName==="INPUT"){ box.dataset.typed="0"; shared.CI=0; comboDraw(box); } });
-document.addEventListener("input",e=>{ const box=e.target.closest&&e.target.closest(".combo"); if(box){ box.dataset.typed="1"; shared.CI=0; comboDraw(box); } });
-document.addEventListener("mousedown",e=>{ const d=e.target.closest(".cdel"); if(d){ e.preventDefault(); const n=d.dataset.del; regSetHidden(n,true).then(()=>comboDraw(d.closest(".combo"))); return; }
-  const o=e.target.closest(".copt[data-n]"); if(o){ e.preventDefault(); comboPick(o.closest(".combo"),o); return; }
-  if(shared.COMBO&&!e.target.closest(".combo")) comboClose(); });
-document.addEventListener("keydown",e=>{ if(!shared.COMBO||!shared.COMBO.contains(document.activeElement)) return; const opts=[...shared.COMBO.querySelectorAll(".copt[data-n]")];
-  if(e.key==="ArrowDown"){ e.preventDefault(); shared.CI=Math.min(shared.CI+1,opts.length-1); comboDraw(shared.COMBO); } else if(e.key==="ArrowUp"){ e.preventDefault(); shared.CI=Math.max(shared.CI-1,0); comboDraw(shared.COMBO); }
-  else if(e.key==="Enter"&&opts[shared.CI]&&!e.metaKey&&!e.ctrlKey){ e.preventDefault(); e.stopPropagation(); comboPick(shared.COMBO,opts[shared.CI]); }   /* BL-78: ⌘/Ctrl+Enter saves instead */
-  else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); comboClose(); } },true);
-}
+export function bootOwnerCombo(){ /* BL-316: the owner field is a Combobox, which carries its own keys and clicks */ }
 /* ===== BL-274 (sprint-ui-sweep) ===== one ⌘↵ for every editor in the peek's place. An editor registers when it is the one the
    key is for and the save its Save button runs (which closes it); the one handler runs that save: the same checks, messages,
    staging and Undo. A new editor gets ⌘↵ by registering. Plain Enter keeps its meaning (a new line in a text area, a pick in a
@@ -244,7 +238,7 @@ export function chCaret(el){ const lh=parseFloat(getComputedStyle(el).lineHeight
    cell (BL-123), the bulk bar (BL-124), the Board's date prompt and an undated card's date; every calendar marks weekend days.
    Review notes a proposal's weekend date with the two buttons, which edit the proposal; the "weekend due date" early warning lists
    open items with one (built by build_dashboard.py), and the peek offers the same buttons beside it. Dates that record what
-   happened (raised, closed, made, a Quick Capture note's date) and milestones are never alerted. */
+   happened (raised, closed, made, a Quick capture note's date) and milestones are never alerted. */
 export const WKNAME=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 export const wkDays=()=>new Set(Array.isArray(S.weekendDays)?S.weekendDays:[5,6]);
 export const wkDow=iso=>(new Date(iso+"T00:00:00Z").getUTCDay()+6)%7;
@@ -268,6 +262,14 @@ export function wkAsk(iso,anchor,apply,o={}){ const n=weekendNote(iso); if(!n) r
 /* the calendars: weekend days marked, in their names too */
 export function wkMark(root){ if(!root) return; root.querySelectorAll(".cg button[data-v],.pkday[data-d]").forEach(b=>{ const v=b.dataset.d||(b.dataset.v?toIso(b.dataset.v):""); if(!v||!DATE.test(v)||b.classList.contains("wkend")) return;
   if(wkDays().has(wkDow(v))){ b.classList.add("wkend"); b.setAttribute("aria-label",(b.getAttribute("aria-label")||fd(v))+", weekend"); } }); }
+/* BL-316: a work item's date from its control: the Picker block's calendar with BL-181's weekend rule. A due or needed-by date
+   (`due`) marks the weekend days, says so as one is typed, and waits for the choice of a working day (wkAsk) before onPick. */
+/** @param {HTMLElement} anchor @param {{value?: string, label: string, due?: boolean, onPick: (iso: string) => any, onClose?: (how: string) => any}} o */
+export function itemDatePicker(anchor,o){ const gate=!!o.due, op=o.onPick;
+  return openDatePicker(anchor,{value:o.value||"",label:o.label,parse:t=>parseWhen(t,TODAY,gate),onClose:o.onClose,
+    onPick:gate?v=>{ if(v&&!WK.ok&&wkAsk(v,anchor,op)) return; op(v); }:op,
+    weekend:gate?iso=>wkDays().has(wkDow(iso)):undefined,
+    typedNote:gate?t=>{ const iso=t?parseWhen(t,TODAY,true):null, n=weekendNote(iso); return n?`${n.text} You'll be offered the nearest working days.`:""; }:undefined}); }
 /* ===== end BL-181 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0180's place) */
 export function bootWeekendNote(){

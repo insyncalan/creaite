@@ -66,8 +66,8 @@ class BoardMoves(BoardCase):
         self.assertIn(card, self.columns()["Later"])
         # the Move to… menu never offers it either
         b.click(self.card_sel(card) + " .bmv")
-        b.wait("document.getElementById('bmenu')")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#bmenu button')].map(x=>x.textContent)"), ["This week", "Next week", "No date"])
+        b.wait("document.getElementById('bdMoveMenu')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#bdMoveMenu button')].map(x=>x.textContent)"), ["This week", "Next week", "No date"])
 
     def test_drop_on_no_date_asks_to_clear_it(self):
         b = self.open_board("actions", "due", view="open")
@@ -131,10 +131,10 @@ class BoardMoves(BoardCase):
         b = self.open_board("actions", "owner", view="open")
         card = self.card_in("Me")
         b.click(self.card_sel(card) + " .bmv")
-        b.wait("document.getElementById('bmenu')")
-        names = b.eval("[...document.querySelectorAll('#bmenu button')].map(x=>x.textContent)")
+        b.wait("document.getElementById('bdMoveMenu')")
+        names = b.eval("[...document.querySelectorAll('#bdMoveMenu button')].map(x=>x.textContent)")
         self.assertNotIn("Me", names)                                                                # not where it already is
-        b.click("#bmenu button[data-bto=\"TBC\"]")
+        b.click("#bdMoveMenu button[data-bto=\"TBC\"]")
         self.wait_saved()
         self.assertEqual(self.action(card)["owner"], "TBC")
 
@@ -143,10 +143,10 @@ class BoardMoves(BoardCase):
         card = self.card_in("Later")
         b.eval(f"document.querySelector('{self.card_sel(card)} .bmv').focus()")
         b.key("Enter")
-        b.wait("document.getElementById('bmenu')")
+        b.wait("document.getElementById('bdMoveMenu')")
         self.assertEqual(b.eval("document.activeElement.textContent"), "This week")
         b.key("Escape")
-        b.wait("!document.getElementById('bmenu')")
+        b.wait("!document.getElementById('bdMoveMenu')")
         self.assertEqual(b.eval("document.activeElement.className"), "bmv")
 
     def test_escape_cancels_a_drag(self):

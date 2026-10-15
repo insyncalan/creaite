@@ -4,6 +4,8 @@
    boot…() functions that src/main.js calls in today's order. */
 import { actId } from "./activity.js";
 import { step } from "./ask.js";
+import { peekFrame } from "./components/Peek.jsx";
+import { drawTabs } from "./components/Tabs.jsx";
 import { A, P, peopleAll, pName, R } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, paintIcons, putHTML, raw } from "./core/dom.js";
 import { autoGrow, DATE_HELP, onCmdEnter, srcHTML } from "./core/fields.js";
@@ -65,7 +67,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e
    by shared helpers, so the milestone editor (#mvPeek) and the project panel (openProject: health and its reason) show their own
    history the same way. All three read ACT (build_dashboard.activity, which already holds every table's change_log lines and the
    Current state edits from file_activity) through pkHistory (BL-250 B: ACT plus D.activity_older, so early history and "created"
-   survive a long log): no new data. feedLines maps an item's lines; feedTabsHtml and
+   survive a long log): no new data. feedLines maps an item's lines; feedTabItems (the Tabs building block's tabs, BL-316) and
    feedListHtml draw the tabs and the list. A milestone's feed: Activity is each field change, Updates the reason given with a
    change (the note in the same apply, as Movement reads it), Source its creation and its source line; internal only, so it is not
    shown in Client view. A project's: Activity is health, its reason and the other fields, Updates the Current state edits and
@@ -73,7 +75,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e
 export function feedLines(lines,typeOf,textOf){ return lines.map(a=>{ const ch=String(a.change||a.what||"");
   return {type:typeOf(ch,a),who:a.by,html:`<span class="chg">${esc(textOf?textOf(ch,a):ch)}</span>`,when:a.at,state:a.reverted||a.undone?"undone":PKAPPLIED.has(a.apply_id)?"applied":""}; }); }
 /* function declarations (hoisted): the peek can be drawn before this block runs (BL-176's "if(CUR&&pkOn()) drawPanel()" on load) */
-export function feedTabsHtml(tab,attr,sel){ return PKTABS.map(([v,l])=>`<button type="button" class="pk-tab" role="tab" ${attr}="${v}" aria-selected="${tab===v}" tabindex="${tab===v?0:-1}"${tab===v?` id="${sel}"`:""}>${l}</button>`).join(""); }
+export function feedTabItems(tab,attr,sel){ return PKTABS.map(([v,l])=>({id:v,label:l,tabId:tab===v?sel:undefined,data:{[attr]:v}})); }
 export function feedListHtml(items,tab){ const icn={act:"pencil",upd:"msg",src:"filetext"}, L=items.filter(e=>tab==="all"||e.type===tab);
   return L.length?L.map(e=>`<div class="pk-fe${e.state==="undone"?" undone":""}" data-t="${e.type}"><span class="pk-fi" aria-hidden="true">${ic(icn[e.type]||"pencil")}</span><div><b>${esc(e.who)}</b> ${e.html}${e.when?`<span class="when">· ${esc(fd(e.when))}</span>`:""}${e.state==="staged"?'<span class="pk-pill st">staged</span>':e.state==="applied"?'<span class="pk-pill ap">applied</span>':e.state==="undone"?'<span class="pk-pill un">undone</span>':""}${e.note?`<div class="sub">${esc(e.note)}</div>`:""}</div></div>`).join(""):'<div class="sub">Nothing here yet.</div>'; }
 /* the feed outside the peek: a section with its own tabs (data-fdtab), remembered per host ("ms", "proj") for the session. It draws
@@ -82,10 +84,12 @@ export function feedListHtml(items,tab){ const icn={act:"pencil",upd:"msg",src:"
 export const FDTAB={};
 export function feedBlock(host,items){ const tab=FDTAB[host]||"all", sel="fdTabSel-"+host, has=new Set(items.map(e=>e.type));
   const none=["act","upd","src"].filter(t=>!has.has(t)).map(t=>`<div class="sub fd-none" data-none="${t}">Nothing here yet.</div>`).join("");
-  return `<section class="fd-hist" data-fdhost="${host}" data-tab="${tab}" aria-label="History"><div class="pk-tabs" role="tablist" aria-label="History">${feedTabsHtml(tab,"data-fdtab",sel)}</div><div class="pk-feed" role="tabpanel" aria-labelledby="${sel}">${items.length?feedListHtml(items,"all"):""}${items.length?none:'<div class="sub">Nothing here yet.</div>'}</div></section>`; }
-export function feedTab(s,v){ const host=s.dataset.fdhost, sel="fdTabSel-"+host; FDTAB[host]=v; s.dataset.tab=v;
-  s.querySelectorAll("[data-fdtab]").forEach(b=>{ const on=b.dataset.fdtab===v; b.setAttribute("aria-selected",String(on)); b.tabIndex=on?0:-1; if(on) b.id=sel; else b.removeAttribute("id"); });
-  document.getElementById(sel)?.focus(); }
+  return `<section class="fd-hist" data-fdhost="${host}" data-tab="${tab}" aria-label="History"><div class="tabhost" data-fdtabs></div><div class="pk-feed" role="tabpanel" aria-labelledby="${sel}">${items.length?feedListHtml(items,"all"):""}${items.length?none:'<div class="sub">Nothing here yet.</div>'}</div></section>`; }
+/* BL-316: a feed's tabs are the Tabs building block, drawn into the section's [data-fdtabs] once its HTML is in the page (mountFeedTabs) */
+export function feedTabsDraw(s){ const host=s.dataset.fdhost, tab=FDTAB[host]||"all", box=s.querySelector(":scope>[data-fdtabs]"); if(!box) return;
+  drawTabs(box,{items:feedTabItems(tab,"fdtab","fdTabSel-"+host),selected:tab,onSelect:v=>feedTab(s,v),label:"History",className:"pk-tabs",tabClass:"pk-tab",wrap:true}); }
+export function mountFeedTabs(root){ if(root) root.querySelectorAll("section.fd-hist[data-fdhost]").forEach(feedTabsDraw); }
+export function feedTab(s,v){ FDTAB[s.dataset.fdhost]=v; s.dataset.tab=v; feedTabsDraw(s); }
 export function mvFeedItems(m){ const out=feedLines(pkHistory(m.id),ch=>/^created\b/.test(ch)?"src":/^note:/.test(ch)?"upd":"act",ch=>ch.replace(/^note: /,"reason: "));
   if(m.src) out.push({type:"src",who:"Source",html:`<div class="pk-src">${srcHTML(m.src)}</div>`,when:""});
   return out; }
@@ -99,10 +103,7 @@ export function projFeedItems(code){ const wk=new RegExp(`^(\\d{4}-\\d{2}-\\d{2}
 /* ===== end BL-250 A ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootMilestones0172(){
-document.addEventListener("click",e=>{ const t=e.target.closest&&e.target.closest("[data-fdtab]"); if(t) feedTab(t.closest("[data-fdhost]"),t.dataset.fdtab); });
-document.addEventListener("keydown",e=>{ const t=e.target.closest&&e.target.closest("[data-fdtab]"); if(!t||!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)) return; e.preventDefault();
-  const s=t.closest("[data-fdhost]"), i=PKTABS.findIndex(x=>x[0]===s.dataset.tab), n=e.key==="Home"?0:e.key==="End"?PKTABS.length-1:(i+(e.key==="ArrowRight"?1:-1)+PKTABS.length)%PKTABS.length;
-  feedTab(s,PKTABS[n][0]); });
+/* BL-316: the feeds' tabs take their own clicks and keys (the Tabs building block) */
 }
 /* ===== BL-174 (sprint-milestones) ===== a page opened before a live server restart says so. The server's token is new at every
    start, so its requests are refused with {stale:true}; any such refusal (an apply, a save, the pulse) shows a banner under the
@@ -309,7 +310,7 @@ export function mvDetail(code){ const m=mvGet(code,shared.MV.sel); if(!m||m.stat
   h+=`<div class="mv-grid2"><div class="mv-box" id="mvDecide"><h3>Decide what to do</h3><p class="mv-cap">${vs>0||st==="overdue"?"Each choice is staged for Review; nothing changes until you approve it there.":"No variance to decide on."}</p><div class="mv-adj">
     <button type="button" class="mv-btn" data-mvadj="hold">Hold: keep forecast, agreed date unchanged</button><button type="button" class="mv-btn pri" data-mvadj="rebase">Rebaseline</button><button type="button" class="mv-btn" data-mvadj="recover">Add recovery action</button><button type="button" class="mv-btn" data-mvadj="escalate">Escalate to steering</button></div>`;
   if(shared.MV.rb&&shared.MV.rb.id===m.id) h+=`<div class="mv-form" id="mvRbForm"><div class="mv-fld">New agreed date${mvDpBtn("mvRbDate",shared.MV.rb.date,"New agreed date",shared.MV.rb.date!==m.agr)}</div>
-      <div class="mv-fld full">Agreed with<div class="mv-chiprow">${shared.MV.rb.with.length?shared.MV.rb.with.map(n=>`<span class="mv-chip">${esc(n)}${mvOrg(n)}<button type="button" data-mvrmw="${esc(n)}" aria-label="Remove ${esc(n)}">${ic("x",{bare:true})}</button></span>`).join(""):'<span class="mv-hint">Nobody chosen yet</span>'}<button type="button" class="mv-cb small" id="mvRbAdd" data-mvppl="rbwith" aria-haspopup="listbox" aria-label="Add person">+ Add person</button></div></div>
+      <div class="mv-fld full">Agreed with<div class="mv-chiprow">${shared.MV.rb.with.length?shared.MV.rb.with.map(n=>`<span class="mv-chip">${esc(n)}${mvOrg(n)}<button type="button" data-mvrmw="${esc(n)}" aria-label="Remove ${esc(n)}">${ic("x",{bare:true})}</button></span>`).join(""):'<span class="mv-hint">Nobody chosen yet</span>'}<button type="button" class="mv-cb small" id="mvRbAdd" data-mvppl="rbwith" aria-haspopup="listbox" aria-expanded="false" aria-label="Add person">+ Add person</button></div></div>
       <label class="mv-fld full">Reason<input type="text" class="mv-in" id="mvRbWhy" value="${esc(shared.MV.rb.why||"")}" placeholder="Why the agreed date has to move"></label><div class="mv-err full" id="mvRbErr" role="alert"></div>
       <div class="full" style="display:flex;gap:8px"><button type="button" class="mv-btn pri" data-mvrb="ok" data-key="${MOD}↵" data-tip="Stage rebaseline and decision">Stage rebaseline and decision</button><button type="button" class="mv-btn" data-mvrb="no">Cancel</button></div></div>`;
   if(shared.MV.adj&&shared.MV.adj.id===m.id) h+=`<div class="mv-form" id="mvAdjForm"><label class="mv-fld full">${shared.MV.adj.k==="hold"?"Why hold? One line, for the decision record":shared.MV.adj.k==="recover"?"The recovery action":"What to ask the steering committee"}<input type="text" class="mv-in" id="mvAdjWhy" value="${esc(shared.MV.adj.text||"")}"></label><div class="mv-err full" id="mvAdjErr" role="alert"></div>
@@ -330,10 +331,10 @@ export function mvRangeLine(m){ const r=m.range; if(!r) return "";
 /* ===== end BL-184 ===== */
 /* ---- the date button and its calendar (weekends muted, keys: arrows by day and week, Page Up and Down by month, Esc) ---- */
 export const MVDPH={}; export let MVCAL=null;
-export function mvDpBtn(id,val,label,chg){ return `<button type="button" class="mv-dp${chg?" chg":""}" id="${id}" data-mvdp="${val||""}" aria-haspopup="dialog" aria-label="${esc(label)}, ${val?fd(val):"not set"}"><span>${val?fd(val):"Choose a date"}</span>${ic("calendar",{bare:true})}</button>`; }
+export function mvDpBtn(id,val,label,chg){ return `<button type="button" class="mv-dp${chg?" chg":""}" id="${id}" data-mvdp="${val||""}" aria-haspopup="dialog" aria-expanded="false" aria-label="${esc(label)}, ${val?fd(val):"not set"}"><span>${val?fd(val):"Choose a date"}</span>${ic("calendar",{bare:true})}</button>`; }
 export function mvCalEl(){ let c=$("#mvCal"); if(!c){ addHTML(document.body,"beforeend",html`<div class="mv-cal" id="mvCal" hidden role="dialog" aria-label="Choose a date"></div>`); c=$("#mvCal"); } return c; }
-export function mvCalOpen(btn,cb){ mvPopClose(false); const v=btn.dataset.mvdp||TODAY, d=new Date(mvT(v)); MVCAL={btn,cb,sel:btn.dataset.mvdp?mvT(v):null,focus:mvT(v),y:d.getUTCFullYear(),m:d.getUTCMonth()}; mvCalDraw(true); mvPlace(mvCalEl(),btn); }
-export function mvCalClose(refocus){ const c=$("#mvCal"); if(!c||c.hidden) return; c.hidden=true; if(refocus&&MVCAL&&MVCAL.btn.isConnected) MVCAL.btn.focus(); }
+export function mvCalOpen(btn,cb){ mvPopClose(false); const v=btn.dataset.mvdp||TODAY, d=new Date(mvT(v)); MVCAL={btn,cb,sel:btn.dataset.mvdp?mvT(v):null,focus:mvT(v),y:d.getUTCFullYear(),m:d.getUTCMonth()}; mvCalDraw(true); mvPlace(mvCalEl(),btn); btn.setAttribute("aria-expanded","true"); }
+export function mvCalClose(refocus){ const c=$("#mvCal"); if(!c||c.hidden) return; c.hidden=true; MVCAL&&MVCAL.btn.setAttribute("aria-expanded","false"); if(refocus&&MVCAL&&MVCAL.btn.isConnected) MVCAL.btn.focus(); }
 export function mvCalDraw(focus){ const c=mvCalEl(), {y,m}=MVCAL, first=Date.UTC(y,m,1), off=(new Date(first).getUTCDay()+6)%7, n=new Date(Date.UTC(y,m+1,0)).getUTCDate(), today=mvT(TODAY);
   let h=`<div class="mv-calh"><button type="button" data-mvcm="-1" aria-label="Previous month">${ic("chevleft",{bare:true})}</button><b aria-live="polite">${PKMON[m]} ${y}</b><button type="button" data-mvcm="1" aria-label="Next month">${ic("chevright",{bare:true})}</button></div><div class="mv-calg" role="grid">`;
   ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach(w=>{ h+=`<div class="wd" aria-hidden="true">${w}</div>`; }); for(let i=0;i<off;i++) h+="<span></span>";
@@ -349,12 +350,12 @@ export function mvPlace(el,anchor){ const r=anchor.getBoundingClientRect(), w=el
 export let MVPOP=null;
 export function mvOrg(n){ const r=(typeof shared.REG!=="undefined"?shared.REG:[]).find(x=>x.name===n); return r&&r.org?` <small>${esc(r.org)}</small>`:""; }
 export function mvPopEl(){ let c=$("#mvPop"); if(!c){ addHTML(document.body,"beforeend",html`<div class="mv-pop" id="mvPop" hidden></div>`); c=$("#mvPop"); } return c; }
-export function mvPopClose(refocus=true){ const p=$("#mvPop"); if(!p||p.hidden) return; p.hidden=true; if(refocus&&MVPOP&&MVPOP.btn.isConnected) MVPOP.btn.focus(); }
+export function mvPopClose(refocus=true){ const p=$("#mvPop"); if(!p||p.hidden) return; p.hidden=true; MVPOP&&MVPOP.btn.setAttribute("aria-expanded","false"); if(refocus&&MVPOP&&MVPOP.btn.isConnected) MVPOP.btn.focus(); }
 export function mvPopItems(){ const q=MVPOP.q.trim().toLowerCase(), pool=peopleAll(), /** @type {any[]} */ L=pool.filter(n=>!q||n.toLowerCase().includes(q)||(mvOrg(n).toLowerCase().includes(q))).map(n=>({n}));
   if(q&&!pool.some(n=>n.toLowerCase()===q)) L.push({add:true,n:MVPOP.q.trim()}); return L; }
-export function mvPopOpen(btn,cur,cb){ mvCalClose(false); MVPOP={btn,cur:cur||"",cb,q:"",idx:0}; mvPopDraw(); mvPlace(mvPopEl(),btn); $("#mvPopQ")?.focus(); }
+export function mvPopOpen(btn,cur,cb){ mvCalClose(false); MVPOP={btn,cur:cur||"",cb,q:"",idx:0}; mvPopDraw(); mvPlace(mvPopEl(),btn); btn.setAttribute("aria-expanded","true"); $("#mvPopQ")?.focus(); }
 export function mvPopDraw(){ const p=mvPopEl(), L=mvPopItems();
-  putHTML(p,html`<input type="text" class="mv-in" id="mvPopQ" placeholder="Search people, or type a new name" value="${MVPOP.q}" aria-label="Search people" autocomplete="off"><ul role="listbox" aria-label="People">${L.map((x,i)=>x.add?html`<li role="option" class="add" data-mvpi="${raw(i)}" aria-selected="${String(i===MVPOP.idx)}">+ Add “${x.n}” as a new person</li>`:html`<li role="option" data-mvpi="${raw(i)}" aria-selected="${String(i===MVPOP.idx)}"><span>${x.n}${x.n===MVPOP.cur?" ✓":""}</span>${raw(mvOrg(x.n))}</li>`)}</ul>`);
+  putHTML(p,html`<input type="text" class="mv-in" id="mvPopQ" placeholder="Search people, or type a new name" value="${MVPOP.q}" aria-label="Search people" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="mvPopL" aria-autocomplete="list"${L.length?html` aria-activedescendant="mvPopO${raw(MVPOP.idx)}"`:""}><ul role="listbox" id="mvPopL" aria-label="People">${L.map((x,i)=>x.add?html`<li role="option" class="add" id="mvPopO${raw(i)}" data-mvpi="${raw(i)}" aria-selected="${String(i===MVPOP.idx)}">+ Add “${x.n}” as a new person</li>`:html`<li role="option" id="mvPopO${raw(i)}" data-mvpi="${raw(i)}" aria-selected="${String(i===MVPOP.idx)}"><span>${x.n}${x.n===MVPOP.cur?" ✓":""}</span>${raw(mvOrg(x.n))}</li>`)}</ul>`);
   p.hidden=false; }
 export async function mvPopChoose(x){ if(!x) return; const cb=MVPOP.cb; mvPopClose(true);
   if(x.add){ const n=await ownerFinal(x.n); if(!n||n==="TBC") return; cb&&cb(n,true); return; } cb&&cb(x.n,false); }
@@ -381,10 +382,11 @@ export function mvPatch(arr,ch){ const /** @type {any} */ x=arr[14]=arr[14]||{};
   if(arr[6]==="Done"){ x.st="Achieved"; x.set=false; } msState(arr); }
 
 /* ---- the editor ---- */
-export function mvPeekEl(){ let p=$("#mvPeek"); if(!p){ addHTML(document.body,"beforeend",html`<aside class="mv-peek" id="mvPeek" hidden role="dialog" aria-label="Edit milestone"></aside>`); p=$("#mvPeek"); } return p; }
+/* the editor's frame: the Peek block's (BL-316), made once at the end of the page */
+export const mvPeekFrame=()=>peekFrame("mvPeek",{label:"Edit milestone",cls:"mv-peek"});
 export let MVJUST=false, MVOPENER=null;
 export function mvEdOpen(id,from,o={}){ MVJUST=true; setTimeout(()=>{ MVJUST=false; },0); shared.MV.peek=id; shared.MV.add=o.add?mvDraftNew():null;   /* BL-245: every field at once */ shared.MV.flow=null; shared.MV.pend=null; shared.MV.cwPend=false;
-  MVOPENER=from||document.activeElement; const p=mvPeekEl(); p.classList.remove("enter"); void p.offsetWidth; if(!reduced()) p.classList.add("enter"); mvEdDraw(); $("#mvName")?.focus();
+  MVOPENER=from||document.activeElement; const p=mvPeekFrame(); p.classList.remove("enter"); void p.offsetWidth; if(!reduced()) p.classList.add("enter"); mvEdDraw(); $("#mvName")?.focus();
   if(shared.VIEW==="milestones") navWrite(false); }
 export function mvEdClose(noFocus){ const was=shared.MV.peek!==null||shared.MV.add; shared.MV.peek=null; shared.MV.add=null; shared.MV.flow=null; shared.MV.pend=null; shared.MV.cwPend=false; mvCalClose(false); mvPopClose(false);
   const p=$("#mvPeek"); if(p) p.hidden=true; if(was&&shared.VIEW==="milestones") navWrite(false); if(!noFocus&&MVOPENER&&MVOPENER.isConnected) MVOPENER.focus(); }
@@ -394,7 +396,7 @@ export function mvStateExplain(m){ const st=m.state, sug=m.sug, sw=w=>`<b>${MVWO
   if(mvMismatch(m)) return `<b>You have set ${MVWORD[st]}</b>${why}. The dates suggest ${sw(sug)}: ${sugWhy}. <button type="button" class="mv-btn sm" data-mvpk="usesug">Use ${MVWORD[sug]}</button>`;
   if(m.manual&&st!==sug) return `<b>You have set ${MVWORD[st]}</b>${why}. The dates alone would say ${MVWORD[sug]}. <button type="button" class="mv-btn sm" data-mvpk="usesug">Use ${MVWORD[sug]}</button>`;
   return `${m.manual?"Set by you. ":"Following the dates. "}The dates say ${MVWORD[sug]}: ${sugWhy}.`; }
-export function mvEdDraw(){ const p=mvPeekEl(), code=mvCode(), pn=pName(code);
+export function mvEdDraw(){ const p=mvPeekFrame(), code=mvCode(), pn=pName(code);
   if(shared.MV.add){ mvAddDraw(p,pn); drFcDraw(); return; }   /* BL-245 */
   const m=mvGet(code,shared.MV.peek); if(!m){ mvEdClose(true); drFcDraw(); return; }
   const st=m.state, ach=st==="achieved", F=shared.MV.flow&&shared.MV.flow.id===m.id?shared.MV.flow:null, PD=shared.MV.pend&&shared.MV.pend.id===m.id?shared.MV.pend:null;
@@ -412,14 +414,14 @@ export function mvEdDraw(){ const p=mvPeekEl(), code=mvCode(), pn=pName(code);
       ${PD?`<div class="mv-inl"><label class="mv-fld">Why is the forecast moving to ${fd(PD.fc)}?<input type="text" class="mv-in" id="mvFcWhy" value="${esc(PD.why||"")}" placeholder="One line, for the movement log"></label><button type="button" class="mv-btn pri" data-mvpk="fcok" data-key="${MOD}↵" data-tip="Save forecast">Save forecast</button><button type="button" class="mv-btn" data-mvpk="fcno">Cancel</button></div>`:""}<div class="mv-err" id="mvDtErr" role="alert"></div></div>`;
   h+=`<div class="mv-pksec"><h4>Progress</h4><div class="mv-rng"><input type="range" id="mvRng" min="0" max="100" step="5" value="${m.pct||0}" aria-label="Percent complete"><input type="number" class="mv-in" id="mvNum" min="0" max="100" value="${m.pct==null?"":m.pct}" aria-label="Percent complete number" placeholder="%"></div><span class="mv-hint">Set by hand. Not calculated from actions.</span></div>`;
   h+=`<div class="mv-pksec"><h4>Description</h4><label class="mv-fld">Scope and needs<textarea class="mv-in" id="mvDesc" rows="3" placeholder="What the milestone covers and what it needs">${esc(m.desc)}</textarea></label>
-    <div class="mv-fld" style="margin-top:10px">Owner<button type="button" class="mv-cb" id="mvOwner" data-mvppl="owner" aria-haspopup="listbox" aria-label="Owner, ${esc(m.owner||"not set")}"><span>${m.owner?esc(m.owner)+mvOrg(m.owner):'<span class="mv-hint">Choose the owner</span>'}</span>${ic("chevdown",{bare:true})}</button><span class="mv-hint">From the people list, or add a new person.</span></div></div>`;
+    <div class="mv-fld" style="margin-top:10px">Owner<button type="button" class="mv-cb" id="mvOwner" data-mvppl="owner" aria-haspopup="listbox" aria-expanded="false" aria-label="Owner, ${esc(m.owner||"not set")}"><span>${m.owner?esc(m.owner)+mvOrg(m.owner):'<span class="mv-hint">Choose the owner</span>'}</span>${ic("chevdown",{bare:true})}</button><span class="mv-hint">From the people list, or add a new person.</span></div></div>`;
   const cwOn=m.client||shared.MV.cwPend;
   h+=`<div class="mv-pksec"><h4>Client view</h4><div class="mv-swrow"><button type="button" class="mv-sw" id="mvCli" role="switch" aria-checked="${cwOn}" aria-label="Visible to client"></button><span>Visible to client</span></div>
     <label class="mv-fld">Client wording<textarea class="mv-in" id="mvCw" rows="2" ${cwOn?"":"disabled"} placeholder="Plain wording a client can read">${esc(m.cw)}</textarea></label>${shared.MV.cwPend?'<div class="mv-err" role="alert">Write the client wording: it is saved with the switch, as a client-visible milestone needs it.</div>':m.client&&!m.cvis?'<div class="mv-err">Client wording is needed before this appears in a client report.</div>':'<span class="mv-hint">Off by default. Only visible milestones appear in client output.</span>'}</div>`;
   /* BL-250 A: its history, internal only */
   h+=`<div class="mv-pksec"><h4>History</h4>${shared.MVAUD==="cli"?'<span class="mv-hint" id="mvHistHid">History is internal: switch to Internal view to see it.</span>':feedBlock("ms",mvFeedItems(m))}</div>`;
   h+=`<div class="mv-pksec"><button type="button" class="mv-btn danger" data-mvpk="cancel">Cancel this milestone</button> <span class="mv-hint">Keeps its history; hides it from every view.</span></div></div>`;
-  putHTML(p,raw(h)); p.hidden=false; sneakMvAttach(p); paintIcons(p); const d=$("#mvDesc"); if(d&&typeof autoGrow==="function") autoGrow(d);   /* BL-322: Sneak peek's sparkle, foot line and box */
+  putHTML(p,raw(h)); mountFeedTabs(p); p.hidden=false; sneakMvAttach(p); paintIcons(p); const d=$("#mvDesc"); if(d&&typeof autoGrow==="function") autoGrow(d);   /* BL-322: Sneak peek's sparkle, foot line and box */
   if(keep&&document.getElementById(keep)) document.getElementById(keep).focus(); 
   drFcDraw(); }
 export function mvShake(){ const p=$("#mvPeek"); if(!p) return; p.classList.remove("shake"); void p.offsetWidth; if(!reduced()) p.classList.add("shake"); snack("Finish or cancel the pending change first."); }
@@ -494,7 +496,7 @@ export function mvAddDraw(p,pn){ const A=shared.MV.add, sug=mvAddSug(A), st=A.st
   h+=`</div><div class="mv-pksec"><h4>Dates</h4><div class="mv-row2"><div class="mv-fld">Agreed (the baseline)${mvDpBtn("mvAgr",A.agr,"Agreed date")}</div><div class="mv-fld">Forecast${mvDpBtn("mvFc",A.fc,"Forecast")}</div></div></div>`;
   h+=`<div class="mv-pksec"><h4>Progress</h4><div class="mv-rng"><input type="range" id="mvRng" min="0" max="100" step="5" value="${A.pct||0}" aria-label="Percent complete"><input type="number" class="mv-in" id="mvNum" min="0" max="100" value="${A.pct==null?"":A.pct}" aria-label="Percent complete number" placeholder="%"></div><span class="mv-hint">Set by hand. Not calculated from actions.</span></div>`;
   h+=`<div class="mv-pksec"><h4>Description</h4><label class="mv-fld">Scope and needs<textarea class="mv-in" id="mvDesc" rows="3" placeholder="What the milestone covers and what it needs">${esc(A.desc)}</textarea></label>
-    <div class="mv-fld" style="margin-top:10px">Owner<button type="button" class="mv-cb" id="mvOwner" data-mvppl="aowner" aria-haspopup="listbox" aria-label="Owner, ${esc(A.owner||"not set")}"><span>${A.owner?esc(A.owner)+mvOrg(A.owner):'<span class="mv-hint">Choose the owner</span>'}</span>${ic("chevdown",{bare:true})}</button><span class="mv-hint">From the people list, or add a new person.</span></div></div>`;
+    <div class="mv-fld" style="margin-top:10px">Owner<button type="button" class="mv-cb" id="mvOwner" data-mvppl="aowner" aria-haspopup="listbox" aria-expanded="false" aria-label="Owner, ${esc(A.owner||"not set")}"><span>${A.owner?esc(A.owner)+mvOrg(A.owner):'<span class="mv-hint">Choose the owner</span>'}</span>${ic("chevdown",{bare:true})}</button><span class="mv-hint">From the people list, or add a new person.</span></div></div>`;
   h+=`<div class="mv-pksec"><h4>Client view</h4><div class="mv-swrow"><button type="button" class="mv-sw" id="mvCli" role="switch" aria-checked="${A.client}" aria-label="Visible to client"></button><span>Visible to client</span></div>
     <label class="mv-fld">Client wording<textarea class="mv-in" id="mvCw" rows="2" ${A.client?"":"disabled"} placeholder="Plain wording a client can read">${esc(A.cw)}</textarea></label><span class="mv-hint">${A.client?"Needed: it is what a client reads.":"Off by default. Only visible milestones appear in client output."}</span></div>`;
   h+=`<div class="mv-pksec mv-afoot"><button type="button" class="mv-btn pri" id="mvACreate" data-mvpk="acreate" data-key="${MOD}↵" data-tip="Create milestone">${ic("plus")}Create milestone</button><button type="button" class="mv-btn" data-mvpk="close">Cancel</button><div class="mv-err" id="mvACreateErr" role="alert"></div></div></div>`;

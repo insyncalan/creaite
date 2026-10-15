@@ -27,6 +27,10 @@ class ActivityItemLinks(LiveBrowserCase):
     def setUp(self):
         super().setUp()
         b = self.b
+        # BL-327: the shared server's data is soon older than PAGE_FRESH, so each load re-reads /api/data after its first paint;
+        # under load that reload redrew Activity or the project page after the set-up below, taking the probe lines (or #probe)
+        # away, so the click opened nothing. Wait for it (and any pulse) first.
+        b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
         # one line of each kind, worded as the change log words them: "<ID> · <what changed>"
         self.ids = b.eval("""(()=>{ const a=A[0], r=R[0], d=DEC[0], m=P.flatMap(p=>p.ms).find(m=>m[3]);
           ACT=[a,r,d].map(x=>({at:"2026-10-09",what:x.id+" · changed",by:"You"})).concat([{at:"2026-10-09",what:m[3]+" · moved",by:"You"},

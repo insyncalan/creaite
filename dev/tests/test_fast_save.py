@@ -159,6 +159,95 @@ class PageInputsTests(unittest.TestCase):
         self.assertNotIn("live-server-starting.json", names)
 
 
+# Run in the vault: build dashboard.html, load the page twice (from it, then from memory), make one change, load again.
+# Prints the three sources and whether the last load's data holds `look` anywhere.
+LOADS = """import json, os, sys, time
+sys.path.insert(0, 'system/scripts')
+import build_dashboard, live_server
+build_dashboard.build()
+a, b = live_server.page_data()[1], live_server.page_data()[1]
+time.sleep(0.05)
+def synced(src, dest, text='x'):
+    '''A file arriving as OneDrive sync or a Finder move brings it: with an old time of its own.'''
+    os.makedirs(os.path.dirname(src), exist_ok=True)
+    open(src, 'w').write(text)
+    os.utime(src, (1e9, 1e9))
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    os.replace(src, dest)
+CHANGE
+data, c, _ = live_server.page_data()
+print(json.dumps([a, b, c, LOOK in json.dumps(data)]))
+"""
+
+
+class PageInputTests(unittest.TestCase):
+    """BL-327 (plan #6): what the page shows but no other input notices makes the next load rebuild: a file moved into
+    inbox/, processed.txt, and files arriving in a project's meeting, agenda, report or (when shown) document folders."""
+
+    def setUp(self):
+        self.v = Vault()
+        self.v.run("init")
+        put(self.v, f"{ABC}/reports/2026/.keep", "")                          # a report subfolder, there before the build
+        put(self.v, f"{ABC}/documents/Plans/.keep", "")
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def loads(self, change, look):
+        r = subprocess.run([sys.executable, "-c", LOADS.replace("CHANGE", change).replace("LOOK", repr(look))],
+                           cwd=self.v.root, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def moved_in(self, rel, look=None):
+        name = Path(rel).name
+        return self.loads(f"synced('tmp-arrival/{name}', {str(rel)!r})", look or name)
+
+    def test_unchanged_is_served_from_the_built_page(self):
+        self.assertEqual(self.loads("pass", "Example Programme"), ["built", "cache", "cache", True])
+
+    def test_a_file_moved_into_the_inbox(self):
+        self.assertEqual(self.moved_in("inbox/2026-10-14 ABC steering.vtt"), ["built", "cache", "new", True])
+
+    def test_a_file_removed_from_the_inbox(self):
+        put(self.v, "inbox/Old notes.txt", "x")
+        self.assertEqual(self.loads("os.remove('inbox/Old notes.txt')", "Old notes.txt"), ["built", "cache", "new", False])
+
+    def test_processed_txt(self):
+        line = "2026-10-15 | fp:2026-10-13|ABC weekly sync| | baseline: existing x, not extracted"
+        self.assertEqual(self.loads(f"open('system/processed.txt', 'a').write({line + chr(10)!r})", "Example Programme")[2], "new")
+
+    def test_a_transcript_synced_into_a_project(self):
+        self.assertEqual(self.moved_in(f"{ABC}/transcripts/ABC weekly sync-20261014_100000-Meeting Transcript.docx"),
+                         ["built", "cache", "new", True])
+
+    def test_minutes_and_an_agenda_in_a_subfolder(self):
+        self.assertEqual(self.moved_in(f"{ABC}/minutes/2026-10-14 ABC weekly sync.docx"), ["built", "cache", "new", True])
+        put(self.v, f"{ABC}/agendas/October/.keep", "")
+        self.assertEqual(self.moved_in(f"{ABC}/agendas/October/2026-10-16 ABC steering prep.html"), ["built", "cache", "new", True])
+
+    def test_a_report_in_a_report_subfolder(self):
+        self.assertEqual(self.moved_in(f"{ABC}/reports/2026/2026-10-09 ABC weekly report.docx"), ["built", "cache", "new", True])
+
+    def test_documents_only_when_files_shows_them(self):
+        doc = f"{ABC}/documents/Plans/Delivery plan v3.docx"
+        self.assertEqual(self.moved_in(doc)[2], "cache")                     # set aside by default: not listed, not watched
+        s = json.loads((self.v.root / "system/config/settings.json").read_text())
+        s.setdefault("dashboard", {})["files_show_documents"] = True
+        (self.v.root / "system/config/settings.json").write_text(json.dumps(s))
+        self.assertEqual(self.moved_in(doc.replace("v3", "v4")), ["built", "cache", "new", True])
+
+    def test_folders_only_and_never_index_skipped(self):
+        put(self.v, f"{ABC}/reports/_Archive/Old/.keep", "")
+        r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts'); import live_server\n"
+                            "print('\\n'.join(map(str, live_server.page_inputs())))"], cwd=self.v.root, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        got = r.stdout.splitlines()
+        self.assertTrue(any(g.endswith(f"{ABC}/reports/2026") for g in got))
+        self.assertFalse(any("_Archive" in g for g in got))
+        self.assertFalse(any(g.endswith(f"{ABC}/documents/Plans") for g in got))   # documents set aside by default
+
+
 class LiveTimingTests(unittest.TestCase):
     """The timed test on the sample vault, through the real live server."""
 

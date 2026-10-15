@@ -2,24 +2,40 @@
 <div class="wrapmax">
 <h1>People</h1>
 <p class="sub" style="margin:#px 0 #px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p>
-<div class="tabs" role="tablist" id="ptabs" aria-label="People" style="margin-bottom:#px">
-<button role="tab" data-ptab="work" aria-selected="true" aria-controls="peopleTbl">With work <span class="sub">3</span>
+<div class="tabhost" id="ptabsHost">
+<div class="tabs" id="ptabs" role="tablist" aria-label="People">
+<button type="button" role="tab" aria-selected="true" aria-controls="peopleTbl" tabindex="0" data-tab="work" data-ptab="work">With work <span class="sub">3</span>
 </button>
-<button role="tab" data-ptab="none" aria-selected="false" aria-controls="peopleTbl">Nothing assigned <span class="sub">1</span>
+<button type="button" role="tab" aria-selected="false" aria-controls="peopleTbl" tabindex="-1" data-tab="none" data-ptab="none">Nothing assigned <span class="sub">1</span>
 </button>
+</div>
 </div>
 <div class="tbl" id="peopleTbl" role="tabpanel">
 <table>
 <thead>
 <tr>
-<th class="" data-psort="name" role="button" tabindex="0" aria-sort="none">Name</th>
-<th class="" data-psort="org" role="button" tabindex="0" aria-sort="none">Organisation</th>
-<th class="" data-psort="role" role="button" tabindex="0" aria-sort="none">Role</th>
+<th class="" data-psort="name" aria-sort="none">
+<button type="button" class="thsort">Name</button>
+</th>
+<th class="" data-psort="org" aria-sort="none">
+<button type="button" class="thsort">Organisation</button>
+</th>
+<th class="" data-psort="role" aria-sort="none">
+<button type="button" class="thsort">Role</button>
+</th>
 <th>Projects</th>
-<th class="num" data-psort="oa" role="button" tabindex="0" aria-sort="none">Open actions</th>
-<th class="num" data-psort="or" role="button" tabindex="0" aria-sort="none">Open RAID</th>
-<th class="num" data-psort="dw" role="button" tabindex="0" aria-sort="none">Decisions waiting</th>
-<th class="num" data-psort="late" role="button" tabindex="0" aria-sort="descending">Overdue ▼</th>
+<th class="num" data-psort="oa" aria-sort="none">
+<button type="button" class="thsort">Open actions</button>
+</th>
+<th class="num" data-psort="or" aria-sort="none">
+<button type="button" class="thsort">Open RAID</button>
+</th>
+<th class="num" data-psort="dw" aria-sort="none">
+<button type="button" class="thsort">Decisions waiting</button>
+</th>
+<th class="num" data-psort="late" aria-sort="descending">
+<button type="button" class="thsort">Overdue ▼</button>
+</th>
 </tr>
 </thead>
 <tbody>

@@ -229,3 +229,125 @@ v1.9.3 is BL-322 and BL-323 (and BL-275); **BL-09 moved to its own v1.9.4** (Ala
 **Tests (local):** `check.py` OK. Passed: test_backups, test_backup_restore_ui, test_sneak_peek_read, test_sneak_peek_ui, test_search, test_search_pdf, test_search_eml, test_search_live, test_search_dashboard, test_onedrive_projects, test_portability, test_check_py39, test_new_vault, test_first_run, test_file_access, test_admin_card, test_snapshots, test_dashboard_split, test_help, test_ui_sweep, test_today_home, test_today_brief, test_today_days_ui, test_close_day_card, test_settings_page, test_settings_calmer, test_settings_catalogue, test_health_fixes, test_meeting_hub, test_work_item_peek, test_rejects_ui, test_rail_customise, test_vip_screens, test_promises, test_prep_popup, test_prep_view, test_ask_claims, test_ask_field_card, test_draft_chase_pane, test_motion, test_sweep_alerts, test_update, test_tracker and the guard tests.
 
 **Open from the branches' notes:** `v193-backups` lists what it didn't do (missed OneDrive days aren't backfilled).
+
+## v195-archiving brought up to date (Team Cap, 15-10-2026; issue #43, step 1 of `dev/sprints/v195-release.md`)
+
+`v195-archiving` (9e810e3: BL-09, BL-10, BL-03) with, in order, `git merge --no-ff`:
+
+| Branch | Head | Items | Merge |
+|---|---|---|---|
+| `release-194` | deba702 | v1.9.4: BL-09, BL-304 instant edits, BL-327 one server, BL-328 sweep lock | 1028b07 |
+| `v196-move-back` | 88c6093 | BL-331: move an archived report back from Files | 9ddfc39 |
+
+All three heads are single squashed commits on a478bbd, and each carries BL-09 again (`v196-move-back` also carries BL-10
+and BL-03). BL-09 is kept once: no doubled function, migration, test or docs line (checked: no new duplicate `def` in the
+merged Python; `schema.sql`, `V194-ARCHIVE-NOTE.md`, `test_archive_projects.py` and the pinned files merged as one).
+
+**Conflicts with `release-194` and how they were resolved**
+
+- `paths.py`, `reach.py`, `tracker.py`, `propose.py`, `health.py`, `settings_catalogue.py`, `creaite-rules.md`,
+  `dashboard-spec.md`: release-194's side was BL-09 alone; archiving's side extends it (BL-03's `archived_file` and
+  `archivable_folders`, the `reports` move shape, `archive_item`/`AGE_OP`, `age_archived_before`, the move record's `kind`
+  and the folders it made, "Move file" on the card, the Archiving checks, "Show archived projects and items"). Archiving's
+  side kept.
+- `doctor.py`: archiving's two checks kept beside release-194's sweep lock: 37 checks (`test_portability`'s count and
+  comment updated).
+- `build_dashboard.py`: release-194's BL-304 row helpers and `records()`, and BL-327's `records_version` and
+  `collect(now, timings)` taken (archiving had none of them).
+- `health_fixes.py`, `test_health_fixes.py`: both new fixes kept (`archive_reports`, `sweep_lock`), in the fix list, the
+  commands and the check map.
+- `help.md`: release-194's Health line (with the sweep lock) and archiving's Archiving bullet.
+- `settings-advanced` golden: archiving's (it already has release-194's one change, "Default: _Archive", from BL-09).
+- Generated files rebuilt (`build_dashboard_js.py globals`, `split_dashboard.py build`, `build_guides.py`); `check.py` OK.
+
+**`v196-move-back`**
+
+Merging it directly conflicted in ten files, all from the doubled BL-09/BL-10/BL-03 (including add/add on `archive.py`).
+`v196-move-back`'s tree is `v195-archiving`'s 9e810e3 plus BL-331 (`git diff 9e810e3 88c6093`: 13 files), so the merge
+commit takes this branch's tree and applies only that diff three-way. Every file applied cleanly except `help.md`:
+release-194's Health line kept, with BL-331's Archiving bullet (Move back from Files). Generated files rebuilt;
+`check.py` OK. Both `origin/release-194` and `origin/v196-move-back` are ancestors of the branch.
+
+**After the merges (own commits)**
+
+- 7d96da8, the BL-323 follow-up (issue #44): the live server's `backup_daily_job` runs `archive.py daily` after the
+  backup, the zip and Tidy up; `archive_timer`, `archive_tick` and `CREAITE_ARCHIVE_FIRST` removed; session start keeps
+  its call after the daily backup. New test `test_the_live_servers_daily_job_runs_it_after_tidy_up`.
+- c490480: `test_archive_reports` asserted the archive line's date as the pinned 14-10-2026, but the apply's date is the
+  wall clock, so it failed from 15-10-2026. Now any date. Pre-existing, not from the merges.
+
+**Tests (local, -j 3), on c490480:** `check.py` OK. 56 files passed, among them test_archive_items, test_archive_reports,
+test_archive_projects, test_archive_move_back, test_backups, test_backup_restore_ui, test_session_sweep, test_live_server,
+test_live_updates, test_one_server, test_fast_save, test_instant_edits, test_sweep_lock, test_ask_gone_chat,
+test_health_fixes, test_portability, test_settings_catalogue, test_settings_calmer, test_snapshots, test_help, test_reach,
+test_record_commands, test_guard_pinned, test_script_policy, test_run_read_pinned, test_tracker, test_writer_pinned,
+test_pages, test_onedrive_projects, test_file_access, test_search, test_update, test_debug_log_wiring,
+test_dashboard_split, test_agendas_files, test_propose, test_excel, test_new_vault, test_project_names, test_admin_card.
+test_sweep_lock's `test_a_finished_sweep_leaves_no_lock` failed under load and passed alone (twice).
+
+**Then pinned:** `test_archive_reports` now pins the apply's date as well (`CREAITE_STAMP_DAY`, a tests-only seam in
+`tracker.now()`: it fixes the date part of the stamps, the time of day stays real), so its exact "on 14-10-2026" check is
+back and the "quiet for the rest of the month" check no longer depends on the real month.
+
+## release-195 (v1.9.5)
+
+From `release-194` 0f80ae8 (Team Stark, 15-10-2026; issue #48, step 3 of `dev/sprints/v195-release.md`). Merged, in
+order, each with `git merge --no-ff`:
+
+| Branch | Head | Items | Merge |
+|---|---|---|---|
+| `v195-vip-conversations` | b0f0e2a | BL-324, BL-325, BL-333, BL-334 (holds release-194 up to dc5c8bc) | e9457e8 |
+| `origin/v195-archiving` | 1770fa3 | BL-10, BL-03, and `v196-move-back`'s BL-331 (Team Cap) | 34b0f1a |
+| `v195-consistency` | f085b4c | BL-316, all screens on the building blocks (holds BL-325's design scale) | 8f664e8, rebuilt 6559133 |
+| `v195-peek-320` | 728cd22 | #80: the proposal peek's actions all on screen at 320px | 7606de9 |
+| `v195-notes` | 4a190c7 | the v1.9.5 release notes and hand checks | 3e066ad |
+
+Generated files (`build_dashboard_js.py globals`, `split_dashboard.py build`, `build_guides.py`) were rebuilt after each
+merge; only the `v195-consistency` merge changed them (6559133).
+
+**Conflicts and how they were resolved**
+
+- `v195-vip-conversations`, `origin/v195-archiving`, `v195-peek-320`, `v195-notes`: clean.
+- **`v195-consistency`** (release-194's line against BL-316's; rule: release-194's behaviour, on BL-316's blocks; no old
+  helper brought back):
+  - Generated files (`dashboard.html`, the two guides): either side, then rebuilt.
+  - `panel.js`, `core/server.js`, `settings.js`, `work.js`: release-194's `pkDots` (BL-304: a hollow dot while a change
+    is saving, and the ids waiting for Apply) is BL-316's `markStagedRows` on the StatusDot block (`statusDotNodes`,
+    `pkdot saving` for the hollow one, `data-st` kept); every caller uses `markStagedRows`.
+  - `core/server.js`: BL-327's quick save rewrote `#snackT` when `snkOn()`; now it rewrites the Toast block's message in
+    place (`TOAST.text`, `drawPageToast()`, its time kept). The imports keep release-194's `REC`.
+  - `settings.js`: BL-09's "open items" prompt was a hand-made `<dialog>` with `showModal()` (two Dialog old helpers); it
+    is now the Dialog block, `#parchDlg`, made on first use by `makeArchiveAskDialog()` in `PageDialogs.jsx` (like
+    `#actDlg`); Esc or the scrim is Stop. The ⌘K aria-label stopgap goes, as on BL-316's side (`#cmdk` is a PageDialog).
+  - `ask.js`: BL-326's restore of a chat (`runAsk` on an ask creaite started, its closure line, no Stopped under it) with
+    BL-316's History on the Menu block (`MSKEL` no longer imported); release-194's `parseHash`, `restoreNav` and
+    `VAULT_PATH` imports kept.
+  - `intake.js`, `main.js`: imports joined (`openDialog` and `runAsk`; `bootToast` and `bootPageRefresh`).
+  - `shell.html`: BL-316 moved the page's dialogs into `PageDialogs.jsx`; release-194's side only had BL-325's font-size
+    changes to them, already in `PageDialogs.jsx`. BL-316's side taken.
+  - `work.js` (the People tabs): BL-316's Tabs block; both sides had the same `thsort` header.
+  - `style.css` (30 hunks): both sides carry BL-325's design scale as a squash, and `v195-vip-conversations` holds an
+    earlier cut of it (no `--z-popup` tokens, `.mini` 26px, the old Today `.th3`); `v195-consistency`'s is
+    `origin/v195-design-scale`'s exactly, plus BL-316's (`--scrim`, the Menu block's `.ddmenu.pop`, `.rjmenu`, `.fcount`,
+    `.tabhost`). So BL-316's file, plus release-194's only CSS (BL-304's `.pkdot.saving`) and BL-334's conversation
+    cards (`.tdcands` and the rest). The rail's Customise backdrop is `var(--scrim)`.
+  - `creaite-rules.md`: release-194's line (BL-334's `vip.json` note; both had "Calendar import"). `test_today_brief.py`:
+    the same code; ours' comment.
+
+**Fixes (own commits)**
+
+- 5b192df: `behaviour_expected_failures.json` lists `#parchDlg` as unreached (Shell), like `#boardDlg` and `#llDlg`: the
+  Archive button opens it only when the server finds open items, so no sample screen reaches it. A deliberate exception;
+  `test_shared_behaviour` failed on it under load and alone before.
+
+**Checks:** `check.py` OK, old-helper counter 0 (baseline 0). `typecheck.py` 0 errors (one, `snkOn`, fixed in the merge).
+
+**Tests (local, the full suite, 256 files):** 255 passed under load; `test_shared_behaviour` failed (the `#parchDlg` line
+above) under load and alone, and passes after 5b192df. `test_snapshots` passed with no golden recorded again;
+`settings-advanced` shows `_Archive` (BL-09, via release-194).
+
+**Security (from the branches, for Team 1 to confirm; none from the merges):** `origin/v195-archiving` adds
+`reach.ARCHIVE_MOVES` `reports` and `reports_back` (one file into, or back from, its engagement's `_Archive`; `FILE_MOVES`),
+`SCRIPT_COMMANDS["archive.py"]` (`daily` record, `items` record or `--dry-run`, `reports` and `status` read), the
+move-back route on the approval card, the `archive` settings group, and `CREAITE_STAMP_DAY` (a tests-only seam in
+`tracker.now()`), pending Alan's confirmation. No `schema.sql` change in the merges.

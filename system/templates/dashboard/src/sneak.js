@@ -241,7 +241,7 @@ export function bootSneak() {
   window.addEventListener("keydown", e => {
     if (replaying || e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || e.repeat || typing()) return;
     if (document.querySelector("dialog[open]") || !sneakWhere()) return;
-    const a = document.activeElement; if (a && a.closest && a.closest("#chat,.pkpop,.bmenu,.cal,.combo")) return;
+    const a = document.activeElement; if (a && a.closest && a.closest("#chat,.pkpop,[role=menu],.cal,.combo")) return;
     e.preventDefault(); e.stopImmediatePropagation();
     if (slashT) { clearTimeout(slashT); slashT = 0; if ($("#chat").classList.contains("on")) closeChat(); sneakOpen(); return; }
     slashT = /** @type {any} */ (setTimeout(() => { slashT = 0; replaying = true;

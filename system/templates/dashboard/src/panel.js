@@ -6,9 +6,16 @@ import { actHref, actId } from "./activity.js";
 import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
 import { CHASE_ICON, mountChase, unmountChase } from "./components/peek/ChasePane.jsx";
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
+import { openNewWorkstream } from "./components/peek/NewWorkstream.jsx";
+import { drawTabs } from "./components/Tabs.jsx";
+import { statusDotNodes } from "./components/StatusDot.jsx";
+import { peekMark, peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { typing } from "./core/keys.js";
-import { CALI, DATE_HELP, formProject, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
+import { comboboxOpen } from "./components/Combobox.jsx";
+import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
 import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
@@ -18,10 +25,10 @@ import { ovAdd, ovDrop, ovReapply, savingIds } from "./core/instant.js";
 import { draftAsk, draftBtn, draftCardHtml, draftStat, draftWhyNot } from "./drafts.js";
 import { pdDrop, pdKeyOf, pdOffer, pdRaw, pdWhen, pKeysShow } from "./help.js";
 import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js";
-import { feedBlock, feedLines, feedListHtml, feedTabsHtml, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
-import { closePanel, curGuard, depChips, depHash, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
+import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
+import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
 import { decide, isMin, llNoteHtml, rejectMinutes, rjMenuFor, rtNoteHtml, rvDup, rvRejectOK } from "./review.js";
-import { alertStage, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
+import { alertStage, alertStaged, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
 import { pkAdd, plur, renderToday } from "./today.js";
 import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF, rvPaint } from "./work.js";
 /* ======================= detail panel ======================= */
@@ -159,7 +166,7 @@ export function editCtl(n,t,v,opts){ const id="f_"+n;
   if(t==="cm") return `<textarea name="${n}" id="${id}" rows="4">${esc(v||CMT)}</textarea>`;
   if(t==="cmd") return `<textarea name="${n}" id="${id}" rows="3" placeholder="Plain wording for the client — no fixed headings">${esc(v||"")}</textarea>`;
   if(t==="date") return `<span class="dwrap"><input type="text" name="${n}" id="${id}" value="${esc(v?fd(v):"")}" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1"><button type="button" class="dbtn" data-cal="${id}" aria-label="Choose date">${CALI}</button></span>`;
-  if(t==="owner") return `<div class="combo"><input type="text" name="${n}" id="${id}" value="${esc(v&&v!=="TBC"?v:"")}" placeholder="Choose or type a name" autocomplete="off"><div class="combo-list"></div></div>`;
+  if(t==="owner") return `<div class="combohost" data-combo="${n}" data-v="${esc(v&&v!=="TBC"?v:"")}" data-label="${n==="by"?"Decision maker":"Owner"}"></div>`;   /* BL-316: a Combobox, drawn by mountOwnerFields */
   if(t==="ws") return `<input type="text" name="${n}" id="${id}" list="wslist" value="${esc(v||"")}" placeholder="${formProject()?`A ${formProject()} workstream`:"e.g. Data, Testing"}"><datalist id="wslist">${wsFor(formProject()).map(w=>`<option value="${esc(w)}">`).join("")}</datalist>`;   /* BL-57: only this project's */
   if(t==="check") return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="${n}" id="${id}" ${v?"checked":""}> Include in client reports</label>`;
   if(t==="calc") return `<span id="f_prcalc">${esc(v)}</span>`;
@@ -170,7 +177,7 @@ export function openRecord(k,id,f){ { const k1=k==="all"?kOfId(id):k, x=REC(k1,i
     if(x&&!curGuard(()=>openRecord(k1,id))){ shared.CUR={mode:"record",k:k1,id}; shared.SEL=id; shared.EDITING=false; if(shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person") markSel(); drawPanel(); $("#panel").classList.add("on"); navWrite(false); } }
   if(!shared.LOADING){ $$(`.mnew[data-mk="${CSS.escape(k+":"+id)}"]`).forEach(mDotGo);
   if(f&&pkOn()){ const el=f==="t"?$("#pkTitle"):["upd","resp","why"].includes(f)?$("#pkDesc"):$(`#panel [data-pkp="${f}"]`); el&&el.focus(); } } }
-export function openNew(k,how){ (()=>{ if(!PKK.includes(k)) return; if(curGuard(()=>openNew(k,how))) return; if(shared.PKPOP) pkPopClose(false);
+export function openNew(k,how){ (()=>{ if(!PKK.includes(k)) return; if(curGuard(()=>openNew(k,how))) return; closePicker("owner",false);
   const draft=pkNewBlank(k,how); PKN.seq++;
   shared.CUR={mode:"new",k,how:how||"",nid:`nw${PKN.seq}-${Date.now().toString(36)}`,draft,blank:{...draft},staged:null}; shared.SEL=null; markSel(); shared.EDITING=false; PK.wide=false;
   drawPanel(); $("#panel").classList.add("on"); $("#pkTitle").focus(); })();
@@ -213,7 +220,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(shared.CUR.mode==="proposal"){ const sig=learnable(REV.find(r=>r.n===shared.CUR.n)); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
   if(shared.CUR.mode==="health") h+=`<div class="evidence" id="hEvidence" aria-live="polite"></div>`;
   if(shared.CUR.k==="project") h+=`<dd class="full">${feedBlock("proj",projFeedItems(shared.CUR.code))}</dd>`;   /* BL-250 A: its history, under the fields */
-  putHTML($("#pFields"),raw(h)); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
+  putHTML($("#pFields"),raw(h)); mountOwnerFields($("#pFields")); mountFeedTabs($("#pFields")); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
   const foot={record:"",   /* BL-176 (sprint-peek): an action, RAID item or decision is the peek, with no Edit, Save or Cancel */
     proposal:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn" id="pSave">Save</button><button class="btn primary" id="pSaveA">Save and approve</button>`,
     health:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Save</button>`,
@@ -235,7 +242,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(shared.EDITING){ const f=focusField&&$("#f_"+(focusField==="imp"?"imp":focusField)); (f||$("#pFields .rted")||$("#pFields [name]"))?.focus(); } } finally{ PANELF=false; } morePanel(focusField);
   { if(shared.CUR&&shared.CUR.mode==="proposal"){ const r=REV.find(x=>x.n===shared.CUR.n); if(r&&rvDup(r)&&!r.done)
     addHTML($("#pFields"),"afterbegin",raw(llNoteHtml(r))); } }   /* BL-133 */
-  depChips();
+  depFormDraw();
   { $("#pWarn")?.remove(); const w=shared.CUR&&shared.CUR.mode==="record"?warnsOf(shared.CUR.k,shared.CUR.id):[];
     if(w.length) addHTML($("#pTitle"),"afterend",html`<div class="wnote" id="pWarn">${w.map(x=>html`<div>${raw(WICO.replace("<svg",'<svg width="14" height="14" style="flex:none;margin-top:1px"'))}<span>${x.text}</span></div>`)}</div>`); }   /* BL-51 */
   if(!shared.LOADING){ pKeysShow(pkNew()&&$("#pFields").contains(document.activeElement));   /* BL-157 */
@@ -370,7 +377,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||shared.COMBO||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,.bmenu,#railPop,#railMoreMenu,#newMenu,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */
@@ -393,42 +400,33 @@ export const pkTitleL=k=>k==="actions"?"Action":k==="raid"?"Description":"Decisi
 export const pkOwnF=k=>k==="decisions"?"by":"o", pkOwnL=k=>k==="decisions"?"Decision maker":"Owner";
 export const pkStatuses=k=>k==="decisions"?["Pending","Made","Withdrawn"]:k==="raid"?["Open","Closed","Cancelled"]:["Open","Delayed","Closed","Cancelled"];
 export const pkLate=(k,x)=>k==="decisions"?decLate(x):!!(OPENST(x.st)&&x.due&&x.due<TODAY);
-export const pkPlain=h=>String(h).replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"');
 export const pkWho=n=>!n||n==="TBC"?"":n;
 export const PKFL={t:null,upd:"Latest update",resp:null,why:"Reasoning",st:"Status",pr:"Priority",o:"Owner",by:"Decision maker",due:null,date:"Date made",imp:"Impact",lik:"Likelihood",type:"Type",
   p:"Project",ws:"Workstream",ms:"Milestone",opts:"Options considered",revisit:"Revisit",replaces:"Replaces",client:"Client-visible",cm:"Client messaging",cmd:"Client messaging"};
 export const pkLabel=(k,f,x)=>f==="t"?pkTitleL(k):f==="resp"?RESPL(x.type):f==="due"?(k==="decisions"?"Needed by":"Due date"):PKFL[f]||f;
-/* the marks: a status ring, priority bars, initials (24px grid, the theme's colours; text beside each, never colour alone) */
-export function pkSt(st){ const c={Open:"var(--accent)",Delayed:"var(--warn)",Closed:"var(--ok)",Cancelled:"var(--faint)",Pending:"var(--muted)",Made:"var(--ok)",Withdrawn:"var(--faint)"}[st]||"var(--muted)";
-  const inner={Open:'<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',Delayed:'<path d="M12 8v4l2.5 1.5"/>',Closed:'<path d="M8 12.5l3 3 5-6"/>',Cancelled:'<path d="M9 9l6 6M15 9l-6 6"/>',Made:'<path d="M8 12.5l3 3 5-6"/>',Withdrawn:'<path d="M9 9l6 6M15 9l-6 6"/>'}[st]||"";
-  return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" style="color:${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8" ${st==="Pending"?'stroke-dasharray="3 3"':""}/>${inner}</svg>`; }
-export function pkPr(p){ const n={Urgent:4,High:3,Medium:2,Low:1}[p]||0, c={Urgent:"var(--bad)",High:"var(--warn)",Medium:"var(--accent)",Low:"var(--faint)"}[p]||"var(--faint)";
-  return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${[0,1,2,3].map(i=>`<rect x="${3+i*5}" y="${16-i*4}" width="3.4" height="${4+i*4}" rx="1" fill="${c}" opacity="${i<n?1:.25}"/>`).join("")}</svg>`; }
-export function pkAv(n){ n=pkWho(n); if(!n) return ic("user"); const i=n.split(/\s+/).map(w=>w[0]||"").join("").slice(0,2).toUpperCase();
-  return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--accent-soft)"/><text x="12" y="15.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--accent)" font-family="inherit">${esc(i)}</text></svg>`; }
-export function pkChip(f,name,icon,html,empty,cls=""){ return `<div class="pk-prop"><button type="button" class="pk-chip${empty?" empty":""}${cls?" "+cls:""}" data-pkp="${f}" aria-haspopup="listbox" aria-label="${esc(name)}: ${esc(empty?"not set":pkPlain(html))}" data-tip="${esc(name)}">${icon}<span>${html}</span></button></div>`; }
+/* the marks (a status ring, priority bars, initials) are PeekProps.jsx's (peekMark) */
 export const PKDRAW=[];                                   /* later blocks add what they draw (staging, details, activity) */
 export function pkNote(msg){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||""; }
 export function pkDrawId(x,k){ putHTML($("#pkId"),html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type}" data-tip="Type">${x.type}${raw(ic("chevdown"))}</button>`:""}`);
   const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`)); }
 export function pkDrawProps(x,k){ (()=>{ if(shared.PKPOP&&($("#pkProps").contains(shared.PKPOP.anchor)||$("#pkProps2").contains(shared.PKPOP.anchor)||$("#pkId").contains(shared.PKPOP.anchor))) return;
-  const o=pkWho(x[pkOwnF(k)]), late=pkLate(k,x);
-  let h=pkChip("st","Status",pkSt(x.st),esc(x.st),false);
-  if(k==="actions") h+=pkChip("pr","Priority",pkPr(x.pr),esc(x.pr||"Medium"),false);
-  if(k==="raid"){ const p=prio(x.imp,x.lik); h+=`<div class="pk-prop"><div class="pk-chip ro" role="note" aria-label="Priority: ${p}, calculated from impact and likelihood" data-tip="Priority is calculated from impact and likelihood">${pkPr(p)}<span>${p}</span></div></div>`; }
-  h+=pkChip("o",pkOwnL(k),pkAv(o),o?esc(o)+(isMe(o)?' <small class="sub">(you)</small>':""):(k==="decisions"?"Add decision maker":"Add owner"),!o);
-  if(k==="decisions"&&x.st==="Made") h+=pkChip("date","Date made",ic("calendar"),x.date?`<span class="nw">${esc(fd(x.date))}</span>`:"Date made",!x.date);
-  else h+=pkChip("due",pkLabel(k,"due",x),ic("calendar"),x.due?`<span class="nw">${esc(fd(x.due))}</span>`+(late?" <em>overdue</em>":""):pkLabel(k,"due",x),!x.due,late?"late":"");
-  putHTML($("#pkProps"),raw(h));
-  putHTML($("#pkProps2"),k==="raid"?raw(pkChip("imp","Impact",ic("alert"),"Impact: "+esc(x.imp||"Medium"),false)+pkChip("lik","Likelihood",ic("alert"),"Likelihood: "+esc(x.lik||"Medium"),false)):""); })();
+  /* BL-316: each property is a Chip (components/peek/PeekProps.jsx), drawn afresh as before */
+  const o=pkWho(x[pkOwnF(k)]), late=pkLate(k,x), L=/** @type {import("./components/peek/PeekProps.jsx").PeekProp[]} */([{f:"st",name:"Status",mark:{st:x.st},value:x.st||""}]);
+  if(k==="actions") L.push({f:"pr",name:"Priority",mark:{pr:x.pr},value:x.pr||"Medium"});
+  if(k==="raid"){ const p=prio(x.imp,x.lik); L.push({f:"prc",name:"Priority",mark:{pr:p},value:p,ro:`Priority: ${p}, calculated from impact and likelihood`,roTip:"Priority is calculated from impact and likelihood"}); }
+  L.push({f:"o",name:pkOwnL(k),mark:{who:o},value:o||(k==="decisions"?"Add decision maker":"Add owner"),you:!!o&&isMe(o),empty:!o});
+  if(k==="decisions"&&x.st==="Made") L.push({f:"date",name:"Date made",popup:"dialog",mark:{icon:"calendar"},value:x.date?fd(x.date):"Date made",nw:!!x.date,empty:!x.date});
+  else L.push({f:"due",name:pkLabel(k,"due",x),popup:"dialog",mark:{icon:"calendar"},value:x.due?fd(x.due):pkLabel(k,"due",x),nw:!!x.due,late:!!x.due&&late,empty:!x.due,cls:late?"late":""});
+  $("#pkProps").replaceChildren(...peekPropNodes(L));
+  $("#pkProps2").replaceChildren(...peekPropNodes(k==="raid"?[{f:"imp",name:"Impact",mark:{icon:"alert"},value:"Impact: "+(x.imp||"Medium")},{f:"lik",name:"Likelihood",mark:{icon:"alert"},value:"Likelihood: "+(x.lik||"Medium")}]:[])); })();
   if(shared.CUR&&shared.CUR.mode==="proposal"&&!(shared.PKPOP&&$("#pkProps").contains(shared.PKPOP.anchor))&&!$('#pkProps [data-pkp="p"]'))
-    addHTML($("#pkProps"),"beforeend",raw(pkChip("p","Project",ic("projects"),x.p?esc(pName(x.p)):"Choose a project",!x.p))); }
+    $("#pkProps").append(...peekPropNodes([{f:"p",name:"Project",mark:{icon:"projects"},value:x.p?pName(x.p):"Choose a project",empty:!x.p}])); }
 export function pkDrawText(x,k){ const t=$("#pkTitle"), d=$("#pkDesc"), f=pkDescF(k);
   t.setAttribute("aria-label",pkTitleL(k)); if(document.activeElement!==t) t.textContent=x.t||"";
   $("#pkDescL").textContent=pkDescL(k,x); d.dataset.pkf=f; d.dataset.ph=pkDescPh(k,x); d.setAttribute("aria-label",pkDescL(k,x)); if(document.activeElement!==d) d.textContent=x[f]||""; }
 export function pkDraw(){ const x=curObj(), k=shared.CUR.k; if(!x){ closePanel(); return; }
   const key=shared.CUR.mode+":"+k+":"+(pkCid()||shared.CUR.n), fresh=PK.key!==key;
-  if(shared.PKPOP&&!fresh){ PK.redraw=true; return; } if(shared.PKPOP) pkPopClose(false);
+  if(shared.PKPOP&&!fresh){ PK.redraw=true; return; } closePicker("owner",false);
   if(fresh){ PK.key=key; PK.tab="all"; PK.pc=null; pkNote(""); }
   const a=document.activeElement, af=!fresh&&a&&a.closest&&a.closest("#panel [data-pkp]")?a.dataset.pkp:null;   /* a redraw keeps the focus on the same chip */
   pkDrawId(x,k); pkDrawProps(x,k); pkDrawText(x,k); PKDRAW.forEach(f=>f(x,k,fresh));
@@ -437,62 +435,12 @@ export function pkDraw(){ const x=curObj(), k=shared.CUR.k; if(!x){ closePanel()
 /* a field asked for when the item opens (a value clicked in a row): focus its chip or its text */
 /* ---- pickers ---- */
 shared.PKPOP=null;
-export function pkPopClose(ret=true){ if(!shared.PKPOP) return; const a=shared.PKPOP.anchor; shared.PKPOP.el.remove(); shared.PKPOP=null; if(a) a.setAttribute("aria-expanded","false");
-  if(PK.redraw){ PK.redraw=false; if(pkOn()) pkDraw(); } else if(ret&&a&&a.isConnected) a.focus(); }
-export function pkPlace(el,anchor){ const r=anchor.getBoundingClientRect(), w=el.offsetWidth, h=el.offsetHeight;   /* kept inside the window, above ask creaite */
-  let x=r.left, y=r.bottom+4; x=Math.max(8,Math.min(x,innerWidth-w-8)); if(y+h>innerHeight-8) y=Math.max(8,r.top-h-4); el.style.left=x+"px"; el.style.top=y+"px"; }
-export function pkMk(anchor,cls,html){ pkPopClose(false); const el=document.createElement("div"); el.className="pkpop"+(cls?" "+cls:""); putHTML(el,raw(html)); (anchor.closest("dialog[open]")||document.body).appendChild(el);   /* inside an open dialog, as the calendar is */
-  shared.PKPOP={el,anchor}; anchor.setAttribute("aria-expanded","true"); pkPlace(el,anchor); el.addEventListener("keydown",e=>{ if(e.key!=="Escape") e.stopPropagation(); }); return el; }
-export const pkOpts=el=>$$(".pkopt",el).filter(b=>b.getAttribute("aria-disabled")!=="true");
-/** @param {any} anchor @param {{options: any[], value?: any, onPick: (v: any, typed?: any, o?: any) => any, search?: boolean, label?: string, allowNew?: boolean, role?: string, filter?: (q: string) => any[]}} o */
-export function pkList(anchor,{options,value,onPick,search,label,allowNew,role="listbox",filter}){   /* filter(q): BL-187, the list for what is typed (it does its own matching) */
-  let cur=options;
-  const item=role==="menu"?"menuitem":"option";
-  const el=pkMk(anchor,"",`${search?`<input class="pkq" type="search" placeholder="Search" aria-label="Search: ${esc(label)}" autocomplete="off">`:""}<div role="${role}" aria-label="${esc(label)}"></div>`), box=el.querySelector(`[role=${role}]`);
-  const draw=q=>{ const t=String(q||"").trim().toLowerCase(); cur=filter?filter(String(q||"").trim()):options;
-    let h=cur.map((o,i)=>[o,i]).filter(([o])=>filter||!t||o.label.toLowerCase().includes(t)).map(([o,i])=>`<button type="button" class="pkopt" role="${item}" data-i="${i}"${role==="listbox"?` aria-selected="${o.v===value}"`:""}${o.disabled?' aria-disabled="true"':""}>${o.icon||""}<span>${esc(o.label)}${o.hint?`<span class="h">${esc(o.hint)}</span>`:""}</span>${role==="listbox"&&o.v===value?ic("check",{cls:"ck"}):""}</button>`).join("");
-    if(allowNew&&!filter&&t&&!options.some(o=>o.label.toLowerCase()===t)) h+=`<button type="button" class="pkopt" role="${item}" data-new="1">${ic("plus")}<span>Use “${esc(String(q).trim())}”</span></button>`;
-    putHTML(box,h?raw(h):html`<div class="pkopt" aria-disabled="true">No match</div>`); };
-  draw("");
-  el.addEventListener("click",e=>{ const b=e.target.closest(".pkopt"); if(!b||b.getAttribute("aria-disabled")==="true") return;
-    if(b.dataset.new){ const q=$(".pkq",el).value.trim(); pkPopClose(); onPick(q,true); return; } const o=cur[+b.dataset.i]; pkPopClose(); onPick(o.v,false,o); });
-  el.addEventListener("keydown",e=>{ const L=pkOpts(el), i=L.indexOf(document.activeElement);
-    if(e.key==="ArrowDown"){ e.preventDefault(); (L[i+1]||L[0])?.focus(); } else if(e.key==="ArrowUp"){ e.preventDefault(); (i<=0&&$(".pkq",el)?$(".pkq",el):L[i-1]||L[L.length-1])?.focus(); }
-    else if(e.key==="Home"&&i>=0){ e.preventDefault(); L[0]?.focus(); } else if(e.key==="End"&&i>=0){ e.preventDefault(); L[L.length-1]?.focus(); }
-    else if(e.key==="Enter"&&e.target.matches(".pkq")&&!e.metaKey&&!e.ctrlKey){ e.preventDefault(); L[0]?.click(); }
-    else if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); pkPopClose(); } else if(e.key==="Tab"){ pkPopClose(false); } });
-  const q=$(".pkq",el); if(q){ q.addEventListener("input",()=>{ draw(q.value); pkPlace(el,anchor); }); q.focus(); }
-  else (el.querySelector('[aria-selected="true"]:not([aria-disabled="true"])')||pkOpts(el)[0])?.focus(); return el; }
+/* BL-316: the pickers are the Picker block's (components/Picker.jsx). A picker opened from the peek redraws it when a change
+   came in while it was open (PK.redraw), with focus back on the same control. */
+export function pkPopDone(anchor){ const f=anchor&&anchor.dataset?anchor.dataset.pkp:null;
+  return how=>{ if(!PK.redraw) return false; PK.redraw=false; if(pkOn()) pkDraw(); if(how!=="away"&&f) $(`#panel [data-pkp="${f}"]`)?.focus(); return true; }; }
 export const PKMON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 export const pkDow=iso=>(new Date(iso+"T00:00:00Z").getUTCDay()+6)%7;
-export function pkDate(anchor,o){ const op=o.onPick, gate=!!o.due, {value,onPick,label,due}=gate?{...o,onPick:v=>{ if(v&&!WK.ok&&wkAsk(v,anchor,op)) return; op(v); }}:o;
-  let base=value||TODAY, y=+base.slice(0,4), m=+base.slice(5,7)-1;
-  const el=pkMk(anchor,"pkcal","");
-  const draw=focusIso=>{ const lead=(new Date(Date.UTC(y,m,1)).getUTCDay()+6)%7, n=new Date(Date.UTC(y,m+1,0)).getUTCDate(); let days="";
-    for(let i=0;i<lead;i++) days+="<span></span>";
-    for(let d=1;d<=n;d++){ const iso=`${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`; days+=`<button type="button" class="pkday${iso===TODAY?" today":""}${iso===value?" on":""}" data-d="${iso}" aria-label="${fd(iso)}"${iso===value?' aria-pressed="true"':""} tabindex="-1">${d}</button>`; }
-    const nm=pkAdd(TODAY,7-pkDow(TODAY));
-    putHTML(el,html`<div class="pkcalh">${raw(ibtn("chevleft","Previous month",'data-m="-1"'))}<b aria-live="polite">${raw(PKMON[m])} ${raw(y)}</b>${raw(ibtn("chevright","Next month",'data-m="1"'))}</div>
-      <div class="pkgrid" role="group" aria-label="${label}">${["Mo","Tu","We","Th","Fr","Sa","Su"].map(w=>html`<span class="wd" aria-hidden="true">${raw(w)}</span>`)}${raw(days)}</div>
-      <div class="pkquick"><button type="button" class="mini" data-d="${raw(TODAY)}">Today</button><button type="button" class="mini" data-d="${raw(pkAdd(TODAY,1))}">Tomorrow</button><button type="button" class="mini" data-d="${raw(nm)}">Next Monday</button><button type="button" class="mini" data-d="${raw(pkAdd(TODAY,7))}">In a week</button><button type="button" class="mini" data-d="">Clear</button></div>
-      <input class="pkdt" type="text" value="${(fd(value||""))}" placeholder="DD-MM-YYYY, or words like fri or +3d" aria-label="${label}, typed" autocomplete="off"><div class="pkerr" role="alert"></div>`);
-    pkPlace(el,anchor); const days0=$$(".pkday",el), f=days0.find(b=>b.dataset.d===focusIso)||days0.find(b=>b.classList.contains("on"))||days0.find(b=>b.classList.contains("today"))||days0[0];
-    if(f){ f.tabIndex=0; if(focusIso!==null) f.focus(); } };
-  draw(); 
-  el.addEventListener("click",e=>{ const mb=e.target.closest("[data-m]"); if(mb){ m+=+mb.dataset.m; if(m<0){ m=11; y--; } if(m>11){ m=0; y++; } draw(null); return; }
-    const d=e.target.closest("[data-d]"); if(d){ pkPopClose(); onPick(d.dataset.d); } });
-  el.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); pkPopClose(); return; }
-    if(e.key==="Tab"&&e.shiftKey&&e.target===el.querySelector("button")) { pkPopClose(false); return; }
-    if(e.target.matches(".pkday")&&["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)){ e.preventDefault(); const to=pkAdd(e.target.dataset.d,{ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7}[e.key]);
-      if(+to.slice(5,7)-1!==m||+to.slice(0,4)!==y){ y=+to.slice(0,4); m=+to.slice(5,7)-1; } draw(to); return; }
-    if(e.key==="Enter"&&e.target.matches(".pkdt")&&!e.metaKey&&!e.ctrlKey){ e.preventDefault(); const t=e.target.value.trim(); if(!t){ pkPopClose(); onPick(""); return; }
-      const iso=parseWhen(t,TODAY,!!due); if(iso){ pkPopClose(); onPick(iso); } else { e.target.classList.add("bad"); e.target.setAttribute("aria-invalid","true"); $(".pkerr",el).textContent="Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d."; } } });
-  { const el=shared.PKPOP&&shared.PKPOP.el; if(!el) return el;
-    if(gate){ wkMark(el); new MutationObserver(()=>wkMark(el)).observe(el,{childList:true,subtree:true}); }   /* a due or needed-by date's calendar */
-    if(gate) el.addEventListener("input",e=>{ if(!e.target.matches(".pkdt")) return; const t=e.target.value.trim(), iso=t?parseWhen(t,TODAY,true):null, n=weekendNote(iso); let w=el.querySelector(".wkline");
-      if(!w){ addHTML(el.querySelector(".pkerr"),"afterend",html`<div class="wkline" role="status" aria-live="polite"></div>`); w=el.querySelector(".wkline"); }
-      w.textContent=n?`${n.text} You'll be offered the nearest working days.`:""; });
-    return el; } }
 /* ---- committing ---- */
 export const pkSame=(a,b)=>typeof b==="boolean"?!!a===b:String(a??"").trim()===String(b??"").trim();
 /* one change to one item: the fields that differ, written by pkWrite. Calls queue (PKQ), so changes are written in the order made. */
@@ -551,13 +499,14 @@ export async function pkOwner(k,id,v,typed){ const x=pkX(k,id), f=pkOwnF(k); if(
   if(typed){ n=await ownerFinal(v); if(n===null) return; }
   return pkCommit(k,id,{[f]:n},pkOwnL(k),pkWho(x[f])||"Unassigned",pkWho(n)||"Unassigned"); }
 export function pkOpenProp(f,anchor){ const x=curObj(), k=shared.CUR.k, id=pkCid(); if(!x) return;
-  if(f==="st") pkList(anchor,{label:"Status",value:x.st,options:pkStatuses(k).map(s=>({v:s,label:s,icon:pkSt(s),...pkStOpt(k,x,s)})),onPick:v=>pkSetStatus(k,id,v)});
-  else if(f==="pr") pkList(anchor,{label:"Priority",value:x.pr,options:["Urgent","High","Medium","Low"].map(v=>({v,label:v,icon:pkPr(v)})),onPick:v=>pkCommit(k,id,{pr:v},"Priority",x.pr,v)});
+  const onClose=pkPopDone(anchor);
+  if(f==="st") openPicker(anchor,{label:"Status",value:x.st,onClose,options:pkStatuses(k).map(s=>({v:s,label:s,mark:peekMark({st:s}),...pkStOpt(k,x,s)})),onPick:v=>pkSetStatus(k,id,v)});
+  else if(f==="pr") openPicker(anchor,{label:"Priority",value:x.pr,onClose,options:["Urgent","High","Medium","Low"].map(v=>({v,label:v,mark:peekMark({pr:v})})),onPick:v=>pkCommit(k,id,{pr:v},"Priority",x.pr,v)});
   else if(f==="o") pkOwnerList(anchor,x,k,id);   /* BL-187 (fix-peek-140): the list, with the register's suggestions, is below */
-  else if(f==="due") pkDate(anchor,{value:x.due,due:true,label:pkLabel(k,"due",x),onPick:v=>pkCommit(k,id,{due:v},pkLabel(k,"due",x),fd(x.due)||"none",fd(v)||"none")});
-  else if(f==="date") pkDate(anchor,{value:x.date,label:"Date made",onPick:v=>pkSetDate(k,id,v)});
-  else if(f==="imp"||f==="lik"){ const nm=PKFL[f]; pkList(anchor,{label:nm,value:x[f],options:["High","Medium","Low"].map(v=>({v,label:v})),onPick:v=>pkImpLik(k,id,f,v)}); }
-  else if(f==="type") pkList(anchor,{label:"Type",value:x.type,options:["Risk","Issue","Assumption","Dependency"].map(v=>({v,label:v,hint:RESPL(v)})),onPick:v=>pkCommit(k,id,{type:v},"Type",x.type,v)});
+  else if(f==="due") itemDatePicker(anchor,{value:x.due,due:true,label:pkLabel(k,"due",x),onClose,onPick:v=>pkCommit(k,id,{due:v},pkLabel(k,"due",x),fd(x.due)||"none",fd(v)||"none")});
+  else if(f==="date") itemDatePicker(anchor,{value:x.date,label:"Date made",onClose,onPick:v=>pkSetDate(k,id,v)});
+  else if(f==="imp"||f==="lik"){ const nm=PKFL[f]; openPicker(anchor,{label:nm,value:x[f],onClose,options:["High","Medium","Low"].map(v=>({v,label:v})),onPick:v=>pkImpLik(k,id,f,v)}); }
+  else if(f==="type") openPicker(anchor,{label:"Type",value:x.type,onClose,options:["Risk","Issue","Assumption","Dependency"].map(v=>({v,label:v,hint:RESPL(v)})),onPick:v=>pkCommit(k,id,{type:v},"Type",x.type,v)});
   else if(PKPROP[f]) PKPROP[f](anchor,x,k,id); }
 export const PKPROP={};                                   /* Details' pickers, added below */
 export function pkSetDate(k,id,v){ const x=pkX(k,id); if(!x) return; if(!v&&x.st==="Made"){ pkNote("A decision that is made needs the date it was made. Not changed."); return; }
@@ -590,11 +539,9 @@ addHTML($("#pkBar"),"afterend",html`<div class="pk-scroll" id="pkScroll"><div cl
   <div class="pk-note" id="pkNote" role="status" hidden></div>
   <div class="pk-dlrow"><div class="pk-dl" id="pkDescL"></div><span class="pk-dldr" id="pkDescDr"></span></div><div class="pk-desc pked" id="pkDesc" contenteditable="plaintext-only" role="textbox" aria-multiline="true" data-pkml="1" spellcheck="true"></div>
   <div id="pkAfter"></div></div>`);
-document.addEventListener("mousedown",e=>{ if(shared.PKPOP&&!shared.PKPOP.el.contains(e.target)&&!shared.PKPOP.anchor.contains(e.target)) pkPopClose(false); },true);
-addEventListener("resize",()=>pkPopClose(false));
-$("#pkScroll").addEventListener("scroll",()=>{ if(shared.PKPOP&&$("#pkScroll").contains(shared.PKPOP.anchor)) pkPopClose(false); });
+$("#pkScroll").addEventListener("scroll",()=>{ if(shared.PKPOP&&$("#pkScroll").contains(shared.PKPOP.anchor)) closePicker("away"); });   /* a click away and a resize: the block's own */
 $("#panel").addEventListener("click",e=>{ const c=e.target.closest("[data-pkp]"); if(!c||!pkOn()||c.classList.contains("ro")) return; e.preventDefault();
-  if(shared.PKPOP&&shared.PKPOP.anchor===c){ pkPopClose(); return; } pkOpenProp(c.dataset.pkp,c); });
+  if(pickerOpenFor(c)){ closePicker("owner"); return; } pkOpenProp(c.dataset.pkp,c); });
 /* text: commits on leaving the field; Enter ends a one-line field; Esc puts the text back */
 document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest("#panel [data-pkf][contenteditable]"); if(!el||!shared.CUR) return; el.dataset.orig=el.textContent; PK.focus={k:shared.CUR.k,id:pkCid(),f:el.dataset.pkf,el}; });
 document.addEventListener("focusout",e=>{ const el=e.target.closest&&e.target.closest("#panel [data-pkf][contenteditable]"); if(!el||!PK.focus||PK.focus.el!==el) return; const {k,id,f}=PK.focus; PK.focus=null;
@@ -603,9 +550,9 @@ window.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.close
   if(e.key==="Escape"){ e.preventDefault(); e.stopImmediatePropagation(); el.textContent=el.dataset.orig??el.textContent; el.dataset.skip="1"; el.blur(); return; }
   if(e.key==="Enter"&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!el.dataset.pkml){ e.preventDefault(); el.blur(); } },true);
 /* More: mark done (or made), ask creaite about it, copy the ID */
-$("#pkMore").onclick=()=>{ const x=curObj(), k=shared.CUR.k, id=pkCid(), b=$("#pkMore"); if(shared.PKPOP&&shared.PKPOP.anchor===b){ pkPopClose(); return; }
-  const can=k==="decisions"?x.st==="Pending":OPENST(x.st);
-  pkList(b,{role:"menu",label:"More",options:[{v:"done",label:k==="decisions"?"Mark as made":"Mark done",icon:ic("check"),disabled:!can,hint:can?"":"Already complete"},{v:"ask",label:"ask creaite about this",icon:ic("chat")},{v:"id",label:"Copy ID",icon:ic("copy")}],
+$("#pkMore").onclick=()=>{ const x=curObj(), k=shared.CUR.k, id=pkCid(), b=$("#pkMore"); if(menuOpenFor(b)){ closeMenu(); return; }
+  const can=k==="decisions"?x.st==="Pending":OPENST(x.st);   /* BL-316: the Menu block's menu (openMenu) */
+  openMenu(b,{label:"More",id:"pkMoreMenu",align:"right",items:[{id:"done",name:k==="decisions"?"Mark as made":"Mark done",icon:"check",disabled:!can,line:can?"":"Already complete"},{id:"ask",name:"ask creaite about this",icon:"chat"},{id:"id",name:"Copy ID",icon:"copy"}],
     onPick:v=>{ if(v==="done") pkSetStatus(k,id,k==="decisions"?"Made":"Closed");
       if(v==="ask"){ openChat(); setTimeout(()=>{ const t=$("#chIn"); if(t&&!t.value.trim()){ t.value=`About ${id} (${x.t}): `; t.dispatchEvent(new Event("input",{bubbles:true})); t.focus(); } },60); }
       if(v==="id"){ const done=()=>snack(`Copied ${id}`); if(navigator.clipboard) navigator.clipboard.writeText(id).then(done,()=>prompt("Copy this ID:",id)); else prompt("Copy this ID:",id); } }}); };
@@ -632,12 +579,13 @@ export function pkLast(x,k){ let el=$("#pkLast"); if(!el){ addHTML($("#pkAfter")
   const s=pkStagedOf(pkCid()), d=shared.PKDONE.filter(e=>e.id===pkCid());
   putHTML(el,html`${raw(ic("history"))}<span>${s.length?html`You edited this ${s[s.length-1].at.slice(11)===nowStamp().slice(11)?"just now":raw("at "+s[s.length-1].at.slice(11))} · ${s.length} change${s.length===1?"":"s"} staged`:d.length?html`Last applied ${fd(d[d.length-1].at)}`:x.upd_at?html`Last updated ${fd(x.upd_at)}`:""}</span>`);
   pkSaving(s.length?"ok":d.length?"ok":"",s.length?"Saved to staging":d.length?"Applied":""); }
-/* the dot on a row with something staged */
-export function pkDots(){ const ids=new Set([...shared.PKS.map(s=>s.id),...(shared.PENDING||[]).flatMap(p=>p.ids||[])]), sv=savingIds();   /* BL-304: also a change still saving (hollow), and one waiting for Apply */
-  $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const id=r.dataset.row, st=sv.has(id)?"saving":ids.has(id)?"staged":"", d=r.querySelector(".pkdot");
+/* the dot on a row with something staged: the StatusDot block, named by its word (BL-316) */
+export function markStagedRows(){ const ids=new Set([...shared.PKS.map(s=>s.id),...(shared.PENDING||[]).flatMap(p=>p.ids||[])]), sv=savingIds();   /* BL-304: also a change still saving (hollow), and one waiting for Apply */
+  $$("#workTbl tr[data-row],#v-person tr[data-row],#workBoard .bcard[data-row]").forEach(r=>{ const id=r.dataset.row, st=sv.has(id)?"saving":ids.has(id)?"staged":"", d=/** @type {HTMLElement|null} */ (r.querySelector(".pkdot"));
     if(d&&d.dataset.st!==st) d.remove(); if(!st||(d&&d.dataset.st===st)) return;
-    const tip=st==="saving"?"Saving…":"Staged, not yet applied", dot=`<span class="pkdot${st==="saving"?" saving":""}" data-st="${st}" role="img" aria-label="${tip}" data-tip="${tip}"></span>`, x=r.querySelector("td.title>.x");
-    if(x) addHTML(x,"beforebegin",raw(dot)); else addHTML((r.querySelector("td.title")||r.firstElementChild||r),"beforeend",raw(dot)); }); }
+    const x=r.querySelector("td.title>.x"), dot=statusDotNodes({status:"staged",cls:st==="saving"?"pkdot saving":"pkdot",label:st==="saving"?"Saving…":"Staged, not yet applied"});
+    /** @type {HTMLElement} */ (dot[0]).dataset.st=st;
+    if(x) x.before(...dot); else (r.querySelector("td.title")||r.firstElementChild||r).append(...dot); }); }
 /* after any apply or reload: what left staging was applied; what is still there stays staged and is shown again on the fresh data */
 export let PKREC=null;
 export async function pkReconcile(){ pkFromVault(); const news=shared.PKS.filter(s=>s.isNew), r=await (async()=>{ if(!shared.PKS.length) return; if(PKREC) return PKREC; PKREC=(async()=>{ const keep=[], gone=[];
@@ -673,7 +621,8 @@ export async function pkUndoLast(){ await shared.PKQ; const s=shared.PKS[shared.
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0167(){
 /* the pill */
-addHTML(document.body,"beforeend",html`<div class="pkstage" id="pkStage" role="region" aria-label="Staged changes" hidden><span class="dot" aria-hidden="true"></span><span id="pkStN" aria-live="polite"></span><small>Nothing reaches the tracker until you apply</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Apply everything staged" data-key="${raw(MOD)}↵">Apply<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
+addHTML(document.body,"beforeend",html`<div class="pkstage" id="pkStage" role="region" aria-label="Staged changes" hidden><small>Nothing reaches the tracker until you apply</small><button type="button" class="pkbtn" id="pkUndo">Undo last</button><button type="button" class="pkbtn go" id="pkApply" data-tip="Apply everything staged" data-key="${raw(MOD)}↵">Apply<span class="pkk" aria-hidden="true">${raw(MOD)}↵</span></button></div>`);
+$("#pkStage").prepend(...statusDotNodes({status:"staged",wordId:"pkStN",live:true}));   /* BL-316: the StatusDot block; pkStageDraw writes its word */
 PKDRAW.push(pkLast);
 $("#pkUndo").onclick=()=>pkUndoLast();
 $("#pkApply").onclick=()=>pkApply();
@@ -704,11 +653,12 @@ export function pkClient(k,id,on){ const x=pkX(k,id); if(!x) return;
   if(pkMsgOK(k,x[pkMsgF(k)])) return pkCommit(k,id,{client:true},"Client-visible","No","Yes");
   PK.pc={k,id}; PK.det[id]=true; pkNote(PKMSGNEED(k)); pkDraw(); setTimeout(()=>{ const m=$(`#panel [data-pkf="${pkMsgF(k)}"]`); if(m){ m.focus(); const r=document.createRange(); r.selectNodeContents(m); r.collapse(false); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); } },0); }
 export async function pkSaveAndClose(){ if(shared.CUR&&shared.CUR.mode==="new"&&!PK.closing){
-    if(shared.PKPOP) pkPopClose(false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await pkQuiet();
-    if(shared.CUR&&shared.CUR.mode==="new"&&!shared.CUR.staged&&shared.CUR.draft.t&&!PK.pc){ if(!pkNewCheck(shared.CUR.k,shared.CUR.draft)){ pkNewMarkDraw()?.focus(); return; } await pkNewSync(shared.CUR.k,shared.CUR.nid,true); if(!shared.CUR.staged) return; } }
+    closePicker("owner",false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await pkQuiet();
+    if(shared.CUR&&shared.CUR.mode==="new"&&!shared.CUR.staged&&shared.CUR.draft.t&&!PK.pc){ if(!pkNewCheck(shared.CUR.k,shared.CUR.draft)){ pkNewMarkDraw()?.focus(); return; } await pkNewSync(shared.CUR.k,shared.CUR.nid,true); if(!shared.CUR||!shared.CUR.staged) return; }
+    if(shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.alertDone) return alertStaged(); }   /* check 45 (BL-334): made from a message, staged for Review only, never applied here */
   if(shared.CUR&&shared.CUR.mode==="proposal") return pkPropSave(false);
   if(PK.closing) return; PK.closing=true;
-  try{ if(shared.PKPOP) pkPopClose(false);
+  try{ closePicker("owner",false);
     const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur();   /* commits the field (queued) */
     await shared.PKQ;
     if(PK.pc){ pkNote(`${PKMSGNEED(PK.pc.k)} Or turn Client-visible off. Then press ${MOD}↵ again.`); $(`#panel [data-pkf="${pkMsgF(PK.pc.k)}"]`)?.focus(); return; }
@@ -757,21 +707,21 @@ export const pkUpdLabel=k=>k==="actions"?"latest update":k==="raid"?"response":"
 export function bootPanel0169(){
 Object.assign(ICONS,{layers:'<path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/>',msg:'<path d="M4 5h16v11H9l-5 4z"/>',clock:'<path d="M12 7v5l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4"/>'});
 addHTML($("#pkAfter"),"beforeend",html`<section aria-label="Details"><button type="button" class="pk-dethead" id="pkDetT" aria-expanded="false" aria-controls="pkDet">${raw(ic("chevright"))}Details</button><div class="pk-det" id="pkDet" hidden></div></section>
-  <section aria-label="Activity"><div class="pk-tabs" role="tablist" aria-label="Activity" id="pkTabs"></div><div class="pk-feed" id="pkFeed" role="tabpanel" aria-labelledby="pkTabSel"></div></section>`);
+  <section aria-label="Activity"><div class="tabhost" id="pkTabsHost"></div><div class="pk-feed" id="pkFeed" role="tabpanel" aria-labelledby="pkTabSel"></div></section>`);
 PKDRAW.push(pkDetails);
 $("#pkDetT").onclick=()=>{ if(!shared.CUR) return; const x=curObj(), open=pkDetOpen(x,pkCid()); PK.det[pkCid()]=!open; pkDetails(x,shared.CUR.k); };
 $("#panel").addEventListener("click",e=>{ const sw=e.target.closest("[data-pksw]"); if(!sw||!pkOn()) return; e.preventDefault(); pkClient(shared.CUR.k,pkCid(),sw.getAttribute("aria-checked")!=="true"); });
 /* Details' pickers */
-PKPROP.p=(a,x,k,id)=>pkList(a,{label:"Project",value:x.p,options:P.filter(p=>p.active!==false||p.code===x.p).map(p=>({v:p.code,label:p.name,icon:ic("projects")})),onPick:v=>{
+PKPROP.p=(a,x,k,id)=>openPicker(a,{label:"Project",value:x.p,onClose:pkPopDone(a),options:P.filter(p=>p.active!==false||p.code===x.p).map(p=>({v:p.code,label:p.name,icon:"projects"})),onPick:v=>{
   if(v===x.p) return; const patch={p:v}, notes=[];
   if(x.ms&&!String(x.ms).startsWith(v+"-M-")){ patch.ms=""; notes.push("milestone cleared: it belongs to "+pName(x.p)); }
   if(x.ws&&!wsFor(v).some(w=>w.toLowerCase()===String(x.ws).toLowerCase())){ patch.ws=""; notes.push("workstream cleared: "+pName(v)+" has none called "+x.ws); }
   pkCommit(k,id,patch,"Project",pName(x.p),pName(v),{note:notes.join("; ")}); }});
-PKPROP.ws=(a,x,k,id)=>pkList(a,{label:"Workstream",search:true,allowNew:true,value:x.ws||"",options:[...wsFor(x.p).map(w=>({v:w,label:w,icon:ic("layers")})),{v:"",label:"None"}],onPick:(v,typed)=>{
+PKPROP.ws=(a,x,k,id)=>openPicker(a,{label:"Workstream",search:true,allowNew:true,value:x.ws||"",onClose:pkPopDone(a),options:[...wsFor(x.p).map(w=>({v:w,label:w,icon:"layers"})),{v:"",label:"None"}],onPick:(v,typed)=>{
   if(typed){ const m=wsFor(x.p).find(w=>w.toLowerCase()===v.toLowerCase()); if(!m){ pkNote(`“${v}” isn't one of ${pName(x.p)}'s workstreams yet. Add it in Settings › People and projects › Workstreams, then choose it here.`); return; } v=m; }
   pkCommit(k,id,{ws:v},"Workstream",x.ws||"none",v||"none"); }});
-PKPROP.ms=(a,x,k,id)=>pkList(a,{label:"Milestone",value:x.ms||"",options:msChoices(x.p,x.ms).map(([v,l])=>({v,label:l,icon:ic("flag")})),onPick:v=>pkCommit(k,id,{ms:v},"Milestone",x.ms?msName(x.ms):"none",v?msName(v):"none")});
-PKPROP.replaces=(a,x,k,id)=>pkList(a,{label:"Replaces",search:true,value:x.replaces||"",options:[{v:"",label:"None"},...DEC.filter(d=>d.p===x.p&&d.id!==x.id).map(d=>({v:d.id,label:`${d.id} · ${decShort(d.t,60)}`,icon:ic("decision")}))],onPick:v=>pkCommit(k,id,{replaces:v},"Replaces",x.replaces||"none",v||"none")});
+PKPROP.ms=(a,x,k,id)=>openPicker(a,{label:"Milestone",value:x.ms||"",onClose:pkPopDone(a),options:msChoices(x.p,x.ms).map(([v,l])=>({v,label:l,icon:"flag"})),onPick:v=>pkCommit(k,id,{ms:v},"Milestone",x.ms?msName(x.ms):"none",v?msName(v):"none")});
+PKPROP.replaces=(a,x,k,id)=>openPicker(a,{label:"Replaces",search:true,value:x.replaces||"",onClose:pkPopDone(a),options:[{v:"",label:"None"},...DEC.filter(d=>d.p===x.p&&d.id!==x.id).map(d=>({v:d.id,label:`${d.id} · ${decShort(d.t,60)}`,icon:"decision"}))],onPick:v=>pkCommit(k,id,{replaces:v},"Replaces",x.replaces||"none",v||"none")});
 }
 /* ===== BL-250 (fix-history-feed) ===== an item's whole history: its lines in ACT (a link's or label's line, by `sides`, in each item it
    touches, in that item's words), then its older changes past Activity's 2000-row cap (D.activity_older, from build_dashboard) */
@@ -787,15 +737,13 @@ export function pkFeedItems(x,k){ const id=pkCid(), out=[], ul=pkUpdLabel(k);
   return out; }
 export const pkShort=(s,n=60)=>{ s=String(s??"").replace(/\s+/g," ").trim(); return !s?"empty":s.length>n?s.slice(0,n-1)+"…":s; };
 export function pkFeed(x,k){ const tab=PK.tab||"all";
-  putHTML($("#pkTabs"),raw(feedTabsHtml(tab,"data-pktab","pkTabSel")));
+  drawTabs($("#pkTabsHost"),{items:feedTabItems(tab,"pktab","pkTabSel"),selected:tab,onSelect:v=>{ if(!shared.CUR) return; PK.tab=v; pkFeed(curObj(),shared.CUR.k); },
+    label:"Activity",className:"pk-tabs",tabClass:"pk-tab",id:"pkTabs",wrap:true});   /* BL-316: the Tabs building block */
   putHTML($("#pkFeed"),raw(feedListHtml(pkFeedItems(x,k),tab))); }
 /* ===== end BL-176 (details and activity) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0171(){
 PKDRAW.push(pkFeed);
-$("#pkTabs").addEventListener("click",e=>{ const t=e.target.closest("[data-pktab]"); if(!t||!shared.CUR) return; PK.tab=t.dataset.pktab; pkFeed(curObj(),shared.CUR.k); $("#pkTabSel")?.focus(); });
-$("#pkTabs").addEventListener("keydown",e=>{ if(!["ArrowLeft","ArrowRight","Home","End"].includes(e.key)||!shared.CUR) return; e.preventDefault(); const i=PKTABS.findIndex(t=>t[0]===(PK.tab||"all"));
-  const n=e.key==="Home"?0:e.key==="End"?PKTABS.length-1:(i+(e.key==="ArrowRight"?1:-1)+PKTABS.length)%PKTABS.length; PK.tab=PKTABS[n][0]; pkFeed(curObj(),shared.CUR.k); $("#pkTabSel")?.focus(); });
 if(shared.CUR&&pkOn()) drawPanel();
 }
 /* ===== BL-177 (sprint-peek) ===== Review's proposals (openProposal) for an action, a RAID item or a decision open in the same peek: the
@@ -819,7 +767,7 @@ export function pkPropDraw(x,k){ const on=shared.CUR.mode==="proposal"; $("#pane
   putHTML($("#pkFeed"),html`<div class="pk-fe"><span class="pk-fi" aria-hidden="true">${raw(ic("filetext"))}</span><div><b>Source</b><div class="pk-src">${raw(srcHTML(r.src))}</div></div></div>`); }
 /* Save: the draft goes through the panel's own save for proposals (readForm is given the draft for that one call) */
 export async function pkPropSave(approve){ if(!shared.CUR||shared.CUR.mode!=="proposal"||PK.closing) return; PK.closing=true;
-  try{ if(shared.PKPOP) pkPopClose(false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await shared.PKQ;
+  try{ closePicker("owner",false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await shared.PKQ;
     if(PK.pc){ pkNote(PKMSGNEED(PK.pc.k)+" Or turn Client-visible off."); return; }
     const x=shared.CUR.draft, k=shared.CUR.k, F=fieldsFor(k,x).filter(f=>f[0]!=="#"&&!["ro","calc","dref"].includes(f[2])).map(f=>f[0]);
     const form=Object.fromEntries(F.map(n=>[n,typeof x[n]==="boolean"?x[n]:String(x[n]??"")]));
@@ -1014,14 +962,14 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-pknd]"); 
   if(a==="restore") pkNewRestore(); else { if(a==="discard"){ pdDrop(PKN.offer&&PKN.offer.key); snack("Unsaved new item discarded"); } PKN.offer=null; pkNewOffer(""); $("#pkTitle").focus(); } });
 }
 /* ===== BL-179 (sprint-peek-new) ===== a dependency's suggested milestones in the peek. The Create form offered them under its Milestone
-   field (depChips: up to three it could threaten, nearest first, then None needed, remembered until the text changes); the peek has no
+   field (depFormDraw: up to three it could threaten, nearest first, then None needed, remembered until the text changes); the peek has no
    form, so the same suggestions (depSuggest, depHash, the same store) show under the key row of a RAID Dependency with no milestone,
    new or existing. Attach is the milestone chip's own change (staged, or into the new item's draft). Nothing is attached by itself. */
 export function pkDepDraw(x,k){ const box=$("#pkDep"); if(!box) return; box.textContent="";
   if(k!=="raid"||x.type!=="Dependency"||x.ms||!x.p||!OPENST(x.st||"Open")) return; const key=shared.CUR.mode==="new"?"new":pkCid();
   if((store.get("creaite-dep-none",{})[key])===depHash(x.t)) return;
   const L=depSuggest(x.p,x.due||""); if(!L.length) return;
-  putHTML(box,html`<div id="depChips" class="depchips" role="group" aria-label="Suggested milestones">${L.map(m=>html`<button type="button" class="chipbtn" data-pkdep="${m[3]}">Attach to ${m[3]} (forecast ${fd(m[8]||m[4])})?</button>`)}<button type="button" class="chipbtn quiet" data-pkdepnone>None needed</button></div>`); }
+  depSugDraw(box,L,"pkdep"); }
 /* ===== end BL-179 (dependency suggestions) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0178(){
@@ -1094,51 +1042,38 @@ document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e
    so Undo last removes both and nothing reaches the tracker until Apply. A proposal in Review keeps its own route (the row's
    "Add workstream"), so its list is unchanged. */
 export function pkOwnerOpts(x,k,q){ const cur=pkWho(x[pkOwnF(k)]), pool=projFirst(peopleAll(),projPeople(x.p));
-  const page=cur&&!isHiddenPerson(cur)?[{v:"\u0000page",label:isMe(cur)?"Open My work":`Open ${cur}'s page`,icon:ic("people")}]:[];   /* BL-56: the name still leads to the person */
-  if(!q) return [...pool.map(n=>({v:n,label:n,icon:pkAv(n),hint:isMe(n)?"you":""})),{v:"",label:k==="decisions"?"No one yet":"Unassigned",icon:pkAv("")},...page];
-  return [...ownerMatches(q,pool).items.map(it=>it.t==="alias"?{v:it.n,label:`Is “${it.typed}” ${it.n}?`,hint:"Yes, and remember it",icon:pkAv(it.n),t:"alias",typed:it.typed}
-      :it.t==="new"?{v:it.n,label:`New person “${it.n}”…`,icon:ic("plus"),t:"new"}:{v:it.n,label:it.n,icon:pkAv(it.n),hint:isMe(it.n)?"you":""}),...page]; }
+  const page=cur&&!isHiddenPerson(cur)?[{v:"\u0000page",label:isMe(cur)?"Open My work":`Open ${cur}'s page`,icon:"people"}]:[];   /* BL-56: the name still leads to the person */
+  const av=n=>peekMark({who:pkWho(n)||""});
+  if(!q) return [...pool.map(n=>({v:n,label:n,mark:av(n),hint:isMe(n)?"you":""})),{v:"",label:k==="decisions"?"No one yet":"Unassigned",mark:av("")},...page];
+  return [...ownerMatches(q,pool).items.map(it=>it.t==="alias"?{v:it.n,label:`Is “${it.typed}” ${it.n}?`,hint:"Yes, and remember it",mark:av(it.n),t:"alias",typed:it.typed}
+      :it.t==="new"?{v:it.n,label:`New person “${it.n}”…`,icon:"plus",t:"new"}:{v:it.n,label:it.n,mark:av(it.n),hint:isMe(it.n)?"you":""}),...page]; }
 export function pkOwnerList(anchor,x,k,id){ const cur=pkWho(x[pkOwnF(k)]);
-  pkList(anchor,{label:pkOwnL(k),search:true,value:cur,options:pkOwnerOpts(x,k,""),filter:q=>pkOwnerOpts(x,k,q),
+  openPicker(anchor,{label:pkOwnL(k),search:true,value:cur,onClose:pkPopDone(anchor),options:pkOwnerOpts(x,k,""),filter:q=>pkOwnerOpts(x,k,q),
     onPick:async(v,typed,o)=>{ if(v==="\u0000page"){ closePanel(); isMe(cur)?go("mine"):go("person",cur); return; }
       if(o&&o.t==="alias"){ if(await regAddAlias(v,o.typed)) return pkOwner(k,id,v,false); return; }
       if(o&&o.t==="new"){ const n=await ownerFinal(v,{skipMatch:true}); if(n!==null) return pkOwner(k,id,n,false); return; }
       return pkOwner(k,id,v,false); }}); }
 export const pkWsAddOK=()=>!!(shared.CUR&&shared.CUR.mode!=="proposal");
 export function pkWsOpts(x,q){ const L=wsFor(x.p), t=String(q||"").toLowerCase(), have=L.some(w=>w.toLowerCase()===t);
-  const o=L.filter(w=>!t||w.toLowerCase().includes(t)).map(w=>({v:w,label:w,icon:ic("layers")}));
+  const o=L.filter(w=>!t||w.toLowerCase().includes(t)).map(w=>({v:w,label:w,icon:"layers"}));
   if(!t) o.push({v:"",label:"None"});
-  if(!x.p) o.push({v:"\u0000add",label:"Add workstream…",icon:ic("plus"),disabled:true,hint:"Choose a project first"});
-  else if(!have) o.push({v:"\u0000add",label:q?`Add “${q}” as a workstream…`:"Add workstream…",icon:ic("plus"),name:q});
+  if(!x.p) o.push({v:"\u0000add",label:"Add workstream…",icon:"plus",disabled:true,hint:"Choose a project first"});
+  else if(!have) o.push({v:"\u0000add",id:"pkWsAdd",label:q?`Add “${q}” as a workstream…`:"Add workstream…",icon:"plus",name:q});   /* its id: the form's way in (NewWorkstream) */
   return o; }
 /* the form: the name and BL-58's details, suggested from the project's items; Add stages it with the item's change */
 export function pkWsForm(anchor,x,k,id,name){ const p=x.p, s=name?wsSuggest(p,name):{};
   if(!anchor||!anchor.isConnected) anchor=$('#panel [data-pkp="ws"]')||$("#pkTitle");
-  const el=pkMk(anchor,"pkws",`<div class="pkws-h">New workstream for ${esc(pName(p))}</div>
-    <label>Name<input type="text" data-wsn="name" value="${esc(name)}" autocomplete="off"></label>
-    ${WS_FIELDS.map(([f,l])=>`<label>${l}<input type="text" data-wsn="${f}" value="${esc(s[f]||"")}" autocomplete="off"${f==="lead"?' placeholder="A person from the people register"':""}></label>`).join("")}
-    <div class="sub pkws-n">${name?`Suggested from ${s.items} item${s.items===1?"":"s"}; change anything.`:"A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.</div>
-    <div class="pkerr" role="alert"></div>
-    <div class="pkws-b"><button type="button" class="mini" data-wsf="cancel">Cancel</button><button type="button" class="mini primary" data-wsf="add">Add and use it</button></div>`);
-  el.setAttribute("role","dialog"); el.setAttribute("aria-label",`New workstream for ${pName(p)}`);
-  const f=n=>el.querySelector(`[data-wsn="${n}"]`), touched=new Set();
-  el.addEventListener("input",e=>{ const n=e.target.dataset.wsn; if(!n) return; if(n!=="name"){ touched.add(n); return; }
-    const nm=e.target.value.trim(); if(!nm) return; const sg=wsSuggest(p,nm); WS_FIELDS.forEach(([q])=>{ if(!touched.has(q)) f(q).value=sg[q]||""; }); });
-  const add=async()=>{ const v=Object.fromEntries($$("[data-wsn]",el).map(i=>[i.dataset.wsn,i.value.trim()])), err=el.querySelector(".pkerr");
-    if(!v.name){ err.textContent="Give the workstream a name."; f("name").focus(); return; }
-    const w=wsRow(p,v.name);
-    if(w&&w.st==="Closed"){ err.textContent=`“${w.name}” is closed in ${pName(p)}: reopen it in Settings › People and projects › Workstreams, or choose another.`; return; }
-    const known=w?w.name:wsFor(p).find(n=>n.toLowerCase()===v.name.toLowerCase());
-    if(known){ pkPopClose(); return pkCommit(k,id,{ws:known},"Workstream",x.ws||"none",known); }   /* it is already there: just use it */
-    pkPopClose();
-    if(v.lead){ const o=await ownerFinal(v.lead); if(o===null) return; v.lead=o; }
-    const {item,row}=wsNewOf({...v,project:p});
-    if(String(id).startsWith("nw")&&shared.CUR&&shared.CUR.nid===id){ shared.CUR.wsPre={item,row}; (D.ws_table=D.ws_table||[]).push(row); }   /* a new item carries it in its one proposal */
-    return pkCommit(k,id,{ws:v.name},"Workstream",x.ws||"none",v.name,{pre:[item],wsRow:String(id).startsWith("nw")?null:row,note:`New workstream “${v.name}” for ${pName(p)}, staged with this change`}); };
-  el.addEventListener("click",e=>{ const b=e.target.closest("[data-wsf]"); if(!b) return; if(b.dataset.wsf==="add") add(); else pkPopClose(); });
-  el.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); pkPopClose(); }
-    else if(e.key==="Enter"&&e.target.matches("input")&&!e.metaKey&&!e.ctrlKey){ e.preventDefault(); e.stopPropagation(); add(); } });
-  const n0=f(name?"lead":"name"); n0.focus(); n0.select&&n0.select(); return el; }
+  return openNewWorkstream(anchor,{title:`New workstream for ${pName(p)}`,name,fields:/** @type {[string, string][]} */(WS_FIELDS),suggest:nm=>wsSuggest(p,nm),onClose:pkPopDone(anchor),
+    note:`${name?`Suggested from ${s.items} item${s.items===1?"":"s"}; change anything.`:"A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
+    onAdd:async v=>{ const w=wsRow(p,v.name);
+      if(w&&w.st==="Closed") return `“${w.name}” is closed in ${pName(p)}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+      const known=w?w.name:wsFor(p).find(n=>n.toLowerCase()===v.name.toLowerCase());
+      closePicker("pick");
+      if(known) return void pkCommit(k,id,{ws:known},"Workstream",x.ws||"none",known);   /* it is already there: just use it */
+      if(v.lead){ const o=await ownerFinal(v.lead); if(o===null) return; v.lead=o; }
+      const {item,row}=wsNewOf({...v,project:p});
+      if(String(id).startsWith("nw")&&shared.CUR&&shared.CUR.nid===id){ shared.CUR.wsPre={item,row}; (D.ws_table=D.ws_table||[]).push(row); }   /* a new item carries it in its one proposal */
+      pkCommit(k,id,{ws:v.name},"Workstream",x.ws||"none",v.name,{pre:[item],wsRow:String(id).startsWith("nw")?null:row,note:`New workstream “${v.name}” for ${pName(p)}, staged with this change`}); }}); }
 /* a new item's one proposal: the new workstream rides ahead of it while its workstream is that one (pkNewSync calls these) */
 export const pkWsPre=x=>{ const w=shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.wsPre; return w&&String(x.ws||"").toLowerCase()===w.row.name.toLowerCase()?[w.item]:[]; };
 export function pkWsPreSync(data,x){ const main=(data.items||[]).filter(i=>i.table!=="workstreams"||i.applied);
@@ -1148,7 +1083,7 @@ export function pkWsPreSync(data,x){ const main=(data.items||[]).filter(i=>i.tab
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0182(){
 { const wsOld=PKPROP.ws; PKPROP.ws=(a,x,k,id)=>{ if(!pkWsAddOK()) return wsOld(a,x,k,id);
-    pkList(a,{label:"Workstream",search:true,value:x.ws||"",options:pkWsOpts(x,""),filter:q=>pkWsOpts(x,q),onPick:(v,typed,o)=>{
+    openPicker(a,{label:"Workstream",search:true,value:x.ws||"",onClose:pkPopDone(a),options:pkWsOpts(x,""),filter:q=>pkWsOpts(x,q),onPick:(v,typed,o)=>{
       if(v==="\u0000add") return pkWsForm(a,x,k,id,(o&&o.name)||"");
       return pkCommit(k,id,{ws:v},"Workstream",x.ws||"none",v||"none"); }}); }; }
 }
@@ -1358,7 +1293,7 @@ export const chaseIsOpen=()=>{ const b=$("#pkChase"); return !!b&&!b.hidden; };
 export function chaseCan(){ const c=shared.CUR; if(!c||c.mode!=="record"||!PKK.includes(c.k)) return false; const x=REC(c.k,c.id);
   return !!x&&(c.k==="decisions"?x.st==="Pending":OPENST(x.st)); }
 /* start (BL-322, Sneak peek's "chase Tom, firmer"): the pane's first choices, {tone, to}, as /api/chase/pane takes them */
-export function chaseOpen(start){ if(!pkOn()||!chaseCan()) return; const box=$("#pkChase"), id=shared.CUR.id; if(shared.PKPOP) pkPopClose(false);
+export function chaseOpen(start){ if(!pkOn()||!chaseCan()) return; const box=$("#pkChase"), id=shared.CUR.id; closePicker("owner",false);
   if(chaseIsOpen()&&box.dataset.id===id&&!start) return;
   box.dataset.id=id; box.hidden=false; $("#pkScroll").hidden=true; $("#pkChaseBtn").setAttribute("aria-pressed","true"); mountChase(box,id,()=>chaseClose(true),start); }
 export function chaseClose(focus){ const box=$("#pkChase"); if(!box||box.hidden) return;
@@ -1373,7 +1308,7 @@ addHTML($("#pkScroll"),"afterend",html`<div class="pk-scroll pk-chase" id="pkCha
 $("#pkChaseBtn").onclick=()=>chaseIsOpen()?chaseClose(true):chaseOpen();
 PKDRAW.push(chaseDraw);
 document.addEventListener("keydown",e=>{ if(e.key.toLowerCase()!=="c"||e.metaKey||e.ctrlKey||e.altKey||e.repeat||!pkOn()||typing()) return;
-  const a=document.activeElement; if(document.querySelector("dialog[open]")||shared.PKPOP||(a&&a.closest&&a.closest("#chat,.bmenu,.cal,.combo,.pkpop"))) return;
+  const a=document.activeElement; if(document.querySelector("dialog[open]")||shared.PKPOP||(a&&a.closest&&a.closest("#chat,[role=menu],.cal,.combo,.pkpop"))) return;
   const b=$("#pkChaseBtn"); if(!b||b.hidden) return; e.preventDefault(); chaseOpen(); });
 }
 /* ===== end BL-298 ===== */

@@ -16,7 +16,7 @@ import { CHK, decide, isMin, renderReview, RHL, rjKey315, rvSyncChk, toggleGroup
 import { dayKey } from "../today.js";
 import { HL, hlClear, hlKey, openDisp, rvOnly, rvPaint } from "../work.js";
 /* click outside closes ask creaite and the detail panel — never while editing */
-export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,#newMenu,[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip";   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
+export const OPENERS="[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip";   /* BL-176: working in ask creaite, the staging pill or a picker leaves the peek open */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0122's place) */
 export function bootCopyCommand(){
 /* copy the start command */
@@ -32,7 +32,8 @@ document.addEventListener("mousedown",e=>{
     closePanel(); } },true);
 }
 /* ======================= keyboard ======================= */
-export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable); };
+export const typing=()=>{ const a=document.activeElement; return a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable||!!a.closest?.('.ddmenu [role="option"]')); };   /* BL-316: an option of a filter list takes keys, as its tick box did */
+
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0123's place) */
 export function bootKeyboard(){
 document.addEventListener("keydown",e=>{
@@ -49,7 +50,7 @@ document.addEventListener("keydown",e=>{
   if((shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")&&!(shared.VIEW==="person"&&shared.HAND)&&hlKey(e)) return;   /* BL-122: J K move the cursor, Shift extends, Space toggles, Enter and E open */
   /* BL-176 (sprint-peek): no E to edit the open item: the peek is always editable. Review keeps its own E below */
   if(shared.VIEW==="review"){ const trs=$$("#reviewBody tr[data-n]"); if(!trs.length) return; shared.RSEL=Math.max(0,Math.min(shared.RSEL,trs.length-1));   /* BL-133: a cursor past the end after a re-render */
-    if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("button,a,input,select,textarea,.bmenu")) return;   /* a focused control does its own job */ if(e.key==="j"){ shared.RSEL=Math.min(shared.RSEL+1,trs.length-1); renderReview(); } else if(e.key==="k"){ shared.RSEL=Math.max(shared.RSEL-1,0); renderReview(); }
+    if((e.key==="Enter"||e.key===" ")&&e.target.closest&&e.target.closest("button,a,input,select,textarea,[role=menu]")) return;   /* a focused control does its own job */ if(e.key==="j"){ shared.RSEL=Math.min(shared.RSEL+1,trs.length-1); renderReview(); } else if(e.key==="k"){ shared.RSEL=Math.max(shared.RSEL-1,0); renderReview(); }
     else if(e.key==="Enter"){ e.preventDefault(); const n=+trs[shared.RSEL].dataset.n; rvOnly(n); openProposal(n); rvPaint(); }
     else if(e.key===" "){ e.preventDefault(); const n=+trs[shared.RSEL].dataset.n, r=REV.find(x=>x.n===n); if(r&&!r.done){ RHL.has(n)?(RHL.delete(n),CHK.delete(n)):(RHL.add(n),r.indiv||CHK.add(n)); rvPaint(); } }
     else if(["a","r","x","e"].includes(e.key)){ const n=+trs[shared.RSEL].dataset.n, r=REV.find(x=>x.n===n); if(e.key==="e"){ e.preventDefault(); openProposal(n); return; } if(r.done) return; if(e.key==="a") decide(n,"approved"); if(e.key==="r"){ e.preventDefault(); rjKey315(); }   /* BL-315: R opens the reasons menu (minutes, reports and file changes are rejected as before) */ if(e.key==="x"&&isMin(r)){ toggleGroup(r,trs[shared.RSEL].dataset.g); return; } if(e.key==="x"){ RHL.has(n)?RHL.delete(n):RHL.add(n); rvSyncChk(); renderReview(); } } }   /* BL-133: X is Space: any proposed item can be selected */
