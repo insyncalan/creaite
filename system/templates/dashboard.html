@@ -3069,6 +3069,8 @@ button.nchip{font:inherit;font-size:12px}
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
 .aibar{position:fixed;z-index:220;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);padding:3px;max-width:calc(100vw - 32px)}
 .aibar .aibtn{min-height:28px;padding:2px 10px}
+/* v2.0.0 polish A (1): the AI menu opens upward when the bar is low in the window; its height is set in AiSelect.jsx */
+.aibar .ddmenu.up{top:auto;bottom:calc(100% + 4px)}
 .aibar .aiask{display:flex;gap:6px;align-items:center;width:min(420px,calc(100vw - 48px))}
 .aibar .aiask input{flex:1;min-width:0;min-height:28px}
 .aisug{position:fixed;z-index:220;width:min(480px,calc(100vw - 32px));max-height:min(60vh,520px);overflow:auto;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;box-shadow:var(--shadow-pop);padding:10px 12px;font-size:14px}
@@ -24271,6 +24273,31 @@ ${s5}`;
     h2(() => {
       if (bar.open) box.current?.querySelector("button[aria-haspopup]")?.click();
     }, [bar.open]);
+    h2(() => {
+      const el2 = box.current;
+      if (!el2) return;
+      const fit = () => {
+        const m5 = (
+          /** @type {HTMLElement | null} */
+          el2.querySelector("[role=menu]")
+        ), btn = el2.querySelector("button[aria-haspopup]");
+        if (!m5 || !btn) return;
+        m5.classList.remove("up");
+        m5.style.maxHeight = "";
+        const r4 = btn.getBoundingClientRect(), gap = 4 + 8;
+        const below = innerHeight - r4.bottom - gap, above = r4.top - gap, need = m5.scrollHeight + 2;
+        const up2 = need > below && above > below;
+        m5.classList.toggle("up", up2);
+        m5.style.maxHeight = `${Math.max(120, Math.floor(Math.min(need, up2 ? above : below)))}px`;
+      };
+      const mo2 = new MutationObserver(fit);
+      mo2.observe(el2, { childList: true, subtree: true });
+      addEventListener("resize", fit);
+      return () => {
+        mo2.disconnect();
+        removeEventListener("resize", fit);
+      };
+    }, []);
     const back2 = () => {
       setAsking(false);
       setWords("");

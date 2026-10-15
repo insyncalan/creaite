@@ -25,6 +25,25 @@ export function AiBar({ bar }) {
   useEffect(() => {                                                       // Alt+/ in the editor: the menu opens, focus in it
     if (bar.open) /** @type {HTMLButtonElement | null} */ (box.current?.querySelector("button[aria-haspopup]"))?.click();
   }, [bar.open]);
+  /* v2.0.0 polish A (#61, check 44 item 1): the menu has 10 items and the bar can sit low in the window, so it opens upward when
+     there is more room above, and is held to the room it has (it scrolls inside; ↑ ↓ Home End still reach every item). */
+  useEffect(() => {
+    const el = box.current; if (!el) return;
+    const fit = () => {
+      const m = /** @type {HTMLElement | null} */ (el.querySelector("[role=menu]")), btn = el.querySelector("button[aria-haspopup]");
+      if (!m || !btn) return;
+      m.classList.remove("up"); m.style.maxHeight = "";
+      const r = btn.getBoundingClientRect(), gap = 4 + 8;                 // the menu's own gap, and the window's edge
+      const below = innerHeight - r.bottom - gap, above = r.top - gap, need = m.scrollHeight + 2;
+      const up = need > below && above > below;
+      m.classList.toggle("up", up);
+      m.style.maxHeight = `${Math.max(120, Math.floor(Math.min(need, up ? above : below)))}px`;
+    };
+    const mo = new MutationObserver(fit);
+    mo.observe(el, { childList: true, subtree: true });
+    addEventListener("resize", fit);
+    return () => { mo.disconnect(); removeEventListener("resize", fit); };
+  }, []);
   const back = () => { setAsking(false); setWords(""); if (!bar.h.editor.isDestroyed) bar.h.focus(); };
   return (
     <div class="aibar" role="toolbar" aria-label="AI on the selected text" ref={box} style={{ top: `${bar.top}px`, left: `${bar.left}px` }}>
