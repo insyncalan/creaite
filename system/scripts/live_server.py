@@ -141,7 +141,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          /api/chase/pane {id, …} BL-298's Draft chase pane: mode, recipient, suggestions, defaults, draft
 - POST /api/log/error    a page script error, short and redacted, into the debug log; /api/diagnostics {report}: Settings ›
                          Diagnostics' errors, or the plain-text report to paste (BL-102)
-- POST /api/report/draft, /save, /approve, /export: the weekly and client reports in creaite (report_server.py)
+- POST /api/report/draft, /save, /approve, /export, /logo (read only): the weekly and client reports in creaite (report_server.py)
 - POST /api/settings/catalogue  every setting: group, Essentials or Advanced, label, line, reason, default, value, changed,
                          resettable, last changed; the Essentials rows; counts (BL-320, settings_catalogue.py). Read only
 - POST /api/settings/reset {key | keys}: put settings back to their defaults, saved as the page's own settings save is (a backup,
@@ -5935,7 +5935,7 @@ def sneak_read_route(handler, req):
 
 DRAFT_ROUTES["/api/sneak/read"] = sneak_read_route
 import report_server  # noqa: E402  v2.1.0 P3 (BL-335, BL-336): the report routes, given this server's own lock and runner
-DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/report/draft, save, approve, export
+DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/report/draft, save, approve, export, logo
 # ===== end BL-322 =====
 
 # ===== BL-227 (sprint-drafts-writing) ===== one set of facts, many forms. /api/current/generate takes `form`: "current" (or none) is
