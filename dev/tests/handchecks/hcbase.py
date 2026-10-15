@@ -187,3 +187,44 @@ class HandcheckCase(LiveBrowserCase):
             measure.width(b, self.width, self.height)
             b.eval("(()=>{ S.palette=%s; S.theme=%s; applyTheme(); return true; })()" % tuple(json.dumps(x) for x in was))
         return k
+
+
+# ── BL-10: the clock and the record (checks 23 to 29) ──
+
+def months_on(now, months):
+    """`now` ("YYYY-MM-DD HH:MM") moved on by whole months, the day kept (or the month's last day): "today plus 7 months"."""
+    import calendar
+    from datetime import datetime
+    t = datetime.strptime(now, "%Y-%m-%d %H:%M")
+    y, m = divmod(t.month - 1 + months, 12)
+    y, m = t.year + y, m + 1
+    return t.replace(year=y, month=m, day=min(t.day, calendar.monthrange(y, m)[1])).strftime("%Y-%m-%d %H:%M")
+
+
+def shown(day):
+    """YYYY-MM-DD (or a longer stamp) as DD-MM-YYYY, as creaite shows dates."""
+    s = str(day)
+    return f"{s[8:10]}-{s[5:7]}-{s[0:4]}"
+
+
+def db_rows(vault, sql, *args):
+    """Rows of a read-only query on the vault's tracker.db, as dicts (the check reads the record; it never writes it)."""
+    import sqlite3
+    con = sqlite3.connect(f"file:{Path(vault) / 'system/tracker.db'}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    try:
+        return [dict(r) for r in con.execute(sql, args)]
+    finally:
+        con.close()
+
+
+def pending_proposals(vault):
+    """The proposal files waiting in the vault's staging (what Review lists), by name."""
+    return sorted(p.name for p in (Path(vault) / "system/staging").glob("proposed-*.json"))
+
+
+def xlsx_text(path):
+    """Every worksheet's XML in an .xlsx, joined (enough to see whether an ID is in the Excel export)."""
+    import zipfile
+    with zipfile.ZipFile(path) as z:
+        return " ".join(z.read(n).decode("utf-8", "ignore") for n in z.namelist() if n.startswith("xl/") and n.endswith(".xml"))

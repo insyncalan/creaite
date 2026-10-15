@@ -171,3 +171,55 @@ def shot(b, path, quality=72):
     data = b.call("Page.captureScreenshot", format="jpeg", quality=quality)["data"]
     path.write_bytes(base64.b64decode(data))
     return path
+
+
+# ── BL-333: scrolling to the bottom (checks 21 and 22) ──
+
+# How far a scroll box can scroll, and where its last visible content ends, both in its own scroll coordinates (as
+# dev/tests/test_ui_sweep.py's ScrollEnd measures it): every rendered descendant but visually hidden text (.vh) and fixed
+# layers, by its margin box; a descendant that clips counts by its own box. Chrome ends the scrollable area at that content
+# plus the box's bottom padding.
+SCROLL_END_JS = """(sel=>{ const box=document.querySelector(sel); if(!box) return null; const B=box.getBoundingClientRect(), s=getComputedStyle(box);
+  const top=B.top+parseFloat(s.borderTopWidth)-box.scrollTop; let end=0, last='';
+  const walk=el=>{ for(const c of el.children){ if(c.matches('.vh')) continue; const cs=getComputedStyle(c);
+      if(cs.display==='none'||cs.position==='fixed'||!c.getClientRects().length) continue;
+      const r=c.getBoundingClientRect(), b=r.bottom+Math.max(0,parseFloat(cs.marginBottom)||0)-top;
+      if(r.height>0&&b>end){ end=b; last=c.tagName+(c.id?'#'+c.id:''); }
+      if(cs.overflowY==='visible'&&cs.overflowX==='visible') walk(c); } };
+  walk(box);
+  return {sh:box.scrollHeight, ch:box.clientHeight, top:Math.round(box.scrollTop), end:Math.ceil(end+parseFloat(s.paddingBottom)), last}; })"""
+
+
+def scroll_end(b, selector):
+    """A scroll box's scrollHeight, clientHeight, scrollTop and where its last visible content ends ({sh, ch, top, end, last}),
+    or None when there is no such box. It "stops at the last content" when sh <= end + 1 (or it doesn't scroll at all)."""
+    return b.eval(f"({SCROLL_END_JS})({json.dumps(selector)})")
+
+
+def rect(b, selector):
+    """The first match's bounding box ({top, left, width, height}), or None."""
+    return b.eval("(()=>{ const e=document.querySelector(%s); if(!e) return null; const r=e.getBoundingClientRect();"
+                  " return {top:Math.round(r.top), left:Math.round(r.left), width:Math.round(r.width), height:Math.round(r.height)}; })()"
+                  % json.dumps(selector))
+
+
+def wheel_to_bottom(b, selector, step=500, most=80):
+    """Turn the mouse wheel over the middle of `selector` (real wheel events, as a hand on the mouse) until nothing moves any
+    more. Returns {steps, top, window_top}: how many turns, the box's scrollTop and the window's scrollY at the end."""
+    pos = b.eval("""(()=>{ const e=document.querySelector(%s); if(!e) return null; const r=e.getBoundingClientRect();
+      return {x:r.left+Math.min(r.width/2, 200), y:r.top+Math.min(r.height/2, innerHeight/2)}; })()""" % json.dumps(selector))
+    if not pos:
+        return None
+    where = "[(document.querySelector(%s)||{}).scrollTop||0, scrollY]" % json.dumps(selector)
+    last, n = None, 0
+    while n < most:
+        n += 1
+        b.call("Input.dispatchMouseEvent", type="mouseWheel", x=pos["x"], y=pos["y"], deltaX=0, deltaY=step)
+        b.pump(0.06)
+        now = b.eval(where)
+        if now == last:
+            break
+        last = now
+    b.pump(0.2)
+    top, wy = b.eval(where)
+    return {"steps": n, "top": round(top), "window_top": round(wy)}
