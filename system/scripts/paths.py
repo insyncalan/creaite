@@ -112,7 +112,7 @@ def write_text_atomic(path, text: str) -> None:
         try:
             os.chmod(tmp, path.stat().st_mode & 0o7777)
         except FileNotFoundError:
-            pass
+            pass  # a new file: no old mode to keep
         os.replace(tmp, path)
     finally:
         if tmp.exists():
