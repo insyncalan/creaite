@@ -1,13 +1,13 @@
 """Move one area's pieces from script/ into an ES module (BL-231 step 2b; development only).
 
-Every area is now a module and script/ is gone (dev/V18-MODULES-PLAN.md, "After the last area"); this is kept as the
+Every area is now a module and script/ is gone (dev/archive/notes/v1.8.0/V18-MODULES-PLAN.md, "After the last area"); this is kept as the
 record of how it was done, and test_dashboard_split runs it on a made-up area. A piece it moved today would also need
 its boot…() call added to src/main.js by hand.
 
 Run: python3 dev/tools/convert_area.py AREA NNNN [NNNN …] [--dry-run]
      e.g. python3 dev/tools/convert_area.py files 0068 0069
 
-It does the mechanical part of dev/V18-MODULES-PLAN.md's "How to convert an area", the way core was moved:
+It does the mechanical part of dev/archive/notes/v1.8.0/V18-MODULES-PLAN.md's "How to convert an area", the way core was moved:
   1. joins the pieces, in order, into system/templates/dashboard/src/AREA.js;
   2. marks each top-level declaration `export`;
   3. moves each piece's load-time statements (listeners, first draws, anything that isn't a declaration) into

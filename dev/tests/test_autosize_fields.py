@@ -124,7 +124,7 @@ class AutosizeFields(LiveBrowserCase):
         b.wait("document.getElementById('mvDesc').dataset.ag")              # fitted once (the next frame), as before any real drag
         self.fill("#mvDesc", 2)
         b.eval("$('#mvDesc').style.height='260px'")                          # as the drag handle does
-        b.pump(0.3)
+        b.wait("($('#mvDesc')._agMin||0)>=258", 5)                           # its ResizeObserver has seen the drag (not a fixed 0.3 s)
         b.key("Backspace")
         b.pump(0.1)
         self.assertGreaterEqual(self.geo("#mvDesc")["h"], 258)

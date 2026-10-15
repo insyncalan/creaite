@@ -3,7 +3,7 @@
 Run: python3 dev/tests/test_early_bound_controls.py   (needs Google Chrome; skipped otherwise)
 The real live server in a throwaway vault; Claude is a stand-in (drafts_fake.py), so no model is called.
 Before this, the panel's Close button and the search button were bound at load to the first `closePanel` and `openCk`, so a click
-skipped every later step (dev/V18-HANDLERS-NOTE.md): Close kept an unused health-reason draft (BL-226) and left focus in the closed
+skipped every later step (dev/archive/notes/v1.8.0/V18-HANDLERS-NOTE.md): Close kept an unused health-reason draft (BL-226) and left focus in the closed
 panel (BL-176); a click on Search kept an earlier "which one?" pick (BL-205), while Enter, ⌘K and Cancel all ran the full function.
 """
 import json

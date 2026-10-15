@@ -1,7 +1,7 @@
 """Run creaite's test files in parallel and report each one (development only).
 
 Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--deep] [--list] [--flaky] [--clean]
-                                    [--repeat N [--stress N]] [name ...]
+                                    [--repeat N [--stress N]] [--file-timeout S] [--rerun-max N] [name ...]
   name       only the test files whose name contains it (e.g. "people" runs test_people.py and test_people_dashboard.py)
   -j N       how many quick-tier files run at once (default: half the processor cores, at least 2)
   --quick    only the quick tier: the files that never start Chrome (BL-246)
@@ -22,6 +22,17 @@ Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--deep]
   --repeat N run each file N times side by side (-j at a time; Chrome files also under the machine-wide cap), with no
              re-run alone, and report each file's passes under load: the proof that a flaky file is steady
   --stress N with --repeat: N processes spin the processor meanwhile, so a fast laptop is as slow as a CI runner
+  --file-timeout S
+             stop a test file that runs longer than S seconds (default 900, or CREAITE_FILE_TIMEOUT; 0: never): it fails
+             as TIMEOUT, and it and everything it started (its live servers, its Chromes) are stopped through its own
+             process group, never by name. The slowest file takes about 290 s on a CI runner, so 900 s is three times that
+  --max-fail N
+             once N files have failed, start no more (the ones running finish) and report: a machine where everything
+             fails says so in minutes, not at the job's time limit (default 0: no limit; CI passes it)
+  --rerun-max N
+             re-run failures alone only when at most N files failed (default 15, or CREAITE_RERUN_MAX). More than that is
+             not load: something is broken for the whole machine (the macOS runner's Chrome, say), and re-running a hundred
+             files one at a time only holds the job open until its time limit
 
 BL-246 (Alan, 11-10-2026): each file is in the quick tier or the Chrome tier, read from the file (dev/tools/run_support.py).
 Chrome-tier files run under a machine-wide cap (about 3 at once, CREAITE_CHROME_CAP), shared by every worktree's and
@@ -61,6 +72,10 @@ TIMES = TESTS / ".durations"          # last run's time per file, so the slowest
 FLAKY = TESTS / ".flaky.jsonl"        # one line each time a file failed under load and passed alone (git-ignored)
 REPO = TESTS.parents[1]
 EVERYTHING = ("VERSION", "system/creaite-rules.md", ".claude/", "system/config/")   # a change here can reach any test
+FILE_TIMEOUT = float(os.environ.get("CREAITE_FILE_TIMEOUT") or 900)   # seconds; 0 means no limit (see --file-timeout)
+RERUN_MAX = int(os.environ.get("CREAITE_RERUN_MAX") or 15)            # more failures than this are not re-run alone
+TIMED_OUT = -1000                     # the exit code a file gets when it was stopped for running too long
+CI = bool(os.environ.get("GITHUB_ACTIONS"))   # on a runner, print a failure's output as it happens (folded), not only at the end
 BULK_COPIER = {"test_tracker"}        # its Vault copies every script; that is having them, not using them
 TEMPLATE_USERS = ("build_dashboard", "docx_tools", "report", "prep_page", "live_server", "minutes")   # read system/templates/
 
@@ -170,6 +185,25 @@ def failed_tests(out):
     return names
 
 
+def result_line(name, code, secs, out, alone=False):
+    """One file's result: OK or FAIL (TIMEOUT when it was stopped for running too long); a failure also names the tests
+    that failed and its last error line, so a job cancelled before the end still says why its files failed."""
+    took = f"{secs:.0f}s, alone" if alone else f"{secs:.0f}s"
+    if code == 0:
+        return f"OK    {name}  ({took})"
+    line = f"FAIL  {name}  ({took}{', TIMEOUT' if code == TIMED_OUT else ''})"
+    err = next((ln.strip() for ln in reversed(out.splitlines())
+                if re.match(r"\s*(TIMEOUT:|\w*(Error|Exception)\b)", ln)), "")
+    which = failed_tests(out)[:4]
+    return line + (f"  {', '.join(which)}" if which else "") + (f" — {err[:200]}" if err else "")
+
+
+def show_now(name, out):
+    """On a CI runner, the end of a failed file's output at once, folded in the job's log (::group::)."""
+    if CI:
+        print(f"::group::{name} output (last 60 lines)\n" + "\n".join(out.splitlines()[-60:]) + "\n::endgroup::", flush=True)
+
+
 def log_flaky(name, secs, out=""):
     """Remember a file that failed under load and passed alone, so the rule that counts it as passing stays visible, with
     which tests failed and the end of that output, so the flake can be diagnosed later."""
@@ -201,7 +235,8 @@ def flaky_report():
 class Runner:
     """Runs test files, each in its own process group with a private TMPDIR; Chrome-tier files hold a machine-wide slot."""
 
-    def __init__(self):
+    def __init__(self, timeout=FILE_TIMEOUT):
+        self.timeout = timeout or None    # seconds a file may run before it is stopped (None: no limit)
         self.dir = support.RunDir()
         self.procs = set()
         self.lock = threading.Lock()
@@ -214,7 +249,7 @@ class Runner:
         env = {**os.environ, "CREAITE_NO_LAUNCH": "1",           # BL-171: a test never starts Word or another app
                "CREAITE_TEST_TAG": tag(f),                         # BL-172: its vaults carry its name
                "TMPDIR": str(tmp), "TMP": str(tmp), "TEMP": str(tmp)}   # BL-246: everything it makes lands here
-        t, p, out = time.time(), None, []
+        t, p, out, timed_out = time.time(), None, [], False
         try:
             p = proc_guard.spawn([sys.executable, f.name], cwd=f.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                  text=True, env=env, pass_fds=() if slot is None else (slot,))   # BL-247: a watchdog too
@@ -222,9 +257,18 @@ class Runner:
                 self.procs.add(p)
             reader = threading.Thread(target=lambda: out.append(p.stdout.read()), daemon=True)
             reader.start()
-            p.wait()                      # the test itself, not its output: a leaked child may hold the pipe open
+            try:
+                p.wait(timeout=self.timeout)  # the test itself, not its output: a leaked child may hold the pipe open
+            except subprocess.TimeoutExpired:
+                timed_out = True          # ci-macos-hang: a hung file fails here instead of holding the run to its time limit
+                # SIGTERM to its group lets the test's own proc_guard stop the servers and Chromes it spawned (each in a
+                # group of its own); after the grace, SIGKILL, and their watchdogs stop them when they see it go
+                proc_guard.stop(p, grace=10)
             proc_guard.stop(p, grace=2)   # BL-247: whatever it started and left in its group (servers, Chromes) ends now
             reader.join(5)
+            if timed_out:
+                out.append(f"\nTIMEOUT: {f.name} ran over {self.timeout:.0f}s (--file-timeout) and was stopped, with "
+                           f"everything it started.\n")
         finally:
             with self.lock:
                 self.procs.discard(p)
@@ -232,7 +276,8 @@ class Runner:
                 proc_guard.stop(p, grace=2)
             support.give_slot(slot)
             left = support.RunDir.finish(tmp)
-        return f, p.returncode, time.time() - t, "".join(out), left
+        code = TIMED_OUT if timed_out else p.returncode
+        return f, code, time.time() - t, "".join(out), left
 
     def stop(self):
         """Kill every test still running, with what it started (its live server, its Chrome)."""
@@ -249,15 +294,21 @@ class Runner:
         self.dir.close()
 
 
-def rerun_alone(failed, runner):
+def rerun_alone(failed, runner, most=None):
     """Run each failed file once more on its own: a failure under load that passes alone counts (and is logged).
+    More than `most` failures (--rerun-max) are not load, so none is run again.
     Returns (the files still failing, with their output; the files that passed alone)."""
     alone, still = [], []
+    most = RERUN_MAX if most is None else most
+    if len(failed) > most:
+        print(f"\n{len(failed)} files failed, more than --rerun-max {most}: that is not load, so none is run again alone "
+              f"(something is wrong for the whole machine; see the first failures below).", flush=True)
+        return list(failed), []
     if failed:
         print(f"\nRunning {len(failed)} failed file{'s' if len(failed) != 1 else ''} again, one at a time…", flush=True)
     for name, out in failed:
         f, code, secs, out2, _ = runner.run(TESTS / name)
-        print(f"{'OK  ' if code == 0 else 'FAIL'}  {name}  ({secs:.0f}s, alone)", flush=True)
+        print(result_line(name, code, secs, out2, alone=True), flush=True)
         if code == 0:
             alone.append((name, out))
             log_flaky(name, secs, out)
@@ -277,8 +328,9 @@ def slowest_first(files):
     return last
 
 
-def execute(files, jobs, runner):
-    """Run the quick tier `jobs` at a time and the Chrome tier under the machine-wide cap, side by side.
+def execute(files, jobs, runner, max_fail=0):
+    """Run the quick tier `jobs` at a time and the Chrome tier under the machine-wide cap, side by side. With `max_fail`
+    (--max-fail), once that many files have failed no further file starts (those running finish), and the rest are named.
     Returns {file name: seconds}, [(failed file name, output)], [(file name, vaults left behind)]."""
     quick = [f for f in files if not support.is_chrome(f)]
     chrome = [f for f in files if support.is_chrome(f)]
@@ -289,19 +341,38 @@ def execute(files, jobs, runner):
     cpool = ThreadPoolExecutor(max_workers=max(1, min(jobs, support.CHROME_CAP)))
     try:
         futures = [qpool.submit(runner.run, f, False) for f in quick] + [cpool.submit(runner.run, f, True) for f in chrome]
+        named = dict(zip(futures, quick + chrome))
         for fut in as_completed(futures):
+            if fut.cancelled():
+                continue
             f, code, secs, out, left = fut.result()
             took[f.name] = secs
-            print(f"{'OK  ' if code == 0 else 'FAIL'}  {f.name}  ({secs:.0f}s)", flush=True)
-            if left:
-                leaks.append((f.name, left))
-                print(f"WARN  {f.name} left {left} vault{'s' if left != 1 else ''} behind (removed with its folder)", flush=True)
+            report(f.name, code, secs, out, left, leaks)
             if code:
                 failed.append((f.name, out))
+                if max_fail and len(failed) == max_fail:
+                    stop_starting(futures, named, max_fail)
     finally:
         for pool in (qpool, cpool):
             pool.shutdown(wait=False, cancel_futures=True)
     return took, failed, leaks
+
+
+def report(name, code, secs, out, left, leaks):
+    """Print one file's result (and, on a CI runner, a failure's output at once); note the vaults it left behind."""
+    print(result_line(name, code, secs, out), flush=True)
+    if code:
+        show_now(name, out)
+    if left:
+        leaks.append((name, left))
+        print(f"WARN  {name} left {left} vault{'s' if left != 1 else ''} behind (removed with its folder)", flush=True)
+
+
+def stop_starting(futures, named, max_fail):
+    """--max-fail reached: cancel every file not yet started (those running finish) and name them."""
+    skipped = [named[x].name for x in futures if x.cancel()]
+    print(f"\n{max_fail} files have failed (--max-fail {max_fail}): no further file starts. Not run: "
+          f"{len(skipped)} ({', '.join(skipped[:10])}{', …' if len(skipped) > 10 else ''}).\n", flush=True)
 
 
 def stop_on_sigterm(_signum, _frame):
@@ -351,6 +422,9 @@ def main(argv):
     ap.add_argument("--update-snapshots", action="store_true")
     ap.add_argument("--repeat", type=int, default=0, metavar="N")
     ap.add_argument("--stress", type=int, default=0, metavar="N")
+    ap.add_argument("--file-timeout", type=float, default=FILE_TIMEOUT, metavar="S")
+    ap.add_argument("--rerun-max", type=int, default=RERUN_MAX, metavar="N")
+    ap.add_argument("--max-fail", type=int, default=0, metavar="N")
     ap.add_argument("names", nargs="*")
     a = ap.parse_args(argv)
     if a.flaky or a.clean or a.update_snapshots:
@@ -367,23 +441,19 @@ def main(argv):
     if a.list:
         print("\n".join(f"{f.name}{'  (Chrome)' if support.is_chrome(f) else ''}" for f in files))
         return 0
-    return run_all(files, a.j, a.repeat, a.stress)
+    return run_all(files, a.j, a.repeat, a.stress, timeout=a.file_timeout, rerun_max=a.rerun_max, max_fail=a.max_fail)
 
 
 def repeat_line(f, code, secs, out):
     """One copy's result: OK or FAIL, and for a failure the tests that failed and its last error line."""
-    line = f"{'OK  ' if code == 0 else 'FAIL'}  {f.name}  ({secs:.0f}s)"
-    if code:
-        err = next((ln.strip() for ln in reversed(out.splitlines()) if re.match(r"\s*\w*(Error|Exception)\b", ln)), "")
-        line += f"  {', '.join(failed_tests(out)[:4])}" + (f" — {err[:200]}" if err else "")
-    return line
+    return result_line(f.name, code, secs, out)
 
 
-def repeat(files, n, jobs, stress=0):
+def repeat(files, n, jobs, stress=0, timeout=FILE_TIMEOUT):
     """Run each of `files` `n` times, `jobs` at a time (Chrome files also under the machine-wide cap), interleaved so each
     copy runs beside the others; no re-run alone. `stress` processes spin the processor meanwhile, so a fast laptop is as
     slow as a shared CI runner. Prints each copy's result, then the passes per file."""
-    runner, start, results = Runner(), time.time(), {f.name: [] for f in files}
+    runner, start, results = Runner(timeout), time.time(), {f.name: [] for f in files}
     pool = ThreadPoolExecutor(max_workers=max(1, jobs))
     burners = [subprocess.Popen([sys.executable, "-c", "while True: pass"]) for _ in range(max(0, stress))]
     spin = f", {stress} processes spinning" if stress else ""
@@ -408,22 +478,22 @@ def repeat(files, n, jobs, stress=0):
     return 0 if all(all(v) for v in results.values()) else 1
 
 
-def run_all(files, jobs, copies=0, stress=0):
+def run_all(files, jobs, copies=0, stress=0, timeout=FILE_TIMEOUT, rerun_max=None, max_fail=0):
     """Run `files`, re-run failures alone, report; always remove the run's temporary folders, even when stopped.
     With `copies` (--repeat), run that many copies of each under load instead, and report each file's passes."""
     support.clean()                       # BL-247: orphans and stale folders from earlier runs, before this one adds load
     signal.signal(signal.SIGTERM, stop_on_sigterm)
     if copies:
-        return repeat(files, copies, jobs, stress)
+        return repeat(files, copies, jobs, stress, timeout)
     stale = split_dashboard.stale()       # BL-231 step 2a: the tests read the built page; never rebuilt behind your back
     if stale:
         print(f"Warning: {stale}. The tests run against the page as it is, and test_dashboard_split fails.", flush=True)
     last = slowest_first(files)
-    start, runner = time.time(), Runner()
+    start, runner = time.time(), Runner(timeout)
     try:
-        took, failed, leaks = execute(files, jobs, runner)
+        took, failed, leaks = execute(files, jobs, runner, max_fail)
         TIMES.write_text("".join(f"{k} {v:.1f}\n" for k, v in sorted({**last, **took}.items())), encoding="utf-8")
-        failed, alone = rerun_alone(failed, runner)
+        failed, alone = rerun_alone(failed, runner, rerun_max)
     except KeyboardInterrupt:
         runner.stop()
         print("\nStopped. The tests still running were ended and their temporary folders removed.", flush=True)
@@ -437,7 +507,9 @@ def run_all(files, jobs, copies=0, stress=0):
               + " (logged; python3 dev/tools/run_tests.py --flaky)")
     for name, out in failed:
         print(f"\n===== {name} =====\n" + "\n".join(out.splitlines()[-80:]))
-    print(f"\n{len(files) - len(failed)} passed, {len(failed)} failed, in {time.time() - start:.0f}s.")
+    not_run = len(files) - len(took)
+    print(f"\n{len(took) - len(failed)} passed, {len(failed)} failed" + (f", {not_run} not run (--max-fail)" if not_run else "")
+          + f", in {time.time() - start:.0f}s.")
     if leaks:
         print("Vaults left behind (now removed): " + ", ".join(f"{n} by {name}" for name, n in leaks) + ".")
     return 1 if failed else 0
