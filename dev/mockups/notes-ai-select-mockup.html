@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AI on selected text</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+/* AI on selected text, redesigned (Alan, 15-10-2026): a horizontal bar above the selection with grouped sub-menus, in place of one tall vertical menu. creaite theme tokens. Demo data only. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--warn:#8A5A00;--warn-soft:#FBF0DA;--ok:#2E6B3A;--sel:#BBD6FB;--ins:#DDF1E0;--del:#FBE0DD;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;--shadow-pop:0 8px 24px rgba(0,0,0,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--warn:#F0C66B;--warn-soft:#3A2C10;--ok:#9FD6A5;--sel:#2C4A6E;--ins:#1D3322;--del:#3B1F1D}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:24px 16px 80px}
+.page{max-width:1000px;margin:0 auto}h1{font:800 26px/1.15 var(--display);margin:0 0 6px}.lede,.sub{color:var(--muted)}.lede{max-width:80ch;margin:0 0 12px}.sub{font-size:13px}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:0 0 12px}.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer}.st[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.stage{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px 36px 90px;min-height:560px}
+.doc{max-width:720px;margin:0 auto;font-size:16px;line-height:1.65;position:relative}.doc h2{font:700 20px var(--font);margin:6px 0 8px}.doc p{margin:0 0 10px}.sel{background:var(--sel);border-radius:3px}
+/* the bar */
+.bar{position:absolute;z-index:20;display:flex;align-items:center;gap:2px;height:38px;padding:3px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);white-space:nowrap}
+.bar[hidden]{display:none}.bar .lead{width:28px;height:30px;display:grid;place-items:center;color:var(--accent)}.bar .sep{width:1px;height:18px;background:var(--line);margin:0 2px}
+.bb{height:30px;border:0;background:none;border-radius:7px;padding:0 9px;font:500 13px var(--font);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:4px}.bb:hover,.bb[aria-expanded=true]{background:var(--accent-soft);color:var(--accent)}.bb svg{width:10px;height:10px;opacity:.7}
+.bb.q{color:var(--muted)}
+.ask{display:flex;gap:6px;align-items:center;padding:0 4px 0 8px}.ask input{width:300px;height:30px;border:0;background:none;color:var(--ink);font:14px var(--font)}.ask input:focus{outline:none}.ask button{height:28px;border:0;border-radius:7px;background:var(--accent);color:var(--accent-ink);padding:0 12px;font:500 13px var(--font);cursor:pointer}
+/* a sub-menu: short, grouped, never scrolls */
+.sub-m{position:absolute;z-index:21;width:300px;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px}.sub-m[hidden]{display:none}
+.sub-m .r{display:block;width:100%;text-align:left;border:0;background:none;border-radius:7px;padding:6px 10px;cursor:pointer;font:inherit;color:inherit}.sub-m .r:hover,.sub-m .r.on{background:var(--accent-soft)}.sub-m .t{display:block;font-weight:500;font-size:14px}.sub-m .d{display:block;color:var(--muted);font-size:12px}
+.sub-m .h{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:6px 10px 2px}
+/* the suggestion */
+.sug{position:absolute;z-index:22;width:560px;max-width:calc(100% - 20px);background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;box-shadow:var(--shadow-pop);padding:12px 16px}.sug[hidden]{display:none}
+.sug .hd{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-weight:600}.sug .hd svg{color:var(--accent)}.sug .hd .sp{flex:1}
+.sug .tx{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:15px;line-height:1.55}.sug ins{background:var(--ins);text-decoration:none;border-radius:3px}.sug del{background:var(--del);border-radius:3px}
+.sug .ok{color:var(--ok);font-size:12px;margin:6px 0 0}.sug .acts{display:flex;gap:6px;margin-top:10px;align-items:center}.sug .acts .sp{flex:1}.sug .running{display:flex;gap:8px;align-items:center;color:var(--muted)}
+.btn{height:32px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 12px;font:500 13px var(--font);cursor:pointer;color:var(--ink)}.btn.p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}.btn[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}
+.spin{width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}@media (max-width:900px){.cards{grid-template-columns:1fr}}.card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px}.card h3{font:700 14px var(--display);margin:0 0 6px}.card ul{margin:0;padding-left:18px}.card li{margin:3px 0}
+</style></head><body><div class="page">
+<h1>AI on selected text, redesigned</h1>
+<p class="lede">Today a selection shows an "AI ▾" button that opens one tall list of ten rows with descriptions. It sits over the text it is about, scrolls inside itself and runs off the note. Proposed: a slim horizontal bar above the selection, with the options grouped into three sub-menus and a place to say what you want. Try it: the text is selected; open a group and choose an option.</p>
+<div class="ctl" role="group" aria-label="Where the text is"><span class="sub">Place:</span><button class="st" data-pl="notes" aria-pressed="true">Notes</button><button class="st" data-pl="current" aria-pressed="false">Current state</button><button class="st" data-pl="email" aria-pressed="false">Email draft</button><button class="st" data-pl="line" aria-pressed="false">One line (a field)</button><span class="sub" style="margin-left:8px">The groups follow the place, as the menu does today.</span></div>
+<div class="stage" id="stage"><div class="doc" id="doc"><h2>Purpose</h2><p>Agree the data-sharing approach with the client's legal team before UAT starts.</p><p><span class="sel" id="selt">this is a story of a girl who dont want to go to scool but her mum made her. Further access delay pushes go-live into Q1 so we need a decision on the agreement this week.</span></p><p>Next session: walk through the UAT entry criteria with the sponsor.</p>
+<div class="bar" id="bar" role="toolbar" aria-label="AI on the selected text"></div><div class="sub-m" id="sm" role="menu" hidden></div><div class="sug" id="sug" role="dialog" aria-label="Suggestion" hidden></div></div></div>
+<div class="cards"><div class="card"><h3>What changes</h3><ul>
+<li><b>Horizontal bar above the selection</b>, 38px, one row, never over the selected words; flips below when there is no room above. A sparkle, then groups, then Ask.</li>
+<li><b>Three groups instead of ten rows.</b> Improve (Fix spelling and grammar, Rewrite clearly, Shorter, Longer, Make it executive), Format (Format nicely, Turn into a checklist, Summarise at the top), Make into (Action, Risk, Decision, Update). Each sub-menu has at most five short rows and never scrolls.</li>
+<li><b>Ask…</b> opens a one-line box in the bar: type what you want, Enter asks, Esc goes back.</li>
+<li><b>Fix spelling is one click away</b> inside Improve; nothing is pre-selected, nothing runs until chosen.</li>
+<li><b>Places differ:</b> Email draft shows Tone (More formal, Warmer) in place of Format and Make into; a one-line field shows only Improve. Nothing is added that the place does not offer today.</li>
+<li>Keyboard as now: Alt+/ opens the bar, arrows move, Esc goes back; focus returns to the text.</li></ul></div>
+<div class="card"><h3>The suggestion (same rules as today)</h3><ul>
+<li>Shown under the selection with the option's name, the suggested text or the changes word by word, the plain-code check ("Keeps your dates, numbers, names and item IDs"), and Show changes, Try again, Discard, Accept. Nothing changes until Accept; a confidential text still asks first.</li>
+<li><b>Make into</b> keeps today's rule: it proposes an item for Review and records nothing until you approve it there. (Check against the current flow when building.)</li>
+<li>Desktop and 900px: the bar clamps inside the window; at 900px the groups stay one row.</li></ul></div></div>
+</div>
+<script>
+const $=s=>document.querySelector(s),on=(a,e,f)=>a.addEventListener(e,f);
+const SP='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.2 6.3L21 10l-6.8 1.7L12 18l-2.2-6.3L3 10l6.8-1.7z"/></svg>',CH='<svg viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4 4-4"/></svg>';
+const O={spelling:["Fix spelling and grammar","British English; nothing else changed"],rewrite:["Rewrite clearly","The same points, in plainer words"],shorter:["Shorter","About half the length; the facts kept"],longer:["Longer","Fuller sentences; adds no facts"],executive:["Make it executive","The position and what matters first"],
+ format:["Format nicely","Sub-headings, lists and bold where they help"],checklist:["Turn into a checklist","One task a line, to tick off"],summary:["Summarise at the top","A short summary first; the text kept below it"],
+ formal:["More formal","A more formal tone for the email"],warmer:["Warmer","A warmer, friendlier tone for the email"],
+ action:["An action","Proposed to Review; nothing recorded yet"],risk:["A risk","Proposed to Review; nothing recorded yet"],decision:["A decision","Proposed to Review; nothing recorded yet"],update:["An update","Proposed to Review; nothing recorded yet"]};
+const G={notes:[["Improve",["spelling","rewrite","shorter","longer","executive"]],["Format",["format","checklist","summary"]],["Make into",["action","risk","decision","update"]]],
+ current:[["Improve",["spelling","rewrite","shorter","longer","executive"]],["Format",["format","summary"]]],
+ email:[["Improve",["spelling","rewrite","shorter","longer"]],["Tone",["formal","warmer"]]],
+ line:[["Improve",["spelling","rewrite","shorter","executive"]]]};
+const ORIG=$("#selt").textContent;
+const R={spelling:"This is a story of a girl who doesn't want to go to school, but her mum made her. Further access delay pushes go-live into Q1, so we need a decision on the agreement this week.",
+ rewrite:"A girl did not want to go to school, but her mum made her. The access delay pushes go-live into Q1, so the agreement needs a decision this week.",
+ shorter:"A girl didn't want to go to school; her mum made her. Access delay pushes go-live into Q1: decision needed this week.",
+ longer:"This is the story of a girl who did not want to go to school, although her mum made her go. Further delay in gaining access pushes go-live into Q1, so we need a decision on the agreement this week.",
+ executive:"Go-live is at risk of moving into Q1 because of the access delay; a decision on the agreement is needed this week. (The first sentence is background.)",
+ format:"**Background**\nA girl who didn't want to go to school; her mum made her.\n**Position**\nFurther access delay pushes go-live into Q1.\n**Needed**\nA decision on the agreement this week.",
+ checklist:"☐ Decide the agreement this week\n☐ Confirm access with the client\n☐ Tell the sponsor go-live may move into Q1",
+ summary:"Summary: access delay may move go-live into Q1; a decision is needed this week.\n(The original text follows.)",
+ formal:"Further delay in obtaining access places go-live in Q1; we would be grateful for a decision on the agreement this week.",warmer:"Thanks for your patience: the access delay may move go-live into Q1, so a decision on the agreement this week would really help."};
+let place="notes",ask=false,openG=null,sel=0;
+function words(t){return t.split(/(\s+)/)}
+function diff(a,b){const x=words(a).filter(s=>s),y=words(b).filter(s=>s),n=x.length,m=y.length,L=Array.from({length:n+1},()=>Array(m+1).fill(0));
+ for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=x[i]===y[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+ let i=0,j=0,o="";while(i<n&&j<m){if(x[i]===y[j]){o+=x[i]+" ";i++;j++}else if(L[i+1][j]>=L[i][j+1]){o+="<del>"+x[i]+"</del> ";i++}else{o+="<ins>"+y[j]+"</ins> ";j++}}
+ while(i<n)o+="<del>"+x[i++]+"</del> ";while(j<m)o+="<ins>"+y[j++]+"</ins> ";return o}
+function pos(){const s=$("#selt").getBoundingClientRect(),d=$("#doc").getBoundingClientRect();return{left:Math.max(0,s.left-d.left),top:s.top-d.top,bottom:s.bottom-d.top}}
+function drawBar(){const b=$("#bar"),p=pos();b.hidden=false;
+ if(ask){b.innerHTML='<span class="lead">'+SP+'</span><form class="ask" id="af"><input id="ai" maxlength="400" placeholder="Say what you want done with the text" aria-label="Say what you want done with the selected text"><button type="submit">Ask</button></form>';
+  on($("#af"),"submit",e=>{e.preventDefault();const v=$("#ai").value.trim();if(v)run("custom",v)});on($("#ai"),"keydown",e=>{if(e.key==="Escape"){ask=false;drawBar()}});setTimeout(()=>$("#ai")&&$("#ai").focus(),0)}
+ else b.innerHTML='<span class="lead" title="AI on the selected text (Alt+/)">'+SP+'</span>'+G[place].map((g,i)=>'<button class="bb" data-g="'+i+'" aria-haspopup="menu" aria-expanded="'+(openG===i)+'">'+g[0]+CH+'</button>').join("")+'<span class="sep"></span><button class="bb q" id="askb">Ask…</button>';
+ b.style.left=p.left+"px";b.style.top=(p.top-46)+"px";posMenu()}
+function posMenu(){const m=$("#sm");if(openG===null){m.hidden=true;return}
+ const g=G[place][openG],p=pos();m.hidden=false;m.innerHTML=g[1].map((id,i)=>'<button class="r'+(i===0?" on":"")+'" role="menuitem" data-o="'+id+'"><span class="t">'+O[id][0]+'</span><span class="d">'+O[id][1]+'</span></button>').join("");
+ const btn=document.querySelector('.bb[data-g="'+openG+'"]'),br=btn.getBoundingClientRect(),d=$("#doc").getBoundingClientRect();m.style.left=(br.left-d.left)+"px";m.style.top=(p.top-46+42)+"px"}
+$("#bar").addEventListener("click",e=>{const g=e.target.closest("[data-g]");if(g){const i=+g.dataset.g;openG=openG===i?null:i;drawBar();return}if(e.target.closest("#askb")){ask=true;openG=null;drawBar()}});
+$("#sm").addEventListener("click",e=>{const r=e.target.closest("[data-o]");if(r){const id=r.dataset.o;openG=null;drawBar();run(id)}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("#sug").hidden){$("#sug").hidden=true;return}if(openG!==null){openG=null;drawBar()}}});
+function sugAt(){const p=pos(),s=$("#sug");s.style.left=p.left+"px";s.style.top=(p.bottom+8)+"px";s.hidden=false}
+function run(id,words){const nm=id==="custom"?words:O[id][0];sugAt();$("#sug").innerHTML='<div class="hd">'+SP+'<span>'+nm+'</span></div><div class="running" role="status"><span class="spin"></span>Asking Claude (it sees only this text)…</div><div class="acts"><button class="btn" id="stop">Stop</button></div>';
+ on($("#stop"),"click",()=>{$("#sug").hidden=true});
+ setTimeout(()=>{if($("#sug").hidden)return;show(id,nm)},900)}
+function show(id,nm){let txt=id==="custom"?R.rewrite:R[id];const kind=["action","risk","decision","update"].includes(id);let changes=false;
+ const draw=()=>{const body=kind?'<div class="tx"><b>'+O[id][0].replace("An ","Proposed ").replace("A ","Proposed ")+':</b> Decide the data-sharing agreement this week, so go-live is not pushed into Q1.</div><p class="sub" style="margin:6px 0 0">It goes to Review. Nothing is recorded until you approve it there.</p>':
+   '<div class="tx">'+(changes?diff(ORIG,txt):txt.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>"))+'</div><p class="ok">✓ Keeps your dates, numbers, names and item IDs.</p>';
+  $("#sug").innerHTML='<div class="hd">'+SP+'<span>'+nm+'</span></div><p class="sub" style="margin:0 0 6px">A suggestion: your text is unchanged until you accept it.</p>'+body+'<div class="acts">'+(kind?"":'<button class="btn" id="chg" aria-pressed="'+changes+'">Show changes</button>')+'<button class="btn" id="try">Try again</button><span class="sp"></span><button class="btn" id="dis">Discard</button><button class="btn p" id="acc">'+(kind?"Add to Review":"Accept")+'</button></div>';
+  on($("#chg")||document.createElement("i"),"click",()=>{changes=!changes;draw()});on($("#try"),"click",()=>run(id,nm));on($("#dis"),"click",()=>{$("#sug").hidden=true});
+  on($("#acc"),"click",()=>{if(!kind)$("#selt").innerHTML=txt.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\n/g,"<br>");$("#sug").hidden=true;drawBar()})};draw()}
+document.querySelectorAll("[data-pl]").forEach(b=>on(b,"click",()=>{place=b.dataset.pl;openG=null;ask=false;$("#sug").hidden=true;document.querySelectorAll("[data-pl]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));drawBar()}));
+drawBar();if(location.hash==="#m0"){openG=0;drawBar()}if(location.hash==="#s"){run("spelling");}
+</script></body></html>
