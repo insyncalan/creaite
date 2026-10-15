@@ -215,11 +215,11 @@ class Slash(LiveBrowserCase):
     def test_the_profile_table_and_the_plain_profile_has_no_menu(self):
         b = self.b
         got = b.eval("""(()=>{ const f=(p,h)=>slashRows(p,h,null).map(r=>r.id); return { plain:f('plain',['table','image','item']), none:f('none',['image']),
-          notes:f('notes',['item','person','note','table','image']), current:f('current',['image']), currentNoHost:f('current',[]), h:f('notes',[],null,'h') }; })()""")
+          notes:f('notes',['item','person','note','table','image']), current:f('current',['image','item']), currentNoHost:f('current',[]), h:f('notes',[],null,'h') }; })()""")
         self.assertEqual(got["plain"], [])
         self.assertEqual(got["none"], [])
         self.assertEqual(got["current"], CURRENT_ROWS)
-        self.assertEqual(got["currentNoHost"], [r for r in CURRENT_ROWS if r != "image"])
+        self.assertEqual(got["currentNoHost"], [r for r in CURRENT_ROWS if r not in ("image", "item")])
         self.assertNotIn("task", got["current"])
         b.eval("WT='actions'; go('work')")
         b.wait("document.querySelector('#workTbl tbody tr[data-row]')")
