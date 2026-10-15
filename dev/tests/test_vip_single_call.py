@@ -767,6 +767,48 @@ class FailedCheckTests(ServerCheck, unittest.TestCase):
             self.stop()
 
 
+DEEP = "[" * 100000 + "]" * 100000
+
+
+class DeepReplyTests(ServerCheck, unittest.TestCase):
+    """Review point 3: a reply nested too deeply to read is an unfinished check (RecursionError on Python 3.9)."""
+
+    def test_vip_reply_treats_a_recursion_error_as_unfinished(self):
+        from types import SimpleNamespace
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        import live_server
+        r = SimpleNamespace(stdout=json.dumps({"result": DEEP, "total_cost_usd": 0.1}), stderr="")
+        real = live_server.json
+
+        class Deep:
+            dumps = staticmethod(real.dumps)
+
+            @staticmethod
+            def loads(text):
+                if text.startswith("[["):
+                    raise RecursionError("maximum recursion depth exceeded")
+                return real.loads(text)
+        live_server.json = Deep
+        try:
+            self.assertEqual(live_server.vip_reply(r), (None, "RecursionError", 0.1))
+        finally:
+            live_server.json = real
+
+    def test_a_deeply_nested_reply_records_nothing_and_the_server_keeps_running(self):
+        self.start(DEEP)
+        try:
+            self.wait(lambda: re.search(r"INFO\s+vip\s", self.log()), "a check logged")
+            st = vip_file(self.v)
+            self.assertEqual(st["alerts"], [])                                               # a newer Python reads it: no card
+            if sys.version_info < (3, 12):                                                   # 3.9 to 3.11 can't read it
+                self.assertEqual(st["last_check"], "2026-10-08 07:00")
+                self.assertIn("check failed", self.log())
+                self.assertIn("didn't finish", self.post("/api/vip", {})["error"])
+            self.assertEqual(urllib.request.urlopen(self.base + "/health", timeout=5).status, 200)
+        finally:
+            self.stop()
+
+
 class InvitesFlipTests(unittest.TestCase):
     def test_vip_invites_true_puts_the_bl334_sentence_back(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))

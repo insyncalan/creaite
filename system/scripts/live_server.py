@@ -3354,19 +3354,20 @@ def vip_check(how="check"):
 
 
 def vip_reply(r):
-    """(the reply's JSON array or None, why it didn't finish, its total_cost_usd or None) from a finished `claude -p` call."""
+    """(the reply's JSON array or None, why it didn't finish, its total_cost_usd or None) from a finished `claude -p` call.
+    A reply nested too deeply to read (RecursionError on Python 3.9) is an unfinished check, like one that isn't JSON."""
     why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
     try:
         reply = json.loads(r.stdout or "{}")
-    except ValueError as e:
-        return None, str(e), None
+    except (ValueError, RecursionError) as e:
+        return None, type(e).__name__, None
     reply = reply if isinstance(reply, dict) else {}
     result, cost = str(reply.get("result") or ""), reply.get("total_cost_usd")
     m = re.search(r"\[.*\]", result, re.S)
     try:
         return (json.loads(m.group(0)) if m else None), (why if m else result or why), cost
-    except ValueError as e:
-        return None, str(e), cost
+    except (ValueError, RecursionError) as e:
+        return None, type(e).__name__, cost
 
 
 def vip_debug(line):
