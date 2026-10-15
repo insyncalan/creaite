@@ -14,6 +14,8 @@ What is covered, on a live server over a throwaway vault (and, for the shapes, a
 - ask creaite can't do it: _Archive stays never for classify(), propose.py stages a "notes" move only from the server's own
   snapshot, a CHANGE card with one is refused;
 - reach.archive_move_problem's "notes" and "notes_back" are exactly the one-note shape, in both layouts.
+- a name taken between the check and the move is never overwritten (os.link, never os.rename over a file), and Undo or an
+  apply that moves a note waits for NOTES_LOCK (LOCK first), as a note's card does.
 Everything is fictional and temporary.
 """
 import json
@@ -372,6 +374,92 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertIsNone(on)                                                            # True: the -2 shape passes
         self.assertIsNone(ok)                                                            # only the free-name suffix differs
         self.assertTrue(other)                                                           # never another name
+
+    # ── Jarvis 16-10: a name taken between the check and the move is never overwritten (os.rename would replace it) ──
+    def test_o_a_name_taken_at_the_last_moment_is_never_overwritten(self):
+        got = self.py_json(
+            "import errno, os, pathlib, reach, tracker, paths\n"
+            f"note, arc = pathlib.Path({str(self.folder())!r}), pathlib.Path({str(self.archive())!r})\n"
+            "arc.mkdir(parents=True, exist_ok=True)\n"
+            "real = tracker._move\n"
+            "def racing(a, b, kind):\n"
+            "    if not racing.done:\n"
+            "        racing.done = True\n"
+            "        b.write_text('the new note')          # a new note takes the name after the check\n"
+            "    return real(a, b, kind)\n"
+            "def undo(name):\n"
+            "    (arc / name).write_text('the archived one'); racing.done = False; out = []\n"
+            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/_Archive/notes/' + name, 'kind': 'notes'}}, out)\n"
+            "    return out\n"
+            "tracker._move = racing\n"
+            "on = undo('Late.md')\n"
+            "on_files = [(note / 'Late.md').read_text(), (note / 'Late-2.md').read_text(), (arc / 'Late.md').exists()]\n"
+            "reach.NOTES_BACK_RENAMES = False\n"
+            "off = undo('Later.md')\n"
+            "off_files = [(note / 'Later.md').read_text(), (arc / 'Later.md').read_text()]\n"
+            "reach.NOTES_BACK_RENAMES = True\n"
+            "(note / 'Apply.md').write_text('the note to delete'); racing.done = False\n"
+            "try:\n"
+            f"    tracker._op_move(1, {{'from': '{ABC}/notes/Apply.md', 'to': '{ABC}/_Archive/notes/Apply.md'}}, {{'archive': 'notes'}}, [])\n"
+            "    applied = None\n"
+            "except tracker.Invalid as e:\n"
+            "    applied = str(e)\n"
+            "apply_files = [(note / 'Apply.md').read_text(), (arc / 'Apply.md').read_text()]\n"
+            "tracker._move = real\n"
+            "def no_links(a, b):\n"
+            "    raise OSError(errno.ENOTSUP, 'no hard links here')\n"
+            "os.link = no_links                                # the fallback: the check, then os.rename\n"
+            "(arc / 'Fall.md').write_text('archived'); (note / 'Fall.md').write_text('there')\n"
+            "try:\n"
+            "    real(arc / 'Fall.md', note / 'Fall.md', 'notes'); fall = None\n"
+            "except FileExistsError:\n"
+            "    fall = 'refused'\n"
+            "fall_files = [(note / 'Fall.md').read_text(), (arc / 'Fall.md').read_text()]\n"
+            "real(arc / 'Fall.md', note / 'Fall-2.md', 'reports')\n"
+            "print(json.dumps([on, on_files, off, off_files, applied, apply_files, fall, fall_files, (note / 'Fall-2.md').read_text()]))")
+        on, on_files, off, off_files, applied, apply_files, fall, fall_files, moved = got
+        self.assertEqual(on, [f"restored {ABC}/notes/Late.md as Late-2.md: a note took its name"])
+        self.assertEqual(on_files, ["the new note", "the archived one", False])                        # the next free name
+        self.assertEqual(off, [f"skipped moving {ABC}/_Archive/notes/Later.md back: {ABC}/notes/Later.md is there again"])
+        self.assertEqual(off_files, ["the new note", "the archived one"])                              # both as they were
+        self.assertIn("already exists", applied)                                                        # the apply rolls back
+        self.assertEqual(apply_files, ["the note to delete", "the new note"])
+        self.assertEqual(fall, "refused")
+        self.assertEqual(fall_files, ["there", "archived"])
+        self.assertEqual(moved, "archived")
+
+    def test_p_undo_and_apply_wait_for_notes_lock(self):
+        r = self.new("Undo raced")
+        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])
+        staged = self.v.root / "system/staging/proposed-2026-10-16-hand.json"
+        got = self.py_json(
+            "import threading, time, live_server as ls\n"
+            "class F:\n"
+            "    def __init__(self): self.out = {}\n"
+            "    def send(self, code, body): self.out.update(body)\n"
+            "def raced(route, req):\n"
+            "    f = F(); ls.NOTES_LOCK.acquire()\n"
+            "    t = threading.Thread(target=lambda: route(f, req)); t.start(); time.sleep(0.5)\n"
+            "    waited = t.is_alive() and not f.out\n"
+            "    ls.NOTES_LOCK.release(); t.join(60)\n"
+            "    return waited, f.out\n"
+            "before = ls.undo_note_move()\n"
+            "waited, out = raced(ls.Handler.undo, {})\n"
+            "quiet = ls.staged_note_move()\n"
+            f"p = __import__('pathlib').Path({str(staged)!r})\n"
+            "p.write_text(json.dumps({'items': [], 'files': [{'archive': 'notes_back', 'file_ops': []}]}))\n"
+            "hand = ls.staged_note_move()\n"
+            "a_waited, _ = raced(ls.Handler.apply, {})\n"
+            "p.unlink(missing_ok=True)\n"
+            "print(json.dumps([before, waited, out.get('ok'), quiet, hand, a_waited]))")
+        before, waited, ok, quiet, hand, a_waited = got
+        self.assertTrue(before)                                    # the latest apply moved a note: Undo takes NOTES_LOCK
+        self.assertTrue(waited)                                    # held off while a save holds the lock
+        self.assertTrue(ok)
+        self.assertTrue((self.folder() / "Undo raced.md").is_file())
+        self.assertFalse(quiet)                                    # nothing staged moves a note: no NOTES_LOCK
+        self.assertTrue(hand)                                      # a hand-staged notes_back move: the apply takes it
+        self.assertTrue(a_waited)
 
     def py_json(self, code):
         src = f"import sys, json; sys.path.insert(0, 'system/scripts')\n{code}"

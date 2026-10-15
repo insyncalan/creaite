@@ -150,6 +150,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          words with the Fix it each would offer (none built: guard decisions), the rest counted (BL-320)
 Standard library only. Never uses a skip-permissions mode.
 """
+import contextlib
 import hashlib
 import json
 import os
@@ -607,6 +608,48 @@ def latest_apply():
         return None
     live = [a for a in json.loads(out) if not a["undone_at"]]
     return max((a["apply_id"] for a in live), default=None)
+
+
+# ===== #124: Undo of a Delete note (or a Move back), and a hand-staged one applied, never beside a note's save =====
+NOTE_MOVES = ("notes", "notes_back")
+
+
+def notes_lock_if(needed):
+    """NOTES_LOCK when a note is moved, else nothing; always taken after LOCK, never the other way round."""
+    return NOTES_LOCK if needed else contextlib.nullcontext()
+
+
+def _has_note_move(obj):
+    """Whether a proposal holds a file block (not yet applied) that moves a note: its "archive" is notes or notes_back."""
+    if isinstance(obj, dict):
+        if obj.get("archive") in NOTE_MOVES and not obj.get("applied"):
+            return True
+        return any(_has_note_move(v) for v in obj.values())
+    return isinstance(obj, list) and any(_has_note_move(v) for v in obj)
+
+
+def staged_note_move():
+    """Whether the apply would move a note (any staged proposal says so); an unreadable one counts, to be safe."""
+    for p in paths.STAGING.glob("proposed-*.json"):
+        try:
+            if _has_note_move(json.loads(p.read_text(encoding="utf-8"))):
+                return True
+        except (OSError, ValueError):
+            return True
+    return False
+
+
+def undo_note_move():
+    """Whether undoing the latest apply would move a note back (its file records hold a move of kind notes or notes_back)."""
+    code, out = run("tracker.py", "read", "applies")
+    try:
+        live = [a for a in json.loads(out) if not a["undone_at"]] if code == 0 else []
+        last = max(live, key=lambda a: a["apply_id"], default=None)
+        recs = json.loads(last["file_ops"] or "[]") if last else []
+    except (ValueError, KeyError, TypeError):
+        return True
+    return any(r.get("op") == "move" and r.get("kind") in NOTE_MOVES for r in recs)
+# ===== end #124 =====
 
 
 def allowed(op, rel):
@@ -1218,7 +1261,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def apply(self, req):
         """POST /api/apply: tracker.py apply, which writes the database; {hold_peek} leaves the peek's staged proposals (BL-189)."""
-        with LOCK:
+        with LOCK, notes_lock_if(staged_note_move()):         # #124: LOCK, then NOTES_LOCK, as a note's card does
             # ===== BL-189 (sprint-milestones) ===== another apply (a cell edit, a bulk change, a Review approval, Settings' Apply)
             # sends hold_peek: the peek's staged proposals (build_dashboard.peek_staged, any window's) are left for the peek's own
             # Apply or ⌘↵, which sends nothing and applies everything decided, as before. tracker.py's rules are unchanged: it is
@@ -1238,7 +1281,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def undo(self, req):
         """POST /api/undo {apply_id}: tracker.py undo, only when that apply is still the latest."""
-        with LOCK:
+        with LOCK, notes_lock_if(undo_note_move()):           # #124: LOCK, then NOTES_LOCK, as a note's card does
             latest = latest_apply()
             if req.get("apply_id") is not None and req["apply_id"] != latest:
                 return self.send(200, {"ok": False, "message": "A later change has been applied since; undo that first "

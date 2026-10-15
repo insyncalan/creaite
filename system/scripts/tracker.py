@@ -1872,30 +1872,80 @@ def _op_move(apply_id, fop, blk, done):
         made = made.parent
     made = made if not made.exists() else None
     b.parent.mkdir(parents=True, exist_ok=True)
-    os.rename(a, b)
+    try:
+        _move(a, b, blk.get("archive"))
+    except FileExistsError:                       # #124: taken between the check and the move: the apply rolls back
+        raise Invalid(f"move: {fop['to']} already exists; a folder move never overwrites") from None
     done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(made) if made else None,
                  "kind": blk.get("archive")})
+
+
+def _move(a, b, kind):
+    """#124: move a to b, never over a file at b (FileExistsError). os.rename replaces a file on macOS and Linux, so one file
+    (reach.FILE_MOVES) moves by os.link, which refuses a name that is taken, then os.unlink; where hard links aren't supported
+    it falls back to a check and os.rename. A folder (BL-09) moves by os.rename as before (it never replaces a folder that
+    isn't empty)."""
+    import reach
+    if kind not in reach.FILE_MOVES or a.is_symlink():
+        os.rename(a, b)
+        return
+    try:
+        os.link(a, b)
+    except FileExistsError:
+        raise
+    except OSError:                               # a file system without hard links: the check, then the move
+        if os.path.lexists(b):
+            raise FileExistsError(str(b)) from None
+        os.rename(a, b)
+        return
+    try:
+        os.unlink(a)
+    except OSError:
+        os.unlink(b)                              # never two names for one file: as it was, and the caller is told
+        raise
+
+
+def _move_back(b, a, kind, renames):
+    """#124: move b back to a, never over a file; with renames, a name taken (before or between the check and the move) gives
+    the next free one. Where it went, or None when it stayed."""
+    a.parent.mkdir(parents=True, exist_ok=True)
+    want = a
+    for _ in range(50):
+        if renames and a.exists():
+            a = paths.free_path(want.parent, want.stem, want.suffix)
+        try:
+            _move(b, a, kind)
+            return a
+        except FileExistsError:
+            if not renames:
+                return None
+    return None
 
 
 def _reverse_move(rec, report):
     import reach
     a, b = paths.resolve(rec["from"], archived=False), paths.resolve(rec["to"], archived=False)
-    want = b.is_file() if rec.get("kind") in reach.FILE_MOVES else b.is_dir()   # BL-03, BL-331 move one file; BL-09 a folder
-    if a.exists() and want and rec.get("kind") == "notes" and reach.NOTES_BACK_RENAMES:
-        a = paths.free_path(a.parent, a.stem, a.suffix)      # #124: a new note took the name: back as <name>-2.md, never over it
-        report.append(f"restored {rec['from']} as {a.name}: a note took its name")
+    kind = rec.get("kind")
+    want = b.is_file() if kind in reach.FILE_MOVES else b.is_dir()   # BL-03, BL-331 move one file; BL-09 a folder
+    renames = kind == "notes" and reach.NOTES_BACK_RENAMES      # #124: a new note took the name: back as <name>-2.md
     if not want:
         report.append(f"skipped moving {rec['to']} back: it isn't there")
-    elif a.exists():
+        return
+    if a.exists() and not renames:
         report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
-    else:
-        a.parent.mkdir(parents=True, exist_ok=True)
-        os.rename(b, a)
-        made = paths.resolve(rec["made"], archived=False) if rec.get("made") else None
-        here = b.parent
-        while made is not None and here.is_dir() and not any(here.iterdir()) and (here == made or made in here.parents):
-            here.rmdir()                          # the folders this move made, once they are empty again
-            here = here.parent
+        return
+    old = a
+    a = _move_back(b, a, kind, renames)
+    if a is None:                                 # whatever took the name is left as it is
+        report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
+        return
+    if a != old:
+        report.append(f"restored {rec['from']} as {a.name}: a note took its name")
+    made = paths.resolve(rec["made"], archived=False) if rec.get("made") else None
+    here = b.parent
+    while made is not None and here.is_dir() and not any(here.iterdir()) and (here == made or made in here.parents):
+        here.rmdir()                              # the folders this move made, once they are empty again
+        here = here.parent
 # ===== end BL-09 =====
 
 
