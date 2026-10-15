@@ -62,15 +62,28 @@ function dropClaims(json){ if(!json||typeof json!=="object") return json; const 
 
 /* #122: Current state's heading levels. The editor has Heading 1 to 3; Current state's text is read to the next `## ` line, so it
    writes them `###`, `####`, `#####` (`headShift` 2: Alan, 15-10-2026). These map a Markdown text between the two, line by line,
-   leaving fenced code alone. Only the levels the mapping owns move: on the way in `###` to `#####`, on the way out `#` to `###`. */
-/** @param {string} md @param {(level: number) => number} to @returns {string} */
-function mapHeads(md,to){ let fence=false;
-  return String(md).split("\n").map(line=>{ if(/^\s*(```|~~~)/.test(line)){ fence=!fence; return line; } if(fence) return line;
-    const m=/^(#{1,6})([ \t].*|)$/.exec(line); if(!m) return line; const n=to(m[1].length); return n===m[1].length?line:"#".repeat(n)+m[2]; }).join("\n"); }
-/** A stored text into the editor's levels (headShift 2: `###` `####` `#####` become 1 2 3). @param {string} md @param {number} shift */
-export const headsIn=(md,shift)=>shift?mapHeads(md,n=>n>shift&&n<=shift+3?n-shift:n):md;
-/** The editor's Markdown into the stored levels (1 2 3 become `###` `####` `#####`). @param {string} md @param {number} shift */
-export const headsOut=(md,shift)=>shift?mapHeads(md,n=>n<=3?n+shift:n):md;
+   and the mapping is reversible (an untouched line comes out as it went in):
+   - in:  stored `###` `####` `#####` become `#` `##` `###` (the editor's 1 to 3); every other line that starts with 1 to 6 `#` and a
+          space (stored `#`, `##`, `######`) is kept as plain text by putting a zero-width space (U+200B) before the first `#`, so the
+          editor shows a paragraph with a visible literal `# `; a line that already starts with U+200B and `#` gets one more;
+   - out: the editor's `#` `##` `###` become `###` `####` `#####`; a typed level above 3 is clamped to `#####` (the editor is limited to
+          three levels as well, see the `extensions` in creaiteEditor); one U+200B is taken off a line that starts with U+200B and `#`.
+   Fenced code and HTML comments (a `# ` line inside either is text, not a heading) are left alone. */
+/*HEADS-BEGIN*/
+/** @param {string} md @param {(zw: string, level: number, rest: string) => string} to @returns {string} */
+function mapHeads(md,to){ let fence=false, comment=false;
+  return String(md).split("\n").map(line=>{
+    if(comment){ if(line.includes("-->")) comment=false; return line; }
+    if(/^\s*(```|~~~)/.test(line)){ fence=!fence; return line; } if(fence) return line;
+    if(line.includes("<!--")&&!line.slice(line.indexOf("<!--")+4).includes("-->")){ comment=true; return line; }
+    const m=/^(\u200B*)(#{1,6})([ \t].*|)$/.exec(line); return m?to(m[1],m[2].length,m[3]):line; }).join("\n"); }
+/** A stored text into the editor's levels (headShift 2: `###` `####` `#####` become 1 2 3; other `#` lines stay literal text).
+    @param {string} md @param {number} shift */
+export const headsIn=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z===""&&n>shift&&n<=shift+3?"#".repeat(n-shift)+rest:"\u200B"+z+"#".repeat(n)+rest):md;
+/** The editor's Markdown into the stored levels (1 2 3 become `###` `####` `#####`; above 3 is clamped to `#####`).
+    @param {string} md @param {number} shift */
+export const headsOut=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z!==""?z.slice(1)+"#".repeat(n)+rest:"#".repeat(Math.min(n,3)+shift)+rest):md;
+/*HEADS-END*/
 
 /** Plain text as a document: one paragraph a line. */
 const plainDoc=t=>({ type:"doc", content:String(t??"").split("\n").map(l=>l?{ type:"paragraph", content:[{ type:"text", text:l }] }:{ type:"paragraph" }) });
@@ -104,7 +117,8 @@ export function creaiteEditor(el,o={}){ const features=o.features||"current", pl
     handleKeyDown:(view,e)=>{ if(!multiline&&e.key==="Enter") return true; const f=/** @type {any} */ (o.editorProps||{}).handleKeyDown; return f?f(view,e):false; },
     ...(plain?{ transformPastedText:t=>multiline?t.replace(/\r\n?/g,"\n"):t.replace(/\s*[\r\n]+\s*/g," ") }:{}) };
   const editor=createEditor({ mount:el },{ features, ...content, injectCSS:false, editorProps:props,
-    extensions:list=>{ const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) }):x);
+    extensions:list=>{ const out=list.map(x=>x&&x.name==="image"?x.extend({ addNodeView:()=>figureView(o.imageSrc) })
+        :x&&x.name==="starterKit"&&headShift?x.configure({ heading:{ levels:[1,2,3] } }):x);      // a shifted host has the three levels it can store (typed #### is text)
       return [...out,...(plain?[]:[ClaimMark]),...(o.extensions||[])]; } });
   const blank=()=>{ el.classList.toggle("blank",editor.isEmpty); };
   editor.on("transaction",({ transaction:tr })=>{ if(!tr.docChanged) return; blank(); if(tr.getMeta(ED_QUIET)) return; touched=true;

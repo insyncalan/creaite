@@ -23182,21 +23182,27 @@ ${s5}`;
     return out;
   }
   function mapHeads(md2, to2) {
-    let fence = false;
+    let fence = false, comment = false;
     return String(md2).split("\n").map((line) => {
+      if (comment) {
+        if (line.includes("-->")) comment = false;
+        return line;
+      }
       if (/^\s*(```|~~~)/.test(line)) {
         fence = !fence;
         return line;
       }
       if (fence) return line;
-      const m5 = /^(#{1,6})([ \t].*|)$/.exec(line);
-      if (!m5) return line;
-      const n4 = to2(m5[1].length);
-      return n4 === m5[1].length ? line : "#".repeat(n4) + m5[2];
+      if (line.includes("<!--") && !line.slice(line.indexOf("<!--") + 4).includes("-->")) {
+        comment = true;
+        return line;
+      }
+      const m5 = /^(\u200B*)(#{1,6})([ \t].*|)$/.exec(line);
+      return m5 ? to2(m5[1], m5[2].length, m5[3]) : line;
     }).join("\n");
   }
-  var headsIn = (md2, shift) => shift ? mapHeads(md2, (n4) => n4 > shift && n4 <= shift + 3 ? n4 - shift : n4) : md2;
-  var headsOut = (md2, shift) => shift ? mapHeads(md2, (n4) => n4 <= 3 ? n4 + shift : n4) : md2;
+  var headsIn = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 > shift && n4 <= shift + 3 ? "#".repeat(n4 - shift) + rest : "​" + z4 + "#".repeat(n4) + rest) : md2;
+  var headsOut = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 !== "" ? z4.slice(1) + "#".repeat(n4) + rest : "#".repeat(Math.min(n4, 3) + shift) + rest) : md2;
   var plainDoc = (t47) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => l6 ? { type: "paragraph", content: [{ type: "text", text: l6 }] } : { type: "paragraph" }) });
   var plainText = (doc) => {
     const L3 = [];
@@ -23245,7 +23251,7 @@ ${s5}`;
       injectCSS: false,
       editorProps: props,
       extensions: (list) => {
-        const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5);
+        const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
         return [...out, ...plain ? [] : [ClaimMark], ...o5.extensions || []];
       }
     });
@@ -60167,6 +60173,8 @@ ${d5.text}`);
         "grpToggle",
         "handle",
         "hashOf",
+        "headsIn",
+        "headsOut",
         "health",
         "healthEvidence",
         "healthFacts",

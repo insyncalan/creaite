@@ -258,6 +258,8 @@
    "grpToggle",
    "handle",
    "hashOf",
+   "headsIn",
+   "headsOut",
    "health",
    "healthEvidence",
    "healthFacts",

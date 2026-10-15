@@ -12,6 +12,7 @@ Done when (dev/sprints/one-editor.md, Alan's eight decisions on #122):
 - ⌘K stays the command palette (Shift or not, outside an editor); ⌘⇧K is the link form inside a rich editor;
 - Current state writes its three heading levels as ###, #### and ##### and never as a line the section's reader would end on.
 """
+import json
 import re
 import sys
 import unittest
@@ -25,6 +26,9 @@ NOTES = ["h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent",
          "note", "person", "item", "table", "image", "undo", "redo"]
 CURRENT = ["h1", "h2", "h3", "b", "i", "s", "ul", "ol", "outdent", "indent", "quote", "image", "link", "unlink", "clear", "undo", "redo"]
 SHARED = [t for t in NOTES if t not in ("note", "person", "item", "table", "image")]      # the capture drawer: no pickers yet
+PROBE = ("### Delivery\n\nPlain **bold** and ~~struck~~ with [a link](https://example.com/plan) and [mail](mailto:pmo@example.com).\n\n"
+         "- one\n  - nested\n- two\n\n1. first\n2. second\n\n#### Risks\n\n> a quote\n\n<!-- # inside a comment -->\n\n"
+         "##### Detail\n\n# Stray level one\n\nLast line.")
 MARKER = "<!-- creaite: second pane -->"
 STATE = "### Top\n\nFirst paragraph.\n\n#### Middle\n\nSecond paragraph.\n\n##### Low\n\n- a bullet\n\nLast line."
 
@@ -54,11 +58,11 @@ class Bars(LiveBrowserCase):
         b.eval("document.querySelector('.nbody').cxed.focus('end')")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
 
-    def open_current(self):
+    def open_current(self, state=STATE):
         b = self.b
         mem = self.memory()
         text = mem.read_text(encoding="utf-8")
-        mem.write_text(re.sub(r"(## Current state\n).*?(?=\n## |\Z)", lambda m: m.group(1) + f"\n{STATE}\n", text, flags=re.S), encoding="utf-8")
+        mem.write_text(re.sub(r"(## Current state\n).*?(?=\n## |\Z)", lambda m: m.group(1) + f"\n{state}\n", text, flags=re.S), encoding="utf-8")
         self.v.run(script="build_dashboard.py")
         b.reload("typeof go==='function' && LIVE")
         b.eval("go('cockpit','ABC')")
@@ -327,6 +331,53 @@ class Bars(LiveBrowserCase):
         v = b.eval("edValue(curEd)")
         for n, w in ((3, "one"), (4, "two"), (5, "three")):
             self.assertIn(f"{'#' * n} Pasted {w}", v)
+
+    # ---- the review's findings (editor-122a2): a reversible mapping and no level above three -----------------------------
+
+    def test_the_mapping_is_reversible_and_leaves_other_hash_lines_as_text(self):
+        b = self.b
+        text = PROBE.replace("<!-- # inside a comment -->", "<!--\n# inside a comment\n-->")      # the page's reader joins a comment; the mapping must not care
+        typed = "# a\n\n## b\n\n### c\n\n#### d\n\n##### e\n\n###### f"
+        maps = b.eval(f"(()=>{{ const t={json.dumps(text)}; return {{ in:headsIn(t,2), back:headsOut(headsIn(t,2),2), typed:headsOut({json.dumps(typed)},2) }}; }})()")
+        self.assertEqual(maps["back"], text)                                    # in then out: the same bytes
+        self.assertIn("\n\u200b# Stray level one\n", maps["in"])                # a stray level one is kept as text, with its #
+        self.assertTrue(maps["in"].startswith("# Delivery\n"))                  # ### is the editor's first level
+        self.assertIn("\n<!--\n# inside a comment\n-->\n", maps["in"])         # a comment is left alone
+        self.assertEqual(maps["typed"].split("\n\n"), ["### a", "#### b", "##### c", "##### d", "##### e", "##### f"])   # above 3 clamps
+        # escapes nest: a line that already starts with the zero-width space comes back as it was
+        odd = "\u200b# x\n\n## y\n\n###### z\n\n```\n# code\n```"
+        self.assertEqual(b.eval(f"headsOut(headsIn({json.dumps(odd)},2),2)"), odd)
+
+    def test_current_state_with_a_stray_level_one_saves_byte_for_byte_after_an_edit_elsewhere(self):
+        b = self.b
+        self.open_current(PROBE)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#curEd h1,#curEd h2,#curEd h3')].map(h=>h.tagName+':'+h.textContent)"),
+                         ["H1:Delivery", "H2:Risks", "H3:Detail"])
+        self.assertIn("# Stray level one", b.eval("curEd.textContent"))          # shown as text, not as a heading
+        self.assertEqual(b.eval("edValue(curEd)"), PROBE)                          # untouched
+        b.eval("curEd.cxed.focus('end')")
+        b.wait("document.activeElement===curEd", 5)
+        b.type("x")
+        b.key("Backspace")
+        self.assertEqual(b.eval("curEd.cxed.touched()"), True)                   # the exact writer ran
+        self.assertEqual(b.eval("edValue(curEd)"), PROBE)                          # and gave every byte back, the stray line too
+
+    def test_current_state_has_no_heading_level_above_three(self):
+        b = self.b
+        self.open_current()
+        b.eval("curEd.cxed.focus('end')")
+        b.wait("document.activeElement===curEd", 5)
+        for hashes in ("####", "#####", "######"):
+            b.key("Enter")
+            b.type(f"{hashes} Typed {len(hashes)}")
+            b.pump(0.1)
+        self.assertEqual(b.eval("document.querySelectorAll('#curEd h4,#curEd h5,#curEd h6').length"), 0)
+        value = b.eval("edValue(curEd)")
+        self.assertFalse(re.search(r"(?m)^#{6} ", value), value)
+        self.assertEqual(len(re.findall(r"(?m)^####[^#]", value)), 1, value)      # only Middle: nothing typed is stored as Heading 2
+        self.assertIn("#### Typed 4", b.eval("curEd.textContent"))               # typed hashes past three stay text
+        # whatever level the editor did produce (a paste, a command) is clamped on the way out
+        self.assertEqual(b.eval("headsOut('#### x\\n\\n###### y',2)"), "##### x\n\n##### y")
 
 
 if __name__ == "__main__":
