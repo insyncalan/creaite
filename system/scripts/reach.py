@@ -831,7 +831,7 @@ def direct_write_area(mode):
 # Fail closed: a note that can't be read counts as confidential, and so does anything this check can't finish. Prep keeps its own
 # allow list otherwise; a Bash call must still be one creaite script on its own (bash_refusal), so its environment, where the server
 # tells search.py it is a Prep run, can't be changed. ask creaite and every other run are unchanged: this mode is the Prep run's only.
-CONFIDENTIAL = "that note is confidential: a Prep page never reads a confidential note"
+CONFIDENTIAL = "a Prep page never reads a confidential note"
 
 
 def confidential_places():
@@ -879,13 +879,12 @@ def confidential_reason(tool, inp):
         for p in prep_paths(tool, inp):
             rp = real(p)
             if rp.suffix.lower() == ".md" and rp.is_file() and notes.held(rp):
-                return f"{p}: {CONFIDENTIAL}"
+                return f"{p}: this note is confidential, and {CONFIDENTIAL}"
             for q in places:
                 if parts_under(rp, q) is not None:          # the place itself, or inside it (the backups)
-                    return f"{p}: {CONFIDENTIAL}, and this holds a copy of its text"
+                    return f"{p}: this holds a copy of a confidential note's text, and {CONFIDENTIAL}"
                 if parts_under(q, rp) is not None:          # a folder that holds one
-                    return (f"{p}: this folder holds a confidential note, and {CONFIDENTIAL}: search or read only the notes "
-                            "Prep was given")
+                    return f"{p}: this folder holds a confidential note, and {CONFIDENTIAL}: search a folder without one"
     except Exception as e:  # noqa: BLE001  fail closed
         return f"the guard couldn't check this call for confidential notes ({type(e).__name__})"
     return None
