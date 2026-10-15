@@ -226,24 +226,45 @@ def project_owners(con, code):
     return sorted(out)
 
 
-def people(con, code, blocking=None):
-    """(client, internal): the names and register aliases of the owners of the project's items a client report may show (any
-    status), and of the owners of its other items who own none of those (Alan's own name and short forms left out: he is named in
-    his client reports)."""
-    blocking = blocking_labels(con) if blocking is None else blocking
-    shown, other = set(), set()
+OPEN_STATUS = {"actions": ("Open", "Delayed"), "raid": ("Open",), "decisions": ("Pending",), "milestones": ("Planned",)}
+
+
+def _owners(con, code, blocking):
+    """Yield (owner without organisation, whether a client report may show the item, whether it is open) for each of the project's
+    items with an owner."""
     for table in OWNER_TABLES:
         cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
         if "owner" not in cols:
             continue
-        for i, o in con.execute(f"SELECT id, owner FROM {table} WHERE project = ?", (code,)):
+        for i, o, st in con.execute(f"SELECT id, owner, status FROM {table} WHERE project = ?", (code,)):
             if o and o != "TBC":
-                (other if item_problem(con, i, blocking) else shown).add(person(o))
+                yield person(o), not item_problem(con, i, blocking), st in OPEN_STATUS.get(table, ())
+
+
+def _tokens(names):
+    """Every word of the names, in lower case: "Jane Doe" gives "jane" and "doe"."""
+    return {w for n in names for w in re.findall(r"[\w'-]+", n.lower())}
+
+
+def people(con, code, blocking=None):
+    """(client, internal): the names and register aliases of the owners of the project's items a client report may show (any
+    status), and of the owners of its OPEN items a client report can't show who own none of those (#123 review M3: someone whose
+    only internal items are closed is neither). Alan's own name and short forms are left out (he is named in his client reports),
+    and so is an alias that is ambiguous (M2): one that is, or is a word of, a client-visible owner's name or alias, or Alan's; an
+    internal-only owner's full name is always kept."""
+    blocking = blocking_labels(con) if blocking is None else blocking
+    shown, other = set(), set()
+    for name, may_show, is_open in _owners(con, code, blocking):
+        if may_show:
+            shown.add(name)
+        elif is_open:
+            other.add(name)
     aliases = register_aliases()
-    widen = lambda names: names | {a for n in names for a in aliases.get(n.lower(), [])}  # noqa: E731
-    client = widen(shown)
+    client = shown | {a for n in shown for a in aliases.get(n.lower(), [])}
     keep = {x.lower() for x in client | alans_names()}
-    internal = {n for n in widen(other - shown) if n.lower() not in keep}
+    shared = keep | _tokens(client | alans_names())
+    full = {n for n in other - shown if n.lower() not in keep}
+    internal = full | {a for n in full for a in aliases.get(n.lower(), []) if a.lower() not in shared}
     return client, internal
 
 
@@ -274,11 +295,28 @@ def findings(doc, con=None):
     none."""
     if (doc.get("audience") or "internal") == "internal":
         return []
-    import drafts
     con = con or connect()
     blocking = blocking_labels(con)
     code, text = doc.get("project") or "", doc_text(doc)
     found = [why for why in (item_problem(con, r, blocking) for r in sorted(refs(doc))) if why]
     found += text_findings(con, code, text)
-    found += [f"it holds {why}" for why in drafts.internal_findings(con, code, text)]   # #123: the gate at the end, any route
+    found += [f"it holds {why}" for why in internal_findings(con, code, doc)]             # #123: the gate at the end, any route
     return found + name_findings(con, code, text, blocking)
+
+
+def internal_findings(con, code, doc):
+    """drafts.internal_findings on a client document (#123 review M1). A client report shows internal health, so the tracker's
+    health reason may stand in the document's own shown health section (Match internal copies it there): it is checked on
+    everything else the document holds. An internal-only marker is found anywhere, the health section included."""
+    import creaite_doc
+    import drafts
+    shown = creaite_doc.sections_text(doc)
+    health_ids = {s.get("id") for s in doc.get("sections") or [] if s.get("type") == "health"}
+    health = "\n\n".join(t for i, _h, t in shown if i in health_ids)
+    clean = creaite_doc.clean(doc)
+    rest = "\n\n".join([clean.get("title") or ""] + [f"{h}\n\n{t}" if i not in health_ids else h for i, h, t in shown]) \
+        + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False)
+    found = drafts.internal_findings(con, code, rest)
+    if drafts.INTERNAL_MARK.search(health) and "an internal-only marker" not in found:
+        found.append("an internal-only marker")
+    return found

@@ -169,7 +169,10 @@ INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufe
 LOOK_ALIKE = str.maketrans({**{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
                             **{c: "I" for c in "\u0399\u0406\u04c0\u01c0\u0131\u03b9\u0456"},
                             **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"}})
-VIP_LOOSE = re.compile(r"(?<![a-z0-9])v\W{0,2}i\W{0,2}p(?:\W{0,2}s)?(?![a-z0-9])", re.I)
+# Between the letters: up to two marks (dots, dashes, underscores; zero-width characters are already gone), each run allowed one
+# space after it ("V. I. P."), but never a bare space ("Phase V IP telephony" isn't VIP; #123 review L).
+_VIP_GAP = r"(?:[^\w\s]{1,2}\s?|_{1,2})?"
+VIP_LOOSE = re.compile(rf"(?<![a-z0-9])v{_VIP_GAP}i{_VIP_GAP}p(?:{_VIP_GAP}s)?(?![a-z0-9])", re.I)
 NO_PROJECT, UNCHECKED = "no project", "the check couldn't run"
 
 
@@ -181,14 +184,31 @@ def normal(text):
 
 def loose_ids(con, text):
     """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
-    any case, with spaces, dots or dashes for its hyphens, or run on to a word before it ("seeABC-A-004")."""
+    any case, with spaces, dots or dashes for its hyphens, or run on to a word before it ("seeABC-A-004"). A loose match counts only
+    when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when there is no ABC-100); it fails closed, so an
+    ID the tracker can't be asked about counts."""
     t = normal(text)
     out = set(ID_RE.findall(t))
     up = t.upper()
     for (c,) in con.execute("SELECT code FROM projects"):
         for m in re.finditer(rf"{re.escape(c)}[\s_.\-]*(?:([A-Z])[\s_.\-]*)?(\d{{3}})(?!\d)", up):
-            out.add(f"{c}-{m.group(1)}-{m.group(2)}" if m.group(1) else f"{c}-{m.group(2)}")
+            ref = f"{c}-{m.group(1)}-{m.group(2)}" if m.group(1) else f"{c}-{m.group(2)}"
+            if ref not in out and in_tracker(con, ref):
+                out.add(ref)
     return out
+
+
+def in_tracker(con, ref):
+    """Whether the tracker holds the item `ref`, in whichever table its form names (a form no table has isn't held); True when the
+    tracker can't be asked (fails closed)."""
+    import tracker
+    table = tracker.item_table(ref)
+    if not table:
+        return False
+    try:
+        return con.execute(f"SELECT 1 FROM {table} WHERE id = ?", (ref,)).fetchone() is not None
+    except Exception:  # noqa: BLE001  a table that can't be read: counted
+        return True
 
 
 def client_problems(code, text, original=""):
