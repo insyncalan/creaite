@@ -9,8 +9,12 @@
                            or stage_client), applied at once with tracker.py apply, the one writer, so Undo works as always
                            A weekly approval re-locks the project's client drafts to that week (relock_client_drafts; `relocked`)
   POST /api/report/logo    {code, paths}: the project's logo files as data (read only; v2.1.0 P6): only files report_doc.logos names
+  POST /api/report/check   {doc}: a client report's check of what is left out (client_check.py; read only, nothing written): the
+                           items, hidden sections, unticked logos and health difference, the leak findings, whether its internal
+                           week is approved, and the rows now client-visible that it could add (v2.1.0 P8, BL-336)
   POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?}: P2's export (the contract's call), from the draft
-                           or the filed report; a client report only once its internal week is approved and nothing would leak
+                           or the filed report; a client report only once its internal week is approved and nothing would leak, and its
+                           answer then carries `left_out`: the check of what is left out runs before every client export
 """
 import base64
 import os
@@ -188,6 +192,12 @@ def approve_route(handler, req):
         return answer(handler, answered)
 
 
+def check_route(handler, req):
+    """POST /api/report/check: a client report's check of what is left out (see the module's description). Writes nothing."""
+    import client_check
+    return answer(handler, client_check.check(req.get("doc")))
+
+
 def export_call():
     """P2's export function (the contract's `export(path, fmt, *, out_dir, file_beside, open_after)`), or None while it isn't
     built: looked for in creaite_doc, then a module of its own."""
@@ -219,7 +229,6 @@ def launch(stored):
 
 def export_route(handler, req):
     """POST /api/report/export: the report exported as HTML, Word or PDF (see the module's description). Nothing is ever sent."""
-    import client_leak
     kind, code, fri, client = target(req)
     fmt = req.get("fmt")
     if fmt not in FORMATS:
@@ -228,17 +237,21 @@ def export_route(handler, req):
     if not state:
         return refuse(handler, "Save the report before exporting it.")
     doc = creaite_doc.read(path)
+    left = None
     if kind == "client":
-        ready, why = report_doc.client_ready(doc)
-        found = client_leak.findings(doc)
-        if not ready or found:
-            return refuse(handler, why or "Not exported: possible internal content in the client report.", findings=found)
+        import client_check
+        left = client_check.left_out(doc)          # the check runs before every client export, whoever asks
+        if not left["ready"] or left["findings"]:
+            return refuse(handler, left["not_ready"] or "Not exported: possible internal content in the client report.",
+                          findings=left["findings"], left_out=left)
     fn = export_call()
     if fn is None:
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
     out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True)
     if out.get("ok") and out.get("path"):
         out["launched"] = launch(out["path"])
+    if left is not None:
+        out["left_out"] = left
     return answer(handler, out)
 
 
@@ -271,5 +284,5 @@ def routes(lock, run, latest_apply):
     """The report routes for live_server's route table, given its lock, its script runner and its latest_apply."""
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
-            "/api/report/approve": guarded(approve_route), "/api/report/export": guarded(export_route),
-            "/api/report/logo": guarded(logo_route)}
+            "/api/report/approve": guarded(approve_route), "/api/report/check": guarded(check_route),
+            "/api/report/export": guarded(export_route), "/api/report/logo": guarded(logo_route)}

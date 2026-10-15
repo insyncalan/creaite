@@ -5,6 +5,7 @@ Changed (15-10-2026, plan #65; Jarvis's decision): "File the exports beside it" 
 `reports.file_exports_beside` (weekly and client reports, **off** by default, BL-335) and `reports.file_minutes_exports_beside`
 (minutes, **on** by default, BL-338); `creaite_doc.file_beside_default(kind)` picks by the document's kind, and
 `report_server` uses it (its own `FILE_BESIDE_DEFAULT` is gone). `export`'s signature is unchanged.
+Changed (15-10-2026, P8; Jarvis agreed): §4.6 `partner.match(id | null)`, the view's own Match internal (client-safe). Addition only.
 Changed (15-10-2026, before P5): §4, Sheet.jsx's props and slots, written (it was a placeholder); `components/report/SheetStub.jsx`
 added for Team Stark's P7 parts. Additions only.
 Changed (15-10-2026, P5, additions; Jarvis for P8): §4.1 `leftReadOnly` (Side by side with the left, internal page read only and the right page editable);
@@ -361,7 +362,7 @@ exported or an export. Coverage is an extra over `doc.meta.coverage`, not a sect
 
 ### 4.6 Side by side
 
-`partner = {doc, label: "Client" | "Distributed", baseVersion, scrollKey, renderers?, onChange, onSave, readOnly?}`: Sheet
+`partner = {doc, label: "Client" | "Distributed", baseVersion, scrollKey, renderers?, match?, onChange, onSave, readOnly?}`: Sheet
 draws `doc` (always the internal one) on the left and `partner.doc` on the right, each with its own saves.
 
 - **Level:** sections with the same `id`, and blocks with the same `ctx.level(key)` inside them, are given the same height
@@ -371,9 +372,12 @@ draws `doc` (always the internal one) on the left and `partner.doc` on the right
   health flag) gets "≠ Client" (or "≠ Distributed"); hover shows both versions. creaite only.
 - **Match internal** on each right-hand section and **Match internal for every section** in the bar copy the left section's
   content in (keeping the right page's hidden sections, logos and row eyes), as `partner.onChange(doc, "Matched internal")`.
-  The label "Matching internal" or "Edited for the client" is worked out by comparing, not stored. **`partner.match(id)`** (optional): when the
-  view gives it, a section's Match internal calls it instead of the generic copy (the view does its own `partner.onChange`), and the bar's
-  Match internal for every section calls it once for each section that differs; without it Sheet makes the generic copy above.
+  **`partner.match(id | null) => SheetDoc`** (optional; P5 added it, P8 settled the shape, 15-10-2026): when the view gives it, a section's
+  Match internal calls it instead of copying (`id` the section), and the bar's Match internal for every section calls it with `null`; Sheet
+  passes the returned document to `partner.onChange(doc, "Matched internal")`. A Client view must give it: a verbatim copy would put
+  internal rows and wording on the client's page (P8's `clientDoc.matchClientSection` copies only what a client may see). Without it, Sheet makes
+  the generic copy above (distributed minutes). SheetStub draws both buttons only when `match` is given.
+  The label "Matching internal" or "Edited for the client" is worked out by comparing, not stored.
 
 ### 4.7 Item IDs and the peek
 
