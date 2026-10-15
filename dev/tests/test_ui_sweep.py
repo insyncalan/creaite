@@ -53,6 +53,10 @@ SCREENS["work-panel-raid"] = (f"go('work'); openRecord('raid',(R.find(r=>r.st===
 SCREENS["work-panel-decision"] = (f"go('work'); openRecord('decisions',(DEC.find(d=>d.st==='Made')||DEC[0]).id); {DETAILS}", PEEK_ON, "#panel")
 SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
                              "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#pkId [data-pkp=\"p\"]')", "#panel")
+# BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached; plan
+# #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
+SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
+                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
 # BL-316: the meeting page (Meetings), the sample's one meeting
 SCREENS["meeting"] = ("go('meeting',Object.keys(D.hub||{})[0])", "!document.getElementById('v-meeting').hidden", "#v-meeting")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
@@ -180,6 +184,28 @@ class Reflow(UiSweepCase):
                             cov = [c for c in r["covered"] if not any(x in c["sig"] for x in REFLOW_SKIP)
                                    and "a.cntl" not in c["sig"]]       # a count link in a sentence, under the sticky first column
                             self.assertEqual(cov, [], "controls under another")
+        finally:
+            b.resize(self.width, self.height)
+
+    def test_the_proposal_peeks_actions_are_on_screen_at_320(self):
+        """Plan #80: at 320 px the proposal peek's Save and approve ran about 50 px off the screen. Every button in its
+        action row is inside the window and is what a press at its middle reaches; the wide layout keeps one row."""
+        b = self.b
+        try:
+            for w in (320, self.width):
+                b.resize(w, 800)
+                with self.subTest(width=w):
+                    self.goto("review-peek")
+                    r = b.eval("""(()=>{ const bs=[...document.querySelectorAll('#pkFoot2 button')].filter(e=>e.offsetParent);
+                      return {vw:innerWidth, vh:innerHeight, rows:new Set(bs.map(e=>Math.round(e.getBoundingClientRect().top))).size,
+                        bs:bs.map(e=>{ const r=e.getBoundingClientRect(), hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+                          return {id:e.id, l:r.left, r:r.right, t:r.top, b:r.bottom, hit:!!hit&&e.contains(hit)}; })}; })()""")
+                    self.assertEqual(len(r["bs"]), 4, "Reject, Cancel, Save and Save and approve")
+                    for x in r["bs"]:
+                        self.assertTrue(x["l"] >= 0 and x["r"] <= r["vw"] and x["t"] >= 0 and x["b"] <= r["vh"], f"{x['id']} off the screen: {x}")
+                        self.assertTrue(x["hit"], f"{x['id']} can't be pressed")
+                    if w > 480:
+                        self.assertEqual(r["rows"], 1, "the wide peek keeps its actions in one row")
         finally:
             b.resize(self.width, self.height)
 
