@@ -16,7 +16,7 @@ It does the hand-check Setup (dev/handchecks/<version>.md) by itself, in a throw
   6. starts the live server on a free port with CREAITE_NOW pinned to today 09:30 and CREAITE_CLAUDE set to the stand-in.
 Then it runs that release's checks module (dev/tests/handchecks/test_<v>.py, LiveBrowserCase-based, against that server),
 writes the Results table with Pass or Fail and a short note into a copy of the hand-check file (--write: the file itself),
-and makes the screenshot sheet for the judgement checks (sheet.html, self-contained).
+and makes the screenshot sheet for the judgement checks (sheet/index.html and a self-contained page per theme).
 
 Everything it makes is under one run folder (--out, default a new temporary folder), printed at the end; screenshots never
 go into the repository (it is public). It stops its server and Chrome by their own process groups (proc_guard), never
