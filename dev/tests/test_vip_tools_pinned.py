@@ -1,8 +1,9 @@
-"""The VIP check's tool flags are pinned: Microsoft 365 reading tools only, no built-in tool (no Bash, Read, Edit or Write).
+"""The VIP check's tool flags are pinned: Microsoft 365 reading tools only, no built-in tool but ToolSearch (no Bash, Read, Edit or Write).
 
 The check reads outside content (mail, Teams) with no guard hook, so the vault's .claude/settings.json allow rules (tracker.py,
-review.py, propose.py, Edit projects/**) must never apply in it: it is started with `--tools ""` (no built-in tools; the
-Microsoft 365 connector's MCP tools stay, so no --strict-mcp-config) and every built-in tool denied by name as well.
+review.py, propose.py, Edit projects/**) must never apply in it: it is started with no `--tools` flag (#116: `--tools ""` reached
+no Microsoft 365 tool on laptop 1) and every built-in tool but ToolSearch denied by name (a deny beats an allow rule). ToolSearch
+stays: it only loads the deferred Microsoft 365 tools' schemas. No --strict-mcp-config (it would drop the Microsoft 365 tools).
 
 Run: python3 dev/tests/test_vip_tools_pinned.py
 A throwaway vault with fictional people and a stand-in `claude` (CREAITE_CLAUDE) that records its argv. No real Claude call.
@@ -24,6 +25,16 @@ from test_sweep_alerts import vip_vault  # noqa: E402
 TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
 BUILTIN = ["Bash", "Read", "Grep", "Glob", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent"]
+# The built-in tools of Claude Code 2.1.300 with no --tools (`claude -p --output-format stream-json --verbose "hi"`: the init
+# event's "tools", the mcp__ ones left out). REFRESH this copy, and live_server.KNOWN_BUILTINS, when Claude Code adds one: a new
+# built-in must be denied in the VIP check or named in ALLOWED_BUILTINS with a reason.
+CLI_DEFAULT_BUILTINS_2_1_300 = [
+    "Task", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
+    "EnterWorktree", "ExitWorktree", "ListAgents", "ListMcpResourcesTool", "Monitor", "NotebookEdit", "PushNotification", "Read",
+    "ReadMcpResourceDirTool", "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill",
+    "TaskStop", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write"]
+OTHER_VERSIONS_BUILTINS = ["Grep", "Glob", "LS", "MultiEdit", "Agent"]
+ALLOWED_BUILTINS = {"ToolSearch"}       # loads deferred tools' schemas so they can be called; reads, runs and writes nothing
 
 FAKE = r'''#!/usr/bin/env python3
 import json, sys
@@ -46,13 +57,22 @@ class Pinned(unittest.TestCase):
     def test_the_constants(self):
         import live_server
         self.assertEqual(live_server.VIP_TOOLS, TOOLS)
-        self.assertEqual(live_server.VIP_ARGS, ["--tools", ""])
-        self.assertNotIn("--strict-mcp-config", live_server.VIP_ARGS)     # it would drop the Microsoft 365 tools
+        self.assertFalse(hasattr(live_server, "VIP_ARGS"))                # #116: no --tools flag at all
         deny = live_server.vip_deny()
         for t in BUILTIN:
             self.assertIn(t, deny)
         for t in live_server.DENY_TOOLS:
             self.assertIn(t, deny)
+        self.assertNotIn("ToolSearch", deny)
+
+    def test_every_cli_built_in_is_denied_or_explicitly_allowed(self):
+        import live_server
+        deny = set(live_server.vip_deny())
+        for t in CLI_DEFAULT_BUILTINS_2_1_300 + OTHER_VERSIONS_BUILTINS:
+            self.assertTrue(t in deny or t in ALLOWED_BUILTINS, f"{t}: neither denied in the VIP check nor allowed")
+            self.assertFalse(t in deny and t in ALLOWED_BUILTINS, t)
+        self.assertEqual(set(live_server.VIP_BUILTIN_ALLOWED), ALLOWED_BUILTINS)
+        self.assertTrue(set(CLI_DEFAULT_BUILTINS_2_1_300 + OTHER_VERSIONS_BUILTINS) <= set(live_server.KNOWN_BUILTINS))
 
 
 class ServerCommand(unittest.TestCase):
@@ -96,8 +116,8 @@ class ServerCommand(unittest.TestCase):
         self.assertEqual(a.index("--"), len(a) - 2)
         self.assertTrue(a[-1].startswith("creaite VIP check."))
 
-    def test_no_built_in_tools(self):
-        self.assertEqual(flag(self.args, "--tools"), "")
+    def test_no_tools_flag(self):
+        self.assertNotIn("--tools", self.args[:self.args.index("--")])     # #116: `--tools ""` hid the Microsoft 365 tools
         self.assertNotIn("--strict-mcp-config", self.args)
 
     def test_only_the_microsoft_365_reading_tools_are_allowed(self):
@@ -108,8 +128,9 @@ class ServerCommand(unittest.TestCase):
 
     def test_every_built_in_tool_is_denied(self):
         denied = flag(self.args, "--disallowedTools").split(",")
-        for t in BUILTIN:
-            self.assertIn(t, denied)
+        for t in CLI_DEFAULT_BUILTINS_2_1_300 + OTHER_VERSIONS_BUILTINS:
+            self.assertTrue(t in denied or t in ALLOWED_BUILTINS, t)
+        self.assertNotIn("ToolSearch", denied)
         self.assertFalse(set(TOOLS) & set(denied))
 
     def test_no_extra_dirs_or_permission_skips(self):
