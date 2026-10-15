@@ -27029,6 +27029,11 @@ ${d5.text}`);
       snack(NODRAFT_MSG);
       return;
     }
+    if (r4.kind === "draft" && /\.html$/i.test(r4.src || "")) {
+      openPath(r4.src);
+      snack(viaServer() ? "Check the minutes, change their items here in Review, then press Approve" : "Check the minutes, then approve them in Claude Code (the live server isn't running)");
+      return;
+    }
     if (r4.kind === "draft") {
       openPath(r4.src);
       snack(viaServer() ? "Edit in Word if needed, close it, then press Approve here" : "Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)");
