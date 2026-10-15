@@ -33,7 +33,7 @@ export { openSheetRef as openRef };
 /** @typedef {{type: string, [k: string]: any}} SheetEvent */
 /** @typedef {{field?: string, rich?: boolean, row?: number, col?: string, pane?: number, label?: string}} TextProps */
 /** @typedef {{section: SheetSection, doc: SheetDoc, editing: boolean, exported: boolean, readOnly: boolean,
-    update: (patch: Partial<SheetSection>, why: string) => void, setMeta: (patch: Record<string, any>, why: string) => void,
+    update: (patch: Partial<SheetSection>, why: string) => void, setDoc: (doc: SheetDoc, why: string) => void, setMeta: (patch: Record<string, any>, why: string) => void,
     Text: (p: TextProps) => any, ItemRef: (p: {id: string}) => any, Tag: (p: {tag: SheetTag}) => any, Spark: () => any,
     level: (key: string) => Record<string, string>, peer: SheetSection|null}} SectionCtx */
 /** @typedef {{row: SheetRow, index: number, section: SheetSection, item: any, editing: boolean, exported: boolean, readOnly: boolean,

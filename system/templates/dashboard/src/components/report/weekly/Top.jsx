@@ -4,7 +4,7 @@
    flush under it, and the reason in Alan's words beside. Logos are the project's files (Settings › Projects › Report logos, kept
    under system/branding/logos/); which of them show is this report's `layout.logos`. */
 import { Menu } from "../../Menu.jsx";
-import { editDoc, weeklyLogos, weeklyView } from "../../../stores/weekly.js";
+import { weeklyLogos, weeklyView } from "../../../stores/weekly.js";
 import { Rich } from "./Rich.jsx";
 import { wkDm, wkLongDate, wkTone, withSection } from "./weeklyDoc.js";
 
@@ -18,7 +18,7 @@ export function WkHeader({ ctx }) {
   const shown = all.filter(l => l.kind === "firm" || chosen.includes(l.kind));
   const pick = (/** @type {string} */ kind) => {
     const next = chosen.includes(kind) ? chosen.filter((/** @type {string} */ k) => k !== kind) : [...chosen, kind];
-    editDoc(withSection(doc, "header", {}, { logos: next }), "Logos changed");
+    ctx.setDoc(withSection(doc, "header", {}, { logos: next }), "Logos changed");
   };
   return (
     <header class="wr-hd">

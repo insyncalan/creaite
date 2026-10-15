@@ -4,7 +4,6 @@
    edge, and under it a milestone list with an eye on each row. The eye chooses which milestones are in the list (what the export
    prints, `section.data.milestones`, and `layout.milestones`); the timeline always shows every milestone. */
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
-import { editDoc } from "../../../stores/weekly.js";
 import { dayNo, wkDm, wkDmy, wkMsState, todayIso, withSection } from "./weeklyDoc.js";
 
 /** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
@@ -60,7 +59,7 @@ export function Timeline({ ctx }) {
   }, [k, ms.length, today]);
   const toggle = (/** @type {string} */ id) => {
     const next = ms.map(m => m.id).filter(r => r === id ? !listed.has(r) : listed.has(r));
-    editDoc(withSection(doc, s.id, { data: { ...(s.data || {}), milestones: next } }, { milestones: next }), listed.has(id) ? "Milestone left out of the list" : "Milestone in the list");
+    ctx.setDoc(withSection(doc, s.id, { data: { ...(s.data || {}), milestones: next } }, { milestones: next }), listed.has(id) ? "Milestone left out of the list" : "Milestone in the list");
   };
   const rows = ctx.exported ? ms.filter(m => listed.has(m.id)) : ms;
   if (!ms.length) return <p class="sub">No milestones are set for this project.</p>;

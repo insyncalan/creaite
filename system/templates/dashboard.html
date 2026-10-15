@@ -58483,6 +58483,7 @@ ${d5.text}`);
       exported,
       readOnly,
       update,
+      setDoc: (nd2, why) => onChange(nd2, why),
       setMeta: (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why),
       Text,
       ItemRef,
@@ -59332,91 +59333,6 @@ ${d5.text}`);
     ] });
   }
 
-  // stores/weekly.js
-  var weeklyArg = y3(
-    /** @type {{code: string, week?: string}|null} */
-    null
-  );
-  var weeklyView = y3(
-    /** @type {WeeklyView|null} */
-    null
-  );
-  var weeklyDoc = y3(
-    /** @type {SheetDoc|null} */
-    null
-  );
-  var weeklyBase = y3(
-    /** @type {number|undefined} */
-    void 0
-  );
-  var weeklyBusy = y3("");
-  var weeklyEditing = y3(false);
-  var weeklyLogos = y3(
-    /** @type {Record<string, string>} */
-    {}
-  );
-  var wkAsked = 0;
-  async function loadWeekly(arg, fresh = false) {
-    const mine = ++wkAsked;
-    weeklyArg.value = arg;
-    weeklyEditing.value = false;
-    if (!viaServer()) {
-      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
-      return;
-    }
-    weeklyBusy.value = "Opening the weekly report…";
-    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
-    if (mine !== wkAsked) return;
-    weeklyBusy.value = "";
-    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
-    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
-  }
-  function takeWeekly(r4) {
-    weeklyView.value = r4;
-    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
-    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
-  }
-  async function readLogos(code, logos) {
-    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
-    if (!want.length) return;
-    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
-    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
-  }
-  async function saveWeekly(req) {
-    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
-    const ok2 = !!(r4 && r4.ok);
-    if (ok2) {
-      weeklyBase.value = Number(r4.version) || weeklyBase.value;
-      const v5 = weeklyView.value;
-      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
-    }
-    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
-  }
-  async function approveWeekly(doc, force) {
-    const a5 = weeklyArg.value;
-    const r4 = await api("/api/report/approve", {
-      kind: "weekly",
-      code: doc.project || a5 && a5.code,
-      week_ending: doc.date,
-      doc,
-      base_version: weeklyBase.value,
-      force: force || void 0
-    });
-    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
-  }
-  async function exportWeekly(doc, fmt) {
-    const r4 = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
-    return r4 || { ok: false, message: "Not exported." };
-  }
-  var weeklyDirty = false;
-  var setWeeklyDirty = (on2) => {
-    weeklyDirty = on2;
-  };
-  function editDoc(d5, _why) {
-    weeklyDoc.value = d5;
-    weeklyDirty = true;
-  }
-
   // components/report/weekly/weeklyDoc.js
   var WK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   var WK_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -59503,7 +59419,7 @@ ${d5.text}`);
       /** @type {number|null} */
       null
     );
-    const put2 = (next, why) => editDoc(withSection(doc, s5.id, { figures: next }, { glance: next.filter((f5) => f5.shown !== false).map((f5) => f5.key) }), why);
+    const put2 = (next, why) => ctx.setDoc(withSection(doc, s5.id, { figures: next }, { glance: next.filter((f5) => f5.shown !== false).map((f5) => f5.key) }), why);
     const move = (from, to2) => {
       if (from === to2 || to2 < 0 || to2 >= figs.length) return;
       const next = figs.slice();
@@ -59866,7 +59782,7 @@ ${d5.text}`);
     }, [k5, ms2.length, today]);
     const toggle = (id2) => {
       const next = ms2.map((m5) => m5.id).filter((r4) => r4 === id2 ? !listed.has(r4) : listed.has(r4));
-      editDoc(withSection(doc, s5.id, { data: { ...s5.data || {}, milestones: next } }, { milestones: next }), listed.has(id2) ? "Milestone left out of the list" : "Milestone in the list");
+      ctx.setDoc(withSection(doc, s5.id, { data: { ...s5.data || {}, milestones: next } }, { milestones: next }), listed.has(id2) ? "Milestone left out of the list" : "Milestone in the list");
     };
     const rows2 = ctx.exported ? ms2.filter((m5) => listed.has(m5.id)) : ms2;
     if (!ms2.length) return /* @__PURE__ */ u2("p", { class: "sub", children: "No milestones are set for this project." });
@@ -59923,6 +59839,91 @@ ${d5.text}`);
     ] });
   }
 
+  // stores/weekly.js
+  var weeklyArg = y3(
+    /** @type {{code: string, week?: string}|null} */
+    null
+  );
+  var weeklyView = y3(
+    /** @type {WeeklyView|null} */
+    null
+  );
+  var weeklyDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var weeklyBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var weeklyBusy = y3("");
+  var weeklyEditing = y3(false);
+  var weeklyLogos = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var wkAsked = 0;
+  async function loadWeekly(arg, fresh = false) {
+    const mine = ++wkAsked;
+    weeklyArg.value = arg;
+    weeklyEditing.value = false;
+    if (!viaServer()) {
+      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      return;
+    }
+    weeklyBusy.value = "Opening the weekly report…";
+    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
+    if (mine !== wkAsked) return;
+    weeklyBusy.value = "";
+    takeWeekly(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
+    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
+  }
+  function takeWeekly(r4) {
+    weeklyView.value = r4;
+    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function readLogos(code, logos) {
+    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
+    if (!want.length) return;
+    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
+    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
+  }
+  async function saveWeekly(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    const ok2 = !!(r4 && r4.ok);
+    if (ok2) {
+      weeklyBase.value = Number(r4.version) || weeklyBase.value;
+      const v5 = weeklyView.value;
+      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
+    }
+    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
+  }
+  async function approveWeekly(doc, force) {
+    const a5 = weeklyArg.value;
+    const r4 = await api("/api/report/approve", {
+      kind: "weekly",
+      code: doc.project || a5 && a5.code,
+      week_ending: doc.date,
+      doc,
+      base_version: weeklyBase.value,
+      force: force || void 0
+    });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportWeekly(doc, fmt) {
+    const r4 = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
+    return r4 || { ok: false, message: "Not exported." };
+  }
+  var weeklyDirty = false;
+  var setWeeklyDirty = (on2) => {
+    weeklyDirty = on2;
+  };
+  function editDoc(d5, _why) {
+    weeklyDoc.value = d5;
+    weeklyDirty = true;
+  }
+
   // components/report/weekly/Top.jsx
   var KIND = { firm: "Firm", client: "Client", partner: "Partner" };
   function WkHeader({ ctx }) {
@@ -59931,7 +59932,7 @@ ${d5.text}`);
     const shown2 = all.filter((l6) => l6.kind === "firm" || chosen.includes(l6.kind));
     const pick = (kind) => {
       const next = chosen.includes(kind) ? chosen.filter((k5) => k5 !== kind) : [...chosen, kind];
-      editDoc(withSection(doc, "header", {}, { logos: next }), "Logos changed");
+      ctx.setDoc(withSection(doc, "header", {}, { logos: next }), "Logos changed");
     };
     return /* @__PURE__ */ u2("header", { class: "wr-hd", children: [
       /* @__PURE__ */ u2("div", { class: "wr-title", children: [

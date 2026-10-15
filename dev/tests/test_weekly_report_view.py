@@ -91,6 +91,23 @@ class WeeklyReportView(LiveBrowserCase):
         self.assertFalse(self.ev("!!document.querySelector('#v-weekly .wr-stat.off')"))
         self.assertFalse(self.ev("!!document.querySelector('#v-weekly .wr-count')"))
 
+    def test_figure_and_list_eyes_autosave(self):
+        """Hand check 73: the figure's eye and the milestone list's eye go through the sheet, so autosave writes them."""
+        self.ev("document.querySelector('#v-weekly .wr-stat .wr-seye').click()")
+        self.b.wait("document.querySelector('#v-weekly .wr-stat.off')", 5)
+        self.ev("document.querySelector('#v-weekly [data-id=milestones] .wr-link').click()")
+        self.b.wait("document.querySelector('#v-weekly [data-id=milestones] table')", 5)
+        self.ev("document.querySelector('#v-weekly [data-id=milestones] tbody .wr-eye').click()")
+        self.b.wait("document.querySelector('#v-weekly [data-id=milestones] tr.hidrow')", 5)
+        self.b.wait("/Saved · version/.test(document.querySelector('#v-weekly .sheet-status').textContent)", 10)
+        draft = next((self.v.root / "system/staging/drafts").glob("*Weekly report*.html"))
+        data = json.loads(draft.read_text(encoding="utf-8").split('id="creaite-data">', 1)[1].split("</script>", 1)[0])
+        glance = next(s for s in data["sections"] if s["type"] == "figures")
+        self.assertTrue(any(f.get("shown") is False for f in glance["figures"]), "the hidden figure is saved")
+        ms = next(s for s in data["sections"] if s["id"] == "milestones")
+        self.assertTrue(len(ms["data"]["milestones"]) < self.ev("document.querySelectorAll('#v-weekly [data-id=milestones] tbody tr').length"),
+                        "the milestone left out of the list is saved")
+
     def test_click_words_edit_in_place(self):
         self.ev("document.querySelector('#v-weekly [data-id=summary] .wr-edit').click()")
         self.b.wait("document.querySelector('#v-weekly [data-id=summary] .sheet-rich.ProseMirror')", 5)
