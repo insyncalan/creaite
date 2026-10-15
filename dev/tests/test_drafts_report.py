@@ -187,6 +187,24 @@ class ClientSection(ReportBase):
         ok = py(self.v, f"print(json.dumps(drafts.result({CLIENT!r}, {ctx!r}, 'Testing could start late. [S1]')))")
         self.assertEqual(ok["text"], "Testing could start late.")
 
+    def test_the_client_health_difference_and_its_reason_never_reach_a_draft(self):
+        """meta.health_diff (the client's health that differs from the internal one, and Alan's reason) stays in the draft file: a
+        client ✦ draft is built from the tracker's facts and the section's words, never from the document's meta."""
+        reason = "ZEBRAREASON the sponsor must not hear how bad the vendor is"
+        flag = "ZEBRAFLAG-internal-red"
+        saved = py(self.v, "import report_doc, creaite_doc\nd = report_doc.client_doc('ABC')\n"
+                           f"d['meta'] = {{**(d.get('meta') or {{}}), 'health_diff': {{'client': 'On track', 'internal': {flag!r}, 'reason': {reason!r}}}}}\n"
+                           "r = report_doc.save_draft(d)\nprint(json.dumps({'path': r['path'], 'kept': bool(creaite_doc.read(r['path'])['meta'].get('health_diff'))}))")
+        self.assertTrue(saved["kept"], saved)                                             # the seed is real: it is in the draft file
+        ctx = self.ctx({**CLIENT, "path": saved["path"]})
+        self.assertIn("prompt", ctx, ctx)
+        reply = "Testing could start late. [S1]"
+        got = py(self.v, f"print(json.dumps(drafts.result({CLIENT!r}, {ctx!r}, {reply!r})))")
+        for where in (everything(ctx), json.dumps(ctx), json.dumps(got)):
+            self.assertNotIn("ZEBRA", where)
+            self.assertNotIn(reason, where)
+            self.assertNotIn("health_diff", where)
+
 
 def _minutes_vault_case():
     class MinutesSection(M.Base):
