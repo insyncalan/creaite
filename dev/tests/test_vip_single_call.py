@@ -767,6 +767,60 @@ class ServerCheck:
         self.fail(f"never {what}")
 
 
+class MergePinTests(unittest.TestCase):
+    """BL-342 Part 3 B v2: what the rebuild on main must keep from both sides (main's VIP security fix, 9c1a0c2f, and
+    Part 3 B's limits and prompt parts)."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        import live_server
+        import sweep
+        cls.ls, cls.sw = live_server, sweep
+
+    def test_main_security_fix_is_kept(self):
+        self.assertFalse(hasattr(self.ls, "VIP_ARGS"))                                       # #116: no --tools flag
+        deny = self.ls.vip_deny()
+        for t in self.ls.DENY_TOOLS + self.ls.VIP_BUILTIN_DENIES:
+            self.assertIn(t, deny)
+        self.assertNotIn("ToolSearch", deny)                                                 # it loads the deferred M365 tools
+
+    def test_the_command_line_has_both_and_one_launch(self):
+        src = Path(self.ls.__file__).read_text(encoding="utf-8")
+        body = src[src.index("def vip_check("):src.index("\ndef ", src.index("def vip_check(") + 1)]
+        self.assertEqual(body.count("prompt_last("), 1)                                      # one command
+        self.assertEqual(body.count("subprocess.run("), 1)                                   # one launch
+        self.assertIn('"--disallowedTools", ",".join(vip_deny())], prompt)', body)
+        self.assertNotIn("join(DENY_TOOLS)", body)
+        cmd = self.ls.prompt_last(["claude", "-p", "--allowedTools", ",".join(self.ls.VIP_TOOLS),
+                                   "--disallowedTools", ",".join(self.ls.vip_deny())], "PROMPT")
+        self.assertEqual(cmd[-2:], ["--", "PROMPT"])                                         # the prompt, alone, after --
+        self.assertEqual(cmd.count("--"), 1)
+        self.assertNotIn("--tools", cmd)
+
+    def test_the_real_checks_argv_is_mains_exactly_to_the_end(self):
+        # The real vip_check with a stand-in claude recording its argv: the whole command, so an argument added
+        # anywhere (before -p's options, between them, or after the prompt) fails here too (review: v2 MergePinTests).
+        s = ServerCheck()
+        s.fail = self.fail
+        s.start(REPLY)
+        try:
+            s.wait(lambda: s.calls(), "a call recorded")
+            args = s.calls()[0]["args"]
+        finally:
+            s.stop()
+        self.assertEqual(args[:-1], ["-p", "--output-format", "json", "--allowedTools", ",".join(self.ls.VIP_TOOLS),
+                                     "--disallowedTools", ",".join(self.ls.vip_deny()), "--"])
+        self.assertTrue(args[-1].startswith("creaite VIP check."))                          # the prompt, alone, last
+        self.assertNotIn("ToolSearch", args[args.index("--disallowedTools") + 1].split(","))
+
+    def test_part_3b_limits_and_prompt_parts_are_unchanged(self):
+        self.assertEqual((self.sw.VIP_MIN_MINUTES, self.sw.VIP_MAX_MINUTES), (10, 240))
+        self.assertEqual((self.sw.VIP_WORK_PER_PROJECT, self.sw.VIP_WORK_MAX), (15, 60))
+        for ph in ("{open}", "{open_work}", "{since}", "{zone}", "{offset}", "{sources}", "{kinds}", "{addresses}"):
+            self.assertIn(ph, self.ls.VIP_PROMPT)
+
+
 class SingleCallServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -791,7 +845,8 @@ class SingleCallServerTests(unittest.TestCase):
         self.assertEqual(args[args.index("--allowedTools") + 1].split(","), TOOLS)
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
         import live_server
-        self.assertEqual(args[args.index("--disallowedTools") + 1].split(","), live_server.DENY_TOOLS)
+        self.assertEqual(args[args.index("--disallowedTools") + 1].split(","), live_server.vip_deny())   # main's 9c1a0c2f
+        self.assertNotIn("--tools", args[:args.index("--")])                                 # #116: no --tools flag
         self.assertEqual(live_server.VIP_TOOLS, TOOLS)
         self.assertNotIn("--model", args)
         self.assertEqual(calls[0]["headless"], "1")                                          # run_env()
