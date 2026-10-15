@@ -12,7 +12,7 @@
 
 ## Goal
 
-Today shows **one card per mail or Teams thread** from people Alan follows, built around what he must do: a **type** (Action, Decision, FYI/file or Risk), a **due date** and **owners**. The thread is matched to open work first (New, Update or Chase). The card stays until Alan acts: **Handled**, or his reply showing in Sent Items (or his own message in the Teams chat). A card can be **logged on the matched item** in one click, which stages an update for Review. Confidential threads get a real summary in creaite's own words and stay internal. The timer's one check fills the card fields (Part 3 B); the two-stage split was dropped on cost (15-10-2026).
+Today shows **one card per mail or Teams thread** from people Alan follows, built around what he must do: a **type** (Action, Decision, FYI/file or Risk), a **due date** and **owners**. The thread is matched to open work first (New, Update or Chase). The card stays until Alan acts: **Handled**, or his reply showing in Sent Items (or his own message in the Teams chat). A card can be **logged on the matched item** in one click, which stages an update for Review. Confidential threads get a real summary in creaite's own words and stay internal. The timer's one check fills the card fields (Part 3 B); the two-stage split was dropped on cost (15-10-2026). The card can also offer to close a finished action (Part 3 B, step 9) and to add or keep Alan's promises from his own messages (Part 5), each staged for Review only on his click.
 
 ## What exists (BL-334, v1.9.5)
 
@@ -97,7 +97,7 @@ Alan ran `dev/tools/vip_probe.py --since-days 3` in his own vault (4 followed ad
 - **Due date:** where stated or clearly implied (`YYYY-MM-DD`, shown as in Conventions); otherwise none. The code drops anything that is not a real date. Overdue cards sort first, then by due date, then by last message.
 - **Owners:** the people named to act, by full name (a register name where known); "you" when the ask is of Alan. Also one line, `ask`: what Alan must do, in creaite's words, up to 140 characters.
 - **Handled:** a button on every card, same effect as Dismiss (out of Needs attention, kept in vip.json, Undo available), recorded as `handled` with a time. Dismiss is relabelled Handled on thread cards; the routes and Undo stay; Activity › Quality can tell the two apart.
-- **Closing on Alan's reply:** stage 1 also looks, for each open card, for a message from Alan in that thread after the card's `last` (mail: Sent Items; Teams: his own message in the chat). Found: the card closes as `replied` with that time, and shows in a quiet "Replied" line. A later message from someone else reopens it (updated in place). A reply does not mark the matched work item done.
+- **Closing on Alan's reply:** stage 1 also looks, for each open card, for a message from Alan in that thread after the card's `last` (mail: Sent Items; Teams: his own message in the chat). Found: the card closes as `replied` with that time, and shows in a quiet "Replied" line. A later message from someone else reopens it (updated in place). A reply does not mark the matched work item done by itself; when the thread shows the item finished, the card offers "Looks done: close <ID>", which stages a pending close for Review only on Alan's click (Part 3 B, step 9).
 - **Log on the matched item:** on a card with a match (Part 2), one click, "Log on ABC-A-007", stages an update for Review (decision b). The button never appears without a match, and the click is the only way anything is staged.
 - **Followed people only for now;** cards stay until Alan acts.
 
@@ -323,6 +323,7 @@ New `dev/tests/test_vip_two_stage.py`, with the repository's stand-in claude (th
 - The reply carries the Part 1 fields (`type`, `ask`, `due`, `owners`), the Part 2 `match` and `last_from`, and Alan's newest reply in each thread (`replied`), so the cards Parts 1, 2 and 4 built are filled by the real check, not only by the stand-in claude.
 - **Calendar invites are left out** (Alan's yes, 15-10-2026, a BL-99 change). Invites from followed people no longer make cards.
 - Times come back in one named zone; IDs are copied exactly; code checks every field before `vip_record` sees it.
+- **Close suggestions** (step 9, Alan 15-10-2026): when the thread shows the matched open action finished, the card offers "Looks done: close <ID>", staged for Review only on Alan's click.
 - Nothing else changes: the same tools, the same skips, the same timer, the same `vip_record` → `conv_record` path, no queue, no second call, no new setting.
 
 ### Step 1. The prompt
@@ -337,6 +338,7 @@ New `dev/tests/test_vip_two_stage.py`, with the repository's stand-in claude (th
 6. **Replies (Part 1, closing on Alan's reply).** "For each conversation you report and each OPEN conversation below, find Alan's newest message in it after its time (mail: search Sent Items for its subject; Teams: his own message in that chat) and give it as `"replied": "YYYY-MM-DDTHH:MM{offset}"` or null. For an OPEN conversation with nothing new from anyone else, give only `{"conversation", "kind", "replied"}`." **OPEN** is `{open}` (below).
 7. **Part 4 rule** (BL-334's, extended): a confidential conversation is summarised like any other in creaite's own words, never quoted, `sensitivity: "confidential"`, **with its type, ask, due, owners and match**; a private one gives only `"summary": "private"` and no items, type, ask, due, owners or match.
 8. Unchanged: read-only, change nothing, write nothing, send nothing; one object per conversation; never the word VIP; `[]` when there is nothing.
+9. **Close suggestions** (`closes`): the wording is in step 9 below. **Promises** (`promises`, `kept`) are Part 5's and join this prompt only when Part 5 is built.
 
 **What code puts in the prompt** (`sweep.vip_prompt_parts()`, plain code, returns the strings; the server only formats them):
 - `{open}`: the open and replied cards (`state` open or replied, not seen), at most 20, newest first, each `{conversation, kind, subject (mail only), last}` in the named zone. References vip.json already holds.
@@ -362,7 +364,7 @@ New `dev/tests/test_vip_two_stage.py`, with the repository's stand-in claude (th
 ### Step 4. The run, guarded hunks and review
 
 **live_server.py hunks that are a run (Opus; Jarvis reviews the diff word for word before push):**
-1. The VIP constants: `VIP_PROMPT` (extended), `VIP_INVITES` (new, `False`), and the two-variant source sentence. Jarvis reads the prompt: read-only, the three probe rules, invites out, the Part 1, 2 and 4 fields, never the word VIP, no instruction to write, send or run anything.
+1. The VIP constants: `VIP_PROMPT` (extended), `VIP_INVITES` (new, `False`), and the two-variant source sentence. Jarvis reads the prompt: read-only, the three probe rules, invites out, the Part 1, 2 and 4 fields, the `closes` sentence (step 9), never the word VIP, no instruction to write, send or run anything.
 2. `vip_check`: `prompt_last` (the prompt after `--`), the prompt filled from `sweep.vip_prompt_parts()` and `sweep.local_zone()`; `sweep.vip_clean` before `vip_record`; the second `sweep_running()` check (step 3); one debug log line per check (BL-102), `info("vip", …)` with counts, seconds and dollars only: conversations returned, kept, dropped by reason, new or updated, replied, and the reply's `total_cost_usd`. Never a subject, address, ID or text. That cost line is what measures today's real per-check figure (step 5).
 
 **Not a run, same diff:** the module docstring's VIP line ("invites" removed).
@@ -419,7 +421,7 @@ New `dev/tests/test_vip_single_call.py`, with the repository's stand-in claude (
 2. The guarded hunks in live_server.py (`VIP_PROMPT`, `VIP_INVITES`, `vip_check`), then the end-to-end tests with the stand-in claude.
 3. The `check_minutes` guard (sweep.py and the Settings field), the rules line, `check.py`, then Jarvis's review.
 
-**Size S to M:** about half a day of Opus build plus one review round. Model: **Opus**.
+**Size S to M:** about half a day of Opus build plus one review round; with step 9's close suggestions (S, 3 to 4 hours) it is **M**. Model: **Opus**.
 
 **Review-round checks:**
 - **Identity and keying:** a reply object matches a card by **any** of its keys (`id:`, `link:`, `loc:`, the card id, `ids`); `vip_clean` never merges (`card_lookup` is the read-only half of `card_find`); merging happens only in `vip_record`, under `VIP_WRITE`.
@@ -428,7 +430,7 @@ New `dev/tests/test_vip_single_call.py`, with the repository's stand-in claude (
 - An internet message ID never becomes a key; a reply-only object never makes a card.
 - No invite card while `VIP_INVITES` is `False`; flipping it restores BL-334's behaviour and the tests show both.
 - The debug log and vip.json hold no message text, no subject or address in a log line, and not the word VIP.
-- The diff to live_server.py is the two run hunks and the docstring line only.
+- The diff to live_server.py is the two run hunks, the docstring line and step 9's one route only.
 
 **Done when (Part 3 B as a whole):**
 - with a stand-in claude, one check makes **one** call with exactly `VIP_TOOLS` and `DENY_TOOLS`, no `--model`, the prompt after `--`;
@@ -437,7 +439,78 @@ New `dev/tests/test_vip_single_call.py`, with the repository's stand-in claude (
 - a reply in Sent Items closes the card as Replied; a confidential card has type, ask, due, owners and the neutral match reason; a private one has none;
 - the debug log gets counts, seconds and the dollar cost per check (BL-102);
 - `check_minutes` under 10 is read as 10;
+- step 9's Done-when (close suggestions) is met;
 - `test_no_real_names.py` and `check.py` pass.
+
+### Step 9. Close suggestions (Alan, 15-10-2026)
+
+> **Agreed by Alan, 15-10-2026** (#86, Jarvis): Part 3 reads Sent and helps close work items. Staged for Review only; never applied by the check.
+
+**What is already in the plan, and what this adds.** Reading Sent Items (and Alan's own messages in a Teams chat) and closing the **card** on his reply are already in Part 3 B (step 1, rule 6; step 2's `replied`; Part 1's Replied state), and Log already stages one pending update line on the matched item. What this step adds: when the thread shows the card's **matched open action is finished**, because Alan's own message delivers it or the action's owner says it is done, the card offers **"Looks done: close ABC-A-007"**. One click stages **one pending close of that action** for Review, with the thread as its source. Nothing is applied by the check or by the click; Review decides, on its own (a closing update is never covered by Approve routine, `review.individual_only`).
+
+**Scope.** Actions only (Log is for actions; Part 2 matches actions only). RAID items, decisions and milestones are not closed from a card. Promises are Part 5. Follows the existing AI drafts switch **Spot items that are probably done** (`drafting.done`, on by default, `extraction.switched_on("done")`): while it is off the prompt sentence stays (the prompt does not vary by setting) but code drops every `closes` (counted `off`) and the card offers nothing. No new setting.
+
+**The prompt (rule 9 in step 1; the build may tighten words, never drop a rule).**
+> "**Finished work.** When a conversation shows that the OPEN WORK action you gave as its `match` is now finished, add `"closes": {"id": "<the same ID as match.id, copied exactly>", "evidence": "<why it looks finished, in your own words, at most 100 characters; never quote the message>"}`. Finished means one of two things only: Alan's own message delivers it (for example he sends the document or gives the answer the action asked for), or the action's owner says in the conversation that it is done. Only when `match.relation` is `update` or `chase`; never for `new` and never for an ID you did not give as `match.id`. If the message only promises it, plans it, asks about it or mentions it, or if you are unsure, leave `closes` out. An OPEN conversation's reply-only object may carry `closes` too, for its card's matched item, when Alan's newest message delivers it. Never for a private conversation."
+
+About 140 words (≈ 190 tokens) on step 5's figure: well inside the +$0.01 a check already allowed for; the reply grows by about 30 tokens a close.
+
+**The reply's shape.** On a full object or a reply-only object: `"closes": {"id": "ABC-A-007", "evidence": "Alan sent the revised plan the action asked for"}`. Nothing else is read from it.
+
+**Code-side validation** (`sweep.vip_closes(a, found, offered)`, plain code, called from `vip_record`'s path after `vip_match` has set the card's match; each drop counted by reason for step 4's debug line, never with text):
+1. `closes` must be a dict with a string `id` and a string `evidence`; anything else → dropped (`shape`).
+2. `drafting.done` off → dropped (`off`). A private card → dropped (`private`).
+3. **The match must agree** (a wrong match must not suggest): the card's match is the one code accepted (`_checked_match`; for a reply-only object, the card's stored match). If `match.relation` is not `update` or `chase`, or `match.id` is empty, or `closes.id` (upper-cased, stripped) is not **exactly** `match.id` → dropped (`wrong_match`). So a thread code turned into New (an invented, closed or other project's ID) can never offer a close, and the model cannot close an item it did not match.
+4. **The ID must be an open action of the card's project and in the candidate list:** `-A-` in it, in `_open_actions(con, a["p"])` (Open or Delayed), and in the IDs `vip_prompt_parts()` put in this check's `{open_work}` (it returns them as `offered`) → else dropped (`not_open`, `not_offered`). An ID copied with one character wrong fails here.
+5. **Who finished it** (the owner rule of BL-218, `extraction.said_by_owner_or_alan`, applied by code): the close is kept when Alan wrote the thread's newest message (step 2's rule: `replied` later than the others' newest, or `_alan_wrote(last_from)`), recorded `who: "Alan"`; or when `last_from` is the action's owner (`extraction.is_person(last_from, owner, register)`), recorded `who: <owner's full name>`. Anyone else → dropped (`not_owner`).
+6. **Timeframe:** the action was raised on or before the day of the closing message (`row["raised"] <= day`) → else dropped (`raised_after`).
+7. **Evidence:** required; `_clean(evidence, 100)`; empty after cleaning → dropped (`no_evidence`). It is creaite's words by the prompt's rule; code also refuses evidence that copies the card's summary or holds a quotation mark run of more than 8 words (`quoted`), a cheap guard, not a proof.
+8. Kept as `a["closes"] = {"id", "evidence", "who", "at": "YYYY-MM-DD HH:MM" (the closing message, local)}`. A later full object for the same card without `closes` removes an unstaged suggestion (the thread moved on); a reply-only object only adds or replaces one. A staged one (`closes.staged`) is never removed by a check. A confidential card keeps `closes` with its `evidence` replaced at once by the fixed words "The thread shows it finished." (Part 4: the model's words may echo the thread; the card shows only the fixed line).
+
+**How it is staged** (`sweep.vip_close_stage(aid)`, plain code, under `VIP_WRITE`, the same pending-proposal path as `vip_update_stage`):
+- Refuses with a reason to show: no such card (LookupError), no `closes`, private, the action no longer open, already staged and still pending ("Already staged for Review").
+- **One pending proposal per item, shared with Log.** Two pending updates of one action would conflict at apply (both carry the same `based_on`; `tracker.py` refuses the second once the first changes `updated_at`), so the close goes into the **same** pending thread proposal for that item when one exists (`_pending_for`), and otherwise starts one (`_new_update_spec`'s shape: `op: update`, `table: actions`, `id`, `based_on` the row's `updated_at`, `source` = `_thread_source(a)`, `decision: pending`, `edited_in: dashboard`, `match: strong`, checked by `propose.complete` and `propose.check`).
+- What it sets: `changes.status = "Closed"` (the closed value of an action, `tracker.CLOSED_STATUSES[0]`); one line appended to `latest_update` with `_append_line` (Alan's Review edits kept): `"DD-MM-YYYY: Looks done: <evidence> (from a mail thread | Teams chat)"`; `suggested.done = {"strength": "Looks done", "reason": "", "evidence": {"kind": "mail" | "teams", "at", "who", "said": <evidence>, "source"}}`; `suggested.closes = [card id]`; `why` = `"Looks done: <evidence>"`, or for a confidential card `"Looks done: from a confidential thread"`.
+- **Confidential:** the line is `NEUTRAL_LINE`'s form with "Looks done" ("DD-MM-YYYY: Looks done (from a confidential thread)"), `said` is "The thread shows it finished.", `source` is `_thread_source(a)` (no subject or title), `who` left out. No thread words anywhere in the staged change.
+- Records `a["closes"]["staged"] = {"proposal", "at"}` and saves vip.json.
+- **Undo** (the card's "Undo" after staging, `vip_close_unstage(aid)`): only while the item is still pending and the card's id is in `suggested.closes`: removes `status`, the Looks-done line (the exact line it added, wherever Alan left it; if he edited it away, the field is left as he left it) and `suggested.done`/`closes`; if nothing of Log's remains (`suggested.lines` empty), the item is removed and an empty proposal file deleted. Leaves nothing behind. Approved, rejected or applied: Undo refuses ("Already decided in Review"; an applied close is undone with the tracker's own undo). Handled or Dismiss on the card before a click stages nothing and leaves nothing.
+- **Review.** `build_dashboard`'s review rows (the BL-218 block, `sg.get("feature") == "done"`) also read `sg.get("done")`, so the row leads with the **Looks done** tag and the evidence; `extraction.evidence_line` gains one branch: with `said` and no `quote`, it gives "Mail 15-10-2026 14:02 by Alan Carter: delivered the revised plan" **without quotation marks** (it is creaite's words, not a quote). `review.closes_individually` already holds it on its own (an action set to Closed). Reject with a reason works as for any row. Activity › Quality counts it under the `done` feature (`drafts.py` stats: offered when the card shows it, used on stage, rejected in Review), as BL-218's are.
+
+**Route** (live_server.py, a route, not a run; Sonnet may write it, Jarvis reviews it as Part 1's): `/api/alerts/close` `{"id", "undo": false}` in `SWEEP_ALERT_ROUTES`, holding `LOCK` then `VIP_WRITE` as `/api/alerts/log` does, calling `vip_close_stage` or `vip_close_unstage`; returns `{"ok", "proposal", "id", "state": "staged" | "undone"}` or `{"ok": false, "error"}`. *For Jarvis:* folding it into `/api/alerts/log` with a flag is a smaller diff but mixes two outcomes in one route; the plan prefers its own route.
+
+**The card** (`today.js`, built into `dashboard.html`):
+- A button beside Log: **"Looks done: close ABC-A-007"** (the ID as shown), with the evidence as a quiet line under the match ("Looks done: Alan sent the revised plan"; confidential: "Looks done: the thread shows it finished"). `aria-label` "Stage a close of ABC-A-007 for Review".
+- Hidden when there is no `closes`, the card is private, the match is New, or the item is no longer open in the page data.
+- After staging: the button becomes the text **"Staged for Review"** with an Undo link, and the Review count rises (the page reloads its data as `alertLog` does, so N1's stale-chip fault does not come back). Clicking it again stages nothing.
+- Never the word VIP; the Confidential marker as Part 4.
+
+**Tests** (in `test_vip_single_call.py` and `test_alert_actions.py`; probe-style fixtures: a stand-in claude returning fixed JSON; fictional people, project ABC with open actions ABC-A-007 (owner Sara Example) and ABC-A-008, project XYZ with open action XYZ-A-001, ABC-A-003 closed):
+- **Wrong match, must not suggest:** `match.id` ABC-A-008 with `closes.id` ABC-A-007 → no `closes` (`wrong_match`); `match.relation` `new` with a `closes` → none; `match.id` an invented ID that code turned into New, with the same `closes.id` → none.
+- **The owner says done:** last message from Sara Example's address, "relation": "update", `closes` ABC-A-007 → kept, `who` Sara Example; the button shows; the stage gives one pending proposal with `status` Closed, `based_on`, the Looks-done line, `suggested.done.evidence.said`, source the thread.
+- **Alan's sent delivery:** a reply-only object for an OPEN card with `replied` later than the others and `closes` its matched ID → the card is Replied **and** offers the close, `who` Alan.
+- **Someone else says done** (not the owner, not Alan) → none (`not_owner`).
+- **Confidential:** kept with the fixed evidence; the staged item's `why`, line, `said` and `source` hold no subject, title or summary words (asserted against the fixture's subject and summary); private → none.
+- **Closed or other project's ID:** `closes` ABC-A-003 (closed) or XYZ-A-001 (other project) with a matching `match.id` → none (code had already made the match New; asserted both ways).
+- **Not offered:** a real open ABC action left out of `{open_work}` (over the cap) → none (`not_offered`).
+- **One proposal with Log:** Log then close on the same card → one pending item with both lines and `status`; close then Log → the same; a second card on the same item closing → its line added, `suggested.closes` both ids, still one item.
+- **Undo:** stage then Undo → the proposal file is gone (no Log) or back to Log's lines only; approved in Review then Undo → refused.
+- **Switch off:** `drafting.done` false → no `closes` kept, no button.
+- **Review row:** the dn tag reads Looks done and the evidence has no quotation marks; `individual_only` gives "closing update"; Approve routine leaves it pending.
+- **No label:** no "VIP" in the route results, the card, the page data or the staged proposal.
+- Screens (`test_vip_screens.py`): the button beside Log, then "Staged for Review", at 1400 and 1100 px, light and dark.
+
+**Guarded hunks.** The prompt sentence only, inside step 4's hunk 1 (`VIP_PROMPT`), Opus, Jarvis reads it word for word; and the one route above (a route, not a run). `vip_check` gains nothing for this step beyond step 4's hunk 2: `vip_prompt_parts()` already returns `offered`, and the `closes` counts go on the same debug line. No change to `reach.py`, the guard hook, `permissions.py`, `.claude/settings.json`, `filechange.py`, `tracker.py`, `schema.sql`, `review.py` (it already holds the close on its own) or the settings.
+
+**Files.** `sweep.py` (`vip_closes`, `vip_close_stage`, `vip_close_unstage`, `offered` from `vip_prompt_parts`), `extraction.py` (`evidence_line`'s `said` branch), `build_dashboard.py` (review rows read `suggested.done`; the card's `closes` in the page data), `today.js` / `dashboard.html`, live_server.py (prompt sentence, route).
+
+**Size: S** (about 3 to 4 hours of build inside Part 3 B, plus its share of the review round); Part 3 B as a whole stays S to M, now the upper end, M.
+
+**Done when (step 9):**
+- with a stand-in claude, an owner's "done" or Alan's sent delivery on a matched action gives a card with "Looks done: close ABC-A-007"; one click stages one pending close (status Closed, `based_on`, the thread as source) that Review shows as Looks done with creaite's words and holds on its own;
+- a wrong match, New, a closed or other project's ID, an ID not offered, or someone other than the owner or Alan never suggests;
+- a confidential card's staged close holds no thread words; a private card offers none;
+- Undo leaves nothing; Handled or Dismiss before a click stages nothing; nothing is applied without Review;
+- Log and close on one item make one pending proposal.
 
 ## Part 4. Confidential mail
 
@@ -457,12 +530,134 @@ New `dev/tests/test_vip_single_call.py`, with the repository's stand-in claude (
 
 **Tests.** Extend `test_vip_confidential.py` (card fields, neutral log line, client report and one-pager exclude), `test_vip_private.py`. Size **S**. Model: **Sonnet**.
 
+## Part 5. Commitments: promises from Alan's sent messages (after Part 3 B)
+
+> **Agreed by Alan, 15-10-2026** (#86, Jarvis): planned 15-10-2026 (Team Stark, Opus); plan only. Built straight after Part 3 B, on its branch tip (`bl342-part5` from `bl342-part3b`), with its own review round. Staged only: nothing is written by the check; each promise is a pending proposal Alan clicked for, decided in Review like everything else.
+
+**Behaviour.**
+- When Alan's own message in a thread from someone he follows makes a commitment in passing ("I'll send the revised plan by Friday"), the card shows a **Promise** line ("You promised Sara Example: Send the revised plan, by 16-10-2026") with an **"Add a promise"** button. One click stages one new promise for Review.
+- When a later message in the thread shows one of the project's **open promises** fulfilled (Alan sends what he promised, or the person who made it delivers), the card shows "Looks kept: ABC-P-012" with a **"Looks kept: mark kept"** button. One click stages the promise's status change to Done for Review.
+- Neither is ever applied by the check or by the click; a card never changes a promise.
+- Scope: **Alan's own promises** (You owe), from the threads the check already reads, and kept for any open promise of the card's project. Promises **made to Alan** by the people he follows (Waiting on) are left out for now: Alan's choice (below).
+
+### What the promises table holds today (BL-125 A, v1.9)
+
+- `promises` (`schema.sql`): `id` (`ABC-P-012`: the project code, `-P-`, three digits; **the same number sequence per project as actions, RAID items and decisions**, `tracker.next_id`, so `ABC-A-011` and `ABC-P-012` never share a number), `project` (required), `promised_by` and `promised_to` (full names from the people register), `description` (required), `due_date` (optional; with none a promise is never overdue), `status` (`Open`, `Done`, `Dropped`; Done and Dropped set `closed`), `raised`, `closed`, `source` (required), `archived`, `updated_at`. **No `client_visible`, no `latest_update`, no owner** (the "owner" for the done rules is `promised_by`, `extraction.owner_of`).
+- Read by: the dashboard's You owe and Waiting on, `tracker.py read promises --list owe|waiting`, the **internal** weekly report ("Promised: …", "Waiting on …", `report.promise_lines`). **The client report, the client-safe one-pager and the prep page's client copy never read the promises table** (it has no client-visible flag), so a promise to a client never reaches a client report; there is no flag to set, and none is added.
+- **How promises are proposed today:** from cx-minutes (always), by Alan by hand (cx-edit, the dashboard), and from cx-sweep **only while `promises.from_sweep` is on** (it ships `false`, Alan 13-10-2026, until BL-233's quality data shows the sweep's promises accepted unedited; `sweep.py stage` drops any that arrive and counts them "promises off"). A new promise is `{"op": "new", "table": "promises", "values": {project, promised_by, promised_to, description, due_date, raised, source}}`; a new promise is **routine** in Review (BL-125 decision 6); "kept" is `{"op": "update", "table": "promises", "id", "changes": {"status": "Done"}}`, routine too **unless** it carries a probably-done mark (`suggested.feature == "done"`), which `review.closes_individually` holds on its own. A promise already open is a mention, never staged twice.
+
+### The switch: how this relates to `promises.from_sweep`
+
+`promises.from_sweep` exists because the sweep **stages** its promises unattended into Review, in bulk, where an unreliable extractor floods the queue. The card stages nothing until Alan clicks, which makes each promise one Alan added himself (the "promises added by hand are unaffected" case of the setting), so the gate's reason does not apply. **Recommendation: no new switch, and the card's promises do not follow `promises.from_sweep`.** The kept suggestion follows `drafting.done` (Spot items that are probably done), as step 9's close does. Activity › Quality counts the card's promises as their own AI-draft feature (`promise`: offered, used, edited, rejected; counts only), so BL-233's data covers them and Alan can see how good they are. If Alan wants an off switch anyway, the cleanest is one key in AI drafts (`drafting.promise`, on by default; `settings-defaults.json` and `settings_catalogue.py`, not guarded, Sonnet): **Alan decides**. Alternative he may prefer: follow `promises.from_sweep`, which hides Part 5 until he turns the sweep's promises on.
+
+### What the single call's prompt adds (rule 10 in Part 3 B step 1; Opus; the build may tighten words, never drop a rule)
+
+> "**Alan's promises.** In Alan's own messages in a conversation since {since} (the one you gave as `replied`, or any of his you read), look for a commitment he made in passing to someone else, such as 'I'll send the revised plan by Friday'. For each, add to the conversation's `promises` list `{"what": "<what he will do, verb first, in your own words, at most 100 characters; never quote>", "to": "<the full name of the person he promised it to>", "due": "<YYYY-MM-DD in {zone}, worked out from the date of his message ('Friday' is the next Friday after it), or null when he gave no time>", "at": "<his message's time, YYYY-MM-DDTHH:MM{offset}>"}`. At most 3 a conversation. Not a promise: a question, a plan without a commitment, a task someone formally gave him (that is an action), or anything in OPEN PROMISES already. **Promises kept.** When a message in the conversation, from Alan or from the person who made it, shows that one of OPEN PROMISES for this project has now been done, add `"kept": {"id": "<the ID exactly as listed>", "evidence": "<why it looks kept, your own words, at most 100 characters; never quote>"}`. If unsure, leave it out. Never for a private conversation."
+
+**`{open_promises}`** (from `vip_prompt_parts()`, plain code): each active project's open promises, `{id, t (at most 80 characters), by, to, due}`, soonest due first, **at most 10 a project, 30 in all**; the IDs sent are returned as `offered_promises`. The check's other inputs are unchanged.
+
+**Cost.** About 190 words of rule (≈ 260 tokens) and at most 30 × ~30 = 900 tokens of list: ≈ 1,200 tokens more input at the cap, about +$0.005 a check on step 5's prices (a 1-hour cache write each check, a few reads); the reply grows ~40 tokens a promise. Roughly +$0.12 a day on 24 checks; negligible beside the call's fixed context.
+
+### The reply shape
+
+On a full object or a reply-only object (an OPEN card's): `"promises": [{"what", "to", "due", "at"}]` and `"kept": {"id", "evidence"}`. Nothing else is read from them.
+
+### Code-side validation (`sweep.vip_promises(a, found, offered_promises)`, plain code, after `vip_clean` and `vip_match`; drops counted by reason on step 4's debug line, never with text)
+
+**New promises:**
+1. A private card → all dropped (`private`). A card with no project → none (a promise needs a project; `no_project`).
+2. A list of dicts, at most 3 (more → the first 3 by `at`, counted `over`).
+3. `what`: a string, `_clean(…, 100)`, at least 3 words → else dropped (`vague`); quotation-mark runs of more than 8 words → dropped (`quoted`).
+4. `to`: mapped to a full name by `propose.map_people` (the people register, as owners are); to Alan himself → dropped (`self`); empty → dropped (`no_to`); an unknown name is kept as written and Review flags it as `people map` does today.
+5. `at`: parsed and converted as step 2's times (an offset required, not in the future, not before `since` minus 10 minutes unless the card is OPEN); **the message at `at` must be Alan's**: the card's `replied` time, or `last_from` is Alan's with `last` equal to `at` (to the minute); otherwise dropped (`not_alan`). Promises are only ever Alan's own words.
+6. `due`: a real date, on or after `at`'s day, else null (the staged item is flagged `no-due-date`, as `new_defaults` does).
+7. **Not a repeat:** dropped when its normalised `what` equals an open promise of the project (`norm`, as `stage`'s `open_items`), or when the card already holds or held a promise with the same key `pkey = sha1(card id + norm(what))[:12]` (kept on the card, so a later check never offers it twice and a dismissed one stays dismissed; `repeat`).
+8. Kept on the card as `a["promises"] = [{"key", "what", "to", "due", "at", "state": "offered" | "staged" | "dismissed", "staged": {...}}]`. A confidential card keeps them for its own display (Part 4: the card is internal) but the staged change is neutral (below).
+
+**Kept:**
+1. A dict with string `id` and `evidence`, else dropped (`shape`); `drafting.done` off → dropped (`off`); private → dropped.
+2. `id` exactly one of `offered_promises` and an Open promise of the **card's** project (`tracker.fetch`) → else dropped (`not_open`, `not_offered`). Another project's promise, a Done or Dropped one, or a mis-copied ID never suggests.
+3. **Who kept it:** the message is Alan's (as step 9's rule) when `promised_by` is Alan, or `last_from` is `promised_by` (`extraction.is_person`) when someone else made it → else dropped (`not_owner`). The promise was raised on or before the message's day → else dropped (`raised_after`).
+4. `evidence` required, `_clean(…, 100)`, empty → dropped. Kept as `a["kept"] = {"id", "evidence", "who", "at"}`; a confidential card's evidence is the fixed "The thread shows it done."
+
+### Staging (plain code, under `VIP_WRITE`, the same proposal path as `vip_make` and `vip_update_stage`)
+
+- **Add a promise** → `sweep.vip_promise_stage(aid, key)`: one new proposal file (`_free_name()`), one item `{"op": "new", "table": "promises", "values": {"project": a["p"], "promised_by": identity.name, "promised_to": <to>, "description": <what>, "due_date": <due or absent>, "raised": <at's day>, "source": _thread_source(a)}, "why": "From a thread: you promised it in a message you sent" | "From a confidential thread", "suggested": {"feature": "promise", "threads": [aid], "key": key}, "match": "strong", "flags": ["no-due-date"] if no due, "decision": "pending", "edited_in": "dashboard"}`, through `propose.complete` and `propose.check` (an invalid one refuses with the reason). Routine in Review, as every new promise is. Marks the card's promise `staged` with `{"proposal", "at"}`.
+- **Mark kept** → `sweep.vip_kept_stage(aid)`: `{"op": "update", "table": "promises", "id", "changes": {"status": "Done"}, "based_on": <updated_at>, "source": _thread_source(a), "why": "Looks kept: <evidence>", "suggested": {"feature": "done", "strength": "Looks done", "reason": "", "evidence": {"kind", "at", "who", "said", "source"}, "threads": [aid]}, "decision": "pending"}`. `suggested.feature == "done"` makes `review.closes_individually` hold it on its own, and Review's BL-218 row shows it with the Looks done tag and creaite's words (step 9's `said` branch). A pending kept for the same promise already staged (from any card) → nothing new ("Already staged for Review").
+- **Undo** (`vip_promise_unstage(aid, key)`, `vip_kept_unstage(aid)`): only while the item is pending and it is the card's own (`suggested.threads`); removes the item, and the file when empty; the card's promise goes back to `offered`. A **Dismiss** on the Promise line marks it `dismissed` and stages nothing; Handled on the card stages nothing.
+- **Confidential:** the staged promise's `description` is the neutral "Follow up on a confidential thread" (Alan rewrites it in Review if he wants the detail; the card shows him the real words while it is open), `source` is `_thread_source(a)`, `why` "From a confidential thread"; the kept update's evidence and `why` are the fixed words. No subject, title or thread words in either. *Alan decides* (below) whether he would rather have the real description, labelled Sensitive, as Create work item does for a confidential card (`CONFIDENTIAL_MADE`).
+
+### The card UI (`today.js`, built into `dashboard.html`)
+
+- A **Promise** line under the ask, one per offered promise: "Promise: Send the revised plan, to Sara Example, by 16-10-2026" (no date: "no date given"), with **"Add a promise"** and a quiet Dismiss. After the click: "Staged for Review" and Undo. Confidential: "Promise: from a confidential thread" plus the real words in the card's confidential body only, as Part 4 shows the summary.
+- A **Looks kept** line when `kept` is set: "Looks kept: ABC-P-012, <evidence>" with **"Looks kept: mark kept"**; after the click "Staged for Review" and Undo. Hidden when the promise is no longer Open in the page data.
+- Private cards show neither. Never the word VIP. The page reloads its data after each click, as `alertLog` does.
+
+### Privacy
+
+- Confidential threads stay neutral in everything staged (above); the card itself keeps Part 4's rule (a real summary in creaite's words, internal).
+- Alan's Sent mail is his own text, but it is **still summarised, never quoted**: `what` and `evidence` are creaite's words, the prompt says so, and code refuses a long quoted run. vip.json holds the words and references only.
+- A promise to a client never reaches a client report: the client report, the client-safe one-pager and the prep page's client copy do not read the promises table at all (no client-visible flag exists or is added). The internal weekly report lists them, as today.
+- The debug log holds counts only.
+
+### Route (live_server.py, a route, not a run; Sonnet may write it; Jarvis reviews)
+
+`/api/alerts/promise` `{"id", "what": "add" | "kept" | "dismiss", "key", "undo": false}` in `SWEEP_ALERT_ROUTES`, holding `LOCK` then `VIP_WRITE`, calling the four functions above; returns `{"ok", "proposal", "state"}` or `{"ok": false, "error"}`.
+
+### Guarded hunks
+
+- **live_server.py, run (Opus; Jarvis reviews word for word):** the promise and kept sentences in `VIP_PROMPT` (the same constant as Part 3 B's hunk 1), and in `vip_check` the `{open_promises}` placeholder filled from `vip_prompt_parts()` plus the promise counts on the existing debug line (Part 3 B's hunk 2). No new tool, no `--model`, `VIP_TOOLS` and `DENY_TOOLS` unchanged (Sent Items is already searched by email search).
+- **live_server.py, route:** `/api/alerts/promise`.
+- **Not touched:** `reach.py`, the guard hook, `permissions.py`, `.claude/settings.json`, `filechange.py`, `tracker.py`, `schema.sql`, `review.py` (it already treats a new promise as routine and a done-marked kept as individual), `report.py`, and the settings unless Alan asks for a switch. If the build needs any of them, it stops and goes back to Jarvis.
+
+### Tests
+
+New cases in `test_vip_single_call.py` and `test_alert_actions.py` (stand-in claude with fixed JSON; fictional register: Alan Carter as `identity.name`, Sara Example, Omar Example; ABC with open promises ABC-P-012 (by Alan Carter, to Sara Example) and ABC-P-013 (by Sara Example, to Alan Carter), ABC-P-009 Done, XYZ-P-002 open):
+- **Prompt:** the promise and kept sentences, `{open_promises}` filled (10 a project, 30 in all), never "VIP".
+- **Alan's sent promise:** a reply-only object with `replied` and `promises: [{what, to: "Sara", due: Friday, at: replied}]` → one offered promise, `to` mapped to Sara Example; Add stages one pending new promise (`promised_by` Alan Carter, `raised` the message day, source the thread), routine in Review.
+- **Not Alan's:** the same promise with `at` equal to Sara's message → dropped (`not_alan`); to Alan himself → dropped.
+- **Dates:** "due" not a date → null and `no-due-date`; a due before the message → null.
+- **Repeat:** a `what` equal to ABC-P-012's text → dropped; the same promise on the next check → not offered twice; dismissed stays dismissed.
+- **Kept:** Alan's message and `kept: ABC-P-012` → offered, staged as Done with `suggested.feature` done, held on its own in Review; `kept: ABC-P-013` from Sara Example → offered; from Omar → dropped (`not_owner`); ABC-P-009 (Done), XYZ-P-002 (other project) or an ID one character off → dropped.
+- **Confidential:** promise and kept staged with the neutral description, source and evidence (asserted against the fixture's subject and summary words); private → none.
+- **Undo** removes the item and an empty file; after Review decided → refused.
+- **Client report:** a client report and the client-safe one-pager built after the promise is applied contain nothing from it.
+- **No label, no text:** no "VIP" in the route results, card, page data, proposals or vip.json; vip.json has no message text.
+- Screens: the Promise and Looks kept lines at 1400 and 1100 px, light and dark.
+
+### Files
+
+`sweep.py` (`vip_promises`, `vip_promise_stage`, `vip_kept_stage`, the two unstage functions, `{open_promises}` and `offered_promises` in `vip_prompt_parts`), `drafts.py` (the `promise` feature in the stats; counts only), `build_dashboard.py` (the card's `promises` and `kept` in the page data), `today.js` / `dashboard.html`, live_server.py (prompt sentences, the placeholder, the route), `creaite-rules.md`'s VIP line (one clause: "and offers your promises from your own messages, for Review").
+
+### What depends on Part 3 B
+
+`local_zone` (the `due` and `at` zone), `vip_prompt_parts` (`{open}`, the place `{open_promises}` joins), `vip_clean` (times, the reply-only object, the unasked rule), `replied` and `last_from` (who wrote the promise), step 9's `said` branch in `evidence_line` and its `suggested.done` reading in Review, and the extended `VIP_PROMPT` itself. Part 5 cannot start before Part 3 B's step 1 and 2 code is on its branch; it can start before Part 3 B's review round ends if Jarvis agrees, since its prompt hunk is additive.
+
+### Size and model
+
+**M** (about a day of build: two staging paths, validation, the card lines and the route, plus a review round). Model: **Opus** for the prompt sentences and `vip_check` line (Alan's rule for runs); the plain code may be Sonnet.
+
+### Done when (Part 5)
+
+- with a stand-in claude, Alan's sent "I'll send X by Friday" in a followed thread gives a Promise line; Add stages one pending new promise for Review with the due date in Alan's zone and the thread as source;
+- a later message fulfilling an open promise of the card's project offers "Looks kept: mark kept"; the click stages one pending Done, held on its own in Review;
+- a promise not in Alan's own message, a repeat, another project's or a closed promise, or a mis-copied ID never offers anything;
+- confidential threads stage neutral promises and kept updates; private ones none;
+- nothing is written by the check; Undo leaves nothing; no promise reaches a client report;
+- `test_no_real_names.py` and `check.py` pass.
+
+### For Alan to decide (Part 5)
+
+1. **A switch:** none (recommended; each promise needs his click and Quality counts them), one AI drafts key `drafting.promise`, or follow `promises.from_sweep` (hidden until he turns the sweep's promises on).
+2. **Promises made to him** (Waiting on) from people he follows: left out (recommended for this part; it doubles the false positives to judge), or in, with `promised_by` the sender.
+3. **A confidential thread's promise:** the neutral description (as asked; he rewrites it in Review), or the real words labelled Sensitive, as Create work item does.
+
 ## Guarded areas, in one place
 
 | Area | Touched? | Where |
 |------|----------|-------|
-| live_server.py runs (the check and its prompt) | **Yes** | Part 3 B only: two hunks (`VIP_PROMPT` with `VIP_INVITES`, and `vip_check`; Part 3 B step 4). **Opus.** Jarvis reviews. |
-| live_server.py routes (not runs) | **Yes** | Part 1 (`/api/alerts/handled`, `/api/alerts/log`). Sonnet; Jarvis reviews. |
+| live_server.py runs (the check and its prompt) | **Yes** | Part 3 B: two hunks (`VIP_PROMPT` with `VIP_INVITES` and the `closes` sentence, and `vip_check`; Part 3 B steps 4 and 9). Part 5: the same `VIP_PROMPT` constant again (the promise sentences) and one line in `vip_check` (the open promises in the prompt). **Opus.** Jarvis reviews. |
+| live_server.py routes (not runs) | **Yes** | Part 1 (`/api/alerts/handled`, `/api/alerts/log`); Part 3 B step 9 (`/api/alerts/close`); Part 5 (`/api/alerts/promise`). Sonnet may write them; Jarvis reviews. |
 | `reach.py`, the guard hook | No | `sweep.py vip` is already `DERIVED`; no new script command. |
 | `permissions.py`, `.claude/settings.json` | No | The check keeps its own allow list. |
 | `filechange.py` | No | Nothing creates or changes a project file. |
@@ -476,8 +671,9 @@ If the build finds it needs any "No" row, it stops and goes back to Jarvis.
 1. **Part 1 data and card** (Sonnet): shape, Handled, Replied, Log, routes, UI. With a stand-in claude and the existing prompt.
 2. **Part 2 matching** (Sonnet): needs Part 1's card shape in sweep.py, so it follows Part 1.
 3. **Part 4** (Sonnet): small, rides on Part 1's shape; can run beside Part 2.
-4. **Part 3 B** (Opus): the one prompt extended, the reply's validation, the cost line and the `check_minutes` guard; last, after `bl342-fixes` lands, so the prompt carries every field from Parts 1, 2 and 4 (Part 3 B, step 8). Jarvis reviews it before push. (Part 3, two-stage, is superseded by cost.)
-5. **Integration pass** (Sonnet): the whole run end to end with the stand-in claude, the real-browser screens, the UX baseline, the sample-vault goldens.
+4. **Part 3 B** (Opus): the one prompt extended, the reply's validation, the cost line, the `check_minutes` guard and the close suggestions (step 9); last, after `bl342-fixes` lands, so the prompt carries every field from Parts 1, 2 and 4 (Part 3 B, step 8). Jarvis reviews it before push. (Part 3, two-stage, is superseded by cost.)
+5. **Part 5, commitments** (Opus for the prompt, Sonnet for the rest): straight after Part 3 B, on its branch tip; needs Part 3 B's `vip_prompt_parts`, `vip_clean`, `local_zone` and step 9's staging (`suggested.done`, the said-evidence line). Its own review round.
+6. **Integration pass** (Sonnet): the whole run end to end with the stand-in claude, the real-browser screens, the UX baseline, the sample-vault goldens.
 
 Parts 1 and 2 can be split between two Sonnet agents only if they agree the card shape first (both edit sweep.py).
 
@@ -487,33 +683,36 @@ Parts 1 and 2 can be split between two Sonnet agents only if they agree the card
 |------|------|-------|
 | 1 The card | M | Sonnet |
 | 2 Matching | M | Sonnet |
-| 3 B One call with the card fields (Part 3 superseded) | S to M | Opus |
+| 3 B One call with the card fields (Part 3 superseded) | M with step 9 | Opus |
+| 3 B step 9 Close suggestions (inside 3 B) | S | Opus (prompt) / Sonnet |
+| 5 Commitments (promises) | M | Opus (prompt) / Sonnet |
 | 4 Confidential mail | S | Sonnet |
 | Step 0 probe, integration, UX baseline | S | Jarvis / Sonnet |
-| **Total** | **L** | |
+| **Total** | **L** (Part 5 included) | |
 
 ## Rules for this sprint
 
 - Nothing in the sample data, tests or docs uses a real name; fictional people only (as `test_vip_conversations.py`).
 - The check stays read-only on Microsoft 365; nothing is sent, replied to or changed there. Chase only opens the existing draft pane.
 - Nothing reaches the tracker without Alan's approval in Review. The only write the card makes is a pending proposal he clicked for.
-- No schema change and no new setting (Part 3 B drops `vip.check_model`).
+- No schema change and no new setting (Part 3 B drops `vip.check_model`; Part 5 adds no switch unless Alan asks, Part 5 › The switch).
+- A card never changes a work item or a promise. Close, Add a promise and Mark kept each stage one pending proposal on Alan's click, for Review; nothing is applied by the check.
 - No message text is kept: vip.json, the card, the debug log and the staged update hold Claude's own words, references and counts.
 
 ## Tests
 
-Run in the review round: `test_vip_threads.py` (new), `test_vip_conversations.py`, `test_alert_actions.py`, `test_sweep_alerts.py`, `test_vip_confidential.py`, `test_vip_private.py`, `test_vip_screens.py`, `test_live_server.py`, `test_settings*`, `test_no_real_names.py`, and `dev/tools/check.py` (no figure may rise; the dashboard source and built `dashboard.html` are committed together).
+Run in the review round: `test_vip_threads.py` (new), `test_vip_single_call.py` (new, Part 3 B, step 9 and Part 5), `test_vip_conversations.py`, `test_alert_actions.py`, `test_sweep_alerts.py`, `test_vip_confidential.py`, `test_vip_private.py`, `test_vip_screens.py`, `test_live_server.py`, `test_settings*`, `test_no_real_names.py`, and `dev/tools/check.py` (no figure may rise; the dashboard source and built `dashboard.html` are committed together).
 
 ## Review-round checks
 
-1. The diff to live_server.py is Part 3 B's two hunks and the two routes only; `VIP_TOOLS` and `DENY_TOOLS` are unchanged and a test pins them.
+1. The diff to live_server.py is Part 3 B's two hunks, Part 5's prompt sentences and open-promises line, and the four routes only (handled, log, close, promise); `VIP_TOOLS` and `DENY_TOOLS` are unchanged and a test pins them.
 2. No call from either stage can write (allow list, no Bash).
 3. One call per check, on the default model, with no `--model` flag.
 4. A thread keeps one card across a reply, a late ID and a restart; two cards for one ID are merged.
 5. No "VIP" or message text anywhere shown, stored or logged; `grep -ri vip` on the page data and route results is clean.
 6. A staged update has `based_on`, is pending, is one proposal per item, and a confidential one is the neutral line.
 7. The Chase rule is code, not the model's say-so; an invalid match falls to New.
-8. Handled and Replied are not confused with done: no work item changes status from a card.
+8. Handled and Replied are not confused with done: no work item or promise changes status from a card. A close or a kept promise is only ever a pending proposal Alan clicked for, approved on its own in Review (a closing update); a wrong match never suggests a close.
 9. The UX baseline's ten checks, with screenshots; the card's due date, type and owners read at 1100px in dark.
 10. An old vault keeps its own `vip` values; `check_minutes` outside 10 to 240 is read at the bound.
 11. `test_no_real_names.py` and `check.py` pass.
