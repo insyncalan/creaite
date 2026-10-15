@@ -2567,6 +2567,7 @@ class LocalServer(ThreadingHTTPServer):
     so the name is set without a lookup."""
 
     def server_bind(self):
+        """Bind as TCPServer does, then name the server after its own address instead of looking the name up."""
         import socketserver
         socketserver.TCPServer.server_bind(self)
         host, port = self.server_address[:2]
