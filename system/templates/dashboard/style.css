@@ -3053,3 +3053,71 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+/* ===== v2.1.0 P8 (BL-336): the client view of the week's report (#client-report=CODE/week/client, components/report/ClientView.jsx),
+   on the stub sheet (SheetStub.jsx) until P5's Sheet.jsx. Tokens only. The sheet fills the view; Side by side puts the internal page
+   beside the client's; desktop only (Alan, 15-10-2026). ===== */
+#v-clientreport{padding:0}
+#v-clientreport:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.crview{display:flex;flex-direction:column;min-height:0;flex:1}
+.crhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.crhead .crumb{font-size:12px;color:var(--muted)} .crhead .crumb a{color:var(--muted)} .crhead .crumb a:hover{color:var(--accent)}
+.crhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600;overflow-wrap:anywhere}
+.crmeta{margin:0;font-size:13px}
+.crsheet{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.crsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
+.crsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.crsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+.crbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.crbarr .tag{border:1px solid currentColor;border-radius:var(--r-pill);padding:1px 8px}
+.crnote{font-size:12px;color:var(--warn)}
+.crsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:20px 16px 48px;background:var(--sunk)}
+.crsheet .sheet-one,.crsheet .sheet-pair{max-width:100%}
+.crsheet .sheet-pair{gap:16px;align-items:flex-start}
+.crsheet .sheet-pair>.page{flex:1 1 0;min-width:0}
+.crsheet .page{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow-card);padding:clamp(16px,5%,56px);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.crsheet .page section{margin:0 0 20px}
+.crsheet .page h2{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.crsheet .page h3{font-size:13px;margin:6px 0 2px}
+.crsheet .sheet-text{width:100%;min-height:96px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.crsheet .sheet-hidden{color:var(--muted);font-size:12px;margin:0 0 12px}
+.crsheet .figures{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.crsheet .figure{flex:1 1 140px;padding:10px 12px 10px 0;font-size:12px;color:var(--muted);display:grid;gap:2px}
+.crsheet .figure b{font-size:20px;line-height:1.2;color:var(--ink);font-weight:600}
+.crhealth{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 20px;background:var(--sunk);padding:14px 16px;position:relative}
+.crhcol{display:grid;gap:4px;align-content:start}
+.crflag{font:inherit;font-weight:700;font-size:13px;letter-spacing:.08em;text-align:center;padding:8px 0;border:1px solid currentColor;border-radius:var(--r-sm);background:var(--surface);min-height:36px}
+button.crflag{cursor:pointer} button.crflag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.crflag.g{color:var(--ok);background:var(--ok-soft)} .crflag.a{color:var(--warn);background:var(--warn-soft)} .crflag.r{color:var(--bad);background:var(--bad-soft)}
+.crdif{font-size:11px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:var(--r-pill);padding:0 7px;text-align:center;line-height:18px}
+.crwhy{min-width:0}
+.crpop{position:absolute;z-index:10;top:56px;left:16px;width:min(340px,calc(100% - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:12px;display:grid;gap:8px;font-size:13px}
+.cropts{display:flex;gap:6px}
+.cropts button{flex:1;min-height:32px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit;font-size:12px}
+.cropts button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.crpop textarea{min-height:56px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;font:inherit}
+.crpopacts{display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap}
+.crmatch{display:flex;gap:8px;align-items:center;font-size:12px;margin:0 0 6px}
+.crmstate{font-weight:600} .crmstate.matching{color:var(--ok)} .crmstate.edited{color:var(--accent)}
+.crheader{display:grid;gap:2px}
+.crlogos{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px}
+.crtable{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:auto}
+.crtable th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--ink);padding:5px 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+.crtable td{vertical-align:top;border-bottom:1px solid var(--line);padding:6px}
+.creye{width:30px;padding-left:0}
+.creyebtn{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;font-size:13px}
+.creyebtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+tr.crhid td{color:var(--muted)} tr.crhid .creye{color:var(--ink)}
+.crlk{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;color:var(--muted);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:0 5px;text-transform:uppercase;letter-spacing:.04em}
+.crlk.lock{color:var(--bad);border-color:var(--bad)} .crlk.ok{color:var(--ok);border-color:var(--ok)}
+.crcount{font-size:11px;color:var(--muted);margin-top:6px}
+.crstate{font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.crnot{margin-top:10px;border:1px dashed var(--line-strong);border-radius:6px;padding:8px 10px;font-size:12.5px}
+.crnoth{font-weight:600;color:var(--muted);margin-bottom:4px;display:flex;gap:10px;align-items:center}
+.crnot ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.crdlg{width:min(520px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:18px 20px;box-shadow:var(--shadow-pop)}
+.crdlg::backdrop{background:var(--scrim)}
+.crdlg h2{font-size:16px;margin:0 0 10px}
+.crleft{margin:0 0 8px;padding-left:18px;font-size:13px;display:grid;gap:6px}
+.crbad{color:var(--bad);font-size:13px;margin:6px 0} .crbad ul{margin:4px 0 0;padding-left:18px}
+.crdacts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+/* ===== end v2.1.0 P8 ===== */

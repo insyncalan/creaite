@@ -3063,6 +3063,74 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+/* ===== v2.1.0 P8 (BL-336): the client view of the week's report (#client-report=CODE/week/client, components/report/ClientView.jsx),
+   on the stub sheet (SheetStub.jsx) until P5's Sheet.jsx. Tokens only. The sheet fills the view; Side by side puts the internal page
+   beside the client's; desktop only (Alan, 15-10-2026). ===== */
+#v-clientreport{padding:0}
+#v-clientreport:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.crview{display:flex;flex-direction:column;min-height:0;flex:1}
+.crhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.crhead .crumb{font-size:12px;color:var(--muted)} .crhead .crumb a{color:var(--muted)} .crhead .crumb a:hover{color:var(--accent)}
+.crhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600;overflow-wrap:anywhere}
+.crmeta{margin:0;font-size:13px}
+.crsheet{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.crsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
+.crsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.crsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+.crbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.crbarr .tag{border:1px solid currentColor;border-radius:var(--r-pill);padding:1px 8px}
+.crnote{font-size:12px;color:var(--warn)}
+.crsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:20px 16px 48px;background:var(--sunk)}
+.crsheet .sheet-one,.crsheet .sheet-pair{max-width:100%}
+.crsheet .sheet-pair{gap:16px;align-items:flex-start}
+.crsheet .sheet-pair>.page{flex:1 1 0;min-width:0}
+.crsheet .page{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow-card);padding:clamp(16px,5%,56px);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.crsheet .page section{margin:0 0 20px}
+.crsheet .page h2{font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.crsheet .page h3{font-size:13px;margin:6px 0 2px}
+.crsheet .sheet-text{width:100%;min-height:96px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.crsheet .sheet-hidden{color:var(--muted);font-size:12px;margin:0 0 12px}
+.crsheet .figures{display:flex;flex-wrap:wrap;gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.crsheet .figure{flex:1 1 140px;padding:10px 12px 10px 0;font-size:12px;color:var(--muted);display:grid;gap:2px}
+.crsheet .figure b{font-size:20px;line-height:1.2;color:var(--ink);font-weight:600}
+.crhealth{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 20px;background:var(--sunk);padding:14px 16px;position:relative}
+.crhcol{display:grid;gap:4px;align-content:start}
+.crflag{font:inherit;font-weight:700;font-size:13px;letter-spacing:.08em;text-align:center;padding:8px 0;border:1px solid currentColor;border-radius:var(--r-sm);background:var(--surface);min-height:36px}
+button.crflag{cursor:pointer} button.crflag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.crflag.g{color:var(--ok);background:var(--ok-soft)} .crflag.a{color:var(--warn);background:var(--warn-soft)} .crflag.r{color:var(--bad);background:var(--bad-soft)}
+.crdif{font-size:11px;font-weight:600;color:var(--accent);border:1px solid currentColor;border-radius:var(--r-pill);padding:0 7px;text-align:center;line-height:18px}
+.crwhy{min-width:0}
+.crpop{position:absolute;z-index:10;top:56px;left:16px;width:min(340px,calc(100% - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:12px;display:grid;gap:8px;font-size:13px}
+.cropts{display:flex;gap:6px}
+.cropts button{flex:1;min-height:32px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit;font-size:12px}
+.cropts button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.crpop textarea{min-height:56px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;font:inherit}
+.crpopacts{display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap}
+.crmatch{display:flex;gap:8px;align-items:center;font-size:12px;margin:0 0 6px}
+.crmstate{font-weight:600} .crmstate.matching{color:var(--ok)} .crmstate.edited{color:var(--accent)}
+.crheader{display:grid;gap:2px}
+.crlogos{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px}
+.crtable{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:auto}
+.crtable th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--ink);padding:5px 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+.crtable td{vertical-align:top;border-bottom:1px solid var(--line);padding:6px}
+.creye{width:30px;padding-left:0}
+.creyebtn{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;font-size:13px}
+.creyebtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+tr.crhid td{color:var(--muted)} tr.crhid .creye{color:var(--ink)}
+.crlk{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;color:var(--muted);border:1px solid var(--line-strong);border-radius:var(--r-sm);padding:0 5px;text-transform:uppercase;letter-spacing:.04em}
+.crlk.lock{color:var(--bad);border-color:var(--bad)} .crlk.ok{color:var(--ok);border-color:var(--ok)}
+.crcount{font-size:11px;color:var(--muted);margin-top:6px}
+.crstate{font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.crnot{margin-top:10px;border:1px dashed var(--line-strong);border-radius:6px;padding:8px 10px;font-size:12.5px}
+.crnoth{font-weight:600;color:var(--muted);margin-bottom:4px;display:flex;gap:10px;align-items:center}
+.crnot ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.crdlg{width:min(520px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:18px 20px;box-shadow:var(--shadow-pop)}
+.crdlg::backdrop{background:var(--scrim)}
+.crdlg h2{font-size:16px;margin:0 0 10px}
+.crleft{margin:0 0 8px;padding-left:18px;font-size:13px;display:grid;gap:6px}
+.crbad{color:var(--bad);font-size:13px;margin:6px 0} .crbad ul{margin:4px 0 0;padding-left:18px}
+.crdacts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+/* ===== end v2.1.0 P8 ===== */
 </style>
 </head>
 <body>
@@ -3116,6 +3184,7 @@ button.nchip{font:inherit;font-size:12px}
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-meeting" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
+      <section class="view" id="v-clientreport" hidden aria-labelledby="crTitle"></section><!-- v2.1.0 P8: a client's report as a Client view of the week (components/report/ClientView.jsx) -->
       <section class="view" id="v-work" hidden><div class="wrapmax">
         <nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden></nav>
         <h1>Work</h1>
@@ -49184,6 +49253,959 @@ ${d5.text}`);
     if (key) loadPrep(key).then(() => tabTitle());
   }
 
+  // components/report/clientDoc.js
+  var FLAGS = (
+    /** @type {const} */
+    [["On track", "g"], ["At risk", "a"], ["Off track", "r"]]
+  );
+  var secOf = (doc, id2) => doc ? doc.sections.find((s5) => s5.id === id2) : void 0;
+  var flagOf = (doc) => String(((secOf(doc, "health") || {}).data || {}).flag || "");
+  var withSection = (doc, id2, patch) => ({ ...doc, sections: doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...patch } : s5) });
+  function cellsFor(sectionId, item) {
+    const it2 = item || {};
+    const day = (iso) => iso && /^\d{4}-\d{2}-\d{2}/.test(iso) ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}` : "";
+    if (sectionId === "risks") return { type: it2.type || "", risk: it2.title || "" };
+    if (sectionId === "overdue") return { action: it2.title || "", owner: it2.owner || "", due: day(it2.due_date) };
+    if (sectionId === "asks") return { ask: it2.title || "", from: it2.owner || "", by: day(it2.due_date), why: "" };
+    if (sectionId === "decisions") return { decision: it2.title || "", date: day(it2.date) };
+    return {};
+  }
+  var shownRefs = (s5) => s5 && !s5.hidden ? (s5.rows || []).filter((r4) => r4.shown !== false && r4.ref).map((r4) => String(r4.ref)) : [];
+  function matchState(client, internal, id2) {
+    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return null;
+    if (c5.type === "health") return flagOf(client) === flagOf(internal) && (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
+    if (c5.type === "table") {
+      const want = shownRefs(i5).filter((r4) => (c5.rows || []).some((x5) => x5.ref === r4)).sort().join(), have = shownRefs(c5).sort().join();
+      return want === have ? "matching" : "edited";
+    }
+    if (c5.type === "timeline") return JSON.stringify(((c5.data || {}).milestones || []).slice().sort()) === JSON.stringify(((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => ((c5.data || {}).timeline || []).includes(m5)).sort()) ? "matching" : "edited";
+    if (c5.type === "panes") return JSON.stringify((c5.panes || []).map((p6) => (p6.text || "").trim())) === JSON.stringify((i5.panes || []).map((p6) => (p6.text || "").trim())) ? "matching" : "edited";
+    return (c5.text || "").trim() === (i5.text || "").trim() ? "matching" : "edited";
+  }
+  function matchSection(client, internal, id2) {
+    const c5 = secOf(client, id2), i5 = secOf(internal, id2);
+    if (!c5 || !i5 || c5.hidden || c5.type === "header" || c5.type === "figures") return client;
+    if (c5.type === "health") {
+      const meta = { ...client.meta || {} };
+      delete meta.health_diff;
+      return { ...withSection(client, id2, { text: i5.text || "", data: { ...c5.data || {}, flag: flagOf(internal) } }), meta };
+    }
+    if (c5.type === "table") {
+      const on2 = shownRefs(i5);
+      return withSection(client, id2, { rows: (c5.rows || []).map((r4) => on2.includes(String(r4.ref)) ? { ...r4, shown: true, cells: r4.cells || cellsFor(id2, (client.items || {})[String(r4.ref)]) } : { ref: r4.ref, shown: false }) });
+    }
+    if (c5.type === "timeline") {
+      const all = (c5.data || {}).timeline || [], listed = ((i5.data || {}).milestones || (i5.data || {}).timeline || []).filter((m5) => all.includes(m5));
+      return withSection(client, id2, { data: { ...c5.data || {}, milestones: listed } });
+    }
+    if (c5.type === "panes") return withSection(client, id2, { panes: (i5.panes || []).map((p6) => ({ title: p6.title, text: p6.text })) });
+    return withSection(client, id2, { text: i5.text || "", tags: [] });
+  }
+  var matchAll = (client, internal) => client.sections.reduce((d5, s5) => matchSection(d5, internal, s5.id), client);
+  function healthDiff(client, internalFlag, clientFlag, reason) {
+    const meta = { ...client.meta || {} };
+    if (clientFlag === internalFlag) delete meta.health_diff;
+    else meta.health_diff = { internal: internalFlag, client: clientFlag, reason: reason.trim() };
+    return meta;
+  }
+  function leftLine(list) {
+    const shown2 = list.slice(0, 4).map((x5) => `${x5.ref} (${x5.why})`).join(", ");
+    return `${shown2}${list.length > 4 ? ` and ${list.length - 4} more` : ""}`;
+  }
+  var GROUP_LABEL = (
+    /** @type {Record<string, string>} */
+    { risks: "risks and issues", overdue: "overdue actions", decisions: "decisions", milestones: "milestones" }
+  );
+
+  // components/report/SheetStub.jsx
+  var ZOOM_MIN = 0.4, ZOOM_MAX = 0.8;
+  var SCROLL = /* @__PURE__ */ new Map();
+  function openRef(ref, own) {
+    if (own && own(ref)) return;
+    if (/-M-\d+$/.test(ref)) openMilestone(ref);
+    else openRecord("all", ref);
+  }
+  var HERE = X(
+    /** @type {Here|null} */
+    null
+  );
+  function StubText({ field = "text", row: row2, col, label }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    ), s5 = h5.s;
+    const v5 = row2 != null && col ? ((s5.rows || [])[row2]?.cells || {})[col] || "" : (
+      /** @type {any} */
+      s5[field] || ""
+    );
+    if (!h5.editing) return /* @__PURE__ */ u2("span", { class: "sheet-text", children: v5 });
+    return /* @__PURE__ */ u2("textarea", { class: "sheet-text", "aria-label": label || s5.heading, value: v5, onInput: (e4) => {
+      const t47 = (
+        /** @type {HTMLTextAreaElement} */
+        e4.currentTarget.value
+      );
+      if (row2 != null && col) {
+        const rows2 = (s5.rows || []).slice();
+        rows2[row2] = { ...rows2[row2], cells: { ...rows2[row2].cells || {}, [col]: t47 } };
+        h5.update({ rows: rows2 }, "Row edited");
+      } else h5.update({ [field]: t47 }, "Text edited");
+    } });
+  }
+  function StubItemRef({ id: id2 }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return /* @__PURE__ */ u2("span", { children: id2 });
+    return /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => {
+      openRef(id2, h5.onOpenItem);
+      h5.onEvent({ type: "item", ref: id2 });
+    }, children: id2 });
+  }
+  function StubTag({ tag }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return null;
+    return /* @__PURE__ */ u2("button", { type: "button", class: "chip", onClick: () => {
+      if (tag.ref.startsWith("t:")) h5.onEvent({ type: "tag", tag });
+      else openRef(tag.ref, h5.onOpenItem);
+    }, children: tag.text || tag.ref });
+  }
+  var NoSpark = () => null;
+  function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, onChange, onOpenItem, onEvent }) {
+    const editing = !exported && !readOnly;
+    const setSection = (i5, patch, why) => {
+      const sections = doc.sections.slice();
+      sections[i5] = { ...sections[i5], ...patch };
+      onChange({ ...doc, sections }, why);
+    };
+    const setMeta = (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why);
+    const here0 = { editing, exported, readOnly, onOpenItem, onEvent };
+    const extra = (x5) => /* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: (
+      /** @type {SheetSection} */
+      { id: "", type: "", heading: "" }
+    ), update: () => {
+    } }, children: /* @__PURE__ */ u2("div", { class: "sheet-extra", children: x5.render({ doc, editing, readOnly, setMeta, ItemRef: StubItemRef }) }) }, `x-${x5.key}`);
+    const out = [];
+    doc.sections.forEach((s5, i5) => {
+      if (s5.hidden) {
+        if (editing) out.push(/* @__PURE__ */ u2("div", { class: "sheet-hidden", children: [
+          "Hidden: ",
+          s5.heading,
+          " ",
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "linkbtn",
+              onClick: () => {
+                setSection(i5, { hidden: false }, "Section shown");
+                onEvent({ type: "section-shown", id: s5.id });
+              },
+              children: "Show"
+            }
+          )
+        ] }, s5.id));
+      } else {
+        const update = (p6, why) => setSection(i5, p6, why);
+        const ctx = {
+          section: s5,
+          doc,
+          editing,
+          exported,
+          readOnly,
+          update,
+          setMeta,
+          Text: StubText,
+          ItemRef: StubItemRef,
+          Tag: StubTag,
+          Spark: NoSpark,
+          level: (key) => ({ "data-level": key }),
+          peer: peerDoc ? peerDoc.sections.find((x5) => x5.id === s5.id) || null : null
+        };
+        const own = (renderers.byId || {})[s5.id] || (renderers.byType || {})[s5.type];
+        out.push(/* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: s5, update }, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, children: [
+          /* @__PURE__ */ u2("h2", { children: s5.heading }),
+          own ? own(ctx) : /* @__PURE__ */ u2(Default, { ctx, rowFn: (renderers.row || {})[s5.id] })
+        ] }) }, s5.id));
+      }
+      if (!exported) for (const x5 of extras.filter((e4) => e4.after === s5.id)) out.push(extra(x5));
+    });
+    if (!exported) for (const x5 of extras.filter((e4) => e4.after == null)) out.push(extra(x5));
+    return /* @__PURE__ */ u2("div", { class: "page", children: out });
+  }
+  function Default({ ctx, rowFn }) {
+    const s5 = ctx.section, { Text, ItemRef, Tag } = ctx;
+    if (s5.type === "table") {
+      const rows2 = s5.rows || [];
+      return /* @__PURE__ */ u2("table", { children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key)) }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, index) => {
+          if (row2.shown === false && !ctx.editing) return null;
+          const setRow = (p6, why) => {
+            const r4 = rows2.slice();
+            r4[index] = { ...row2, ...p6 };
+            ctx.update({ rows: r4 }, why);
+          };
+          const removeRow = (why) => ctx.update({ rows: rows2.filter((_6, j5) => j5 !== index) }, why);
+          const rc2 = {
+            row: row2,
+            index,
+            section: s5,
+            item: (ctx.doc.items || {})[row2.ref || ""] || null,
+            editing: ctx.editing,
+            exported: ctx.exported,
+            readOnly: ctx.readOnly,
+            setRow,
+            removeRow,
+            Text,
+            ItemRef,
+            Tag
+          };
+          return rowFn ? rowFn(rc2) : /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(Text, { row: index, col: c5.key, label: c5.label }) }, c5.key)) }, row2.ref || index);
+        }) })
+      ] });
+    }
+    if (s5.type === "figures") return /* @__PURE__ */ u2("div", { class: "figures", children: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => /* @__PURE__ */ u2("div", { class: "figure", children: [
+      /* @__PURE__ */ u2("b", { children: f5.value }),
+      f5.label
+    ] }, f5.key)) });
+    if (s5.type === "panes") return /* @__PURE__ */ u2("div", { class: "panes", children: (s5.panes || []).map((p6, i5) => /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("h3", { children: p6.title }),
+      /* @__PURE__ */ u2("p", { children: p6.text })
+    ] }, i5)) });
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2(Text, { rich: true }),
+      (s5.tags || []).map((t47) => /* @__PURE__ */ u2(Tag, { tag: t47 }, t47.ref))
+    ] });
+  }
+  function SheetStub(props) {
+    const { doc, baseVersion, scrollKey = "", zoom = ZOOM_MAX, exported = false, readOnly = false, partner = null, onSave, onEvent = () => {
+    } } = props;
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [base, setBase] = d2(baseVersion);
+    const [line, setLine] = d2("");
+    _2(() => {
+      const el2 = box.current;
+      if (el2 && SCROLL.has(scrollKey)) el2.scrollTop = SCROLL.get(scrollKey) || 0;
+    });
+    const save2 = async () => {
+      if (!onSave || readOnly) return;
+      const answer = await onSave({ doc, base_version: base });
+      if (answer.ok) {
+        setBase(answer.version ?? void 0);
+        setLine(`Saved · version ${answer.version}`);
+        onEvent({ type: "saved", version: answer.version, answer });
+      } else {
+        setLine(answer.message || "Not saved.");
+        onEvent({ type: "save-failed", answer });
+      }
+    };
+    const width = `${Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom)) * 100)}%`;
+    const page = (d5, p6) => /* @__PURE__ */ u2(
+      Page,
+      {
+        doc: d5,
+        renderers: p6 ? p6.renderers || props.renderers : props.renderers,
+        extras: p6 ? [] : props.extras,
+        exported,
+        readOnly: readOnly || !!(p6 && p6.readOnly),
+        peerDoc: p6 ? doc : partner ? partner.doc : null,
+        onChange: p6 ? p6.onChange : props.onChange,
+        onOpenItem: props.onOpenItem,
+        onEvent
+      }
+    );
+    return /* @__PURE__ */ u2("div", { class: "sheet-stub", onKeyDown: (e4) => {
+      if ((e4.metaKey || e4.ctrlKey) && e4.key === "s") {
+        e4.preventDefault();
+        save2();
+      }
+    }, children: [
+      /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": exported ? "true" : "false", onClick: () => {
+          props.onExported?.(!exported);
+          onEvent({ type: "exported", on: !exported });
+        }, children: "Show as exported" }),
+        onSave && !readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: save2, children: "Save" }) : null,
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: line }),
+        props.toolbar || null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: box, onScroll: (e4) => SCROLL.set(
+        scrollKey,
+        /** @type {HTMLDivElement} */
+        e4.currentTarget.scrollTop
+      ), children: /* @__PURE__ */ u2("div", { class: partner ? "sheet-pair" : "sheet-one", style: { width: partner ? "100%" : width, margin: "0 auto", display: partner ? "flex" : "block" }, children: [
+        page(doc, null),
+        partner ? page(partner.doc, partner) : null
+      ] }) })
+    ] });
+  }
+
+  // stores/clientReport.js
+  var crArg = y3(
+    /** @type {{code: string, week?: string, client?: string}|null} */
+    null
+  );
+  var crOpen = y3(
+    /** @type {{ok: boolean, message?: string}|null} */
+    null
+  );
+  var crDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var crInternal = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var crBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var crInfo = y3(
+    /** @type {{where: string, filed: boolean, ready: boolean, not_ready: string, baseline: {date: string, path: string, version: number}|null, findings: string[]}|null} */
+    null
+  );
+  var crMode = y3(
+    /** @type {"client"|"side"} */
+    "client"
+  );
+  var crCheck = y3(
+    /** @type {Check|null} */
+    null
+  );
+  var crBusy = y3("");
+  var crDialog = y3(false);
+  var crDirty = y3(false);
+  var crAsked = 0;
+  async function loadClientReport(arg, fresh) {
+    const mine = ++crAsked;
+    crArg.value = arg;
+    crCheck.value = null;
+    crDirty.value = false;
+    if (!viaServer()) {
+      crOpen.value = { ok: false, message: "The client view needs the live server." };
+      return;
+    }
+    crBusy.value = "Opening the client report…";
+    const base = { code: arg.code, week_ending: arg.week || void 0 };
+    const [i5, c5] = await Promise.all([api("/api/report/draft", { kind: "weekly", ...base }), api("/api/report/draft", { kind: "client", ...base, client: arg.client || void 0, fresh: fresh || void 0 })]);
+    if (mine !== crAsked) return;
+    crBusy.value = "";
+    if (!c5 || !c5.ok || !c5.doc) {
+      crOpen.value = { ok: false, message: oneLine(c5 && c5.message || "") || "Couldn't open the client report" };
+      crDoc.value = null;
+      return;
+    }
+    crInternal.value = i5 && i5.ok ? i5.doc : null;
+    crDoc.value = c5.doc;
+    crBase.value = Number(c5.doc.version) || void 0;
+    crInfo.value = { where: c5.where, filed: !!c5.filed, ready: !!c5.ready, not_ready: c5.not_ready || "", baseline: c5.baseline || null, findings: c5.findings || [] };
+    crOpen.value = { ok: true };
+    runCheck();
+  }
+  async function runCheck() {
+    const d5 = crDoc.value;
+    if (!d5 || !viaServer()) return null;
+    const r4 = (
+      /** @type {Check} */
+      await api("/api/report/check", { doc: d5 })
+    );
+    crCheck.value = r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "The check didn't run" };
+    return crCheck.value;
+  }
+  async function saveClientPage(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      crBase.value = Number(r4.version) || crBase.value;
+      crDirty.value = false;
+      if (crInfo.value && crInfo.value.where === "new") crInfo.value = { ...crInfo.value, where: "draft" };
+    }
+    return r4;
+  }
+  async function approveClientReport(force) {
+    const a5 = crArg.value, d5 = crDoc.value;
+    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    return api("/api/report/approve", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, doc: d5, base_version: crBase.value, force: !!force });
+  }
+  async function exportClientReport(fmt) {
+    const a5 = crArg.value, d5 = crDoc.value;
+    if (!a5 || !d5) return { ok: false, message: "Nothing is open." };
+    if (crDirty.value || crInfo.value && crInfo.value.where === "new") {
+      const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
+      if (!s5.ok) return s5;
+    }
+    return api("/api/report/export", { kind: "client", code: a5.code, week_ending: d5.date, client: d5.client || a5.client || void 0, fmt });
+  }
+
+  // components/report/ClientParts.jsx
+  function setClientDoc(next) {
+    crDoc.value = next;
+    crDirty.value = true;
+  }
+  function matchOne(id2) {
+    const d5 = crDoc.value, i5 = crInternal.value;
+    if (d5 && i5) setClientDoc(matchSection(d5, i5, id2));
+  }
+  function MatchBar({ ctx }) {
+    const d5 = crDoc.value, i5 = crInternal.value;
+    if (!ctx.editing || !d5 || !i5) return null;
+    const st2 = matchState(d5, i5, ctx.section.id);
+    if (!st2) return null;
+    return /* @__PURE__ */ u2("div", { class: "crmatch", "data-match": ctx.section.id, children: [
+      /* @__PURE__ */ u2("span", { class: `crmstate ${st2}`, children: st2 === "matching" ? "Matching internal" : "Edited for the client" }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-matchone": ctx.section.id, disabled: st2 === "matching", onClick: () => matchOne(ctx.section.id), children: "Match internal" })
+    ] });
+  }
+  function Sec({ ctx, children }) {
+    return /* @__PURE__ */ u2("div", { class: "crsec", children: [
+      /* @__PURE__ */ u2(MatchBar, { ctx }),
+      children
+    ] });
+  }
+  function Pop({ label, onClose, anchor, children }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    h2(() => {
+      const a5 = anchor.current;
+      const first = box.current && /** @type {HTMLElement|null} */
+      box.current.querySelector("button,textarea,input");
+      if (first) first.focus();
+      const away = (e4) => {
+        if (box.current && !box.current.contains(
+          /** @type {Node} */
+          e4.target
+        ) && !(a5 && a5.contains(
+          /** @type {Node} */
+          e4.target
+        ))) onClose();
+      };
+      document.addEventListener("mousedown", away);
+      return () => {
+        document.removeEventListener("mousedown", away);
+        if (a5 && a5.isConnected) a5.focus();
+      };
+    }, []);
+    return /* @__PURE__ */ u2("div", { class: "crpop", role: "dialog", "aria-label": label, ref: box, onKeyDown: (e4) => {
+      if (e4.key === "Escape") {
+        e4.stopPropagation();
+        onClose();
+      }
+    }, children });
+  }
+  function HealthSection({ ctx }) {
+    const [open2, setOpen2] = d2(false);
+    const [pick, setPick] = d2("");
+    const [why, setWhy] = d2("");
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const d5 = crDoc.value, internal = crInternal.value;
+    const flag = flagOf(d5) || "On track", inFlag = flagOf(internal), diff = ((d5 || {}).meta || {}).health_diff || null;
+    const cls = (FLAGS.find((f5) => f5[0] === flag) || FLAGS[0])[1];
+    const edit = ctx.editing;
+    const begin = () => {
+      setPick(flag);
+      setWhy(diff ? String(diff.reason || "") : "");
+      setOpen2(true);
+    };
+    const save2 = () => {
+      if (!d5) return;
+      if (pick !== inFlag && !why.trim()) return;
+      const next = { ...secOf(d5, "health") };
+      setClientDoc({
+        ...d5,
+        sections: d5.sections.map((s5) => s5.id === "health" ? { ...s5, data: { ...next.data || {}, flag: pick } } : s5),
+        meta: healthDiff(d5, inFlag, pick, why)
+      });
+      setOpen2(false);
+    };
+    const matchHealth = () => {
+      matchOne("health");
+      setOpen2(false);
+    };
+    const needWhy = pick !== inFlag && !why.trim();
+    return /* @__PURE__ */ u2("div", { class: "crhealth", "data-crhealth": true, children: [
+      /* @__PURE__ */ u2("div", { class: "crhcol", children: [
+        edit ? /* @__PURE__ */ u2("button", { type: "button", class: `crflag ${cls}`, ref: btn, "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", "data-crflag": true, onClick: () => open2 ? setOpen2(false) : begin(), children: flag.toUpperCase() }) : /* @__PURE__ */ u2("span", { class: `crflag ${cls}`, children: flag.toUpperCase() }),
+        edit && inFlag && flag !== inFlag ? /* @__PURE__ */ u2("span", { class: "crdif", title: `Internal: ${inFlag}. ${diff && diff.reason ? diff.reason : ""}`, "data-crdif": true, children: [
+          "≠ internal: ",
+          inFlag
+        ] }) : null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "crwhy", children: [
+        /* @__PURE__ */ u2(MatchBar, { ctx }),
+        /* @__PURE__ */ u2(ctx.Text, { field: "text", label: "The client's headline" })
+      ] }),
+      open2 ? /* @__PURE__ */ u2(Pop, { label: "Client health", anchor: btn, onClose: () => setOpen2(false), children: [
+        /* @__PURE__ */ u2("b", { children: "Client health" }),
+        /* @__PURE__ */ u2("div", { class: "cropts", role: "group", "aria-label": "Health", children: FLAGS.map(([name]) => /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": pick === name ? "true" : "false", "data-crpick": name, onClick: () => setPick(name), children: name }, name)) }),
+        /* @__PURE__ */ u2("label", { class: "sub", for: "crWhy", children: pick !== inFlag ? "Why it differs from the internal health (required; kept internally, never on the client's page)" : "The same as the internal health" }),
+        /* @__PURE__ */ u2("textarea", { id: "crWhy", value: why, disabled: pick === inFlag, onInput: (e4) => setWhy(
+          /** @type {HTMLTextAreaElement} */
+          e4.currentTarget.value
+        ) }),
+        /* @__PURE__ */ u2("div", { class: "crpopacts", children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crmatchhealth": true, onClick: matchHealth, children: "Match internal health" }),
+          /* @__PURE__ */ u2("span", { children: [
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => setOpen2(false), children: "Cancel" }),
+            " ",
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", "data-crhsave": true, disabled: needWhy, onClick: save2, children: "Save" })
+          ] })
+        ] })
+      ] }) : null
+    ] });
+  }
+  function HeaderSection({ ctx }) {
+    const d5 = ctx.doc, h5 = ctx.section.data || {}, meta = d5.meta || {};
+    const logos = (d5.layout || {}).logos || ["firm", "client", "partner"];
+    const toggle = (k5) => {
+      const next = logos.includes(k5) ? logos.filter((x5) => x5 !== k5) : [...logos, k5];
+      setClientDoc({ ...d5, layout: { ...d5.layout || {}, logos: ["firm", "client", "partner"].filter((x5) => x5 === "firm" || next.includes(x5)) } });
+    };
+    return /* @__PURE__ */ u2("div", { class: "crheader", children: [
+      /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("b", { children: h5.client || d5.client || "Client" }) }),
+      /* @__PURE__ */ u2("div", { class: "sub", children: [
+        d5.project_name || "",
+        h5.period_start ? ` · ${h5.period_start.slice(8, 10)}-${h5.period_start.slice(5, 7)} to ${(h5.period_end || "").slice(8, 10)}-${(h5.period_end || "").slice(5, 7)}-${(h5.period_end || "").slice(0, 4)}` : ""
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "sub", children: meta.facts_week ? `Facts from the internal report for week ending ${meta.facts_week.slice(8, 10)}-${meta.facts_week.slice(5, 7)}-${meta.facts_week.slice(0, 4)}${meta.locked ? ", locked" : ""}` : "Facts as the tracker stands now: they lock when the internal report is approved" }),
+      ctx.editing ? /* @__PURE__ */ u2("div", { class: "crlogos", role: "group", "aria-label": "Logos on this client's reports", children: [["firm", "The firm"], ["client", "The client"], ["partner", "The partner"]].map(([k5, l6]) => /* @__PURE__ */ u2("label", { children: [
+        /* @__PURE__ */ u2("input", { type: "checkbox", checked: logos.includes(k5), disabled: k5 === "firm", onChange: () => toggle(k5) }),
+        " ",
+        l6
+      ] }, k5)) }) : null
+    ] });
+  }
+  function MilestonesSection({ ctx }) {
+    const s5 = ctx.section, data = s5.data || {}, all = (
+      /** @type {string[]} */
+      data.timeline || []
+    ), listed = (
+      /** @type {string[]} */
+      data.milestones || all
+    );
+    const items2 = ctx.doc.items || {};
+    const flip2 = (ref) => ctx.update({ data: { ...data, milestones: listed.includes(ref) ? listed.filter((x5) => x5 !== ref) : all.filter((x5) => x5 === ref || listed.includes(x5)) } }, "Milestone list changed");
+    const rows2 = ctx.editing ? all : listed;
+    if (!all.length) return /* @__PURE__ */ u2(Sec, { ctx, children: /* @__PURE__ */ u2("p", { class: "sub", children: "No client-visible milestones yet." }) });
+    return /* @__PURE__ */ u2(Sec, { ctx, children: /* @__PURE__ */ u2("table", { class: "crtable", children: [
+      /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+        ctx.editing ? /* @__PURE__ */ u2("th", { class: "creye" }) : null,
+        /* @__PURE__ */ u2("th", { children: "Milestone" }),
+        /* @__PURE__ */ u2("th", { children: "Expected" }),
+        /* @__PURE__ */ u2("th", { children: "State" })
+      ] }) }),
+      /* @__PURE__ */ u2("tbody", { children: rows2.map((ref) => {
+        const it2 = items2[ref] || {}, on2 = listed.includes(ref);
+        return /* @__PURE__ */ u2("tr", { class: on2 ? "" : "crhid", children: [
+          ctx.editing ? /* @__PURE__ */ u2("td", { class: "creye", children: /* @__PURE__ */ u2("button", { type: "button", class: "creyebtn", "aria-pressed": on2 ? "true" : "false", "aria-label": `${on2 ? "Hide" : "Show"} ${it2.title || ref} in the list`, "data-crmile": ref, onClick: () => flip2(ref), children: on2 ? "◉" : "○" }) }) : null,
+          /* @__PURE__ */ u2("td", { children: it2.title || ref }),
+          /* @__PURE__ */ u2("td", { children: it2.shown_date || "" }),
+          /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("span", { class: "crstate", children: it2.state || it2.status || "" }) })
+        ] }, ref);
+      }) })
+    ] }) });
+  }
+  function TableSection({ ctx }) {
+    const s5 = ctx.section, rows2 = s5.rows || [], cols = s5.columns || [], items2 = ctx.doc.items || {};
+    const check = crCheck.value, group = s5.id;
+    const left = ctx.editing && check && check.left_out ? check.left_out.items.filter((x5) => x5.group === group && (x5.kind === "blocked" || x5.kind === "sensitive")) : [];
+    const add = ctx.editing && check && check.addable ? check.addable.filter((a5) => a5.section === group) : [];
+    const setRows = (next, why) => ctx.update({ rows: next }, why);
+    const flip2 = (i5) => {
+      const r4 = rows2[i5], on2 = r4.shown === false;
+      setRows(rows2.map((x5, j5) => j5 !== i5 ? x5 : on2 ? { ...x5, shown: true, cells: x5.cells || cellsFor(s5.id, items2[String(x5.ref)]) } : { ref: x5.ref, shown: false }), on2 ? "Row shown" : "Row hidden");
+    };
+    const hiddenN = rows2.filter((r4) => r4.shown === false).length;
+    const first = cols[0] ? cols[0].key : "";
+    return /* @__PURE__ */ u2(Sec, { ctx, children: [
+      rows2.length ? /* @__PURE__ */ u2("table", { class: "crtable", "data-crtable": s5.id, children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          ctx.editing ? /* @__PURE__ */ u2("th", { class: "creye" }) : null,
+          cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((r4, i5) => {
+          const it2 = items2[String(r4.ref)] || {}, off = r4.shown === false;
+          if (off && !ctx.editing) return null;
+          const own = s5.id === "overdue" && it2.client_owned === false;
+          return /* @__PURE__ */ u2("tr", { class: off ? "crhid" : "", "data-row": String(r4.ref), children: [
+            ctx.editing ? /* @__PURE__ */ u2("td", { class: "creye", children: /* @__PURE__ */ u2("button", { type: "button", class: "creyebtn", "aria-pressed": off ? "false" : "true", "aria-label": `${off ? "Show" : "Hide"} ${it2.title || r4.ref}`, "data-creye": String(r4.ref), onClick: () => flip2(i5), children: off ? "○" : "◉" }) }) : null,
+            off ? /* @__PURE__ */ u2("td", { colSpan: cols.length, children: [
+              it2.title || cellsFor(s5.id, it2)[first] || "",
+              " ",
+              own ? /* @__PURE__ */ u2("span", { class: "crlk", children: "not the client's own" }) : null
+            ] }) : cols.map((c5, k5) => /* @__PURE__ */ u2("td", { children: [
+              /* @__PURE__ */ u2(ctx.Text, { row: i5, col: c5.key, label: c5.label }),
+              k5 === 0 && own ? /* @__PURE__ */ u2("span", { class: "crlk", children: "not the client's own" }) : null
+            ] }, c5.key))
+          ] }, String(r4.ref) + i5);
+        }) })
+      ] }) : /* @__PURE__ */ u2("p", { class: "sub", children: ctx.editing ? "Nothing client-visible here yet." : "" }),
+      ctx.editing && hiddenN ? /* @__PURE__ */ u2("div", { class: "crcount", children: [
+        "Showing ",
+        rows2.length - hiddenN,
+        " of ",
+        rows2.length,
+        ". Hidden rows are left out of this client's report."
+      ] }) : null,
+      ctx.editing && (left.length || add.length) ? /* @__PURE__ */ u2("div", { class: "crnot", "data-crnot": group, children: [
+        /* @__PURE__ */ u2("div", { class: "crnoth", children: [
+          "Not in this report ",
+          /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-crrecheck": true, onClick: () => runCheck(), children: "Check again" })
+        ] }),
+        /* @__PURE__ */ u2("ul", { children: [
+          add.map((a5) => /* @__PURE__ */ u2("li", { children: [
+            /* @__PURE__ */ u2(ctx.ItemRef, { id: String(a5.row.ref) }),
+            " ",
+            a5.item && a5.item.title || "",
+            " ",
+            /* @__PURE__ */ u2("span", { class: "crlk ok", children: "now client-visible" }),
+            " ",
+            /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-cradd": String(a5.row.ref), onClick: () => {
+              const d5 = crDoc.value;
+              if (!d5) return;
+              setClientDoc({ ...d5, items: { ...d5.items || {}, [String(a5.row.ref)]: a5.item }, sections: d5.sections.map((x5) => x5.id === s5.id ? { ...x5, rows: [...x5.rows || [], a5.row] } : x5) });
+            }, children: "Add" })
+          ] }, "a" + a5.row.ref)),
+          left.map((x5) => /* @__PURE__ */ u2("li", { "data-crleft": x5.ref, children: [
+            /* @__PURE__ */ u2(ctx.ItemRef, { id: x5.ref }),
+            " ",
+            x5.title,
+            " ",
+            /* @__PURE__ */ u2("span", { class: `crlk${x5.kind === "sensitive" ? " lock" : ""}`, children: [
+              x5.kind === "sensitive" ? "⊘ " : "",
+              x5.why
+            ] }),
+            " ",
+            x5.kind === "blocked" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crvisible": x5.ref, onClick: () => openRef(x5.ref, void 0), children: "Make client-visible…" }) : null
+          ] }, x5.ref))
+        ] })
+      ] }) : null
+    ] });
+  }
+  function TextSection({ ctx }) {
+    return /* @__PURE__ */ u2(Sec, { ctx, children: [
+      /* @__PURE__ */ u2(ctx.Text, { rich: true }),
+      ctx.editing ? (ctx.section.tags || []).map((t47) => /* @__PURE__ */ u2(ctx.Tag, { tag: t47 }, t47.ref)) : null
+    ] });
+  }
+  function PanesSection({ ctx }) {
+    const panes = ctx.section.panes || [];
+    const set = (i5, text) => ctx.update({ panes: panes.map((p6, j5) => j5 === i5 ? { ...p6, text } : p6) }, "Text edited");
+    return /* @__PURE__ */ u2(Sec, { ctx, children: panes.map((p6, i5) => /* @__PURE__ */ u2("div", { children: [
+      p6.title ? /* @__PURE__ */ u2("h3", { children: p6.title }) : null,
+      ctx.editing ? /* @__PURE__ */ u2("textarea", { class: "sheet-text", "aria-label": p6.title || ctx.section.heading, value: p6.text || "", onInput: (e4) => set(
+        i5,
+        /** @type {HTMLTextAreaElement} */
+        e4.currentTarget.value
+      ) }) : /* @__PURE__ */ u2("p", { children: p6.text })
+    ] }, i5)) });
+  }
+  function FiguresSection({ ctx }) {
+    return /* @__PURE__ */ u2("div", { class: "figures crfigs", children: (ctx.section.figures || []).filter((f5) => f5.shown !== false).map((f5) => /* @__PURE__ */ u2("div", { class: "figure", children: [
+      /* @__PURE__ */ u2("b", { children: f5.value }),
+      f5.label,
+      f5.note ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+        " ",
+        f5.note
+      ] }) : null
+    ] }, f5.key)) });
+  }
+  var CLIENT_RENDERERS = {
+    byId: {
+      header: (ctx) => /* @__PURE__ */ u2(HeaderSection, { ctx }),
+      health: (ctx) => /* @__PURE__ */ u2(HealthSection, { ctx }),
+      glance: (ctx) => /* @__PURE__ */ u2(FiguresSection, { ctx }),
+      milestones: (ctx) => /* @__PURE__ */ u2(MilestonesSection, { ctx }),
+      current_state: (ctx) => /* @__PURE__ */ u2(PanesSection, { ctx })
+    },
+    byType: { text: (ctx) => /* @__PURE__ */ u2(TextSection, { ctx }), table: (ctx) => /* @__PURE__ */ u2(TableSection, { ctx }) }
+  };
+
+  // components/report/LeftOutDialog.jsx
+  var ONE = (
+    /** @type {Record<string, string>} */
+    { risks: "risk or issue", overdue: "overdue action", decisions: "decision", milestones: "milestone" }
+  );
+  function LeftOutDialog({ client, onExport }) {
+    const open2 = crDialog.value, c5 = crCheck.value, lo2 = c5 && c5.left_out;
+    const close = () => {
+      crDialog.value = false;
+    };
+    const lines = [];
+    if (lo2) {
+      for (const g5 of Object.keys(GROUP_LABEL)) {
+        const its = lo2.items.filter((x5) => x5.group === g5 && x5.kind !== "other");
+        if (its.length) lines.push(/* @__PURE__ */ u2("li", { "data-leftgroup": g5, children: [
+          /* @__PURE__ */ u2("b", { children: [
+            its.length,
+            " ",
+            its.length === 1 ? ONE[g5] : GROUP_LABEL[g5],
+            ":"
+          ] }),
+          " ",
+          leftLine(its),
+          "."
+        ] }, g5));
+      }
+      if (lo2.sections.length) lines.push(/* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2("b", { children: "Hidden sections:" }),
+        " ",
+        lo2.sections.map((s5) => s5.heading).join(", "),
+        "."
+      ] }, "sec"));
+      lines.push(/* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2("b", { children: "Internal notes and sources:" }),
+        " creaite checks, source chips",
+        lo2.tags ? ` (${lo2.tags} here)` : "",
+        ", item IDs and the page's editing data."
+      ] }, "notes"));
+      if (lo2.logos.length) lines.push(/* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2("b", { children: [
+          lo2.logos.length > 1 ? "Logos" : "A logo",
+          ":"
+        ] }),
+        " ",
+        lo2.logos.join(" and "),
+        ", unticked for this client."
+      ] }, "logo"));
+      if (lo2.health) lines.push(/* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2("b", { children: "Health:" }),
+        " shown as ",
+        lo2.health.client,
+        " (internal: ",
+        lo2.health.internal,
+        "), with your reason kept internally."
+      ] }, "health"));
+    }
+    const blocked = !lo2 || !lo2.ready || lo2.findings.length > 0;
+    return /* @__PURE__ */ u2(Dialog, { open: open2, onClose: close, labelledBy: "crLeftH", id: "crLeftDlg", class: "crdlg", focus: "[data-crdcancel]", children: [
+      /* @__PURE__ */ u2("h2", { id: "crLeftH", children: [
+        "Left out of ",
+        client || "the client",
+        "'s report"
+      ] }),
+      !c5 ? /* @__PURE__ */ u2("p", { class: "sub", children: "Checking…" }) : !c5.ok || !lo2 ? /* @__PURE__ */ u2("p", { class: "mnerr", role: "alert", children: c5.message || "The check didn't run." }) : /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("ul", { class: "crleft", "data-crleft-list": true, children: lines }),
+        lo2.findings.length ? /* @__PURE__ */ u2("div", { class: "crbad", role: "alert", "data-crfindings": true, children: [
+          /* @__PURE__ */ u2("b", { children: "Possible internal content. Fix it before exporting:" }),
+          /* @__PURE__ */ u2("ul", { children: lo2.findings.map((f5, i5) => /* @__PURE__ */ u2("li", { children: f5 }, i5)) })
+        ] }) : null,
+        !lo2.ready ? /* @__PURE__ */ u2("p", { class: "crbad", role: "alert", children: lo2.not_ready }) : null,
+        /* @__PURE__ */ u2("p", { class: "sub", children: lo2.facts_week ? `Facts come from the internal report approved for week ending ${fd(lo2.facts_week)}.` : "The internal report isn't approved yet." })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "crdacts", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-crdcancel": true, onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-crexport": "html", disabled: blocked, onClick: () => onExport("html"), children: "HTML" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-crexport": "docx", disabled: blocked, onClick: () => onExport("docx"), children: "Word" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-crexport": "pdf", disabled: blocked, onClick: () => onExport("pdf"), children: "PDF" })
+      ] })
+    ] });
+  }
+
+  // components/report/WeeklyPartner.jsx
+  function InternalHealth({ ctx }) {
+    const flag = String((ctx.section.data || {}).flag || ""), cls = (FLAGS.find((f5) => f5[0] === flag) || FLAGS[0])[1];
+    return /* @__PURE__ */ u2("div", { class: "crhealth", children: [
+      /* @__PURE__ */ u2("div", { class: "crhcol", children: /* @__PURE__ */ u2("span", { class: `crflag ${cls}`, children: flag.toUpperCase() }) }),
+      /* @__PURE__ */ u2("div", { class: "crwhy", children: /* @__PURE__ */ u2("p", { children: ctx.section.text }) })
+    ] });
+  }
+  var INTERNAL_RENDERERS = { byId: { health: (ctx) => /* @__PURE__ */ u2(InternalHealth, { ctx }) } };
+
+  // components/report/ClientView.jsx
+  async function openCheck() {
+    const d5 = crDoc.value;
+    if (!d5) return;
+    if (crDirty.value) {
+      const s5 = await saveClientPage({ doc: d5, base_version: crBase.value });
+      if (!s5.ok) {
+        snack(String(s5.message || "The report wasn't saved").split("\n")[0]);
+        return;
+      }
+    }
+    crDialog.value = true;
+    await runCheck();
+  }
+  async function doExport(fmt) {
+    const r4 = await exportClientReport(fmt);
+    if (r4 && r4.ok) {
+      crDialog.value = false;
+      snack(`Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}`);
+    } else {
+      await runCheck();
+      snack(String(r4 && r4.message || "Not exported").split("\n")[0]);
+    }
+  }
+  function Bar({ doc, note, setNote }) {
+    const info = crInfo.value, ready = !!(info && info.ready), mode = crMode.value, draft = doc.state !== "approved";
+    const approve = async (force) => {
+      const r4 = await approveClientReport(force);
+      if (r4 && r4.ok) {
+        setNote("");
+        snack("Client report approved and filed");
+        const a5 = crArg.value;
+        if (a5) loadClientReport(a5);
+        return;
+      }
+      const msg = String(r4 && r4.message || "Not approved").split("\n")[0];
+      setNote(msg);
+    };
+    return /* @__PURE__ */ u2("span", { class: "crbarr", children: [
+      /* @__PURE__ */ u2("span", { class: `tag ${ready ? "ok" : "warn"}`, "data-crbase": true, children: ready ? "Internal: approved · facts locked" : "Internal: not approved yet" }),
+      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "View", children: [
+        /* @__PURE__ */ u2("button", { type: "button", "data-crmode": "client", "aria-pressed": mode === "client" ? "true" : "false", onClick: () => {
+          crMode.value = "client";
+        }, children: "Client report" }),
+        /* @__PURE__ */ u2("button", { type: "button", "data-crmode": "side", "aria-pressed": mode === "side" ? "true" : "false", disabled: !crInternal.value, onClick: () => {
+          crMode.value = "side";
+        }, children: "Side by side" })
+      ] }),
+      draft ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
+        const d5 = crDoc.value, i5 = crInternal.value;
+        if (d5 && i5) setClientDoc(matchAll(d5, i5));
+      }, children: "Match internal for every section" }) : null,
+      draft && ready && info && info.baseline && !(doc.based_on && doc.based_on.version === info.baseline.version) ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm",
+          "data-crrefresh": true,
+          title: "This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save.",
+          onClick: () => {
+            const a5 = crArg.value;
+            if (a5) loadClientReport(a5, true);
+          },
+          children: "Refresh from the approved week"
+        }
+      ) : null,
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crcheck": true, disabled: !ready, "data-tip": ready ? void 0 : "Approve the internal report first", title: ready ? void 0 : "Approve the internal report first", onClick: openCheck, children: "Check and export ▾" }),
+      draft ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", "data-crapprove": true, disabled: !ready, title: ready ? void 0 : "Approve the internal report first", onClick: () => approve(false), children: "Approve client report" }) : null,
+      note ? /* @__PURE__ */ u2("span", { class: "crnote", role: "status", children: [
+        note,
+        " ",
+        /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => approve(true), children: "Approve anyway" }) : null
+      ] }) : null
+    ] });
+  }
+  function ClientView() {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [exported, setExported] = d2(false);
+    const [note, setNote] = d2("");
+    const open2 = crOpen.value, doc = crDoc.value, internal = crInternal.value, mode = crMode.value, info = crInfo.value;
+    const side = mode === "side" && !!internal;
+    _2(() => {
+      const left = box.current && box.current.querySelector(".sheet-pair > .page");
+      if (left) left.querySelectorAll("textarea").forEach((t47) => {
+        t47.setAttribute("readonly", "");
+      });
+    });
+    if (!open2) return /* @__PURE__ */ u2("div", { class: "crview", children: /* @__PURE__ */ u2("p", { class: "sub", children: crBusy.value || "Opening the client report…" }) });
+    if (!open2.ok || !doc) return /* @__PURE__ */ u2("div", { class: "crview", children: [
+      /* @__PURE__ */ u2("h1", { id: "crTitle", children: "Client report" }),
+      /* @__PURE__ */ u2("p", { class: "mnerr", role: "alert", children: open2.message || "Couldn't open the client report" })
+    ] });
+    const a5 = crArg.value, filed = doc.state === "approved";
+    const key = `client:${doc.project}:${doc.date}:${doc.client || ""}:${mode}`;
+    return /* @__PURE__ */ u2("div", { class: "crview", ref: box, children: [
+      /* @__PURE__ */ u2("header", { class: "crhead", children: [
+        /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
+          /* @__PURE__ */ u2("a", { href: "#", "data-go": "projects", children: "Projects" }),
+          " › ",
+          /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Client report" })
+        ] }),
+        /* @__PURE__ */ u2("h1", { id: "crTitle", children: [
+          "Client report",
+          doc.client ? `: ${doc.client}` : ""
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "sub crmeta", children: [
+          doc.project_name || a5 && a5.code || "",
+          " · week ending ",
+          fd(doc.date),
+          " · ",
+          filed ? "Approved and filed" : info && info.where === "new" ? "New, not yet saved" : "Draft, not yet approved",
+          filed ? " · Edits start a new draft" : ""
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "crsheet", children: /* @__PURE__ */ u2(
+        SheetStub,
+        {
+          doc: side && internal ? internal : doc,
+          baseVersion: crBase.value,
+          scrollKey: key,
+          exported,
+          onExported: setExported,
+          readOnly: filed && !side,
+          renderers: side ? INTERNAL_RENDERERS : CLIENT_RENDERERS,
+          partner: side ? {
+            doc,
+            label: "Client",
+            baseVersion: crBase.value,
+            scrollKey: key,
+            renderers: CLIENT_RENDERERS,
+            readOnly: filed,
+            onChange: setClientDoc,
+            onSave: saveClientPage
+          } : null,
+          onChange: side ? () => {
+          } : setClientDoc,
+          onSave: side ? void 0 : saveClientPage,
+          onEvent: (ev) => {
+            if (ev.type === "reload" && a5) loadClientReport(a5);
+          },
+          toolbar: /* @__PURE__ */ u2(Bar, { doc, note, setNote })
+        }
+      ) }),
+      /* @__PURE__ */ u2(LeftOutDialog, { client: doc.client || "", onExport: doExport })
+    ] });
+  }
+  var crMounted = false;
+  function renderClientReport(arg) {
+    const el2 = $("#v-clientreport");
+    if (!el2) return;
+    if (!crMounted) {
+      R(/* @__PURE__ */ u2(ClientView, {}), el2);
+      crMounted = true;
+    }
+    const a5 = typeof arg === "string" ? parseKey(arg) : arg;
+    if (a5 && a5.code) {
+      crMode.value = "client";
+      loadClientReport(a5).then(() => {
+        navWrite(false);
+        tabTitle();
+      });
+    }
+  }
+  function clientReportKey() {
+    const a5 = crArg.value, d5 = crDoc.value;
+    return a5 && d5 ? `${a5.code}/${d5.date}/${encodeURIComponent(d5.client || a5.client || "")}` : null;
+  }
+  function parseKey(text) {
+    const m5 = /^([A-Z][A-Z0-9]{2,6})(?:\/(\d{4}-\d{2}-\d{2}))?(?:\/(.*))?$/.exec(String(text || ""));
+    if (!m5) return null;
+    let client = "";
+    try {
+      client = decodeURIComponent(m5[3] || "");
+    } catch (e4) {
+      return null;
+    }
+    return { code: m5[1], week: m5[2] || void 0, client: client || void 0 };
+  }
+
   // stores/notes.js
   var IDLE_MS = 3e4;
   var DRAFT_MS = 1e3;
@@ -49578,6 +50600,7 @@ ${d5.text}`);
     }
     if (shared.VIEW === "meeting") st2.arg = shared.MEETING;
     if (shared.VIEW === "prep") st2.arg = prepViewKey.value;
+    if (shared.VIEW === "clientreport") st2.arg = clientReportKey();
     if (shared.VIEW === "notes") {
       st2.arg = shared.NOTECODE;
       const c5 = noteCur.value;
@@ -49590,6 +50613,7 @@ ${d5.text}`);
     if (st2 && st2.v === "meeting") return `#meeting=${st2.arg || ""}`;
     if (st2 && st2.v === "notes") return `#notes=${st2.arg || ""}${st2.note ? `&n=${encodeURIComponent(st2.note)}` : ""}${st2.note && st2.find ? "&find=1" : ""}`;
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
+    if (st2 && st2.v === "clientreport") return `#client-report=${typeof st2.arg === "string" ? st2.arg : ""}`;
     if (st2 && st2.v === "milestones") return `#milestones=${st2.arg}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
     if (st2 && st2.v === "people") return "#people" + (st2.arg === "none" ? "/none" : "");
     let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? `cockpit=${st2.arg}` : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : st2.v === "inbox" ? "intake" : st2.v;
@@ -49614,6 +50638,13 @@ ${d5.text}`);
     {
       const k5 = prepKeyOf(h5);
       if (k5) return { v: "prep", arg: k5, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+    }
+    {
+      const mm2 = /^#?client-report=(.+)$/.exec(String(h5 || ""));
+      if (mm2) {
+        const a5 = parseKey(mm2[1]);
+        return a5 && P4.some((p6) => p6.code === a5.code) ? { v: "clientreport", arg: mm2[1], wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 } : null;
+      }
     }
     {
       const mm2 = /^#?notes=([^&]+)(?:&n=([^&]*))?/.exec(String(h5 || ""));
@@ -49840,7 +50871,7 @@ ${d5.text}`);
       const id2 = { cockpit: "v-cockpit", mine: "v-work" }[v6] || "v-" + v6;
       $("#" + id2).hidden = false;
       $("#" + id2).scrollTop = 0;
-      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects" }[v6] || v6;
+      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", clientreport: "projects" }[v6] || v6;
       setRailView(railKey);
       if (v6 === "mine") {
         shared.WT = "actions";
@@ -49852,7 +50883,7 @@ ${d5.text}`);
       if (v6 === "person") shared.PERSON = arg2;
       if (v6 === "notes") shared.NOTECODE = arg2;
       if (v6 === "settings" && arg2) STAB = arg2;
-      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2) }[v6] || (() => {
+      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), clientreport: () => renderClientReport(arg2), notes: () => renderNotes(arg2) }[v6] || (() => {
       }))();
       if (!opt2.restore) navWrite(true);
       return true;
@@ -50032,6 +51063,7 @@ ${d5.text}`);
       const v5 = prepView.value, t48 = v5 && v5.ok && v5.model ? v5.model.meeting.title : "";
       TABNAME.prep = t48 ? `Prep · ${t48}` : "Prep";
     }
+    if (shared.VIEW === "clientreport") TABNAME.clientreport = "Client report";
     const n4 = REV.filter((r4) => !r4.done).length, vips = VIPS().length;
     const where2 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
     const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where2 ? ` · ${where2}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
@@ -59180,6 +60212,7 @@ ${d5.text}`);
         "CMDENTER",
         "COLS",
         "Chip",
+        "ClientView",
         "CloseDay",
         "Combobox",
         "D",
@@ -59197,6 +60230,7 @@ ${d5.text}`);
         "Essentials",
         "FDEFS",
         "FILES",
+        "FLAGS",
         "FOPEN",
         "FX",
         "FilterBar",
@@ -59454,6 +60488,7 @@ ${d5.text}`);
         "mScroll",
         "mWords",
         "markHelpSeen",
+        "matchAll",
         "mdBlocks",
         "mdChat",
         "mdHtml",

@@ -158,6 +158,49 @@ class Baseline(Base):
             self.assertNotIn(internal, text)
 
 
+class P8ClientView(Base):
+    """v2.1.0 P8: what the client view's Match internal, eyes, health reason and left-out check can and can't do to the data."""
+
+    def test_internal_rows_copied_into_the_client_report_are_dropped_at_save(self):
+        """Match internal copied wholesale (what a generic sheet would do) would put internal rows on the client's page: saving removes them."""
+        self.label("ABC-006")
+        got = self.py("d = report_doc.client_doc('ABC')\n"
+                      "risks = next(s for s in d['sections'] if s['id'] == 'risks')\n"
+                      "for ref, t in (('ABC-005', 'Vendor exits the market before go-live'), ('ABC-006', 'Test licences not ordered')):\n"
+                      "    risks['rows'].append({'ref': ref, 'shown': True, 'cells': {'type': 'Risk', 'risk': t}})\n"
+                      "    d['items'][ref] = {'table': 'raid', 'id': ref, 'title': t}\n"
+                      "r = report_doc.save_draft(d)\n"
+                      "text = open(str(__import__('paths').resolve(r['path']))).read()\n"
+                      "print(json.dumps({'removed': r['removed'], 'leaked': [x for x in ('ABC-005', 'ABC-006', 'Vendor exits', 'Test licences not') if x in text]}))")
+        self.assertEqual(sorted(got["removed"]), ["ABC-005 isn't client-visible", "ABC-006 is Sensitive: never in a client report"])
+        self.assertEqual(got["leaked"], [])
+
+    def test_the_left_out_check_never_offers_a_sensitive_or_unseen_item(self):
+        self.label("ABC-006")
+        got = self.py("import client_check\nd = report_doc.client_doc('ABC')\nc = client_check.check(d)\n"
+                      "print(json.dumps({'items': {x['ref']: [x['kind'], x['why']] for x in c['left_out']['items']},"
+                      " 'addable': [a['row']['ref'] for a in c['addable']]}))")
+        self.assertEqual(got["items"]["ABC-006"], ["sensitive", "Sensitive: never in a client report"])
+        self.assertEqual(got["items"]["ABC-005"], ["blocked", "not client-visible"])
+        self.assertEqual(got["addable"], [])
+
+    def test_a_row_hidden_by_its_eye_keeps_no_wording_in_the_file(self):
+        got = self.py("d = report_doc.client_doc('ABC')\n"
+                      "risks = next(s for s in d['sections'] if s['id'] == 'risks')\n"
+                      "risks['rows'] = [{'ref': r['ref'], 'shown': False} for r in risks['rows']]\n"
+                      "r = report_doc.save_draft(d)\n"
+                      "text = open(str(__import__('paths').resolve(r['path']))).read()\n"
+                      "print(json.dumps('Test licences are not yet ordered' in text.split('creaite-data')[0]))")
+        self.assertFalse(got)
+
+    def test_the_health_reason_is_in_the_data_but_never_on_the_exported_page(self):
+        got = self.py("d = report_doc.client_doc('ABC')\n"
+                      "d['meta']['health_diff'] = {'internal': 'At risk', 'client': 'On track', 'reason': 'INTERNAL-REASON-ZED'}\n"
+                      "print(json.dumps({'page': 'INTERNAL-REASON-ZED' in creaite_doc.render(d, editing=False),"
+                      " 'findings': client_leak.findings(d)}))")
+        self.assertEqual(got, {"page": False, "findings": []})
+
+
 class ReviewReadsTheData(Base):
     def test_client_findings_reads_a_creaite_draft_from_its_data(self):
         got = self.py("import review\n"

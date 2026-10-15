@@ -141,7 +141,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          /api/chase/pane {id, …} BL-298's Draft chase pane: mode, recipient, suggestions, defaults, draft
 - POST /api/log/error    a page script error, short and redacted, into the debug log; /api/diagnostics {report}: Settings ›
                          Diagnostics' errors, or the plain-text report to paste (BL-102)
-- POST /api/report/draft, /save, /approve, /export: the weekly and client reports in creaite (report_server.py)
+- POST /api/report/draft, /save, /approve, /check, /export: the weekly and client reports in creaite (report_server.py; /check is read only)
 - POST /api/settings/catalogue  every setting: group, Essentials or Advanced, label, line, reason, default, value, changed,
                          resettable, last changed; the Essentials rows; counts (BL-320, settings_catalogue.py). Read only
 - POST /api/settings/reset {key | keys}: put settings back to their defaults, saved as the page's own settings save is (a backup,
