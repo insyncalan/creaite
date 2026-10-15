@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | Lite digest (12:00). #76's default is moot (Alan decided "keep" directly). Team Cap's #39 fix (non-atomic settings writes) is Team Cap's, and Team Stark's duplicate was stopped; #65 back to Team Cap. #59 closed (v20-rules-notes, non-negotiables checked unchanged). #60's last guard diff (9d893d9: Search's answer like ask creaite) reviewed and pushed | One owner per fix; guard diffs checked against Alan's decisions |
 | 15-10-2026 | Alan | Search's answer is treated like ask creaite: it may draw on confidential notes (not a held run) | It's his own question, shown only on his screen |
 | 15-10-2026 | Jarvis | In held runs, search drops its "n confidential notes also matched" line | A count gives a match away; Alan's "hide entirely" |
 | 15-10-2026 | Jarvis | Team Cap silent since 10:26 (Alan: "Team Cap are not working"): #39, #50, #59 and #65 move to Team Stark. Jarvis merged #56 (v20-notes-guard, signed off) into v20-base, bbddb2e, after the guard tests passed | Keep v1.9.4, v1.9.5 and v2.0.0 moving |
