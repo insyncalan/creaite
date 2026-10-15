@@ -3066,6 +3066,8 @@ def vip_close_stage(aid):
         out, spec, item = found
         sg = item["suggested"]
         sg.setdefault("why_before", item.get("why") or "")
+        if "status_before" not in sg:                                   # review (c): a status already there is Alan's
+            sg["status_before"] = item["changes"].get("status")
         item["changes"]["status"] = tracker.CLOSED_STATUSES[0]
         _append_line(item, line)
         sg["closes"] = list(sg.get("closes") or []) + [aid]
@@ -3142,7 +3144,7 @@ def _take_close(spec, item, aid, line):
     item["changes"]["latest_update"] = "\n".join(cur)
     if sg["closes"]:
         return
-    item["changes"].pop("status", None)
+    _take_status(item, sg.pop("status_before", None))
     for k in ("done", "closes", "close_lines"):
         sg.pop(k, None)
     before = sg.pop("why_before", None)
@@ -3151,6 +3153,15 @@ def _take_close(spec, item, aid, line):
         spec["items"].remove(item)
         for n, it in enumerate(spec["items"], 1):
             it["n"] = n
+def _take_status(item, before):
+    """Review (c): take out only the status the stage added. A status the item had before the first close was staged (Alan's,
+    set in Review on the pending item) is put back; a status Alan changed after the stage (no longer the stage's Closed) is
+    left. Only a status the stage added and nobody changed is removed. (Alan setting the very same Closed after the stage
+    can't be told apart from the stage's own, so that one is removed with it.)"""
+    if before is not None:
+        item["changes"]["status"] = before
+    elif item["changes"].get("status") == tracker.CLOSED_STATUSES[0]:
+        item["changes"].pop("status")
 # ===== end BL-342 Part 3 B, step 9 =====
 
 

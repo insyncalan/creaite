@@ -541,6 +541,33 @@ class StageTests(Base):
         [(name, item)] = self.staged()
         self.assertTrue(item["why"].startswith("Logged from a thread"))
 
+    def alan_sets(self, status):
+        [(name, item)] = self.staged()
+        f = self.v.root / "system/staging" / name
+        spec = json.loads(f.read_text())
+        spec["items"][0]["changes"]["status"] = status                                       # his edit in Review
+        spec["items"][0]["edited_in"] = "dashboard"
+        f.write_text(json.dumps(spec))
+
+    def test_undo_keeps_a_status_alan_set_on_the_pending_item(self):
+        # Review (c): Undo takes out only what the stage added.
+        self.call("vip_log")
+        self.alan_sets("Closed")                                                             # before the click
+        self.call("vip_close_stage")
+        self.call("vip_close_unstage")
+        [(name, item)] = self.staged()
+        self.assertEqual(item["changes"]["status"], "Closed")                                # his status stays
+        self.assertNotIn("status_before", item["suggested"])
+        self.assertFalse(any("Looks done" in ln for ln in item["changes"]["latest_update"].splitlines()))
+
+    def test_undo_keeps_a_status_alan_changed_after_the_stage(self):
+        self.call("vip_log")
+        self.call("vip_close_stage")
+        self.alan_sets("Cancelled")                                                          # after the click
+        self.call("vip_close_unstage")
+        [(name, item)] = self.staged()
+        self.assertEqual(item["changes"]["status"], "Cancelled")
+
     def test_a_second_card_on_the_same_item_adds_its_line_to_the_same_item(self):
         self.call("vip_close_stage")
         self.check([owner_done(conversation=MAIL_ID + "2", subject="Project Falcon plan, the other thread",
