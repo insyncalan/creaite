@@ -778,6 +778,7 @@ SCRIPT_COMMANDS = {
     "excel_sync.py": {"changed": READ, "export": DERIVED, "import": RECORD},
     "docx_tools.py": {"text": READ, "status": READ, "fill": STAGE, "build-adhoc": STAGE, "clean": STAGE},
     "drafts.py": {"context": READ, "result": READ, "stats": READ, "features": READ, "stat": DERIVED},
+    "edit_ai.py": {"context": READ, "result": READ, "options": READ},          # BL-301 D: AI on selected text; writes nothing
     "filechange.py": {"check": READ, "list": READ, "create": GUARDED, "edit": GUARDED, "move": GUARDED, "delete": GUARDED,
                       "undo": GUARDED},
     "forecast.py": {"range": READ},

@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
+import { isNotePath, openNoteAt } from "./notes.js";
 import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
@@ -33,7 +34,7 @@ import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 export const SRCH={skip:[],seq:0,timer:null,res:null,q:""};
 export const SEARCHCFG=Object.assign({debounce_ms:150},D.search||{});
 export const SKIND={action:"Action",risk:"Risk",issue:"Issue",assumption:"Assumption",dependency:"Dependency",decision:"Decision",milestone:"Milestone",minutes:"Minutes",transcript:"Transcript",report:"Report",document:"Document"};
-export const SGROUP={items:"Items",meetings:"Meetings",reports:"Reports",documents:"Documents"};
+export const SGROUP={items:"Items",meetings:"Meetings",reports:"Reports",documents:"Documents",notes:"Notes"};   /* BL-301 B: notes, their own group */
 export const searchIco=k=>ico(k==="action"?"action":k==="decision"?"decision":k==="milestone"?"milestone":["risk","issue","assumption","dependency"].includes(k)?k[0].toUpperCase()+k.slice(1):"");
 export async function searchFetch(q,skip){ const p=new URLSearchParams({q}); if(skip&&skip.length) p.set("skip",skip.join(","));
   const r=await fetch("/api/search?"+p,{headers:{"X-Creaite-Token":D.token||""}}); if(r.status===404) throw new Error(OLDSERVER); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||"Search failed"); return await r.json(); }
@@ -59,6 +60,7 @@ export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.re
 export function openFound(r){ const o=r.opens;
   if(o.type==="item"&&o.archived&&!S.showArchived){ snack("Its project is archived: Settings › Advanced › Show archived projects opens it"); return; }   /* BL-09 */
   if(o.type==="item"){ if(o.table==="milestones"){ openMilestone(o.id); return; }   /* BL-186: the Milestones page, its editor open */ const k=o.table; shared.WT=k; go("work"); openRecord(k,o.id); return; }
+  if(o.type==="preview"&&isNotePath(o.path)){ openNoteAt(o.path); return; }   /* BL-301 B: a note opens in its Notes tab */
   if(o.type==="preview") return searchPreview(o.path,o.q);
   openPath(o.path); }
 export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing needs the live server"); return; }
@@ -87,7 +89,7 @@ export const ITEMID=/^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/;
 export const itemTable=id=>A.some(a=>a.id===id)?"actions":R.some(r=>r.id===id)?"raid":DEC.some(d=>d.id===id)?"decisions":P.some(p=>(p.ms||[]).some(m=>m[3]===id))?"milestones":null;
 export function citeFind(name){ const n=name.trim().toLowerCase(), stem=x=>x.replace(/\.[^.]+$/,"").toLowerCase();
   const s=(shared.ASKQ.sources||[]).find(x=>x.kind!=="item"&&(x.name.toLowerCase()===n||(x.stem||"").toLowerCase()===n)); if(s) return s;
-  const f=FILES.find(x=>x.n.toLowerCase()===n||stem(x.n)===n); return f?{name:f.n,path:f.path,kind:f.f==="reports"?"report":f.f==="documents"||f.f==="agendas"?"document":f.f==="transcripts"?"transcript":"minutes"}:null; }
+  const f=FILES.find(x=>x.n.toLowerCase()===n||stem(x.n)===n); return f?{name:f.n,path:f.path,kind:f.f==="notes"?"note":f.f==="reports"?"report":f.f==="documents"||f.f==="agendas"?"document":f.f==="transcripts"?"transcript":"minutes"}:null; }
 /* [file › section], [ABC-A-003] and [a; b] in the answer's HTML become links when every part is a source we know */
 export function vsCite(h){ return h.replace(/\[([^\[\]<>]{2,200})\]/g,(m,inner)=>{ const parts=decodeHtml(inner).split(/;\s*/).map(p=>{ const [file,...sec]=p.split("›").map(x=>x.trim());
       if(ITEMID.test(file)&&!sec.length&&itemTable(file)) return `<a href="#" class="cite" data-citeitem="${esc(file)}">${esc(file)}</a>`;

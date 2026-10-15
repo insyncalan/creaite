@@ -47,3 +47,16 @@ Only the ES module files the bundle needs and their type files (for `dev/tools/t
 The dashboard's build (`dev/tools/build_dashboard_js.py`, development only) bundles them into `dashboard.html` with the
 rest of the script, so the page needs no network and nothing is installed at run time (NFR-12). To upgrade: Alan runs
 `dev/tools/fetch_preact.sh`, then `python3 -I dev/tools/vendor_preact.py` with new pins, and the page is rebuilt.
+
+## Tiptap, the editor (BL-301)
+
+| File in `tiptap/` | Library | Version | Licence |
+|------|---------|---------|---------|
+| `tiptap.module.js` | Tiptap with `@tiptap/markdown`, ProseMirror, marked, linkifyjs and their dependencies, and creaite's exact Markdown writer (`dev/tiptap/`), as one minified ES module | Tiptap 3.31.3 (04-09-2026) | MIT (every bundled package's own licence file in `tiptap/licenses/`) |
+
+`tiptap/manifest.json` records each bundled package's version, tarball SHA-256 and licence, the esbuild version, the
+SHA-256 of the `dev/tiptap/` sources it was built from, and the SHA-256 of every file in the folder. It is built in
+development only, never at run time (NFR-12): `python3 dev/tools/tiptap.py fetch` (the pinned tarballs, each checked
+against its hash), then `python3 dev/tools/tiptap.py vendor`; commit the folder. `python3 dev/tools/tiptap.py vendor
+--check` rebuilds in memory and compares byte for byte; `dev/tools/check.py` (VENDORED) and
+`dev/tests/test_vendor_tiptap.py` do the same. Nothing in the dashboard loads it yet.

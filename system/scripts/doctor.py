@@ -212,7 +212,7 @@ def extraction_scope():
         folders = paths.project_folders()
         ext = {d.resolve() for code, _ in folders for d in paths.extract_dirs(code)}
         rep = {d.resolve() for code, _ in folders for d in (paths.folder(code, "weekly_reports"), paths.folder(code, "client_reports"),
-                                                            paths.folder(code, "adhoc_documents"))}
+                                                            paths.folder(code, "adhoc_documents"), paths.folder(code, "notes"))}   # BL-301
         for e in ext:
             for r in rep:
                 if e == r or e in r.parents or r in e.parents:
@@ -265,7 +265,8 @@ def project_folders_present():
 def mapped_folders():
     """BL-93: the folders creaite files into (Steerco, ad hoc documents, images) are there and can be written to."""
     problems = []
-    kinds = [k for k in (paths.locations().get("folders") or {}) if k not in ("minutes", "transcripts")]
+    kinds = [k for k in (paths.locations().get("folders") or {})
+             if k not in ("minutes", "transcripts", "notes")]          # BL-301: a notes folder is made with the first note
     for code, _ in paths.project_folders():
         if code == "_portfolio":
             continue

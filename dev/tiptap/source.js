@@ -10,7 +10,7 @@
 //   bold         delim   "**" or "__"          (new text: "**")
 //   code         delim   the opening backticks, and a space when one was taken off each end ("` a `")
 //   link         form    "bare", "angle" or null for [text](href)  (new: bare when the text is its own address)
-//   hardBreak    raw     "  \n", "\\\n", or more trailing spaces   (new: "  \n")
+//   hardBreak    raw     "  \n", "\\\n", more trailing spaces, or "<br>"   (new: "  \n"; in a table cell "<br>")
 //   bulletList   bullet  "-", "*" or "+"       (new: "-")
 //   orderedList  delim   "." or ")"            (new: ".")
 //   table        source  the table's Markdown as written; written back while the table's content is unchanged
@@ -130,6 +130,7 @@ export const HtmlBlockFromMarked = Extension.create({
     token.block ? h.createNode("htmlBlock", { raw: String(token.raw || token.text || "").replace(/\n+$/, "") }) : null,
 });
 
+const BR = /^<br\s*\/?>$/i;
 const INLINE_TAG = /^<\/?[A-Za-z][A-Za-z0-9-]*(?:\s+[A-Za-z_:][\w.:-]*(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*\s*\/?>/;
 
 /** Inline HTML (a comment, or an opening or closing tag such as <b>, </b> or <br>), kept verbatim as a read-only chip.
@@ -161,7 +162,10 @@ export const HtmlInline = Node.create({
       return m ? { type: "htmlInline", raw: m[0], text: m[0] } : undefined;
     },
   },
-  parseMarkdown: (token, h) => h.createNode("htmlInline", { raw: token.text }),
+  // "<br>" is a hard break kept as written (raw "<br>"): it is how a break inside a table cell is written (writer.js),
+  // and so typed breaks in a cell survive save, load and save.
+  parseMarkdown: (token, h) => (BR.test(token.text) ? h.createNode("hardBreak", { raw: token.text })
+    : h.createNode("htmlInline", { raw: token.text })),
 });
 
 const ESCAPABLE = /^\\([!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~])/;

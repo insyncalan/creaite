@@ -102,7 +102,7 @@ class Shape(ShapeCase):
         chips = b.eval("[...document.querySelectorAll('#prepShape .readas .chip')].map(c=>c.textContent)")
         self.assertTrue(any("ABC-A-001" in c for c in chips), chips)
         self.assertIn("A date for data access", b.eval("document.querySelector('#prepShape .readas').textContent"))
-        boxes = b.eval("[...document.querySelectorAll('#prepShape textarea.shbox')].map(t=>[t.id,t.value])")
+        boxes = b.eval("[...document.querySelectorAll('#prepShape .shbox')].map(t=>[t.id,t.value])")
         self.assertEqual([x[0] for x in boxes], ["shN-objective", "shN-talking_points", "shN-ask", "shN-carried_over"])
         self.assertEqual(boxes[0][1], "Agree a date for data access.")
         cite = b.eval("document.querySelector('#shC-objective [data-open]').dataset.open")
@@ -184,6 +184,20 @@ class Shape(ShapeCase):
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#prepShape .shscope')).gridTemplateColumns.split(' ').length"), 1)
         self.assertTrue(b.eval(f"(()=>{{ const s=document.getElementById('prepScroll'); return s.scrollWidth<=s.clientWidth+1 && {DLG}.scrollWidth<={DLG}.clientWidth+1; }})()"))
 
+    def test_7_the_notes_have_ai_on_a_selection_with_the_meetings_project(self):
+        """BL-301 D: the shaped notes are on the one editor with AI on a selection (plain text, the meeting's project)."""
+        b = self.open_shape()
+        self.shape()
+        b.click("#shN-objective")
+        b.key("a", 4)                                                                                   # ⌘A
+        b.wait("document.querySelector('#aiLayer .aibar')", 30)
+        self.assertEqual(b.eval("[aiBar.value.ai.place, aiBar.value.ai.project(), aiBar.value.ai.confidential()]"), ["plain", "ABC", False])
+        b.click("#aiLayer .aibar button[aria-haspopup]")
+        b.wait("document.querySelector('#aiLayer [role=menu]')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
+                         ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
+        b.key("Escape")
+
     def test_6_the_switch_in_settings_turns_it_off(self):
         b = self.b
         b.eval("S.drafting={...(S.drafting||{}),shape:false}")
@@ -207,6 +221,10 @@ class Confidential(ShapeCase):
         call = json.loads(Path(str(self.fake) + ".calls").read_text().splitlines()[-1])
         self.assertEqual(call["allowed"], "")                                                           # the run had no tools
         self.assertNotIn("Board secret", call["prompt"])
+        b.click("#shN-objective")                                                                       # BL-301 D: AI asks first
+        b.key("a", 4)
+        b.wait("document.querySelector('#aiLayer .aibar')", 30)
+        self.assertTrue(b.eval("aiBar.value.ai.confidential()"))
         self.assertEqual(b.errors, [])
 
 

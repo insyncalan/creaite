@@ -6,7 +6,8 @@ Run: python3 dev/tests/test_tiptap_roundtrip.py   (needs Google Chrome; the runn
 The runner is given a fake bundle (window.CreaiteTiptap.roundTripAll written here: it encodes "&" as upstream Tiptap
 does, fails on "boom" and reports "lossy" as not faithful), so no network and no real Tiptap are needed. The real
 writer's tests run only when `python3 dev/tools/tiptap.py fetch` has filled dev/.cache (they never download anything):
-the whole gate must pass, and an edited document must be written in creaite's style.
+the whole gate must pass, and an edited document must be written in creaite's style. The notes gate (the stable group:
+typed tables and checklists, save, load, save) is tested on a fake page and, with the pinned Tiptap, on the real one.
 """
 import contextlib
 import hashlib
@@ -36,6 +37,21 @@ FAKE_BUNDLE = """var CreaiteTiptap = { PINNED: "%s", roundTripAll: function (tex
     return { out: mode === "exact" ? t : t.replace(/&/g, "&amp;") };
   });
 } };""" % tiptap.PINNED
+
+
+# The notes gate's page, faked: a "script" sets editor.text; the save gives it back; loading it again trims a double
+# space (so "a  b" is unstable) and "lossy" is not faithful.
+FAKE_STABLE = """var CreaiteTiptap = {
+  createEditor: function () { return { text: "", destroy: function () {} }; },
+  markdownOf: function (ed) { return { markdown: ed.text, faithful: ed.text.indexOf("lossy") < 0 }; },
+  roundTrip: function (md) { return { markdown: md.replace("  ", " "), faithful: md.indexOf("lossy") < 0 }; },
+  roundTripAll: function (texts) { return texts.map(function (t) { return { out: t }; }); }
+};"""
+
+
+def stable(name, script, contains=(), unfaithful=False):
+    """A stable-group case for the fake page."""
+    return gate.Case("stable", name, script, "notes", script=True, contains=tuple(contains), unfaithful=unfaithful)
 
 
 def pinned_tiptap_here():
@@ -101,6 +117,59 @@ class RunnerTest(unittest.TestCase):
         """A bundle holding "</script" (as a string) still loads."""
         results = gate.run([gate.Case("current", "s", "a")], FAKE_BUNDLE + '\nvar s = "</script>";')
         self.assertEqual(results[0][1], "a")
+
+
+class StableResultTest(unittest.TestCase):
+    """stable_result(): one stable case's three saves judged without a browser."""
+
+    def judge(self, saves, faithful, mode="exact", **kw):
+        """(passes, error) for a case given its browser result."""
+        case, out, error = gate.stable_result(stable("c", "", **kw), {"saves": saves, "faithful": faithful}, mode)
+        return error is None and out == case.wanted, error
+
+    def test_three_equal_faithful_saves_pass(self):
+        self.assertEqual(self.judge(["| a |"] * 3, [True] * 3, contains=["| a |"]), (True, None))
+
+    def test_a_later_save_that_differs_fails_with_where(self):
+        ok, error = self.judge(["a", "a", "b"], [True] * 3)
+        self.assertFalse(ok)
+        case, out, _ = gate.stable_result(stable("c", ""), {"saves": ["a", "b", "b"], "faithful": [True] * 3})
+        self.assertEqual((case.wanted, out), ("a", "b"))
+
+    def test_unfaithful_fails_unless_it_is_the_known_loss(self):
+        self.assertEqual(self.judge(["a"] * 3, [False] * 3), (False, gate.UNFAITHFUL))
+        self.assertEqual(self.judge(["a"] * 3, [False] * 3, unfaithful=True), (True, None))
+        self.assertEqual(self.judge(["a"] * 3, [True] * 3, unfaithful=True), (False, gate.UNSTABLE_KNOWN))
+
+    def test_contains_is_creaite_s_style_so_exact_only(self):
+        ok, error = self.judge(["a"] * 3, [True] * 3, contains=["a", "b"])
+        self.assertFalse(ok)
+        self.assertIn("1 of the 2 forms", error)
+        self.assertEqual(self.judge(["a"] * 3, [None] * 3, "upstream", contains=["b"]), (True, None))
+
+    def test_an_editor_error_fails(self):
+        case, out, error = gate.stable_result(stable("c", ""), {"error": "boom"})
+        self.assertEqual((out, error), (None, "boom"))
+
+
+@unittest.skipUnless(cdp.chrome_path(), "needs Google Chrome")
+class StableRunnerTest(unittest.TestCase):
+    """run() sends stable cases to the notes gate's harness and the rest to roundTripAll, results in order."""
+
+    def test_stable_and_round_trip_cases_together(self):
+        cases = [gate.Case("current", "plain", "x"), stable("ok", "editor.text = '| a |';", ["| a |"]),
+                 stable("unstable", "editor.text = 'a  b';"), stable("lossy", "editor.text = 'lossy';"),
+                 stable("throws", "throw new Error('no table');")]
+        results = gate.run(cases, FAKE_STABLE)
+        self.assertEqual([(c.source, o, e) for c, o, e in results],
+                         [("plain", "x", None), ("ok", "| a |", None), ("unstable", "a b", None),
+                          ("lossy", "lossy", gate.UNFAITHFUL), ("throws", None, "no table")])
+        lines, failed = gate.report(results)
+        self.assertEqual(failed, 3)
+        self.assertEqual(lines[-1], "round-trip: current 1/1 pass, stable 1/4 pass; 3 failed")
+        rows = gate.private_rows(results)
+        self.assertEqual([r["pass"] for r in rows], [True, True, False, False, False])
+        self.assertNotIn("a b", json.dumps(rows))
 
 
 class CorpusTest(unittest.TestCase):
@@ -170,6 +239,24 @@ class CorpusTest(unittest.TestCase):
             self.assertTrue(any(needle in t for t in texts), needle)
         self.assertEqual(len(gate.hard_cases()), len(raw))
 
+    def test_the_stable_cases_file(self):
+        """dev/tiptap/stable-cases.json (the notes gate): every case named once, with why, a script and the forms its
+        first save must hold; tables and checklists both typed through the editor's commands."""
+        raw = json.loads(gate.STABLE_CASES.read_text(encoding="utf-8"))
+        names = [c["name"] for c in raw]
+        self.assertEqual(len(names), len(set(names)))
+        for c in raw:
+            self.assertTrue(c.get("why") and c.get("script") and c.get("contains"), c["name"])
+            self.assertEqual(c.get("features", "notes"), "notes", c["name"])
+        scripts = " ".join(c["script"] for c in raw)
+        for command in ("insertTable", "goToNextCell", "addColumnAfter", "deleteRow", "setHardBreak", "toggleTaskList",
+                        "sinkListItem", "liftListItem", "updateAttributes('taskItem'"):
+            self.assertIn(command, scripts)
+        cases = gate.stable_cases()
+        self.assertEqual(len(cases), len(raw))
+        self.assertTrue(all(c.script and c.group == "stable" for c in cases))
+        self.assertEqual([c.source for c in cases if c.unfaithful], ["table with no header row (notes)"])
+
 
 @unittest.skipUnless(cdp.chrome_path() and pinned_tiptap_here(),
                      "needs Google Chrome and the pinned Tiptap in dev/.cache (python3 dev/tools/tiptap.py fetch)")
@@ -185,6 +272,16 @@ class ExactWriterTest(unittest.TestCase):
         """Every case of every group comes back byte for byte (or exactly as its known loss says)."""
         lines, failed = gate.report(gate.run(gate.corpus(), self.bundle, "exact", tiptap.PINNED))
         self.assertEqual(failed, 0, "\n".join(line for line in lines if not line.startswith("PASS")))
+
+    def test_the_notes_gate_passes(self):
+        """Typed tables and checklists: save, load and save give the same bytes, in creaite's form (BL-301)."""
+        results = gate.run(gate.stable_cases(), self.bundle, "exact", tiptap.PINNED)
+        lines, failed = gate.report(results)
+        self.assertEqual(failed, 0, "\n".join(line for line in lines if not line.startswith("PASS")))
+        first = {c.source: c.wanted for c, _, _ in results}
+        self.assertEqual(first["checklist nested (notes)"], "- [ ] Prepare the steering pack\n  - [ ] Health and risks\n"
+                         "  - [x] Milestones\n- [ ] Send it")
+        self.assertIn("first line<br>second line", first["table with a line break in a cell (notes)"])
 
     def test_edits(self):
         """A table edited loses its source and is written fresh; new italic is "_" beside a kept "*"; two lists side

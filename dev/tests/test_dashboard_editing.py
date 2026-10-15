@@ -47,7 +47,7 @@ SCRIPT = r"""
     openNew("raid"); { const id=CUR.nid; await pkCommit("raid",id,{p:"ABC"},"Project","",""); await pkCommit("raid",id,{t:"Temporary risk"},"Description","",""); } await pkUndoLast(); out.unstaged=[CUR&&CUR.mode,CUR&&CUR.staged]; CUR.draft.t=""; closePanel(); await VQ;   /* Undo last unstages it */
     // 4. health and current state
     openProject("ABC","health"); set("f_health","At risk"); set("f_reason","Data access still late"); await savePanel(false);
-    go("cockpit","ABC"); startCurEdit("ABC"); const ce=document.getElementById("curEd"); ce.innerHTML="<p>Recovery plan agreed with the client.</p>";
+    go("cockpit","ABC"); startCurEdit("ABC"); const ce=document.getElementById("curEd"); ce.cxed.editor.commands.setContent("<p>Recovery plan agreed with the client.</p>");   /* BL-301 A: the one editor */
     ce.dispatchEvent(new Event("input",{bubbles:true})); await saveCurEdit(); await VQ;
     // 5. Review: approve a routine item, reject a new risk, try to approve the draft (must not write)
     const routine=REV.find(r=>r.kind==="actions"&&r.p), risk=REV.find(r=>r.kind==="raid"), draft=REV.find(r=>r.kind==="draft");

@@ -2,6 +2,7 @@
 /* panel.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0046-detail-panel.js, 0047-bl-154-sprint-ux.js, 0048-after-bl-154.js, 0049-bl-260-fix-minutes-draft.js, 0050-after-bl-260.js, 0165-bl-176-sprint-peek.js, 0166-bl-176-sprint-peek.js, 0167-bl-176-sprint-peek.js, 0168-bl-176-sprint-peek.js, 0169-bl-176-sprint-peek.js, 0170-bl-250-fix-history-feed.js, 0171-after-bl-250.js, 0173-bl-177-sprint-peek.js, 0174-bl-175-sprint-peek.js, 0175-bl-179-sprint-peek-new.js, 0176-bl-179-sprint-peek-new.js, 0177-bl-179-sprint-peek-new.js, 0178-bl-179-sprint-peek-new.js, 0179-bl-180-sprint-peek-new.js, 0181-bl-185-sprint-peek-new.js, 0182-bl-187-fix-peek-140.js, 0183-bl-188-fix-peek-140.js, 0194-bl-198-sprint-review-work.js, 0197-bl-219-sprint-drafts-fields.js, 0198-bl-225-sprint-drafts-fields.js, 0199-bl-222-sprint-drafts-fields.js, 0200-bl-226-sprint-drafts-fields.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { drawPeekNotes } from "./notes.js";
 import { actHref, actId } from "./activity.js";
 import { closeChat, openChat, send } from "./ask.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, wsFor } from "./core/data.js";
@@ -13,6 +14,7 @@ import { drawTabs } from "./components/Tabs.jsx";
 import { statusDotNodes } from "./components/StatusDot.jsx";
 import { peekMark, peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
+import { creaiteEditor } from "./core/editor.js";
 import { typing } from "./core/keys.js";
 import { comboboxOpen } from "./components/Combobox.jsx";
 import { CALI, DATE_HELP, formProject, itemDatePicker, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
@@ -408,7 +410,8 @@ export const pkLabel=(k,f,x)=>f==="t"?pkTitleL(k):f==="resp"?RESPL(x.type):f==="
 export const PKDRAW=[];                                   /* later blocks add what they draw (staging, details, activity) */
 export function pkNote(msg){ const n=$("#pkNote"); if(!n) return; n.hidden=!msg; n.textContent=msg||""; }
 export function pkDrawId(x,k){ putHTML($("#pkId"),html`<span>${pkCid()}</span><span aria-hidden="true">·</span>${x.p?html`<a href="#" class="hlink" data-proj="${x.p}" data-tip="Open the project page">${pName(x.p)}</a>`:html`<span>needs a project</span>`}${k==="raid"?html`<button type="button" class="pk-type" data-pkp="type" aria-haspopup="listbox" aria-label="Type: ${x.type}" data-tip="Type">${x.type}${raw(ic("chevdown"))}</button>`:""}`);
-  const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`)); }
+  const w=shared.CUR.mode==="record"?warnsOf(k,pkCid()):[]; putHTML($("#pkWarn"),w.map(z=>html`<div class="pk-warn">${raw(WICO.replace("<svg",'<svg width="14" height="14"'))}<span>${z.text}</span></div>`));
+  drawPeekNotes(shared.CUR.mode==="record"?pkCid():"");   /* BL-301 B: "2 notes mention this" */ }
 export function pkDrawProps(x,k){ (()=>{ if(shared.PKPOP&&($("#pkProps").contains(shared.PKPOP.anchor)||$("#pkProps2").contains(shared.PKPOP.anchor)||$("#pkId").contains(shared.PKPOP.anchor))) return;
   /* BL-316: each property is a Chip (components/peek/PeekProps.jsx), drawn afresh as before */
   const o=pkWho(x[pkOwnF(k)]), late=pkLate(k,x), L=/** @type {import("./components/peek/PeekProps.jsx").PeekProp[]} */([{f:"st",name:"Status",mark:{st:x.st},value:x.st||""}]);
@@ -539,6 +542,7 @@ addHTML($("#pkBar"),"afterend",html`<div class="pk-scroll" id="pkScroll"><div cl
   <div class="pk-note" id="pkNote" role="status" hidden></div>
   <div class="pk-dlrow"><div class="pk-dl" id="pkDescL"></div><span class="pk-dldr" id="pkDescDr"></span></div><div class="pk-desc pked" id="pkDesc" contenteditable="plaintext-only" role="textbox" aria-multiline="true" data-pkml="1" spellcheck="true"></div>
   <div id="pkAfter"></div></div>`);
+pkEdMount($("#pkScroll"));
 $("#pkScroll").addEventListener("scroll",()=>{ if(shared.PKPOP&&$("#pkScroll").contains(shared.PKPOP.anchor)) closePicker("away"); });   /* a click away and a resize: the block's own */
 $("#panel").addEventListener("click",e=>{ const c=e.target.closest("[data-pkp]"); if(!c||!pkOn()||c.classList.contains("ro")) return; e.preventDefault();
   if(pickerOpenFor(c)){ closePicker("owner"); return; } pkOpenProp(c.dataset.pkp,c); });
@@ -679,6 +683,12 @@ PK.det={};
    change log lines as the Activity page (ACT, from build_dashboard.activity, with actId), so there is one reading of the history:
    a change staged here shows first, marked "staged", and once applied it is the change log's own line, marked "applied". Updates
    are the changes to the free text (latest update, the response, the reasoning); Source is the item's source and its creation. */
+/* BL-301 A: the peek's text fields are the one editor (core/editor.js), as plain text: one paragraph a line, no Markdown, so
+   the stored text stays as it was. Their text is read and set by textContent as before (the editor answers for it), so the
+   commit on leaving the field, Esc, the rules and the AI drafts are unchanged. */
+export function pkEdMount(root){ if(!root) return; root.querySelectorAll(".pked").forEach(el=>{ if(el.cxed) return;
+  creaiteEditor(el,{features:"plain",text:el.textContent,multiline:!!el.dataset.pkml,prop:"textContent",
+    ...(el.dataset.pkml||el.id==="pkTitle"?{ai:{place:el.dataset.pkml?"plain":"line",project:()=>{ const x=shared.CUR&&pkX(shared.CUR.k,pkCid()); return (x&&x.p)||""; }}}:{})}); }); }   /* BL-301 D: AI on a selection in the longer fields, and the title (one line: place "line", a suggestion never breaks it) */
 export const pkDetOpen=(x,id)=>!!((PK.pc&&PK.pc.id===id)||(id in PK.det?PK.det[id]:!!x.client));
 export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#pkDetT"); tg.setAttribute("aria-expanded",String(open)); $("#pkDet").hidden=!open; if(!open) return;
   const body=$("#pkDet"); if(body.contains(document.activeElement)&&document.activeElement.isContentEditable) return;   /* never under the cursor */
@@ -698,7 +708,7 @@ export function pkDetails(x,k){ const id=pkCid(), open=pkDetOpen(x,id), tg=$("#p
   h+=row("eye","Client-visible",`<button type="button" class="pk-sw" role="switch" aria-checked="${on}" aria-label="Client-visible" data-pksw="client"></button>`);
   if(on){ const f=pkMsgF(k);   /* actions and RAID: an empty messaging offers its three headings */
     h+=row("msg","Client messaging",`<div class="pk-vtext pked" contenteditable="plaintext-only" role="textbox" data-pkf="${f}" data-pkml="1" aria-multiline="true" data-ph="Plain wording for the client" aria-label="Client messaging">${esc(x[f]||(k==="decisions"?"":CMT))}</div>`); }
-  putHTML(body,raw(h)); if(af) body.querySelector(`[data-pkp="${af}"],[data-pksw="${af}"]`)?.focus(); }
+  putHTML(body,raw(h)); pkEdMount(body); if(af) body.querySelector(`[data-pkp="${af}"],[data-pksw="${af}"]`)?.focus(); }
 /* the feed */
 export const PKTABS=[["all","All"],["act","Activity"],["upd","Updates"],["src","Source"]];
 export const pkUpdLabel=k=>k==="actions"?"latest update":k==="raid"?"response":"reasoning";
@@ -841,6 +851,7 @@ export function pkNewDraw(x,k){ const on=shared.CUR.mode==="new", s=$("#pkSrcIn"
 export function bootPanel0175(){
 PKFL.srcIn="Source";
 addHTML($("#pkNote"),"afterend",html`<div class="pk-dl pk-src-l" id="pkSrcL" hidden>Source</div><div class="pk-desc pked pk-srcin" id="pkSrcIn" data-pkf="srcIn" contenteditable="plaintext-only" role="textbox" spellcheck="true" aria-label="Source" hidden></div>`);
+pkEdMount($("#pkScroll"));
 PKDRAW.push(pkNewDraw);
 if(shared.CUR&&pkOn()) drawPanel();
 }

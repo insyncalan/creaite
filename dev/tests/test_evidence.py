@@ -281,7 +281,9 @@ class EvidenceBrowser(LiveBrowserCase):
         b.click("#v-cockpit .curcard [data-edcur]")
         b.wait("document.getElementById('curEd')")
         b.eval("document.getElementById('curEd').innerHTML='<p>UAT is 14 days late.</p>'")
-        b.click("[data-exec]")
+        b.click("#curAi button[aria-haspopup]")   # BL-301 D: Make it executive is an option of AI ▾
+        b.wait("document.querySelector('#curAi [data-exec]')")
+        b.click("#curAi [data-exec]")
         b.wait("document.querySelectorAll('#genRewrite .rwbody .claim').length===2 && CURED.rewrite.claims && Object.values(CURED.rewrite.claims).every(c=>c.how)", 30)
         self.assertNotIn("{", b.eval("document.querySelector('#genRewrite .rwbody').innerText"))
         self.assertEqual(b.eval("Object.values(CURED.rewrite.claims).map(claimState)"), ["ok", "none"])

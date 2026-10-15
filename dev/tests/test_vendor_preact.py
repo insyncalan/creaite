@@ -54,6 +54,7 @@ class Build(unittest.TestCase):
         self.assertIn("--jsx=automatic", flags)
         self.assertIn("--jsx-import-source=preact", flags)
         aliases = dict(f[len("--alias:"):].split("=", 1) for f in flags if f.startswith("--alias:"))
+        self.assertEqual(Path(aliases.pop("tiptap")), bj.TIPTAP)            # BL-301 A: the one editor's Tiptap, beside Preact
         self.assertEqual(set(aliases), set(vp.MODULES))
         for spec, path in aliases.items():
             self.assertEqual(Path(path), vp.VENDOR / vp.MODULES[spec], spec)

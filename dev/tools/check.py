@@ -14,6 +14,8 @@ Hard checks (always fail, no baseline):
   E722     a bare `except:`
   JSDUP    a function declared twice in the dashboard's inline script (the last declaration silently replaces the first
            everywhere: BL-253's evOpen took over BL-207's evidence panel)
+  VENDORED system/templates/vendor/tiptap/ (BL-301 A) doesn't match its manifest, was built from older dev/tiptap/
+           sources, or (when the pinned Tiptap is in dev/.cache) isn't byte for byte a fresh `tiptap.py vendor` build
   BUILT    system/templates/dashboard.html is out of date with its source in system/templates/dashboard/ (BL-231 step
            2a), or can't be built (step 2b: the pinned esbuild bundles src/); the message says how to rebuild it. The JS
            checks below read the source (each module in src/), and JSDUP also fails a top-level name declared in two
@@ -634,6 +636,14 @@ def built_page(problems):
         problems.append((rel(DASHBOARD), 0, "BUILT", why))
 
 
+def vendored_tiptap(problems):
+    """VENDORED: the committed Tiptap editor is the one dev/tiptap/ and the pinned packages build (BL-301 A)."""
+    import tiptap
+    why = tiptap.stale()
+    if why:
+        problems.append((rel(tiptap.VENDOR), 0, "VENDORED", why))
+
+
 def extras(js, with_js, cur, problems):
     """ruff, Biome, vulture and tsc counts into `cur` when installed; a tool that checked nothing is a problem. Their versions."""
     import check_extras
@@ -673,6 +683,7 @@ def main(argv):
         for kind, vals in metrics(path, src, tree).items():
             cur[kind].update(vals)
     built_page(problems)
+    vendored_tiptap(problems)
     sources = dashboard_sources()
     js = "\n".join(sources.values())
     cur["js"] = js_metrics(js, not a.no_js, problems, sources)

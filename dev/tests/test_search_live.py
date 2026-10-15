@@ -111,7 +111,7 @@ class SearchLiveTests(unittest.TestCase):
         status, r = self.search("data access")
         self.assertEqual(status, 200)
         self.assertTrue(r["ok"])
-        self.assertEqual(set(r["groups"]), {"items", "meetings", "reports", "documents"})
+        self.assertEqual(set(r["groups"]), {"items", "meetings", "reports", "documents", "notes"})   # notes: BL-301
         self.assertEqual([x["title"] for x in r["groups"]["reports"]], ["2026-10-02 Weekly report"])
         self.assertEqual([x["title"] for x in r["groups"]["documents"]], ["2026-08-01 Plan"])
         self.assertEqual([x["title"] for x in r["groups"]["meetings"]], ["2026-09-25 Steering"])   # found without `index`
@@ -133,7 +133,7 @@ class SearchLiveTests(unittest.TestCase):
         self.assertEqual(self.search("x", **{"from": "yesterday"})[0], 400)
         self.assertEqual(self.search("x" * 400)[0], 400)
         self.assertEqual(self.get("/api/search?q=data", token="wrong")[0], 403)
-        self.assertEqual(self.search("")[1]["totals"], {"items": 0, "meetings": 0, "reports": 0, "documents": 0})
+        self.assertEqual(self.search("")[1]["totals"], {"items": 0, "meetings": 0, "reports": 0, "documents": 0, "notes": 0})
 
     def test_it_is_read_only(self):
         before = (self.v.root / "system/tracker.db").read_bytes()

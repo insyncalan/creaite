@@ -937,7 +937,7 @@ class PanesLive(LiveBrowserCase):
         b.wait("document.getElementById('curEd2')")
         self.assertIn("A new drafted left pane.", b.eval("document.getElementById('curEd').textContent"))
         self.assertEqual(b.eval("document.getElementById('curEd2').textContent.trim()"), "Alan's own notes.")
-        self.assertEqual(b.eval("CURED.html2.includes(\"Alan's own notes.\")"), True)
+        self.assertEqual(b.eval("edValue(document.getElementById('curEd2')).includes(\"Alan's own notes.\")"), True)
         self.assertIn("saved and applied", self.save())
         left, right = self.md().split(MARKER)
         self.assertIn("A new drafted left pane.", left)

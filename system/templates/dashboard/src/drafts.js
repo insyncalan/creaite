@@ -301,7 +301,7 @@ export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
     try{ res=await fetch(o.url||"/api/draft",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({...body,run:id})}); }   /* o.url: BL-296's /api/alerts/draft */
     catch(e){ return {ok:false,message:"The live server isn't reachable"}; }
     if(!res.ok||!res.body||(res.headers.get("Content-Type")||"").includes("json")){ const j=await res.json().catch(()=>({}));
-      return {ok:!!j.ok&&!!j.nothing,nothing:j.nothing||"",off:!!j.off,message:res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message||"")||"The draft couldn't be started"}; }
+      return {ok:!!j.ok&&!!j.nothing,nothing:j.nothing||"",off:!!j.off,confidential:!!j.confidential,message:res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message||"")||"The draft couldn't be started"}; }
     started=true; rbStart(o.label||"Drafting with Claude");
     const rd=res.body.getReader(), dec=new TextDecoder(); let buf="";
     for(;;){ let c; try{ c=await rd.read(); }catch(e){ out.stopped=true; break; } if(c.done) break; buf+=dec.decode(c.value,{stream:true}); let i;

@@ -116,6 +116,7 @@ class Source(unittest.TestCase):
             src = Path(tmp) / "elsewhere" / "dashboard"
             shutil.copytree(sd.SRC, src)
             shutil.copytree(sd.SRC.parent / "vendor" / "preact", src.parent / "vendor" / "preact")   # BL-256: beside it, as in templates/
+            shutil.copytree(sd.SRC.parent / "vendor" / "tiptap", src.parent / "vendor" / "tiptap")   # BL-301 A: and the one editor's
             self.assertEqual(sd.built(src), REAL.read_bytes(), "the same source built in another folder gives other bytes")
         self.assertEqual(sd.built(), sd.built(), "two builds of the same source differ")
 

@@ -3355,8 +3355,20 @@ def text_of(p):
 
 # ── The search index (BL-07) ──────────────────────────────────────────────────
 
-INDEX_FOLDERS = ("minutes", "transcripts", "reports", "documents")      # what the index covers, in every project
-STORED_KIND = {"reports": "report", "agendas": "documents"}                # the others are stored as their folder name (BL-135: an agenda is a document to search)
+INDEX_FOLDERS = ("minutes", "transcripts", "reports", "documents", "notes")      # what the index covers, in every project
+STORED_KIND = {"reports": "report", "agendas": "documents", "notes": "note"}     # the others are stored as their folder name (BL-135: an agenda
+#                                                                                  is a document to search; BL-301: a note is kind `note`)
+INDEX_VERSION = 2          # BL-301: raised when what the index holds changes, so a vault built by an older release rebuilds once
+
+
+def index_entry_text(f, folder):
+    """(text, date) a file is indexed with. A note (BL-301) is read by notes.py (front matter left out, its own date); every other
+    file by text_of, dated as before."""
+    if folder == "notes":
+        import notes
+        return notes.index_text(f), notes.index_date(f)
+    when = paths.file_date(f)[0] if folder in ("minutes", "transcripts") else (paths.name_date(f.name)[0] or "")
+    return text_of(f), when
 
 
 def index_files():
@@ -3400,6 +3412,8 @@ def index_state():
         stamp = json.loads(index_stamp().read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return True, "never built"
+    if stamp.get("version", 1) != INDEX_VERSION:
+        return True, "built by an older release"
     sidecars = list(paths.SEARCH_DIR.glob("*.json")) if paths.SEARCH_DIR.is_dir() else []
     newest = max([f.stat().st_mtime for f, _, _ in files] + [s.stat().st_mtime for s in sidecars
                                                               if s.name != index_stamp().name] + [0])
@@ -3479,9 +3493,9 @@ def _index_entries(scan, keys):
         rel = paths.rel(f)
         entry = found.get(meta["k"])
         if entry is None:
+            content, when = index_entry_text(f, folder)          # BL-301: a note is read by notes.py, with its own date
             entry = found[meta["k"]] = {"path": rel, "projects": [], "kind": STORED_KIND.get(folder, folder),
-                                        "date": paths.file_date(f)[0] if folder in MEETING_FOLDERS else (paths.name_date(f.name)[0] or ""),
-                                        "text": text_of(f), "stem": f.stem, "note": None}
+                                        "date": when, "text": content, "stem": f.stem, "note": None}
         entry["note"] = entry["note"] or read_sidecar(rel)        # any copy's sidecar will do
         if code not in entry["projects"]:
             entry["projects"].append(code)
@@ -3499,7 +3513,8 @@ def _index_old(full, recreated):
         stamp = json.loads(index_stamp().read_text(encoding="utf-8"))
     except (OSError, ValueError):                      # never built, or a stamp caught half-written: a full build
         return None
-    if full or recreated or stamp.get("readers", 1) != INDEX_READERS or stamp.get("layout") != INDEX_LAYOUT:
+    if (full or recreated or stamp.get("readers", 1) != INDEX_READERS or stamp.get("layout") != INDEX_LAYOUT
+            or stamp.get("version", 1) != INDEX_VERSION):      # BL-301: what the index holds changed (notes): read it all once
         return None
     return stamp.get("entries")
 
@@ -3553,7 +3568,7 @@ def build_index(full=False):
         total = len({meta["k"] for *_, meta, _c in scan})
         tmp = index_stamp().with_suffix(".tmp")
         tmp.write_text(json.dumps({"built": started, "files": len(scan), "readers": INDEX_READERS, "layout": INDEX_LAYOUT,
-                                   "entries": {slot: meta for slot, _f, _fo, _c, meta, _ch in scan}}), encoding="utf-8")
+                                   "version": INDEX_VERSION, "entries": {slot: meta for slot, _f, _fo, _c, meta, _ch in scan}}), encoding="utf-8")
         os.replace(tmp, index_stamp())
         now_slots = {slot for slot, *_ in scan}
         removed = sum(1 for slot in (old or {}) if slot not in now_slots)
