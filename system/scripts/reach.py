@@ -1259,10 +1259,61 @@ def hook_decision(tool, inp, mode, run):
             return False, (f"{p}: ask creaite changes files only through filechange.py (backed up, logged, undoable): prepare the "
                            f"new content in {paths.rel(area)}/ and run python3 system/scripts/filechange.py")
     if tool == "Bash":
-        why = bash_refusal(str((inp or {}).get("command") or ""), mode)
+        command = str((inp or {}).get("command") or "")
+        why = bash_refusal(command, mode) or ask_never_reason(command)      # ask-hook-fix: every argument form
         if why:
             return False, why
     return True, ""
+
+
+# ===== ask-hook-fix (15-10-2026): ask creaite's never list on every argument form =====
+# hook_decision's own check (tool_paths) sees each whole argument that looks like a path and doesn't start with "-", so
+# `minutes.py transcript ~/.ss?/id_rsa` (the shell expands the wildcard after the hook has looked) and `… --file=~/.ssh/id_rsa`
+# passed in a chat, a typed sweep and a confirmed request. ask_arg_paths adds what the held runs' check adds (A5,
+# held_arg_paths): a path after = : or , inside an argument, `--x=path`, a quoted $HOME as a script could expand it, and what a
+# wildcard would expand to. It is ask creaite's own copy, so a change to the held runs' rules never changes a chat's; and a `//`
+# after = : or , is skipped only when it is a URL's (`https://host`): on macOS `//Users/…` is the root folder's Users.
+ASK_SPLIT = r"([=:,])"
+ASK_WILDCARDS = set("*?[")
+URL_BEFORE = r"(?:^|[^A-Za-z0-9+.-])[A-Za-z][A-Za-z0-9+.-]*:$"     # the text before a URL's //: its scheme and colon
+
+
+def ask_arg_paths(command):
+    """Every path an ask creaite Bash call could hand a script: tool_paths', every path-like piece of an argument after = : or ,
+    (a URL's //host left out), a piece with $ as a script could expand it, and, for a wildcard, what the shell would expand it to."""
+    import glob
+    import re
+    out = list(tool_paths("Bash", {"command": command}))
+    for a in bash_args(command):
+        parts = re.split(ASK_SPLIT, a)                  # [text, sep, text, sep, text, …]
+        for i in range(2, len(parts), 2):
+            piece = parts[i]
+            if piece.startswith("//") and re.search(URL_BEFORE, "".join(parts[:i])):
+                continue                                # https://host/…: a URL, not a path
+            if ("/" in piece or piece.startswith(("~", "."))) and piece not in out:
+                out.append(piece)
+    for p in list(out):
+        if "$" in p and os.path.expandvars(p) not in out:
+            out.append(os.path.expandvars(p))
+    for p in list(out):
+        if ASK_WILDCARDS & set(p):
+            pattern = os.path.expanduser(p)
+            pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
+            out += [m for m in glob.glob(pattern, recursive=False) if m not in out]
+    return out
+
+
+def ask_never_reason(command):
+    """Why an ask creaite Bash call names a place on the never list, in any argument form, or None. Fails closed."""
+    try:
+        for p in ask_arg_paths(command):
+            kind, why = classify(p, "read")
+            if kind == "never":
+                return f"{p}: {why}"
+    except Exception as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+# ===== end ask-hook-fix: argument forms =====
 
 
 def bash_refusal(command, mode):
