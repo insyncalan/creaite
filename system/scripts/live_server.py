@@ -1934,7 +1934,10 @@ PANEL_SWEEP_PROMPT = (
     "message's text. End with the sweep's one-line summary and \"n items staged for Review\".")
 PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
 # ===== end BL-309 =====
-KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools()]}
+# The file writers are denied by name too: an empty allow list doesn't stop the vault's .claude/settings.json allow rules (Edit
+# projects/**, Edit system/config/settings.json, Edit system/staging/**, Edit inbox/**) from applying. The run only replies.
+KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools(),
+                                "Edit", "Write", "MultiEdit", "NotebookEdit"]}
 # ===== BL-301 D (v20-ai-select) ===== AI on selected text (/api/edit/ai): Claude sees only the prompt edit_ai.py builds (the selected
 # text, the option, the project's name, people and open item IDs). The run "edit-ai" has no tools at all: its allow list is empty,
 # Claude Code is started with no built-in tools (`--tools ""`) and no MCP servers (`--strict-mcp-config`), no --add-dir, and every
@@ -1947,6 +1950,20 @@ KIND_ARGS = {"edit-ai": ["--tools", "", "--strict-mcp-config"]}
 KIND_PROMPTS["edit-ai"] = ("You are creaite's editor assistant (BL-301 D). You have no tools. Reply only with the suggestion the "
                            "message asks for, between its marker lines; never anything else.")
 # ===== end BL-301 D =====
+# Search's answer (kind "search", BL-07): the server gathers the passages and tracker rows (search.py context) and Claude answers
+# from them, reading more vault files if it needs to. It has no guard hook (Alan, #60: like ask creaite, so a confidential note
+# stays readable here), so the vault's .claude/settings.json allow rules (tracker.py, review.py, propose.py, filechange.py, Edit
+# projects/**, Edit system/config/settings.json) would apply to anything it may use: it is started with only the three reading
+# built-ins (`--tools "Read,Grep,Glob"`), and every tool that runs, writes, delegates or reaches the web is denied by name as well.
+# What it can do: Read, Grep and Glob in the vault and the projects root, nothing else. No Bash (a deny beats an allow, so a
+# narrow `tracker.py read` allow can't sit beside a Bash deny; the tracker rows come in the material). No Microsoft 365 either
+# (least privilege, Jarvis, 15-10-2026: its prompt already says never call it): the reading tools are neither allowed nor
+# available, denied by name like the rest. "Continue in Ask creaite" carries on as a chat, with a chat's tools.
+SEARCH_TOOLS = ["Read", "Grep", "Glob"]
+KIND_TOOLS["search"] = list(SEARCH_TOOLS)
+KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
+                         *vault_permissions.m365_read_tools()]
+KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS)]
 
 
 def run_prompt(kind, confirmed):
@@ -1993,6 +2010,19 @@ def held_run(kind, confirmed, only, sweep, tools):
     return kind not in LIKE_ASK and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
 
 
+# A run in mode "held" (Prep page, Current state's draft and rewrite, the AI drafts, Shape the meeting, a transcript check or load)
+# reads outside content and writes nothing itself: the server writes the page, the draft, the proposals and the transcript from
+# its reply or its tool results. So it is started with the file writers denied by name: the vault's .claude/settings.json allow
+# rules (Edit projects/**, Edit system/config/settings.json, Edit system/staging/**, Edit inbox/**) can't apply in it. Not a
+# guarded run with --held 1 (Close the day's sweep writes its input files in system/staging/drafts/, under the hook's "sweep" mode).
+HELD_DENIES = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
+
+
+def held_deny(deny, held, guarded):
+    """A run's deny list, with HELD_DENIES added for a run in mode "held" (held and not guarded)."""
+    return deny + [t for t in HELD_DENIES if t not in deny] if held and not guarded else deny
+
+
 def guard_args(run_id, mode, held, session):
     """The guard hook's --settings for a run: a guarded run's mode (BL-141, BL-295; the run written to system/guard/run.json),
     with `--held 1` when creaite started it (#60); else mode "held" for a run creaite starts itself; else none."""
@@ -2010,6 +2040,8 @@ class Run:
                  sweep=False, lines=None, closer=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
+        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+        deny = held_deny(deny, held, guarded)                   # and, in mode "held", no file writes at all
         prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
         self.images = list(images)
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
@@ -2018,7 +2050,6 @@ class Run:
                "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
-        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
         self.guarded = guarded
         if session:
@@ -6689,7 +6720,7 @@ def swallowed(where, e):
 #                                          notes-sent.json records the lines (fingerprints and IDs, never text).
 #   /api/notes/undo {path, apply_id}       Undo: tracker.py undo of that apply when it is still the latest; its lines are new again.
 KIND_TOOLS["notes-find"] = []
-KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])
+KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])           # every reading tool and every file writer: it only replies
 
 
 class FindJob:
