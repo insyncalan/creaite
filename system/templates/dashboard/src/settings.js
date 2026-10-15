@@ -22,7 +22,7 @@ import { countLink, go, pLink, tabTitle } from "./core/nav.js";
 import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
 import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { catalogue, changedOnly, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
+import { catalogue, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
 import { refreshFiles } from "./files.js";
 import { decLate, decLateWords, decRank } from "./meetings.js";
@@ -55,7 +55,6 @@ export const SETOLD={prefs:"essentials",admin:"people",general:"advanced",work:"
 export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
   const sec=SETSECTIONS.find(x=>x.id===(SETALIAS[t]||t)); return sec?{cat:catOf(sec),sec:sec.id}:null; }
 export let SECT=null; shared.SCAT="essentials"; shared.SQ="";                 /* the category, the section to scroll to, the search text */
-export let CHANGED=false;                                                     /* BL-320: Show changed only */
 export const sw=(k)=>`<input type="checkbox" class="switch" data-k="${k}" ${S[k]?"checked":""}>`;   /* BL-279: named by its row's label (row, srName), never its key */
 export const tx=(k,ph)=>`<input type="text" data-k="${k}" value="${esc(S[k])}" placeholder="${ph||""}">`;
 export const nm=(k)=>`<input type="number" data-k="${k}" value="${S[k]}" min="0" style="width:80px">`;
@@ -102,9 +101,9 @@ export const row=(l,c,h)=>{ const id="sr"+(++SRN); return `<div class="srow"><di
 /* ===== end BL-214 ===== */
 export const SETSECTIONS=[
  /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
-    whether a search (or Show changed only) finds anything in it. */
+    whether a search finds anything in it. */
  {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day",
-  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>(!CHANGED||r.changed)&&sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
+  mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
  {id:"you",cat:"general",title:"You",kw:"short forms email domains identity owner mine company",
   render:()=>row("Short forms",tx("short","Alan, AC"),"Comma-separated; also matched as you (your name is in Essentials)")
    +row("Own email domains",`<input type="text" data-k="ownDomains" value="${esc((S.ownDomains||[]).join(", "))}" placeholder="example.com">`,"Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside")},
@@ -154,16 +153,14 @@ export const SETSECTIONS=[
  {id:"danger",cat:"system",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
   render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")},
  {id:"more",cat:"advanced",title:"Everything else",kw:"everything else advanced",mount:el=>render(h(MoreSettings,{covered}),el),
-  match:w=>{ const c=catalogue.value; return !!c&&c.settings.some(s=>s.tier!=="essentials"&&!covered(s.key)&&(!CHANGED||s.changed)&&sqHas(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`,w)); }}];
+  match:w=>{ const c=catalogue.value; return !!c&&c.settings.some(s=>s.tier!=="essentials"&&!covered(s.key)&&sqHas(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`,w)); }}];
 /* ===== BL-320 (v1.9.2): Settings, calmer, with Health inside =====
    The catalogue (/api/settings/catalogue, stores/settings.js) says, for every setting, whether it differs from its default.
    - Essentials, Health and Advanced's "Everything else" are components (`mount`); they read the catalogue and the page's
-     search and Show changed only themselves.
+     search themselves.
    - Advanced's older cards are drawn as before, then each row that holds a setting gets the "changed" dot and Reset
      (setMark). A row's settings are found from its control's data attribute (ROWKEY); `covered` lists every setting these
      cards show, so "Everything else" lists only the rest.
-   - Show changed only works like a search: the sections with a changed setting, across Essentials and Advanced, each
-     showing only its changed rows.
    - A save on an older card rereads the catalogue (a moment later, once it is written); a save or a Reset anywhere brings
      the page's own copies up to date (setSynced). */
 export const ROWKEY={k:v=>SKEY[v],vipk:v=>"vip."+v,drsw:v=>"drafting."+v,wk:v=>"warnings."+v};
@@ -207,11 +204,10 @@ $("#settingsBody").addEventListener("click",async e=>{ const b=e.target.closest(
   const keys=b.dataset.reset.split(" ").filter(Boolean), name=(b.getAttribute("aria-label")||"").replace(/^Reset | to its default$/g,""); b.disabled=true;
   const r=await resetSettings(keys); if(!r.ok){ b.disabled=false; snack(r.message); return; }
   renderSettings(); snack(`${name}: back to its default`); });
-const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.onchange=()=>{ CHANGED=chg.checked; changedOnly.value=CHANGED; if(CHANGED&&!catalogue.value&&SERVED) loadCatalogue(); renderSettings(); $("#v-settings").scrollTop=0; };
-/* when the catalogue arrives or changes: the older cards' dots follow; Show changed only and a search redraw, as their sections
+/* when the catalogue arrives or changes: the older cards' dots follow; a search redraws, as its sections
    may change (a search typed before the catalogue arrived found nothing in Essentials or Everything else) */
 effect(()=>{ const c=catalogue.value; if(!c||shared.VIEW!=="settings") return;
-  if((CHANGED||shared.SQ.trim())&&!$("#settingsBody").contains(document.activeElement)) renderSettings(); else setMark($("#settingsBody")); });
+  if(shared.SQ.trim()&&!$("#settingsBody").contains(document.activeElement)) renderSettings(); else setMark($("#settingsBody")); });
 /* the rail's count needs a recent check: one a minute after start-up when this browser hasn't checked for a day */
 if(SERVED&&Date.now()-lastCheckAt()>24*3600*1000) window.setTimeout(()=>{ if(viaServer()) checkHealth(); },60*1000);
 }
@@ -219,36 +215,33 @@ export const setCard=s=>s.mount?`<div class="setmount" id="set-${s.id}" data-sec
 export const catName=id=>(SETCATS.find(c=>c[0]===id)||[])[1]||"";
 /* Search: sections and rows whose label, help text or keywords hold every word typed, across all categories. A section
    whose title or category matches shows all its rows; otherwise it shows just the rows that match, or all of them when
-   only its keywords matched (for example "ignore rules" or "diagnostics"). A mounted section answers for itself (`match`).
-   Show changed only (BL-320) narrows the same way to the rows with the dot, in Essentials and Advanced. */
+   only its keywords matched (for example "ignore rules" or "diagnostics"). A mounted section answers for itself (`match`). */
 export const sqWords=()=>shared.SQ.toLowerCase().split(/\s+/).filter(Boolean), sqHas=(txt,w)=>w.every(x=>txt.toLowerCase().includes(x));
 export const rowText=r=>(r.classList.contains("srow")&&r.firstElementChild&&r.firstElementChild!==r.lastElementChild?r.firstElementChild:r).textContent;
 export let SMATCH=new Set();
-export const rowOK=(r,w)=>sqHas(rowText(r),w)&&(!CHANGED||r.classList.contains("chg"));
+export const rowOK=(r,w)=>sqHas(rowText(r),w);
 export function setSearchSections(){ const w=sqWords(); SMATCH=new Set(); const t=document.createElement("div");
-  return SETSECTIONS.filter(s=>{ if(CHANGED&&!["essentials","advanced"].includes(catOf(s))) return false;
-    if(s.mount) return s.match(w);
-    if(!CHANGED&&sqHas(`${s.title} ${catName(catOf(s))} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
+  return SETSECTIONS.filter(s=>{ if(s.mount) return s.match(w);
+    if(sqHas(`${s.title} ${catName(catOf(s))} ${OLDCATS[s.cat]||""}`,w)){ SMATCH.add(s.id); return true; }
     putHTML(t,raw(setCard(s))); setMark(t); const rows=[...t.querySelectorAll(".srow,.igrow")];
-    return (!CHANGED&&sqHas(s.kw,w))||rows.some(r=>rowOK(r,w)); }); }
-export function setApplySearch(){ if(!shared.SQ.trim()&&!CHANGED) return; const w=sqWords();
+    return sqHas(s.kw,w)||rows.some(r=>rowOK(r,w)); }); }
+export function setApplySearch(){ if(!shared.SQ.trim()) return; const w=sqWords();
   $$("#settingsBody [data-sec]").forEach(c=>{ if(c.hasAttribute("data-mount")||SMATCH.has(c.dataset.sec)) return; const rows=[...c.querySelectorAll(".srow,.igrow")], hit=rows.filter(r=>rowOK(r,w));
-    rows.forEach(r=>{ r.hidden=hit.length||CHANGED?!hit.some(h=>h===r||h.contains(r)):false; }); }); }      /* a row inside a matching row (the ignore rules) stays */
+    rows.forEach(r=>{ r.hidden=hit.length?!hit.some(h=>h===r||h.contains(r)):false; }); }); }      /* a row inside a matching row (the ignore rules) stays */
 export let MOUNTS=[];
 export function setUnmount(){ MOUNTS.forEach(el=>render(null,el)); MOUNTS=[]; }
 export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) shared.SCAT="essentials";
-  const searching=!!shared.SQ.trim()||CHANGED;
-  query.value=shared.SQ.trim(); changedOnly.value=CHANGED;
-  const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.checked=CHANGED;
+  const searching=!!shared.SQ.trim();
+  query.value=shared.SQ.trim();
   if(SERVED&&!catalogue.value) loadCatalogue();
   drawTabs($("#setcatsHost"),{id:"setcats",className:"setcats",label:"Settings categories",vertical:true,controls:"settingsBody",
     items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
-  putHTML($("#setcatsel"),raw((searching?`<option value="">${CHANGED&&!shared.SQ.trim()?"Changed settings":"Search results"}</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
+  putHTML($("#setcatsel"),raw((searching?`<option value="">Search results</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
   const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT);
   const head=s=>searching?(s.mount&&s.id!=="more"?"":`<div class="setcrumb">${esc(catName(catOf(s)))} › ${esc(s.id==="more"?OLDCATS.advanced:s.title)}</div>`)
     :shared.SCAT==="advanced"&&OLDCATS[s.cat==="advanced"?"advanced":s.cat]&&(s===secs.find(x=>x.cat===s.cat))?`<h2 class="setgroup">${esc(OLDCATS[s.cat])}</h2>`:"";
   setUnmount();
-  const none=CHANGED&&!shared.SQ.trim()?(catalogue.value?"Nothing is changed from its default.":"Reading your settings…"):`No settings match “${shared.SQ.trim()}”${CHANGED?" among the changed ones":""}.`;
+  const none=`No settings match “${shared.SQ.trim()}”.`;
   putHTML($("#settingsBody"),!secs.length?html`<p class="sub setnone" role="status">${none}</p>`:html`<div class="setstack">${raw(secs.map(s=>head(s)+setCard(s)).join(""))}</div>`);
   secs.forEach(s=>{ if(s.mount){ const el=document.getElementById("set-"+s.id); if(el){ MOUNTS.push(el); s.mount(el); } } else if(s.after) s.after(); });
   setMark($("#settingsBody"));

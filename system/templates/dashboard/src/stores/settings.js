@@ -3,8 +3,8 @@
 
    - catalogue: /api/settings/catalogue's answer (every setting: group, tier, label, line, reason, default, value, changed;
      the Essentials rows; the counts), or null until it is read. Reloaded after a save or a Reset.
-   - query and changedOnly: the page's search text and its Show changed only switch. settings.js sets them; the components
-     filter their own rows by them (old code never writes into a mounted container).
+   - query: the page's search text. settings.js sets it; the components
+     filter their own rows by it (old code never writes into a mounted container).
    - health: /api/health's answer (problems, fine, stopped, checked), its busy flag and its error; healthCount is what the
      rail shows on Settings (BL-320 §4), kept with its time in this browser so a new page has it without a check.
    Saving is the page's own: writeSettings (a backup and a log line). After a save or a Reset each listener in SAVED is told
@@ -29,7 +29,6 @@ import { api, writeSettings } from "../core/server.js";
 export const catalogue = signal(null);
 export const catalogueError = signal("");
 export const query = signal("");
-export const changedOnly = signal(false);
 /** @type {import("@preact/signals").Signal<HealthResult|null>} */
 export const healthResult = signal(null);
 export const healthBusy = signal(false);

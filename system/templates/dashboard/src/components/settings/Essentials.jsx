@@ -3,12 +3,12 @@
    what it does. The rows, their sections and their words come from /api/settings/catalogue (`essentials`); the values from the
    same answer. A row may cover several keys: what the sweep reads is five switches, AI drafts one switch for every kind (the
    per-kind switches stay in Advanced). Each change is saved with writeSettings (a backup and a log line), as every setting is.
-   The page's search and Show changed only narrow the rows; a section with none left isn't drawn. */
+   The page's search narrows the rows; a section with none left isn't drawn. */
 import { useEffect, useRef, useState } from "preact/hooks";
 import { THEMES } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { applyPending, SERVED, snack } from "../../core/server.js";
-import { catalogue, catalogueError, changedOnly, query, saveSettings, settingOf } from "../../stores/settings.js";
+import { catalogue, catalogueError, query, saveSettings, settingOf } from "../../stores/settings.js";
 import { rowId, SettingRow } from "./SettingRow.jsx";
 
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -145,8 +145,8 @@ function AllSwitch({ keys, named, save }) {
 export function Essentials() {
   const c = catalogue.value;
   if (!c) return <div class="card wide"><h2>Essentials</h2><p class="sub" role="status">{catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.")}</p></div>;
-  const w = settingWords(query.value), only = changedOnly.value;
-  const rows = c.essentials.filter(r => (!only || r.changed) && (!w.length || settingHasAll(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`, w)));
+  const w = settingWords(query.value);
+  const rows = c.essentials.filter(r => (!w.length || settingHasAll(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`, w)));
   if (!rows.length) return null;
   const sections = [...new Set(rows.map(r => r.section))];
   return (
