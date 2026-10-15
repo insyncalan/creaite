@@ -846,7 +846,7 @@ export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs t
     if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
 export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live server"); return; }
   const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
-  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a) a.logged=r.logged;
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a&&a.match) a.match.logged=r.logged;
   await reloadData(); renderToday(); snack(r.message||"Staged for Review"); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek

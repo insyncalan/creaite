@@ -455,7 +455,7 @@ const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
    without that time falls back to when it was recorded */
 const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
 const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
-  a.found==="start-up"?"found on start-up":"",a.logged?`Logged on ${a.logged.id}${a.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
+  a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
 /** BL-342: a card's due date as the row shows it, and whether it is past @param {any} a */
 const cardDue=a=>a.due?{text:`due ${longDay(a.due)}`,over:a.due<TODAY}:null;
 /** @param {any} a */
@@ -467,7 +467,7 @@ export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
   /* BL-342: the type chip, the ask, the due date and the owners; Handled on every card, Log on the matched item when there is one */
   const due=cardDue(a), name=`${a.who??""}, ${t}`, acts=[{id:"handled",icon:"done",label:"Handled",name:`Handled: ${name}`,data:{alertdo:"handled",id:a.id}}];
   const m=a.match&&a.match.id&&a.match.relation!=="new"?String(a.match.id):"";
-  if(m&&!a.logged) acts.push({id:"log",icon:"filetext",label:`Log on ${m}`,name:`Log on ${m}: ${t}`,data:{alertdo:"log",id:a.id}});
+  if(m&&!(a.match&&a.match.logged)) acts.push({id:"log",icon:"filetext",label:`Log on ${m}`,name:`Log on ${m}: ${t}`,data:{alertdo:"log",id:a.id}});
   const files=a.type==="fyi"&&(a.attachments||[]).length?`Files: ${(a.attachments||[]).slice(0,4).join(", ")}${a.attachments.length>4?` and ${a.attachments.length-4} more`:""}`:"";
   return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:CARDTYPE[a.type]||"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts,
     ask:String(a.ask||""),due:a.due||"",overdue:!!(due&&due.over),dueText:due?due.text:"",owners:(a.owners||[]).join(", "),files}; }

@@ -3618,8 +3618,7 @@ def alert_log_route(handler, req):
             got = sweep.vip_log(str(req.get("id") or ""))
     except (LookupError, ValueError) as e:
         return handler.send(200, {"ok": False, "message": str(e)})
-    return handler.send(200, {"ok": True, **got, "logged": {"proposal": got["proposal"], "n": got["n"], "id": got["id"],
-                                                           "state": got["state"]},
+    return handler.send(200, {"ok": True, **got,
                               "message": f"Already logged on {got['id']}." if got["already"]
                               else f"Staged an update on {got['id']} for Review."})
 

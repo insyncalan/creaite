@@ -11308,7 +11308,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     `${VIPKIND[a5.kind] || "Message"}${convWhen(a5) ? " · updated " + whenWords(convWhen(a5)) : ""}`,
     a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project",
     a5.found === "start-up" ? "found on start-up" : "",
-    a5.logged ? `Logged on ${a5.logged.id}${a5.logged.state === "applied" ? "" : ", staged for Review"}` : ""
+    a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
   var cardDue = (a5) => a5.due ? { text: `due ${longDay(a5.due)}`, over: a5.due < TODAY } : null;
   function convRow(a5) {
@@ -11331,7 +11331,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     );
     const due = cardDue(a5), name = `${a5.who ?? ""}, ${t5}`, acts2 = [{ id: "handled", icon: "done", label: "Handled", name: `Handled: ${name}`, data: { alertdo: "handled", id: a5.id } }];
     const m5 = a5.match && a5.match.id && a5.match.relation !== "new" ? String(a5.match.id) : "";
-    if (m5 && !a5.logged) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t5}`, data: { alertdo: "log", id: a5.id } });
+    if (m5 && !(a5.match && a5.match.logged)) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t5}`, data: { alertdo: "log", id: a5.id } });
     const files = a5.type === "fyi" && (a5.attachments || []).length ? `Files: ${(a5.attachments || []).slice(0, 4).join(", ")}${a5.attachments.length > 4 ? ` and ${a5.attachments.length - 4} more` : ""}` : "";
     return {
       key: "al" + a5.id,
@@ -13803,7 +13803,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return;
     }
     const a5 = (VIPD().alerts || []).find((x5) => x5.id === id);
-    if (a5) a5.logged = r4.logged;
+    if (a5 && a5.match) a5.match.logged = r4.logged;
     await reloadData();
     renderToday();
     snack(r4.message || "Staged for Review");

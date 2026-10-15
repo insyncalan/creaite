@@ -1473,12 +1473,19 @@ def card_merge(st, keep, drop):
     keep["keys"] = list(dict.fromkeys((keep.get("keys") or []) + (drop.get("keys") or [])))[-KEYS_KEPT:]
     keep["conv"] = keep.get("conv") or drop.get("conv")
     keep["candidates"] = conv_merge(older.get("candidates") or [], newer.get("candidates") or [])
-    for f in ("made", "logged"):
-        if drop.get(f) and not keep.get(f):
-            keep[f] = drop[f]
+    merge_marks(keep, drop)
     merge_state(keep, drop, newer)
     st["alerts"].remove(drop)
     st["_dirty"] = True
+
+
+def merge_marks(keep, drop):
+    """What a card remembers of its work: made stays, and logged stays when both cards are matched to the same item."""
+    if drop.get("made") and not keep.get("made"):
+        keep["made"] = drop["made"]
+    dm, km = drop.get("match") or {}, keep.get("match") or {}
+    if dm.get("logged") and km and not km.get("logged") and dm.get("id") == km.get("id"):
+        km["logged"] = dm["logged"]
 
 
 def merge_state(keep, drop, newer):
@@ -1535,7 +1542,7 @@ def vip_sort(alerts, today=None):
     return sorted(by_last, key=lambda a: (0 if a.get("due") and a["due"] < today else 1, a.get("due") or "9999-12-31"))
 
 
-def logged_state(logged):
+def logged_state(logged, item_id=None):
     """Where a logged update is: "staged" (pending in Review), "decided" (decided there, not applied yet), "applied" or "gone"."""
     name = str((logged or {}).get("proposal") or "")
     if not re.fullmatch(r"proposed-[\w.-]+\.json", name):
@@ -1545,36 +1552,11 @@ def logged_state(logged):
             data = json.loads((d / name).read_text(encoding="utf-8"))
         except (OSError, ValueError):                              # not in this folder (or unreadable): look in the other
             continue
-        item = next((i for i in data.get("items") or [] if i.get("n") == logged.get("n")), None)
+        item = next((i for i in data.get("items") or [] if i.get("op") == "update" and i.get("id") == item_id), None)
         if item is None:
             return "gone"
         return state or ("staged" if item.get("decision") == "pending" else "decided")
     return "gone"
-
-
-def thread_item(item_id):
-    """(file, data, item) of the pending thread update for an item already waiting in Review, else None."""
-    for f in sorted(paths.STAGING.glob("proposed-*-dashboard*.json")):
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-        except (OSError, ValueError):                              # a file that went or isn't a proposal: skip it
-            continue
-        for i in data.get("items") or []:
-            if (i.get("op") == "update" and i.get("table") == "actions" and i.get("id") == item_id
-                    and i.get("decision") == "pending" and (i.get("suggested") or {}).get("feature") == "thread"):
-                return f, data, i
-    return None
-
-
-def thread_line(a):
-    """The line a card adds to an item's latest update: the date and Claude's own summary with the source named; a
-    confidential thread only a neutral line (latest_update has no Sensitive label of its own)."""
-    day = tracker.shown(now().strftime("%Y-%m-%d"))
-    if a.get("marker") == "confidential" or a.get("confidential"):
-        return f"{day}: Discussed in a confidential thread, {day}."
-    word = {"mail": "email", "teams": "Teams", "calendar": "invite"}.get(a.get("kind"), "message")
-    summary = _clean(a.get("summary"), SUMMARY) or _clean(a.get("title"), 200)
-    return f"{day}: {summary} (from the {word} thread \u201c{_clean(a.get('title'), 80)}\u201d)"[:2000]
 
 
 def log_target(a):
@@ -1592,56 +1574,22 @@ def log_target(a):
     return item_id, row
 
 
-def log_stage(a, item_id, row, line):
-    """Write the card's update as a new pending proposal; returns (file name, item number)."""
-    import propose
-    item = {"n": 1, "op": "update", "table": "actions", "id": item_id, "changes": {"latest_update": line},
-            "based_on": row["updated_at"],
-            "why": f"Logged from the {a.get('kind') or 'mail'} thread \u201c{_clean(a.get('title'), 80)}\u201d",
-            "source": alert_source(a), "suggested": {"feature": "thread", "threads": [a["id"]]}, "match": "strong",
-            "flags": [], "decision": "pending"}
-    spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [], "items": [item]}
-    propose.complete(spec)
-    bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
-    if bad:
-        raise ValueError(f"Not staged: {bad[0]}")
-    stamp, out, k = now().strftime("%Y-%m-%d-%H%M%S"), None, 1
-    while out is None or out.exists() or (paths.APPLIED / out.name).exists():
-        out = paths.STAGING / f"proposed-{stamp}-dashboard{f'-{k}' if k > 1 else ''}.json"
-        k += 1
-    paths.STAGING.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return out.name, 1
-
-
-def log_append(held, aid, line):
-    """Add the card's line to the pending thread proposal already holding an update for the item; returns (name, n)."""
-    f, data, item = held
-    item["changes"]["latest_update"] += "\n" + line
-    item.setdefault("suggested", {"feature": "thread"}).setdefault("threads", []).append(aid)
-    f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return f.name, item["n"]
-
-
 def vip_log(aid):
-    """Log a matched thread on its item (BL-342, decision b): stage one pending `update` of the action (`latest_update`) as the
-    dashboard's own proposal for Review. A second pending thread update for the same item gets the line added to the same
-    proposal. Clicking again stages nothing new. Returns {"proposal", "n", "id", "state", "already"}; raises LookupError
-    (no such card) or ValueError with a reason to show."""
+    """Log a matched thread on its item (BL-342, decision b): a thin wrapper over vip_update_stage (Part 2), which stages the one
+    pending `update` of the action for Review. Adds this wrapper's refusals (private thread, no matched item, not an action, not
+    open) and the card's state: clicking again stages nothing new. Returns {"proposal", "id", "line", "lines", "added", "state",
+    "already", "logged"}; raises LookupError (no such card) or ValueError with a reason to show. Hold VIP_WRITE around it."""
     a = vip_find(aid)
     if a is None:
         raise LookupError("That thread isn't on Today any more.")
-    item_id, row = log_target(a)
-    if isinstance(a.get("logged"), dict) and logged_state(a["logged"]) != "gone":
-        return {**{k: a["logged"].get(k) for k in ("proposal", "n", "id")}, "state": logged_state(a["logged"]), "already": True}
-    line, held = thread_line(a), thread_item(item_id)
-    name, n = log_append(held, aid, line) if held else log_stage(a, item_id, row, line)
-    st = vip_state()
-    for x in st["alerts"]:
-        if x.get("id") == aid:
-            x["logged"] = {"proposal": name, "n": n, "id": item_id, "at": now().strftime("%Y-%m-%d %H:%M")}
-    vip_save(st)
-    return {"proposal": name, "n": n, "id": item_id, "state": "staged", "already": False}
+    item_id, _row = log_target(a)
+    was = (a.get("match") or {}).get("logged")
+    if isinstance(was, dict) and logged_state(was, item_id) != "gone":
+        return {"proposal": was.get("proposal"), "id": item_id, "state": logged_state(was, item_id), "already": True,
+                "added": False, "logged": {**was, "state": logged_state(was, item_id)}}
+    got = vip_update_stage(aid)
+    logged = {**(vip_find(aid).get("match") or {}).get("logged", {}), "state": "staged"}
+    return {**got, "state": "staged", "already": False, "logged": logged}
 
 # ===== end BL-342 =====
 
@@ -2173,7 +2121,7 @@ main = _main_with_expected
 # A card says New, Update or Chase against the project's open actions, or nothing when no project was matched. Plain code
 # builds the short candidate list (vip_open_items) and validates what the model suggests (vip_match); the tracker is only
 # ever read (a read-only connection). A card's "match" is {"id", "relation": "new"|"update"|"chase", "why", "t", "count"
-# (cards on the same item), "logged" ({"proposal", "at"} once a line was staged)}. Updates are staged by vip_update_stage as
+# (cards on the same item), "logged" ({"proposal", "at"} once a line was staged; the one place a card records it)}. Updates are staged by vip_update_stage as
 # a pending proposal for Review (one op: update on latest_update; several threads for one item add a line to the same one).
 MATCH_RELATIONS = ("new", "update", "chase")
 MATCH_ITEMS = 15
