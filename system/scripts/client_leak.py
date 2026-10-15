@@ -5,6 +5,8 @@ BL-338). The check reads a creaite document's data (creaite_doc.py), never a Wor
   - item_problem: why one item may not appear for a client, or None (the tracker as it is now, and the item's labels);
   - make_safe: a copy of a client document with every row, tag, milestone and item that fails dropped, and what was dropped;
   - findings: what is still wrong with a client document (items, and internal wording found in its text), for approve and export;
+  - people: the names (and register aliases) of the owners of the items a client report may show, and of everyone else on the
+    project's items: the names check edit_ai.client_problems and findings share (#123);
   - text_findings: the wording check on any text, moved here from review.client_findings (which still reads the Word flow's drafts
     through it until the Word drafts are retired).
 """
@@ -179,6 +181,79 @@ def text_findings(con, code, text):
         if word in low:
             found.append(f"contains “{word}”")
     return found
+
+
+OWNER_TABLES = ("actions", "raid", "decisions", "milestones")
+
+
+def person(owner):
+    """An owner's name without its organisation: "Jane Doe (Example Client Ltd)" is "Jane Doe"."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
+
+
+def named(text, people):
+    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once."""
+    low = (text or "").lower()
+    found = {p for p in people if p and len(p) > 2 and re.search(rf"\b{re.escape(p.lower())}\b", low)}
+    return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
+
+
+def register_aliases():
+    """{full name in lower case: [aliases]} from the people register (the same columns drafts.people_names reads); {} when it can't
+    be read."""
+    out = {}
+    try:
+        text = paths.PEOPLE_REGISTER.read_text(encoding="utf-8") if paths.PEOPLE_REGISTER.exists() else ""
+    except OSError:
+        return out
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 3 and cells[0] and not set(cells[0]) <= set("-: ") and cells[0].lower() not in ("name", "full name"):
+            out.setdefault(cells[0].lower(), []).extend(a.strip() for a in re.split(r"[;,]", cells[2]) if a.strip())
+    return out
+
+
+def project_owners(con, code):
+    """Every owner named on the project's items, open or not, without their organisation."""
+    out = set()
+    for table in OWNER_TABLES:
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        if "owner" in cols:
+            out |= {person(o) for (o,) in con.execute(f"SELECT DISTINCT owner FROM {table} WHERE project = ?", (code,))
+                    if o and o != "TBC"}
+    return sorted(out)
+
+
+def people(con, code, blocking=None):
+    """(client, internal): the names and register aliases of the owners of the project's items a client report may show (any
+    status), and of the owners of its other items who own none of those (Alan's own name and short forms left out: he is named in
+    his client reports)."""
+    blocking = blocking_labels(con) if blocking is None else blocking
+    shown, other = set(), set()
+    for table in OWNER_TABLES:
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        if "owner" not in cols:
+            continue
+        for i, o in con.execute(f"SELECT id, owner FROM {table} WHERE project = ?", (code,)):
+            if o and o != "TBC":
+                (other if item_problem(con, i, blocking) else shown).add(person(o))
+    aliases = register_aliases()
+    widen = lambda names: names | {a for n in names for a in aliases.get(n.lower(), [])}  # noqa: E731
+    client = widen(shown)
+    try:
+        ident = paths.load_settings().get("identity") or {}
+        alan = {ident.get("name") or ""} | set(ident.get("short_forms") or [])
+    except Exception:  # noqa: BLE001  no settings: nobody is left out
+        alan = set()
+    keep = {x.lower() for x in client | alan}
+    internal = {n for n in widen(other - shown) if n.lower() not in keep}
+    return client, internal
+
+
+def name_findings(con, code, text, blocking=None):
+    """The people a client text names who own only items a client report can't show (people's internal set)."""
+    _, internal = people(con, code, blocking)
+    return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal))]
 
 
 def doc_text(doc):

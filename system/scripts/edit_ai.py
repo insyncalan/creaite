@@ -149,71 +149,90 @@ def project_facts(code, client=False):
     return {"name": name if name != code else "", "people": people[:MAX_PEOPLE], "ids": ids[:MAX_IDS]}
 
 
-def client_ids(con, code, owners=False):
-    """The project's open item IDs a client report may show (client_leak.item_problem passes them), or with owners=True their
-    owners' names."""
+def client_ids(con, code):
+    """The project's open item IDs a client report may show (client_leak.item_problem passes them)."""
     import client_leak
     blocking = client_leak.blocking_labels(con)
     out = []
     for table, open_ in OPEN:
-        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
-        owner = "owner" if "owner" in cols else "NULL"
-        for i, o in con.execute(f"SELECT id, {owner} FROM {table} WHERE project = ? AND status IN {open_} AND client_visible = 1 "
-                                "ORDER BY id", (code,)):
-            if client_leak.item_problem(con, i, blocking):
-                continue
-            if not owners:
+        sql = f"SELECT id FROM {table} WHERE project = ? AND status IN {open_} AND client_visible = 1 ORDER BY id"
+        for (i,) in con.execute(sql, (code,)):
+            if not client_leak.item_problem(con, i, blocking):
                 out.append(i)
-            elif o and o != "TBC" and person(o) not in out:
-                out.append(person(o))
     return out
 
 
-def person(owner):
-    """An owner's name without its organisation: "Jane Doe (Example Client Ltd)" is "Jane Doe"."""
-    return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
+# #123 review: a client reply's IDs and the word VIP are matched after normalising, so a look-alike, a zero-width character, a
+# non-breaking hyphen, lower case or a missing space can't slip an item past the check (only here: client_leak.text_findings
+# still matches IDs exactly).
+INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
+LOOK_ALIKE = str.maketrans({**{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
+                            **{c: "I" for c in "\u0399\u0406\u04c0\u01c0\u0131\u03b9\u0456"},
+                            **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"}})
+VIP_LOOSE = re.compile(r"(?<![a-z0-9])v\W{0,2}i\W{0,2}p(?:\W{0,2}s)?(?![a-z0-9])", re.I)
+NO_PROJECT, UNCHECKED = "no project", "the check couldn't run"
+
+
+def normal(text):
+    """Text as the client check matches it: NFKC, invisible characters gone, dashes and look-alike letters made plain."""
+    import unicodedata
+    return INVISIBLE.sub("", unicodedata.normalize("NFKC", text or "")).translate(LOOK_ALIKE)
+
+
+def loose_ids(con, text):
+    """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
+    any case, with spaces, dots or dashes for its hyphens, or run on to a word before it ("seeABC-A-004")."""
+    t = normal(text)
+    out = set(ID_RE.findall(t))
+    up = t.upper()
+    for (c,) in con.execute("SELECT code FROM projects"):
+        for m in re.finditer(rf"{re.escape(c)}[\s_.\-]*(?:([A-Z])[\s_.\-]*)?(\d{{3}})(?!\d)", up):
+            out.add(f"{c}-{m.group(1)}-{m.group(2)}" if m.group(1) else f"{c}-{m.group(2)}")
+    return out
 
 
 def client_problems(code, text, original=""):
     """What a client place's text holds that a client mustn't see, as short reasons ([] when it is client-safe): an item a client
-    report may not show, internal wording (client_leak.text_findings), the tracker's internal health reason or an internal-only
-    marker the original didn't hold (drafts.internal_findings), a person neither the original nor the client-visible items name,
-    or the word VIP. Fails closed: an unreadable tracker is a problem."""
+    report may not show (however its ID is written), internal wording (client_leak.text_findings), the tracker's internal health
+    reason or an internal-only marker the original didn't hold (drafts.internal_findings), a person neither the original nor the
+    client-visible items (and their aliases) name, or the word VIP however it is written. Fails closed: no project is NO_PROJECT,
+    and a tracker or a check that can't be read is UNCHECKED."""
     import client_leak
     import drafts
     import tracker
-    if drafts.VIP_RE.search(text or ""):
+    if drafts.VIP_RE.search(text or "") or VIP_LOOSE.search(normal(text)):
         return ["something private"]
     if not code:
-        return ["no project"]
+        return [NO_PROJECT]
     try:
         con = tracker.connect()
     except (Exception, SystemExit):  # noqa: BLE001
-        return ["the tracker couldn't be read"]
+        return [UNCHECKED]
     try:
         blocking = client_leak.blocking_labels(con)
-        found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(set(ID_RE.findall(text or "")))) if why]
+        found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(loose_ids(con, text))) if why]
         found += client_leak.text_findings(con, code, text or "")
         found += drafts.internal_findings(con, code, text or "", original)
-        allowed = names(original, _register_names() + owners_of(con, code)) | set(client_ids(con, code, owners=True))
-        added = names(text, _register_names() + owners_of(con, code)) - allowed
-        found += [f"{n} isn't named in the text" for n in sorted(added)]
-    except (Exception, SystemExit) as e:  # noqa: BLE001  fails closed
-        found = [f"the check couldn't finish ({type(e).__name__})"]
+        known = _register_names() + client_leak.project_owners(con, code)
+        allowed = names(original, known) | client_leak.people(con, code, blocking)[0]
+        found += [f"{n} isn't named in the text" for n in sorted(names(text, known) - allowed)]
+    except (Exception, SystemExit):  # noqa: BLE001  fails closed
+        found = [UNCHECKED]
     finally:
         con.close()
     return found
 
 
-def owners_of(con, code):
-    """Every owner named on the project's items, open or not: the names a client suggestion is checked for."""
-    out = set()
-    for table in ("actions", "raid", "decisions", "milestones"):
-        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
-        if "owner" in cols:
-            out |= {person(o) for (o,) in con.execute(f"SELECT DISTINCT owner FROM {table} WHERE project = ?", (code,))
-                    if o and o != "TBC"}
-    return sorted(out)
+def refusal(found, suggestion=False):
+    """The plain message for a client place's problems: no project, a check that couldn't run, or something not client-safe."""
+    if found == [NO_PROJECT]:
+        return ("The suggestion was dropped: there's no project to check it against." if suggestion else
+                "There's no project to check this text against, so nothing was sent to Claude.")
+    if UNCHECKED in found:
+        return ("The suggestion was dropped: creaite couldn't check it against the tracker. Try again." if suggestion else
+                "creaite couldn't check this text against the tracker, so nothing was sent to Claude. Try again.")
+    return ("The suggestion was dropped: it held something that isn't client-safe. Try again." if suggestion else
+            "This text already holds something that isn't client-safe. Fix it first; nothing was sent to Claude.")
 
 
 DOC_KEYS = ("kind", "code", "week_ending", "client")
@@ -239,8 +258,8 @@ def bound_place(req, code, claimed):
         import creaite_doc
         import report_doc
         import report_server
-        kind, dcode, fri, client = report_server.target({"kind": "client", "code": code,
-                                                         "week_ending": d.get("week_ending") or None, "client": d.get("client") or None})
+        ask = {"kind": "client", "code": code, "week_ending": d.get("week_ending") or None, "client": d.get("client") or None}
+        kind, dcode, fri, client = report_server.target(ask)
         state, path = report_doc.where(kind, dcode, fri, client)
         if state:                                         # saved: it must read as this project's client report
             doc = creaite_doc.read(path)
@@ -282,8 +301,9 @@ def context(req):
     option, text, code, place, instruction = request(req)
     fmt = FORMATS[place]
     client = place in CLIENT_PLACES
-    if client and client_problems(code, text, text):
-        raise Refused("This text already holds something that isn't client-safe. Fix it first; nothing was sent to Claude.")
+    bad = client_problems(code, text, text) if client else []
+    if bad:
+        raise Refused(refusal(bad))
     facts = project_facts(code, client)
     task = OPTIONS[option][2] if option != "custom" else (
         "Do what Alan asks with the text, and only that. His instruction: " + instruction)
@@ -311,10 +331,9 @@ def parse(reply):
 
 
 def names(text, people):
-    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once."""
-    low = (text or "").lower()
-    found = {p for p in people if p and len(p) > 2 and re.search(rf"\b{re.escape(p.lower())}\b", low)}
-    return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
+    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once (client_leak.named)."""
+    import client_leak
+    return client_leak.named(text, people)
 
 
 def check(original, suggestion, people=()):
@@ -368,9 +387,9 @@ def result(body):
         text = one_line(text)
     if not text.strip():
         return {"text": "", "notes": [], "message": "No suggestion came back."}
-    if ctx.get("place") in CLIENT_PLACES and client_problems(ctx.get("code") or "", text, ctx.get("original") or ""):
-        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"),
-                "message": "The suggestion was dropped: it held something that isn't client-safe. Try again."}
+    bad = client_problems(ctx.get("code") or "", text, ctx.get("original") or "") if ctx.get("place") in CLIENT_PLACES else []
+    if bad:
+        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"), "message": refusal(bad, True)}
     return {"text": text, "notes": check(ctx.get("original") or "", text, ctx.get("people") or []), "option": ctx.get("option"),
             "format": ctx.get("format")}
 

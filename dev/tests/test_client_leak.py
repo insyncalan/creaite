@@ -201,6 +201,13 @@ class P8ClientView(Base):
         self.assertEqual(got, {"page": False, "findings": []})
 
 
+REGISTER = ("# People register\n\n## People\n\n| Full name | Email | Aliases | Organisation | Role | Hidden | VIP | Labels |\n"
+            "|---|---|---|---|---|---|---|---|\n"
+            "| Jane Doe | jane@example.com | Jane, JD | Example Client Ltd | Sponsor | | | |\n"
+            "| Omar Ali | omar@example.com | Omar | Example Client Ltd | Tester | | | |\n"
+            "| Mia Hale | mia@example.com | Mia | Example Partner | Adviser | | | |\n")
+
+
 class ReviewReadsTheData(Base):
     def test_client_findings_reads_a_creaite_draft_from_its_data(self):
         got = self.py("import review\n"
@@ -350,6 +357,68 @@ class ClientPlaceForAiOnSelection(Base):
             ctx = self.context(place=place, document=None, option="shorter")
             self.assertEqual(ctx.get("place"), place, ctx)
             self.assertIn("ABC-A-004", ctx["prompt"])
+
+    def test_items_only_the_item_check_catches_are_dropped(self):
+        """#123 review: cases text_findings doesn't see (it reads actions, risks and decisions by ID): a partner-only label that only
+        warns, a milestone that isn't client-visible, a promise and another project's item. Only item_problem drops these."""
+        self.v.propose("partner-label", [{"n": 1, "op": "new", "table": "labels", "match": "strong", "flags": [],
+                                          "decision": "approved", "values": {"name": "Partner only", "colour": "grey",
+                                                                             "behaviour": "warn"}}])
+        self.v.run("apply")
+        self.label("ABC-006", "Partner only")
+        ctx = self.context()
+        for ref in ("ABC-006", "ABC-M-001", "ABC-P-001", "DEF-A-001"):
+            got = self.result(ctx, f"Testing could start late ({ref}).")
+            self.assertEqual(got["text"], "", ref)
+            self.assertIn("isn't client-safe", got["message"], ref)
+
+    def test_the_prompt_carries_the_client_rule(self):
+        import importlib
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        edit_ai = importlib.import_module("edit_ai")
+        self.assertIn(edit_ai.CLIENT_RULE, self.context()["prompt"])
+        self.assertNotIn(edit_ai.CLIENT_RULE, self.context(place="report", document=None)["prompt"])   # control
+
+    def test_aliases_of_client_visible_owners_pass_and_other_register_names_dont(self):
+        (self.v.root / "projects/_portfolio/people-register.md").write_text(REGISTER, encoding="utf-8")
+        ctx = self.context()
+        ok = "Jane signs the statement of work (ABC-A-002)."                        # Jane Doe's alias: she owns a client item
+        self.assertEqual(self.result(ctx, ok)["text"], ok)
+        for bad in ("Testing could start late, says Omar.",                        # an internal owner's alias
+                    "Testing could start late, says Mia Hale."):                    # a register name the text doesn't give
+            self.assertEqual(self.result(ctx, bad)["text"], "", bad)
+
+    def test_no_project_and_an_unreadable_tracker_have_their_own_messages(self):
+        got = self.context(code="", document=None, place="client")                  # refused before the checks: no document
+        self.assertIn("refused", got)
+        got = self.py("import edit_ai\nprint(json.dumps([edit_ai.refusal(edit_ai.client_problems('', 'Hello there.')),"
+                      " edit_ai.refusal(edit_ai.client_problems('', 'Hello.'), True)]))")
+        self.assertIn("no project to check", got[0])
+        self.assertIn("no project to check", got[1])
+        got = self.py("import edit_ai, tracker\n"
+                      "def boom():\n    raise OSError('locked')\n"
+                      "tracker.connect = boom\n"
+                      "print(json.dumps([edit_ai.refusal(edit_ai.client_problems('ABC', 'Hello there.')),"
+                      " edit_ai.result({'context': {'place': 'client', 'code': 'ABC', 'original': 'Hi.'},"
+                      " 'reply': '<<<SUGGESTION\\nHi there.\\nSUGGESTION>>>'})['message']]))")
+        for msg in got:
+            self.assertIn("couldn't check", msg)
+            self.assertNotIn("isn't client-safe", msg)
+        ctx = self.context()
+        self.assertIn("isn't client-safe", self.result(ctx, "Late (ABC-A-004).")["message"])   # control: a real leak keeps its words
+
+    def test_ids_and_vip_written_any_way_are_still_caught(self):
+        ctx = self.context()
+        for reply in ("Testing could start late, see abc-a-004.", "Testing could start late, seeABC-A-004.",
+                      "Testing could start late (ABC A 004).", "Testing could start late (ABC\u2011A\u2011004).",
+                      "Testing could start late (ABC\u2013A\u2013004).", "Testing could start late (ABC-\u200bA-004).",
+                      "Testing could start late (\uff21\uff22\uff23-\uff21-\uff10\uff10\uff14).", "Testing could start late (abc.a.004).",
+                      "Testing could start late; the V\u0399P knows.", "Testing could start late; the V\u200bIP knows.",
+                      "Testing could start late; the V.I.P. knows.", "Testing could start late; the vips know."):
+            got = self.result(ctx, reply)
+            self.assertEqual(got["text"], "", reply)
+        ok = "Testing could start late (ABC-006); vipers and 1,004 users aside."     # control: a client-visible ID, no VIP
+        self.assertEqual(self.result(ctx, ok)["text"], ok)
 
     def test_names_the_model_invents_are_only_a_names_added_note(self):
         """Documents today's behaviour (Jarvis, #123): a name in neither the people register nor the project's owners isn't one the
