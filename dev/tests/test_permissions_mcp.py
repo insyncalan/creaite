@@ -25,7 +25,26 @@ REFUSED = ["mcp__claude_ai_Todoist", "mcp__claude_ai_Todoist__*", "mcp__claude_a
            "mcp__claude_ai_Linear", "mcp__claude_ai_Linear__create_issue", "mcp__some_new_server", "mcp__some_new_server__*",
            "mcp__claude-vscode__getDiagnostics", "MCP__claude_ai_Todoist", "mcp__claude_ai_Microsoft_365",
            M365 + "outlook_send_mail", M365 + "sharepoint_delete_item", M365 + "a_new_tool"] + \
-          list(P.ACTING_BUILTINS) + ["Monitor(*)", "SendMessage(*)"]
+          list(P.ACTING_BUILTINS) + list(P.WRITING_BUILTINS) + \
+          ["Monitor(*)", "SendMessage(*)", "NotebookEdit(projects/**)"]
+
+# Claude Code 2.1.300's default built-in tool list, from a probe (Jarvis, 15-10-2026). To refresh it after a CLI update, start
+# `claude -p` from a scratch folder outside the vault with no --tools and ask it to list its tool names (or read the stream-json
+# `init` event's "tools" field), then paste the built-in names here (not the mcp__ ones) and sort each new name into
+# P.ACTING_BUILTINS, P.WRITING_BUILTINS or LEFT_OUT below, with its reason.
+CLI_BUILTINS_2_1_300 = (
+    "Task", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
+    "EnterWorktree", "ExitWorktree", "ListAgents", "ListMcpResourcesTool", "Monitor", "NotebookEdit", "PushNotification", "Read",
+    "ReadMcpResourceDirTool", "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill",
+    "TaskStop", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write")
+LEFT_OUT = {
+    "Task", "Bash", "Edit", "Read", "Write", "Skill",   # creaite's own runs use them; their allow rules have their own checks
+    "ToolSearch",                                       # only loads deferred tools' schemas
+    "WebFetch",                                         # reading a web page is outside content; .claude/settings.json denies it
+    "ListAgents", "ListMcpResourcesTool", "ReadMcpResourceTool", "ReadMcpResourceDirTool",   # read only
+    "ReportFindings",                                   # hands a report back to the caller; nothing leaves the laptop
+    "WebSearch",                                        # approvable on the one card (BL-141); each run's --tools decides it
+}
 
 
 def with_rule(rule):
@@ -66,10 +85,22 @@ class Table(unittest.TestCase):
         self.assertEqual(P.MCP_SAFE, ())
         self.assertEqual(P.ACTING_BUILTINS, (
             "EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
-            "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments", "ArtifactData"))
+            "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments", "ArtifactData",
+            "TaskStop"))
+        self.assertEqual(P.WRITING_BUILTINS, ("NotebookEdit",))
         self.assertEqual(P.NON_M365_MCP_DENY, ("mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI",
                                                "mcp__claude_ai_Linear", "mcp__claude-vscode"))
-        self.assertEqual(P.run_deny_extras(), list(P.NON_M365_MCP_DENY) + list(P.ACTING_BUILTINS))
+        self.assertEqual(P.run_deny_extras(), list(P.NON_M365_MCP_DENY) + list(P.ACTING_BUILTINS) + list(P.WRITING_BUILTINS))
+
+    def test_refused_builtins_match_the_cli_list(self):
+        refused = P.ACTING_BUILTINS + P.WRITING_BUILTINS
+        self.assertEqual(sorted(set(refused)), sorted(refused), "a name is listed twice")
+        self.assertEqual([n for n in refused if n not in CLI_BUILTINS_2_1_300], [], "not a Claude Code 2.1.300 tool name")
+        self.assertEqual(LEFT_OUT & set(refused), set())
+        self.assertEqual(set(refused), set(CLI_BUILTINS_2_1_300) - LEFT_OUT,
+                         "every CLI built-in is either refused or deliberately left out")
+        for name in LEFT_OUT:                                   # left out: no refusal from the connector check
+            self.assertIsNone(P.tool_problem(name), name)
 
 
 class PermissionCard(unittest.TestCase):

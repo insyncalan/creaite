@@ -604,15 +604,19 @@ def m365_problem(rule):
 MCP_SAFE = ()                                            # other MCP tools creaite has checked and allows: none
 ACTING_BUILTINS = ("EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
                    "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments",
-                   "ArtifactData")
+                   "ArtifactData", "TaskStop")
+# F3 follow-up (Jarvis, 15-10-2026): every name above is in Claude Code 2.1.300's default tool list (probe; pinned in
+# test_permissions_mcp). TaskStop stops background work no creaite feature starts. One more built-in gets no allow rule either:
+WRITING_BUILTINS = ("NotebookEdit",)    # writes a file without filechange.py's backup, log and undo; denied in every run too
+# WebSearch stays approvable on the one card (BL-141's own example): each run's --tools list decides whether it has it at all.
 NON_M365_MCP_DENY = ("mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI", "mcp__claude_ai_Linear",
                      "mcp__claude-vscode")          # the other connectors seen on Alan's machine, whole-server deny rules
 
 
 def run_deny_extras():
     """What a run that reads outside content denies besides the Microsoft 365 actions: the other known connectors (whole server)
-    and the acting built-ins. An unknown server isn't listed here: no allow rule for it is ever written (tool_problem)."""
-    return list(NON_M365_MCP_DENY) + list(ACTING_BUILTINS)
+    and the acting and writing built-ins. An unknown server isn't listed here: no allow rule for it is ever written (tool_problem)."""
+    return list(NON_M365_MCP_DENY) + list(ACTING_BUILTINS) + list(WRITING_BUILTINS)
 
 
 def tool_problem(rule):
@@ -629,6 +633,8 @@ def tool_problem(rule):
     m = re.match(r"^(\w+)(?:\(.*\))?$", rule)
     if m and m.group(1) in ACTING_BUILTINS:
         return f"{m.group(1)} acts outside the laptop or the vault, and no creaite feature needs it"
+    if m and m.group(1) in WRITING_BUILTINS:
+        return f"{m.group(1)} writes files without creaite's backup and undo, and no creaite feature needs it"
     return None
 
 
