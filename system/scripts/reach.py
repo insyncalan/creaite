@@ -1393,15 +1393,19 @@ def read_write_refusal(command):
     words = bash_args(command)
     if command_kind("tracker.py", words)[1] != "tracker.py validate":
         return None
-    staging = Path(os.path.realpath(paths.STAGING))
+    why = "tracker.py validate writes its findings back into the file, so it runs only on a proposal in system/staging/"
     try:
-        for arg in [w for w in words if w != "validate"]:
-            for cand in (Path(arg), paths.ROOT / arg, paths.STAGING / Path(arg).name):   # tracker.resolve_proposal's order
-                if cand.exists() and parts_under(Path(os.path.realpath(cand)), staging) is None:
-                    _debug("warn", "read command refused: tracker.py validate outside system/staging")
-                    return (f"{arg}: tracker.py validate writes its findings back into the file, so it runs only on a "
-                            f"proposal in system/staging/")
-    except (OSError, ValueError, RuntimeError) as e:  # fail closed
+        given = [w for w in words if w != "validate"]
+        if len(given) != 1:                                   # one proposal only (resolve_proposal reads the first)
+            return why
+        # The first that exists, in tracker.resolve_proposal's order; nothing found is refused (an unquoted ~ the shell
+        # expands isn't found here, so it can't be checked).
+        found = next((c for c in (Path(given[0]), paths.ROOT / given[0], paths.STAGING / Path(given[0]).name)
+                      if c.exists()), None)
+        if found is None or parts_under(Path(os.path.realpath(found)), Path(os.path.realpath(paths.STAGING))) is None:
+            _debug("warn", "read command refused: tracker.py validate outside system/staging")
+            return f"{given[0]}: {why}"
+    except (OSError, ValueError, RuntimeError) as e:  # noqa: BLE001  fail closed
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
 # ===== end ask-hook-fix: read commands that write =====

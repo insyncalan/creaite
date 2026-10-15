@@ -129,6 +129,8 @@ class Hook(unittest.TestCase):
     def setUpClass(cls):
         cls.v = Vault()
         cls.v.run("init")
+        # tracker.py validate runs only on a proposal that is in system/staging/ (a missing one is refused, ask-hook-fix)
+        (cls.v.root / "system/staging/proposed-x.json").write_text('{"items": []}\n')
 
     @classmethod
     def tearDownClass(cls):
