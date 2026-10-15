@@ -42,11 +42,13 @@ export const AI_PLACES = /** @type {Record<string, string[]>} */ ({
   line: ["rewrite", "shorter", "executive", "spelling", "custom"],
   report: ["shorter", "executive", "polish", "custom"],     // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
   minutes: ["shorter", "executive", "polish", "custom"],
+  client: ["shorter", "executive", "polish", "custom"],      // #123: the client sheet (client-visible facts only; the reply checked)
   readonly: [],                                              // a sheet that can't be edited: only Find the source
 });
 
 /** A place's own name for an option (v2.1.0 P5: the sheet's bar says "Shorten", as its mockup does). */
-const AI_NAMES = /** @type {Record<string, Record<string, string>>} */ ({ report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" } });
+const AI_NAMES = /** @type {Record<string, Record<string, string>>} */ ({ report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" },
+  client: { shorter: "Shorten" } });
 
 /**
  * @typedef {import("../core/editor.js").EdHandle} AiHandle

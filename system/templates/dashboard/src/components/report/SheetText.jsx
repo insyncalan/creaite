@@ -1,7 +1,7 @@
 // @ts-check
 /* SheetText (v2.1.0 P5, contract §4.3): the sheet's text. In editing, a field is the one editor (core/editor.js creaiteEditor):
    rich (Markdown, as the one editor writes it) for a section's text and panes, plain and one line for a table cell. Its AI
-   (BL-301 D) is the bar over a selection, with the place the view named ("report" or "minutes"). In Show as exported the same text is
+   (BL-301 D) is the bar over a selection, with the place the view named ("report", "minutes" or "client"). In Show as exported the same text is
    drawn as creaite_doc.render draws it (paragraphs, lists, bold), never as an editor. Inline checks are claim marks on the first
    match of the check's quote; they are never saved. Text only through JSX. */
 import { useEffect, useRef } from "preact/hooks";

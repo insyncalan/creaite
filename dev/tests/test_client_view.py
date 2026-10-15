@@ -213,36 +213,6 @@ class ClientBrowser(LiveBrowserCase):
         self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
         return doc
 
-    def test_the_client_sheet_has_no_ai_bar_and_sends_nothing_to_edit_ai(self):
-        """#90 review F2: the AI bar on selected text (/api/edit/ai, whose facts are every open item whatever its client flag) is
-        off on the client sheet until it has a client place (#123). Control: the same selection on the internal weekly sheet opens
-        it, so the method is real. Nothing is sent to /api/edit/ai from the client sheet."""
-        b = self.b
-        b.eval("""window.__aiCalls = []; if (!window.__aiSpy) { window.__aiSpy = 1; const f = window.fetch;
-          window.fetch = (u, o) => { if (String(u).includes('/api/edit/ai')) window.__aiCalls.push(String(u)); return f(u, o); }; } true""")
-        def select_in(view):
-            """Open the Summary's editor in `view`, give it words, and select them all, as a person would."""
-            sec = f"#{view} section[data-id='summary']"
-            b.wait(f"document.querySelector({json.dumps(sec)})", 20)
-            if not b.eval(f"!!document.querySelector({json.dumps(sec + ' .ProseMirror')})"):
-                b.click(sec + " .wr-rich")
-            b.wait(f"document.querySelector({json.dumps(sec + ' .ProseMirror')})")
-            b.click(sec + " .ProseMirror")
-            b.type(" Testing could start late.")
-            b.key("a", 4)
-        b.eval("go('weekly',{code:'ABC'})")
-        select_in("v-weekly")
-        b.wait("document.querySelector('#aiLayer .aibar')")                                  # control: the internal sheet has it
-        b.eval("aiBar.value = null; aiSug.value = null; true")
-        self.open_view()
-        select_in("v-clientreport")
-        b.key("/", 1)                                                                       # Alt+/ opens the bar's menu where there is one
-        b.pump(0.5)
-        self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar') || !!document.querySelector('#aiLayer .aisug')"))
-        self.assertEqual(b.eval("window.__aiCalls"), [])
-        self.assertTrue(b.eval("!!document.querySelector(\"#v-clientreport section[data-id='summary'] .sheet-spark\")"),
-                        "the client-safe ✦ stays")
-
     def test_opens_with_the_clients_own_words_and_none_of_the_internal_ones(self):
         self.open_view()
         page = self.words("#v-clientreport .page")
@@ -365,6 +335,115 @@ class ClientBrowser(LiveBrowserCase):
                     self.b.screenshot(str(out / f"health-{w}-{theme}.png"))
                     self.b.key("Escape")
         self.assertTrue(any(out.glob("client-*.png")))
+
+
+# #123: the stand-in Claude for the AI bar: it keeps each prompt and its command line beside itself and answers with the selected
+# text plus an item ID that isn't client-visible (ABC-A-004), so the reply check has something to drop. Never a real model call.
+AI_FAKE = r'''#!/usr/bin/env python3
+import json, re, sys
+args = sys.argv[1:]
+p = args[args.index("--") + 1] if "--" in args else args[args.index("-p") + 1]
+open(__file__ + ".prompt", "w", encoding="utf-8").write(p)
+open(__file__ + ".argv.json", "w", encoding="utf-8").write(json.dumps(args))
+m = re.search(r"<<<TEXT\n(.*?)\nTEXT>>>", p, re.S)
+reply = "<<<SUGGESTION\n" + (m.group(1) if m else "") + " See ABC-A-004.\nSUGGESTION>>>"
+out = lambda o: print(json.dumps(o), flush=True)
+out({"type": "system", "subtype": "init", "session_id": "sess-c"})
+out({"type": "assistant", "message": {"content": [{"type": "text", "text": reply}]}})
+out({"type": "result", "result": reply, "session_id": "sess-c"})
+'''
+
+
+class ClientSheetAi(LiveBrowserCase):
+    """#123: the client sheet's AI bar uses the client place. What reaches Claude (the stand-in keeps it) has only the items a
+    client report may show and no people or health; a suggestion that brings in an internal item is dropped on the page. The
+    internal weekly sheet, same selection and same reply, is the control."""
+    REASON = "ZEBRAINTERNAL vendor is failing to deliver the build on time"
+    open_view = ClientBrowser.open_view
+
+    @classmethod
+    def load(cls, v):
+        import sqlite3
+        from contextlib import closing
+        R.populate(v)
+        with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:          # a test vault: set directly
+            con.execute("UPDATE projects SET health = 'Off track', health_reason = ? WHERE code = 'ABC'", (cls.REASON,))
+            con.commit()
+        cls.fake = v.root / "fake_claude.py"
+        cls.fake.write_text(AI_FAKE)
+        cls.fake.chmod(0o755)
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_NOW": R.NOW, "CREAITE_NO_LAUNCH": "1", "CREAITE_CLAUDE": str(cls.fake)}
+
+    def select_in(self, view):
+        """Open the Summary's editor in `view`, give it words, and select them all, as a person would."""
+        b = self.b
+        sec = f"#{view} section[data-id='summary']"
+        b.wait(f"document.querySelector({json.dumps(sec)})", 20)
+        if not b.eval(f"!!document.querySelector({json.dumps(sec + ' .ProseMirror')})"):
+            b.click(sec + " .wr-rich")
+        b.wait(f"document.querySelector({json.dumps(sec + ' .ProseMirror')})")
+        b.click(sec + " .ProseMirror")
+        b.type(" Testing could start late.")
+        b.key("a", 4)
+        b.wait("document.querySelector('#aiLayer .aibar')")
+
+    def suggest(self):
+        """Pick Polish on the bar; (what the page shows, the prompt Claude got, the request the page sent)."""
+        b = self.b
+        b.eval("""window.__aiBodies = []; if (!window.__aiSpy) { window.__aiSpy = 1; const f = window.fetch;
+          window.fetch = (u, o) => { if (String(u).includes('/api/edit/ai')) window.__aiBodies.push(JSON.parse(o.body)); return f(u, o); }; } true""")
+        b.click("#aiLayer .aibar button[aria-haspopup]")
+        b.wait("document.querySelector('#aiLayer [role=menu]')")
+        b.click("#aiLayer [role=menu] [data-ai=polish]")
+        b.wait("document.querySelector('#aiLayer .aisug .aitext')||document.querySelector('#aiLayer .aisug [role=alert]')", 30)
+        shown = b.eval("document.querySelector('#aiLayer .aisug').textContent")
+        prompt = Path(str(self.fake) + ".prompt").read_text(encoding="utf-8")
+        body = b.eval("window.__aiBodies[0]")
+        b.key("Escape")
+        b.eval("aiBar.value = null; aiSug.value = null; true")
+        return shown, prompt.replace("(such as ABC-A-003)", ""), body
+
+    def test_the_client_sheet_sends_only_client_safe_facts_and_drops_an_internal_reply(self):
+        self.open_view()
+        self.select_in("v-clientreport")
+        shown, prompt, body = self.suggest()
+        self.assertEqual(body["place"], "client")
+        self.assertIn("Its open item IDs: ABC-A-002, ABC-A-003, ABC-006\n", prompt)
+        self.assertIn("Its people: none listed", prompt)
+        for x in ("ABC-A-001", "ABC-A-004", "ABC-005", "ABC-M-001", "Omar Ali", "Alan Carter", "Jane Doe", "ZEBRAINTERNAL",
+                  "Off track"):
+            self.assertNotIn(x, prompt)
+        self.assertIn("isn't client-safe", shown)
+        self.assertNotIn("ABC-A-004", shown)
+        args = json.loads(Path(str(self.fake) + ".argv.json").read_text())
+        self.assertEqual(args[args.index("--tools") + 1], "")                       # the edit-ai run is unchanged: no tools
+        self.assertIn("--strict-mcp-config", args)
+
+    def edit_ai(self, place):
+        """POST /api/edit/ai from the page, as the bar does, and read its stream: the "draft" event."""
+        got = self.b.eval("""(async()=>{ const r=await fetch('/api/edit/ai',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},
+            body:JSON.stringify({option:'polish',text:'Testing could start late.',code:'ABC',place:%s})}); return r.text(); })()""" % json.dumps(place))
+        events = [json.loads(ln[6:]) for ln in got.splitlines() if ln.startswith("data: ")]
+        run = next((e.get("run") for e in events if e.get("type") == "done"), None)
+        if run:
+            self.b.eval(f"api('/api/ask/ack',{{run:{json.dumps(run)}}})")
+        return next(e for e in events if e["type"] == "draft"), Path(str(self.fake) + ".prompt").read_text(encoding="utf-8")
+
+    def test_the_route_keeps_the_internal_place_as_it_was_and_drops_the_reply_only_in_the_client_place(self):
+        """Control, on the route itself: the internal sheet's place ("report") still sends every open item and owner, and keeps the
+        same reply that the client place drops."""
+        self.open_view()
+        draft, prompt = self.edit_ai("report")
+        for x in ("ABC-A-001", "ABC-A-004", "ABC-005", "Omar Ali", "Alan Carter"):
+            self.assertIn(x, prompt)
+        self.assertEqual(draft["text"], "Testing could start late. See ABC-A-004.")
+        draft, prompt = self.edit_ai("client")
+        self.assertNotIn("ABC-A-004", prompt.replace("(such as ABC-A-003)", ""))
+        self.assertEqual(draft["text"], "")
+        self.assertIn("isn't client-safe", draft["message"])
 
 
 if __name__ == "__main__":

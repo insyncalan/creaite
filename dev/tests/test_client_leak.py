@@ -215,5 +215,78 @@ class ReviewReadsTheData(Base):
         self.assertTrue(any("ABC-D-008" in f for f in got), got)
 
 
+class ClientPlaceForAiOnSelection(Base):
+    """#123: the client sheet's AI bar (edit_ai.py, place "client") gives Claude only what a client report may show: the open items
+    client_leak passes, no people, no health; and a suggestion that brings in anything else is dropped. The internal sheet's place
+    ("report") still has every open item and owner (the control)."""
+    REASON = "ZEBRAINTERNAL vendor is failing to deliver the build on time"
+    INTERNAL_IDS = ("ABC-A-001", "ABC-A-004", "ABC-005", "ABC-M-001", "ABC-A-003")   # not client-visible, or excluded by a label
+    OWNERS = ("Alan Carter", "Omar Ali", "Jane Doe")
+
+    def setUp(self):
+        super().setUp()
+        import sqlite3
+        from contextlib import closing
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:     # a test vault: set directly
+            con.execute("UPDATE projects SET health = 'Off track', health_reason = ? WHERE code = 'ABC'", (self.REASON,))
+            con.commit()
+        self.v.propose("board-label", [{"n": 1, "op": "new", "table": "labels", "match": "strong", "flags": [],
+                                        "decision": "approved", "values": {"name": "Board only", "colour": "grey",
+                                                                           "behaviour": "exclude"}}])
+        self.v.run("apply")
+        self.label("ABC-A-003", "Board only")                                         # client-visible, but a label excludes it
+
+    def context(self, place="client", text="Testing could start late.", option="polish"):
+        return self.py("import edit_ai\ntry:\n    print(json.dumps(edit_ai.context(" + repr(
+            {"option": option, "text": text, "code": "ABC", "place": place}) + ")))\n"
+            "except edit_ai.Refused as e:\n    print(json.dumps({'refused': str(e)}))")
+
+    def result(self, ctx, reply):
+        return self.py("import edit_ai\nprint(json.dumps(edit_ai.result(" + repr(
+            {"context": ctx, "reply": "<<<SUGGESTION\n" + reply + "\nSUGGESTION>>>"}) + ")))")
+
+    def test_the_client_prompt_holds_only_client_safe_items_and_no_people(self):
+        ctx = self.context()
+        p = ctx["prompt"].replace("(such as ABC-A-003)", "")                     # the template's own example ID
+        self.assertIn("Its open item IDs: ABC-A-002, ABC-006\n", p)                   # client-visible, open, not excluded
+        self.assertIn("Its people: none listed", p)
+        for x in self.INTERNAL_IDS + self.OWNERS + ("ZEBRAINTERNAL", "Off track", "Vendor exits", "Confirm tester names"):
+            self.assertNotIn(x, p)
+        self.assertEqual(ctx["people"], [])
+
+    def test_the_internal_sheet_still_has_every_open_item_and_owner(self):
+        p = self.context(place="report")["prompt"].replace("(such as ABC-A-003)", "")   # control: the seeds are real
+        for x in self.INTERNAL_IDS + ("Omar Ali", "Alan Carter"):
+            self.assertIn(x, p)
+
+    def test_a_suggestion_bringing_in_internal_content_is_dropped(self):
+        ctx = self.context()
+        for reply in ("Testing could start late (ABC-A-004).",                       # an item that isn't client-visible
+                      "Testing could start late; see ABC-A-003.",                    # a client-visible item a label excludes
+                      "Testing could start late: " + self.REASON + ".",              # the tracker's internal health reason
+                      "Testing could start late. Internal only: the vendor.",        # an internal-only marker
+                      "Testing could start late, says Omar Ali.",                    # a person the text doesn't name
+                      "Testing could start late; the VIP knows.",                    # the word VIP
+                      "Testing could start late; absorb the phase one overrun internally."):  # internal wording
+            got = self.result(ctx, reply)
+            self.assertEqual(got["text"], "", reply)
+            self.assertIn("isn't client-safe", got["message"])
+
+    def test_a_client_safe_suggestion_comes_back(self):
+        reply = "Testing may start late (ABC-006); Jane Doe signs the statement of work (ABC-A-002)."   # her item is client-visible
+        self.assertEqual(self.result(self.context(), reply)["text"], reply)
+
+    def test_the_same_reply_on_the_internal_sheet_is_not_dropped(self):
+        got = self.result(self.context(place="report"), "Testing could start late (ABC-A-004).")
+        self.assertEqual(got["text"], "Testing could start late (ABC-A-004).")      # control: only the client place drops it
+
+    def test_selected_text_already_holding_internal_content_is_refused(self):
+        for text in ("Testing could start late (ABC-A-004).", "We will absorb the phase one overrun internally."):
+            self.assertIn("isn't client-safe", self.context(text=text).get("refused", ""), text)
+        got = self.py("import edit_ai\ntry:\n    edit_ai.context({'option': 'polish', 'text': 'Hello there.', 'place': 'client'})\n"
+                      "    print(json.dumps('sent'))\nexcept edit_ai.Refused as e:\n    print(json.dumps(str(e)))")
+        self.assertIn("isn't client-safe", got)                                      # no project: nothing to check against
+
+
 if __name__ == "__main__":
     unittest.main()

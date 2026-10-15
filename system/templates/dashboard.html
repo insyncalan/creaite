@@ -25948,13 +25948,19 @@ ${s5}`;
       report: ["shorter", "executive", "polish", "custom"],
       // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
       minutes: ["shorter", "executive", "polish", "custom"],
+      client: ["shorter", "executive", "polish", "custom"],
+      // #123: the client sheet (client-visible facts only; the reply checked)
       readonly: []
       // a sheet that can't be edited: only Find the source
     }
   );
   var AI_NAMES = (
     /** @type {Record<string, Record<string, string>>} */
-    { report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" } }
+    {
+      report: { shorter: "Shorten" },
+      minutes: { shorter: "Shorten" },
+      client: { shorter: "Shorten" }
+    }
   );
   var aiBar = y3(null);
   var aiSug = y3(null);
@@ -58793,7 +58799,7 @@ ${d5.text}`);
     id: "source",
     name: "Find the source",
     line: "Where this comes from",
-    places: ["report", "minutes", "readonly"],
+    places: ["report", "minutes", "client", "readonly"],
     run: (range, h5, ai2) => {
       const run = SHEET_SOURCES.get(
         /** @type {any} */
@@ -60931,6 +60937,7 @@ ${d5.text}`);
           onChange: side ? () => {
           } : setClientDoc,
           onSave: side ? void 0 : saveClientPage,
+          ai: { place: "client", project: () => doc.project, confidential: () => false },
           onRedraft: side ? void 0 : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report"),
           onEvent: (ev) => {
             if (ev.type === "reload" && a5) loadClientReport(a5);

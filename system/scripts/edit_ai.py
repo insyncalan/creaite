@@ -10,6 +10,13 @@ shows it as a suggestion that changes nothing until Alan accepts it.
   python3 system/scripts/edit_ai.py result     JSON {request, context, reply} on stdin → {text, notes, option}
   python3 system/scripts/edit_ai.py options    each place's options, as JSON
 
+The client place (#123) is the client sheet's: its facts are only the open items a client report may show (client_leak.item_problem
+passes them: client-visible, not Sensitive, partner-only or excluded by a label, a milestone with client wording) and no people at
+all; selected text that already holds something a client mustn't see is refused before anything goes to Claude; and a suggestion
+that brings in an item a client may not see, internal wording (client_leak.text_findings), the tracker's internal health reason or
+an internal-only marker (drafts.internal_findings), a person the text and the client-visible items don't name, or the word VIP comes
+back with no text and a plain reason.
+
 The check (BL-106's plain-code check, as Make it executive's): every date, number, person's name and item ID the suggestion
 loses or adds is a note under it. Notes, never blocks. Counts go to draft-stats.json under the feature "edit" (the page posts
 /api/draft/stat): offered, used (accepted) and rejected (discarded); never text.
@@ -27,6 +34,7 @@ import status_checks  # noqa: E402
 MAX_TEXT = 12000            # characters of selected text
 MAX_INSTRUCTION = 400       # "Or say what you want…"
 MAX_IDS, MAX_PEOPLE = 60, 40
+OPEN = (("actions", "('Open','Delayed')"), ("raid", "('Open')"), ("decisions", "('Pending')"), ("milestones", "('Planned')"))
 ID_RE = re.compile(r"\b[A-Z][A-Z0-9]{2,6}-(?:[A-Z]-)?\d{3}\b")
 CODE_RE = re.compile(r"[A-Z][A-Z0-9]{2,6}")
 
@@ -75,10 +83,14 @@ PLACES = {
     "line": ["rewrite", "shorter", "executive", "spelling", "custom"],
     "report": ["shorter", "executive", "polish", "custom"],      # v2.1.0 P5: the A4 sheet (reports and minutes)
     "minutes": ["shorter", "executive", "polish", "custom"],
+    "client": ["shorter", "executive", "polish", "custom"],      # #123: the client sheet (client-safe facts and reply check)
     "readonly": [],      # a sheet that can't be edited offers only Find the source, which is the page's own and runs no Claude
 }
 FORMATS = {"notes": "markdown", "current": "markdown", "plain": "plain", "email": "plain", "line": "line", "report": "markdown",
-           "minutes": "markdown", "readonly": "plain"}
+           "minutes": "markdown", "client": "markdown", "readonly": "plain"}
+CLIENT_PLACES = {"client"}
+CLIENT_RULE = ("This text is for the client. Use only what the text holds and the item IDs listed below; never add an internal "
+               "health view or its reason, internal-only wording, or anyone's name the text doesn't already give.")
 FORMAT_RULES = {
     "markdown": "The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
                 "sub-headings, quotes, links{tasks}. Keep any link, image or HTML comment exactly as it is.",
@@ -102,8 +114,9 @@ def options():
     return {p: [{"id": o, "name": OPTIONS[o][0], "line": OPTIONS[o][1]} for o in ids] for p, ids in PLACES.items()}
 
 
-def project_facts(code):
-    """The project's name, its people (owners of its open items) and its open item IDs, nothing else (BL-301 D)."""
+def project_facts(code, client=False):
+    """The project's name, its people (owners of its open items) and its open item IDs, nothing else (BL-301 D). For a client place
+    (#123): only the open items client_leak.item_problem passes, and no people."""
     if not code or not CODE_RE.fullmatch(code) or not paths.DB.exists():
         return {"name": "", "people": [], "ids": []}
     import tracker
@@ -112,8 +125,9 @@ def project_facts(code):
         name = tracker.project_label(code)
         con = tracker.connect()
         try:
-            for table, open_ in (("actions", "('Open','Delayed')"), ("raid", "('Open')"), ("decisions", "('Pending')"),
-                                 ("milestones", "('Planned')")):
+            if client:
+                return {"name": name if name != code else "", "people": [], "ids": client_ids(con, code)[:MAX_IDS]}
+            for table, open_ in OPEN:
                 cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
                 owner = "owner" if "owner" in cols else "NULL"
                 for i, o in con.execute(f"SELECT id, {owner} FROM {table} WHERE project = ? AND status IN {open_} ORDER BY id",
@@ -126,6 +140,73 @@ def project_facts(code):
     except (Exception, SystemExit):  # noqa: BLE001  an unreadable database: what was read so far
         pass
     return {"name": name if name != code else "", "people": people[:MAX_PEOPLE], "ids": ids[:MAX_IDS]}
+
+
+def client_ids(con, code, owners=False):
+    """The project's open item IDs a client report may show (client_leak.item_problem passes them), or with owners=True their
+    owners' names."""
+    import client_leak
+    blocking = client_leak.blocking_labels(con)
+    out = []
+    for table, open_ in OPEN:
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        owner = "owner" if "owner" in cols else "NULL"
+        for i, o in con.execute(f"SELECT id, {owner} FROM {table} WHERE project = ? AND status IN {open_} AND client_visible = 1 "
+                                "ORDER BY id", (code,)):
+            if client_leak.item_problem(con, i, blocking):
+                continue
+            if not owners:
+                out.append(i)
+            elif o and o != "TBC" and person(o) not in out:
+                out.append(person(o))
+    return out
+
+
+def person(owner):
+    """An owner's name without its organisation: "Jane Doe (Example Client Ltd)" is "Jane Doe"."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
+
+
+def client_problems(code, text, original=""):
+    """What a client place's text holds that a client mustn't see, as short reasons ([] when it is client-safe): an item a client
+    report may not show, internal wording (client_leak.text_findings), the tracker's internal health reason or an internal-only
+    marker the original didn't hold (drafts.internal_findings), a person neither the original nor the client-visible items name,
+    or the word VIP. Fails closed: an unreadable tracker is a problem."""
+    import client_leak
+    import drafts
+    import tracker
+    if drafts.VIP_RE.search(text or ""):
+        return ["something private"]
+    if not code:
+        return ["no project"]
+    try:
+        con = tracker.connect()
+    except (Exception, SystemExit):  # noqa: BLE001
+        return ["the tracker couldn't be read"]
+    try:
+        blocking = client_leak.blocking_labels(con)
+        found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(set(ID_RE.findall(text or "")))) if why]
+        found += client_leak.text_findings(con, code, text or "")
+        found += drafts.internal_findings(con, code, text or "", original)
+        allowed = names(original, _register_names() + owners_of(con, code)) | set(client_ids(con, code, owners=True))
+        added = names(text, _register_names() + owners_of(con, code)) - allowed
+        found += [f"{n} isn't named in the text" for n in sorted(added)]
+    except (Exception, SystemExit) as e:  # noqa: BLE001  fails closed
+        found = [f"the check couldn't finish ({type(e).__name__})"]
+    finally:
+        con.close()
+    return found
+
+
+def owners_of(con, code):
+    """Every owner named on the project's items, open or not: the names a client suggestion is checked for."""
+    out = set()
+    for table in ("actions", "raid", "decisions", "milestones"):
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        if "owner" in cols:
+            out |= {person(o) for (o,) in con.execute(f"SELECT DISTINCT owner FROM {table} WHERE project = ?", (code,))
+                    if o and o != "TBC"}
+    return sorted(out)
 
 
 def request(req):
@@ -154,9 +235,14 @@ def context(req):
     """{prompt, option, label, format} for one suggestion: the template filled from the request and the project's facts."""
     option, text, code, place, instruction = request(req)
     fmt = FORMATS[place]
-    facts = project_facts(code)
+    client = place in CLIENT_PLACES
+    if client and client_problems(code, text, text):
+        raise Refused("This text already holds something that isn't client-safe. Fix it first; nothing was sent to Claude.")
+    facts = project_facts(code, client)
     task = OPTIONS[option][2] if option != "custom" else (
         "Do what Alan asks with the text, and only that. His instruction: " + instruction)
+    if client:
+        task += "\n\n" + CLIENT_RULE
     if option == "executive":
         import report
         task += "\n\nThe executive voice:\n" + report.style_guide()
@@ -168,7 +254,7 @@ def context(req):
         ids=", ".join(facts["ids"]) or "none",
         text=text)
     return {"prompt": prompt, "option": option, "label": OPTIONS[option][0], "format": fmt, "place": place,
-            "people": facts["people"], "original": text}
+            "people": facts["people"], "original": text, "code": code}
 
 
 def parse(reply):
@@ -236,6 +322,9 @@ def result(body):
         text = one_line(text)
     if not text.strip():
         return {"text": "", "notes": [], "message": "No suggestion came back."}
+    if ctx.get("place") in CLIENT_PLACES and client_problems(ctx.get("code") or "", text, ctx.get("original") or ""):
+        return {"text": "", "notes": [], "option": ctx.get("option"), "format": ctx.get("format"),
+                "message": "The suggestion was dropped: it held something that isn't client-safe. Try again."}
     return {"text": text, "notes": check(ctx.get("original") or "", text, ctx.get("people") or []), "option": ctx.get("option"),
             "format": ctx.get("format")}
 

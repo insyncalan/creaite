@@ -9,7 +9,7 @@
      offset into it, and puts that back after a zoom, a move, Show as exported, a doc replaced by a save or reload, and on switching
      views. Nothing else sets scrollTop.
    - Sections move (drag, Alt+↑ ↓) and hide; headings are renamed in place with Reset; the layout keeps in step (sheetLib.syncLayout).
-   - ✦ per section (`onRedraft`), the one editor's AI bar (`ai`, places "report" and "minutes"), inline checks, source tags, Find the
+   - ✦ per section (`onRedraft`), the one editor's AI bar (`ai`, places "report", "minutes" and "client"), inline checks, source tags, Find the
      source (`onSelectAction`), the standard peek with Sneak peek on every item ID, Side by side (levelled, ≠ markers, Match internal).
    - Saves 1.5 s after the last change, on ⌘S and on unmount, one at a time; a conflict stops saving and offers Reload.
    Text only through JSX. */
@@ -68,7 +68,7 @@ const SHEET_SOURCES = new Map();
 let SHEET_SEQ = 0;
 
 /* The "Find the source" item of the AI bar in the report and minutes places (and in the read-only one, where it is the only item). */
-aiAction({ id: "source", name: "Find the source", line: "Where this comes from", places: ["report", "minutes", "readonly"],
+aiAction({ id: "source", name: "Find the source", line: "Where this comes from", places: ["report", "minutes", "client", "readonly"],
   run: (range, h, ai) => { const run = SHEET_SOURCES.get(/** @type {any} */ (ai).sheetId); if (run) run(range, h); else snack("Finding the source isn't available here"); } });
 
 const SAVE_WAIT = 1500;
