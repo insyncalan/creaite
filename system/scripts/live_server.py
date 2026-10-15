@@ -6363,17 +6363,19 @@ main = main_with_restart
 
 # ===== BL-301 B (v20-notes-tab): the Notes tab =====
 # POST /api/notes/list  {code}                                  a project's (or _portfolio's) notes: front matter and references, no text
-# POST /api/notes/get   {path}                                  one note: its body, front matter, the text's fingerprint and any draft
+# POST /api/notes/get   {path}                                  one note: its body, front matter and the text's fingerprint
 # POST /api/notes/new   {code, template, title, date?, with?}   a new note from one of the four templates, created through filechange.py
-# POST /api/notes/draft {path, body?, changes?, base}           what Alan has typed, kept in system/staging/drafts/notes/ (no project file)
-# POST /api/notes/save  {path, body?, changes?, base}           the note's file written through filechange.py: backed up, logged, undoable
-# The page saves a draft as Alan types and the file once per editing session (on leaving the note, or after 30 seconds without
-# typing). A note changed outside creaite since it was opened is never overwritten: the draft is kept and the page says so. The
-# search index is refreshed after a save, in the background. Notes are internal and passive: nothing here extracts or stages.
+# POST /api/notes/save  {path, body?, changes?, base, session?} the note's file written through filechange.py: backed up, logged, undoable
+# #119: the page writes the file as Alan types (a moment after the last key) and names its editing session (`session`: a new id each
+# time a note is opened and after 5 minutes idle), so filechange.py keeps ONE backup per session, not one per save. A save without
+# a session (an older page) is backed up on its own, as before. A note changed outside creaite since it was opened is never
+# overwritten: nothing is written and the page says so. The search index is refreshed after a save, in the background. Notes are
+# internal and passive: nothing here extracts or stages.
 NOTES_LOCK = threading.Lock()
 NOTES_INDEX = {"busy": False, "again": False}
 NOTE_BODY_LIMIT = 400_000
 NOTE_WHY = "a note saved in the Notes tab"
+NOTE_SESSION = re.compile(r"[A-Za-z0-9-]{8,64}")   # #119: the page's editing-session id (a UUID); anything else is no session
 
 
 def notes_code(code):
@@ -6434,20 +6436,16 @@ def notes_target(handler, req):
 
 
 def notes_get_route(handler, req):
-    """One note to open: its body and front matter, the fingerprint a save is checked against, and a draft not yet written."""
+    """One note to open: its body and front matter, and the fingerprint a save is checked against."""
     t = notes_target(handler, req)
     if not t:
         return None
     notes, code, p, rel = t
     text = p.read_text(encoding="utf-8", errors="ignore")
     meta, body = notes.parse(text)
-    draft = notes.read_draft(rel)
-    if draft and draft.get("base") != notes.text_sha(text):
-        draft["stale"] = True                       # the file changed since the draft was typed: the page asks which to keep
     return handler.send(200, {"ok": True, "code": code, "note": notes.summary(p, code), "body": body,
                               "meta": {k: meta.get(k) for k in notes.FIELDS if k in meta}, "base": notes.text_sha(text),
-                              "draft": draft, "sent": note_sent_lines(notes, rel, body),
-                              "images": note_images(code, body + "\n" + str((draft or {}).get("body") or ""))})     # BL-301 B gaps
+                              "sent": note_sent_lines(notes, rel, body), "images": note_images(code, body)})     # BL-301 B gaps
 
 
 def note_sent_lines(notes, rel, body=None):
@@ -6502,23 +6500,10 @@ def notes_body(req):
     return False if len(body) > NOTE_BODY_LIMIT else body
 
 
-def notes_draft_route(handler, req):
-    """Keep what Alan typed (the body and the front-matter changes) as the note's draft. No project file is written."""
-    t = notes_target(handler, req)
-    if not t:
-        return None
-    notes, _code, _p, rel = t
-    body = notes_body(req)
-    if body is False:
-        return handler.send(400, {"ok": False, "message": "That note is too long to save."})
-    at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
-    return handler.send(200, {"ok": True, "at": at})
-
-
 def notes_save_route(handler, req):
     """Write the note's file through filechange.py (backed up, logged, undoable), unless it changed outside creaite since it was
-    opened (`base`): then nothing is written and the draft is kept."""
+    opened (`base`): then nothing is written. #119: `session`, the page's editing-session id, lets filechange.py keep one backup
+    per session; a missing or malformed one means a backup for this save alone."""
     import filechange
     t = notes_target(handler, req)
     if not t:
@@ -6527,21 +6512,20 @@ def notes_save_route(handler, req):
     body = notes_body(req)
     if body is False:
         return handler.send(400, {"ok": False, "message": "That note is too long to save."})
+    sid = req.get("session")
+    session = {"session": f"{rel}:{sid}"} if isinstance(sid, str) and NOTE_SESSION.fullmatch(sid) else {}
     with NOTES_LOCK:
         text = p.read_text(encoding="utf-8", errors="ignore")
         if str(req.get("base") or "") != notes.text_sha(text):
-            notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""),
-                             datetime.now().strftime("%Y-%m-%d %H:%M:%S"))          # the typing is kept, never lost
             return handler.send(200, {"ok": False, "conflict": True, "message": "This note was changed outside creaite since you "
-                                      "opened it, so it wasn't saved. Your typing is kept as a draft."})
+                                      "opened it, so it wasn't saved."})
         new = notes.saved_text(text, body, req.get("changes"))
         if new is None:
-            notes.drop_draft(rel)
             return handler.send(200, {"ok": True, "unchanged": True, "note": notes.summary(p, code), "base": notes.text_sha(text)})
-        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY}, via="dashboard")
+        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY, **session},
+                                       via="dashboard")
         if done != 0:
             return handler.send(200, {"ok": False, "wait": done == filechange.NEEDS, "message": msg})
-        notes.drop_draft(rel)
     notes_reindex()
     m = re.search(r"\(change (\d+)", msg)
     return handler.send(200, {"ok": True, "note": notes.summary(p, code), "base": notes.text_sha(new),
@@ -6549,7 +6533,7 @@ def notes_save_route(handler, req):
 
 
 NOTES_ROUTES = {"/api/notes/list": notes_list_route, "/api/notes/get": notes_get_route, "/api/notes/new": notes_new_route,
-                "/api/notes/draft": notes_draft_route, "/api/notes/save": notes_save_route}
+                "/api/notes/save": notes_save_route}
 DRAFT_ROUTES.update(NOTES_ROUTES)              # dispatched with the drafts' routes (do_POST stays as it is)
 # ===== end BL-301 B =====
 
@@ -6563,8 +6547,8 @@ DRAFT_ROUTES.update(NOTES_ROUTES)              # dispatched with the drafts' rou
 # issues that approval itself, bound to exactly this move, and only when the move's ONLY reason for approval is that it is a move:
 # the note and the new name must each be ordinary on their own (a note directly in a notes folder; never in a run marked by
 # outside content, never a settings file, never someone else's). Otherwise nothing is moved and the note keeps its name. A link in
-# another note is changed through filechange.py (ordinary: Alan's own notes); a note being typed in (it has a draft), or one
-# filechange won't change, is listed instead, never touched.
+# another note is changed through filechange.py (ordinary: Alan's own notes); one filechange won't change is listed instead, never
+# touched. A note open and being typed in elsewhere sees the change as "changed outside creaite" at its next save (`base`).
 NOTE_IMAGE_MAX = 40                         # pictures sent with an opened note at most
 NOTE_RENAME_WHY = "the note's title changed in the Notes tab"
 NOTE_RELINK_WHY = "a link to a note whose title changed"
@@ -6652,8 +6636,6 @@ def notes_relink(skip, old_names, title):
             name = str(notes.parse(text)[0].get("title") or f.stem)
             if not notes.link_safe(title):
                 listed.append({"path": rel, "title": name, "why": "the new title can't stand in a [[…]] link"})
-            elif notes.read_draft(rel):
-                listed.append({"path": rel, "title": name, "why": "it has typing not yet saved"})
             else:
                 done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_RELINK_WHY},
                                                via="dashboard")
@@ -6688,7 +6670,6 @@ def notes_rename_route(handler, req):
         done, msg = filechange.perform(ch, token, "dashboard")
         if done != 0:
             return handler.send(200, {"ok": False, "message": f"Saved, but the file keeps its name: {msg}"})
-        notes.drop_draft(rel)
         old = [str(req.get("old") or ""), p.stem]
         changed, listed = notes_relink(to, old, title)
     notes_reindex()

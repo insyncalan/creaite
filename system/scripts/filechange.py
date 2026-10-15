@@ -18,7 +18,8 @@ Commands:
   delete <path> --why "<reason>"                      delete one existing file (a copy is kept)
   undo [<n>]                    undo the latest change that hasn't been undone (or change <n>): a created file is removed, a changed
                                 one put back, a moved one moved back, a deleted one restored. Refused when the file has been changed
-                                since, so nothing Alan did is lost
+                                since, so nothing Alan did is lost. Undoing an editing session's latest save (#119) puts back the
+                                text from before the session and undoes its earlier saves with it
   list [--json] [--days N]      the changes made through this script
 
 <path> is a stored path (projects/<folder>/…, mapped to the projects root), a vault path, ~/… or an absolute path. Every change is
@@ -213,12 +214,81 @@ def perform(ch, approval=None, via="cli", run=None):
             **({"approved": True} if approved else {})}
     if op == "create":
         return _do_create(ch, target, base, n_id)
+    backup = _backup(ch, target, base, n_id, joinable=(op, kind, approved, run) == ("edit", "ordinary", False, None))
+    do = {"edit": _do_edit, "move": _do_move, "delete": _do_delete}[op]
+    return do(ch, target, base, n_id, backup, before_bytes)
+
+
+# ===== #119: one backup per editing session =====
+# A save may name its editing session ("<stored path>:<the page's session id>"). The session's first save is backed up and logged
+# as always; a later save of the same session reuses that backup, so Undo of the latest save puts back the text as it was before
+# the session. Only an ordinary edit (never one Alan approved on the card, a settings or permission file, or one made while an ask
+# creaite run is in progress) of the same file, by the same route, under 5 minutes after the session's last save, with nothing else
+# having changed the file since, joins a session. Anything else gets its own backup, as before. The log keeps a hash of the token.
+SESSION_IDLE = 300                              # seconds without a save that end an editing session
+SESSION_MAX = 1024                              # characters in a session token at most
+
+
+def session_key(ch, target):
+    """The log's key for the save's editing session (16 hex of the token's hash), or None: no token, or one not for this file."""
+    tok = ch.get("session")
+    here = stored(target) + ":"
+    if not isinstance(tok, str) or len(tok) > SESSION_MAX or not tok.startswith(here) or len(tok) == len(here):
+        return None
+    return sha_bytes(tok.encode("utf-8"))[:16]
+
+
+def _backup(ch, target, base, n_id, joinable):
+    """The earlier version of the file, kept first, always: called by perform after every check has passed, unchanged. A new copy
+    in system/backups/files/changes/<n>/, unless (#119) the change is `joinable` (an ordinary edit, not approved on the card,
+    outside any run), the file isn't a settings or permission file and the save names its editing session for this file: then the
+    session's key goes in `base` (the log line), and a later save of that session reuses the session's one backup."""
+    key = session_key(ch, target) if joinable and not is_settings_file(target) else None
+    if key:
+        base["session"] = key
+        joined = session_backup(key, target, base["via"])
+        if joined:
+            return joined
     keep = CHANGES / f"{n_id:04d}"
     keep.mkdir(parents=True, exist_ok=True)
     backup = keep / target.name
     shutil.copy2(target, backup)                                   # the earlier version first, always
-    do = {"edit": _do_edit, "move": _do_move, "delete": _do_delete}[op]
-    return do(ch, target, base, n_id, backup, before_bytes)
+    return backup
+
+
+def _same_session(last, key, here, via):
+    """Whether the log entry `last` is an ordinary edit of `here` in session `key` by route `via`, outside any run, with a backup."""
+    return bool(last) and last.get("op") == "edit" and last.get("path") == here and last.get("session") == key and \
+        last.get("via") == via and last.get("tier") == "ordinary" and not last.get("approved") and not last.get("run") and \
+        bool(last.get("backup"))
+
+
+def session_backup(key, target, via):
+    """The backup of the editing session this save continues, or None. The last logged change to this file (as its path, or as
+    where a move went) must be an ordinary edit of the same session by the same route, outside any run, under SESSION_IDLE seconds
+    ago, its result still the file as it is now, and its backup still the earlier version it logged."""
+    here = stored(target)
+    last = next((e for e in reversed(entries()) if here in (e.get("path"), e.get("to"))), None)
+    if not _same_session(last, key, here, via):
+        return None
+    try:
+        age = (datetime.now() - datetime.strptime(str(last.get("at")), "%Y-%m-%d %H:%M:%S")).total_seconds()
+    except ValueError:
+        return None
+    backup = paths.resolve(last["backup"])
+    if not 0 <= age < SESSION_IDLE or sha(target) != last.get("after") or not backup.is_file() or sha(backup) != last.get("before"):
+        return None
+    return backup
+
+
+def session_saves(todo, last):
+    """#119: the earlier saves, not yet undone, of the editing session whose latest save is `last` (they share its one backup),
+    undone with it; [] for any other change."""
+    if last["op"] != "edit" or not last.get("session"):
+        return []
+    return [e["id"] for e in todo if e["id"] < last["id"] and e.get("op") == "edit" and e.get("session") == last["session"]
+            and e.get("backup") == last.get("backup") and e.get("path") == last["path"]]
+# ===== end #119 =====
 
 
 def _refused(ch, op, why, target):
@@ -370,11 +440,16 @@ def cmd_undo(which):
         print(refusal)
         return 1
     n = next_id(es)
+    # #119: undoing an editing session's latest save puts back the text from before the session, so its earlier saves (the same
+    # session, sharing its one backup) are undone with it
+    whole = session_saves(todo, last)
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with open(LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps({"id": n, "at": now(), "op": "undo", "undoes": last["id"], "path": last["path"]}, ensure_ascii=False) + "\n")
-    reach._debug("info", f"undo of change {last['id']}: {last['path']} {note}")
-    print(f"{last['path']} {note} (change {last['id']} undone).")
+        for i, undoes in enumerate([last["id"]] + whole):
+            f.write(json.dumps({"id": n + i, "at": now(), "op": "undo", "undoes": undoes, "path": last["path"]}, ensure_ascii=False) + "\n")
+    reach._debug("info", f"undo of change {last['id']}: {last['path']} {note}" + (f" (and {len(whole)} earlier saves)" if whole else ""))
+    print(f"{last['path']} {note} (change {last['id']} undone" +
+          (f", with the earlier saves of its editing session: {', '.join(str(i) for i in whole)}" if whole else "") + ").")
     return 0
 
 
