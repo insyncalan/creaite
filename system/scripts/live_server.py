@@ -3324,22 +3324,25 @@ def vip_check(how="check"):
         prompt = vip_prompt(since, vips, zone, parts)
         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
                            "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
-        found, why, cost, began = None, "no reply", None, time.monotonic()
+        found, why, cost, began = None, "", None, time.monotonic()
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
             found, why, cost = vip_reply(r)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            why = str(e)
+        except subprocess.TimeoutExpired:
+            why = VIP_TIMED_OUT
+        except OSError:
+            why = VIP_NOT_STARTED
         took = time.monotonic() - began
-        if not isinstance(found, list):
-            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {why[:160]}"
+        if not isinstance(found, list):                   # the reason shown is fixed words: never the model's or a tool's
+            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {vip_why(why)}"
             print(VIP_STATUS["last_error"], flush=True)
             vip_debug(sweep.vip_check_line({}, [], took, cost, failed=True))
             return VIP_STATUS["last_error"]
-        if sweep_running():                               # a sweep began during the call: it records these people itself
-            vip_debug(f"check dropped: a sweep started during it, {took:.1f}s")
-            return "skipped: a sweep started during the check"
         with VIP_WRITE:
+            # a sweep began during the call: it records these people itself (checked just before the write, review point 7)
+            if sweep_running():
+                vip_debug(f"check dropped: a sweep started during it, {took:.1f}s")
+                return "skipped: a sweep started during the check"
             clean, counts = sweep.vip_clean(found, since, zone, sweep.vip_state()["alerts"], invites=bool(VIP_INVITES))
             checked = {"offered": parts["offered"], "counts": counts}
             new = sweep.vip_record(clean, how, checked=checked)
@@ -3351,6 +3354,17 @@ def vip_check(how="check"):
     finally:
         VIP_STATUS["running"] = False
         VIP_LOCK.release()
+
+
+VIP_TIMED_OUT, VIP_NOT_STARTED = "it timed out", "claude couldn't be started"
+
+
+def vip_why(why):
+    """The fixed words a failed check shows (VIP_STATUS, /api/vip and the server's output): the two fixed reasons as they
+    are; anything else (the model's prose, a tool's or a parser's message) only counted, never shown."""
+    if why in (VIP_TIMED_OUT, VIP_NOT_STARTED):
+        return why
+    return f"its reply couldn't be used ({len(str(why or ''))} characters held back)"
 
 
 def vip_reply(r):

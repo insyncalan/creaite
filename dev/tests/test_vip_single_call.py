@@ -973,6 +973,29 @@ class DeepReplyTests(ServerCheck, unittest.TestCase):
             self.stop()
 
 
+class FailedCheckWordsTests(ServerCheck, unittest.TestCase):
+    """Review point 7a: a failed check shows fixed words and a count, never the model's prose."""
+
+    def test_the_models_prose_never_reaches_the_error(self):
+        self.start(f"Sorry, I could not finish: {SECRET}")
+        try:
+            self.wait(lambda: "check failed" in self.log(), "the failure logged")
+            error = self.post("/api/vip", {})["error"]
+            self.assertIn("the VIP check didn't finish: its reply couldn't be used (", error)
+            self.assertRegex(error, r"\(\d+ characters held back\)$")
+            self.assertNotIn(SECRET, error + self.log())
+            self.assertNotIn("Sorry", error)
+        finally:
+            self.stop()
+
+    def test_the_fixed_reasons_are_shown_as_they_are(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
+        import live_server
+        self.assertEqual(live_server.vip_why(live_server.VIP_TIMED_OUT), "it timed out")
+        self.assertEqual(live_server.vip_why(live_server.VIP_NOT_STARTED), "claude couldn't be started")
+        self.assertEqual(live_server.vip_why("Mia wrote " + SECRET), f"its reply couldn't be used ({10 + len(SECRET)} characters held back)")
+
+
 class InvitesFlipTests(unittest.TestCase):
     def test_vip_invites_true_puts_the_bl334_sentence_back(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
