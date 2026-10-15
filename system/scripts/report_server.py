@@ -21,7 +21,6 @@ import creaite_doc  # noqa: E402
 import report_doc  # noqa: E402
 
 FORMATS = ("html", "docx", "pdf")
-FILE_BESIDE_DEFAULT = False          # BL-335 (the backlog wins over the plan): an export is filed beside the report only when ticked
 
 
 def answer(handler, body):
@@ -179,7 +178,7 @@ def export_route(handler, req):
     fn = export_call()
     if fn is None:
         return refuse(handler, "Exports aren't built yet in this version of creaite.")
-    out = fn(path, fmt, file_beside=bool(req.get("file_beside", FILE_BESIDE_DEFAULT)), open_after=True)
+    out = fn(path, fmt, file_beside=bool(req.get("file_beside", creaite_doc.file_beside_default(kind))), open_after=True)
     if out.get("ok") and out.get("path"):
         out["launched"] = launch(out["path"])
     return answer(handler, out)
