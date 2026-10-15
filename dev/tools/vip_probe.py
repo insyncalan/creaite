@@ -2,7 +2,7 @@
 """BL-342 step 0: the live probe for thread cards (read-only; run by Alan in his own vault).
 
 Run, from your vault's folder (not the development repository):
-    cd <your vault> && python3 <path to this repository>/dev/tools/vip_probe.py [--since-days 3]
+    cd <your vault> && python3 <path to this repository>/dev/tools/vip_probe.py [--since-days 3 | 0.05]
 
 WHAT IT READS (through `claude -p` headless, three calls, the same read-only Microsoft 365 tools as the follow check,
 VIP_TOOLS in live_server.py): mail, Teams chats and calendar items sent by the people in the people register's VIP field,
@@ -259,7 +259,7 @@ def main(argv=None):
     """Check the vault, run the facts call and stage 1 on both models, print the verdict."""
     ap = argparse.ArgumentParser(description="BL-342 step 0: read-only live probe. Writes nothing.")
     ap.add_argument("--vault", default=os.getcwd(), help="the vault's folder (default: the current folder)")
-    ap.add_argument("--since-days", type=int, default=3, help="how far back to look (default 3)")
+    ap.add_argument("--since-days", type=float, default=3, help="how far back to look, in days; a fraction is fine, e.g. 0.05 (default 3)")
     args = ap.parse_args(argv)
     pre = preflight(args)
     if isinstance(pre, str):

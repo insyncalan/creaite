@@ -69,10 +69,10 @@ class Probe(unittest.TestCase):
     def tearDown(self):
         self.v.cleanup()
 
-    def probe(self, vault=None, **env):
+    def probe(self, vault=None, extra=(), **env):
         e = {**os.environ, "CREAITE_CLAUDE": str(self.claude), "STANDIN_LOG": str(self.log), **env}
-        return subprocess.run([sys.executable, str(PROBE), "--vault", str(vault or self.v.root)], capture_output=True, text=True,
-                              cwd=self.tmp, env=e)
+        return subprocess.run([sys.executable, str(PROBE), "--vault", str(vault or self.v.root), *extra], capture_output=True,
+                              text=True, cwd=self.tmp, env=e)
 
     def calls(self):
         return [json.loads(x) for x in self.log.read_text().splitlines()]
@@ -96,6 +96,12 @@ class Probe(unittest.TestCase):
                 self.assertIn(w, deny)
             self.assertFalse(set(deny) & set(vip_tools))
             self.assertNotIn(c[-1], c[:-1])
+
+    def test_since_days_takes_a_fraction_for_a_per_check_cost(self):
+        r = self.probe(extra=("--since-days", "0.05"))                       # about an hour: the per-check figure (Alan, 15-10-2026)
+        self.assertEqual(r.returncode, 0, r.stderr + r.stdout)
+        self.assertEqual(len(self.calls()), 3)
+        self.assertNotIn("invalid int value", r.stderr)
 
     def test_the_deny_list_covers_every_action_tool_the_servers_own_list_denies(self):
         sys.path.insert(0, str(REPO / "system/scripts"))
@@ -200,7 +206,9 @@ class Source(unittest.TestCase):
         sys.path.insert(0, str(REPO / "dev/tools"))
         import vip_probe
         self.assertEqual(vip_probe.PROBE_TOOLS, vip_tools)
-        out = subprocess.run(["git", "-C", str(REPO), "diff", "--name-only", "origin/main", "HEAD"], capture_output=True, text=True).stdout
+        base = subprocess.run(["git", "-C", str(REPO), "merge-base", "origin/main", "HEAD"], capture_output=True, text=True).stdout.strip()
+        out = subprocess.run(["git", "-C", str(REPO), "diff", "--name-only", base or "origin/main", "HEAD"], capture_output=True,
+                             text=True).stdout                               # this branch's own changes, not main's later ones
         self.assertNotIn("live_server.py", out)
 
     def test_the_header_lists_what_it_reads_and_that_it_writes_nothing(self):
