@@ -3,6 +3,7 @@
 Run: python3 dev/tests/test_bulk_edit.py   (needs Google Chrome; skipped otherwise)
 """
 import sys
+import time
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
@@ -58,6 +59,15 @@ class BulkEdit(LiveBrowserCase):
         """Wait for the save to report (the apply can take a while under load), then let the page settle."""
         self.b.wait("document.getElementById('snackT').textContent!==''", 30)
         self.b.pump(0.5)
+
+    def until(self, ready, timeout=30):
+        """The page shows a save at once and the apply follows; wait (on a runner under load too) until the database has it."""
+        end = time.time() + timeout
+        while time.time() < end and not ready():
+            self.b.pump(0.1)
+
+    def acts(self, field, *ids):
+        return [self.row("actions", i)[field] for i in ids]
 
     def select(self, *ids):
         b = self.b
@@ -137,6 +147,7 @@ class BulkEdit(LiveBrowserCase):
         self.select("ABC-A-001", "ABC-A-002")
         b.click("#wbulk [data-bq=close]")
         self.saved()
+        self.until(lambda: self.applies() > before and self.acts("status", "ABC-A-001", "ABC-A-002") == ["Closed", "Closed"])
         for id_ in ("ABC-A-001", "ABC-A-002"):
             row = self.row("actions", id_)
             self.assertEqual((row["status"], row["closed"]), ("Closed", date.today().isoformat()))
@@ -148,27 +159,32 @@ class BulkEdit(LiveBrowserCase):
         self.arm()
         b.click("#snackU")                                                  # one Undo puts both back
         self.saved()
+        self.until(lambda: self.acts("status", "ABC-A-001", "ABC-A-002") == ["Open", "Open"])
         for id_ in ("ABC-A-001", "ABC-A-002"):
             self.assertEqual(self.row("actions", id_)["status"], "Open")
         b.eval("setOf('st').clear(); workChanged()")
         self.select("ABC-A-001", "ABC-A-002")
         b.click("#wbulk [data-bq=reopen]")
         self.saved()
+        self.until(lambda: self.row("actions", "ABC-A-001")["closed"] is None)
         self.assertEqual(self.row("actions", "ABC-A-001")["closed"], None)
 
     def test_owner_priority_and_due_date_from_the_bar(self):
         b = self.open_work()
         self.select("ABC-A-001", "ABC-A-002")
         self.pick("o", "Omar Ali")
+        self.until(lambda: self.acts("owner", "ABC-A-001", "ABC-A-002") == ["Omar Ali"] * 2)
         self.assertEqual([self.row("actions", i)["owner"] for i in ("ABC-A-001", "ABC-A-002")], ["Omar Ali", "Omar Ali"])
         self.assertIn("Owner set to Omar Ali on 2 items", self.snack())
         self.select("ABC-A-001", "ABC-A-002")
         self.pick("pr", "Low")
+        self.until(lambda: self.acts("priority", "ABC-A-001", "ABC-A-002") == ["Low", "Low"])
         self.assertEqual([self.row("actions", i)["priority"] for i in ("ABC-A-001", "ABC-A-002")], ["Low", "Low"])
         self.select("ABC-A-001", "ABC-A-002")
         b.eval(f"document.getElementById('bkDate').focus(); document.getElementById('bkDate').value={shown(wd(30))!r}")
         b.key("Enter")                                                      # a date is set with Enter (or the calendar)
         self.saved()
+        self.until(lambda: self.acts("due_date", "ABC-A-001", "ABC-A-002") == [wd(30)] * 2)
         self.assertEqual([self.row("actions", i)["due_date"] for i in ("ABC-A-001", "ABC-A-002")], [wd(30), wd(30)])
 
     def test_items_that_cannot_take_the_change_are_left_out_and_named(self):
@@ -181,6 +197,7 @@ class BulkEdit(LiveBrowserCase):
         self.select("ABC-A-002", late)
         b.click("#wbulk [data-bq=close]")
         self.saved()
+        self.until(lambda: self.row("actions", "ABC-A-002")["status"] == "Closed")
         self.assertEqual(self.row("actions", "ABC-A-002")["status"], "Closed")       # the one that can, changes
         self.assertEqual(self.row("actions", late)["status"], "Open")                # the other is left out
         text = self.snack()
@@ -211,6 +228,7 @@ class BulkEdit(LiveBrowserCase):
         self.assertEqual(sorted(b.eval("[...HL.keys()]")), ["ABC-A-001", "ABC-A-002"])   # the group stays highlighted
         b.eval("""(()=>{ const s=document.querySelector('#workTbl td.editing select'); s.value='Omar Ali'; s.dispatchEvent(new Event('change',{bubbles:true})); })()""")
         self.saved()
+        self.until(lambda: self.acts("owner", "ABC-A-001", "ABC-A-002") == ["Omar Ali"] * 2)
         self.assertEqual([self.row("actions", i)["owner"] for i in ("ABC-A-001", "ABC-A-002")], ["Omar Ali", "Omar Ali"])
         self.assertIn("2 items", self.snack())
         self.assertEqual(self.row("actions", "DEF-A-001")["owner"], "Omar Ali")        # (it already was Omar's) and nothing else moved
@@ -236,6 +254,7 @@ class BulkEdit(LiveBrowserCase):
         self.arm()
         b.click("#bdOk")
         self.saved()
+        self.until(lambda: self.applies() == before + 1 and {r["status"] for r in self.v.rows("actions") if r["description"].startswith("Batch item")} == {"Closed"})
         self.assertEqual(self.applies(), before + 1)
         self.assertEqual({r["status"] for r in self.v.rows("actions") if r["description"].startswith("Batch item")}, {"Closed"})
 
@@ -247,6 +266,7 @@ class BulkEdit(LiveBrowserCase):
         self.assertFalse(self.bar()["hidden"])
         self.assertEqual(self.bar()["n"], "2 selected")
         self.pick("pr", "Low")
+        self.until(lambda: set(self.acts("priority", *cards[:2])) == {"Low"})
         self.assertEqual({self.row("actions", c)["priority"] for c in cards[:2]}, {"Low"})
 
 
