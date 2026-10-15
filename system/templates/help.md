@@ -18,15 +18,7 @@ python3 dev/tools/build_guides.py (a test fails while the guides are out of date
 - A line of --- at the end of a part, then lines of text, is its footer.
 - {version} becomes the installed version. A paragraph that is only [start command] becomes this vault's server command.
 
-Only this first comment is dropped: a comment anywhere else would show on the page. So what is still moving is listed here.
-moving (v2.0.0 Notes, 15-10-2026; check each before the release and delete the line once it has landed as written):
-- B's margin ticks (Team Cap, v20-ticks): "A line already sent shows a ✓ in the note's left margin" (Find updates in a note)
-  comes with that branch; it isn't on v20-capture.
-- The notes guard exemption (Team Cap, v20-notes-guard): "Reading a note … isn't outside content" (Notes, and the approval
-  card in Word documents and permissions) describes it; until it lands, reading a note in OneDrive marks the run.
-- D's one-line rule (v20-ai-select): "Make this an action, a risk, a decision or an update" refusing a selection over two
-  lines (Let creaite draft the wording, step 9; Notes).
-- A's real-data gate (step 6, laptop 1): nothing in Help depends on it.
+Only this first comment is dropped: a comment anywhere else would show on the page.
 -->
 
 # Start here
