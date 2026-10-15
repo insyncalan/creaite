@@ -19,7 +19,7 @@ import { placeAtCaret } from "../core/caretPlace.js";
 /** @typedef {import("../core/editorProfiles.js").SlashDef} SlashDef */
 /** @typedef {{from: number, to: number, q: string, rows: SlashDef[], i: number}} SlashState */
 
-let seq = 0;
+let slashSeq = 0;
 /** The text before the caret in a paragraph where a `/` menu may open, else null: the "/query" and where it starts. @param {any} editor */
 export function slashAt(editor) {
   const s = editor.state.selection;
@@ -65,7 +65,7 @@ function SlashList({ state, id, view, pick, hover }) {
 /** Give an editor its `/` menu. `host` maps a row id to what the host does for it. Returns what takes it away again.
     @param {import("../core/editor.js").EdHandle} h @param {{profile: string, host?: Record<string, () => void>}} o */
 export function attachSlash(h, { profile, host }) {
-  const id = `slash-${++seq}`, editor = h.editor, view = editor.view, el = h.el;
+  const id = `slash-${++slashSeq}`, editor = h.editor, view = editor.view, el = h.el;
   const hostRows = Object.keys(host || {});
   if (!slashRows(profile, hostRows, editor.schema).length) return () => {};
   const root = document.createElement("div");

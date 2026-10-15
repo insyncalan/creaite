@@ -24977,7 +24977,7 @@ ${s5}`;
   }
 
   // components/SlashMenu.jsx
-  var seq = 0;
+  var slashSeq = 0;
   function slashAt(editor) {
     const s5 = editor.state.selection;
     if (!s5.empty) return null;
@@ -25045,7 +25045,7 @@ ${s5}`;
     ] });
   }
   function attachSlash(h5, { profile, host: host2 }) {
-    const id2 = `slash-${++seq}`, editor = h5.editor, view = editor.view, el2 = h5.el;
+    const id2 = `slash-${++slashSeq}`, editor = h5.editor, view = editor.view, el2 = h5.el;
     const hostRows = Object.keys(host2 || {});
     if (!slashRows(profile, hostRows, editor.schema).length) return () => {
     };
@@ -25881,7 +25881,7 @@ ${s5}`;
   var timer = 0, opener = (
     /** @type {Element|null} */
     null
-  ), seq2 = 0;
+  ), seq = 0;
   var where = (code) => code && code !== "_portfolio" ? pName(code) : "Unfiled";
   var hasText = (n4) => !!(n4.title.trim() || n4.body.trim());
   var typed = (n4) => hasText(n4) && `${n4.title}\0${n4.body}` !== (n4.loaded ?? "\0");
@@ -25906,8 +25906,8 @@ ${s5}`;
   async function guess() {
     const n4 = capNote.value;
     if (!viaServer() || n4.chosen || n4.how === "meeting" || !(n4.title.trim() || n4.body.trim())) return;
-    const mine = ++seq2, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
-    if (mine !== seq2 || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
+    const mine = ++seq, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
+    if (mine !== seq || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
     const code = r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "";
     patchNote({ code, how: "guess", reason: r4.reason || "" });
   }
@@ -34344,7 +34344,7 @@ ${s5}`;
     const input = A2(
       /** @type {HTMLInputElement|null} */
       null
-    ), seq3 = A2(0), timer2 = A2(0);
+    ), seq2 = A2(0), timer2 = A2(0);
     const draftRef = A2(
       /** @type {SneakDraft|null} */
       null
@@ -34360,7 +34360,7 @@ ${s5}`;
       if (d5 && d5.d) draftStat(d5.feature, "rejected");
     }, []);
     async function read(t47, pk2) {
-      const n4 = ++seq3.current;
+      const n4 = ++seq2.current;
       if (!t47.trim()) {
         setReply(null);
         return null;
@@ -34378,12 +34378,12 @@ ${s5}`;
         /** @type {SneakReply} */
         await api("/api/sneak/read", body2)
       );
-      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq3.current; i5++) {
+      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq2.current; i5++) {
         await new Promise((res) => setTimeout(res, 300));
         r5 = /** @type {SneakReply} */
         await api("/api/sneak/read", body2);
       }
-      if (n4 !== seq3.current) return null;
+      if (n4 !== seq2.current) return null;
       setReply(r5);
       return r5;
     }
@@ -34407,7 +34407,7 @@ ${s5}`;
         setDraft(null);
       }
       if (t47.trim().length < 2) {
-        seq3.current++;
+        seq2.current++;
         setReply(null);
         return;
       }
@@ -34444,7 +34444,7 @@ ${s5}`;
         setDone({ text: res.message || "Not changed.", ok: false });
         return;
       }
-      seq3.current++;
+      seq2.current++;
       setText("");
       setReply(null);
       setClosing("");
@@ -34503,7 +34503,7 @@ ${s5}`;
       }
       draftStat(d5.feature, "used");
       setDraft(null);
-      seq3.current++;
+      seq2.current++;
       setText("");
       setReply(null);
       const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
@@ -34657,7 +34657,7 @@ ${s5}`;
           setClosing,
           onMake: () => make(r4, closing),
           onNot: () => {
-            seq3.current++;
+            seq2.current++;
             setReply(null);
             setText("");
             setShown(false);
@@ -42118,6 +42118,8 @@ ${s5}`;
       if (card && DRAFTKIND["client-bulk"] && !card.querySelector("[data-drcmall]") && draftOn("client")) addHTML(card, "beforeend", html`<div class="drstale">${raw(draftBtn("client-bulk", "Draft all", "Draft client wording for each of them, as proposals in Review (each approved on its own)", `data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`);
     }
   }
+  var slashOn = (t47) => !!t47 && /** @type {Element} */
+  t47.getAttribute?.("aria-expanded") === "true";
   function bootProjects0029() {
     document.addEventListener("keydown", (e4) => {
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches(".rkrow[data-open]")) e4.target.click();
@@ -42917,7 +42919,7 @@ ${s5}`;
     document.addEventListener("keydown", (e4) => {
       if (!(e4.target.classList && e4.target.classList.contains("rted") && e4.target.closest(".curpanes"))) return;
       const mod = e4.metaKey || e4.ctrlKey;
-      if (e4.target.getAttribute("aria-expanded") === "true" && (e4.key === "Escape" || e4.key === "Tab")) return;
+      if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab")) return;
       if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
@@ -43588,7 +43590,7 @@ ${pre}**Current state title:** ${title}`);
       if (!shared.EV || e4.isComposing) return;
       const p6 = $("#evPanel"), root = evRoot(shared.EV.which);
       const inside = p6 && p6.contains(e4.target) || root && root.contains(e4.target) || shared.EV.which === "ed" && e4.target.id === "curEd";
-      if (e4.target.getAttribute && e4.target.getAttribute("aria-expanded") === "true" && (e4.key === "Escape" || e4.key === "Tab")) return;
+      if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab")) return;
       if (e4.key === "Escape" && (inside || !document.querySelector("dialog[open]"))) {
         e4.preventDefault();
         e4.stopImmediatePropagation();
@@ -45212,7 +45214,7 @@ ${pre}**Current state title:** ${title}`);
     );
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
-    const seq3 = A2(0), mail = A2(
+    const seq2 = A2(0), mail = A2(
       /** @type {HTMLDivElement | null} */
       null
     ), back2 = A2(
@@ -45237,10 +45239,10 @@ ${pre}**Current state title:** ${title}`);
         setErr("Draft chase needs the live server: start it, then try again.");
         return void 0;
       }
-      const n4 = ++seq3.current;
+      const n4 = ++seq2.current;
       const t47 = setTimeout(async () => {
         const r4 = await api("/api/chase/pane", { id: id2, hour: (/* @__PURE__ */ new Date()).getHours(), ...opts });
-        if (n4 !== seq3.current) return;
+        if (n4 !== seq2.current) return;
         if (!r4 || r4.ok === false) {
           setErr(r4 && r4.message || "The item couldn't be read.");
           return;
@@ -55460,15 +55462,15 @@ ${d5.text}`);
       $("#vsChips").textContent = "";
       return;
     }
-    const seq3 = ++SRCH.seq;
+    const seq2 = ++SRCH.seq;
     $("#vsNote").textContent = "Searching…";
     try {
       const res = await searchFetch(q5, SRCH.skip);
-      if (seq3 !== SRCH.seq) return;
+      if (seq2 !== SRCH.seq) return;
       SRCH.res = res;
       vsRender();
     } catch (e4) {
-      if (seq3 === SRCH.seq) {
+      if (seq2 === SRCH.seq) {
         $("#vsNote").textContent = oneLine(e4.message);
       }
     }
@@ -56459,11 +56461,11 @@ ${d5.text}`);
     log.querySelectorAll(".mday").forEach((x5) => x5.remove());
     const msgs = [...log.children].filter((e4) => e4.classList.contains("msg"));
     if (!msgs.length) return;
-    const seq3 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
-    if (head) seq3.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
-    if (!seq3.length || !head && new Set(seq3.map((x5) => x5.day)).size < 2) return;
+    const seq2 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
+    if (head) seq2.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
+    if (!seq2.length || !head && new Set(seq2.map((x5) => x5.day)).size < 2) return;
     let prev = null;
-    seq3.forEach((x5) => {
+    seq2.forEach((x5) => {
       if (x5.day === prev) return;
       prev = x5.day;
       const m5 = document.createElement("div");

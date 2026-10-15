@@ -106,6 +106,8 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
     mvBindScroll($("#v-cockpit")); paintIcons($("#mvCard"));   /* BL-245 */
     const h=[...$$("#v-cockpit .card>h2")].find(x=>x.textContent==="Client messaging"), card=h&&h.parentElement;
     if(card&&DRAFTKIND["client-bulk"]&&!card.querySelector("[data-drcmall]")&&draftOn("client")) addHTML(card,"beforeend",html`<div class="drstale">${raw(draftBtn("client-bulk","Draft all","Draft client wording for each of them, as proposals in Review (each approved on its own)",`data-drcmall="${esc(code)}"`))}<span class="drbst" role="status"></span></div>`); } }   /* BL-219 */
+/** #122 B: the editor the key is in has its / menu open (SlashMenu sets aria-expanded on the text) @param {EventTarget|null} t */
+const slashOn=t=>!!t&&/** @type {Element} */(t).getAttribute?.("aria-expanded")==="true";
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0029(){
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches(".rkrow[data-open]")) e.target.click(); });   /* BL-300 */
@@ -345,7 +347,7 @@ document.addEventListener("input",e=>{ if(shared.CURED&&e.target.classList&&e.ta
 document.addEventListener("focusin",e=>{ const ed=e.target.closest&&e.target.closest(".curpanes .rted"); if(ed&&shared.CURED) shared.CURED.last=ed.id==="curEd2"?2:1; });
 document.addEventListener("keydown",e=>{
   if(!(e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes"))) return; const mod=e.metaKey||e.ctrlKey;   /* ⌘K stays the palette; ⌘⇧K and ⌘⇧X are the shared bar's (#122) */
-  if(e.target.getAttribute("aria-expanded")==="true"&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open: Esc closes it and Tab inserts the row (components/SlashMenu.jsx), not cancel or indent */
+  if(slashOn(e.target)&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open: Esc closes it and Tab inserts the row (components/SlashMenu.jsx), not cancel or indent */
   if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); cancelCurEdit(); }
   else if(mod&&e.key==="Enter"){ e.preventDefault(); saveCurEdit(); }
   else if(e.key==="Tab"&&getSelection().anchorNode&&(getSelection().anchorNode.parentElement||{}).closest&&getSelection().anchorNode.parentElement.closest("li")){ e.preventDefault(); rteCmd(e.shiftKey?"outdent":"indent"); } },true);
@@ -602,7 +604,7 @@ document.addEventListener("mouseover",e=>{ const sp=e.target.closest&&e.target.c
   if(sp&&root) claimSpans(root,sp.dataset.c).forEach(s=>s.classList.add("hov")); });
 document.addEventListener("keydown",e=>{ if(!shared.EV||e.isComposing) return; const p=$("#evPanel"), root=evRoot(shared.EV.which);
   const inside=(p&&p.contains(e.target))||(root&&root.contains(e.target))||(shared.EV.which==="ed"&&e.target.id==="curEd");
-  if(e.target.getAttribute&&e.target.getAttribute("aria-expanded")==="true"&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open */
+  if(slashOn(e.target)&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open */
   if(e.key==="Escape"&&(inside||!document.querySelector("dialog[open]"))){ e.preventDefault(); e.stopImmediatePropagation(); evPanelClose(); return; }
   if(e.key==="Tab"&&inside&&!(e.target.id==="evNote")&&!e.metaKey&&!e.ctrlKey&&!e.altKey){ e.preventDefault(); e.stopImmediatePropagation(); evMove(e.shiftKey?-1:1); } },true);
 document.addEventListener("input",e=>{ if(e.target.closest&&e.target.closest("#curEd")){ claimTrack(); if(shared.CURED&&shared.CURED.claims) claimPaint("ed"); } });   /* BL-301 A: a redrawn sentence is painted again */
