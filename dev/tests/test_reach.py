@@ -205,6 +205,29 @@ class ReachOneDrive(OneDriveCase):
         self.assertEqual(self.kind(eng / "zz Archive/old.md", "read"), ["never", "zz Archive is never read or written by creaite"])
         self.assertEqual(self.kind(eng / "CLAUDE.md", "change")[0], "sensitive")
 
+    def test_a_note_is_what_notes_note_of_accepts(self):
+        """BL-301 (Alan, 15-10-2026): reach.is_note, the notes exemption from outside content (reach.read_reason), is notes.note_of on the real path;
+        reading a note marks nothing, while its pictures, a subfolder and a transcript still do. Changing a note is unchanged."""
+        eng, notes = self.root / "Example Programme", self.root / "Example Programme/08 Notes"
+        cases = {str(touch(notes / "Kickoff.md", "x")): True, str(touch(self.root / "_Portfolio/08 Notes/Themes.md", "x")): True,
+                 str(touch(notes / "_images/a.png", "x")): False, str(touch(notes / "_images/a.md", "x")): False,
+                 str(touch(notes / "Old/b.md", "x")): False, str(touch(notes / "c.txt", "x")): False,
+                 str(touch(eng / "03 Delivery/Design/d.md", "x")): False,
+                 str(touch(eng / "02 Meetings/Transcripts/t.vtt", "WEBVTT\n")): False}
+        got = self.py("import reach, notes\n"
+                      f"ps = {list(cases)!r}\n"
+                      "print(json.dumps([[reach.is_note(reach.real(p)), notes.note_of(p) is not None] for p in ps]))")
+        self.assertEqual(got, [[want, want] for want in cases.values()])
+        table = {"folders": ["inbox", "transcripts", "documents"], "outside_vault": True, "notes_exempt": True}
+        got = self.py("import reach\n"
+                      f"t = {table!r}\n"
+                      f"ps = {list(cases)!r}\n"
+                      "print(json.dumps([reach.read_reason(p, t) for p in ps]))")
+        self.assertEqual(got, [None, None, "read a project document", "read a project document", "read a project document",
+                               "read a project document", "read a project document", "read a transcript"])
+        self.assertEqual(self.kind(notes / "Kickoff.md", "change"), ["ordinary", ""])
+        self.assertEqual(self.kind(notes / "Kickoff.md", "change", marked=True)[0], "sensitive")
+
     def test_the_rest_of_the_home_folder_is_outside_the_projects(self):
         self.assertEqual(self.kind(self.home / "Documents/x.md", "create"), ["sensitive", "it is outside the vault and the projects folder"])
 

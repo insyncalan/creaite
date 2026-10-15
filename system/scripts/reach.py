@@ -481,7 +481,7 @@ def is_marked(data=None):
 
 def outside_reason(tool, inp, outside):
     """Why this tool call reads outside content, or None. `outside` is the run's table (OUTSIDE_CONTENT in live_server.py):
-    {tools: [names], folders: [inbox, transcripts, documents], outside_vault: bool}."""
+    {tools: [names], folders: [inbox, transcripts, documents], outside_vault: bool, notes_exempt: bool}."""
     tools = set((outside or {}).get("tools") or [])
     if tool in tools:
         return f"used {tool.rsplit('__', 1)[-1]}"
@@ -493,10 +493,21 @@ def outside_reason(tool, inp, outside):
         except (OSError, ValueError, RuntimeError):  # BL-228: an unresolvable search path; its paths are still checked below
             pass
     for p in tool_paths(tool, inp):
-        why = folder_reason(p, outside)
+        why = read_reason(p, outside)
         if why:
             return why
     return None
+
+
+def read_reason(path, outside):
+    """folder_reason, except that with the table's notes_exempt one of Alan's notes is not outside content (BL-301; Alan,
+    15-10-2026): reading it marks nothing. A path that can't be resolved is left to folder_reason."""
+    try:
+        if (outside or {}).get("notes_exempt") and is_note(real(path)):
+            return None
+    except (OSError, ValueError, RuntimeError):  # an unresolvable path is no note: folder_reason judges it as before
+        pass
+    return folder_reason(path, outside)
 
 
 def folder_reason(path, outside):
@@ -521,6 +532,17 @@ def folder_reason(path, outside):
     if (outside or {}).get("outside_vault") and in_reach(p) == ["home"]:
         return "read a file outside the vault"
     return None
+
+
+def is_note(p):
+    """BL-301 (Alan, 15-10-2026): whether the real path p (symlinks already resolved) is one of Alan's notes, a .md file directly
+    in a project's or the portfolio's notes folder, exactly as notes.note_of accepts it. Its _images/, a file in a subfolder and
+    anything else are not; so a link named like a note is judged by what it points at. Fails closed (not a note)."""
+    try:
+        import notes
+        return notes.note_of(str(p)) is not None
+    except (OSError, LookupError, ValueError, RuntimeError):  # fails closed: not a note, so the read still marks
+        return False
 
 
 SHELL_OUT = set(";&|<>(){}\n\r")
