@@ -71,8 +71,9 @@ class Base(LiveBrowserCase):
         return self.b.eval(f"({PAINT})({json.dumps(sel)}, {json.dumps(prop)})")
 
 
-# Under the bar and held for a decision (kind, palette, mode): see test_held_the_brightwater_light_now_line
-HELD = {("now-line", "Brightwater", "light")}
+# Nothing is held: Brightwater light's sun (--day-sun, shared by the Now dot, the "Now" label and the ripple) went from
+# #AB72FB (2.78:1) to #A26DED (3.06:1), same hue (Alan, 15-10-2026, #81)
+HELD = set()
 
 
 class PastTimeContrast(Base):
@@ -113,12 +114,6 @@ class PastTimeContrast(Base):
         low = [x for x in self.low(self.measure()) if x[:3] not in HELD]
         self.assertEqual(len(theme_names()), 9)
         self.assertEqual([x[3] for x in low], [])
-
-    @unittest.expectedFailure
-    def test_held_the_brightwater_light_now_line(self):
-        """Held, not fixed (plan #81): the sun is --day-sun, which the Now dot and the "Now" label share, so raising it to 3:1
-        would change them too; Jarvis decides. Remove HELD and this test when it is fixed (an unexpected pass fails the run)."""
-        self.assertEqual([x[3] for x in self.low(self.measure()) if x[:3] in HELD], [])
 
     def test_the_past_words_are_a_colour_not_a_fade(self):
         """Preferred over an opacity: the dimmed words take a token colour, so what they are drawn in is the colour measured."""
