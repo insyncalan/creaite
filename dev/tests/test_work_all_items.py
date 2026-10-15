@@ -30,6 +30,9 @@ def load(v):
     with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:
         con.execute("UPDATE decisions SET status='Withdrawn', date=NULL WHERE id=(SELECT id FROM decisions WHERE decision='Decision number 05')")
         con.commit()
+    # BL-327: the server's first page is the last built dashboard.html while the records' version (change_log, applies) is
+    # unchanged, and a direct edit doesn't move it; build the page again so it shows the edit
+    v.run("build_dashboard.py", script="build_dashboard.py")
 
 
 def expected(v):
