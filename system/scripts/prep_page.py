@@ -413,7 +413,8 @@ def hold_confidential(reply, held=None):
         return reply, 0
     out, dropped = dict(reply), 0
     if isinstance(reply.get("notes"), list):
-        keep = [n for n in reply["notes"] if not (isinstance(n, dict) and (_leaks(n.get("source"), held, True) or _leaks(n.get("text"), held)))]
+        keep = [n for n in reply["notes"]
+                if not (isinstance(n, dict) and (_leaks(n.get("source"), held, True) or _leaks(n.get("text"), held)))]
         dropped += len(reply["notes"]) - len(keep)
         out["notes"] = keep
     if isinstance(reply.get("questions"), list):
