@@ -10,6 +10,10 @@ hook, as Claude Code runs it, every form A5's table covers, in all three modes, 
 the lookalikes ask creaite legitimately sends (search text with / : , and =, URLs, a ~/Documents path, an option's value in the
 vault). The one narrow over-refusal is written down: a separator directly followed by a path outside reach, inside free text.
 
+The read commands that write a file: propose.py new-project, close-project, archive, restore and old-archives (--out) write
+only a bare file name directly in system/staging/drafts/; tracker.py validate, which writes its findings back into the file it is
+given, runs only on a proposal in system/staging/ in every ask mode.
+
 `reach.py wrap` and `reach.py hook` are refused in every ask mode: wrap ran the command it wrapped after the record gate had
 judged the wrapper (`reach.py wrap tracker.py apply` passed a plain chat). `reach.py classify` and `never` still run.
 
@@ -236,6 +240,117 @@ class Handover(HookCase):
         self.assertEqual(code, 2)
         self.assertIn("changes the record", why)
         self.assertEqual(self.hook("confirmed", "system/scripts/run tracker.py apply")[0], 0)
+
+
+class ValidateOnlyInStaging(unittest.TestCase):
+    """The one READ command that writes into a file it is given: tracker.py validate rewrites its proposal with its findings. It
+    runs only on a proposal in system/staging/, in every ask mode; elsewhere it is refused."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.v = Vault()
+        cls.v.run("init")
+        cls.root = cls.v.root
+        cls.prop = cls.v.propose("x", [])
+        (cls.root / "system/staging/drafts").mkdir(parents=True, exist_ok=True)
+        cls.home = Path(tempfile.mkdtemp(prefix="ask-validate-home-")).resolve()
+        cls.outside = cls.home / "Documents"                 # in reach (the home folder), so only the validate rule refuses it
+        cls.outside.mkdir()
+        cls.env = {**os.environ, "HOME": str(cls.home)}
+        (cls.outside / "spec.json").write_text('{"items": [], "note": "kept as it is"}')
+        os.symlink(cls.outside / "spec.json", cls.root / "system/staging/proposed-link.json")
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.v.cleanup()
+        shutil.rmtree(cls.home, ignore_errors=True)
+
+    def hook(self, mode, command):
+        r = subprocess.run(["/bin/sh", "system/scripts/run", "reach.py", "hook", "--run", "r-validate", "--mode", mode],
+                           cwd=self.root, capture_output=True, text=True, timeout=60, env=self.env,
+                           input=json.dumps({"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}}))
+        return r.returncode, r.stderr.strip()
+
+    def test_validate_rewrites_the_file_it_is_given(self):
+        """Why the guard restricts it: run directly, validate rewrites a JSON file outside staging."""
+        f = self.outside / "plain.json"
+        f.write_text('{"items": []}')
+        self.v.run("validate", str(f), ok=False, cwd=self.root)
+        self.assertNotEqual(f.read_text(), '{"items": []}')
+
+    def test_outside_staging_is_refused(self):
+        for target in (".claude/settings.json", "system/config/settings.json", str(self.outside / "spec.json"),
+                       "system/staging/proposed-link.json", "proposed-link.json"):
+            for mode in MODES:
+                with self.subTest(target=target, mode=mode):
+                    code, why = self.hook(mode, f"system/scripts/run tracker.py validate {target}")
+                    self.assertEqual(code, 2, why)
+                    self.assertIn("runs only on a proposal in system/staging/", why)
+
+    def test_a_proposal_in_staging_runs(self):
+        for target in (str(self.prop.relative_to(self.root)), self.prop.name, "proposed-missing.json"):
+            for mode in MODES:
+                with self.subTest(target=target, mode=mode):
+                    self.assertEqual(self.hook(mode, f"system/scripts/run tracker.py validate {target}"), (0, ""))
+
+
+class ReadCommandsWriteOnlyDrafts(unittest.TestCase):
+    """The READ commands whose --out saves a spec (propose.emit_spec): a bare name lands directly in system/staging/drafts/, and a
+    path, a hidden name or a folder is refused with nothing written."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.v = Vault()
+        cls.v.run("init")
+        cls.root = cls.v.root
+        cls.drafts = cls.root / "system/staging/drafts"
+        cls.outside = Path(tempfile.mkdtemp(prefix="ask-out-")).resolve()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.v.cleanup()
+        shutil.rmtree(cls.outside, ignore_errors=True)
+
+    def files(self):
+        every = {p for p in self.root.rglob("*") if p.is_file() and "__pycache__" not in p.parts and "logs" not in p.parts}
+        return every | {p for p in self.outside.rglob("*")}
+
+    def propose(self, *args):
+        return self.v.run(*args, script="propose.py", ok=False, cwd=self.root)
+
+    COMMANDS = (("new-project", "--code", "DEF", "--name", "Digital Enablement", "--out"), ("close-project", "ABC", "--out"),
+                ("archive", "ABC", "--cancel-open", "--out"), ("restore", "ABC", "--out"))
+
+    def test_a_bare_name_lands_in_drafts(self):
+        r = self.propose("new-project", "--code", "DEF", "--name", "Digital Enablement", "--out", "np.json")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((self.drafts / "np.json").is_file())
+        self.assertIn("Spec saved: system/staging/drafts/np.json", r.stdout)
+
+    def test_a_path_is_refused_and_nothing_is_written(self):
+        for base in self.COMMANDS:
+            for out in (str(self.outside / "x.json"), "../x.json", "../../x.json", "~/x.json", "sub/x.json", ".x.json", "..",
+                        "system/staging/proposed-x.json", f"{self.outside}/../x.json"):
+                with self.subTest(cmd=base[0], out=out):
+                    before = self.files()
+                    r = self.propose(*base, out)
+                    self.assertNotEqual(r.returncode, 0, f"{base} {out}: {r.stdout}")
+                    self.assertEqual(self.files() - before, set(), f"{base} {out} wrote a file")
+
+    def test_every_saving_read_command_goes_through_emit_spec(self):
+        """Every READ command of propose.py that takes --out saves through emit_spec (its one confined writer)."""
+        src = (self.root / "system/scripts/propose.py").read_text(encoding="utf-8")
+        writer = src[src.index("def emit_spec"):src.index("def cmd_new_project")]
+        self.assertIn("name != out or name.startswith(\".\")", writer)
+        self.assertIn("paths.DRAFTS / f\"{stem}.json\"", writer)
+        for fn in ("def cmd_new_project", "def cmd_close_project", "def archive_cli", "def cmd_old_archives"):
+            body = src[src.index(fn):]
+            body = body[:body.index("\ndef ", 1)]
+            self.assertIn("emit_spec(", body, fn)
+            self.assertNotIn("write_text(", body, fn)
+        arch = (self.root / "system/scripts/archive.py").read_text(encoding="utf-8")       # archive.py reports --out
+        at = arch.index('argv.index("--out") + 1]')
+        self.assertIn("return propose.emit_spec(spec, out)", arch[at:at + 300], "archive.py reports --out saves through emit_spec")
 
 
 if __name__ == "__main__":
