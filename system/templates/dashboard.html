@@ -3899,6 +3899,7 @@ button.nchip{font:inherit;font-size:12px}
     bootIntake0137: () => bootIntake0137,
     bootKeyboard: () => bootKeyboard,
     bootLive: () => bootLive,
+    bootLostClick: () => bootLostClick,
     bootMeetings0125: () => bootMeetings0125,
     bootMeetings0126: () => bootMeetings0126,
     bootMeetings0143: () => bootMeetings0143,
@@ -5948,6 +5949,48 @@ button.nchip{font:inherit;font-size:12px}
       if (k5 && !b5.dataset.key) b5.dataset.key = k5[1];
       b5.removeAttribute("title");
     });
+  }
+  var PRESS = { key: null, el: null, sent: false };
+  function bootLostClick() {
+    document.addEventListener("mousedown", (e4) => {
+      PRESS.key = null;
+      PRESS.el = null;
+      PRESS.sent = false;
+      if (e4.button !== 0 || !e4.target.closest) return;
+      const r4 = e4.target.closest("[data-row]");
+      if (r4) {
+        PRESS.key = r4.dataset.row;
+        PRESS.el = e4.target;
+      }
+    }, true);
+    document.addEventListener("mouseup", (e4) => {
+      const el2 = PRESS.el, key = PRESS.key;
+      if (!e4.isTrusted || e4.button !== 0 || el2 == null || key == null || el2.isConnected || !e4.target.closest) return;
+      const landed = e4.target.closest("[data-row]");
+      if (!landed || landed.dataset.row !== key) return;
+      PRESS.sent = true;
+      setTimeout(() => e4.target.isConnected && e4.target.dispatchEvent(new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        detail: e4.detail || 1,
+        clientX: e4.clientX,
+        clientY: e4.clientY,
+        screenX: e4.screenX,
+        screenY: e4.screenY,
+        ctrlKey: e4.ctrlKey,
+        shiftKey: e4.shiftKey,
+        altKey: e4.altKey,
+        metaKey: e4.metaKey,
+        button: 0
+      })), 0);
+    }, true);
+    document.addEventListener("click", (e4) => {
+      if (PRESS.sent && e4.isTrusted) {
+        PRESS.sent = false;
+        e4.stopImmediatePropagation();
+      }
+    }, true);
   }
   function bootTooltips() {
     paintIcons();
@@ -60156,6 +60199,7 @@ ${d5.text}`);
   bootDialogs();
   bootTooltips();
   bootAiSelect();
+  bootLostClick();
   bootDevTag();
   bootRail0007();
   bootTheme();
