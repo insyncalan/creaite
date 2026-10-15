@@ -7,7 +7,8 @@ LaunchAgents, a shell start-up file, browser logins), so the home-folder rules a
 the real home folder:
 - decisions: reach.classify (paths × operations, marked or not, a bulk count), reach.tier, reach.bash_problem,
   reach.hook_decision (tool calls in both modes), reach.decide (#60 option (a): ask and the Prep page run's mode "prep",
-  with a notes folder holding a confidential note; #60 follow-ups: "held", and "sweep" with and without --held), permissions.check_full (rules), permissions.settings_problem and
+  with a notes folder holding a confidential note; #60 follow-ups: "held", and "sweep" with and without --held), live_server.held_run (#60: which runs get that guard, by kind; Search's answer like
+  ask creaite), permissions.check_full (rules), permissions.settings_problem and
   validate_edit (edited settings files), permissions.preview_list (list edits);
 - flows, end to end through the command lines: filechange.py create, edit, move, delete, a settings file, outside the
   vault, a never path, list and undo; permissions.py edit, list and undo; begin_file_edit and finish_file_edit (kept,
@@ -175,6 +176,16 @@ for spec in ["settings add allow Bash(python3 system/scripts/report.py *)", "set
         out["preview_list"][spec] = f"exit: {e}"
     except Exception as e:
         out["preview_list"][spec] = f"raised {type(e).__name__}: {e}"
+# #60 (Alan, 15-10-2026): which runs creaite starts get the confidential-note guard (live_server.held_run), by kind; Search's
+# answer like ask creaite
+import live_server as L
+out["held_run"] = {}
+for kind in ("ask", "search", "prep", "generate", "check", "load", "sweep", "shape-closed", "edit-ai", "notes-find"):
+    for confirmed, only, sweep in ((None, None, False), ("Close ABC-A-001", None, False), (None, L.ALERT_DRAFT_TOOLS, False),
+                                   (None, None, True)):
+        tools = L.run_policy("sweep" if sweep else kind, confirmed, only)[0]
+        out["held_run"][f"{kind} | confirmed={bool(confirmed)} | only={only is not None} | sweep={sweep}"] = \
+            L.held_run(kind, confirmed, only, sweep, tools)
 print(json.dumps(out, sort_keys=True, ensure_ascii=False, default=str))
 '''
 
