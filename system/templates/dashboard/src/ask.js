@@ -2,6 +2,7 @@
 /* ask.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0080-search-bl-07.js, 0085-ad-hoc-documents-and-permission-requests.js, 0086-bl-140-sprint-admin.js, 0087-bl-141-sprint-admin-what-ask-creaite-cha.js, 0088-bl-141-sprint-admin-the-one-card.js, 0089-bl-258-sprint-ask-flow.js, 0090-bl-194-sprint-ask-creaite-access-the-car.js, 0092-ask-creaite.js, 0093-bl-262-sprint-ask-flow.js, 0094-after-bl-262.js, 0095-bl-211-sprint-ui-audit.js, 0096-chat-and-sweep-markdown-in-the-chat-bl-1.js, 0097-bl-196-sprint-chat-text.js, 0098-bl-120-sprint-polish.js, 0100-chat-and-sweep-a-time-under-each-bubble.js, 0101-after-chat-and-sweep-times.js, 0102-bl-257-sprint-ask-flow.js, 0103-bl-262-sprint-ask-flow.js, 0104-after-bl-262.js, 0105-bl-139-sprint-final.js, 0106-after-bl-139.js, 0107-bl-259-sprint-ask-flow.js, 0108-after-bl-259.js, 0109-images-in-ask-creaite-bl-100.js, 0110-bl-201-sprint-chat-text.js, 0111-after-bl-201.js, 0112-bl-199-sprint-chat-text.js, 0113-after-bl-199.js, 0114-bl-145-fix-chat-box.js, 0117-after-bl-145.js, 0118-bl-148-sprint-ux.js, 0119-after-bl-148.js, 0120-command-palette.js, 0207-bl-205-sprint-insight.js, 0208-bl-206-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { resumeDeleteNote } from "./components/notes/DeleteNote.jsx";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
 import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
@@ -262,7 +263,8 @@ export async function editFlow(c,o={}){
     acts.textContent="Not applied"; addEl("msg a info",html`${oneLine(r.message||"Not applied")}`); return; } }
 export async function pendingEdit(){ if(!viaServer()) return; const r=await api("/api/edit/pending",{}); if(!r.ok||!r.card) return;
   if(r.card.chat&&r.card.chat!==shared.ASKCHAT){ setChat(r.card.chat,r.card.chat); await loadChat(r.card.chat,true); }
-  openChat(); editFlow(r.card); }
+  openChat(); if(resumeDeleteNote(r.card)) return;   /* #124: a Delete note card this tab started is watched as the first time */
+  editFlow(r.card); }
 /* #124 Delete note: a card the server made for the page's own action (a note's move into _Archive), shown in ask creaite and
    answered there like any change card. Resolves to {apply} (the apply's number, for Undo) once Approve has applied it, else
    null (rejected, failed, or only staged for Review when another job was writing). */

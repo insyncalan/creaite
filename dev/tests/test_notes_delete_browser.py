@@ -110,6 +110,63 @@ class NotesDeleteBrowser(LiveBrowserCase):
         self.assertTrue(f.is_file())                                                       # Undo: back in its notes folder
         b.wait(f"[...document.querySelectorAll('.nlist .ni b')].some(x=>x.textContent==={json.dumps(WS)})", 15)
 
+    def real_lines(self):
+        """The lines tracker._reverse_move really writes, for names with ' as ', quotes and colons: [(name, case, lines)]."""
+        import subprocess
+        names = ["Plan as built", 'Say "as is": a note', "Notes as a as b"]
+        code = ("import sys, json, pathlib; sys.path.insert(0, 'system/scripts')\nimport paths, reach, tracker\n"
+                f"notes = pathlib.Path({str(self.notes_dir())!r}); arch = notes.parent / '_Archive' / 'notes'; arch.mkdir(parents=True, exist_ok=True)\n"
+                f"out = []\nfor n in {names!r}:\n"
+                "    def run(on):\n        reach.NOTES_BACK_RENAMES = on; rep = []\n"
+                "        tracker._reverse_move({'from': paths.rel(notes / (n + '.md')), 'to': paths.rel(arch / (n + '.md')), 'kind': 'notes'}, rep)\n"
+                "        return rep\n"
+                "    (arch / (n + '.md')).write_text('x'); (notes / (n + '.md')).write_text('y')\n"
+                "    out.append([n, 'renamed', run(True), (notes / (n + '-2.md')).is_file()])\n"
+                "    (notes / (n + '-2.md')).unlink(); (notes / (n + '.md')).write_text('y'); (arch / (n + '.md')).write_text('x')\n"
+                "    out.append([n, 'taken', run(False), None])\n"
+                "    (notes / (n + '.md')).unlink(); (arch / (n + '.md')).unlink()\n"
+                "    out.append([n, 'missing', run(True), None])\n"
+                "print(json.dumps(out))")
+        r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=self.v.root)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout.strip().splitlines()[-1])
+
+    def words(self):
+        b = self.b
+        self.assertEqual(b.eval("[undoWords({ok:true,moves:[]},'A'), undoWords({ok:true,moves:['odd line']},'A'), undoWords({ok:false,message:'No'},'A')]"),
+                         ["“A” is back in its notes folder", "Undo did not restore the note: see Files › Archived", "No"])
+        for name, case, lines, made in self.real_lines():
+            got = b.eval(f"undoWords({{ok:true,moves:{json.dumps(lines)}}},{json.dumps(name)})")
+            want = {"renamed": f"Restored “{name}” as {name}-2.md: a note has its old name",
+                    "taken": "Not restored: a note with that name exists",
+                    "missing": "Not restored: the archived note is no longer there"}[case]
+            self.assertEqual(got, want, (name, case, lines))
+            if case == "renamed":
+                self.assertTrue(made, lines)
+
+    def resumed(self, title):
+        b = self.b
+        self.make(title)
+        b.eval("noteFlush()")
+        b.wait("noteSave.value.state==='saved'", 15)
+        f = self.notes_dir() / f"{title}.md"
+        self.open_box()
+        b.click("#ndelGo")
+        b.wait("[...document.querySelectorAll('#chLog .edcard')].pop().querySelector('[data-ed=\"approve\"]')", 15)
+        b.reload("typeof go==='function' && LIVE")                                          # reload while the card waits
+        b.eval("go('notes','ABC')")
+        b.wait(f"noteCur.value&&noteCur.value.note.title==={json.dumps(title)}", 20)
+        b.wait("!!document.querySelector('#chLog .edcard [data-ed=\"approve\"]')", 20)
+        b.wait("!!document.querySelector('.nheld')", 10)                                    # read only again
+        self.assertEqual(b.eval("document.querySelector('.nbody.ProseMirror').getAttribute('contenteditable')"), "false")
+        b.click("#chLog .edcard:last-of-type [data-ed=\"approve\"]")
+        b.wait("!noteCur.value||noteCur.value.note.title!==" + json.dumps(title), 20)       # the note closes
+        b.wait("document.querySelector('.snack') && document.querySelector('.snack').textContent.includes('to the archive')", 10)
+        self.assertFalse(f.exists())
+        b.pump(1.0)
+        text = b.eval("[...document.querySelectorAll('.snack,.nmsg,.nhead,.nbody')].map(x=>x.textContent).join(' | ')")
+        self.assertNotIn("isn't there any more", text)                                      # no 404 on a later save
+
     def held(self, title):
         b = self.b
         self.make(title)
@@ -127,10 +184,7 @@ class NotesDeleteBrowser(LiveBrowserCase):
         b.click("#chLog .edcard:last-of-type [data-ed=\"reject\"]")
         b.wait("!document.querySelector('.nheld')", 10)
         self.assertEqual(b.eval("document.querySelector('.nbody.ProseMirror').getAttribute('contenteditable')"), "true")
-        words = b.eval("[undoWords({ok:true,moves:[]},'A'), undoWords({ok:true,moves:['restored x as A-2.md: a note took its name']},'A'),"
-                       "undoWords({ok:true,moves:['skipped moving y back: x is there again']},'A')]")
-        self.assertEqual(words, ["“A” is back in its notes folder", "Restored “A” as A-2.md: a note has its old name",
-                                 "Not restored: a note with that name exists"])
+        self.words()
         b.click("#chatClose")
         b.wait("!document.getElementById('chat').classList.contains('on')")
 
@@ -168,6 +222,14 @@ class NotesDeleteBrowser(LiveBrowserCase):
         self.b.resize(900, 1000)
         self.b.wait("innerWidth===900")
         self.held("Held at 900")
+
+    def test_resumed_card_after_a_reload(self):
+        self.resumed("Reloaded at 1400")
+
+    def test_resumed_card_after_a_reload_at_900(self):
+        self.b.resize(900, 1000)
+        self.b.wait("innerWidth===900")
+        self.resumed("Reloaded at 900")
 
     def test_archived_rows_keyed_by_their_place(self):
         self.archived_rows("Same at 1400")
