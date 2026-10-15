@@ -33,6 +33,7 @@ class ChatFocusReturn(LiveBrowserCase):
         self.open_with_slash()
         b.key("Escape")
         b.wait(f"!{CHAT_ON}")
+        b.wait("document.activeElement.matches('.rail button[data-v=\"people\"]')")      # focus comes back a moment after the panel closes
         self.assertTrue(b.eval("document.activeElement.matches('.rail button[data-v=\"people\"]')"))
 
     def test_a_work_row_and_the_close_button(self):
@@ -43,6 +44,7 @@ class ChatFocusReturn(LiveBrowserCase):
         self.open_with_slash()
         b.click("#chatClose")
         b.wait(f"!{CHAT_ON}")
+        b.wait(f"document.activeElement.dataset.row==={row!r}")            # focus comes back a moment after the panel closes
         self.assertEqual(b.eval("document.activeElement.dataset.row"), row)
 
     def test_a_row_drawn_again_is_found_by_its_key(self):
@@ -54,6 +56,7 @@ class ChatFocusReturn(LiveBrowserCase):
         b.eval("renderWork()")                                           # the list is drawn again while the chat is open
         b.key("Escape")
         b.wait(f"!{CHAT_ON}")
+        b.wait(f"document.activeElement.dataset.row==={row!r}")
         self.assertEqual(b.eval("document.activeElement.dataset.row||document.activeElement.tagName"), row)
 
     def test_the_opener_gone_goes_quietly_to_the_page(self):          # BL-312: was the heading (BL-211)

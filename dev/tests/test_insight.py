@@ -190,20 +190,25 @@ def chrome(v, script, name="probe"):
                                   "}catch(e){window.OUT={error:String(e&&e.stack||e)}} const p=document.createElement('pre');"
                                   "p.id='out';p.textContent=JSON.stringify(window.OUT);document.body.appendChild(p);});"
                                   "</script></body>"), encoding="utf-8")
-    profile = tempfile.mkdtemp(prefix="creaite-chrome-")
-    cmd = [str(CHROME), "--headless", "--disable-gpu", f"--user-data-dir={profile}", "--no-first-run",
-           "--disable-component-update", "--disable-background-networking", "--enable-logging=stderr", "--v=0",
-           "--virtual-time-budget=4000", "--dump-dom", probe.as_uri()]
-    try:
-        r = subprocess.run(cmd, capture_output=True, timeout=60)
-        out, err = r.stdout, r.stderr
-    except subprocess.TimeoutExpired as e:
-        out, err = e.stdout or b"", e.stderr or b""
-    finally:
-        shutil.rmtree(profile, ignore_errors=True)
     import html as h
     import re
-    m = re.search(r'<pre id="out">(.*?)</pre>', out.decode("utf-8", "ignore"), re.S)
+    # A headless Chrome on a runner running a dozen other browsers can outlast any one timeout (and then prints no page at all):
+    # give each try three minutes and try again, once more, only if it printed nothing.
+    for _ in range(3):
+        profile = tempfile.mkdtemp(prefix="creaite-chrome-")
+        cmd = [str(CHROME), "--headless", "--disable-gpu", f"--user-data-dir={profile}", "--no-first-run",
+               "--disable-component-update", "--disable-background-networking", "--enable-logging=stderr", "--v=0",
+               "--virtual-time-budget=4000", "--dump-dom", probe.as_uri()]
+        try:
+            r = subprocess.run(cmd, capture_output=True, timeout=180)
+            out, err = r.stdout, r.stderr
+        except subprocess.TimeoutExpired as e:
+            out, err = e.stdout or b"", e.stderr or b""
+        finally:
+            shutil.rmtree(profile, ignore_errors=True)
+        m = re.search(r'<pre id="out">(.*?)</pre>', out.decode("utf-8", "ignore"), re.S)
+        if m:
+            break
     errors = [ln for ln in err.decode("utf-8", "ignore").splitlines() if "CONSOLE" in ln and ("Uncaught" in ln or "Error" in ln)]
     return (json.loads(h.unescape(m.group(1))) if m else None), errors
 

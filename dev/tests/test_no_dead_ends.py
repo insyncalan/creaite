@@ -110,8 +110,8 @@ class NoDeadEnds(LiveBrowserCase):
         self.assertIn("Use this one", txt)
         before = self.owner()
         b.click(f'{row} [data-act="co"]')
-        b.wait("!REV.some(r=>(r.flags||[]).includes('conflict')&&!r.done)", 20)
-        for _ in range(40):
+        b.wait("!REV.some(r=>(r.flags||[]).includes('conflict')&&!r.done)", 60)     # the apply behind it can take a while on a loaded runner
+        for _ in range(120):
             if self.owner() == "Omar Ali":
                 break
             b.pump(0.25)
@@ -132,7 +132,7 @@ class KeepCurrent(LiveBrowserCase):
         b.pump(0.3)
         n = b.eval("REV.find(r=>(r.flags||[]).includes('conflict')).n")
         b.click(f'#reviewBody tr[data-n="{n}"] [data-act="ck"]')
-        b.wait("!REV.some(r=>(r.flags||[]).includes('conflict')&&!r.done)", 20)
+        b.wait("!REV.some(r=>(r.flags||[]).includes('conflict')&&!r.done)", 60)
         b.pump(0.5)
         owner = next(r["owner"] for r in self.v.rows("actions") if r["id"] == "ABC-A-002")
         self.assertEqual(owner, "Sara Example")

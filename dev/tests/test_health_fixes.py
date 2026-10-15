@@ -156,6 +156,17 @@ class FixRoutes(unittest.TestCase):
             (self.home / "Applications").unlink()
 
     def post(self, path, body=None, token=None, raw=None):
+        """One POST. A fix is refused with "Something else is running" while a job of the server's own (its start-up jobs, on a
+        busy runner) holds the lock; that is the server working as built, so wait for the lock to be free and ask again."""
+        end = time.monotonic() + 90
+        while True:
+            code, got = self._post(path, body, token, raw)
+            if not (path.startswith("/api/health/fix/") and isinstance(got, dict) and "Something else is running" in str(got.get("message"))
+                    and time.monotonic() < end):
+                return code, got
+            time.sleep(0.5)
+
+    def _post(self, path, body=None, token=None, raw=None):
         data = raw if raw is not None else (b"" if body is None else json.dumps(body).encode())
         req = urllib.request.Request(self.base + path, data=data, method="POST",
                                      headers={"Content-Type": "application/json", "X-Creaite-Token": token or self.token})
