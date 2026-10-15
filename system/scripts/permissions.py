@@ -597,14 +597,59 @@ def m365_problem(rule):
     return "it allows every Microsoft 365 tool, actions included" if not name else "it is a Microsoft 365 tool creaite hasn't checked"
 
 
+# ===== F3 (review #116): other MCP servers and the built-ins that act outside the laptop =====
+# Microsoft 365 is the only connector creaite has checked, tool by tool. Any other MCP server (Todoist, Claude Docs, Slides, Linear,
+# one added later) may write or act where nothing here can undo it, so no allow rule for it is written, whatever is approved. The
+# same goes for the built-in tools that act outside the laptop or the vault and that no creaite feature needs.
+MCP_SAFE = ()                                            # other MCP tools creaite has checked and allows: none
+ACTING_BUILTINS = ("EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
+                   "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments",
+                   "ArtifactData")
+NON_M365_MCP_DENY = ("mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI", "mcp__claude_ai_Linear",
+                     "mcp__claude-vscode")          # the other connectors seen on Alan's machine, whole-server deny rules
+
+
+def run_deny_extras():
+    """What a run that reads outside content denies besides the Microsoft 365 actions: the other known connectors (whole server)
+    and the acting built-ins. An unknown server isn't listed here: no allow rule for it is ever written (tool_problem)."""
+    return list(NON_M365_MCP_DENY) + list(ACTING_BUILTINS)
+
+
+def tool_problem(rule):
+    """Why an allow rule for an MCP server other than Microsoft 365, or for a built-in that acts outside the laptop, is refused
+    whatever is approved; None for anything else (Microsoft 365 rules are m365_problem's)."""
+    rule = str(rule).strip()
+    if rule.startswith(M365.rstrip("_")):
+        return None
+    if rule.lower().startswith("mcp_"):
+        if rule in MCP_SAFE:
+            return None
+        return ("it would let ask creaite write or act through another connector, which can't be undone from here; creaite "
+                "allows only the Microsoft 365 reading tools")
+    m = re.match(r"^(\w+)(?:\(.*\))?$", rule)
+    if m and m.group(1) in ACTING_BUILTINS:
+        return f"{m.group(1)} acts outside the laptop or the vault, and no creaite feature needs it"
+    return None
+
+
+def connector_problem(rule):
+    """None when the rule isn't for a connector or an acting built-in; "" for a Microsoft 365 reading tool; else why it is refused
+    whatever is approved (m365_problem or tool_problem)."""
+    if str(rule).strip().startswith(M365.rstrip("_")):
+        return m365_problem(rule) or ""
+    return tool_problem(rule)
+# ===== end F3 =====
+
+
 def broad_rule(rule):
     """Why a rule is too broad for creaite to write, or None. Blanket tool rules, the whole disk or home folder, a bare Bash
     or interpreter, anything that skips permissions."""
     rule = str(rule)
     if SKIP_WORDS.search(rule):
         return "it skips permissions"
-    if rule.strip().startswith(M365.rstrip("_")):
-        return m365_problem(rule)
+    why = connector_problem(rule)                                                 # F3: Microsoft 365, other connectors
+    if why:
+        return why
     m = re.match(r"^(\w+)(?:\((.*)\))?$", rule.strip())
     if not m:
         return "it isn't a permission rule"
@@ -726,8 +771,9 @@ def rule_refusal(rule):
     rule = normalise(str(rule))
     if SKIP_WORDS.search(rule):
         return "it skips permissions"
-    if rule.startswith(M365.rstrip("_")):
-        return m365_problem(rule)
+    why = connector_problem(rule)                                                 # F3: Microsoft 365, other connectors
+    if why:
+        return why
     m = re.match(r"^(\w+)(?:\((.*)\))?$", rule)
     if not m:
         return "it isn't a permission rule"
