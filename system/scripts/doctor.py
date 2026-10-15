@@ -297,8 +297,8 @@ def assistant_permissions():
     broad = []
     import permissions
     for rule in perms.get("allow") or []:
-        if str(rule).startswith("mcp__claude_ai_Microsoft_365"):          # Sprint 4b: reading is allowed, actions are not
-            why = permissions.m365_problem(rule)
+        why = permissions.connector_problem(rule)    # Sprint 4b: reading is allowed, actions are not; F3: no other connector
+        if why is not None:                          # or built-in that acts outside the laptop
             if why:
                 broad.append(f"{rule} ({why})")
             continue
