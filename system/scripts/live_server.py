@@ -3022,16 +3022,20 @@ def main():
     """Start the live server on 127.0.0.1 (live_mode.port, or CREAITE_PORT) and serve until stopped; ends any run on the
     way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
     the search index, the VIP check and, when launched, the close watcher (BL-07, BL-99, BL-86)."""
-    port = int(os.environ.get("CREAITE_PORT") or paths.load_settings().get("live_mode", {}).get("port", 8765))
+    port = start_port()                                   # #93: a reason in the debug log if it can't be read
     import launch as launcher
     # ===== BL-329 (v194-one-server): this vault's server already there (or starting) is left be, and this one exits 0 =====
     if held_by_this_vault(port):
         return already_running(port)
     try:
         httpd = LocalServer(("127.0.0.1", port), Handler)
+    except OverflowError:                                 # #93: a port out of range; it stops as it always did
+        start_stopped("error", f"port {port} is out of range")
+        raise
     except OSError as e:
         if held_by_this_vault(port):
             return already_running(port)
+        start_stopped("warn", port_taken(port, e))        # #93: the reason, then the same exit and message
         sys.exit(f"Can't use port {port} ({e.strerror}). Is the live server already running? "
                  f"Change live_mode.port in settings.json if another app uses it.")
     note_server(port)
@@ -3077,17 +3081,64 @@ def held_by_this_vault(port):
     """True if another of this vault's servers is starting or answers on the port (waiting up to 20 s for it to answer)."""
     import launch as launcher
     other = launcher.server_starting(port)
-    if not other and launcher.health(port) != "this":
+    seen = None if other else launcher.health(port)
+    START_SEEN.update(mark=other and other[0], answer=seen)      # #93: what was seen, for the log line only
+    if not other and seen != "this":
         return False
-    return launcher.wait_for_server(port, pid=other and other[0]) == "this"
+    seen = launcher.wait_for_server(port, pid=other and other[0])
+    START_SEEN["answer"] = seen
+    return seen == "this"
 
 
 def already_running(port):
     """This vault's server already holds the port: say so and exit 0 (not a warning)."""
     print(f"The live server is already running on port {port}: this one stops.", flush=True)
     if debuglog is not None:
-        debuglog.info("server", f"already running on port {port}: this start exits")
+        how = (f"this vault's server, pid {START_SEEN['mark']}, is running or starting" if START_SEEN.get("mark")
+               else "this vault's server answers on it")
+        debuglog.info("server", f"already running on port {port} ({how}): this start exits")
     return 0
+
+
+# ===== #93: why a start stopped, in the debug log (ids, ports and counts only) =====
+START_SEEN = {}            # what held_by_this_vault saw: the pid in the starting mark or live-server.json, and what answered
+
+
+def start_stopped(level, why):
+    """One debug-log line saying why this start stops; the exit and what is printed stay as they were."""
+    if debuglog is not None:
+        getattr(debuglog, level)("server", f"start stopped: {why}")
+
+
+def start_port():
+    """The port to listen on (CREAITE_PORT, else live_mode.port, else 8765). An unreadable settings.json or a port that
+    isn't a whole number is logged, then raised as before."""
+    raw = os.environ.get("CREAITE_PORT")
+    if not raw:
+        try:
+            raw = paths.load_settings().get("live_mode", {}).get("port", 8765)
+        except (OSError, ValueError, AttributeError) as e:
+            start_stopped("error", f"settings.json can't be read ({type(e).__name__})")
+            raise
+    try:
+        return int(raw)
+    except (ValueError, TypeError) as e:
+        start_stopped("error", f"the port isn't a whole number ({type(e).__name__})")
+        raise
+
+
+def port_taken(port, e):
+    """Why the port can't be used: the error's code, and whether another vault's creaite server or another program holds it."""
+    import errno
+    code = errno.errorcode.get(e.errno, "error") if e.errno else type(e).__name__
+    if START_SEEN.get("answer") == "other":
+        held = "another vault's creaite server answers on it"
+    elif code == "EADDRINUSE":
+        held = "held by another program, or a creaite server that doesn't answer"
+    else:
+        held = "not this vault's server"
+    return f"can't use port {port} ({code}): {held}"
+# ===== end #93 =====
 
 
 def note_server(port):
@@ -6190,12 +6241,42 @@ def log_route(handler):
 
 # ===== BL-269 (sprint-live-updates) =====
 STALE_SEEN = []           # short fingerprints of the old tokens already logged, newest last (a page each)
+STALE_HOUR = {"start": None, "pages": set(), "over": 0, "repeats": 0}   # #93: this hour's stale pages and repeat requests
+STALE_HOUR_LOCK = threading.Lock()                            # #93: the counters only; requests run in threads
+STALE_HOUR_CAP = 1000                                         # fingerprints kept a window; past it a request counts as a page
+
+
+def count_stale(key, now=None):
+    """#93: count one stale request (key: the token's fingerprint, never the token). When it comes an hour or more after the
+    window began, the closed window's line is returned (and a new window starts with this request); else None. Nothing stale,
+    no window, no line. Emitted from the next stale request, not a timer: no new thread, and a page that stays stale keeps
+    asking, so its hour is reported; a quiet tail is already shown by each page's own info line."""
+    now = time.time() if now is None else now
+    line = None
+    with STALE_HOUR_LOCK:
+        h = STALE_HOUR
+        if h["start"] is not None and now - h["start"] >= 3600:
+            line = (f"stale pages in the hour from {datetime.fromtimestamp(h['start']):%H:%M}: "
+                    f"{len(h['pages']) + h['over']} pages, {h['repeats']} repeat requests")
+            h.update(start=None, pages=set(), over=0, repeats=0)
+        if h["start"] is None:
+            h["start"] = now
+        if key in h["pages"]:
+            h["repeats"] += 1
+        elif len(h["pages"]) < STALE_HOUR_CAP:
+            h["pages"].add(key)
+        else:
+            h["over"] += 1
+    return line
 
 
 def log_stale(handler, line):
     """A request from a page opened before a restart: one info line per page (its old token), the repeats at debug level
     only. Such a page stops asking once it knows (BL-269); an older page that doesn't can no longer fill the log with WARNs."""
     key = hashlib.sha256((handler.headers.get("X-Creaite-Token") or "").encode()).hexdigest()[:12]
+    hourly = count_stale(key)                                     # #93: the hourly count, before this request's own line
+    if hourly:
+        debuglog.info("server", hourly)
     if key in STALE_SEEN:
         return debuglog.debug("server", f"{line} stale page again")
     STALE_SEEN.append(key)
