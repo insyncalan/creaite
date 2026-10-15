@@ -1036,7 +1036,8 @@ def prep_decision(tool, inp):
         return False, why
     if tool == "Bash":
         command = str((inp or {}).get("command") or "")
-        why = bash_refusal(command, "prep") or held_never_reason(command) or held_kind_reason(command)
+        why = (bash_refusal(command, "prep") or held_form_reason(command) or held_never_reason(command)
+               or held_kind_reason(command))
         if why:
             return False, why
     return True, ""
@@ -1073,6 +1074,15 @@ def held_arg_paths(command):
             pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
             out += [m for m in glob.glob(pattern, recursive=False) if m not in out]
     return out
+
+
+def held_form_reason(command):
+    """Why a held run's Bash call has a form only the shell reads, or None (review N1, 15-10-2026). A `#` starts a shell comment
+    that bash_args' split doesn't drop, so `review.py assign … # --dry-run` would be classed by a flag the shell never passes.
+    No held prompt's command needs one (docx_tools.py text, minutes.py transcript), so any `#` at all is refused."""
+    if "#" in command:
+        return "the command has a #, which the shell reads as a comment: run the script on its own, without it"
+    return None
 
 
 def held_never_reason(command):

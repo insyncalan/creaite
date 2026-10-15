@@ -27,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from test_tracker import ABC, Vault  # noqa: E402
 
-NEVER, SHELL, KIND = "never list", "shell form", "not a read command"
+NEVER, SHELL, KIND, FORM = "never list", "shell form", "not a read command", "held form"
 T = "system/scripts/run minutes.py transcript"
 P = "python3 system/scripts/minutes.py transcript"
 
@@ -84,6 +84,14 @@ def forms(root, home):
         ("python3 -c", "python3 -c 'print(open(\"/x\").read())'", SHELL),
         ("a program by its path", "/bin/cat ~/.ssh/id_rsa", SHELL),
         ("a stage command, no path", "system/scripts/run report.py adhoc system/staging/drafts/a.json", KIND),
+        # review N1: a shell comment hides the read flag command_kind looks for (reach.held_form_reason)
+        ("# --dry-run after review.py assign", "system/scripts/run review.py assign ABC-A-001 Sara # --dry-run", FORM),
+        ("# --dry-run after propose.py recode", "system/scripts/run propose.py recode ABC XYZ # --dry-run", FORM),
+        ("# --check after propose.py learn", "system/scripts/run propose.py learn x.json # --check", FORM),
+        ("# --dry-run after minutes.py baseline", "python3 system/scripts/minutes.py baseline # --dry-run", FORM),
+        ("# at the start of the arguments", f"{T} #x ~/.ssh/id_rsa", FORM),
+        ("a#b inside a word", f"{T} a#b.vtt", FORM),
+        ("quoted '#'", f"{T} '#' x.vtt", FORM),
     ]
 
 
@@ -123,6 +131,8 @@ class HeldArgForms(unittest.TestCase):
             return NEVER
         if "isn't a read command" in why:
             return KIND
+        if "which the shell reads as a comment" in why:
+            return FORM
         if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
             return SHELL
         return "other: " + why
@@ -144,6 +154,17 @@ class HeldArgForms(unittest.TestCase):
             code, why = self.hook(mode, f"{P} ~/.ssh/key-backup.txt")
             self.assertEqual(code, 2, why)
             self.assertIn("~/.ssh/key-backup.txt: it holds secrets (keys, passwords, sign-ins)", why)
+
+    def test_a_comment_hid_the_read_flag(self):
+        """Review N1, as pure functions: without the # rule each of these record commands is classed read, because the split
+        keeps the comment's flag; held_form_reason refuses them first."""
+        sys.path.insert(0, str(self.root / "system/scripts"))
+        import reach
+        for script, cmd in (("review.py", "review.py assign ABC-A-001 Sara # --dry-run"), ("propose.py", "propose.py recode ABC X # --dry-run"),
+                            ("propose.py", "propose.py learn x.json # --check"), ("minutes.py", "minutes.py baseline # --dry-run")):
+            command = "system/scripts/run " + cmd
+            self.assertEqual(reach.command_kind(script, reach.bash_args(command))[0], reach.READ, cmd)
+            self.assertIn("comment", reach.held_form_reason(command) or "", cmd)
 
     def test_an_ordinary_read_still_passes(self):
         for mode in ("held", "prep"):
