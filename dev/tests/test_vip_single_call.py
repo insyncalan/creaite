@@ -1,0 +1,406 @@
+"""BL-342 Part 3 B: the one check with the card fields, its reply's checks and the close suggestions (step 9).
+
+Run: python3 dev/tests/test_vip_single_call.py
+A throwaway vault with fictional people and actions (project ABC: open actions ABC-A-007, owned by Sara Example, and
+ABC-A-008, owned by Ben Ito; ABC-A-003 closed; project XYZ: open action XYZ-A-001). Probe-style fixtures: the reply a model
+gave, fed to plain code (never Microsoft 365, never a real Claude). Covers the laptop's zone in and out, every probe failure
+(no offset, UTC, future times, invented and one-character-off IDs, internet message IDs, calendar invites), a thread nobody
+asked about, a reply-only object, the prompt's parts (the open cards and at most 15 open actions a project, 60 in all), and
+the close suggestion's rules: a wrong match, New, a closed or other project's ID, an ID not offered, someone other than the
+owner or Alan, a confidential thread, the switch off.
+"""
+import json
+import os
+import sqlite3
+import subprocess
+import sys
+import unittest
+from contextlib import closing
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from test_sweep_alerts import vip_file, vip_vault  # noqa: E402
+from test_tracker import action  # noqa: E402
+
+NOW = "2026-10-08 09:30"
+OFF = "+04:00"
+MIA = "Mia Hale <mia@client.example>"
+SARA = "Sara Example <sara@brightwater.example>"
+BEN = "Ben Ito <ben@brightwater.example>"
+ALAN = "Alan Carter <alan@brightwater.example>"
+SECRET = "SECRET MESSAGE TEXT"
+REGISTER = """# People register
+
+## People
+
+| Full name | Email | Aliases | Organisation | Role | Hidden | VIP |
+|---|---|---|---|---|---|---|
+| Mia Hale | mia@client.example | Mia | Client | Sponsor | | client |
+| Ben Ito | ben@brightwater.example | Ben | Brightwater | Director | | |
+| Sara Example | sara@brightwater.example | Sara | Brightwater | Lead | | |
+| Alan Carter | alan@brightwater.example | Alan | Brightwater | Programme manager | | |
+"""
+MAIL_ID = "AAQkADAwATM0MDAAMS1hYjI3LTJiOTQtMDACLTAwCgAQAN"
+
+
+def thread(n=1, **extra):
+    """A mail thread as the model returns it, in the laptop's zone."""
+    subject = "Project Falcon revised plan" + (f" {n}" if n > 1 else "")
+    return {"kind": "mail", "conversation": f"{MAIL_ID}{n}", "title": subject, "subject": subject, "from": MIA,
+            "people": [MIA, SARA], "last": f"2026-10-08T09:00{OFF}", "last_from": "mia@client.example",
+            "link": f"https://outlook.example/owa/?ItemID=t{n}", "sensitivity": "normal",
+            "summary": "Mia asks for the revised plan.", "type": "action", "ask": "Send the revised plan", "due": "2026-10-12",
+            "owners": ["Sara Example"], "items": [], "body": SECRET, **extra}
+
+
+def py(v, code, **env):
+    """Run code in the vault with sweep importable; returns stdout as JSON."""
+    r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import sweep, paths\n" + code],
+                       cwd=v.root, capture_output=True, text=True,
+                       env={**os.environ, "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": OFF, **env})
+    if r.returncode:
+        raise AssertionError(r.stdout + r.stderr)
+    return json.loads(r.stdout)
+
+
+def seed(v):
+    """Project ABC with ABC-A-001 to 008 (003 closed), project XYZ with XYZ-A-001; Alan's identity."""
+    cfg = v.root / "system/config/settings.json"
+    d = json.loads(cfg.read_text())
+    d["identity"] = {"name": "Alan Carter", "short_forms": ["Alan"], "own_domains": ["brightwater.example"]}
+    cfg.write_text(json.dumps(d, indent=2))
+    (v.root / "projects/_portfolio/people-register.md").write_text(REGISTER)
+    rows = [action(i, description=f"Filler action {i}", owner="Ben Ito", due_date=f"2026-10-{10 + i}") for i in range(1, 7)]
+    rows += [action(7, description="Send the revised plan to Mia", owner="Sara Example", due_date="2026-10-12"),
+             action(8, description="Book the rehearsal room", owner="Ben Ito", due_date="2026-10-20")]
+    v.propose("seed", rows)
+    v.run("apply")
+    with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:
+        con.execute("UPDATE actions SET status = 'Closed', closed = '2026-10-03' WHERE id = 'ABC-A-003'")
+        con.execute("INSERT INTO projects (code, name) VALUES ('XYZ', 'Project Other')")
+        con.execute("INSERT INTO actions (id, project, description, owner, raised, source) VALUES "
+                    "('XYZ-A-001', 'XYZ', 'Send the revised plan', 'Sara Example', '2026-10-01', 'Email · test')")
+        con.commit()
+
+
+CLEAN = ("found, counts = sweep.vip_clean(json.loads(sys.argv[1]), '2026-10-08 09:00', sweep.local_zone(), "
+         "sweep.vip_state()['alerts'], invites=json.loads(sys.argv[2]))\nprint(json.dumps([found, counts]))")
+
+
+class Base(unittest.TestCase):
+    def setUp(self):
+        self.v = vip_vault()
+        seed(self.v)
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def clean(self, found, invites=False):
+        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import sweep\n" + CLEAN,
+                            json.dumps(found), json.dumps(invites)], cwd=self.v.root, capture_output=True, text=True,
+                           env={**os.environ, "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": OFF})
+        if r.returncode:
+            raise AssertionError(r.stdout + r.stderr)
+        return json.loads(r.stdout)
+
+    def check(self, found, offered=None):
+        """What the live server's check does with a reply: vip_clean, then vip_record with what was offered."""
+        code = ("st = sweep.vip_state(); parts = sweep.vip_prompt_parts(st)\n"
+                "found, counts = sweep.vip_clean(json.loads(sys.argv[1]), '2026-10-08 08:00', sweep.local_zone(), st['alerts'])\n"
+                "offered = set(json.loads(sys.argv[2])) if sys.argv[2] != 'null' else parts['offered']\n"
+                "checked = {'offered': offered, 'counts': counts}\n"
+                "new = sweep.vip_record(found, 'check', checked=checked)\n"
+                "print(json.dumps({'new': [a['id'] for a in new], 'counts': checked['counts']}))")
+        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import sweep\n" + code,
+                            json.dumps(found), json.dumps(offered)], cwd=self.v.root, capture_output=True, text=True,
+                           env={**os.environ, "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": OFF})
+        if r.returncode:
+            raise AssertionError(r.stdout + r.stderr)
+        return json.loads(r.stdout)
+
+    def cards(self):
+        return vip_file(self.v)["alerts"]
+
+
+class ZoneTests(Base):
+    def test_the_zone_is_the_laptops_and_every_time_carries_its_offset(self):
+        z = py(self.v, "z = sweep.local_zone(); print(json.dumps([z['offset'], z['zone'], sweep.zoned_out('2026-10-08 09:16', z)]))")
+        self.assertEqual(z, ["+04:00", "Alan's local time, UTC+04:00", "2026-10-08T09:16+04:00"])
+        got = py(self.v, "z = sweep.local_zone(); print(json.dumps([sweep.zoned_in(t, z) for t in "
+                         "['2026-10-08T05:16Z', '2026-10-08 05:16', '2026-10-08T09:16+04:00', '2026-10-08T07:16+02:00', 'soon']]))")
+        self.assertEqual(got, [["2026-10-08 09:16", True], None, ["2026-10-08 09:16", False], ["2026-10-08 09:16", True], None])
+
+    def test_without_the_test_offset_the_laptops_own_zone_is_used(self):
+        z = py(self.v, "z = sweep.local_zone(); print(json.dumps([z['tz'] is None, z['offset']]))", CREAITE_TZ_OFFSET="")
+        self.assertTrue(z[0])
+        self.assertRegex(z[1], r"^[+-]\d\d:\d\d$")
+
+
+class CleanTests(Base):
+    """The probe's failure modes, each dropped or converted as Part 3 B step 2 says."""
+
+    def test_a_time_without_an_offset_is_dropped(self):
+        found, counts = self.clean([thread(last="2026-10-08 09:00")])
+        self.assertEqual((found, counts.get("no_zone")), ([], 1))
+
+    def test_utc_is_converted_to_local_and_counted(self):
+        found, counts = self.clean([thread(last="2026-10-08T05:16Z")])
+        self.assertEqual(found[0]["last"], "2026-10-08 09:16")
+        self.assertEqual(counts.get("other_zone"), 1)
+
+    def test_a_future_last_is_dropped_and_a_future_reply_ignored(self):
+        found, counts = self.clean([thread(last=f"2026-10-20T09:00{OFF}")])
+        self.assertEqual((found, counts.get("future")), ([], 1))
+        found, counts = self.clean([thread(replied=f"2026-10-20T09:00{OFF}")])
+        self.assertEqual(len(found), 1)
+        self.assertNotIn("replied", found[0])
+        self.assertEqual(counts.get("future"), 1)
+        found, _ = self.clean([thread(last=f"2026-10-08T09:31{OFF}")])                     # a minute ahead: a clock's slack
+        self.assertEqual(len(found), 1)
+
+    def test_an_internet_message_id_and_a_slip_are_never_a_key(self):
+        for bad in ("<DX1234567890ABCDEF@EXAMPLE.OUTLOOK.COM>", "DX1234567890ABCDEF@EXAMPLE.OUTLOOK.COM", MAIL_ID[:20] + "!" + MAIL_ID[21:],
+                    MAIL_ID[:10] + " " + MAIL_ID[11:], "short"):
+            with self.subTest(bad):
+                found, counts = self.clean([thread(conversation=bad)])
+                self.assertIsNone(found[0]["conversation"])
+                self.assertEqual(counts.get("bad_id"), 1)
+        self.check([thread(conversation="<DX1234567890ABCDEF@EXAMPLE.OUTLOOK.COM>")])
+        a = self.cards()[0]
+        self.assertIsNone(a["conv"])
+        self.assertTrue(all(not k.startswith("id:") for k in a["keys"]))                     # keyed by link and local key
+        self.assertTrue({k.split(":")[0] for k in a["keys"]} >= {"link", "loc"})
+        self.assertNotIn("DX1234567890ABCDEF", json.dumps(a))
+
+    def test_a_teams_chat_id_and_a_mail_conversation_id_are_kept(self):
+        found, counts = self.clean([thread(), {**thread(), "kind": "teams", "conversation": "19:chat-plan@thread.v2",
+                                                "link": "https://teams.microsoft.com/l/chat/19:chat-plan"}])
+        self.assertEqual(sorted(f["conversation"] for f in found), sorted([MAIL_ID + "1", "19:chat-plan@thread.v2"]))
+        self.assertNotIn("bad_id", counts)
+
+    def test_calendar_invites_are_left_out_unless_invites_are_on(self):
+        invites = [{**thread(1), "kind": "calendar"}, thread(2, subject="Accepted: Steering", title="Accepted: Steering"),
+                   thread(3, subject="Updated invitation: Steering", title="Updated invitation: Steering"),
+                   thread(4, subject="Canceled: Steering", title="Canceled: Steering")]
+        found, counts = self.clean(invites)
+        self.assertEqual((found, counts.get("invite")), ([], 4))
+        found, counts = self.clean(invites, invites=True)
+        self.assertEqual(len(found), 4)
+        self.assertNotIn("invite", counts)
+
+    def test_a_thread_nobody_asked_about_is_dropped(self):
+        found, counts = self.clean([thread(**{"from": "Zed Other <zed@other.example>"})])
+        self.assertEqual((found, counts.get("unasked")), ([], 1))
+        found, counts = self.clean([{"kind": "mail", "conversation": MAIL_ID + "9", "replied": f"2026-10-08T09:10{OFF}"}])
+        self.assertEqual((found, counts.get("unasked")), ([], 1))                             # reply-only, no such card
+
+    def test_an_old_thread_is_dropped_unless_it_is_an_open_cards(self):
+        found, counts = self.clean([thread(last=f"2026-10-08T07:00{OFF}")])
+        self.assertEqual((found, counts.get("old")), ([], 1))
+        self.check([thread(last=f"2026-10-08T08:10{OFF}")])
+        found, counts = self.clean([thread(last=f"2026-10-08T07:00{OFF}", **{"from": "Zed Other <zed@other.example>"})])
+        self.assertEqual(len(found), 1)                                                      # the open card's, by its ID
+
+    def test_two_objects_for_one_conversation_keep_the_newest_and_fifty_at_most(self):
+        found, counts = self.clean([thread(last=f"2026-10-08T09:05{OFF}", summary="Newer."), thread(summary="Older.")])
+        self.assertEqual([f["summary"] for f in found], ["Newer."])
+        self.assertEqual(counts.get("dup"), 1)
+        many = [thread(n, last=f"2026-10-08T09:{n % 30:02d}{OFF}") for n in range(60)]
+        found, counts = self.clean(many)
+        self.assertEqual((len(found), counts.get("over")), (50, 10))
+
+    def test_the_fields_are_cut_to_shape(self):
+        found, _ = self.clean([thread(type="urgent", ask="x" * 300, due="2026-02-30", owners=["A", 3, "B", "C", "D", "E", "F", "G"],
+                                      match={"id": "ABC-A-007", "relation": "update", "why": "y" * 300})])
+        f = found[0]
+        self.assertEqual((f["type"], len(f["ask"]), f["due"], f["owners"]), ("fyi", 140, None, ["A", "B", "C", "D", "E", "F"]))
+        self.assertEqual(len(f["match"]["why"]), 140)
+
+    def test_last_from_is_kept_only_for_someone_in_the_thread_or_alan(self):
+        found, counts = self.clean([thread(last_from="zed@other.example"), thread(2, last_from=ALAN), thread(3, last_from=SARA)])
+        by = {f["conversation"][-1]: f.get("last_from") for f in found}
+        self.assertEqual(by, {"1": None, "2": ALAN, "3": SARA})
+        self.assertEqual(counts.get("bad_from"), 1)
+
+    def test_the_codes_own_keys_never_come_from_the_reply(self):
+        found, _ = self.clean([thread(_reply="abc", _alan_last=True)])
+        self.assertNotIn("_reply", found[0])
+        self.assertNotIn("_alan_last", found[0])
+        self.check([thread(_alan_last=True, match={"id": "ABC-A-007", "relation": "chase", "why": "Waiting."})])
+        self.assertEqual(self.cards()[0]["match"]["relation"], "update")                     # no evidence Alan wrote last
+
+    def test_a_reply_only_object_closes_an_open_card_and_never_makes_one(self):
+        self.check([thread()])
+        aid = self.cards()[0]["id"]
+        got = self.check([{"kind": "mail", "conversation": MAIL_ID + "1", "replied": f"2026-10-08T09:20{OFF}"},
+                          {"kind": "mail", "conversation": MAIL_ID + "7", "replied": f"2026-10-08T09:20{OFF}"}])
+        self.assertEqual(got["new"], [aid])
+        self.assertEqual(got["counts"].get("replied"), 1)
+        self.assertEqual(len(self.cards()), 1)
+        self.assertEqual((self.cards()[0]["state"], self.cards()[0]["replied_at"]), ("replied", "2026-10-08 09:20"))
+
+    def test_a_reply_only_object_finds_its_card_by_card_id_link_and_a_merged_cards_id(self):
+        self.check([thread(conversation=None)])
+        a = self.cards()[0]
+        st = vip_file(self.v)
+        st["alerts"][0]["ids"] = ["0123456789ab"]
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
+        for ref in (a["id"], "0123456789ab"):
+            with self.subTest(ref):
+                found, counts = self.clean([{"kind": "mail", "conversation": ref, "replied": f"2026-10-08T09:20{OFF}"}])
+                self.assertEqual(found[0]["_reply"], a["id"])
+        found, _ = self.clean([{"kind": "mail", "conversation": None, "link": a["link"], "replied": f"2026-10-08T09:20{OFF}"}])
+        self.assertEqual(found[0]["_reply"], a["id"])
+
+    def test_a_reply_after_the_last_message_is_evidence_alan_wrote_last(self):
+        self.check([thread(replied=f"2026-10-08T09:10{OFF}", match={"id": "ABC-A-007", "relation": "chase", "why": "Waiting."})])
+        a = self.cards()[0]
+        self.assertEqual(a["state"], "replied")
+        self.assertEqual(a["match"]["relation"], "chase")
+
+
+class PromptPartsTests(Base):
+    def test_the_open_cards_and_the_open_work(self):
+        self.check([thread(1), thread(2, last=f"2026-10-08T09:05{OFF}"),
+                    {**thread(3), "kind": "teams", "conversation": "19:chat-3@thread.v2", "link": "https://teams.example/3"}])
+        st = vip_file(self.v)
+        next(a for a in st["alerts"] if a["conv"] == MAIL_ID + "1")["seen"] = "2026-10-08 09:20"   # a seen card isn't asked about
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
+        parts = py(self.v, "p = sweep.vip_prompt_parts(); p['offered'] = sorted(p['offered']); print(json.dumps(p))")
+        asked = json.loads(parts["open"])
+        self.assertEqual([a["conversation"] for a in asked], [MAIL_ID + "2", "19:chat-3@thread.v2"])  # newest first
+        self.assertEqual(asked[0], {"conversation": MAIL_ID + "2", "kind": "mail", "subject": "Project Falcon revised plan 2",
+                                    "last": "2026-10-08T09:05+04:00"})
+        self.assertNotIn("subject", asked[1])                                                # mail only
+        work = json.loads(parts["open_work"])
+        self.assertEqual(sorted(work), ["ABC", "XYZ"])
+        self.assertNotIn("ABC-A-003", [w["id"] for w in work["ABC"]])                        # closed
+        self.assertEqual(work["ABC"][0], {"id": "ABC-A-001", "t": "Filler action 1", "owner": "Ben Ito", "due": "2026-10-11"})
+        self.assertEqual(parts["offered"], sorted([w["id"] for c in work.values() for w in c]))
+        self.assertNotRegex(json.dumps(parts), r"(?i)\bvip\b")
+        self.assertNotIn(SECRET, json.dumps(parts))
+
+    def test_at_most_15_a_project_and_60_in_all(self):
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            for code in ("P1", "P2", "P3", "P4", "P5"):
+                con.execute("INSERT INTO projects (code, name) VALUES (?, ?)", (code + "AB", f"Project {code}"))
+                for i in range(1, 21):
+                    con.execute("INSERT INTO actions (id, project, description, owner, raised, due_date, source) VALUES "
+                                "(?, ?, ?, 'Ben Ito', '2026-10-01', ?, 'Email · test')",
+                                (f"{code}AB-A-{i:03d}", code + "AB", f"Task {i} " + "word " * 30, f"2026-11-{i:02d}"))
+            con.commit()
+        parts = py(self.v, "p = sweep.vip_prompt_parts(); p['offered'] = sorted(p['offered']); print(json.dumps(p))")
+        work = json.loads(parts["open_work"])
+        self.assertTrue(all(len(v) <= 15 for v in work.values()))
+        self.assertEqual(sum(len(v) for v in work.values()), 60)
+        self.assertEqual(len(parts["offered"]), 60)
+        self.assertTrue(all(len(w["t"]) <= 80 for v in work.values() for w in v))
+        self.assertEqual([w["id"] for w in work["P1AB"]][:2], ["P1AB-A-001", "P1AB-A-002"])  # by due date
+
+
+def owner_done(**extra):
+    """Sara Example, the owner of ABC-A-007, says in the thread that she sent it."""
+    return thread(**{"from": MIA, "last_from": "sara@brightwater.example",
+                     "match": {"id": "ABC-A-007", "relation": "update", "why": "The plan was sent."},
+                     "closes": {"id": "ABC-A-007", "evidence": "Sara says the revised plan went out"}, **extra})
+
+
+class CloseTests(Base):
+    """Step 9: a close suggestion only when code agrees with the model."""
+
+    def closes(self):
+        return self.cards()[0].get("closes")
+
+    def test_the_owner_saying_done_gives_a_close(self):
+        got = self.check([owner_done()])
+        c = self.closes()
+        self.assertEqual(c, {"id": "ABC-A-007", "evidence": "Sara says the revised plan went out", "who": "Sara Example",
+                             "at": "2026-10-08 09:00"})
+        self.assertEqual(got["counts"].get("closes_kept"), 1)
+
+    def test_a_wrong_match_never_suggests(self):
+        cases = {"other id": {"match": {"id": "ABC-A-008", "relation": "update", "why": "x"}},
+                 "new": {"match": {"id": None, "relation": "new", "why": "x"}},
+                 "invented": {"match": {"id": "ABC-A-099", "relation": "update", "why": "x"},
+                              "closes": {"id": "ABC-A-099", "evidence": "Done"}}}
+        for name, extra in cases.items():
+            with self.subTest(name):
+                got = self.check([owner_done(**extra)])
+                self.assertIsNone(self.closes())
+                self.assertEqual(got["counts"].get("closes_wrong_match"), 1)
+                (self.v.root / "system/staging/vip.json").unlink()
+
+    def test_a_closed_or_other_projects_id_never_suggests(self):
+        for bad in ("ABC-A-003", "XYZ-A-001"):
+            with self.subTest(bad):
+                self.check([owner_done(match={"id": bad, "relation": "update", "why": "x"}, closes={"id": bad, "evidence": "Done now"})])
+                self.assertEqual(self.cards()[0]["match"]["relation"], "new")               # code had already made it New
+                self.assertIsNone(self.closes())
+                (self.v.root / "system/staging/vip.json").unlink()
+
+    def test_an_id_not_offered_never_suggests(self):
+        got = self.check([owner_done()], offered=["ABC-A-008"])
+        self.assertIsNone(self.closes())
+        self.assertEqual(got["counts"].get("closes_not_offered"), 1)
+
+    def test_someone_else_saying_done_never_suggests(self):
+        got = self.check([owner_done(last_from="mia@client.example")])
+        self.assertIsNone(self.closes())
+        self.assertEqual(got["counts"].get("closes_not_owner"), 1)
+
+    def test_alans_sent_delivery_on_an_open_card_closes_it_and_offers_the_close(self):
+        self.check([thread(match={"id": "ABC-A-007", "relation": "update", "why": "About the plan."})])
+        got = self.check([{"kind": "mail", "conversation": MAIL_ID + "1", "replied": f"2026-10-08T09:20{OFF}",
+                           "closes": {"id": "ABC-A-007", "evidence": "Alan sent the revised plan the action asked for"}}])
+        a = self.cards()[0]
+        self.assertEqual(a["state"], "replied")
+        self.assertEqual(a["closes"], {"id": "ABC-A-007", "evidence": "Alan sent the revised plan the action asked for",
+                                       "who": "Alan Carter", "at": "2026-10-08 09:20"})
+        self.assertEqual(got["counts"].get("closes_kept"), 1)
+
+    def test_a_confidential_thread_keeps_only_the_fixed_words_and_a_private_one_none(self):
+        self.check([owner_done(sensitivity="confidential")])
+        self.assertEqual(self.closes()["evidence"], "The thread shows it finished.")
+        (self.v.root / "system/staging/vip.json").unlink()
+        self.check([owner_done(sensitivity="private")])
+        self.assertIsNone(self.closes())
+
+    def test_the_switch_off_suggests_nothing(self):
+        cfg = self.v.root / "system/config/settings.json"
+        d = json.loads(cfg.read_text())
+        d.setdefault("drafting", {})["done"] = False
+        cfg.write_text(json.dumps(d))
+        got = self.check([owner_done()])
+        self.assertIsNone(self.closes())
+        self.assertEqual(got["counts"].get("closes_off"), 1)
+
+    def test_evidence_that_quotes_or_copies_the_summary_is_refused(self):
+        for ev in ('She wrote "the revised plan is attached here for everyone to review now"', "Mia asks for the revised plan.", " "):
+            with self.subTest(ev):
+                self.check([owner_done(closes={"id": "ABC-A-007", "evidence": ev})])
+                self.assertIsNone(self.closes())
+                (self.v.root / "system/staging/vip.json").unlink()
+
+    def test_an_action_raised_after_the_message_never_closes(self):
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("UPDATE actions SET raised = '2026-10-09' WHERE id = 'ABC-A-007'")
+            con.commit()
+        got = self.check([owner_done()])
+        self.assertIsNone(self.closes())
+        self.assertEqual(got["counts"].get("closes_raised_after"), 1)
+
+    def test_a_later_message_without_a_close_takes_the_suggestion_back(self):
+        self.check([owner_done()])
+        self.assertIsNotNone(self.closes())
+        self.check([thread(last=f"2026-10-08T09:10{OFF}", match={"id": "ABC-A-007", "relation": "update", "why": "More."})])
+        self.assertIsNone(self.closes())
+
+    def test_no_label_and_no_message_text(self):
+        self.check([owner_done()])
+        text = json.dumps(vip_file(self.v))
+        self.assertNotIn(SECRET, text)
+        self.assertNotRegex(text.replace('"vip', ""), r"\bVIP\b")
+
+
+if __name__ == "__main__":
+    unittest.main()

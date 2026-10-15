@@ -999,12 +999,18 @@ def vip_project(m):
     return hits.pop() if len(hits) == 1 else None
 
 
-def vip_record(found, how="sweep"):
+def vip_record(found, how="sweep", checked=None):
     """Record what the check or the sweep found. Each entry is a conversation (BL-334: {"conversation", "kind", "title",
     "people", "from", "last", "link", "sensitivity", "attachments", "summary", "items"}; conv_record) or, as before, one
     message ({kind, from, subject, sent, link, gist, sensitivity, project}). Only a conversation or a message from a followed
-    address is kept; ignore rules don't apply. Returns the new or updated alerts."""
+    address is kept; ignore rules don't apply. Returns the new or updated alerts.
+    checked (BL-342 Part 3 B): the live server's check passes {"offered", "counts"} with a reply vip_clean has checked; its
+    reply-only objects ("_reply") close an open card as replied, and close suggestions are kept (vip_closes). Without it (the
+    sweep, the command line) keys starting "_" are the code's own and are dropped, and no close is suggested."""
     vips = vip_addresses()
+    if checked is None:
+        found = [{k: v for k, v in m.items() if not str(k).startswith("_")} if isinstance(m, dict) else m
+                 for m in (found if isinstance(found, list) else [])]
     st = vip_state()
     have = {a["id"] for a in st["alerts"]}
     held = st.setdefault("held", {}) if how in ("check", "start-up") else None
@@ -1012,8 +1018,13 @@ def vip_record(found, how="sweep"):
     for m in found if isinstance(found, list) else []:
         if not isinstance(m, dict):
             continue
+        if m.get("_reply"):
+            got = reply_record(st, m, checked)                        # BL-342 Part 3 B: Alan's reply in an open card's thread
+            if got:
+                new.append(got)
+            continue
         is_conv = bool(m.get("conversation")) or "summary" in m or "items" in m
-        got = conv_record(st, m, vips, how, held) if is_conv else msg_record(st, m, vips, how, have)
+        got = conv_record(st, m, vips, how, held, checked) if is_conv else msg_record(st, m, vips, how, have)
         if got:
             new.append(got)
     dirty = st.pop("_dirty", False)                                  # BL-342: a key learned or two cards merged
@@ -1171,9 +1182,10 @@ def conv_candidates(items):
     return out
 
 
-def conv_record(st, m, vips, how, held):
+def conv_record(st, m, vips, how, held, checked=None):
     """Record or update one conversation's alert in st (BL-334). Returns the alert when it was added or changed, else None.
-    held: the conversations being waited for (a check or start-up only), {key: when first waited}; None for the sweep."""
+    held: the conversations being waited for (a check or start-up only), {key: when first waited}; None for the sweep.
+    checked: the live server's check (BL-342 Part 3 B): its close suggestion is kept or taken back (vip_closes)."""
     people_raw = [str(p) for p in ([m.get("from")] + list(m.get("people") or [])) if p]
     followed = followed_in(people_raw, vips)
     if not followed:
@@ -1186,7 +1198,14 @@ def conv_record(st, m, vips, how, held):
     if a is not None:
         card_learn(st, a, keys)
         if (a.get("last") or "") >= last:
-            return card_unchanged(st, a, replied)
+            got = card_unchanged(st, a, replied)
+            if checked is not None and "closes" in m:                  # nothing newer, but a close may still be offered
+                before = json.dumps(a.get("closes"), sort_keys=True)
+                vip_closes(a, m, checked, reply_only=True)
+                if json.dumps(a.get("closes"), sort_keys=True) != before:
+                    st["_dirty"] = True
+                    return a
+            return got
     else:
         a = card_new(st, m, vips, how, key, keys)
     a.pop("confidential", None)                                        # set again below while it is still confidential
@@ -1195,6 +1214,10 @@ def conv_record(st, m, vips, how, held):
     conv_finish(a, last, m.get("link"))
     if replied and replied >= last:
         replied_set(a, replied)                                        # he answered after the last message
+        if checked is not None and a.get("state") == "replied":
+            _bump(checked.setdefault("counts", {}), "replied")
+    if checked is not None:
+        vip_closes(a, m, checked)                                      # BL-342 Part 3 B, step 9: a close suggestion
     return a
 
 
@@ -1433,7 +1456,7 @@ def card_keys(a):
 
 def card_find(st, key, keys):
     """The card a found thread belongs to: its alert ID or any shared key. Two or more are merged into the first."""
-    hits = [x for x in st["alerts"] if x.get("id") == key or same_thread(card_keys(x), set(keys))]
+    hits = [x for x in st["alerts"] if x.get("id") == key or key in (x.get("ids") or []) or same_thread(card_keys(x), set(keys))]
     for extra in hits[1:]:
         card_merge(st, hits[0], extra)
     return hits[0] if hits else None
@@ -2150,7 +2173,7 @@ def _thread_text(thread):
 def _open_actions(con, project):
     """{id: row} of a project's open actions (Open or Delayed)."""
     return {r["id"]: dict(r) for r in con.execute(
-        "SELECT id, project, description, owner, due_date, status, latest_update, updated_at FROM actions "
+        "SELECT id, project, description, owner, due_date, status, latest_update, updated_at, raised FROM actions "
         "WHERE project = ? AND status IN ('Open', 'Delayed')", (project,))}
 
 
@@ -2233,7 +2256,7 @@ def _checked_match(rel, item_id, why, rows, thread, found):
         return {"id": None, "relation": "new", "why": (why if rel == "new" else "") or "Nothing open matches."}
     row = rows[item_id]
     if rel == "chase" and not (_owner_in(thread, row["owner"], extraction.people()) and not _alan_wrote(row["owner"])
-                               and _alan_wrote(found.get("last_from"))):
+                               and (found.get("_alan_last") or _alan_wrote(found.get("last_from")))):
         rel = "update"
     return {"id": item_id, "relation": rel, "why": why or "The thread moves it forward.", "t": _clean(row["description"], 200)}
 
@@ -2425,6 +2448,372 @@ def vip_update_stage(aid):
     vip_save(st)
     return {"proposal": out.name, "id": m["id"], "line": line, "lines": item["suggested"]["lines"], "added": added}
 # ===== end BL-342 part 2 =====
+
+# ===== BL-342 Part 3 B: the one check's prompt parts and its reply's checks =====
+# The live server's check stays one `claude -p` call (vip_check). Plain code gives the prompt its parts (vip_prompt_parts: the
+# laptop's own time zone, the open cards and each project's open actions) and checks every field of the reply before
+# vip_record sees it (vip_clean): an ID that isn't one (an internet message ID, a slip), a time without a zone or in the
+# future, a calendar invite, a thread nobody asked about. Each drop is counted by reason for the debug log, never with text
+# (BL-102). Close suggestions (step 9): vip_closes keeps a "Looks done" on a card only when the model's match, the owner rule
+# and the timeframe agree; nothing is staged until Alan clicks (vip_close_stage).
+VIP_OPEN_CARDS = 20                       # the open and replied cards named in the prompt
+VIP_WORK_PER_PROJECT, VIP_WORK_MAX = 15, 60
+VIP_REPLY_MAX = 50                        # more conversations than this in one reply is a fault
+VIP_WORK_TITLE = 80
+INVITE_SUBJECT = re.compile(r"^\s*(accepted|declined|tentative|canceled|cancelled|invitation|updated invitation)\b", re.I)
+TEAMS_ID = re.compile(r"19:[A-Za-z0-9._:@-]{1,297}")
+MAIL_ID = re.compile(r"[A-Za-z0-9+/=_-]{16,300}")
+ZONED = re.compile(r"(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?\s*(Z|[+-]\d{2}:?\d{2})$", re.I)
+CLOSE_EVIDENCE = 100
+CLOSE_FIXED = "The thread shows it finished."         # Part 4: a confidential card's close is never in the model's words
+
+
+def local_zone():
+    """The laptop's own time zone, read now (a clock change is followed): {"tz", "offset" ("+04:00"), "zone" (the words the
+    prompt uses)}. CREAITE_TZ_OFFSET ("+04:00") fixes it in tests, as CREAITE_NOW fixes the clock; tz is None for the laptop's
+    zone (each time is then converted with its own daylight-saving offset)."""
+    from datetime import timezone
+    fixed = os.environ.get("CREAITE_TZ_OFFSET") or ""
+    m = re.fullmatch(r"([+-])(\d{2}):(\d{2})", fixed)
+    if m:
+        delta = timedelta(hours=int(m.group(2)), minutes=int(m.group(3))) * (1 if m.group(1) == "+" else -1)
+        tz, off = timezone(delta), fixed
+    else:
+        tz, raw = None, datetime.now().astimezone().strftime("%z") or "+0000"
+        off = f"{raw[:3]}:{raw[3:5]}"
+    return {"tz": tz, "offset": off, "zone": f"Alan's local time, UTC{off}"}
+
+
+def zoned_out(local, zone):
+    """A stored local "YYYY-MM-DD HH:MM" as the prompt gives it: "YYYY-MM-DDTHH:MM+04:00"; "" when it isn't one."""
+    t = _when(local)
+    if not t:
+        return ""
+    if zone["tz"] is not None:
+        return f"{t[:10]}T{t[11:]}{zone['offset']}"
+    raw = datetime.strptime(t, "%Y-%m-%d %H:%M").astimezone().strftime("%z") or "+0000"
+    return f"{t[:10]}T{t[11:]}{raw[:3]}:{raw[3:5]}"
+
+
+def zoned_in(text, zone):
+    """(local "YYYY-MM-DD HH:MM", whether it was given in another zone) for an ISO 8601 time WITH an offset; None without one
+    (probe rule 1: a bare time is exactly the four-hour slip) or when it isn't a time."""
+    from datetime import timezone
+    m = ZONED.match(str(text or "").strip())
+    if not m:
+        return None
+    off = m.group(3).upper().replace(":", "")
+    try:
+        delta = timedelta() if off == "Z" else timedelta(hours=int(off[1:3]), minutes=int(off[3:5])) * (1 if off[0] == "+" else -1)
+        aware = datetime.strptime(f"{m.group(1)} {m.group(2)}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone(delta))
+    except ValueError:
+        return None
+    local = aware.astimezone(zone["tz"]) if zone["tz"] is not None else aware.astimezone()
+    return local.strftime("%Y-%m-%d %H:%M"), local.utcoffset() != delta
+
+
+def vip_open_cards(alerts):
+    """The cards the check asks about again: open or replied, not seen, newest first, at most VIP_OPEN_CARDS."""
+    cards = [a for a in alerts if "summary" in a and not a.get("seen") and (a.get("state") or "open") in ("open", "replied")]
+    return sorted(cards, key=lambda a: a.get("last") or "", reverse=True)[:VIP_OPEN_CARDS]
+
+
+def vip_open_work():
+    """({code: [{id, t, owner, due}]}, the set of IDs offered): each active project's open actions, overdue first then by due
+    date, at most VIP_WORK_PER_PROJECT a project and VIP_WORK_MAX in all. Read only; the vault's own data, for the same
+    read-only call that reads the mail."""
+    out, offered = {}, set()
+    try:
+        with closing(vip_ro()) as con:
+            codes = [r[0] for r in con.execute("SELECT code FROM projects WHERE active = 1 ORDER BY code")]
+            for code in codes:
+                rows = sorted(_open_actions(con, code).values(), key=lambda r: (r["due_date"] is None, r["due_date"] or "", r["id"]))
+                room = min(VIP_WORK_PER_PROJECT, VIP_WORK_MAX - len(offered))
+                if room <= 0:
+                    break
+                if rows[:room]:
+                    out[code] = [{"id": r["id"], "t": _clean(r["description"], VIP_WORK_TITLE), "owner": r["owner"],
+                                  "due": r["due_date"]} for r in rows[:room]]
+                    offered.update(r["id"] for r in rows[:room])
+    except Exception:  # noqa: BLE001  no database: the check still runs, with nothing to match against
+        return {}, set()
+    return out, offered
+
+
+def vip_prompt_parts(st=None, zone=None):
+    """What the check's prompt is filled with (plain code; the server only formats it): {"open": the open and replied cards as
+    JSON ({conversation, kind, subject (mail only), last} in the named zone), "open_work": each project's open actions as JSON,
+    "offered": the action IDs in open_work, "cards": the IDs of the cards in open}. References vip.json already holds and the
+    tracker's own rows; never message text."""
+    st, zone = st or vip_state(), zone or local_zone()
+    cards = vip_open_cards(st["alerts"])
+    asked = [{"conversation": a.get("conv") or a["id"], "kind": a.get("kind") or "teams",
+              **({"subject": a.get("subject")} if a.get("kind") == "mail" and a.get("subject") else {}),
+              "last": zoned_out(a.get("last"), zone)} for a in cards]
+    work, offered = vip_open_work()
+    return {"open": json.dumps(asked, ensure_ascii=False), "open_work": json.dumps(work, ensure_ascii=False),
+            "offered": offered, "cards": [a["id"] for a in cards]}
+
+
+def card_lookup(alerts, keys, ref=None):
+    """The card a reply names, read only (card_find's matching half: never merges): its card ID (or a merged card's, in `ids`)
+    or any shared key (id:, link:, loc:). None when there is none."""
+    ref = str(ref or "")
+    return next((a for a in alerts if (ref and (a.get("id") == ref or ref in (a.get("ids") or [])))
+                 or same_thread(card_keys(a), set(keys))), None)
+
+
+def good_id(kind, conv):
+    """Whether a conversation ID is well formed: a Teams chat ID (19:…), or a mail conversation ID (opaque, 16 to 300 characters;
+    anything with @, < or > is an internet message ID, never a conversation ID)."""
+    c = str(conv or "")
+    if kind == "teams":
+        return bool(TEAMS_ID.fullmatch(c))
+    return bool(MAIL_ID.fullmatch(c))
+
+
+def _bump(counts, why, n=1):
+    counts[why] = counts.get(why, 0) + n
+
+
+def _clean_fields(m):
+    """The Part 1 and 2 fields, cut to shape: a type outside the four is fyi, the ask and the match's reason 140 characters,
+    a due date that isn't a real one null, owners a list of at most six names."""
+    if "type" in m:
+        t = str(m.get("type") or "").strip().lower()
+        m["type"] = "fyi" if t in ("file", "fyi / file") or t not in CARD_TYPES else t
+    if "ask" in m:
+        m["ask"] = _clean(m.get("ask"), 140)
+    if "due" in m:
+        m["due"] = real_date(m.get("due"))
+    if "owners" in m:
+        o = m.get("owners")
+        m["owners"] = o if isinstance(o, str) else [str(x) for x in o if isinstance(x, str)][:6] if isinstance(o, list) else []
+    if isinstance(m.get("match"), dict):
+        m["match"] = {**m["match"], "why": _clean(m["match"].get("why"), MATCH_WHY)}
+    elif "match" in m:
+        m.pop("match")
+
+
+def _last_from(m):
+    """The newest message's sender, kept only when it is one of the thread's people or Alan (F3's address rule decides)."""
+    who = str(m.get("last_from") or "").strip()
+    if not who:
+        return None
+    addr = address_of(who)
+    people = {address_of(p) for p in [m.get("from")] + list(m.get("people") or []) if p} - {""}
+    return who if (addr and addr in people) or _alan_wrote(who) else None
+
+
+def vip_clean(found, since, zone, open_cards, invites=False, vips=None):
+    """The check's reply, checked field by field before vip_record (plain code). Returns (kept objects, counts by reason).
+    - kind: mail or teams only (calendar too when invites); a mail whose subject starts Accepted:, Declined:, Tentative:,
+      Canceled:, Cancelled:, Invitation: or Updated invitation is an invite ("invite");
+    - a malformed conversation ID becomes null ("bad_id"), so the thread is keyed by its link and local key, never the text;
+    - times need an offset ("no_zone"); another zone is converted ("other_zone"); later than now plus two minutes is dropped
+      ("future"; a future `replied` is only ignored); a `last` before `since` less ten minutes is kept only for an open card
+      ("old"); every kept time is local "YYYY-MM-DD HH:MM";
+    - an object is kept only when its sender is followed or it names an open card by any key ("unasked"); a reply-only
+      object (no summary or items) can only close or leave an open card, never make one;
+    - one object per conversation, the newest ("dup"); at most VIP_REPLY_MAX ("over").
+    open_cards: the alerts in vip.json (the open and replied ones are those asked about). Keys starting "_" are the code's own:
+    any the reply carries are dropped."""
+    counts, vips = {"returned": len(found) if isinstance(found, list) else 0}, vip_addresses() if vips is None else vips
+    asked = vip_open_cards(open_cards or [])
+    try:
+        floor = datetime.strptime(_when(since), "%Y-%m-%d %H:%M") - timedelta(minutes=10)
+    except ValueError:
+        floor = None
+    limit = (now() + timedelta(minutes=2)).strftime("%Y-%m-%d %H:%M")
+    kept = {}
+    for raw in found if isinstance(found, list) else []:
+        if not isinstance(raw, dict):
+            _bump(counts, "shape")
+            continue
+        m = {k: v for k, v in raw.items() if not str(k).startswith("_")}
+        got = _clean_one(m, asked, vips, invites, zone, floor, limit, counts)
+        if got is None:
+            continue
+        ref = got.get("_reply") or got.get("conversation") or got.get("link") or conv_key(got)
+        if ref in kept:
+            _bump(counts, "dup")
+            if (got.get("last") or "") <= (kept[ref].get("last") or ""):
+                continue
+        kept[ref] = got
+    out = sorted(kept.values(), key=lambda x: x.get("last") or x.get("replied") or "", reverse=True)
+    if len(out) > VIP_REPLY_MAX:
+        _bump(counts, "over", len(out) - VIP_REPLY_MAX)
+        out = out[:VIP_REPLY_MAX]
+    counts["kept"] = len(out)
+    return out, counts
+
+
+def _clean_one(m, asked, vips, invites, zone, floor, limit, counts):
+    """One object of the reply, checked (vip_clean's rules), or None when it is dropped."""
+    kind = str(m.get("kind") or "").strip().lower()
+    if kind not in ("mail", "teams") and not (invites and kind == "calendar"):
+        return _bump(counts, "invite")
+    m["kind"] = kind
+    if not invites and kind == "mail" and INVITE_SUBJECT.match(str(m.get("subject") or m.get("title") or "")):
+        return _bump(counts, "invite")
+    ref = str(m.get("conversation") or "")
+    if m.get("conversation") is not None and not good_id(kind, m["conversation"]):
+        m["conversation"] = None
+        _bump(counts, "bad_id")
+    card = card_lookup(asked, conv_keys(m), ref)
+    replied = _zoned_field(m, "replied", zone, limit, counts)
+    if not any(k in m for k in ("summary", "items", "gist")):        # a reply-only object: Alan's newest message in an open card
+        if card is None:
+            return _bump(counts, "unasked")
+        if not replied:
+            return _bump(counts, "no_reply")
+        out = {"kind": card.get("kind") or kind, "_reply": card["id"], "replied": replied,
+               "_alan_last": replied >= (card.get("last") or "")}
+        if "closes" in m:
+            out["closes"] = m["closes"]
+        return out
+    field = "last" if m.get("last") else "sent"
+    got = zoned_in(m.get(field), zone)
+    if got is None:
+        return _bump(counts, "no_zone")
+    last, other = got
+    if other:
+        _bump(counts, "other_zone")
+    if last > limit:
+        return _bump(counts, "future")
+    if floor is not None and last < floor.strftime("%Y-%m-%d %H:%M") and card is None:
+        return _bump(counts, "old")
+    if address_of(m.get("from")) not in vips and card is None:
+        return _bump(counts, "unasked")
+    m[field] = last
+    _clean_fields(m)
+    if "last_from" in m:
+        m["last_from"] = _last_from(m)
+        if m["last_from"] is None:
+            m.pop("last_from")
+            _bump(counts, "bad_from")
+    if replied:
+        m["replied"] = replied
+        m["_alan_last"] = replied >= last                              # Chase and close evidence: Alan wrote last
+    return m
+
+
+def _zoned_field(m, field, zone, limit, counts):
+    """A reply's optional time field checked as `last` is: local, or "" (and taken out of m) when missing, without a zone or in
+    the future."""
+    if not m.get(field):
+        m.pop(field, None)
+        return ""
+    got = zoned_in(m[field], zone)
+    m.pop(field, None)
+    if got is None:
+        _bump(counts, "no_zone")
+        return ""
+    if got[1]:
+        _bump(counts, "other_zone")
+    if got[0] > limit:
+        _bump(counts, "future")
+        return ""
+    return got[0]
+
+
+def vip_check_line(counts, new, seconds, cost, failed=False):
+    """The check's one debug-log line (BL-102): counts, seconds and dollars only, never a subject, address, ID or text."""
+    drops = ", ".join(f"{k} {v}" for k, v in sorted(counts.items())
+                      if k not in ("returned", "kept", "replied") and not k.startswith("closes_") and v)
+    closes = ", ".join(f"{k[7:]} {v}" for k, v in sorted(counts.items()) if k.startswith("closes_") and v)
+    money = f"${float(cost):.4f}" if isinstance(cost, (int, float)) else "cost unknown"
+    if failed:
+        return f"check failed after {seconds:.1f}s, {money}"
+    return (f"check: {counts.get('returned', 0)} returned, {counts.get('kept', 0)} kept"
+            + (f", dropped {drops}" if drops else "") + f", {len(new)} new or updated, {counts.get('replied', 0)} replied"
+            + (f", closes {closes}" if closes else "") + f", {seconds:.1f}s, {money}")
+
+
+def reply_record(st, m, checked):
+    """A reply-only object from the check: Alan's newest message in an open card's thread closes it as replied (and may carry a
+    close suggestion, step 9). Never makes a card. Returns the card when it changed, else None."""
+    a = card_find(st, m["_reply"], [])
+    if a is None:
+        return None
+    changed = False
+    if m.get("replied") and (a.get("state") or "open") == "open" and m["replied"] >= (a.get("last") or ""):
+        replied_set(a, m["replied"])
+        changed = a.get("state") == "replied"
+        if changed:
+            _bump(checked.setdefault("counts", {}), "replied")
+    before = json.dumps(a.get("closes"), sort_keys=True)
+    vip_closes(a, m, checked, reply_only=True)
+    if changed or json.dumps(a.get("closes"), sort_keys=True) != before:
+        st["_dirty"] = True
+        return a
+    return None
+
+
+def vip_closes(a, found, checked, reply_only=False):
+    """Step 9: keep the model's "Looks done" on a card only when code agrees (plain code; each drop counted, never with text).
+    The close must name the card's accepted match (Update or Chase, the same ID), an open action of the card's project that
+    this check offered, finished by Alan (his message is the newest) or by the action's owner (the newest message is theirs),
+    raised on or before that day, with evidence in creaite's own words. Kept as a["closes"] = {id, evidence, who, at}. A full
+    object without a close takes back an unstaged one (the thread moved on); a staged one is never changed. Returns it or None."""
+    counts = checked.setdefault("counts", {})
+    raw, old = found.get("closes"), a.get("closes") if isinstance(a.get("closes"), dict) else None
+    if old and old.get("staged"):
+        return old
+
+    def drop(why):
+        _bump(counts, "closes_" + why)
+        if not reply_only:
+            a.pop("closes", None)
+        return None
+
+    if raw is None:
+        if not reply_only:
+            a.pop("closes", None)
+        return None
+    if not (isinstance(raw, dict) and isinstance(raw.get("id"), str) and isinstance(raw.get("evidence"), str)):
+        return drop("shape")
+    if not extraction.switched_on("done"):
+        return drop("off")
+    if a.get("marker") == "private":
+        return drop("private")
+    m, cid = a.get("match") or {}, raw["id"].strip().upper()
+    if m.get("relation") not in ("update", "chase") or not m.get("id") or cid != m["id"]:
+        return drop("wrong_match")
+    try:
+        with closing(vip_ro()) as con:
+            row = _open_actions(con, a.get("p")).get(cid) if "-A-" in cid else None
+    except Exception:  # noqa: BLE001  no database: nothing can be checked, so nothing is suggested
+        row = None
+    if row is None:
+        return drop("not_open")
+    if cid not in (checked.get("offered") or set()):
+        return drop("not_offered")
+    alan = bool(found.get("_alan_last")) or (not reply_only and _alan_wrote(found.get("last_from")))
+    if alan:
+        who, at = my_name() or "Alan", found.get("replied") or a.get("last") or ""
+    elif not reply_only and found.get("last_from") and extraction.is_person(found["last_from"], row["owner"], extraction.people()):
+        who, at = row["owner"], a.get("last") or ""
+    else:
+        return drop("not_owner")
+    if (row.get("raised") or "") > at[:10]:
+        return drop("raised_after")
+    ev = _clean(raw["evidence"], CLOSE_EVIDENCE)
+    if not ev:
+        return drop("no_evidence")
+    summary = str(a.get("summary") or "").lower()
+    quote = re.search(r"[\"“”]([^\"“”]+)[\"“”]", ev)
+    if (len(ev) >= 20 and ev.lower() in summary) or (quote and len(quote.group(1).split()) > 8):
+        return drop("quoted")
+    if a.get("marker") == "confidential" or a.get("confidential"):
+        ev = CLOSE_FIXED
+    new = {"id": cid, "evidence": ev, "who": who, "at": at}
+    if not (old and (old.get("id"), old.get("evidence")) == (cid, ev)):
+        extraction.count("done", "offered")
+    a["closes"] = new
+    _bump(counts, "closes_kept")
+    return new
+# ===== end BL-342 Part 3 B =====
 
 
 if __name__ == "__main__":
