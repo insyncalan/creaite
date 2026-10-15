@@ -159,6 +159,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from datetime import date, datetime, timedelta
@@ -1942,7 +1943,7 @@ KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "Web
 # text, the option, the project's name, people and open item IDs). The run "edit-ai" has no tools at all: its allow list is empty,
 # Claude Code is started with no built-in tools (`--tools ""`) and no MCP servers (`--strict-mcp-config`), no --add-dir, and every
 # tool that reads, runs, writes or reaches out is denied as well, so it cannot read a file or mail, run anything or write.
-TOOLLESS_KINDS = ("edit-ai",)
+TOOLLESS_KINDS = ("edit-ai", "shape-closed", "notes-find")     # #126: no tools, no --add-dir, and no context but the prompt
 KIND_TOOLS["edit-ai"] = []
 KIND_DENIES["edit-ai"] = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent",
                           "Skill", *vault_permissions.m365_read_tools()]
@@ -2003,6 +2004,33 @@ for _k in ("shape-closed", "notes-find"):
 # 2.1.300 copy in dev/tests/test_vip_tools_pinned.py (it is then denied here unless a kind's --tools names it); when a new
 # connector appears in the same init event (an mcp__<server>__ prefix other than Microsoft 365), add its server name to
 # permissions.NON_M365_MCP_DENY. Neither list updates itself: no test can see a built-in or a connector the CLI adds later.
+
+# ===== #126 (16-10-2026): a tool-less run sees only its prompt =====
+# Started in the vault, a run loads the vault's CLAUDE.md (Alan's notes), ~/.claude/CLAUDE.md and the project's auto-memory as
+# context. A tool-less run (TOOLLESS_KINDS) is meant to see only the text and facts it is given, so it starts in an empty folder
+# of its own outside the vault (NEUTRAL_CWD), with no setting sources (no user, project or local settings, so no CLAUDE.md) and
+# auto-memory off. A probe (Claude Code 2.1.288, 16-10-2026): --setting-sources "" removed both CLAUDE.md files but not the
+# auto-memory; CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 removed that. The kinds with tools keep the vault as their working folder.
+NO_CONTEXT_ARGS = ["--setting-sources", ""]
+NO_CONTEXT_ENV = {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
+NEUTRAL_CWD = None
+
+
+def neutral_cwd():
+    """#126: a tool-less run's working folder: an empty folder of its own outside the vault, made again if it has gone or isn't
+    empty."""
+    global NEUTRAL_CWD
+    if not NEUTRAL_CWD or not os.path.isdir(NEUTRAL_CWD) or os.listdir(NEUTRAL_CWD):
+        NEUTRAL_CWD = tempfile.mkdtemp(prefix="creaite-toolless-")
+    return NEUTRAL_CWD
+
+
+def launch_context(policy):
+    """#126: a run's extra arguments, extra environment and working folder: none and the vault for a kind with tools."""
+    if policy in TOOLLESS_KINDS:
+        return list(NO_CONTEXT_ARGS), dict(NO_CONTEXT_ENV), neutral_cwd()
+    return [], {}, paths.ROOT
+# ===== end #126 =====
 
 
 def run_args(policy, confirmed=None, only=None):
@@ -2118,6 +2146,8 @@ class Run:
         cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
                "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
+        more, more_env, cwd = launch_context(policy)            # #126: a tool-less run: no CLAUDE.md, settings or auto-memory
+        cmd += more
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
@@ -2139,7 +2169,8 @@ class Run:
         try:
             env = run_env(kind if held else None)                                      # BL-248; #60: a held run's kind
             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
-            self.proc = subprocess.Popen(cmd, cwd=paths.ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            env.update(more_env)                                                       # #126
+            self.proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                          bufsize=1, env=env)
         except OSError:
             if guarded:
