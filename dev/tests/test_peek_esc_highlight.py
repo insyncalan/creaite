@@ -80,8 +80,47 @@ class PeekCloseHighlight(LiveBrowserCase):
         self.from_work()
         self.b.eval("document.querySelector('#v-work').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))")
         self.b.pump(0.3)
-        o = self.b.eval(LEFT)                                  # a click outside leaves Work's own row selection (bulk select) alone
-        self.assertFalse(o["panel"] or o["focusOnOpener"], "click outside, Work")
+        self.clean(self.b.eval(LEFT), "click outside, Work")
+
+    # ── Alan, 15-10-2026: a click outside clears a bulk selection too ──
+    BULK = """(()=>{ const bar=document.getElementById('wbulk'); return {n:HL.size, hl:[...document.querySelectorAll('tr.hl,.bcard.hl')].filter(e=>e.offsetParent).length,
+      bar:!!(bar&&!bar.hidden&&bar.offsetParent), panel:document.getElementById('panel').classList.contains('on')}; })()"""
+
+    def bulk(self):
+        b = self.b
+        b.eval("WT='actions'; go('work')")
+        b.wait("document.querySelectorAll('#workTbl tbody tr[data-row]').length>1")
+        b.eval("(()=>{ const r=[...document.querySelectorAll('#workTbl tbody tr[data-row]')]; hlOnly('actions',r[0].dataset.row); hlToggle('actions',r[1].dataset.row); })()")
+        b.pump(0.4)
+        o = b.eval(self.BULK)
+        self.assertEqual((o["n"], o["bar"]), (2, True), "two rows selected, the bulk bar shown")
+
+    def test_a_click_outside_clears_a_bulk_selection(self):
+        self.bulk()
+        self.b.eval("document.querySelector('#v-work').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))")
+        self.b.pump(0.4)
+        o = self.b.eval(self.BULK)
+        self.assertEqual((o["n"], o["hl"], o["bar"]), (0, 0, False))
+
+    def test_the_bulk_bar_and_a_row_tick_keep_the_selection(self):
+        self.bulk()
+        self.b.eval("document.querySelector('#wbulk').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))")
+        self.b.eval("document.querySelector('#wbulk button, #wbulk select').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))")
+        self.b.eval("document.querySelector('#workTbl tbody tr[data-row]').dispatchEvent(new MouseEvent('mousedown',{bubbles:true}))")
+        self.b.pump(0.3)
+        o = self.b.eval(self.BULK)
+        self.assertEqual((o["n"], o["bar"]), (2, True))
+
+    def test_esc_clears_a_bulk_selection(self):
+        self.bulk()
+        self.b.key("Escape")
+        self.b.pump(0.3)
+        o = self.b.eval(self.BULK)
+        self.assertEqual((o["n"], o["hl"], o["bar"], o["panel"]), (0, 0, False, False))
+        self.from_work()
+        self.b.key("Escape")                                   # and Esc still closes a peek together with its row
+        self.b.pump(0.3)
+        self.clean(self.b.eval(LEFT), "Esc, Work")
 
 
 if __name__ == "__main__":

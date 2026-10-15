@@ -27,6 +27,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-copycmd]"
 $("#alertCmd").textContent=START_CMD;
 document.addEventListener("mousedown",e=>{
   if(e.target.closest(".snack,.cal,dialog")) return;
+  if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="person")&&!e.target.closest(OPENERS)&&!e.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();   /* #108 (Alan, 15-10-2026): a click outside clears a bulk selection too; the rows, the bulk bar, its menus and any control stay as they were */
   if($("#chat").classList.contains("on")&&!e.target.closest("#chat")&&!e.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();   /* BL-176: the peek stays usable beside the chat; fix-peek-140: so does the errors banner (closing the chat under the pointer moved its buttons) */
   if($("#panel").classList.contains("on")&&!e.target.closest("#panel")&&!e.target.closest(OPENERS)){
     if(shared.EDITING){ snack(shared.CUR&&shared.CUR.mode==="record"?"You're editing — save or cancel first":"Finish or cancel this first"); $("#pFoot").animate([{transform:"translateX(0)"},{transform:"translateX(-4px)"},{transform:"translateX(4px)"},{transform:"translateX(0)"}],{duration:220}); return; }

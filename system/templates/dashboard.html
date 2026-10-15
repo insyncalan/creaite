@@ -33316,6 +33316,7 @@ ${s5}`;
     $("#alertCmd").textContent = START_CMD;
     document.addEventListener("mousedown", (e4) => {
       if (e4.target.closest(".snack,.cal,dialog")) return;
+      if (HL.size && (shared.VIEW === "work" || shared.VIEW === "person") && !e4.target.closest(OPENERS) && !e4.target.closest("#wbulk,#panel,#workTbl tr,#v-person tr,.bcard,button,a,input,select,textarea,label,[role=menu],[role=option],[role=dialog],.ddmenu,.ms-menu")) hlClear();
       if ($("#chat").classList.contains("on") && !e4.target.closest("#chat") && !e4.target.closest("#askBtn,[data-ask],#panel.peek,.pkpop,#pkStage,#errBanner,#mvPeek,#mvCal,#mvPop")) closeChat();
       if ($("#panel").classList.contains("on") && !e4.target.closest("#panel") && !e4.target.closest(OPENERS)) {
         if (shared.EDITING) {
