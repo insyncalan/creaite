@@ -422,7 +422,8 @@ class Measured2(HandcheckCase):
                      + " → ".join(str(v) for _, v, _ in steps) + " px (→ → ←), the column's width each time, range 60 to 900")
 
     def test_c08_sortable_headers(self):
-        """8. Settings › People, Tab to a column heading → it is a button; Enter sorts, and VoiceOver reads the sort order."""
+        """8. People, Tab to the Name column heading → a button in a column header; Enter sorts ascending, then descending,
+        aria-sort follows and focus stays on the heading, so VoiceOver reads the new order."""
         # The sortable headings are the People page's (th[data-psort], reached from Settings › People); Settings › People's
         # own tables have none. Chrome's accessibility tree gives no sort property over CDP, so the order VoiceOver is given
         # is read from aria-sort on the heading, whose role must be columnheader (where aria-sort is allowed).
@@ -1057,8 +1058,8 @@ class Bl333And10(HandcheckCase):
     # ── BL-10 ──
 
     def test_c23_due_items_listed(self):
-        """23. Make an old closed item: close FAL-A-004 and cancel ORX-R-001; `archive.py items --dry-run` 7 months on → both
-        listed. An open action, any decision and any milestone are not."""
+        """23. Make an old closed item: close FAL-A-004 and cancel ORX-005; `archive.py items --dry-run` 7 months on → both
+        listed, with the demo's own item closed today (MER-A-003). An open action, any decision and any milestone are not."""
         slot = self.daily_slot_taken()
         self.close_both()
         listed, out = self.dry_run()
@@ -1075,8 +1076,8 @@ class Bl333And10(HandcheckCase):
                       + f"; no open action ({len(open_ids)}), decision or milestone; ORX-R-001 is ORX-005 in the demo; {slot}")
 
     def test_c24_archived_through_apply(self):
-        """24. Run it again without `--dry-run` → "Archived 2 items". Activity shows one apply (source archive); Review gets
-        nothing."""
+        """24. Run it again without `--dry-run` → "Archived n items", n the dry run's count. Activity shows one apply, its lines
+        by "Archived for age"; Review gets nothing."""
         b = self.b
         self.daily_slot_taken()
         self.close_both()
@@ -1111,13 +1112,13 @@ class Bl333And10(HandcheckCase):
         self.note(24, f"\"{m.group(0)}\" ({n}: FAL-A-004, ORX-005 and the demo's MER-A-003, closed today too, so not the check's 2); "
                       f"one apply ({a['apply_id']}, {prop}), {len(logged)} archived "
                       f"flags; Review {rev0} → {rev1}, no new proposal; Activity's By column: {', '.join(bys)}")
-        self.assertTrue(all("archiv" in x.lower() for x in bys),
-                        f"Activity names the source as \"{', '.join(bys)}\", not archive: build_dashboard's BY has no entry for "
-                        f"archive.py's proposal (change_log.via is its file name), so it falls back to \"Approved in review\"")
+        self.assertEqual(bys, ["Archived for age"],
+                         f"Activity names the source as \"{', '.join(bys)}\", not \"Archived for age\" (build_dashboard's BY for "
+                         f"archive.py's proposal, whose change_log.via is its file name; without it, \"Approved in review\")")
 
     def test_c25_gone_search_health(self):
-        """25. Work, Today and the Excel export → those two items are gone. Search for FAL-A-004's words → found, marked
-        Archived. Settings › Health › Archiving → "Archived 2 items on DD-MM-YYYY"."""
+        """25. Work, Today and the Excel export → those items are gone. Search for FAL-A-004's words → found, marked Archived.
+        Settings › Health › Archiving → "Archived n items on DD-MM-YYYY", the same n and the run's date."""
         b = self.b
         self.ensure_archived()
         self.reopen()
@@ -1147,7 +1148,8 @@ class Bl333And10(HandcheckCase):
                       f"({st['archived']}, not 2: the demo's MER-A-003 too; the date is the run's, seven months on)")
 
     def test_c26_show_archived(self):
-        """26. Turn on "Show archived projects and items" (Settings › Work and views) → both are back, marked. Turn it off."""
+        """26. Turn on "Show archived projects" (Settings › People and projects › Projects and register; its help mentions items
+        archived for their age) → both are back in Work (Closed and Cancelled shown), each row tagged Archived. Turn it off."""
         b, problems = self.b, []
         self.ensure_archived()
         self.reopen()
@@ -1169,21 +1171,22 @@ class Bl333And10(HandcheckCase):
             if not all(marked.values()):
                 problems.append(f"the page's records carry no archived flag ({', '.join(k for k, v in marked.items() if not v)}), "
                                 "so nothing can mark them")
-            catalogue = "Show archived projects and items"
-            if where["label"] != catalogue or "views" not in (where["heading"] or "").lower():
-                problems.append(f"the switch is \"{where['label']}\" in Settings › {where['heading']}, not \"{catalogue}\" in Work and "
-                                f"views (the catalogue's label; the Advanced list leaves it out as covered); its help: "
-                                f"\"{where['help'][:80]}\"")
+            label = "Show archived projects"
+            if where["label"] != label or where["sec"] != "projects" or "projects and register" not in (where["heading"] or "").lower():
+                problems.append(f"the switch is \"{where['label']}\" in Settings › {where['heading']} ({where['sec']}), not \"{label}\" "
+                                f"in People and projects › Projects and register")
+            if "archived for their age" not in where["help"]:
+                problems.append(f"its help doesn't mention items archived for their age: \"{where['help'][:100]}\"")
         finally:
             self.show_archived(False)
         gone = b.eval(f"A.some(a=>a.id==={json.dumps(self.ACTION)})||R.some(a=>a.id==={json.dumps(self.RAID)})")
         self.assertFalse(gone, "gone again once it is off")
-        self.note(26, "on: both back in Work (FAL-A-004's row with Closed shown); off: gone again" + (f"; {'; '.join(problems)}" if problems else ""))
+        self.note(26, f"\"{where['label']}\" in Settings › {where['heading']}; on: both back in Work (FAL-A-004's row with Closed shown); off: gone again" + (f"; {'; '.join(problems)}" if problems else ""))
         self.assertEqual(problems, [], "; ".join(problems))
 
     def test_c27_edit_unarchives(self):
-        """27. Search for FAL-A-004, open it and change its priority → it is live again (back in Work). Activity shows the
-        un-archive in its change log."""
+        """27. With the switch off, search for FAL-A-004 and open it → its panel opens. Change its priority → it is live again
+        (back in Work). Activity shows the un-archive in its change log."""
         b, problems = self.b, []
         self.ensure_archived()
         self.reopen()
@@ -1223,8 +1226,8 @@ class Bl333And10(HandcheckCase):
         self.assertEqual(problems, [], "; ".join(problems))
 
     def test_c28_undo_nothing_in_review(self):
-        """28. Undo the archive apply (Activity › Undo, or `tracker.py undo`) → ORX-R-001 is back, and nothing appears in
-        Review."""
+        """28. Undo the archive apply with its own Undo in Activity → ORX-005 is back, and nothing appears in Review. Ticking the
+        archive's lines instead (Undo selected) is refused: "archived for its age: use Undo on the archive apply, …"."""
         b = self.b
         self.ensure_archived()
         a = self.archive_apply()
@@ -1243,12 +1246,15 @@ class Bl333And10(HandcheckCase):
             b.click("#actUndoSel")
             b.wait("document.getElementById('actDlg')&&document.getElementById('actDlg').open", 15)
             refused = b.eval("document.getElementById('actDlgBody').innerText.replace(/\\s+/g,' ').trim()")
+            said = refused
             if b.eval("!!document.getElementById('actDlgGo')"):
                 b.click("#actDlgGo")
                 b.pump(2)
+                said += " " + b.eval("document.body.innerText")
             else:
                 b.click("#actDlgCancel")
             steps.append(f"ticking the archive's rows in Activity: \"{refused[:160]}\"")
+            self.assertIn("archived for its age", said, "Undo selected on the archive's lines says how to bring the item back")
         for _ in range(4):                                     # then Activity › Undo on the latest apply, until the archive's is undone
             if self.row("raid", self.RAID).get("archived") == 0:
                 break
@@ -1684,13 +1690,18 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
 
     def test_c35_archived_chip(self):
         """35. Archive them again (check 30). Files → an **Archived** chip; it lists the four moved files, each tagged Archived
-        with **Move back**. No other row in Files has Move back. Clicking a name opens the file."""
+        with **Move back**, the portfolio's at "Portfolio › minutes". No other row in Files has Move back. Clicking a name opens
+        the file."""
         b = self.b
         again = not all(self.at(self.archived(f)).is_file() for f in self.DUE)
         self.ensure_archived()
         rows = self.files_archived()
         self.assertEqual(sorted(r[0] for r in rows), sorted(self.DUE))
         self.assertTrue(all(r[1] and r[2] for r in rows), rows)
+        # BL-101: the portfolio is "Portfolio" in Files, never its folder name
+        where = b.eval(f"(document.querySelector('#filesTbl tr[data-fp={json.dumps(self.PORTF)}] td.x')||{{}}).textContent||''")
+        self.assertEqual(where, "Portfolio › minutes", "the portfolio's minutes are under Portfolio")
+        self.assertNotIn("_portfolio", b.eval("document.getElementById('v-files').innerText"), "Files never shows the folder name")
         others = {}
         for q in b.eval("[...document.querySelectorAll('#fquick [data-q]')].map(e=>e.dataset.q)"):
             if q == "archived":
@@ -1710,7 +1721,7 @@ out({"type": "result", "result": text, "session_id": "sess-hc-guard", "permissio
         o = self.got("/api/open")[-1]
         self.assertTrue(o.get("ok"), o)
         self.assertEqual(o.get("path"), str((self.vault / self.archived(self.STEER)).resolve()))
-        self.note(35, f"{'archived again through Health and the card' if again else 'already archived (check 34 not run)'}; Archived chip lists 4, each tagged Archived with Move back; no Move back under "
+        self.note(35, f"{'archived again through Health and the card' if again else 'already archived (check 34 not run)'}; Archived chip lists 4, each tagged Archived with Move back (the portfolio's at Portfolio › minutes); no Move back under "
                       f"{len(others)} other chips and folders ({sum(v[0] for v in others.values())} rows); clicking the steering "
                       f"minutes' name → /api/open opens it in _Archive")
 
@@ -1820,8 +1831,8 @@ class Bl334And316(HandcheckCase):
 
     42 to 47 build on each other, as the hand checks do: `ensure(step)` records (or does) each earlier step once, so any of
     them runs on its own with --only. Recording is the check's own command (`sweep.py vip record <file> --found sweep`,
-    hcbase.vip_found) with the clock at the time the check names, so "updated HH:MM" is that time (the card says when it was
-    recorded, which by hand is when the tester ran the command)."""
+    hcbase.vip_found), each recorded ten minutes after the conversation's last message, so "updated HH:MM" on the card is
+    shown to be the last message's time (`last`), not when it was recorded."""
     own_vault = True
     CONV = "19:hc-falcon@thread.v2"
     RASHID = "Rashid Al Suwaidi <rashid@northgate.example>"
@@ -1858,9 +1869,9 @@ class Bl334And316(HandcheckCase):
     def ensure(self, step):
         """Do the hand checks' steps up to `step` once each: first (42), quiet (43), update (44)."""
         import hcbase
-        order = {"first": (8, 40, [lambda: self.falcon()]),
-                 "quiet": (8, 45, [lambda: self.falcon(), self.hello]),
-                 "update": (9, 5, [lambda: self.falcon(later=True), self.hello])}
+        order = {"first": (8, 50, [lambda: self.falcon()]),                 # last message 08:40
+                 "quiet": (8, 55, [lambda: self.falcon(), self.hello]),
+                 "update": (9, 15, [lambda: self.falcon(later=True), self.hello])}  # last message 09:05
         for name in order:
             if name not in self.steps:
                 h, m, make = order[name]
@@ -1901,8 +1912,9 @@ class Bl334And316(HandcheckCase):
         return [x[0] for x in cand["buttons"]]
 
     def test_c42_one_card_per_conversation(self):
-        """42. Today → one card titled "Falcon go-live" (not "Group chat"), "updated 08:40", the summary, and two candidates,
-        each with **Create work item** and **Dismiss**. The project is Falcon Data Platform, matched from the title."""
+        """42. Today → one card titled "Falcon go-live" (not "Group chat"), "updated 08:40" (its last message, recorded at
+        08:50), the summary, and two candidates, each with **Create work item** and **Dismiss**. The project is Falcon Data
+        Platform, matched from the title."""
         self.ensure("first")
         cards = self.falcon_cards()
         self.assertEqual(len(cards), 1, f"one card: {[c['title'] for c in self.page_card()]}")
@@ -1919,7 +1931,7 @@ class Bl334And316(HandcheckCase):
         a = self.alert()
         self.assertEqual(a["p"], "FAL", "matched from the title")
         names = [x[2] for x in c["cands"][0]["buttons"]]
-        self.note(42, f"card \"{c['title']}\", updated 08:40 (recorded at 08:40), Falcon Data Platform (p=FAL); "
+        self.note(42, f"card \"{c['title']}\", updated 08:40 (the last message; recorded at 08:50), Falcon Data Platform (p=FAL); "
                       f"Action + Decision, each {' / '.join(n.split(':')[0] for n in names)}")
 
     def test_c43_quiet_line(self):
@@ -1946,8 +1958,8 @@ class Bl334And316(HandcheckCase):
         self.note(43, f"\"{q['text']}\", 0 buttons; title in vip.json \"{a['title']}\"; Today's count {rail or '0'} (the card only)")
 
     def test_c44_same_card_updated(self):
-        """44. Record the first conversation again at 09:05 with a third item → the same card is updated ("updated 09:05", three
-        candidates). No second card."""
+        """44. Record the first conversation again, its last message at 09:05, with a third item → the same card is updated
+        ("updated 09:05", three candidates). No second card."""
         self.ensure("quiet")
         before = self.alert()["id"]
         self.ensure("update")
@@ -1959,11 +1971,11 @@ class Bl334And316(HandcheckCase):
         a = self.alert()
         self.assertEqual(a["id"], before, "the same alert")
         self.assertEqual(len([x for x in self.vip()["alerts"] if x.get("conv") == self.CONV]), 1)
-        self.note(44, "same alert id, updated 09:05, Action + Decision + Risk; one card")
+        self.note(44, "same alert id, updated 09:05 (the last message; recorded at 09:15), Action + Decision + Risk; one card")
 
     def test_c45_dismiss_create(self):
-        """45. Dismiss the risk → it goes; nothing in Review. Create work item on the action → one proposal in Review, for
-        Falcon Data Platform."""
+        """45. Dismiss the risk → it goes; nothing in Review. Create work item on the action → its panel, filled in; Save → one
+        proposal in Review (staged, not applied), for Falcon Data Platform."""
         self.ensure("update")
         b = self.b
         before = self.proposals()
