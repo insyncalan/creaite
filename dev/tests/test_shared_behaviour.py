@@ -57,7 +57,8 @@ VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
 SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek",
                 "review": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
-                "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell"}
+                "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
+                "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones"}
 
 
 def screen_area(name):
@@ -450,7 +451,7 @@ class SharedUndo(Driver, us.UiSweepCase):
                 b.eval(f"document.querySelector({u!r}).click()")         # put the sample back for the next control
                 b.pump(1.0)
                 return []
-            if b.eval("!!document.querySelector('dialog:modal')"):
+            if b.eval(f"SB.state({i}).modal"):
                 return None                          # it asks first: the change is the dialog's, not the menu's
             b.pump(0.25)
         return ["a change is saved with no Undo"]

@@ -41,6 +41,23 @@ SCREENS["work-panel"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), 
                          ts.SCREENS["work-panel"][1], ts.SCREENS["work-panel"][2])
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
+# BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a
+# menu there), a saved view's ▾, the Prep popup with its project chosen (Draft agenda), the milestone editor (Owner) and
+# Movement's rebaseline (Agreed with: Add person). Each is set up in the page only: nothing is saved.
+SCREENS["work-decisions"] = ("go('work'); document.querySelector('#wtabs [data-t=decisions]').click(); setLayout(WT,'list')",
+                             "document.querySelector('#newBtn[aria-haspopup]') && document.querySelector('#workTbl tbody tr')", "#v-work")
+SCREENS["work-views"] = ("go('work'); document.querySelector('#wtabs [data-t=actions]').click(); setLayout(WT,'list'); "
+                         "SAVED.actions=[{name:'Due soon',f:{}},{name:'Mine',f:{}}]; renderWork()",
+                         "document.querySelector('#wviews [data-vmenu]') && document.querySelector('#workTbl tbody tr')", "#v-work")
+SCREENS["prep-popup"] = ("D.calendar={fetched:TODAY+' 07:00',days:{[TODAY]:[{id:'e1',start:'10:00',end:'11:00',title:'ABC Steering',"
+                         "teams:true}]}}; D.prep.meetings['10:00|ABC Steering']={series:'abc steering',p:'ABC',how:'matched',day:TODAY}; "
+                         "openPrep(prepTimed()[0],TODAY)",
+                         "document.getElementById('prepDlg').open && document.querySelector('#prepDlg .agbtn')", "#prepDlg")
+SCREENS["milestone-editor"] = ("MVAUD='int'; mvOpenPage('ABC','plan'); setTimeout(()=>mvEdOpen('ABC-M-001'),30)",
+                               "!document.getElementById('mvPeek')?.hidden && document.getElementById('mvOwner')", "#mvPeek")
+SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='ABC-M-001'; "
+                              "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
+                              "document.getElementById('mvRbAdd')", "#v-milestones")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
@@ -56,7 +73,9 @@ class UiSweepCase(ts.Snapshots):
         go, ready, region = SCREENS[name]
         b = self.b
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
-               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today')")
+               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
+               "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
+               "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)
         last = None
