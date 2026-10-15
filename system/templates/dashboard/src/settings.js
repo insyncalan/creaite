@@ -204,9 +204,10 @@ $("#settingsBody").addEventListener("click",async e=>{ const b=e.target.closest(
   const r=await resetSettings(keys); if(!r.ok){ b.disabled=false; snack(r.message); return; }
   renderSettings(); snack(`${name}: back to its default`); });
 const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.onchange=()=>{ CHANGED=chg.checked; changedOnly.value=CHANGED; if(CHANGED&&!catalogue.value&&SERVED) loadCatalogue(); renderSettings(); $("#v-settings").scrollTop=0; };
-/* when the catalogue arrives or changes: the older cards' dots follow; Show changed only redraws, as its sections may change */
+/* when the catalogue arrives or changes: the older cards' dots follow; Show changed only and a search redraw, as their sections
+   may change (a search typed before the catalogue arrived found nothing in Essentials or Everything else) */
 effect(()=>{ const c=catalogue.value; if(!c||shared.VIEW!=="settings") return;
-  if(CHANGED&&!$("#settingsBody").contains(document.activeElement)) renderSettings(); else setMark($("#settingsBody")); });
+  if((CHANGED||shared.SQ.trim())&&!$("#settingsBody").contains(document.activeElement)) renderSettings(); else setMark($("#settingsBody")); });
 /* the rail's count needs a recent check: one a minute after start-up when this browser hasn't checked for a day */
 if(SERVED&&Date.now()-lastCheckAt()>24*3600*1000) window.setTimeout(()=>{ if(viaServer()) checkHealth(); },60*1000);
 }
