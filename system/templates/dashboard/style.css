@@ -3027,7 +3027,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 /* the list's quiet collapse control, at the right edge of the NOTES header */
 .nlist .lhead .sp{flex:1}
 .nlist .lhead .col{border:0;background:none;color:var(--faint);opacity:.75;width:var(--ctl-h-sm);height:var(--ctl-h-sm)} .nlist .lhead .col:hover,.nlist .lhead .col:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}
-.nsave{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap} .nsave.saved{color:var(--muted)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
+.nsave{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap} .nsave.saved,.nsave.typing,.nsave.saving{color:var(--muted)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
 .nslot:empty{display:none}
 .nmore .nch{display:none} .nmore>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .nmore::before{content:"⋯";font-size:16px;line-height:1}
@@ -3106,6 +3106,22 @@ button.nchip{font:inherit;font-size:12px}
 #noteDelDlg{width:min(480px,calc(100vw - 32px))} .ndelbox{display:grid;gap:10px} .ndelbox h2{margin:0;font-size:16px;overflow-wrap:anywhere} .ndelbox p{margin:0}
 @media (max-width:1100px){.nsplit,.nsplit.finding{grid-template-columns:220px minmax(0,1fr)}.nsplit.collapsed,.nsplit.finding.collapsed{grid-template-columns:40px minmax(0,1fr)}.nside{position:static}.nctx,.nside{grid-column:1/-1}}
 @media (max-width:700px){.nsplit,.nsplit.collapsed,.nsplit.finding,.nsplit.finding.collapsed{grid-template-columns:minmax(0,1fr)}.nlist{position:static}.ndoc{padding:14px}.nntpl,.nnws{grid-template-columns:1fr}}
+/* #115 focus mode and #119 closing rules: the open note lifted over the page (the same element, fixed; nothing is copied), a
+   dimmed scrim behind it, and the "couldn't save" question. Tokens only. */
+.nexpand{flex:none;color:var(--faint);opacity:.8} .nexpand:hover,.nexpand:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}
+.ndocgh{min-height:40vh}
+.nscrim{position:fixed;inset:0;z-index:var(--z-popup-scrim);background:var(--scrim)}
+.ndoc.nfocus{position:fixed;z-index:var(--z-popup);top:6vh;left:0;right:0;margin:0 auto;width:min(1040px,82vw);height:88vh;box-sizing:border-box;overflow:auto;
+  padding:52px 0 40px;box-shadow:var(--shadow-lg);border-radius:14px}
+.ndoc.nfocus>*{max-width:780px;margin-left:auto;margin-right:auto;width:calc(100% - 64px);box-sizing:border-box}
+.ndoc.nfocus .nexpand{position:absolute;left:14px;top:14px;z-index:var(--z-raised-2)}
+.ndoc.nfocus .nslot,.ndoc.nfocus .nmorewrap{display:none}
+.ndoc.nfocus .ntitle{font-size:26px}
+.ndoc.nfocus .ned .nbody{font-size:16px;line-height:1.65;max-width:none;min-height:50vh}
+@media (max-width:900px){.ndoc.nfocus{width:96vw}.ndoc.nfocus>*{width:calc(100% - 32px)}}
+#noteLeaveDlg{width:min(480px,calc(100vw - 32px))}
+.nleave{display:grid;gap:12px} .nleave h2{margin:0;font-size:16px} .nleave p{margin:0;color:var(--muted);font-size:13px}
+.nlfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 /* ===== end BL-301 B ===== */
 /* ===== BL-301 E (v20-find-updates): Find updates, the panel beside a note (components/notes/FindUpdates.jsx). Tokens only. ===== */
 .fu{background:var(--surface);border:1px solid var(--accent);border-radius:10px;overflow:hidden;min-width:0;font-size:13px}

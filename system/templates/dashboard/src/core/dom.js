@@ -81,6 +81,9 @@ export const ICONS={
   chevdown:'<path d="m6 9 6 6 6-6"/>',
   /* Notes header (#115): the list's quiet double chevrons  */
   chevsright:'<path d="M13 6l6 6-6 6M5 6l6 6-6 6"/>',
+  /* #115 focus mode: lift the note over the page, and leave */
+  expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/>',
+  shrink:'<path d="M20 10h-6V4M4 14h6v6M14 10l7-7M10 14l-7 7"/>',
   chevsleft:'<path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/>',
   calendar:'<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
   filetext:'<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',

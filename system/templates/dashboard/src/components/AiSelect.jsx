@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { Icon } from "./Icon.jsx";
 import { Menu } from "./Menu.jsx";
 import { ED_HOOKS } from "../core/editor.js";
-import { AI_OPTIONS, aiAccept, aiAttach, aiBar, aiChanges, aiDiff, aiDiscard, aiItems, aiRetry, aiRun, aiRunAction, aiSend, aiSug } from "../stores/aiEdit.js";
+import { AI_OPTIONS, aiAccept, aiAttach, aiBar, aiBarClose, aiChanges, aiDiff, aiDiscard, aiItems, aiRetry, aiRun, aiRunAction, aiSend, aiSug } from "../stores/aiEdit.js";
 
 /** The bar over a selection. @param {{bar: import("../stores/aiEdit.js").Bar}} props */
 export function AiBar({ bar }) {
@@ -27,7 +27,8 @@ export function AiBar({ bar }) {
   }, [bar.open]);
   const back = () => { setAsking(false); setWords(""); if (!bar.h.editor.isDestroyed) bar.h.focus(); };
   return (
-    <div class="aibar" role="toolbar" aria-label="AI on the selected text" ref={box} style={{ top: `${bar.top}px`, left: `${bar.left}px` }}>
+    <div class="aibar" role="toolbar" aria-label="AI on the selected text" ref={box} style={{ top: `${bar.top}px`, left: `${bar.left}px` }}
+      onKeyDown={e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); aiBarClose(); } }}>
       {asking ? (
         <form class="aiask" onSubmit={e => { e.preventDefault(); if (words.trim()) aiRun("custom", words.trim(), { h: bar.h, ai: bar.ai }); }}>
           <input ref={input} type="text" value={words} maxLength={400} placeholder="Say what you want done with the text"
