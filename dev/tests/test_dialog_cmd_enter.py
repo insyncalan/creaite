@@ -69,7 +69,7 @@ class Cases(LiveBrowserCase):
         self.assertEqual(sorted(found - listed), [], "a dialog with no entry: say whether ⌘↵ saves in it or why it is exempt")
 
     def test_table(self):
-        for dlg, opener, fill, button, empty in ROWS:
+        for dlg, opener, fill, button, _empty in ROWS:
             with self.subTest(dialog=dlg, opener=opener[:30]):
                 self.open_(dlg, opener)
                 if fill:
@@ -85,7 +85,7 @@ class Cases(LiveBrowserCase):
                 self.shut(dlg)
 
     def test_a_required_field_left_empty_is_not_saved(self):
-        for dlg, opener, fill, button, empty in ROWS:
+        for dlg, opener, _fill, _button, empty in ROWS:
             if not empty:
                 continue
             with self.subTest(dialog=dlg):
