@@ -4,6 +4,8 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | #79's fix (`ci-macos-hang`: Chrome's mock keychain, per-file timeout, `--rerun-max`, `--max-fail 25`) is merged into main once pushes return. No item for test_activity_*: its failures were in a cancelled run, and main later passed on Ubuntu | CI timing is within the charter; no check turned off |
+| 15-10-2026 | Jarvis | Full digest 2 (08:00): 10 decisions to Alan; pushes blocked by the safety check since 02:50; Team Cap given its morning plan on #34 | The 08:00 digest |
 | 15-10-2026 | Jarvis | Raised #80 (v1.9.5 defect: the proposal peek's Save off screen at 320px; Team Stark, XS). #79 (macOS CI hang) and test_people_filters' load flake move to Team Stark | A defect in the release being built is the Head's; Team Cap silent, Stark idle |
 | 15-10-2026 | Jarvis | BL-316: only `v195-consistency` (which holds the screen branches) is pushed. The four markup-only goldens are re-recorded once after peek-core. Activity's Kind/When filter and a Review More actions button are kept in their own commits, to be dropped if Alan says no | Scope and visible changes are Alan's; keeping them separable costs nothing |
 | 15-10-2026 | Jarvis | v2.0.0 defect: `openNoteFull` doesn't open the note from the capture drawer; Team Stark fixes it on its own branch (#60). Whether confidential notes are filtered out of Prep pages goes to Alan | A defect inside a release is the Head's; confidential material is Alan's |
