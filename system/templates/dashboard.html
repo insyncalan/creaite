@@ -32,10 +32,10 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#838C95; --line:#2B3238; --line-strong:#3E474E;
   --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
-  --ok:#9FD6A5; --ok-soft:#1D3322; --inverse:#E3E7EA; --inverse-ink:#181D21; --bad-ink:#601410;}}
+  --ok:#9FD6A5; --ok-soft:#1D3322; --inverse:#E3E7EA; --inverse-ink:#181D21; --bad-ink:#601410; --scrim:rgba(0,0,0,.6);}}
 :root[data-theme="dark"]{--bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#838C95; --line:#2B3238; --line-strong:#3E474E;
   --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; --inverse:#E3E7EA; --inverse-ink:#181D21;
-  --bad-ink:#601410;}   /* v1.9.5 (UI audit P1-3): dark text on the pale dark --bad badge, 7.66:1 (white was 1.71:1) */
+  --bad-ink:#601410; --scrim:rgba(0,0,0,.6);}   /* v1.9.5 (UI audit P1-3): dark text on the pale dark --bad badge, 7.66:1 (white was 1.71:1) */
 /* ===== BL-325 scale (v1.9.5): one design scale, shared by all nine palettes (each keeps its own colours) =====
    Use these, never a raw value: dev/tools/token_audit.py flags a font size, radius, shadow or z-index that isn't one, and
    a spacing value off the scale. The Help guides take this block too (build_guides.py copies it).
@@ -53,6 +53,7 @@
   --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-pill:999px;
   --shadow-sm:0 4px 12px rgba(0,0,0,.14); --shadow-md:0 8px 24px rgba(0,0,0,.18); --shadow-lg:0 12px 32px rgba(0,0,0,.26);
   --shadow-side:-14px 0 32px rgba(0,0,0,.16);
+  --scrim:rgba(0,0,0,.25);   /* a modal dialog's backdrop; darker in dark mode (below), where .25 black barely shows */
   --z-under:0; --z-raised:1; --z-raised-2:2; --z-sticky:3; --z-sticky-2:4; --z-local:5;
   --z-menu:30; --z-popup-scrim:38; --z-popup:39; --z-panel:40; --z-panel-over:41; --z-chat:45; --z-badge:46; --z-stage:47;
   --z-pop:60; --z-pop-over:65; --z-toast:70; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210;
@@ -922,7 +923,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .acmenu .aco{display:flex;gap:10px;align-items:baseline;padding:6px 12px;cursor:pointer} .acmenu .aco.act{background:var(--sunk)} .acmenu .aco span{flex:1} .acmenu .aco small{color:var(--muted);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .chin textarea{flex:1;resize:none;min-height:40px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--bg)}
 /* ===== BL-199 (sprint-chat-text) ===== */ .acmenu .aco:hover{background:var(--sunk)} .acmenu .achint{padding:4px 12px 4px;font-size:var(--fs-xs);color:var(--faint);border-bottom:1px solid var(--line)}
 dialog#cmdk{margin:72px auto auto;width:min(640px,94vw);padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)}
-dialog#cmdk::backdrop{background:rgba(0,0,0,.25)}
+dialog#cmdk::backdrop{background:var(--scrim)}
 #cmdkIn{width:100%;height:52px;border:0;border-bottom:1px solid var(--line);padding:0 16px;background:none;outline:0;font-size:var(--fs-lg)}
 #cmdkList{max-height:60vh;overflow:auto;padding:6px 0} #cmdkList .grp{font-size:var(--fs-xs);color:var(--muted);padding:8px 16px 2px}
 #cmdkList button{display:flex;width:100%;border:0;background:none;padding:8px 16px;text-align:left;cursor:pointer;font-size:var(--fs-sm);gap:10px} #cmdkList button small{margin-left:auto;color:var(--muted)}
@@ -944,9 +945,9 @@ body.resizing{cursor:col-resize;user-select:none}
 .vst{display:flex;gap:6px;align-items:center} .vsm{font-size:var(--fs-xs);color:var(--muted);margin:2px 0} .vss{font-size:var(--fs-sm)} .vss mark,#spText mark{background:var(--accent-soft);color:inherit;border-bottom:2px solid var(--accent);border-radius:var(--r-sm)}
 #vsAnswer{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);padding:12px 14px;margin:10px 0} .vsah{display:flex;gap:8px;align-items:center} .vsah .sp{flex:1} .vsab{margin:8px 0;font-size:var(--fs-md)} .vsab p{margin:0 0 8px} .vsaf{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
 a.cite{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)} a.cite:hover{text-decoration:underline}
-#searchPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(760px,94vw);background:var(--surface);color:var(--ink)} #searchPrev::backdrop{background:rgba(0,0,0,.25)} #spText{max-height:62vh;overflow:auto;font-size:var(--fs-sm)} #spText p{margin:0 0 8px}
+#searchPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(760px,94vw);background:var(--surface);color:var(--ink)} #searchPrev::backdrop{background:var(--scrim)} #spText{max-height:62vh;overflow:auto;font-size:var(--fs-sm)} #spText p{margin:0 0 8px}
 /* ===== People (BL-55, BL-56) ===== */
-#personDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(440px,92vw);background:var(--surface);color:var(--ink)} #personDlg::backdrop{background:rgba(0,0,0,.25)}
+#personDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(440px,92vw);background:var(--surface);color:var(--ink)} #personDlg::backdrop{background:var(--scrim)}
 #personDlg label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:8px 0 2px} #personDlg .req{color:var(--warn)} #personDlg input[type=text]{width:100%;height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink)}
 #personDlg input[readonly]{background:var(--sunk);color:var(--muted)} #personDlg .pdc{display:block;width:100%;text-align:left;margin:4px 0} #personDlg .pdc small{color:var(--muted);margin-left:6px} #pdErr{min-height:18px;margin-top:6px}
 .copt.new small,.copt small{margin-left:auto}
@@ -1004,7 +1005,7 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 .rgroup h2 .rgtick{margin-right:6px;vertical-align:-2px} .rgroup h2 .rgc{font-weight:400;font-size:var(--fs-sm);margin-left:6px}
 .tag.stale{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--ink)}
 .rvdone{text-align:center;padding:32px 10px} .rvdone h2{margin:0 0 6px} .rvdacts{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
-dialog.rvdlg{width:min(560px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.rvdlg::backdrop{background:rgba(0,0,0,.25)} .rvdlg h2{margin:0 0 4px} .rvcnt{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px} .rvcnt>div{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs);color:var(--muted)} .rvcnt b{display:block;font-size:var(--fs-lg);color:var(--ink)}
+dialog.rvdlg{width:min(560px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.rvdlg::backdrop{background:var(--scrim)} .rvdlg h2{margin:0 0 4px} .rvcnt{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px} .rvcnt>div{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs);color:var(--muted)} .rvcnt b{display:block;font-size:var(--fs-lg);color:var(--ink)}
 .rvcnt.warnc>div{background:color-mix(in srgb,var(--warn) 10%,var(--surface))} .rvlst{display:grid;gap:4px;max-height:260px;overflow:auto} .rvlst>div{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-sm);padding:4px 0;border-bottom:1px solid var(--line)}
 /* ===== BL-133 stage B (sprint-work-views) ===== the reason menu */
 .rvreason button{display:flex;justify-content:space-between;gap:16px} .rvreason .rvother{display:flex;gap:6px;padding:6px} .rvreason .rvother input{height:28px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;font:inherit;font-size:var(--fs-sm);width:190px;background:var(--bg);color:var(--ink)}
@@ -1053,7 +1054,7 @@ body.bdragging .bcol:not(.collapsed) .bdrop{display:block} body.bdragging{cursor
 .bpick{padding:16px 14px;border:1px dashed var(--line);border-radius:var(--r-md);font-size:var(--fs-sm)} .bpick select{margin-left:8px;height:30px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px}
 .rjmenu{position:fixed;z-index:var(--z-top);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:4px;display:grid}
 .rjmenu button{border:0;background:none;text-align:left;padding:8px 12px;border-radius:var(--r-md);cursor:pointer;color:var(--ink);font:inherit;font-size:var(--fs-sm)} .rjmenu button:hover,.rjmenu button:focus-visible{background:var(--sunk);outline:none}
-dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#boardDlg::backdrop{background:rgba(0,0,0,.25)}
+dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#boardDlg::backdrop{background:var(--scrim)}
 #boardDlg .dwrap{width:170px;margin:4px 0 8px} #boardDlg .dwrap input{height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink)} .bdquick{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
 .bcard{transition:border-color var(--d1),box-shadow var(--d1)} .bcol{transition:background-color var(--d1)}
 @media (max-width:640px){ .boardctl{width:100%} }
@@ -1086,7 +1087,7 @@ dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);
 .pptype{font-size:var(--fs-xs);color:var(--muted);font-weight:500;margin:8px 0 4px} .ppcard .tbl{margin-bottom:6px}
 .pplinks{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 4px;font-size:var(--fs-sm)} .pplinks a{color:var(--accent)}
 .pickcol{width:32px;padding-right:0} tr.handpick{cursor:pointer}
-dialog.prepdlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.prepdlg::backdrop{background:rgba(0,0,0,.25)}
+dialog.prepdlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.prepdlg::backdrop{background:var(--scrim)}
 .wsq{margin-top:6px;font-size:var(--fs-xs);color:var(--warn);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 /* ===== Insight (BL-51, BL-49, BL-54) ===== */
 .wflag{display:inline-flex;vertical-align:-3px;margin-right:4px;color:var(--warn);cursor:help} .wflag svg{width:15px;height:15px}
@@ -1095,10 +1096,10 @@ dialog.prepdlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid 
 .wlist>div:hover{background:var(--sunk)} .wlist .sub{display:block;margin-left:20px}
 .preplink{font-size:var(--fs-xs);padding:0;margin-top:4px;display:block}
 dialog#prepDlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)}
-dialog#prepDlg::backdrop{background:rgba(0,0,0,.25)}
+dialog#prepDlg::backdrop{background:var(--scrim)}
 .prephead{display:flex;gap:8px;align-items:flex-start;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 /* Draft email (BL-83): the popup; the preview is always a white card, as the email will be read */
-dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#deDlg::backdrop{background:rgba(0,0,0,.25)}
+dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#deDlg::backdrop{background:var(--scrim)}
 #deDlg .prepbody{max-height:calc(90vh - 72px)} .derow{display:flex;align-items:center;gap:10px;margin:8px 0} .derow>label{width:64px;flex:none;color:var(--muted);font-size:var(--fs-sm)} .derow>span,.derow>input{flex:1;min-width:0}
 .derow>input[type=text]{height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg);color:var(--ink)}
 .deinc{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;margin:10px 0;max-height:190px;overflow:auto} .deinc .pph{margin:6px 0 2px} .deinc label.it{display:flex;gap:8px;align-items:baseline;padding:2px 0;font-size:var(--fs-sm);cursor:pointer}
@@ -1758,7 +1759,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
 @media (max-width:480px){ :root.railicons{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} }
 #railCust{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);padding:16px 16px 14px;box-shadow:var(--shadow-lg)}
-#railCust::backdrop{background:rgba(0,0,0,.25)}
+#railCust::backdrop{background:var(--scrim)}
 #railCust h2{margin:0 0 4px;font-size:var(--fs-lg)} #railCust .sub{margin:0;font-size:var(--fs-xs)}
 #railCust .rccols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 12px}
 @media (max-width:520px){ #railCust .rccols{grid-template-columns:1fr} }
@@ -1902,7 +1903,7 @@ body.pkstaged .snack{bottom:68px}
 .pk-vbtn:hover{background:var(--sunk)} .pk-vbtn.empty{color:var(--faint)} .pk-vbtn:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .pk-vtext{padding:8px 10px;margin-left:-10px;font-size:var(--fs-md);white-space:pre-wrap}
 .pk-vro{padding:8px 0;color:var(--ink);font-size:var(--fs-md)} .pk-vro .sub{font-size:var(--fs-xs)}
-.pk-sw{width:36px;height:20px;border-radius:var(--r-pill);border:0;background:var(--line);position:relative;cursor:pointer;margin-top:8px;flex:none;padding:0}
+.pk-sw{width:36px;height:24px;border-radius:var(--r-pill);border:2px solid transparent;border-left:0;border-right:0;background:var(--line);background-clip:padding-box;position:relative;cursor:pointer;margin-top:6px;flex:none;padding:0}   /* BL-316: a 24px target, the same 20px track (WCAG 2.5.8) */
 .pk-sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--knob);transition:transform var(--d1,.12s)}
 .pk-sw[aria-checked="true"]{background:var(--accent)} .pk-sw[aria-checked="true"]::after{transform:translateX(16px)} .pk-sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .pk-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:16px 0 12px}
@@ -2367,7 +2368,7 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .mhstrip .mhdot{font-size:var(--fs-sm);line-height:1;color:var(--muted)}
 .mhstrip .mh-done .mhdot{color:var(--ok)} .mhstrip .mh-current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .mhstrip .mh-current .mhdot{color:var(--accent)} .mhstrip .mh-skip{opacity:.7;border-style:dashed}
-.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
 .mhgrid .card{margin:0} .mhnext .btn{margin-top:4px}
 .mhitems,.mhcov,.mhfiles{list-style:none;margin:8px 0 0;padding:0} .mhitems li,.mhcov li,.mhfiles li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
 .mhitem.you{font-weight:500} .tag.ok{color:var(--ok);font-weight:500}
@@ -4141,6 +4142,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     flip: () => flip,
     flkOpen: () => flkOpen,
     flowCard: () => flowCard,
+    flushPicker: () => flushPicker,
     formProject: () => formProject,
     freeBackup: () => freeBackup,
     funnelTip: () => funnelTip,
@@ -4231,6 +4233,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     isoAdd: () => isoAdd,
     isoDow: () => isoDow,
     itemActs: () => itemActs,
+    itemDatePicker: () => itemDatePicker,
     itemLate: () => itemLate,
     itemTable: () => itemTable,
     itemText: () => itemText,
@@ -4551,6 +4554,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pdWhen: () => pdWhen,
     pdWrite: () => pdWrite,
     peekFrame: () => peekFrame,
+    peekMark: () => peekMark,
     peekPropNodes: () => peekPropNodes,
     pencil: () => pencil,
     pendingCard: () => pendingCard,
@@ -4608,7 +4612,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkAdd: () => pkAdd,
     pkApply: () => pkApply,
     pkArr: () => pkArr,
-    pkAv: () => pkAv,
     pkChipsDraw: () => pkChipsDraw,
     pkCid: () => pkCid,
     pkClient: () => pkClient,
@@ -4676,7 +4679,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkNote: () => pkNote,
     pkOn: () => pkOn,
     pkOpenProp: () => pkOpenProp,
-    pkOpts: () => pkOpts,
     pkOrder: () => pkOrder,
     pkOwnF: () => pkOwnF,
     pkOwnL: () => pkOwnL,
@@ -4684,9 +4686,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkOwnerList: () => pkOwnerList,
     pkOwnerOpts: () => pkOwnerOpts,
     pkPersist: () => pkPersist,
-    pkPlace: () => pkPlace,
     pkPopClose: () => pkPopClose,
-    pkPr: () => pkPr,
+    pkPopDone: () => pkPopDone,
     pkPropDraw: () => pkPropDraw,
     pkPropSave: () => pkPropSave,
     pkQuiet: () => pkQuiet,
@@ -4698,7 +4699,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkSetDate: () => pkSetDate,
     pkSetStatus: () => pkSetStatus,
     pkShort: () => pkShort,
-    pkSt: () => pkSt,
     pkStOpt: () => pkStOpt,
     pkStageDraw: () => pkStageDraw,
     pkStagedOf: () => pkStagedOf,
@@ -5141,6 +5141,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     toDb: () => toDb,
     toDecideRows: () => toDecideRows,
     toIso: () => toIso,
+    toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
     tx: () => tx,
     typing: () => typing,
@@ -6855,6 +6856,447 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   function comboboxOpen() {
     return !!OPEN;
+  }
+
+  // components/IconButton.jsx
+  function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm = true, cls, data, haspopup, keyHint, id, hidden }) {
+    const c5 = ["ib", sm ? "sm" : "", primary ? "pri" : "", cls].filter(Boolean).join(" ");
+    const extra = {};
+    for (const k5 of Object.keys(data || {})) extra[`data-${k5}`] = String((data || {})[k5]);
+    const click = (e4) => {
+      if (why) {
+        e4.preventDefault();
+        if (onBlocked) onBlocked(e4);
+        return;
+      }
+      if (onClick) onClick(e4);
+    };
+    return /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: c5,
+        id,
+        hidden,
+        "aria-label": name || label,
+        "data-tip": why || label,
+        "data-key": keyHint,
+        "aria-disabled": why ? "true" : void 0,
+        "aria-haspopup": (
+          /** @type {any} */
+          haspopup
+        ),
+        onClick: click,
+        ...extra,
+        children: /* @__PURE__ */ u2(Icon, { name: icon })
+      }
+    );
+  }
+  function drawIconButton(host2, props) {
+    R(/* @__PURE__ */ u2(IconButton, { ...props }), host2);
+  }
+
+  // components/Picker.jsx
+  var PICK = null;
+  function flushPicker() {
+    if (PICK) R(PICK.make(), PICK.host);
+  }
+  function placePicker(el, anchor) {
+    const r4 = anchor.getBoundingClientRect(), w5 = el.offsetWidth, h5 = el.offsetHeight;
+    let x5 = r4.left, y5 = r4.bottom + 4;
+    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
+    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
+    el.style.left = `${x5}px`;
+    el.style.top = `${y5}px`;
+  }
+  var focusables = (el) => (
+    /** @type {HTMLElement[]} */
+    [...el.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
+  );
+  function tabOut(e4, el) {
+    if (e4.key !== "Tab" || !el) return;
+    const L2 = focusables(el), first = L2[0], last = L2[L2.length - 1];
+    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L2.length) closePicker("tab");
+  }
+  function Frame({ cls, role, label, id, anchor, onKey, boxRef, children }) {
+    _2(() => {
+      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
+    });
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.key !== "Escape") e4.stopPropagation();
+    };
+    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
+      /** @type {any} */
+      role || void 0
+    ), "aria-label": role ? label : void 0, id, ref: boxRef, onKeyDown: keys, children });
+  }
+  var optionsIn = (el) => el ? (
+    /** @type {HTMLElement[]} */
+    [...el.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function PickerList({ anchor, props }) {
+    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
+    const [q4, setQ] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), field = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    const item = role === "menu" ? "menuitem" : "option", t5 = q4.trim().toLowerCase();
+    const cur = filter ? filter(q4.trim()) : options;
+    const shown2 = cur.map((o5, i5) => (
+      /** @type {[PickerOption, number]} */
+      [o5, i5]
+    )).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5));
+    const useNew = !!(allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5));
+    _2(() => {
+      const el = box.current;
+      if (!el) return;
+      if (field.current) {
+        field.current.focus();
+        return;
+      }
+      /** @type {HTMLElement | null} */
+      (el.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el)[0])?.focus();
+    }, []);
+    const pick = (o5) => {
+      if (o5.disabled) return;
+      closePicker("pick");
+      onPick(o5.v, false, o5);
+    };
+    const pickNew = () => {
+      const typed = q4.trim();
+      closePicker("pick");
+      onPick(typed, true);
+    };
+    const keys = (e4) => {
+      const L2 = optionsIn(box.current), i5 = L2.indexOf(
+        /** @type {HTMLElement} */
+        document.activeElement
+      );
+      if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        (L2[i5 + 1] || L2[0])?.focus();
+      } else if (e4.key === "ArrowUp") {
+        e4.preventDefault();
+        (i5 <= 0 && field.current ? field.current : L2[i5 - 1] || L2[L2.length - 1])?.focus();
+      } else if (e4.key === "Home" && i5 >= 0) {
+        e4.preventDefault();
+        L2[0]?.focus();
+      } else if (e4.key === "End" && i5 >= 0) {
+        e4.preventDefault();
+        L2[L2.length - 1]?.focus();
+      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        L2[0]?.click();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+      } else if (e4.key === "Tab") closePicker("tab");
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
+      search ? /* @__PURE__ */ u2(
+        "input",
+        {
+          class: "pkq",
+          type: "search",
+          placeholder: "Search",
+          "aria-label": `Search: ${label}`,
+          autocomplete: "off",
+          ref: field,
+          value: q4,
+          onInput: (e4) => {
+            setQ(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            );
+            flushPicker();
+          }
+        }
+      ) : null,
+      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown2.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
+        shown2.map(([o5, i5]) => /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "pkopt",
+            role: item,
+            "data-i": String(i5),
+            id: o5.id,
+            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
+            "aria-disabled": o5.disabled ? "true" : void 0,
+            onClick: () => pick(o5),
+            children: [
+              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
+              /* @__PURE__ */ u2("span", { children: [
+                o5.label,
+                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
+              ] }),
+              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
+            ]
+          },
+          `${i5}:${o5.v}`
+        )),
+        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
+          /* @__PURE__ */ u2(Icon, { name: "plus" }),
+          /* @__PURE__ */ u2("span", { children: [
+            "Use “",
+            q4.trim(),
+            "”"
+          ] })
+        ] }) : null
+      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
+    ] });
+  }
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var calAdd = (iso, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
+    d5.setUTCDate(d5.getUTCDate() + n4);
+    return d5.toISOString().slice(0, 10);
+  };
+  var dow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
+  function DateCalendar({ anchor, props }) {
+    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
+    const base = value || TODAY;
+    const [ym, setYm] = d2(
+      /** @type {[number, number]} */
+      [+base.slice(0, 4), +base.slice(5, 7) - 1]
+    );
+    const [focusIso, setFocusIso] = d2(
+      /** @type {string | null} */
+      value || TODAY
+    );
+    const [bad, setBad] = d2(false), [note, setNote] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), typed = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    _2(() => {
+      if (typed.current) typed.current.value = fd(value || "");
+    }, []);
+    const [y5, m5] = ym, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
+    const days2 = Array.from({ length: n4 }, (_5, i5) => isoOf(y5, m5, i5 + 1));
+    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
+    _2(() => {
+      if (focusIso === null || !box.current) return;
+      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
+    }, [focusIso, ym]);
+    const pick = (iso) => {
+      closePicker("pick");
+      onPick(iso);
+    };
+    const month = (by) => {
+      let mm = m5 + by, yy = y5;
+      if (mm < 0) {
+        mm = 11;
+        yy--;
+      }
+      if (mm > 11) {
+        mm = 0;
+        yy++;
+      }
+      setFocusIso(null);
+      setYm([yy, mm]);
+      flushPicker();
+    };
+    const keys = (e4) => {
+      const tg = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      if (tg.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
+        e4.preventDefault();
+        const to = calAdd(
+          tg.dataset.d || TODAY,
+          /** @type {Record<string, number>} */
+          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
+        );
+        setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]);
+        setFocusIso(to);
+        flushPicker();
+        return;
+      }
+      if (e4.key === "Enter" && tg.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        const t5 = (
+          /** @type {HTMLInputElement} */
+          tg.value.trim()
+        );
+        if (!t5) {
+          pick("");
+          return;
+        }
+        const iso = parse(t5);
+        if (iso) pick(iso);
+        else {
+          setBad(true);
+          flushPicker();
+        }
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
+    const quick = (
+      /** @type {[string, string][]} */
+      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
+    );
+    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
+      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
+        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
+        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
+          MONTHS[m5],
+          " ",
+          y5
+        ] }),
+        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
+        DOW.map((w5) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w5 }, w5)),
+        Array.from({ length: lead }, (_5, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
+        days2.map((iso) => {
+          const we = !!(weekend && weekend(iso));
+          return /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: `pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}${we ? " wkend" : ""}`,
+              "data-d": iso,
+              "aria-label": `${fd(iso)}${we ? ", weekend" : ""}`,
+              "aria-pressed": iso === value ? "true" : void 0,
+              tabIndex: iso === tabDay ? 0 : -1,
+              onClick: () => pick(iso),
+              children: +iso.slice(8)
+            },
+            iso
+          );
+        })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w5, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w5 }, w5)) }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          class: `pkdt${bad ? " bad" : ""}`,
+          type: "text",
+          ref: typed,
+          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
+          "aria-label": `${label}, typed`,
+          "aria-invalid": bad ? "true" : void 0,
+          autocomplete: "off",
+          onInput: (e4) => {
+            setBad(false);
+            if (typedNote) setNote(typedNote(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value.trim()
+            ));
+            flushPicker();
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
+      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
+    ] });
+  }
+  function Popover({ anchor, props }) {
+    const { label, content, cls, id, role = "dialog", focus } = props;
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el = box.current;
+      if (!el || !content) return;
+      const f5 = (
+        /** @type {HTMLElement | null} */
+        focus ? el.querySelector(focus) : focusables(el)[0] || null
+      );
+      if (f5) {
+        f5.focus();
+        if (f5 instanceof HTMLInputElement) f5.select();
+      }
+    }, []);
+    const keys = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, role, label, id, anchor, boxRef: box, onKey: keys, children: typeof content === "function" ? content() : content });
+  }
+  function popupMount(anchor, make, onClose) {
+    closePicker("owner", false);
+    bootPicker();
+    const host2 = document.createElement("div");
+    host2.className = "pophost";
+    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
+    PICK = { host: host2, el: null, anchor, make, onClose };
+    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    R(make(), host2);
+    PICK.el = /** @type {HTMLElement} */
+    host2.firstElementChild;
+    shared.PKPOP = { el: PICK.el, anchor };
+    return PICK.el;
+  }
+  function openPicker(anchor, props) {
+    return popupMount(anchor, () => /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
+  }
+  function openDatePicker(anchor, props) {
+    return popupMount(anchor, () => /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
+  }
+  function openPopover(anchor, props) {
+    return popupMount(anchor, () => /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
+  }
+  function closePicker(how = "owner", focus = true) {
+    const p6 = PICK;
+    if (!p6) return;
+    PICK = null;
+    shared.PKPOP = null;
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    const done = p6.onClose ? p6.onClose(how) : false;
+    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
+  }
+  function pickerOpenFor(anchor) {
+    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
+  }
+  var BOOTED = false;
+  function bootPicker() {
+    if (BOOTED) return;
+    BOOTED = true;
+    document.addEventListener("mousedown", (e4) => {
+      const t5 = (
+        /** @type {Node} */
+        e4.target
+      );
+      if (PICK && !(PICK.el && PICK.el.contains(t5)) && !PICK.anchor.contains(t5)) closePicker("away");
+    }, true);
+    addEventListener("resize", () => closePicker("away"));
+  }
+  function htmlPopover(anchor, cls, htmlText) {
+    const el = openPopover(anchor, { label: "", cls, role: "" });
+    putHTML(el, raw(htmlText));
+    placePicker(el, anchor);
+    return el;
   }
 
   // components/Chip.jsx
@@ -9387,435 +9829,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       /* @__PURE__ */ u2("h2", { children: g5 }),
       list.filter((s5) => groupOf2(s5) === g5).map((s5) => /* @__PURE__ */ u2(One, { s: s5 }, s5.key))
     ] })) });
-  }
-
-  // components/IconButton.jsx
-  function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm = true, cls, data, haspopup, keyHint, id, hidden }) {
-    const c5 = ["ib", sm ? "sm" : "", primary ? "pri" : "", cls].filter(Boolean).join(" ");
-    const extra = {};
-    for (const k5 of Object.keys(data || {})) extra[`data-${k5}`] = String((data || {})[k5]);
-    const click = (e4) => {
-      if (why) {
-        e4.preventDefault();
-        if (onBlocked) onBlocked(e4);
-        return;
-      }
-      if (onClick) onClick(e4);
-    };
-    return /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        class: c5,
-        id,
-        hidden,
-        "aria-label": name || label,
-        "data-tip": why || label,
-        "data-key": keyHint,
-        "aria-disabled": why ? "true" : void 0,
-        "aria-haspopup": (
-          /** @type {any} */
-          haspopup
-        ),
-        onClick: click,
-        ...extra,
-        children: /* @__PURE__ */ u2(Icon, { name: icon })
-      }
-    );
-  }
-  function drawIconButton(host2, props) {
-    R(/* @__PURE__ */ u2(IconButton, { ...props }), host2);
-  }
-
-  // components/Picker.jsx
-  var PICK = null;
-  function placePicker(el, anchor) {
-    const r4 = anchor.getBoundingClientRect(), w5 = el.offsetWidth, h5 = el.offsetHeight;
-    let x5 = r4.left, y5 = r4.bottom + 4;
-    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
-    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
-    el.style.left = `${x5}px`;
-    el.style.top = `${y5}px`;
-  }
-  var focusables = (el) => (
-    /** @type {HTMLElement[]} */
-    [...el.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
-  );
-  function tabOut(e4, el) {
-    if (e4.key !== "Tab" || !el) return;
-    const L2 = focusables(el), first = L2[0], last = L2[L2.length - 1];
-    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L2.length) closePicker("tab");
-  }
-  function Frame({ cls, role, label, id, anchor, onKey, boxRef, children }) {
-    _2(() => {
-      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
-    });
-    const keys = (e4) => {
-      if (onKey) onKey(e4);
-      if (e4.key !== "Escape") e4.stopPropagation();
-    };
-    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
-      /** @type {any} */
-      role || void 0
-    ), "aria-label": role ? label : void 0, id, ref: boxRef, onKeyDown: keys, children });
-  }
-  var optionsIn = (el) => el ? (
-    /** @type {HTMLElement[]} */
-    [...el.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
-  ) : [];
-  function PickerList({ anchor, props }) {
-    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
-    const [q4, setQ] = d2("");
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), field = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
-    const item = role === "menu" ? "menuitem" : "option", t5 = q4.trim().toLowerCase();
-    const cur = filter ? filter(q4.trim()) : options;
-    const shown2 = cur.map((o5, i5) => (
-      /** @type {[PickerOption, number]} */
-      [o5, i5]
-    )).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5));
-    const useNew = !!(allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5));
-    _2(() => {
-      const el = box.current;
-      if (!el) return;
-      if (field.current) {
-        field.current.focus();
-        return;
-      }
-      /** @type {HTMLElement | null} */
-      (el.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el)[0])?.focus();
-    }, []);
-    const pick = (o5) => {
-      if (o5.disabled) return;
-      closePicker("pick");
-      onPick(o5.v, false, o5);
-    };
-    const pickNew = () => {
-      const typed = q4.trim();
-      closePicker("pick");
-      onPick(typed, true);
-    };
-    const keys = (e4) => {
-      const L2 = optionsIn(box.current), i5 = L2.indexOf(
-        /** @type {HTMLElement} */
-        document.activeElement
-      );
-      if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        (L2[i5 + 1] || L2[0])?.focus();
-      } else if (e4.key === "ArrowUp") {
-        e4.preventDefault();
-        (i5 <= 0 && field.current ? field.current : L2[i5 - 1] || L2[L2.length - 1])?.focus();
-      } else if (e4.key === "Home" && i5 >= 0) {
-        e4.preventDefault();
-        L2[0]?.focus();
-      } else if (e4.key === "End" && i5 >= 0) {
-        e4.preventDefault();
-        L2[L2.length - 1]?.focus();
-      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        L2[0]?.click();
-      } else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-      } else if (e4.key === "Tab") closePicker("tab");
-    };
-    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
-      search ? /* @__PURE__ */ u2(
-        "input",
-        {
-          class: "pkq",
-          type: "search",
-          placeholder: "Search",
-          "aria-label": `Search: ${label}`,
-          autocomplete: "off",
-          ref: field,
-          value: q4,
-          onInput: (e4) => setQ(
-            /** @type {HTMLInputElement} */
-            e4.currentTarget.value
-          )
-        }
-      ) : null,
-      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown2.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
-        shown2.map(([o5, i5]) => /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "pkopt",
-            role: item,
-            "data-i": String(i5),
-            id: o5.id,
-            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
-            "aria-disabled": o5.disabled ? "true" : void 0,
-            onClick: () => pick(o5),
-            children: [
-              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
-              /* @__PURE__ */ u2("span", { children: [
-                o5.label,
-                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
-              ] }),
-              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
-            ]
-          },
-          `${i5}:${o5.v}`
-        )),
-        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
-          /* @__PURE__ */ u2(Icon, { name: "plus" }),
-          /* @__PURE__ */ u2("span", { children: [
-            "Use “",
-            q4.trim(),
-            "”"
-          ] })
-        ] }) : null
-      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
-    ] });
-  }
-  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  var calAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
-    d5.setUTCDate(d5.getUTCDate() + n4);
-    return d5.toISOString().slice(0, 10);
-  };
-  var dow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
-  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
-  function DateCalendar({ anchor, props }) {
-    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
-    const base = value || TODAY;
-    const [ym, setYm] = d2(
-      /** @type {[number, number]} */
-      [+base.slice(0, 4), +base.slice(5, 7) - 1]
-    );
-    const [focusIso, setFocusIso] = d2(
-      /** @type {string | null} */
-      value || TODAY
-    );
-    const [bad, setBad] = d2(false), [note, setNote] = d2("");
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), typed = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
-    _2(() => {
-      if (typed.current) typed.current.value = fd(value || "");
-    }, []);
-    const [y5, m5] = ym, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
-    const days2 = Array.from({ length: n4 }, (_5, i5) => isoOf(y5, m5, i5 + 1));
-    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
-    _2(() => {
-      if (focusIso === null || !box.current) return;
-      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
-    }, [focusIso, ym]);
-    const pick = (iso) => {
-      closePicker("pick");
-      onPick(iso);
-    };
-    const month = (by) => {
-      let mm = m5 + by, yy = y5;
-      if (mm < 0) {
-        mm = 11;
-        yy--;
-      }
-      if (mm > 11) {
-        mm = 0;
-        yy++;
-      }
-      setFocusIso(null);
-      setYm([yy, mm]);
-    };
-    const keys = (e4) => {
-      const tg = (
-        /** @type {HTMLElement} */
-        e4.target
-      );
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-        return;
-      }
-      if (tg.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
-        e4.preventDefault();
-        const to = calAdd(
-          tg.dataset.d || TODAY,
-          /** @type {Record<string, number>} */
-          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
-        );
-        setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]);
-        setFocusIso(to);
-        return;
-      }
-      if (e4.key === "Enter" && tg.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        const t5 = (
-          /** @type {HTMLInputElement} */
-          tg.value.trim()
-        );
-        if (!t5) {
-          pick("");
-          return;
-        }
-        const iso = parse(t5);
-        if (iso) pick(iso);
-        else setBad(true);
-        return;
-      }
-      tabOut(e4, box.current);
-    };
-    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
-    const quick = (
-      /** @type {[string, string][]} */
-      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
-    );
-    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
-      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
-        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
-        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
-          MONTHS[m5],
-          " ",
-          y5
-        ] }),
-        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
-        DOW.map((w5) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w5 }, w5)),
-        Array.from({ length: lead }, (_5, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
-        days2.map((iso) => {
-          const we = !!(weekend && weekend(iso));
-          return /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: `pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}${we ? " wkend" : ""}`,
-              "data-d": iso,
-              "aria-label": `${fd(iso)}${we ? ", weekend" : ""}`,
-              "aria-pressed": iso === value ? "true" : void 0,
-              tabIndex: iso === tabDay ? 0 : -1,
-              onClick: () => pick(iso),
-              children: +iso.slice(8)
-            },
-            iso
-          );
-        })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w5, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w5 }, w5)) }),
-      /* @__PURE__ */ u2(
-        "input",
-        {
-          class: `pkdt${bad ? " bad" : ""}`,
-          type: "text",
-          ref: typed,
-          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
-          "aria-label": `${label}, typed`,
-          "aria-invalid": bad ? "true" : void 0,
-          autocomplete: "off",
-          onInput: (e4) => {
-            setBad(false);
-            if (typedNote) setNote(typedNote(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value.trim()
-            ));
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
-      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
-    ] });
-  }
-  function Popover({ anchor, props }) {
-    const { label, content, cls, id, role = "dialog", focus } = props;
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      const el = box.current;
-      if (!el || !content) return;
-      const f5 = (
-        /** @type {HTMLElement | null} */
-        focus ? el.querySelector(focus) : focusables(el)[0] || null
-      );
-      if (f5) {
-        f5.focus();
-        if (f5 instanceof HTMLInputElement) f5.select();
-      }
-    }, []);
-    const keys = (e4) => {
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-        return;
-      }
-      tabOut(e4, box.current);
-    };
-    return /* @__PURE__ */ u2(Frame, { cls, role, label, id, anchor, boxRef: box, onKey: keys, children: content });
-  }
-  function popupMount(anchor, vnode, onClose) {
-    closePicker("owner", false);
-    bootPicker();
-    const host2 = document.createElement("div");
-    host2.className = "pophost";
-    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
-    PICK = { host: host2, el: null, anchor, onClose };
-    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    R(vnode, host2);
-    PICK.el = /** @type {HTMLElement} */
-    host2.firstElementChild;
-    shared.PKPOP = { el: PICK.el, anchor };
-    return PICK.el;
-  }
-  function openPicker(anchor, props) {
-    return popupMount(anchor, /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
-  }
-  function openDatePicker(anchor, props) {
-    return popupMount(anchor, /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
-  }
-  function openPopover(anchor, props) {
-    return popupMount(anchor, /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
-  }
-  function closePicker(how = "owner", focus = true) {
-    const p6 = PICK;
-    if (!p6) return;
-    PICK = null;
-    shared.PKPOP = null;
-    R(null, p6.host);
-    p6.host.remove();
-    const a5 = p6.anchor;
-    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
-    const done = p6.onClose ? p6.onClose(how) : false;
-    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
-  }
-  function pickerOpenFor(anchor) {
-    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
-  }
-  var BOOTED = false;
-  function bootPicker() {
-    if (BOOTED) return;
-    BOOTED = true;
-    document.addEventListener("mousedown", (e4) => {
-      const t5 = (
-        /** @type {Node} */
-        e4.target
-      );
-      if (PICK && !(PICK.el && PICK.el.contains(t5)) && !PICK.anchor.contains(t5)) closePicker("away");
-    }, true);
-    addEventListener("resize", () => closePicker("away"));
-  }
-  function htmlPopover(anchor, cls, htmlText) {
-    const el = openPopover(anchor, { label: "", cls, role: "" });
-    putHTML(el, raw(htmlText));
-    placePicker(el, anchor);
-    return el;
   }
 
   // components/StatusDot.jsx
@@ -28081,6 +28094,99 @@ ${d5.text}`);
     R(null, box);
   }
 
+  // components/peek/NewWorkstream.jsx
+  function NewWorkstream({ title, name, fields, suggest, note, onAdd }) {
+    const [vals, setVals] = d2(() => {
+      const s5 = name ? suggest(name) : {};
+      return (
+        /** @type {Record<string, string>} */
+        { name, ...Object.fromEntries(fields.map(([f5]) => [f5, String(s5[f5] || "")])) }
+      );
+    });
+    const [err, setErr] = d2(""), touched = A2(/* @__PURE__ */ new Set()), box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const set = (f5, v4) => {
+      const next = { ...vals, [f5]: v4 };
+      if (f5 !== "name") touched.current.add(f5);
+      else if (v4.trim()) {
+        const sg = suggest(v4.trim());
+        fields.forEach(([q4]) => {
+          if (!touched.current.has(q4)) next[q4] = String(sg[q4] || "");
+        });
+      }
+      setVals(next);
+      flushPicker();
+    };
+    const add = async () => {
+      const ins = (
+        /** @type {HTMLInputElement[]} */
+        [...box.current?.parentElement?.querySelectorAll("[data-wsn]") || []]
+      );
+      const v4 = ins.length ? Object.fromEntries(ins.map((i5) => [i5.dataset.wsn || "", i5.value.trim()])) : Object.fromEntries(Object.entries(vals).map(([k5, x5]) => [k5, String(x5).trim()]));
+      if (!v4.name) {
+        setErr("Give the workstream a name.");
+        flushPicker();
+        box.current?.querySelector('[data-wsn="name"]')?.focus();
+        return;
+      }
+      const e4 = await onAdd(v4);
+      if (e4) {
+        setErr(e4);
+        flushPicker();
+      }
+    };
+    const enter = (e4) => {
+      if (e4.key === "Enter" && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        add();
+      }
+    };
+    const field = (f5, label, ph) => /* @__PURE__ */ u2("label", { children: [
+      label,
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          "data-wsn": f5,
+          value: vals[f5],
+          autocomplete: "off",
+          placeholder: ph,
+          onKeyDown: enter,
+          onInput: (e4) => set(
+            f5,
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          )
+        }
+      )
+    ] }, f5);
+    return /* @__PURE__ */ u2("div", { ref: box, style: "display:contents", children: [
+      /* @__PURE__ */ u2("div", { class: "pkws-h", children: title }),
+      field("name", "Name"),
+      fields.map(([f5, l6]) => field(f5, l6, f5 === "lead" ? "A person from the people register" : void 0)),
+      /* @__PURE__ */ u2("div", { class: "sub pkws-n", children: note }),
+      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: err }),
+      /* @__PURE__ */ u2("div", { class: "pkws-b", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-wsf": "cancel", onClick: () => closePicker("esc"), children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "mini primary", "data-wsf": "add", onClick: add, children: "Add and use it" })
+      ] })
+    ] });
+  }
+  function openNewWorkstream(anchor, props) {
+    return openPopover(anchor, {
+      label: props.title,
+      cls: "pkws",
+      id: "pkWsForm",
+      via: "pkWsAdd",
+      onClose: props.onClose,
+      focus: props.name ? '[data-wsn="lead"]' : '[data-wsn="name"]',
+      content: () => /* @__PURE__ */ u2(NewWorkstream, { ...props })
+    });
+  }
+
   // components/peek/PeekProps.jsx
   var ST_COLOUR = (
     /** @type {Record<string, string>} */
@@ -28177,7 +28283,10 @@ ${d5.text}`);
         button: true,
         cls: ["pk-chip", p6.empty ? "empty" : "", p6.cls || ""].filter(Boolean).join(" "),
         "data-pkp": p6.f,
-        "aria-haspopup": "listbox",
+        "aria-haspopup": (
+          /** @type {any} */
+          p6.popup || "listbox"
+        ),
         name: `${p6.name}: ${p6.empty ? "not set" : plain}`,
         tip: p6.name,
         children: [
@@ -28186,6 +28295,9 @@ ${d5.text}`);
         ]
       }
     ) });
+  }
+  function peekMark(mark) {
+    return /* @__PURE__ */ u2(Mark, { mark });
   }
   function peekPropNodes(list) {
     const box = document.createElement("div");
@@ -28526,7 +28638,7 @@ ${d5.text}`);
     (() => {
       if (!PKK.includes(k5)) return;
       if (curGuard(() => openNew(k5, how))) return;
-      if (shared.PKPOP) pkPopClose(false);
+      closePicker("owner", false);
       const draft = pkNewBlank(k5, how);
       PKN.seq++;
       shared.CUR = { mode: "new", k: k5, how: how || "", nid: `nw${PKN.seq}-${Date.now().toString(36)}`, draft, blank: { ...draft }, staged: null };
@@ -29140,21 +29252,6 @@ ${d5.text}`);
     cmd: "Client messaging"
   };
   var pkLabel = (k5, f5, x5) => f5 === "t" ? pkTitleL(k5) : f5 === "resp" ? RESPL(x5.type) : f5 === "due" ? k5 === "decisions" ? "Needed by" : "Due date" : PKFL[f5] || f5;
-  function pkSt(st) {
-    const c5 = { Open: "var(--accent)", Delayed: "var(--warn)", Closed: "var(--ok)", Cancelled: "var(--faint)", Pending: "var(--muted)", Made: "var(--ok)", Withdrawn: "var(--faint)" }[st] || "var(--muted)";
-    const inner = { Open: '<path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>', Delayed: '<path d="M12 8v4l2.5 1.5"/>', Closed: '<path d="M8 12.5l3 3 5-6"/>', Cancelled: '<path d="M9 9l6 6M15 9l-6 6"/>', Made: '<path d="M8 12.5l3 3 5-6"/>', Withdrawn: '<path d="M9 9l6 6M15 9l-6 6"/>' }[st] || "";
-    return `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" style="color:${c5}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8" ${st === "Pending" ? 'stroke-dasharray="3 3"' : ""}/>${inner}</svg>`;
-  }
-  function pkPr(p6) {
-    const n4 = { Urgent: 4, High: 3, Medium: 2, Low: 1 }[p6] || 0, c5 = { Urgent: "var(--bad)", High: "var(--warn)", Medium: "var(--accent)", Low: "var(--faint)" }[p6] || "var(--faint)";
-    return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">${[0, 1, 2, 3].map((i5) => `<rect x="${3 + i5 * 5}" y="${16 - i5 * 4}" width="3.4" height="${4 + i5 * 4}" rx="1" fill="${c5}" opacity="${i5 < n4 ? 1 : 0.25}"/>`).join("")}</svg>`;
-  }
-  function pkAv(n4) {
-    n4 = pkWho(n4);
-    if (!n4) return ic("user");
-    const i5 = n4.split(/\s+/).map((w5) => w5[0] || "").join("").slice(0, 2).toUpperCase();
-    return `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--accent-soft)"/><text x="12" y="15.5" text-anchor="middle" font-size="9.5" font-weight="600" fill="var(--accent)" font-family="inherit">${esc(i5)}</text></svg>`;
-  }
   var PKDRAW = [];
   function pkNote(msg) {
     const n4 = $("#pkNote");
@@ -29180,8 +29277,8 @@ ${d5.text}`);
         L2.push({ f: "prc", name: "Priority", mark: { pr: p6 }, value: p6, ro: `Priority: ${p6}, calculated from impact and likelihood`, roTip: "Priority is calculated from impact and likelihood" });
       }
       L2.push({ f: "o", name: pkOwnL(k5), mark: { who: o5 }, value: o5 || (k5 === "decisions" ? "Add decision maker" : "Add owner"), you: !!o5 && isMe(o5), empty: !o5 });
-      if (k5 === "decisions" && x5.st === "Made") L2.push({ f: "date", name: "Date made", mark: { icon: "calendar" }, value: x5.date ? fd(x5.date) : "Date made", nw: !!x5.date, empty: !x5.date });
-      else L2.push({ f: "due", name: pkLabel(k5, "due", x5), mark: { icon: "calendar" }, value: x5.due ? fd(x5.due) : pkLabel(k5, "due", x5), nw: !!x5.due, late: !!x5.due && late, empty: !x5.due, cls: late ? "late" : "" });
+      if (k5 === "decisions" && x5.st === "Made") L2.push({ f: "date", name: "Date made", popup: "dialog", mark: { icon: "calendar" }, value: x5.date ? fd(x5.date) : "Date made", nw: !!x5.date, empty: !x5.date });
+      else L2.push({ f: "due", name: pkLabel(k5, "due", x5), popup: "dialog", mark: { icon: "calendar" }, value: x5.due ? fd(x5.due) : pkLabel(k5, "due", x5), nw: !!x5.due, late: !!x5.due && late, empty: !x5.due, cls: late ? "late" : "" });
       $("#pkProps").replaceChildren(...peekPropNodes(L2));
       $("#pkProps2").replaceChildren(...peekPropNodes(k5 === "raid" ? [{ f: "imp", name: "Impact", mark: { icon: "alert" }, value: "Impact: " + (x5.imp || "Medium") }, { f: "lik", name: "Likelihood", mark: { icon: "alert" }, value: "Likelihood: " + (x5.lik || "Medium") }] : []));
     })();
@@ -29209,7 +29306,7 @@ ${d5.text}`);
       PK.redraw = true;
       return;
     }
-    if (shared.PKPOP) pkPopClose(false);
+    closePicker("owner", false);
     if (fresh) {
       PK.key = key;
       PK.tab = "all";
@@ -29227,211 +29324,22 @@ ${d5.text}`);
     }
   }
   shared.PKPOP = null;
-  function pkPopClose(ret = true) {
-    if (!shared.PKPOP) return;
-    const a5 = shared.PKPOP.anchor;
-    shared.PKPOP.el.remove();
-    shared.PKPOP = null;
-    if (a5) a5.setAttribute("aria-expanded", "false");
-    if (PK.redraw) {
+  function pkPopDone(anchor) {
+    const f5 = anchor && anchor.dataset ? anchor.dataset.pkp : null;
+    return (how) => {
+      if (!PK.redraw) return false;
       PK.redraw = false;
       if (pkOn()) pkDraw();
-    } else if (ret && a5 && a5.isConnected) a5.focus();
-  }
-  function pkPlace(el, anchor) {
-    const r4 = anchor.getBoundingClientRect(), w5 = el.offsetWidth, h5 = el.offsetHeight;
-    let x5 = r4.left, y5 = r4.bottom + 4;
-    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
-    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
-    el.style.left = x5 + "px";
-    el.style.top = y5 + "px";
-  }
-  function pkMk(anchor, cls, html2) {
-    pkPopClose(false);
-    const el = document.createElement("div");
-    el.className = "pkpop" + (cls ? " " + cls : "");
-    putHTML(el, raw(html2));
-    (anchor.closest("dialog[open]") || document.body).appendChild(el);
-    shared.PKPOP = { el, anchor };
-    anchor.setAttribute("aria-expanded", "true");
-    pkPlace(el, anchor);
-    el.addEventListener("keydown", (e4) => {
-      if (e4.key !== "Escape") e4.stopPropagation();
-    });
-    return el;
-  }
-  var pkOpts = (el) => $$(".pkopt", el).filter((b5) => b5.getAttribute("aria-disabled") !== "true");
-  function pkList(anchor, { options, value, onPick, search, label, allowNew, role = "listbox", filter }) {
-    let cur = options;
-    const item = role === "menu" ? "menuitem" : "option";
-    const el = pkMk(anchor, "", `${search ? `<input class="pkq" type="search" placeholder="Search" aria-label="Search: ${esc(label)}" autocomplete="off">` : ""}<div role="${role}" aria-label="${esc(label)}"></div>`), box = el.querySelector(`[role=${role}]`);
-    const draw2 = (q5) => {
-      const t5 = String(q5 || "").trim().toLowerCase();
-      cur = filter ? filter(String(q5 || "").trim()) : options;
-      let h5 = cur.map((o5, i5) => [o5, i5]).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5)).map(([o5, i5]) => `<button type="button" class="pkopt" role="${item}" data-i="${i5}"${role === "listbox" ? ` aria-selected="${o5.v === value}"` : ""}${o5.disabled ? ' aria-disabled="true"' : ""}>${o5.icon || ""}<span>${esc(o5.label)}${o5.hint ? `<span class="h">${esc(o5.hint)}</span>` : ""}</span>${role === "listbox" && o5.v === value ? ic("check", { cls: "ck" }) : ""}</button>`).join("");
-      if (allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5)) h5 += `<button type="button" class="pkopt" role="${item}" data-new="1">${ic("plus")}<span>Use “${esc(String(q5).trim())}”</span></button>`;
-      putHTML(box, h5 ? raw(h5) : html`<div class="pkopt" aria-disabled="true">No match</div>`);
+      if (how !== "away" && f5) $(`#panel [data-pkp="${f5}"]`)?.focus();
+      return true;
     };
-    draw2("");
-    el.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest(".pkopt");
-      if (!b5 || b5.getAttribute("aria-disabled") === "true") return;
-      if (b5.dataset.new) {
-        const q5 = $(".pkq", el).value.trim();
-        pkPopClose();
-        onPick(q5, true);
-        return;
-      }
-      const o5 = cur[+b5.dataset.i];
-      pkPopClose();
-      onPick(o5.v, false, o5);
-    });
-    el.addEventListener("keydown", (e4) => {
-      const L2 = pkOpts(el), i5 = L2.indexOf(document.activeElement);
-      if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        (L2[i5 + 1] || L2[0])?.focus();
-      } else if (e4.key === "ArrowUp") {
-        e4.preventDefault();
-        (i5 <= 0 && $(".pkq", el) ? $(".pkq", el) : L2[i5 - 1] || L2[L2.length - 1])?.focus();
-      } else if (e4.key === "Home" && i5 >= 0) {
-        e4.preventDefault();
-        L2[0]?.focus();
-      } else if (e4.key === "End" && i5 >= 0) {
-        e4.preventDefault();
-        L2[L2.length - 1]?.focus();
-      } else if (e4.key === "Enter" && e4.target.matches(".pkq") && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        L2[0]?.click();
-      } else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        pkPopClose();
-      } else if (e4.key === "Tab") {
-        pkPopClose(false);
-      }
-    });
-    const q4 = $(".pkq", el);
-    if (q4) {
-      q4.addEventListener("input", () => {
-        draw2(q4.value);
-        pkPlace(el, anchor);
-      });
-      q4.focus();
-    } else (el.querySelector('[aria-selected="true"]:not([aria-disabled="true"])') || pkOpts(el)[0])?.focus();
-    return el;
   }
+  var pkList = openPicker;
+  var pkPopClose = (ret = true) => closePicker("owner", ret);
+  var pkMk = htmlPopover;
+  var pkDate = itemDatePicker;
   var PKMON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   var pkDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
-  function pkDate(anchor, o5) {
-    const op = o5.onPick, gate = !!o5.due, { value, onPick, label, due } = gate ? { ...o5, onPick: (v4) => {
-      if (v4 && !WK.ok && wkAsk(v4, anchor, op)) return;
-      op(v4);
-    } } : o5;
-    let base = value || TODAY, y5 = +base.slice(0, 4), m5 = +base.slice(5, 7) - 1;
-    const el = pkMk(anchor, "pkcal", "");
-    const draw2 = (focusIso) => {
-      const lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
-      let days2 = "";
-      for (let i5 = 0; i5 < lead; i5++) days2 += "<span></span>";
-      for (let d5 = 1; d5 <= n4; d5++) {
-        const iso = `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
-        days2 += `<button type="button" class="pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}" data-d="${iso}" aria-label="${fd(iso)}"${iso === value ? ' aria-pressed="true"' : ""} tabindex="-1">${d5}</button>`;
-      }
-      const nm2 = pkAdd(TODAY, 7 - pkDow(TODAY));
-      putHTML(el, html`<div class="pkcalh">${raw(ibtn("chevleft", "Previous month", 'data-m="-1"'))}<b aria-live="polite">${raw(PKMON[m5])} ${raw(y5)}</b>${raw(ibtn("chevright", "Next month", 'data-m="1"'))}</div>
-      <div class="pkgrid" role="group" aria-label="${label}">${["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((w5) => html`<span class="wd" aria-hidden="true">${raw(w5)}</span>`)}${raw(days2)}</div>
-      <div class="pkquick"><button type="button" class="mini" data-d="${raw(TODAY)}">Today</button><button type="button" class="mini" data-d="${raw(pkAdd(TODAY, 1))}">Tomorrow</button><button type="button" class="mini" data-d="${raw(nm2)}">Next Monday</button><button type="button" class="mini" data-d="${raw(pkAdd(TODAY, 7))}">In a week</button><button type="button" class="mini" data-d="">Clear</button></div>
-      <input class="pkdt" type="text" value="${fd(value || "")}" placeholder="DD-MM-YYYY, or words like fri or +3d" aria-label="${label}, typed" autocomplete="off"><div class="pkerr" role="alert"></div>`);
-      pkPlace(el, anchor);
-      const days0 = $$(".pkday", el), f5 = days0.find((b5) => b5.dataset.d === focusIso) || days0.find((b5) => b5.classList.contains("on")) || days0.find((b5) => b5.classList.contains("today")) || days0[0];
-      if (f5) {
-        f5.tabIndex = 0;
-        if (focusIso !== null) f5.focus();
-      }
-    };
-    draw2();
-    el.addEventListener("click", (e4) => {
-      const mb = e4.target.closest("[data-m]");
-      if (mb) {
-        m5 += +mb.dataset.m;
-        if (m5 < 0) {
-          m5 = 11;
-          y5--;
-        }
-        if (m5 > 11) {
-          m5 = 0;
-          y5++;
-        }
-        draw2(null);
-        return;
-      }
-      const d5 = e4.target.closest("[data-d]");
-      if (d5) {
-        pkPopClose();
-        onPick(d5.dataset.d);
-      }
-    });
-    el.addEventListener("keydown", (e4) => {
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        pkPopClose();
-        return;
-      }
-      if (e4.key === "Tab" && e4.shiftKey && e4.target === el.querySelector("button")) {
-        pkPopClose(false);
-        return;
-      }
-      if (e4.target.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
-        e4.preventDefault();
-        const to = pkAdd(e4.target.dataset.d, { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]);
-        if (+to.slice(5, 7) - 1 !== m5 || +to.slice(0, 4) !== y5) {
-          y5 = +to.slice(0, 4);
-          m5 = +to.slice(5, 7) - 1;
-        }
-        draw2(to);
-        return;
-      }
-      if (e4.key === "Enter" && e4.target.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        const t5 = e4.target.value.trim();
-        if (!t5) {
-          pkPopClose();
-          onPick("");
-          return;
-        }
-        const iso = parseWhen(t5, TODAY, !!due);
-        if (iso) {
-          pkPopClose();
-          onPick(iso);
-        } else {
-          e4.target.classList.add("bad");
-          e4.target.setAttribute("aria-invalid", "true");
-          $(".pkerr", el).textContent = "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d.";
-        }
-      }
-    });
-    {
-      const el2 = shared.PKPOP && shared.PKPOP.el;
-      if (!el2) return el2;
-      if (gate) {
-        wkMark(el2);
-        new MutationObserver(() => wkMark(el2)).observe(el2, { childList: true, subtree: true });
-      }
-      if (gate) el2.addEventListener("input", (e4) => {
-        if (!e4.target.matches(".pkdt")) return;
-        const t5 = e4.target.value.trim(), iso = t5 ? parseWhen(t5, TODAY, true) : null, n4 = weekendNote(iso);
-        let w5 = el2.querySelector(".wkline");
-        if (!w5) {
-          addHTML(el2.querySelector(".pkerr"), "afterend", html`<div class="wkline" role="status" aria-live="polite"></div>`);
-          w5 = el2.querySelector(".wkline");
-        }
-        w5.textContent = n4 ? `${n4.text} You'll be offered the nearest working days.` : "";
-      });
-      return el2;
-    }
-  }
   var pkSame = (a5, b5) => typeof b5 === "boolean" ? !!a5 === b5 : String(a5 ?? "").trim() === String(b5 ?? "").trim();
   shared.PKQ = Promise.resolve();
   function pkCommit(k5, id, patch, label, from, to, o5 = {}) {
@@ -29559,15 +29467,16 @@ ${d5.text}`);
   function pkOpenProp(f5, anchor) {
     const x5 = curObj(), k5 = shared.CUR.k, id = pkCid();
     if (!x5) return;
-    if (f5 === "st") pkList(anchor, { label: "Status", value: x5.st, options: pkStatuses(k5).map((s5) => ({ v: s5, label: s5, icon: pkSt(s5), ...pkStOpt(k5, x5, s5) })), onPick: (v4) => pkSetStatus(k5, id, v4) });
-    else if (f5 === "pr") pkList(anchor, { label: "Priority", value: x5.pr, options: ["Urgent", "High", "Medium", "Low"].map((v4) => ({ v: v4, label: v4, icon: pkPr(v4) })), onPick: (v4) => pkCommit(k5, id, { pr: v4 }, "Priority", x5.pr, v4) });
+    const onClose = pkPopDone(anchor);
+    if (f5 === "st") openPicker(anchor, { label: "Status", value: x5.st, onClose, options: pkStatuses(k5).map((s5) => ({ v: s5, label: s5, mark: peekMark({ st: s5 }), ...pkStOpt(k5, x5, s5) })), onPick: (v4) => pkSetStatus(k5, id, v4) });
+    else if (f5 === "pr") openPicker(anchor, { label: "Priority", value: x5.pr, onClose, options: ["Urgent", "High", "Medium", "Low"].map((v4) => ({ v: v4, label: v4, mark: peekMark({ pr: v4 }) })), onPick: (v4) => pkCommit(k5, id, { pr: v4 }, "Priority", x5.pr, v4) });
     else if (f5 === "o") pkOwnerList(anchor, x5, k5, id);
-    else if (f5 === "due") pkDate(anchor, { value: x5.due, due: true, label: pkLabel(k5, "due", x5), onPick: (v4) => pkCommit(k5, id, { due: v4 }, pkLabel(k5, "due", x5), fd(x5.due) || "none", fd(v4) || "none") });
-    else if (f5 === "date") pkDate(anchor, { value: x5.date, label: "Date made", onPick: (v4) => pkSetDate(k5, id, v4) });
+    else if (f5 === "due") itemDatePicker(anchor, { value: x5.due, due: true, label: pkLabel(k5, "due", x5), onClose, onPick: (v4) => pkCommit(k5, id, { due: v4 }, pkLabel(k5, "due", x5), fd(x5.due) || "none", fd(v4) || "none") });
+    else if (f5 === "date") itemDatePicker(anchor, { value: x5.date, label: "Date made", onClose, onPick: (v4) => pkSetDate(k5, id, v4) });
     else if (f5 === "imp" || f5 === "lik") {
       const nm2 = PKFL[f5];
-      pkList(anchor, { label: nm2, value: x5[f5], options: ["High", "Medium", "Low"].map((v4) => ({ v: v4, label: v4 })), onPick: (v4) => pkImpLik(k5, id, f5, v4) });
-    } else if (f5 === "type") pkList(anchor, { label: "Type", value: x5.type, options: ["Risk", "Issue", "Assumption", "Dependency"].map((v4) => ({ v: v4, label: v4, hint: RESPL(v4) })), onPick: (v4) => pkCommit(k5, id, { type: v4 }, "Type", x5.type, v4) });
+      openPicker(anchor, { label: nm2, value: x5[f5], onClose, options: ["High", "Medium", "Low"].map((v4) => ({ v: v4, label: v4 })), onPick: (v4) => pkImpLik(k5, id, f5, v4) });
+    } else if (f5 === "type") openPicker(anchor, { label: "Type", value: x5.type, onClose, options: ["Risk", "Issue", "Assumption", "Dependency"].map((v4) => ({ v: v4, label: v4, hint: RESPL(v4) })), onPick: (v4) => pkCommit(k5, id, { type: v4 }, "Type", x5.type, v4) });
     else if (PKPROP[f5]) PKPROP[f5](anchor, x5, k5, id);
   }
   var PKPROP = {};
@@ -29651,19 +29560,15 @@ ${d5.text}`);
   <div class="pk-note" id="pkNote" role="status" hidden></div>
   <div class="pk-dlrow"><div class="pk-dl" id="pkDescL"></div><span class="pk-dldr" id="pkDescDr"></span></div><div class="pk-desc pked" id="pkDesc" contenteditable="plaintext-only" role="textbox" aria-multiline="true" data-pkml="1" spellcheck="true"></div>
   <div id="pkAfter"></div></div>`);
-    document.addEventListener("mousedown", (e4) => {
-      if (shared.PKPOP && !shared.PKPOP.el.contains(e4.target) && !shared.PKPOP.anchor.contains(e4.target)) pkPopClose(false);
-    }, true);
-    addEventListener("resize", () => pkPopClose(false));
     $("#pkScroll").addEventListener("scroll", () => {
-      if (shared.PKPOP && $("#pkScroll").contains(shared.PKPOP.anchor)) pkPopClose(false);
+      if (shared.PKPOP && $("#pkScroll").contains(shared.PKPOP.anchor)) closePicker("away");
     });
     $("#panel").addEventListener("click", (e4) => {
       const c5 = e4.target.closest("[data-pkp]");
       if (!c5 || !pkOn() || c5.classList.contains("ro")) return;
       e4.preventDefault();
-      if (shared.PKPOP && shared.PKPOP.anchor === c5) {
-        pkPopClose();
+      if (pickerOpenFor(c5)) {
+        closePicker("owner");
         return;
       }
       pkOpenProp(c5.dataset.pkp, c5);
@@ -29990,7 +29895,7 @@ ${d5.text}`);
   }
   async function pkSaveAndClose() {
     if (shared.CUR && shared.CUR.mode === "new" && !PK.closing) {
-      if (shared.PKPOP) pkPopClose(false);
+      closePicker("owner", false);
       const a5 = document.activeElement;
       if (a5 && a5.matches && a5.matches("#panel [data-pkf][contenteditable]")) a5.blur();
       await pkQuiet();
@@ -30007,7 +29912,7 @@ ${d5.text}`);
     if (PK.closing) return;
     PK.closing = true;
     try {
-      if (shared.PKPOP) pkPopClose(false);
+      closePicker("owner", false);
       const a5 = document.activeElement;
       if (a5 && a5.matches && a5.matches("#panel [data-pkf][contenteditable]")) a5.blur();
       await shared.PKQ;
@@ -30084,7 +29989,7 @@ ${d5.text}`);
       e4.preventDefault();
       pkClient(shared.CUR.k, pkCid(), sw2.getAttribute("aria-checked") !== "true");
     });
-    PKPROP.p = (a5, x5, k5, id) => pkList(a5, { label: "Project", value: x5.p, options: P3.filter((p6) => p6.active !== false || p6.code === x5.p).map((p6) => ({ v: p6.code, label: p6.name, icon: ic("projects") })), onPick: (v4) => {
+    PKPROP.p = (a5, x5, k5, id) => openPicker(a5, { label: "Project", value: x5.p, onClose: pkPopDone(a5), options: P3.filter((p6) => p6.active !== false || p6.code === x5.p).map((p6) => ({ v: p6.code, label: p6.name, icon: "projects" })), onPick: (v4) => {
       if (v4 === x5.p) return;
       const patch = { p: v4 }, notes = [];
       if (x5.ms && !String(x5.ms).startsWith(v4 + "-M-")) {
@@ -30097,7 +30002,7 @@ ${d5.text}`);
       }
       pkCommit(k5, id, patch, "Project", pName(x5.p), pName(v4), { note: notes.join("; ") });
     } });
-    PKPROP.ws = (a5, x5, k5, id) => pkList(a5, { label: "Workstream", search: true, allowNew: true, value: x5.ws || "", options: [...wsFor(x5.p).map((w5) => ({ v: w5, label: w5, icon: ic("layers") })), { v: "", label: "None" }], onPick: (v4, typed) => {
+    PKPROP.ws = (a5, x5, k5, id) => openPicker(a5, { label: "Workstream", search: true, allowNew: true, value: x5.ws || "", onClose: pkPopDone(a5), options: [...wsFor(x5.p).map((w5) => ({ v: w5, label: w5, icon: "layers" })), { v: "", label: "None" }], onPick: (v4, typed) => {
       if (typed) {
         const m5 = wsFor(x5.p).find((w5) => w5.toLowerCase() === v4.toLowerCase());
         if (!m5) {
@@ -30108,8 +30013,8 @@ ${d5.text}`);
       }
       pkCommit(k5, id, { ws: v4 }, "Workstream", x5.ws || "none", v4 || "none");
     } });
-    PKPROP.ms = (a5, x5, k5, id) => pkList(a5, { label: "Milestone", value: x5.ms || "", options: msChoices(x5.p, x5.ms).map(([v4, l6]) => ({ v: v4, label: l6, icon: ic("flag") })), onPick: (v4) => pkCommit(k5, id, { ms: v4 }, "Milestone", x5.ms ? msName(x5.ms) : "none", v4 ? msName(v4) : "none") });
-    PKPROP.replaces = (a5, x5, k5, id) => pkList(a5, { label: "Replaces", search: true, value: x5.replaces || "", options: [{ v: "", label: "None" }, ...DEC.filter((d5) => d5.p === x5.p && d5.id !== x5.id).map((d5) => ({ v: d5.id, label: `${d5.id} · ${decShort(d5.t, 60)}`, icon: ic("decision") }))], onPick: (v4) => pkCommit(k5, id, { replaces: v4 }, "Replaces", x5.replaces || "none", v4 || "none") });
+    PKPROP.ms = (a5, x5, k5, id) => openPicker(a5, { label: "Milestone", value: x5.ms || "", onClose: pkPopDone(a5), options: msChoices(x5.p, x5.ms).map(([v4, l6]) => ({ v: v4, label: l6, icon: "flag" })), onPick: (v4) => pkCommit(k5, id, { ms: v4 }, "Milestone", x5.ms ? msName(x5.ms) : "none", v4 ? msName(v4) : "none") });
+    PKPROP.replaces = (a5, x5, k5, id) => openPicker(a5, { label: "Replaces", search: true, value: x5.replaces || "", onClose: pkPopDone(a5), options: [{ v: "", label: "None" }, ...DEC.filter((d5) => d5.p === x5.p && d5.id !== x5.id).map((d5) => ({ v: d5.id, label: `${d5.id} · ${decShort(d5.t, 60)}`, icon: "decision" }))], onPick: (v4) => pkCommit(k5, id, { replaces: v4 }, "Replaces", x5.replaces || "none", v4 || "none") });
   }
   function pkHistory(id) {
     const own = (a5) => actId(a5) === id || !!(a5.sides && Object.prototype.hasOwnProperty.call(a5.sides, id));
@@ -30183,7 +30088,7 @@ ${d5.text}`);
     if (!shared.CUR || shared.CUR.mode !== "proposal" || PK.closing) return;
     PK.closing = true;
     try {
-      if (shared.PKPOP) pkPopClose(false);
+      closePicker("owner", false);
       const a5 = document.activeElement;
       if (a5 && a5.matches && a5.matches("#panel [data-pkf][contenteditable]")) a5.blur();
       await shared.PKQ;
@@ -30754,16 +30659,18 @@ ${d5.text}`);
   }
   function pkOwnerOpts(x5, k5, q4) {
     const cur = pkWho(x5[pkOwnF(k5)]), pool = projFirst(peopleAll(), projPeople(x5.p));
-    const page = cur && !isHiddenPerson(cur) ? [{ v: "\0page", label: isMe(cur) ? "Open My work" : `Open ${cur}'s page`, icon: ic("people") }] : [];
-    if (!q4) return [...pool.map((n4) => ({ v: n4, label: n4, icon: pkAv(n4), hint: isMe(n4) ? "you" : "" })), { v: "", label: k5 === "decisions" ? "No one yet" : "Unassigned", icon: pkAv("") }, ...page];
-    return [...ownerMatches(q4, pool).items.map((it) => it.t === "alias" ? { v: it.n, label: `Is “${it.typed}” ${it.n}?`, hint: "Yes, and remember it", icon: pkAv(it.n), t: "alias", typed: it.typed } : it.t === "new" ? { v: it.n, label: `New person “${it.n}”…`, icon: ic("plus"), t: "new" } : { v: it.n, label: it.n, icon: pkAv(it.n), hint: isMe(it.n) ? "you" : "" }), ...page];
+    const page = cur && !isHiddenPerson(cur) ? [{ v: "\0page", label: isMe(cur) ? "Open My work" : `Open ${cur}'s page`, icon: "people" }] : [];
+    const av = (n4) => peekMark({ who: pkWho(n4) || "" });
+    if (!q4) return [...pool.map((n4) => ({ v: n4, label: n4, mark: av(n4), hint: isMe(n4) ? "you" : "" })), { v: "", label: k5 === "decisions" ? "No one yet" : "Unassigned", mark: av("") }, ...page];
+    return [...ownerMatches(q4, pool).items.map((it) => it.t === "alias" ? { v: it.n, label: `Is “${it.typed}” ${it.n}?`, hint: "Yes, and remember it", mark: av(it.n), t: "alias", typed: it.typed } : it.t === "new" ? { v: it.n, label: `New person “${it.n}”…`, icon: "plus", t: "new" } : { v: it.n, label: it.n, mark: av(it.n), hint: isMe(it.n) ? "you" : "" }), ...page];
   }
   function pkOwnerList(anchor, x5, k5, id) {
     const cur = pkWho(x5[pkOwnF(k5)]);
-    pkList(anchor, {
+    openPicker(anchor, {
       label: pkOwnL(k5),
       search: true,
       value: cur,
+      onClose: pkPopDone(anchor),
       options: pkOwnerOpts(x5, k5, ""),
       filter: (q4) => pkOwnerOpts(x5, k5, q4),
       onPick: async (v4, typed, o5) => {
@@ -30788,89 +30695,44 @@ ${d5.text}`);
   var pkWsAddOK = () => !!(shared.CUR && shared.CUR.mode !== "proposal");
   function pkWsOpts(x5, q4) {
     const L2 = wsFor(x5.p), t5 = String(q4 || "").toLowerCase(), have = L2.some((w5) => w5.toLowerCase() === t5);
-    const o5 = L2.filter((w5) => !t5 || w5.toLowerCase().includes(t5)).map((w5) => ({ v: w5, label: w5, icon: ic("layers") }));
+    const o5 = L2.filter((w5) => !t5 || w5.toLowerCase().includes(t5)).map((w5) => ({ v: w5, label: w5, icon: "layers" }));
     if (!t5) o5.push({ v: "", label: "None" });
-    if (!x5.p) o5.push({ v: "\0add", label: "Add workstream…", icon: ic("plus"), disabled: true, hint: "Choose a project first" });
-    else if (!have) o5.push({ v: "\0add", label: q4 ? `Add “${q4}” as a workstream…` : "Add workstream…", icon: ic("plus"), name: q4 });
+    if (!x5.p) o5.push({ v: "\0add", label: "Add workstream…", icon: "plus", disabled: true, hint: "Choose a project first" });
+    else if (!have) o5.push({ v: "\0add", id: "pkWsAdd", label: q4 ? `Add “${q4}” as a workstream…` : "Add workstream…", icon: "plus", name: q4 });
     return o5;
   }
   function pkWsForm(anchor, x5, k5, id, name) {
     const p6 = x5.p, s5 = name ? wsSuggest(p6, name) : {};
     if (!anchor || !anchor.isConnected) anchor = $('#panel [data-pkp="ws"]') || $("#pkTitle");
-    const el = pkMk(anchor, "pkws", `<div class="pkws-h">New workstream for ${esc(pName(p6))}</div>
-    <label>Name<input type="text" data-wsn="name" value="${esc(name)}" autocomplete="off"></label>
-    ${WS_FIELDS.map(([f6, l6]) => `<label>${l6}<input type="text" data-wsn="${f6}" value="${esc(s5[f6] || "")}" autocomplete="off"${f6 === "lead" ? ' placeholder="A person from the people register"' : ""}></label>`).join("")}
-    <div class="sub pkws-n">${name ? `Suggested from ${s5.items} item${s5.items === 1 ? "" : "s"}; change anything.` : "A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.</div>
-    <div class="pkerr" role="alert"></div>
-    <div class="pkws-b"><button type="button" class="mini" data-wsf="cancel">Cancel</button><button type="button" class="mini primary" data-wsf="add">Add and use it</button></div>`);
-    el.setAttribute("role", "dialog");
-    el.setAttribute("aria-label", `New workstream for ${pName(p6)}`);
-    const f5 = (n4) => el.querySelector(`[data-wsn="${n4}"]`), touched = /* @__PURE__ */ new Set();
-    el.addEventListener("input", (e4) => {
-      const n4 = e4.target.dataset.wsn;
-      if (!n4) return;
-      if (n4 !== "name") {
-        touched.add(n4);
-        return;
-      }
-      const nm2 = e4.target.value.trim();
-      if (!nm2) return;
-      const sg = wsSuggest(p6, nm2);
-      WS_FIELDS.forEach(([q4]) => {
-        if (!touched.has(q4)) f5(q4).value = sg[q4] || "";
-      });
-    });
-    const add = async () => {
-      const v4 = Object.fromEntries($$("[data-wsn]", el).map((i5) => [i5.dataset.wsn, i5.value.trim()])), err = el.querySelector(".pkerr");
-      if (!v4.name) {
-        err.textContent = "Give the workstream a name.";
-        f5("name").focus();
-        return;
-      }
-      const w5 = wsRow(p6, v4.name);
-      if (w5 && w5.st === "Closed") {
-        err.textContent = `“${w5.name}” is closed in ${pName(p6)}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
-        return;
-      }
-      const known = w5 ? w5.name : wsFor(p6).find((n4) => n4.toLowerCase() === v4.name.toLowerCase());
-      if (known) {
-        pkPopClose();
-        return pkCommit(k5, id, { ws: known }, "Workstream", x5.ws || "none", known);
-      }
-      pkPopClose();
-      if (v4.lead) {
-        const o5 = await ownerFinal(v4.lead);
-        if (o5 === null) return;
-        v4.lead = o5;
-      }
-      const { item, row: row2 } = wsNewOf({ ...v4, project: p6 });
-      if (String(id).startsWith("nw") && shared.CUR && shared.CUR.nid === id) {
-        shared.CUR.wsPre = { item, row: row2 };
-        (D.ws_table = D.ws_table || []).push(row2);
-      }
-      return pkCommit(k5, id, { ws: v4.name }, "Workstream", x5.ws || "none", v4.name, { pre: [item], wsRow: String(id).startsWith("nw") ? null : row2, note: `New workstream “${v4.name}” for ${pName(p6)}, staged with this change` });
-    };
-    el.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest("[data-wsf]");
-      if (!b5) return;
-      if (b5.dataset.wsf === "add") add();
-      else pkPopClose();
-    });
-    el.addEventListener("keydown", (e4) => {
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        pkPopClose();
-      } else if (e4.key === "Enter" && e4.target.matches("input") && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        add();
+    return openNewWorkstream(anchor, {
+      title: `New workstream for ${pName(p6)}`,
+      name,
+      fields: (
+        /** @type {[string, string][]} */
+        WS_FIELDS
+      ),
+      suggest: (nm2) => wsSuggest(p6, nm2),
+      onClose: pkPopDone(anchor),
+      note: `${name ? `Suggested from ${s5.items} item${s5.items === 1 ? "" : "s"}; change anything.` : "A lead, keywords and aliases help creaite match items to it."} Staged with this item's change.`,
+      onAdd: async (v4) => {
+        const w5 = wsRow(p6, v4.name);
+        if (w5 && w5.st === "Closed") return `“${w5.name}” is closed in ${pName(p6)}: reopen it in Settings › People and projects › Workstreams, or choose another.`;
+        const known = w5 ? w5.name : wsFor(p6).find((n4) => n4.toLowerCase() === v4.name.toLowerCase());
+        closePicker("pick");
+        if (known) return void pkCommit(k5, id, { ws: known }, "Workstream", x5.ws || "none", known);
+        if (v4.lead) {
+          const o5 = await ownerFinal(v4.lead);
+          if (o5 === null) return;
+          v4.lead = o5;
+        }
+        const { item, row: row2 } = wsNewOf({ ...v4, project: p6 });
+        if (String(id).startsWith("nw") && shared.CUR && shared.CUR.nid === id) {
+          shared.CUR.wsPre = { item, row: row2 };
+          (D.ws_table = D.ws_table || []).push(row2);
+        }
+        pkCommit(k5, id, { ws: v4.name }, "Workstream", x5.ws || "none", v4.name, { pre: [item], wsRow: String(id).startsWith("nw") ? null : row2, note: `New workstream “${v4.name}” for ${pName(p6)}, staged with this change` });
       }
     });
-    const n0 = f5(name ? "lead" : "name");
-    n0.focus();
-    n0.select && n0.select();
-    return el;
   }
   var pkWsPre = (x5) => {
     const w5 = shared.CUR && shared.CUR.mode === "new" && shared.CUR.wsPre;
@@ -30885,7 +30747,7 @@ ${d5.text}`);
       const wsOld = PKPROP.ws;
       PKPROP.ws = (a5, x5, k5, id) => {
         if (!pkWsAddOK()) return wsOld(a5, x5, k5, id);
-        pkList(a5, { label: "Workstream", search: true, value: x5.ws || "", options: pkWsOpts(x5, ""), filter: (q4) => pkWsOpts(x5, q4), onPick: (v4, typed, o5) => {
+        openPicker(a5, { label: "Workstream", search: true, value: x5.ws || "", onClose: pkPopDone(a5), options: pkWsOpts(x5, ""), filter: (q4) => pkWsOpts(x5, q4), onPick: (v4, typed, o5) => {
           if (v4 === "\0add") return pkWsForm(a5, x5, k5, id, o5 && o5.name || "");
           return pkCommit(k5, id, { ws: v4 }, "Workstream", x5.ws || "none", v4 || "none");
         } });
@@ -31345,7 +31207,7 @@ ${d5.text}`);
   function chaseOpen(start) {
     if (!pkOn() || !chaseCan()) return;
     const box = $("#pkChase"), id = shared.CUR.id;
-    if (shared.PKPOP) pkPopClose(false);
+    closePicker("owner", false);
     if (chaseIsOpen() && box.dataset.id === id && !start) return;
     box.dataset.id = id;
     box.hidden = false;
@@ -33328,7 +33190,7 @@ ${d5.text}`);
     const mine = isMe(d5.by), slips = dnSlips(d5), id = esc(d5.id);
     const title = tLink(`data-open="decisions:${id}"`, esc(d5.t));
     const body = [mine ? '<span class="dnyours">Yours</span> asked of you' : `from ${esc(d5.by)}`, o5.inProject ? "" : o5.n ? projLink(d5.p) : pLink(d5.p), dnWait(d5), dnNeeded(d5)].filter(Boolean).join(" · ") + (slips.length ? `<span class="dnslip">If it stays open: ${andList(slips)}</span>` : "") + (o5.extra || "");
-    if (o5.n) return tl(o5.n, title, body, `<span class="tacts dnacts">${mine ? tib("flag", "Record the decision", `Record the decision: ${d5.t}`, `data-dndecide="${id}"`, true) : tib("chasemail", "Draft a chase", `Draft a chase to ${d5.by}: ${d5.t}`, `data-dnchase="${id}"`, true)}${tib("external", "Open", `Open ${d5.id}`, `data-open="decisions:${id}"`)}</span>`, 'class="dnrow"');
+    if (o5.n) return tl(o5.n, title, body, `<span class="tacts dnacts">${mine ? tib("flag", "Record the decision", `Record the decision: ${d5.t}`, `data-dndecide="${id}"`, true) : tib("chasemail", "Draft a chase", `Draft a chase to ${d5.by}: ${d5.t}`, `data-dnchase="${id}" aria-haspopup="dialog"`, true)}${tib("external", "Open", `Open ${d5.id}`, `data-open="decisions:${id}"`)}</span>`, 'class="dnrow"');
     const acts2 = `<span class="dnacts">${mine ? `<button type="button" class="mini" data-dndecide="${id}" aria-label="Decide ${id}">Decide</button>` : `<button type="button" class="mini" data-dnchase="${id}" aria-label="Chase ${esc(d5.by)} for ${id}" data-tip="Draft an email to ${esc(d5.by)}: nothing is sent">Chase</button>`}<button type="button" class="mini" data-open="decisions:${id}" aria-label="Open ${id}">Open</button></span>`;
     return o5.n ? tl(o5.n, title, body, acts2, 'class="dnrow"') : `<div class="dnrow"><div class="tb">${title}<p>${body}</p></div>${acts2}</div>`;
   }
@@ -33570,7 +33432,7 @@ ${d5.text}`);
     const strip = `<ol class="mhstrip" aria-label="Where this meeting is">${m5.steps.map(([k5, l6, s5, txt]) => `<li class="mh-${s5}" data-step="${k5}"${s5 === "current" ? ' aria-current="step"' : ""}><span class="mhdot" aria-hidden="true">${MHSTATE[s5][0]}</span><span class="mhl">${esc(l6)}</span><span class="mht">${esc(txt)}</span><span class="vh">${MHSTATE[s5][1]}</span></li>`).join("")}</ol>`;
     const nx = m5.next, nextCard = `<div class="card mhnext"><h2>Next step</h2>${nx ? `<p>${esc((m5.steps.find((s5) => s5[2] === "current") || [])[3] || "")}</p><button class="btn primary" data-mhact="${nx.act}">${esc(nx.label)}</button>${nx.act === "prep" && draftOn("agenda") ? ' <button class="btn" data-mhact="agenda">Draft agenda</button>' : ""}${!viaServer() && ["prep"].includes(nx.act) ? '<div class="sub">Needs the live server.</div>' : ""}` : '<p class="sub">Nothing is waiting on this meeting.</p>'}</div>`;
     const c5 = m5.counts, items2 = m5.items.filter((x5) => x5.state !== "rejected");
-    const produced = `<div class="card"><h2>What it produced</h2>${items2.some((x5) => x5.id && (x5.k === "actions" || x5.k === "decisions")) ? `<button type="button" class="btn" data-defollow="${t5}">${ic("mail")}Draft the follow-up email</button>` : ""}<p class="sub">${[c5.items ? plur(c5.items, "item") : "", c5.updates ? plur(c5.updates, "update") + " to items already open" : "", c5.pending ? `${c5.pending} waiting for you` : "", c5.rejected ? `${c5.rejected} rejected` : ""].filter(Boolean).join(" · ") || "Nothing yet: items appear once the transcript is processed."}</p>${items2.length ? `<ul class="mhitems">${items2.map(mhItem).join("")}</ul>` : ""}</div>`;
+    const produced = `<div class="card"><h2>What it produced</h2>${items2.some((x5) => x5.id && (x5.k === "actions" || x5.k === "decisions")) ? `<button type="button" class="btn" data-defollow="${t5}" aria-haspopup="dialog">${ic("mail")}Draft the follow-up email</button>` : ""}<p class="sub">${[c5.items ? plur(c5.items, "item") : "", c5.updates ? plur(c5.updates, "update") + " to items already open" : "", c5.pending ? `${c5.pending} waiting for you` : "", c5.rejected ? `${c5.rejected} rejected` : ""].filter(Boolean).join(" · ") || "Nothing yet: items appear once the transcript is processed."}</p>${items2.length ? `<ul class="mhitems">${items2.map(mhItem).join("")}</ul>` : ""}</div>`;
     const cov = m5.coverage && m5.coverage.length ? `<div class="card"><h2>Coverage: was the agenda discussed?</h2><ul class="mhcov">${m5.coverage.map((x5, i5) => `<li><span class="tag ${x5.verdict === "Covered" ? "ok" : x5.verdict === "Not discussed" ? "warn" : ""}">${esc(x5.verdict)}</span> ${esc(x5.point)}${x5.verdict !== "Covered" ? ` <button type="button" class="mini" data-mhcarry="${i5}" aria-pressed="${!!x5.carried}">${x5.carried ? "Carried ✓" : "Carry to the next agenda"}</button>` : ""}</li>`).join("")}</ul><p class="sub">The agenda's own points; the transcript isn't stored. A carried point shows on the next ${esc(m5.title)} prep page as "Not covered last time".</p></div>` : "";
     const promised = m5.promised.length ? `<div class="card"><h2>Promised to you</h2><ul class="mhitems">${m5.promised.map((id) => {
       const x5 = REC("actions", id);
@@ -34246,6 +34108,24 @@ ${d5.text}`);
         b5.classList.add("wkend");
         b5.setAttribute("aria-label", (b5.getAttribute("aria-label") || fd(v4)) + ", weekend");
       }
+    });
+  }
+  function itemDatePicker(anchor, o5) {
+    const gate = !!o5.due, op = o5.onPick;
+    return openDatePicker(anchor, {
+      value: o5.value || "",
+      label: o5.label,
+      parse: (t5) => parseWhen(t5, TODAY, gate),
+      onClose: o5.onClose,
+      onPick: gate ? (v4) => {
+        if (v4 && !WK.ok && wkAsk(v4, anchor, op)) return;
+        op(v4);
+      } : op,
+      weekend: gate ? (iso) => wkDays().has(wkDow(iso)) : void 0,
+      typedNote: gate ? (t5) => {
+        const iso = t5 ? parseWhen(t5, TODAY, true) : null, n4 = weekendNote(iso);
+        return n4 ? `${n4.text} You'll be offered the nearest working days.` : "";
+      } : void 0
     });
   }
   function bootWeekendNote() {
@@ -39085,7 +38965,28 @@ ${d5.text}`);
       }
     );
   }
+  var HOMES = /* @__PURE__ */ new Map();
+  var WATCHING = false;
+  var topModal = () => [...document.querySelectorAll("dialog")].filter((d5) => d5.matches(":modal")).pop() || null;
+  function toastLayer(host2) {
+    if (!HOMES.has(host2)) HOMES.set(host2, { parent: (
+      /** @type {Node} */
+      host2.parentNode
+    ), next: host2.nextSibling });
+    const top = topModal(), home = (
+      /** @type {{parent: Node, next: Node | null}} */
+      HOMES.get(host2)
+    );
+    if (top) {
+      if (host2.parentNode !== top) top.appendChild(host2);
+    } else if (host2.parentNode !== home.parent) home.parent.insertBefore(host2, home.next && home.next.parentNode === home.parent ? home.next : null);
+    if (!WATCHING) {
+      WATCHING = true;
+      document.addEventListener("close", () => HOMES.forEach((_5, h5) => toastLayer(h5)), true);
+    }
+  }
   function drawToast(host2, props) {
+    if (props.open || HOMES.has(host2)) toastLayer(host2);
     R(/* @__PURE__ */ u2(Toast, { ...props }), host2);
   }
 
@@ -40330,6 +40231,7 @@ ${d5.text}`);
         "invitees",
         "isMe",
         "isMin",
+        "itemDatePicker",
         "items",
         "jobLive",
         "joinPanes",
@@ -40444,7 +40346,6 @@ ${d5.text}`);
         "pkOn",
         "pkOrder",
         "pkOwner",
-        "pkPopClose",
         "pkPropSave",
         "pkQuiet",
         "pkSetDate",
