@@ -4781,7 +4781,6 @@ button.nchip{font:inherit;font-size:12px}
     noteFlash: () => noteFlash,
     noteFlush: () => noteFlush,
     noteFlushOnExit: () => noteFlushOnExit,
-    noteHref: () => noteHref,
     noteImageSrc: () => noteImageSrc,
     noteLines: () => noteLines,
     noteLoading: () => noteLoading,
@@ -4789,7 +4788,6 @@ button.nchip{font:inherit;font-size:12px}
     noteMeta: () => noteMeta,
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
-    noteRequest: () => noteRequest,
     noteSave: () => noteSave,
     noteSetSent: () => noteSetSent,
     noteTyped: () => noteTyped,
@@ -25108,14 +25106,6 @@ ${s5}`;
 
   // stores/capture.js
   var capOpen = y3(false);
-  var noteRequest = y3(
-    /** @type {NoteRequest|null} */
-    null
-  );
-  function noteHref(r4) {
-    const file = String(r4.path || "").split("/").pop() || "";
-    return `#notes=${encodeURIComponent(r4.code || "_portfolio")}&n=${encodeURIComponent(file)}${r4.find ? "&find=1" : ""}`;
-  }
 
   // components/notes/CaptureDrawer.jsx
   var WAIT = 600;
@@ -25232,13 +25222,7 @@ ${s5}`;
     if (back2 && back2 instanceof HTMLElement && back2.isConnected) back2.focus();
   }
   function openNoteFull(r4) {
-    noteRequest.value = r4;
-    if (r4.code && r4.code !== "_portfolio" && P4.some((p6) => p6.code === r4.code)) go2("cockpit", r4.code);
-    else go2("projects");
-    try {
-      history.replaceState(history.state, "", noteHref(r4));
-    } catch (e4) {
-    }
+    return openNoteAt(r4.path, 0, { code: r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "_portfolio", find: r4.find });
   }
   async function captureDone(find) {
     clearTimeout(timer);
@@ -53071,9 +53055,9 @@ ${d5.text}`);
       }
     });
   }
-  function openNoteAt(path, line) {
+  function openNoteAt(path, line, o5 = {}) {
     if (line) noteFlash.value = { path, line };
-    const code = noteCodeOf(path) || (() => {
+    const code = (o5.code && notesCodeOk(o5.code) ? o5.code : null) || noteCodeOf(path) || (() => {
       const m5 = /^projects\/([^/]+)\//.exec(path);
       const f5 = m5 && m5[1];
       if (f5 === "_portfolio") return "_portfolio";
@@ -53085,6 +53069,7 @@ ${d5.text}`);
     })();
     if (!code) return false;
     shared.NOTEFILE = path;
+    shared.NOTEFIND = !!o5.find;
     if (shared.VIEW === "notes" && notesCode.value === code) {
       renderNotes(code);
       return true;
