@@ -12,6 +12,7 @@ import { h, render } from "preact";
 import { Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
 import { MoreSettings } from "./components/settings/MoreSettings.jsx";
+import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
 import { openPath } from "./core/fields.js";
 import { typing } from "./core/keys.js";
@@ -216,7 +217,8 @@ export function renderSettings(){ if(!SETCATS.some(c=>c[0]===shared.SCAT)) share
   query.value=shared.SQ.trim(); changedOnly.value=CHANGED;
   const chg=/** @type {HTMLInputElement} */($("#setChanged")); if(chg) chg.checked=CHANGED;
   if(SERVED&&!catalogue.value) loadCatalogue();
-  putHTML($("#setcats"),raw(SETCATS.map(([id,t])=>`<button data-scat="${id}" aria-selected="${!searching&&id===shared.SCAT}">${esc(t)}</button>`).join("")));
+  drawTabs($("#setcatsHost"),{id:"setcats",className:"setcats",label:"Settings categories",vertical:true,controls:"settingsBody",
+    items:SETCATS.map(([id,t])=>({id,label:t,data:{scat:id}})),selected:searching?"":shared.SCAT,onSelect:setOpen});   /* BL-316: the Tabs block */
   putHTML($("#setcatsel"),raw((searching?`<option value="">${CHANGED&&!shared.SQ.trim()?"Changed settings":"Search results"}</option>`:"")+SETCATS.map(([id,t])=>`<option value="${id}" ${!searching&&id===shared.SCAT?"selected":""}>${esc(t)}</option>`).join("")));
   const secs=searching?setSearchSections():SETSECTIONS.filter(s=>catOf(s)===shared.SCAT);
   const head=s=>searching?(s.mount&&s.id!=="more"?"":`<div class="setcrumb">${esc(catName(catOf(s)))} › ${esc(s.id==="more"?OLDCATS.advanced:s.title)}</div>`)
@@ -324,7 +326,6 @@ export async function renameWs(key,to,also){ const [pc,nm]=wsParts(key); if(!to|
   if(others.length) snack(`${pc} done. ${others.join(", ")} also ${others.length===1?"has":"have"} “${nm}”.`,async()=>{ for(const o of others) await renameWs(wsKey(o,nm),to,false); },`Also rename in ${others.join(", ")}`); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootSettings0078(){
-$("#setcats").onclick=e=>{ const t=e.target.closest("[data-scat]"); if(t) setOpen(t.dataset.scat); };
 $("#setcatsel").onchange=e=>{ if(e.target.value) setOpen(e.target.value); };
 $("#setq").oninput=e=>setSearch(e.target.value);
 $("#setq").onkeydown=e=>{ if(e.key==="Escape"&&shared.SQ){ e.stopPropagation(); e.target.value=""; setSearch(""); } };
@@ -459,7 +460,7 @@ export async function ownerFinal(typed,opt={}){ typed=String(typed||"").trim(); 
 
 /* Settings › People: the register, with each person's open work. Edit, rename, merge, remove from the owner list. */
 export function renderPeopleMgr(){ pfLoad();
-  putHTML($("#peopleMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd">Add a person</button></div>
+  putHTML($("#peopleMgr"),html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd" aria-haspopup="dialog">Add a person</button></div>
    <p class="sub" style="margin:4px 0 8px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
    ${PEOPLE.added.length||PEOPLE.hidden.length?html`<p class="sub" id="pmLegacy"><span class="tag warn">${PEOPLE.added.length+PEOPLE.hidden.length} name${PEOPLE.added.length+PEOPLE.hidden.length===1?"":"s"} still in settings.json</span> ${viaServer()?html`<button class="mini" data-ask="${PEOPLE_MOVE}">Move them into the register</button> <span class="sub">(ask creaite does it, asking first)</span>`:"Say “setup” in Claude Code to move them into the register."}</p>`:""}
    <div class="toolbar pmtools" role="search"><input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="${PF.q}"><span class="dd" id="pmFdd"></span></div>
@@ -529,7 +530,7 @@ export function pfRow(x,sc,active){ const {n,p,me,off}=x, a=sc?sc.reduce((s,c)=>
   return html`<tr class="${off?"off":""}" data-pn="${n}"><td>${pfHl(n)}${me?raw(' <span class="tag">(you)</span>'):""}${p||me?"":raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p&&!p.email?raw(' <span class="tag warn" title="Add email">no email</span>'):""}${off?raw(' <span class="tag warn">removed from list</span>'):""}${via?html`<span class="sub pmvia">named in the project’s stakeholders</span>`:""}</td>
      <td>${p&&p.email?pfHl(p.email):raw('<span class="sub">—</span>')}</td><td>${p&&(p.org||p.role)?html`${p.org||""}${p.org&&p.role?" · ":""}${pfHl(p.role)}`:raw('<span class="sub">—</span>')}</td><td class="sub">${p&&p.aliases.length?p.aliases.map((s,i)=>html`${i?", ":""}${pfHl(s)}`):"—"}</td>
      <td class="num">${raw(pfLink(n,"actions",a,sc))}</td><td class="num">${raw(pfLink(n,"raid",r,sc))}</td>
-     <td class="mgract">${me?raw('<span class="x">Change in Settings › Essentials › You</span>'):html`${raw(ibtn("pencil",p?"Edit details":"Add details",`data-pm="edit" data-n="${esc(n)}"`,"sm"))}${raw(ibtn("type","Rename",`data-pm="ren" data-n="${esc(n)}"`,"sm"))}<select class="mgsel pmsel" data-n="${n}" aria-label="Merge ${n} into"><option value="">Merge into…</option>${mergeTo.map(y=>html`<option value="${y}">${y}</option>`)}</select>${raw(off?ibtn("undo","Restore",`data-pm="restore" data-n="${esc(n)}"`,"sm"):ibtn("trash","Remove from list",`data-pm="hide" data-n="${esc(n)}"`,"sm no"))}`}</td></tr>`; }
+     <td class="mgract">${me?raw('<span class="x">Change in Settings › Essentials › You</span>'):html`${raw(ibtn("pencil",p?"Edit details":"Add details",`data-pm="edit" data-n="${esc(n)}" aria-haspopup="dialog"`,"sm"))}${raw(ibtn("type","Rename",`data-pm="ren" data-n="${esc(n)}"`,"sm"))}<select class="mgsel pmsel" data-n="${n}" aria-label="Merge ${n} into"><option value="">Merge into…</option>${mergeTo.map(y=>html`<option value="${y}">${y}</option>`)}</select>${raw(off?ibtn("undo","Restore",`data-pm="restore" data-n="${esc(n)}"`,"sm"):ibtn("trash","Remove from list",`data-pm="hide" data-n="${esc(n)}"`,"sm no"))}`}</td></tr>`; }
 export function pfEmpty(L,F){ const act=F.filter(f=>f[0]==="rem"?PF.rem==="only":pfOn(f[0])).map(f=>({k:f[0],label:pfChip(f)}));
   if(PF.q.trim()) act.push({k:"q",label:`Search “${PF.q.trim()}”`});
   const ways=act.map(r=>({...r,n:L.filter(x=>pfPass(x,F,r.k)&&(r.k!=="rem"||!x.off)).length}));
@@ -618,7 +619,7 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}${p||isMe(name)?"":html` <span class="tag warn" title="Owns items but isn’t in the people register">not in register</span>`}</h1>
      <p class="sub" style="margin:2px 0">${p&&(p.org||p.role)?[p.org,p.role].filter(Boolean).join(" · "):"Organisation and role not recorded"}${p&&p.email?html` · <a href="mailto:${p.email}">${p.email}</a>`:""}</p>
      ${p&&p.aliases.length?html`<p class="sub" style="margin:2px 0">Also written as ${p.aliases.join(", ")}</p>`:""}</div>
-     ${raw(ibtn("pencil",p?"Edit details":"Add details",'id="ppEdit"',"bd"))}</div>
+     ${raw(ibtn("pencil",p?"Edit details":"Add details",'id="ppEdit" aria-haspopup="dialog"',"bd"))}</div>
    <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x.oo.length,"open action")} owned by ${name}`,x.oo.length,"actions:open:",{o:ownersOf(x.oo)},`<b>${x.oo.length}</b> open action${x.oo.length===1?"":"s"}`))}</span><span>${raw(countLink(`${plur(x.or.length,"open RAID item")} owned by ${name}`,x.or.length,"raid:open:",{o:ownersOf(x.or)},`<b>${x.or.length}</b> open risk${x.or.length===1?"":"s"} and issue${x.or.length===1?"":"s"}`))}</span><span class="${x.late?"late":""}">${raw(countLink(`${plur(x.late,"overdue item")} owned by ${name}`,x.late,"all:open:",{st:["Open"],due:["overdue"],ty:["Action","Risk","Issue","Assumption","Dependency"],o:ownersOf(latesOf(x))},`<b>${x.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ")||"—")}</span></div>
    <div class="card ppcard"><h2>Open work${items.length?html` <span class="sub">· ${items.length}</span>`:""}</h2>${items.length?raw(personLinks(x)+personWork(x,codes)):html`<p class="sub">Nothing open.</p>`}</div>
    <div class="card ppcard"><h2>Decisions made${recent.length?html` <span class="sub">· last ${raw(RECENT_DEC_DAYS)} days</span>`:""}</h2>${recent.length?raw(personTbl("decisions",recent)):html`<p class="sub">None in the last ${raw(RECENT_DEC_DAYS)} days.</p>`}</div>
@@ -627,7 +628,7 @@ export function renderPerson(name){ if(!shared.HAND||shared.HAND.name!==name) sh
   { const el=$("#v-person"), x=PERS().find(y=>y.name===name); if(x){
     const open=[...x.oa.map(a=>["actions",a]),...x.or.map(r=>["raid",r])], cut=new Date(TODAY); cut.setDate(cut.getDate()-P1_DAYS); const since=cut.toISOString().slice(0,10);
     const closed=[...x.A.map(a=>["actions",a]),...x.R.map(r=>["raid",r])].filter(([,i])=>i.st==="Closed"&&i.closed&&i.closed>=since).sort((a,b)=>b[1].closed.localeCompare(a[1].closed));
-    addHTML(el.querySelector("#ppEdit"),"beforebegin",html`<button class="btn" id="ppEmail" data-tip="Draft an email with their open items" ${open.length?"":html`disabled aria-describedby="ppEmailNote"`}>${raw(ic("mail"))}Draft email</button>${open.length?html`<button class="btn" id="ppHand" data-tip="Hand their open items to someone else" ${shared.HAND?"disabled":""}>${raw(ic("handover"))}Hand over…</button>`:html`<span class="sub" id="ppEmailNote">Nothing open for ${name}, so no email is needed.</span>`}${raw(chaseNote(x))}`);   /* BL-83: Draft email replaces Prep 1:1; BL-224: when items were chased */
+    addHTML(el.querySelector("#ppEdit"),"beforebegin",html`<button class="btn" id="ppEmail" aria-haspopup="dialog" data-tip="Draft an email with their open items" ${open.length?"":html`disabled aria-describedby="ppEmailNote"`}>${raw(ic("mail"))}Draft email</button>${open.length?html`<button class="btn" id="ppHand" data-tip="Hand their open items to someone else" ${shared.HAND?"disabled":""}>${raw(ic("handover"))}Hand over…</button>`:html`<span class="sub" id="ppEmailNote">Nothing open for ${name}, so no email is needed.</span>`}${raw(chaseNote(x))}`);   /* BL-83: Draft email replaces Prep 1:1; BL-224: when items were chased */
     const kp=WARNS().filter(w=>w.sig==="key_person"&&w.who===name);
     if(kp.length) addHTML(el.querySelector(".ppcounts"),"afterend",html`<div class="wnote">${kp.map(w=>html`<div>${raw(WICO.replace("<svg",'<svg width="14" height="14" style="flex:none;margin-top:1px"'))}<span>${(w.k==="projects"?pName(w.id):w.id)}: ${w.text}</span></div>`)}</div>`);
     const work=el.querySelector(".ppcard");
