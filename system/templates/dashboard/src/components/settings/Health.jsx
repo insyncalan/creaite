@@ -12,17 +12,21 @@
 import { useEffect, useState } from "preact/hooks";
 import { copied, fd } from "../../core/page.js";
 import { api, snack, viaServer } from "../../core/server.js";
-import { checkHealth, healthResult, healthBusy, healthError } from "../../stores/settings.js";
+import { checkHealth, healthResult, healthBusy, healthError, healthCardWaiting, markCardWaiting } from "../../stores/settings.js";
 import { pendingEdit } from "../../ask.js";
 
 const CMD = /system\/scripts\/run [^,;"]+/;
 /** The command in a manual step, to copy, or "". @param {string} how */
 export const commandIn = how => { const m = CMD.exec(how || ""); return m ? m[0].trim() : ""; };
 
+export const CARD_WAITING = "On the approval card, waiting for you";
+
 /** Run one built fix through its fixed route: no body, no query string. @param {import("../../stores/settings.js").Fix} f */
 export async function runHealthFix(f) {
   const r = await api(`/api/health/fix/${encodeURIComponent(f.id || "")}`);
-  snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));
+  /* a move waits on the approval card: nothing has changed yet, so it is never "Done" (BL-09, #94) */
+  if (r.ok && r.card) { markCardWaiting(f.id || ""); snack(CARD_WAITING + ": nothing moves until you approve it."); }
+  else snack(r.message || (r.ok ? "Done" : "It wasn't fixed"));
   if (r.ok && r.url) window.open(r.url, "_blank", "noopener");
   if (r.ok && r.card) await pendingEdit();      /* BL-09: a move waits on the approval card in ask creaite */
   if (r.ok && !r.url) checkHealth();
@@ -107,6 +111,7 @@ function Problem({ p }) {
         <div class="t">{p.title} <span class={`tag ${bad ? "bad" : "warn"}`}>{bad ? "Needs fixing" : "Worth a look"}</span></div>
         {p.detail && <div class="d">{p.detail}</div>}
         {p.fix.built && <div class="hdoes">{p.fix.does}</div>}
+        {p.fix.id && healthCardWaiting.value.includes(p.fix.id) && <div class="hdoes hwait" role="status">{CARD_WAITING}.</div>}
         {!p.fix.built && open && (
           <div class="hhow" id={hid}>
             {p.fix.how ? <span>{p.fix.how}</span> : <span>Only you can take this step: the line above says what is wrong.</span>}
