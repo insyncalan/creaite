@@ -11,14 +11,15 @@
    page-wide handler in settings.js runs them, with their Undo.
    BL-334: a message row is a conversation's card: its summary, then each candidate item (a quiet tag for its type, the item,
    its owner and due date) with Create work item and Dismiss (the same data-alertdo buttons, naming the item). A conversation
-   with nothing for Alan is a quiet row (td-quiet): one line, no buttons. */
+   with nothing for Alan is a quiet row (td-quiet): one line, no buttons. A confidential conversation's card carries a quiet
+   "Confidential" mark beside its title (the candidate tag's style); its summary shows like any other (Alan, 15-10-2026). */
 import { render } from "preact";
 import { IconButton } from "../IconButton.jsx";
 
 /** @typedef {{id: string, icon: string, label: string, name?: string, primary?: boolean, why?: string, data?: Record<string, string>, haspopup?: string}} TdAct */
 /** @typedef {{key: string, tag: string, t: string, sub?: string, acts: TdAct[]}} TdCand */
 /** @typedef {{key: string, kind: "review"|"transcript"|"message"|"quiet", tag: string, tone?: string, t: string, meta: string, link?: string,
-    summary?: string, cands?: TdCand[], acts: TdAct[]}} TdRow */
+    mark?: string, summary?: string, cands?: TdCand[], acts: TdAct[]}} TdRow */
 /** @typedef {{rows: TdRow[], total: number, cap: number, open: boolean, onAct: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
     onOpen: (row: TdRow) => void, onReview: () => void, blocked: (why: string) => void}} ToDecideProps */
 
@@ -41,6 +42,7 @@ function TdLine({ r, hidden, p }) {
           : r.link
             ? <a class="t" href={r.link} target="_blank" rel="noopener">{r.t}</a>
             : <a class="t" href="#" onClick={open}>{r.t}</a>}
+        {r.mark ? <>{" "}<span class="tag tdctag tdmark">{r.mark}</span></> : null}
         <p>{r.meta}</p>
         {r.summary ? <p class="tdsum">{r.summary}</p> : null}
         {r.cands && r.cands.length
