@@ -161,8 +161,19 @@ class Filing(Base):
         log = [json.loads(x) for x in (self.v.root / "system/config/files-log.jsonl").read_text().splitlines()]
         self.assertEqual([e["path"] for e in log if e["op"] == "create" and not e["path"].endswith(".html")], [one["path"], two["path"]])
 
-    def test_the_setting_is_on_by_default(self):
-        self.assertTrue(self.py("print(json.dumps(creaite_doc.file_beside_default()))"))
+    def test_the_setting_is_off_for_reports_and_on_for_minutes_by_default(self):
+        got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
+        self.assertEqual(got, [False, False, True])
+
+    def test_the_saved_settings_win_and_an_unknown_kind_is_refused(self):
+        cfg = self.v.root / "system/config/settings.json"
+        data = json.loads(cfg.read_text(encoding="utf-8")) if cfg.is_file() else {}
+        data["reports"] = {"file_exports_beside": True, "file_minutes_exports_beside": False}
+        cfg.parent.mkdir(parents=True, exist_ok=True)
+        cfg.write_text(json.dumps(data), encoding="utf-8")
+        got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
+        self.assertEqual(got, [True, True, False])
+        self.assertEqual(self.py("try:\n    creaite_doc.file_beside_default('memo')\nexcept ValueError:\n    print('true')"), True)
 
     def test_a_client_view_waits_for_the_approved_internal_report(self):
         draft = self.saved(date="2026-10-09")

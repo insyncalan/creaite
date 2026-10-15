@@ -1,6 +1,10 @@
 # v2.1.0 contract: creaite's document format, its calls and the export call
 
 Team Cap, branch `sprint-reporting` (P1 `v210-p1-doc`, P2 `v210-p2-exports`). Team Stark builds P4 against this from day 1.
+Changed (15-10-2026, plan #65; Jarvis's decision): "File the exports beside it" is split by kind, one source of truth.
+`reports.file_exports_beside` (weekly and client reports, **off** by default, BL-335) and `reports.file_minutes_exports_beside`
+(minutes, **on** by default, BL-338); `creaite_doc.file_beside_default(kind)` picks by the document's kind, and
+`report_server` uses it (its own `FILE_BESIDE_DEFAULT` is gone). `export`'s signature is unchanged.
 Changed (15-10-2026, before P5): §4, Sheet.jsx's props and slots, written (it was a placeholder); `components/report/SheetStub.jsx`
 added for Team Stark's P7 parts. Additions only.
 Changed (15-10-2026, P3; Alan's decision, option C): **a filed report or minutes is never changed in place.** Save on an approved,
@@ -208,8 +212,9 @@ export(path, fmt, *, out_dir=None, file_beside=True, open_after=True) -> dict
 - Written to `system/staging/drafts/`; with `file_beside` (the default) also filed beside the document through `filechange.py`
   (a create, never overwriting: a taken name gets a number), named as the document with the export's extension (HTML:
   `<name> (read only).html`). `out_dir` (a stored folder) files it there instead. Filed, the draft is removed.
-- **The setting** "File the exports beside it" is `reports.file_exports_beside`, on by default; callers pass
-  `file_beside=creaite_doc.file_beside_default()` unless Alan ticked otherwise for this export.
+- **The settings**, by kind: "File report exports beside it" is `reports.file_exports_beside` (weekly and client reports, off
+  by default, BL-335); "File minutes exports beside them" is `reports.file_minutes_exports_beside` (minutes, on by default,
+  BL-338). Callers pass `file_beside=creaite_doc.file_beside_default(kind)` unless Alan ticked otherwise for this export.
 - **Word:** the kind's template keeps its title block (project or meeting, status line `Internal · Draft, version N` or
   `… · Approved <date>`, the date; a client report's `meta.period_start` gives its period); its health and attendees lines go,
   and each shown section follows in page order as the template's heading, Markdown paragraphs and, for a table, the template's
