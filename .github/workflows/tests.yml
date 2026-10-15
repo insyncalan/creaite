@@ -16,7 +16,14 @@
 # `on:` line below for the commented one under it. That one line is the whole change.
 # on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}}
 on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
-# ===== end BL-242 =====
+#
+# ===== #89: who runs what =====
+# Python 3.14 runs every test file (the browser tests included); Python 3.9, the floor, runs the files that never start Chrome
+# (`--quick`: the quick tier, read from the files by dev/tools/run_support.py). Each is split in 3 shards (`--shard I/3`).
+# So a browser test runs once per commit, not twice, and the floor is still tested on all the rest. macOS (3.14, all files, 3
+# shards) runs on release branches only. `--max-fail 8` stops a shard that has plainly gone wrong after 8 failed files.
+# Files that failed last time start first (dev/tests/.last-failed), which helps a local run; a fresh runner has none.
+# ===== end #89 =====
 
 name: Tests
 # #89: a hand-started run of named files is named "Tests (files)", so release.yml can tell it from a full run.
@@ -43,10 +50,11 @@ jobs:
       # is about a third. Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
       # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
       # The "Tests passed" job below is green only if every shard is.
-      # The macOS job runs only on pushes to main (Alan, 12-10-2026): it needs about 2 hours and GitHub runs only five macOS
-      # jobs at once, so on every branch run it held the run open and queued the others. Branch and pull-request runs use Linux.
+      # macOS runs on release branches only (release-*; Alan, 15-10-2026, #89). It needs about 2 hours and GitHub runs only five
+      # macOS jobs at once, so on a push to main or a pull request it held the run open for nothing; Linux decides those. It
+      # is still continue-on-error: a macOS runner that fails to start never blocks a cut.
       matrix:
-        os: ${{ fromJSON(github.event_name == 'push' && github.ref == 'refs/heads/main' && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
+        os: ${{ fromJSON(startsWith(github.head_ref || github.ref_name, 'release-') && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
         python: ["3.9", "3.14"]
         shard: [1, 2, 3]
         exclude:
@@ -76,6 +84,7 @@ jobs:
           FILES: ${{ github.event.inputs.files }}
           JOBS: ${{ matrix.os == 'macos-latest' && 3 || 4 }}
           SHARD: ${{ matrix.shard }}
+          SCOPE: ${{ matrix.python == '3.9' && '--quick' || '' }}
         run: |
           if [ -n "$FILES" ]; then
             # named files: shard 1 runs them, the others have nothing to do
@@ -84,7 +93,7 @@ jobs:
             for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
             exit $fail
           else
-            python3 dev/tools/run_tests.py -j "$JOBS" --shard "$SHARD/3" --max-fail 25
+            python3 dev/tools/run_tests.py -j "$JOBS" $SCOPE --shard "$SHARD/3" --max-fail 8
           fi
 
   passed:
