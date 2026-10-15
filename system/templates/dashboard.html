@@ -5147,6 +5147,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     toDb: () => toDb,
     toDecideRows: () => toDecideRows,
     toIso: () => toIso,
+    toastLayer: () => toastLayer,
     toggleGroup: () => toggleGroup,
     tx: () => tx,
     typing: () => typing,
@@ -32986,7 +32987,7 @@ ${d5.text}`);
     const title = tLink(`data-open="decisions:${id}"`, esc(d5.t));
     const body = [mine ? '<span class="dnyours">Yours</span> asked of you' : `from ${esc(d5.by)}`, o5.inProject ? "" : o5.n ? projLink(d5.p) : pLink(d5.p), dnWait(d5), dnNeeded(d5)].filter(Boolean).join(" · ") + (slips.length ? `<span class="dnslip">If it stays open: ${andList(slips)}</span>` : "") + (o5.extra || "");
     if (o5.n) return tl(o5.n, title, body, `<span class="tacts dnacts">${mine ? tib("flag", "Record the decision", `Record the decision: ${d5.t}`, `data-dndecide="${id}"`, true) : tib("chasemail", "Draft a chase", `Draft a chase to ${d5.by}: ${d5.t}`, `data-dnchase="${id}" aria-haspopup="dialog"`, true)}${tib("external", "Open", `Open ${d5.id}`, `data-open="decisions:${id}"`)}</span>`, 'class="dnrow"');
-    const acts2 = `<span class="dnacts">${mine ? `<button type="button" class="mini" data-dndecide="${id}" aria-label="Decide ${id}">Decide</button>` : `<button type="button" class="mini" data-dnchase="${id}" aria-haspopup="dialog" aria-label="Chase ${esc(d5.by)} for ${id}" data-tip="Draft an email to ${esc(d5.by)}: nothing is sent">Chase</button>`}<button type="button" class="mini" data-open="decisions:${id}" aria-label="Open ${id}">Open</button></span>`;
+    const acts2 = `<span class="dnacts">${mine ? `<button type="button" class="mini" data-dndecide="${id}" aria-label="Decide ${id}">Decide</button>` : `<button type="button" class="mini" data-dnchase="${id}" aria-label="Chase ${esc(d5.by)} for ${id}" data-tip="Draft an email to ${esc(d5.by)}: nothing is sent">Chase</button>`}<button type="button" class="mini" data-open="decisions:${id}" aria-label="Open ${id}">Open</button></span>`;
     return o5.n ? tl(o5.n, title, body, acts2, 'class="dnrow"') : `<div class="dnrow"><div class="tb">${title}<p>${body}</p></div>${acts2}</div>`;
   }
   var dnBlock = (L2, o5) => L2.length ? `<div class="dnlist">${L2.map((d5) => dnDecisionHtml(d5, o5)).join("")}</div>` : "";
@@ -38728,7 +38729,28 @@ ${d5.text}`);
       }
     );
   }
+  var HOMES = /* @__PURE__ */ new Map();
+  var WATCHING = false;
+  var topModal = () => [...document.querySelectorAll("dialog")].filter((d5) => d5.matches(":modal")).pop() || null;
+  function toastLayer(host2) {
+    if (!HOMES.has(host2)) HOMES.set(host2, { parent: (
+      /** @type {Node} */
+      host2.parentNode
+    ), next: host2.nextSibling });
+    const top = topModal(), home = (
+      /** @type {{parent: Node, next: Node | null}} */
+      HOMES.get(host2)
+    );
+    if (top) {
+      if (host2.parentNode !== top) top.appendChild(host2);
+    } else if (host2.parentNode !== home.parent) home.parent.insertBefore(host2, home.next && home.next.parentNode === home.parent ? home.next : null);
+    if (!WATCHING) {
+      WATCHING = true;
+      document.addEventListener("close", () => HOMES.forEach((_5, h5) => toastLayer(h5)), true);
+    }
+  }
   function drawToast(host2, props) {
+    if (props.open || HOMES.has(host2)) toastLayer(host2);
     R(/* @__PURE__ */ u2(Toast, { ...props }), host2);
   }
 
