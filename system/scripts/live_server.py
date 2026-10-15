@@ -92,7 +92,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/minutes/draft {file | path}: the minutes view (v2.1.0 P4, BL-338): a meeting's minutes record, its versions, the
                          transcript's turns and the approve popup's plan (minutes_record.view); read only
 - POST /api/minutes/save {path, doc, base_version} | {path, op, base_version}: save the page as a new version (over filed
-                         minutes is refused, Alan 15-10-2026: never approved here, no card; answers code 3), or one row or coverage change (op:
+                         minutes is refused, Alan 15-10-2026: no approval, no card; code 3), or one row or coverage change (op:
                          remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
 - POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
                          approve_minutes, through tracker.py apply); unticked items wait in Review

@@ -490,7 +490,7 @@ def _drop_unsaved(name):
                 if json.loads(f.read_text(encoding="utf-8")).get("from") == rel:
                     return False
             except (OSError, ValueError):
-                continue
+                continue                    # an unreadable request names nothing: it keeps no copy
         given.unlink()
     except OSError:
         return False
@@ -764,6 +764,28 @@ def change(path, op, base_version=None, via="dashboard"):
 
 
 
+def _follow_record(p, data):
+    """(stored path, record) of the draft minutes record whose items are staged in proposal `p`, or (None, None)."""
+    draft = (data.get("meeting") or {}).get("draft")
+    if not (draft and str(draft).startswith("system/staging/drafts/") and is_record(draft)):
+        return None, None
+    doc = creaite_doc.read(draft)
+    if doc.get("state") == "approved" or (doc.get("meta") or {}).get("proposal") != p.name:
+        return None, None
+    return draft, doc
+
+
+def _row_differs(doc, item):
+    """Whether item's row on the record (its section, words and what it does) or its snapshot no longer matches the staged item."""
+    s, i = find_row(doc, item["n"])
+    sid, row = item_row(item)
+    if (s is None) != (sid is None) or (s is not None and sid != s["id"]):
+        return True
+    had, row, old = (s["rows"][i] if s is not None else {}), row or {}, doc["items"][f"@{item['n']}"]
+    return (had.get("cells"), had.get("does"), old.get("values"), old.get("changes")) != \
+        (row.get("cells"), row.get("does"), item.get("values"), item.get("changes"))
+
+
 def follow(proposal, via="dashboard"):
     """Review's edits reach the record: after a staged item is edited in Review (the dashboard's proposal save, review.py edit),
     each row the record shows follows its item (sync_item, as a change from the minutes view does), saved as a new version of the
@@ -773,32 +795,19 @@ def follow(proposal, via="dashboard"):
         p = Path(proposal)
         p = p if p.is_absolute() else paths.STAGING / p.name
         data = json.loads(p.read_text(encoding="utf-8"))
-        draft = (data.get("meeting") or {}).get("draft")
-        if not (draft and str(draft).startswith("system/staging/drafts/") and is_record(draft)):
+        draft, doc = _follow_record(p, data)
+        if not draft:
             return None
-        doc = creaite_doc.read(draft)
-        if doc.get("state") == "approved" or (doc.get("meta") or {}).get("proposal") != p.name:
-            return None
-        changed = []
-        for item in data.get("items") or []:
-            ref = f"@{item.get('n')}"
-            if item.get("applied") or ref not in doc["items"]:
-                continue
-            s, i = find_row(doc, item["n"])
-            sid, row = item_row(item)
-            had = s["rows"][i] if s is not None else {}
-            old = doc["items"][ref]
-            if (s is None and sid) or (s is not None and sid != s["id"]) or had.get("cells") != (row or {}).get("cells") \
-                    or had.get("does") != (row or {}).get("does") \
-                    or (old.get("values"), old.get("changes")) != (item.get("values"), item.get("changes")):
-                sync_item(doc, item)
-                changed.append(item["n"])
+        changed = [it for it in data.get("items") or []
+                   if not it.get("applied") and f"@{it.get('n')}" in doc["items"] and _row_differs(doc, it)]
+        for item in changed:
+            sync_item(doc, item)
         if not changed:
             return None
         r = save_record(draft, doc, "Minutes: edited in Review", via=via)
         return r.get("version") if r.get("ok") else None
     except (OSError, ValueError, KeyError, TypeError, RecordError, creaite_doc.DocError):
-        return None
+        return None             # a record that can't be read or saved stays as it was; Review's own save already stands
 
 # ── The minutes view's routes (live_server.py /api/minutes/draft, save, export) ──
 
