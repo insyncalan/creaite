@@ -114,13 +114,11 @@ def claude_command(paths_mod):
 
 
 def build_command(claude, model, prompt, deny):
-    """Options first, then `--`, then the prompt, so nothing in the prompt is ever read as an option. `--tools ""` removes every
-    built-in tool, as the live VIP check does (vip-tools-fix): a probe that still reads its Microsoft 365 tools proves they load."""
+    """Options first, then `--`, then the prompt, so nothing in the prompt is ever read as an option."""
     cmd = [claude, "-p"]
     if model:
         cmd += ["--model", model]
-    cmd += ["--output-format", "json", "--tools", "", "--allowedTools", ",".join(PROBE_TOOLS)]
-    cmd += ["--disallowedTools", ",".join(deny), "--", prompt]
+    cmd += ["--output-format", "json", "--allowedTools", ",".join(PROBE_TOOLS), "--disallowedTools", ",".join(deny), "--", prompt]
     return cmd
 
 
