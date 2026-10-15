@@ -10,7 +10,7 @@
 import { useContext, useState } from "preact/hooks";
 import { Checked } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
-import { isInternal, lines, tagOf, toggleInternal } from "./minutesDoc.js";
+import { isInternal, mdLines, lineTag, toggleInternal } from "./minutesDoc.js";
 import { jumpTo } from "./TranscriptPane.jsx";
 
 /** @typedef {import("../report/SheetStub.jsx").SectionCtx} SectionCtx */
@@ -35,7 +35,7 @@ export function TimeTag({ tag, onRemove }) {
     @param {{ctx: SectionCtx, line: Line, i: number, li: boolean, onEdit: () => void}} props */
 function TextLine({ ctx, line, i, li, onEdit }) {
   const m = useContext(MinutesCtx), s = ctx.section, live = ctx.editing && !ctx.exported;
-  const tags = /** @type {TimeTag[]} */ (s.tags || []), tag = live ? tagOf(line, tags) : null;
+  const tags = /** @type {TimeTag[]} */ (s.tags || []), tag = live ? lineTag(line, tags) : null;
   const checks = live && m ? m.checks.filter(c => c.section === s.id && c.line === i) : [];
   const internal = m ? isInternal(m.doc, s.id, { text: line.text }) : false;
   const Tag = li ? "li" : "p";
@@ -46,7 +46,7 @@ function TextLine({ ctx, line, i, li, onEdit }) {
       {live ? <span class="mntext" onClick={e => { if (!(/** @type {HTMLElement} */ (e.target)).closest("button")) onEdit(); }}><Checked text={line.text} checks={checks} /></span>
         : <span>{line.text}</span>}
       {tag ? <TimeTag tag={tag} onRemove={() => ctx.update({ tags: tags.filter(t => t !== tag) }, "Time tag removed")} /> : null}
-      {live && m && m.distributed ? (
+      {live && m && m.distributed && s.type !== "header" ? (
         <button type="button" class={`mnio${internal ? " on" : ""}`} aria-pressed={internal ? "true" : "false"}
           aria-label={`Internal only: ${line.text.slice(0, 60)}`} onClick={() => m.setDoc(toggleInternal(m.doc, s.id, { text: line.text }), internal ? "Shown to attendees" : "Internal only")}>
           Internal only</button>) : null}
@@ -77,7 +77,7 @@ export function TextLines({ ctx }) {
       </div>
     );
   }
-  const ls = lines(s.text || "");
+  const ls = mdLines(s.text || "");
   return (
     <div class="mnlines">
       {blocks(ls).map((b, k) => {

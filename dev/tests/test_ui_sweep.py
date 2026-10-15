@@ -26,6 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_snapshots as ts  # noqa: E402
+import test_minutes_editor as me  # noqa: E402
 
 PROBE = (Path(__file__).resolve().parent / "ui_probe.js").read_text(encoding="utf-8")
 
@@ -38,6 +39,15 @@ SCREENS["work-panel"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), 
                          ts.SCREENS["work-panel"][1], ts.SCREENS["work-panel"][2])
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
+# v2.1.0 P7: the minutes view, its approve popup and the deadline popover, answered by test_minutes_editor's sample record (the
+# snapshot vault itself stays as it is).
+SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes .mnrow')", "#v-minutes")
+SCREENS["minutes-approve"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#mnApproveBtn:not([disabled])')", 15),
+                                         b.eval("document.getElementById('mnApproveBtn').click()")),
+                              "document.getElementById('mnApprove') && document.getElementById('mnApprove').open", "#v-minutes")
+SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes .mnrow .mndue')", 15),
+                                          b.eval("document.querySelector('#v-minutes .mnrow .mndue').click()")),
+                               "document.querySelector('#v-minutes .mnpop')", "#v-minutes")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
@@ -53,7 +63,9 @@ class UiSweepCase(ts.Snapshots):
         go, ready, region = SCREENS[name]
         b = self.b
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
-               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); go('today')")
+               "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
+               "document.getElementById('mnApprove') && document.getElementById('mnApprove').open && document.getElementById('mnApprove').close(); "
+               "go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)
         last = None

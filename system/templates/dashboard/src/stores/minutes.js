@@ -13,7 +13,8 @@ import { api, oneLine, viaServer } from "../core/server.js";
 /** @typedef {{n: number, group: string, why: string|null, label: string}} PlanItem */
 /** @typedef {{files: string[], transcripts: string[], items: PlanItem[], group: number, joins: string[]}} Plan */
 /** @typedef {{ok: boolean, message?: string, path?: string, doc?: SheetDoc, versions?: Version[],
-    turns?: {timed: boolean, turns: Turn[]}, proposal?: string|null, plan?: Plan|null}} MinutesView */
+    turns?: {timed: boolean, turns: Turn[]}, proposal?: string|null, plan?: Plan|null, labels?: Record<string, string[]>,
+    withheld?: Record<string, string>}} MinutesView */
 
 /** What the view was opened with: {file} (the proposal) or {path} (the record). */
 export const minutesArg = signal(/** @type {{file?: string, path?: string}|null} */ (null));
@@ -34,16 +35,16 @@ export const keptChecks = signal(/** @type {string[]} */ ([]));
 export const minutesMode = signal(/** @type {"internal"|"distributed"|"side"} */ ("internal"));
 export const approveOpen = signal(false);
 
-let asked = 0;
+let mnAsked = 0;
 /** Open (or reload) the minutes: by the proposal's file name or the record's stored path.
     @param {{file?: string, path?: string}} arg */
 export async function loadMinutes(arg) {
-  const mine = ++asked;
+  const mine = ++mnAsked;
   minutesArg.value = arg;
   if (!viaServer()) { minutesView.value = { ok: false, message: "The minutes view needs the live server." }; return; }
   minutesBusy.value = "Opening the minutes…";
   const r = await api("/api/minutes/draft", arg);
-  if (mine !== asked) return;
+  if (mine !== mnAsked) return;
   minutesBusy.value = "";
   take(r && r.ok ? r : { ok: false, message: oneLine((r && r.message) || "") || "Couldn't open the minutes" });
 }
@@ -78,12 +79,12 @@ export async function changeMinutes(op) {
   return { ok: !!(r && r.ok), message: oneLine((r && r.message) || ""), needs_approval: !!(r && r.needs_approval) };
 }
 
-/** The approve popup's plan follows a change (an item removed or added): asked again, read only. */
+/** The approve popup's plan follows a change (an item removed or added): mnAsked again, read only. */
 async function refreshPlan() {
   const v = minutesView.value;
   if (!v || !v.ok || !v.path) return;
   const r = await api("/api/minutes/draft", { path: v.path });
-  if (r && r.ok && minutesView.value && minutesView.value.path === r.path) minutesView.value = { ...minutesView.value, plan: r.plan, versions: r.versions };
+  if (r && r.ok && minutesView.value && minutesView.value.path === r.path) minutesView.value = { ...minutesView.value, plan: r.plan, versions: r.versions, labels: r.labels, withheld: r.withheld };
 }
 
 /** The sheet's save: the page as Alan edited it, as a new version. @param {{doc: SheetDoc, base_version: number|undefined}} req */
@@ -103,9 +104,10 @@ export async function approveMinutes(group, own) {
   return r || { ok: false, message: "The apply didn't run; nothing was changed." };
 }
 
-/** Export the minutes as HTML, Word or PDF (P2's export, opened once made). @param {string} format */
-export async function exportMinutes(format) {
+/** Export the minutes as HTML, Word or PDF (P2's export, opened once made); `version` "distributed" exports the distributed
+    version (the approved minutes only; filed under a new name, never over a file). @param {string} format @param {"internal"|"distributed"} [version] */
+export async function exportMinutes(format, version = "internal") {
   const v = minutesView.value;
   if (!v || !v.ok || !v.path) return { ok: false, message: "The minutes aren't open." };
-  return (await api("/api/minutes/export", { path: v.path, format, file_beside: true })) || { ok: false, message: "Not exported." };
+  return (await api("/api/minutes/export", { path: v.path, format, file_beside: true, version })) || { ok: false, message: "Not exported." };
 }

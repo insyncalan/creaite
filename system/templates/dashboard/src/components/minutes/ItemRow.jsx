@@ -3,7 +3,7 @@
    themselves (P4: row ref "@n"), so every change here is one of the record's changes (/api/minutes/save {op}) and the row and
    its item change together; nothing needs reconciling.
    - What the row does, as P4 words it (New action, Closes ABC-A-002 · Looks done, Records ABC-D-004 as made, Looks like…); a
-     click opens the staged item in the peek, an ID in it opens that item.
+     click opens the staged item in the peek, an ITEM_ID in it opens that item.
    - The words edited in place (saved when the field is left); the owner picked from the people register (an owner the
      register doesn't know can be remembered as an alias, BL-55); the deadline from the deadline popover.
    - Looks like an existing item (BL-221): Update that one (with What changes) or Keep as new.
@@ -16,7 +16,7 @@ import { openRef } from "../report/SheetStub.jsx";
 import { CheckMark } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
 import { DeadlinePopover } from "./DeadlinePopover.jsx";
-import { isInternal, toggleInternal } from "./minutesDoc.js";
+import { heldBack, isInternal, toggleInternal } from "./minutesDoc.js";
 import { Pop } from "./Pop.jsx";
 import { TimeTag } from "./TextLines.jsx";
 import { A, DEC, R } from "../../core/data.js";
@@ -28,18 +28,18 @@ import { regAddAlias, unknownOwner } from "../../settings.js";
 /** @typedef {import("./minutesDoc.js").Check} Check */
 
 const MAIN = { actions: "action", decisions: "decision", raid: "description" };
-const FIELD = { actions: "description", decisions: "decision", raid: "description" };
+const ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
 const TYPES = ["Risk", "Issue", "Assumption", "Dependency"];
-const ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+const ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
 
-/** A tracker item by its ID (actions, RAID, decisions), or null. @param {string} id */
+/** A tracker item by its ITEM_ID (actions, RAID, decisions), or null. @param {string} id */
 const recOf = id => A.find(x => x.id === id) || R.find(x => x.id === id) || DEC.find(x => x.id === id) || null;
 
 /** What a row does, its IDs opening the peek. @param {{does: string, row: any, onOpen: (ref: string) => void}} props */
 function Does({ does, row, onOpen }) {
   const parts = [], s = String(does || "");
   let i = 0;
-  for (const m of s.matchAll(ID)) {
+  for (const m of s.matchAll(ITEM_ID)) {
     parts.push(s.slice(i, m.index));
     parts.push(<button key={m.index} type="button" class="linkbtn mnid" onClick={() => openRef(m[0], () => false)}>{m[0]}</button>);
     i = (m.index || 0) + m[0].length;
@@ -152,7 +152,7 @@ export function ItemRow({ rc }) {
   const live = rc.editing && !rc.exported && !!m && !!item.op;
   if (!live || !m) return <tr class="mnrow" data-n={n}>{cols.map(c => <td key={c.key}>{cells[c.key] || ""}</td>)}</tr>;
   const label = (cells[MAIN[sid]] || "").slice(0, 80), checks = m.checks.filter(c => c.section === s.id && c.n === n);
-  const own = checks.find(c => c.field === "owner") || null, internal = isInternal(m.doc, s.id, { ref: row.ref });
+  const own = checks.find(c => c.field === "owner") || null, internal = isInternal(m.doc, s.id, { ref: row.ref, n: row.n });
   const edit = (/** @type {Record<string, any>} */ values) => m.change({ op: "edit", n, values });
   const remove = (/** @type {string} */ how) => m.change({ op: "remove", n, keep_line: how === "keep" }, { op: "restore", n });
   /** @param {{key: string}} c */
@@ -163,7 +163,7 @@ export function ItemRow({ rc }) {
     if (c.key === "due") return <DeadlinePopover due={(item.values || {}).due_date || null} day={m.day} label={label} onSet={words => m.change({ op: "deadline", n, words })} />;
     if (c.key === "type") return <select class="mntype" aria-label={`Type of ${label}`} value={(item.values || {}).type || "Risk"}
       onChange={e => edit({ type: /** @type {HTMLSelectElement} */ (e.currentTarget).value })}>{TYPES.map(t => <option key={t}>{t}</option>)}</select>;
-    if (c.key === MAIN[sid]) return <CellText value={(item.values || {})[FIELD[sid]] || ""} label={`${s.heading}: ${label}`} onSave={t => edit({ [FIELD[sid]]: t })} />;
+    if (c.key === MAIN[sid]) return <CellText value={(item.values || {})[ROW_FIELD[sid]] || ""} label={`${s.heading}: ${label}`} onSave={t => edit({ [ROW_FIELD[sid]]: t })} />;
     return cells[c.key] || "";
   };
   return (
@@ -178,7 +178,8 @@ export function ItemRow({ rc }) {
               {isNew ? <LooksLike item={item} n={n} /> : null}
               {checks.filter(c => c.field !== "owner" || !own).map(c => <CheckMark key={c.id} check={c}>{c.kind === "due" ? "Deadline?" : c.kind === "figure" ? `${c.quote}?` : "Check"}</CheckMark>)}
               {own ? <CheckMark check={own}>{own.note}</CheckMark> : null}
-              {m.distributed ? <button type="button" class={`mnio${internal ? " on" : ""}`} aria-pressed={internal ? "true" : "false"} aria-label={`Internal only: ${label}`}
+              {m.distributed && heldBack(m.doc, row.ref, m.held) ? <span class="tag mnheld" data-tip="Never in the distributed version">Internal only · {heldBack(m.doc, row.ref, m.held)}</span>
+                : m.distributed ? <button type="button" class={`mnio${internal ? " on" : ""}`} aria-pressed={internal ? "true" : "false"} aria-label={`Internal only: ${label}`}
                 onClick={() => m.setDoc(toggleInternal(m.doc, s.id, { ref: row.ref }), internal ? "Shown to attendees" : "Internal only")}>Internal only</button> : null}
               <Menu label="Remove" icon="x" btnCls="btn sm mnrm" menuLabel={`Remove ${label}`} data={{ mnremove: String(n) }}
                 items={[{ id: "remove", name: "Remove the item and its line", line: "Nothing is made; the line leaves the minutes", icon: "x" },

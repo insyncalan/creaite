@@ -365,6 +365,66 @@ class ReviewEditFollows(Base):
         self.assertEqual(self.rows(self.doc(), "raid")[0]["ref"], "@5")
 
 
+class Distributed(Base):
+    """BL-338 point 13 (Jarvis, 15-10-2026 on plan #70): the distributed version never holds an Internal only line or row, nor a
+    Sensitive, partner-only or excluded item; it is exported only from approved minutes, filed under a new name, never over a file."""
+
+    def mark(self):
+        """Mark the summary's line and the issue's row (@2) Internal only, and save the page."""
+        page = self.doc()
+        page["layout"] = {**(page.get("layout") or {}), "distributed": True,
+                          "internal_only": [{"section": "summary", "text": "The committee met."}, {"section": "raid", "ref": "@2"}]}
+        return self.js("import minutes_record\n"
+                       f"r = minutes_record.save_page({DRAFT!r}, {page!r})\nr.pop('doc', None)\nprint(json.dumps(r))")
+
+    def test_it_never_holds_an_internal_only_line_or_a_sensitive_item(self):
+        self.assertTrue(self.mark()["ok"])
+        doc = self.doc()
+        doc["items"]["@4"]["flags"] = ["sensitive"]                                   # the decision
+        doc["items"]["@5"].setdefault("values", {})["labels"] = ["Partner only"]      # the risk
+        out = self.js(f"import minutes_record\ndoc = {doc!r}\nprint(json.dumps(minutes_record.distributed_of(doc)))")
+        text = json.dumps(out)
+        self.assertEqual(out["audience"], "distributed")
+        for gone in ("The committee met.", "Test data isn't anonymised", "Go-live stays on 20 November",
+                     "Vendor capacity is short"):
+            self.assertNotIn(gone, text)
+        self.assertNotIn("internal_only", out["layout"])
+        self.assertEqual(set(out["items"]) & {"@2", "@4", "@5"}, set())
+        self.assertIn("Book the UAT environment", text)                               # the rest stays
+        held = self.js(f"import minutes_record\nprint(json.dumps(minutes_record.withheld({doc!r})))")
+        self.assertEqual(held, {"@4": "Sensitive", "@5": "partner-only"})
+
+    def test_the_view_returns_each_items_labels_and_what_is_withheld(self):
+        view = self.js(f"import minutes_record\nprint(json.dumps(minutes_record.view(path={DRAFT!r})))")
+        self.assertEqual(set(view["labels"]), set(view["doc"]["items"]))
+        self.assertEqual(view["withheld"], {})
+
+    def test_export_waits_for_approval_then_files_a_new_name_each_time(self):
+        self.assertTrue(self.mark()["ok"])
+        exp = "import minutes_record\nprint(json.dumps(minutes_record.export({p!r}, 'html', True, version='distributed')))"
+        early = self.js(exp.replace("{p!r}", repr(DRAFT)))
+        self.assertFalse(early["ok"])
+        self.assertIn("after the internal minutes are approved", early["message"])
+        self.assertTrue(self.approve(group=True, own=[4, 5, 6, 7])["ok"])
+        before = (self.v.root / FILED).read_bytes()
+        first, second = (self.js(exp.replace("{p!r}", repr(FILED))) for _ in range(2))
+        self.assertTrue(first["ok"] and second["ok"], (first, second))
+        self.assertEqual(first["path"], f"{ABC}/minutes/2026-10-14 Steering committee (distributed) (read only).html")
+        self.assertNotEqual(second["path"], first["path"])                            # never over a file
+        self.assertTrue(second["path"].startswith(f"{ABC}/minutes/2026-10-14 Steering committee (distributed)"))
+        page = (self.v.root / first["path"]).read_text(encoding="utf-8")
+        self.assertNotIn("The committee met.", page)
+        self.assertNotIn("Test data isn't anonymised", page)                          # marked as @2, filed as ABC-005
+        self.assertIn("Book the UAT environment", page)
+        self.assertIn("Distributed", page)
+        self.assertEqual((self.v.root / FILED).read_bytes(), before)                  # the filed minutes are untouched
+        left = [f.name for f in (self.v.root / "system/staging/drafts").iterdir() if "(distributed)" in f.name]
+        self.assertEqual(left, [])                                                     # no working copy is left behind
+        bad = self.js("import minutes_record\ntry:\n    minutes_record.export(" + repr(FILED) + ", 'html', True, version='client')\n"
+                      "    print('{\"ok\": true}')\nexcept minutes_record.RecordError as e:\n    print(json.dumps({'ok': False}))")
+        self.assertFalse(bad["ok"])
+
+
 class ThroughTheServer(unittest.TestCase):
     """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
     the filed minutes reopened and a save over them refused (Alan, 15-10-2026), leaving no draft behind."""
@@ -379,8 +439,8 @@ class ThroughTheServer(unittest.TestCase):
         cls.port = free_port()
         cls.base = f"http://127.0.0.1:{cls.port}"
         cls.proc = subprocess.Popen([sys.executable, str(cls.v.root / "system/scripts/live_server.py")], cwd=cls.v.root,
-                                    env={**os.environ, "CREAITE_PORT": str(cls.port)}, stdout=subprocess.DEVNULL,
-                                    stderr=subprocess.DEVNULL)
+                                    env={**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_NO_LAUNCH": "1"},
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(150):
             try:
                 urllib.request.urlopen(cls.base + "/health", timeout=1)
@@ -459,6 +519,11 @@ class ThroughTheServer(unittest.TestCase):
         self.assertEqual((filed["doc"]["state"], filed["plan"]), ("approved", None))
         self.assertEqual(filed["doc"]["meta"]["transcript"], f"{ABC}/transcripts/2026-10-14 Steering committee.vtt")
         self.assertEqual(len(filed["turns"]["turns"]), 2)                     # the pane reads the filed transcript
+        self.assertIn("withheld", filed)
+        dist = self.post("/api/minutes/export", {"path": FILED, "format": "html", "version": "distributed"})
+        self.assertTrue(dist["ok"], dist)
+        self.assertEqual((dist["version"], dist["filed"]), ("distributed", True))
+        self.assertIn("(distributed)", dist["path"])
         doc = filed["doc"]
         before = (self.v.root / FILED).read_bytes()
         log = self.v.root / "system/config/files-log.jsonl"

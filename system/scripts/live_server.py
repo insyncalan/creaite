@@ -96,7 +96,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
 - POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
                          approve_minutes, through tracker.py apply); unticked items wait in Review
-- POST /api/minutes/export {path, format, file_beside}: HTML, Word or PDF through creaite_doc.export (P2), opened once made
+- POST /api/minutes/export {path, format, file_beside, version}: HTML, Word or PDF through creaite_doc.export (P2), opened once
+                         made; version "distributed" exports the distributed version (approved minutes only; never overwriting)
 - POST /api/day/close    {choices, prep}: close the day: the time and BL-295's plan (First thing tomorrow, Review now: references
                          only) in system/staging/day-closed.json, and the prep pages queued; waits for a running catch-up sweep
 - POST /api/day/card, /api/day/catchup {force}, /catchup/status, /catchup/skip, /api/day/prep {op, keys}: Close the day as a
@@ -4124,11 +4125,13 @@ def open_made(rel):
 
 
 def minutes_export_route(handler, req):
-    """POST /api/minutes/export {path, format, file_beside}: export the minutes, then open the export (P2's creaite_doc.export)."""
+    """POST /api/minutes/export {path, format, file_beside, version}: export the minutes (or, with version "distributed", their
+    distributed version), then open the export (P2's creaite_doc.export)."""
     import minutes_record
     with LOCK:
         try:
-            out = minutes_record.export(req.get("path"), req.get("format"), req.get("file_beside", True) is not False)
+            out = minutes_record.export(req.get("path"), req.get("format"), req.get("file_beside", True) is not False,
+                                        version=str(req.get("version") or "internal"))
         except minutes_record.RecordError as e:
             return handler.send(200, {"ok": False, "message": str(e)})
     if out.get("ok") and out.get("path"):

@@ -1,15 +1,16 @@
 // @ts-check
 /* minutesDoc.js (v2.1.0 P7, BL-338): plain functions over the minutes record (the creaite-doc data block, kind "minutes"), shared
    by the minutes view's parts. No drawing, no server.
-   - lines(text): a section's Markdown as lines ({kind: "topic" | "bullet" | "para", text, flag}), for drawing each with its tag;
-   - tagOf(line, tags): the time tag P4 gave that line (`{ref: "transcript", turn, time, text}`);
+   - mdLines(text): a section's Markdown as lines ({kind: "topic" | "bullet" | "para", text, flag}), for drawing each with its tag;
+   - lineTag(line, tags): the time tag P4 gave that line (`{ref: "transcript", turn, time, text}`);
    - checksOf(doc, turns, people): the checks against the transcript and the record (§4.5's shape), worked out here in plain
      code (no model): an owner the people register doesn't know, an action with no owner, a deadline that isn't what was said,
      a figure the transcript doesn't say, an item the tracker's checks refused;
    - distributedOf(doc): the distributed version (BL-338 point 13) as the page shows it: the internal record without the lines
-     and rows marked Internal only (`layout.internal_only`) and without Sensitive items. P2's export makes the file the same way
-     on the server (client_leak.py, audience "distributed"); this is the view's preview of it. */
-import { deadlineOf, longDay } from "./DeadlinePopover.jsx";
+     and rows marked Internal only (`layout.internal_only`) and without withheld items (Sensitive, partner-only or labelled to
+     exclude: the item's own flags and the route's `withheld`, from its labels). minutes_record.distributed_of makes the same
+     record on the server for /api/minutes/export with version "distributed"; this is the view's preview of it. */
+import { deadlineOf, deadlineDay } from "./DeadlinePopover.jsx";
 import { fd } from "../../core/page.js";
 
 /** @typedef {import("../report/SheetStub.jsx").SheetDoc} SheetDoc */
@@ -23,11 +24,11 @@ const FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW S
 const unbold = (/** @type {string} */ s) => s.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
 
 /** A section's Markdown as lines. @param {string} text @returns {Line[]} */
-export function lines(text) {
+export function mdLines(text) {
   /** @type {Line[]} */
   const out = [];
-  for (const raw of String(text || "").split("\n")) {
-    const s = raw.trim();
+  for (const rawLine of String(text || "").split("\n")) {
+    const s = rawLine.trim();
     if (!s) continue;
     const topic = /^\*\*([^*]+)\*\*$/.exec(s);
     if (topic) { out.push({ kind: "topic", text: topic[1], flag: "" }); continue; }
@@ -40,7 +41,7 @@ export function lines(text) {
 }
 
 /** Lines back to Markdown, after one changed. @param {Line[]} ls */
-export function unlines(ls) {
+export function mdUnlines(ls) {
   const out = [];
   ls.forEach((l, i) => {
     if (l.kind === "topic") { if (i) out.push(""); out.push(`**${l.text}**`); }
@@ -53,7 +54,7 @@ export function unlines(ls) {
 const squash = (/** @type {string} */ s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 /** The time tag for a line: the tag whose words are the line's (or start it). @param {Line} line @param {TimeTag[]} tags */
-export function tagOf(line, tags) {
+export function lineTag(line, tags) {
   const l = squash(line.text);
   return (tags || []).find(t => t.ref === "transcript" && t.time && (squash(t.text) === l || (l && squash(t.text).startsWith(l)) || (l && l.startsWith(squash(t.text))))) || null;
 }
@@ -64,8 +65,10 @@ export const sensitive = item => !!item && (((item.flags || []).some((/** @type 
 
 /** Lines and rows marked Internal only. @param {SheetDoc} doc @returns {{section: string, text?: string, ref?: string}[]} */
 export const internalOnly = doc => Array.isArray((doc.layout || {}).internal_only) ? doc.layout.internal_only : [];
-/** Whether a line or a row is marked Internal only. @param {SheetDoc} doc @param {string} section @param {{text?: string, ref?: string}} what */
-export const isInternal = (doc, section, what) => internalOnly(doc).some(x => x.section === section && (what.ref ? x.ref === what.ref : x.text === what.text));
+/** Whether a line or a row is marked Internal only. A row marked while a draft ("@3") stays marked once approval gives it its ID
+    (the row keeps its number `n`). @param {SheetDoc} doc @param {string} section @param {{text?: string, ref?: string, n?: number}} what */
+export const isInternal = (doc, section, what) => internalOnly(doc).some(x => x.section === section &&
+  (what.ref ? x.ref === what.ref || (what.n != null && x.ref === `@${what.n}`) : x.text === what.text));
 /** The layout with a line or row marked (or unmarked) Internal only. @param {SheetDoc} doc @param {string} section @param {{text?: string, ref?: string}} what */
 export function toggleInternal(doc, section, what) {
   const was = internalOnly(doc), on = isInternal(doc, section, what);
@@ -73,30 +76,34 @@ export function toggleInternal(doc, section, what) {
   return { ...doc, layout: { ...(doc.layout || {}), internal_only: next } };
 }
 
-/** The distributed version as the page shows it. @param {SheetDoc} doc @returns {SheetDoc} */
-export function distributedOf(doc) {
+/** Why an item never reaches the distributed version ("Sensitive", "partner-only", "labelled …"), or "".
+    @param {SheetDoc} doc @param {string} ref @param {Record<string, string>} [held] the route's `withheld` */
+export const heldBack = (doc, ref, held) => (held && held[ref]) || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
+
+/** The distributed version as the page shows it. @param {SheetDoc} doc @param {Record<string, string>} [held] @returns {SheetDoc} */
+export function distributedOf(doc, held) {
   const sections = doc.sections.map(s => {
     if (s.type === "table") {
-      const rows = (s.rows || []).filter(r => !(r.ref && (sensitive((doc.items || {})[r.ref]) || isInternal(doc, s.id, { ref: r.ref }))));
-      return { ...s, rows, text: rows.length ? "" : "None recorded." };
+      const keptRows = (s.rows || []).filter(r => !(r.ref && (heldBack(doc, r.ref, held) || isInternal(doc, s.id, { ref: r.ref, n: /** @type {any} */ (r).n }))));
+      return { ...s, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
     }
     if (s.type === "header" || !s.text) return s;
-    const kept = lines(s.text).filter(l => !isInternal(doc, s.id, { text: l.text }));
-    return { ...s, text: unlines(kept) || "None recorded." };
+    const kept = mdLines(s.text).filter(l => !isInternal(doc, s.id, { text: l.text }));
+    return { ...s, text: mdUnlines(kept) || "None recorded." };
   });
   return { ...doc, audience: "distributed", sections };
 }
 
-/** What the distributed version leaves out, in words, for the check before export. @param {SheetDoc} doc */
-export function leftOut(doc) {
+/** What the distributed version leaves out, in words, for the check before export. @param {SheetDoc} doc @param {Record<string, string>} [held] */
+export function leftOut(doc, held) {
   const out = [];
   for (const s of doc.sections) {
     for (const r of s.rows || []) {
-      const it = r.ref ? (doc.items || {})[r.ref] : null;
-      if (it && sensitive(it)) out.push(`${s.heading}: a Sensitive item`);
-      else if (r.ref && isInternal(doc, s.id, { ref: r.ref })) out.push(`${s.heading}: ${Object.values(r.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
+      const why = r.ref ? heldBack(doc, r.ref, held) : "";
+      if (why) out.push(`${s.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
+      else if (r.ref && isInternal(doc, s.id, { ref: r.ref, n: /** @type {any} */ (r).n })) out.push(`${s.heading}: ${Object.values(r.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
     }
-    if (s.type !== "table" && s.type !== "header") for (const l of lines(s.text || "")) if (isInternal(doc, s.id, { text: l.text })) out.push(`${s.heading}: ${l.text.slice(0, 80)}`);
+    if (s.type !== "table" && s.type !== "header") for (const l of mdLines(s.text || "")) if (isInternal(doc, s.id, { text: l.text })) out.push(`${s.heading}: ${l.text.slice(0, 80)}`);
   }
   return out;
 }
@@ -122,7 +129,7 @@ function rowChecks(doc, s, r, i, turns, unknown) {
   const meant = said ? deadlineOf(said[0], doc.date) : null;
   if (said && meant && meant !== (v.due_date || null))
     out.push({ id: `due:${r.ref}`, section: s.id, row: i, field: "due", quote: v.due_date ? fd(v.due_date) : "Not set", kind: "due", n, turn: turn.n, words: said[0],
-      note: `${turn.who || "Someone"} said “${said[0]}”: ${longDay(meant)}.`, last: v.due_date ? `The row says ${longDay(v.due_date)}.` : "The row has no deadline.",
+      note: `${turn.who || "Someone"} said “${said[0]}”: ${deadlineDay(meant)}.`, last: v.due_date ? `The row says ${deadlineDay(v.due_date)}.` : "The row has no deadline.",
       actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }] });
   if (turn) for (const f of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f))
     out.push({ id: `fig:${r.ref}:${f}`, section: s.id, row: i, quote: f, kind: "figure", n, turn: turn.n,
@@ -138,8 +145,8 @@ function rowChecks(doc, s, r, i, turns, unknown) {
     @returns {Check[]} */
 function lineChecks(s, turns) {
   const out = [];
-  lines(s.text || "").forEach((l, i) => {
-    const t = tagOf(l, /** @type {TimeTag[]} */ (s.tags || [])), turn = t ? turns.find(x => x.n === t.turn) : null;
+  mdLines(s.text || "").forEach((l, i) => {
+    const t = lineTag(l, /** @type {TimeTag[]} */ (s.tags || [])), turn = t ? turns.find(x => x.n === t.turn) : null;
     if (!turn) return;
     for (const f of new Set(l.text.match(FIGURE) || [])) if (!turn.text.includes(f))
       out.push({ id: `fig:${s.id}:${i}:${f}`, section: s.id, line: i, field: "text", quote: f, kind: "figure", turn: turn.n,

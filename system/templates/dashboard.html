@@ -2826,7 +2826,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .mntopic{font-size:14px;margin:8px 0 2px}
 .mnflag{font-size:11px;letter-spacing:.03em;color:var(--accent)}
 .mntext{cursor:text}
-.mnedbtn{font-size:12px}
+.mnedbtn{font-size:12px;min-height:24px;min-width:24px}
 .mnedit{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .mntagw{display:inline-flex;align-items:center;margin-left:6px;vertical-align:baseline}
 .mntag{border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:999px;font:11px/16px var(--mono,monospace);padding:2px 7px;min-height:24px;cursor:pointer}
@@ -2835,11 +2835,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
 .mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
 .btn.mncheck{text-decoration:underline wavy var(--warn)}
+.mnbar .mncheck,.mndoes .mnid{min-height:24px}
 .mnio{border:1px dashed var(--line);background:none;color:var(--muted);border-radius:999px;font-size:11px;padding:2px 8px;min-height:24px;margin-left:6px;cursor:pointer}
 .mnio.on{border-style:solid;border-color:var(--ink);color:var(--ink)}
+.mnheld{margin-left:6px;font-size:11px}
 .mnline.internal,.mnrow.internal td{background:var(--sunk)}
 .mnpopw{position:relative;display:inline-block}
 .pkpop.mnpop{position:absolute;top:calc(100% + 4px);left:0;min-width:240px}
+.pkpop.mnpop.flip{left:auto;right:0}
 .pkpop.mnpop.wide{width:min(340px,calc(100vw - 32px));max-width:min(340px,calc(100vw - 32px));padding:10px 12px}
 .pkpop.mnpop.mndl{width:min(290px,calc(100vw - 32px))}
 .mndl-l{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
@@ -5930,8 +5933,8 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
   function weekdayOf(w5) {
     return DAYS.findIndex((d5) => w5.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w5)));
   }
-  function workingDay(day, weekend2 = [0, 6]) {
-    const off = (s5) => weekend2.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
+  function workingDay(day, weekend = [0, 6]) {
+    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
     if (!off(day)) return day;
     for (let n4 = 1; n4 < 7; n4++) {
       const back = shift(day, -n4, "d"), on = shift(day, n4, "d");
@@ -5940,16 +5943,16 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     }
     return day;
   }
-  function lastWorkingDay(day, weekend2) {
+  function lastWorkingDay(day, weekend) {
     const d5 = /* @__PURE__ */ new Date(day + "T12:00:00");
     let s5 = iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
-    for (let n4 = 0; n4 < 7 && weekend2.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
+    for (let n4 = 0; n4 < 7 && weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
     return s5;
   }
-  function deadlineOnly(s5, today, weekend2) {
+  function deadlineOnly(s5, today, weekend) {
     const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), monday = (1 - dow + 7) % 7 || 7;
     if (s5 === "next week") return shift(today, monday + 4, "d");
-    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend2);
+    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend);
     const m5 = s5.match(/^next ([a-z]{3,9})$/), w5 = m5 ? weekdayOf(m5[1]) : -1;
     if (w5 >= 0) return shift(today, monday + (w5 + 6) % 7, "d");
     return null;
@@ -5972,17 +5975,17 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     if (m5 && monthOf(m5[1])) return dm(m5[2], monthOf(m5[1]), m5[3]);
     return null;
   }
-  function parseWords(text, today, due = false, mode = "", weekend2 = [0, 6]) {
+  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
     let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
     if (!s5) return null;
     const deadline = mode === "deadline";
     if (deadline) {
       due = true;
       s5 = s5.replace(/^(?:by|on) /, "");
-      const d5 = deadlineOnly(s5, today, weekend2);
+      const d5 = deadlineOnly(s5, today, weekend);
       if (d5) return d5;
     }
-    const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend2) : r4;
+    const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend) : r4;
     if (s5 === "today" || s5 === "now") return today;
     if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return shift(today, 1, "d");
     if (s5 === "yesterday") return shift(today, -1, "d");
@@ -9705,7 +9708,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
       /** @type {any[]} */
       []
     ), quiet = (i5, first) => first && i5.kind === "actions" && isMe(i5.o);
-    const tagOf2 = (i5) => {
+    const tagOf = (i5) => {
       const k5 = i5.kind === "milestone" ? "Milestone" : i5.kind === "decisions" ? "Decision" : i5.kind === "raid" ? i5.type || "Risk" : "Action";
       return i5.pr === "Urgent" || i5.pr === "High" ? `${k5} · ${i5.pr}` : k5;
     };
@@ -9721,7 +9724,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     const item = (i5, key, further, undated = false) => ({
       key,
       kind: i5.kind,
-      tag: tagOf2(i5),
+      tag: tagOf(i5),
       tone: toneOf(i5),
       t: i5.t || i5.id,
       open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
@@ -10585,26 +10588,26 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
   var pKey = (t5) => String(t5 || "").replace(/\([^)]*\)/g, " ").toLowerCase().replace(/[.,]/g, " ").split(/\s+/).filter(Boolean).join(" ");
   var pCell = (v4) => String(v4 ?? "").replace(/\|/g, "/").replace(/\n/g, " ").trim();
   var pSplit = (line) => line.trim().replace(/^\|+|\|+$/g, "").split("|").map((c5) => c5.trim());
-  function pTable(lines2) {
-    const at = lines2.indexOf("## People");
+  function pTable(lines) {
+    const at = lines.indexOf("## People");
     if (at < 0) return null;
     let i5 = at + 1;
-    while (i5 < lines2.length && !lines2[i5].startsWith("|")) {
-      if (lines2[i5].startsWith("## ")) return null;
+    while (i5 < lines.length && !lines[i5].startsWith("|")) {
+      if (lines[i5].startsWith("## ")) return null;
       i5++;
     }
-    if (i5 >= lines2.length) return null;
+    if (i5 >= lines.length) return null;
     const head = i5, rows2 = [];
     i5 += 2;
-    while (i5 < lines2.length && lines2[i5].startsWith("|")) rows2.push(i5++);
+    while (i5 < lines.length && lines[i5].startsWith("|")) rows2.push(i5++);
     return { head, rows: rows2 };
   }
   function peopleParse(text) {
-    const lines2 = text.split("\n"), t5 = pTable(lines2);
+    const lines = text.split("\n"), t5 = pTable(lines);
     if (!t5) return [];
-    const cols = pSplit(lines2[t5.head]), out = [];
+    const cols = pSplit(lines[t5.head]), out = [];
     for (const i5 of t5.rows) {
-      const cells = pSplit(lines2[i5]), row2 = {};
+      const cells = pSplit(lines[i5]), row2 = {};
       cols.forEach((c5, j4) => {
         row2[c5] = cells[j4] || "";
       });
@@ -10627,10 +10630,10 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     return out;
   }
   function peopleText(text, people) {
-    const lines2 = text.split("\n");
-    if (lines2[lines2.length - 1] === "") lines2.pop();
-    const t5 = pTable(lines2);
-    let cols = t5 ? pSplit(lines2[t5.head]) : [];
+    const lines = text.split("\n");
+    if (lines[lines.length - 1] === "") lines.pop();
+    const t5 = pTable(lines);
+    let cols = t5 ? pSplit(lines[t5.head]) : [];
     cols = [...cols, ...PCOLS.filter((c5) => !cols.includes(c5))];
     people.forEach((p6) => Object.keys(p6.extra || {}).forEach((c5) => {
       if (!cols.includes(c5)) cols.push(c5);
@@ -10643,11 +10646,11 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     const row2 = (a5) => "| " + a5.join(" | ") + " |", table = [row2(cols), "|" + cols.map((c5) => "-".repeat(c5.length + 2)).join("|") + "|", ...people.map((p6) => row2(cols.map((c5) => cell2(p6, c5))))];
     if (t5) {
       const end = (t5.rows.length ? t5.rows[t5.rows.length - 1] : t5.head + 1) + 1;
-      lines2.splice(t5.head, end - t5.head, ...table);
-    } else if (lines2.includes("## People")) {
-      lines2.splice(lines2.indexOf("## People") + 1, 0, "", ...table);
-    } else lines2.push("", "## People", "", ...table);
-    return lines2.join("\n") + "\n";
+      lines.splice(t5.head, end - t5.head, ...table);
+    } else if (lines.includes("## People")) {
+      lines.splice(lines.indexOf("## People") + 1, 0, "", ...table);
+    } else lines.push("", "## People", "", ...table);
+    return lines.join("\n") + "\n";
   }
   var lev = (a5, b5) => {
     let prev = Array.from({ length: b5.length + 1 }, (_5, i5) => i5);
@@ -16303,8 +16306,8 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches("[data-ms]")) openMilestone(e4.target.dataset.ms);
     });
   }
-  function feedLines(lines2, typeOf, textOf2) {
-    return lines2.map((a5) => {
+  function feedLines(lines, typeOf, textOf2) {
+    return lines.map((a5) => {
       const ch = String(a5.change || a5.what || "");
       return { type: typeOf(ch, a5), who: a5.by, html: `<span class="chg">${esc(textOf2 ? textOf2(ch, a5) : ch)}</span>`, when: a5.at, state: a5.reverted || a5.undone ? "undone" : PKAPPLIED.has(a5.apply_id) ? "applied" : "" };
     });
@@ -22304,7 +22307,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
     /** @type {Notes} */
     Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, []]))
   );
-  var textOf = (lines2) => (lines2 || []).map((l6) => l6.text).join("\n");
+  var textOf = (lines) => (lines || []).map((l6) => l6.text).join("\n");
   function shapeLinesFrom(text, before) {
     const old = before || [];
     return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t5, i5) => {
@@ -22918,7 +22921,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
         ": the notes are on the prep page. Accept again after a change."
       ] }) : null,
       SHAPE_SECTIONS.map(([k5, label]) => {
-        const lines2 = now[k5] || [];
+        const lines = now[k5] || [];
         return /* @__PURE__ */ u2("div", { class: "shsec", children: [
           /* @__PURE__ */ u2("div", { class: "shsech", children: [
             /* @__PURE__ */ u2("label", { for: `shN-${k5}`, children: label }),
@@ -22932,9 +22935,9 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
             {
               id: `shN-${k5}`,
               class: "shgrow shbox",
-              rows: Math.max(2, lines2.length + 1),
+              rows: Math.max(2, lines.length + 1),
               value: texts[k5] || "",
-              "aria-describedby": lines2.length ? `shC-${k5}` : void 0,
+              "aria-describedby": lines.length ? `shC-${k5}` : void 0,
               onInput: (e4) => {
                 shapeText.value = { ...shapeText.value, [k5]: (
                   /** @type {HTMLTextAreaElement} */
@@ -22943,7 +22946,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
               }
             }
           ),
-          lines2.length ? /* @__PURE__ */ u2("ol", { class: "shcites", id: `shC-${k5}`, "aria-label": `${label}: each line's source`, children: lines2.map((l6, i5) => /* @__PURE__ */ u2("li", { children: (l6.sources || []).length ? (l6.sources || []).map((s5, j4) => /* @__PURE__ */ u2(ShapeSource, { s: s5 }, j4)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" }) }, i5)) }) : null
+          lines.length ? /* @__PURE__ */ u2("ol", { class: "shcites", id: `shC-${k5}`, "aria-label": `${label}: each line's source`, children: lines.map((l6, i5) => /* @__PURE__ */ u2("li", { children: (l6.sources || []).length ? (l6.sources || []).map((s5, j4) => /* @__PURE__ */ u2(ShapeSource, { s: s5 }, j4)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" }) }, i5)) }) : null
         ] }, k5);
       })
     ] });
@@ -25386,10 +25389,10 @@ ${pre}**Current state title:** ${title}`);
     const items2 = dePicked(o5), codes = [...new Set(items2.map((i5) => i5.p))].sort(), reply = deReplyBy(o5.replyBy), open2 = o5.cover || DE_OPEN, ask = `${DE_ASK}${items2.some((i5) => i5.k === "decisions") ? " " + DE_DECIDE : ""}${reply} ${DE_THANKS}`;
     const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join(""), [endH, endT] = deClose(o5);
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
-    codes.forEach((c5) => lines2.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
-    lines2.push(ask, ...endT);
-    return { to: o5.email || "", subject: deSubject(items2, today), html: html2, text: lines2.join("\n"), items: items2 };
+    const lines = [deGreeting(o5.now, first), "", open2, ""];
+    codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
+    lines.push(ask, ...endT);
+    return { to: o5.email || "", subject: deSubject(items2, today), html: html2, text: lines.join("\n"), items: items2 };
   }
   var DE_CHASE = [
     { subj: "Reminder", open: "A quick reminder about the items below, which are now past their due dates.", ask: "Could you let me know where each one stands, and when I can expect it?" },
@@ -25406,11 +25409,11 @@ ${pre}**Current state title:** ${title}`);
     const ask = `${t5.ask}${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5);
     const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join("");
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
-    codes.forEach((c5) => lines2.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
-    lines2.push(ask, ...endT);
+    const lines = [deGreeting(o5.now, first), "", open2, ""];
+    codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
+    lines.push(ask, ...endT);
     const subject = !items2.length ? t5.subj : items2.length === 1 ? `${items2[0].id} · ${t5.subj}` : `${codes.join(" / ")} · ${t5.subj}: ${items2.length} overdue items`;
-    return { to: o5.email || "", subject, html: html2, text: lines2.join("\n"), items: items2, level: lv.level };
+    return { to: o5.email || "", subject, html: html2, text: lines.join("\n"), items: items2, level: lv.level };
   }
   function deOwners(acts2, o5) {
     const names = [o5.lead, ...(o5.attendees || []).map((a5) => a5.name)].filter(Boolean), all = [...new Set(acts2.map((i5) => i5.o || "No owner"))];
@@ -25423,15 +25426,15 @@ ${pre}**Current state title:** ${title}`);
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
-    if (o5.summary) lines2.push("Summary", o5.summary, "");
-    if (decs.length) lines2.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
+    const lines = [deGreeting(o5.now, first), "", open2, ""];
+    if (o5.summary) lines.push("Summary", o5.summary, "");
+    if (decs.length) lines.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
     if (acts2.length) {
-      lines2.push("Actions");
-      owners.forEach((n4) => lines2.push(n4, ...deTextRows(mine(n4), o5), ""));
+      lines.push("Actions");
+      owners.forEach((n4) => lines.push(n4, ...deTextRows(mine(n4), o5), ""));
     }
-    lines2.push(ask, ...endT);
-    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines2.join("\n"), items: items2 };
+    lines.push(ask, ...endT);
+    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
   }
   shared.DE = null;
   var deHost = (addr) => String(addr || "").split("@")[1]?.trim().toLowerCase() || "";
@@ -26059,9 +26062,9 @@ ${pre}**Current state title:** ${title}`);
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-gfdo="discard">Discard</button><button type="button" class="btn" data-gfdo="plain">Copy as plain text</button>${d5.form === "teams" ? "" : '<button type="button" class="btn primary" data-gfdo="rich">Copy</button>'}</div><div class="sub" id="gfMsg" role="status"></div></div>`;
   }
   function genFormText(d5) {
-    const src = d5.sources || [], lines2 = d5.form === "steering" || d5.form === "three", fmt = (t5) => esc(t5.replace(/^[-*]\s+/, "• ")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    const src = d5.sources || [], lines = d5.form === "steering" || d5.form === "three", fmt = (t5) => esc(t5.replace(/^[-*]\s+/, "• ")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
     const one = (x5) => x5.unsourced ? `<mark class="drloose">${fmt(x5.text)}</mark><span class="drtag" role="note">no source</span>` : `<span>${fmt(x5.text)}</span>${x5.refs.map((r4) => `<sup class="drref" data-tip="${esc((src.find((y5) => y5.ref === r4) || {}).text || r4)}">${esc(r4)}</sup>`).join("")}`;
-    return `<div class="drtext">${(d5.sentences || []).map(one).join(lines2 ? "<br>" : " ")}</div>`;
+    return `<div class="drtext">${(d5.sentences || []).map(one).join(lines ? "<br>" : " ")}</div>`;
   }
   async function genFormDraft(body) {
     const out = $("#genOut"), why = draftWhyNot("status-form");
@@ -26901,9 +26904,9 @@ ${d5.text}`);
         quote = [];
       }
     };
-    const marks = paneLines(text), lines2 = String(text || "").split("\n").concat([""]);
-    for (let n4 = 0; n4 < lines2.length; n4++) {
-      const line = lines2[n4];
+    const marks = paneLines(text), lines = String(text || "").split("\n").concat([""]);
+    for (let n4 = 0; n4 < lines.length; n4++) {
+      const line = lines[n4];
       if (marks.has(n4)) {
         flush();
         continue;
@@ -27009,8 +27012,8 @@ ${d5.text}`);
         const tag = n4.nodeType === 1 ? n4.tagName : "";
         if (tag === "UL" || tag === "OL") {
           flush();
-          const lines2 = listMd(n4, 0, []);
-          if (lines2.length) blocks2.push(lines2.join("\n"));
+          const lines = listMd(n4, 0, []);
+          if (lines.length) blocks2.push(lines.join("\n"));
         } else if (/^H[1-6]$/.test(tag)) {
           flush();
           const t5 = flat(inl(n4));
@@ -30611,13 +30614,13 @@ ${d5.text}`);
       ] }) : null
     ] });
   }
-  function NoteBox({ sec, label, lines: lines2, onSave }) {
-    const start = lines2.map((l6) => l6.text).join("\n");
+  function NoteBox({ sec, label, lines, onSave }) {
+    const start = lines.map((l6) => l6.text).join("\n");
     const [text, setText] = d2(start);
     h2(() => {
       setText(start);
     }, [start]);
-    const cites = lines2.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
+    const cites = lines.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
     return /* @__PURE__ */ u2("div", { class: "ppnote", children: [
       /* @__PURE__ */ u2("label", { for: `pp-n-${sec}`, children: label }),
       /* @__PURE__ */ u2(
@@ -30625,7 +30628,7 @@ ${d5.text}`);
         {
           id: `pp-n-${sec}`,
           class: "ppbox",
-          rows: Math.max(2, lines2.length + 1),
+          rows: Math.max(2, lines.length + 1),
           value: text,
           onInput: (e4) => setText(
             /** @type {HTMLTextAreaElement} */
@@ -31045,7 +31048,7 @@ ${d5.text}`);
     );
     if (h5.exported) return null;
     return /* @__PURE__ */ u2("button", { type: "button", class: "chip", onClick: () => {
-      if (tag.ref.startsWith("t:")) h5.onEvent({ type: "tag", tag });
+      if (tag.ref === "transcript" || tag.ref.startsWith("t:")) h5.onEvent({ type: "tag", tag });
       else openRef(tag.ref, h5.onOpenItem);
     }, children: tag.text || tag.ref });
   }
@@ -31302,9 +31305,9 @@ ${d5.text}`);
     "internal"
   );
   var approveOpen = y3(false);
-  var asked2 = 0;
+  var mnAsked = 0;
   async function loadMinutes(arg) {
-    const mine = ++asked2;
+    const mine = ++mnAsked;
     minutesArg.value = arg;
     if (!viaServer()) {
       minutesView.value = { ok: false, message: "The minutes view needs the live server." };
@@ -31312,7 +31315,7 @@ ${d5.text}`);
     }
     minutesBusy.value = "Opening the minutes…";
     const r4 = await api("/api/minutes/draft", arg);
-    if (mine !== asked2) return;
+    if (mine !== mnAsked) return;
     minutesBusy.value = "";
     take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
   }
@@ -31342,7 +31345,7 @@ ${d5.text}`);
     const v4 = minutesView.value;
     if (!v4 || !v4.ok || !v4.path) return;
     const r4 = await api("/api/minutes/draft", { path: v4.path });
-    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions };
+    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
   }
   async function saveMinutesPage(req) {
     const v4 = minutesView.value;
@@ -31360,10 +31363,10 @@ ${d5.text}`);
     const r4 = await api("/api/minutes/approve", { file: v4.proposal, group, own });
     return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
   }
-  async function exportMinutes(format) {
+  async function exportMinutes(format, version = "internal") {
     const v4 = minutesView.value;
     if (!v4 || !v4.ok || !v4.path) return { ok: false, message: "The minutes aren't open." };
-    return await api("/api/minutes/export", { path: v4.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+    return await api("/api/minutes/export", { path: v4.path, format, file_beside: true, version }) || { ok: false, message: "Not exported." };
   }
 
   // components/minutes/ApprovePopup.jsx
@@ -31567,7 +31570,7 @@ ${d5.text}`);
   }
 
   // components/minutes/Pop.jsx
-  var FOCUSABLE2 = 'input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  var POP_FOCUSABLE = 'input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
   function Pop({ open: open2, onClose, label, anchor, focus, cls, wide, children }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
@@ -31578,9 +31581,13 @@ ${d5.text}`);
       if (!open2) return;
       back.current = true;
       const b5 = box.current;
+      if (b5) {
+        const lim = Math.min(window.innerWidth, (b5.closest(".sheet-scroll") || document.documentElement).getBoundingClientRect().right);
+        b5.classList.toggle("flip", b5.getBoundingClientRect().right > lim - 8);
+      }
       const f5 = (
         /** @type {HTMLElement|null} */
-        b5 && (focus && b5.querySelector(focus) || b5.querySelector(FOCUSABLE2))
+        b5 && (focus && b5.querySelector(focus) || b5.querySelector(POP_FOCUSABLE))
       );
       if (f5) f5.focus();
       const away = (e4) => {
@@ -31672,11 +31679,11 @@ ${d5.text}`);
   // components/minutes/DeadlinePopover.jsx
   var WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   var LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  var MONTHS2 = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var DP_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   var QUICK = [["Friday", "Friday"], ["Next week", "next week"], ["Next Wednesday", "next wednesday"], ["End of month", "end of month"]];
-  var weekend = () => [...wkDays()].map((d5) => (d5 + 1) % 7);
-  var deadlineOf = (words, day) => parseWords(words, day, true, "deadline", weekend());
-  var longDay2 = (iso2) => `${LONG[(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay()]} ${fd(iso2)}`;
+  var offDays = () => [...wkDays()].map((d5) => (d5 + 1) % 7);
+  var deadlineOf = (words, day) => parseWords(words, day, true, "deadline", offDays());
+  var deadlineDay = (iso2) => `${LONG[(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay()]} ${fd(iso2)}`;
   var pad2 = (n4) => String(n4).padStart(2, "0");
   function DeadlinePopover({ due, day, label, readOnly, onSet }) {
     const [open2, setOpen2] = d2(false);
@@ -31694,7 +31701,7 @@ ${d5.text}`);
           class: "mndue btn sm",
           "aria-haspopup": "dialog",
           "aria-expanded": open2 ? "true" : "false",
-          "aria-label": `Deadline: ${due ? longDay2(due) : "not set"}. Change the deadline of ${label}`,
+          "aria-label": `Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`,
           onClick: () => setOpen2(!open2),
           children: due ? fd(due) : "Not set"
         }
@@ -31740,13 +31747,13 @@ ${d5.text}`);
         }
       ),
       /* @__PURE__ */ u2("div", { id: "mnDlSaid", class: `mndl-said${words.trim() && !got ? " bad" : ""}`, role: "status", children: !words.trim() ? "" : got ? /* @__PURE__ */ u2("span", { children: [
-        longDay2(got),
+        deadlineDay(got),
         " ",
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", onClick: set, children: "Set" })
       ] }) : "Not a date creaite can read. Try “Friday”, “next week” or 30-10." }),
       /* @__PURE__ */ u2("div", { class: "pkquick", role: "group", "aria-label": "Quick picks", children: QUICK.map(([name, w5]) => {
         const d5 = deadlineOf(w5, day);
-        return d5 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-quick": w5, "aria-label": `${name}: ${longDay2(d5)}`, onClick: () => onPick(w5), children: [
+        return d5 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-quick": w5, "aria-label": `${name}: ${deadlineDay(d5)}`, onClick: () => onPick(w5), children: [
           name,
           " ",
           /* @__PURE__ */ u2("span", { class: "sub", children: fd(d5).slice(0, 5) })
@@ -31763,7 +31770,7 @@ ${d5.text}`);
       const d5 = new Date(y5, m5 - 1 + k5, 1, 12);
       setMonth(`${d5.getFullYear()}-${pad2(d5.getMonth() + 1)}`);
     };
-    const off = new Set(weekend());
+    const off = new Set(offDays());
     const cells = [];
     for (let i5 = 0; i5 < lead; i5++) cells.push(/* @__PURE__ */ u2("span", {}, `b${i5}`));
     for (let d5 = 1; d5 <= count; d5++) {
@@ -31774,7 +31781,7 @@ ${d5.text}`);
           type: "button",
           class: `pkday${iso2 === due ? " on" : ""}${iso2 === day ? " today" : ""}${off.has(dow) ? " wk" : ""}`,
           "data-day": iso2,
-          "aria-label": longDay2(iso2),
+          "aria-label": deadlineDay(iso2),
           "aria-pressed": iso2 === due ? "true" : "false",
           onClick: () => onPick(iso2),
           children: d5
@@ -31786,7 +31793,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Previous month", onClick: () => step2(-1), children: "‹" }),
         /* @__PURE__ */ u2("b", { children: [
-          MONTHS2[m5 - 1],
+          DP_MONTHS[m5 - 1],
           " ",
           y5
         ] }),
@@ -31802,10 +31809,10 @@ ${d5.text}`);
   // components/minutes/minutesDoc.js
   var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
   var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
-  function lines(text) {
+  function mdLines(text) {
     const out = [];
-    for (const raw2 of String(text || "").split("\n")) {
-      const s5 = raw2.trim();
+    for (const rawLine of String(text || "").split("\n")) {
+      const s5 = rawLine.trim();
       if (!s5) continue;
       const topic = /^\*\*([^*]+)\*\*$/.exec(s5);
       if (topic) {
@@ -31819,7 +31826,7 @@ ${d5.text}`);
     }
     return out;
   }
-  function unlines(ls) {
+  function mdUnlines(ls) {
     const out = [];
     ls.forEach((l6, i5) => {
       if (l6.kind === "topic") {
@@ -31834,40 +31841,47 @@ ${d5.text}`);
     return out.join("\n");
   }
   var squash = (s5) => String(s5 || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  function tagOf(line, tags) {
+  function lineTag(line, tags) {
     const l6 = squash(line.text);
     return (tags || []).find((t5) => t5.ref === "transcript" && t5.time && (squash(t5.text) === l6 || l6 && squash(t5.text).startsWith(l6) || l6 && l6.startsWith(squash(t5.text)))) || null;
   }
   var sensitive = (item) => !!item && ((item.flags || []).some((f5) => /sensitive/i.test(f5)) || ((item.values || {}).labels || []).some((l6) => /sensitive/i.test(l6)) || !!(item.values || {}).sensitive);
   var internalOnly = (doc) => Array.isArray((doc.layout || {}).internal_only) ? doc.layout.internal_only : [];
-  var isInternal = (doc, section, what) => internalOnly(doc).some((x5) => x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text));
+  var isInternal = (doc, section, what) => internalOnly(doc).some((x5) => x5.section === section && (what.ref ? x5.ref === what.ref || what.n != null && x5.ref === `@${what.n}` : x5.text === what.text));
   function toggleInternal(doc, section, what) {
     const was = internalOnly(doc), on = isInternal(doc, section, what);
     const next = on ? was.filter((x5) => !(x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text))) : [...was, { section, ...what }];
     return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
   }
-  function distributedOf(doc) {
+  var heldBack = (doc, ref, held) => held && held[ref] || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
+  function distributedOf(doc, held) {
     const sections = doc.sections.map((s5) => {
       if (s5.type === "table") {
-        const rows2 = (s5.rows || []).filter((r4) => !(r4.ref && (sensitive((doc.items || {})[r4.ref]) || isInternal(doc, s5.id, { ref: r4.ref }))));
-        return { ...s5, rows: rows2, text: rows2.length ? "" : "None recorded." };
+        const keptRows = (s5.rows || []).filter((r4) => !(r4.ref && (heldBack(doc, r4.ref, held) || isInternal(doc, s5.id, { ref: r4.ref, n: (
+          /** @type {any} */
+          r4.n
+        ) }))));
+        return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
       }
       if (s5.type === "header" || !s5.text) return s5;
-      const kept = lines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
-      return { ...s5, text: unlines(kept) || "None recorded." };
+      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
+      return { ...s5, text: mdUnlines(kept) || "None recorded." };
     });
     return { ...doc, audience: "distributed", sections };
   }
-  function leftOut(doc) {
+  function leftOut(doc, held) {
     const out = [];
     for (const s5 of doc.sections) {
       for (const r4 of s5.rows || []) {
-        const it = r4.ref ? (doc.items || {})[r4.ref] : null;
-        if (it && sensitive(it)) out.push(`${s5.heading}: a Sensitive item`);
-        else if (r4.ref && isInternal(doc, s5.id, { ref: r4.ref })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
+        const why = r4.ref ? heldBack(doc, r4.ref, held) : "";
+        if (why) out.push(`${s5.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
+        else if (r4.ref && isInternal(doc, s5.id, { ref: r4.ref, n: (
+          /** @type {any} */
+          r4.n
+        ) })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
       }
       if (s5.type !== "table" && s5.type !== "header") {
-        for (const l6 of lines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
+        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
       }
     }
     return out;
@@ -31917,8 +31931,8 @@ ${d5.text}`);
         n: n4,
         turn: turn.n,
         words: said2[0],
-        note: `${turn.who || "Someone"} said “${said2[0]}”: ${longDay2(meant)}.`,
-        last: v4.due_date ? `The row says ${longDay2(v4.due_date)}.` : "The row has no deadline.",
+        note: `${turn.who || "Someone"} said “${said2[0]}”: ${deadlineDay(meant)}.`,
+        last: v4.due_date ? `The row says ${deadlineDay(v4.due_date)}.` : "The row has no deadline.",
         actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
       });
     if (turn) {
@@ -31951,8 +31965,8 @@ ${d5.text}`);
   }
   function lineChecks(s5, turns) {
     const out = [];
-    lines(s5.text || "").forEach((l6, i5) => {
-      const t5 = tagOf(
+    mdLines(s5.text || "").forEach((l6, i5) => {
+      const t5 = lineTag(
         l6,
         /** @type {TimeTag[]} */
         s5.tags || []
@@ -32098,7 +32112,7 @@ ${d5.text}`);
     const tags = (
       /** @type {TimeTag[]} */
       s5.tags || []
-    ), tag = live ? tagOf(line, tags) : null;
+    ), tag = live ? lineTag(line, tags) : null;
     const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
     const internal = m5 ? isInternal(m5.doc, s5.id, { text: line.text }) : false;
     const Tag = li ? "li" : "p";
@@ -32110,7 +32124,7 @@ ${d5.text}`);
         e4.target.closest("button")) onEdit();
       }, children: /* @__PURE__ */ u2(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u2("span", { children: line.text }),
       tag ? /* @__PURE__ */ u2(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t5) => t5 !== tag) }, "Time tag removed") }) : null,
-      live && m5 && m5.distributed ? /* @__PURE__ */ u2(
+      live && m5 && m5.distributed && s5.type !== "header" ? /* @__PURE__ */ u2(
         "button",
         {
           type: "button",
@@ -32140,7 +32154,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => setEd(false), children: "Done" })
       ] });
     }
-    const ls = lines(s5.text || "");
+    const ls = mdLines(s5.text || "");
     return /* @__PURE__ */ u2("div", { class: "mnlines", children: [
       blocks(ls).map((b5, k5) => {
         const bullets = b5.items.some((x5) => x5.line.kind === "bullet");
@@ -32156,14 +32170,14 @@ ${d5.text}`);
 
   // components/minutes/ItemRow.jsx
   var MAIN = { actions: "action", decisions: "decision", raid: "description" };
-  var FIELD2 = { actions: "description", decisions: "decision", raid: "description" };
+  var ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
   var TYPES = ["Risk", "Issue", "Assumption", "Dependency"];
-  var ID2 = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+  var ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
   var recOf = (id) => A4.find((x5) => x5.id === id) || R2.find((x5) => x5.id === id) || DEC.find((x5) => x5.id === id) || null;
   function Does({ does, row: row2, onOpen }) {
     const parts = [], s5 = String(does || "");
     let i5 = 0;
-    for (const m5 of s5.matchAll(ID2)) {
+    for (const m5 of s5.matchAll(ITEM_ID)) {
       parts.push(s5.slice(i5, m5.index));
       parts.push(/* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openRef(m5[0], () => false), children: m5[0] }, m5.index));
       i5 = (m5.index || 0) + m5[0].length;
@@ -32353,7 +32367,7 @@ ${d5.text}`);
     const live = rc.editing && !rc.exported && !!m5 && !!item.op;
     if (!live || !m5) return /* @__PURE__ */ u2("tr", { class: "mnrow", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: cells[c5.key] || "" }, c5.key)) });
     const label = (cells[MAIN[sid]] || "").slice(0, 80), checks = m5.checks.filter((c5) => c5.section === s5.id && c5.n === n4);
-    const own = checks.find((c5) => c5.field === "owner") || null, internal = isInternal(m5.doc, s5.id, { ref: row2.ref });
+    const own = checks.find((c5) => c5.field === "owner") || null, internal = isInternal(m5.doc, s5.id, { ref: row2.ref, n: row2.n });
     const edit = (values) => m5.change({ op: "edit", n: n4, values });
     const remove = (how) => m5.change({ op: "remove", n: n4, keep_line: how === "keep" }, { op: "restore", n: n4 });
     const cell2 = (c5) => {
@@ -32383,7 +32397,7 @@ ${d5.text}`);
           children: TYPES.map((t5) => /* @__PURE__ */ u2("option", { children: t5 }, t5))
         }
       );
-      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[FIELD2[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t5) => edit({ [FIELD2[sid]]: t5 }) });
+      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[ROW_FIELD[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t5) => edit({ [ROW_FIELD[sid]]: t5 }) });
       return cells[c5.key] || "";
     };
     return /* @__PURE__ */ u2("tr", { class: `mnrow${internal ? " internal" : ""}`, "data-n": n4, "data-ref": row2.ref, children: cols.map((c5) => /* @__PURE__ */ u2("td", { class: `mncol-${c5.key}`, children: [
@@ -32394,7 +32408,10 @@ ${d5.text}`);
         isNew ? /* @__PURE__ */ u2(LooksLike, { item, n: n4 }) : null,
         checks.filter((c6) => c6.field !== "owner" || !own).map((c6) => /* @__PURE__ */ u2(CheckMark, { check: c6, children: c6.kind === "due" ? "Deadline?" : c6.kind === "figure" ? `${c6.quote}?` : "Check" }, c6.id)),
         own ? /* @__PURE__ */ u2(CheckMark, { check: own, children: own.note }) : null,
-        m5.distributed ? /* @__PURE__ */ u2(
+        m5.distributed && heldBack(m5.doc, row2.ref, m5.held) ? /* @__PURE__ */ u2("span", { class: "tag mnheld", "data-tip": "Never in the distributed version", children: [
+          "Internal only · ",
+          heldBack(m5.doc, row2.ref, m5.held)
+        ] }) : m5.distributed ? /* @__PURE__ */ u2(
           "button",
           {
             type: "button",
@@ -32452,6 +32469,23 @@ ${d5.text}`);
         a5.style.minHeight = b5.style.minHeight = `${h5}px`;
       }
     };
+    const nextSec = (x5) => {
+      let n4 = x5.nextElementSibling;
+      while (n4 && !n4.matches("section[data-id]")) n4 = n4.nextElementSibling;
+      return (
+        /** @type {HTMLElement|null} */
+        n4
+      );
+    };
+    const close = (ps) => {
+      for (const [a5, b5] of ps) {
+        const an = b5 && nextSec(a5), bn = b5 && nextSec(b5);
+        if (!b5 || !an || !bn) continue;
+        const d5 = an.getBoundingClientRect().top - bn.getBoundingClientRect().top;
+        if (d5 > 0.5) b5.style.minHeight = `${b5.getBoundingClientRect().height + d5}px`;
+        else if (d5 < -0.5) a5.style.minHeight = `${a5.getBoundingClientRect().height - d5}px`;
+      }
+    };
     const secs = (
       /** @type {[HTMLElement, HTMLElement|null][]} */
       pairs("section[data-id]", "data-id", l6, r4)
@@ -32461,6 +32495,7 @@ ${d5.text}`);
       pairs("[data-level]", "data-level", a5, b5)
     );
     even(secs);
+    close(secs);
   }
   function openStaged(ref) {
     const v4 = minutesView.value, n4 = Number(String(ref).replace(/^@/, ""));
@@ -32476,14 +32511,27 @@ ${d5.text}`);
       onDoc({ ...doc, layout: { ...doc.layout || {}, distributed: on } }, on ? "Distributed version on" : "One version");
       if (!on) minutesMode.value = "internal";
     };
-    const exp = async (fmt) => {
-      if (dist && fmt) {
-        const out = leftOut(doc);
-        if (out.length) snack(`The distributed version leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}`);
-      }
-      const r4 = await exportMinutes(fmt);
-      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+    const exp = async (id) => {
+      const [fmt, which] = id.split(":"), version = which === "distributed" ? "distributed" : "internal";
+      const out = version === "distributed" ? leftOut(doc, v4 && v4.withheld) : [];
+      const r4 = await exportMinutes(fmt, version);
+      const left = out.length ? ` · leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}` : "";
+      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}${left}` : String(r4.message || "Not exported").split("\n")[0]);
     };
+    const formats = [
+      { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
+      { id: "docx", name: "Word", line: "The minutes template" },
+      { id: "pdf", name: "PDF", line: "Printed from the page" }
+    ];
+    const exports = dist ? [
+      ...formats.map((f5) => ({ ...f5, id: `${f5.id}:internal`, name: `Internal: ${f5.name}` })),
+      ...formats.map((f5) => ({
+        ...f5,
+        id: `${f5.id}:distributed`,
+        name: `Distributed: ${f5.name}`,
+        line: draft ? "Once the internal minutes are approved" : `${f5.line}, under a new name`
+      }))
+    ] : formats;
     return /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
       /* @__PURE__ */ u2(
         Menu,
@@ -32529,11 +32577,7 @@ ${d5.text}`);
           btnCls: "btn sm",
           menuLabel: "Export the minutes",
           data: { mnexport: "" },
-          items: [
-            { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
-            { id: "docx", name: "Word", line: "The minutes template" },
-            { id: "pdf", name: "PDF", line: "Printed from the page" }
-          ],
+          items: exports,
           onPick: exp
         }
       ),
@@ -32597,6 +32641,9 @@ ${d5.text}`);
     const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
     _2(() => {
       const el = box.current;
+      if (el && !side) el.querySelectorAll(".page section[data-id], .page [data-level]").forEach((x5) => {
+        x5.style.minHeight = "";
+      });
       if (!side || !el) return;
       levelPair(el);
       const ro = new ResizeObserver(() => levelPair(el));
@@ -32610,8 +32657,8 @@ ${d5.text}`);
     ] });
     const draft = doc.state === "draft", turns = (v4.turns || { turns: [] }).turns;
     const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
-    const shown = dist && mode === "distributed" ? distributedOf(doc) : doc;
-    const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged };
+    const held = v4.withheld || {}, shown = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
+    const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
     return /* @__PURE__ */ u2("div", { class: "mnview", ref: box, children: [
       /* @__PURE__ */ u2("header", { class: "mnhead", children: [
         /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
@@ -32641,7 +32688,7 @@ ${d5.text}`);
             extras: EXTRAS,
             checks,
             onOpenItem: (ref) => ref.startsWith("@") ? openStaged(ref) : false,
-            partner: side ? { doc: distributedOf(doc), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {
+            partner: side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {
             } } : null,
             onChange: onDoc,
             onSave: async (req) => {
@@ -32660,13 +32707,13 @@ ${d5.text}`);
       /* @__PURE__ */ u2(ApprovePopup, { checks })
     ] });
   }
-  var mounted2 = false;
+  var mnMounted = false;
   function renderMinutes(arg) {
     const el = $("#v-minutes");
     if (!el) return;
-    if (!mounted2) {
+    if (!mnMounted) {
       R(/* @__PURE__ */ u2(MinutesView, {}), el);
-      mounted2 = true;
+      mnMounted = true;
     }
     const a5 = typeof arg === "string" ? { path: arg } : arg;
     if (a5 && (a5.file || a5.path)) {
@@ -33268,12 +33315,12 @@ ${d5.text}`);
         snack("A prep page is already being made");
         return;
       }
-      const asked3 = typeof given === "string" && !!given;
-      if (shared.BUSY && !asked3) {
+      const asked2 = typeof given === "string" && !!given;
+      if (shared.BUSY && !asked2) {
         snack("ask creaite is busy; try again when it's finished");
         return;
       }
-      const key = asked3 ? given : prepKey(shared.PREPEV, shared.PREPDAY);
+      const key = asked2 ? given : prepKey(shared.PREPEV, shared.PREPDAY);
       if (SA().agendas_shared && !store.get("creaite-prep-shared-ok", false)) {
         if (!confirm("The page is saved in the project's Agendas folder, in OneDrive, where other people may see it if the folder is shared. It's marked Internal. Save it there?")) return;
         store.set("creaite-prep-shared-ok", true);
@@ -36231,10 +36278,10 @@ ${d5.text}`);
     return false;
   }
   function permissionInfoText(ev) {
-    const asked3 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
-    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked3} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
-    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked3}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
-    return `ask creaite asked for ${ev.rule}${asked3}, which creaite won't add: ${ev.reason}.`;
+    const asked2 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
+    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked2} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
+    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
+    return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}.`;
   }
   function permissionInfo(ev) {
     const d5 = addEl("msg a info", html`${permissionInfoText(ev)}`);
@@ -36323,8 +36370,8 @@ ${d5.text}`);
     }
     putHTML(acts2, html`<span class='sub'>${r4.ok ? html`${raw(MTICK)}Approved` : "Approved, with problems"}</span>`);
     chgRollbackNumbers(d5, r4.results);
-    const lines2 = (r4.results || []).map((x5) => `${x5.ok ? "✓" : "✗"} ${oneLine(x5.message)}`);
-    addEl("msg a", html`${lines2.length ? lines2.join("\n") : oneLine(r4.message || "")}`);
+    const lines = (r4.results || []).map((x5) => `${x5.ok ? "✓" : "✗"} ${oneLine(x5.message)}`);
+    addEl("msg a", html`${lines.length ? lines.join("\n") : oneLine(r4.message || "")}`);
     if (!(r4.results || []).some((x5) => x5.ok)) return false;
     snack(oneLine(r4.message || "Changes made"), () => go("activity"));
     const msg = "The approved changes are made. Carry on with my last request.";
@@ -36642,14 +36689,14 @@ ${d5.text}`);
     return s5.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g, "$1<strong>$2</strong>").replace(/~~(?=\S)([\s\S]*?\S)~~/g, "<del>$1</del>").replace(/(^|[^\w*\u0001])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?!\*)/g, "$1<em>$2</em>").replace(/(^|[^\w])_(?=[^\s_])([^_\n]*?[^\s_])_(?!\w)/g, "$1<em>$2</em>");
   }
   var ITEMCODE = (c5) => /^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/.test(c5.trim()) && !!itemTable(c5.trim());
-  function chatMdBlocks(lines2, st, depth) {
-    const out = [], n4 = lines2.length, blank = (l6) => /^\s*$/.test(l6), inl = (t5) => chatMdInline(t5, st);
+  function chatMdBlocks(lines, st, depth) {
+    const out = [], n4 = lines.length, blank = (l6) => /^\s*$/.test(l6), inl = (t5) => chatMdInline(t5, st);
     const cells = (l6) => l6.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c5) => c5.trim().replace(/\\\|/g, "|"));
-    const tableAt = (i6) => i6 + 1 < n4 && lines2[i6].includes("|") && MDC.SEP.test(lines2[i6 + 1]) && lines2[i6 + 1].includes("-") && cells(lines2[i6]).length === cells(lines2[i6 + 1]).length;
-    const startsBlock = (i6) => MDC.FENCE.test(lines2[i6]) || MDC.HEAD.test(lines2[i6]) || MDC.HR.test(lines2[i6]) || MDC.QUOTE.test(lines2[i6]) || MDC.LI.test(lines2[i6]) || tableAt(i6);
+    const tableAt = (i6) => i6 + 1 < n4 && lines[i6].includes("|") && MDC.SEP.test(lines[i6 + 1]) && lines[i6 + 1].includes("-") && cells(lines[i6]).length === cells(lines[i6 + 1]).length;
+    const startsBlock = (i6) => MDC.FENCE.test(lines[i6]) || MDC.HEAD.test(lines[i6]) || MDC.HR.test(lines[i6]) || MDC.QUOTE.test(lines[i6]) || MDC.LI.test(lines[i6]) || tableAt(i6);
     let i5 = 0;
     while (i5 < n4) {
-      const l6 = lines2[i5];
+      const l6 = lines[i5];
       if (blank(l6)) {
         i5++;
         continue;
@@ -36658,7 +36705,7 @@ ${d5.text}`);
       if (m5) {
         const mark = m5[1], code = [];
         i5++;
-        while (i5 < n4 && !(lines2[i5].trim().startsWith(mark[0].repeat(mark.length)) && /^[`~]+\s*$/.test(lines2[i5].trim()))) code.push(lines2[i5++]);
+        while (i5 < n4 && !(lines[i5].trim().startsWith(mark[0].repeat(mark.length)) && /^[`~]+\s*$/.test(lines[i5].trim()))) code.push(lines[i5++]);
         i5++;
         out.push(`<div class="mdcode"><button type="button" class="mini mdcopy" data-mdcopy aria-label="Copy the code">Copy</button><pre><code>${code.join("\n")}</code></pre></div>`);
         continue;
@@ -36670,10 +36717,10 @@ ${d5.text}`);
         continue;
       }
       if (tableAt(i5)) {
-        const head = cells(lines2[i5]), al = cells(lines2[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
+        const head = cells(lines[i5]), al = cells(lines[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
         i5 += 2;
         const rows2 = [];
-        while (i5 < n4 && !blank(lines2[i5]) && lines2[i5].includes("|")) rows2.push(cells(lines2[i5++]));
+        while (i5 < n4 && !blank(lines[i5]) && lines[i5].includes("|")) rows2.push(cells(lines[i5++]));
         const td = (t5, k5, tag) => `<${tag}${al[k5] ? ` class="ta-${al[k5]}"` : ""}>${inl(t5 || "")}</${tag}>`;
         out.push(`<div class="mdtable"><table><thead><tr>${head.map((c5, k5) => td(c5, k5, "th")).join("")}</tr></thead><tbody>${rows2.map((r4) => `<tr>${head.map((_5, k5) => td(r4[k5], k5, "td")).join("")}</tr>`).join("")}</tbody></table></div>`);
         continue;
@@ -36685,7 +36732,7 @@ ${d5.text}`);
       }
       if (MDC.QUOTE.test(l6)) {
         const q4 = [];
-        while (i5 < n4 && MDC.QUOTE.test(lines2[i5])) q4.push(lines2[i5++].replace(MDC.QUOTE, ""));
+        while (i5 < n4 && MDC.QUOTE.test(lines[i5])) q4.push(lines[i5++].replace(MDC.QUOTE, ""));
         out.push(`<blockquote>${depth < 6 ? chatMdBlocks(q4, st, depth + 1) : inl(q4.join("\n")).replace(/\n/g, "<br>")}</blockquote>`);
         continue;
       }
@@ -36693,7 +36740,7 @@ ${d5.text}`);
         const items2 = [];
         let fence = null;
         while (i5 < n4) {
-          const x5 = lines2[i5], lm = fence ? null : MDC.LI.exec(x5);
+          const x5 = lines[i5], lm = fence ? null : MDC.LI.exec(x5);
           if (lm) {
             items2.push({ ind: lm[1].length, ord: /\d/.test(lm[2]), num: parseInt(lm[2]), off: lm[1].length + lm[2].length + 1, lines: [lm[3]] });
             i5++;
@@ -36701,9 +36748,9 @@ ${d5.text}`);
           }
           if (blank(x5)) {
             let j4 = i5;
-            while (j4 < n4 && blank(lines2[j4])) j4++;
-            if (items2.length && j4 < n4 && (MDC.LI.test(lines2[j4]) || /^ {2,}\S/.test(lines2[j4]))) {
-              if (!MDC.LI.test(lines2[j4])) items2[items2.length - 1].lines.push("");
+            while (j4 < n4 && blank(lines[j4])) j4++;
+            if (items2.length && j4 < n4 && (MDC.LI.test(lines[j4]) || /^ {2,}\S/.test(lines[j4]))) {
+              if (!MDC.LI.test(lines[j4])) items2[items2.length - 1].lines.push("");
               i5 = j4;
               continue;
             }
@@ -36749,7 +36796,7 @@ ${d5.text}`);
       }
       const para = [l6];
       i5++;
-      while (i5 < n4 && !blank(lines2[i5]) && !startsBlock(i5)) para.push(lines2[i5++]);
+      while (i5 < n4 && !blank(lines[i5]) && !startsBlock(i5)) para.push(lines[i5++]);
       out.push(`<p>${inl(para.join("\n")).replace(/\n/g, "<br>")}</p>`);
     }
     return out.join("");
@@ -36757,9 +36804,9 @@ ${d5.text}`);
   function mdChat(text, o5) {
     text = String(text ?? "");
     if (text.length > MDC.MAX) return `<div class="mdraw">${esc(text)}</div>`;
-    const st = [], lines2 = esc(text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/\r\n?/g, "\n")).split("\n");
+    const st = [], lines = esc(text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/\r\n?/g, "\n")).split("\n");
     st.hb = o5 && o5.hBase || 0;
-    let h5 = chatMdBlocks(lines2, st, 0);
+    let h5 = chatMdBlocks(lines, st, 0);
     for (let k5 = 0; k5 < 6 && /\u0001\d+\u0001/.test(h5); k5++) h5 = h5.replace(/\u0001(\d+)\u0001/g, (m5, x5) => st[x5]);
     return h5;
   }
@@ -39032,15 +39079,15 @@ ${d5.text}`);
       dlg = $("#actDlg");
     }
     const done = plan.done || [], skipped = plan.skipped || [], n4 = done.length;
-    let asked3 = false;
+    let asked2 = false;
     putHTML(dlg, html`<h2 id="actDlgH" style="margin:0 0 6px">${n4 ? html`Undo ${raw(n4)} change${n4 === 1 ? "" : "s"}?` : "Nothing here can be undone"}</h2>
     <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n4 ? "Each goes back to what it was before, only where it still holds the value that change gave it. It is one new apply, so you can undo it too." : html`Each of these has changed since, or can't be put back here.`}</p>
     <ul class="actplan">${raw(done.map(actPlanLine).join(""))}${raw(skipped.map(actPlanLine).join(""))}</ul>
     <div class="curacts"><span class="sp"></span><button type="button" class="btn" id="actDlgCancel">${n4 ? "Cancel" : "Close"}</button>${n4 ? html`<button type="button" class="btn primary" id="actDlgGo">Undo ${raw(n4)}</button>` : ""}</div>`);
     $("#actDlgCancel").onclick = () => dlg.close();
     if (n4) $("#actDlgGo").onclick = async () => {
-      if (n4 > ACT_ASK_AGAIN && !asked3) {
-        asked3 = true;
+      if (n4 > ACT_ASK_AGAIN && !asked2) {
+        asked2 = true;
         $("#actDlgAsk").textContent = `This undoes ${n4} changes at once. Are you sure? (It can itself be undone.)`;
         $("#actDlgGo").textContent = `Yes, undo ${n4}`;
         $("#actDlgGo").focus();
@@ -39766,7 +39813,7 @@ ${d5.text}`);
     if (!re.test(md)) return md.replace(/\s*$/, "\n\n## Current state\n\n" + text.trim() + "\n");
     const placed2 = new Set(text.split("\n").map((l6) => (l6.match(MD_IMG) || [])[2]).filter(Boolean));
     return md.replace(re, (m5, h5, body) => {
-      const lines2 = body.split("\n"), g5 = lines2.filter((l6) => /^_.*_$/.test(l6.trim())), im = lines2.filter((l6) => l6.trim().startsWith("![") && !placed2.has((l6.match(MD_IMG) || [])[2]) && !dropped.includes((l6.match(MD_IMG) || [])[2]));
+      const lines = body.split("\n"), g5 = lines.filter((l6) => /^_.*_$/.test(l6.trim())), im = lines.filter((l6) => l6.trim().startsWith("![") && !placed2.has((l6.match(MD_IMG) || [])[2]) && !dropped.includes((l6.match(MD_IMG) || [])[2]));
       return h5 + "\n" + (g5.length ? g5.join("\n") + "\n\n" : "") + text.trim() + "\n" + (im.length ? "\n" + im.join("\n") + "\n" : "") + "\n";
     });
   }

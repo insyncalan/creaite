@@ -99,7 +99,8 @@ def sample_view():
 
 def open_sample(b):
     """Open the minutes view with /api/minutes/draft answered by sample_view() (every other call goes to the server)."""
-    b.eval(f"(()=>{{ const real=window.api, ans={json.dumps(sample_view())}; window.api=async(p,body)=>p==='/api/minutes/draft'?JSON.parse(JSON.stringify(ans)):real(p,body); }})()")
+    b.eval(f"(()=>{{ if(window.__mnSample) return; window.__mnSample=1; const real=window.fetch.bind(window), ans={json.dumps(json.dumps(sample_view()))}; "
+           "window.fetch=(u,o)=>String(u).endsWith('/api/minutes/draft')?Promise.resolve(new Response(ans,{headers:{'Content-Type':'application/json'}})):real(u,o); })()")
     b.eval(f"go('minutes',{{path:{json.dumps(DRAFT)}}})")
 
 
@@ -179,6 +180,17 @@ class MinutesEditor(LiveBrowserCase):
         sec = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .page');
           return [l.querySelector('section[data-id=actions] > h2').getBoundingClientRect().top, r.querySelector('section[data-id=actions] > h2').getBoundingClientRect().top]; })()""")
         self.assertLessEqual(abs(sec[0] - sec[1]), 1, "still level once scrolled")
+        marked = self.ev("document.querySelector('.sheet-pair > .page .mnline.internal').textContent")
+        self.assertNotIn("The committee reviewed", self.ev("document.querySelectorAll('.sheet-pair > .page')[1].textContent"))
+        self.assertIn("The committee reviewed", marked)
+        b.click("[data-mnmode=distributed]")                     # the Distributed page alone: the marked line isn't there
+        b.wait("!document.querySelector('.sheet-pair')")
+        self.assertNotIn("The committee reviewed", self.ev("document.querySelector('#v-minutes .page').textContent"))
+        b.click("#v-minutes [data-mnexport]")
+        b.wait("document.querySelector('#v-minutes .ddmenu.on')")
+        names = self.ev("[...document.querySelectorAll('#v-minutes .ddmenu.on [role=menuitem]')].map(x=>x.textContent)")
+        self.assertTrue(any("Distributed: Word" in n and "approved" in n for n in names), names)
+        b.key("Escape")
 
     def test_3_popups_close_on_esc_and_a_click_outside_with_focus_back(self):
         b = self.b
@@ -259,13 +271,13 @@ class MinutesEditor(LiveBrowserCase):
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         quick = self.ev("[...document.querySelectorAll('.mndl [data-quick]')].map(x=>[x.dataset.quick, x.getAttribute('aria-label')])")
-        want = {w: self.ev(f"parseWords({json.dumps(w)}, {json.dumps(DAY)}, true, 'deadline')") for w in ("Friday", "next week", "next wednesday", "end of month")}
+        want = {w: self.ev(f"CREAITE.parseWhen({json.dumps(w)}, {json.dumps(DAY)}, true, 'deadline')") for w in ("Friday", "next week", "next wednesday", "end of month")}
         for w, label in quick[:4]:
             self.assertIn(self.ev(f"fd({json.dumps(want[w])})"), label, f"{w} shows its date from the meeting's day")
         b.eval("document.getElementById('mnDlWords').focus()")
         b.type("in 2 weeks")
         b.pump(0.2)
-        got = self.ev(f"parseWords('in 2 weeks', {json.dumps(DAY)}, true, 'deadline')")
+        got = self.ev(f"CREAITE.parseWhen('in 2 weeks', {json.dumps(DAY)}, true, 'deadline')")
         self.assertIn(self.ev(f"fd({json.dumps(got)})"), self.ev("document.getElementById('mnDlSaid').textContent"), "the date shown before it is set")
         self.assertIsNone(self.staged(3)["values"].get("due_date"), "nothing set yet")
         b.key("Enter")
@@ -277,7 +289,7 @@ class MinutesEditor(LiveBrowserCase):
         b.click(sel)
         b.wait("document.querySelector('.mndl')")
         b.click(".mndl [data-quick='Friday']")
-        friday = self.ev(f"parseWords('Friday', {json.dumps(DAY)}, true, 'deadline')")
+        friday = self.ev(f"CREAITE.parseWhen('Friday', {json.dumps(DAY)}, true, 'deadline')")
         self.wait_saved(f"document.querySelector({json.dumps(sel)}).textContent==={json.dumps(self.ev(f'fd({json.dumps(friday)})'))}")
         self.assertEqual(self.staged(3)["values"]["due_date"], friday)
         b.click(sel)
@@ -305,7 +317,7 @@ class MinutesEditor(LiveBrowserCase):
         b.eval("[...document.querySelectorAll('#v-minutes .mnbar .mncheck')].find(x=>/by Friday/.test(x.getAttribute('aria-label'))).click()")
         b.wait("document.querySelector('.mnck [data-ckact=use]')")
         b.click(".mnck [data-ckact=use]")
-        friday = self.ev(f"parseWords('by Friday', {json.dumps(DAY)}, true, 'deadline')")
+        friday = self.ev(f"CREAITE.parseWhen('by Friday', {json.dumps(DAY)}, true, 'deadline')")
         self.wait_saved(f"document.querySelector(\"#v-minutes .mnrow[data-n='2'] .mndue\").textContent==={json.dumps(self.ev(f'fd({json.dumps(friday)})'))}")
         self.assertEqual(self.staged(2)["values"]["due_date"], friday, "Use that sets what was said")
         b.click("[data-mncover='Training plan']")

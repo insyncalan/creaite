@@ -6,7 +6,7 @@
    peek picker's look (.pkpop). A candidate for a top-level Popover block once P5's sheet needs one too. */
 import { useEffect, useRef } from "preact/hooks";
 
-const FOCUSABLE = 'input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+const POP_FOCUSABLE = 'input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /** @typedef {{open: boolean, onClose: () => void, label: string, anchor: {current: HTMLElement|null}, focus?: string,
     cls?: string, wide?: boolean, children?: import("preact").ComponentChildren}} PopProps */
@@ -19,7 +19,11 @@ export function Pop({ open, onClose, label, anchor, focus, cls, wide, children }
     if (!open) return;
     back.current = true;
     const b = box.current;
-    const f = /** @type {HTMLElement|null} */ (b && ((focus && b.querySelector(focus)) || b.querySelector(FOCUSABLE)));
+    if (b) {                                    // past the right edge of the sheet's scroller (or the window): open leftwards
+      const lim = Math.min(window.innerWidth, (b.closest(".sheet-scroll") || document.documentElement).getBoundingClientRect().right);
+      b.classList.toggle("flip", b.getBoundingClientRect().right > lim - 8);
+    }
+    const f = /** @type {HTMLElement|null} */ (b && ((focus && b.querySelector(focus)) || b.querySelector(POP_FOCUSABLE)));
     if (f) f.focus();
     /** @param {Event} e */
     const away = e => {

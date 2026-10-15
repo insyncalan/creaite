@@ -848,8 +848,10 @@ def view(file=None, path=None):
         except RecordError:
             data = None
     meta = doc.get("meta") or {}
+    labels = item_labels(doc)
     return {"ok": True, "path": rel, "doc": doc, "versions": creaite_doc.versions(rel), "turns": turns(meta.get("transcript")),
-            "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None}
+            "proposal": meta.get("proposal"), "plan": review.minutes_plan(data) if data and doc["state"] == "draft" else None,
+            "labels": labels, "withheld": withheld(doc, labels)}
 
 
 def save_page(path, page, base_version=None, via="dashboard"):
@@ -873,14 +875,164 @@ def save_page(path, page, base_version=None, via="dashboard"):
     return {**r, "doc": creaite_doc.read(rel)}
 
 
-def export(path, fmt, file_beside=True):
-    """An export of the minutes (HTML, Word or PDF) through creaite_doc.export (v2.1.0 P2, the contract's call). Until P2 is on the
-    branch it answers that it isn't there yet (a stub, never a guess at the format)."""
-    rel, _doc = record_at(path)
+def export(path, fmt, file_beside=True, version="internal"):
+    """An export of the minutes (HTML, Word or PDF) through creaite_doc.export (v2.1.0 P2, the contract's call). `version`
+    "distributed" exports the distributed version instead (distributed_export)."""
+    rel, doc = record_at(path)
     if fmt not in ("html", "docx", "pdf"):
         raise RecordError("Export as HTML, Word or PDF.")
-    fn = getattr(creaite_doc, "export", None)
-    if fn is None:
-        return {"ok": False, "format": fmt, "stub": True,
-                "message": "Exporting isn't in this version yet: it comes with creaite_doc.export (v2.1.0 P2)."}
-    return fn(rel, fmt, file_beside=bool(file_beside), open_after=False)
+    if version == "distributed":
+        return distributed_export(rel, doc, fmt, file_beside)
+    if version not in (None, "", "internal"):
+        raise RecordError("Export the internal or the distributed version.")
+    return creaite_doc.export(rel, fmt, file_beside=bool(file_beside), open_after=False)
+
+
+# ── The distributed version (BL-338 point 13; Jarvis, 15-10-2026 on plan #70) ──
+# The view shows it as a preview (minutesDoc.js distributedOf); these build the same thing on the server, for its export. What it
+# never holds: a line or row marked Internal only (layout.internal_only), and an item that is Sensitive, partner-only or carries a
+# label that excludes it (its own flags and labels, and its tracker labels: client_leak.blocking_labels).
+
+def _label_list(v):
+    """Label names from a staged item's value: a list, or names separated by commas."""
+    if isinstance(v, (list, tuple)):
+        return [str(x).strip() for x in v if str(x).strip()]
+    return [x.strip() for x in str(v or "").split(",") if x.strip()]
+
+
+def item_labels(doc, con=None):
+    """{row ref: [label names]} for each item the record holds: the staged item's own labels, and the tracker's labels of the item
+    it is (an update's ID, or a filed record's ID). Without a tracker, the item's own only."""
+    import client_leak
+    try:
+        con = con or client_leak.connect()
+    except (SystemExit, Exception):  # noqa: BLE001  no tracker (a fresh vault): the items' own labels still count
+        con = None
+    out = {}
+    for ref, it in (doc.get("items") or {}).items():
+        names = _label_list((it.get("values") or {}).get("labels")) + _label_list((it.get("changes") or {}).get("labels"))
+        tid = it.get("id") or ("" if str(ref).startswith("@") else ref)
+        if con is not None and tid:
+            names += client_leak.labels_of(con, tid)
+        out[ref] = sorted(set(names), key=str.lower)
+    return out
+
+
+def _blocking(con=None):
+    """{label name in lower case: why} for every label that keeps an item out of the distributed version: Sensitive and the
+    partner-only names always (by name), and the tracker's labels that exclude (client_leak.blocking_labels)."""
+    import client_leak
+    out = {client_leak.SENSITIVE: "Sensitive", **{n: "partner-only" for n in client_leak.PARTNER_ONLY}}
+    try:
+        out.update(client_leak.blocking_labels(con or client_leak.connect()))
+    except (SystemExit, Exception):  # noqa: BLE001  no tracker: Sensitive and partner-only still block, by name
+        pass
+    return out
+
+
+def _flagged_sensitive(item):
+    """Whether a staged item's own flags or values say Sensitive."""
+    return any(re.search("sensitive", str(f), re.I) for f in item.get("flags") or []) or bool((item.get("values") or {}).get("sensitive"))
+
+
+def withheld(doc, labels=None, con=None):
+    """{row ref: why} for each item the distributed version never shows: Sensitive (a flag, a value or a label), partner-only, or
+    labelled with a label that excludes."""
+    labels = item_labels(doc, con) if labels is None else labels
+    blocking = _blocking(con)
+    out = {}
+    for ref, it in (doc.get("items") or {}).items():
+        why = "Sensitive" if _flagged_sensitive(it) else next(
+            (blocking[n.lower()] for n in labels.get(ref) or [] if n.lower() in blocking), None)
+        if why:
+            out[ref] = why
+    return out
+
+
+_TOPIC = re.compile(r"\*\*([^*]+)\*\*")
+_FLAGGED = re.compile(r"\*\*([A-Z ]+)\*\* (.*)")
+
+
+def line_text(raw):
+    """A Markdown line's words as the view compares them (minutesDoc.js lines): no bullet, flag or bold."""
+    s = raw.strip()
+    t = _TOPIC.fullmatch(s)
+    if t:
+        return t.group(1)
+    body = s[2:] if s[:2] in ("- ", "* ") else s
+    f = _FLAGGED.fullmatch(body)
+    if f and f.group(1) in FLAGS:
+        body = f.group(2)
+    return re.sub(r"\*([^*]+)\*", r"\1", re.sub(r"\*\*([^*]+)\*\*", r"\1", body))
+
+
+def _without_lines(text, gone):
+    """The Markdown without the lines whose words are in `gone`, blank runs closed up; "None recorded." when nothing is left."""
+    kept = [raw for raw in str(text or "").split("\n") if not (raw.strip() and line_text(raw) in gone)]
+    out = re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
+    return out or "None recorded."
+
+
+def _distributed_table(s, marks, gone_refs):
+    """A table section without the rows of withheld items or marked Internal only (a row marked as a draft, "@3", keeps its
+    number once filed). Adds the refs it drops to `gone_refs`."""
+    marked = {m["ref"] for m in marks if m.get("ref")}
+    gone_refs |= {r["ref"] for r in s.get("rows") or [] if r.get("ref") in marked or f"@{r.get('n')}" in marked}
+    s["rows"] = [r for r in s.get("rows") or [] if not (r.get("ref") and r["ref"] in gone_refs)]
+    s["text"] = "" if s["rows"] else "None recorded."
+
+
+def _distributed_text(s, marks):
+    """A text section without the lines marked Internal only, and their tags."""
+    gone = {m["text"] for m in marks if m.get("text")}
+    if gone and s.get("text"):
+        s["text"] = _without_lines(s["text"], gone)
+        s["tags"] = [t for t in s.get("tags") or [] if line_text(str(t.get("text") or "")) not in gone]
+
+
+def distributed_of(doc, held=None):
+    """The distributed version of an internal minutes record (audience "distributed"), as the view's preview makes it: without the
+    rows of withheld items or marked Internal only, the lines marked Internal only, their tags and the withheld items; based on
+    the internal record. Nothing is written."""
+    held = withheld(doc) if held is None else held
+    marks = [m for m in (doc.get("layout") or {}).get("internal_only") or [] if isinstance(m, dict)]
+    out = json.loads(json.dumps(doc))
+    gone_refs = set(held)
+    for s in out.get("sections") or []:
+        mine = [m for m in marks if m.get("section") == s.get("id")]
+        if s.get("type") == "table":
+            _distributed_table(s, mine, gone_refs)
+        elif s.get("type") != "header":
+            _distributed_text(s, mine)
+    return _without_items(out, gone_refs, doc.get("version"))
+
+
+def _without_items(out, gone_refs, version):
+    """The distributed record's last step: no tag or item for what it leaves out, no Internal only marks, its audience."""
+    for s in out.get("sections") or []:
+        if s.get("tags"):
+            s["tags"] = [t for t in s["tags"] if t.get("ref") not in gone_refs]
+    out["items"] = {k: v for k, v in (out.get("items") or {}).items() if k not in gone_refs}
+    out["layout"] = {k: v for k, v in (out.get("layout") or {}).items() if k != "internal_only"}
+    out.update(audience="distributed", based_on={"path": None, "version": version})
+    return out
+
+
+def distributed_export(rel, doc, fmt, file_beside=True):
+    """Export the distributed version of the minutes at `rel`: the distributed record is built (distributed_of), written as a
+    working copy in system/staging/drafts/ (`<name> (distributed).html`), exported through creaite_doc.export into the minutes'
+    own folder (a create: never over a file, a taken name gets a number; Alan, 15-10-2026, option (c)), then the working copy goes.
+    creaite_doc refuses it until the internal minutes are approved."""
+    if (doc.get("audience") or "internal") != "internal":
+        raise RecordError("Export the distributed version from the internal minutes.")
+    dist = distributed_of(doc)
+    dist["based_on"] = {"path": rel, "version": doc.get("version")}
+    paths.DRAFTS.mkdir(parents=True, exist_ok=True)
+    work = paths.free_path(paths.DRAFTS, f"{creaite_doc.real(rel).stem} (distributed)", ".html")
+    work.write_text(creaite_doc.dumps(dist), encoding="utf-8")
+    try:
+        folder = str(Path(rel).parent) if file_beside else None
+        out = creaite_doc.export(paths.rel(work), fmt, out_dir=folder, file_beside=False, open_after=False)
+    finally:
+        work.unlink(missing_ok=True)
+    return {**out, "version": "distributed"}

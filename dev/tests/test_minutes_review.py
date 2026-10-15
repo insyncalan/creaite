@@ -355,13 +355,15 @@ class RecordFlowTests(unittest.TestCase):
 
 
     def test_open_draft_on_a_record_never_says_word(self):
-        """Review's Open draft on a minutes record (an .html draft) says to change its items in Review, not to edit it in Word."""
+        """Review's Open draft on a minutes record (an .html draft) opens the minutes view (v2.1.0 P7), never Word; without the
+        live server it opens the record and says to approve the minutes in Claude Code."""
         sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
         from split_dashboard import readable_page
         page = readable_page()
-        rule = re.search(r'if\(r\.kind==="draft"&&/\\\.html\$/i\.test\(r\.src\|\|""\)\)\{[^}]*\}', page)
+        rule = re.search(r'if\(r\.kind==="draft"&&/\\\.html\$/i\.test\(r\.src\|\|""\)\)\{.*?running\)"\); return; \}', page)
         self.assertIsNotNone(rule)
-        self.assertIn("Check the minutes, change their items here in Review, then press Approve", rule.group(0))
+        self.assertIn('go("minutes",{file:r.file})', rule.group(0))
+        self.assertIn("Check the minutes, then approve them", rule.group(0))
         self.assertNotIn("Word", rule.group(0))
 
 class ReviewDetailTests(unittest.TestCase):

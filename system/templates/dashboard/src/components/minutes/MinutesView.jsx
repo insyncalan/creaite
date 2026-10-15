@@ -48,9 +48,22 @@ export function levelPair(box) {
     for (const [a, b] of ps) { a.style.minHeight = ""; if (b) b.style.minHeight = ""; }
     for (const [a, b] of ps) { if (!b) continue; const h = Math.max(a.getBoundingClientRect().height, b.getBoundingClientRect().height); a.style.minHeight = b.style.minHeight = `${h}px`; }
   };
+  /* A creaite-only extra between sections (coverage) has no peer on the right: whichever page's next section starts lower, the
+     other page's section grows by the difference, top to bottom (margins and all). */
+  const nextSec = (/** @type {Element} */ x) => { let n = x.nextElementSibling; while (n && !(n.matches("section[data-id]"))) n = n.nextElementSibling; return /** @type {HTMLElement|null} */ (n); };
+  const close = (/** @type {[HTMLElement, HTMLElement|null][]} */ ps) => {
+    for (const [a, b] of ps) {
+      const an = b && nextSec(a), bn = b && nextSec(b);
+      if (!b || !an || !bn) continue;
+      const d = an.getBoundingClientRect().top - bn.getBoundingClientRect().top;
+      if (d > 0.5) b.style.minHeight = `${b.getBoundingClientRect().height + d}px`;
+      else if (d < -0.5) a.style.minHeight = `${a.getBoundingClientRect().height - d}px`;
+    }
+  };
   const secs = /** @type {[HTMLElement, HTMLElement|null][]} */ (pairs("section[data-id]", "data-id", l, r));
   for (const [a, b] of secs) if (b) even(/** @type {[HTMLElement, HTMLElement|null][]} */ (pairs("[data-level]", "data-level", a, b)));
   even(secs);
+  close(secs);
 }
 
 /** The staged item of a row ("@3") in the peek: its Review proposal. @param {string} ref */
@@ -66,11 +79,18 @@ function Bar({ doc, checks }) {
   const v = minutesView.value, versions = (v && v.versions) || [], draft = doc.state === "draft";
   const dist = !!(doc.layout || {}).distributed, mode = minutesMode.value;
   const setDist = (/** @type {boolean} */ on) => { onDoc({ ...doc, layout: { ...(doc.layout || {}), distributed: on } }, on ? "Distributed version on" : "One version"); if (!on) minutesMode.value = "internal"; };
-  const exp = async (/** @type {string} */ fmt) => {
-    if (dist && fmt) { const out = leftOut(doc); if (out.length) snack(`The distributed version leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}`); }
-    const r = await exportMinutes(fmt);
-    snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}` : String(r.message || "Not exported").split("\n")[0]);
+  const exp = async (/** @type {string} */ id) => {
+    const [fmt, which] = id.split(":"), version = which === "distributed" ? "distributed" : "internal";
+    const out = version === "distributed" ? leftOut(doc, v && v.withheld) : [];
+    const r = await exportMinutes(fmt, version);
+    const left = out.length ? ` · leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}` : "";
+    snack(r.ok ? `Exported${r.path ? `: ${String(r.path).split("/").pop()}` : ""}${left}` : String(r.message || "Not exported").split("\n")[0]);
   };
+  const formats = [{ id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" }, { id: "docx", name: "Word", line: "The minutes template" },
+    { id: "pdf", name: "PDF", line: "Printed from the page" }];
+  const exports = dist ? [...formats.map(f => ({ ...f, id: `${f.id}:internal`, name: `Internal: ${f.name}` })),
+    ...formats.map(f => ({ ...f, id: `${f.id}:distributed`, name: `Distributed: ${f.name}`,
+      line: draft ? "Once the internal minutes are approved" : `${f.line}, under a new name` }))] : formats;
   return (
     <span class="mnbarr">
       <Menu label={`Version ${doc.version || 1}`} icon="history" btnCls="btn sm" menuLabel="Versions of these minutes" data={{ mnversions: "" }}
@@ -88,8 +108,7 @@ function Bar({ doc, checks }) {
       <button type="button" class="btn sm" aria-pressed={paneOpen.value ? "true" : "false"} onClick={() => { paneOpen.value = !paneOpen.value; }}>Transcript</button>
       {draft && checks.length ? <span class="tag mnckcount" role="status">{checks.length} check{checks.length === 1 ? "" : "s"} open</span> : null}
       <Menu label="Export" icon="filetext" btnCls="btn sm" menuLabel="Export the minutes" data={{ mnexport: "" }}
-        items={[{ id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" }, { id: "docx", name: "Word", line: "The minutes template" },
-          { id: "pdf", name: "PDF", line: "Printed from the page" }]} onPick={exp} />
+        items={exports} onPick={exp} />
       {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan)} data-tip={v && v.plan ? undefined : "Nothing pending to approve"}
         onClick={() => { approveOpen.value = true; }}>Approve minutes</button> : null}
     </span>
@@ -130,6 +149,7 @@ export function MinutesView() {
   const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
   useLayoutEffect(() => {
     const el = box.current;
+    if (el && !side) /** @type {NodeListOf<HTMLElement>} */ (el.querySelectorAll(".page section[data-id], .page [data-level]")).forEach(x => { x.style.minHeight = ""; });
     if (!side || !el) return;
     levelPair(el);
     const ro = new ResizeObserver(() => levelPair(el));
@@ -140,8 +160,8 @@ export function MinutesView() {
   if (!v.ok || !doc) return <div class="mnview"><h1 id="mnTitle">Minutes</h1><p class="mnerr" role="alert">{v.message || "Couldn't open the minutes"}</p></div>;
   const draft = doc.state === "draft", turns = (v.turns || { turns: [] }).turns;
   const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
-  const shown = dist && mode === "distributed" ? distributedOf(doc) : doc;
-  const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged };
+  const held = v.withheld || {}, shown = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
+  const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
   return (
     <div class="mnview" ref={box}>
       <header class="mnhead">
@@ -155,7 +175,7 @@ export function MinutesView() {
           <MinutesCtx.Provider value={ctx}>
             <SheetStub doc={shown} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}:${mode}`} readOnly={!draft || (dist && mode === "distributed")}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
-              partner={side ? { doc: distributedOf(doc), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {} } : null}
+              partner={side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {} } : null}
               onChange={onDoc} onSave={async req => { const r = await saveMinutesPage(req); if (r.ok) dirty = false; return r; }}
               onEvent={ev => { if (ev.type === "reload") loadMinutes({ path: v.path }); }}
               toolbar={<Bar doc={doc} checks={checks} />} />
@@ -168,13 +188,13 @@ export function MinutesView() {
   );
 }
 
-let mounted = false;
+let mnMounted = false;
 /** Draw the minutes view into #v-minutes and open the minutes: {file} (a proposal), {path} (a record) or the path as a string.
     @param {{file?: string, path?: string}|string|null} arg */
 export function renderMinutes(arg) {
   const el = $("#v-minutes");
   if (!el) return;
-  if (!mounted) { render(<MinutesView />, el); mounted = true; }
+  if (!mnMounted) { render(<MinutesView />, el); mnMounted = true; }
   const a = typeof arg === "string" ? { path: arg } : arg;
   if (a && (a.file || a.path)) {
     dirty = false; keptChecks.value = []; minutesMode.value = "internal";

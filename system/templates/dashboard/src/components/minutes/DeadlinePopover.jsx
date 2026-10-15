@@ -12,16 +12,16 @@ import { Pop } from "./Pop.jsx";
 
 const WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DP_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 export const QUICK = [["Friday", "Friday"], ["Next week", "next week"], ["Next Wednesday", "next wednesday"], ["End of month", "end of month"]];
 
 /** The weekend as getDay() numbers (Sunday 0), from settings work.weekend_days (Monday 0 there). */
-export const weekend = () => [...wkDays()].map(d => (d + 1) % 7);
+export const offDays = () => [...wkDays()].map(d => (d + 1) % 7);
 /** What words mean as a deadline from the meeting's day: YYYY-MM-DD or null. @param {string} words @param {string} day */
-export const deadlineOf = (words, day) => parseWords(words, day, true, "deadline", weekend());
+export const deadlineOf = (words, day) => parseWords(words, day, true, "deadline", offDays());
 /** "Friday 16-10-2026". @param {string} iso */
-export const longDay = iso => `${LONG[new Date(iso + "T12:00:00").getDay()]} ${fd(iso)}`;
-const pad = (/** @type {number} */ n) => String(n).padStart(2, "0");
+export const deadlineDay = iso => `${LONG[new Date(iso + "T12:00:00").getDay()]} ${fd(iso)}`;
+const pad2 = (/** @type {number} */ n) => String(n).padStart(2, "0");
 
 /** @typedef {{due: string|null, day: string, label: string, readOnly?: boolean, onSet: (words: string) => Promise<boolean>}} DeadlineProps */
 
@@ -33,7 +33,7 @@ export function DeadlinePopover({ due, day, label, readOnly, onSet }) {
   return (
     <span class="mnpopw">
       <button type="button" ref={btn} class="mndue btn sm" aria-haspopup="dialog" aria-expanded={open ? "true" : "false"}
-        aria-label={`Deadline: ${due ? longDay(due) : "not set"}. Change the deadline of ${label}`} onClick={() => setOpen(!open)}>
+        aria-label={`Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`} onClick={() => setOpen(!open)}>
         {due ? fd(due) : "Not set"}
       </button>
       <Pop open={open} onClose={() => setOpen(false)} label={`Deadline for ${label}`} anchor={btn} focus="input" cls="pkcal mndl">
@@ -58,12 +58,12 @@ function DeadlineBody({ due, day, onPick }) {
         aria-describedby="mnDlSaid" onInput={e => setWords(/** @type {HTMLInputElement} */ (e.currentTarget).value)}
         onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); set(); } }} />
       <div id="mnDlSaid" class={`mndl-said${words.trim() && !got ? " bad" : ""}`} role="status">
-        {!words.trim() ? "" : got ? <span>{longDay(got)} <button type="button" class="btn sm primary" onClick={set}>Set</button></span>
+        {!words.trim() ? "" : got ? <span>{deadlineDay(got)} <button type="button" class="btn sm primary" onClick={set}>Set</button></span>
           : "Not a date creaite can read. Try “Friday”, “next week” or 30-10."}
       </div>
       <div class="pkquick" role="group" aria-label="Quick picks">
         {QUICK.map(([name, w]) => { const d = deadlineOf(w, day); return d ? (
-          <button key={w} type="button" class="btn sm" data-quick={w} aria-label={`${name}: ${longDay(d)}`} onClick={() => onPick(w)}>
+          <button key={w} type="button" class="btn sm" data-quick={w} aria-label={`${name}: ${deadlineDay(d)}`} onClick={() => onPick(w)}>
             {name} <span class="sub">{fd(d).slice(0, 5)}</span></button>) : null; })}
       </div>
       <Calendar month={month} setMonth={setMonth} due={due} day={day} onPick={iso => onPick(fd(iso))} />
@@ -77,20 +77,20 @@ function DeadlineBody({ due, day, onPick }) {
 function Calendar({ month, setMonth, due, day, onPick }) {
   const y = +month.slice(0, 4), m = +month.slice(5, 7);
   const first = new Date(y, m - 1, 1, 12), lead = (first.getDay() + 6) % 7, count = new Date(y, m, 0, 12).getDate();
-  const step = (/** @type {number} */ k) => { const d = new Date(y, m - 1 + k, 1, 12); setMonth(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`); };
-  const off = new Set(weekend());
+  const step = (/** @type {number} */ k) => { const d = new Date(y, m - 1 + k, 1, 12); setMonth(`${d.getFullYear()}-${pad2(d.getMonth() + 1)}`); };
+  const off = new Set(offDays());
   const cells = [];
   for (let i = 0; i < lead; i++) cells.push(<span key={`b${i}`} />);
   for (let d = 1; d <= count; d++) {
-    const iso = `${month}-${pad(d)}`, dow = new Date(iso + "T12:00:00").getDay();
+    const iso = `${month}-${pad2(d)}`, dow = new Date(iso + "T12:00:00").getDay();
     cells.push(<button key={iso} type="button" class={`pkday${iso === due ? " on" : ""}${iso === day ? " today" : ""}${off.has(dow) ? " wk" : ""}`}
-      data-day={iso} aria-label={longDay(iso)} aria-pressed={iso === due ? "true" : "false"} onClick={() => onPick(iso)}>{d}</button>);
+      data-day={iso} aria-label={deadlineDay(iso)} aria-pressed={iso === due ? "true" : "false"} onClick={() => onPick(iso)}>{d}</button>);
   }
   return (
     <div class="mncal">
       <div class="pkcalh">
         <button type="button" class="btn sm" aria-label="Previous month" onClick={() => step(-1)}>‹</button>
-        <b>{MONTHS[m - 1]} {y}</b>
+        <b>{DP_MONTHS[m - 1]} {y}</b>
         <button type="button" class="btn sm" aria-label="Next month" onClick={() => step(1)}>›</button>
       </div>
       <div class="pkgrid">{WEEK.map(w => <span key={w} class="wd" aria-hidden="true">{w.slice(0, 2)}</span>)}{cells}</div>
