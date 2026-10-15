@@ -3,6 +3,10 @@
 Team Cap, branch `sprint-reporting` (P1 `v210-p1-doc`, P2 `v210-p2-exports`). Team Stark builds P4 against this from day 1.
 Changed (15-10-2026, before any use): no command line (a script command line must be classified in `reach.SCRIPT_COMMANDS`, a
 guard change; P3 and P4 call it from Python); `save` takes `approver` instead of `approval`; `project_name` added.
+Changed (15-10-2026, P2): `export` answers also carry `open_after`; `out_dir` is a stored folder to file in instead of beside
+the document; the HTML export is filed as `<name> (read only).html` (the document's own name is the document); a filed export's
+draft is removed (`draft: null`) and kept only when it isn't filed or waits on Alan's card (`needs_approval: true`); the setting
+is `reports.file_exports_beside` (on), read by `file_beside_default()`.
 
 Read with `git show sprint-reporting:dev/sprints/v210-contract.md`. A change goes in a "Changed:" line at the top and a
 SPRINTCOMMS entry. Additions only once Team Stark has started; nothing is renamed.
@@ -189,11 +193,21 @@ export(path, fmt, *, out_dir=None, file_beside=True, open_after=True) -> dict
   `weekly-report-template.docx`, `client-report-template.docx` or `minutes-template.docx`. **PDF:** Chrome's print to PDF of the
   HTML export.
 - Written to `system/staging/drafts/`; with `file_beside` (the default) also filed beside the document through `filechange.py`
-  (a create, never overwriting: a taken name gets a number), named as the document with the export's extension.
-- `open_after`: the live server opens it in the default viewer (`/api/open`); from the command line nothing opens.
-- Returns `{"ok": true, "format": "pdf", "path": "<stored path of the filed copy, or the draft>", "draft": "<drafts path>",
-  "filed": true, "message": "…"}`; on failure `{"ok": false, "format", "message"}` ("Chrome wasn't found…", "The Word template
-  is missing…", or a filechange refusal). A client view or distributed minutes is refused until `based_on` is approved (P3, P4).
+  (a create, never overwriting: a taken name gets a number), named as the document with the export's extension (HTML:
+  `<name> (read only).html`). `out_dir` (a stored folder) files it there instead. Filed, the draft is removed.
+- **The setting** "File the exports beside it" is `reports.file_exports_beside`, on by default; callers pass
+  `file_beside=creaite_doc.file_beside_default()` unless Alan ticked otherwise for this export.
+- **Word:** the kind's template keeps its title block (project or meeting, status line `Internal · Draft, version N` or
+  `… · Approved <date>`, the date; a client report's `meta.period_start` gives its period); its health and attendees lines go,
+  and each shown section follows in page order as the template's heading, Markdown paragraphs and, for a table, the template's
+  table with the section's columns. **PDF:** Chrome headless (`launch.find_chrome`), a throwaway profile, at most 90 seconds.
+- `open_after`: passed back in the answer; the live server opens the export in the default viewer (`/api/open`); from the
+  command line nothing opens.
+- Returns `{"ok": true, "format": "pdf", "path": "<stored path of the filed copy, or the draft>", "draft": "<drafts path, or
+  null once filed>", "filed": true, "open_after": true, "message": "…"}`; on failure `{"ok": false, "format", "message"}`
+  ("Chrome wasn't found…", "The Word template is missing…", or a filechange refusal; `needs_approval: true` and `draft` when
+  the filing waits on Alan's card). A client view or distributed minutes is refused until the document `based_on` names is
+  approved ("A client report is exported only after the internal report is approved.").
 
 ## 4. Sheet.jsx props and slots (added before P5)
 
