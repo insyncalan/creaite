@@ -30,12 +30,22 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 import test_notes_tab_browser as notes_tab_browser  # noqa: E402  (its helpers; imported as a module so its own tests do not run here)
 
-SPY = """(()=>{ window.__saves=[]; window.__slow=0; window.__fail=null; const f=window.fetch.bind(window);
-  window.fetch=function(u,o){ const save=String(u).includes('/api/notes/save');
+SPY = """(()=>{ window.__saves=[]; window.__slow=0; window.__slowGet=0; window.__slowRename=0; window.__failRename=false; window.__fail=null; window.__rej=0;
+  addEventListener('unhandledrejection',()=>{ window.__rej++; }); const f=window.fetch.bind(window);
+  const later=(ms,u,o)=>new Promise(r=>setTimeout(r,ms)).then(()=>f(u,o));
+  window.fetch=function(u,o){ const url=String(u), save=url.includes('/api/notes/save');
     if(save){ try{ window.__saves.push({...JSON.parse(o.body),keepalive:!!(o&&o.keepalive)}); }catch(e){} }
     if(save&&window.__fail) return Promise.resolve(new Response(JSON.stringify(window.__fail),{status:200,headers:{'Content-Type':'application/json'}}));
-    if(save&&window.__slow) return new Promise(r=>setTimeout(r,window.__slow)).then(()=>f(u,o));
+    if(save&&window.__slow) return later(window.__slow,u,o);
+    if(url.includes('/api/notes/get')&&window.__slowGet) return later(window.__slowGet,u,o);
+    if(url.includes('/api/notes/rename')){ if(window.__failRename) return Promise.resolve(new Response(JSON.stringify({ok:true,renamed:true,from:'x',note:null}),{status:200,headers:{'Content-Type':'application/json'}})); if(window.__slowRename) return later(window.__slowRename,u,o); }
     return f(u,o); }; return true; })()"""
+# (__failRename answers the rename with something the page cannot use, so its handling throws)
+# the 2 s autosave timer never fires (every other timer does): a test of what writes at once then cannot be a race with the clock
+NO_TIMER = """(()=>{ const st=window.setTimeout.bind(window); window.setTimeout=(fn,ms,...a)=>(ms===2000&&String(fn).includes('noteFlush'))?0:st(fn,ms,...a); return true; })()"""
+# a reload with typing that could not be saved asks the browser to confirm (the leave guard, which would block the test's reload):
+# a test that leaves a failed save behind says the state is settled before it reloads
+NO_GUARD = "(()=>{ noteSave.value={state:'saved'}; return true; })()"
 CLIP = "(()=>{ window.__clip=null; Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async t=>{ window.__clip=t; }}}); return true; })()"
 
 
@@ -50,6 +60,7 @@ class AutosavePage(LiveBrowserCase):
         return [e for e in self.log()[since:] if e.get("op") == "edit"]
 
     def wait_text(self, f, text, secs=10):
+        """Seconds until `text` is in the file, counted from the call."""
         t0 = time.monotonic()
         while time.monotonic() - t0 < secs:
             if f.is_file() and text in f.read_text():
@@ -69,10 +80,18 @@ class AutosavePage(LiveBrowserCase):
         b = self.b
         if how == "esc":
             b.key("Escape")
+        elif how == "body":                                                           # focus on nothing (a click on the note's blank space)
+            b.eval("document.activeElement.blur()")
+            self.assertEqual(b.eval("document.activeElement===document.body"), True)
+            b.key("Escape")
         elif how == "scrim":
             b.eval("document.querySelector('[data-nscrim]').click()")
         else:
             b.click("#noteExpand")
+
+    def reload_clean(self):
+        self.b.eval(NO_GUARD)
+        self.b.reload("typeof go==='function' && LIVE")
 
     def dialog_open(self):
         return self.b.eval("document.getElementById('noteLeaveDlg').open")
@@ -85,13 +104,14 @@ class AutosavePage(LiveBrowserCase):
         n = len(self.log())
         b.eval(SPY)
         self.type_end("first words")
-        b.pump(1.0)
-        self.assertNotIn("first words", f.read_text(), "1 s after the last key: not yet")
+        b.type(" and more")                                                           # one burst: the save follows its last key
+        t_key = time.monotonic()
+        self.assertNotIn("first words", f.read_text(), "straight after the last key: not yet")
         self.assertEqual(self.line(), "Saving…")
-        self.type_end(" and more")                                                    # a further key moves the save
-        dt = self.wait_text(f, "first words and more", 8)
-        self.assertGreater(dt, 1.5, "about 2 s after the last key")
-        b.wait("noteSave.value.state==='saved'", 10)
+        self.wait_text(f, "first words and more", 15)
+        dt = time.monotonic() - t_key
+        self.assertGreater(dt, 1.6, "about 2 s after the last key, never sooner (a slow machine only makes it later)")
+        b.wait("noteSave.value.state==='saved'", 15)
         self.assertRegex(self.line(), r"^Saved \d\d:\d\d$")
         self.assertEqual(len(b.eval("window.__saves")), 1, "one save for the whole burst")
         for _ in range(40):
@@ -127,21 +147,23 @@ class AutosavePage(LiveBrowserCase):
         self.make("Leave B")
         fb = self.notes_dir() / "Leave B.md"
         b.eval(SPY)
+        b.eval(NO_TIMER)                                                              # the 2 s timer never fires: only these can have written
         self.type_end("typed in b")                                                   # leaving the page
         b.eval("go('today')")
-        self.assertLess(self.wait_text(fb, "typed in b", 4), 1.7, "written by leaving, not by the 2 s timer")
+        self.wait_text(fb, "typed in b", 10)
         b.eval("go('notes','ABC')")
         b.wait("noteCur.value&&!!document.querySelector('.nbody.ProseMirror')", 10)
-        b.eval(f"openNote({json.dumps([x['path'] for x in self.listing() if x['title'] == 'Leave A'][0])})")
+        path_a = [x["path"] for x in self.listing() if x["title"] == "Leave A"][0]
+        b.eval(f"openNote({json.dumps(path_a)})")
         b.wait("noteCur.value&&noteCur.value.note.title==='Leave A'&&!!document.querySelector('.nbody.ProseMirror')", 10)
         self.type_end("typed in a")                                                   # switching notes
         path_b = [x["path"] for x in self.listing() if x["title"] == "Leave B"][0]
         b.eval(f"openNote({json.dumps(path_b)})")
-        self.assertLess(self.wait_text(fa, "typed in a", 4), 1.7, "written by switching, not by the timer")
+        self.wait_text(fa, "typed in a", 10)
         b.wait("noteCur.value&&noteCur.value.note.title==='Leave B'&&!!document.querySelector('.nbody.ProseMirror')", 10)
         self.type_end(" and pinned")                                                  # a property toggle
         b.eval("noteMeta({pinned:true},true)")
-        self.assertLess(self.wait_text(fb, "pinned: true", 4), 1.7, "written by the toggle, not by the timer")
+        self.wait_text(fb, "pinned: true", 10)
         self.assertIn("and pinned", fb.read_text())
 
     def listing(self):
@@ -284,20 +306,19 @@ class AutosavePage(LiveBrowserCase):
     # ---- closing rules ----
     def test_esc_the_scrim_and_the_leave_icon_save_then_close_with_no_question(self):
         b = self.b
-        for how in ("esc", "scrim", "icon"):
+        for how in ("esc", "scrim", "icon", "body"):
             with self.subTest(how=how):
                 title = f"Close by {how}"
                 self.make(title)
+                b.eval(NO_TIMER)
                 f = self.notes_dir() / f"{title}.md"
                 self.focus_on()
                 self.assertEqual(b.eval("document.querySelector('.ndoc').getAttribute('role')"), "dialog")
                 self.assertEqual(b.eval("document.querySelector('.ndoc').getAttribute('aria-modal')"), "true")
                 self.type_end(f"typed for {how}")
-                t0 = time.monotonic()
-                self.trigger(how)
-                b.wait("!noteFocus.value", 8)
+                self.trigger(how)                                                     # (the 2 s timer is off: closing is what wrote it)
+                b.wait("!noteFocus.value", 15)
                 self.assertFalse(self.dialog_open(), "saved: no prompt")
-                self.assertLess(time.monotonic() - t0, 1.7, "flushed by closing, not by the 2 s timer")
                 self.assertIn(f"typed for {how}", f.read_text())
                 self.assertEqual(b.eval("noteSave.value.state"), "saved")
                 self.assertEqual(b.eval("document.activeElement.id"), "noteExpand", "focus is back on the control that opened it")
@@ -320,7 +341,7 @@ class AutosavePage(LiveBrowserCase):
 
     def test_a_failing_save_keeps_the_note_and_asks_with_three_buttons(self):
         b = self.b
-        for how in ("esc", "scrim", "icon"):
+        for how in ("esc", "scrim", "icon", "body"):
             with self.subTest(how=how):
                 f, orig = self.failing(f"Conflict {how}", how)
                 self.assertEqual(b.eval("noteFocus.value"), True, "the note stays open")
@@ -331,7 +352,7 @@ class AutosavePage(LiveBrowserCase):
                 self.assertIn("my unsaved words", b.eval("document.querySelector('.nbody').textContent"), "the typing is kept")
                 self.assertNotIn("my unsaved words", f.read_text())
                 self.assertEqual(b.eval("document.activeElement.hasAttribute('data-nlkeep')"), True)
-                b.reload("typeof go==='function' && LIVE")                            # (the page goes with its unsaved note; the next case starts clean)
+                self.reload_clean()                                                   # (the page goes with its unsaved note; the next case starts clean)
 
     def test_keep_editing_and_esc_in_the_dialog_go_back_to_the_note(self):
         b = self.b
@@ -366,9 +387,11 @@ class AutosavePage(LiveBrowserCase):
         b.wait("window.__saves.length>=1&&document.getElementById('noteLeaveDlg').open&&noteSave.value.state==='conflict'", 8)
         self.assertEqual(b.eval("noteFocus.value"), True)
         f.write_text(orig)                                                            # put the file back as it was opened
-        b.click("[data-nlretry]")
+        b.eval("(()=>{ const x=document.querySelector('[data-nlretry]'); x.click(); x.click(); return true; })()")      # a double click
         b.wait("!noteFocus.value", 8)
+        b.pump(0.5)
         self.assertFalse(self.dialog_open())
+        self.assertEqual(b.eval("document.activeElement.id"), "noteExpand", "left once: focus is on the opener, not the title")
         self.assertIn("my unsaved words", f.read_text())
         self.assertEqual(b.eval("noteSave.value.state"), "saved")
 
@@ -403,6 +426,285 @@ class AutosavePage(LiveBrowserCase):
         b.click("#noteExpand")                                                        # works now: closes with no question
         b.wait("!noteFocus.value", 8)
         self.assertIn("held text", f.read_text())
+
+    # ---- review round 1 (#119 page half) ----
+    def test_a_title_rename_does_not_remount_the_editor_or_lose_the_next_keys(self):
+        b = self.b
+        for i, delay in enumerate((0.1, 0.3, 0.8)):
+            with self.subTest(delay=delay):
+                title = f"Rename {i}"
+                self.make(title)
+                old, new = self.notes_dir() / f"{title}.md", self.notes_dir() / f"Renamed {i}.md"
+                b.eval(SPY)
+                b.eval("window.__slowRename=600")                                     # the rename round trip is wide: typing lands in it
+                b.eval(f"(()=>{{ const i=document.getElementById('noteTitle'); i.focus(); i.value='Renamed {i}'; i.dispatchEvent(new Event('input',{{bubbles:true}})); return true; }})()")
+                self.wait_text(old, f"title: Renamed {i}", 15)
+                b.eval("window.__el=document.querySelector('.nbody'); window.__pm=window.__el.cxed.editor.view; true")
+                b.click(".nbody")                                                     # leaving the title field renames the file
+                b.pump(delay)
+                b.type("typed after")
+
+                def same():
+                    return b.eval("document.querySelector('.nbody')===window.__el&&window.__el.cxed.editor.view===window.__pm&&document.activeElement===window.__el&&"
+                                  "window.__el.textContent.includes('typed after')")
+                self.assertTrue(same(), "right after typing")
+                self.wait_text(new, "typed after", 20)
+                self.assertTrue(same(), "after the rename and the save")
+                b.pump(0.8)
+                self.assertTrue(same(), "and a moment later")
+                self.assertFalse(old.exists())
+
+    def test_esc_works_when_focus_is_on_the_page_body(self):
+        b = self.b
+        self.make("Body focus")
+        self.focus_on()
+        b.eval("document.activeElement.blur()")
+        b.key("Escape")
+        b.wait("!noteFocus.value", 10)                                                # saved: closes (the same path as with focus in the note)
+        self.make("Body focus failing")
+        f = self.notes_dir() / "Body focus failing.md"
+        orig = f.read_text()
+        self.focus_on()
+        f.write_text(orig + "\nchanged elsewhere\n")
+        self.type_end("held")
+        b.eval("document.activeElement.blur()")
+        b.key("Escape")
+        b.wait("document.getElementById('noteLeaveDlg').open", 10)                    # failed: asks
+        self.assertEqual(b.eval("noteFocus.value"), True)
+
+    def test_esc_while_an_input_method_is_composing_does_not_leave(self):
+        b = self.b
+        self.make("Composing")
+        self.focus_on()
+        for target in ("document.querySelector('.nbody')", "document.body"):
+            for init in ("{key:'Escape',isComposing:true}", "{key:'Escape',keyCode:229}"):
+                if target == "document.body":
+                    b.eval("document.activeElement.blur()")
+                b.eval(f"{target}.dispatchEvent(new KeyboardEvent('keydown',{{...{init},bubbles:true,cancelable:true}}))")
+                b.pump(0.3)
+                self.assertEqual(b.eval("noteFocus.value"), True, f"{init} on {target}")
+                self.assertFalse(self.dialog_open())
+        b.eval("document.querySelector('.nbody').cxed.focus()")
+        b.key("Escape")                                                               # a real Esc still leaves
+        b.wait("!noteFocus.value", 10)
+
+    def test_typing_while_another_note_is_opening_is_not_lost(self):
+        b = self.b
+        self.make("Get A")
+        fa = self.notes_dir() / "Get A.md"
+        self.make("Get B")
+        path_a = [x["path"] for x in self.listing() if x["title"] == "Get A"][0]
+        path_b = [x["path"] for x in self.listing() if x["title"] == "Get B"][0]
+        b.eval(f"openNote({json.dumps(path_a)})")
+        b.wait("noteCur.value&&noteCur.value.note.title==='Get A'&&!!document.querySelector('.nbody.ProseMirror')", 10)
+        b.eval(SPY)
+        b.eval("window.__slowGet=1500")
+        b.eval(f"window.__r=undefined; openNote({json.dumps(path_b)}).then(v=>{{ window.__r=v; }}); true")
+        b.pump(0.3)
+        self.type_end("LATE words")                                                   # while B is still being fetched
+        b.wait("window.__r!==undefined", 15)
+        self.assertEqual(b.eval("window.__r"), False, "the switch is given up")
+        self.assertEqual(b.eval("noteCur.value.note.title"), "Get A")
+        self.assertIn("typed in this note", b.eval("notesMsg.value"))
+        self.assertIn("LATE words", b.eval("document.querySelector('.nbody').textContent"))
+        self.wait_text(fa, "LATE words", 15)                                          # and it is saved
+
+    def test_typing_while_the_file_is_renamed_is_saved_before_the_flush_returns(self):
+        b = self.b
+        self.make("Slow rename")
+        old, new = self.notes_dir() / "Slow rename.md", self.notes_dir() / "Quick rename.md"
+        b.eval(SPY)
+        b.eval("window.__slowRename=1500")
+        b.eval("(()=>{ const i=document.getElementById('noteTitle'); i.value='Quick rename'; i.dispatchEvent(new Event('input',{bubbles:true})); return true; })()")
+        b.eval("window.__fr=undefined; noteFlush(true).then(v=>{ window.__fr=v; }); true")
+        self.wait_text(old, "title: Quick rename", 15)                               # saved; the rename is now in flight
+        b.click(".nbody")
+        b.type("during the rename")
+        b.wait("window.__fr!==undefined", 20)
+        self.assertEqual(b.eval("window.__fr"), True)
+        self.assertEqual(b.eval("noteDirty()"), False, "true means everything typed is saved")
+        self.assertIn("during the rename", new.read_text())
+
+    def test_a_rename_that_fails_does_not_hang_later_saves(self):
+        b = self.b
+        self.make("Fails to rename")
+        f = self.notes_dir() / "Fails to rename.md"
+        b.eval(SPY)
+        b.eval("window.__failRename=true")
+        b.eval("(()=>{ const i=document.getElementById('noteTitle'); i.value='Other name'; i.dispatchEvent(new Event('input',{bubbles:true})); return true; })()")
+        b.eval("window.__fr=undefined; noteFlush(true).then(v=>{ window.__fr=v; }); true")
+        b.wait("window.__fr!==undefined", 15)
+        self.type_end("still saves")
+        self.wait_text(f, "still saves", 15)
+        b.wait("noteSave.value.state==='saved'", 15)
+
+    def test_a_late_save_result_does_not_touch_the_note_switched_to(self):
+        b = self.b
+        self.make("Late A")
+        fa = self.notes_dir() / "Late A.md"
+        self.make("Late B")
+        path_a = [x["path"] for x in self.listing() if x["title"] == "Late A"][0]
+        b.eval(f"openNote({json.dumps(path_a)})")
+        b.wait("noteCur.value&&noteCur.value.note.title==='Late A'&&!!document.querySelector('.nbody.ProseMirror')", 10)
+        b.eval(SPY)
+        b.eval("window.__slow=1500")
+        self.type_end("for a only")
+        b.wait("noteSave.value.state==='saving'", 15)
+        path_b = [x["path"] for x in self.listing() if x["title"] == "Late B"][0]
+        b.eval(f"openNote({json.dumps(path_b)})")                                     # waits for A's save, then opens B
+        b.wait("noteCur.value&&noteCur.value.note.title==='Late B'&&!!document.querySelector('.nbody.ProseMirror')", 15)
+        self.assertIn("for a only", fa.read_text())
+        self.assertNotIn("for a only", b.eval("document.querySelector('.nbody').textContent"))
+        self.assertEqual(b.eval("noteSave.value.state"), "", "B shows no save state of A's")
+        self.assertEqual(b.eval("noteDirty()"), False)
+
+    def test_a_rename_then_a_save_goes_to_the_new_file_with_a_backup_of_its_own(self):
+        b = self.b
+        self.make("Before rename")
+        n = len(self.log())
+        old, new = self.notes_dir() / "Before rename.md", self.notes_dir() / "After rename.md"
+        b.eval(SPY)
+        self.type_end("one")
+        self.wait_text(old, "one", 15)
+        b.wait("noteSave.value.state==='saved'", 15)
+        b.eval("(()=>{ const i=document.getElementById('noteTitle'); i.value='After rename'; i.dispatchEvent(new Event('input',{bubbles:true})); return true; })()")
+        b.eval("noteFlush(true)")
+        for _ in range(150):
+            if new.is_file() and not old.exists():
+                break
+            b.pump(0.1)
+        self.assertTrue(new.is_file())
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.type(" two")
+        self.wait_text(new, "two", 15)
+        saves = b.eval("window.__saves")
+        self.assertTrue(saves[-1]["path"].endswith("After rename.md"), saves[-1]["path"])
+        self.assertRegex(saves[-1]["session"], r"^[A-Za-z0-9-]{8,64}$")
+        for _ in range(40):
+            ed = self.edits(n)
+            if ed and ed[-1]["path"].endswith("After rename.md"):
+                break
+            b.pump(0.1)
+        ed = self.edits(n)
+        self.assertTrue(ed[-1]["path"].endswith("After rename.md"))
+        self.assertNotEqual(ed[-1]["backup"], ed[0]["backup"], "the renamed file's first save has a backup of its own")
+
+    def test_closing_a_note_that_could_not_be_saved_keeps_it_unless_the_text_was_copied(self):
+        b = self.b
+        self.make("Closing")
+        b.eval(SPY)
+        b.eval(CLIP)
+        b.eval("window.__fail={ok:false,message:'Not saved: nope.'}")
+        self.type_end("keep this")
+        b.wait("noteSave.value.state==='error'", 15)
+        self.assertEqual(b.eval("closeNote()"), False)
+        self.assertEqual(b.eval("noteCur.value.note.title"), "Closing", "still open")
+        b.click("[data-ncopy]")                                                       # copied out: the typing is safe
+        b.wait("window.__clip!==null", 5)
+        self.assertIn("keep this", b.eval("window.__clip"))
+        self.assertEqual(b.eval("closeNote()"), True)
+        self.assertEqual(b.eval("noteCur.value"), None)
+
+    def test_a_note_that_can_never_save_can_be_left_after_copying_or_discarding(self):
+        b = self.b
+        self.make("Stuck other")
+        other = b.eval("noteCur.value.path")
+        self.make("Stuck")
+        f = self.notes_dir() / "Stuck.md"
+        orig = f.read_text()
+        b.eval(SPY)
+        b.eval(CLIP)
+        b.eval("window.__fail={ok:false,message:'Not saved: the disk said no.'}")
+        self.type_end("irreplaceable")
+        b.wait("noteSave.value.state==='error'", 15)
+        self.assertEqual(b.eval(f"openNote({json.dumps(other)})"), False, "refused while the text is at risk")
+        b.click("[data-ncopy]")                                                       # a successful copy releases it
+        b.wait("window.__clip!==null", 5)
+        self.assertEqual(b.eval(f"openNote({json.dumps(other)})"), True)
+        self.assertEqual(b.eval("noteCur.value.note.title"), "Stuck other")
+        self.assertNotIn("irreplaceable", f.read_text())
+        # a confirmed discard, from the banner: a question first, Esc or Cancel keeps the text
+        stuck = [x["path"] for x in self.listing() if x["title"] == "Stuck"][0]
+        b.eval("window.__fail=null")
+        b.eval(f"openNote({json.dumps(stuck)})")
+        b.wait("noteCur.value&&noteCur.value.note.title==='Stuck'&&!!document.querySelector('.nbody.ProseMirror')", 10)
+        b.eval("window.__fail={ok:false,message:'Not saved: the disk said no.'}")
+        self.type_end("second text")
+        b.wait("noteSave.value.state==='error'", 15)
+        b.click("[data-ndiscard]")
+        b.wait("document.getElementById('noteLeaveDlg').open&&document.querySelector('#noteLeaveDlg [data-nlstage=discard]')", 5)
+        b.key("Escape")
+        b.wait("!document.getElementById('noteLeaveDlg').open", 5)
+        self.assertIn("second text", b.eval("document.querySelector('.nbody').textContent"), "Esc did not discard")
+        b.click("[data-ndiscard]")
+        b.wait("document.querySelector('#noteLeaveDlg [data-nlstage=discard]')", 5)
+        b.eval("window.__fail=null")
+        b.click("[data-nldiscard]")
+        b.wait("!document.getElementById('noteLeaveDlg').open&&noteSave.value.state===''", 10)
+        self.assertNotIn("second text", b.eval("document.querySelector('.nbody').textContent"), "the file's version is back")
+        self.assertEqual(b.eval(f"openNote({json.dumps(other)})"), True)
+        self.assertEqual(f.read_text(), orig)
+
+    def test_the_refusal_is_visible_in_focus_mode_and_the_dialog_offers_the_files_version_and_a_discard(self):
+        b = self.b
+        self.make("Visible")
+        other = b.eval("noteCur.value.path")
+        self.make("Visible conflict")
+        f = self.notes_dir() / "Visible conflict.md"
+        orig = f.read_text()
+        b.eval(SPY)
+        self.focus_on()
+        f.write_text(orig + "\nchanged elsewhere\n")
+        self.type_end("my words")
+        self.assertEqual(b.eval(f"openNote({json.dumps(other)})"), False)             # e.g. a [[link]] click in the lifted note
+        b.wait("!!document.querySelector('.ndoc.nfocus [data-nfocusmsg]')", 5)
+        r = b.eval("(()=>{ const m=document.querySelector('.ndoc.nfocus [data-nfocusmsg]'), r=m.getBoundingClientRect(); const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);"
+                   " return [m.textContent, !!top&&m.contains(top)]; })()")
+        self.assertIn("stays open", r[0])
+        self.assertTrue(r[1], "the message is not behind the scrim")
+        b.key("Escape")
+        b.wait("document.getElementById('noteLeaveDlg').open", 10)
+        self.assertEqual(b.eval("[...document.querySelectorAll('#noteLeaveDlg .nlfoot button')].length"), 3, "still the three buttons")
+        self.assertEqual(b.eval("!!document.querySelector('#noteLeaveDlg [data-nlopen]')&&!!document.querySelector('#noteLeaveDlg [data-nlgiveup]')"), True)
+        b.click("#noteLeaveDlg [data-nlopen]")                                        # the file's version, from the dialog
+        b.wait("!document.getElementById('noteLeaveDlg').open&&noteSave.value.state===''", 10)
+        self.assertIn("changed elsewhere", b.eval("document.querySelector('.nbody').textContent"))
+        self.assertNotIn("my words", b.eval("document.querySelector('.nbody').textContent"))
+        self.assertEqual(b.eval("noteFocus.value"), True)
+
+    def test_the_page_asks_before_closing_while_typing_could_not_be_saved(self):
+        b = self.b
+        self.make("Unload")
+        b.eval(SPY)
+        ask = "(()=>{ const e=new Event('beforeunload',{cancelable:true}); window.dispatchEvent(e); return e.defaultPrevented; })()"
+        self.type_end("fine")
+        b.wait("noteSave.value.state==='saved'", 15)
+        self.assertFalse(b.eval(ask), "saved: leaving is not stopped")
+        b.eval("window.__fail={ok:false,message:'Not saved: nope.'}")
+        self.type_end(" more")
+        b.wait("noteSave.value.state==='error'", 15)
+        self.assertTrue(b.eval(ask), "typing that could not be saved: the browser asks")
+        b.eval("window.__fail=null")
+        b.eval("noteFlush()")
+        b.wait("noteSave.value.state==='saved'", 15)
+        self.assertFalse(b.eval(ask))
+
+    def test_a_big_note_leaving_the_page_is_saved_without_a_keepalive_request(self):
+        b = self.b
+        self.make("Big")
+        f = self.notes_dir() / "Big.md"
+        b.eval(SPY)
+        b.eval(NO_TIMER)
+        self.type_end("start ")
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.insertContent('x'.repeat(100000))")
+        b.wait("noteDirty()", 5)
+        b.eval("noteFlushOnExit()")
+        self.wait_text(f, "x" * 1000, 20)
+        last = b.eval("window.__saves")[-1]
+        self.assertFalse(last["keepalive"], "over about 60 KB a keepalive request would be refused")
+        self.assertGreater(len(last["body"]), 100000)
+        b.wait("!noteDirty()", 10)
+        self.assertEqual(b.eval("window.__rej"), 0, "no unhandled rejection")
 
     # ---- Esc layers, focus, the live element ----
     def test_esc_closes_the_topmost_overlay_first_then_leaves_focus_mode(self):
