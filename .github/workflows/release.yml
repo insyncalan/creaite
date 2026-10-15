@@ -1,5 +1,5 @@
-# creaite release zip (BL-36). Publishing a release on GitHub (tag vX.Y.Z, matching VERSION) runs the tests,
-# builds creaite-X.Y.Z.zip with dev/tools/build_release.py and attaches it to the release.
+# creaite release zip (BL-36). Publishing a release on GitHub (tag vX.Y.Z, matching VERSION) runs the tests (unless the
+# Tests workflow already passed the whole suite on this exact commit, #89), builds creaite-X.Y.Z.zip with dev/tools/build_release.py and attaches it to the release.
 # If anything fails, no zip is attached and this run shows why (Actions tab).
 name: Release zip
 
@@ -30,7 +30,28 @@ jobs:
         run: |
           test "$TAG" = "v$(tr -d '[:space:]' < VERSION)" || { echo "Tag $TAG doesn't match VERSION $(cat VERSION)"; exit 1; }
 
+      - name: Look for a passed Tests run on this commit
+        # #89: the suite takes about 20 minutes and a release is cut from a commit the Tests workflow has usually passed
+        # already. A successful run of tests.yml for the exact commit, named plain "Tests" (a hand-started run of a few
+        # files is named "Tests (files)" by run-name, and an older run is named after its commit message: neither
+        # counts), means the suite is not repeated. Listing a public repository's runs needs no `actions: read` and no
+        # change to this workflow's permissions. If the lookup fails for any reason, or finds nothing, the suite runs.
+        id: reuse
+        run: |
+          sha="$(git rev-parse HEAD)"
+          found=false
+          if runs="$(gh api "repos/${{ github.repository }}/actions/workflows/tests.yml/runs?head_sha=$sha&status=success&per_page=100" \
+                       --jq '[.workflow_runs[] | select(.head_sha == "'"$sha"'" and .conclusion == "success" and .display_title == "Tests")] | length' 2>&1)" \
+             && [ "$runs" -ge 1 ] 2>/dev/null; then
+            found=true
+            echo "A passed Tests run exists for $sha ($runs): the suite is not repeated."
+          else
+            echo "No usable passed Tests run for $sha (lookup said: $runs): the suite runs."
+          fi
+          echo "found=$found" >> "$GITHUB_OUTPUT"
+
       - name: Find Chrome
+        if: steps.reuse.outputs.found != 'true'
         # The browser tests find Chrome through dev/tools/cdp.py chrome_path(): CREAITE_CHROME, then the PATH, then macOS.
         run: |
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
@@ -39,9 +60,10 @@ jobs:
           "$CHROME" --version
 
       - name: Tests
+        if: steps.reuse.outputs.found != 'true'
         # All test files, several at once (dev/tools/run_tests.py): each prints OK or FAIL with its time, and a failing
         # file's output is printed at the end. Each file uses its own throwaway vault, Chrome profile and port.
-        run: python3 dev/tools/run_tests.py -j 4
+        run: python3 dev/tools/run_tests.py -j 4 --max-fail 8
 
       - name: Build the zip
         run: |

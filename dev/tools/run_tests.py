@@ -1,7 +1,7 @@
 """Run creaite's test files in parallel and report each one (development only).
 
 Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--deep] [--list] [--flaky] [--clean]
-                                    [--repeat N [--stress N]] [--file-timeout S] [--rerun-max N] [name ...]
+                                    [--repeat N [--stress N]] [--file-timeout S] [--rerun-max N] [--shard I/N] [name ...]
   name       only the test files whose name contains it (e.g. "people" runs test_people.py and test_people_dashboard.py)
   -j N       how many quick-tier files run at once (default: half the processor cores, at least 2)
   --quick    only the quick tier: the files that never start Chrome (BL-246)
@@ -26,6 +26,11 @@ Run: python3 dev/tools/run_tests.py [-j N] [--quick] [--changed [BASE]] [--deep]
              stop a test file that runs longer than S seconds (default 900, or CREAITE_FILE_TIMEOUT; 0: never): it fails
              as TIMEOUT, and it and everything it started (its live servers, its Chromes) are stopped through its own
              process group, never by name. The slowest file takes about 290 s on a CI runner, so 900 s is three times that
+  --shard I/N
+             run only shard I of N (1 to N) of the files chosen by the other options (CI #89: the Linux jobs run three each).
+             Every file is in exactly one shard. They are balanced greedily, slowest first, by the times in
+             dev/tools/shard_times.txt (read from a real run; a file it doesn't list counts as 30 s), never by this machine's
+             last run, so every machine, and every CI job, computes the same split. Print one with --list.
   --max-fail N
              once N files have failed, start no more (the ones running finish) and report: a machine where everything
              fails says so in minutes, not at the job's time limit (default 0: no limit; CI passes it)
@@ -69,6 +74,9 @@ from pathlib import Path
 
 TESTS = Path(__file__).resolve().parents[1] / "tests"
 TIMES = TESTS / ".durations"          # last run's time per file, so the slowest start first (git-ignored)
+LAST_FAILED = TESTS / ".last-failed"  # the files that failed in their last run, one per line: they start first next time (git-ignored)
+SHARD_TIMES = Path(__file__).resolve().parent / "shard_times.txt" # "test_x.py seconds" from a real CI run (committed), for --shard
+SHARD_DEFAULT = 30                    # seconds assumed for a test file the times don't list
 FLAKY = TESTS / ".flaky.jsonl"        # one line each time a file failed under load and passed alone (git-ignored)
 REPO = TESTS.parents[1]
 EVERYTHING = ("VERSION", "system/creaite-rules.md", ".claude/", "system/config/")   # a change here can reach any test
@@ -78,6 +86,67 @@ TIMED_OUT = -1000                     # the exit code a file gets when it was st
 CI = bool(os.environ.get("GITHUB_ACTIONS"))   # on a runner, print a failure's output as it happens (folded), not only at the end
 BULK_COPIER = {"test_tracker"}        # its Vault copies every script; that is having them, not using them
 TEMPLATE_USERS = ("build_dashboard", "docx_tools", "report", "prep_page", "live_server", "minutes")   # read system/templates/
+
+
+# ===== #89 (CI shards) =====
+def shard_arg(text):
+    """'I/N' as (I, N) with 1 <= I <= N, or an argparse error."""
+    m = re.fullmatch(r"(\d+)/(\d+)", text.strip())
+    if not m or not 1 <= int(m.group(1)) <= int(m.group(2)):
+        raise argparse.ArgumentTypeError(f"{text!r}: expected I/N with 1 <= I <= N (for example 2/3)")
+    return int(m.group(1)), int(m.group(2))
+
+
+def shard_weights():
+    """{test file name: seconds} from dev/tools/shard_times.txt (empty when the file is missing)."""
+    out = {}
+    if SHARD_TIMES.exists():
+        for ln in SHARD_TIMES.read_text(encoding="utf-8").splitlines():
+            name, _, secs = ln.partition(" ")
+            if name and secs.strip().isdigit():
+                out[name] = int(secs)
+    return out
+
+
+def shard(files, index, count, weights=None):
+    """The files of shard `index` (1-based) of `count`. Greedy, slowest first, each to the lightest shard so far; ties go
+    to the lowest shard and the name, so the split depends only on the names and the weights. Every file is in exactly one
+    shard, and the same file list gives the same split on every machine."""
+    weights = shard_weights() if weights is None else weights
+    load, mine = [0] * count, []
+    for f in sorted(files, key=lambda f: (-weights.get(f.name, SHARD_DEFAULT), f.name)):
+        k = load.index(min(load))
+        load[k] += weights.get(f.name, SHARD_DEFAULT)
+        if k == index - 1:
+            mine.append(f)
+    return sorted(mine, key=lambda f: f.name)
+
+
+def apply_shard(files, spec):
+    """`files` narrowed to shard `spec` ((I, N) or None for all), saying so."""
+    if not spec:
+        return files
+    mine = shard(files, *spec)
+    print(f"--shard {spec[0]}/{spec[1]}: {len(mine)} of {len(files)} test files.", flush=True)
+    return mine
+
+
+def last_failed():
+    """The set of file names that failed in their last run."""
+    return set(LAST_FAILED.read_text(encoding="utf-8").split()) if LAST_FAILED.exists() else set()
+
+
+def remember_failed(ran, failed):
+    """Keep the failed file names: those of the files just run replaced by `failed`, the others kept (a partial run
+    doesn't forget a failure it didn't re-check)."""
+    keep = (last_failed() - set(ran)) | set(failed)
+    try:
+        LAST_FAILED.write_text("".join(f"{n}\n" for n in sorted(keep)), encoding="utf-8")
+    except OSError:
+        pass                              # a read-only checkout loses only the ordering
+
+
+# ===== end #89 =====
 
 
 # ===== BL-172 (sprint-polish-2) =====
@@ -318,13 +387,15 @@ def rerun_alone(failed, runner, most=None):
 
 
 def slowest_first(files):
-    """Sort `files` in place, slowest first by the last run's times (unknown files count as slow); return those times."""
+    """Sort `files` in place: the files that failed last time first, then slowest first by the last run's times (unknown
+    files count as slow); return those times."""
     last = {}
     if TIMES.exists():
         for ln in TIMES.read_text(encoding="utf-8").splitlines():
             name, _, secs = ln.partition(" ")
             last[name] = float(secs or 0)
-    files.sort(key=lambda f: -last.get(f.name, 1e9))
+    bad = last_failed()
+    files.sort(key=lambda f: (f.name not in bad, -last.get(f.name, 1e9)))
     return last
 
 
@@ -424,6 +495,7 @@ def main(argv):
     ap.add_argument("--stress", type=int, default=0, metavar="N")
     ap.add_argument("--file-timeout", type=float, default=FILE_TIMEOUT, metavar="S")
     ap.add_argument("--rerun-max", type=int, default=RERUN_MAX, metavar="N")
+    ap.add_argument("--shard", type=shard_arg, metavar="I/N")
     ap.add_argument("--max-fail", type=int, default=0, metavar="N")
     ap.add_argument("names", nargs="*")
     a = ap.parse_args(argv)
@@ -435,6 +507,7 @@ def main(argv):
     if a.changed:
         files, why = select(files, a.changed, a.deep)
         print(f"--changed: {len(files)} of the test files ({why}).", flush=True)
+    files = apply_shard(files, a.shard)
     if not files:
         print("No test files to run." if a.changed else "No test files match.")
         return 0 if a.changed else 1
@@ -493,6 +566,7 @@ def run_all(files, jobs, copies=0, stress=0, timeout=FILE_TIMEOUT, rerun_max=Non
     try:
         took, failed, leaks = execute(files, jobs, runner, max_fail)
         TIMES.write_text("".join(f"{k} {v:.1f}\n" for k, v in sorted({**last, **took}.items())), encoding="utf-8")
+        remember_failed([f.name for f in files], [n for n, _ in failed])
         failed, alone = rerun_alone(failed, runner, rerun_max)
     except KeyboardInterrupt:
         runner.stop()
