@@ -8,7 +8,7 @@
    them (the data block's kind, audience, client, date, state "draft" or "approved"). Today it reads `D.reports`, an optional list
    of {project, kind: "weekly"|"client", client, date, state, path, edited, health, differs, sections_hidden}; when none is
    there, a report's state comes from its filed file, or a draft waiting in Review. Also stubbed: more than one client per
-   project (the cockpit's "Client / partner" line is the one client), and the editor itself (components/reporting/ReportEditorStub.jsx).
+   project (the cockpit's "Client / partner" line is the one client), and the editor, which is P6's weekly view and P8's client view, linked by address.
 
    The week is the reminder's: the last weekly-report day (Friday) at or before today, from its time on that day. */
 import { signal } from "@preact/signals";
@@ -127,10 +127,13 @@ export function reportsBadge() {
   setRailCount("reports", n, `${n} project${n === 1 ? "" : "s"} with a report to check or a client report due`);
 }
 
-/** The project whose reporting space is open, the week and the editor view ("", "internal", "client" or "side"). */
+/** The project whose reporting space is open, and the week. */
 export const spaceCode = signal("");
 export const spaceWeek = signal("");
-export const spaceEdit = signal(/** @type {""|"internal"|"client"|"side"} */ (""));
+
+/** P6's weekly view (origin/v210-p6-weekly; not on this base, so the address does nothing until P6 merges): #weekly=<code>&week=<Friday>.
+    @param {string} code @param {string} week */
+export const weeklyHref = (code, week) => `#weekly=${code}&week=${week}`;
 
 /** P8's client view (origin/v210-p8-client; not on this base, so the address does nothing until P8 merges): #client-report=CODE/week/client.
     @param {string} code @param {string} week @param {string} client */
@@ -139,14 +142,14 @@ export const clientReportHref = (code, week, client) => `#client-report=${code}/
 /** @param {string} week */
 export const weekLabel = week => week.split("-").reverse().join("-");
 
-/** The address of a project's reporting space. @param {string} code @param {string} [week] @param {string} [edit] */
-export function reportingHref(code, week, edit) {
-  return `#reporting=${code}${week ? `&w=${week}` : ""}${edit ? `&e=${edit}` : ""}`;
+/** The address of a project's reporting space. @param {string} code @param {string} [week] */
+export function reportingHref(code, week) {
+  return `#reporting=${code}${week ? `&w=${week}` : ""}`;
 }
-/** The state of "#reporting=ABC&w=2026-10-09&e=client", or null. @param {string} hash @param {(c: string) => boolean} known */
+/** The state of "#reporting=ABC&w=2026-10-09", or null (an older address's &e= is read and dropped). @param {string} hash @param {(c: string) => boolean} known */
 export function parseReporting(hash, known) {
   const m = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
   if (!m || !known(m[1])) return null;
   const kv = Object.fromEntries(m[2].split("&").filter(Boolean).map(x => x.split("=")));
-  return { code: m[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", edit: ["internal", "client", "side"].includes(kv.e) ? kv.e : "" };
+  return { code: m[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "" };
 }

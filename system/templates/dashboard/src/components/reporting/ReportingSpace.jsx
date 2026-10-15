@@ -7,18 +7,17 @@
 import { render } from "preact";
 import { Chip } from "../Chip.jsx";
 import { Icon } from "../Icon.jsx";
-import { ReportEditorStub } from "./ReportEditorStub.jsx";
 import { $ } from "../../core/dom.js";
 import { go, navWrite } from "../../core/nav.js";
 import { P } from "../../core/data.js";
 import { fd } from "../../core/page.js";
 import { shared } from "../../core/state.js";
-import { clientReportHref, reportingHref, repTick, spaceCode, spaceEdit, spaceWeek, spaceWeeks, thisWeek, weekLabel, weekView } from "../../stores/reporting.js";
+import { clientReportHref, repTick, spaceCode, spaceWeek, spaceWeeks, thisWeek, weekLabel, weekView, weeklyHref } from "../../stores/reporting.js";
 
 /** Open a project's reporting space (the one door every way in uses).
-    @param {string} code @param {string} [week] @param {""|"internal"|"client"|"side"} [edit] */
-export function openSpace(code, week = "", edit = "") {
-  spaceWeek.value = week; spaceEdit.value = edit;
+    @param {string} code @param {string} [week] */
+export function openSpace(code, week = "") {
+  spaceWeek.value = week;
   go("reporting", code);
 }
 
@@ -40,25 +39,24 @@ function SpaceView({ code }) {
   if (!p) return null;
   const weeks = spaceWeeks(code), cur = thisWeek();
   const week = spaceWeek.value || cur;
-  const v = weekView(code, week), c = v.clients[0], editing = spaceEdit.value, isCur = week === cur;
-  const open = (/** @type {any} */ m) => { spaceEdit.value = m; navWrite(true); };
+  const v = weekView(code, week), c = v.clients[0], isCur = week === cur;
   const pick = (/** @type {string} */ w) => { spaceWeek.value = w; navWrite(false); };
   const internalOk = v.internal.key === "filed" || v.internal.key === "approved";
   const crumb = (
     <nav class="crumb" aria-label="Breadcrumb">
       <a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span>
       <a href="#" data-cock={code}>{p.name}</a><span aria-hidden="true">›</span>
-      {editing ? <><a href="#" onClick={e => { e.preventDefault(); open(""); }}>Reporting</a><span aria-hidden="true">›</span><span aria-current="page">Week ending {weekLabel(week)}</span></>
-        : <span aria-current="page">Reporting</span>}
+      <span aria-current="page">Reporting</span>
     </nav>
   );
-  if (editing) return <div class="wrapmax rp">{crumb}<ReportEditorStub mode={editing} client={c.client} internalOk={internalOk} onMode={open} /></div>;
   const ask = (/** @type {string} */ k) => `${k === "weekly" ? "weekly report" : "client report"} ${code}${k === "weekly" ? ` for week ending ${weekLabel(week)}` : ""}`;
-  const doOpen = (/** @type {any} */ st, /** @type {string} */ m) => st.path
+  /* Open goes to the report's own view: the weekly view (P6) or the client view (P8); a filed report's file opens as a file */
+  const doOpen = (/** @type {any} */ st, /** @type {string} */ href) => st.path
     ? <a class="btn sm" href="#" data-openfile={st.path}>Open</a>
-    : st.key === "notdue" ? <button type="button" class="btn sm" onClick={() => open(m)}>Make one anyway</button>
-    : isCur ? <button type="button" class="btn sm primary" onClick={() => open(m)}>{st.key === "draft" ? "Open and check" : "Open"}</button>
+    : st.key === "notdue" ? <a class="btn sm" href={href} data-rpopen-view>Make one anyway</a>
+    : isCur ? <a class={`btn sm primary`} href={href} data-rpopen-view>{st.key === "draft" ? "Open and check" : "Open"}</a>
     : <span class="sub">Nothing filed</span>;
+  const wHref = weeklyHref(code, week), cHref = clientReportHref(code, week, c.client);
   return (
     <div class="wrapmax rp">
       {crumb}
@@ -85,7 +83,8 @@ function SpaceView({ code }) {
               <Thumb c="internal" />
               <div class="rp-kv"><span>Health</span><span>{p.health || "Not set"}</span><span>Edited</span><span>{v.internal.edited || (internalOk ? "filed on the Friday" : "not yet")}</span></div>
               <div class="acts">
-                {doOpen(v.internal, "internal")}
+                {doOpen(v.internal, wHref)}
+                {v.internal.path ? <a class="btn sm" href={wHref} data-weeklyview>Weekly view</a> : null}
                 {!internalOk && isCur ? <button type="button" class="btn sm" data-ask={ask("weekly")} data-tip="Draft the weekly report with ask creaite">Draft it</button> : null}
                 <button type="button" class="btn sm" disabled data-tip="Approve and Export arrive with the report editor (BL-335)">{internalOk ? "Export" : "Approve"}</button>
               </div>
@@ -100,8 +99,8 @@ function SpaceView({ code }) {
                       {c.differs ? <><span>Differs</span><span>{c.differs}</span></> : null}</div>
                   </>}
               <div class="acts">
-                {doOpen(c.state, "client")}
-                {c.state.key !== "notdue" ? <a class="btn sm" href={clientReportHref(code, week, c.client)} data-clientreport>Client view</a> : null}
+                {doOpen(c.state, cHref)}
+                {c.state.key !== "notdue" && c.state.path ? <a class="btn sm" href={cHref} data-clientreport>Client view</a> : null}
                 {c.state.key !== "notdue" && !c.state.path && isCur ? <button type="button" class="btn sm" data-ask={ask("client")} data-tip="Draft the client report with ask creaite">Draft it</button> : null}
                 {c.state.key === "notdue" ? null
                   : <button type="button" class="btn sm" disabled data-tip={!internalOk && isCur ? "Approve the internal report first" : "Approve and Export arrive with the report editor (BL-336)"}>{c.state.path ? "Export" : "Approve"}</button>}
@@ -110,8 +109,8 @@ function SpaceView({ code }) {
             </section>
           </div>
           <div class="rp-both">
-            <span><b>Edit both side by side</b><br /><span class="sub">The internal page beside the client page, section by section, with the differences marked.</span></span>
-            <button type="button" class="btn primary" onClick={() => open("side")}>Edit both</button>
+            <span><b>Edit both side by side</b><br /><span class="sub">Opens the client report; choose Side by side there for the internal page beside it, with the differences marked.</span></span>
+            <a class="btn primary" href={cHref} data-editboth>Edit both</a>
           </div>
           <section class="card rp-files" aria-label="Filed for this week">
             <h2>Filed for this week</h2>

@@ -3070,6 +3070,7 @@ button.nchip{font:inherit;font-size:12px}
 .rp-cockcard .chip{display:inline-flex;align-items:center;min-height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font:500 var(--fs-xs)/16px var(--font);white-space:nowrap}
 .rp .btn.sm,.rp-cockcard .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary,.rp-cockcard .btn.primary{color:var(--accent-ink)}
 .rp-both{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;border:1px dashed var(--accent);border-radius:var(--r-md);padding:10px 14px;background:var(--accent-soft);margin-bottom:16px}
+.rp-both a.btn{text-decoration:none}
 .rp-both.solid{border-style:solid}
 .rp-tbl{overflow-x:auto} .rp-tbl td{vertical-align:top} .rp-cl{display:grid;gap:4px}
 .rp-grow{flex:1}
@@ -3084,20 +3085,12 @@ button.nchip{font:inherit;font-size:12px}
 .rp-card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .rp-card .top b{font-size:var(--fs-lg)}
 .rp-card .acts,.rp-cockcard .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .rp-thumb{height:150px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:10px 12px;display:grid;gap:6px;align-content:start}
-.rp-thumb i,.rp-sheet i{display:block;height:8px;border-radius:2px;background:var(--line-strong)}
-.rp-thumb .rp-flag{height:18px;width:60px} .rp-flag[data-kind="internal"],.rp-sheet-bar[data-kind="internal"]{background:var(--warn)} .rp-flag[data-kind="client"],.rp-sheet-bar[data-kind="client"]{background:var(--ok)}
+.rp-thumb i{display:block;height:8px;border-radius:2px;background:var(--line-strong)}
+.rp-thumb .rp-flag{height:18px;width:60px} .rp-flag[data-kind="internal"]{background:var(--warn)} .rp-flag[data-kind="client"]{background:var(--ok)}
 i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:80%} i.w85{width:85%} i.w90{width:90%} i.tall{height:26px}
 .rp-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:var(--fs-sm)} .rp-kv span:nth-child(odd){color:var(--muted)}
 .rp-files h2{margin-bottom:8px} .rp-files>div{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .rp-files>div:last-child{border-bottom:0}
 .rp-files .g{flex:1;min-width:0;overflow-wrap:anywhere}
-.rp-ebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px;margin-bottom:12px}
-.rp-stub{margin:0 0 12px;color:var(--muted);font-size:var(--fs-sm)}
-.rp-canvas{background:var(--sunk);border-radius:var(--r-md);padding:20px;display:grid;gap:16px;justify-content:center}
-.rp-canvas.two{grid-template-columns:repeat(2,minmax(0,420px))} @media (max-width:900px){.rp-canvas.two{grid-template-columns:minmax(0,420px)}}
-.rp-sheet{width:100%;max-width:420px;aspect-ratio:1/1.414;background:var(--surface);box-shadow:var(--shadow-md);padding:24px 28px;display:grid;gap:8px;align-content:start;margin:0 auto;min-width:0}
-.rp-sheet-lab,.rp-sheet-sh{font:600 var(--fs-2xs)/12px var(--font);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.rp-sheet-sh{display:flex;gap:6px;align-items:center;margin-top:4px} .rp-sheet-bar{height:22px;width:90px;border-radius:2px}
-.rp-diff{margin-left:auto;font:600 var(--fs-2xs)/16px var(--font);color:var(--accent);background:var(--accent-soft);border-radius:var(--r-pill);padding:0 8px;text-transform:none;letter-spacing:0;width:max-content}
 .rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
 .rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
 /* ===== end BL-337 ===== */
@@ -5480,7 +5473,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     soon: () => soon,
     sortNotes: () => sortNotes,
     spaceCode: () => spaceCode,
-    spaceEdit: () => spaceEdit,
     spaceWeek: () => spaceWeek,
     spaceWeeks: () => spaceWeeks,
     spark: () => spark,
@@ -5616,6 +5608,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     weekView: () => weekView,
     weekendHtml: () => weekendHtml,
     weekendNote: () => weekendNote,
+    weeklyHref: () => weeklyHref,
     wfCount: () => wfCount,
     wflag: () => wflag,
     wgGroups: () => wgGroups,
@@ -6716,64 +6709,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       const { key, ...props } = p6;
       return /* @__PURE__ */ u2(Chip, { ...props }, key ?? i5);
     }) }), host2);
-  }
-
-  // components/reporting/ReportEditorStub.jsx
-  function PageOutline({ kind, client, side }) {
-    const c5 = kind === "client";
-    return /* @__PURE__ */ u2("div", { class: "rp-sheet", role: "img", "aria-label": `${c5 ? "Client" : "Internal"} report page, outline only`, children: [
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-lab", children: c5 ? `Client report · ${client}` : "Weekly report · Internal" }),
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-bar", "data-kind": kind }),
-      side && !c5 ? /* @__PURE__ */ u2("span", { class: "rp-diff", children: "≠ Client" }) : null,
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", { class: "w80" }),
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-sh", children: [
-        c5 ? "Summary" : "Summary",
-        side && !c5 ? /* @__PURE__ */ u2("span", { class: "rp-diff", children: "≠ Client" }) : null
-      ] }),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", { class: "w90" }),
-      /* @__PURE__ */ u2("i", { class: "w70" }),
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-sh", children: "Milestones" }),
-      /* @__PURE__ */ u2("i", { class: "tall" }),
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-sh", children: c5 ? `What we need from ${client}` : "What we need from people" }),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", { class: "w60" }),
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-sh", children: [
-        c5 ? "Points to watch" : "Risks and issues",
-        side && !c5 ? /* @__PURE__ */ u2("span", { class: "rp-diff", children: "≠ Client" }) : null
-      ] }),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", { class: "w85" }),
-      /* @__PURE__ */ u2("span", { class: "rp-sheet-sh", children: c5 ? "Where things stand" : "Current state" }),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", { class: "w75" })
-    ] });
-  }
-  function ReportEditorStub({ mode, client, internalOk, onMode }) {
-    const modes = (
-      /** @type {[string, string][]} */
-      [["internal", "Internal"], ["client", `Client: ${client}`], ["side", "Side by side"]]
-    );
-    const label = { internal: "Approve internal", client: "Approve client report", side: "Approve: internal (last edited)" }[mode];
-    const waits = mode === "client" && !internalOk;
-    return /* @__PURE__ */ u2("div", { class: "rp-ed", children: [
-      /* @__PURE__ */ u2("div", { class: "rp-ebar", children: [
-        /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "View", children: modes.map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-rpmode": k5, "aria-pressed": k5 === mode, onClick: () => onMode(
-          /** @type {any} */
-          k5
-        ), children: l6 }, k5)) }),
-        /* @__PURE__ */ u2("span", { class: "rp-grow" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", disabled: true, "data-tip": "Arrives with the report editor (BL-335)", children: "Show as exported" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", disabled: true, "data-tip": "Arrives with the report editor (BL-335)", children: "Export" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary sm", disabled: true, "data-tip": waits ? "Approve the internal report first" : "Arrives with the report editor (BL-335)", children: label })
-      ] }),
-      /* @__PURE__ */ u2("p", { class: "rp-stub", role: "note", children: "Outline only: the report page itself arrives with the report editor (BL-335, BL-336). The views, the address and the order of approval are final." }),
-      /* @__PURE__ */ u2("div", { class: `rp-canvas${mode === "side" ? " two" : ""}`, children: [
-        mode !== "client" ? /* @__PURE__ */ u2(PageOutline, { kind: "internal", client, side: mode === "side" }) : null,
-        mode !== "internal" ? /* @__PURE__ */ u2(PageOutline, { kind: "client", client, side: mode === "side" }) : null
-      ] })
-    ] });
   }
 
   // ../../vendor/preact/preact/hooks/dist/hooks.module.js
@@ -8081,20 +8016,17 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
   }
   var spaceCode = y3("");
   var spaceWeek = y3("");
-  var spaceEdit = y3(
-    /** @type {""|"internal"|"client"|"side"} */
-    ""
-  );
+  var weeklyHref = (code, week) => `#weekly=${code}&week=${week}`;
   var clientReportHref = (code, week, client) => `#client-report=${code}/${week}/${encodeURIComponent(client)}`;
   var weekLabel = (week) => week.split("-").reverse().join("-");
-  function reportingHref(code, week, edit) {
-    return `#reporting=${code}${week ? `&w=${week}` : ""}${edit ? `&e=${edit}` : ""}`;
+  function reportingHref(code, week) {
+    return `#reporting=${code}${week ? `&w=${week}` : ""}`;
   }
   function parseReporting(hash, known) {
     const m5 = /^#?reporting=([A-Z][A-Z0-9]{2,6})((?:&[a-z]=[^&]*)*)$/.exec(String(hash || ""));
     if (!m5 || !known(m5[1])) return null;
     const kv = Object.fromEntries(m5[2].split("&").filter(Boolean).map((x5) => x5.split("=")));
-    return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "", edit: ["internal", "client", "side"].includes(kv.e) ? kv.e : "" };
+    return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "" };
   }
 
   // components/Combobox.jsx
@@ -26152,7 +26084,7 @@ ${s5}`;
           ] })
         ] }),
         /* @__PURE__ */ u2(StateChip, { s: v5.internal }),
-        v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "internal", "data-openfile": v5.internal.path, "aria-label": "Open the weekly report", children: "Open" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-rpcard": "internal", "aria-label": "Open the weekly report", onClick: () => openSpace(code, "", "internal"), children: "Open" })
+        v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "internal", "data-openfile": v5.internal.path, "aria-label": "Open the weekly report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "internal", "aria-label": "Open the weekly report", href: weeklyHref(code, week), children: "Open" })
       ] }),
       /* @__PURE__ */ u2("div", { class: "rp-row", children: [
         /* @__PURE__ */ u2("span", { class: "g", children: [
@@ -26166,7 +26098,7 @@ ${s5}`;
           ] })
         ] }),
         /* @__PURE__ */ u2(StateChip, { s: c5.state }),
-        c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "client", "data-openfile": c5.state.path, "aria-label": "Open the client report", children: "Open" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-rpcard": "client", "aria-label": "Open the client report", onClick: () => openSpace(code, "", "client"), children: "Open" })
+        c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-rpcard": "client", "data-openfile": c5.state.path, "aria-label": "Open the client report", children: "Open" }) : /* @__PURE__ */ u2("a", { class: "btn sm", "data-rpcard": "client", "aria-label": "Open the client report", href: clientReportHref(code, week, c5.client), children: "Open" })
       ] }),
       /* @__PURE__ */ u2("div", { class: "acts", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary sm", "data-rpcard": "space", onClick: () => openSpace(code), children: "Open reporting" }),
@@ -55927,6 +55859,9 @@ ${d5.text}`);
       })));
       P3.forEach((p6) => add("Projects", p6.name, p6.health, () => go2("cockpit", p6.code), p6.code));
       peopleCk(add);
+      if (q6) P3.forEach((p6) => add("Reporting", `Weekly report: ${p6.name}`, "this week's weekly view", () => {
+        location.hash = weeklyHref(p6.code, thisWeek());
+      }, `weekly report ${p6.code}`));
       if (q6) P3.forEach((p6) => add("Reporting", `Reporting: ${p6.name}`, "this week's reports", () => openSpace(p6.code), `weekly report ${p6.code} client report ${p6.code} reporting ${p6.code}`));
       if (q6) P3.forEach((p6) => add("Reporting", `Client report: ${p6.name}`, "client view", () => {
         location.hash = clientReportHref(p6.code, thisWeek(), (p6.client || "").trim() || "Client");
@@ -57635,7 +57570,6 @@ ${d5.text}`);
     if (shared.VIEW === "reporting") {
       st2.arg = spaceCode.value;
       st2.rw = spaceWeek.value;
-      st2.re = spaceEdit.value;
     }
     if (shared.VIEW === "notes") {
       st2.arg = shared.NOTECODE;
@@ -57648,7 +57582,7 @@ ${d5.text}`);
   function hashOf(st2) {
     if (st2 && st2.v === "meeting") return `#meeting=${st2.arg || ""}`;
     if (st2 && st2.v === "notes") return `#notes=${st2.arg || ""}${st2.note ? `&n=${encodeURIComponent(st2.note)}` : ""}${st2.note && st2.find ? "&find=1" : ""}`;
-    if (st2 && st2.v === "reporting") return reportingHref(st2.arg, st2.rw, st2.re);
+    if (st2 && st2.v === "reporting") return reportingHref(st2.arg, st2.rw);
     if (st2 && st2.v === "reports") return "#reports" + (st2.arg ? `&w=${st2.arg}` : "");
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
     if (st2 && st2.v === "milestones") return `#milestones=${st2.arg}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
@@ -57674,7 +57608,7 @@ ${d5.text}`);
     }
     {
       const r4 = parseReporting(h5, (c5) => P3.some((p6) => p6.code === c5));
-      if (r4) return { v: "reporting", arg: r4.code, rw: r4.week, re: r4.edit, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+      if (r4) return { v: "reporting", arg: r4.code, rw: r4.week, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
     }
     {
       const k5 = prepKeyOf(h5);
@@ -57852,7 +57786,6 @@ ${d5.text}`);
     if (st2.v === "reports") repWeek.value = st2.arg || "";
     if (st2.v === "reporting") {
       spaceWeek.value = st2.rw || "";
-      spaceEdit.value = st2.re || "";
     }
     go2(st2.v, st2.arg, { restore: true, from: st2.from });
     if (st2.item) {
@@ -58143,9 +58076,8 @@ ${d5.text}`);
   }
 
   // components/reporting/ReportingSpace.jsx
-  function openSpace(code, week = "", edit = "") {
+  function openSpace(code, week = "") {
     spaceWeek.value = week;
-    spaceEdit.value = edit;
     go2("reporting", code);
   }
   function StateChip({ s: s5 }) {
@@ -58167,11 +58099,7 @@ ${d5.text}`);
     if (!p6) return null;
     const weeks = spaceWeeks(code), cur = thisWeek();
     const week = spaceWeek.value || cur;
-    const v5 = weekView(code, week), c5 = v5.clients[0], editing = spaceEdit.value, isCur = week === cur;
-    const open2 = (m5) => {
-      spaceEdit.value = m5;
-      navWrite(true);
-    };
+    const v5 = weekView(code, week), c5 = v5.clients[0], isCur = week === cur;
     const pick = (w6) => {
       spaceWeek.value = w6;
       navWrite(false);
@@ -58182,24 +58110,11 @@ ${d5.text}`);
       /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "›" }),
       /* @__PURE__ */ u2("a", { href: "#", "data-cock": code, children: p6.name }),
       /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "›" }),
-      editing ? /* @__PURE__ */ u2(S2, { children: [
-        /* @__PURE__ */ u2("a", { href: "#", onClick: (e4) => {
-          e4.preventDefault();
-          open2("");
-        }, children: "Reporting" }),
-        /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "›" }),
-        /* @__PURE__ */ u2("span", { "aria-current": "page", children: [
-          "Week ending ",
-          weekLabel(week)
-        ] })
-      ] }) : /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Reporting" })
-    ] });
-    if (editing) return /* @__PURE__ */ u2("div", { class: "wrapmax rp", children: [
-      crumb,
-      /* @__PURE__ */ u2(ReportEditorStub, { mode: editing, client: c5.client, internalOk, onMode: open2 })
+      /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Reporting" })
     ] });
     const ask2 = (k5) => `${k5 === "weekly" ? "weekly report" : "client report"} ${code}${k5 === "weekly" ? ` for week ending ${weekLabel(week)}` : ""}`;
-    const doOpen = (st2, m5) => st2.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-openfile": st2.path, children: "Open" }) : st2.key === "notdue" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => open2(m5), children: "Make one anyway" }) : isCur ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", onClick: () => open2(m5), children: st2.key === "draft" ? "Open and check" : "Open" }) : /* @__PURE__ */ u2("span", { class: "sub", children: "Nothing filed" });
+    const doOpen = (st2, href) => st2.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: "#", "data-openfile": st2.path, children: "Open" }) : st2.key === "notdue" ? /* @__PURE__ */ u2("a", { class: "btn sm", href, "data-rpopen-view": true, children: "Make one anyway" }) : isCur ? /* @__PURE__ */ u2("a", { class: `btn sm primary`, href, "data-rpopen-view": true, children: st2.key === "draft" ? "Open and check" : "Open" }) : /* @__PURE__ */ u2("span", { class: "sub", children: "Nothing filed" });
+    const wHref = weeklyHref(code, week), cHref = clientReportHref(code, week, c5.client);
     return /* @__PURE__ */ u2("div", { class: "wrapmax rp", children: [
       crumb,
       /* @__PURE__ */ u2("div", { class: "hhead", children: /* @__PURE__ */ u2("div", { style: { flex: 1 }, children: [
@@ -58248,7 +58163,8 @@ ${d5.text}`);
                 /* @__PURE__ */ u2("span", { children: v5.internal.edited || (internalOk ? "filed on the Friday" : "not yet") })
               ] }),
               /* @__PURE__ */ u2("div", { class: "acts", children: [
-                doOpen(v5.internal, "internal"),
+                doOpen(v5.internal, wHref),
+                v5.internal.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: wHref, "data-weeklyview": true, children: "Weekly view" }) : null,
                 !internalOk && isCur ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ask": ask2("weekly"), "data-tip": "Draft the weekly report with ask creaite", children: "Draft it" }) : null,
                 /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", disabled: true, "data-tip": "Approve and Export arrive with the report editor (BL-335)", children: internalOk ? "Export" : "Approve" })
               ] })
@@ -58282,8 +58198,8 @@ ${d5.text}`);
                 ] })
               ] }),
               /* @__PURE__ */ u2("div", { class: "acts", children: [
-                doOpen(c5.state, "client"),
-                c5.state.key !== "notdue" ? /* @__PURE__ */ u2("a", { class: "btn sm", href: clientReportHref(code, week, c5.client), "data-clientreport": true, children: "Client view" }) : null,
+                doOpen(c5.state, cHref),
+                c5.state.key !== "notdue" && c5.state.path ? /* @__PURE__ */ u2("a", { class: "btn sm", href: cHref, "data-clientreport": true, children: "Client view" }) : null,
                 c5.state.key !== "notdue" && !c5.state.path && isCur ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ask": ask2("client"), "data-tip": "Draft the client report with ask creaite", children: "Draft it" }) : null,
                 c5.state.key === "notdue" ? null : /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", disabled: true, "data-tip": !internalOk && isCur ? "Approve the internal report first" : "Approve and Export arrive with the report editor (BL-336)", children: c5.state.path ? "Export" : "Approve" }),
                 !internalOk && isCur && c5.state.key !== "notdue" ? /* @__PURE__ */ u2("span", { class: "sub", children: "Approve the internal report first" }) : null
@@ -58294,9 +58210,9 @@ ${d5.text}`);
             /* @__PURE__ */ u2("span", { children: [
               /* @__PURE__ */ u2("b", { children: "Edit both side by side" }),
               /* @__PURE__ */ u2("br", {}),
-              /* @__PURE__ */ u2("span", { class: "sub", children: "The internal page beside the client page, section by section, with the differences marked." })
+              /* @__PURE__ */ u2("span", { class: "sub", children: "Opens the client report; choose Side by side there for the internal page beside it, with the differences marked." })
             ] }),
-            /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", onClick: () => open2("side"), children: "Edit both" })
+            /* @__PURE__ */ u2("a", { class: "btn primary", href: cHref, "data-editboth": true, children: "Edit both" })
           ] }),
           /* @__PURE__ */ u2("section", { class: "card rp-files", "aria-label": "Filed for this week", children: [
             /* @__PURE__ */ u2("h2", { children: "Filed for this week" }),
@@ -60232,7 +60148,6 @@ ${d5.text}`);
         "snapshot",
         "soon",
         "spaceCode",
-        "spaceEdit",
         "spaceWeek",
         "spark",
         "split",

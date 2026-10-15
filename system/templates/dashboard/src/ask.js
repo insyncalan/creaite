@@ -3,7 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openSpace } from "./components/reporting/ReportingSpace.jsx";
-import { clientReportHref, needsMe, thisWeek } from "./stores/reporting.js";
+import { clientReportHref, needsMe, thisWeek, weeklyHref } from "./stores/reporting.js";
 import { openDialog } from "./components/Dialog.jsx";
 import { isNotePath, openNoteAt } from "./notes.js";
 import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
@@ -930,6 +930,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   /* Work's views, built-in and saved, straight from anywhere */
   [["actions","Actions"],["raid","RAID"],["decisions","Decisions"]].forEach(([t,tl])=>allViews(t).forEach(v=>add("Views",`${tl}: ${v.label}`,v.builtin?"":"saved view",()=>{ if(navBlocked()) return; saveTab(); loadTab(t); applyView(v.id); go("work"); })));
   P.forEach(p=>add("Projects",p.name,p.health,()=>go("cockpit",p.code),p.code)); peopleCk(add);
+  if(q) P.forEach(p=>add("Reporting",`Weekly report: ${p.name}`,"this week's weekly view",()=>{ location.hash=weeklyHref(p.code,thisWeek()); },`weekly report ${p.code}`));   /* P6's address; opens once P6 merges */
   if(q) P.forEach(p=>add("Reporting",`Reporting: ${p.name}`,"this week's reports",()=>openSpace(p.code),`weekly report ${p.code} client report ${p.code} reporting ${p.code}`));   /* BL-337: ⌘K reaches the reporting space */
   if(q) P.forEach(p=>add("Reporting",`Client report: ${p.name}`,"client view",()=>{ location.hash=clientReportHref(p.code,thisWeek(),(p.client||"").trim()||"Client"); },`client report ${p.code}`));   /* P8's address; opens once P8 merges */
   add("Actions","New action","",()=>{ shared.WT="actions"; go("work"); openNew("actions"); }); add("Actions","New RAID item","",()=>{ shared.WT="raid"; go("work"); openNew("raid"); }); add("Actions","New decision","",()=>{ shared.WT="decisions"; go("work"); openNew("decisions"); });

@@ -83,7 +83,6 @@ SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='AB
 SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.click()",
                       "document.querySelector('#v-reports tbody tr')", "#v-reports")
 SCREENS["reporting"] = ("openSpace('ABC')", "document.querySelector('#v-reporting .rp-card')", "#v-reporting")
-SCREENS["reporting-side"] = ("openSpace('ABC','','side')", "document.querySelectorAll('#v-reporting .rp-sheet').length==2", "#v-reporting")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip

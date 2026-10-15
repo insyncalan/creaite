@@ -19,7 +19,7 @@ import { HUB, renderMeeting } from "../meetings.js";
 import { renderPrep } from "../components/prep/PrepPage.jsx";
 import { renderReports } from "../components/reporting/ReportsPage.jsx";   /* BL-337 */
 import { renderReporting } from "../components/reporting/ReportingSpace.jsx";
-import { parseReporting, repWeek, reportingHref, spaceCode, spaceEdit, spaceWeek } from "../stores/reporting.js";
+import { parseReporting, repWeek, reportingHref, spaceCode, spaceWeek } from "../stores/reporting.js";
 import { notesCodeOk, notesLeave, renderNotes } from "../notes.js";
 import { noteCur, noteFind } from "../stores/notes.js";
 import { prepHref, prepKeyOf, prepView, prepViewKey } from "../stores/prep.js";
@@ -44,12 +44,12 @@ export function navState(){ const st={v:shared.VIEW,arg:shared.VIEW==="cockpit"?
   if(shared.VIEW==="meeting") st.arg=shared.MEETING;   /* BL-233 */
   if(shared.VIEW==="prep") st.arg=prepViewKey.value;   /* BL-286 D */
   if(shared.VIEW==="reports") st.arg=repWeek.value||null;   /* BL-337 */
-  if(shared.VIEW==="reporting"){ st.arg=spaceCode.value; st.rw=spaceWeek.value; st.re=spaceEdit.value; }
+  if(shared.VIEW==="reporting"){ st.arg=spaceCode.value; st.rw=spaceWeek.value; }
   if(shared.VIEW==="notes"){ st.arg=shared.NOTECODE; const c=noteCur.value; st.note=c&&c.code===shared.NOTECODE?c.note.file:null; st.find=!!(st.note&&noteFind.value); }   /* BL-301 B */
   return st; }
 export function hashOf(st){ if(st&&st.v==="meeting") return `#meeting=${st.arg||""}`;   /* BL-233 */
   if(st&&st.v==="notes") return `#notes=${st.arg||""}${st.note?`&n=${encodeURIComponent(st.note)}`:""}${st.note&&st.find?"&find=1":""}`;   /* BL-301 B */
-  if(st&&st.v==="reporting") return reportingHref(st.arg,st.rw,st.re);   /* BL-337 */
+  if(st&&st.v==="reporting") return reportingHref(st.arg,st.rw);   /* BL-337 */
   if(st&&st.v==="reports") return "#reports"+(st.arg?`&w=${st.arg}`:"");
   if(st&&st.v==="prep") return prepHref(st.arg||"");   /* BL-286 D: #prep=<the dated meeting key> */
   if(st&&st.v==="milestones") return `#milestones=${st.arg}&v=${st.mv==="move"?"movement":"plan"}${st.ms?`&ms=${st.ms}`:""}`;   /* BL-245 */
@@ -60,7 +60,7 @@ export function hashOf(st){ if(st&&st.v==="meeting") return `#meeting=${st.arg||
     if((a.q||"").trim()) p.push("q="+encodeURIComponent(a.q.trim())); if((a.types||[]).length) p.push("type="+a.types.map(encodeURIComponent).join(","));
     if(a.from) p.push("from="+a.from); if(a.to) p.push("to="+a.to); if(p.length) h+="&"+p.join("&"); } return h; }
 export function parseHash(h){ { const q=(h||"").replace(/^#/,""); const mm=/^meeting=([0-9a-f]{6,20})/.exec(q); if(mm) return {v:"meeting",arg:mm[1],wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-233 */
-  { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,re:r.edit,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
+  { const r=parseReporting(h,c=>P.some(p=>p.code===c)); if(r) return {v:"reporting",arg:r.code,rw:r.week,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-337 */
   { const k=prepKeyOf(h); if(k) return {v:"prep",arg:k,wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; }   /* BL-286 D */
   { const mm=/^#?notes=([^&]+)(?:&n=([^&]*))?/.exec(String(h||"")); if(mm){ let code="", n=null; try{ code=decodeURIComponent(mm[1]); n=mm[2]?decodeURIComponent(mm[2]):null; }catch(e){ return null; }
     if(!notesCodeOk(code)) return null; return {v:"notes",arg:code,note:n,find:/[&]find=1(&|$)/.test(String(h||"")),wt:shared.WT,wv:null,p:[],from:null,item:null,scroll:0}; } }   /* BL-301 B */
@@ -104,7 +104,7 @@ export function restoreNav(st){ if(st&&st.v==="milestones"){ shared.MV.view=st.m
     if(st.lay){ shared.LAYCHOSEN=true; WLAY[shared.WT]=st.lay; if(st.g) WGRP[shared.WT]=st.g; }   /* BL-103: the layout and grouping are in the address */
     if(st.lg) WLGRP[shared.WT]=st.lay==="board"?(WLGRP[shared.WT]||"none"):st.lg; if(st.sg) WSUB[shared.WT+"|"+(st.lay||"list")]=st.sg; }   /* BL-129: the List's grouping and the sub-group too */
   if(st.v==="reports") repWeek.value=st.arg||"";   /* BL-337 */
-  if(st.v==="reporting"){ spaceWeek.value=st.rw||""; spaceEdit.value=st.re||""; }
+  if(st.v==="reporting"){ spaceWeek.value=st.rw||""; }
   go(st.v,st.arg,{restore:true,from:st.from});
   if(st.item){ const k=st.item.k; if(st.v==="work"&&shared.WT!==k&&shared.WT!=="all"){ shared.WT=k; renderWork(); }   /* BL-134: All items opens the item where it is */ openRecord(k,st.item.id); }
   const sc=st.scroll||0; requestAnimationFrame(()=>{ const el=viewEl(); if(el) el.scrollTop=sc; }); shared.NAVSTATE=navState(); shared.NAVSTATE.scroll=sc; }
