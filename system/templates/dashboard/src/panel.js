@@ -192,6 +192,7 @@ export function openNew(k,how){ (()=>{ if(!PKK.includes(k)) return; if(curGuard(
 export const NODRAFT_MSG="No Word draft was made for these minutes: Reject them and process the meeting again";
 /* ===== end BL-260 ===== */
 export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if(r.kind==="draft"&&r.nodraft){ snack(NODRAFT_MSG); return; }   /* BL-260 */
+  if(r.kind==="draft"&&/\.html$/i.test(r.src||"")){ if(viaServer()){ go("minutes",{file:r.file}); return; } openPath(r.src); snack("Check the minutes, then approve them in Claude Code (the live server isn't running)"); return; }   /* v2.1.0 P4: a minutes record isn't edited in Word; P7: it opens in the minutes view */
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
