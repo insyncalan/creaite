@@ -46,7 +46,7 @@
   --scrim:rgba(0,0,0,.25);   /* a modal dialog's backdrop; darker in dark mode (below), where .25 black barely shows */
   --z-under:0; --z-raised:1; --z-raised-2:2; --z-sticky:3; --z-sticky-2:4; --z-local:5;
   --z-menu:30; --z-popup-scrim:38; --z-popup:39; --z-panel:40; --z-panel-over:41; --z-chat:45; --z-badge:46; --z-stage:47;
-  --z-pop:60; --z-pop-over:65; --z-toast:70; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210;
+  --z-pop:60; --z-pop-over:65; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210; --z-toast:220;   /* v1.9.5 check 19: a toast is over everything, menus included (inside a modal it sits in the dialog, BL-316) */
   --ctl-h:32px; --ctl-h-sm:26px; --ctl-r:var(--r-md); --ctl-fs:var(--fs-sm);
   --ctl-h-lg:40px; --ctl-r-lg:10px;   /* the large search variant: Files' centred bar only */
 }
@@ -63,7 +63,7 @@
   --accent:#1E1F1E; --accent-ink:#F8F8FF; --accent-soft:#E9FFCC; --brand:#91FF01; --violet:#AE74FF; --btn-hover:#3A3B3A;
   --bad:#B3261E; --bad-soft:#FBE7E5; --warn:#7A4F00; --warn-soft:#FBF0DA; --ok:#2E6B3A; --ok-soft:#E3F2E5;
   --focus:#1E1F1E; --inverse:#1E1F1E; --inverse-ink:#F8F8FF;
-  --day-page:#F8F8FF; --day-band:#EEEEF4; --day-past:#808187; --day-sun:#AB72FB;
+  --day-page:#F8F8FF; --day-band:#EEEEF4; --day-past:#808187; --day-past-text:#86878B; --day-sun:#A26DED;
   --day-serif:var(--font);
   --font:"ABC Diatype",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;}
 @media (prefers-color-scheme:dark){:root[data-palette="Brightwater"]:not([data-theme="light"]){
@@ -72,14 +72,14 @@
   --accent:#91FF01; --accent-ink:#1E1F1E; --accent-soft:#2F3D1A; --brand:#91FF01; --violet:#AE74FF; --btn-hover:#B4FF4D;
   --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322;
   --focus:#91FF01; --inverse:#F8F8FF; --inverse-ink:#1E1F1E;
-  --day-page:#1E1F1E; --day-band:#272827; --day-past:#8E929B; --day-sun:#91FF01;}}
+  --day-page:#1E1F1E; --day-band:#272827; --day-past:#8E929B; --day-past-text:#7C8087; --day-sun:#91FF01;}}
 :root[data-palette="Brightwater"][data-theme="dark"]{
   --brand-ink:#1E1F1E;   /* BL-325: the same in dark */
   --bg:#1E1F1E; --surface:#272827; --sunk:#323432; --ink:#F8F8FF; --muted:#C2C8D6; --faint:#989CA4; --line:#3E403F; --line-strong:#575A58;
   --accent:#91FF01; --accent-ink:#1E1F1E; --accent-soft:#2F3D1A; --brand:#91FF01; --violet:#AE74FF; --btn-hover:#B4FF4D;
   --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322;
   --focus:#91FF01; --inverse:#F8F8FF; --inverse-ink:#1E1F1E;
-  --day-page:#1E1F1E; --day-band:#272827; --day-past:#8E929B; --day-sun:#91FF01;}
+  --day-page:#1E1F1E; --day-band:#272827; --day-past:#8E929B; --day-past-text:#7C8087; --day-sun:#91FF01;}
 :root[data-palette="Brightwater"] .card,:root[data-palette="Brightwater"] .col,:root[data-palette="Brightwater"] .tbl,:root[data-palette="Brightwater"] .tree{border-radius:var(--r-md)}
 /* BL-325: the brand's tighter radius is the palette's control radius, so .btn and the fields agree; Charcoal is the ink on
    Signal Green in light and dark alike (--brand-ink, was the literal #1E1F1E) */
@@ -103,18 +103,18 @@
   --ok:#2E6B3A; --ok-soft:#E3F2E5; --focus:#0B6E7F; --inverse:#14212A; --inverse-ink:#E4EAED;
   --font:"Source Sans 3","Segoe UI",system-ui,-apple-system,Arial,sans-serif;
   --display:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif; --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --day-page:#F3F6F7; --day-band:#E8F2F4; --day-sun:#0B6E7F; --day-past:#858F94;
+  --day-page:#F3F6F7; --day-band:#E8F2F4; --day-sun:#0B6E7F; --day-past:#818B91; --day-past-text:#7D8A91;
   --day-serif:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;}
 @media (prefers-color-scheme:dark){:root[data-palette="creaite"]:not([data-theme="light"]){
   --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#828E95; --line:#2A343A; --line-strong:#3D4950;
   --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
   --ok:#9FD6A5; --ok-soft:#1D3322; --focus:#5FC4D6; --inverse:#E4EAED; --inverse-ink:#171E22;
-  --day-page:#0F1518; --day-band:#132024; --day-sun:#5FC4D6; --day-past:#56656B;}}
+  --day-page:#0F1518; --day-band:#132024; --day-sun:#5FC4D6; --day-past:#5D6C71; --day-past-text:#626E74;}}
 :root[data-palette="creaite"][data-theme="dark"]{
   --bg:#0F1518; --surface:#171E22; --sunk:#1E272C; --ink:#E4EAED; --muted:#A2AEB5; --faint:#828E95; --line:#2A343A; --line-strong:#3D4950;
   --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
   --ok:#9FD6A5; --ok-soft:#1D3322; --focus:#5FC4D6; --inverse:#E4EAED; --inverse-ink:#171E22;
-  --day-page:#0F1518; --day-band:#132024; --day-sun:#5FC4D6; --day-past:#56656B;}
+  --day-page:#0F1518; --day-band:#132024; --day-sun:#5FC4D6; --day-past:#5D6C71; --day-past-text:#626E74;}
 :root[data-palette="creaite"] h1,:root[data-palette="creaite"] h2,:root[data-palette="creaite"] .brief h1{font-family:var(--display)}
 :root[data-palette="creaite"] h1{font-weight:800;letter-spacing:-.02em} :root[data-palette="creaite"] h2{font-weight:700;letter-spacing:-.01em}
 :root[data-palette="creaite"] .brief h1{font-weight:800;letter-spacing:-.02em}
@@ -137,7 +137,7 @@
   --shadow-card:0 .175px 1.04px rgba(0,0,0,.01),0 .8px 2.925px rgba(0,0,0,.02),0 2px 7.85px rgba(0,0,0,.027),0 4px 18px rgba(0,0,0,.04);
   --shadow-pop:0 1px 3px rgba(0,0,0,.01),0 3px 7px rgba(0,0,0,.02),0 7px 15px rgba(0,0,0,.02),0 14px 28px rgba(0,0,0,.03),0 23px 52px rgba(0,0,0,.05);
   --font:"NotionInter","Inter",-apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;
-  --day-page:#F6F5F4; --day-band:#EFEEEC; --day-sun:#005BAB; --day-past:#918D87;
+  --day-page:#F6F5F4; --day-band:#EFEEEC; --day-sun:#005BAB; --day-past:#8B8782; --day-past-text:#898684;
   --day-serif:var(--font);}
 @media (prefers-color-scheme:dark){:root[data-palette="Notion"]:not([data-theme="light"]){
   --bg:#191919; --surface:#202020; --sunk:#2A2A2A; --ink:#F5F4F2; --muted:#A8A39D; --faint:#94908A; --line:#363636; --line-strong:#4A4A4A;
@@ -145,14 +145,14 @@
   --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322;
   --focus:#62AEF0; --inverse:#F5F4F2; --inverse-ink:#202020;
   --shadow-card:0 0 0 rgba(0,0,0,0); --shadow-pop:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.4),0 23px 52px rgba(0,0,0,.35);
-  --day-page:#191919; --day-band:#202020; --day-sun:#62AEF0; --day-past:#696561;}}
+  --day-page:#191919; --day-band:#202020; --day-sun:#62AEF0; --day-past:#6E6B67; --day-past-text:#6F6C69;}}
 :root[data-palette="Notion"][data-theme="dark"]{
   --bg:#191919; --surface:#202020; --sunk:#2A2A2A; --ink:#F5F4F2; --muted:#A8A39D; --faint:#94908A; --line:#363636; --line-strong:#4A4A4A;
   --accent:#62AEF0; --accent-ink:#00203D; --accent-soft:#16304A; --brand:#62AEF0; --btn-hover:#8CC4F5;
   --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322;
   --focus:#62AEF0; --inverse:#F5F4F2; --inverse-ink:#202020;
   --shadow-card:0 0 0 rgba(0,0,0,0); --shadow-pop:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.4),0 23px 52px rgba(0,0,0,.35);
-  --day-page:#191919; --day-band:#202020; --day-sun:#62AEF0; --day-past:#696561;}
+  --day-page:#191919; --day-band:#202020; --day-sun:#62AEF0; --day-past:#6E6B67; --day-past-text:#6F6C69;}
 /* Notion shapes: 12px cards on hairlines, 8px controls, a pill primary button, tight heavy headings, a tinted active nav row */
 :root[data-palette="Notion"] .card,:root[data-palette="Notion"] .col,:root[data-palette="Notion"] .tbl,:root[data-palette="Notion"] .tree{border-radius:var(--r-lg)}
 :root[data-palette="Notion"] .ddmenu,:root[data-palette="Notion"] .combo-list,:root[data-palette="Notion"] .cal,:root[data-palette="Notion"] .acmenu,:root[data-palette="Notion"] .asknote,:root[data-palette="Notion"] dialog#cmdk{border-radius:var(--r-lg);box-shadow:var(--shadow-pop)}
@@ -179,7 +179,7 @@
   --focus:#5E6AD2; --inverse:#18191A; --inverse-ink:#F7F8F8;
   --shadow-card:0 0 0 rgba(0,0,0,0); --shadow-pop:0 1px 2px rgba(15,16,17,.06),0 8px 24px rgba(15,16,17,.1);
   --font:"Linear Text","Inter","SF Pro Display",-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;
-  --day-page:#F5F6F6; --day-band:#ECEDEF; --day-sun:#4D58C0; --day-past:#8B8E95;
+  --day-page:#F5F6F6; --day-band:#ECEDEF; --day-sun:#4D58C0; --day-past:#85878E; --day-past-text:#84868B;
   --day-serif:var(--font);}
 @media (prefers-color-scheme:dark){:root[data-palette="Linear"]:not([data-theme="light"]){
   --brand-ink:#FFFFFF;   /* BL-325: the same in dark */
@@ -188,7 +188,7 @@
   --bad:#F2B8B5; --bad-soft:#2A1514; --warn:#F0C66B; --warn-soft:#2A200B; --ok:#27A644; --ok-soft:#0F2315;
   --focus:#828FFF; --inverse:#F7F8F8; --inverse-ink:#0F1011;
   --shadow-card:inset 0 1px 0 rgba(255,255,255,.05); --shadow-pop:0 0 0 1px #34343A,0 12px 32px rgba(0,0,0,.6);
-  --day-page:#010102; --day-band:#0F1011; --day-sun:#828FFF; --day-past:#62666D;}}
+  --day-page:#010102; --day-band:#0F1011; --day-sun:#828FFF; --day-past:#62666D; --day-past-text:#797D83;}}
 :root[data-palette="Linear"][data-theme="dark"]{
   --brand-ink:#FFFFFF;   /* BL-325: the same in dark */
   --bg:#010102; --surface:#0F1011; --sunk:#18191A; --ink:#F7F8F8; --muted:#D0D6E0; --faint:#8A8F98; --line:#23252A; --line-strong:#34343A;
@@ -196,7 +196,7 @@
   --bad:#F2B8B5; --bad-soft:#2A1514; --warn:#F0C66B; --warn-soft:#2A200B; --ok:#27A644; --ok-soft:#0F2315;
   --focus:#828FFF; --inverse:#F7F8F8; --inverse-ink:#0F1011;
   --shadow-card:inset 0 1px 0 rgba(255,255,255,.05); --shadow-pop:0 0 0 1px #34343A,0 12px 32px rgba(0,0,0,.6);
-  --day-page:#010102; --day-band:#0F1011; --day-sun:#828FFF; --day-past:#62666D;}
+  --day-page:#010102; --day-band:#0F1011; --day-sun:#828FFF; --day-past:#62666D; --day-past-text:#797D83;}
 /* Linear shapes: 12px cards on hairlines with a faint top edge (dark), lifted menus on the third surface step, 8px square-ish
    buttons (never pill) and pill filter chips, tight 600-weight headings, lavender only on the mark, primary button, focus and links */
 :root[data-palette="Linear"] .card,:root[data-palette="Linear"] .col,:root[data-palette="Linear"] .tbl,:root[data-palette="Linear"] .tree{border-radius:var(--r-lg);box-shadow:var(--shadow-card)}
@@ -233,7 +233,7 @@
   --shadow-card:none; --shadow-pop:0 0 0 1px #CFCDC4,0 8px 24px rgba(38,37,30,.1);
   --font:"CursorGothic","Inter",system-ui,-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;
   --mono:"JetBrains Mono","Fira Code",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --day-page:#F7F7F4; --day-band:#EFEEE8; --day-sun:#B83A00; --day-past:#928E85;
+  --day-page:#F7F7F4; --day-band:#EFEEE8; --day-sun:#B83A00; --day-past:#8B877F; --day-past-text:#888780;
   --day-serif:var(--font);}
 @media (prefers-color-scheme:dark){:root[data-palette="Cursor"]:not([data-theme="light"]){
   --bg:#1A1915; --surface:#23221D; --sunk:#2C2B25; --ink:#F2F1EA; --muted:#BDBAAE; --faint:#A3A094; --line:#37352E; --line-strong:#4B493F;
@@ -241,14 +241,14 @@
   --bad:#F2B8B5; --bad-soft:#33191C; --warn:#F0C66B; --warn-soft:#33270E; --ok:#8FD3B4; --ok-soft:#16302A;
   --focus:#FF7A3D; --inverse:#F2F1EA; --inverse-ink:#23221D;
   --shadow-pop:0 0 0 1px #4B493F,0 12px 32px rgba(0,0,0,.55);
-  --day-page:#1A1915; --day-band:#23221D; --day-sun:#FF7A3D; --day-past:#6A675D;}}
+  --day-page:#1A1915; --day-band:#23221D; --day-sun:#FF7A3D; --day-past:#6F6D63; --day-past-text:#78766D;}}
 :root[data-palette="Cursor"][data-theme="dark"]{
   --bg:#1A1915; --surface:#23221D; --sunk:#2C2B25; --ink:#F2F1EA; --muted:#BDBAAE; --faint:#A3A094; --line:#37352E; --line-strong:#4B493F;
   --accent:#FF7A3D; --accent-ink:#1A1915; --accent-soft:#3A2418; --brand:#F54E00; --btn:#F54E00; --btn-hover:#FF7A3D;
   --bad:#F2B8B5; --bad-soft:#33191C; --warn:#F0C66B; --warn-soft:#33270E; --ok:#8FD3B4; --ok-soft:#16302A;
   --focus:#FF7A3D; --inverse:#F2F1EA; --inverse-ink:#23221D;
   --shadow-pop:0 0 0 1px #4B493F,0 12px 32px rgba(0,0,0,.55);
-  --day-page:#1A1915; --day-band:#23221D; --day-sun:#FF7A3D; --day-past:#6A675D;}
+  --day-page:#1A1915; --day-band:#23221D; --day-sun:#FF7A3D; --day-past:#6F6D63; --day-past-text:#78766D;}
 /* Cursor shapes: 12px white cards on hairlines, no shadow; 8px controls; menus lifted by a hairline ring; the orange only on the
    primary button, the mark, the active-page marker and the tab underline; light display headings with tight tracking */
 :root[data-palette="Cursor"] .card,:root[data-palette="Cursor"] .col,:root[data-palette="Cursor"] .tbl,:root[data-palette="Cursor"] .tree{border-radius:var(--r-lg);box-shadow:none}
@@ -285,21 +285,21 @@
   --shadow-card:none; --shadow-pop:0 0 0 1px #D1C7BB,0 10px 28px rgba(20,20,19,.10);
   --font:"StyreneB","Inter",-apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  --day-page:#FAF9F5; --day-band:#F5F0E8; --day-sun:#9C4E35; --day-past:#949087; --day-serif:"Copernicus","Tiempos Headline","Iowan Old Style","Charter",Georgia,serif;}
+  --day-page:#FAF9F5; --day-band:#F5F0E8; --day-sun:#9C4E35; --day-past:#8D8981; --day-past-text:#8C8883; --day-serif:"Copernicus","Tiempos Headline","Iowan Old Style","Charter",Georgia,serif;}
 @media (prefers-color-scheme:dark){:root[data-palette="Claude"]:not([data-theme="light"]){
   --bg:#181715; --surface:#1F1E1B; --sunk:#252320; --ink:#FAF9F5; --muted:#A09D96; --faint:#9A978F; --line:#34312C; --line-strong:#48443D;
   --accent:#E08F72; --accent-ink:#141413; --accent-soft:#3A2820; --brand:#CC785C; --btn:#CC785C; --btn-ink:#141413; --btn-hover:#E08F72;
   --bad:#F0A39B; --bad-soft:#3A1F1C; --bad-ink:#141413; --warn:#F2D27A; --warn-soft:#3A2C12; --ok:#6CC883; --ok-soft:#1C3323;
   --focus:#E08F72; --inverse:#FAF9F5; --inverse-ink:#1F1E1B; --stage-dot:#7F5A00;
   --shadow-pop:0 0 0 1px #48443D,0 12px 32px rgba(0,0,0,.55);
-  --day-page:#181715; --day-band:#1F1E1B; --day-sun:#E08F72; --day-past:#68645D;}}
+  --day-page:#181715; --day-band:#1F1E1B; --day-sun:#E08F72; --day-past:#6D6962; --day-past-text:#6D6B66;}}
 :root[data-palette="Claude"][data-theme="dark"]{
   --bg:#181715; --surface:#1F1E1B; --sunk:#252320; --ink:#FAF9F5; --muted:#A09D96; --faint:#9A978F; --line:#34312C; --line-strong:#48443D;
   --accent:#E08F72; --accent-ink:#141413; --accent-soft:#3A2820; --brand:#CC785C; --btn:#CC785C; --btn-ink:#141413; --btn-hover:#E08F72;
   --bad:#F0A39B; --bad-soft:#3A1F1C; --bad-ink:#141413; --warn:#F2D27A; --warn-soft:#3A2C12; --ok:#6CC883; --ok-soft:#1C3323;
   --focus:#E08F72; --inverse:#FAF9F5; --inverse-ink:#1F1E1B; --stage-dot:#7F5A00;
   --shadow-pop:0 0 0 1px #48443D,0 12px 32px rgba(0,0,0,.55);
-  --day-page:#181715; --day-band:#1F1E1B; --day-sun:#E08F72; --day-past:#68645D;}
+  --day-page:#181715; --day-band:#1F1E1B; --day-sun:#E08F72; --day-past:#6D6962; --day-past-text:#6D6B66;}
 /* Claude shapes: 12px cards on cream hairlines, no shadow; 8px controls (the design's md) and pill chips; menus lifted by a hairline
    ring; coral only on the mark, the active-page marker and the tab underline; medium-weight headings */
 :root[data-palette="Claude"] .card,:root[data-palette="Claude"] .col,:root[data-palette="Claude"] .tbl,:root[data-palette="Claude"] .tree{border-radius:var(--r-lg);box-shadow:none}
@@ -333,21 +333,21 @@
   --shadow-card:none; --shadow-pop:0 0 0 1px #D2D2D7,0 8px 24px rgba(0,0,0,.08);
   --font:"SF Pro Text",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
   --display:"SF Pro Display",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
-  --day-page:#FFFFFF; --day-band:#F5F5F7; --day-sun:#0066CC; --day-past:#949497; --day-serif:var(--display);}
+  --day-page:#FFFFFF; --day-band:#F5F5F7; --day-sun:#0066CC; --day-past:#8C8C8F; --day-past-text:#8B8B8F; --day-serif:var(--display);}
 @media (prefers-color-scheme:dark){:root[data-palette="Apple"]:not([data-theme="light"]){
   --bg:#000000; --surface:#1C1C1E; --sunk:#2C2C2E; --ink:#F5F5F7; --muted:#AEAEB2; --faint:#98989D; --line:#38383A; --line-strong:#48484A;
   --accent:#2997FF; --accent-ink:#000000; --accent-soft:#0A2540; --brand:#2997FF; --btn:#2997FF; --btn-ink:#000000; --btn-hover:#5AAEFF;
   --bad:#FF7A70; --bad-soft:#3A1512; --bad-ink:#000000; --warn:#FFB340; --warn-soft:#3A2A0E; --ok:#30D158; --ok-soft:#0E2E17;
   --focus:#2997FF; --inverse:#F5F5F7; --inverse-ink:#1C1C1E; --stage-dot:#9E4A00;
   --shadow-pop:0 0 0 1px #48484A,0 12px 32px rgba(0,0,0,.6);
-  --day-page:#000000; --day-band:#1C1C1E; --day-sun:#2997FF; --day-past:#636366;}}
+  --day-page:#000000; --day-band:#1C1C1E; --day-sun:#2997FF; --day-past:#68686A; --day-past-text:#6C6C6F;}}
 :root[data-palette="Apple"][data-theme="dark"]{
   --bg:#000000; --surface:#1C1C1E; --sunk:#2C2C2E; --ink:#F5F5F7; --muted:#AEAEB2; --faint:#98989D; --line:#38383A; --line-strong:#48484A;
   --accent:#2997FF; --accent-ink:#000000; --accent-soft:#0A2540; --brand:#2997FF; --btn:#2997FF; --btn-ink:#000000; --btn-hover:#5AAEFF;
   --bad:#FF7A70; --bad-soft:#3A1512; --bad-ink:#000000; --warn:#FFB340; --warn-soft:#3A2A0E; --ok:#30D158; --ok-soft:#0E2E17;
   --focus:#2997FF; --inverse:#F5F5F7; --inverse-ink:#1C1C1E; --stage-dot:#9E4A00;
   --shadow-pop:0 0 0 1px #48484A,0 12px 32px rgba(0,0,0,.6);
-  --day-page:#000000; --day-band:#1C1C1E; --day-sun:#2997FF; --day-past:#636366;}
+  --day-page:#000000; --day-band:#1C1C1E; --day-sun:#2997FF; --day-past:#68686A; --day-past-text:#6C6C6F;}
 /* Apple shapes: 18px tiles on hairlines with no shadow; compact 8px utility buttons and a blue pill for the primary one only (the
    design's two button grammars); pill filter chips; display headings at 600 with the design's negative tracking; the active page a
    quiet grey tile with a blue marker */
@@ -389,7 +389,7 @@
   --shadow-card:4px 4px 0 var(--pixel); --shadow-pop:4px 4px 0 var(--pixel);
   --font:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  --day-page:#F2F2FF; --day-band:#E8E8FA; --day-sun:#0000FF; --day-past:#8989A9; --day-serif:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
+  --day-page:#F2F2FF; --day-band:#E8E8FA; --day-sun:#0000FF; --day-past:#8282A1; --day-past-text:#81819B; --day-serif:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;}
 @media (prefers-color-scheme:dark){:root[data-palette="Retro Arcade"]:not([data-theme="light"]){
   --brand-mark:#FFFF00;   /* BL-325: the same in dark */
   --bg:#000000; --surface:#0B0B1E; --sunk:#15153A; --ink:#FFFFFF; --muted:#A8E8F0; --faint:#9AA8D8; --line:#2A2A66; --line-strong:#00FFFF;
@@ -397,7 +397,7 @@
   --bad:#FF4545; --bad-soft:#3A0A0A; --bad-ink:#000000; --warn:#FFFF00; --warn-soft:#2E2E00; --ok:#00FF00; --ok-soft:#003300;
   --focus:#FFFF00; --inverse:#FFFF00; --inverse-ink:#000000; --stage-dot:#B000B0;
   --pixel:#B000B0; --arcade-logo:#FFFF00; --arcade-red:#FF0000;
-  --day-page:#000000; --day-band:#0B0B1E; --day-sun:#FFFF00; --day-past:#565683;}}
+  --day-page:#000000; --day-band:#0B0B1E; --day-sun:#FFFF00; --day-past:#5C5C87; --day-past-text:#618592;}}
 :root[data-palette="Retro Arcade"][data-theme="dark"]{
   --brand-mark:#FFFF00;   /* BL-325: the same in dark */
   --bg:#000000; --surface:#0B0B1E; --sunk:#15153A; --ink:#FFFFFF; --muted:#A8E8F0; --faint:#9AA8D8; --line:#2A2A66; --line-strong:#00FFFF;
@@ -405,7 +405,7 @@
   --bad:#FF4545; --bad-soft:#3A0A0A; --bad-ink:#000000; --warn:#FFFF00; --warn-soft:#2E2E00; --ok:#00FF00; --ok-soft:#003300;
   --focus:#FFFF00; --inverse:#FFFF00; --inverse-ink:#000000; --stage-dot:#B000B0;
   --pixel:#B000B0; --arcade-logo:#FFFF00; --arcade-red:#FF0000;
-  --day-page:#000000; --day-band:#0B0B1E; --day-sun:#FFFF00; --day-past:#565683;}
+  --day-page:#000000; --day-band:#0B0B1E; --day-sun:#FFFF00; --day-past:#5C5C87; --day-past-text:#618592;}
 /* Retro Arcade shapes: 8px cards with a 2px neon border and a hard pixel shadow (no blur, no glow); menus framed in the focus
    colour; 6px controls; the primary button a blue block with a pixel shadow that presses in; the active page a blue tile with a
    yellow icon; monospace headings, table heads and logo; a red offset shadow under page titles, as the design's display type */
@@ -453,21 +453,21 @@
   --shadow-card:none; --shadow-pop:0 0 0 1px #AEB9D6,0 10px 28px rgba(5,11,38,.12);
   --font:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:"Share Tech Mono",ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-  --day-page:#F1F4FA; --day-band:#E6EBF5; --day-sun:#1D3BD1; --day-past:#838CA3; --day-serif:var(--mono);}
+  --day-page:#F1F4FA; --day-band:#E6EBF5; --day-sun:#1D3BD1; --day-past:#7D859D; --day-past-text:#7D849E; --day-serif:var(--mono);}
 @media (prefers-color-scheme:dark){:root[data-palette="Thermo Scan"]:not([data-theme="light"]){
   --bg:#050B26; --surface:#0B1435; --sunk:#121D45; --ink:#FFFFFF; --muted:#AEBBE3; --faint:#97A5D2; --line:#1F2C5C; --line-strong:#34457F;
   --accent:#FFC800; --accent-ink:#050B26; --accent-soft:#2B2A2A; --brand:#FFC800; --btn:#FFC800; --btn-ink:#050B26; --btn-hover:#FFD84D;
   --bad:#FF5C5C; --bad-soft:#3A0E1A; --bad-ink:#050B26; --warn:#FF7A1A; --warn-soft:#3A230E; --ok:#00FF00; --ok-soft:#06331A;
   --focus:#FFC800; --inverse:#E6ECFF; --inverse-ink:#050B26; --stage-dot:#A84300;
   --shadow-card:inset 0 1px 0 rgba(255,255,255,.04); --shadow-pop:0 0 0 1px #34457F,0 12px 32px rgba(0,0,0,.6),0 0 24px rgba(255,200,0,.06);
-  --day-page:#050B26; --day-band:#0B1435; --day-sun:#FFC800; --day-past:#505D8A;}}
+  --day-page:#050B26; --day-band:#0B1435; --day-sun:#FFC800; --day-past:#56638E; --day-past-text:#657095;}}
 :root[data-palette="Thermo Scan"][data-theme="dark"]{
   --bg:#050B26; --surface:#0B1435; --sunk:#121D45; --ink:#FFFFFF; --muted:#AEBBE3; --faint:#97A5D2; --line:#1F2C5C; --line-strong:#34457F;
   --accent:#FFC800; --accent-ink:#050B26; --accent-soft:#2B2A2A; --brand:#FFC800; --btn:#FFC800; --btn-ink:#050B26; --btn-hover:#FFD84D;
   --bad:#FF5C5C; --bad-soft:#3A0E1A; --bad-ink:#050B26; --warn:#FF7A1A; --warn-soft:#3A230E; --ok:#00FF00; --ok-soft:#06331A;
   --focus:#FFC800; --inverse:#E6ECFF; --inverse-ink:#050B26; --stage-dot:#A84300;
   --shadow-card:inset 0 1px 0 rgba(255,255,255,.04); --shadow-pop:0 0 0 1px #34457F,0 12px 32px rgba(0,0,0,.6),0 0 24px rgba(255,200,0,.06);
-  --day-page:#050B26; --day-band:#0B1435; --day-sun:#FFC800; --day-past:#505D8A;}
+  --day-page:#050B26; --day-band:#0B1435; --day-sun:#FFC800; --day-past:#56638E; --day-past-text:#657095;}
 /* Thermo Scan shapes: 8px panels on navy hairlines like an instrument display; menus lifted by a hairline ring (and, on dark, the
    faintest warm glow); 6px controls; the gold button; monospace headings, table heads, labels and logo; the thermal spectrum
    (cold blue to hot red) as the active page's marker and the chosen tab's underline */
@@ -495,6 +495,7 @@
    they are aliases now, set once here, and no palette repeats them */
 :root{--day-ink:var(--ink); --day-muted:var(--muted); --day-rule:var(--line);
   --day-page:#FAF9F6; --day-band:#F3F1EC; --day-sun:#C2603F; --day-past:#B9B2A8;
+  --day-past-text:color-mix(in srgb,var(--day-muted) 55%,var(--day-band));   /* every palette sets its own; this is the old .55 fade as a colour */
   --day-serif:"Iowan Old Style","Charter","Georgia","Cambria","Times New Roman",serif;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--day-page:#161513; --day-band:#1D1B18; --day-sun:#E58E68; --day-past:#5E5850;}}
 :root[data-theme="dark"]{--day-page:#161513; --day-band:#1D1B18; --day-sun:#E58E68; --day-past:#5E5850;}
@@ -562,7 +563,7 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .daymeets{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px 0;margin-top:6px}
 .dm{padding:2px 16px 0;border-left:1px solid var(--day-rule);min-width:0} .dm:first-child{border-left:0;padding-left:0}
 .dm .tm{font-weight:600;font-size:var(--fs-sm);color:var(--day-ink)} .dm .tt{margin-top:4px;font-size:var(--fs-md);line-height:20px;color:var(--day-muted)} .dm .wh{font-size:var(--fs-xs);color:var(--day-muted);margin-top:2px}
-.dm.past{opacity:.55} .dm.now .tm::after{content:"Now";margin-left:8px;font-size:var(--fs-xs);font-weight:600;color:var(--day-sun);text-transform:uppercase;letter-spacing:.04em}
+.dm.now .tm::after{content:"Now";margin-left:8px;font-size:var(--fs-xs);font-weight:600;color:var(--day-sun);text-transform:uppercase;letter-spacing:.04em}
 .dayall{font-size:var(--fs-sm);color:var(--day-muted);margin-top:10px} .daynote{font-size:var(--fs-sm);color:var(--day-muted);margin-top:8px}
 /* ===== BL-293: Today moves between the calendar's days (mockup: dev/mockups/today-week-nav-mockup.html) =====
    The day line replaces the date: quiet small capitals, the chosen day written out, today in the accent colour (a small dot
@@ -579,7 +580,7 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .daytabs .dy.today:not([aria-selected="true"])::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle}
 .daytabs .dy:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .daytabs .daysep{color:var(--day-rule);font-size:var(--fs-xs)}
-.daytabs .daywk{font-size:var(--fs-2xs);line-height:1;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);opacity:.7;padding:0 6px 0 10px;margin-left:4px;border-left:1px solid var(--day-rule);white-space:nowrap}
+.daytabs .daywk{font-size:var(--fs-2xs);line-height:1;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);padding:0 6px 0 10px;margin-left:4px;border-left:1px solid var(--day-rule);white-space:nowrap}   /* v1.9.5 check 6: no .7 fade; 10 px words need 4.5:1 */
 /* the arrows never move (Alan, 13-10-2026): both sit at the band's top right, a fixed place on every day, whatever the headline,
    the meetings or the day line's wrapping; the line keeps room for them. At an end the arrow stays, disabled and dimmed. */
 .daytabs{padding-right:64px}
@@ -588,7 +589,9 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dayband:hover .dayedge:not(:disabled),.dayedge:focus-visible{opacity:.7} .dayedge:hover:not(:disabled){opacity:1;background:color-mix(in srgb,var(--surface) 60%,transparent)}
 .dayedge:disabled{opacity:.18;cursor:default}
 @media (max-width:640px){ .dayedge.l{right:44px} .dayedge.r{right:12px} }
-.dm.past{opacity:1} .dm.past>:not(.acts){opacity:.55}
+/* v1.9.5 check 6: a past meeting's words are dimmed with a colour of their own (--day-past-text, at least 3:1 on the band in
+   every palette), not a .55 fade, which left them at 2.1 to 3.7:1; its follow-up actions (.acts) keep their full colours */
+.dm.past>:not(.acts),.dm.past>:not(.acts) *{color:var(--day-past-text)}
 .dm .acts{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px}
 .dm .acts .chip{font:600 var(--fs-xs)/1 var(--font);padding:4px 8px;border-radius:var(--r-pill);letter-spacing:.02em}
 .dm .acts .chip.ok{background:var(--ok-soft);color:var(--ok)} .dm .acts .chip.warn{background:var(--warn-soft);color:var(--warn)} .dm .acts .chip.mute{color:var(--day-muted);border:1px solid var(--day-rule)}
@@ -820,7 +823,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .setcats button[aria-selected="true"]{color:var(--ink);border-left-color:var(--accent);background:var(--sunk)}
 .setside{position:sticky;top:12px;display:flex;flex-direction:column;gap:8px}
 .setside .setcats{position:static}
-.setq{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;background:var(--surface);color:var(--ink);width:100%;box-sizing:border-box}
+.setq{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs);width:100%;box-sizing:border-box}   /* v1.9.5 check 9: the one field height (was 38px) */
 .setcatsel{display:none;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;background:var(--surface);color:var(--ink)}
 .setcrumb{font-size:var(--fs-xs);color:var(--muted);margin:2px 0 -10px 2px}
 .setnone{padding:12px 2px}
@@ -845,7 +848,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .switch:checked{background:var(--accent)} .switch:checked::after{transform:translateX(16px)}
 .wide{grid-column:1/-1}
 table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;width:70px} table.mgr tr.off td{color:var(--muted)}
-.mgract{white-space:nowrap;text-align:right} .mgsel{height:28px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);font-size:var(--fs-xs);margin:0 4px}
+.mgract{white-space:nowrap;text-align:right} .mgsel{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);background:var(--surface);font-size:var(--ctl-fs);margin:0 4px}   /* v1.9.5 check 9: in-table selects are fields too (was 28px) */
 #chat{position:fixed;top:0;right:0;height:100vh;width:min(var(--chatw,420px),100vw);background:var(--surface);border-left:1px solid var(--line);display:none;flex-direction:column;z-index:var(--z-chat);box-shadow:var(--shadow-side)}
 #chat.on{display:flex}
 .chgrip{position:absolute;left:-4px;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:var(--z-raised-2);outline:none} .chgrip::after{content:"";position:absolute;left:3px;top:0;bottom:0;width:2px;background:transparent;transition:background-color var(--d1)}
@@ -925,7 +928,7 @@ body.resizing{cursor:col-resize;user-select:none}
 .cmdbox{display:flex;align-items:center;gap:8px;margin:6px 0;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 6px 6px 10px} .cmdbox code{flex:1;font:500 var(--fs-sm)/18px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:nowrap}
 .livealert code{font-family:ui-monospace,Menlo,monospace}
 .sample{font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px}
-@media (max-width:1100px){.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.panel.on.pwide,.panel.pwide .pin{width:max(360px,50vw)}.files{grid-template-columns:1fr}}
+@media (max-width:1100px){.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.panel.on.pwide,.panel.pwide .pin{width:max(360px,50vw)}.files{grid-template-columns:1fr}.tree{position:static}}   /* v1.9.5 hand checks (plan #81): stacked, a sticky folder list drew over the table as the page scrolled */
 /* ===== Search (BL-07) ===== */
 .vsearch{margin:10px 0 14px} .vsearch input[type=search]{width:100%;height:var(--ctl-h-lg);border:1px solid var(--line);border-radius:var(--ctl-r-lg);padding:0 14px;background:var(--surface);color:var(--ink);font-size:var(--fs-md)}   /* BL-325: the large search, a deliberate variant (the page's centred bar, beside the 40px ask creaite button; test_pages SearchBarTests) */
 .vschips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0;min-height:0} .vschip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--accent-soft);border-radius:var(--r-pill);padding:2px 4px 2px 10px;font-size:var(--fs-xs)}
@@ -1061,15 +1064,16 @@ dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);
 .mtgtbl tr:has(input:checked):not(.mtgtx) td{background:var(--sunk)}
 .mtgyes{font-weight:500;color:var(--ink)} .mtgwhen{font-size:var(--fs-xs);min-height:0} .mtgchk{font-size:var(--fs-xs)}
 /* Clear day (BL-104) */
-.mtgdayh{display:flex;align-items:center;gap:8px} .mtgdayh .sp{flex:1} .mtgclr{height:24px;font-size:var(--fs-xs);padding:0 8px}
+.mtgdayh{display:flex;align-items:center;gap:8px} .mtgdayh .sp{flex:1} .mtgclr{padding:0 10px}   /* v1.9.5 check 9: a .btn, 32px (was 24px) */
 .mtgx{border:0;background:none;color:var(--muted);font-size:var(--fs-lg);line-height:1;width:24px;height:24px;border-radius:var(--r-md);cursor:pointer} .mtgx:hover,.mtgx:focus-visible{background:var(--sunk);color:var(--ink)}
 .mtgconfirm{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px;padding:8px 12px;border:1px solid var(--warn);border-radius:var(--r-md);background:var(--sunk);font-size:var(--fs-sm)} .mtgconfirm .sp{flex:1}
 .mtgcleared{margin-top:12px;font-size:var(--fs-sm)} .mtgcleared .clrlink{background:none;border:0;padding:0;color:var(--accent);cursor:pointer;font:inherit} .mtgcleared .clrlink:hover{text-decoration:underline}
 .mtgclrlist{margin-top:8px;border:1px solid var(--line);border-radius:var(--r-md)} .mtgclrlist .clrday{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sunk);font-weight:600;font-size:var(--fs-xs);color:var(--muted)} .mtgclrlist .clrday .sp{flex:1}
 .mtgclrlist .clrrow{display:flex;align-items:center;gap:10px;padding:6px 10px;border-top:1px solid var(--line)} .mtgclrlist .clrrow .sp{flex:1}
-.mtgteams{display:inline-flex;gap:4px;align-items:center} .mtgpriv .title{color:var(--muted)} .mtgp{height:28px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);font-size:var(--fs-xs)}
+.mtgteams{display:inline-flex;gap:4px;align-items:center} .mtgpriv .title{color:var(--muted)} .mtgp{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}   /* v1.9.5 check 9 (was 28px) */
 /* ===== Workstreams (BL-58, BL-56) ===== */
 .wsnew{margin-top:8px;padding:8px 10px;border:1px dashed var(--line);border-radius:var(--r-md);display:grid;gap:6px} .wsnew label{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:center;font-size:var(--fs-xs);color:var(--muted)}
+#wsmP,#wsmName{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}   /* v1.9.5 check 9: the Workstreams bar's fields (browser default, 24 and 26px) */
 .wsnew input,#wsMgr .wsedit input,#wsMgr .wsedit select{width:100%;border:1px solid var(--line);border-radius:var(--r-md);padding:4px 8px;background:var(--surface);color:var(--ink);font-size:var(--fs-sm)}
 .handbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 10px;padding:8px 10px;background:var(--sunk);border-radius:var(--r-md)} .handbar input[type=text]{height:30px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--surface);color:var(--ink);min-width:220px}
 /* ===== Person rows (BL-68) ===== */
@@ -1572,7 +1576,7 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
 textarea.agfit{overflow-y:hidden} textarea.agfit.agscroll{overflow-y:auto}
 /* ===== end BL-146 (CSS) ===== */
 /* ===== BL-147 (sprint-ux) ===== what a typed date was understood as, under the field */
-.datehint{position:fixed;z-index:var(--z-toast);max-width:420px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 8px;font-size:var(--fs-xs);line-height:18px;box-shadow:var(--shadow-sm);pointer-events:none}
+.datehint{position:fixed;z-index:var(--z-tip);max-width:420px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 8px;font-size:var(--fs-xs);line-height:18px;box-shadow:var(--shadow-sm);pointer-events:none}
 .datehint.bad{color:var(--bad);border-color:var(--bad)}
 /* ===== end BL-147 (CSS) ===== */
 /* ===== BL-148 (sprint-ux) ===== Copy on a reply, Edit on Alan's last message (shown on hover and on focus); the draft note */
@@ -1739,7 +1743,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail.collapsed button.nv{justify-content:center;padding:0} .rail.collapsed .rl{display:none}
 .rail.collapsed .badge{position:absolute;top:2px;right:2px;margin:0;min-width:14px;height:14px;font-size:var(--fs-2xs);line-height:14px;padding:0 4px}
 .railmore{flex:none}
-#railMoreMenu{position:fixed;z-index:var(--z-toast);width:220px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:2px}
+#railMoreMenu{position:fixed;z-index:var(--z-top);width:220px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:2px}
 #railMoreMenu[hidden]{display:none}
 .rail #railMoreMenu button.nv{justify-content:flex-start;padding:0 8px} .rail #railMoreMenu .rl{display:inline}
 .rail #railMoreMenu .badge{position:static;margin-left:auto;min-width:18px;height:18px;font-size:var(--fs-xs);line-height:18px;padding:0 4px}
@@ -1769,7 +1773,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 /* ===== BL-164 (sprint-rail) ===== Activity: the toolbar, the type icons, ticks, "undone" lines and the confirm */
 .acttools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 10px}
 .actsearch{flex:1 1 280px;max-width:460px;height:var(--ctl-h);display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--muted);cursor:text}
-.actsearch input{flex:1;border:0;background:none;outline:none;min-width:0;height:30px;color:var(--ink);font-size:var(--ctl-fs)} .actsearch:focus-within{outline:3px solid var(--focus);outline-offset:1px}
+.actsearch input{flex:1;border:0;background:none;outline:none;min-width:0;height:var(--ctl-h);color:var(--ink);font-size:var(--ctl-fs)}   /* v1.9.5 check 9: the field fills the 32px bar (was 30px; it overflows the 1px border, unseen) */ .actsearch:focus-within{outline:3px solid var(--focus);outline-offset:1px}
 .actsearch svg{width:16px;height:16px} .actsearch kbd{font:500 var(--fs-xs)/16px var(--font);border:1px solid var(--line);border-bottom-width:2px;border-radius:var(--r-sm);padding:0 4px}
 #actCount{font-size:var(--fs-xs);color:var(--muted)} .actdates{display:inline-flex;gap:6px;align-items:center;font-size:var(--fs-sm);color:var(--muted)}
 .actdates input{width:112px;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
@@ -2127,6 +2131,7 @@ svg .flk text{text-decoration:underline dotted}
 .mv-card.client{border:2px solid var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
 .mv-head{display:flex;align-items:center;gap:10px;margin:0 0 8px;flex-wrap:wrap} .mv-head h2{margin:0}
 .mv-head .sp{flex:1}
+.mv-head .mv-tag{white-space:normal;min-width:0}   /* v1.9.5: Movement's "Internal only: never in client output" wraps at 320 px rather than run past the card */
 .mv-pill{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;border-radius:var(--r-pill);padding:4px 10px;white-space:nowrap}
 .mv-pill svg{width:13px;height:13px}
 .mv-pill.int{background:var(--ink);color:var(--surface)} .mv-pill.cli{background:var(--accent);color:var(--accent-ink)}
@@ -2212,7 +2217,8 @@ svg .flk text{text-decoration:underline dotted}
 .mv-legend span{display:inline-flex;align-items:center;gap:6px}
 @media (max-width:900px){.mv-lh{display:none}.mv-lrow{grid-template-columns:1fr}}
 .mv-grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-top:12px}
-@media (max-width:900px){.mv-grid2{grid-template-columns:1fr}}
+@media (max-width:900px){.mv-grid2{grid-template-columns:minmax(0,1fr)}}
+.mv-grid2>*{min-width:0}   /* v1.9.5: a grid item may not be wider than its column, else Decide-what-to-do ran 6 px past the view at 320 px where a scrollbar takes room */
 .mv-dchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
 .mv-dchips>span{background:var(--sunk);border-radius:var(--r-md);padding:4px 8px;font-size:var(--fs-xs);color:var(--muted)} .mv-dchips b{color:var(--ink);font-weight:600}
 svg.mv-tr text{font-size:var(--fs-xs);fill:var(--muted);font-family:var(--font)}
@@ -2235,7 +2241,7 @@ textarea.mv-in{height:auto;min-height:64px;padding:8px 10px;resize:vertical}
 .mv-dp{display:inline-flex;align-items:center;gap:8px;height:34px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 10px;cursor:pointer;font:inherit;font-size:var(--fs-md);min-width:150px;justify-content:space-between}
 .mv-dp:hover{background:var(--sunk)} .mv-dp.chg{border-color:var(--accent);background:var(--accent-soft)} .mv-dp svg{width:16px;height:16px}
 .mv-dp:focus-visible,.mv-cb:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.mv-cal,.mv-pop{position:fixed;z-index:var(--z-toast);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px}
+.mv-cal,.mv-pop{position:fixed;z-index:var(--z-top);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px}
 .mv-cal{width:292px} .mv-pop{width:300px;padding:8px}
 .mv-cal[hidden],.mv-pop[hidden]{display:none}
 .mv-calh{display:flex;align-items:center;gap:6px;margin:0 0 6px} .mv-calh b{flex:1;text-align:center;font-weight:600}
@@ -2807,6 +2813,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand .ct{flex:1;min-width:0;font-size:var(--fs-sm);line-height:20px;overflow-wrap:anywhere}
 .tdcand .cs{color:var(--day-muted,var(--muted))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
+.tdmark{vertical-align:2px;height:18px}
 #tBrief .tdrow.td-quiet .tb .t{font-weight:400;color:var(--day-muted,var(--muted))}
 #tBrief ol.bl>li{min-height:44px;padding:8px 0;align-items:flex-start}
 #tBrief .tacts{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto;opacity:.55;transition:opacity var(--d1)}

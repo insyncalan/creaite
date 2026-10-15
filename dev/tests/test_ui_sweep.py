@@ -95,6 +95,12 @@ SCREENS["reports"] = ("go('reports'); document.querySelector('[data-rpf=all]')?.
                       "document.querySelector('#v-reports tbody tr')", "#v-reports")
 SCREENS["reporting"] = ("openSpace('ABC')", "document.querySelector('#v-reporting .rp-card')", "#v-reporting")
 
+# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
+# ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
+SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=document.querySelector('#projArch [data-parch=archive][data-pcode=ABC]'); "
+                          "b ? (b.focus(), b.click()) : n && setTimeout(()=>t(n-1),50); })(100)",
+                          "document.getElementById('parchDlg')?.open && document.querySelector('#parchDlg .parchlist li')", "#parchDlg")
+
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
 # (arrow keys on the grip); the project page's flow chart bars (the same counts are links in the card's table).
@@ -114,6 +120,7 @@ class UiSweepCase(ts.Snapshots):
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
                "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
                "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
+               "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
                "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; document.getElementById('mnApprove') && document.getElementById('mnApprove').open && document.getElementById('mnApprove').close(); go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)

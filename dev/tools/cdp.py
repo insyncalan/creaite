@@ -126,6 +126,9 @@ class Browser:
         self.proc = proc_guard.spawn(          # BL-247: its own process group, with a watchdog
             [path, "--headless=new", "--disable-gpu", f"--user-data-dir={self.profile}", "--remote-debugging-port=0",
              "--no-first-run", "--no-default-browser-check", "--disable-component-update", "--disable-background-networking",
+             # ci-macos-hang: on a Mac with no unlocked login keychain (a CI runner, a fresh HOME) Chrome waits on the keychain
+             # and Page.navigate never answers; a mock keychain is what Puppeteer and Playwright use there (ignored elsewhere)
+             "--use-mock-keychain",
              f"--window-size={width},{height}", *args, "about:blank"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         port_file = os.path.join(self.profile, "DevToolsActivePort")
         for _ in range(100):

@@ -172,7 +172,7 @@ class ConversationServerTests(unittest.TestCase):
         self.assertEqual(len(after), len(before) + 1)                                        # one proposal
         spec = json.loads((self.v.root / "system/staging" / made["proposal"]).read_text())
         self.assertEqual(len(spec["items"]), 1)
-        self.assertEqual(spec["items"][0]["table"], "decisions")
+        self.assertEqual((spec["items"][0]["table"], spec["items"][0]["decision"]), ("decisions", "pending"))   # for Review (check 45)
         self.assertIn("Chat: Project Falcon go-live", spec["items"][0]["values"]["source"])
         st = vip_file(self.v)
         card = next(a for a in st["alerts"] if a["id"] == card["id"])
@@ -187,6 +187,10 @@ class ConversationServerTests(unittest.TestCase):
         back = next(a for a in vip_file(self.v)["alerts"] if a["id"] == card["id"])
         self.assertIsNone(back["seen"])
         self.assertNotIn("dismissed", back["candidates"][2])
+        (self.v.root / "system/staging" / made["proposal"]).unlink()                         # the page's Undo: unstaged first
+        u = self.post("/api/alerts/undo", {"ids": [card["id"]], "cand": 2})
+        self.assertEqual(u["restored"], 1)                                                   # then the item is back on the card
+        self.assertNotIn("made", next(a for a in vip_file(self.v)["alerts"] if a["id"] == card["id"])["candidates"][1])
 
     def test_5_no_message_text_and_no_label(self):
         self.wait_for(lambda g: len(g["alerts"]) == 2, "two conversations")
@@ -280,7 +284,7 @@ class ConversationRecordTests(unittest.TestCase):
 
 
 class ConversationPageTests(unittest.TestCase):
-    """Today: one card per conversation (its title, "updated HH:MM", the summary, each candidate with Create work item and
+    """Today: one card per conversation (its title, "updated HH:MM" at its last message, the summary, each candidate with Create work item and
     Dismiss), the quiet line with no buttons and no count, and never the word VIP."""
 
     @classmethod
@@ -314,12 +318,14 @@ class ConversationPageTests(unittest.TestCase):
         self.assertIsNotNone(o)
         self.assertNotIn("error", o, o)
         self.assertEqual(o["title"], "Project Falcon go-live")
-        self.assertIn("updated 09:30", o["card"])
+        self.assertIn("updated 08:40", o["card"])                                            # the last message, not when it was recorded
+        self.assertNotIn("09:30", o["card"])                                                 # (plan #81)
         self.assertIn("Example Programme", o["card"])                                        # the matched project, by name
         self.assertIn("Mia's team will take the solution from production to live", o["card"])
         self.assertEqual(o["cands"], [["Action", [["make", "1"], ["dismiss", "1"]]], ["Decision", [["make", "2"], ["dismiss", "2"]]]])
         self.assertEqual(o["cardButtons"], 0)                                                # the buttons are per item
         self.assertIn("Mia Hale with Omar Ali: nothing for you", o["quiet"])
+        self.assertIn("updated 08:20", o["quiet"])                                           # its own last message
         self.assertEqual(o["quietButtons"], 0)
         self.assertEqual(o["count"], "1")                                                    # the quiet line isn't counted
         self.assertNotIn("VIP", o["page"])                                                   # BL-288

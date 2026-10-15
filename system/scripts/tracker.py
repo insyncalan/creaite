@@ -1270,8 +1270,13 @@ def resolve_proposal(arg):
 
 
 def via_for(prop_path, data):
-    """What change_log records as the source of an apply: the proposal's source_run, else its file name."""
+    """What change_log records as the source of an apply: the proposal's source_run, else its file name. The daily archiving
+    (BL-10: items only, each an archive_item) is recorded as "archive", so Activity names it; it is not one of Alan's own
+    edits (VIA_NAMES), and a report archive (files only) keeps its file name."""
     run = data.get("source_run", "")
+    items = data.get("items") or []
+    if run == AGE_SOURCE and items and all(i.get("op") == AGE_OP for i in items):
+        return AGE_SOURCE
     return run if run in VIA_NAMES else Path(prop_path).name
 
 
@@ -2685,6 +2690,20 @@ def why_not(con, r, reverted, done_ids):
     return None
 
 
+def age_archive_refusal(r):
+    """BL-10: why the daily archiving's change can't be chosen (its own Undo, or an edit, brings the item back), or None."""
+    if r["field"] == "archived" and is_age_archive_via(r["via"]):
+        return "archived for its age: use Undo on the archive apply, or edit the item to bring it back"
+    return None
+
+
+def is_age_archive_via(via):
+    """BL-10: whether a change_log source is the daily archiving: "archive" (via_for), or its proposal's file name as
+    recorded before v1.9.5's fix (proposed-<stamp>-archive.json)."""
+    via = str(via or "")
+    return via == AGE_SOURCE or bool(re.fullmatch(r"proposed-[\d-]+-archive(-\d+)?\.json", via))
+
+
 def revert_plan(con, rowids, apply_id, via):
     """Put back the chosen rows inside the caller's transaction. Returns (done, skipped): lists of dicts."""
     reverted = reverted_rowids(con)
@@ -2695,7 +2714,7 @@ def revert_plan(con, rowids, apply_id, via):
     groups = {}                                        # (apply, table, item) → the chosen rows of that apply on that item
     for rid in sorted(set(rowids), reverse=True):     # newest first, so two changes to one field go back in turn
         r = found.get(rid)
-        why = why_not(con, r, reverted, done_ids)
+        why = why_not(con, r, reverted, done_ids) or age_archive_refusal(r)
         if why:
             skipped.append({"rowid": rid, "id": r["item_id"] if r else "", "field": r["field"] if r else "", "why": why})
             continue

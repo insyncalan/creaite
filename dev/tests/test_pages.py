@@ -171,6 +171,14 @@ def settle(b, js, timeout=10):
     b.wait(js, timeout)
 
 
+def resize(b, width, height):
+    """Resize, then wait until the page has the new size and the rail has followed it. The renderer takes the new viewport a
+    little after Chrome answers, and the rail turns to icons below 1200px on the media query's change event, at the next frame;
+    under load a measurement taken at once saw the old size (two panes side by side at 700px)."""
+    b.resize(width, height)
+    b.wait(f"innerWidth==={width} && innerHeight==={height} && document.documentElement.classList.contains('railicons')==={str(width < 1200).lower()}")
+
+
 class FilesLiveBase(LiveBrowserCase):
     """A live server and a headless Chrome; files are added to the vault from outside the dashboard."""
 
@@ -391,7 +399,7 @@ class SearchBarTests(LiveBrowserCase):
 
     def test_the_bar_is_centred_about_half_the_page_with_the_button_beside_it(self):
         for width in (1400, 1700, 1100):
-            self.b.resize(width, 900)
+            resize(self.b, width, 900)
             self.b.eval("go('files')")
             page = self.box("#vsearch")[2]
             bar, col, btn = self.box("#vsInput"), self.box(".vscol"), self.box("#vsAskBtn")
@@ -479,7 +487,7 @@ class SearchBarTests(LiveBrowserCase):
 
     def test_narrow_windows_stack_the_button_under_the_bar(self):
         b = self.b
-        b.resize(700, 900)
+        resize(b, 700, 900)
         b.eval("go('files')")
         page = self.box("#vsearch")[2]
         bar, btn, col = self.box("#vsInput"), self.box("#vsAskBtn"), self.box(".vscol")
@@ -784,7 +792,7 @@ class PanesLive(LiveBrowserCase):
     def test_a_solo_read_view_is_full_width_in_a_narrow_window(self):
         b = self.b
         self.open_card()
-        b.resize(700, 900)
+        resize(b, 700, 900)
         b.eval("renderCockpit('ABC')")
         left = b.eval("document.querySelector('.curpane[data-pane=\"1\"]').getBoundingClientRect().toJSON()")
         box = b.eval("document.querySelector('.curpanes').getBoundingClientRect().width")
@@ -923,7 +931,7 @@ class PanesLive(LiveBrowserCase):
     def test_narrow_windows_stack_the_panes(self):
         b = self.b
         self.two_panes()
-        b.resize(700, 900)
+        resize(b, 700, 900)
         b.eval("renderCockpit('ABC')")
         left, right = (b.eval(f"document.querySelector('.curpane[data-pane=\"{n}\"]').getBoundingClientRect().toJSON()") for n in (1, 2))
         self.assertGreaterEqual(right["top"], left["bottom"] - 1)                                        # left on top
