@@ -1573,13 +1573,15 @@ def merge_closes(keep, drop):
         keep["closes"] = dc
         if dc.get("staged") and (keep.get("match") or {}).get("id") != dc.get("id") and drop.get("match"):
             keep["match"] = drop["match"]
-    elif kc and dc and isinstance(kc.get("staged"), dict) and isinstance(dc.get("staged"), dict):
+    else:
         merge_staged(kc, dc, drop)
 
 
 def merge_staged(kc, dc, drop):
     """Review (d): both cards had a staged close. The kept card's close carries the dropped one's (and any it carried) in
-    staged.merged, so Undo on the kept card takes out both and leaves no proposal for either."""
+    staged.merged, so Undo on the kept card takes out both and leaves no proposal for either. Otherwise nothing."""
+    if not (kc and dc and isinstance(kc.get("staged"), dict) and isinstance(dc.get("staged"), dict)):
+        return
     ds = dc["staged"]
     carried = [{"proposal": ds.get("proposal"), "line": ds.get("line"), "card": ds.get("card") or drop.get("id"),
                 "id": dc.get("id")}] + [m for m in ds.get("merged") or [] if isinstance(m, dict)]
