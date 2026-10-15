@@ -288,3 +288,66 @@ test_sweep_lock's `test_a_finished_sweep_leaves_no_lock` failed under load and p
 **Then pinned:** `test_archive_reports` now pins the apply's date as well (`CREAITE_STAMP_DAY`, a tests-only seam in
 `tracker.now()`: it fixes the date part of the stamps, the time of day stays real), so its exact "on 14-10-2026" check is
 back and the "quiet for the rest of the month" check no longer depends on the real month.
+
+## release-195 (v1.9.5)
+
+From `release-194` 0f80ae8 (Team Stark, 15-10-2026; issue #48, step 3 of `dev/sprints/v195-release.md`). Merged, in
+order, each with `git merge --no-ff`:
+
+| Branch | Head | Items | Merge |
+|---|---|---|---|
+| `v195-vip-conversations` | b0f0e2a | BL-324, BL-325, BL-333, BL-334 (holds release-194 up to dc5c8bc) | e9457e8 |
+| `origin/v195-archiving` | 1770fa3 | BL-10, BL-03, and `v196-move-back`'s BL-331 (Team Cap) | 34b0f1a |
+| `v195-consistency` | f085b4c | BL-316, all screens on the building blocks (holds BL-325's design scale) | 8f664e8, rebuilt 6559133 |
+| `v195-peek-320` | 728cd22 | #80: the proposal peek's actions all on screen at 320px | 7606de9 |
+| `v195-notes` | 4a190c7 | the v1.9.5 release notes and hand checks | 3e066ad |
+
+Generated files (`build_dashboard_js.py globals`, `split_dashboard.py build`, `build_guides.py`) were rebuilt after each
+merge; only the `v195-consistency` merge changed them (6559133).
+
+**Conflicts and how they were resolved**
+
+- `v195-vip-conversations`, `origin/v195-archiving`, `v195-peek-320`, `v195-notes`: clean.
+- **`v195-consistency`** (release-194's line against BL-316's; rule: release-194's behaviour, on BL-316's blocks; no old
+  helper brought back):
+  - Generated files (`dashboard.html`, the two guides): either side, then rebuilt.
+  - `panel.js`, `core/server.js`, `settings.js`, `work.js`: release-194's `pkDots` (BL-304: a hollow dot while a change
+    is saving, and the ids waiting for Apply) is BL-316's `markStagedRows` on the StatusDot block (`statusDotNodes`,
+    `pkdot saving` for the hollow one, `data-st` kept); every caller uses `markStagedRows`.
+  - `core/server.js`: BL-327's quick save rewrote `#snackT` when `snkOn()`; now it rewrites the Toast block's message in
+    place (`TOAST.text`, `drawPageToast()`, its time kept). The imports keep release-194's `REC`.
+  - `settings.js`: BL-09's "open items" prompt was a hand-made `<dialog>` with `showModal()` (two Dialog old helpers); it
+    is now the Dialog block, `#parchDlg`, made on first use by `makeArchiveAskDialog()` in `PageDialogs.jsx` (like
+    `#actDlg`); Esc or the scrim is Stop. The ⌘K aria-label stopgap goes, as on BL-316's side (`#cmdk` is a PageDialog).
+  - `ask.js`: BL-326's restore of a chat (`runAsk` on an ask creaite started, its closure line, no Stopped under it) with
+    BL-316's History on the Menu block (`MSKEL` no longer imported); release-194's `parseHash`, `restoreNav` and
+    `VAULT_PATH` imports kept.
+  - `intake.js`, `main.js`: imports joined (`openDialog` and `runAsk`; `bootToast` and `bootPageRefresh`).
+  - `shell.html`: BL-316 moved the page's dialogs into `PageDialogs.jsx`; release-194's side only had BL-325's font-size
+    changes to them, already in `PageDialogs.jsx`. BL-316's side taken.
+  - `work.js` (the People tabs): BL-316's Tabs block; both sides had the same `thsort` header.
+  - `style.css` (30 hunks): both sides carry BL-325's design scale as a squash, and `v195-vip-conversations` holds an
+    earlier cut of it (no `--z-popup` tokens, `.mini` 26px, the old Today `.th3`); `v195-consistency`'s is
+    `origin/v195-design-scale`'s exactly, plus BL-316's (`--scrim`, the Menu block's `.ddmenu.pop`, `.rjmenu`, `.fcount`,
+    `.tabhost`). So BL-316's file, plus release-194's only CSS (BL-304's `.pkdot.saving`) and BL-334's conversation
+    cards (`.tdcands` and the rest). The rail's Customise backdrop is `var(--scrim)`.
+  - `creaite-rules.md`: release-194's line (BL-334's `vip.json` note; both had "Calendar import"). `test_today_brief.py`:
+    the same code; ours' comment.
+
+**Fixes (own commits)**
+
+- 5b192df: `behaviour_expected_failures.json` lists `#parchDlg` as unreached (Shell), like `#boardDlg` and `#llDlg`: the
+  Archive button opens it only when the server finds open items, so no sample screen reaches it. A deliberate exception;
+  `test_shared_behaviour` failed on it under load and alone before.
+
+**Checks:** `check.py` OK, old-helper counter 0 (baseline 0). `typecheck.py` 0 errors (one, `snkOn`, fixed in the merge).
+
+**Tests (local, the full suite, 256 files):** 255 passed under load; `test_shared_behaviour` failed (the `#parchDlg` line
+above) under load and alone, and passes after 5b192df. `test_snapshots` passed with no golden recorded again;
+`settings-advanced` shows `_Archive` (BL-09, via release-194).
+
+**Security (from the branches, for Team 1 to confirm; none from the merges):** `origin/v195-archiving` adds
+`reach.ARCHIVE_MOVES` `reports` and `reports_back` (one file into, or back from, its engagement's `_Archive`; `FILE_MOVES`),
+`SCRIPT_COMMANDS["archive.py"]` (`daily` record, `items` record or `--dry-run`, `reports` and `status` read), the
+move-back route on the approval card, the `archive` settings group, and `CREAITE_STAMP_DAY` (a tests-only seam in
+`tracker.now()`), pending Alan's confirmation. No `schema.sql` change in the merges.
