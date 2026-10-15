@@ -154,6 +154,52 @@ class NotesHeader(LiveBrowserCase):
         b.wait("!document.getElementById('noteDatePop')")
         self.assertEqual(b.eval("document.getElementById('noteWsDate').value"), y.strftime("%d-%m-%Y"))
 
+    def test_date_keyboard_pick_returns_focus_and_esc_closes_without_reopening(self):
+        import datetime
+        b = self.b
+        self.make("Workshop", "working-session")
+        active = "(document.activeElement.id||document.activeElement.tagName)"
+        # M1: calendar button, ArrowDown, ArrowRight, Enter: the day is used and focus is back in the date box
+        b.eval("document.getElementById('noteWsDate').focus()")
+        b.wait("!!document.getElementById('noteDatePop')")
+        b.key("ArrowDown")
+        b.wait("document.activeElement.dataset&&!!document.activeElement.dataset.d")
+        b.key("ArrowRight")
+        b.pump(0.1)
+        want = b.eval("document.activeElement.dataset.d")
+        b.key("Enter")
+        b.wait("!document.getElementById('noteDatePop')")
+        self.assertEqual(b.eval(active), "noteWsDate", "focus is back in the date box, not on the page")
+        self.assertEqual(b.eval("noteCur.value.meta.date"), want)
+        b.pump(0.3)
+        self.assertFalse(b.eval("!!document.getElementById('noteDatePop')"), "picking a day does not reopen the pop-up")
+        # M2: Esc from a day returns focus to the box and the pop-up stays closed (one Esc is enough)
+        b.key("ArrowDown")
+        b.wait("document.activeElement.dataset&&!!document.activeElement.dataset.d")
+        b.key("Escape")
+        b.wait("!document.getElementById('noteDatePop')")
+        b.pump(0.3)
+        self.assertEqual(b.eval(active), "noteWsDate")
+        self.assertFalse(b.eval("!!document.getElementById('noteDatePop')"), "Esc leaves it closed")
+        self.assertEqual(b.eval("document.getElementById('noteDateBtn').getAttribute('aria-expanded')"), "false")
+        # typing opens it again with the reads-as line; Tab out settles the field
+        self.type_into("#noteWsDate", "tomorrow")
+        b.wait("!!document.getElementById('noteDatePop')")
+        self.assertIn("Reads as", b.eval("document.getElementById('noteDateRead').textContent"))
+        for _ in range(12):                    # Tab through the calendar button and the pop-up until focus leaves the date property
+            b.key("Tab")
+            if not b.eval("!!document.querySelector('.nprop').contains(document.activeElement)"):
+                break
+        b.wait("!document.getElementById('noteDatePop')")
+        tom = datetime.date.today() + datetime.timedelta(days=1)
+        self.assertEqual(b.eval("noteCur.value.meta.date"), tom.isoformat())
+        # a click on the box opens it, and the calendar button's day pick by mouse also lands focus in the box
+        b.click("#noteDateBtn")
+        b.wait("!!document.getElementById('noteDatePop')")
+        b.click("#noteDatePop .foot [data-q=yesterday]")
+        b.wait("!document.getElementById('noteDatePop')")
+        self.assertEqual(b.eval(active), "noteWsDate")
+
     def test_the_popup_is_not_clipped_at_900(self):
         b = self.b
         self.make("Workshop", "working-session")

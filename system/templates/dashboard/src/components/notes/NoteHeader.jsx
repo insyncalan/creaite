@@ -22,14 +22,21 @@ export function NoteDate({ date }) {
   const [text, setText] = useState(date ? fd(date) : ""), [open, setOpen] = useState(false);
   const [view, setView] = useState(() => (date || TODAY).slice(0, 7));
   const box = useRef(/** @type {HTMLSpanElement | null} */ (null)), inp = useRef(/** @type {HTMLInputElement | null} */ (null));
-  const grid = useRef(/** @type {HTMLDivElement | null} */ (null));
+  const grid = useRef(/** @type {HTMLDivElement | null} */ (null)), quiet = useRef(false);
   const t = text.trim(), read = t ? readDate(t) : null, bad = !!t && !read;
   const chosen = read || date;
   useEffect(() => { if (read) setView(read.slice(0, 7)); }, [read]);
 
-  /** Write the date (or clear it) and close. @param {string} iso */
-  const commit = iso => {
+  /** Put focus back in the date box without opening the pop-up again (the box opens on focus; this focus is not the person's). */
+  const back = () => {
+    const el = inp.current; if (!el || document.activeElement === el) return;
+    quiet.current = true; el.focus(); quiet.current = false;
+  };
+  /** Write the date (or clear it) and close; `refocus` returns focus to the box (a day picked, where the day button goes away).
+      @param {string} iso @param {boolean} [refocus] */
+  const commit = (iso, refocus) => {
     setText(iso ? fd(iso) : ""); setOpen(false);
+    if (refocus) back();
     if (iso !== date) noteMeta({ date: iso });
   };
   const settle = () => {              /* leaving the field: a date it can read is used, anything else keeps the old date */
@@ -53,7 +60,7 @@ export function NoteDate({ date }) {
       <span class="ndwrap">
         <input ref={inp} type="text" id="noteWsDate" class="nin date" value={text} placeholder="Date, or e.g. last monday" autoComplete="off" maxLength={40}
           aria-label="Date of the session, a date or words like last monday" aria-invalid={bad ? "true" : undefined} aria-describedby={open ? "noteDateRead" : undefined}
-          onFocus={() => setOpen(true)} onClick={() => setOpen(true)}
+          onFocus={() => { if (!quiet.current) setOpen(true); }} onClick={() => setOpen(true)}
           onInput={e => { setText(/** @type {HTMLInputElement} */ (e.target).value); setOpen(true); }}
           onKeyDown={e => {
             if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if (!t) commit(""); else if (read) commit(read); else setOpen(true); }
@@ -65,7 +72,7 @@ export function NoteDate({ date }) {
       </span>
       {open ? (
         <div class="dpop" id="noteDatePop" role="dialog" aria-label="Choose a date" onMouseDown={e => { if (!/** @type {Element} */ (e.target).closest("input")) e.preventDefault(); }}
-          onKeyDown={e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setText(date ? fd(date) : ""); setOpen(false); if (inp.current) inp.current.focus(); } }}>
+          onKeyDown={e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setText(date ? fd(date) : ""); setOpen(false); back(); } }}>
           <div class={`typed${bad ? " bad" : ""}`} id="noteDateRead" role="status" aria-live="polite">
             {!t ? "Type a date or words like last monday." : read ? <>Reads as <b>{sayDate(read)}</b> · Enter to use</> : "Not a date I can read. Try 12-10-2026 or last monday."}
           </div>
@@ -76,10 +83,10 @@ export function NoteDate({ date }) {
             {cells.map(d => { const iso = nhIso(d), on = iso === chosen;
               return <button key={iso} type="button" data-d={iso} class={`${d.getMonth() !== m ? "o " : ""}${iso === TODAY ? "t " : ""}${on ? "s" : ""}`}
                 aria-label={sayDate(iso)} aria-pressed={on ? "true" : "false"} tabIndex={iso === (chosen && chosen.slice(0, 7) === view ? chosen : `${view}-01`) ? 0 : -1}
-                onKeyDown={e => arrow(e, iso)} onClick={() => commit(iso)}>{d.getDate()}</button>; })}
+                onKeyDown={e => arrow(e, iso)} onClick={() => commit(iso, true)}>{d.getDate()}</button>; })}
           </div>
           <div class="foot">{[["Today", "today"], ["Last Monday", "last monday"], ["Yesterday", "yesterday"]].map(([name, q]) =>
-            <button key={q} type="button" data-q={q} onClick={() => { const r = readDate(q); if (r) commit(r); }}>{name}</button>)}</div>
+            <button key={q} type="button" data-q={q} onClick={() => { const r = readDate(q); if (r) commit(r, true); }}>{name}</button>)}</div>
         </div>) : null}
     </span>);
 }

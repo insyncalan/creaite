@@ -52079,15 +52079,23 @@ ${d5.text}`);
     const grid = A2(
       /** @type {HTMLDivElement | null} */
       null
-    );
+    ), quiet = A2(false);
     const t47 = text.trim(), read = t47 ? readDate(t47) : null, bad = !!t47 && !read;
     const chosen = read || date;
     h2(() => {
       if (read) setView(read.slice(0, 7));
     }, [read]);
-    const commit = (iso) => {
+    const back2 = () => {
+      const el2 = inp.current;
+      if (!el2 || document.activeElement === el2) return;
+      quiet.current = true;
+      el2.focus();
+      quiet.current = false;
+    };
+    const commit = (iso, refocus) => {
       setText(iso ? fd(iso) : "");
       setOpen2(false);
+      if (refocus) back2();
       if (iso !== date) noteMeta({ date: iso });
     };
     const settle = () => {
@@ -52158,7 +52166,9 @@ ${d5.text}`);
             "aria-label": "Date of the session, a date or words like last monday",
             "aria-invalid": bad ? "true" : void 0,
             "aria-describedby": open2 ? "noteDateRead" : void 0,
-            onFocus: () => setOpen2(true),
+            onFocus: () => {
+              if (!quiet.current) setOpen2(true);
+            },
             onClick: () => setOpen2(true),
             onInput: (e4) => {
               setText(
@@ -52225,7 +52235,7 @@ ${d5.text}`);
               e4.stopPropagation();
               setText(date ? fd(date) : "");
               setOpen2(false);
-              if (inp.current) inp.current.focus();
+              back2();
             }
           },
           children: [
@@ -52257,7 +52267,7 @@ ${d5.text}`);
                     "aria-pressed": on2 ? "true" : "false",
                     tabIndex: iso === (chosen && chosen.slice(0, 7) === view ? chosen : `${view}-01`) ? 0 : -1,
                     onKeyDown: (e4) => arrow(e4, iso),
-                    onClick: () => commit(iso),
+                    onClick: () => commit(iso, true),
                     children: d5.getDate()
                   },
                   iso
@@ -52266,7 +52276,7 @@ ${d5.text}`);
             ] }),
             /* @__PURE__ */ u2("div", { class: "foot", children: [["Today", "today"], ["Last Monday", "last monday"], ["Yesterday", "yesterday"]].map(([name, q5]) => /* @__PURE__ */ u2("button", { type: "button", "data-q": q5, onClick: () => {
               const r4 = readDate(q5);
-              if (r4) commit(r4);
+              if (r4) commit(r4, true);
             }, children: name }, q5)) })
           ]
         }
