@@ -366,6 +366,18 @@ class StageTests(Base):
                 st["alerts"][0]["promises"][0].pop("staged")
                 (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
 
+    def test_undo_of_an_item_that_is_no_longer_the_cards_is_refused_and_changes_nothing(self):
+        self.call("vip_promise_stage", self.aid, self.key)
+        [(name, item)] = self.staged()
+        f = self.v.root / "system/staging" / name
+        spec = json.loads(f.read_text())
+        spec["items"][0]["suggested"]["threads"] = ["another-card"]
+        f.write_text(json.dumps(spec))
+        self.assertEqual(self.call("vip_promise_unstage", self.aid, self.key),
+                         {"refused": "That isn't this thread's to take back: decide it in Review."})
+        self.assertEqual(len(self.staged()), 1)
+        self.assertEqual(self.proms()[0]["state"], "staged")
+
     def test_no_due_date_and_an_unknown_name_are_flagged(self):
         self.reset()
         self.check([alan_said(promise(to="Zed Unknown", due=None))])

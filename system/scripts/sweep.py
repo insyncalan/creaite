@@ -3667,12 +3667,13 @@ def vip_promise_stage(aid, key):
 
 def _take_item(out, match, cards):
     """Take the card's own pending item out of a proposal file (the first item `match` accepts whose suggested.threads names
-    one of `cards`); an empty file is deleted. Refused when Alan changed it in Review (it is his to decide there)."""
+    one of `cards`); an empty file is deleted. Refused when it isn't this card's (nothing is changed, so the card stays
+    staged) or Alan changed it in Review (it is his to decide there)."""
     spec = json.loads(out.read_text(encoding="utf-8"))
     item = next((i for i in spec.get("items") or [] if match(i) and set((i.get("suggested") or {}).get("threads") or []) & cards),
                 None)
     if item is None:
-        return
+        raise ValueError("That isn't this thread's to take back: decide it in Review.")
     if item.get("as_proposed"):
         raise ValueError("You changed it in Review, so decide it there.")
     spec["items"].remove(item)
