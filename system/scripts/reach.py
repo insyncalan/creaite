@@ -1208,9 +1208,10 @@ def held_validate_reason(command):
         return None
     why = "tracker.py validate writes its findings back into the file, so a held run runs it only on a proposal in system/staging/"
     try:
-        given = [w for w in words if w != "validate"]
-        if len(given) != 1:
-            return why
+        given = list(words)
+        given.remove("validate")                       # the command word only: a file named validate is still checked
+        if len(given) != 1 or given[0].startswith("~") or WILDCARDS & set(given[0]):
+            return why                                 # #116: a ~ or a wildcard is what the shell expands, not what is found here
         found = next((c for c in (Path(given[0]), paths.ROOT / given[0], paths.STAGING / Path(given[0]).name) if c.exists()), None)
         if found is None or parts_under(Path(os.path.realpath(found)), Path(os.path.realpath(paths.STAGING))) is None:
             _debug("warn", "held run refused: tracker.py validate outside system/staging")

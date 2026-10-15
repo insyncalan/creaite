@@ -127,6 +127,11 @@ def forms(root, home):
         ("validate by name, a symlink", "system/scripts/run tracker.py validate link.json", VALIDATE),
         ("validate a missing file", "system/scripts/run tracker.py validate nothing-here.json", VALIDATE),
         ("validate two files", "system/scripts/run tracker.py validate proposed-held.json .claude/settings.json", VALIDATE),
+        # #116 (A6 review F1, the same rule here): a ~ or a wildcard whose name also matches a file in system/staging/
+        ("validate ~ (a namesake in staging)", "system/scripts/run tracker.py validate ~/.claude/proposed-held.json", VALIDATE),
+        ("validate ~/ (a namesake in staging)", "system/scripts/run tracker.py validate ~/proposed-held.json", VALIDATE),
+        ("validate a quoted wildcard", "system/scripts/run tracker.py validate 'proposed-hel?.json'", VALIDATE),
+        ("validate validate", "system/scripts/run tracker.py validate validate", VALIDATE),
         # drafts.py result stages a bulk draft; the server runs it, never a held run (reach.HELD_NOT_READ)
         ("drafts.py result", "system/scripts/run drafts.py result", KIND),
         ("drafts.py result, python3 form", "python3 system/scripts/drafts.py result --x", KIND),
