@@ -22,10 +22,10 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#838C95; --line:#2B3238; --line-strong:#3E474E;
   --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10;
-  --ok:#9FD6A5; --ok-soft:#1D3322; --inverse:#E3E7EA; --inverse-ink:#181D21; --bad-ink:#601410;}}
+  --ok:#9FD6A5; --ok-soft:#1D3322; --inverse:#E3E7EA; --inverse-ink:#181D21; --bad-ink:#601410; --scrim:rgba(0,0,0,.6);}}
 :root[data-theme="dark"]{--bg:#111518; --surface:#181D21; --sunk:#1F252A; --ink:#E3E7EA; --muted:#A3ADB5; --faint:#838C95; --line:#2B3238; --line-strong:#3E474E;
   --accent:#5FC4D6; --accent-ink:#00323A; --accent-soft:#16363C; --bad:#F2B8B5; --bad-soft:#3B1F1D; --warn:#F0C66B; --warn-soft:#3A2C10; --ok:#9FD6A5; --ok-soft:#1D3322; --inverse:#E3E7EA; --inverse-ink:#181D21;
-  --bad-ink:#601410;}   /* v1.9.5 (UI audit P1-3): dark text on the pale dark --bad badge, 7.66:1 (white was 1.71:1) */
+  --bad-ink:#601410; --scrim:rgba(0,0,0,.6);}   /* v1.9.5 (UI audit P1-3): dark text on the pale dark --bad badge, 7.66:1 (white was 1.71:1) */
 /* ===== BL-325 scale (v1.9.5): one design scale, shared by all nine palettes (each keeps its own colours) =====
    Use these, never a raw value: dev/tools/token_audit.py flags a font size, radius, shadow or z-index that isn't one, and
    a spacing value off the scale. The Help guides take this block too (build_guides.py copies it).
@@ -43,6 +43,7 @@
   --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:16px; --r-pill:999px;
   --shadow-sm:0 4px 12px rgba(0,0,0,.14); --shadow-md:0 8px 24px rgba(0,0,0,.18); --shadow-lg:0 12px 32px rgba(0,0,0,.26);
   --shadow-side:-14px 0 32px rgba(0,0,0,.16);
+  --scrim:rgba(0,0,0,.25);   /* a modal dialog's backdrop; darker in dark mode (below), where .25 black barely shows */
   --z-under:0; --z-raised:1; --z-raised-2:2; --z-sticky:3; --z-sticky-2:4; --z-local:5;
   --z-menu:30; --z-popup-scrim:38; --z-popup:39; --z-panel:40; --z-panel-over:41; --z-chat:45; --z-badge:46; --z-stage:47;
   --z-pop:60; --z-pop-over:65; --z-toast:70; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210;
@@ -912,7 +913,7 @@ table.mgr td,table.mgr th{padding:8px 10px} table.mgr .num{text-align:right;widt
 .acmenu .aco{display:flex;gap:10px;align-items:baseline;padding:6px 12px;cursor:pointer} .acmenu .aco.act{background:var(--sunk)} .acmenu .aco span{flex:1} .acmenu .aco small{color:var(--muted);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .chin textarea{flex:1;resize:none;min-height:40px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--bg)}
 /* ===== BL-199 (sprint-chat-text) ===== */ .acmenu .aco:hover{background:var(--sunk)} .acmenu .achint{padding:4px 12px 4px;font-size:var(--fs-xs);color:var(--faint);border-bottom:1px solid var(--line)}
 dialog#cmdk{margin:72px auto auto;width:min(640px,94vw);padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)}
-dialog#cmdk::backdrop{background:rgba(0,0,0,.25)}
+dialog#cmdk::backdrop{background:var(--scrim)}
 #cmdkIn{width:100%;height:52px;border:0;border-bottom:1px solid var(--line);padding:0 16px;background:none;outline:0;font-size:var(--fs-lg)}
 #cmdkList{max-height:60vh;overflow:auto;padding:6px 0} #cmdkList .grp{font-size:var(--fs-xs);color:var(--muted);padding:8px 16px 2px}
 #cmdkList button{display:flex;width:100%;border:0;background:none;padding:8px 16px;text-align:left;cursor:pointer;font-size:var(--fs-sm);gap:10px} #cmdkList button small{margin-left:auto;color:var(--muted)}
@@ -934,9 +935,9 @@ body.resizing{cursor:col-resize;user-select:none}
 .vst{display:flex;gap:6px;align-items:center} .vsm{font-size:var(--fs-xs);color:var(--muted);margin:2px 0} .vss{font-size:var(--fs-sm)} .vss mark,#spText mark{background:var(--accent-soft);color:inherit;border-bottom:2px solid var(--accent);border-radius:var(--r-sm)}
 #vsAnswer{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);padding:12px 14px;margin:10px 0} .vsah{display:flex;gap:8px;align-items:center} .vsah .sp{flex:1} .vsab{margin:8px 0;font-size:var(--fs-md)} .vsab p{margin:0 0 8px} .vsaf{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
 a.cite{color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)} a.cite:hover{text-decoration:underline}
-#searchPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(760px,94vw);background:var(--surface);color:var(--ink)} #searchPrev::backdrop{background:rgba(0,0,0,.25)} #spText{max-height:62vh;overflow:auto;font-size:var(--fs-sm)} #spText p{margin:0 0 8px}
+#searchPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(760px,94vw);background:var(--surface);color:var(--ink)} #searchPrev::backdrop{background:var(--scrim)} #spText{max-height:62vh;overflow:auto;font-size:var(--fs-sm)} #spText p{margin:0 0 8px}
 /* ===== People (BL-55, BL-56) ===== */
-#personDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(440px,92vw);background:var(--surface);color:var(--ink)} #personDlg::backdrop{background:rgba(0,0,0,.25)}
+#personDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(440px,92vw);background:var(--surface);color:var(--ink)} #personDlg::backdrop{background:var(--scrim)}
 #personDlg label{display:block;font-size:var(--fs-xs);color:var(--muted);margin:8px 0 2px} #personDlg .req{color:var(--warn)} #personDlg input[type=text]{width:100%;height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink)}
 #personDlg input[readonly]{background:var(--sunk);color:var(--muted)} #personDlg .pdc{display:block;width:100%;text-align:left;margin:4px 0} #personDlg .pdc small{color:var(--muted);margin-left:6px} #pdErr{min-height:18px;margin-top:6px}
 .copt.new small,.copt small{margin-left:auto}
@@ -994,7 +995,7 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 .rgroup h2 .rgtick{margin-right:6px;vertical-align:-2px} .rgroup h2 .rgc{font-weight:400;font-size:var(--fs-sm);margin-left:6px}
 .tag.stale{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--ink)}
 .rvdone{text-align:center;padding:32px 10px} .rvdone h2{margin:0 0 6px} .rvdacts{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap}
-dialog.rvdlg{width:min(560px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.rvdlg::backdrop{background:rgba(0,0,0,.25)} .rvdlg h2{margin:0 0 4px} .rvcnt{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px} .rvcnt>div{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs);color:var(--muted)} .rvcnt b{display:block;font-size:var(--fs-lg);color:var(--ink)}
+dialog.rvdlg{width:min(560px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.rvdlg::backdrop{background:var(--scrim)} .rvdlg h2{margin:0 0 4px} .rvcnt{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 6px} .rvcnt>div{flex:1;min-width:120px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);font-size:var(--fs-xs);color:var(--muted)} .rvcnt b{display:block;font-size:var(--fs-lg);color:var(--ink)}
 .rvcnt.warnc>div{background:color-mix(in srgb,var(--warn) 10%,var(--surface))} .rvlst{display:grid;gap:4px;max-height:260px;overflow:auto} .rvlst>div{display:flex;justify-content:space-between;gap:10px;font-size:var(--fs-sm);padding:4px 0;border-bottom:1px solid var(--line)}
 /* ===== BL-133 stage B (sprint-work-views) ===== the reason menu */
 .rvreason button{display:flex;justify-content:space-between;gap:16px} .rvreason .rvother{display:flex;gap:6px;padding:6px} .rvreason .rvother input{height:28px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;font:inherit;font-size:var(--fs-sm);width:190px;background:var(--bg);color:var(--ink)}
@@ -1043,7 +1044,7 @@ body.bdragging .bcol:not(.collapsed) .bdrop{display:block} body.bdragging{cursor
 .bpick{padding:16px 14px;border:1px dashed var(--line);border-radius:var(--r-md);font-size:var(--fs-sm)} .bpick select{margin-left:8px;height:30px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px}
 .rjmenu{position:fixed;z-index:var(--z-top);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:4px;display:grid}
 .rjmenu button{border:0;background:none;text-align:left;padding:8px 12px;border-radius:var(--r-md);cursor:pointer;color:var(--ink);font:inherit;font-size:var(--fs-sm)} .rjmenu button:hover,.rjmenu button:focus-visible{background:var(--sunk);outline:none}
-dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#boardDlg::backdrop{background:rgba(0,0,0,.25)}
+dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#boardDlg::backdrop{background:var(--scrim)}
 #boardDlg .dwrap{width:170px;margin:4px 0 8px} #boardDlg .dwrap input{height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink)} .bdquick{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 6px}
 .bcard{transition:border-color var(--d1),box-shadow var(--d1)} .bcol{transition:background-color var(--d1)}
 @media (max-width:640px){ .boardctl{width:100%} }
@@ -1076,7 +1077,7 @@ dialog#boardDlg{width:min(420px,94vw);padding:16px;border:1px solid var(--line);
 .pptype{font-size:var(--fs-xs);color:var(--muted);font-weight:500;margin:8px 0 4px} .ppcard .tbl{margin-bottom:6px}
 .pplinks{display:flex;gap:16px;flex-wrap:wrap;margin:0 0 4px;font-size:var(--fs-sm)} .pplinks a{color:var(--accent)}
 .pickcol{width:32px;padding-right:0} tr.handpick{cursor:pointer}
-dialog.prepdlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.prepdlg::backdrop{background:rgba(0,0,0,.25)}
+dialog.prepdlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog.prepdlg::backdrop{background:var(--scrim)}
 .wsq{margin-top:6px;font-size:var(--fs-xs);color:var(--warn);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 /* ===== Insight (BL-51, BL-49, BL-54) ===== */
 .wflag{display:inline-flex;vertical-align:-3px;margin-right:4px;color:var(--warn);cursor:help} .wflag svg{width:15px;height:15px}
@@ -1085,10 +1086,10 @@ dialog.prepdlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid 
 .wlist>div:hover{background:var(--sunk)} .wlist .sub{display:block;margin-left:20px}
 .preplink{font-size:var(--fs-xs);padding:0;margin-top:4px;display:block}
 dialog#prepDlg{width:min(640px,94vw);max-height:84vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)}
-dialog#prepDlg::backdrop{background:rgba(0,0,0,.25)}
+dialog#prepDlg::backdrop{background:var(--scrim)}
 .prephead{display:flex;gap:8px;align-items:flex-start;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 /* Draft email (BL-83): the popup; the preview is always a white card, as the email will be read */
-dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#deDlg::backdrop{background:rgba(0,0,0,.25)}
+dialog#deDlg{width:min(860px,95vw);max-height:90vh;padding:0;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} dialog#deDlg::backdrop{background:var(--scrim)}
 #deDlg .prepbody{max-height:calc(90vh - 72px)} .derow{display:flex;align-items:center;gap:10px;margin:8px 0} .derow>label{width:64px;flex:none;color:var(--muted);font-size:var(--fs-sm)} .derow>span,.derow>input{flex:1;min-width:0}
 .derow>input[type=text]{height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg);color:var(--ink)}
 .deinc{border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;margin:10px 0;max-height:190px;overflow:auto} .deinc .pph{margin:6px 0 2px} .deinc label.it{display:flex;gap:8px;align-items:baseline;padding:2px 0;font-size:var(--fs-sm);cursor:pointer}
@@ -1748,7 +1749,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
 @media (max-width:480px){ :root.railicons{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} }
 #railCust{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 32px);border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink);padding:16px 16px 14px;box-shadow:var(--shadow-lg)}
-#railCust::backdrop{background:rgba(0,0,0,.25)}
+#railCust::backdrop{background:var(--scrim)}
 #railCust h2{margin:0 0 4px;font-size:var(--fs-lg)} #railCust .sub{margin:0;font-size:var(--fs-xs)}
 #railCust .rccols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 12px}
 @media (max-width:520px){ #railCust .rccols{grid-template-columns:1fr} }
