@@ -221,7 +221,10 @@ class Bars(LiveBrowserCase):
     def align(self):
         return self.b.eval("""(()=>{ const out=[]; for(const li of document.querySelectorAll('.nbody ul[data-type=taskList] li')){
           const box=li.querySelector('label input').getBoundingClientRect(), p=li.querySelector('div p'), r=document.createRange(); r.selectNodeContents(p.firstChild);
-          const t=r.getClientRects()[0]; out.push({ box:(box.top+box.bottom)/2, text:(t.top+t.bottom)/2, w:box.width, h:box.height, checked:li.dataset.checked }); } return out; })()""")
+          const t=r.getClientRects()[0]; const lab=li.querySelector('label'), lc=getComputedStyle(lab), pc=getComputedStyle(p);
+          out.push({ box:(box.top+box.bottom)/2, text:(t.top+t.bottom)/2, w:box.width, h:box.height, checked:li.dataset.checked,
+            lines:Math.round(p.getBoundingClientRect().height/parseFloat(pc.lineHeight)), label:lab.getBoundingClientRect().height, line:parseFloat(pc.lineHeight),
+            labelFlex:lc.display+'/'+lc.alignItems }); } return out; })()""")
 
     def checklist_note(self):
         self.make_note("Checks")
@@ -240,9 +243,22 @@ class Bars(LiveBrowserCase):
                 rows = self.align()
                 self.assertEqual(len(rows), 3)
                 for r in rows:
-                    self.assertLessEqual(abs(r["box"] - r["text"]), 2, f"{width} {theme}: {r}")
+                    self.assertLessEqual(abs(r["box"] - r["text"]), 1, f"{width} {theme}: {r}")     # the box's centre is the first line's centre
+                    self.assertAlmostEqual(r["label"], r["line"], delta=1, msg=f"the label is one line tall: {r}")   # the label rule itself
+                    self.assertEqual(r["labelFlex"], "flex/center", r)
                     self.assertGreaterEqual(r["w"], 24, r)             # the click target stays 24 px
                     self.assertGreaterEqual(r["h"], 24, r)
+                self.assertGreaterEqual(rows[2]["lines"], 3, rows[2])     # the long item wraps: the box stays on its first line
+
+    def test_the_checkbox_is_still_a_24px_target_in_forced_colours(self):
+        b = self.b
+        self.checklist_note()
+        b.call("Emulation.setEmulatedMedia", features=[{"name": "forced-colors", "value": "active"}])
+        b.pump(0.3)
+        for r in self.align():
+            self.assertGreaterEqual(r["w"], 24, r)
+            self.assertGreaterEqual(r["h"], 24, r)
+            self.assertLessEqual(abs(r["box"] - r["text"]), 1, r)
 
     def test_a_checkbox_toggles_and_the_checklist_is_in_notes_only(self):
         b = self.b
