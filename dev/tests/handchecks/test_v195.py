@@ -494,8 +494,8 @@ class Judgement2(HandcheckCase):
 
     def test_c20_audits_snapshots(self):
         """20. `python3 dev/tools/token_audit.py` and `dev/tools/ui_audit.py` from the repository → no P1 in shipped files; one
-        variant of each control. Look through the screenshot sheet's check 20 (every screen, creaite, light and dark, 1400 and
-        320 px) → you agree how each screen looks."""
+        variant of each control. Look through the screenshot sheet's check 20 (every screen in every theme, light and dark, at
+        1400 px, and in the default theme at 320 px) → you agree how each screen looks."""
         import os
         import subprocess
         repo = Path(__file__).resolve().parents[3]
@@ -512,8 +512,11 @@ class Judgement2(HandcheckCase):
         kinds = re.findall(r"^- \*\*(\w+)\*\*: (\d+) classes, \d+ rendered styles; (\d+) classes drawn more than one way", u.stdout, re.M)
         self.assertTrue(kinds, "ui_audit's control summary")
         more = [f"{k} {n}" for k, _, n in kinds if int(n)]
-        shots = sum(self.sheet(20, s, palettes=["creaite"]) for s in measure_screens())
-        self.note(20, f"{shots} shots of every screen on the sheet, in place of dev/reviews/bl325-before-after/; "
+        # Drift shows in the other themes too (Jarvis, #81): every theme in light and dark at 1400 px, and the default
+        # theme (creaite) at 320 px
+        shots = sum(self.sheet(20, s, widths=(1400,)) + self.sheet(20, s, palettes=["creaite"], widths=(320,))
+                    for s in measure_screens())
+        self.note(20, f"{shots} shots of every screen (every theme at 1400 px, creaite at 320 px) on the sheet, in place of dev/reviews/bl325-before-after/; "
                       f"token audit: {len(p1)} P1, {len(shipped)} in shipped files"
                       + (f" ({'; '.join(shipped[:3])})" if shipped else f" (all in dev/: {', '.join(sorted({f['file'] for f in p1}))})")
                       + f"; ui_audit (creaite, light, 1400 px): classes drawn more than one way: {', '.join(more) or 'none'}"
