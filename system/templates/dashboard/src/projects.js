@@ -16,7 +16,7 @@ import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, MOD, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { draftBtn, draftStat, draftWhyNot, DRRUN, genFormDraft, genFormOptions, genReset } from "./drafts.js";
+import { draftBtn, draftStat, draftWhyNot, DRRUN, genFormDraft, genFormOptions, genReset, refineAsk, refineHtml, REFINE_TEXT_MAX, versBarHtml } from "./drafts.js";
 import { FOPEN } from "./files.js";
 import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
@@ -156,12 +156,37 @@ export async function runGen(body,kind){ shared.RBOUT=""; rbStart(kind==="rewrit
   shared.GEN.run=null; genStatus(""); api("/api/ask/ack",{run:id}).catch(()=>{});   /* BL-326: seen here, so ask creaite doesn't draw it again */ if(stopped){ shared.RBOUT="stopped"; snack("Stopped; nothing changed"); return; }
   const text=said.join("\n\n"), [draft,src=""]=text.split(/^SOURCES:\s*$/m); if(!draft.trim()){ snack("No draft came back"); return; }
   if(kind==="rewrite"){ execResult(body.code,body.text,fdMd(draft.trim())); return; }
-  genDraft(body.code,fdMd(draft.trim()),src.trim(),{audience:body.audience,length:body.length,from:body.from,to:body.to}); }
+  genDraft(body.code,fdMd(draft.trim()),src.trim(),{audience:body.audience,length:body.length,from:body.from,to:body.to,note:body.note}); }
   finally{ rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
 export function genDraft(code,md,sources,opts){ if(shared.VIEW!=="cockpit"||shared.COCK!==code) go("cockpit",code);
   if(!shared.CURED) startCurEdit(code); if(!shared.CURED) return; curLoad(1,md); shared.CURED.dirty=true; shared.CURED.sources=sources||"";
-  shared.CURED.opts=opts||null; shared.CURED.notes=null; shared.CURED.facts=""; shared.CURED.rewrite=null; shared.CURED.claims=null; shared.CURED.ev={}; mountCurEdit(); claimsInit("ed"); curCheck();   /* BL-207: the marks become claims */
+  shared.CURED.opts=opts||null; shared.CURED.notes=null; shared.CURED.facts=""; shared.CURED.rewrite=null; shared.CURED.claims=null; shared.CURED.ev={}; shared.CURED.vers=[{md}]; shared.CURED.at=0; shared.CURED.refineNote=""; mountCurEdit(); claimsInit("ed"); curCheck();   /* BL-207: the marks become claims */
   snack("Draft ready — edit it, then Save. Nothing is written until you do."); }
+/* ===== #110 B: Steer it further under the unsaved Current state draft in the editor. The draft is the left pane; each refine writes
+   a new version of it (drafts.js refineAsk: the same facts, the version shown and the change), with each sentence's fact marks put
+   back so the sources and the no-source marks are worked out again for it. Versions live in the editor (CURED.vers) until it is
+   closed; Save is still the only save. ===== */
+export function curVersSync(){ const c=shared.CURED, el=$("#curVers"); if(!el||!c) return; const n=(c.vers||[]).length; putHtml(el,n>1?versBarHtml(c.at||0,n,"cver"):""); }
+/* a version's Markdown with each sentence's fact marks ({F3, F5}) put after it, from the draft's own sentences and sources */
+export function refinedMd(res){ let md=String(res.text||""), pos=0; const ids=r=>((res.sources||[]).find(x=>x.ref===r)||{}).id;
+  for(const s of res.sentences||[]){ const i=md.indexOf(s.text,pos); if(i<0) continue; pos=i+s.text.length;
+    const f=[...new Set((s.refs||[]).map(ids).filter(x=>/^F\d+$/.test(String(x||""))))]; if(!f.length) continue;
+    const mark=` {${f.join(", ")}}`; md=md.slice(0,pos)+mark+md.slice(pos); pos+=mark.length; }
+  return md; }
+function curShow(c,md){ curLoad(1,md); c.dirty=true; c.notes=null; c.claims=null; c.rewrite=null; mountCurEdit(); claimsInit("ed"); curCheck(); }
+export async function curRefine(){ const c=shared.CURED; if(!c||!c.opts||c.refining) return; const box=$("#curRefineNote"), ins=box?box.value.trim():"";
+  if(!ins){ snack("Say what to change first, or pick one of the quick ones."); if(box) box.focus(); return; }
+  const md0=edValue($("#curEd")); c.vers=c.vers||[{md:md0}]; c.at=c.at||0; c.vers[c.at].md=md0;   /* the words as they stand, edits and all */
+  c.refining=true; $("#curRefineGo")?.setAttribute("aria-disabled","true");
+  let res=null; try{ res=await refineAsk({body:{code:c.code,...c.opts},form:"current",text:stripMarks(md0).trim(),ins,fromV:c.at+1,toV:c.vers.length+1,work:$("#curRefineWork")}); }
+  finally{ c.refining=false; $("#curRefineGo")?.removeAttribute("aria-disabled"); }
+  if(shared.CURED!==c||!res) return;                            /* closed while it was written, or it failed: the editor is as it was */
+  const md=fdMd(refinedMd(res)); c.vers.push({md}); c.at=c.vers.length-1; c.refineNote="";
+  if(!c.edited){ c.edited=true; draftStat("forms","edited"); }   /* a refine is an edit of the same draft */
+  curShow(c,md); }
+export function curVersion(way){ const c=shared.CURED; if(!c||c.refining||!c.vers) return; const at=(c.at||0)+(way==="next"?1:-1); if(at<0||at>=c.vers.length) return;
+  c.vers[c.at||0].md=edValue($("#curEd")); c.at=at; curShow(c,c.vers[at].md); }
+/* ===== end #110 B ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0054(){
 if(!GEN_AUD.some(a=>a[0]===shared.GEN.aud)) shared.GEN.aud="internal";
@@ -175,8 +200,9 @@ $("#genDlg").addEventListener("click",e=>{ const st=e.target.closest("[data-gsta
   if(e.target.closest("#genSrcBtn")) genSrcOpen($("#genSrcBtn").getAttribute("aria-expanded")!=="true");
   if(e.target.closest("#genChange")){ genReset(); $("#genDays").focus(); } });
 $("#genSrc").addEventListener("change",()=>genSrcLine());
+document.addEventListener("input",e=>{ if(e.target.id==="curRefineNote"&&shared.CURED) shared.CURED.refineNote=e.target.value; });   /* #110 B: what is typed survives the editor being drawn again */
 /* ⌘↵ generates here (#101 has not built the shared dialog key yet; this is the one on this dialog) */
-onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t)); },()=>{ if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
+onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t))&&!(t.closest&&t.closest("[data-refine]")); },()=>{ if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
   $("#genGo").click(); });
 $("#genDlg").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("#genFrom,#genTo")){ e.preventDefault(); $("#genGo").click(); } });   /* Enter in a date box generates, as the primary button; it never closes the dialog */
 $("#genForm").addEventListener("submit",e=>{ if(e.submitter&&e.submitter.value!=="go") return; e.preventDefault(); if($("#genGo").getAttribute("aria-disabled")==="true") return;   /* a draft is being written */
@@ -277,13 +303,14 @@ export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=
   putHTML(box,html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map(t=>t[0]==="|"?html`<span class="rtesep"></span>`:html`<button type="button" data-rc="${t[0]}" title="${t[2]}" aria-label="${t[2]}">${t[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`,`<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`,"edit",!!splitPanes(shared.CURED.orig)[1]||!!String(shared.CURED.ed2?edValue(shared.CURED.ed2.el):shared.CURED.src2||"").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
+    ${shared.CURED.opts&&viaServer()?raw(refineHtml("cur",{note:shared.CURED.refineNote||""})):""}
     ${shared.CURED.sources?html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>`:""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts?"":"hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
   curAttach(1); curAttach(2); curAiMenu(); $$(".curpanes .rted").forEach(e=>{ paneBlank(e); }); shared.CURED.shown=new Set(figRefs($(".curpanes"))); (shared.CURED.last===2?$("#curEd2"):$("#curEd")).focus(); })();
   if(shared.CURED){ const t=csTitle(shared.CURED.code);
     $("#curEd")?.setAttribute("aria-label",`${t}, left pane`); $("#curEd2")?.setAttribute("aria-label",`${t}, right pane`); csHead(shared.CURED.code); }
-  if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); } }
+  if(shared.CURED){ claimPaint("ed"); rwWrap(); evRefresh(); curVersSync(); } }
 export function endCurEdit(){ evPanelClose(); curDrop(); DISCARD=null; $("#discardBar").classList.remove("on"); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); }
 export const figRefs=ed=>[...ed.querySelectorAll("figure.cimg")].map(f=>f.dataset.ref).filter(r=>r&&!r.startsWith("new:"));
 /* BL-76: an image taken out with its × stays out when saved; one that merely isn't in a drafted text is kept. (Only the × removes a
