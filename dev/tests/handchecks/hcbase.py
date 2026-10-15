@@ -187,3 +187,109 @@ class HandcheckCase(LiveBrowserCase):
             measure.width(b, self.width, self.height)
             b.eval("(()=>{ S.palette=%s; S.theme=%s; applyTheme(); return true; })()" % tuple(json.dumps(x) for x in was))
         return k
+
+
+# ── BL-334 and BL-316 (checks 42 to 50) ──────────────────────────────────────
+
+def vip_found(vault, conversations, now):
+    """Record conversations as the sweep would (`sweep.py vip record <file> --found sweep`), with the clock at `now`
+    ("YYYY-MM-DD HH:MM"), the way the hand check's step does it. The file goes in the vault's staging drafts (the run wrapper
+    passes only paths inside the vault). Returns (exit code, output)."""
+    import subprocess
+    f = Path(vault) / "system/staging/drafts/hc-found.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps(conversations), encoding="utf-8")
+    r = subprocess.run([str(Path(vault) / "system/scripts/run"), "sweep.py", "vip", "record", str(f), "--found", "sweep"],
+                       cwd=vault, capture_output=True, text=True, env={**os.environ, "CREAITE_NOW": now})
+    return r.returncode, r.stdout + r.stderr
+
+
+def behaviour_screens(milestone):
+    """test_shared_behaviour's screens (the snapshot sample's), pointed at the demo vault: project ABC → FAL, its first
+    milestone → `milestone` (an open one of FAL's), the sample's person → Sara Khan. Each is (go, ready, region), as there."""
+    import re as _re
+    import test_shared_behaviour as tsb
+
+    def demo(s):
+        if not isinstance(s, str):
+            return s
+        s = s.replace("ABC-M-001", milestone).replace("abc steering", "fal steering").replace("Sara Example", "Sara Khan")
+        return _re.sub(r"\bABC\b", "FAL", s)
+    return {name: tuple(demo(x) for x in spec) for name, spec in tsb.SCREENS.items()}
+
+
+def behaviour_driver(case, screens):
+    """BL-316's keyboard script and Undo check (dev/tests/test_shared_behaviour.py: Enter opens, ↑ ↓ move, Esc closes and
+    returns focus, Tab closes a menu or list or stays in a dialog; a change from a menu or a list offers Undo), driven on
+    `screens` (behaviour_screens) in `case`'s browser. Its methods are that test's own, unchanged; only the screens, going to
+    them and the Archive prompt's project (FAL, not the sample's ABC) differ."""
+    import test_shared_behaviour as tsb
+    import test_ui_sweep as us
+
+    class Drv(tsb.Driver):
+        opened, arrows, escape, tab_closes, drive, cmdk = (tsb.SharedBehaviour.opened, tsb.SharedBehaviour.arrows,
+                                                          tsb.SharedBehaviour.escape, tsb.SharedBehaviour.tab_closes,
+                                                          tsb.SharedBehaviour.drive, tsb.SharedBehaviour.cmdk)
+        pick = tsb.SharedUndo.pick
+
+        def __init__(self):
+            self.b, self.seen = case.b, []
+
+        def goto(self, name):
+            go, ready, region = screens[name]
+            b = self.b
+            b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
+                   "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
+                   "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
+                   "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
+                   "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
+            go(b) if callable(go) else b.eval(go)
+            b.wait(ready, 15)
+            last = None
+            for _ in range(12):
+                b.pump(0.25)
+                html = b.eval(f"(document.querySelector({region!r})||{{}}).outerHTML||''")
+                if html == last:
+                    break
+                last = html
+            b.eval(us.PROBE + ";true")
+            return region
+
+        def settle(self, name):
+            b = self.b
+            for _ in range(2):
+                if not b.eval("SB.popups().length"):
+                    break
+                self.press("Escape", 0.15)
+            if b.eval("SB.reset()") or not b.eval(tsb.ON_SCREEN.get(name, screens[name][1])):
+                self.goto(name)
+                b.eval(tsb.PROBE + ";true")
+
+        def openers(self, name):
+            region = screens[name][2]
+            return self.b.eval(f"SB.openers({json.dumps(tsb.ONLY.get(name, region))})")
+
+        def parch(self):
+            """test_shared_behaviour's parch, on FAL's Archive (the demo has no ABC)."""
+            b = self.b
+            self.goto("settings-people")
+            b.eval(tsb.PROBE + ";true")
+            sel = json.dumps('#projArch [data-parch="archive"][data-pcode="FAL"]')
+            b.eval(f"(()=>{{ const e=document.querySelector({sel}); e.scrollIntoView({{block:'center'}}); e.focus(); }})()")
+            self.press("Enter", 0.5)
+            try:
+                b.wait("document.getElementById('parchDlg')?.open", 20)
+            except TimeoutError:
+                return ["Enter opens nothing"]
+            self.seen.append({"ids": ["parchDlg"], "labels": [], "classes": []})
+            bad = []
+            if not b.eval("document.getElementById('parchDlg').contains(document.activeElement)"):
+                bad.append("focus stays outside the dialog")
+            self.press("Escape", 0.4)
+            if b.eval("document.getElementById('parchDlg').open"):
+                bad.append("Esc leaves it open")
+            elif not b.eval(f"document.activeElement===document.querySelector({sel})"):
+                bad.append("Esc doesn't return focus to the control")
+            return bad
+
+    return Drv()
