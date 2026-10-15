@@ -5,14 +5,13 @@
    (initials and a count, the names on hover). A confidential meeting keeps only its title and times, so it has no
    invited chip. */
 import { P, pName } from "../../core/data.js";
-import { ic } from "../../core/dom.js";
 import { fd, TODAY } from "../../core/page.js";
 import { snack } from "../../core/server.js";
 import { choosePrep, hubFor } from "../../meetings.js";
-import { pkList } from "../../panel.js";
 import { popupRev, prepNow } from "../../stores/prepPopup.js";
 import { longDay, pkAdd } from "../../today.js";
 import { Icon } from "../Icon.jsx";
+import { openPicker } from "../Picker.jsx";
 
 /** "Today · Tuesday 13th October", "Tomorrow · …" or the day written out.
     @param {string} day */
@@ -55,9 +54,9 @@ export function PrepHead() {
   /** @param {MouseEvent} ev */
   const pickProject = ev => {
     const btn = /** @type {HTMLElement} */ (ev.currentTarget);
-    pkList(btn, { label: "Project", value: code,
-      options: [...P.filter(p => p.active !== false || p.code === code).map(p => ({ v: p.code, label: p.name, icon: ic("projects") })),
-        { v: "_portfolio", label: "Portfolio (all projects)", icon: ic("projects") }],
+    openPicker(btn, { label: "Project", value: code,
+      options: [...P.filter(p => p.active !== false || p.code === code).map(p => ({ v: p.code, label: p.name, icon: "projects" })),
+        { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }],
       onPick: async v => { if (v === code) return; await choosePrep(v);
         /* BL-316: a change offers Undo (the series is remembered for the project it had) */
         if (code) snack(`Remembered for this series: ${v === "_portfolio" ? "Portfolio (all projects)" : pName(v)}`, () => { choosePrep(code); }); } });

@@ -4425,7 +4425,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     mvOrg: () => mvOrg,
     mvPatch: () => mvPatch,
     mvPct: () => mvPct,
-    mvPeekEl: () => mvPeekEl,
+    mvPeekFrame: () => mvPeekFrame,
     mvPill: () => mvPill,
     mvPlace: () => mvPlace,
     mvPlan: () => mvPlan,
@@ -16112,6 +16112,36 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (!MAC) $("#kK").textContent = "Ctrl K";
   }
 
+  // components/Peek.jsx
+  function Peek({ id, label, cls, open: open2 = true, children }) {
+    return /* @__PURE__ */ u2("aside", { class: cls, id, role: "dialog", "aria-label": label, hidden: !open2, children });
+  }
+  function PeekBar({ onClose, closeKey = "Esc", onExpand, expandLabel = "Expand to full width", onPrev, onNext, prevOff, nextOff, ids = {}, children }) {
+    return /* @__PURE__ */ u2("div", { class: "pk-bar", children: [
+      /* @__PURE__ */ u2(IconButton, { icon: "arrowright", label: "Close", sm: false, id: ids.close, keyHint: closeKey, onClick: onClose }),
+      onExpand ? /* @__PURE__ */ u2(IconButton, { icon: "expand", label: expandLabel, sm: false, id: ids.expand, onClick: onExpand }) : null,
+      onPrev || onNext ? /* @__PURE__ */ u2("span", { class: "pk-sep", "aria-hidden": "true" }) : null,
+      onPrev ? /* @__PURE__ */ u2(IconButton, { icon: "chevup", label: "Previous item", sm: false, id: ids.prev, why: prevOff ? "This is the first item" : void 0, onClick: onPrev }) : null,
+      onNext ? /* @__PURE__ */ u2(IconButton, { icon: "chevdown", label: "Next item", sm: false, id: ids.next, why: nextOff ? "This is the last item" : void 0, onClick: onNext }) : null,
+      children
+    ] });
+  }
+  function peekFrame(id, { label, cls }) {
+    const was = document.getElementById(id);
+    if (was) return was;
+    const host2 = document.createElement("div");
+    R(/* @__PURE__ */ u2(Peek, { id, label, cls, open: false }), host2);
+    const el = (
+      /** @type {HTMLElement} */
+      host2.firstElementChild
+    );
+    document.body.appendChild(el);
+    return el;
+  }
+  function drawPeekBar(host2, props) {
+    R(/* @__PURE__ */ u2(PeekBar, { ...props }), host2);
+  }
+
   // components/peek/SneakPeek.jsx
   var SNEAK_ICON = [
     ["path", { d: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" }],
@@ -18045,14 +18075,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     msState(arr);
   }
-  function mvPeekEl() {
-    let p6 = $("#mvPeek");
-    if (!p6) {
-      addHTML(document.body, "beforeend", html`<aside class="mv-peek" id="mvPeek" hidden role="dialog" aria-label="Edit milestone"></aside>`);
-      p6 = $("#mvPeek");
-    }
-    return p6;
-  }
+  var mvPeekFrame = () => peekFrame("mvPeek", { label: "Edit milestone", cls: "mv-peek" });
   var MVJUST = false, MVOPENER = null;
   function mvEdOpen(id, from, o5 = {}) {
     MVJUST = true;
@@ -18065,7 +18088,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     shared.MV.pend = null;
     shared.MV.cwPend = false;
     MVOPENER = from || document.activeElement;
-    const p6 = mvPeekEl();
+    const p6 = mvPeekFrame();
     p6.classList.remove("enter");
     void p6.offsetWidth;
     if (!reduced()) p6.classList.add("enter");
@@ -18096,7 +18119,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return `${m5.manual ? "Set by you. " : "Following the dates. "}The dates say ${MVWORD[sug]}: ${sugWhy}.`;
   }
   function mvEdDraw() {
-    const p6 = mvPeekEl(), code = mvCode(), pn = pName(code);
+    const p6 = mvPeekFrame(), code = mvCode(), pn = pName(code);
     if (shared.MV.add) {
       mvAddDraw(p6, pn);
       drFcDraw();
@@ -22944,6 +22967,397 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return `#prep=${encodeURIComponent(dated)}`;
   }
 
+  // components/Picker.jsx
+  var PICK = null;
+  function placePicker(el, anchor) {
+    const r4 = anchor.getBoundingClientRect(), w5 = el.offsetWidth, h5 = el.offsetHeight;
+    let x5 = r4.left, y5 = r4.bottom + 4;
+    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
+    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
+    el.style.left = `${x5}px`;
+    el.style.top = `${y5}px`;
+  }
+  var focusables = (el) => (
+    /** @type {HTMLElement[]} */
+    [...el.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
+  );
+  function tabOut(e4, el) {
+    if (e4.key !== "Tab" || !el) return;
+    const L2 = focusables(el), first = L2[0], last = L2[L2.length - 1];
+    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L2.length) closePicker("tab");
+  }
+  function Frame({ cls, role, label, id, anchor, onKey, boxRef, children }) {
+    _2(() => {
+      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
+    });
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.key !== "Escape") e4.stopPropagation();
+    };
+    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
+      /** @type {any} */
+      role || void 0
+    ), "aria-label": role ? label : void 0, id, ref: boxRef, onKeyDown: keys, children });
+  }
+  var optionsIn = (el) => el ? (
+    /** @type {HTMLElement[]} */
+    [...el.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function PickerList({ anchor, props }) {
+    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
+    const [q4, setQ] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), field = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    const item = role === "menu" ? "menuitem" : "option", t5 = q4.trim().toLowerCase();
+    const cur = filter ? filter(q4.trim()) : options;
+    const shown = cur.map((o5, i5) => (
+      /** @type {[PickerOption, number]} */
+      [o5, i5]
+    )).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5));
+    const useNew = !!(allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5));
+    _2(() => {
+      const el = box.current;
+      if (!el) return;
+      if (field.current) {
+        field.current.focus();
+        return;
+      }
+      /** @type {HTMLElement | null} */
+      (el.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el)[0])?.focus();
+    }, []);
+    const pick = (o5) => {
+      if (o5.disabled) return;
+      closePicker("pick");
+      onPick(o5.v, false, o5);
+    };
+    const pickNew = () => {
+      const typed = q4.trim();
+      closePicker("pick");
+      onPick(typed, true);
+    };
+    const keys = (e4) => {
+      const L2 = optionsIn(box.current), i5 = L2.indexOf(
+        /** @type {HTMLElement} */
+        document.activeElement
+      );
+      if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        (L2[i5 + 1] || L2[0])?.focus();
+      } else if (e4.key === "ArrowUp") {
+        e4.preventDefault();
+        (i5 <= 0 && field.current ? field.current : L2[i5 - 1] || L2[L2.length - 1])?.focus();
+      } else if (e4.key === "Home" && i5 >= 0) {
+        e4.preventDefault();
+        L2[0]?.focus();
+      } else if (e4.key === "End" && i5 >= 0) {
+        e4.preventDefault();
+        L2[L2.length - 1]?.focus();
+      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        L2[0]?.click();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+      } else if (e4.key === "Tab") closePicker("tab");
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
+      search ? /* @__PURE__ */ u2(
+        "input",
+        {
+          class: "pkq",
+          type: "search",
+          placeholder: "Search",
+          "aria-label": `Search: ${label}`,
+          autocomplete: "off",
+          ref: field,
+          value: q4,
+          onInput: (e4) => setQ(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          )
+        }
+      ) : null,
+      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
+        shown.map(([o5, i5]) => /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "pkopt",
+            role: item,
+            "data-i": String(i5),
+            id: o5.id,
+            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
+            "aria-disabled": o5.disabled ? "true" : void 0,
+            onClick: () => pick(o5),
+            children: [
+              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
+              /* @__PURE__ */ u2("span", { children: [
+                o5.label,
+                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
+              ] }),
+              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
+            ]
+          },
+          `${i5}:${o5.v}`
+        )),
+        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
+          /* @__PURE__ */ u2(Icon, { name: "plus" }),
+          /* @__PURE__ */ u2("span", { children: [
+            "Use “",
+            q4.trim(),
+            "”"
+          ] })
+        ] }) : null
+      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
+    ] });
+  }
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var calAdd = (iso, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
+    d5.setUTCDate(d5.getUTCDate() + n4);
+    return d5.toISOString().slice(0, 10);
+  };
+  var dow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
+  function DateCalendar({ anchor, props }) {
+    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
+    const base = value || TODAY;
+    const [ym, setYm] = d2(
+      /** @type {[number, number]} */
+      [+base.slice(0, 4), +base.slice(5, 7) - 1]
+    );
+    const [focusIso, setFocusIso] = d2(
+      /** @type {string | null} */
+      value || TODAY
+    );
+    const [bad, setBad] = d2(false), [note, setNote] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), typed = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    _2(() => {
+      if (typed.current) typed.current.value = fd(value || "");
+    }, []);
+    const [y5, m5] = ym, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
+    const days2 = Array.from({ length: n4 }, (_5, i5) => isoOf(y5, m5, i5 + 1));
+    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
+    _2(() => {
+      if (focusIso === null || !box.current) return;
+      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
+    }, [focusIso, ym]);
+    const pick = (iso) => {
+      closePicker("pick");
+      onPick(iso);
+    };
+    const month = (by) => {
+      let mm = m5 + by, yy = y5;
+      if (mm < 0) {
+        mm = 11;
+        yy--;
+      }
+      if (mm > 11) {
+        mm = 0;
+        yy++;
+      }
+      setFocusIso(null);
+      setYm([yy, mm]);
+    };
+    const keys = (e4) => {
+      const tg = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      if (tg.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
+        e4.preventDefault();
+        const to = calAdd(
+          tg.dataset.d || TODAY,
+          /** @type {Record<string, number>} */
+          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
+        );
+        setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]);
+        setFocusIso(to);
+        return;
+      }
+      if (e4.key === "Enter" && tg.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        const t5 = (
+          /** @type {HTMLInputElement} */
+          tg.value.trim()
+        );
+        if (!t5) {
+          pick("");
+          return;
+        }
+        const iso = parse(t5);
+        if (iso) pick(iso);
+        else setBad(true);
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
+    const quick = (
+      /** @type {[string, string][]} */
+      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
+    );
+    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
+      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
+        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
+        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
+          MONTHS[m5],
+          " ",
+          y5
+        ] }),
+        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
+        DOW.map((w5) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w5 }, w5)),
+        Array.from({ length: lead }, (_5, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
+        days2.map((iso) => {
+          const we = !!(weekend && weekend(iso));
+          return /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: `pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}${we ? " wkend" : ""}`,
+              "data-d": iso,
+              "aria-label": `${fd(iso)}${we ? ", weekend" : ""}`,
+              "aria-pressed": iso === value ? "true" : void 0,
+              tabIndex: iso === tabDay ? 0 : -1,
+              onClick: () => pick(iso),
+              children: +iso.slice(8)
+            },
+            iso
+          );
+        })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w5, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w5 }, w5)) }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          class: `pkdt${bad ? " bad" : ""}`,
+          type: "text",
+          ref: typed,
+          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
+          "aria-label": `${label}, typed`,
+          "aria-invalid": bad ? "true" : void 0,
+          autocomplete: "off",
+          onInput: (e4) => {
+            setBad(false);
+            if (typedNote) setNote(typedNote(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value.trim()
+            ));
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
+      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
+    ] });
+  }
+  function Popover({ anchor, props }) {
+    const { label, content, cls, id, role = "dialog", focus } = props;
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el = box.current;
+      if (!el || !content) return;
+      const f5 = (
+        /** @type {HTMLElement | null} */
+        focus ? el.querySelector(focus) : focusables(el)[0] || null
+      );
+      if (f5) {
+        f5.focus();
+        if (f5 instanceof HTMLInputElement) f5.select();
+      }
+    }, []);
+    const keys = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, role, label, id, anchor, boxRef: box, onKey: keys, children: content });
+  }
+  function popupMount(anchor, vnode, onClose) {
+    closePicker("owner", false);
+    bootPicker();
+    const host2 = document.createElement("div");
+    host2.className = "pophost";
+    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
+    PICK = { host: host2, el: null, anchor, onClose };
+    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    R(vnode, host2);
+    PICK.el = /** @type {HTMLElement} */
+    host2.firstElementChild;
+    shared.PKPOP = { el: PICK.el, anchor };
+    return PICK.el;
+  }
+  function openPicker(anchor, props) {
+    return popupMount(anchor, /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
+  }
+  function openDatePicker(anchor, props) {
+    return popupMount(anchor, /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
+  }
+  function openPopover(anchor, props) {
+    return popupMount(anchor, /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
+  }
+  function closePicker(how = "owner", focus = true) {
+    const p6 = PICK;
+    if (!p6) return;
+    PICK = null;
+    shared.PKPOP = null;
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    const done = p6.onClose ? p6.onClose(how) : false;
+    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
+  }
+  function pickerOpenFor(anchor) {
+    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
+  }
+  var BOOTED = false;
+  function bootPicker() {
+    if (BOOTED) return;
+    BOOTED = true;
+    document.addEventListener("mousedown", (e4) => {
+      const t5 = (
+        /** @type {Node} */
+        e4.target
+      );
+      if (PICK && !(PICK.el && PICK.el.contains(t5)) && !PICK.anchor.contains(t5)) closePicker("away");
+    }, true);
+    addEventListener("resize", () => closePicker("away"));
+  }
+  function htmlPopover(anchor, cls, htmlText) {
+    const el = openPopover(anchor, { label: "", cls, role: "" });
+    putHTML(el, raw(htmlText));
+    placePicker(el, anchor);
+    return el;
+  }
+
   // components/prep/PrepHead.jsx
   function prepDayLabel(day) {
     const lead = day === TODAY ? "Today" : day === pkAdd(TODAY, 1) ? "Tomorrow" : "";
@@ -22973,12 +23387,12 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         /** @type {HTMLElement} */
         ev.currentTarget
       );
-      pkList(btn, {
+      openPicker(btn, {
         label: "Project",
         value: code,
         options: [
-          ...P3.filter((p6) => p6.active !== false || p6.code === code).map((p6) => ({ v: p6.code, label: p6.name, icon: ic("projects") })),
-          { v: "_portfolio", label: "Portfolio (all projects)", icon: ic("projects") }
+          ...P3.filter((p6) => p6.active !== false || p6.code === code).map((p6) => ({ v: p6.code, label: p6.name, icon: "projects" })),
+          { v: "_portfolio", label: "Portfolio (all projects)", icon: "projects" }
         ],
         onPick: async (v4) => {
           if (v4 === code) return;
@@ -39462,427 +39876,6 @@ ${d5.text}`);
       });
       shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
     })();
-  }
-
-  // components/Picker.jsx
-  var PICK = null;
-  function placePicker(el, anchor) {
-    const r4 = anchor.getBoundingClientRect(), w5 = el.offsetWidth, h5 = el.offsetHeight;
-    let x5 = r4.left, y5 = r4.bottom + 4;
-    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
-    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
-    el.style.left = `${x5}px`;
-    el.style.top = `${y5}px`;
-  }
-  var focusables = (el) => (
-    /** @type {HTMLElement[]} */
-    [...el.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
-  );
-  function tabOut(e4, el) {
-    if (e4.key !== "Tab" || !el) return;
-    const L2 = focusables(el), first = L2[0], last = L2[L2.length - 1];
-    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L2.length) closePicker("tab");
-  }
-  function Frame({ cls, role, label, id, anchor, onKey, boxRef, children }) {
-    _2(() => {
-      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
-    });
-    const keys = (e4) => {
-      if (onKey) onKey(e4);
-      if (e4.key !== "Escape") e4.stopPropagation();
-    };
-    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
-      /** @type {any} */
-      role || void 0
-    ), "aria-label": role ? label : void 0, id, ref: boxRef, onKeyDown: keys, children });
-  }
-  var optionsIn = (el) => el ? (
-    /** @type {HTMLElement[]} */
-    [...el.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
-  ) : [];
-  function PickerList({ anchor, props }) {
-    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
-    const [q4, setQ] = d2("");
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), field = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
-    const item = role === "menu" ? "menuitem" : "option", t5 = q4.trim().toLowerCase();
-    const cur = filter ? filter(q4.trim()) : options;
-    const shown = cur.map((o5, i5) => (
-      /** @type {[PickerOption, number]} */
-      [o5, i5]
-    )).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5));
-    const useNew = !!(allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5));
-    _2(() => {
-      const el = box.current;
-      if (!el) return;
-      if (field.current) {
-        field.current.focus();
-        return;
-      }
-      /** @type {HTMLElement | null} */
-      (el.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el)[0])?.focus();
-    }, []);
-    const pick = (o5) => {
-      if (o5.disabled) return;
-      closePicker("pick");
-      onPick(o5.v, false, o5);
-    };
-    const pickNew = () => {
-      const typed = q4.trim();
-      closePicker("pick");
-      onPick(typed, true);
-    };
-    const keys = (e4) => {
-      const L2 = optionsIn(box.current), i5 = L2.indexOf(
-        /** @type {HTMLElement} */
-        document.activeElement
-      );
-      if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        (L2[i5 + 1] || L2[0])?.focus();
-      } else if (e4.key === "ArrowUp") {
-        e4.preventDefault();
-        (i5 <= 0 && field.current ? field.current : L2[i5 - 1] || L2[L2.length - 1])?.focus();
-      } else if (e4.key === "Home" && i5 >= 0) {
-        e4.preventDefault();
-        L2[0]?.focus();
-      } else if (e4.key === "End" && i5 >= 0) {
-        e4.preventDefault();
-        L2[L2.length - 1]?.focus();
-      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        L2[0]?.click();
-      } else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-      } else if (e4.key === "Tab") closePicker("tab");
-    };
-    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
-      search ? /* @__PURE__ */ u2(
-        "input",
-        {
-          class: "pkq",
-          type: "search",
-          placeholder: "Search",
-          "aria-label": `Search: ${label}`,
-          autocomplete: "off",
-          ref: field,
-          value: q4,
-          onInput: (e4) => setQ(
-            /** @type {HTMLInputElement} */
-            e4.currentTarget.value
-          )
-        }
-      ) : null,
-      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
-        shown.map(([o5, i5]) => /* @__PURE__ */ u2(
-          "button",
-          {
-            type: "button",
-            class: "pkopt",
-            role: item,
-            "data-i": String(i5),
-            id: o5.id,
-            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
-            "aria-disabled": o5.disabled ? "true" : void 0,
-            onClick: () => pick(o5),
-            children: [
-              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
-              /* @__PURE__ */ u2("span", { children: [
-                o5.label,
-                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
-              ] }),
-              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
-            ]
-          },
-          `${i5}:${o5.v}`
-        )),
-        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
-          /* @__PURE__ */ u2(Icon, { name: "plus" }),
-          /* @__PURE__ */ u2("span", { children: [
-            "Use “",
-            q4.trim(),
-            "”"
-          ] })
-        ] }) : null
-      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
-    ] });
-  }
-  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  var calAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
-    d5.setUTCDate(d5.getUTCDate() + n4);
-    return d5.toISOString().slice(0, 10);
-  };
-  var dow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
-  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
-  function DateCalendar({ anchor, props }) {
-    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
-    const base = value || TODAY;
-    const [ym, setYm] = d2(
-      /** @type {[number, number]} */
-      [+base.slice(0, 4), +base.slice(5, 7) - 1]
-    );
-    const [focusIso, setFocusIso] = d2(
-      /** @type {string | null} */
-      value || TODAY
-    );
-    const [bad, setBad] = d2(false), [note, setNote] = d2("");
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), typed = A2(
-      /** @type {HTMLInputElement | null} */
-      null
-    );
-    _2(() => {
-      if (typed.current) typed.current.value = fd(value || "");
-    }, []);
-    const [y5, m5] = ym, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
-    const days2 = Array.from({ length: n4 }, (_5, i5) => isoOf(y5, m5, i5 + 1));
-    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
-    _2(() => {
-      if (focusIso === null || !box.current) return;
-      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
-    }, [focusIso, ym]);
-    const pick = (iso) => {
-      closePicker("pick");
-      onPick(iso);
-    };
-    const month = (by) => {
-      let mm = m5 + by, yy = y5;
-      if (mm < 0) {
-        mm = 11;
-        yy--;
-      }
-      if (mm > 11) {
-        mm = 0;
-        yy++;
-      }
-      setFocusIso(null);
-      setYm([yy, mm]);
-    };
-    const keys = (e4) => {
-      const tg = (
-        /** @type {HTMLElement} */
-        e4.target
-      );
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-        return;
-      }
-      if (tg.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
-        e4.preventDefault();
-        const to = calAdd(
-          tg.dataset.d || TODAY,
-          /** @type {Record<string, number>} */
-          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
-        );
-        setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]);
-        setFocusIso(to);
-        return;
-      }
-      if (e4.key === "Enter" && tg.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        const t5 = (
-          /** @type {HTMLInputElement} */
-          tg.value.trim()
-        );
-        if (!t5) {
-          pick("");
-          return;
-        }
-        const iso = parse(t5);
-        if (iso) pick(iso);
-        else setBad(true);
-        return;
-      }
-      tabOut(e4, box.current);
-    };
-    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
-    const quick = (
-      /** @type {[string, string][]} */
-      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
-    );
-    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
-      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
-        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
-        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
-          MONTHS[m5],
-          " ",
-          y5
-        ] }),
-        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
-        DOW.map((w5) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w5 }, w5)),
-        Array.from({ length: lead }, (_5, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
-        days2.map((iso) => {
-          const we = !!(weekend && weekend(iso));
-          return /* @__PURE__ */ u2(
-            "button",
-            {
-              type: "button",
-              class: `pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}${we ? " wkend" : ""}`,
-              "data-d": iso,
-              "aria-label": `${fd(iso)}${we ? ", weekend" : ""}`,
-              "aria-pressed": iso === value ? "true" : void 0,
-              tabIndex: iso === tabDay ? 0 : -1,
-              onClick: () => pick(iso),
-              children: +iso.slice(8)
-            },
-            iso
-          );
-        })
-      ] }),
-      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w5, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w5 }, w5)) }),
-      /* @__PURE__ */ u2(
-        "input",
-        {
-          class: `pkdt${bad ? " bad" : ""}`,
-          type: "text",
-          ref: typed,
-          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
-          "aria-label": `${label}, typed`,
-          "aria-invalid": bad ? "true" : void 0,
-          autocomplete: "off",
-          onInput: (e4) => {
-            setBad(false);
-            if (typedNote) setNote(typedNote(
-              /** @type {HTMLInputElement} */
-              e4.currentTarget.value.trim()
-            ));
-          }
-        }
-      ),
-      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
-      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
-    ] });
-  }
-  function Popover({ anchor, props }) {
-    const { label, content, cls, id, role = "dialog", focus } = props;
-    const box = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      const el = box.current;
-      if (!el || !content) return;
-      const f5 = (
-        /** @type {HTMLElement | null} */
-        focus ? el.querySelector(focus) : focusables(el)[0] || null
-      );
-      if (f5) {
-        f5.focus();
-        if (f5 instanceof HTMLInputElement) f5.select();
-      }
-    }, []);
-    const keys = (e4) => {
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        closePicker("esc");
-        return;
-      }
-      tabOut(e4, box.current);
-    };
-    return /* @__PURE__ */ u2(Frame, { cls, role, label, id, anchor, boxRef: box, onKey: keys, children: content });
-  }
-  function popupMount(anchor, vnode, onClose) {
-    closePicker("owner", false);
-    bootPicker();
-    const host2 = document.createElement("div");
-    host2.className = "pophost";
-    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
-    PICK = { host: host2, el: null, anchor, onClose };
-    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    R(vnode, host2);
-    PICK.el = /** @type {HTMLElement} */
-    host2.firstElementChild;
-    shared.PKPOP = { el: PICK.el, anchor };
-    return PICK.el;
-  }
-  function openPicker(anchor, props) {
-    return popupMount(anchor, /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
-  }
-  function openDatePicker(anchor, props) {
-    return popupMount(anchor, /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
-  }
-  function openPopover(anchor, props) {
-    return popupMount(anchor, /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
-  }
-  function closePicker(how = "owner", focus = true) {
-    const p6 = PICK;
-    if (!p6) return;
-    PICK = null;
-    shared.PKPOP = null;
-    R(null, p6.host);
-    p6.host.remove();
-    const a5 = p6.anchor;
-    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
-    const done = p6.onClose ? p6.onClose(how) : false;
-    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
-  }
-  function pickerOpenFor(anchor) {
-    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
-  }
-  var BOOTED = false;
-  function bootPicker() {
-    if (BOOTED) return;
-    BOOTED = true;
-    document.addEventListener("mousedown", (e4) => {
-      const t5 = (
-        /** @type {Node} */
-        e4.target
-      );
-      if (PICK && !(PICK.el && PICK.el.contains(t5)) && !PICK.anchor.contains(t5)) closePicker("away");
-    }, true);
-    addEventListener("resize", () => closePicker("away"));
-  }
-  function htmlPopover(anchor, cls, htmlText) {
-    const el = openPopover(anchor, { label: "", cls, role: "" });
-    putHTML(el, raw(htmlText));
-    placePicker(el, anchor);
-    return el;
-  }
-
-  // components/Peek.jsx
-  function Peek({ id, label, cls, open: open2 = true, children }) {
-    return /* @__PURE__ */ u2("aside", { class: cls, id, role: "dialog", "aria-label": label, hidden: !open2, children });
-  }
-  function PeekBar({ onClose, closeKey = "Esc", onExpand, expandLabel = "Expand to full width", onPrev, onNext, prevOff, nextOff, ids = {}, children }) {
-    return /* @__PURE__ */ u2("div", { class: "pk-bar", children: [
-      /* @__PURE__ */ u2(IconButton, { icon: "arrowright", label: "Close", sm: false, id: ids.close, keyHint: closeKey, onClick: onClose }),
-      onExpand ? /* @__PURE__ */ u2(IconButton, { icon: "expand", label: expandLabel, sm: false, id: ids.expand, onClick: onExpand }) : null,
-      onPrev || onNext ? /* @__PURE__ */ u2("span", { class: "pk-sep", "aria-hidden": "true" }) : null,
-      onPrev ? /* @__PURE__ */ u2(IconButton, { icon: "chevup", label: "Previous item", sm: false, id: ids.prev, why: prevOff ? "This is the first item" : void 0, onClick: onPrev }) : null,
-      onNext ? /* @__PURE__ */ u2(IconButton, { icon: "chevdown", label: "Next item", sm: false, id: ids.next, why: nextOff ? "This is the last item" : void 0, onClick: onNext }) : null,
-      children
-    ] });
-  }
-  function peekFrame(id, { label, cls }) {
-    const was = document.getElementById(id);
-    if (was) return was;
-    const host2 = document.createElement("div");
-    R(/* @__PURE__ */ u2(Peek, { id, label, cls, open: false }), host2);
-    const el = (
-      /** @type {HTMLElement} */
-      host2.firstElementChild
-    );
-    document.body.appendChild(el);
-    return el;
-  }
-  function drawPeekBar(host2, props) {
-    R(/* @__PURE__ */ u2(PeekBar, { ...props }), host2);
   }
 
   // components/mount.js

@@ -222,8 +222,8 @@
   "Dialog": 0,
   "FilterBar": 4,
   "Menu": 8,
-  "Peek": 3,
-  "Picker": 62,
+  "Peek": 0,
+  "Picker": 60,
   "StatusDot": 0,
   "Tabs": 0,
   "Toast": 0
