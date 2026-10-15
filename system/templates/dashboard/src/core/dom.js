@@ -127,6 +127,23 @@ export function tipUp(root){ const L=root.matches&&root.matches("button")?[root]
     const k=(b.title||"").match(/\((Esc|Shift\+R|[A-Z])\)\s*$/); b.dataset.tip=lab; if(k&&!b.dataset.key) b.dataset.key=k[1]; b.removeAttribute("title"); }); }
 /* ===== end BL-158 (JS: set, helper, tooltip) ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0004's place) */
+/* insyncalan/creaite-plan#85: a click is not lost when the page redraws between the press and the release. Chrome sends no click
+   at all when the pressed node has been replaced (a data refresh, BL-327, BL-253), so the row's handler never ran. The press
+   remembers its row's key (data-row); at the release, if that node has gone and the element now under the pointer is the same
+   row by key, the click is made there. A press on one row released on another is still no click on either. */
+const PRESS={key:null,el:null,sent:false};
+export function bootLostClick(){
+document.addEventListener("mousedown",e=>{ PRESS.key=null; PRESS.el=null; PRESS.sent=false; if(e.button!==0||!e.target.closest) return;
+  const r=e.target.closest("[data-row]"); if(r){ PRESS.key=r.dataset.row; PRESS.el=r; } },true);
+document.addEventListener("mouseup",e=>{ const el=PRESS.el, key=PRESS.key;
+  if(!e.isTrusted||e.button!==0||el==null||key==null||el.isConnected||!e.target.closest) return;
+  const landed=e.target.closest("[data-row]"); if(!landed||landed.dataset.row!==key) return;
+  PRESS.sent=true;
+  const tgt=/** @type {Element} */(e.target);
+  setTimeout(()=>tgt.isConnected&&tgt.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window,detail:e.detail||1,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
+    ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,button:0})),0); },true);
+document.addEventListener("click",e=>{ if(PRESS.sent&&e.isTrusted){ PRESS.sent=false; e.stopImmediatePropagation(); } },true);   /* a click the browser did send is not handled twice */
+}
 export function bootTooltips(){
 paintIcons();
 document.addEventListener("mouseover",e=>{ const t=e.target; if(!t.closest) return; if(t.closest("#tip")){ clearTimeout(TIP.hide); return; }
