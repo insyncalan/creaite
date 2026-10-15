@@ -23,6 +23,12 @@ class AutosizeFields(LiveBrowserCase):
     shared_server = True
     width, height = 1400, 900
 
+    def setUp(self):
+        super().setUp()
+        # BL-327: the shared server's data is soon older than PAGE_FRESH, so each load re-reads /api/data after its first paint;
+        # under load that reload redrew the open editor mid-test (a hand-dragged 260px box came back at its automatic 78px)
+        self.b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
+
     def geo(self, sel):
         return self.b.eval(f"{GEO}({sel!r})")
 
