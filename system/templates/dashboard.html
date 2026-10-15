@@ -24062,7 +24062,8 @@ ${s5}`;
     const below = Math.max(b5.bottom, a5.bottom) + 6;
     const need = w6 > 200 ? Math.min(520, H3 * 0.6) : 340;
     const top = H3 - below >= need ? below : w6 > 200 ? H3 - need - 8 : a5.top - 40 >= 8 ? a5.top - 40 : H3 - need - 8;
-    return { top: Math.max(8, Math.min(top, H3 - 48)), left };
+    const flipped = w6 <= 200 && a5.top - 44 >= 8 ? a5.top - 44 : top;
+    return { top: Math.max(8, Math.min(flipped, H3 - 48)), left };
   }
   function barFor(h5, ai2) {
     const s5 = h5.editor.state.selection;

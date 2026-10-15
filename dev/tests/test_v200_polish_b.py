@@ -7,13 +7,11 @@
 Run: python3 dev/tests/test_v200_polish_b.py   (needs Google Chrome; skipped otherwise)
 The real live server in a throwaway vault; Claude is the stand-in of test_ai_select_notes.
 """
-import json
 import sys
 import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import notes_find_fixture as fx  # noqa: E402
 from test_ai_select_notes import AiInANote  # noqa: E402
 
 WIDTHS = (1400, 900)
@@ -68,6 +66,17 @@ class PolishB(AiInANote):
             b.pump(0.4)
             self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar')"), f"{w}: the bar is still up (address)")
             b.eval("document.getElementById('noteFind').click()")
+
+    def test_the_bar_does_not_hide_the_next_line(self):
+        b = self.b
+        for w in WIDTHS:
+            b.resize(w, 900)
+            self.open_note()
+            for words in ("Sandbox access granted", "probably moves two weeks", "Schema changes"):
+                self.select(words)
+                o = b.eval(NEXT_LINE)
+                if o is not None:
+                    self.assertEqual(o["hits"], 0, f"{w} {words}: the bar hides the next line {o}")
 
 
 for _n in [n for n in dir(AiInANote) if n.startswith("test_") and n not in PolishB.__dict__]:   # the base class's own tests live in test_ai_select_notes

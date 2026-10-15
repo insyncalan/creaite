@@ -106,7 +106,8 @@ export function aiPlace(h, from, to, w = 300) {
   const need = w > 200 ? Math.min(520, H * 0.6) : 340;     // the card's height at most, or the bar with its menu open
   // under the selection when there is room; else above it (the bar), or as low as it still fits (the card)
   const top = H - below >= need ? below : w > 200 ? H - need - 8 : a.top - 40 >= 8 ? a.top - 40 : H - need - 8;
-  return { top: Math.max(8, Math.min(top, H - 48)), left };
+  const flipped = w <= 200 && a.top - 44 >= 8 ? a.top - 44 : top;   /* v2.0.0 polish B (#61): the bar sits above the selection's first line when there is room: under it, it hid the next line's words */
+  return { top: Math.max(8, Math.min(flipped, H - 48)), left };
 }
 
 /** Show the bar for `h`'s selection, or hide it when nothing is selected (a suggestion on screen stays).
