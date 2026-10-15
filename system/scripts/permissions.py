@@ -618,7 +618,8 @@ ACTING_BUILTINS = ("EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow",
 # F3 follow-up (Jarvis, 15-10-2026): every name above is in Claude Code 2.1.300's default tool list (probe; pinned in
 # test_permissions_mcp against KNOWN_BUILTINS). TaskStop stops background work no creaite feature starts. One more built-in
 # gets no allow rule either:
-WRITING_BUILTINS = ("NotebookEdit",)    # no filechange.py backup, log or undo; denied by name in every run (F2's builtin_denies) and the VIP check
+# NotebookEdit writes with no filechange.py backup, log or undo; denied by name in every run (F2's builtin_denies) and the VIP check.
+WRITING_BUILTINS = ("NotebookEdit",)
 # WebSearch stays approvable on the one card (BL-141's own example): each run's --tools list decides whether it has it at all.
 NON_M365_MCP_DENY = ("mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI", "mcp__claude_ai_Linear",
                      "mcp__claude-vscode")          # the other connectors seen on Alan's machine, whole-server deny rules
