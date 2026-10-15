@@ -385,16 +385,32 @@ class CloseTests(Base):
                 self.assertIsNone(self.closes())
                 (self.v.root / "system/staging/vip.json").unlink()
 
-    def test_evidence_in_single_curly_or_guillemet_quotes_or_copied_unquoted_is_refused(self):
+    def test_evidence_in_single_curly_or_guillemet_quotes_is_refused(self):
         run = "the revised plan is attached here for everyone to review now ok"
         summary = f"Mia said {run}, thanks."
         for ev in (f"She wrote '{run}'", f"She wrote \u2018{run}\u2019", f"\u00ab{run}\u00bb", f"\u201c{run}\u201d",
-                   f"Sara: {run.upper()} thanks", f"Sara: {run.replace(' ', ', ')} thanks"):
+                   f'Sara: "{run}"'):
             with self.subTest(ev):
                 got = self.check([owner_done(summary=summary, closes={"id": "ABC-A-007", "evidence": ev})])
                 self.assertIsNone(self.closes())
                 self.assertEqual(got["counts"].get("closes_quoted"), 1)
                 (self.v.root / "system/staging/vip.json").unlink()
+
+    def test_evidence_that_restates_the_summary_in_its_own_words_passes(self):
+        # Review (e), for Alan to confirm: the summary is the model's words, not the message's, so a long run shared with
+        # it is not a quotation; only the quote rules and the whole-summary rule refuse.
+        summary = "Mia asks whether the SOW went out; Sara confirmed the signed statement of work was sent to the client on Tuesday."
+        for ev in ("Sara confirmed the signed statement of work was sent to the client.",
+                   "Sara: THE SIGNED STATEMENT OF WORK WAS SENT TO THE CLIENT ON TUESDAY, done"):
+            with self.subTest(ev):
+                got = self.check([owner_done(summary=summary, closes={"id": "ABC-A-007", "evidence": ev})])
+                self.assertEqual(self.closes()["evidence"], ev)
+                self.assertNotIn("closes_quoted", got["counts"])
+                (self.v.root / "system/staging/vip.json").unlink()
+        got = self.check([owner_done(summary=summary, closes={"id": "ABC-A-007", "evidence":
+                                     'Sara wrote "the signed statement of work was sent to the client on Tuesday"'})])
+        self.assertIsNone(self.closes())                                                     # a quoted run still refused
+        self.assertEqual(got["counts"].get("closes_quoted"), 1)
 
     def test_short_evidence_and_apostrophes_still_pass(self):
         summary = "Mia said the revised plan is attached here for everyone to review now ok, thanks."

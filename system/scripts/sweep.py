@@ -2940,7 +2940,9 @@ def _close_who(a, found, row, reply_only):
 
 
 QUOTE_WORDS = 8           # a quotation of more than this many words is refused
-COPY_WORDS = 9            # nor any run of this many words found in the thread's summary
+# Review (e), for Alan to confirm: no rule against a run of words shared with the thread's summary. The summary is the model's
+# own words, not the message's, so restating it is not quoting the message; code holds no message text to compare with. The
+# guards are the quote rules, the whole-summary rule and the 100-character cap.
 QUOTE_PAIRS = (re.compile(r'["\u201c\u201d\u201e\u201f]([^"\u201c\u201d\u201e\u201f]+)["\u201c\u201d\u201e\u201f]'),
                re.compile("[\u00ab\u00bb\u2039\u203a]([^\u00ab\u00bb\u2039\u203a]+)[\u00ab\u00bb\u2039\u203a]"),
                # a single quote opens after the start, a space or a bracket and closes before a space, punctuation or the
@@ -2949,33 +2951,20 @@ QUOTE_PAIRS = (re.compile(r'["\u201c\u201d\u201e\u201f]([^"\u201c\u201d\u201e\u2
                           "(?=[\\s.,;:!?)\\]\u2014-]|$)"))
 
 
-def _words(text):
-    """The words of text, lower case, without punctuation (for the verbatim-copy rule)."""
-    return re.findall(r"\w+", str(text or "").lower())
-
-
 def _quotes_long(ev):
     """Whether ev holds a quotation of more than QUOTE_WORDS words (double, single, curly or guillemet quotes)."""
     return any(len(m.group(1).split()) > QUOTE_WORDS for rx in QUOTE_PAIRS for m in rx.finditer(ev))
 
 
-def _copies(ev, summaries):
-    """Whether any run of COPY_WORDS words of ev appears in one of the summaries (case and punctuation ignored)."""
-    w = _words(ev)
-    runs = {" ".join(w[i:i + COPY_WORDS]) for i in range(len(w) - COPY_WORDS + 1)}
-    hay = [f" {' '.join(_words(x))} " for x in summaries]
-    return any(f" {r} " in h for r in runs for h in hay)
-
-
 def _close_evidence(a, text, summary=None):
-    """(the evidence to keep, "") or ("", why not): creaite's own words, at most 100 characters; not the card's summary, no
-    quotation of more than 8 words (in any quote marks) and no run of 9 words copied from the thread's summary (the card's
-    or the reply's: the only message-derived text code holds); a confidential card's is the fixed line."""
+    """(the evidence to keep, "") or ("", why not, counted as closes_quoted): creaite's own words, at most 100 characters; not
+    the card's or the reply's summary itself, and no quotation of more than 8 words (in any quote marks); a confidential
+    card's is the fixed line. Words shared with the summary are allowed (review e)."""
     ev = _clean(text, CLOSE_EVIDENCE)
     if not ev:
         return "", "no_evidence"
     summaries = [str(x) for x in (a.get("summary"), summary) if x]
-    if ((len(ev) >= 20 and any(ev.lower() in x.lower() for x in summaries)) or _quotes_long(ev) or _copies(ev, summaries)):
+    if ((len(ev) >= 20 and any(ev.lower() in x.lower() for x in summaries)) or _quotes_long(ev)):
         return "", "quoted"
     return (CLOSE_FIXED if a.get("marker") == "confidential" or a.get("confidential") else ev), ""
 # ===== end BL-342 Part 3 B =====
