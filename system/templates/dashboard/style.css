@@ -1561,6 +1561,8 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
 @starting-style{:root.mready .runbadge:not([hidden]){opacity:0;transform:translateY(6px)}}
 :root[data-reduced] .runbadge.running .rbi{animation:none} :root[data-motion="reduce"] .runbadge.running .rbi{animation:none}
 @media (max-width:760px){.runbadge{bottom:72px;right:12px}}
+/* v2.0.0 polish B (#61): the badge rises clear of a control it would cover (ask.js rbAvoid sets --rb-lift) */
+.runbadge{bottom:calc(20px + var(--rb-lift,0px))} @media (max-width:760px){.runbadge{bottom:calc(72px + var(--rb-lift,0px))}}
 /* ===== end BL-139 ===== */
 /* ===== end BL-136 (CSS) ===== */
 /* ===== BL-145 (fix-chat-box) ===== the ask creaite message box grows with what is typed, up to about half the panel, then

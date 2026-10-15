@@ -612,7 +612,19 @@ export let rbDraw = function(){ const el=$("#runBadge"); if(!el) return; if(!RB.
   const s=RB.state; el.hidden=false; el.className=`runbadge ${s}`; el.dataset.state=s;
   $("#rbI").textContent=RBICON[s]||""; $("#rbT").textContent=RBWORDS[s];
   $("#rbL").textContent=s==="running"?RB.label:RB.took?`${s==="done"?"took":"after"} ${RB.took}`:"";
-  $("#rbE").hidden=s!=="running"; $("#rbX").hidden=s==="running"; rbTick(); };
+  $("#rbE").hidden=s!=="running"; $("#rbX").hidden=s==="running"; rbTick(); rbAvoidSoon(); };
+/* v2.0.0 polish B (check 44, #61): a finished badge never covers a control. It stays fixed bottom right, but when it would sit over a visible
+   button, link or field of the page it rises (--rb-lift) until it clears them, and drops back when they scroll away. Checked on scroll,
+   resize, a click and every half second while it is shown (a panel opening moves things without either). */
+export function rbAvoid(){ const el=$("#runBadge"); if(!el||el.hidden){ return; }
+  el.style.setProperty("--rb-lift","0px"); let lift=0;
+  for(let i=0;i<8;i++){ const r=el.getBoundingClientRect(); let top=0;
+    for(const c of document.querySelectorAll("button,a[href],input,select,textarea,[role=button]")){
+      if(el.contains(c)||c.closest("dialog,#chat,#aiLayer,.snack")) continue; const q=c.getBoundingClientRect();
+      if(q.width<1||q.height<1||q.right<=r.left||q.left>=r.right||q.bottom<=r.top||q.top>=r.bottom) continue; top=Math.max(top,r.bottom-q.top); }
+    if(!top) break; lift+=top+8; el.style.setProperty("--rb-lift",lift+"px"); }
+  if(lift&&el.getBoundingClientRect().top<64) el.style.setProperty("--rb-lift","0px"); }
+let rbAvoidQ=0; export function rbAvoidSoon(){ if(rbAvoidQ) return; rbAvoidQ=requestAnimationFrame(()=>{ rbAvoidQ=0; rbAvoid(); }); }
 export function rbTick(){ if(RB.state==="running") $("#rbE").textContent=rbClock(Date.now()-RB.t0); }
 export function rbGuess(q){ q=String(q||""); return /weekly report/i.test(q)?"Drafting the weekly report":/client report/i.test(q)?"Drafting the client report":/steerco|one-pager/i.test(q)?"Drafting the one-pager":
   /refresh calendar/i.test(q)?"Refreshing the calendar":/^sweep/i.test(q)?"Sweeping mail and Teams":/prep/i.test(q)?"Making the prep page":/^process/i.test(q)?"Processing a meeting":""; }
@@ -636,6 +648,8 @@ export function askFinished(o){ rbEnd(o||"done"); }
 export function bootAsk0105(){
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) rbUnmark(); });
 $("#rbMain").onclick=()=>openChat();
+document.addEventListener("scroll",rbAvoidSoon,true); window.addEventListener("resize",rbAvoidSoon); document.addEventListener("click",rbAvoidSoon,true);
+setInterval(rbAvoidSoon,500);
 $("#rbX").onclick=()=>{ rbDismiss(); };
 }
 /* While ask creaite works: a rotating bit of office humour instead of "Working…" (like Claude's own "Clauding…"),

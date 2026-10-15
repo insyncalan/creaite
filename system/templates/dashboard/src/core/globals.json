@@ -428,6 +428,8 @@
    "rbGuess",
    "rbStop",
    "rbTick",
+   "rbAvoid",
+   "rbAvoidSoon",
    "rbUnmark",
    "readForm",
    "reattach",
