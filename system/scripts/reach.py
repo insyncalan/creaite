@@ -1142,7 +1142,8 @@ def hook_decision(tool, inp, mode, run):
                            f"new content in {paths.rel(area)}/ and run python3 system/scripts/filechange.py")
     if tool == "Bash":
         command = str((inp or {}).get("command") or "")
-        why = bash_refusal(command, mode) or ask_never_reason(command)      # ask-hook-fix: every argument form
+        why = (bash_refusal(command, mode) or ask_never_reason(command)    # ask-hook-fix: every argument form,
+               or handover_refusal(command))                              # never reach.py wrap or hook
         if why:
             return False, why
     return True, ""
@@ -1196,6 +1197,30 @@ def ask_never_reason(command):
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
 # ===== end ask-hook-fix: argument forms =====
+
+
+# ===== ask-hook-fix (15-10-2026): reach.py wrap and hook are never a Bash call =====
+# `reach.py wrap X …` becomes `X …` and `reach.py hook` is the guard itself, both classed read in SCRIPT_COMMANDS, so a chat's
+# record gate judged the wrapper and not the command it runs (`reach.py wrap tracker.py apply` passed, and wrap would also skip
+# bash_problem's never-run scripts, permissions.py among them). Nothing legitimate runs either as a Bash call: system/scripts/run
+# execs `reach.py wrap` itself, and Claude Code runs `reach.py hook` from the run's --settings, never through the Bash tool. So
+# every ask creaite mode refuses them, confirmed included (a held run already does: held_kind_reason). classify and never stay.
+HANDOVER = ("reach.py wrap", "reach.py hook")
+
+
+def handover_refusal(command):
+    """Why this Bash call is refused as a hand-over command (HANDOVER), or None."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", vault_relative(command))
+    if not m or m.group(1) != "reach.py":
+        return None
+    name = command_kind("reach.py", bash_args(command))[1]
+    if name not in HANDOVER:
+        return None
+    _debug("warn", f"hand-over command refused: {name}")
+    return (f"{name} hands over to another command, and ask creaite never runs it: run the creaite script itself, "
+            f"`system/scripts/run <name>.py …`")
+# ===== end ask-hook-fix: hand-over commands =====
 
 
 def bash_refusal(command, mode):

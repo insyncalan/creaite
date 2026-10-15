@@ -1,4 +1,5 @@
-"""ask-hook-fix (15-10-2026): ask creaite's guard holds the never list for every form of a script argument.
+"""ask-hook-fix (15-10-2026): ask creaite's guard holds the never list for every form of a script argument, and never runs
+reach.py wrap or hook.
 
 A5 (dev/tests/test_held_bash_arg_forms.py) closed the argument forms for the runs creaite starts itself (modes "held" and "prep").
 ask creaite's own modes ("ask", a plain chat; "confirmed", a request Alan confirmed; "sweep", a typed sweep) were decided by
@@ -8,6 +9,9 @@ passed. hook_decision now also checks reach.ask_arg_paths, ask creaite's own cop
 hook, as Claude Code runs it, every form A5's table covers, in all three modes, says by what each is refused, and lets through
 the lookalikes ask creaite legitimately sends (search text with / : , and =, URLs, a ~/Documents path, an option's value in the
 vault). The one narrow over-refusal is written down: a separator directly followed by a path outside reach, inside free text.
+
+`reach.py wrap` and `reach.py hook` are refused in every ask mode: wrap ran the command it wrapped after the record gate had
+judged the wrapper (`reach.py wrap tracker.py apply` passed a plain chat). `reach.py classify` and `never` still run.
 
 No model is called. A throwaway vault and a fake home folder with ~/.ssh/id_rsa holding a fake key; HOME is the fake home.
 
@@ -27,7 +31,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from test_tracker import ABC, Vault  # noqa: E402
 
-NEVER, SHELL = "never list", "shell form"
+NEVER, SHELL, HANDOVER = "never list", "shell form", "a hand-over command"
 MODES = ("ask", "confirmed", "sweep")
 T = "system/scripts/run minutes.py transcript"
 P = "python3 system/scripts/minutes.py transcript"
@@ -124,6 +128,8 @@ OVER_REFUSED = ["system/scripts/run search.py query 'copy from:/tmp/x'"]
 def by(why):
     if "holds secrets" in why or "outside the vault, the projects folder and your home folder" in why:
         return NEVER
+    if "hands over to another command" in why:
+        return HANDOVER
     if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
         return SHELL
     return "other: " + why
@@ -204,6 +210,32 @@ class AskArgForms(HookCase):
             code, why = self.hook("ask", cmd)
             self.assertEqual((code, by(why)), (2, NEVER), why)
             self.assertIn("/tmp/x", why)
+
+
+
+def handovers(root):
+    return [
+        ("reach.py wrap tracker.py apply", "system/scripts/run reach.py wrap tracker.py apply", HANDOVER),
+        ("reach.py wrap (python3 form)", "python3 system/scripts/reach.py wrap tracker.py apply", HANDOVER),
+        ("reach.py wrap (full vault path)", f"python3 {root}/system/scripts/reach.py wrap tracker.py apply", HANDOVER),
+        ("reach.py wrap permissions.py", "system/scripts/run reach.py wrap permissions.py edit x", HANDOVER),
+        ("reach.py wrap, a stage command", "system/scripts/run reach.py wrap report.py adhoc x.json", HANDOVER),
+        ("reach.py wrap, an option first", "system/scripts/run reach.py --x wrap doctor.py", HANDOVER),
+        ("reach.py wrap with a secret", "system/scripts/run reach.py wrap minutes.py transcript ~/.ssh/id_rsa", NEVER),
+        ("reach.py hook", "system/scripts/run reach.py hook --run r --mode confirmed", HANDOVER),
+    ]
+
+
+class Handover(HookCase):
+    def test_wrap_and_hook_are_refused(self):
+        self.refused_by(handovers(self.root))
+
+    def test_the_wrapped_command_is_judged_on_its_own(self):
+        """What wrap would have run: refused in a plain chat (BL-267), run in a confirmed one; unchanged."""
+        code, why = self.hook("ask", "system/scripts/run tracker.py apply")
+        self.assertEqual(code, 2)
+        self.assertIn("changes the record", why)
+        self.assertEqual(self.hook("confirmed", "system/scripts/run tracker.py apply")[0], 0)
 
 
 if __name__ == "__main__":
