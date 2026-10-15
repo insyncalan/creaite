@@ -713,6 +713,11 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .genoff{margin-top:8px;background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px} .genoff[hidden]{display:none}
 .gensum{display:flex;align-items:center;gap:12px;margin-top:16px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)} .gensum[hidden]{display:none} .gensum b{color:var(--ink);font-weight:500}
 .genlink:focus-visible,.gendrawb:focus-visible{border-radius:var(--r-sm)}
+/* #110 B: Steer it further, under a form's result and under the editor's draft; the version bar in the card's head */
+.genref{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)} .genref label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600;margin-bottom:4px} .genref label .sub{font-weight:400}
+.genref textarea,#genDlg #genRefineNote{display:block;width:100%;min-height:60px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--surface);color:var(--ink);margin:0;resize:vertical;font:inherit;line-height:1.5}
+.genrow{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:6px} .genrow .btn{align-self:center} .genstarts{display:flex;gap:12px;flex-wrap:wrap} .genrow .btn .kbd{margin-left:4px} .genref [aria-disabled="true"]{opacity:.55;cursor:default}
+.vers{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)} #curVers{align-self:center;font-size:var(--fs-xs);color:var(--muted)} #curVers .vers{margin-left:0}
 .genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
 .gensrc{margin-top:10px;font-size:var(--fs-sm);color:var(--muted)} .gensrc summary{cursor:pointer}
 /* ===== Executive Current state (BL-106) ===== */
