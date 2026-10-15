@@ -26,7 +26,7 @@ import { catalogue, changedOnly, checkHealth, lastCheckAt, loadCatalogue, query,
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
 import { refreshFiles } from "./files.js";
 import { decLate, decLateWords, decRank } from "./meetings.js";
-import { drawPanel, ebMarkSeen, errBanner, openNew, pkArr, markStagedRows, pkDraw, PKDRAW, pkNewOffer, pkNote, pkPersist, pkSaveAndClose, pkSaving, REC } from "./panel.js";
+import { drawPanel, ebMarkSeen, errBanner, openNew, markStagedRows, pkDraw, PKDRAW, pkNewOffer, pkNote, pkSaveAndClose, pkSaving, REC } from "./panel.js";
 import { closePanel, decorateWarnings, PKN, WARNS, warnSectionHtml, WICO, WSIG } from "./projects.js";
 import { draftOn, renderReview } from "./review.js";
 import { setRailCount } from "./stores/rail.js";
@@ -835,7 +835,8 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
     if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
-   stages it through /api/alerts/make, which dismisses the message; closing the peek leaves the message as it was. */
+   stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
+   leaves the message as it was. */
 export const ALERTTYPES=[["action","Action"],["risk","Risk"],["issue","Issue"],["decision","Decision"]];
 export const alertTypeOf=(k,x)=>k==="actions"?"action":k==="decisions"?"decision":String((x&&x.type)||"risk").toLowerCase();
 export async function alertMake(id,type,keep,cand){ if(!viaServer()){ snack("Create work item needs the live server"); return; }
@@ -852,15 +853,32 @@ export async function alertMake(id,type,keep,cand){ if(!viaServer()){ snack("Cre
   shared.CUR.alert={id,type,cand:cand||0,link:pre.link||"",who:pre.who||"",sent:pre.sent||"",kind:pre.kind||"mail",marker:pre.marker||"",source:pre.source||""};
   shared.CUR.blank={...x}; drawPanel(); const t=$("#pkTitle"); if(t){ t.textContent=x.t; t.focus(); } }
 export function alertValues(k,f){ const v=toDb(k,f); return {...v,project:f.p||""}; }
-/* the peek's first stage for an item made from a message: the server stages it and dismisses the message */
+/* the peek's first stage for an item made from a message: the server stages it as a pending proposal for Review and dismisses the
+   message. Check 45 (BL-334, Jarvis option (a)): it is never applied from here, and it isn't in the pill (staged = approved there);
+   pkSaveAndClose then closes the peek through alertStaged, with Undo. */
 export async function alertStage(k,nid,f){ const al=shared.CUR.alert, type=alertTypeOf(k,shared.CUR.draft); pkSaving("busy");
   const r=await api("/api/alerts/make",{id:al.id,type,values:alertValues(k,f),...(al.cand?{cand:al.cand}:{})});
   if(!r.ok){ pkSaving("fail"); pkNote(r.message||"Not staged"); return "wait"; }
-  const meta={k,id:nid,patch:{},prev:{},label:"Created",from:"",to:f.t,at:nowStamp(),note:"",type:"act",isNew:true,title:f.t,p:f.p,known:pkArr(k).map(y=>y.id),ms:Date.now()};
-  shared.PKS.push({name:r.proposal,...meta}); if(shared.CUR&&shared.CUR.nid===nid) shared.CUR.staged=r.proposal; pkPersist(); pkSaving("ok");
+  if(shared.CUR&&shared.CUR.nid===nid){ shared.CUR.staged=r.proposal; shared.CUR.alertDone={al,name:r.proposal,word:pkNewWordOf(k,type),title:f.t}; } pkSaving("ok");
   const a=(VIPD().alerts||[]).find(z=>z.id===al.id), it=a&&al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===al.cand):null;
   if(it){ it.made=r.made||{proposal:r.proposal}; if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=nowStamp(); }   /* BL-334: that item only */
-  else if(a){ a.seen=nowStamp(); a.made=r.made||{proposal:r.proposal}; } vipBadge(); refreshAll(); return "ok"; }
+  else if(a){ a.seen=nowStamp(); a.made=r.made||{proposal:r.proposal}; } vipBadge(); return "ok"; }
+const pkNewWordOf=(k,type)=>k==="actions"?"action":k==="decisions"?"decision":String(type||"item").toLowerCase();
+/* Save's end for an item made from a message: the peek closes, Review gets the proposal, and Undo removes it (if Review hasn't
+   decided it yet) and brings the message back */
+export async function alertStaged(){ const d=shared.CUR&&shared.CUR.alertDone; closePanel(); if(!d) return;
+  await reloadData(); renderToday();
+  snack(`Staged the new ${d.word} for Review: “${String(d.title).slice(0,60)}”`,()=>alertUnstage(d)); }
+export async function alertUnstage(d){ let ok=false;
+  try{ ok=await vq(async()=>{ const path="system/staging/"+d.name; if(!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d.name)||!await shared.VW.exists(path)) return false;
+      const data=JSON.parse(await shared.VW.read(path)); if((data.items||[]).some(/** @param {any} i */i=>i.applied||i.decision!=="pending")) return false;
+      await shared.VW.remove(path); return true; }); }catch(e){ ok=false; }
+  if(!ok){ snack("Already decided in Review: undo it in Activity"); return; }
+  const c=d.al.cand?{cand:d.al.cand}:{}, u=await api("/api/alerts/undo",{ids:[d.al.id],...c});
+  const a=(VIPD().alerts||[]).find(z=>z.id===d.al.id), it=a&&d.al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===d.al.cand):null;
+  if(it){ delete it.made; delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; }
+  VIPNOTED.add(d.al.id); vipBadge(); await reloadData(); renderToday();
+  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in To decide`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
 /* why Draft from the message can't run, or "" */
 export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs the live server":""; }
 /* the strip at the top of the peek: where it came from, the type, Draft from the message, Save and Cancel */

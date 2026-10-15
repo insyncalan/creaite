@@ -106,7 +106,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          form from the alert's references only; /api/alerts/draft {id, type, run} "Draft from the message":
                          one read-only Microsoft 365 read (its own allow list, no Bash or writes; never in the development
                          repository), streamed, ending in a "draft" event with the filled form; /api/alerts/make {id, type,
-                         values} stages the item as an approved dashboard proposal, dismisses the message and records the
+                         values} stages the item as a pending proposal for Review, dismisses the message and records the
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
@@ -3502,8 +3502,8 @@ def alert_draft_route(handler, req):
 
 
 def alert_make_route(handler, req):
-    """POST /api/alerts/make {id, type, values}: stage the item as an approved proposal (nothing is applied here), dismiss
-    the message and record the proposal on it; with auto-apply the page applies it as it does any staged item."""
+    """POST /api/alerts/make {id, type, values}: stage the item as a pending proposal for Review (BL-334, check 45: nothing
+    is applied here, and the page's Save doesn't apply it), dismiss the message and record the proposal on it."""
     import sweep
     values = req.get("values") if isinstance(req.get("values"), dict) else {}
     try:
@@ -3514,7 +3514,7 @@ def alert_make_route(handler, req):
     word = {"actions": "action", "decisions": "decision"}.get(got["table"]) or str(got["values"].get("type") or "item").lower()
     return handler.send(200, {"ok": True, **got, "made": {"proposal": got["proposal"], "n": got["n"], "id": None,
                                                          "state": "staged"},
-                              "message": f"Staged the new {word}. It's written when you apply."})
+                              "message": f"Staged the new {word} for Review."})
 
 
 SWEEP_ALERT_ROUTES.update({"/api/alerts/dismiss": alert_dismiss_route, "/api/alerts/undo": alert_undo_route,

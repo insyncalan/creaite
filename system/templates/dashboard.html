@@ -3542,7 +3542,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     alertMake: () => alertMake,
     alertPeekDraw: () => alertPeekDraw,
     alertStage: () => alertStage,
+    alertStaged: () => alertStaged,
     alertTypeOf: () => alertTypeOf,
+    alertUnstage: () => alertUnstage,
     alertValues: () => alertValues,
     allBucket: () => allBucket,
     allCell: () => allCell,
@@ -13723,10 +13725,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       pkNote(r4.message || "Not staged");
       return "wait";
     }
-    const meta = { k: k5, id: nid, patch: {}, prev: {}, label: "Created", from: "", to: f5.t, at: nowStamp(), note: "", type: "act", isNew: true, title: f5.t, p: f5.p, known: pkArr(k5).map((y5) => y5.id), ms: Date.now() };
-    shared.PKS.push({ name: r4.proposal, ...meta });
-    if (shared.CUR && shared.CUR.nid === nid) shared.CUR.staged = r4.proposal;
-    pkPersist();
+    if (shared.CUR && shared.CUR.nid === nid) {
+      shared.CUR.staged = r4.proposal;
+      shared.CUR.alertDone = { al, name: r4.proposal, word: pkNewWordOf(k5, type), title: f5.t };
+    }
     pkSaving("ok");
     const a5 = (VIPD().alerts || []).find((z3) => z3.id === al.id), it = a5 && al.cand ? (a5.candidates || []).find(
       /** @param {any} x */
@@ -13743,8 +13745,56 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       a5.made = r4.made || { proposal: r4.proposal };
     }
     vipBadge();
-    refreshAll();
     return "ok";
+  }
+  var pkNewWordOf = (k5, type) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(type || "item").toLowerCase();
+  async function alertStaged() {
+    const d5 = shared.CUR && shared.CUR.alertDone;
+    closePanel();
+    if (!d5) return;
+    await reloadData();
+    renderToday();
+    snack(`Staged the new ${d5.word} for Review: “${String(d5.title).slice(0, 60)}”`, () => alertUnstage(d5));
+  }
+  async function alertUnstage(d5) {
+    let ok = false;
+    try {
+      ok = await vq(async () => {
+        const path = "system/staging/" + d5.name;
+        if (!/^proposed-[\w.-]+-dashboard(-\d+)?\.json$/.test(d5.name) || !await shared.VW.exists(path)) return false;
+        const data = JSON.parse(await shared.VW.read(path));
+        if ((data.items || []).some(
+          /** @param {any} i */
+          (i5) => i5.applied || i5.decision !== "pending"
+        )) return false;
+        await shared.VW.remove(path);
+        return true;
+      });
+    } catch (e4) {
+      ok = false;
+    }
+    if (!ok) {
+      snack("Already decided in Review: undo it in Activity");
+      return;
+    }
+    const c5 = d5.al.cand ? { cand: d5.al.cand } : {}, u5 = await api("/api/alerts/undo", { ids: [d5.al.id], ...c5 });
+    const a5 = (VIPD().alerts || []).find((z3) => z3.id === d5.al.id), it = a5 && d5.al.cand ? (a5.candidates || []).find(
+      /** @param {any} x */
+      (x5) => x5.n === d5.al.cand
+    ) : null;
+    if (it) {
+      delete it.made;
+      delete it.dismissed;
+      if (a5) delete a5.seen;
+    } else if (a5) {
+      delete a5.seen;
+      delete a5.made;
+    }
+    VIPNOTED.add(d5.al.id);
+    vipBadge();
+    await reloadData();
+    renderToday();
+    snack(u5.ok ? `Undone: the new ${d5.word} is no longer staged, and the message is back in To decide` : `Unstaged; the message wasn't put back: ${u5.message || "try again"}`);
   }
   function alertDraftWhy(al) {
     return /^(private|confidential)$/i.test(al.marker || "") ? `Not for a ${al.marker.toLowerCase()} message` : !draftOn("sharpen") ? "Sharpen a vague action is off in Settings › Advanced › AI drafts" : !viaServer() ? "Drafting needs the live server" : "";
@@ -30284,8 +30334,9 @@ ${d5.text}`);
           return;
         }
         await pkNewSync(shared.CUR.k, shared.CUR.nid, true);
-        if (!shared.CUR.staged) return;
+        if (!shared.CUR || !shared.CUR.staged) return;
       }
+      if (shared.CUR && shared.CUR.mode === "new" && shared.CUR.alertDone) return alertStaged();
     }
     if (shared.CUR && shared.CUR.mode === "proposal") return pkPropSave(false);
     if (PK.closing) return;

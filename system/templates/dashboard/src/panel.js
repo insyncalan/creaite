@@ -28,7 +28,7 @@ import { decisionCheck, decisionFields, decLate, decShort } from "./meetings.js"
 import { feedBlock, feedLines, feedListHtml, feedTabItems, mountFeedTabs, msLinked, msPanelSave, msRemove, msSave, projFeedItems } from "./milestones.js";
 import { closePanel, curGuard, depFormDraw, depHash, depSugDraw, depSuggest, DRAFTKIND, PK, PKN, pkOn, WARNS, warnsOf, WICO } from "./projects.js";
 import { decide, isMin, llNoteHtml, rejectMinutes, rjMenuFor, rtNoteHtml, rvDup, rvRejectOK } from "./review.js";
-import { alertStage, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
+import { alertStage, alertStaged, isHiddenPerson, nm, ownerFinal, personLink, PKAPPLIED, regAddAlias, row, sl, sw, tx, WS_FIELDS, wsConfirm, WSD, wsNewOf, wsRow, wsSuggest } from "./settings.js";
 import { pkAdd, plur, renderToday } from "./today.js";
 import { bkItems, FX, HL, hlOrder, hlPaint, isStale, items, kOfId, layoutOf, msOpts, NEG, PROJF, rvPaint } from "./work.js";
 /* ======================= detail panel ======================= */
@@ -654,7 +654,8 @@ export function pkClient(k,id,on){ const x=pkX(k,id); if(!x) return;
   PK.pc={k,id}; PK.det[id]=true; pkNote(PKMSGNEED(k)); pkDraw(); setTimeout(()=>{ const m=$(`#panel [data-pkf="${pkMsgF(k)}"]`); if(m){ m.focus(); const r=document.createRange(); r.selectNodeContents(m); r.collapse(false); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); } },0); }
 export async function pkSaveAndClose(){ if(shared.CUR&&shared.CUR.mode==="new"&&!PK.closing){
     closePicker("owner",false); const a=document.activeElement; if(a&&a.matches&&a.matches("#panel [data-pkf][contenteditable]")) a.blur(); await pkQuiet();
-    if(shared.CUR&&shared.CUR.mode==="new"&&!shared.CUR.staged&&shared.CUR.draft.t&&!PK.pc){ if(!pkNewCheck(shared.CUR.k,shared.CUR.draft)){ pkNewMarkDraw()?.focus(); return; } await pkNewSync(shared.CUR.k,shared.CUR.nid,true); if(!shared.CUR.staged) return; } }
+    if(shared.CUR&&shared.CUR.mode==="new"&&!shared.CUR.staged&&shared.CUR.draft.t&&!PK.pc){ if(!pkNewCheck(shared.CUR.k,shared.CUR.draft)){ pkNewMarkDraw()?.focus(); return; } await pkNewSync(shared.CUR.k,shared.CUR.nid,true); if(!shared.CUR||!shared.CUR.staged) return; }
+    if(shared.CUR&&shared.CUR.mode==="new"&&shared.CUR.alertDone) return alertStaged(); }   /* check 45 (BL-334): made from a message, staged for Review only, never applied here */
   if(shared.CUR&&shared.CUR.mode==="proposal") return pkPropSave(false);
   if(PK.closing) return; PK.closing=true;
   try{ closePicker("owner",false);

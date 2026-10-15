@@ -201,7 +201,8 @@ class AlertActionTests(unittest.TestCase):
         self.assertTrue(got["proposal"].endswith("-dashboard.json"))
         self.assertEqual(prop["source_run"], "dashboard")
         item = prop["items"][0]
-        self.assertEqual((item["op"], item["table"], item["decision"]), ("new", "actions", "approved"))
+        self.assertEqual((item["op"], item["table"], item["decision"]), ("new", "actions", "pending"))   # for Review (check 45)
+        self.assertIn("for Review", got["message"])
         v = item["values"]
         self.assertEqual((v["project"], v["owner"], v["due_date"], v["raised"]), ("ABC", "Alan Carter", "2026-10-16", "2026-10-08"))
         self.assertNotIn("status", v)                                                       # only the form's own fields
@@ -209,7 +210,13 @@ class AlertActionTests(unittest.TestCase):
         self.assertNotIn("[ABC] Go-live date", self.unseen())                               # dismissed
         made = self.alert("[ABC] Go-live date")["made"]
         self.assertEqual((made["proposal"], made["n"], made["id"]), (got["proposal"], 1, None))
-        self.v.run("apply")                                                                 # Alan applies (not this route)
+        p = self.v.root / "system/staging" / got["proposal"]
+        self.v.run("apply")                                                                 # pending: an apply leaves it alone
+        self.assertTrue(p.exists())
+        self.assertFalse(any(r["description"] == "Confirm whether go-live can move a week" for r in self.v.rows("actions")))
+        prop["items"][0]["decision"] = "approved"                                           # Alan approves it in Review
+        p.write_text(json.dumps(prop))
+        self.v.run("apply")                                                                 # and applies (not this route)
         self.post("/api/vip", {}, keep=False)
         made = self.alert("[ABC] Go-live date")["made"]
         self.assertRegex(made["id"] or "", r"^ABC-A-\d{3}$")
