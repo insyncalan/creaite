@@ -18,6 +18,13 @@ META, CTRL = 4, 2
 
 
 class PanelCase(LiveBrowserCase):
+    def setUp(self):
+        super().setUp()
+        # BL-327: under load the vault's data is over PAGE_FRESH old by the time the page loads, so the page re-reads /api/data
+        # after its first paint and redraws the Work table; a redraw between the click's press and release replaces the row and
+        # the click is lost (the panel never opens). Wait for that reload (and any pulse) first.
+        self.b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
+
     def action(self, id_):
         return next(r for r in self.v.rows("actions") if r["id"] == id_)
 
@@ -276,6 +283,10 @@ class WidePanel(PanelCase):
     def test_the_peek_is_half_the_window_and_never_under_520(self):
         for window, want in ((1400, 700), (1200, 600), (1000, 520), (700, 520)):
             self.b.resize(window, 900)
+            # the rail turns to icons below 1200px on the media query's change event, which Chrome sends at the next frame, not on
+            # the resize; under load the click was aimed before the rail narrowed, so the table moved 156px left under it and the
+            # press landed on another cell (an inline edit, no panel)
+            self.b.wait(f"innerWidth==={window} && document.documentElement.classList.contains('railicons')==={str(window < 1200).lower()}")
             self.open_row()
             self.assertAlmostEqual(self.width(want), want, delta=1, msg=f"at {window}px")
             self.assertFalse(self.b.eval("EDITING"))
