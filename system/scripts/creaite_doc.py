@@ -8,6 +8,9 @@ it, so the filed page and every export match. The data block's shape is in dev/s
 Saving goes through filechange.py: a new file is a create, a later save an edit (the earlier version backed up, logged and
 undoable). Hidden sections, rows and figures never reach the page, an export or the file (clean). Search reads every shown section
 (search_text, called by tracker.text_of).
+
+Exports (P2, `export`): HTML (the page without the data block), Word (the kind's firm template, filled by docx_tools.py) and PDF
+(Chrome's print to PDF of the HTML export), each made from the data and filed beside the document through filechange.py.
 """
 import copy
 import html
@@ -446,3 +449,282 @@ def undo(path):
     p = real(path)
     version = int(read(p).get("version") or 0) if p.is_file() and is_doc(p) else None
     return {"ok": code == 0, "message": buf.getvalue().strip(), "version": version}
+
+
+# ── Exports: HTML, Word and PDF (P2; BL-335, BL-336, BL-338) ─────────────────
+# Every export is made from the data block, so all three have the same sections in the same order and nothing hidden.
+
+EXPORTS = {"html": ".html", "docx": ".docx", "pdf": ".pdf"}
+TEMPLATES = {"weekly": "weekly-report-template.docx", "client": "client-report-template.docx", "minutes": "minutes-template.docx"}
+WORD_EL = re.compile(r"<w:p(?: [^>]*)?/>|<w:p(?: [^>]*)?>.*?</w:p>|<w:tbl>.*?</w:tbl>", re.S)
+WORD_TEXT = re.compile(r"<w:t(?: [^>]*)?>([^<]*)</w:t>")
+FRONT_DROP = ("{{HEALTH_LINE}}", "{{ATTENDEES}}")     # the template's health and attendees lines: the document's sections instead
+CHROME_SECONDS = 90
+
+
+def file_beside_default():
+    """The setting "File the exports beside it" (reports.file_exports_beside), on by default."""
+    try:
+        value = (paths.load_settings().get("reports") or {}).get("file_exports_beside")
+    except (OSError, ValueError):
+        value = None
+    return True if value is None else bool(value)
+
+
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True):
+    """Export the document at `path` as "html", "docx" or "pdf", made from its data. Written to system/staging/drafts/; with
+    `file_beside` also filed beside the document through filechange.py (a create, never overwriting), or in `out_dir` (a stored
+    folder) when given. `open_after` is passed back for the live server to open the export (/api/open). See the contract."""
+    def fail(message, **extra):
+        """The answer when nothing was exported."""
+        return {"ok": False, "format": fmt, "message": message, **extra}
+    if fmt not in EXPORTS:
+        return fail(f"creaite exports to HTML, Word or PDF; not {fmt!r}.")
+    try:
+        doc = read(path)
+        _check_baseline(doc)
+        draft = _make_export(doc, fmt, real(path).stem)
+    except DocError as e:
+        return fail(str(e))
+    out = {"ok": True, "format": fmt, "path": paths.rel(draft), "draft": paths.rel(draft), "filed": False,
+           "open_after": bool(open_after)}
+    folder = real(out_dir) if out_dir else real(path).parent if file_beside else None
+    if folder is None or folder.resolve() == paths.DRAFTS.resolve():
+        return {**out, "message": f"Exported {paths.rel(draft)}."}
+    return _file_export(out, draft, folder / (real(path).stem + (" (read only)" if fmt == "html" else "") + EXPORTS[fmt]), fail)
+
+
+def _check_baseline(doc):
+    """A client view or distributed minutes is exported only once the internal document it is based on is approved."""
+    if (doc.get("audience") or "internal") == "internal":
+        return
+    base = doc.get("based_on") or {}
+    try:
+        approved = bool(base.get("path")) and read(base["path"]).get("state") == "approved"
+    except DocError:
+        approved = False
+    if not approved:
+        what = "Distributed minutes are" if doc.get("kind") == "minutes" else "A client report is"
+        raise DocError(f"{what} exported only after the internal {'minutes are' if doc.get('kind') == 'minutes' else 'report is'} "
+                       "approved.")
+
+
+def _make_export(doc, fmt, stem):
+    """Write the export into system/staging/drafts/ and return its path. Raises DocError."""
+    paths.DRAFTS.mkdir(parents=True, exist_ok=True)
+    draft = paths.free_path(paths.DRAFTS, stem, EXPORTS[fmt])
+    if fmt == "html":
+        draft.write_text(render(doc, editing=False), encoding="utf-8")
+    elif fmt == "docx":
+        word_export(doc, draft)
+    else:
+        page = paths.free_path(paths.DRAFTS, f"{stem} print", ".html")
+        page.write_text(render(doc, editing=False), encoding="utf-8")
+        try:
+            print_pdf(page, draft)
+        finally:
+            page.unlink()
+    return draft
+
+
+def _file_export(out, draft, target, fail):
+    """File the draft at `target` through filechange.py (a create: a taken name gets a number). The draft goes once it is filed;
+    when the change needs Alan's approval it stays for his card."""
+    import filechange
+    ch = {"op": "create", "path": stored(target), "data": draft.read_bytes(), "from": paths.rel(draft),
+          "why": f"{out['format'].upper()} export of {target.stem}"}
+    code, msg = filechange.perform(ch, None, "cli")
+    if code == filechange.NEEDS:
+        filechange.record_request(ch, msg[len("Needs approval: "):].rstrip("."))
+        return fail(msg, needs_approval=True, draft=out["draft"])
+    if code != 0:
+        return fail(msg, draft=out["draft"])
+    draft.unlink()
+    final = re.match(r"Created (.+?) \(change", msg)
+    return {**out, "path": final.group(1) if final else ch["path"], "draft": None, "filed": True, "message": msg}
+
+
+# ── Word: the firm's template, filled by docx_tools.py ───────────────────────
+
+def _nobraces(text):
+    """Text that can't be read as a {{PLACEHOLDER}} by the fill."""
+    return str(text if text is not None else "").replace("{{", "{​{").replace("}}", "}​}")
+
+
+def _word_text(el):
+    """A Word element's text."""
+    import docx_tools
+    return docx_tools.unesc("".join(WORD_TEXT.findall(el)))
+
+
+def _md(text):
+    """One Markdown fill entry, or none for empty text."""
+    return [{"md": _nobraces(text)}] if str(text or "").strip() else []
+
+
+def _health_entries(s, _items):
+    """Health: the flag (a coloured label when Word has one, else bold), then the text."""
+    import docx_tools
+    flag = str((s.get("data") or {}).get("flag") or "")
+    if flag.upper() in docx_tools.FLAGS:
+        return [{"flag": flag.upper(), "text": _nobraces(flag)}] + _md(s.get("text"))
+    return _md(f"**{flag}**" if flag else "") + _md(s.get("text"))
+
+
+def _figure_entries(s, _items):
+    """At a glance: one line per shown figure."""
+    return [e for f in s.get("figures") or [] if f.get("shown", True)
+            for e in _md(f"**{f.get('label') or ''}:** {f.get('value') or ''}" + (f" · {f['note']}" if f.get("note") else ""))]
+
+
+def _pane_entries(s, _items):
+    """Current state: each pane's title in bold, then its text."""
+    return [e for p in s.get("panes") or [] for e in _md(f"**{p['title']}**" if p.get("title") else "") + _md(p.get("text"))]
+
+
+def _timeline_entries(s, items):
+    """Milestones: the text, then the chosen milestones as they stood, with their dates."""
+    rows = [items.get(ref) or {"title": ref} for ref in (s.get("data") or {}).get("milestones") or []]
+    return _md(s.get("text")) + [e for m in rows
+                                 for e in _md(f"- {m.get('title') or ''}" + (f" · {m['due_date']}" if m.get("due_date") else ""))]
+
+
+def _word_entries(s, items):
+    """A shown section's content as docx_tools fill entries (Markdown, a coloured flag), in the page's order; a table's rows are
+    added as a Word table, and any other type gives its text, as on the page."""
+    make = {"health": _health_entries, "figures": _figure_entries, "panes": _pane_entries, "timeline": _timeline_entries}
+    return make.get(s.get("type"), lambda sec, _i: _md(sec.get("text")))(s, items)
+
+
+def _word_table(s, table, total):
+    """A table section's shown rows as a Word table, from the template's own table."""
+    import docx_tools
+    cols = s.get("columns") or []
+    rows = [[_nobraces((r.get("cells") or {}).get(c.get("key"))) for c in cols] for r in s.get("rows") or [] if r.get("shown", True)]
+    return docx_tools.adhoc_table({"table": table}, [{"header": _nobraces(c.get("label"))} for c in cols], rows, total)
+
+
+def _status_line(doc):
+    """The title block's status: the audience, then Draft and its version, or Approved and when."""
+    import tracker
+    label = {"internal": "Internal", "client": "Client", "distributed": "Distributed"}[doc.get("audience") or "internal"]
+    if doc.get("state") != "approved":
+        return f"{label} · Draft, version {doc.get('version') or 0}"
+    when = tracker.long_date(str(doc["approved_at"])[:10]) if doc.get("approved_at") else ""
+    return f"{label} · Approved{' ' + when if when else ''}"
+
+
+def _front_values(doc):
+    """The title block's placeholders, from the document."""
+    import tracker
+    d, meta = doc.get("date") or "", doc.get("meta") or {}
+    return {"PROJECT_NAME": doc.get("project_name") or doc.get("title"), "MEETING_TITLE": doc.get("title"),
+            "STATUS_LINE": _status_line(doc), "WEEK_ENDING": tracker.long_date(d), "CLIENT_NAME": doc.get("client") or "",
+            "PERIOD_START": tracker.long_date(meta.get("period_start") or d), "PERIOD_END": tracker.long_date(d),
+            "MEETING_WHEN": meta.get("when") or tracker.long_date(d), "REPORT_DATE": tracker.long_date(d)}
+
+
+def _front(els, doc):
+    """The template's title block, filled: the project or meeting, the status line and the date. Health and attendees lines go
+    (they are sections)."""
+    import docx_tools
+    values, has_start = _front_values(doc), bool((doc.get("meta") or {}).get("period_start"))
+    out = []
+    for el in els:
+        text = _word_text(el)
+        if any(p in text for p in FRONT_DROP):
+            continue
+        if "{{" in text:
+            text = text if has_start else text.replace("{{PERIOD_START}} to {{PERIOD_END}}", "week ending {{PERIOD_END}}")
+            text = re.sub(r"\{\{(\w+)\}\}", lambda m: _nobraces(values.get(m.group(1), "")), text).strip(" ·")
+            el = docx_tools.put_text(el, text)
+        out.append(el)
+    return out
+
+
+def _word_body(doc, els):
+    """The derived template's body (the title block, then each shown section in page order) and the fill's values."""
+    import docx_tools
+    texts = [_word_text(e) for e in els]
+    at = next((i for i, t in enumerate(texts) if "{{SUMMARY}}" in t), None)
+    table = next((e for e in els if e.startswith("<w:tbl>")), None)
+    if not at or table is None:
+        raise DocError("The Word template isn't one creaite can fill (no summary or table to copy).")
+    heading, para = els[at - 1], els[at]
+    total = sum(int(w) for w in re.findall(r'<w:gridCol w:w="(\d+)"', table)) or 9000
+    out, values = _front(els[:at - 1], doc), {}
+    out += [e for e, t in zip(els, texts) if "{{STYLE_" in t]              # the fill's style samples (topic headings)
+    shown = clean(doc)
+    for n, s in enumerate(shown["sections"]):
+        if s.get("hidden"):
+            continue
+        out.append(docx_tools.put_text(heading, _nobraces(s.get("heading"))))
+        entries = _word_entries(s, shown.get("items") or {})
+        if entries:
+            out.append(docx_tools.replace_in(para, {"SUMMARY": "{{CX_%d}}" % n}))
+            values[f"CX_{n}"] = entries
+        if s.get("type") == "table" and s.get("columns"):
+            out += [_word_table(s, table, total), "<w:p/>"]
+    return out, values
+
+
+def word_export(doc, out):
+    """Write the Word export of `doc` at `out` (inside system/staging/drafts/): the firm's template for its kind, its title block,
+    then each shown section in page order, filled by docx_tools.py fill. Raises DocError."""
+    import contextlib
+    import io
+    import docx_tools
+    tpl = paths.TEMPLATES / TEMPLATES[doc["kind"]]
+    if not tpl.is_file():
+        raise DocError(f"The Word template is missing: {paths.rel(tpl)}.")
+    parts = docx_tools.read_parts(tpl)
+    xml = next(raw for info, raw in parts if info.filename == "word/document.xml").decode("utf-8")
+    start = xml.index("<w:body>") + len("<w:body>")
+    sect = re.findall(r"<w:sectPr.*?</w:sectPr>", xml[start:], re.S)[-1]
+    body, values = _word_body(doc, WORD_EL.findall(xml[start:xml.rindex(sect)]))
+    derived = xml[:start] + "".join(body) + sect + "</w:body></w:document>"
+    stamp = f"{out.stem} {datetime.now():%H%M%S}"
+    tmp_tpl = paths.free_path(paths.DRAFTS, f"{stamp} template", ".docx")
+    tmp_values = paths.free_path(paths.DRAFTS, f"{stamp} values", ".json")
+    docx_tools.write_parts([(i, derived.encode("utf-8") if i.filename == "word/document.xml" else raw) for i, raw in parts], tmp_tpl)
+    tmp_values.write_text(json.dumps(values, ensure_ascii=False), encoding="utf-8")
+    said = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(said):
+            code = docx_tools.cmd_fill(str(tmp_tpl), str(tmp_values), str(out))
+    finally:
+        for f in (tmp_tpl, tmp_values):
+            f.unlink(missing_ok=True)
+    if code != 0:
+        raise DocError(f"The Word export couldn't be filled: {said.getvalue().strip()}")
+
+
+# ── PDF: Chrome's print to PDF of the HTML export ────────────────────────────
+
+def print_pdf(page, out):
+    """Print the HTML `page` to the PDF `out` with Chrome, headless, in a throwaway profile. Raises DocError."""
+    import os
+    import shutil
+    import signal
+    import subprocess
+    import tempfile
+    import launch
+    chrome = launch.find_chrome()
+    if not chrome:
+        raise DocError("Chrome wasn't found, so the PDF wasn't made. Install Google Chrome (creaite needs it) and try again.")
+    profile = tempfile.mkdtemp(prefix="creaite-pdf-")
+    cmd = [chrome, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", "--disable-extensions",
+           f"--user-data-dir={profile}", "--no-pdf-header-footer", "--print-to-pdf-no-header", f"--print-to-pdf={out}",
+           Path(page).resolve().as_uri()]
+    proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            start_new_session=True)
+    try:
+        proc.wait(timeout=CHROME_SECONDS)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)       # its own session: Chrome and only its helpers
+        proc.wait()
+    finally:
+        shutil.rmtree(profile, ignore_errors=True)
+    if not (Path(out).is_file() and Path(out).read_bytes()[:5] == b"%PDF-"):
+        Path(out).unlink(missing_ok=True)
+        raise DocError("Chrome didn't make the PDF. Try again; if it keeps failing, Settings › Diagnostics has the details.")
