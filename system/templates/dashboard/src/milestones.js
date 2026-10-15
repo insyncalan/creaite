@@ -4,6 +4,7 @@
    boot…() functions that src/main.js calls in today's order. */
 import { actId } from "./activity.js";
 import { step } from "./ask.js";
+import { peekFrame } from "./components/Peek.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { A, P, peopleAll, pName, R } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, paintIcons, putHTML, raw } from "./core/dom.js";
@@ -381,10 +382,11 @@ export function mvPatch(arr,ch){ const /** @type {any} */ x=arr[14]=arr[14]||{};
   if(arr[6]==="Done"){ x.st="Achieved"; x.set=false; } msState(arr); }
 
 /* ---- the editor ---- */
-export function mvPeekEl(){ let p=$("#mvPeek"); if(!p){ addHTML(document.body,"beforeend",html`<aside class="mv-peek" id="mvPeek" hidden role="dialog" aria-label="Edit milestone"></aside>`); p=$("#mvPeek"); } return p; }
+/* the editor's frame: the Peek block's (BL-316), made once at the end of the page */
+export const mvPeekFrame=()=>peekFrame("mvPeek",{label:"Edit milestone",cls:"mv-peek"});
 export let MVJUST=false, MVOPENER=null;
 export function mvEdOpen(id,from,o={}){ MVJUST=true; setTimeout(()=>{ MVJUST=false; },0); shared.MV.peek=id; shared.MV.add=o.add?mvDraftNew():null;   /* BL-245: every field at once */ shared.MV.flow=null; shared.MV.pend=null; shared.MV.cwPend=false;
-  MVOPENER=from||document.activeElement; const p=mvPeekEl(); p.classList.remove("enter"); void p.offsetWidth; if(!reduced()) p.classList.add("enter"); mvEdDraw(); $("#mvName")?.focus();
+  MVOPENER=from||document.activeElement; const p=mvPeekFrame(); p.classList.remove("enter"); void p.offsetWidth; if(!reduced()) p.classList.add("enter"); mvEdDraw(); $("#mvName")?.focus();
   if(shared.VIEW==="milestones") navWrite(false); }
 export function mvEdClose(noFocus){ const was=shared.MV.peek!==null||shared.MV.add; shared.MV.peek=null; shared.MV.add=null; shared.MV.flow=null; shared.MV.pend=null; shared.MV.cwPend=false; mvCalClose(false); mvPopClose(false);
   const p=$("#mvPeek"); if(p) p.hidden=true; if(was&&shared.VIEW==="milestones") navWrite(false); if(!noFocus&&MVOPENER&&MVOPENER.isConnected) MVOPENER.focus(); }
@@ -394,7 +396,7 @@ export function mvStateExplain(m){ const st=m.state, sug=m.sug, sw=w=>`<b>${MVWO
   if(mvMismatch(m)) return `<b>You have set ${MVWORD[st]}</b>${why}. The dates suggest ${sw(sug)}: ${sugWhy}. <button type="button" class="mv-btn sm" data-mvpk="usesug">Use ${MVWORD[sug]}</button>`;
   if(m.manual&&st!==sug) return `<b>You have set ${MVWORD[st]}</b>${why}. The dates alone would say ${MVWORD[sug]}. <button type="button" class="mv-btn sm" data-mvpk="usesug">Use ${MVWORD[sug]}</button>`;
   return `${m.manual?"Set by you. ":"Following the dates. "}The dates say ${MVWORD[sug]}: ${sugWhy}.`; }
-export function mvEdDraw(){ const p=mvPeekEl(), code=mvCode(), pn=pName(code);
+export function mvEdDraw(){ const p=mvPeekFrame(), code=mvCode(), pn=pName(code);
   if(shared.MV.add){ mvAddDraw(p,pn); drFcDraw(); return; }   /* BL-245 */
   const m=mvGet(code,shared.MV.peek); if(!m){ mvEdClose(true); drFcDraw(); return; }
   const st=m.state, ach=st==="achieved", F=shared.MV.flow&&shared.MV.flow.id===m.id?shared.MV.flow:null, PD=shared.MV.pend&&shared.MV.pend.id===m.id?shared.MV.pend:null;
