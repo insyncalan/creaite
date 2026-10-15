@@ -223,6 +223,28 @@ class HubBrowser(LiveBrowserCase):
         self.assertEqual(b.eval(f"meetingRoute({json.dumps(self.token('calendar:e2'))})"), "#prep=2026-10-14%7C09%3A00%7CABC%20Design%20review")
         self.assertEqual(b.errors, [])
 
+    def test_an_items_source_keeps_its_meeting_link_and_it_goes_where_meeting_route_says(self):
+        b = self.b
+        note = ABC + "/minutes/2026-10-13 Quick note - Corridor chat.md"
+        t = self.token("fp:" + b.eval("D.hub[Object.keys(D.hub).find(t=>D.hub[t].quick)].key.slice(3)"))
+        self.assertEqual(b.eval(f"meetingOfFile({json.dumps(note)})"), t)
+        holder = "document.getElementById('v-today')"
+        b.eval(f"{holder}.insertAdjacentHTML('beforeend', '<div id=\"srcprobe\">'+srcHTML({json.dumps(note)})+'</div>')")
+        self.assertEqual(b.eval("document.querySelector('#srcprobe a.mhlink').getAttribute('href')"), "#meeting=" + t)
+        self.assertEqual(b.eval("document.querySelector('#srcprobe a.mhlink').textContent"), "Meeting")
+        route = b.eval(f"meetingRoute({json.dumps(t)})")
+        self.assertEqual(route, "#review")                  # over, its minutes waiting in Review
+        b.eval("document.querySelector('#srcprobe a.mhlink').click()")
+        b.wait("VIEW==='review'")
+        self.assertEqual(b.eval("location.hash"), route)
+        # filed minutes: the same link would go to the minutes view's address
+        path = ABC + "/minutes/2026-10-13 Quick note minutes.html"
+        b.eval(f"D.hub[{json.dumps(t)}].files.push({json.dumps(path)}); D.hub[{json.dumps(t)}].filed=[{json.dumps(path)}]")
+        self.assertEqual(b.eval(f"meetingRoute(meetingOfFile({json.dumps(path)}))"), "#minutes=" + b.eval(f"encodeURIComponent({json.dumps(path)})"))
+        # a file no meeting owns gets no link
+        self.assertNotIn("mhlink", b.eval(f"srcHTML({json.dumps(ABC + '/documents/plan.md')})"))
+        self.assertEqual(b.errors, [])
+
     def test_an_unknown_old_link_goes_to_today(self):
         b = self.b
         b.eval("go('review')")

@@ -2,6 +2,7 @@
 /* core/fields.js (BL-231 step 2b): sources, the calendar picker, dates in words, the owner combobox, ⌘↵, tick boxes, `addEl`, auto-grow and the weekend note.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0042-sources.js, 0043-calendar-picker.js, 0044-bl-147-sprint-ux.js, 0045-owner-combobox.js, 0057-bl-274-sprint-ui-sweep.js, 0062-bl-216-sprint-ui-sweep.js, 0099-after-bl-120.js, 0115-bl-146-sprint-ux.js, 0116-after-bl-146.js, 0180-bl-181-sprint-peek-new.js */
+import { meetingOfFile, meetingRoute } from "../meetings.js";
 import { chatScroll, nowIso, stampMsg, step } from "../ask.js";
 import { A, DEC, peopleAll, R, REV, useCount } from "./data.js";
 import { $, addHTML, esc, html, ic, putHTML, raw } from "./dom.js";
@@ -25,7 +26,7 @@ export function srcParse(x){ if(!x) return null; if(/^(Email|Teams) · /.test(x)
 export const NOTE_OPEN={fn:null};
 export const srcShort=x=>{ const o=srcParse(x); if(!o) return "—"; if(o.type==="File") return o.name.replace(/\.[a-z]+$/,""); if(o.type==="Email") return "Email · "+(o.Subject||""); if(o.type==="Teams") return "Teams · "+(o.Channel||o.Chat||""); return o.text; };
 export function srcHTML(x){ const o=srcParse(x); if(!o) return "—";
-  if(o.type==="File"){ return `<a href="#" class="srclink" data-openfile="${esc(o.path)}"${o.line?` data-noteline="${o.line}"`:""}>${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>`; }
+  if(o.type==="File"){ const mt=!shared.LOADING&&meetingOfFile(o.path); return `<a href="#" class="srclink" data-openfile="${esc(o.path)}"${o.line?` data-noteline="${o.line}"`:""}>${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>${mt&&meetingRoute(mt)?`<div><a href="#meeting=${mt}" class="linkbtn mhlink" title="Open this meeting's minutes, or its Review or Prep">Meeting</a></div>`:""}`; }
   if(o.type==="Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Subject</dt><dd>${esc(o.Subject||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Outlook</a>`:'<span class="sub">No message link stored</span>'}`;
   if(o.type==="Teams") return `<dl class="srcmeta"><dt>${o.Channel?"Channel":"Chat"}</dt><dd>${esc(o.Channel||o.Chat)}</dd><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Teams</a>`:'<span class="sub">No message link stored</span>'}`;
   return esc(o.text); }

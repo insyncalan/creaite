@@ -350,6 +350,7 @@
    "openDialog",
    "openDisp",
    "openDraftEmail",
+   "meetingOfFile",
    "meetingRoute",
    "openFollowup",
    "openGen",

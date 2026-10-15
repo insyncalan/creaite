@@ -2366,6 +2366,7 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 /* ===== BL-209 (sprint-insight) ===== (v2.1.0 P10: the hub page and its strip are gone; Review's Coverage list keeps these two rules) */
 .mhcov{list-style:none;margin:8px 0 0;padding:0} .mhcov li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
 .tag.ok{color:var(--ok);font-weight:500}
+.mhlink{margin-left:6px;font-size:var(--fs-xs)}
 /* ===== BL-205 (sprint-insight) ===== ⌘K's change: marked Change, and its preview with the sign as well as the colour */
 #cmdkList button.ckchg{font-weight:600}
 #ckPrev{border-top:1px solid var(--line);padding:10px 16px 12px;max-height:40vh;overflow:auto;font-size:var(--fs-sm)}

@@ -289,4 +289,6 @@ export function meetingRoute(token){ const m=(D.hub||{})[token]; if(!m||!m.day) 
   if(over&&(m.counts||{}).pending) return "#review";   /* the minutes are drafted and waiting: Review is where they open */
   const ev=(((D.calendar||{}).days||{})[m.day]||[]).find(e=>e.start===m.start&&e.title===m.title);
   return ev?prepHref(prepKey(ev,m.day),m.day):null; }
+/* the retired page's address for the meeting a file belongs to (its minutes, copies or quick note), or null */
+export function meetingOfFile(path){ const found=Object.entries(D.hub||{}).find(([,m])=>(m.files||[]).includes(path)); return found?found[0]:null; }
 /* ===== end P10 ===== */
