@@ -200,6 +200,53 @@ class NotesHeader(LiveBrowserCase):
         b.wait("!document.getElementById('noteDatePop')")
         self.assertEqual(b.eval(active), "noteWsDate")
 
+    def test_tags_esc_cancels_rename_is_cleaned_and_twenty_is_the_limit(self):
+        b = self.b
+        self.make("Tagged")
+        # M3: Esc in + Tags adds nothing, whatever was typed; Enter adds; blur with text adds
+        b.click("#noteTagAdd")
+        b.wait("!!document.getElementById('noteTagNew')")
+        b.type("tmp")
+        b.key("Escape")
+        b.wait("!document.getElementById('noteTagNew')")
+        b.pump(0.3)
+        self.assertEqual(self.tags_now(), [])
+        self.assertEqual(b.eval("document.activeElement.id"), "noteTagAdd")
+        b.click("#noteTagAdd")
+        b.wait("!!document.getElementById('noteTagNew')")
+        b.type("kept")
+        b.eval("document.getElementById('noteTagNew').blur()")
+        b.wait("noteCur.value.meta.tags.length===1")
+        self.assertEqual(self.tags_now(), ["kept"])
+        # L1: a rename is cleaned like an add (commas and runs of spaces become one space), so the screen and the file agree
+        self.type_into("#noteTags .chip .t", "  two,   words ", enter=True, idx=0)
+        b.wait("noteCur.value.meta.tags[0]==='two words'")
+        self.assertEqual(b.eval("document.querySelectorAll('#noteTags .chip .t')[0].value"), "two words")
+        b.eval("noteFlush()")
+        f = self.notes_dir() / "Tagged.md"
+        self.assertTrue(self.saved(f, "tags: [two words]"), f.read_text())
+        b.wait("noteSave.value.state==='saved'", 15)
+        # L2: 20 tags, the server's limit; the 21st is refused with a plain message
+        b.eval("(()=>{const a=document.getElementById('noteTagAdd'); a.click();})()")
+        b.wait("!!document.getElementById('noteTagNew')")
+        b.wait("document.activeElement.id==='noteTagNew'")
+        b.type(",".join(f"t{k}" for k in range(19)))
+        b.key("Enter")
+        b.wait("noteCur.value.meta.tags.length===20")
+        b.click("#noteTagAdd")
+        b.wait("!!document.getElementById('noteTagNew')")
+        b.type("one-too-many")
+        b.key("Enter")
+        b.wait("!document.getElementById('noteTagNew')")
+        b.pump(0.3)
+        self.assertEqual(len(self.tags_now()), 20)
+        self.assertNotIn("one-too-many", self.tags_now())
+        self.assertIn("Notes keep up to 20 tags", b.eval("document.getElementById('toastHost').textContent"))
+        b.eval("noteFlush()")
+        b.pump(1)
+        meta_tags = [x for x in f.read_text().split("\n") if x.startswith("tags:")][0]
+        self.assertEqual(meta_tags.count(",") + 1, 20, meta_tags)
+
     def test_the_popup_is_not_clipped_at_900(self):
         b = self.b
         self.make("Workshop", "working-session")
@@ -247,7 +294,7 @@ class NotesHeader(LiveBrowserCase):
         b.eval("(()=>{const i=document.getElementById('noteTagNew'); i.maxLength=500; i.value='x'.repeat(80); })()")
         b.key("Enter")
         b.wait("noteCur.value.meta.tags.length===3")
-        self.assertEqual(len(self.tags_now()[2]), 40)
+        self.assertEqual(len(self.tags_now()[2]), 60)       # the server's own cap (notes.py clean_changes)
         b.eval("document.querySelectorAll('#noteTags .chip .t')[0].focus()")
         b.eval("(()=>{const i=document.querySelectorAll('#noteTags .chip .t')[0]; i.value=''; i.blur();})()")
         b.wait("noteCur.value.meta.tags.length===2")

@@ -52283,7 +52283,8 @@ ${d5.text}`);
       ) : null
     ] });
   }
-  var cleanTag = (v5) => v5.replace(/\s+/g, " ").trim().slice(0, 40);
+  var TAG_MAX = 60, TAG_N = 20;
+  var cleanTag = (v5) => v5.replace(/[\s,]+/g, " ").trim().slice(0, TAG_MAX).trim();
   var tagsNow = () => (
     /** @type {string[]} */
     (noteCur.value && noteCur.value.meta || {}).tags || []
@@ -52305,7 +52306,12 @@ ${d5.text}`);
       const next = tagsNow().slice();
       for (const part of raw2.split(",")) {
         const v5 = cleanTag(part);
-        if (v5 && !next.some((x5) => x5.toLowerCase() === v5.toLowerCase())) next.push(v5);
+        if (!v5 || next.some((x5) => x5.toLowerCase() === v5.toLowerCase())) continue;
+        if (next.length >= TAG_N) {
+          snack(`Notes keep up to ${TAG_N} tags`);
+          break;
+        }
+        next.push(v5);
       }
       if (next.length !== tagsNow().length) noteMeta({ tags: next });
     };
@@ -52350,7 +52356,7 @@ ${d5.text}`);
             type: "text",
             class: "t",
             defaultValue: t47,
-            maxLength: 40,
+            maxLength: TAG_MAX,
             "aria-label": `Tag ${t47}, edit to rename`,
             style: { width: `${Math.max(2, t47.length + 1)}ch` },
             onInput: (e4) => {
@@ -52403,10 +52409,12 @@ ${d5.text}`);
               e4.preventDefault();
               e4.stopPropagation();
               add(el2.value);
+              el2.value = "";
               doneAdding(true);
             } else if (e4.key === "Escape") {
               e4.preventDefault();
               e4.stopPropagation();
+              el2.value = "";
               doneAdding(true);
             }
           },

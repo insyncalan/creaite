@@ -91,8 +91,11 @@ export function NoteDate({ date }) {
     </span>);
 }
 
-/** Trim, collapse spaces and cap a tag's length. @param {string} v */
-const cleanTag = v => v.replace(/\s+/g, " ").trim().slice(0, 40);
+/* A tag is at most TAG_MAX characters and a note keeps at most TAG_N tags: the same limits as notes.py clean_changes, so the
+   screen and the file agree. Commas and every kind of space become one space, as the server writes them. */
+const TAG_MAX = 60, TAG_N = 20;
+/** Commas and spaces to one space, trimmed, capped. @param {string} v */
+const cleanTag = v => v.replace(/[\s,]+/g, " ").trim().slice(0, TAG_MAX).trim();
 /** The open note's tags right now. @returns {string[]} */
 const tagsNow = () => /** @type {string[]} */ (((noteCur.value && noteCur.value.meta) || {}).tags || []);
 const SUGGEST = ["stakeholder", "decision", "follow-up"];
@@ -105,7 +108,12 @@ export function NoteTags({ tags }) {
   /** Add tags (commas separate several): never a duplicate (any case), empty or over-long one. @param {string} raw */
   const add = raw => {
     const next = tagsNow().slice();
-    for (const part of raw.split(",")) { const v = cleanTag(part); if (v && !next.some(x => x.toLowerCase() === v.toLowerCase())) next.push(v); }
+    for (const part of raw.split(",")) {
+      const v = cleanTag(part);
+      if (!v || next.some(x => x.toLowerCase() === v.toLowerCase())) continue;
+      if (next.length >= TAG_N) { snack(`Notes keep up to ${TAG_N} tags`); break; }
+      next.push(v);
+    }
     if (next.length !== tagsNow().length) noteMeta({ tags: next });
   };
   /** @param {number} i */ const remove = i => { const L = tagsNow(); if (i >= 0 && i < L.length) noteMeta({ tags: L.filter((_, j) => j !== i) }); };
@@ -124,7 +132,7 @@ export function NoteTags({ tags }) {
       <TagFlag />
       {tags.map((t, i) => (
         <span key={`${i}|${t}`} class="chip">
-          <input type="text" class="t" defaultValue={t} maxLength={40} aria-label={`Tag ${t}, edit to rename`} style={{ width: `${Math.max(2, t.length + 1)}ch` }}
+          <input type="text" class="t" defaultValue={t} maxLength={TAG_MAX} aria-label={`Tag ${t}, edit to rename`} style={{ width: `${Math.max(2, t.length + 1)}ch` }}
             onInput={e => { const el = /** @type {HTMLInputElement} */ (e.target); el.style.width = `${Math.max(2, el.value.length + 1)}ch`; }}
             onKeyDown={e => { const el = /** @type {HTMLInputElement} */ (e.target);
               if (e.key === "Enter") { e.preventDefault(); el.blur(); } else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); el.value = t; el.blur(); } }}
@@ -134,8 +142,8 @@ export function NoteTags({ tags }) {
       {adding
         ? <input type="text" class="addin" id="noteTagNew" placeholder="Tag" aria-label="New tag" maxLength={80} ref={newIn}
             onKeyDown={e => { const el = /** @type {HTMLInputElement} */ (e.target);
-              if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); add(el.value); doneAdding(true); }
-              else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); doneAdding(true); } }}
+              if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); add(el.value); el.value = ""; doneAdding(true); }
+              else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); el.value = ""; doneAdding(true); } }}
             onBlur={e => { add(/** @type {HTMLInputElement} */ (e.target).value); doneAdding(false); }} />
         : <button type="button" class="addl" id="noteTagAdd" ref={addBtn} onClick={() => setAdding(true)}>+ Tags</button>}
       {!tags.length ? <span class="sugg" id="noteTagSugg">Suggested: {SUGGEST.map(s =>
