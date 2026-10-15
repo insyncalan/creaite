@@ -238,6 +238,9 @@ def refusal(found, suggestion=False):
 DOC_KEYS = ("kind", "code", "week_ending", "client")
 
 
+NOT_CLIENT = "That isn't a client report creaite can check, so nothing was sent to Claude."
+
+
 def bound_place(req, code, claimed):
     """The place a request gets (#123): the client place for a request naming its client report (checked here, never trusted),
     else the place it claims. Refuses, failing closed, the client place without a document and any document that isn't a client
@@ -247,30 +250,34 @@ def bound_place(req, code, claimed):
         if claimed in CLIENT_PLACES:
             raise Refused("The client report wasn't named, so nothing was sent to Claude. Reload the page and try again.")
         return claimed
-    no = "That isn't a client report creaite can check, so nothing was sent to Claude."
-    if not isinstance(d, dict) or set(d) - set(DOC_KEYS) or any(not isinstance(d.get(k, ""), str) for k in DOC_KEYS):
-        raise Refused(no)
-    if d.get("kind") != "client":
-        raise Refused(no)
+    if not isinstance(d, dict) or set(d) - set(DOC_KEYS) or any(not isinstance(d.get(k, ""), str) for k in DOC_KEYS) \
+            or d.get("kind") != "client":
+        raise Refused(NOT_CLIENT)
     if not code or d.get("code") != code:
         raise Refused("The client report and the project don't agree, so nothing was sent to Claude.")
     try:
-        import creaite_doc
-        import report_doc
-        import report_server
-        ask = {"kind": "client", "code": code, "week_ending": d.get("week_ending") or None, "client": d.get("client") or None}
-        kind, dcode, fri, client = report_server.target(ask)
-        state, path = report_doc.where(kind, dcode, fri, client)
-        if state:                                         # saved: it must read as this project's client report
-            doc = creaite_doc.read(path)
-            if not isinstance(doc, dict) or doc.get("kind") != "client" or doc.get("audience") != "client" \
-                    or doc.get("project") != code:
-                raise Refused(no)
-    except Refused:
-        raise
+        ok = _client_report_found(code, d)
     except (Exception, SystemExit):  # noqa: BLE001  fails closed: an unknown project or date, an unreadable file
-        raise Refused(no) from None
+        ok = False
+    if not ok:
+        raise Refused(NOT_CLIENT)
     return "client"
+
+
+def _client_report_found(code, d):
+    """Whether the document names a client report of this project creaite knows (report_server.target: the project is in the
+    tracker and the date is one), and, when it is saved, whether it reads as that project's client-audience document. Raises
+    on anything it can't read."""
+    import creaite_doc
+    import report_doc
+    import report_server
+    ask = {"kind": "client", "code": code, "week_ending": d.get("week_ending") or None, "client": d.get("client") or None}
+    kind, dcode, fri, client = report_server.target(ask)
+    state, path = report_doc.where(kind, dcode, fri, client)
+    if not state:                                         # not saved yet: the draft route builds it from the tracker
+        return True
+    doc = creaite_doc.read(path)
+    return isinstance(doc, dict) and doc.get("kind") == "client" and doc.get("audience") == "client" and doc.get("project") == code
 
 
 def request(req):

@@ -242,14 +242,18 @@ def people(con, code, blocking=None):
     aliases = register_aliases()
     widen = lambda names: names | {a for n in names for a in aliases.get(n.lower(), [])}  # noqa: E731
     client = widen(shown)
-    try:
-        ident = paths.load_settings().get("identity") or {}
-        alan = {ident.get("name") or ""} | set(ident.get("short_forms") or [])
-    except Exception:  # noqa: BLE001  no settings: nobody is left out
-        alan = set()
-    keep = {x.lower() for x in client | alan}
+    keep = {x.lower() for x in client | alans_names()}
     internal = {n for n in widen(other - shown) if n.lower() not in keep}
     return client, internal
+
+
+def alans_names():
+    """Alan's own name and short forms (settings identity), or none when the settings can't be read."""
+    try:
+        ident = paths.load_settings().get("identity") or {}
+        return {ident.get("name") or ""} | set(ident.get("short_forms") or [])
+    except Exception:  # noqa: BLE001  no settings: nobody is left out
+        return set()
 
 
 def name_findings(con, code, text, blocking=None):
