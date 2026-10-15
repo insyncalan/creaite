@@ -52,7 +52,8 @@ export { openSheetRef as openRef };
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
     exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, leftReadOnly?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
-    checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string},
+    checks?: SheetCheck[], ai?: {place: string, project?: () => string, confidential?: () => boolean, key?: () => string,
+      document?: () => ({kind: string, code: string, week_ending: string, client: string}|null)},
     onRedraft?: (s: SheetSection) => Promise<Redraft>, onSelectAction?: (id: string, sel: any) => Promise<any>,
     onOpenItem?: (ref: string) => boolean, partner?: SheetPartner|null, onChange: (doc: SheetDoc, why: string) => void,
     onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>, onEvent?: (e: SheetEvent) => void,
@@ -275,7 +276,8 @@ export function Sheet(props) {
     const a = P.current.ai;
     if (!a) return undefined;
     return { place: ro || eref.current ? "readonly" : a.place, sheetId: sid, project: () => (P.current.ai && P.current.ai.project ? P.current.ai.project() : ""),
-      confidential: () => !!(P.current.ai && P.current.ai.confidential && P.current.ai.confidential()), key: () => `sheet:${sid}:${s.id}` };
+      confidential: () => !!(P.current.ai && P.current.ai.confidential && P.current.ai.confidential()), key: () => `sheet:${sid}:${s.id}`,
+      document: () => (P.current.ai && P.current.ai.document ? P.current.ai.document() : null) };
   };
   useEffect(() => {
     SHEET_SOURCES.set(sid, async (range, h) => {

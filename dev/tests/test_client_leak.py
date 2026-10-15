@@ -236,10 +236,17 @@ class ClientPlaceForAiOnSelection(Base):
         self.v.run("apply")
         self.label("ABC-A-003", "Board only")                                         # client-visible, but a label excludes it
 
-    def context(self, place="client", text="Testing could start late.", option="polish"):
-        return self.py("import edit_ai\ntry:\n    print(json.dumps(edit_ai.context(" + repr(
-            {"option": option, "text": text, "code": "ABC", "place": place}) + ")))\n"
-            "except edit_ai.Refused as e:\n    print(json.dumps({'refused': str(e)}))")
+    DOC = {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}   # the client sheet's report (#123)
+
+    def context(self, place="client", text="Testing could start late.", option="polish", document=..., code="ABC"):
+        """edit_ai.context on a request; by default the client place names its report, as the client sheet does."""
+        req = {"option": option, "text": text, "code": code, "place": place}
+        if document is ...:
+            document = self.DOC if place == "client" else None
+        if document is not None:
+            req["document"] = document
+        return self.py("import edit_ai\ntry:\n    print(json.dumps(edit_ai.context(" + repr(req) + ")))\n"
+                       "except edit_ai.Refused as e:\n    print(json.dumps({'refused': str(e)}))")
 
     def result(self, ctx, reply):
         return self.py("import edit_ai\nprint(json.dumps(edit_ai.result(" + repr(
@@ -283,9 +290,76 @@ class ClientPlaceForAiOnSelection(Base):
     def test_selected_text_already_holding_internal_content_is_refused(self):
         for text in ("Testing could start late (ABC-A-004).", "We will absorb the phase one overrun internally."):
             self.assertIn("isn't client-safe", self.context(text=text).get("refused", ""), text)
-        got = self.py("import edit_ai\ntry:\n    edit_ai.context({'option': 'polish', 'text': 'Hello there.', 'place': 'client'})\n"
-                      "    print(json.dumps('sent'))\nexcept edit_ai.Refused as e:\n    print(json.dumps(str(e)))")
-        self.assertIn("isn't client-safe", got)                                      # no project: nothing to check against
+        got = self.context(text="Hello there.", code="", document={**self.DOC, "code": ""})
+        self.assertIn("refused", got)                                                # no project: nothing to check against
+
+    # ── #123 (Jarvis): the server binds the place from the document; the page's `place` is never trusted ──
+
+    def test_a_request_claiming_the_report_place_with_the_client_report_gets_the_client_place(self):
+        for claimed in ("report", "minutes", "notes", "readonly", "made-up"):
+            ctx = self.context(place=claimed, document=self.DOC)
+            self.assertEqual(ctx.get("place"), "client", claimed)
+            p = ctx["prompt"].replace("(such as ABC-A-003)", "")
+            self.assertIn("Its open item IDs: ABC-A-002, ABC-006\n", p)
+            self.assertIn("Its people: none listed", p)
+            for x in self.INTERNAL_IDS + self.OWNERS + ("ZEBRAINTERNAL", "Off track"):
+                self.assertNotIn(x, p)
+            got = self.result(ctx, "Testing could start late (ABC-A-004).")             # and its reply is checked as a client one
+            self.assertEqual(got["text"], "", claimed)
+
+    def test_the_client_place_without_a_document_is_refused(self):
+        for doc in (None, "", {}):
+            got = self.context(document=doc)
+            self.assertIn("client report wasn't named", got.get("refused", ""), doc)
+
+    def test_a_document_that_isnt_this_projects_client_report_is_refused(self):
+        bad = ({**self.DOC, "kind": "weekly"},                    # not a client report
+               {**self.DOC, "kind": ""},
+               {**self.DOC, "code": "DEF"},                       # another project's
+               {**self.DOC, "week_ending": "2026-13-45"},         # a date creaite can't read
+               {**self.DOC, "extra": "x"},                        # a key a document doesn't have
+               {**self.DOC, "client": 7},
+               "client", ["client"])
+        for doc in bad:
+            for place in ("client", "report"):
+                self.assertIn("refused", self.context(place=place, document=doc), (doc, place))
+        unknown = {"kind": "client", "code": "ZZZ", "week_ending": "2026-10-09", "client": ""}   # a project the tracker hasn't
+        self.assertIn("refused", self.context(code="ZZZ", document=unknown))
+
+    def draft_at(self):
+        """The stored path of the ABC client report's draft for the week (where the server looks first)."""
+        return self.py("import report_server\nprint(json.dumps(report_doc.draft_path('client', 'ABC', '2026-10-09', "
+                       "report_server.project_client('ABC'))))")
+
+    def test_a_saved_client_report_is_read_and_one_that_cant_be_or_isnt_a_client_one_is_refused(self):
+        self.py("r = report_doc.save_draft(report_doc.client_doc('ABC'))\nprint(json.dumps(r['path']))")
+        self.assertEqual(self.context(place="report", document=self.DOC).get("place"), "client")   # control: a real saved one
+        f = self.v.root / self.draft_at()
+        self.assertTrue(f.is_file(), f)
+        good = f.read_text(encoding="utf-8")
+        f.write_text("<html>not a creaite document</html>", encoding="utf-8")                        # unreadable
+        self.assertIn("refused", self.context(place="report", document=self.DOC))
+        self.assertIn("refused", self.context(document=self.DOC))
+        f.write_text(good.replace('"audience": "client"', '"audience": "internal"'), encoding="utf-8")   # not a client audience
+        self.assertIn("refused", self.context(place="report", document=self.DOC))
+        f.write_text(good.replace('"project": "ABC"', '"project": "DEF"'), encoding="utf-8")          # another project's file
+        self.assertIn("refused", self.context(place="report", document=self.DOC))
+
+    def test_a_report_place_with_no_document_is_as_before(self):
+        for place in ("report", "notes"):                                              # the weekly sheet and Notes: unchanged
+            ctx = self.context(place=place, document=None, option="shorter")
+            self.assertEqual(ctx.get("place"), place, ctx)
+            self.assertIn("ABC-A-004", ctx["prompt"])
+
+    def test_names_the_model_invents_are_only_a_names_added_note(self):
+        """Documents today's behaviour (Jarvis, #123): a name in neither the people register nor the project's owners isn't one the
+        client check knows, so the suggestion comes back, with the plain-code check's 'names-added' note under it. Not changed here."""
+        for place in ("client", "report"):
+            reply = "Testing could start late, says Zara Quillfeather."             # invented: not in the register, not an owner
+            got = self.result(self.context(place=place), reply)
+            self.assertEqual(got["text"], reply, place)
+            self.assertEqual([n["id"] for n in got["notes"]], ["names-added"], (place, got["notes"]))
+            self.assertIn("Zara", got["notes"][0]["note"])
 
 
 if __name__ == "__main__":

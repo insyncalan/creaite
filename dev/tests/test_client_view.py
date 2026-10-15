@@ -411,6 +411,10 @@ class ClientSheetAi(LiveBrowserCase):
         self.select_in("v-clientreport")
         shown, prompt, body = self.suggest()
         self.assertEqual(body["place"], "client")
+        self.assertEqual({k: body["document"][k] for k in ("kind", "code", "week_ending")},
+                         {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertEqual(sorted(body["document"]), ["client", "code", "kind", "week_ending"])
+        self.assertEqual(sorted(body), ["code", "document", "instruction", "option", "place", "run", "text"])
         self.assertIn("Its open item IDs: ABC-A-002, ABC-A-003, ABC-006\n", prompt)
         self.assertIn("Its people: none listed", prompt)
         for x in ("ABC-A-001", "ABC-A-004", "ABC-005", "ABC-M-001", "Omar Ali", "Alan Carter", "Jane Doe", "ZEBRAINTERNAL",
@@ -422,10 +426,20 @@ class ClientSheetAi(LiveBrowserCase):
         self.assertEqual(args[args.index("--tools") + 1], "")                       # the edit-ai run is unchanged: no tools
         self.assertIn("--strict-mcp-config", args)
 
-    def edit_ai(self, place):
+    DOC = {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}
+
+    def raw(self, body):
+        """POST /api/edit/ai from the page with `body`; (status, the answer's text)."""
+        return self.b.eval("""(async()=>{ const r=await fetch('/api/edit/ai',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},
+            body:JSON.stringify(%s)}); return [r.status, await r.text()]; })()""" % json.dumps(body))
+
+    def edit_ai(self, place, document=None):
         """POST /api/edit/ai from the page, as the bar does, and read its stream: the "draft" event."""
-        got = self.b.eval("""(async()=>{ const r=await fetch('/api/edit/ai',{method:'POST',headers:{'Content-Type':'application/json','X-Creaite-Token':D.token},
-            body:JSON.stringify({option:'polish',text:'Testing could start late.',code:'ABC',place:%s})}); return r.text(); })()""" % json.dumps(place))
+        body = {"option": "polish", "text": "Testing could start late.", "code": "ABC", "place": place}
+        if document is not None:
+            body["document"] = document
+        Path(str(self.fake) + ".prompt").unlink(missing_ok=True)
+        got = self.raw(body)[1]
         events = [json.loads(ln[6:]) for ln in got.splitlines() if ln.startswith("data: ")]
         run = next((e.get("run") for e in events if e.get("type") == "done"), None)
         if run:
@@ -440,10 +454,74 @@ class ClientSheetAi(LiveBrowserCase):
         for x in ("ABC-A-001", "ABC-A-004", "ABC-005", "Omar Ali", "Alan Carter"):
             self.assertIn(x, prompt)
         self.assertEqual(draft["text"], "Testing could start late. See ABC-A-004.")
-        draft, prompt = self.edit_ai("client")
+        draft, prompt = self.edit_ai("client", self.DOC)
         self.assertNotIn("ABC-A-004", prompt.replace("(such as ABC-A-003)", ""))
         self.assertEqual(draft["text"], "")
         self.assertIn("isn't client-safe", draft["message"])
+
+    def test_the_server_binds_the_place_from_the_document_and_fails_closed(self):
+        """#123 (Jarvis): a request that names the client report gets the client place whatever place it claims; the client place
+        with no document, or a document that isn't this project's client report, is refused before Claude runs; and any key the
+        route doesn't know is a 400."""
+        self.open_view()
+        draft, prompt = self.edit_ai("report", self.DOC)                             # a tampered page claims the internal place
+        p = prompt.replace("(such as ABC-A-003)", "")
+        self.assertIn("Its people: none listed", p)
+        for x in ("ABC-A-001", "ABC-A-004", "ABC-005", "Omar Ali", "Alan Carter"):
+            self.assertNotIn(x, p)
+        self.assertEqual(draft["text"], "")                                          # and its reply is checked as a client one
+        fake = Path(str(self.fake) + ".prompt")
+        base = {"option": "polish", "text": "Testing could start late.", "code": "ABC"}
+        for body in ({**base, "place": "client"}, {**base, "place": "client", "document": {}},
+                     {**base, "place": "report", "document": {**self.DOC, "kind": "weekly"}},
+                     {**base, "place": "client", "document": {**self.DOC, "code": "DEF"}},
+                     {**base, "place": "client", "document": {**self.DOC, "week_ending": "not-a-date"}}):
+            fake.unlink(missing_ok=True)
+            status, text = self.raw(body)
+            self.assertEqual(status, 200, body)
+            self.assertFalse(json.loads(text)["ok"], body)
+            self.assertFalse(fake.exists(), body)                                    # Claude never ran
+        for body in ({**base, "place": "report", "audience": "internal"},           # a key the route doesn't know
+                     {**base, "place": "report", "document": {**self.DOC, "audience": "internal"}},
+                     {**base, "place": "report", "document": "client"},
+                     {**base, "place": "report", "document": {**self.DOC, "client": 3}}):
+            fake.unlink(missing_ok=True)
+            status, text = self.raw(body)
+            self.assertEqual(status, 400, body)
+            self.assertFalse(fake.exists(), body)
+
+
+class EditAiRouteKeys(unittest.TestCase):
+    """#123: /api/edit/ai's request whitelist (live_server.edit_ai_request): known keys only, a document only as a small object of
+    strings, sizes capped; anything else is None, which the route answers with a 400 before anything runs."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import live_server
+        cls.ls = live_server
+
+    def test_the_whitelist(self):
+        f = self.ls.edit_ai_request
+        base = {"option": "polish", "text": "x", "code": "ABC", "place": "report"}
+        self.assertEqual(f(base), {**base, "instruction": ""})
+        doc = {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": "c" * 500}
+        got = f({**base, "document": doc, "run": "d-abc123"})
+        self.assertEqual(got["document"], {**doc, "client": "c" * 120})
+        self.assertNotIn("run", got)
+        for bad in ({**base, "audience": "internal"}, {**base, "facts": []}, {**base, "document": []},
+                    {**base, "document": {**doc, "audience": "client"}}, {**base, "document": {**doc, "code": None}}, "x", None):
+            self.assertIsNone(f(bad), bad)
+
+    def test_the_route_answers_400(self):
+        sent = []
+
+        class H:
+            def send(self, status, body):
+                sent.append((status, body))
+
+        self.ls.edit_ai_route(H(), {"option": "polish", "text": "x", "code": "ABC", "place": "report", "extra": 1})
+        self.assertEqual(sent[0][0], 400)
 
 
 if __name__ == "__main__":

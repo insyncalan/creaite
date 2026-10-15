@@ -5,8 +5,8 @@ from those and from the project's name, people and open item IDs only (nothing e
 Claude headless with no tools at all (`/api/edit/ai`, run kind "edit-ai"); the reply is parsed and checked here, and the page
 shows it as a suggestion that changes nothing until Alan accepts it.
 
-  python3 system/scripts/edit_ai.py context    JSON {option, text, code, place, instruction} on stdin → {prompt, option, label,
-                                               format} or {refused}
+  python3 system/scripts/edit_ai.py context    JSON {option, text, code, place, instruction, document?} on stdin → {prompt,
+                                               option, label, format} or {refused}
   python3 system/scripts/edit_ai.py result     JSON {request, context, reply} on stdin → {text, notes, option}
   python3 system/scripts/edit_ai.py options    each place's options, as JSON
 
@@ -16,6 +16,13 @@ all; selected text that already holds something a client mustn't see is refused 
 that brings in an item a client may not see, internal wording (client_leak.text_findings), the tracker's internal health reason or
 an internal-only marker (drafts.internal_findings), a person the text and the client-visible items don't name, or the word VIP comes
 back with no text and a plain reason.
+
+The place is the server's to decide, never the page's (#123, Jarvis): the client sheet sends the report it is editing as
+`document` {kind, code, week_ending, client}; a request that names a document gets the client place whatever place it claims,
+once plain code here has checked it is a client report of that project (bound_place). It fails closed: a request that claims the
+client place without a document, or whose document isn't a client report, names another project, has a date or project creaite
+doesn't know, or is saved but can't be read, is refused before anything goes to Claude. A request with no document keeps the
+place it names (the weekly sheet, the minutes, Notes and the rest, as before).
 
 The check (BL-106's plain-code check, as Make it executive's): every date, number, person's name and item ID the suggestion
 loses or adds is a note under it. Notes, never blocks. Counts go to draft-stats.json under the feature "edit" (the page posts
@@ -209,9 +216,49 @@ def owners_of(con, code):
     return sorted(out)
 
 
+DOC_KEYS = ("kind", "code", "week_ending", "client")
+
+
+def bound_place(req, code, claimed):
+    """The place a request gets (#123): the client place for a request naming its client report (checked here, never trusted),
+    else the place it claims. Refuses, failing closed, the client place without a document and any document that isn't a client
+    report of this project that creaite can find and read."""
+    d = req.get("document")
+    if d is None or d == "" or d == {}:
+        if claimed in CLIENT_PLACES:
+            raise Refused("The client report wasn't named, so nothing was sent to Claude. Reload the page and try again.")
+        return claimed
+    no = "That isn't a client report creaite can check, so nothing was sent to Claude."
+    if not isinstance(d, dict) or set(d) - set(DOC_KEYS) or any(not isinstance(d.get(k, ""), str) for k in DOC_KEYS):
+        raise Refused(no)
+    if d.get("kind") != "client":
+        raise Refused(no)
+    if not code or d.get("code") != code:
+        raise Refused("The client report and the project don't agree, so nothing was sent to Claude.")
+    try:
+        import creaite_doc
+        import report_doc
+        import report_server
+        kind, dcode, fri, client = report_server.target({"kind": "client", "code": code,
+                                                         "week_ending": d.get("week_ending") or None, "client": d.get("client") or None})
+        state, path = report_doc.where(kind, dcode, fri, client)
+        if state:                                         # saved: it must read as this project's client report
+            doc = creaite_doc.read(path)
+            if not isinstance(doc, dict) or doc.get("kind") != "client" or doc.get("audience") != "client" \
+                    or doc.get("project") != code:
+                raise Refused(no)
+    except Refused:
+        raise
+    except (Exception, SystemExit):  # noqa: BLE001  fails closed: an unknown project or date, an unreadable file
+        raise Refused(no) from None
+    return "client"
+
+
 def request(req):
-    """The request checked: (option, text, code, place, instruction) or Refused."""
-    place = str(req.get("place") or "")
+    """The request checked: (option, text, code, place, instruction) or Refused. The place is bound_place's."""
+    code = str(req.get("code") or "")
+    code = code if CODE_RE.fullmatch(code) else ""
+    place = bound_place(req, code, str(req.get("place") or ""))
     option = str(req.get("option") or "")
     if place not in PLACES:
         raise Refused("Not a place creaite knows.")
@@ -227,8 +274,7 @@ def request(req):
         raise Refused("Say what you want done with the text.")
     if len(instruction) > MAX_INSTRUCTION:
         raise Refused(f"Keep the instruction under {MAX_INSTRUCTION} characters.")
-    code = str(req.get("code") or "")
-    return option, text, code if CODE_RE.fullmatch(code) else "", place, instruction
+    return option, text, code, place, instruction
 
 
 def context(req):

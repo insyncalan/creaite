@@ -26113,12 +26113,14 @@ ${s5}`;
       "running"
     ), steps: 0 };
     aiSug.value = cur;
+    const doc = s5.ai.document ? s5.ai.document() : null;
     const r4 = await draftAsk({
       option: s5.option,
       instruction: s5.instruction,
       text: s5.range.text,
       place: s5.ai.place,
-      code: s5.ai.project && s5.ai.project() || ""
+      code: s5.ai.project && s5.ai.project() || "",
+      ...doc ? { document: doc } : {}
     }, { url: "/api/edit/ai", label: `${s5.label}, with Claude`, status: () => {
     } });
     if (aiSug.value !== cur) return;
@@ -59179,7 +59181,8 @@ ${d5.text}`);
         sheetId: sid,
         project: () => P5.current.ai && P5.current.ai.project ? P5.current.ai.project() : "",
         confidential: () => !!(P5.current.ai && P5.current.ai.confidential && P5.current.ai.confidential()),
-        key: () => `sheet:${sid}:${s5.id}`
+        key: () => `sheet:${sid}:${s5.id}`,
+        document: () => P5.current.ai && P5.current.ai.document ? P5.current.ai.document() : null
       };
     };
     h2(() => {
@@ -60937,7 +60940,12 @@ ${d5.text}`);
           onChange: side ? () => {
           } : setClientDoc,
           onSave: side ? void 0 : saveClientPage,
-          ai: { place: "client", project: () => doc.project, confidential: () => false },
+          ai: {
+            place: "client",
+            project: () => doc.project,
+            confidential: () => false,
+            document: () => ({ kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" })
+          },
           onRedraft: side ? void 0 : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report"),
           onEvent: (ev) => {
             if (ev.type === "reload" && a5) loadClientReport(a5);
