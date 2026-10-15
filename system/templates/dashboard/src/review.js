@@ -2,6 +2,9 @@
 /* review.js (BL-231 step 2b), moved from script/ by dev/tools/convert_area.py: 0060-review.js, 0061-bl-133-sprint-work-views.js, 0063-after-bl-216.js, 0064-bl-133-stage-b-sprint-work-views.js, 0065-bl-221-sprint-drafts-extraction.js, 0066-bl-218-sprint-drafts-extraction.js, 0067-after-bl-218.js, 0193-bl-200-sprint-review-work.js, 0195-bl-197-sprint-review-work.js, 0209-bl-208-sprint-insight.js.
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
+import { openDialog } from "./components/Dialog.jsx";
+import { drawFilterBar } from "./components/FilterBar.jsx";
+
 import { actHref } from "./activity.js";
 import { A, DEC, open, P, peopleAll, pName, R, REV, SWEPT, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
@@ -10,16 +13,19 @@ import { typing } from "./core/keys.js";
 import { mDots, mRowGone, mSnapRows } from "./core/motion.js";
 import { go } from "./core/nav.js";
 import { D, DDATE, fd, fdText, isMe, MAC, nowStamp, OPENST, prio, reduced, revIco, S, store, TODAY, toIso, who } from "./core/page.js";
-import { api, apply, applyNow, applySoon, conflictChoice, editProposal, needVault, oneLine, refreshAll, refreshItems, reloadData, renderBadge, reviewViaServer, snack, toDb, undoApply, viaServer } from "./core/server.js";
+import { api, apply, applyNow, applySoon, conflictChoice, editProposal, hideSnack, needVault, oneLine, refreshAll, refreshItems, reloadData, renderBadge, reviewViaServer, snack, toDb, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./intake.js";
 import { HUB, hubLink, withdrawDecision } from "./meetings.js";
-import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkList, pkMk, pkPopClose, pkStatuses, pkWho, REC } from "./panel.js";
+import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkStatuses, pkWho, REC } from "./panel.js";
 import { closePanel, pkOn } from "./projects.js";
 import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
 import { conflictHtml, isConflict, kindLabel, pkAdd, plur, revGroupTitle } from "./today.js";
 import { mountRejectMenu } from "./components/review/RejectMenu.jsx";
+import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+import { contextMenuOpen, openContextMenu, openContextMenuAt } from "./components/review/ContextMenu.jsx";
+import { closePicker, openPicker, pickerOpenFor } from "./components/Picker.jsx";
 import { rjAddGone, rjCloseMenu, rjDropGone, rjGone, rjGuesses, rjGuessFor, rjMenu, rjOpenMenu, rjReasons, rjRecent, rjSetGone } from "./stores/rejects.js";
 import { batchMove, BK_STATUS, bkWhat, boardAsk, boardMove, cell, ceOpts, funnelTip, hit, HL, hlOnly, items, kOfId, msLabel, recordFromBoard, rows, rvfCount, rvOnly, rvPaint, rvPick, srcKind, thisFriday } from "./work.js";
 /* ======================= Review ======================= */
@@ -193,7 +199,7 @@ export function rvBlocks0(){ const gk=new Set(rjGone.value.map(g=>g.rk)), ok=r=>
 export const RVORD={age:r=>-(r.age||0),kind:r=>Object.keys(RVKINDS).indexOf(r.kind),due:r=>r.rec.due||"9999"};
 export function rvRender(){ const und=REV.filter(r=>!r.done), stale=und.filter(r=>r.stale).length, shownN=und.filter(r=>rvPasses(r)).length;
   putHTML($("#rvSub"),html`Claude's proposals. ${und.length} waiting${stale?html` · <span class="tag stale">${stale} stale</span>`:""}`);
-  rvFilterBar(); rvApplied(shownN,und.length); rvRoutineBtn(); putHTML($("#rvHint"),rvHintHtml());
+  drawReviewFilters(); rvApplied(shownN,und.length); rvRoutineBtn(); putHTML($("#rvHint"),rvHintHtml());
   const G=rvBlocks(); if(RVO&&RVORD[RVO]) G.forEach(g=>g.blocks.sort((a,b)=>{ const x=RVORD[RVO](a[0].r), y=RVORD[RVO](b[0].r); return x<y?-1:x>y?1:0; }));
   let i=0; const anyLive=G.some(g=>g.blocks.some(b=>b.some(o=>!o.r.gone)));
   const groups=html`${G.map(g=>{ const rows=g.blocks.flat(), live=rows.filter(o=>!o.r.done&&!isMin(o.r)), st=rows.filter(o=>o.r.stale&&!o.r.done).length, n=rows.filter(o=>!o.r.done).length;
@@ -209,17 +215,20 @@ export function rvEmptyHtml(){ const s=shared.RVSTATS, any=s.approved||s.rejecte
   return html`<div class="empty rvdone"><h2>Nothing left to review</h2>${any?html`<div class="sub">This session: approved ${s.approved} · rejected ${s.rejected} · edited ${s.edited}</div>`:""}
     <div class="rvdacts">${RVLASTUNDO?html`<button type="button" class="btn" id="rvUndoLast">Undo the last batch</button>`:""}<button type="button" class="btn" data-go="activity">Open Activity</button><button type="button" class="btn" data-ask="sweep">Sweep now</button></div>
     <div class="sub" style="margin-top:14px">${SWEPT==="never"?"Mail and Teams have not been swept yet.":`The last sweep was ${fdText(SWEPT)}.`}${(D.inbox||[]).filter(f=>f.state==="new").length?` Intake has ${(D.inbox||[]).filter(f=>f.state==="new").length} new file${(D.inbox||[]).filter(f=>f.state==="new").length===1?"":"s"}.`:""}</div></div>`; }
-/* ── filters: the same picker as Work (BL-130), with Review's own fields ── */
-export function rvFilterBar(){ const btn=(k,l)=>html`<button type="button" class="btn fbtn ${RVF[k].size?"on":""}" data-rvf="${k}" aria-haspopup="dialog">${RVF[k].size?`${l}: ${RVNEG.has(k)?"not ":""}${RVF[k].size<=2?[...RVF[k]].map(v=>(rvDef(k)[2]().find(o=>o[0]===v)||[v,v])[1]).join(", "):RVF[k].size+" chosen"}`:l}</button>`;
-  const open=$("#rvPick")?.classList.contains("on");
-  putHTML($("#rvfilters"),html`${btn("k","Kind")}${btn("nd","Needs")}${btn("src","Source")}<span class="dd"><button type="button" class="ib bd fbtn ${RVF.p.size||RVF.age.size?"on":""}" id="rvMore" aria-haspopup="dialog" aria-label="${funnelTip(rvfCount())}" data-tip="${funnelTip(rvfCount())}">${raw(ic("funnel"))}${rvfCount()?html`<span class="dot" aria-hidden="true">${rvfCount()}</span>`:""}</button><div class="ddmenu left fpmenu${open?" on":""}" id="rvPick" role="dialog" aria-label="Filter the proposals"></div></span>`);
-  if(open) rvDrawPick(); }
-export function rvDrawPick(){ const m=$("#rvPick"); if(!m) return; const d=rvDef(RVPK), set=RVF[RVPK], und=REV.filter(r=>!r.done);
-  const cnt=v=>und.filter(r=>rvPasses(r,RVPK)&&d[3](r,new Set([v]))).length, neg=RVNEG.has(RVPK);
-  putHTML(m,html`<div class="fpick"><div class="fpl"><div class="fplist" role="listbox" aria-label="Fields">${RVFIELDS.map(f=>html`<button type="button" role="option" class="fpf${RVF[f[0]].size?" on":""}" data-rvpk="${f[0]}" aria-selected="${String(f[0]===RVPK)}">${f[1]}${RVF[f[0]].size?html` <small>${RVNEG.has(f[0])?"not · ":""}set</small>`:""}</button>`)}</div></div>
-    <div class="fpr"><h3>${d[1]}</h3><div class="isnot"><span class="seg" role="group" aria-label="Match"><button type="button" data-rvneg="0" aria-pressed="${String(!neg)}">is</button><button type="button" data-rvneg="1" aria-pressed="${String(neg)}">is not</button></span><span class="sub">${neg?"none of":"any of"}</span></div>
-    <div class="fpopts">${d[2]().map(([v,l])=>{ const n=cnt(v); return html`<label class="${n||set.has(v)?"":"dim"}"><input type="checkbox" data-rvv="${v}" ${raw(set.has(v)?"checked":"")}>${l}<small>${n}</small></label>`; })}</div>
-    <div class="fpfoot"><span class="sub" id="rvResult">Result: ${und.filter(r=>rvPasses(r)).length} of ${und.length} shown</span><span class="sp"></span><button type="button" class="btn primary" id="rvPickDone">Done</button></div></div></div>`); }
+/* ── filters: the FilterBar building block (BL-316), as Work's: Kind, Needs and Source each open their own list; the funnel's
+   picker holds every field (Project and Age only there) ── */
+export function rvBarProps(){ const und=REV.filter(r=>!r.done), main=new Set(["k","nd","src"]);
+  const fields=RVFIELDS.map(([k,l,opts,hit])=>{ const set=RVF[k], on=!!set.size, neg=RVNEG.has(k), lab=v=>(opts().find(o=>o[0]===v)||[v,v])[1];
+    return {id:k,label:l,main:main.has(k),section:main.has(k)?undefined:"More fields",menuId:`rvf-${k}`,data:{rvf:k},on,selected:set,not:neg,
+      button:on?`${l}: ${neg?"not ":""}${set.size<=2?[...set].map(lab).join(", "):set.size+" chosen"}`:l,mark:on?`${neg?"not · ":""}set`:"",
+      options:()=>opts().map(([v,ol])=>({value:v,label:ol,count:und.filter(r=>rvPasses(r,k)&&hit(r,new Set([v]))).length}))}; });
+  return {fields,
+    onSelect:(k,vals)=>{ RVF[k].clear(); vals.forEach(v=>RVF[k].add(v)); rvChanged(); },
+    onNot:(k,n)=>{ n?RVNEG.add(k):RVNEG.delete(k); rvChanged(); },
+    more:{id:"rvMore",menuId:"rvPick",label:funnelTip(rvfCount()),menuLabel:"Filter the proposals",count:rvfCount(),on:!!(RVF.p.size||RVF.age.size),
+      field:RVPK,onField:k=>{ RVPK=k; drawReviewFilters(); },onOpen:()=>{ RVPK=RVF.p.size?"p":RVF.age.size?"age":"p"; },
+      result:`Result: ${und.filter(r=>rvPasses(r)).length} of ${und.length} shown`,resultId:"rvResult",doneId:"rvPickDone"}}; }
+export function drawReviewFilters(){ const h=$("#rvfilters"); if(h) drawFilterBar(h,rvBarProps()); }
 export function rvApplied(shown,total){ const chips=RVFIELDS.filter(f=>RVF[f[0]].size).map(f=>{ const neg=RVNEG.has(f[0]), lab=v=>(f[2]().find(o=>o[0]===v)||[v,v])[1];
     return html`<span class="fchip${neg?" neg":""}">${f[1]}: ${neg?"not ":""}${[...RVF[f[0]]].map(lab).join(", ")}<button data-rvclr="${f[0]}" aria-label="Remove the ${f[1].toLowerCase()} filter">${raw(ic("x"))}</button></span>`; });
   if(RVQ.trim()) chips.push(html`<span class="fchip">Search: “${RVQ.trim()}”<button data-rvclr="q" aria-label="Clear the search">${raw(ic("x"))}</button></span>`);
@@ -283,7 +292,7 @@ export function rvPreview(ok,left,title,go){ const dlg=$("#rvDlg"), filt=RVFIELD
     ${left.length?html`<div class="rvcnt warnc"><div><b>${left.length}</b>not included: ${[by.indiv?`${by.indiv} individual approval`:"",by.conflict?`${by.conflict} conflict${by.conflict===1?"":"s"}`:"",by.project?`${by.project} need${by.project===1?"s":""} a project`:""].filter(Boolean).join(" · ")}</div></div>`:""}`);
   $("#rvDlgOk").textContent=`Approve ${ok.length}`; let fired=false;
   $("#rvDlgOk").onclick=()=>{ if(fired) return; fired=true; dlg.close(); go(); }; $("#rvDlgCancel").onclick=()=>dlg.close();
-  dlg.showModal(); $("#rvDlgOk").focus(); }
+  openDialog(dlg,{focus:"#rvDlgOk"}); }
 /* ── mass change before approval: through editProposal, tagged edited, checked one by one, one Undo ── */
 export function rvCheck(r,f,v){ if(f==="p") return P.some(p=>p.code===v)?"":"not a project";
   if(f==="o") return v==="TBC"||peopleAll().includes(v)?"":"not in the people register";
@@ -313,19 +322,11 @@ export function rvDate(){ const i=$("#rvDate"); if(!i) return; const v=i.value.t
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootReview0061(){
 document.addEventListener("click",e=>{ if(!e.target.closest("#v-review")) return;
-  const fb=e.target.closest("[data-rvf],#rvMore"); if(fb){ e.stopPropagation(); const m=$("#rvPick"), was=m.classList.contains("on"); if(fb.dataset.rvf) RVPK=fb.dataset.rvf; else if(!was) RVPK=RVF.p.size?"p":RVF.age.size?"age":"p";
-    if(was&&!fb.dataset.rvf){ m.classList.remove("on"); return; } rvDrawPick(); m.classList.add("on"); (m.querySelector(".fpopts input")||m.querySelector("button"))?.focus(); return; }
-  const pk=e.target.closest("[data-rvpk]"); if(pk){ e.stopPropagation(); RVPK=pk.dataset.rvpk; rvDrawPick(); $("#rvPick .fpopts input")?.focus(); return; }
-  const ng=e.target.closest("[data-rvneg]"); if(ng){ e.stopPropagation(); ng.dataset.rvneg==="1"?RVNEG.add(RVPK):RVNEG.delete(RVPK); rvChanged(); $(`#rvPick [data-rvneg="${ng.dataset.rvneg}"]`)?.focus(); return; }
-  if(e.target.id==="rvPickDone"){ $("#rvPick").classList.remove("on"); $("#rvMore").focus(); return; }
   const c=e.target.closest("[data-rvclr]"); if(c){ const k=c.dataset.rvclr; if(k==="q"){ RVQ=""; $("#rvQ").value=""; } else { RVF[k].clear(); RVNEG.delete(k); } rvChanged(); return; }
   if(e.target.id==="rvClearF"){ Object.values(RVF).forEach(s=>s.clear()); RVNEG.clear(); RVQ=""; $("#rvQ").value=""; rvChanged(); return; }
-  if(e.target.closest("#rvPick")){ e.stopPropagation(); return; }
-  if(!e.target.closest("#rvfilters .dd")) $("#rvPick")?.classList.remove("on"); });
-document.addEventListener("change",e=>{ const i=e.target; if(!i.matches||!i.matches("#rvPick input[data-rvv]")) return; const set=RVF[RVPK]; i.checked?set.add(i.dataset.rvv):set.delete(i.dataset.rvv); const v=i.dataset.rvv; rvChanged(); $(`#rvPick input[data-rvv="${CSS.escape(v)}"]`)?.focus(); });
+  });
 $("#rvQ").addEventListener("input",e=>{ RVQ=e.target.value; rvChanged(); });
 $("#rvQ").addEventListener("keydown",e=>{ if(e.key==="Escape"&&RVQ){ e.preventDefault(); e.stopPropagation(); RVQ=""; e.target.value=""; rvChanged(); } });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&e.target.closest&&e.target.closest("#rvPick.on")){ e.preventDefault(); e.stopPropagation(); $("#rvPick").classList.remove("on"); $("#rvMore").focus(); } },true);
 $("#rvDispBtn").addEventListener("click",e=>{ e.stopPropagation(); const m=$("#rvDispMenu"); if(m.classList.contains("on")){ rvDispClose(true); return; } rvDrawDisp(); m.hidden=false; m.classList.add("on"); $("#rvDispBtn").setAttribute("aria-expanded","true"); $("#rvGrp").focus(); });
 $("#rvDispMenu").addEventListener("click",e=>{ e.stopPropagation(); if(e.target.id==="rvDispDone") rvDispClose(true); if(e.target.id==="rvDispReset"){ RVG="project"; RVO=""; rvDrawDisp(); rvChanged(); } });
 $("#rvDispMenu").addEventListener("change",e=>{ if(e.target.id==="rvGrp") RVG=e.target.value; if(e.target.id==="rvOrd") RVO=e.target.value; rvChanged(); });
@@ -360,7 +361,7 @@ export const rvKey=r=>r.file+"|"+r.ref;
 export function bootReview0063(){
 /* the keys: Shift+J/K extends, X is Space, Cmd/Ctrl+A selects all shown, Cmd/Ctrl+Z undoes the last decision or batch */
 document.addEventListener("keydown",e=>{ if(shared.VIEW!=="review"||typing()||e.target.closest&&e.target.closest("dialog,.ddmenu")) return; const trs=$$("#reviewBody tr[data-n]");
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){ if(shared.UNDO){ e.preventDefault(); const u=shared.UNDO; shared.UNDO=null; $("#snack").classList.remove("on"); $("#rvresult").textContent=""; u(); } return; }
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="z"){ if(shared.UNDO){ e.preventDefault(); const u=shared.UNDO; shared.UNDO=null; hideSnack(); $("#rvresult").textContent=""; u(); } return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="a"){ e.preventDefault(); rvMatching().forEach(r=>RHL.add(r.n)); rvSyncChk(); renderReview(); return; }
   if(e.shiftKey&&!e.metaKey&&!e.ctrlKey&&(e.key==="J"||e.key==="K")&&trs.length){ e.preventDefault(); e.stopImmediatePropagation(); const cur=trs[shared.RSEL]?+trs[shared.RSEL].dataset.n:null; if(cur!=null&&shared.RVA==null) shared.RVA=cur;
     shared.RSEL=Math.max(0,Math.min(trs.length-1,shared.RSEL+(e.key==="J"?1:-1))); const order=trs.map(t=>+t.dataset.n), a=order.indexOf(shared.RVA), b=shared.RSEL; RHL.clear(); order.slice(Math.min(a<0?b:a,b),Math.max(a<0?b:a,b)+1).forEach(n=>RHL.add(n)); rvSyncChk(); rvPaint(); trs[shared.RSEL].scrollIntoView({block:"nearest"}); } },true);
@@ -374,8 +375,6 @@ document.addEventListener("click",e=>{ const b=e.target.closest("#reviewBody [da
    the row and named in the panel, with Reject as duplicate. Nothing is merged and nothing is blocked beyond the fingerprint. */
 export const RVREASON=new Map();                         /* n → {reason, dup} for the next rejection written */
 export const RVWHY=[["Not mine to track"],["Not an action"]];
-export function rvReasonMenu(btn,list){ rjMenuFor(list,btn); }   /* BL-315: the one reasons menu (RejectMenu) */
-export function snackAdd(t){ const s=$("#snackT"); if(s&&$("#snack").classList.contains("on")&&!s.textContent.endsWith(t)) s.textContent+=t; }
 /* the panel names the possible duplicate */
 /* ===== end BL-133 stage B ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
@@ -384,7 +383,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("#reviewBody [data-act=rr]"); if(b){ e.stopPropagation(); const r=REV.find(x=>x.n===+b.closest("tr[data-n]").dataset.n); if(r&&!r.done){ shared.RSEL=+b.closest("tr").dataset.ri; rjMenuFor(rjWith(r),b); } return; }
   const d=e.target.closest("[data-rvdup]"); if(d){ e.stopPropagation(); const r=REV.find(x=>x.n===+d.dataset.rvdup); if(!r||r.done) return; closePanel(); rjReject([r],{reason:"Duplicate",dup:r.dup.id}); } },true);
 /* Shift+R: the reason menu for the cursor row (or the selection, when there is one) */
-document.addEventListener("keydown",e=>{ if(shared.VIEW!=="review"||typing()||e.metaKey||e.ctrlKey||!(e.shiftKey&&e.key==="R")||e.target.closest&&e.target.closest("dialog,.bmenu")) return; e.preventDefault(); e.stopImmediatePropagation();
+document.addEventListener("keydown",e=>{ if(shared.VIEW!=="review"||typing()||e.metaKey||e.ctrlKey||!(e.shiftKey&&e.key==="R")||e.target.closest&&e.target.closest("dialog,[role=menu]")) return; e.preventDefault(); e.stopImmediatePropagation();
   rjKey315(); },true);
 }
 /* ===== BL-221 (sprint-drafts-extraction) ===== "Looks like": a proposal that repeats an item already in the tracker. Staging marks it
@@ -404,7 +403,7 @@ export function llCompare(r){ const d=r.dup, x=REC(r.kind,d.id)||{t:d.t}, dlg=$(
   const mine={...r.rec,o:r.rec.o||r.rec.by,src:fdText(srcShort(r.src))}, theirs={...x,o:x.o||x.by,src:fdText(srcShort(x.src||""))};
   LLF.forEach(([f,lab])=>{ const a=mine[f], b=theirs[f]; if(!a&&!b) return; const tr=document.createElement("tr"), th=document.createElement("th"); th.scope="row"; th.textContent=lab; tr.append(th);
     [a,b].forEach(v=>{ const td=document.createElement("td"); td.textContent=f==="due"?(fd(v)||"—"):String(v||"—"); if(f!=="t"&&String(a||"")!==String(b||"")) td.className="lldiff"; tr.append(td); }); body.append(tr); });
-  $("#llMerge").hidden=!(d.staged&&d.same!==false&&d.state!=="closed"); $("#llMerge").textContent=`Merge as an update to ${d.id}`; $("#llKeep").hidden=!d.staged; dlg.dataset.n=r.n; dlg.showModal(); $("#llClose").focus(); }
+  $("#llMerge").hidden=!(d.staged&&d.same!==false&&d.state!=="closed"); $("#llMerge").textContent=`Merge as an update to ${d.id}`; $("#llKeep").hidden=!d.staged; dlg.dataset.n=r.n; openDialog(dlg,{focus:"#llClose"}); }
 export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ snack(`${how==="merge"?"Merging":"Keeping it as new"} needs the live server; or say “${how==="merge"?"merge":"keep-new"} ${r.n}” in Claude Code (review)`); return; }
   const res=await api("/api/review/repeat",{file:r.file,ref:r.ref,how}); snack(oneLine(res.message)||(res.ok?"Done":"Not changed")); if(res.ok){ closePanel(); await reloadData(); } }
 /* ===== end BL-221 ===== */
@@ -412,7 +411,7 @@ export async function llAct(how,r){ if(!r||r.done) return; if(!viaServer()){ sna
    project can be pointed at an open item of its project and kind, whether or not Looks like marked one. The proposal's peek has the
    button (beside the Looks like note, when there is one) and the row's right-click menu the same command. It asks the live server
    for the candidates (/api/review/candidates: review.py ranks them, the marked item first, then by BL-297 B's signals; strength in
-   words, never a percentage) and opens Work's picker (pkList: listbox, search over seven, ↑ ↓ Home End, Enter, Esc back to the
+   words, never a percentage) and opens the Picker block (openPicker: a listbox, search over seven, ↑ ↓ Home End, Enter, Esc back to the
    button). Choosing one retargets the proposal (/api/review/retarget: it becomes an update carrying its date and latest update or
    response, as Merge; with nothing new it is rejected as its duplicate). The message offers Undo (review.py unmerge, by file and
    item, so it works after either). Nothing reaches the tracker until the update is approved and applied. */
@@ -430,7 +429,7 @@ export async function rtOpen(anchor,r){ if(!rtOK(r)) return;
   const L=res.items||[]; if(!L.length){ snack(`No open ${RTKINDS[r.kind]} in ${pName(r.p)} for it to update`); return; }
   if(!anchor.isConnected){   /* the list or the peek was drawn again while the server answered: open on the new one, never silently not at all */
     const tr=document.querySelector(`#reviewBody tr[data-n="${r.n}"]`); anchor=document.querySelector(`[data-rvrt="${r.n}"]`)||(tr&&(tr.querySelector('[data-act="e"]')||tr)); if(!anchor) return; }
-  pkList(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
+  openPicker(anchor,{role:"listbox",search:L.length>7,label:`Update which ${RTKINDS[r.kind]} instead`,options:L.map(c=>({v:c.id,label:`${c.id} · ${c.t}`,hint:rtHint(c)})),onPick:v=>rtGo(r,v)}); }
 export async function rtGo(r,id){ const at={file:r.file,ref:r.ref};
   const res=await api("/api/review/retarget",{...at,id}); if(!res||!res.ok){ snack(oneLine(res&&res.message)||"Not changed"); return; }
   if(shared.CUR&&shared.CUR.mode==="proposal"&&shared.CUR.n===r.n) closePanel(); await reloadData();
@@ -441,7 +440,7 @@ export async function rtGo(r,id){ const at={file:r.file,ref:r.ref};
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootReview0065(){
 document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("[data-rvrt]"); if(!b) return; e.preventDefault(); e.stopPropagation();
-  const r=REV.find(x=>x.n===+b.dataset.rvrt); if(shared.PKPOP&&shared.PKPOP.anchor===b){ pkPopClose(); return; } rtOpen(b,r); },true);   /* BL-297 D */
+  const r=REV.find(x=>x.n===+b.dataset.rvrt); if(pickerOpenFor(b)){ closePicker(); return; } rtOpen(b,r); },true);   /* BL-297 D */
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-rvll]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const [how,n]=b.dataset.rvll.split(":"), r=REV.find(x=>x.n===+n); if(!r||!rvDup(r)) return; if(how==="cmp") llCompare(r); else llAct(how,r); },true);
 $("#llDlg").addEventListener("click",e=>{ const dlg=$("#llDlg"), r=REV.find(x=>x.n===+dlg.dataset.n); if(e.target.id==="llClose") dlg.close();
@@ -470,54 +469,62 @@ document.addEventListener("click",e=>{ const a=e.target.closest("[data-appr]"); 
    follows (review.py rebuilds file_ops and projects); nothing moves on disk until the minutes are approved and applied. In the
    peek, a proposal's Project is a chip beside Owner and Due (held until Save, as its other fields are). Undo moves it back. */
 export const rvActive=()=>P.filter(p=>p.active!==false);
-export function rvMoveMenu(b,r){ pkList(b,{role:"menu",label:"Move to project",options:rvActive().map(p=>({v:p.code,label:p.name,icon:ic("projects"),disabled:p.code===r.p,hint:p.code===r.p?"Its project now":""})),onPick:v=>rvMoveItem(r,v)}); }
+/* BL-316: the project menus are the Menu block's (openMenu), opened from the row's Move button */
+export function rvMoveTo(b,r){ openMenu(b,{label:"Move to project",id:"rvMoveTo",items:rvActive().map(p=>({id:p.code,name:p.name,icon:"projects",disabled:p.code===r.p,line:p.code===r.p?"Its project now":""})),onPick:v=>rvMoveItem(r,v)}); }
 export async function rvMoveItem(r,code,quiet){ const was=r.p;
   if(!viaServer()){ if(!await needVault()) return false;   /* without the server: the same change, made in the proposal by the page */
     try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied||it.op!=="new") throw new Error("that proposal can't be moved"); const /** @type {any} */ v=it.values=it.values||{};
       v.project=code; if(v.milestone&&!String(v.milestone).startsWith(code+"-M-")) v.milestone=null; if(v.workstream&&!wsFor(code).some(w=>w.toLowerCase()===String(v.workstream).toLowerCase())) v.workstream=null;
       it.match="strong"; if(it.moved_from===code) delete it.moved_from; else if(was&&was!==code) it.moved_from=it.moved_from||was; it.edited_in="review"; }); }
     catch(e){ snack("Not moved: "+e.message); return false; }
-    r.p=code; r.edited=true; refreshAll(); if(!quiet) snack(`Moved to ${pName(code)} — still waiting for review`); return true; }
+    r.p=code; r.edited=true; refreshAll();
+    if(!quiet) snack(`Moved to ${pName(code)} — still waiting for review`,was&&was!==code?async()=>{ if(await rvMoveItem(r,was,true)) snack(`Moved back to ${pName(was)}`); }:null);   /* BL-316: Undo, as with the server */
+    return true; }
+  const keep=was||quiet?null:await rvItemState(r);   /* BL-316: an item with no project yet goes back to none, as it was */
   const res=await api("/api/review/assign",{file:r.file,ref:r.ref,code}); if(!res.ok){ snack(oneLine(res.message)||"Not moved"); return false; }
   await reloadData(); if(quiet) return true; const sig=learnable(r);
+  if(!was&&!sig){ snack(`Moved to ${pName(code)} — still waiting for review`,keep?async()=>{ try{ await editProposal(r.file,data=>{ const it=(data.items||[]).find(i=>i.n===r.ref); if(!it||it.applied) throw new Error("it has been decided since");
+      it.values={...(it.values||{}),...keep.values}; ["match","moved_from","edited_in"].forEach(f=>{ if(keep[f]===undefined) delete it[f]; else it[f]=keep[f]; }); }); }
+    catch(e){ snack("Not moved back: "+e.message); return; } await reloadData(); snack("Moved back: no project yet"); }:null); return true; }
   if(sig) snack(`Moved to ${pName(code)} — still waiting for review`,()=>learnSignal(code,sig.kind,sig.value),`Remember ${sig.value}`);   /* BL-28: the signal is offered for the new project */
   else snack(`Moved to ${pName(code)} — still waiting for review`,was?async()=>{ const back=REV.find(x=>x.file===r.file&&x.ref===r.ref&&!x.done); if(back) await rvMoveItem(back,was,true); snack(`Moved back to ${pName(was)}`); }:null);
   return true; }
+/** a pending item's project fields as its proposal holds them, for Undo (null when it can't be read) */
+export async function rvItemState(r){ try{ const data=JSON.parse(await shared.VW.read("system/staging/"+r.file)), it=(data.items||[]).find(i=>i.n===r.ref); if(!it) return null;
+  const v=it.values||{}; return {values:{project:v.project??null,milestone:v.milestone??null,workstream:v.workstream??null},match:it.match,moved_from:it.moved_from,edited_in:it.edited_in}; }catch(e){ return null; } }
 export function rvMoveMinutes(b,r,g){ if(!viaServer()){ snack(`Moving minutes needs the live server, which refiles them; or say “minutes ${r.n} is DEF” in Claude Code`); return; }
   const projs=(r.projects||[r.p]).filter(Boolean);
-  const to=frm=>pkList(b,{role:"menu",label:`Move ${pName(frm)}'s items to`,options:rvActive().filter(p=>p.code!==frm).map(p=>({v:p.code,label:p.name,icon:ic("projects"),hint:projs.includes(p.code)?"These minutes are filed here too":""})),onPick:v=>rvMovePreview(b,r,frm,v)});
+  const to=frm=>openMenu(b,{label:`Move ${pName(frm)}'s items to`,id:"rvMoveTo",items:rvActive().filter(p=>p.code!==frm).map(p=>({id:p.code,name:p.name,icon:"projects",line:projs.includes(p.code)?"These minutes are filed here too":""})),onPick:v=>rvMovePreview(b,r,frm,v)});
   // @ts-expect-error TS2362: true and false subtract as 1 and 0 (this item's project first)
-  if(projs.length>1){ const order=[...projs].sort((x,y)=>(y===g)-(x===g)); pkList(b,{role:"menu",label:"These minutes span several projects: move which project's items?",options:order.map(c=>({v:c,label:pName(c),icon:ic("projects"),hint:`${plur(kidsOf(r,c).filter(k=>!k.done).length,"item")}, and its copy of the minutes`})),onPick:v=>setTimeout(()=>to(v),0)}); }
+  if(projs.length>1){ const order=[...projs].sort((x,y)=>(y===g)-(x===g)); openMenu(b,{label:"These minutes span several projects: move which project's items?",id:"rvMoveTo",items:order.map(c=>({id:c,name:pName(c),icon:"projects",line:`${plur(kidsOf(r,c).filter(k=>!k.done).length,"item")}, and its copy of the minutes`})),onPick:v=>setTimeout(()=>to(v),0)}); }
   else to(projs[0]); }
+/* BL-316: the preview is Review's confirmation dialog (#rvDlg, the Dialog block), as a large approval's is */
 export async function rvMovePreview(b,r,frm,code,moved="leave"){ const res=await api("/api/review/assign",{file:r.file,ref:r.ref,code,from:frm,moved,dry_run:true});
-  if(!res.ok||!res.preview){ snack(oneLine(res.message)||"Can't move these minutes"); return; } const pv=res.preview;
-  if(!b.isConnected) b=$(`#reviewBody tr[data-n="${r.n}"] [data-act="pj"]`)||$(`#reviewBody tr[data-n="${r.n}"]`); if(!b) return;
-  const el=pkMk(b,"rvmv",`<div class="rvmv-h" role="heading" aria-level="2">${esc(pv.headline)}</div>
-    <p class="sub">The minutes and transcript will be filed in ${esc(pName(code))}'s folders when the minutes are approved. Nothing changes in the tracker until then.</p>
-    ${pv.alone?`<fieldset class="rvmv-ch"><legend>${pv.alone} item${pv.alone===1?" was":"s were"} moved on ${pv.alone===1?"its":"their"} own before</legend><label><input type="radio" name="rvmvA" value="leave"${moved!=="all"?" checked":""}> Leave ${pv.alone===1?"it":"those"} where ${pv.alone===1?"it is":"they are"}</label><label><input type="radio" name="rvmvA" value="all"${moved==="all"?" checked":""}> Move all</label></fieldset>`:""}
-    ${(pv.updates||[]).length?`<p class="sub">${pv.updates.map(esc).join(", ")} ${pv.updates.length===1?"is an update":"are updates"} to ${pv.updates.length===1?"an item":"items"} already in the tracker, so ${pv.updates.length===1?"it stays":"they stay"} with ${esc(pName(frm))}.</p>`:""}
-    <div class="rvmv-b"><button type="button" class="btn" data-mv="no">Cancel</button><button type="button" class="btn primary" data-mv="go">${ic("projects")}Move</button></div>`);
-  el.setAttribute("role","dialog"); el.setAttribute("aria-label",pv.headline);
-  el.addEventListener("change",e=>{ if(e.target.name==="rvmvA") rvMovePreview(b,r,frm,code,e.target.value); });
-  el.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); pkPopClose(); } });
-  el.addEventListener("click",async e=>{ const k=e.target.closest("[data-mv]"); if(!k) return; if(k.dataset.mv==="no"){ pkPopClose(); return; }
-    k.disabled=true; pkPopClose(false); const out=await api("/api/review/assign",{file:r.file,ref:r.ref,code,from:frm,moved});
+  if(!res.ok||!res.preview){ snack(oneLine(res.message)||"Can't move these minutes"); return; } const pv=res.preview, dlg=$("#rvDlg");
+  putHTML($("#rvDlgBody"),html`<h2 id="rvDlgTitle" class="rvmv-h">${pv.headline}</h2>
+    <p class="sub">The minutes and transcript will be filed in ${pName(code)}'s folders when the minutes are approved. Nothing changes in the tracker until then.</p>
+    ${pv.alone?html`<fieldset class="rvmv-ch"><legend>${pv.alone} item${pv.alone===1?" was":"s were"} moved on ${pv.alone===1?"its":"their"} own before</legend><label><input type="radio" name="rvmvA" value="leave" ${raw(moved!=="all"?"checked":"")}> Leave ${pv.alone===1?"it":"those"} where ${pv.alone===1?"it is":"they are"}</label><label><input type="radio" name="rvmvA" value="all" ${raw(moved==="all"?"checked":"")}> Move all</label></fieldset>`:""}
+    ${(pv.updates||[]).length?html`<p class="sub">${pv.updates.join(", ")} ${pv.updates.length===1?"is an update":"are updates"} to ${pv.updates.length===1?"an item":"items"} already in the tracker, so ${pv.updates.length===1?"it stays":"they stay"} with ${pName(frm)}.</p>`:""}`);
+  dlg.classList.add("rvmvdlg"); $("#rvDlgOk").textContent="Move"; $("#rvDlgBody").onchange=e=>{ if(e.target.name==="rvmvA") rvMovePreview(b,r,frm,code,e.target.value); };
+  dlg.addEventListener("close",()=>{ dlg.classList.remove("rvmvdlg"); $("#rvDlgBody").onchange=null; },{once:true});
+  let fired=false; $("#rvDlgCancel").onclick=()=>dlg.close();
+  $("#rvDlgOk").onclick=async()=>{ if(fired) return; fired=true; dlg.close(); const out=await api("/api/review/assign",{file:r.file,ref:r.ref,code,from:frm,moved});
     if(!out.ok){ snack(oneLine(out.message)||"Not moved"); return; } await reloadData();
     const undo=pv.projects.includes(code)?null:async()=>{ const m=REV.find(x=>x.file===r.file&&x.ref==="meeting"&&!x.done); if(!m) return;
       const back=await api("/api/review/assign",{file:r.file,ref:"meeting",code:frm,from:code,moved:"all"}); snack(back.ok?`Moved back to ${pName(frm)}`:oneLine(back.message)||"Not moved back"); await reloadData(); };
-    snack(`${pv.headline.replace(/^Move/,"Moved")} — the minutes go with them`,undo); });
-  (el.querySelector("[data-mv=go]")).focus(); }
+    snack(`${pv.headline.replace(/^Move/,"Moved")} — the minutes go with them`,undo); };
+  openDialog(dlg,{focus:"#rvDlgOk"}); }
 /* ===== end BL-200 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootReview0193(){
 document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest('#reviewBody [data-act="pj"]'); if(!b) return; e.stopPropagation(); e.preventDefault();
   const tr=b.closest("tr[data-n]"), r=REV.find(x=>x.n===+tr.dataset.n); if(!rvMovable(r)) return; shared.RSEL=+tr.dataset.ri;
-  if(shared.PKPOP&&shared.PKPOP.anchor===b){ pkPopClose(); return; } isMin(r)?rvMoveMinutes(b,r,tr.dataset.g):rvMoveMenu(b,r); },true);
+  if(menuOpenFor(b)){ closeMenu(); return; } isMin(r)?rvMoveMinutes(b,r,tr.dataset.g):rvMoveTo(b,r); },true);
 /* the peek: a proposal's Project sits beside Owner and Due */
 if(shared.CUR&&pkOn()) drawPanel();
 }
-/* ===== BL-197 (sprint-review-work) ===== right-click a work item for a menu of its common actions. One component (cxOpen: a menu
-   with submenus, role="menu", the icon set beside each word, never colour alone) and per-kind action lists (cxWork for actions,
+/* ===== BL-197 (sprint-review-work) ===== right-click a work item for a menu of its common actions. One component (components/review/ContextMenu.jsx since BL-316: a menu
+   with submenus, a real menu, the icon set beside each word, never colour alone) and per-kind action lists (cxWork for actions,
    RAID items and decisions; cxReview for Review's proposals), wired to the save paths that exist: one item through boardMove (the
    cell editor's save: the same checks, one proposal, Undo in the message, a line in Activity); several through batchMove (BL-124's
    bar: what can't take the change is left out and named); a decision through recordFromBoard and withdrawDecision; a proposal
@@ -528,27 +535,7 @@ if(shared.CUR&&pkOn()) drawPanel();
    the menu says how many and offers only what applies to all of them (different kinds: Copy IDs only). Shift+F10 or the
    context-menu key opens it on the cursor row; arrows, Enter, Esc; submenus open to the side that fits the window (BL-175). Outside
    items, text fields and real links, the browser's own menu appears. */
-export let CXM=[], CXFROM=null, CXKEYAT=-1e9, CXAT=0;
-export function cxCloseAll(ret){ CXM.forEach(m=>m.el.remove()); CXM=[]; const f=CXFROM; CXFROM=null; if(ret&&f&&f.isConnected) f.focus({preventScroll:true}); }
-export function cxCloseFrom(i){ CXM.splice(i).forEach(m=>m.el.remove()); }
-export const cxOpts=el=>[...el.querySelectorAll('[role=menuitem]:not([aria-disabled="true"])')];
-export function cxPlace(el,x,y,parent){ const w=el.offsetWidth, h=el.offsetHeight;
-  if(parent){ const pr=parent.getBoundingClientRect(), m=parent.closest(".cxmenu").getBoundingClientRect(); x=m.right-2; if(x+w>innerWidth-8) x=Math.max(8,m.left-w+2); y=pr.top-6; }   /* BL-175: the side that fits */
-  x=Math.max(8,Math.min(x,innerWidth-w-8)); if(y+h>innerHeight-8) y=Math.max(8,innerHeight-h-8); el.style.left=x+"px"; el.style.top=y+"px"; }
-export function cxDraw(m,q){ const t=String(q||"").trim().toLowerCase(), L=m.items.filter(it=>!t||it.head||it.sep||(it.label||"").toLowerCase().includes(t));
-  putHTML(m.box,raw(L.map(it=>it.sep?'<div class="cxsep" role="separator"></div>':it.head?`<div class="cxhead">${esc(it.head)}</div>`
-    :`<button type="button" class="pkopt" role="menuitem" data-ci="${m.items.indexOf(it)}"${it.sub?' aria-haspopup="menu" aria-expanded="false"':""}${it.disabled?' aria-disabled="true"':""}${it.checked?' aria-current="true"':""}>${it.icon?ic(it.icon):'<svg width="18" height="18" aria-hidden="true"></svg>'}<span>${esc(it.label)}${it.hint?`<span class="h">${esc(it.hint)}</span>`:""}</span>${it.checked?ic("check",{cls:"ck"}):it.sub?ic("chevright",{cls:"ck cxsub"}):""}</button>`).join("")||'<div class="pkopt" aria-disabled="true">No match</div>')); }
-/** @param {any[]} items @param {number} x @param {number} y @param {{label?: string, parent?: any, search?: boolean}} [o] */
-export function cxOpen(items,x,y,{label,parent,search}={}){ const level=parent?CXM.findIndex(m=>m.el.contains(parent))+1:0; cxCloseFrom(level);
-  const el=document.createElement("div"); el.className="pkpop cxmenu"; putHTML(el,html`${search?html`<input class="pkq" type="search" placeholder="Search" aria-label="Search: ${label}" autocomplete="off">`:""}<div role="menu" aria-label="${(label||"Actions")}"></div>`);
-  document.body.appendChild(el); CXAT=performance.now(); const m={el,items,box:el.querySelector("[role=menu]"),parent}; CXM.push(m); cxDraw(m,""); cxPlace(el,x,y,parent);
-  if(parent) parent.setAttribute("aria-expanded","true");
-  const q=el.querySelector(".pkq"); if(q){ q.addEventListener("input",()=>{ cxDraw(m,q.value); }); q.focus(); } else (cxOpts(el)[0]||el).focus(); return m; }
-export function cxRun(btn){ const mi=CXM.findIndex(m=>m.el.contains(btn)), m=CXM[mi], it=m&&m.items[+btn.dataset.ci]; if(!it||it.disabled) return;
-  if(it.sub){ const sub=typeof it.sub==="function"?it.sub():it.sub; cxOpen(sub,0,0,{label:it.label,parent:btn,search:it.search}); return; }
-  cxCloseAll(true); Promise.resolve().then(()=>it.run&&it.run()).catch(e=>snack("Not saved: "+(e&&e.message||e))); }
- 
-   /* a scroll by hand closes it; not the one that brought the row into view */
+export let CXKEYAT=-1e9;   /* BL-316: the menu itself is components/review/ContextMenu.jsx (the Menu block's MenuPanel) */
 /* ---- what was right-clicked ---- */
 export function cxTarget(t){ if(!t||!t.closest) return null;
   if(t.closest("input,textarea,select,[contenteditable=true],[contenteditable=plaintext-only],.rail,#panel,#chat,dialog,.cxmenu,.pkpop,td.editing")) return null;
@@ -559,13 +546,13 @@ export function cxTarget(t){ if(!t||!t.closest) return null;
     if(PKK.includes(k)&&REC(k,id)) return {k,id,el:row,row:inWork||!!row.closest("#v-person")}; }
   const o=t.closest("[data-open]"); if(o){ const [k,id]=String(o.dataset.open).split(":"); if(PKK.includes(k)&&REC(k,id)) return {k,id,el:o}; }
   return null; }
-export function cxShow(c,x,y){ CXFROM=document.activeElement&&document.activeElement!==document.body?document.activeElement:c.el;
-  if(c.gone){ cxOpen(cxGone(c.gone,c.el),x,y,{label:"Rejected proposal"}); return; }   /* BL-315 */
+export function cxShow(c,x,y){ const from=document.activeElement&&document.activeElement!==document.body?document.activeElement:c.el;
+  if(c.gone){ openContextMenu(cxGone(c.gone,c.el),x,y,{label:"Rejected proposal",from}); return; }   /* BL-315 */
   if(c.rev){ const n=c.rev.n; if(!(RHL.has(n)&&RHL.size>=2)){ rvOnly(n); shared.RSEL=+c.el.dataset.ri; rvPaint(); } else { shared.RSEL=+c.el.dataset.ri; rvPaint(); }
-    const L=RHL.size>=2?rvSel():[c.rev]; cxOpen(L.length>1?cxReviewMany(L):cxReview(c.rev,c.el),x,y,{label:L.length>1?`${L.length} proposals`:"Proposal"}); return; }
+    const L=RHL.size>=2?rvSel():[c.rev]; openContextMenu(L.length>1?cxReviewMany(L):cxReview(c.rev,c.el),x,y,{label:L.length>1?`${L.length} proposals`:"Proposal",from}); return; }
   let ids=[[c.k,c.id]];
   if(c.row){ if(HL.has(c.id)&&HL.size>=2) ids=[...HL.keys()].map(id=>[kOfId(id),id]).filter(([k,id])=>k&&REC(k,id)); else { hlOnly(c.k,c.id); } }
-  cxOpen(ids.length>1?cxWorkMany(ids):cxWork(c.k,c.id),x,y,{label:ids.length>1?`${ids.length} items`:c.id}); }
+  openContextMenu(ids.length>1?cxWorkMany(ids):cxWork(c.k,c.id),x,y,{label:ids.length>1?`${ids.length} items`:c.id,from}); }
 /* the focused row for Shift+F10 and the context-menu key: the focused element's item, or the list's cursor row */
 export function cxCursor(){ const a=document.activeElement; let c=a&&a!==document.body?cxTarget(a):null; if(c) return c;
   if(a&&a!==document.body&&a.closest&&a.closest("input,textarea,select,[contenteditable],.rail,#chat,dialog,#panel")) return null;
@@ -648,28 +635,10 @@ export function cxReviewMany(L){ const ok=L.filter(rvBulkOK), rej=L.filter(rvRej
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootReview0195(){
 Object.assign(ICONS,{cxopen:'<path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/>'});
-document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest(".cxmenu [role=menuitem]"); if(!b) return; e.preventDefault(); cxRun(b); });
-document.addEventListener("mousedown",e=>{ if(CXM.length&&!(e.target.closest&&e.target.closest(".cxmenu"))) cxCloseAll(false); },true);
-document.addEventListener("mouseover",e=>{ const b=e.target.closest&&e.target.closest(".cxmenu [role=menuitem]"); if(!b) return; const mi=CXM.findIndex(m=>m.el.contains(b)), it=CXM[mi].items[+b.dataset.ci];
-  if(document.activeElement!==b&&!CXM[mi].el.querySelector(".pkq:focus")) b.focus({preventScroll:true});
-  if(it&&it.sub&&!it.disabled){ if(!(CXM[mi+1]&&CXM[mi+1].parent===b)) cxRun(b), b.focus({preventScroll:true}); } else cxCloseFrom(mi+1); });
-addEventListener("resize",()=>cxCloseAll(false));
-addEventListener("blur",()=>cxCloseAll(false));
-document.addEventListener("wheel",e=>{ if(CXM.length&&!(e.target.closest&&e.target.closest(".cxmenu"))) cxCloseAll(false); },{capture:true,passive:true});
-window.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.closest(".cxmenu"); if(!el||!CXM.length) return; const mi=CXM.findIndex(m=>m.el===el), m=CXM[mi], L=cxOpts(el), i=L.indexOf(document.activeElement), inQ=e.target.matches(".pkq");
-  const stop=()=>{ e.preventDefault(); e.stopPropagation(); };
-  if(e.key==="ArrowDown"){ stop(); (L[i+1]||L[0])?.focus(); } else if(e.key==="ArrowUp"){ stop(); (i<=0&&el.querySelector(".pkq")?el.querySelector(".pkq"):L[i-1]||L[L.length-1])?.focus(); }
-  else if(e.key==="Home"&&!inQ){ stop(); L[0]?.focus(); } else if(e.key==="End"&&!inQ){ stop(); L[L.length-1]?.focus(); }
-  else if(e.key==="ArrowRight"&&!inQ){ stop(); const b=document.activeElement; if(b&&b.getAttribute("aria-haspopup")==="menu") cxRun(b); }
-  else if(e.key==="ArrowLeft"&&!inQ){ stop(); if(mi>0){ const p=m.parent; cxCloseFrom(mi); p&&p.setAttribute("aria-expanded","false"); p&&p.focus(); } }
-  else if(e.key==="Escape"){ stop(); if(mi>0){ const p=m.parent; cxCloseFrom(mi); p&&p.setAttribute("aria-expanded","false"); p&&p.focus(); } else cxCloseAll(true); }
-  else if(e.key==="Enter"||(e.key===" "&&!inQ)){ stop(); if(inQ){ L[0]&&cxRun(L[0]); } else if(i>=0) cxRun(L[i]); }
-  else if(e.key==="Tab"){ stop(); cxCloseAll(true); }
-  else if(!inQ) e.stopPropagation(); },true);
 document.addEventListener("contextmenu",e=>{ if(performance.now()-CXKEYAT<400){ e.preventDefault(); return; }   /* the key opened it already */
   const kb=!e.clientX&&!e.clientY; let c=cxTarget(e.target); if(!c&&kb) c=cxCursor(); if(!c) return;
   e.preventDefault(); const r=c.el.getBoundingClientRect(); cxShow(c,kb?r.left+Math.min(48,r.width/3):e.clientX,kb?r.top+Math.min(r.height,28):e.clientY); });
-window.addEventListener("keydown",e=>{ if(!(e.key==="ContextMenu"||(e.key==="F10"&&e.shiftKey))||CXM.length) return; const c=cxCursor(); if(!c) return;
+window.addEventListener("keydown",e=>{ if(!(e.key==="ContextMenu"||(e.key==="F10"&&e.shiftKey))||contextMenuOpen()) return; const c=cxCursor(); if(!c) return;
   e.preventDefault(); e.stopPropagation(); CXKEYAT=performance.now(); const r=c.el.getBoundingClientRect(); c.el.scrollIntoView({block:"nearest"}); cxShow(c,r.left+Math.min(48,r.width/3),r.top+Math.min(r.height,28)); },true);
 }
 /* ===== BL-208 (sprint-insight) ===== Review one proposal at a time: a focus mode inside Review, from its toolbar. The list stays; the
@@ -719,12 +688,12 @@ export async function rfAct(a,btn){ if(!shared.RF) return; const r=REV.find(x=>x
   if(a==="e"){ openProposal(r.n); return; }
   if(a==="a"){ await decide(r.n,"approved"); rfDraw(); return; }
   if(a==="r"){ if(isMin(r)){ await rejectMinutes(r); rfDraw(); return; } rvOnly(r.n); if(rvRejectOK(r)) rjMenuFor([r],btn||$('#rvFocus [data-rf="r"]'),()=>rfDraw()); else { await decide(r.n,"rejected"); rfDraw(); } return; }
-  if(a==="proj"){ const b=btn||$('#rvFocus [data-rf="proj"]'), rc=b.getBoundingClientRect(); cxOpen(rvActive().map(p=>({label:p.name,icon:"projects",checked:r.p===p.code,run:async()=>{ await rvMoveItem(r,p.code); rfDraw(); }})),rc.left,rc.bottom+4,{label:"Project"}); } }
+  if(a==="proj"){ const b=btn||$('#rvFocus [data-rf="proj"]'); openContextMenuAt(b,rvActive().map(p=>({label:p.name,icon:"projects",checked:r.p===p.code,run:async()=>{ await rvMoveItem(r,p.code); rfDraw(); }})),{label:"Project"}); } }
 /* ===== end BL-208 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootReview0209(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-rf]"); if(b&&b.closest("#rvFocus")){ rfAct(b.dataset.rf,b); return; } if(e.target.closest("[data-rvfocus]")) rfOpen(); });
-window.addEventListener("keydown",e=>{ if(!shared.RF||shared.VIEW!=="review"||e.metaKey||e.ctrlKey||e.altKey||e.isComposing) return; const t=e.target; if(t.closest&&t.closest("input,textarea,select,[contenteditable=true],dialog,.cxmenu,.bmenu,#panel,#chat")) return;
+window.addEventListener("keydown",e=>{ if(!shared.RF||shared.VIEW!=="review"||e.metaKey||e.ctrlKey||e.altKey||e.isComposing) return; const t=e.target; if(t.closest&&t.closest("input,textarea,select,[contenteditable=true],dialog,.cxmenu,[role=menu],#panel,#chat")) return;
   const k=e.key.toLowerCase(); if(e.key==="Escape"){ e.preventDefault(); e.stopImmediatePropagation(); rfClose(); return; }
   if(["a","r","e","j","k"].includes(k)){ e.preventDefault(); e.stopImmediatePropagation(); rfAct(k); } },true);
 }

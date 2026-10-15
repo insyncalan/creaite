@@ -1575,7 +1575,7 @@ class DependencyPageTests(unittest.TestCase):
         i = self.ids
         o = self.probe(subst("""
           go("work"); WT="raid"; openNew("raid"); const out={}, set=(n,v)=>{ CUR.draft[n]=n==="due"&&DDATE.test(v)?toIso(v):v; pkDraw(); };   /* BL-179: the new item is the peek; its draft as the chips leave it */
-          const chips=()=>[...document.querySelectorAll("#depChips button")].map(b=>b.textContent);
+          const chips=()=>[...document.querySelectorAll("#depSug button")].map(b=>b.textContent);
           set("p","ABC"); out.risk=chips();                                                            // a Risk: no chips
           set("type","Dependency"); out.noDue=chips();                                                  // no due date: nothing to compare with
           set("t","Vendor access"); set("due","__D6__"); out.chips=chips();
@@ -1619,7 +1619,7 @@ class DependencyPageTests(unittest.TestCase):
           const out={}; for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); go("cockpit","ABC"); const c=document.getElementById("depCard"), bg=__bgOf(c), css=s=>getComputedStyle(c.querySelector(s));
             const m=document.querySelector("#mvCard .mv-prow.atrisk .waiting"); out[pal+"|"+mode]={warn:__ratio(css(".depwarn").color,bg), text:__ratio(css(".dept").color,bg), id:__ratio(css(".depid").color,bg), tag:__ratio(getComputedStyle(m).color,__bgOf(m))};
             go("work"); WT="raid"; openNew("raid"); Object.assign(CUR.draft,{p:"ABC",type:"Dependency",due:toIso("__D6__")}); pkDraw();   /* BL-179: the peek's suggestions */
-            const b=document.querySelector("#depChips .chipbtn"), cs=getComputedStyle(b); out[pal+"|"+mode].chip=__ratio(cs.color,cs.backgroundColor); out[pal+"|"+mode].chipEdge=__ratio(cs.borderTopColor,__bgOf(b.parentElement)); closePanel(); }
+            const b=document.querySelector("#depSug .chipbtn"), cs=getComputedStyle(b); out[pal+"|"+mode].chip=__ratio(cs.color,cs.backgroundColor); out[pal+"|"+mode].chipEdge=__ratio(cs.borderTopColor,__bgOf(b.parentElement)); closePanel(); }
           window.OUT=out;"""))
         self.assertEqual(len(o), theme_count() * 2)
         bad = {k: {n: round(x, 2) for n, x in v.items() if x < (3.0 if n == "chipEdge" else 4.5)} for k, v in o.items()}

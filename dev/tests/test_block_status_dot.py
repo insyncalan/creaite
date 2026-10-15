@@ -35,6 +35,23 @@ class StatusDotBlock(LiveBrowserCase):
         self.assertIn("&lt;b&gt;x&lt;/b&gt;", out)
         self.assertNotIn("<b>", out)
 
+    def test_a_plain_status_dot_carries_its_word(self):
+        """BL-316: `status` draws a plain dot; its word is beside it (the dot hidden), in a named span, or its own name."""
+        b = self.b
+        out = b.eval("""(()=>{ const box=document.createElement('div'), r=p=>{ drawStatusDot(box,p); return box.innerHTML; };
+          return [r({status:'ok',word:'Live <b>now</b>'}), r({status:'off',word:'Not running'}),
+            r({status:'staged',wordId:'stX',live:true,word:'2 staged'}), r({status:'staged',cls:'pkdot',label:'Staged, not yet applied'})]; })()""")
+        self.assertEqual(out[0], '<span class="dot" aria-hidden="true"></span>Live &lt;b&gt;now&lt;/b&gt;')
+        self.assertEqual(out[1], '<span class="dot off" aria-hidden="true"></span>Not running')
+        self.assertEqual(out[2], '<span class="dot" aria-hidden="true"></span><span id="stX" aria-live="polite">2 staged</span>')
+        self.assertEqual(out[3], '<span class="pkdot" role="img" aria-label="Staged, not yet applied" data-tip="Staged, not yet applied"></span>')
+
+    def test_the_page_s_status_dots_use_it(self):
+        b = self.b
+        self.assertEqual(b.eval("document.querySelector('#pkStage .dot').nextElementSibling.id"), "pkStN")
+        self.assertEqual(b.eval("document.querySelector('#chSub .dot').getAttribute('aria-hidden')"), "true")
+        self.assertTrue(b.eval("document.getElementById('chSub').textContent.length>10"))
+
     def test_today_s_portfolio_table_uses_it(self):
         b = self.b
         b.eval("go('today')")

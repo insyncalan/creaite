@@ -164,7 +164,7 @@ class WeekendInThePage(LiveBrowserCase):
         self.work()
         b.eval("PROJF.clear(); PROJF.add('ABC'); renderWork(); openNew('actions')")
         b.wait("CUR&&CUR.mode==='new'")
-        b.eval(f"pkDate(document.querySelector('#pkProps [data-pkp=\"due\"]'),{{value:'',due:true,label:'Due date',onPick:v=>pkCommit('actions',CUR.nid,{{due:v}},'Due date','','')}})")
+        b.eval(f"itemDatePicker(document.querySelector('#pkProps [data-pkp=\"due\"]'),{{value:'',due:true,label:'Due date',onPick:v=>pkCommit('actions',CUR.nid,{{due:v}},'Due date','','')}})")
         b.eval("document.querySelector('.pkpop .pkdt').focus()")
         b.type(shown(SAT))
         b.key("Enter")

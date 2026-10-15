@@ -6,12 +6,15 @@
 <input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
 <label class="setchg">
 <input type="checkbox" id="setChanged"> Show changed only</label>
-<nav class="setcats" id="setcats" aria-label="Settings categories">
-<button data-scat="essentials" aria-selected="false">Essentials</button>
-<button data-scat="people" aria-selected="true">People and projects</button>
-<button data-scat="advanced" aria-selected="false">Advanced</button>
-<button data-scat="health" aria-selected="false">Health</button>
-</nav>
+<div class="tabhost" id="setcatsHost">
+<div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
+<button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="people" data-scat="people">People and projects</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="advanced" data-scat="advanced">Advanced</button>
+<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="health" data-scat="health">Health</button>
+</div>
+</div>
+<!-- BL-316: the categories (#setcats), the Tabs building block -->
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
 <option value="people" selected="">People and projects</option>
@@ -24,7 +27,7 @@
 <div class="card wide" id="peopleMgr" data-sec="people">
 <div style="display:flex;align-items:center;gap:#px;flex-wrap:wrap">
 <h2 style="flex:1">People</h2>
-<button class="btn" id="pmAdd">Add a person</button>
+<button class="btn" id="pmAdd" aria-haspopup="dialog">Add a person</button>
 </div>
 <p class="sub" style="margin:#px 0 #px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
 <p class="sub" id="pmLegacy">
@@ -93,7 +96,7 @@
 <td class="num">0</td>
 <td class="num">0</td>
 <td class="mgract">
-<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Jane Doe">
+<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Jane Doe" aria-haspopup="dialog">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">
 </path>
@@ -135,7 +138,7 @@
 <td class="num">0</td>
 <td class="num">0</td>
 <td class="mgract">
-<button type="button" class="ib sm" aria-label="Add details" data-tip="Add details" data-pm="edit" data-n="Noah Price (FAL)">
+<button type="button" class="ib sm" aria-label="Add details" data-tip="Add details" data-pm="edit" data-n="Noah Price (FAL)" aria-haspopup="dialog">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">
 </path>
@@ -174,7 +177,7 @@
 </td>
 <td class="num">0</td>
 <td class="mgract">
-<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Omar Ali">
+<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Omar Ali" aria-haspopup="dialog">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">
 </path>
@@ -213,7 +216,7 @@
 </td>
 <td class="num">0</td>
 <td class="mgract">
-<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Sara Example">
+<button type="button" class="ib sm" aria-label="Edit details" data-tip="Edit details" data-pm="edit" data-n="Sara Example" aria-haspopup="dialog">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="pencil">
 <path d="M12 20h9">
 </path>

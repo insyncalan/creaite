@@ -121,6 +121,7 @@ class AutosizeFields(LiveBrowserCase):
         b.pump(0.2)
         b.eval("mvOpenPage('ABC','plan','ABC-M-001')")                      # BL-186: the milestone editor's text box
         b.wait("document.getElementById('mvDesc')")
+        b.wait("document.getElementById('mvDesc').dataset.ag")              # fitted once (the next frame), as before any real drag
         self.fill("#mvDesc", 2)
         b.eval("$('#mvDesc').style.height='260px'")                          # as the drag handle does
         b.pump(0.3)

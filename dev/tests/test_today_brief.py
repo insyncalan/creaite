@@ -484,8 +484,8 @@ class TodayBriefTests(PageTests):
           setRev([]); REMINDERS.push({id:"weekly:2026-10-09",text:"Weekly report for week ending 09-10-2026 is due",cmd:"weekly report for week ending 09-10-2026"},
             {id:"client:ABC:2026-09-01",text:"ABC client report is due (last: 01-09-2026)",cmd:"client report ABC"});
           go("today"); renderToday(); const rem=[...document.querySelectorAll("#attnList .rem")], first=rem[0];
-          first.querySelector(".dots").click(); const open=first.querySelector(".dmenu").classList.contains("on");
-          window.OUT={n:rem.length,titles:rem.map(r=>r.querySelector("a.t").textContent),open,menu:[...first.querySelectorAll(".dmenu button")].map(b=>[b.textContent,b.disabled]),
+          first.querySelector(".dots").click(); const open=!!document.querySelector("#remMenu[role=menu]")&&first.querySelector(".dots").getAttribute("aria-expanded")==="true";
+          window.OUT={n:rem.length,titles:rem.map(r=>r.querySelector("a.t").textContent),open,menu:[...document.querySelectorAll("#remMenu [role=menuitem]")].map(b=>[b.textContent,b.getAttribute("aria-disabled")==="true"]),
             old:!!document.getElementById("notes"), links:rem.map(r=>r.querySelector("a.t").dataset.cock||r.querySelector("a.t").dataset.go), label:first.querySelector(".dots").getAttribute("aria-label")};""")
         self.assertEqual(o["n"], 2)
         self.assertEqual(o["menu"][0][0], "Run report now")

@@ -256,8 +256,9 @@ class ReadingTests(DecisionCase):
         self.assertEqual(self.options(), [["Pending", False], ["Made", False], ["Withdrawn", False]])
         self.b.key("Escape")
         self.b.click("#pkMore")
-        self.b.wait("document.querySelector('.pkpop')")
-        self.assertEqual(self.options()[0], ["Mark as made", False])
+        self.b.wait("document.querySelector('#pkMoreMenu')")                                          # BL-316: the Menu block's menu
+        self.assertEqual(self.b.eval("(o=>[o.querySelector('b').textContent, o.getAttribute('aria-disabled')==='true'])(document.querySelector('#pkMoreMenu [role=menuitem]'))"),
+                         ["Mark as made", False])
         self.b.key("Escape")
         self.b.eval("closePanel()")
         self.open_panel("ABC-D-008")
@@ -337,7 +338,7 @@ class WritingTests(DecisionCase):
     def test_a_decision_needed_is_raised_from_the_work_page(self):
         self.open_decisions()
         self.b.click("#newBtn")                                              # BL-159: the New menu's Ask for a decision
-        self.b.click('#newMenu [data-newd="needed"]')
+        self.b.click('#newDecMenu [data-newd="needed"]')
         self.b.wait("CUR&&CUR.mode==='new'&&document.activeElement.id==='pkTitle'")   # BL-179: the empty peek
         self.assertEqual(self.b.eval("CUR.draft.st"), "Pending")
         self.assertEqual(self.b.eval("CUR.draft.date"), "")
@@ -356,7 +357,7 @@ class WritingTests(DecisionCase):
     def test_a_new_made_decision_still_needs_its_date_and_source(self):
         self.open_decisions()
         self.b.click("#newBtn")                                              # BL-159: the New menu's Record a decision
-        self.b.click('#newMenu [data-newd="made"]')
+        self.b.click('#newDecMenu [data-newd="made"]')
         self.b.wait("CUR&&CUR.mode==='new'&&document.activeElement.id==='pkTitle'")
         self.assertEqual(self.b.eval("[CUR.draft.st, CUR.draft.date]"), ["Made", TODAY.isoformat()])
         self.b.eval("pkCommit('decisions',CUR.nid,{p:'ABC'},'Project','','')")

@@ -102,27 +102,27 @@ SCRIPT = r"""
     hsel.value="Off track"; hsel.dispatchEvent(new Event("change")); out.evidenceOk=document.getElementById("hEvidence").classList.contains("warn"); EDITING=false; closePanel();
     // 5b2. milestone picker shows names, keeps IDs as values (BL-27); nothing saved
     const linked=A.find(a=>a.ms==="ABC-M-001"); openRecord("actions",linked.id); PK.det[linked.id]=true; drawPanel(); document.querySelector('#pkDet [data-pkp="ms"]').click();   /* BL-176: Details' list */
-    out.msOpts=[...document.querySelectorAll(".pkpop .pkopt")].map(o=>o.querySelector("span").textContent); out.msSel=(document.querySelector('.pkpop .pkopt[aria-selected="true"] span')||{}).textContent; pkPopClose(false); closePanel();
+    out.msOpts=[...document.querySelectorAll(".pkpop .pkopt")].map(o=>o.querySelector("span").textContent); out.msSel=(document.querySelector('.pkpop .pkopt[aria-selected="true"] span')||{}).textContent; closePicker("owner",false); closePanel();
     // 5b3. learn from a project choice (BL-28): the option names the signal and follows the chosen project
     const lr=REV.find(r=>r.kind==="actions"&&!r.done); lr.signals=[{kind:"keyword",value:"pilot",ok:false,owners:[]},{kind:"sender",value:"sam@client.com",ok:true,owners:[]}];
     openProposal(lr.n); await pkCommit("actions","rv"+lr.n,{p:"DEF"},"Project","","");   /* BL-177: the peek's Project, held in the proposal */
     out.learnTxt=(document.querySelector("#pkPropEnd .pk-learn span")||{}).textContent||""; closePanel(); delete lr.signals;
     // 5b4. reminders offer Run report now first; in the file version it needs the live server (BL-34)
     go("today"); const note=document.querySelector("#attnList .rem"); note.querySelector(".dots").click();
-    out.remMenu=[...note.querySelectorAll(".dmenu button")].map(b=>[b.textContent,b.disabled,b.title||""]); note.querySelector(".dmenu").classList.remove("on");
+    out.remMenu=[...document.querySelectorAll("#remMenu [role=menuitem]")].map(b=>[b.textContent,b.getAttribute("aria-disabled")==="true",b.dataset.tip||""]); closeMenu();
     // 5b5. workstreams belong to their project (BL-57); in-memory items only, nothing saved here
     { const a1=A.find(a=>a.p==="ABC"), d1=A.find(a=>a.p==="DEF"), keep=[a1.ws,d1.ws]; a1.ws="Cut-over"; d1.ws="Cut-over";
       out.wsFor=[wsFor("ABC").includes("Cut-over"),wsFor("DEF").includes("Cut-over"),wsFor("ABC").some(w=>A.some(x=>x.p==="DEF"&&x.ws===w&&!A.some(y=>y.p==="ABC"&&y.ws===w)))];
       openRecord("actions",a1.id); PK.det[a1.id]=true; drawPanel(); document.querySelector('#pkDet [data-pkp="ws"]').click();   /* BL-176: Details' list, this project's only */
       out.wsList=[...document.querySelectorAll(".pkpop .pkopt span")].map(o=>o.textContent).filter(t=>t!=="None"&&!t.startsWith("Add ")).every(v=>wsFor("ABC").includes(v));
       const wq=document.querySelector(".pkpop .pkq"); wq.value="Brand new stream"; wq.dispatchEvent(new Event("input")); [...document.querySelectorAll(".pkpop .pkopt")].find(o=>o.textContent.startsWith("Add “")).click();
-      out.wsAsk=[(document.querySelector(".pkws .pkws-h")||{}).textContent,(document.querySelector('.pkws [data-wsn="name"]')||{}).value]; pkPopClose(false); closePanel();   /* BL-187: the new workstream's form */
+      out.wsAsk=[(document.querySelector(".pkws .pkws-h")||{}).textContent,(document.querySelector('.pkws [data-wsn="name"]')||{}).value]; closePicker("owner",false); closePanel();   /* BL-187: the new workstream's form */
       go("settings","people");
       out.wsMgr=[...document.querySelectorAll("#wsMgr tbody tr td:first-child")].map(td=>td.textContent.trim()).filter(t=>t.endsWith("Cut-over"));
       a1.ws=keep[0]; d1.ws=keep[1]; }
     // 5c. owner picker lists the project's own people first (BL-18 A; BL-179: the new item's owner chip); nothing saved
     openNew("actions"); await pkCommit("actions",CUR.nid,{p:"DEF"},"Project","",""); document.querySelector('#panel [data-pkp="o"]').click();
-    out.defPeople=projPeople("DEF"); out.firstNames=[...document.querySelectorAll(".pkpop .pkopt")].slice(0,out.defPeople.length).map(o=>o.querySelector("span").firstChild.textContent.trim()); pkPopClose(false); closePanel();
+    out.defPeople=projPeople("DEF"); out.firstNames=[...document.querySelectorAll(".pkpop .pkopt")].slice(0,out.defPeople.length).map(o=>o.querySelector("span").firstChild.textContent.trim()); closePicker("owner",false); closePanel();
     // 5d. ask creaite autocomplete (BL-24)
     openChat(); const ci=document.getElementById("chIn"), type=v=>{ ci.value=v; ci.dispatchEvent(new Event("input",{bubbles:true})); },
       key=k=>ci.dispatchEvent(new KeyboardEvent("keydown",{key:k,bubbles:true,cancelable:true})), opts=()=>[...document.querySelectorAll("#acMenu .aco span")].map(x=>x.textContent);
@@ -213,7 +213,7 @@ SCRIPT = r"""
     /* dev-test-steadiness: wait for the reopened chat itself (its session and its reply), not a fixed 200 ms, before the stub goes */
     document.querySelector("#chHistMenu [data-chat]").click();
     await until(()=>ASKSESSION==="s-12"&&document.querySelector("#chLog .msg.a")); window.fetch=realFetch;
-    out.histClosed=!document.getElementById("chHistMenu").classList.contains("on");
+    out.histClosed=!document.getElementById("chHistMenu");   /* BL-316: the Menu block's menu, gone when closed */
     /* the Copy and Edit buttons the page adds a frame later are not the messages' text (BL-148, as attachLog above) */
     out.reopened={session:ASKSESSION,chat:ASKCHAT,log:[...document.querySelectorAll("#chLog .step, #chLog .msg")].map(e=>[...e.childNodes].filter(n=>!(n.classList&&(n.classList.contains("msgedit")||n.classList.contains("msgcopy")))).map(n=>n.textContent).join(""))};
     // 8. a setting (the page's own vault check finishes late and resets the fake's state; set it again)
