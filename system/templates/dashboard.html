@@ -2218,7 +2218,8 @@ svg .flk text{text-decoration:underline dotted}
 .mv-legend span{display:inline-flex;align-items:center;gap:6px}
 @media (max-width:900px){.mv-lh{display:none}.mv-lrow{grid-template-columns:1fr}}
 .mv-grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:12px;margin-top:12px}
-@media (max-width:900px){.mv-grid2{grid-template-columns:1fr}}
+@media (max-width:900px){.mv-grid2{grid-template-columns:minmax(0,1fr)}}
+.mv-grid2>*{min-width:0}   /* v1.9.5: a grid item may not be wider than its column, else Decide-what-to-do ran 6 px past the view at 320 px where a scrollbar takes room */
 .mv-dchips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 4px}
 .mv-dchips>span{background:var(--sunk);border-radius:var(--r-md);padding:4px 8px;font-size:var(--fs-xs);color:var(--muted)} .mv-dchips b{color:var(--ink);font-weight:600}
 svg.mv-tr text{font-size:var(--fs-xs);fill:var(--muted);font-family:var(--font)}
