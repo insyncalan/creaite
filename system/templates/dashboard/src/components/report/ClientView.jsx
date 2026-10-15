@@ -10,7 +10,7 @@
 import { render } from "preact";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
-import { matchAll } from "./clientDoc.js";
+import { matchAll, matchSection } from "./clientDoc.js";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
 import { SheetStub } from "./SheetStub.jsx";
 import { INTERNAL_RENDERERS } from "./WeeklyPartner.jsx";
@@ -55,7 +55,7 @@ function Bar({ doc, note, setNote }) {
         <button type="button" data-crmode="client" aria-pressed={mode === "client" ? "true" : "false"} onClick={() => { crMode.value = "client"; }}>Client report</button>
         <button type="button" data-crmode="side" aria-pressed={mode === "side" ? "true" : "false"} disabled={!crInternal.value} onClick={() => { crMode.value = "side"; }}>Side by side</button>
       </span>
-      {draft ? <button type="button" class="btn sm" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchAll(d, i)); }}>Match internal for every section</button> : null}
+      {draft && mode !== "side" ? <button type="button" class="btn sm" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchAll(d, i)); }}>Match internal for every section</button> : null}
       {draft && ready && info && info.baseline && !(doc.based_on && doc.based_on.version === info.baseline.version) ? <button type="button" class="btn sm" data-crrefresh
         title="This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save."
         onClick={() => { const a = crArg.value; if (a) loadClientReport(a, true); }}>Refresh from the approved week</button> : null}
@@ -64,6 +64,14 @@ function Bar({ doc, note, setNote }) {
       {note ? <span class="crnote" role="status">{note} {/awaiting review/.test(note) ? <button type="button" class="btn sm" data-crforce onClick={() => approve(true)}>Approve anyway</button> : null}</span> : null}
     </span>
   );
+}
+
+/** The sheet's Match internal for the client page (contract §4.6 `partner.match`): the client-safe match, never a verbatim copy of
+    the internal section. @param {string|null} id the section's id, or null for every section @returns {SheetDoc} */
+function matchFor(id) {
+  const d = /** @type {SheetDoc} */ (crDoc.value), i = crInternal.value;
+  if (!i) return d;
+  return id == null ? matchAll(d, i) : matchSection(d, i, id);
 }
 
 /** The view. */
@@ -92,7 +100,7 @@ export function ClientView() {
       <div class="crsheet">
         <SheetStub doc={side && internal ? internal : doc} baseVersion={crBase.value} scrollKey={key} exported={exported} onExported={setExported}
           readOnly={filed && !side} renderers={side ? INTERNAL_RENDERERS : CLIENT_RENDERERS}
-          partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed,
+          partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed, match: matchFor,
             onChange: setClientDoc, onSave: saveClientPage } : null}
           onChange={side ? () => {} : setClientDoc} onSave={side ? undefined : saveClientPage}
           onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); }}

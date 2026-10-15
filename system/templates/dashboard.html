@@ -49375,7 +49375,7 @@ ${d5.text}`);
     }, children: tag.text || tag.ref });
   }
   var NoSpark = () => null;
-  function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, onChange, onOpenItem, onEvent }) {
+  function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, match, onChange, onOpenItem, onEvent }) {
     const editing = !exported && !readOnly;
     const setSection = (i5, patch, why) => {
       const sections = doc.sections.slice();
@@ -49429,6 +49429,7 @@ ${d5.text}`);
         const own = (renderers.byId || {})[s5.id] || (renderers.byType || {})[s5.type];
         out.push(/* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: s5, update }, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, children: [
           /* @__PURE__ */ u2("h2", { children: s5.heading }),
+          match && editing ? /* @__PURE__ */ u2("div", { class: "sheet-match", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-sheetmatch": s5.id, onClick: () => onChange(match(s5.id), "Matched internal"), children: "Match internal" }) }) : null,
           own ? own(ctx) : /* @__PURE__ */ u2(Default, { ctx, rowFn: (renderers.row || {})[s5.id] })
         ] }) }, s5.id));
       }
@@ -49517,6 +49518,7 @@ ${d5.text}`);
         exported,
         readOnly: readOnly || !!(p6 && p6.readOnly),
         peerDoc: p6 ? doc : partner ? partner.doc : null,
+        match: p6 ? p6.match : void 0,
         onChange: p6 ? p6.onChange : props.onChange,
         onOpenItem: props.onOpenItem,
         onEvent
@@ -49533,6 +49535,11 @@ ${d5.text}`);
           props.onExported?.(!exported);
           onEvent({ type: "exported", on: !exported });
         }, children: "Show as exported" }),
+        partner && partner.match && !readOnly && !partner.readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-sheetmatchall": true, onClick: () => partner.onChange(
+          /** @type {(id: string|null) => SheetDoc} */
+          partner.match(null),
+          "Matched internal"
+        ), children: "Match internal for every section" }) : null,
         onSave && !readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: save2, children: "Save" }) : null,
         /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: line }),
         props.toolbar || null
@@ -49656,7 +49663,7 @@ ${d5.text}`);
   }
   function MatchBar({ ctx }) {
     const d5 = crDoc.value, i5 = crInternal.value;
-    if (!ctx.editing || !d5 || !i5) return null;
+    if (!ctx.editing || !d5 || !i5 || ctx.peer) return null;
     const st2 = matchState(d5, i5, ctx.section.id);
     if (!st2) return null;
     return /* @__PURE__ */ u2("div", { class: "crmatch", "data-match": ctx.section.id, children: [
@@ -50072,7 +50079,7 @@ ${d5.text}`);
           crMode.value = "side";
         }, children: "Side by side" })
       ] }),
-      draft ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
+      draft && mode !== "side" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crmatchall": true, disabled: !crInternal.value, onClick: () => {
         const d5 = crDoc.value, i5 = crInternal.value;
         if (d5 && i5) setClientDoc(matchAll(d5, i5));
       }, children: "Match internal for every section" }) : null,
@@ -50098,6 +50105,14 @@ ${d5.text}`);
         /awaiting review/.test(note) ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-crforce": true, onClick: () => approve(true), children: "Approve anyway" }) : null
       ] }) : null
     ] });
+  }
+  function matchFor(id2) {
+    const d5 = (
+      /** @type {SheetDoc} */
+      crDoc.value
+    ), i5 = crInternal.value;
+    if (!i5) return d5;
+    return id2 == null ? matchAll(d5, i5) : matchSection(d5, i5, id2);
   }
   function ClientView() {
     const box = A2(
@@ -50158,6 +50173,7 @@ ${d5.text}`);
             scrollKey: key,
             renderers: CLIENT_RENDERERS,
             readOnly: filed,
+            match: matchFor,
             onChange: setClientDoc,
             onSave: saveClientPage
           } : null,

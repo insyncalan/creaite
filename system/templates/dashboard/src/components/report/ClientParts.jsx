@@ -29,7 +29,7 @@ export function matchOne(id) {
     @param {{ctx: SectionCtx}} props */
 function MatchBar({ ctx }) {
   const d = crDoc.value, i = crInternal.value;
-  if (!ctx.editing || !d || !i) return null;
+  if (!ctx.editing || !d || !i || ctx.peer) return null;     // in Side by side the sheet's own Match internal (partner.match) is drawn
   const st = matchState(d, i, ctx.section.id);
   if (!st) return null;
   return (

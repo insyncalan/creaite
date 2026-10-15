@@ -252,6 +252,12 @@ class ClientBrowser(LiveBrowserCase):
         self.assertIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page"))                    # the internal page has its own
         self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page + .page"))
         self.assertTrue(self.b.eval(f"[...{left}.querySelectorAll('textarea')].every(t=>t.readOnly)"))
+        # the sheet's Match internal (partner.match) is the client-safe match: the summary comes over, never an internal row
+        self.b.click("[data-sheetmatch='summary']")
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .page')[1].querySelector('section[data-id=\"summary\"] textarea').value"),
+                         "The internal summary, not for the client.")
+        self.b.click("[data-sheetmatchall]")
+        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page + .page"))
 
     def test_export_waits_for_the_internal_week_and_the_check_runs_before_every_export(self):
         self.approve_internal()
@@ -261,9 +267,10 @@ class ClientBrowser(LiveBrowserCase):
         a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
         self.assertTrue(a["ok"], a)
         self.open_view()
+        self.b.wait("document.querySelector('[data-crcheck]:not([disabled])')", 15)     # the reload after the approval has landed
         self.b.eval("(()=>{ window.__calls=[]; const f=window.fetch; window.fetch=(u,o)=>{ window.__calls.push(String(u)); return f(u,o); }; })()")
         self.b.click("[data-crcheck]")
-        self.b.wait("document.querySelector('#crLeftDlg [data-crleft-list]')", 15)
+        self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
         text = self.b.eval("document.querySelector('#crLeftDlg').innerText")
         self.assertIn("ABC-005 (not client-visible)", text)
         self.assertIn("Internal notes and sources", text)
@@ -295,7 +302,7 @@ class ClientBrowser(LiveBrowserCase):
                     self.b.screenshot(str(out / f"side-{w}-{theme}.png"))
                     self.b.click("[data-crmode='client']")
                     self.b.click("[data-crcheck]")
-                    self.b.wait("document.querySelector('#crLeftDlg [data-crleft-list]')", 15)
+                    self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
                     self.b.pump(0.3)
                     self.b.screenshot(str(out / f"leftout-{w}-{theme}.png"))
                     self.b.key("Escape")
