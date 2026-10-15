@@ -7,16 +7,16 @@
    - `why` blocks it: aria-disabled="true" (still focusable, so the reason can be read), the reason as its tooltip, and a
      click calls `onBlocked` instead of `onClick`.
    - `primary` gives it the accent colour (the row's main action); `sm` (default on) the 28px size; `cls` extra classes.
-   - `data` adds data-* attributes (a page-wide handler can act on them); `haspopup` marks one that opens a menu.
+   - `data` adds data-* attributes (a page-wide handler can act on them); `haspopup` marks one that opens a menu; `id` and `hidden` (BL-316) as on any button.
    Text only through JSX: nothing here takes HTML. */
 import { render } from "preact";
 import { Icon } from "./Icon.jsx";
 
 /** @typedef {{icon: string, label: string, name?: string, onClick?: (e: MouseEvent) => void, why?: string, onBlocked?: (e: MouseEvent) => void,
-    primary?: boolean, sm?: boolean, cls?: string, data?: Record<string, string>, haspopup?: string, keyHint?: string}} IconButtonProps */
+    primary?: boolean, sm?: boolean, cls?: string, data?: Record<string, string>, haspopup?: string, keyHint?: string, id?: string, hidden?: boolean}} IconButtonProps */
 
 /** @param {IconButtonProps} props */
-export function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm = true, cls, data, haspopup, keyHint }) {
+export function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm = true, cls, data, haspopup, keyHint, id, hidden }) {
   const c = ["ib", sm ? "sm" : "", primary ? "pri" : "", cls].filter(Boolean).join(" ");
   /** @type {Record<string, string>} */
   const extra = {};
@@ -27,7 +27,7 @@ export function IconButton({ icon, label, name, onClick, why, onBlocked, primary
     if (onClick) onClick(e);
   };
   return (
-    <button type="button" class={c} aria-label={name || label} data-tip={why || label} data-key={keyHint}
+    <button type="button" class={c} id={id} hidden={hidden} aria-label={name || label} data-tip={why || label} data-key={keyHint}
       aria-disabled={why ? "true" : undefined} aria-haspopup={/** @type {any} */ (haspopup)} onClick={click} {...extra}>
       <Icon name={icon} />
     </button>

@@ -7,7 +7,8 @@ import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, paintIcons, putHTML, raw, swapHTML, tipHide } from "./core/dom.js";
-import { CALI, closeCal, comboClose, DATE_HELP, formProject, WK, wkAsk } from "./core/fields.js";
+import { closeCombobox } from "./components/Combobox.jsx";
+import { CALI, closeCal, DATE_HELP, formProject, WK, wkAsk } from "./core/fields.js";
 import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll, tabTitle } from "./core/nav.js";
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
@@ -298,7 +299,7 @@ export function closePanel(quiet){ if(shared.DRH){ if(shared.DRH.d) draftStat("r
   PK.dirty=false; $("#panel").classList.remove("pkprop");   /* BL-250 A */
   const was=pkOn(), a=document.activeElement; if(a&&a!==document.body&&$("#panel").contains(a)) a.blur();   /* a text field commits as it closes, and no focus is left in a closed panel */   /* BL-166 */
   if(shared.EDITING&&shared.PDKEY) pdDrop(shared.PDKEY); shared.PDKEY=shared.PDBASE=shared.PDOFFER=null;   /* BL-169 */
-  const wasItem=shared.CUR&&shared.CUR.mode==="record"; $("#panel").classList.remove("on","pwide"); shared.CUR=null; shared.EDITING=false; closeCal(); comboClose(); if(shared.SEL){ shared.SEL=null; markSel(); } if(wasItem&&!quiet) navWrite(false); 
+  const wasItem=shared.CUR&&shared.CUR.mode==="record"; $("#panel").classList.remove("on","pwide"); shared.CUR=null; shared.EDITING=false; closeCal(); closeCombobox(); if(shared.SEL){ shared.SEL=null; markSel(); } if(wasItem&&!quiet) navWrite(false); 
   $("#panel").classList.remove("peek"); if(was){ PK.wide=false; PK.key=null; }
   if(shared.PREPPEEK&&shared.PREPPEEK!=="swap") prepPeekEnd(); }   /* BL-286 E: the Prep popup comes back, modal, with focus on the item */
    /* looked up when clicked, so Close runs every later step (as Cancel and Esc do) */

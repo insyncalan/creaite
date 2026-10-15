@@ -12,7 +12,8 @@ import { statusDotNodes } from "./components/StatusDot.jsx";
 import { peekPropNodes } from "./components/peek/PeekProps.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { typing } from "./core/keys.js";
-import { CALI, DATE_HELP, formProject, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
+import { comboboxOpen } from "./components/Combobox.jsx";
+import { CALI, DATE_HELP, formProject, mountOwnerFields, onCmdEnter, openPath, ownerMatches, parseWhen, projFirst, projPeople, srcHTML, weekendNote, WK, wkAsk, wkMark } from "./core/fields.js";
 import { mDotGo } from "./core/motion.js";
 import { go, navWrite } from "./core/nav.js";
 import { cmdOK, cmHeads, cmOK, CMT, copied, D, DATE, days, DDATE, fd, isMe, MOD, mScroll, nowStamp, OPENST, prio, S, store, TODAY, toIso } from "./core/page.js";
@@ -162,7 +163,7 @@ export function editCtl(n,t,v,opts){ const id="f_"+n;
   if(t==="cm") return `<textarea name="${n}" id="${id}" rows="4">${esc(v||CMT)}</textarea>`;
   if(t==="cmd") return `<textarea name="${n}" id="${id}" rows="3" placeholder="Plain wording for the client — no fixed headings">${esc(v||"")}</textarea>`;
   if(t==="date") return `<span class="dwrap"><input type="text" name="${n}" id="${id}" value="${esc(v?fd(v):"")}" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1"><button type="button" class="dbtn" data-cal="${id}" aria-label="Choose date">${CALI}</button></span>`;
-  if(t==="owner") return `<div class="combo"><input type="text" name="${n}" id="${id}" value="${esc(v&&v!=="TBC"?v:"")}" placeholder="Choose or type a name" autocomplete="off"><div class="combo-list"></div></div>`;
+  if(t==="owner") return `<div class="combohost" data-combo="${n}" data-v="${esc(v&&v!=="TBC"?v:"")}" data-label="${n==="by"?"Decision maker":"Owner"}"></div>`;   /* BL-316: a Combobox, drawn by mountOwnerFields */
   if(t==="ws") return `<input type="text" name="${n}" id="${id}" list="wslist" value="${esc(v||"")}" placeholder="${formProject()?`A ${formProject()} workstream`:"e.g. Data, Testing"}"><datalist id="wslist">${wsFor(formProject()).map(w=>`<option value="${esc(w)}">`).join("")}</datalist>`;   /* BL-57: only this project's */
   if(t==="check") return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="${n}" id="${id}" ${v?"checked":""}> Include in client reports</label>`;
   if(t==="calc") return `<span id="f_prcalc">${esc(v)}</span>`;
@@ -216,7 +217,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(shared.CUR.mode==="proposal"){ const sig=learnable(REV.find(r=>r.n===shared.CUR.n)); if(sig) h+=`<div class="fsec">Learn</div><dt></dt><dd><label style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="f_learn" data-kind="${esc(sig.kind)}" data-value="${esc(sig.value)}"><span id="learnTxt"></span></label></dd>`; }
   if(shared.CUR.mode==="health") h+=`<div class="evidence" id="hEvidence" aria-live="polite"></div>`;
   if(shared.CUR.k==="project") h+=`<dd class="full">${feedBlock("proj",projFeedItems(shared.CUR.code))}</dd>`;   /* BL-250 A: its history, under the fields */
-  putHTML($("#pFields"),raw(h)); mountFeedTabs($("#pFields")); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
+  putHTML($("#pFields"),raw(h)); mountOwnerFields($("#pFields")); mountFeedTabs($("#pFields")); learnLabel(); if(shared.CUR.mode==="health"){ const hs=$("#f_health"); if(hs){ hs.addEventListener("change",showEvidence); showEvidence(); } }
   const foot={record:"",   /* BL-176 (sprint-peek): an action, RAID item or decision is the peek, with no Edit, Save or Cancel */
     proposal:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn" id="pSave">Save</button><button class="btn primary" id="pSaveA">Save and approve</button>`,
     health:`<button class="btn" id="pCancel">Cancel</button><span class="sp"></span><button class="btn primary" id="pSave">Save</button>`,
@@ -373,7 +374,7 @@ $("#pkLink").onclick=()=>{ if(!shared.CUR) return; const u=location.origin+locat
   if(navigator.clipboard) navigator.clipboard.writeText(u).then(done,()=>prompt("Copy this link:",u)); else prompt("Copy this link:",u); };
 window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDITING) return;
   const a=document.activeElement;
-  if(document.querySelector("dialog:modal")||shared.CAL||shared.COMBO||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
+  if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box"))) return;   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
   if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */
