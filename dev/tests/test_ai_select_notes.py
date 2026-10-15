@@ -123,7 +123,7 @@ class AiInANote(LiveBrowserCase):
         b.click("#aiLayer .aisug [data-aifirst]")                                                   # Accept
         b.wait("!document.querySelector('#aiLayer .aisug')")
         b.wait("document.querySelector('#v-notes .nbody').cxed.value().includes('Clearly: Sandbox access granted yesterday.')")
-        b.wait("['typing','draft','saving','saved'].includes(noteSave.value.state)", 10)            # an edit, saved as typing is
+        b.wait("['typing','saving','saved'].includes(noteSave.value.state)", 10)            # an edit, saved as typing is
         b.pump(0.5)                                                                                  # the counts are posted, not awaited
         got, raw = self.stats()
         self.assertEqual((got.get("offered"), got.get("used")), (1, 1))
