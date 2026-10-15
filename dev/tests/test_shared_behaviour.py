@@ -6,7 +6,11 @@ real key presses: focus it and press Enter: the popup opens, the control says so
 menu or a list, ↓ and ↑ move between its items; Esc closes it and focus is back on the control that opened it; opened again,
 Tab closes a menu or a list. A dialog keeps Tab inside itself, so for a dialog only Enter and Esc are checked. ⌘K, the one
 dialog opened by a key from anywhere, gets the same Enter-less script from the key; the archive prompt (#parchDlg, opened by
-Archive only when the server finds open items) gets the dialog script from its Archive button. **Undo:** in a second sample vault each
+Archive only when the server finds open items) gets the dialog script from its Archive button. Three more dialogs no aria-haspopup
+control opens each get a script of their own (KEYED, #88): the date prompt (#boardDlg: Enter on a board card's Move button, Enter on a
+column), Compare a repeat (#llDlg: Enter on Compare in the peek of a proposal marked as a repeat; Esc must not also close that peek) and
+the search preview (#searchPrev: Enter on a vault-search result; the preview's server answer is stood in for). Each puts the page back
+as it found it, whatever it finds. **Undo:** in a second sample vault each
 menu and list is opened once more and an item chosen (↓, Enter); when that saves a change, the message at the foot (or, in
 the peek, its staging bar's Undo last) must offer Undo (and Undo is pressed, so the next control sees the sample as it was). Each screen is the snapshot sample vault's
 (test_snapshots), at 1400 by 1000.
@@ -452,10 +456,107 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             bad.append("Esc doesn't return focus to the control")
         return bad
 
+    def dialog_keys(self, dlg):
+        """The dialog is open (opened by Enter on the control kept in window.__back): focus is in it; Esc closes it and focus is
+        back on that control."""
+        b = self.b
+        self.seen.append({"ids": [dlg], "labels": [], "classes": []})
+        bad = []
+        if not b.eval(f"document.getElementById({dlg!r}).contains(document.activeElement)"):
+            bad.append("focus stays outside the dialog")
+        peek = b.eval("document.getElementById('panel').classList.contains('on')")
+        self.press("Escape", 0.5)
+        if b.eval(f"document.getElementById({dlg!r}).open"):
+            bad.append("Esc leaves it open")
+        elif not b.eval("document.activeElement===window.__back"):
+            bad.append("Esc doesn't return focus to the control")
+        if peek and not b.eval("document.getElementById('panel').classList.contains('on')"):
+            bad.append("Esc in the dialog also closed the peek")
+        return bad
+
+    def enter_on(self, control_js, ready_js, wait=20):
+        """Focus the control `control_js` finds, press Enter, wait for `ready_js` (the popup open): (the problems, whether it opened)."""
+        b = self.b
+        b.eval(f"(()=>{{ const e={control_js}; window.__back=e; e.scrollIntoView({{block:'center'}}); e.focus(); }})()")
+        self.press("Enter", 0.5)
+        try:
+            b.wait(ready_js, wait)
+        except TimeoutError:
+            return ["Enter opens nothing"], False
+        return [], True
+
+    def tidy(self, extra=""):
+        """Leave the page as it was found, whatever the script did: the real api back, the board grouped by status, the marked
+        repeat gone, and no dialog or peek still open. `extra` is more JS for the script's own state."""
+        self.b.eval("(()=>{ if(window.__realApi){ window.api=window.__realApi; window.__realApi=null; } "
+                    "const g=document.getElementById('wgrp'); if(g&&g.value!=='status'){ g.value='status'; g.dispatchEvent(new Event('change',{bubbles:true})); } "
+                    + extra +
+                    " document.querySelectorAll('dialog[open]').forEach(d=>{ try{ typeof closeDialog==='function'?closeDialog(d):d.close(); }catch(e){ d.close(); } }); "
+                    "if(document.getElementById('panel')?.classList.contains('on')) closePanel(); })()")
+
+    def boardask(self):
+        """BL-316 (#88): the date prompt (#boardDlg), reached as a keyboard user reaches it: on the Work board grouped by due
+        date, Enter on a card's Move button opens its menu, Enter on the first column asks for the date."""
+        b = self.b
+        try:
+            self.goto("work-board")
+            b.eval("(()=>{ const s=document.getElementById('wgrp'); s.value='due'; s.dispatchEvent(new Event('change',{bubbles:true})); })()")
+            b.wait("groupOf(WT)==='due' && document.querySelector('#workBoard .bmv')", 15)
+            bad, opened = self.enter_on("document.querySelector('#workBoard .bmv')", "!!document.getElementById('bdMoveMenu')")
+            if not opened:
+                return ["Enter on a card's Move button opens nothing"]
+            self.press("Enter", 0.6)             # the menu opens with its first column focused
+            try:
+                b.wait("document.getElementById('boardDlg').open", 10)
+            except TimeoutError:
+                return ["Enter on a column opens nothing"]
+            return self.dialog_keys("boardDlg")
+        finally:
+            self.tidy()
+
+    def llcompare(self):
+        """BL-221 (#88): Compare a repeat (#llDlg). The sample vault has no proposal that repeats an item, so one is marked
+        as the page would mark it; its peek's Compare button, Enter opens the dialog."""
+        b = self.b
+        n = None
+        try:
+            self.goto("review")
+            n = b.eval("REV.find(r=>r.kind==='actions')?.n")
+            if n is None:
+                return ["the sample vault has no actions proposal to mark as a repeat"]
+            b.eval("(()=>{ const r=REV.find(r=>r.n===%s); r.dup={id:'ABC-A-001',t:'Chase the SOW',strength:'Likely',staged:true,same:true,state:'open',project:'ABC'}; renderReview(); openProposal(%s); })()" % (n, n))
+            b.wait("document.querySelector('[data-rvll=\"cmp:%s\"]')" % n, 10)
+            bad, opened = self.enter_on("document.querySelector('[data-rvll=\"cmp:%s\"]')" % n, "document.getElementById('llDlg').open")
+            return self.dialog_keys("llDlg") if opened else bad
+        finally:
+            self.tidy("" if n is None else "const r=REV.find(r=>r.n===%s); if(r){ delete r.dup; renderReview(); }" % n)
+
+    def searchprev(self):
+        """The search preview (#searchPrev): a vault search on Files finds a meeting's minutes; Enter on that result previews it.
+        The sample vault's minutes have no text to preview (the server then opens the file instead), so the server's answer for
+        /api/search/preview is the one thing stood in for, as test_snapshots does for Health."""
+        b = self.b
+        try:
+            self.goto("files")
+            b.eval("(()=>{ const real=window.api; window.__realApi=real; window.api=async(p,body)=>p==='/api/search/preview' "
+                   "? {ok:true,name:'2026-10-04 Steering Minutes',html:'<p>Chase the <mark>steering</mark> actions.</p>',cut:false} : real(p,body); })()")
+            b.eval("(()=>{ const i=document.getElementById('vsInput'); i.focus(); i.value='steering'; i.dispatchEvent(new Event('input',{bubbles:true})); })()")
+            try:
+                b.wait("[...document.querySelectorAll('#vsResults .vsr')].some(r=>r.textContent.includes('Minutes'))", 20)
+            except TimeoutError:
+                return ["the search finds no minutes to preview"]
+            bad, opened = self.enter_on("[...document.querySelectorAll('#vsResults .vsr')].find(r=>r.textContent.includes('Minutes'))", "document.getElementById('searchPrev').open")
+            return self.dialog_keys("searchPrev") if opened else bad
+        finally:
+            self.tidy("const i=document.getElementById('vsInput'); if(i&&i.value){ i.value=''; i.dispatchEvent(new Event('input',{bubbles:true})); }")
+
     # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the
     # script, its name in the report and the expected-failures list, its area, what it opens).
     KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
-             ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"))
+             ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"),
+             ("work-board", "boardask", "boardask dialog#boardDlg", "Shell", "Move ▸ a due column", "Due date for"),
+             ("review", "llcompare", "llcompare dialog#llDlg", "Shell", "Compare", "Looks like"),
+             ("files", "searchprev", "searchprev dialog#searchPrev", "Shell", "a search result", "Preview"))
 
     def keyed_dialogs(self, only, report, found):
         for screen, script, sig, area, how, label in self.KEYED:
@@ -478,7 +579,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
         self.keyed_dialogs(only, report, found)
-        msg = judge("keys", found, set(only) | {"cmdk", "parch"})
+        msg = judge("keys", found, set(only) | {k[1] for k in self.KEYED})
         if os.environ.get("SB_ONLY"):
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding

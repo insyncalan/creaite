@@ -167,6 +167,8 @@ export function mountMenuPanel(box, props, items, field) {
 /* ---- openMenu: one menu at a time, opened from a control that is already in the page, or at the pointer ---- */
 /** @type {{host: HTMLDivElement, anchor: HTMLElement | null, props: PopMenuProps} | null} */
 let POP = null;
+/** @type {{anchor: HTMLElement | null, at: number} | null} */
+let PICKED = null;
 
 /** The open menu, placed under its control (or at the pointer), turned to fit the window.
     @param {{anchor: HTMLElement | null, props: PopMenuProps}} p */
@@ -217,11 +219,20 @@ export function openMenu(anchor, props) {
 export function closeMenu(how = "away") {
   const p = POP; if (!p) return;
   POP = null;
+  if (how === "pick") PICKED = { anchor: p.anchor, at: Date.now() };
   render(null, p.host); p.host.remove();
   const a = p.anchor;
   if (a && a.hasAttribute("aria-haspopup")) a.setAttribute("aria-expanded", "false");
   if ((how === "esc" || how === "tab") && a && a.isConnected) a.focus({ preventScroll: true });
   if (p.props.onClose) p.props.onClose(how);
+}
+
+/** The control whose menu an item was just picked from (BL-316): a dialog that item opens gives focus back there, since the item is gone.
+    openMenu only: the Menu component's own pick unmounts its list after onPick, so the item still has focus when a dialog opens.
+    Only for a pick in the last two seconds; reading it clears it. @returns {HTMLElement | null} */
+export function pickedAnchor() {
+  const p = PICKED; PICKED = null;
+  return p && Date.now() - p.at < 2000 && p.anchor && p.anchor.isConnected ? p.anchor : null;
 }
 
 /** Whether a menu is open (from `anchor`, when one is given).
