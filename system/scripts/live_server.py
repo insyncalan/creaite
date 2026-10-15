@@ -3162,9 +3162,17 @@ def mark_interrupted():
 # ignored, never matched away; no message text). It skips while a sweep runs (the sweep records VIPs itself), when
 # VIP alerts are off or nobody is a VIP, and always in the development repository (sample data only). Its own
 # subprocess, so it never queues behind ask creaite. Routes: /api/vip (the unseen alerts), /api/vip/seen.
+# The run reads outside content (mail, Teams) with no guard hook, so it has no vault tools at all: `--tools ""` removes every
+# built-in tool (Bash, Read, Edit, Write and the rest; `claude --help`: "the list of available tools from the built-in set. Use
+# \"\" to disable all tools"), which leaves the Microsoft 365 connector's tools (MCP, not built in; no --strict-mcp-config here),
+# and vip_deny() denies the built-in tools by name as well, so the vault's .claude/settings.json allow rules (tracker.py, review.py,
+# propose.py, Edit projects/**) can never apply. What it can do: the four Microsoft 365 reading tools in VIP_TOOLS. Nothing else.
 
 VIP_TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
              "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
+VIP_ARGS = ["--tools", ""]                  # no built-in tools; the MCP tools stay (they aren't in the built-in set)
+VIP_BUILTIN_DENIES = ["Bash", "Read", "Grep", "Glob", "LS", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch",
+                      "Task", "Agent", "Skill"]
 # BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
 # what these people sent since the last check, then reads each whole conversation it belongs to (everyone's messages and a
 # few earlier ones for context, the title, the people and the attachment names) and reports the outcome in its own words.
@@ -3192,6 +3200,11 @@ VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never 
 VIP_STATUS = {"running": False, "last_error": None}
 
 
+def vip_deny():
+    """The VIP check's deny list: DENY_TOOLS (Microsoft 365 actions included) and every built-in tool, by name."""
+    return DENY_TOOLS + [t for t in VIP_BUILTIN_DENIES if t not in DENY_TOOLS]
+
+
 def vip_check(how="check"):
     """One VIP check. Returns a short note of what happened (also printed)."""
     import sweep
@@ -3210,7 +3223,7 @@ def vip_check(how="check"):
         since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
         prompt = VIP_PROMPT.format(since=since, addresses=", ".join(sorted(vips)))
         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
-                           "--disallowedTools", ",".join(DENY_TOOLS)], prompt)                       # #91: after `--`
+                           "--disallowedTools", ",".join(vip_deny())] + VIP_ARGS, prompt)            # #91: after `--`
         found, why = None, "no reply"
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
