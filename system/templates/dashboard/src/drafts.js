@@ -408,6 +408,9 @@ $("#genDlg").addEventListener("close",()=>{ if(GENFM&&!GENFM.used) draftStat("fo
 /* ===== end BL-224 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootDrafts0203(){
+Object.assign(DRAFTKIND,{"report-section":"report-section","minutes-section":"minutes-section"});   /* #90: the sheet's ✦ */
+DRAFTFEATURES.push(["report-section","Redraft a report section","The weekly or client report's ✦, and Polish, Shorter, Executive or your own words on one section, from the week's facts (a client report: client-visible facts only)"],
+  ["minutes-section","Redraft a minutes section","The minutes' ✦, and Polish, Shorter, Executive or your own words on one section (the distributed version: nothing marked Internal only or withheld)"]);
 Object.assign(DRAFTKIND,{polish:"email","polish-help":"email"});   /* BL-298: the chase pane's Polish for Alan's own item */
 DRAFTFEATURES.push(["email","Polish the email wording","Draft email's opening paragraph reworded in a warm, neutral or firm tone; the table, subject and addresses are untouched"]);
 }

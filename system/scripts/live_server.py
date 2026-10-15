@@ -5063,6 +5063,15 @@ def draft_request(req):
     for k in ("kind", "id", "field", "code", "to", "fc"):
         if isinstance(req.get(k), str) and len(req[k]) <= 80:
             keep[k] = req[k]
+    for k in ("report", "week_ending", "section", "action", "heading", "version"):   # #90: the ✦ on a report or minutes section
+        if isinstance(req.get(k), str) and len(req[k]) <= 80:
+            keep[k] = req[k]
+    for k, n in (("path", 300), ("instruction", 400), ("text", 6000)):
+        if isinstance(req.get(k), str):
+            keep[k] = req[k][:n]
+    if isinstance(req.get("panes"), list):
+        keep["panes"] = [{"title": str(x.get("title") or "")[:60], "text": str(x.get("text") or "")[:6000]}
+                         for x in req["panes"][:6] if isinstance(x, dict)]
     if isinstance(req.get("title"), str):                  # BL-220 (sprint-drafts-extraction): the words Sharpen rewords
         keep["title"] = req["title"][:300]
     if isinstance(req.get("ids"), list):
@@ -6041,6 +6050,7 @@ DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/repo
 # "status-form" on the same run engine, shown with Copy and never saved. The audiences gain "steering" and "sponsor" (internal
 # wording with nothing sensitive), for Generate's Current state too.
 DRAFT_KINDS |= {"status-form"}
+DRAFT_KINDS |= {"report-section", "minutes-section"}      # #90: the ✦ on the weekly, client and minutes sheets
 _generate_before_forms = Handler.generate
 _exec_options_before_forms = Handler.exec_options
 

@@ -304,7 +304,9 @@
     "repeat": true,
     "done": true,
     "sharpen": true,
-    "shape": true
+    "shape": true,
+    "report-section": true,
+    "minutes-section": true
   },
   "logging": {
     "level": "info",

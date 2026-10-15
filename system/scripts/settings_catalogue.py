@@ -56,7 +56,8 @@ ESSENTIAL_ROWS = (
     ("Look and help", "Motion", "Follows your Mac's Reduce motion unless you choose.", ("dashboard.motion",)),
     ("Look and help", "AI drafts", "Suggestions you can use, edit or ignore. Never applied by themselves.",
      ("drafting.update", "drafting.client", "drafting.thinking", "drafting.reason", "drafting.agenda", "drafting.email",
-      "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape")),
+      "drafting.forms", "drafting.repeat", "drafting.done", "drafting.sharpen", "drafting.shape", "drafting.report-section",
+      "drafting.minutes-section")),
     ("Safety", "Daily backup, and a copy in OneDrive",
      "The database is backed up each day; with the projects in OneDrive a closed zip (database, settings, staging, history) "
      "goes to your _Portfolio folder. Chats, who you follow and the live database never leave the laptop.",
@@ -380,6 +381,10 @@ CATALOGUE = {
                          "On: drafts only suggest."),
     "drafting.shape": ("Look and help", "AI drafts: shape the meeting",                     # BL-286 C (joined on release-192)
                        "Read your focus and aim for a meeting and draft its notes, each line cited.", "On: drafts only suggest."),
+    "drafting.report-section": ("Look and help", "AI drafts: report sections",                # #90
+                                "The ✦ on a weekly or client report's section: a fresh draft beside your words.", "On: drafts only suggest."),
+    "drafting.minutes-section": ("Look and help", "AI drafts: minutes sections",
+                                 "The ✦ on a section of the minutes: a fresh draft beside your words.", "On: drafts only suggest."),
     "logging.level": ("Logging", "Log level", "Info, or debug for more detail.", "Info: enough to diagnose, small files."),
     "logging.max_mb": ("Logging", "Log file limit (MB)", "The largest a day's log may grow.",
                        "5 MB: a busy day fits; a loop can't fill the disk."),
