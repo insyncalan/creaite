@@ -302,10 +302,11 @@ def sent_ids(rel, body):
     return {n: by_fp[fingerprint(t)] for n, t in paragraphs(body) if fingerprint(t) in by_fp}
 
 
-# ===== BL-301 B (v20-notes-tab): what the Notes tab reads, and a note's draft while it is typed =====
+# ===== BL-301 B (v20-notes-tab): what the Notes tab reads =====
 # The Notes tab (the dashboard, through the live server's /api/notes/* routes) lists a project's notes from their front matter and
-# the references in their bodies (no text), opens one, keeps a draft in system/staging/drafts/notes/ as Alan types, and writes the
-# file through filechange.py (backed up, logged, undoable) once per editing session. Nothing here writes a project file.
+# the references in their bodies (no text), opens one, and writes the file through filechange.py as Alan types (backed up once per
+# editing session, logged, undoable; #119). Nothing here writes a project file. DRAFT_DIR holds the capture drawer's drafts
+# (capture.py); the Notes tab keeps none since #119, and reach.py still treats any left there as a note's typed copy.
 
 WIKI_LINK = re.compile(r"\[\[([^\[\]\n|]{1,160})(?:\|[^\[\]\n]*)?\]\]")
 ITEM_LINK = re.compile(r"\]\(creaite:item/([A-Za-z0-9-]{3,30})\)")
@@ -383,39 +384,6 @@ def note_of(rel):
         return None
     area = paths.project_area(p)
     return (area[0], p) if area else None
-
-
-def draft_file(rel):
-    """Where a note's draft is kept while it is typed: system/staging/drafts/notes/<16 hex of its path>.json."""
-    return DRAFT_DIR / (hashlib.sha256(str(rel).encode("utf-8")).hexdigest()[:16] + ".json")
-
-
-def save_draft(rel, body, changes, base, at):
-    """Keep what Alan has typed in a note, before the file is written: {path, body, changes, base, at}. Written whole."""
-    DRAFT_DIR.mkdir(parents=True, exist_ok=True)
-    f = draft_file(rel)
-    tmp = f.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"path": str(rel), "body": body, "changes": changes or {}, "base": base, "at": at},
-                              ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, f)
-    return f
-
-
-def read_draft(rel):
-    """The note's draft, or None."""
-    try:
-        d = json.loads(draft_file(rel).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
-    return d if isinstance(d, dict) and d.get("path") == str(rel) else None
-
-
-def drop_draft(rel):
-    """Remove the note's draft (after its file is written)."""
-    try:
-        draft_file(rel).unlink()
-    except OSError:  # no draft to remove: nothing to do
-        pass
 
 
 EDITABLE = ("title", "tags", "pinned", "confidential", "date", "with")
