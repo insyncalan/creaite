@@ -59,4 +59,4 @@ SHA-256 of the `dev/tiptap/` sources it was built from, and the SHA-256 of every
 development only, never at run time (NFR-12): `python3 dev/tools/tiptap.py fetch` (the pinned tarballs, each checked
 against its hash), then `python3 dev/tools/tiptap.py vendor`; commit the folder. `python3 dev/tools/tiptap.py vendor
 --check` rebuilds in memory and compares byte for byte; `dev/tools/check.py` (VENDORED) and
-`dev/tests/test_vendor_tiptap.py` do the same. Nothing in the dashboard loads it yet.
+`dev/tests/test_vendor_tiptap.py` do the same. The dashboard's one editor (`src/core/editor.js`, `creaiteEditor`) loads it (BL-301 A).
