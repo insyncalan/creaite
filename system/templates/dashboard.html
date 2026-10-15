@@ -705,9 +705,9 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .genbody{overflow:auto;min-height:0;padding:20px 24px 4px} .genfoot{display:flex;align-items:center;gap:8px;padding:12px 24px 16px;border-top:1px solid var(--line)} .genfoot .sub{flex:1}
 #genGo .kbd{margin-left:4px} #genGo[aria-disabled="true"]{opacity:.55;cursor:default}
 .genstrip{display:grid;grid-template-columns:1fr 1.25fr 1.3fr .8fr;gap:0 16px;margin-top:16px;padding:12px 0 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.genf{min-width:0} .genf label{display:block;font:500 var(--fs-xs)/16px var(--mono,var(--font));letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.genf{min-width:0} .genf label{display:block;font:500 var(--fs-xs)/16px var(--mono,var(--font));letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .genq{display:flex;align-items:center;justify-content:space-between;gap:4px;width:calc(100% + 8px);margin-left:-8px;height:var(--ctl-h);border:1px solid transparent;border-radius:var(--ctl-r);background:transparent;color:var(--ink);font:500 var(--fs-md)/18px var(--font);padding:0 8px;cursor:pointer;text-align:left}
-.genq .gv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .genq svg{width:14px;height:14px;flex:none;color:var(--muted)}
+.genq:focus-visible{outline-offset:0} .genq .gv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .genq svg{width:14px;height:14px;flex:none;color:var(--muted)}
 .genq:not([aria-disabled="true"]):hover,.genq:focus-visible,.genq[aria-expanded="true"]{border-color:var(--line);background:var(--sunk)} .genq[aria-disabled="true"]{opacity:.55;cursor:default}
 #genCustom{padding:8px 0 0} #genCustom[hidden]{display:none} #genCustom input{width:132px;height:var(--ctl-h);border-radius:var(--ctl-r);background:var(--sunk)}
 .genhint{margin:8px 0 0;min-height:20px}
@@ -41344,7 +41344,7 @@ ${s5}`;
    <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div>
      <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P4.length < 2 ? "disabled" : ""}>‹</button><select id="projSw" aria-label="Switch project">${P4.map((x5) => html`<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${x5.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P4.length < 2 ? "disabled" : ""}>›</button></div></div>
    <div id="cockTabs"></div>
-   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
+   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run || DRRUN ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run || DRRUN ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R3.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v5, b5, nav, ex2]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex2))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v5 && v5 !== "None" ? "bad" : ""}">${v5}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
@@ -41505,7 +41505,7 @@ ${s5}`;
   shared.GEN = { code: null, days: S.genDays || 7, aud: store.get("creaite-gen-aud", "internal"), len: store.get("creaite-gen-len", "standard"), form: store.get("creaite-gen-form", "current"), run: null, ctl: null };
   function openGen(code) {
     (() => {
-      if (shared.RUN || shared.GEN.run) {
+      if (shared.RUN || shared.GEN.run || DRRUN) {
         snack("ask creaite is busy; try again when it's finished");
         return;
       }
@@ -41513,9 +41513,14 @@ ${s5}`;
         snack("Generate needs the live server");
         return;
       }
-      if (shared.RUN || shared.GEN.run) {
+      if (shared.RUN || shared.GEN.run || DRRUN) {
         snack("ask creaite is busy; try again when it's finished");
         return;
+      }
+      if (shared.GEN.code !== code) {
+        $("#genNote").value = "";
+        $("#genFrom").value = "";
+        $("#genTo").value = "";
       }
       shared.GEN.code = code;
       $("#genWho").textContent = pName(code);
@@ -41685,8 +41690,17 @@ ${s5}`;
       const d5 = $("#genDlg");
       return !!d5 && d5.open && (t47 === d5 || d5.contains(t47));
     }, () => {
-      closePicker("owner", false);
+      if (pickerOpenFor()) {
+        closePicker("owner");
+        return;
+      }
       $("#genGo").click();
+    });
+    $("#genDlg").addEventListener("keydown", (e4) => {
+      if (e4.key === "Enter" && e4.target.matches && e4.target.matches("#genFrom,#genTo")) {
+        e4.preventDefault();
+        $("#genGo").click();
+      }
     });
     $("#genForm").addEventListener("submit", (e4) => {
       if (e4.submitter && e4.submitter.value !== "go") return;
@@ -44345,7 +44359,7 @@ ${pre}**Current state title:** ${title}`);
     else len.removeAttribute("aria-disabled");
     len.title = fx2;
     const h5 = $("#genDlg h2");
-    if (h5) h5.textContent = cur ? "Generate current state" : `Write ${/^[aeiou]/i.test(GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1]) ? "an" : "a"} ${GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1].toLowerCase()}`;
+    if (h5) h5.textContent = cur ? "Generate current state" : `Write ${/^[aeiou]/i.test(GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1]) ? "an" : "a"} ${GEN_FORMS.find((x5) => x5[0] === shared.GEN.form)[1].toLowerCase().replace(/^teams/, "Teams")}`;
     genFooter();
     if (!GENFM || GENFM.form !== shared.GEN.form) putHtml($("#genOut"), "");
   }
@@ -44360,11 +44374,19 @@ ${pre}**Current state title:** ${title}`);
     const [form, ...rest] = genSummary(), el2 = $("#genSumTxt"), b5 = document.createElement("b");
     b5.textContent = form;
     el2.replaceChildren(b5, document.createTextNode(` · ${rest.join(" · ")}`));
-    $("#genSetup").hidden = true;
     $("#genSum").hidden = false;
+    if ($("#genSetup").contains(document.activeElement)) $("#genChange").focus();
+    $("#genSetup").hidden = true;
     genFooter();
   }
   function genReset() {
+    GENSEQ++;
+    if (GENCALL && DRRUN) {
+      const r4 = DRRUN;
+      api("/api/ask/stop", { run: r4.id }).then((x5) => {
+        if (!x5.ok) r4.ctl.abort();
+      });
+    }
     if (GENFM && !GENFM.used) draftStat("forms", "rejected");
     GENFM = null;
     putHtml($("#genOut"), "");
@@ -44389,6 +44411,7 @@ ${pre}**Current state title:** ${title}`);
     const one = (x5) => x5.unsourced ? `<mark class="drloose">${fmt(x5.text)}</mark><span class="drtag" role="note">no source</span>` : `<span>${fmt(x5.text)}</span>${x5.refs.map((r4) => `<sup class="drref" data-tip="${esc((src.find((y5) => y5.ref === r4) || {}).text || r4)}">${esc(r4)}</sup>`).join("")}`;
     return `<div class="drtext">${(d5.sentences || []).map(one).join(lines ? "<br>" : " ")}</div>`;
   }
+  var GENSEQ = 0, GENCALL = false;
   async function genFormDraft(body2) {
     const out = $("#genOut"), why = draftWhyNot("status-form");
     if (why) {
@@ -44397,17 +44420,21 @@ ${pre}**Current state title:** ${title}`);
     }
     if (GENFM && !GENFM.used) draftStat("forms", "rejected");
     GENFM = null;
-    const form = shared.GEN.form;
+    const form = shared.GEN.form, mine = ++GENSEQ;
     genFold();
     genBusy(true);
     let res;
+    GENCALL = true;
     try {
-      res = await draftAsk({ kind: "status-form", ...body2, form }, { label: "Writing it from the facts", status: (h5) => putHtml(out, h5 ? `<div class="drstatus" role="status">${h5}</div>` : "") });
+      res = await draftAsk({ kind: "status-form", ...body2, form }, { label: "Writing it from the facts", status: (h5) => {
+        if (mine === GENSEQ) putHtml(out, h5 ? `<div class="drstatus" role="status">${h5}</div>` : "");
+      } });
     } finally {
-      genBusy(false);
+      GENCALL = false;
+      if (mine === GENSEQ) genBusy(false);
     }
-    if (!$("#genDlg").open && res.ok) {
-      draftStat("forms", "rejected");
+    if (mine !== GENSEQ) {
+      if (res.ok && !res.nothing) draftStat("forms", "rejected");
       return;
     }
     if (res.nothing) {

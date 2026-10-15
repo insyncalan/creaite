@@ -356,7 +356,7 @@ export function genFormOptions(){ const off=!draftOn("forms"); if(off&&shared.GE
   /* #110: one hint line under the strip follows the Form and the Audience (was a note under each) */
   $("#genHint").textContent=`${cur?`Into the editor, for you to edit and save.${why?` The other forms: ${why[0].toLowerCase()+why.slice(1)}.`:""}`:"Shown here to copy; never saved."} ${GEN_AUDNOTE[shared.GEN.aud]||""}`.trim();
   if(fx) len.setAttribute("aria-disabled","true"); else len.removeAttribute("aria-disabled"); len.title=fx;   /* Length dims for a form that fixes it, with the reason on hover */
-  const h=$("#genDlg h2"); if(h) h.textContent=cur?"Generate current state":`Write ${/^[aeiou]/i.test(GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1])?"an":"a"} ${GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1].toLowerCase()}`;
+  const h=$("#genDlg h2"); if(h) h.textContent=cur?"Generate current state":`Write ${/^[aeiou]/i.test(GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1])?"an":"a"} ${GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1].toLowerCase().replace(/^teams/,"Teams")}`;
   genFooter(); if(!GENFM||GENFM.form!==shared.GEN.form) putHtml($("#genOut"),""); }
 /* #110: after a draft starts the setup folds to one summary line with Change settings; the footer is then Close and a plain Generate again
    (Copy on the card is the one primary). The DOM is the state: the summary line shows while it is folded. */
@@ -364,9 +364,13 @@ export const genFolded=()=>!$("#genSum").hidden;
 function genFooter(){ const fold=genFolded(), cur=shared.GEN.form==="current";
   $("#genGoT").textContent=fold?"Generate again":cur?"Generate":"Write it"; $("#genGo").classList.toggle("primary",!fold); $("#genCancel").textContent=fold?"Close":"Cancel"; }
 export function genFold(){ const [form,...rest]=genSummary(), el=$("#genSumTxt"), b=document.createElement("b"); b.textContent=form;
-  el.replaceChildren(b,document.createTextNode(` · ${rest.join(" · ")}`)); $("#genSetup").hidden=true; $("#genSum").hidden=false; genFooter(); }
+  el.replaceChildren(b,document.createTextNode(` · ${rest.join(" · ")}`)); $("#genSum").hidden=false;
+  if($("#genSetup").contains(document.activeElement)) $("#genChange").focus();      /* focus never drops to the page behind the dialog when the setup folds */
+  $("#genSetup").hidden=true; genFooter(); }
 /* back to a new dialog: setup showing, no draft (an unused one counts as rejected), Draw on folded, not busy. Change settings, Discard, closing and opening do this */
-export function genReset(){ if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),"");
+export function genReset(){ GENSEQ++;                      /* a draft still being written belongs to the dialog as it was: it is stopped and its result is never shown */
+  if(GENCALL&&DRRUN){ const r=DRRUN; api("/api/ask/stop",{run:r.id}).then(x=>{ if(!x.ok) r.ctl.abort(); }); }
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),"");
   $("#genSetup").hidden=false; $("#genSum").hidden=true; genBusy(false); genFooter(); }
 function genBusy(on){ if(on) $("#genGo").setAttribute("aria-disabled","true"); else $("#genGo").removeAttribute("aria-disabled"); }
 export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[])[1]||"Status", aud=(GEN_AUD.find(x=>x[0]===d.audience)||[])[1]||"", loose=d.unsourced||0;
@@ -379,12 +383,13 @@ export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[]
 export function genFormText(d){ const src=d.sources||[], lines=d.form==="steering"||d.form==="three", fmt=t=>esc(t.replace(/^[-*]\s+/,"• ")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
   const one=x=>x.unsourced?`<mark class="drloose">${fmt(x.text)}</mark><span class="drtag" role="note">no source</span>`:`<span>${fmt(x.text)}</span>${x.refs.map(r=>`<sup class="drref" data-tip="${esc((src.find(y=>y.ref===r)||{}).text||r)}">${esc(r)}</sup>`).join("")}`;
   return `<div class="drtext">${(d.sentences||[]).map(one).join(lines?"<br>":" ")}</div>`; }
+let GENSEQ=0, GENCALL=false;                                   /* which dialog session a draft belongs to; a form draft is being written */
 export async function genFormDraft(body){ const out=$("#genOut"), why=draftWhyNot("status-form"); if(why){ snack(why); return; }
-  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form;
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form, mine=++GENSEQ;
   genFold(); genBusy(true);                                  /* #110: the setup folds to its summary while it is written; Generate again waits */
-  let res; try{ res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:"")}); }
-  finally{ genBusy(false); }
-  if(!$("#genDlg").open&&res.ok){ draftStat("forms","rejected"); return; }   /* closed while it was written: nothing to show, and it was never used */
+  let res; GENCALL=true; try{ res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>{ if(mine===GENSEQ) putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:""); }}); }
+  finally{ GENCALL=false; if(mine===GENSEQ) genBusy(false); }
+  if(mine!==GENSEQ){ if(res.ok&&!res.nothing) draftStat("forms","rejected"); return; }   /* the dialog was closed, reset or opened again meanwhile: this draft is not its own, and was never used */
   if(res.nothing){ putHtml(out,`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`); return; }
   if(!res.ok){ putHtml(out,""); genReset(); snack(res.message||"No draft came back"); return; }   /* a failure gives the setup back */
   GENFM={d:res,form,used:false}; putHtml(out,genFormCard(res)); out.querySelector(".drcard")?.focus?.(); }

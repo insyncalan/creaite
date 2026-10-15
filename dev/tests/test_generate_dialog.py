@@ -10,6 +10,7 @@ reversed in one test and the controls still work), so a redraw loses nothing.
 Run: python3 dev/tests/test_generate_dialog.py   (needs Google Chrome; skipped otherwise)
 A stand-in Claude (drafts_fake.py) words the facts, so no model is called.
 """
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -59,7 +60,7 @@ class GenerateDialog(DraftCase):
 
     def hold_drafts(self):
         """Hold /api/draft until released, and count what is sent (to see the state while a draft is being written)."""
-        self.b.eval("""(()=>{ window.__sent=0; window.__f=window.fetch; window.fetch=(u,o)=>{ if(String(u).includes('/api/draft')){ window.__sent++;
+        self.b.eval("""(()=>{ window.__sent=0; window.__f=window.fetch; window.fetch=(u,o)=>{ if(/[/]api[/]draft$/.test(String(u))){ window.__sent++;
           if(window.__hold) return new Promise(r=>{ window.__rel=()=>r(window.__f(u,o)); }); } return window.__f(u,o); }; window.__hold=true; })()""")
 
     # ── the frame ──
@@ -415,7 +416,7 @@ class GenerateDialog(DraftCase):
 
     def test_a_failed_draft_gives_the_setup_back(self):
         b = self.b
-        b.eval("""(()=>{ const f=window.fetch; window.fetch=(u,o)=>String(u).includes('/api/draft')?Promise.resolve(new Response(JSON.stringify({ok:false,message:'No draft today'}),
+        b.eval("""(()=>{ const f=window.fetch; window.fetch=(u,o)=>/[/]api[/]draft$/.test(String(u))?Promise.resolve(new Response(JSON.stringify({ok:false,message:'No draft today'}),
           {status:500,headers:{'Content-Type':'application/json'}})):f(u,o); })()""")
         self.pick("#genFormKind", "Teams message")
         b.click("#genGo")
@@ -432,6 +433,146 @@ class GenerateDialog(DraftCase):
         b.wait("document.getElementById('curEd')", 30)
         self.assertFalse(b.eval("document.getElementById('genDlg').open"))
         self.assertTrue(b.eval("document.getElementById('genSum').hidden"))                           # the fold is for the forms shown here
+
+    # ── review fixes (a draft belongs to the dialog that asked for it; focus; ⌘↵ and Enter) ──
+    def stub_first(self, text="Quick update: UAT is at risk because data access is late."):
+        """Answer a first draft with a made-up one, held until released, and count the stops that are sent."""
+        self.b.eval("""(()=>{ window.__stops=0; const f=window.fetch; window.fetch=(u,o)=>{ if(String(u).includes('/api/ask/stop')) window.__stops++; return f(u,o); }; })()""")
+        self.hold_drafts()
+        self.b.eval("""(()=>{ const f=window.fetch, d=%s; window.fetch=(u,o)=>{ if(/[/]api[/]draft$/.test(String(u))&&o&&o.body){ window.__sent++; const ev=t=>'data: '+JSON.stringify(t)+'\\n\\n';
+          const go=()=>new Response(new Blob([ev({type:'step'}),ev({type:'draft',...d}),ev({type:'done',run:JSON.parse(o.body).run})]).stream(),{status:200,headers:{'Content-Type':'text/event-stream'}});
+          return window.__hold?new Promise(r=>{ window.__rel=()=>r(go()); }):Promise.resolve(go()); } return f(u,o); }; })()""" % json.dumps(
+            {"text": text, "sentences": [{"text": text, "refs": ["S1"], "unsourced": False}], "sources": [{"id": "F1", "ref": "S1", "text": "Tracker: UAT data is late"}],
+             "unsourced": 0, "words": 11, "lines": 1, "length_notes": [], "form": "teams", "audience": "internal"}))
+
+    def test_a_draft_still_being_written_never_lands_in_a_dialog_opened_for_another_project(self):
+        b = self.b
+        self.stub_first("ABC's internal email text, not for DEF.")
+        self.pick("#genFormKind", "Email paragraph")
+        b.eval("document.getElementById('genNote').value='keep me'")
+        b.click("#genGo")
+        b.wait("window.__sent===1")
+        b.click("#genCancel")                                                                         # Close, while it is written
+        b.wait("!document.getElementById('genDlg').open")
+        self.assertEqual(b.eval("window.__stops"), 1)                                                  # the run is stopped
+        b.eval("openGen('DEF')")                                                                      # the run has not ended: nothing opens over it
+        self.assertFalse(b.eval("document.getElementById('genDlg').open"))
+        self.assertIn("busy", b.eval("document.getElementById('snackT').textContent"))
+        b.eval("window.__hold=false; window.__rel()")                                                 # the run ends (ABC's draft arrives late)
+        b.pump(0.5)
+        self.assertFalse(b.eval("document.getElementById('genDlg').open"))
+        for _ in range(50):
+            if self.stats().get("forms", {}).get("rejected") == 1:
+                break
+            b.pump(0.1)
+        self.assertEqual(self.stats().get("forms", {}).get("rejected"), 1)                              # never seen, never used
+        b.eval("openGen('DEF')")
+        b.wait("document.getElementById('genDlg').open")
+        self.assertEqual(b.eval("document.getElementById('genWho').textContent"), "Digital Enablement")
+        self.assertEqual(b.eval("document.getElementById('genOut').innerHTML"), "")
+        self.assertEqual(b.eval("document.querySelector('#genOut .drcard')"), None)
+        self.assertTrue(self.visible("#genSetup"))
+        self.assertFalse(self.visible("#genSum"))
+        self.assertEqual(b.eval("document.getElementById('genNote').value"), "")                       # the steer was for ABC
+
+    def test_change_settings_while_writing_stops_the_draft_and_its_result_never_shows(self):
+        b = self.b
+        self.stub_first("An internal email paragraph.")
+        self.pick("#genFormKind", "Email paragraph")
+        b.click("#genGo")
+        b.wait("window.__sent===1")
+        b.click("#genChange")                                                                         # Change settings, mid-write
+        self.assertEqual(b.eval("window.__stops"), 1)
+        self.assertTrue(self.visible("#genSetup"))
+        b.eval("window.__hold=false; window.__rel()")                                                 # the first run lands late
+        b.pump(0.5)
+        self.assertEqual(b.eval("document.getElementById('genOut').innerHTML"), "")                    # no Internal card under a changed setup
+        self.assertTrue(self.visible("#genSetup"))
+        self.assertFalse(self.visible("#genSum"))
+        self.pick("#genAud", "Client-safe")
+        self.pick("#genFormKind", "Teams message")
+        self.stub_first("Fresh Teams message for the client.")
+        b.eval("window.__hold=false")
+        b.click("#genGo")
+        b.wait("document.querySelector('#genOut .drcard')", 30)
+        self.assertEqual(b.eval("document.getElementById('genSumTxt').textContent"), "Teams message · last 7 days · Client-safe · client-visible items")
+        self.assertIn("Fresh Teams message for the client.", b.eval("document.querySelector('#genOut .drtext').textContent"))
+        self.assertNotIn("internal email", b.eval("document.getElementById('genOut').textContent"))
+
+    def test_open_gen_is_busy_while_a_draft_is_written(self):
+        b = self.b
+        self.stub_first()
+        self.pick("#genFormKind", "Teams message")
+        b.click("#genGo")
+        b.wait("window.__sent===1")
+        self.assertEqual(b.eval("document.getElementById('genGo').getAttribute('aria-disabled')"), "true")
+        b.eval("window.__hold=false; window.__rel()")
+        b.wait("document.querySelector('#genOut .drcard')", 30)
+
+    def test_focus_stays_in_the_dialog_when_the_setup_folds(self):
+        b = self.b
+        self.stub_first()
+        self.pick("#genFormKind", "Teams message")
+        b.eval("document.getElementById('genNote').focus()")
+        b.key("Enter", modifiers=4)                                                                    # ⌘↵ in Steer it folds the setup
+        b.wait("window.__sent===1")
+        self.assertEqual(b.eval("document.activeElement.id"), "genChange")
+        self.assertTrue(b.eval("document.getElementById('genDlg').contains(document.activeElement)"))
+
+    def test_cmd_enter_with_a_menu_open_only_closes_the_menu(self):
+        b = self.b
+        self.hold_drafts()
+        self.pick("#genFormKind", "Teams message")
+        b.click("#genAud")
+        b.wait("document.querySelector('.pkpop [role=option]')")
+        b.key("ArrowDown")                                                                             # the focused option is Client-safe, not yet picked
+        self.assertEqual(b.eval("document.activeElement.textContent.trim()"), "Client-safe")
+        b.key("Enter", modifiers=4)
+        b.pump(0.2)
+        self.assertEqual(b.eval("!!document.querySelector('.pkpop')"), False)
+        self.assertEqual(b.eval("window.__sent"), 0)                                                    # nothing was generated with the old value
+        self.assertEqual(b.eval("GEN.aud"), "internal")
+        self.assertEqual(b.eval("document.querySelector('#genAud .gv').textContent"), "Internal")
+        self.assertEqual(b.eval("document.activeElement.id"), "genAud")
+        b.key("Enter", modifiers=4)                                                                    # with no menu open it generates, as the strip says
+        b.wait("window.__sent===1")
+
+    def test_enter_in_a_date_box_generates_and_never_closes_the_dialog(self):
+        b = self.b
+        self.hold_drafts()
+        self.pick("#genFormKind", "Teams message")
+        self.pick("#genDays", "Dates")
+        b.eval("document.getElementById('genFrom').value='abc'")
+        b.key("Enter")
+        b.wait("document.querySelector('#snack.on')")
+        self.assertIn("Not a date creaite knows", b.eval("document.getElementById('snackT').textContent"))
+        self.assertTrue(b.eval("document.getElementById('genDlg').open"))                              # a bad date is refused, the dialog stays
+        b.eval("document.getElementById('genFrom').value='01-10-2026'; document.getElementById('genTo').focus()")
+        b.key("Enter")
+        b.wait("window.__sent===1")
+        self.assertTrue(b.eval("document.getElementById('genDlg').open"))
+        self.assertEqual(b.eval("document.getElementById('genSumTxt').textContent"), "Teams message · 01-10-2026 to today · Internal · 5 sources")
+
+    def test_the_steer_and_the_dates_do_not_carry_over_to_another_project(self):
+        b = self.b
+        b.eval("document.getElementById('genNote').value='keep me'; document.getElementById('genFrom').value='01-10-2026'")
+        b.click("#genCancel")
+        b.eval("openGen('ABC')")                                                                       # the same project: kept
+        b.wait("document.getElementById('genDlg').open")
+        self.assertEqual(b.eval("document.getElementById('genNote').value"), "keep me")
+        b.click("#genCancel")
+        b.eval("openGen('DEF')")
+        b.wait("document.getElementById('genDlg').open")
+        self.assertEqual(b.eval("[document.getElementById('genNote').value,document.getElementById('genFrom').value,document.getElementById('genTo').value]"), ["", "", ""])
+
+    def test_the_focus_ring_does_not_cover_the_label_above(self):
+        b = self.b
+        b.eval("document.getElementById('genFormKind').focus()")
+        b.key("Tab")
+        lab, btn = self.rect(".genf[data-gfield=aud] label"), self.rect("#genAud")
+        off = b.eval("parseFloat(getComputedStyle(document.getElementById('genAud')).outlineOffset)")
+        w = b.eval("parseFloat(getComputedStyle(document.getElementById('genAud')).outlineWidth)")
+        self.assertGreaterEqual(btn["t"] - w - off, lab["b"])
 
     # ── light and dark ──
     def test_text_is_readable_in_light_and_dark(self):

@@ -134,7 +134,7 @@ class FormsCase(DraftCase):
         self.assertIn("Quick update: UAT is at risk", b.eval("document.querySelector('#genOut .drtext').textContent"))
         self.assertIsNone(b.eval("document.querySelector('#genOut [data-gfdo=rich]')"))       # Teams: plain text only
         self.assertEqual(b.eval("[...document.querySelectorAll('#genOut button')].map(x=>x.textContent)"), ["Discard", "Copy as plain text"])
-        self.assertEqual(b.eval("document.getElementById('genDlg').querySelector('h2').textContent"), "Write a teams message")
+        self.assertEqual(b.eval("document.getElementById('genDlg').querySelector('h2').textContent"), "Write a Teams message")
         b.eval("window.__clip=[]; navigator.clipboard.writeText=async t=>{ window.__clip.push(t); };")
         b.click("#genOut [data-gfdo=plain]")
         b.wait("window.__clip.length===1")
@@ -191,7 +191,7 @@ class FormsCase(DraftCase):
             self.pick("#genFormKind", label)
             titles[label] = b.eval("document.querySelector('#genDlg h2').textContent")
         self.assertEqual(titles, {"Email paragraph": "Write an email paragraph", "Steering note": "Write a steering note",
-                                  "Three-line update": "Write a three-line update", "Teams message": "Write a teams message"})
+                                  "Three-line update": "Write a three-line update", "Teams message": "Write a Teams message"})
         b.eval("document.getElementById('genDlg').close()")
 
 

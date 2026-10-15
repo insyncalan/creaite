@@ -16,7 +16,7 @@ import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, MOD, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { draftBtn, draftStat, draftWhyNot, genFormDraft, genFormOptions, genReset } from "./drafts.js";
+import { draftBtn, draftStat, draftWhyNot, DRRUN, genFormDraft, genFormOptions, genReset } from "./drafts.js";
 import { FOPEN } from "./files.js";
 import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
@@ -62,7 +62,7 @@ export function renderCockpit(code){ (()=>{ const p=P.find(x=>x.code===code); if
    <div class="hhead"><div style="flex:1"><h1>${p.name}</h1><div class="sub">${(p.client||"Client not set")} · client reports ${((p.rhythm||"weekly").toLowerCase())}</div></div>
      <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P.length<2?"disabled":""}>‹</button><select id="projSw" aria-label="Switch project">${P.map(x=>html`<option value="${x.code}" ${x.code===code?"selected":""}>${x.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P.length<2?"disabled":""}>›</button></div></div>
    <div id="cockTabs"></div>
-   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
+   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p.code}" aria-haspopup="dialog"${!viaServer()||shared.RUN||shared.GEN.run||DRRUN?' aria-disabled="true"':""}`,!viaServer()?"Generate needs the live server":shared.RUN||shared.GEN.run||DRRUN?"ask creaite is busy":"Generate current state",SPARKI,"second"))}${raw(pencil(`data-edcur="${p.code}"`,"Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p.health))}</span>${raw(spark(p))}<span class="sub">${p.reason}</span></div>${raw(pencil(`data-edproj="${p.code}"`,"Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions",A.filter(x=>x.p===code&&overdue(x)).length,1,"actions:overdue"],["No due date",undatedWork(code).length,0,""],["Urgent risks",R.filter(r=>r.p===code&&r.st==="Open"&&r.pr==="Urgent").length,1,"raid:urgentonly"],["Milestone slip",p.slip?p.slip+" days":"None",p.slip,""],["Due in "+S.dueSoon+" days",A.filter(x=>x.p===code&&soon(x)).length,0,"actions:soon",{st:["Open","Delayed"]}]].map(([l,v,b,nav,ex])=>`<div class="evbox${nav?" click":""}" ${nav?`data-nav="${esc(navOf(`${nav}:${code}`,ex))}" role="link" tabindex="0" title="Open in Work"`:""}><div class="v ${b&&v&&v!=="None"?"bad":""}">${v}</div><div class="l">${l}</div></div>`).join(""))}</div></div>
@@ -130,7 +130,8 @@ export function genPick(btn){ if(btn.getAttribute("aria-disabled")==="true") ret
   openPicker(btn,{label:c.label,value:c.value,options:c.options,onPick:v=>{ c.set(v); genOptions(); }}); }
 shared.GEN={code:null,days:S.genDays||7,aud:store.get("creaite-gen-aud","internal"),len:store.get("creaite-gen-len","standard"),form:store.get("creaite-gen-form","current"),run:null,ctl:null};
   
-export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Generate needs the live server"); return; } if(shared.RUN||shared.GEN.run){ snack("ask creaite is busy; try again when it's finished"); return; }
+export function openGen(code){ (()=>{ if(shared.RUN||shared.GEN.run||DRRUN){ snack("ask creaite is busy; try again when it's finished"); return; } if(!viaServer()){ snack("Generate needs the live server"); return; } if(shared.RUN||shared.GEN.run||DRRUN){ snack("ask creaite is busy; try again when it's finished"); return; }
+  if(shared.GEN.code!==code){ $("#genNote").value=""; $("#genFrom").value=""; $("#genTo").value=""; }   /* another project: no steer or dates from the last one */
   shared.GEN.code=code; $("#genWho").textContent=pName(code);
   genReset();   /* a dialog opened again starts as a new one: setup showing, no draft, Draw on folded */
   $("#genCustom").hidden=shared.GEN.days!=="custom";
@@ -175,7 +176,9 @@ $("#genDlg").addEventListener("click",e=>{ const st=e.target.closest("[data-gsta
   if(e.target.closest("#genChange")){ genReset(); $("#genDays").focus(); } });
 $("#genSrc").addEventListener("change",()=>genSrcLine());
 /* ⌘↵ generates here (#101 has not built the shared dialog key yet; this is the one on this dialog) */
-onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t)); },()=>{ closePicker("owner",false); $("#genGo").click(); });
+onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t)); },()=>{ if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
+  $("#genGo").click(); });
+$("#genDlg").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("#genFrom,#genTo")){ e.preventDefault(); $("#genGo").click(); } });   /* Enter in a date box generates, as the primary button; it never closes the dialog */
 $("#genForm").addEventListener("submit",e=>{ if(e.submitter&&e.submitter.value!=="go") return; e.preventDefault(); if($("#genGo").getAttribute("aria-disabled")==="true") return;   /* a draft is being written */
   let from, to=TODAY; if(shared.GEN.days==="custom"){ const f=$("#genFrom").value.trim(), t=$("#genTo").value.trim(); if(!DDATE.test(f)||(t&&!DDATE.test(t))){ snack("Not a date creaite knows. "+DATE_HELP); return; } from=toIso(f); if(t) to=toIso(t); }
   else from=new Date(Date.now()-shared.GEN.days*864e5).toISOString().slice(0,10);
