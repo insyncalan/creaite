@@ -6,7 +6,7 @@ SendMessage, Workflow…). So each kind's `--tools` is pinned here, a new kind w
 kind needs are denied by name in every run as well (builtin_denies: F3's permissions.run_deny_extras() plus every name in
 permissions.KNOWN_BUILTINS, the one list, that the run's --tools doesn't name). No Task in a chat (#116 review).
 A kind that calls an MCP tool lists ToolSearch (`--tools ""` hides deferred MCP tools; #116, Alan's live check). F4: Search's
-answer also has `--strict-mcp-config`. The VIP check keeps main's command line (its own branch changes it).
+answer also has `--strict-mcp-config`. The VIP check keeps main's command line; its deny list adds run_deny_extras() (#116 M1).
 
 Each kind is started through the run engine with a stand-in `claude` (CREAITE_CLAUDE) that records its argv; nothing calls Claude.
 
@@ -149,6 +149,26 @@ class Table(unittest.TestCase):
             self.assertTrue(set(P.KNOWN_BUILTINS) - allowed <= denied, kind)
             self.assertFalse(allowed & denied, kind)                     # what --tools names is never denied as a whole
 
+    def test_every_kind_denies_run_deny_extras_on_its_command_line(self):
+        import permissions as P
+        extras = P.run_deny_extras()
+        self.assertTrue({"mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI",
+                         "mcp__claude_ai_Linear", "mcp__claude-vscode"} <= set(extras))
+        for kind, *_ in TABLE:                                           # #116 review M1: every started kind, 'only' included
+            denied = flag(self.calls[kind], "--disallowedTools").split(",")
+            for t in extras:
+                self.assertIn(t, denied, f"{kind}: {t}")
+
+    def test_no_kind_has_a_subagent(self):
+        for kind, *_ in TABLE:                                           # #116 review L1: Task and Agent denied by name everywhere
+            a = self.calls[kind]
+            allowed, denied = flag(a, "--allowedTools").split(","), flag(a, "--disallowedTools").split(",")
+            tools = flag(a, "--tools").split(",")
+            for t in ("Task", "Agent"):
+                self.assertIn(t, denied, kind)
+                self.assertNotIn(t, tools, kind)
+                self.assertFalse(any(x == t or x.startswith(t + "(") for x in allowed), kind)
+
     def test_prompt_still_last(self):
         for kind, *_ in TABLE:
             a = self.calls[kind]
@@ -178,7 +198,12 @@ class Constants(unittest.TestCase):
             self.assertIn(t, L.NEVER_BUILTINS)
         for k in L.KIND_ARGS:                                             # no kind's list names one
             self.assertFalse(set(L.KIND_ARGS[k][1].split(",")) & set(L.NEVER_BUILTINS), k)
-        self.assertEqual(L.vip_deny(), L.DENY_TOOLS + [t for t in L.VIP_BUILTIN_DENIES if t not in L.DENY_TOOLS])   # main's, unchanged
+        import permissions as P
+        expected = list(L.DENY_TOOLS)                                     # #116 review M1: run_deny_extras() in the VIP check too
+        for t in P.run_deny_extras() + L.VIP_BUILTIN_DENIES:
+            if t not in expected:
+                expected.append(t)
+        self.assertEqual(L.vip_deny(), expected)
 
     def test_the_deny_lists_are_derived_from_the_one_list(self):
         import live_server as L
