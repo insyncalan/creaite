@@ -385,6 +385,26 @@ class CloseTests(Base):
                 self.assertIsNone(self.closes())
                 (self.v.root / "system/staging/vip.json").unlink()
 
+    def test_evidence_in_single_curly_or_guillemet_quotes_or_copied_unquoted_is_refused(self):
+        run = "the revised plan is attached here for everyone to review now ok"
+        summary = f"Mia said {run}, thanks."
+        for ev in (f"She wrote '{run}'", f"She wrote \u2018{run}\u2019", f"\u00ab{run}\u00bb", f"\u201c{run}\u201d",
+                   f"Sara: {run.upper()} thanks", f"Sara: {run.replace(' ', ', ')} thanks"):
+            with self.subTest(ev):
+                got = self.check([owner_done(summary=summary, closes={"id": "ABC-A-007", "evidence": ev})])
+                self.assertIsNone(self.closes())
+                self.assertEqual(got["counts"].get("closes_quoted"), 1)
+                (self.v.root / "system/staging/vip.json").unlink()
+
+    def test_short_evidence_and_apostrophes_still_pass(self):
+        summary = "Mia said the revised plan is attached here for everyone to review now ok, thanks."
+        for ev in ("Alan sent the revised plan", "Sara's plan isn't late; Ben's room is booked and Mia's team agreed",
+                   "Sara said 'sent' and 'done' today", "Sara: the revised plan is attached here for everyone"):
+            with self.subTest(ev):
+                self.check([owner_done(summary=summary, closes={"id": "ABC-A-007", "evidence": ev})])
+                self.assertEqual(self.closes()["evidence"], ev)
+                (self.v.root / "system/staging/vip.json").unlink()
+
     def test_an_action_raised_after_the_message_never_closes(self):
         with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
             con.execute("UPDATE actions SET raised = '2026-10-09' WHERE id = 'ABC-A-007'")
