@@ -13,7 +13,7 @@ import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNote
   noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
   useStaleDraft } from "../../stores/notes.js";
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
-import { aiAction } from "../../stores/aiEdit.js";
+import { aiAction, aiBar } from "../../stores/aiEdit.js";
 import { FindUpdates } from "./FindUpdates.jsx";
 import { Dialog } from "../Dialog.jsx";
 import { Icon } from "../Icon.jsx";
@@ -135,6 +135,9 @@ aiAction({ id: "fu-line", name: "Make this an action, a risk, a decision or an u
     if (!p) { snack("Select text on one line of the note: Find updates looks at that line only"); return; }
     toggleFind(true, p);
   } });
+/* v2.0.0 polish B (#61): Find updates opening, by its button, the address or the AI menu, takes the AI bar down: the bar belonged to the
+   selection it floated over, and the panel is where the person is looking now */
+noteFind.subscribe(on => { if (on) aiBar.value = null; });
 /** ✦ Find updates, in the note's header (the slot part B left for it). */
 function FindButton() {
   const on = noteFind.value;

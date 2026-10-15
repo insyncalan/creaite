@@ -50,6 +50,25 @@ class PolishB(AiInANote):
             self.assertIn("clear", seen)
             b.eval("RB.state=''; rbDraw(); document.getElementById('noteFind').click()")
 
+    def test_opening_find_updates_closes_the_ai_bar(self):
+        b = self.b
+        for w in WIDTHS:
+            b.resize(w, 900)
+            self.open_note()
+            self.select("probably moves two weeks")
+            self.assertTrue(b.eval("!!document.querySelector('#aiLayer .aibar')"))
+            b.click("#noteFind")
+            b.wait("!!document.querySelector('#noteSide aside.fu')", 20)
+            b.pump(0.4)
+            self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar')"), f"{w}: the bar is still up")
+            b.eval("document.getElementById('noteFind').click()")
+            b.wait("!document.querySelector('#noteSide aside.fu')", 20)
+            self.select("Sandbox access granted")                          # and by the address (&find=1), with a selection up
+            b.eval("noteFind.value=false; noteFind.value=true")
+            b.pump(0.4)
+            self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar')"), f"{w}: the bar is still up (address)")
+            b.eval("document.getElementById('noteFind').click()")
+
 
 for _n in [n for n in dir(AiInANote) if n.startswith("test_") and n not in PolishB.__dict__]:   # the base class's own tests live in test_ai_select_notes
     setattr(PolishB, _n, None)

@@ -52735,6 +52735,9 @@ ${d5.text}`);
       toggleFind(true, p6);
     }
   });
+  noteFind.subscribe((on2) => {
+    if (on2) aiBar.value = null;
+  });
   function FindButton() {
     const on2 = noteFind.value;
     return /* @__PURE__ */ u2(
