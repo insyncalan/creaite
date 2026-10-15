@@ -3192,11 +3192,12 @@ def mark_interrupted():
 
 # ===== Sweep and alerts (BL-97, BL-99, BL-98) =====
 # BL-99: while the server runs, a VIP check looks for mail and Teams messages from the VIP addresses since the last
-# check (BL-342 Part 3 B: calendar invites are left out, VIP_INVITES): on start-up, then every vip.check_minutes. It runs Claude headless with Microsoft 365 search tools only
-# (read-only), gets back a JSON list of references and gists, and sweep.py records the alerts (from a VIP only; never
-# ignored, never matched away; no message text). It skips while a sweep runs (the sweep records VIPs itself), when
-# VIP alerts are off or nobody is a VIP, and always in the development repository (sample data only). Its own
-# subprocess, so it never queues behind ask creaite. Routes: /api/vip (the unseen alerts), /api/vip/seen.
+# check (BL-342 Part 3 B: calendar invites are left out, VIP_INVITES): on start-up, then every vip.check_minutes. It
+# runs Claude headless with Microsoft 365 search tools only (read-only), gets back a JSON list of references and gists,
+# and sweep.py records the alerts (from a VIP only; never ignored, never matched away; no message text). It skips while
+# a sweep runs (the sweep records VIPs itself), when VIP alerts are off or nobody is a VIP, and always in the
+# development repository (sample data only). Its own subprocess, so it never queues behind ask creaite. Routes:
+# /api/vip (the unseen alerts), /api/vip/seen.
 # The run reads outside content (mail, Teams) with no guard hook, so it has no vault tools at all. It is started with no
 # `--tools` flag (#116, 15-10-2026: under `--tools ""` the check reached no Microsoft 365 tool on laptop 1, so the flag is
 # gone) and every built-in tool but ToolSearch denied by name in --disallowedTools (vip_deny()). A deny beats the vault's
