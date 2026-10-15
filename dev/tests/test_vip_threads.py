@@ -355,6 +355,31 @@ sweep.vip_save(st)""")
         self.assertIn("Mia asks how many test licences", lines[1])
         self.assertEqual(spec["items"][0]["suggested"]["threads"], [a1, a2])
 
+    def test_a_change_made_in_review_is_kept_when_a_second_thread_is_logged(self):
+        a1, a2 = self.match("Project Falcon go-live"), self.match("Licence numbers")
+        first = self.log(a1)
+        f = self.v.root / "system/staging" / first["proposal"]
+        spec = json.loads(f.read_text())
+        spec["items"][0]["changes"]["latest_update"] = "ALAN EDITED TEXT"                       # edited in Review
+        f.write_text(json.dumps(spec))
+        self.log(a2)
+        (spec,) = self.staged()
+        lines = spec["items"][0]["changes"]["latest_update"].split("\n")
+        self.assertEqual(lines[0], "ALAN EDITED TEXT")
+        self.assertEqual(len(lines), 2)
+        self.assertIn("Mia asks how many test licences", lines[1])
+
+    def test_a_merged_card_keeps_the_thread_it_had_logged(self):
+        a1, a2 = self.match("Project Falcon go-live"), self.match("Licence numbers")
+        self.log(a2)
+        py(self.v, f"""st = sweep.vip_state()
+by = {{a['id']: a for a in st['alerts']}}
+sweep.card_merge(st, by[{a1!r}], by[{a2!r}])
+sweep.vip_save(st)""")
+        got = py(self.v, f"print(json.dumps(sweep.vip_update_stage({a1!r})))")
+        self.assertFalse(got["added"])                                                           # the same thread, already in
+        self.assertEqual(len(self.staged()[0]["items"][0]["suggested"]["lines"]), 1)
+
     def test_log_is_refused_without_a_match_for_a_closed_item_and_for_a_private_thread(self):
         aid = card(self.v, "Project Falcon go-live")["id"]
         with self.assertRaises(AssertionError) as e:

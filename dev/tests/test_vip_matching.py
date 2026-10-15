@@ -60,6 +60,10 @@ class MatchTests(unittest.TestCase):
         from contextlib import closing
         with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:
             con.execute("UPDATE actions SET status = 'Closed', closed = '2026-10-03' WHERE id = 'ABC-A-003'")
+            # F7: another project with an open action, so an item of another project is really refused
+            con.execute("INSERT INTO projects (code, name) VALUES ('XYZ', 'Project Other')")
+            con.execute("INSERT INTO actions (id, project, description, owner, raised, source) VALUES "
+                        "('XYZ-A-001', 'XYZ', 'Send revised SOW to client', 'Omar Ali', '2026-10-01', 'Email · test')")
             con.commit()
         self.ids = [r["id"] for r in v.rows("actions")]
 
@@ -269,6 +273,33 @@ class MatchTests(unittest.TestCase):
         before = (self.v.root / "system/tracker.db").read_bytes()
         record(self.v, [conv(1, match={"id": "ABC-A-001", "relation": "update", "why": "x"})], "check")
         self.assertEqual((self.v.root / "system/tracker.db").read_bytes(), before)
+        aid = vip_file(self.v)["alerts"][0]["id"]
+        py(self.v, f"print(json.dumps(sweep.vip_log('{aid}')))")                              # F4: a Log leaves the tracker as it was
+        self.assertEqual((self.v.root / "system/tracker.db").read_bytes(), before)
+
+    def test_the_count_follows_dismiss_handled_and_undo(self):
+        m = {"id": "ABC-A-001", "relation": "update", "why": "Both ask."}
+        record(self.v, [conv(1, match=m), conv(2, match=m)], "check")
+        a1, a2 = [c["id"] for c in vip_file(self.v)["alerts"]]
+        counts = lambda: sorted((c["id"], c["match"]["count"]) for c in vip_file(self.v)["alerts"] if not c.get("seen"))  # noqa: E731
+        py(self.v, f"print(json.dumps(sweep.vip_dismiss(['{a1}'])))")
+        self.assertEqual(counts(), [(a2, 1)])                                                  # F1: the shown card counts alone
+        py(self.v, f"print(json.dumps(sweep.vip_undismiss(['{a1}'])))")
+        self.assertEqual([n for _, n in counts()], [2, 2])
+        py(self.v, f"print(json.dumps(sweep.vip_handled(['{a2}'])))")
+        self.assertEqual(counts(), [(a1, 1)])
+        py(self.v, f"print(json.dumps(sweep.vip_seen(['{a1}'])))")
+        self.assertEqual(vip_file(self.v)["alerts"][0]["match"]["count"], 1)
+
+    def test_a_different_person_with_the_same_first_name_is_not_alan(self):
+        chase = {"id": "ABC-A-001", "relation": "chase", "why": "Alan asked and had no answer."}
+        for who, want in (("Alan Jones <alan.jones@other.example>", "update"), ("Alan <alan@other.example>", "update"),
+                          ("Alan Carter <alan.carter@other.example>", "update"), ("Alan Carter", "chase"),
+                          ("Alan Carter <alan.carter@brightwater.example>", "chase")):
+            with self.subTest(who):
+                record(self.v, [conv(1, last_from=who, match=chase)], "check")
+                self.assertEqual(vip_file(self.v)["alerts"][0]["match"]["relation"], want)
+                (self.v.root / "system/staging/vip.json").unlink()
 
 
 if __name__ == "__main__":

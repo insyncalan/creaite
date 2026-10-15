@@ -2517,7 +2517,7 @@ def sweep_alerts(settings):
             "agendas_shared": paths.external(),                # projects in OneDrive: warn before the first page there
             "vip": {"enabled": vs.get("enabled", True), "notify": vs.get("notify", True),
                     "check_minutes": vs.get("check_minutes", 30), "last_check": st["last_check"],
-                    "alerts": [{k: v for k, v in a.items() if k != "keys"}     # BL-342: the card's keys stay in vip.json
+                    "alerts": [{k: v for k, v in a.items() if k not in ("keys", "ids")}     # BL-342: the card's keys stay in vip.json
                                for a in sweep.vip_sort([a for a in st["alerts"] if not a.get("seen")])],
                     "people": {v["name"]: v["kind"] for v in propose.vip_people()}}}
 

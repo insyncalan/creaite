@@ -65,6 +65,7 @@ import json
 import os
 import re
 import sys
+from contextlib import closing
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -971,6 +972,7 @@ def vip_state():
 def vip_save(st):
     """Write the VIP alerts to system/staging/vip.json, atomically (BL-99)."""
     VIP_FILE.parent.mkdir(parents=True, exist_ok=True)
+    vip_match_counts(st.get("alerts") or [])                       # BL-342: the count follows every change of state or seen
     tmp = VIP_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(st, indent=1, ensure_ascii=False), encoding="utf-8")
     tmp.replace(VIP_FILE)
@@ -1472,6 +1474,7 @@ def card_merge(st, keep, drop):
         keep["confidential"] = True
     keep["keys"] = list(dict.fromkeys((keep.get("keys") or []) + (drop.get("keys") or [])))[-KEYS_KEPT:]
     keep["conv"] = keep.get("conv") or drop.get("conv")
+    keep["ids"] = list(dict.fromkeys((keep.get("ids") or []) + [drop["id"]] + (drop.get("ids") or [])))   # a logged thread stays logged
     keep["candidates"] = conv_merge(older.get("candidates") or [], newer.get("candidates") or [])
     merge_marks(keep, drop)
     merge_state(keep, drop, newer)
@@ -1568,7 +1571,8 @@ def log_target(a):
         raise ValueError("No matched item to log it on.")
     if "-A-" not in item_id:
         raise ValueError("Log is for actions; open the item and add the update there.")
-    row = tracker.fetch(tracker.connect(), "actions", item_id)
+    with closing(tracker.connect()) as con:
+        row = tracker.fetch(con, "actions", item_id)
     if row is None or row["status"] not in ("Open", "Delayed"):
         raise ValueError("That item isn't open any more.")
     return item_id, row
@@ -2164,12 +2168,12 @@ def vip_open_items(project, thread):
     if not project:
         return []
     try:
-        con = vip_ro()
-        rows, text = _open_actions(con, project), _thread_text(thread)
-        if not rows:
-            return []
-        scores = extraction.rank_open(con, project, text, str(thread.get("title") or thread.get("subject") or ""),
-                                      _when(thread.get("last"))[:10] or None)
+        with closing(vip_ro()) as con:
+            rows, text = _open_actions(con, project), _thread_text(thread)
+            if not rows:
+                return []
+            scores = extraction.rank_open(con, project, text, str(thread.get("title") or thread.get("subject") or ""),
+                                          _when(thread.get("last"))[:10] or None)
         register = extraction.people()
     except Exception:  # noqa: BLE001  matching is a nicety; the card matters
         return []
@@ -2185,9 +2189,24 @@ def vip_open_items(project, thread):
     return [x[3] for x in sorted(out, key=lambda x: x[:3])[:MATCH_ITEMS]]
 
 
+def _alan_identity():
+    """(his full name, his own mail domains, his addresses in the people register), all but the name lower case."""
+    ident = paths.load_settings().get("identity") or {}
+    name = str(ident.get("name") or "").strip()
+    me = next((p for p in extraction.people() if p["name"].lower() == name.lower()), None)
+    return name, {str(d).lower() for d in ident.get("own_domains") or []}, {e.lower() for e in (me or {}).get("emails") or []}
+
+
 def _alan_wrote(who):
-    """Whether the sender a thread's last message names is Alan (his name or a short form from settings, or the Sent folder)."""
-    return bool(str(who or "").strip()) and extraction.is_alan(str(who), "")
+    """Whether the sender a thread's last message names is Alan: an address of his in the people register, or his full name with
+    (when the sender has an address) an address on identity.own_domains. A short form alone ("Alan") is not enough, so
+    "Alan Jones <alan.jones@other.example>" is someone else."""
+    who = str(who or "").strip()
+    name, own, mine = _alan_identity()
+    addr = re.search(r"[\w.+-]+@([\w.-]+)", who)
+    if not who or (addr and addr.group(0).lower() in mine):
+        return bool(who)
+    return bool(name) and extraction.is_person(who, name, extraction.people()) and (not addr or addr.group(1).lower() in own)
 
 
 def _match_thread(a, found):
@@ -2213,7 +2232,7 @@ def _checked_match(rel, item_id, why, rows, thread, found):
     if rel == "new" or item_id not in rows:
         return {"id": None, "relation": "new", "why": (why if rel == "new" else "") or "Nothing open matches."}
     row = rows[item_id]
-    if rel == "chase" and not (_owner_in(thread, row["owner"], extraction.people()) and not _alan_wrote(row["owner"])
+    if rel == "chase" and not (_owner_in(thread, row["owner"], extraction.people()) and not extraction.is_alan(str(row["owner"]), "")
                                and _alan_wrote(found.get("last_from"))):
         rel = "update"
     return {"id": item_id, "relation": rel, "why": why or "The thread moves it forward.", "t": _clean(row["description"], 200)}
@@ -2238,7 +2257,8 @@ def vip_match(a, found, alerts=None):
         a["match"] = {"id": None, "relation": "new", "why": "No project matched, so nothing to match against."}
         return a["match"]
     try:
-        rows = _open_actions(vip_ro(), a["p"])
+        with closing(vip_ro()) as con:
+            rows = _open_actions(con, a["p"])
     except Exception:  # noqa: BLE001  matching is a nicety; the card matters
         rows = {}
     thread = _match_thread(a, found)
@@ -2253,11 +2273,12 @@ def vip_match(a, found, alerts=None):
 
 
 def vip_match_counts(alerts):
-    """Set "count" on every card's match: how many open cards (not Handled or Replied) sit on the same item."""
+    """Set "count" on every card's match: how many open, unseen cards (not Handled, Replied or Dismissed) sit on the same item,
+    as the page shows them; vip_save calls it, so a Dismiss, Handled, Undo or reply is counted at once."""
     by = {}
     for x in alerts:
         m = x.get("match") or {}
-        if m.get("id") and x.get("state", "open") == "open":
+        if m.get("id") and x.get("state", "open") == "open" and not x.get("seen"):
             by[m["id"]] = by.get(m["id"], 0) + 1
     for x in alerts:
         m = x.get("match")
@@ -2307,9 +2328,19 @@ def _thread_source(a):
 
 def _set_lines(item):
     """latest_update = the item's existing text, then each thread's line (Review shows a replacement, and approving it would
-    otherwise lose the old text)."""
+    otherwise lose the old text). Used for a new proposal; a line added later goes on the current text (_append_line)."""
     sg = item["suggested"]
     item["changes"]["latest_update"] = "\n".join(([sg["base"]] if sg.get("base") else []) + sg["lines"])
+
+
+def _append_line(item, line):
+    """Add a line to the proposal's current latest_update, so what Alan changed in Review is kept; an empty field starts again
+    from the base and the lines."""
+    cur = str(item["changes"].get("latest_update") or "")
+    if cur.strip():
+        item["changes"]["latest_update"] = f"{cur}\n{line}"
+    else:
+        _set_lines(item)
 
 
 def _new_update_spec(a, m, row, line, source, confidential):
@@ -2346,13 +2377,13 @@ def _add_line(item, a, line, source):
     (the hash of kind and conversation), not on the newest message's link, so a thread with a new message adds nothing. When
     Part 1's `keys` land, any of the card's keys should count here too."""
     sg = item["suggested"]
-    ids = {a["id"], *(a.get("keys") or [])}
+    ids = {a["id"], *(a.get("ids") or []), *(a.get("keys") or [])}
     if ids & set(sg.get("threads") or []):
         return False
     sg["threads"] = list(sg.get("threads") or []) + [a["id"]]
     sg["lines"] = list(sg.get("lines") or []) + [line]
     item["source"] = f"{item.get('source') or ''} ; {source}"
-    _set_lines(item)
+    _append_line(item, line)
     return True
 
 
@@ -2372,7 +2403,8 @@ def vip_update_stage(aid):
     if not m.get("id"):
         raise ValueError("This thread has no matched item to log on.")
     try:
-        row = _open_actions(vip_ro(), a.get("p")).get(m["id"])
+        with closing(vip_ro()) as con:
+            row = _open_actions(con, a.get("p")).get(m["id"])
     except Exception:  # noqa: BLE001  no database: the item can't be checked
         row = None
     if row is None:
