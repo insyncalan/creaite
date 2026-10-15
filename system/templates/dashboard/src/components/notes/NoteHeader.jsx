@@ -22,21 +22,22 @@ export function NoteDate({ date }) {
   const [text, setText] = useState(date ? fd(date) : ""), [open, setOpen] = useState(false);
   const [view, setView] = useState(() => (date || TODAY).slice(0, 7));
   const box = useRef(/** @type {HTMLSpanElement | null} */ (null)), inp = useRef(/** @type {HTMLInputElement | null} */ (null));
-  const grid = useRef(/** @type {HTMLDivElement | null} */ (null)), quiet = useRef(false);
+  const btn = useRef(/** @type {HTMLButtonElement | null} */ (null)), grid = useRef(/** @type {HTMLDivElement | null} */ (null)), via = useRef(/** @type {"box" | "btn"} */ ("box"));
   const t = text.trim(), read = t ? readDate(t) : null, bad = !!t && !read;
   const chosen = read || date;
   useEffect(() => { if (read) setView(read.slice(0, 7)); }, [read]);
 
-  /** Put focus back in the date box without opening the pop-up again (the box opens on focus; this focus is not the person's). */
-  const back = () => {
-    const el = inp.current; if (!el || document.activeElement === el) return;
-    quiet.current = true; el.focus(); quiet.current = false;
+  /** Put focus back where the pop-up was opened from (the box, or the calendar button when that opened it). The pop-up opens on
+      a click, typing, ↓ or the button, never on focus alone, so this does not open it again. @param {boolean} [toBox] always the box */
+  const back = toBox => {
+    const el = !toBox && via.current === "btn" ? btn.current : inp.current; if (!el || document.activeElement === el) return;
+    el.focus();
   };
   /** Write the date (or clear it) and close; `refocus` returns focus to the box (a day picked, where the day button goes away).
       @param {string} iso @param {boolean} [refocus] */
   const commit = (iso, refocus) => {
     setText(iso ? fd(iso) : ""); setOpen(false);
-    if (refocus) back();
+    if (refocus) back(true);
     if (iso !== date) noteMeta({ date: iso });
   };
   const settle = () => {              /* leaving the field: a date it can read is used, anything else keeps the old date */
@@ -49,7 +50,10 @@ export function NoteDate({ date }) {
   const first = (new Date(y, m, 1).getDay() + 6) % 7, start = new Date(y, m, 1 - first);
   const cells = Array.from({ length: 42 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
   const step = /** @param {number} n */ n => { const d = new Date(y, m + n, 1); setView(`${d.getFullYear()}-${nhPad(d.getMonth() + 1)}`); };
-  const focusDay = /** @param {string} iso */ iso => { setView(iso.slice(0, 7)); setTimeout(() => { const b = grid.current && grid.current.querySelector(`[data-d="${iso}"]`); if (b) /** @type {HTMLElement} */ (b).focus(); }, 0); };
+  const focusDay = /** @param {string} iso */ iso => { setView(iso.slice(0, 7)); 
+    /* the pop-up may not be drawn yet (it was just opened): look a few times */
+    let tries = 0; const go = () => { const b = grid.current && grid.current.querySelector(`[data-d="${iso}"]`); if (b) /** @type {HTMLElement} */ (b).focus(); else if (++tries < 8) setTimeout(go, 15); };
+    setTimeout(go, 0); };
   const arrow = /** @param {KeyboardEvent} e @param {string} iso */ (e, iso) => {
     const d = new Date(`${iso}T12:00:00`), s = /** @type {Record<string, number>} */ ({ ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 })[e.key];
     if (s === undefined) return;
@@ -60,15 +64,20 @@ export function NoteDate({ date }) {
       <span class="ndwrap">
         <input ref={inp} type="text" id="noteWsDate" class="nin date" value={text} placeholder="Date, or e.g. last monday" autoComplete="off" maxLength={40}
           aria-label="Date of the session, a date or words like last monday" aria-invalid={bad ? "true" : undefined} aria-describedby={open ? "noteDateRead" : undefined}
-          onFocus={() => { if (!quiet.current) setOpen(true); }} onClick={() => setOpen(true)}
-          onInput={e => { setText(/** @type {HTMLInputElement} */ (e.target).value); setOpen(true); }}
+          onClick={() => { via.current = "box"; setOpen(true); }}
+          onInput={e => { setText(/** @type {HTMLInputElement} */ (e.target).value); via.current = "box"; setOpen(true); }}
           onKeyDown={e => {
             if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); if (!t) commit(""); else if (read) commit(read); else setOpen(true); }
             else if (e.key === "Escape" && open) { e.preventDefault(); e.stopPropagation(); setText(date ? fd(date) : ""); setOpen(false); }
-            else if (e.key === "ArrowDown") { e.preventDefault(); setOpen(true); focusDay(chosen || TODAY); }
+            else if (e.key === "ArrowDown") { e.preventDefault(); via.current = "box"; setOpen(true); focusDay(chosen || TODAY); }
           }} />
-        <button type="button" class="ndbtn" id="noteDateBtn" aria-label="Choose date" data-tip="Choose a date" aria-expanded={open ? "true" : "false"} aria-haspopup="dialog"
-          onClick={() => { if (open) setOpen(false); else { setOpen(true); if (inp.current) inp.current.focus(); } }}><Icon name="calendar" /></button>
+        <button type="button" class="ndbtn" id="noteDateBtn" ref={btn} aria-label="Choose date" data-tip="Choose a date" aria-expanded={open ? "true" : "false"} aria-haspopup="dialog"
+          onClick={e => {
+            if (open) { setOpen(false); return; }
+            setOpen(true);
+            if (e.detail === 0) { via.current = "btn"; focusDay(chosen || TODAY); }          /* from the keyboard: into the pop-up */
+            else { via.current = "box"; if (inp.current) inp.current.focus(); }                  /* by mouse: the box, ready to type */
+          }}><Icon name="calendar" /></button>
       </span>
       {open ? (
         <div class="dpop" id="noteDatePop" role="dialog" aria-label="Choose a date" onMouseDown={e => { if (!/** @type {Element} */ (e.target).closest("input")) e.preventDefault(); }}

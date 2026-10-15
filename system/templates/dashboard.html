@@ -52076,26 +52076,30 @@ ${d5.text}`);
       /** @type {HTMLInputElement | null} */
       null
     );
-    const grid = A2(
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    ), grid = A2(
       /** @type {HTMLDivElement | null} */
       null
-    ), quiet = A2(false);
+    ), via = A2(
+      /** @type {"box" | "btn"} */
+      "box"
+    );
     const t47 = text.trim(), read = t47 ? readDate(t47) : null, bad = !!t47 && !read;
     const chosen = read || date;
     h2(() => {
       if (read) setView(read.slice(0, 7));
     }, [read]);
-    const back2 = () => {
-      const el2 = inp.current;
+    const back2 = (toBox) => {
+      const el2 = !toBox && via.current === "btn" ? btn.current : inp.current;
       if (!el2 || document.activeElement === el2) return;
-      quiet.current = true;
       el2.focus();
-      quiet.current = false;
     };
     const commit = (iso, refocus) => {
       setText(iso ? fd(iso) : "");
       setOpen2(false);
-      if (refocus) back2();
+      if (refocus) back2(true);
       if (iso !== date) noteMeta({ date: iso });
     };
     const settle = () => {
@@ -52125,10 +52129,13 @@ ${d5.text}`);
       /** @param {string} iso */
       (iso) => {
         setView(iso.slice(0, 7));
-        setTimeout(() => {
+        let tries = 0;
+        const go3 = () => {
           const b5 = grid.current && grid.current.querySelector(`[data-d="${iso}"]`);
           if (b5) b5.focus();
-        }, 0);
+          else if (++tries < 8) setTimeout(go3, 15);
+        };
+        setTimeout(go3, 0);
       }
     );
     const arrow = (
@@ -52166,15 +52173,16 @@ ${d5.text}`);
             "aria-label": "Date of the session, a date or words like last monday",
             "aria-invalid": bad ? "true" : void 0,
             "aria-describedby": open2 ? "noteDateRead" : void 0,
-            onFocus: () => {
-              if (!quiet.current) setOpen2(true);
+            onClick: () => {
+              via.current = "box";
+              setOpen2(true);
             },
-            onClick: () => setOpen2(true),
             onInput: (e4) => {
               setText(
                 /** @type {HTMLInputElement} */
                 e4.target.value
               );
+              via.current = "box";
               setOpen2(true);
             },
             onKeyDown: (e4) => {
@@ -52191,6 +52199,7 @@ ${d5.text}`);
                 setOpen2(false);
               } else if (e4.key === "ArrowDown") {
                 e4.preventDefault();
+                via.current = "box";
                 setOpen2(true);
                 focusDay(chosen || TODAY);
               }
@@ -52203,14 +52212,22 @@ ${d5.text}`);
             type: "button",
             class: "ndbtn",
             id: "noteDateBtn",
+            ref: btn,
             "aria-label": "Choose date",
             "data-tip": "Choose a date",
             "aria-expanded": open2 ? "true" : "false",
             "aria-haspopup": "dialog",
-            onClick: () => {
-              if (open2) setOpen2(false);
-              else {
-                setOpen2(true);
+            onClick: (e4) => {
+              if (open2) {
+                setOpen2(false);
+                return;
+              }
+              setOpen2(true);
+              if (e4.detail === 0) {
+                via.current = "btn";
+                focusDay(chosen || TODAY);
+              } else {
+                via.current = "box";
                 if (inp.current) inp.current.focus();
               }
             },

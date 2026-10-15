@@ -161,8 +161,10 @@ class NotesHeader(LiveBrowserCase):
         active = "(document.activeElement.id||document.activeElement.tagName)"
         # M1: calendar button, ArrowDown, ArrowRight, Enter: the day is used and focus is back in the date box
         b.eval("document.getElementById('noteWsDate').focus()")
-        b.wait("!!document.getElementById('noteDatePop')")
+        b.pump(0.2)
+        self.assertFalse(b.eval("!!document.getElementById('noteDatePop')"), "focus alone does not open it (Tab through the header is quiet)")
         b.key("ArrowDown")
+        b.wait("!!document.getElementById('noteDatePop')")
         b.wait("document.activeElement.dataset&&!!document.activeElement.dataset.d")
         b.key("ArrowRight")
         b.pump(0.1)
@@ -182,6 +184,15 @@ class NotesHeader(LiveBrowserCase):
         self.assertEqual(b.eval(active), "noteWsDate")
         self.assertFalse(b.eval("!!document.getElementById('noteDatePop')"), "Esc leaves it closed")
         self.assertEqual(b.eval("document.getElementById('noteDateBtn').getAttribute('aria-expanded')"), "false")
+        # the calendar button from the keyboard: focus goes into the pop-up, Esc returns it to the button, closed
+        b.eval("document.getElementById('noteDateBtn').focus()")
+        b.key("Enter")
+        b.wait("!!document.getElementById('noteDatePop')&&document.getElementById('noteDatePop').contains(document.activeElement)")
+        b.key("Escape")
+        b.wait("!document.getElementById('noteDatePop')")
+        b.pump(0.2)
+        self.assertEqual(b.eval(active), "noteDateBtn")
+        self.assertFalse(b.eval("!!document.getElementById('noteDatePop')"))
         # typing opens it again with the reads-as line; Tab out settles the field
         self.type_into("#noteWsDate", "tomorrow")
         b.wait("!!document.getElementById('noteDatePop')")
