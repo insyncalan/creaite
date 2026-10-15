@@ -19,6 +19,7 @@ import { andList, capped, longDay, plur, projLink, renderToday, tib, tl, tLink }
 import { items, kOfId, recordFromBoard, rows } from "./work.js";
 import { invitees } from "./components/prep/PrepHead.jsx";
 import { prepNow, prepViewHref } from "./stores/prepPopup.js";
+import { prepHref } from "./stores/prep.js";
 /* ===== Prep updates (BL-65) ===== */
 /* An update cx-minutes proposes to an open item (from what the meeting said) sits under the meeting's minutes like its new
    items, labelled "Update", with the item's ID and text and each changed field as before → after (revDetail), and what was
@@ -276,55 +277,16 @@ document.addEventListener("click",e=>{   /* Draft agenda itself is a menu now (P
   agendaCopyDo(a.dataset.agdo==="copy",a); });
 document.addEventListener("change",e=>{ if(e.target.matches&&e.target.matches("[data-agatt]")&&AGD){ AGD.attendees=e.target.checked; AGD.html=agendaCardHtml(AGD.d); } });
 }
-/* ===== BL-209 (sprint-insight) ===== the meeting hub: one page per meeting (#meeting=<token>), from invite to follow-up, read
-   from D.hub (build_dashboard.meeting_hub: the calendar, prep pages, transcripts, the minutes proposals, processed.txt). It reads
-   and links; the one thing it writes is Carry to the next agenda (system/staging/carried.json, through the live server). */
-shared.MEETING=null;
-export function HUB(){ return D.hub||{}; }
-// @ts-expect-error TS2339: the index is cached on the function itself (HUBIX.d, HUBIX.ix)
-export function HUBIX(){ if(HUBIX.d===D) return HUBIX.ix; const ix={eid:{},slot:{},file:{},key:{}};
-  for(const [t,m] of Object.entries(HUB())){ if(m.eid) ix.eid[m.eid]=t; if(m.day&&m.start) ix.slot[`${m.day}|${m.start}|${m.title}`]=t; (m.files||[]).forEach(f=>{ ix.file[f]=t; }); ix.key[m.key]=t; }
-  // @ts-expect-error TS2339: the cache, as above
-  HUBIX.d=D; HUBIX.ix=ix; return ix; }
-export function hubFor(o){ const ix=HUBIX(); return (o.eid&&ix.eid[o.eid])||(o.day&&o.start&&ix.slot[`${o.day}|${o.start}|${o.title}`])||(o.path&&ix.file[o.path])||(o.key&&ix.key[o.key])||null; }
-export function hubLink(t,label="Meeting page"){ return t?html` <a href="#meeting=${t}" class="linkbtn mhlink" data-meeting="${t}" title="Everything about this meeting, from invite to follow-up">${label}</a>`:""; }
-export var MHSTATE={done:["✓","Done"],current:["●","Now"],todo:["○","To do"],skip:["–","Not needed"]};
-export var MHKIND={actions:"Action",raid:"RAID item",decisions:"Decision"};
-export function mhItem(x){ const st=x.state==="pending"?"Waiting for you":x.state==="approved"?"Approved, not applied":x.state==="rejected"?"Rejected":x.state==="applied"?"Applied":x.state;
-  const what=x.id?`<a href="#" class="hlink" data-open="${x.k}:${esc(x.id)}">${esc(x.id)}</a>`:`<span class="sub">${esc(MHKIND[x.k]||"Item")}, proposed</span>`;
-  return `<li class="mhitem${x.you?" you":""}">${what} ${esc(x.t)}${x.o?` <span class="sub">— ${esc(x.o)}</span>`:""}${x.due?` <span class="sub">· ${x.k==="decisions"?"needed by":"due"} ${fd(x.due)}</span>`:""} <span class="tag${x.you?" warn":""}">${esc(st)}</span></li>`; }
-export function renderMeeting(t){ shared.MEETING=t; const el=$("#v-meeting"), m=HUB()[t];
-  if(!m){ putHTML(el,html`<div class="phead"><h1>Meeting</h1></div><div class="card"><p>This meeting isn't in creaite's records any more: it may be older than ${45} days, or its calendar entry has gone.</p><button class="btn" data-go="today">Back to Today</button></div>`); return; }
-  const when=m.day?`${longDay(m.day)}${m.start?`, ${m.start}${m.end?` – ${m.end}`:""}`:""}`:"No date";
-  const strip=`<ol class="mhstrip" aria-label="Where this meeting is">${m.steps.map(([k,l,s,txt])=>`<li class="mh-${s}" data-step="${k}"${s==="current"?' aria-current="step"':""}><span class="mhdot" aria-hidden="true">${MHSTATE[s][0]}</span><span class="mhl">${esc(l)}</span><span class="mht">${esc(txt)}</span><span class="vh">${MHSTATE[s][1]}</span></li>`).join("")}</ol>`;
-  const nx=m.next, nextCard=`<div class="card mhnext"><h2>Next step</h2>${nx?`<p>${esc((m.steps.find(s=>s[2]==="current")||[])[3]||"")}</p><button class="btn primary" data-mhact="${nx.act}">${esc(nx.label)}</button>${nx.act==="prep"&&draftOn("agenda")?' <button class="btn" data-mhact="agenda">Draft agenda</button>':""}${!viaServer()&&["prep"].includes(nx.act)?'<div class="sub">Needs the live server.</div>':""}`:'<p class="sub">Nothing is waiting on this meeting.</p>'}</div>`;
-  const c=m.counts, items=m.items.filter(x=>x.state!=="rejected");
-  const produced=`<div class="card"><h2>What it produced</h2>${items.some(x=>x.id&&(x.k==="actions"||x.k==="decisions"))?`<button type="button" class="btn" data-defollow="${t}" aria-haspopup="dialog">${ic("mail")}Draft the follow-up email</button>`:""}<p class="sub">${[c.items?plur(c.items,"item"):"",c.updates?plur(c.updates,"update")+" to items already open":"",c.pending?`${c.pending} waiting for you`:"",c.rejected?`${c.rejected} rejected`:""].filter(Boolean).join(" · ")||"Nothing yet: items appear once the transcript is processed."}</p>${items.length?`<ul class="mhitems">${items.map(mhItem).join("")}</ul>`:""}</div>`;
-  const cov=m.coverage&&m.coverage.length?`<div class="card"><h2>Coverage: was the agenda discussed?</h2><ul class="mhcov">${m.coverage.map((x,i)=>`<li><span class="tag ${x.verdict==="Covered"?"ok":x.verdict==="Not discussed"?"warn":""}">${esc(x.verdict)}</span> ${esc(x.point)}${x.verdict!=="Covered"?` <button type="button" class="mini" data-mhcarry="${i}" aria-pressed="${!!x.carried}">${x.carried?"Carried ✓":"Carry to the next agenda"}</button>`:""}</li>`).join("")}</ul><p class="sub">The agenda's own points; the transcript isn't stored. A carried point shows on the next ${esc(m.title)} prep page as "Not covered last time".</p></div>`:"";
-  const promised=m.promised.length?`<div class="card"><h2>Promised to you</h2><ul class="mhitems">${m.promised.map(id=>{ const x=REC("actions",id); return x?`<li><a href="#" class="hlink" data-open="actions:${esc(id)}">${esc(id)}</a> ${esc(x.t)} <span class="sub">— ${esc(x.o)}${x.due?` · due ${fd(x.due)}`:""}</span></li>`:""; }).join("")}</ul></div>`:"";
-  const files=[m.prep?`<li>Prep page: <a href="#" data-mhprep="${esc(m.prep)}">${esc(m.prep.split("/").pop())}</a></li>`:"",...(m.filed||[]).map(f=>`<li><a href="#" data-openfile="${esc(f)}">${esc(f.split("/").pop())}</a> <span class="sub">${esc(f.slice(0,f.lastIndexOf("/")))}</span></li>`)].join("");
-  putHTML(el,html`<div class="phead"><h1>${m.title}</h1><div class="sub">${when}${m.p.length?raw(" · "+m.p.map(pLink).join(" ")):""}${m.quick?" · quick note":""}</div></div>${raw(strip)}
-    <div class="mhgrid">${raw(nextCard)}${raw(produced)}${raw(cov)}${raw(promised)}${files?html`<div class="card"><h2>Files</h2><ul class="mhfiles">${raw(files)}</ul></div>`:""}</div>`); }
-export async function mhAct(act){ const m=HUB()[shared.MEETING]; if(!m) return;
-  if(act==="intake"){ go("inbox"); return; }
-  if(act==="review"){ go("review"); return; }
-  if(act==="work"){ const id=(m.due||[])[0]; if(id) openRecord("actions",id); return; }
-  if(act==="prep"||act==="agenda"){ const days=(D.calendar||{}).days||{}, ev=(days[m.day]||[]).find(e=>e.start===m.start&&e.title===m.title);
-    const tom=(Object.keys(days).filter(d=>d>TODAY).sort()[0])||"";
-    if(!ev||(m.day!==TODAY&&m.day!==tom)){ snack("A prep page is made for today's or the next day's meetings: open it then."); return; }
-    if(m.day===TODAY) go("today"); openPrep(ev,m.day); if(act==="agenda") draftAgenda(); } }
-/* the page's address, Back and the title */
-/* links in: Today's day view, the Week ahead, Intake's Meetings, the prep brief, Files and an item's source */
-/* Review's minutes card shows the meeting's coverage and its hub */
-/* ===== end BL-209 ===== */
-/* BL-231: what this block did at load, run in today's order by src/main.js */
-export function bootMeetings0206(){
-document.addEventListener("click",async e=>{ const a=e.target.closest("[data-meeting]"); if(a){ e.preventDefault(); e.stopPropagation(); go("meeting",a.dataset.meeting); return; }
-  const b=e.target.closest("[data-mhact]"); if(b){ mhAct(b.dataset.mhact); return; }
-  const pp=e.target.closest("[data-mhprep]"); if(pp){ e.preventDefault(); prepOpen(pp.dataset.mhprep); return; }
-  const g=e.target.closest("#v-meeting [data-go]"); if(g){ go(g.dataset.go); return; }
-  const c=e.target.closest("[data-mhcarry]"); if(c){ const m=HUB()[shared.MEETING], x=m&&m.coverage[+c.dataset.mhcarry]; if(!x) return;
-    if(!viaServer()){ snack("Carrying a point needs the live server"); return; }
-    const r=await api("/api/meeting/carry",{key:m.key,point:x.point,on:!x.carried}); if(!r.ok){ snack(oneLine(r.message)||"Not carried"); return; }
-    x.carried=!x.carried; renderMeeting(shared.MEETING); snack(oneLine(r.message)); } },true);
-}
+/* ===== v2.1.0 P10 (BL-339) ===== the meeting hub is retired. An old #meeting=<token> link (and a bookmark) is read from the
+   token index the page still carries (D.hub, build_dashboard.meeting_hub) and sent to the meeting's Prep before it, and to its
+   minutes (#minutes=<stored path>, the minutes view) after it. Nothing here draws a page. */
+export function meetingRoute(token){ const m=(D.hub||{})[token]; if(!m||!m.day) return null;
+  const now=new Date();
+  const clockNow=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
+  const over=m.day<TODAY||(m.day===TODAY&&!!(m.end||m.start)&&(m.end||m.start)<=clockNow);
+  const minFile=(m.filed||[]).find(f=>String(f).toLowerCase().endsWith(".html"));
+  if(over&&minFile) return "#minutes="+encodeURIComponent(minFile);
+  if(over&&(m.counts||{}).pending) return "#review";   /* the minutes are drafted and waiting: Review is where they open */
+  const ev=(((D.calendar||{}).days||{})[m.day]||[]).find(e=>e.start===m.start&&e.title===m.title);
+  return ev?prepHref(prepKey(ev,m.day),m.day):null; }
+/* ===== end P10 ===== */

@@ -10,7 +10,6 @@ import { openDatePicker } from "../components/Picker.jsx";
 import { D, DATE, DDATE, fd, isMe, S, TODAY, toIso } from "./page.js";
 import { api, apply, editProposal, needVault, oneLine, refreshAll, save, snack, split, viaServer } from "./server.js";
 import { shared } from "./state.js";
-import { hubFor, hubLink } from "../meetings.js";
 import { pkCommit, PKDRAW, pkLabel, REC } from "../panel.js";
 import { pkOn, saveAndClose, warnsOf, WSIG } from "../projects.js";
 import { WKRVF } from "../review.js";
@@ -26,7 +25,7 @@ export function srcParse(x){ if(!x) return null; if(/^(Email|Teams) · /.test(x)
 export const NOTE_OPEN={fn:null};
 export const srcShort=x=>{ const o=srcParse(x); if(!o) return "—"; if(o.type==="File") return o.name.replace(/\.[a-z]+$/,""); if(o.type==="Email") return "Email · "+(o.Subject||""); if(o.type==="Teams") return "Teams · "+(o.Channel||o.Chat||""); return o.text; };
 export function srcHTML(x){ const o=srcParse(x); if(!o) return "—";
-  if(o.type==="File"){ const t=!shared.LOADING&&hubFor({path:o.path}); return `<a href="#" class="srclink" data-openfile="${esc(o.path)}"${o.line?` data-noteline="${o.line}"`:""}>${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>${t?`<div>${hubLink(t)}</div>`:""}`; }
+  if(o.type==="File"){ return `<a href="#" class="srclink" data-openfile="${esc(o.path)}"${o.line?` data-noteline="${o.line}"`:""}>${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>`; }
   if(o.type==="Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Subject</dt><dd>${esc(o.Subject||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Outlook</a>`:'<span class="sub">No message link stored</span>'}`;
   if(o.type==="Teams") return `<dl class="srcmeta"><dt>${o.Channel?"Channel":"Chat"}</dt><dd>${esc(o.Channel||o.Chat)}</dd><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Teams</a>`:'<span class="sub">No message link stored</span>'}`;
   return esc(o.text); }

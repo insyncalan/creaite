@@ -57,8 +57,6 @@ SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
 # #80: its action row (Reject, Cancel, Save, Save and approve) stays on screen at 320 px
 SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
                           "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
-# BL-316: the meeting page (Meetings), the sample's one meeting
-SCREENS["meeting"] = ("go('meeting',Object.keys(D.hub||{})[0])", "!document.getElementById('v-meeting').hidden", "#v-meeting")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 # BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a
@@ -426,14 +424,6 @@ class ScrollEnd(UiSweepCase):
                     with self.subTest(width=w, screen=name):
                         region = self.goto(name)
                         self.check(name, region if region.startswith("#v-") else ".view:not([hidden])")
-                with self.subTest(width=w, screen="meeting"):
-                    self.goto("today")
-                    t = b.eval("Object.entries(D.hub||{}).find(([t,m])=>m.key==='calendar:e1')?.[0]||''")
-                    self.assertTrue(t, "the fixture meeting has a page")
-                    b.eval(f"go('meeting',{json.dumps(t)})")
-                    b.wait("/ABC Steering/.test(document.querySelector('#v-meeting h1').textContent)")
-                    b.pump(0.5)
-                    self.check("meeting", "#v-meeting")
                 with self.subTest(width=w, screen="prep-popup"):
                     self.goto("today")
                     b.click("[data-prep]")

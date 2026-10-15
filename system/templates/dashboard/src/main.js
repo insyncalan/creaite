@@ -112,7 +112,7 @@ import { bootNotes } from "./notes.js";
 import { bootHelp0091, bootHelp0158, bootHelp0161, bootHelp0162, firstHelp } from "./help.js";
 import { bootIntake0053, bootIntake0134, bootIntake0135, bootIntake0136, bootIntake0137, inboxBadge } from "./intake.js";
 import { bootPrepShape } from "./stores/prepShape.js";
-import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, bootMeetings0206, openFromAddress } from "./meetings.js";
+import { bootMeetings0125, bootMeetings0126, bootMeetings0143, bootMeetings0144, bootMeetings0145, bootMeetings0201, openFromAddress } from "./meetings.js";
 import { bootMilestones0051, bootMilestones0172, bootMilestones0184, bootMilestones0185, bootMilestones0186, bootMilestones0188, bootMilestones0189, bootMilestones0190, bootMilestones0191, bootMilestones0192 } from "./milestones.js";
 import { bootPanel0050, bootPanel0165, bootPanel0166, bootPanelChase, bootPanel0167, bootPanel0168, bootPanel0169, bootPanel0171, bootPanel0173, bootPanel0174, bootPanel0175, bootPanel0176, bootPanel0177, bootPanel0178, bootPanel0179, bootPanel0181, bootPanel0182, bootPanel0197, bootPanel0198, bootPanel0199, bootPanel0200 } from "./panel.js";
 import { bootProjects0029, bootProjects0054, bootProjects0055, bootProjects0056, bootProjects0058, bootProjects0059, bootProjects0081, bootProjects0083, bootProjects0124 } from "./projects.js";
@@ -233,7 +233,7 @@ status(); renderBadge(); inboxBadge(); vaultInit(); checkLive(); setInterval(che
 shared.HADHASH=!!location.hash&&!/^#openfile=/.test(location.hash);
 openFromAddress();                                                       /* BL-126: clears the address, so what follows is a plain start */
 shared.HASH0=location.hash;   /* BL-186: the address as opened (the Milestones page is restored once its block has run) */
-restoreNav(/^#?(milestones|meeting)=/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
+restoreNav(/^#?milestones=/.test(location.hash||"")?null:parseHash(location.hash)); navWrite(false);   /* BL-231: milestone and meeting addresses aren't restored here (as before their blocks taught parseHash them): the Milestones page is restored by its own block below */
 firstHelp();
 shared.LOADING=false;
 bootDebugLog();
@@ -287,7 +287,6 @@ bootDrafts0202();
 bootDrafts0203();
 bootDrafts0204();
 bootActivity0205();
-bootMeetings0206();
 bootAsk0207();
 bootAsk0208();
 bootReview0209();

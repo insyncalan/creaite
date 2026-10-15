@@ -1,4 +1,6 @@
-"""BL-209: the meeting hub (one page per meeting, from invite to follow-up) and Coverage (was the agenda discussed?).
+"""BL-209 and v2.1.0 P10 (BL-339): the meeting hub is retired. HubData keeps the server half (the per-meeting records the old addresses are
+read from, and Carry to the next agenda, /api/meeting/carry, which stays for the minutes' coverage); HubBrowser checks the page is gone
+and that an old #meeting= link opens the meeting's Prep or its minutes.
 
 Run: python3 dev/tests/test_meeting_hub.py   (the browser half needs Google Chrome; skipped otherwise)
 The clock is fixed to Wednesday 14-10-2026 15:00. The meetings are fictional: a steering tomorrow with its prep page, a design
@@ -168,15 +170,12 @@ class HubData(unittest.TestCase):
 
 
 class HubBrowser(LiveBrowserCase):
+    """v2.1.0 P10 (BL-339): the hub page is gone; an old #meeting= link opens the meeting's Prep or its minutes."""
     shared_server = False
 
     @classmethod
     def load(cls, v):
         load(v)
-        cal = v.root / "system/staging/calendar.json"      # the page's Today is the browser's day, pinned to NOW in setUp
-        data = json.loads(cal.read_text())                  # (it was the real day: on 14-10-2026 it met the design review)
-        data["days"].setdefault(NOW[:10], []).append({"id": "e9", "start": "08:00", "end": "08:30", "title": "ABC Daily check", "teams": True})
-        cal.write_text(json.dumps(data))
         run(v, script="build_dashboard.py")
 
     @classmethod
@@ -190,41 +189,47 @@ class HubBrowser(LiveBrowserCase):
     def token(self, key):
         return self.b.eval(f"Object.entries(D.hub).find(([t,m])=>m.key==={json.dumps(key)})[0]")
 
-    def test_the_page_its_address_and_the_next_step(self):
+    def test_the_hub_is_gone(self):
         b = self.b
-        t = self.token("calendar:e3")
-        b.eval(f"location.hash='#meeting={t}'")
-        b.wait("VIEW==='meeting' && document.querySelector('#v-meeting .mhstrip')")
-        self.assertEqual(b.eval("[...document.querySelectorAll('#v-meeting .mhstrip li')].map(l=>l.dataset.step)"),
-                         ["invite", "prep", "transcript", "draft", "coverage", "review", "follow"])
-        self.assertEqual(b.eval("document.querySelector('#v-meeting .mhstrip [aria-current=step]').dataset.step"), "review")
-        self.assertEqual(b.eval("document.querySelector('#v-meeting [data-mhact]').textContent"), "Review the minutes and 1 item")
-        self.assertIn("ABC Steering", b.eval("document.title"))
-        self.assertIn("Budget", b.eval("document.querySelector('#v-meeting .mhcov').innerText"))
-        b.click('#v-meeting [data-mhcarry="1"]')
-        b.wait("document.querySelector('#v-meeting [data-mhcarry=\"1\"]').getAttribute('aria-pressed')==='true'")
-        self.assertEqual(json.loads((self.v.root / "system/staging/carried.json").read_text())["points"][0]["point"], "Budget")
-        b.click("#v-meeting [data-mhact]")
-        b.wait("VIEW==='review'")
-        b.wait("document.querySelector('#v-review .mhcovrow')")
-        self.assertIn("1 of 2 agenda points not fully discussed", b.eval("document.querySelector('#v-review .mhcovrow').innerText"))
+        for name in ("HUB", "HUBIX", "hubFor", "hubLink", "renderMeeting", "mhAct"):
+            self.assertEqual(b.eval(f"typeof {name}"), "undefined", name)
+        self.assertFalse(b.eval("!!document.getElementById('v-meeting')"))
+        b.eval("go('today')")
+        b.pump(0.5)
+        self.assertFalse(b.eval("!!document.querySelector('.mhlink,[data-meeting]')"))
+        b.eval("go('inbox')")
+        b.pump(0.5)
+        self.assertFalse(b.eval("!!document.querySelector('.mhlink,[data-meeting]')"))
         self.assertEqual(b.errors, [])
 
-    def test_links_in_from_today_intake_and_an_unknown_address(self):
+    def test_an_old_link_before_the_meeting_opens_its_prep(self):
         b = self.b
-        b.eval("go('today')")
-        daily = "[...document.querySelectorAll('#dayMeets .dm')].find(d=>/ABC Daily check/.test(d.innerText))?.querySelector('.mhlink')"
-        b.wait(daily)                                       # today also has the design review: the daily check's own link
-        b.eval(daily + ".click()")
-        b.wait("VIEW==='meeting'")
-        self.assertIn("ABC Daily check", b.eval("document.querySelector('#v-meeting h1').textContent"))
-        b.eval(f"go('meeting',{json.dumps(self.token('calendar:e2'))})")
-        b.wait("/ABC Design review/.test(document.querySelector('#v-meeting h1').textContent)")
-        self.assertEqual(b.eval("document.querySelector('#v-meeting [data-mhact]').textContent"), "Load the transcript")
-        b.eval("go('inbox')")
-        b.wait("document.querySelector('#mtgBody .mhlink')", 15)
+        b.eval(f"location.hash='#meeting={self.token('calendar:e1')}'")
+        b.wait("VIEW==='prep'")
+        self.assertEqual(b.eval("location.hash"), "#prep=" + "2026-10-15%7C10%3A00%7CABC%20Steering")
+        self.assertEqual(b.errors, [])
+
+    def test_an_old_link_after_the_meeting(self):
+        b = self.b
+        # the minutes drafted and waiting: Review
+        b.eval(f"location.hash='#meeting={self.token('calendar:e3')}'")
+        b.wait("VIEW==='review'")
+        # the minutes filed (the minutes view's address, #minutes=<stored path>)
+        path = ABC + "/minutes/2026-10-08 ABC Steering minutes.html"
+        t = self.token("calendar:e3")
+        b.eval(f"D.hub[{json.dumps(t)}].counts.pending=0; D.hub[{json.dumps(t)}].filed=[{json.dumps(path)}]")
+        self.assertEqual(b.eval(f"meetingRoute({json.dumps(t)})"), "#minutes=" + b.eval(f"encodeURIComponent({json.dumps(path)})"))
+        # a design review that ended this morning, nothing filed yet: its Prep is still the nearest page
+        self.assertEqual(b.eval(f"meetingRoute({json.dumps(self.token('calendar:e2'))})"), "#prep=2026-10-14%7C09%3A00%7CABC%20Design%20review")
+        self.assertEqual(b.errors, [])
+
+    def test_an_unknown_old_link_goes_to_today(self):
+        b = self.b
+        b.eval("go('review')")
         b.eval("location.hash='#meeting=ffffffffff'")
-        b.wait("VIEW==='meeting' && /isn't in creaite's records/.test(document.getElementById('v-meeting').innerText)")
+        b.wait("VIEW==='today'")
+        self.assertEqual(b.eval("meetingRoute('ffffffffff')"), None)
+        self.assertEqual(b.errors, [])
 
 
 if __name__ == "__main__":

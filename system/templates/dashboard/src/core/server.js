@@ -16,7 +16,6 @@ import { shared } from "./state.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
 import { inboxBadge, renderInbox } from "../intake.js";
-import { renderMeeting } from "../meetings.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
@@ -300,7 +299,6 @@ export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P
   if(shared.MVREADY){ const sig=mvSig(); if(sig!==shared.MV.sig){ shared.MV.sig=sig;
       if(shared.VIEW==="milestones"&&!(document.activeElement&&["mvNote","mvRbWhy","mvAdjWhy"].includes(document.activeElement.id))) renderMilestones();
       if(shared.MV.peek&&!shared.MV.add&&!(document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#mvPeek input[type=text],#mvPeek textarea"))) mvEdDraw(); } }   /* BL-245: once the Milestones block has run (a reload with staged peek changes refreshes before it) */
-  if(shared.VIEW==="meeting") renderMeeting(shared.MEETING);
   if(shared.PREPEV&&$("#prepDlg")&&$("#prepDlg").open) drawPrep(); }   /* BL-286 E: an applied edit shows in the Prep popup */
 export function renderBadge(){ const n=REV.filter(r=>!r.done).length; setRailCount("review",n); tabTitle(); }
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0021's place) */

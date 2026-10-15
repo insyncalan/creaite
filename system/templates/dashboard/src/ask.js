@@ -15,7 +15,7 @@ import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, renderMeetings } from "./intake.js";
-import { hubFor, hubLink, prepPage } from "./meetings.js";
+import { prepPage } from "./meetings.js";
 import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
 import { mdHtml, newItemOf, norm, openNew, openProject, openRecord, pkArr, pkCommit, pkPersist, pkStatuses, pkUndoLast, REC, validate } from "./panel.js";
