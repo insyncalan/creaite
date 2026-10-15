@@ -192,9 +192,10 @@ class Session:
             shutil.copy2(src, f)
 
     def server_env(self, root, port):
-        """The live server's environment: its port, the stand-in Claude and the pinned clock."""
+        """The live server's environment: its port, the stand-in Claude, the pinned clock, and no app launches
+        (CREAITE_NO_LAUNCH: /api/open reports the path instead of opening Word on the throwaway file)."""
         return {"CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(self.fake), "CREAITE_NOW": self.now,
-                "CREAITE_HC_VAULT": str(root)}
+                "CREAITE_HC_VAULT": str(root), "CREAITE_NO_LAUNCH": "1"}
 
     def start_server(self, root):
         """Setup step 7: the live server on a free port; returns (process, base URL)."""
