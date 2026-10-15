@@ -1886,6 +1886,8 @@ def card_move_problem(fop, blk, prop):
         return None
     m = reach.card_move_marker(blk.get("archive"), fop.get("from"), fop.get("to"))
     try:
+        if m.parent.is_symlink():                 # only the vault's own system/guard
+            raise OSError("system/guard is a symlink")
         fd = os.open(m, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
         try:
             st = os.fstat(fd)

@@ -298,6 +298,42 @@ class CardOnly(CardOnlyMoves):
         self.assertIsNone(got["card_loaded"])
         self.assertIsNone(got["unbound_read"])                  # only the apply's own load binds (the last bound one: the card's)
 
+    def test_k_the_guard_folder_is_private_and_never_a_symlink(self):
+        """card_moves_allowed makes system/guard 0700 when it has to make it; with system/guard a symlink, Approve writes no
+        marker (the note stays) and tracker refuses a marker reached through it."""
+        self.new("Guarded")
+        got = self.py_json(
+            "import os, shutil, archive, live_server as ls, reach, tracker, paths\n"
+            f"spec, why = archive.note_delete_spec({f'{ABC}/notes/Guarded.md'!r})\n"
+            "fop = spec['file_changes']['file_ops'][0]\n"
+            "prop = paths.STAGING / 'proposed-2026-10-16-guarded.json'; prop.write_text(json.dumps(spec))\n"
+            "g, saved, elsewhere = paths.GUARD, paths.SYSTEM / 'guard-saved', paths.SYSTEM / 'elsewhere'\n"
+            "had = g.exists()\n"
+            "if had: g.rename(saved)\n"
+            "try:\n"
+            "    with ls.card_moves_allowed(prop.name):\n"
+            "        mode = oct(g.stat().st_mode & 0o777); inside = len(list(g.glob('move-*')))\n"
+            "    shutil.rmtree(g)\n"
+            "    elsewhere.mkdir(); os.symlink(elsewhere, g)\n"
+            "    card, why = ls.server_edit_card('t', json.dumps(spec).encode('utf-8'))\n"
+            "    out = ls.edit_apply(ls.EDITS[card['card']])\n"
+            "    left = sorted(f.name for f in elsewhere.iterdir())\n"
+            "    reach.card_move_marker('notes', fop['from'], fop['to']).write_text('{}')\n"
+            "    t = tracker.card_move_problem(fop, {'archive': 'notes'}, prop)\n"
+            "finally:\n"
+            "    if g.is_symlink(): g.unlink()\n"
+            "    shutil.rmtree(elsewhere, ignore_errors=True)\n"
+            "    if had: saved.rename(g)\n"
+            "    prop.unlink(missing_ok=True)\n"
+            "print(json.dumps([mode, inside, out.get('ok'), out.get('message'), left, t]))")
+        mode, inside, ok, message, left, t = got
+        self.assertEqual((mode, inside), ("0o700", 1))
+        self.assertFalse(ok, message)
+        self.assertIn("the approval couldn't be recorded", message)
+        self.assertEqual(left, [])                                                     # nothing written through the symlink
+        self.assertIn(REFUSED, t or "")
+        self.assertTrue((self.folder() / "Guarded.md").is_file())
+
     def test_f_the_lists_agree_and_nobody_else_writes_the_marker(self):
         got = self.py_json(
             "import propose, reach\n"

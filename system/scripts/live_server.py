@@ -4333,7 +4333,7 @@ def edit_stage(c, how):
 
 def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
     """#124 F3: remove the move markers in system/guard/ older than `older` seconds (a crash's leftovers; never used anyway)."""
-    for m in paths.GUARD.glob("move-*") if paths.GUARD.is_dir() else []:
+    for m in paths.GUARD.glob("move-*") if paths.GUARD.is_dir() and not paths.GUARD.is_symlink() else []:
         try:
             if time.time() - m.lstat().st_mtime >= older:
                 m.unlink()
@@ -4354,9 +4354,12 @@ def card_moves_allowed(name):
     marks = [reach.card_move_marker(kind, op.get("from"), op.get("to")) for op in fc.get("file_ops") or []
              if kind in reach.CARD_ONLY_MOVES and isinstance(op, dict) and op.get("op") == "move"]
     body = json.dumps({"proposal": name, "sha256": hashlib.sha256(raw).hexdigest()}).encode("utf-8")
+    if marks:
+        paths.GUARD.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if paths.GUARD.is_symlink():                   # the markers only ever in the vault's own system/guard
+            raise OSError("system/guard is a symlink")
     try:
         for m in marks:
-            m.parent.mkdir(parents=True, exist_ok=True)
             m.unlink(missing_ok=True)
             fd = os.open(m, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
             try:
