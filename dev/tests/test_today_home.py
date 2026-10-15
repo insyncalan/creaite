@@ -55,6 +55,20 @@ class Header(LiveBrowserCase):
         self.assertEqual(o["first"], o["later"])                         # the arrows never move between days (BL-321)
         self.assertEqual(o["next"], "tBrief")
 
+    def test_the_headers_content_is_80_percent_centred_and_the_band_full_width_at_1400_and_900(self):
+        """#113 (regression, BL-319 04c87566 dropped .col80): the band spans the whole view; its content is 80% of the band's
+        inner width, centred; below 640px it is full width."""
+        b = self.b
+        for w in (1400, 900):
+            b.resize(w, 1000)
+            o = b.eval("""(()=>{ const v=document.getElementById('v-today'), band=document.querySelector('#v-today .dayband'), c=document.querySelector('#v-today .bandin'),
+              r=e=>e.getBoundingClientRect(), cs=getComputedStyle(band), inner=r(band).width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+              return {band:Math.round(r(band).width), view:v.clientWidth, ratio:r(c).width/inner,
+                offL:r(c).left-r(band).left-parseFloat(cs.paddingLeft), offR:r(band).right-parseFloat(cs.paddingRight)-r(c).right}; })()""")
+            self.assertEqual(o["band"], o["view"], w)                      # the coloured band at full width
+            self.assertAlmostEqual(o["ratio"], 0.8, delta=0.005, msg=w)    # the content in 80% of it
+            self.assertAlmostEqual(o["offL"], o["offR"], delta=1.5, msg=w) # centred
+
 
 class Home(LiveBrowserCase):
     """The sample vault (populate): six proposals, reminders, an overdue action of Alan's."""
