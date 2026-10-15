@@ -12,7 +12,9 @@
    BL-334: a message row is a conversation's card: its summary, then each candidate item (a quiet tag for its type, the item,
    its owner and due date) with Create work item and Dismiss (the same data-alertdo buttons, naming the item). A conversation
    with nothing for Alan is a quiet row (td-quiet): one line, no buttons. A confidential conversation's card carries a quiet
-   "Confidential" mark beside its title (the candidate tag's style); its summary shows like any other (Alan, 15-10-2026). */
+   "Confidential" mark beside its title (the candidate tag's style); its summary shows like any other (Alan, 15-10-2026).
+   BL-342 Part 3 B: a card whose matched action looks done says why in one quiet line; once its close is staged, "Staged for
+   Review" with Undo (a data-alertdo button, run by settings.js). */
 import { render } from "preact";
 import { IconButton } from "../IconButton.jsx";
 
@@ -20,7 +22,8 @@ import { IconButton } from "../IconButton.jsx";
 /** @typedef {{key: string, tag: string, t: string, sub?: string, acts: TdAct[]}} TdCand */
 /** @typedef {{key: string, kind: "review"|"transcript"|"message"|"quiet", tag: string, tone?: string, t: string, meta: string, link?: string,
     mark?: string, summary?: string, cands?: TdCand[], acts: TdAct[], ask?: string, due?: string, overdue?: boolean, dueText?: string,
-    owners?: string, files?: string, rel?: string, relId?: string, relT?: string, relWhy?: string, count?: string}} TdRow */
+    owners?: string, files?: string, rel?: string, relId?: string, relT?: string, relWhy?: string, count?: string,
+    closeWhy?: string, closeStaged?: string, closeCard?: string}} TdRow */
 /** @typedef {{rows: TdRow[], total: number, cap: number, open: boolean, onAct: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
     onOpen: (row: TdRow) => void, onReview: () => void, blocked: (why: string) => void}} ToDecideProps */
 
@@ -53,6 +56,12 @@ function TdLine({ r, hidden, p }) {
             {r.count ? <>{" "}<span class="tag tdctag tdcount">{r.count}</span></> : null}
             {r.relWhy ? <span class="tdwhy">{r.relWhy}</span> : null}
           </p>
+        ) : null}
+        {r.closeWhy ? <p class="tdwhy tddone">{r.closeWhy}</p> : null}
+        {r.closeStaged ? (
+          <p class="tdstaged">{`Close of ${r.closeStaged}: Staged for Review`}{" · "}
+            <button type="button" class="qa" data-alertdo="closeundo" data-id={r.closeCard}
+              aria-label={`Undo the staged close of ${r.closeStaged}`}>Undo</button></p>
         ) : null}
         {r.ask ? <p class="tdask"><span class="tdlab">Ask</span>{" "}{r.ask}</p> : null}
         {r.owners || r.dueText ? (

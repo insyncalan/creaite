@@ -584,5 +584,90 @@ class ThreadCardActions(LiveBrowserCase):
         self.assertIsNone(says_vip(b.eval("document.getElementById('tdList').outerHTML")))
 
 
+def close_vault(v):
+    """The thread vault with a close suggestion on the overdue card (the check kept it: step 9)."""
+    thread_vault(v)
+    item = next(r["id"] for r in v.rows("actions") if r["description"] == "Send the data access letter")
+    vf = v.root / "system/staging/vip.json"
+    st = json.loads(vf.read_text())
+    card = next(a for a in st["alerts"] if a.get("title") == "Go-live window")
+    card["p"] = item.split("-")[0]
+    card["closes"] = {"id": item, "evidence": "Sara says the letter went out", "who": "Sara Example", "at": f"{TODAY} 08:50"}
+    vf.write_text(json.dumps(st))
+    run(v, "build_dashboard.py")
+
+
+class ThreadCardClose(LiveBrowserCase):
+    """BL-342 Part 3 B, step 9: "Looks done: close <ID>" beside Log at 1400 and 900px, light and dark; one click stages the
+    close for Review and the card says "Staged for Review" with Undo; Undo takes it back. Nothing says VIP."""
+
+    @classmethod
+    def load(cls, v):
+        close_vault(v)
+
+    def show(self, width, mode):
+        b = self.b
+        b.resize(width, 900)
+        b.wait(f"innerWidth==={width}")
+        b.eval(f"S.theme={mode!r}; applyTheme(); go('today'); EXPAND.add('td'); renderToday()")
+        b.wait("document.querySelector('#tdList li.td-message')")
+        b.pump(0.4)
+
+    def card(self):
+        return self.b.eval("""(()=>{ %s
+          const li=[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Go-live window'));
+          const done=li.querySelector('.tddone'), st=li.querySelector('.tdstaged');
+          return {id:li.dataset.td.slice(2), buttons:[...li.querySelectorAll(':scope>.tacts button')].map(x=>x.getAttribute('aria-label')),
+            tips:[...li.querySelectorAll(':scope>.tacts button')].map(x=>x.dataset.tip), done:done&&done.textContent,
+            staged:st&&st.textContent.replace(/\\s+/g,' '), contrast:[done,st].filter(Boolean).map(ratio),
+            scroll:[document.documentElement.scrollWidth, innerWidth], right:li.getBoundingClientRect().right<=innerWidth+1}; })()""" % CONTRAST)
+
+    def test_the_button_beside_log_then_staged_for_review_and_undo(self):
+        b = self.b
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        item = next(r["id"] for r in self.v.rows("actions") if r["description"] == "Send the data access letter")
+        for width in (1400, 900):
+            for mode in ("Light", "Dark"):
+                with self.subTest(width=width, mode=mode):
+                    self.show(width, mode)
+                    o = self.card()
+                    self.assertIn(f"Stage a close of {item} for Review", o["buttons"])
+                    i = o["buttons"].index(f"Stage a close of {item} for Review")
+                    self.assertTrue(o["buttons"][i - 1].startswith("Log on"), o["buttons"])          # beside Log
+                    self.assertEqual(o["tips"][i], f"Looks done: close {item}")
+                    self.assertEqual(o["done"], "Looks done: Sara says the letter went out")
+                    self.assertTrue(o["right"])
+                    self.assertLessEqual(o["scroll"][0], o["scroll"][1])
+                    for r in o["contrast"]:
+                        self.assertGreaterEqual(r, 4.5)
+                    b.eval("document.querySelector('#tdList>li.td-message').scrollIntoView({block:'center'})")
+                    b.pump(0.3)
+                    b.screenshot(str(SHOTS / f"close-{width}-{mode.lower()}.png"))
+        self.show(1400, "Light")
+        aid = self.card()["id"]
+        b.click(f'#tdList [data-alertdo="close"][data-id="{aid}"]')
+        b.wait(f"(document.querySelector('#tdList li[data-td=\"al{aid}\"] .tdstaged')||{{}}).textContent", 20)
+        o = self.card()
+        self.assertEqual(o["staged"], f"Close of {item}: Staged for Review · Undo")
+        self.assertNotIn(f"Stage a close of {item} for Review", o["buttons"])
+        staged = [i for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
+                  for i in json.loads(f.read_text())["items"] if i.get("id") == item]
+        self.assertEqual([(i["changes"].get("status"), i["decision"]) for i in staged], [("Closed", "pending")])
+        for width, mode in ((1400, "Dark"), (900, "Light")):
+            self.show(width, mode)
+            for r in self.card()["contrast"]:
+                self.assertGreaterEqual(r, 4.5)
+            b.eval("document.querySelector('#tdList>li.td-message').scrollIntoView({block:'center'})")
+            b.pump(0.3)
+            b.screenshot(str(SHOTS / f"close-staged-{width}-{mode.lower()}.png"))
+        self.show(1400, "Light")
+        self.assertIsNone(says_vip(b.eval("document.getElementById('tdList').outerHTML")))
+        b.click(f'#tdList li[data-td="al{aid}"] [data-alertdo="closeundo"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"] .tdstaged')", 20)
+        self.assertIn(f"Stage a close of {item} for Review", self.card()["buttons"])
+        self.assertEqual([i for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
+                          for i in json.loads(f.read_text())["items"] if i.get("id") == item], [])
+
+
 if __name__ == "__main__":
     unittest.main()

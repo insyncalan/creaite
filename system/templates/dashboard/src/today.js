@@ -474,10 +474,20 @@ export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
   /* BL-342 Part 2: the New / Update / Chase chip with the matched item, the count of other threads on it, and Chase for its owner */
   const mt=a.match&&a.match.relation?a.match:null, rel=mt?RELCHIP[mt.relation]||"":"", others=mt&&mt.id&&mt.count>1?mt.count-1:0;
   if(mt&&mt.relation==="chase"&&mt.id) acts.push({id:"chase",icon:"chasemail",label:"Chase",name:`Chase the owner of ${mt.id}: ${t}`,data:{alertdo:"chase",id:a.id}});
+  /* BL-342 Part 3 B, step 9: "Looks done: close ABC-A-007" beside Log, when the check offered a close the code kept; once
+     staged, "Staged for Review" with Undo. Hidden on a private card, a New match or an item no longer open. */
+  const cl=cardClose(a,mt);
+  if(cl&&!cl.staged) acts.push({id:"close",icon:"checks",label:`Looks done: close ${cl.id}`,name:`Stage a close of ${cl.id} for Review`,data:{alertdo:"close",id:a.id}});
   const files=a.type==="fyi"&&(a.attachments||[]).length?`Files: ${(a.attachments||[]).slice(0,4).join(", ")}${a.attachments.length>4?` and ${a.attachments.length-4} more`:""}`:"";
   return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:CARDTYPE[a.type]||"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts,
     rel,relId:mt&&mt.id&&mt.relation!=="new"?String(mt.id):"",relT:mt&&mt.id&&mt.relation!=="new"?String(mt.t||""):"",relWhy:mt?String(mt.why||""):"",
-    count:others?`also on ${others} other thread${others===1?"":"s"}`:"",ask:String(a.ask||""),due:a.due||"",overdue:!!(due&&due.over),dueText:due?due.text:"",owners:(a.owners||[]).join(", "),files}; }
+    count:others?`also on ${others} other thread${others===1?"":"s"}`:"",ask:String(a.ask||""),due:a.due||"",overdue:!!(due&&due.over),dueText:due?due.text:"",owners:(a.owners||[]).join(", "),files,
+    closeWhy:cl?`Looks done: ${confMark(a)?"the thread shows it finished":String(cl.evidence||"").replace(/\.$/,"")}`:"",closeStaged:cl&&cl.staged?String(cl.id):"",closeCard:cl?a.id:""}; }
+/** BL-342 Part 3 B: the card's close suggestion, when it may be shown: not private, matched (not New) to that same action, and the
+    action still open in the page data @param {any} a @param {any} mt */
+export function cardClose(a,mt){ const c=a.closes;
+  if(!c||!c.id||a.marker==="private"||!mt||mt.relation==="new"||mt.id!==c.id) return null;
+  const it=A.find(x=>x.id===c.id); return it&&open(it)?c:null; }
 /** "Mia Hale with Omar Ali: you replied 14:02" @param {any} a */
 export function repliedRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:String(a.replied_at||convAt(a)),tag:"Replied",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: you replied ${whenWords(String(a.replied_at||""))}`,

@@ -2843,6 +2843,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdrel-chase{background:var(--warn-soft);color:var(--ink)}
 .tdrelitem{color:var(--day-ink,var(--ink))}
 .tdwhy{flex-basis:100%;color:var(--day-muted,var(--muted));font-size:var(--fs-xs)}
+/* BL-342 Part 3 B: why the matched action looks done, and its staged close with Undo */
+#tBrief .tdrow .tb p.tddone,#tBrief .tdrow .tb p.tdstaged{margin-top:4px;font-size:var(--fs-sm)}
+#tBrief .tdrow .tb p.tdstaged{color:var(--day-ink,var(--ink))}
 .tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .tddue{color:var(--day-muted,var(--muted))}
 .tdover{color:var(--bad);font-weight:600}
@@ -3787,6 +3790,7 @@ button.nchip{font:inherit;font-size:12px}
     aiSend: () => aiSend,
     aiSug: () => aiSug,
     alertChase: () => alertChase,
+    alertClose: () => alertClose,
     alertDismiss: () => alertDismiss,
     alertDraft: () => alertDraft,
     alertDraftWhy: () => alertDraftWhy,
@@ -4029,6 +4033,7 @@ button.nchip{font:inherit;font-size:12px}
     capOpen: () => capOpen,
     capped: () => capped,
     captureDone: () => captureDone,
+    cardClose: () => cardClose,
     cardHtml: () => cardHtml,
     cardProps: () => cardProps,
     catName: () => catName,
@@ -26742,6 +26747,22 @@ ${s5}`;
           ] }) : null,
           r4.relWhy ? /* @__PURE__ */ u2("span", { class: "tdwhy", children: r4.relWhy }) : null
         ] }) : null,
+        r4.closeWhy ? /* @__PURE__ */ u2("p", { class: "tdwhy tddone", children: r4.closeWhy }) : null,
+        r4.closeStaged ? /* @__PURE__ */ u2("p", { class: "tdstaged", children: [
+          `Close of ${r4.closeStaged}: Staged for Review`,
+          " · ",
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "qa",
+              "data-alertdo": "closeundo",
+              "data-id": r4.closeCard,
+              "aria-label": `Undo the staged close of ${r4.closeStaged}`,
+              children: "Undo"
+            }
+          )
+        ] }) : null,
         r4.ask ? /* @__PURE__ */ u2("p", { class: "tdask", children: [
           /* @__PURE__ */ u2("span", { class: "tdlab", children: "Ask" }),
           " ",
@@ -27837,6 +27858,8 @@ ${s5}`;
     if (m5 && !(a5.match && a5.match.logged)) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t47}`, data: { alertdo: "log", id: a5.id } });
     const mt2 = a5.match && a5.match.relation ? a5.match : null, rel2 = mt2 ? RELCHIP[mt2.relation] || "" : "", others = mt2 && mt2.id && mt2.count > 1 ? mt2.count - 1 : 0;
     if (mt2 && mt2.relation === "chase" && mt2.id) acts2.push({ id: "chase", icon: "chasemail", label: "Chase", name: `Chase the owner of ${mt2.id}: ${t47}`, data: { alertdo: "chase", id: a5.id } });
+    const cl2 = cardClose(a5, mt2);
+    if (cl2 && !cl2.staged) acts2.push({ id: "close", icon: "checks", label: `Looks done: close ${cl2.id}`, name: `Stage a close of ${cl2.id} for Review`, data: { alertdo: "close", id: a5.id } });
     const files = a5.type === "fyi" && (a5.attachments || []).length ? `Files: ${(a5.attachments || []).slice(0, 4).join(", ")}${a5.attachments.length > 4 ? ` and ${a5.attachments.length - 4} more` : ""}` : "";
     return {
       key: "al" + a5.id,
@@ -27862,8 +27885,17 @@ ${s5}`;
       overdue: !!(due && due.over),
       dueText: due ? due.text : "",
       owners: (a5.owners || []).join(", "),
-      files
+      files,
+      closeWhy: cl2 ? `Looks done: ${confMark(a5) ? "the thread shows it finished" : String(cl2.evidence || "").replace(/\.$/, "")}` : "",
+      closeStaged: cl2 && cl2.staged ? String(cl2.id) : "",
+      closeCard: cl2 ? a5.id : ""
     };
+  }
+  function cardClose(a5, mt2) {
+    const c5 = a5.closes;
+    if (!c5 || !c5.id || a5.marker === "private" || !mt2 || mt2.relation === "new" || mt2.id !== c5.id) return null;
+    const it2 = A4.find((x5) => x5.id === c5.id);
+    return it2 && open(it2) ? c5 : null;
   }
   function repliedRow(a5) {
     const others = (a5.people || []).filter(
@@ -30335,6 +30367,22 @@ ${s5}`;
     renderToday();
     snack(r4.message || "Staged for Review");
   }
+  async function alertClose(id2, undo) {
+    if (!viaServer()) {
+      snack("Closing needs the live server");
+      return;
+    }
+    const r4 = await api("/api/alerts/close", { id: id2, ...undo ? { undo: true } : {} });
+    if (!r4.ok) {
+      snack(r4.message || r4.error || "Not staged");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2);
+    if (a5) a5.closes = r4.closes;
+    await reloadData();
+    renderToday();
+    snack(r4.message || (undo ? "Taken back" : "Staged for Review"), undo ? void 0 : () => alertClose(id2, true));
+  }
   var ALERTTYPES = [["action", "Action"], ["risk", "Risk"], ["issue", "Issue"], ["decision", "Decision"]];
   var alertTypeOf = (k5, x5) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(x5 && x5.type || "risk").toLowerCase();
   async function alertMake(id2, type, keep2, cand) {
@@ -30631,6 +30679,8 @@ ${s5}`;
       if (b5.dataset.alertdo === "handled") alertHandled(b5.dataset.id);
       else if (b5.dataset.alertdo === "log") alertLog(b5.dataset.id);
       else if (b5.dataset.alertdo === "chase") alertChase(b5.dataset.id);
+      else if (b5.dataset.alertdo === "close") alertClose(b5.dataset.id, false);
+      else if (b5.dataset.alertdo === "closeundo") alertClose(b5.dataset.id, true);
       else if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
       else if (b5.dataset.alertdo === "make") alertMake(b5.dataset.id, b5.dataset.ctype || "", void 0, cand);
       else if (b5.dataset.alerttype && shared.CUR && shared.CUR.alert) {

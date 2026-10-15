@@ -2833,6 +2833,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdrel-chase{background:var(--warn-soft);color:var(--ink)}
 .tdrelitem{color:var(--day-ink,var(--ink))}
 .tdwhy{flex-basis:100%;color:var(--day-muted,var(--muted));font-size:var(--fs-xs)}
+/* BL-342 Part 3 B: why the matched action looks done, and its staged close with Undo */
+#tBrief .tdrow .tb p.tddone,#tBrief .tdrow .tb p.tdstaged{margin-top:4px;font-size:var(--fs-sm)}
+#tBrief .tdrow .tb p.tdstaged{color:var(--day-ink,var(--ink))}
 .tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .tddue{color:var(--day-muted,var(--muted))}
 .tdover{color:var(--bad);font-weight:600}

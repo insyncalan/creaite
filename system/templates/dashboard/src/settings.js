@@ -855,6 +855,12 @@ export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live 
   const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a&&a.match) a.match.logged=r.logged;
   await reloadData(); renderToday(); snack(r.message||"Staged for Review"); }
+/* BL-342 Part 3 B, step 9: "Looks done: close <ID>" stages one pending close of the matched action for Review (nothing is
+   applied); Undo takes it back while it is still pending. The page's data is reloaded so the Review count follows. */
+export async function alertClose(id,undo){ if(!viaServer()){ snack("Closing needs the live server"); return; }
+  const r=await api("/api/alerts/close",{id,...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a) a.closes=r.closes;
+  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertClose(id,true)); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
    leaves the message as it was. */
@@ -959,6 +965,7 @@ export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
   if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
+  else if(b.dataset.alertdo==="close") alertClose(b.dataset.id,false); else if(b.dataset.alertdo==="closeundo") alertClose(b.dataset.id,true);
   else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
   else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */

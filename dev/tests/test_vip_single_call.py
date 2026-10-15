@@ -734,6 +734,19 @@ class SweepDuringTheCallTests(ServerCheck, unittest.TestCase):
             self.stop()
 
 
+class FailedCheckTests(ServerCheck, unittest.TestCase):
+    def test_a_reply_that_is_not_a_list_changes_nothing_and_logs_the_failure(self):
+        self.start({"not": "a list"})
+        try:
+            self.wait(lambda: "check failed" in self.log(), "the failure logged")
+            st = vip_file(self.v)
+            self.assertEqual((st["alerts"], st["last_check"]), ([], "2026-10-08 07:00"))
+            self.assertRegex(self.log(), r"check failed after \d+\.\ds, \$0\.3027")
+            self.assertIn("didn't finish", self.post("/api/vip", {})["error"])
+        finally:
+            self.stop()
+
+
 class InvitesFlipTests(unittest.TestCase):
     def test_vip_invites_true_puts_the_bl334_sentence_back(self):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
