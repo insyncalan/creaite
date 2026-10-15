@@ -230,7 +230,11 @@ export async function saveView(name){ name=String(name||"").trim().replace(/[<>"
   if(allViews(shared.WT).some(v=>v.label.toLowerCase()===name.toLowerCase())){ snack(`There's already a view called “${name}”`); return; }
   shared.SAVED[shared.WT]=[...(shared.SAVED[shared.WT]||[]),{name,...viewState()}]; if(await writeSettings({"work.saved_views":shared.SAVED})){ shared.WVIEW=WB[shared.WT]="saved:"+name; renderWork(); navWrite(false); snack(`View “${name}” saved`); } else shared.SAVED[shared.WT]=shared.SAVED[shared.WT].filter(v=>v.name!==name); }
 export async function deleteView(name){ const before=shared.SAVED[shared.WT]; shared.SAVED[shared.WT]=before.filter(v=>v.name!==name);
-  if(await writeSettings({"work.saved_views":shared.SAVED})){ if(WB[shared.WT]==="saved:"+name) WB[shared.WT]=null; if(shared.WVIEW==="saved:"+name){ shared.WVIEW=null; syncView(); } renderWork(); navWrite(false); snack(`View “${name}” deleted`); } else shared.SAVED[shared.WT]=before; }
+  if(await writeSettings({"work.saved_views":shared.SAVED})){ if(WB[shared.WT]==="saved:"+name) WB[shared.WT]=null; if(shared.WVIEW==="saved:"+name){ shared.WVIEW=null; syncView(); } renderWork(); navWrite(false); snack(`View “${name}” deleted`,viewUndo(before)); } else shared.SAVED[shared.WT]=before; }
+/* BL-316: a change to the saved views offers Undo (a move moves it back, a rename renames it back); a delete puts the tab's
+   views back as they were */
+export const viewUndo=before=>{ const t=shared.WT; return async()=>{ const now=shared.SAVED[t]; shared.SAVED[t]=before;
+  if(await writeSettings({"work.saved_views":shared.SAVED})){ renderWork(); navWrite(false); snack("View put back"); } else shared.SAVED[t]=now; }; };
 /* BL-62: each tab keeps its own filters, search and sort; switching tabs never carries filters across */
 export const TABSTATE={};
 export function saveTab(){ TABSTATE[shared.WT]={fx:snapshot(),p:[...PROJF],q:shared.WQ,view:shared.WVIEW,base:WB[shared.WT]||null}; }
@@ -762,12 +766,12 @@ export function renderViewBar(){ const el=$("#wviews"), V=allViews(shared.WT), d
 export async function updateView(){ const b=allViews(shared.WT).find(v=>v.id===WB[shared.WT]); if(!b||b.builtin) return; const before=shared.SAVED[shared.WT], i=before.findIndex(v=>v.name===b.label); if(i<0) return;
   shared.SAVED[shared.WT]=before.map((v,j)=>j===i?{...v,...viewState(),name:v.name}:v); if(await writeSettings({"work.saved_views":shared.SAVED})){ shared.WVIEW=WB[shared.WT]=b.id; renderWork(); navWrite(false); snack(`View “${b.label}” updated`); } else shared.SAVED[shared.WT]=before; }
 export async function moveView(name,d){ const L=[...(shared.SAVED[shared.WT]||[])], i=L.findIndex(v=>v.name===name), j=i+d; if(i<0||j<0||j>=L.length) return; [L[i],L[j]]=[L[j],L[i]]; const before=shared.SAVED[shared.WT]; shared.SAVED[shared.WT]=L;
-  if(await writeSettings({"work.saved_views":shared.SAVED})){ renderWork(); snack(`“${name}” moved ${d<0?"earlier":"later"}`); $(`#wviews [data-vmenu="${CSS.escape(name)}"]`)?.focus(); } else shared.SAVED[shared.WT]=before; }
+  if(await writeSettings({"work.saved_views":shared.SAVED})){ renderWork(); snack(`“${name}” moved ${d<0?"earlier":"later"}`,()=>moveView(name,-d)); $(`#wviews [data-vmenu="${CSS.escape(name)}"]`)?.focus(); } else shared.SAVED[shared.WT]=before; }
 export async function renameView(old,name){ name=String(name||"").trim().replace(/[<>"]/g,""); if(!name){ snack("Name the view first"); return; } if(name===old){ VRENAME=null; renderWork(); return; }
   if(allViews(shared.WT).some(v=>v.label.toLowerCase()===name.toLowerCase()&&v.label!==old)){ snack(`There's already a view called “${name}”`); return; }
   const before=shared.SAVED[shared.WT]; shared.SAVED[shared.WT]=before.map(v=>v.name===old?{...v,name}:v); const ch={"work.saved_views":shared.SAVED}, dk={actions:"defActionView",raid:"defRaidView",decisions:"defDecisionView"}[shared.WT];
   if(S[dk]==="saved:"+old) ch[SKEY[dk]]="saved:"+name;                                          /* the default view follows its new name */
-  if(await writeSettings(ch)){ if(ch[SKEY[dk]]) S[dk]="saved:"+name; if(shared.WVIEW==="saved:"+old) shared.WVIEW="saved:"+name; if(WB[shared.WT]==="saved:"+old) WB[shared.WT]="saved:"+name; VRENAME=null; renderWork(); navWrite(false); snack(`View renamed “${name}”`); $(`#wviews [data-wv="saved:${CSS.escape(name)}"]`)?.focus(); }
+  if(await writeSettings(ch)){ if(ch[SKEY[dk]]) S[dk]="saved:"+name; if(shared.WVIEW==="saved:"+old) shared.WVIEW="saved:"+name; if(WB[shared.WT]==="saved:"+old) WB[shared.WT]="saved:"+name; VRENAME=null; renderWork(); navWrite(false); snack(`View renamed “${name}”`,()=>renameView(name,old)); $(`#wviews [data-wv="saved:${CSS.escape(name)}"]`)?.focus(); }
   else shared.SAVED[shared.WT]=before; }
 /* BL-316: a saved view's ▾ opens the Menu block's menu */
 export function savedViewMenu(btn,name){ if(menuOpenFor(btn)){ closeMenu(); return; } const L=shared.SAVED[shared.WT]||[], i=L.findIndex(v=>v.name===name);

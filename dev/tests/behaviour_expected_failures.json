@@ -43,9 +43,5 @@
  "Today": [
   "unreached: dialog Dialog id:closeDlg (src/components/closeday/CloseDay.jsx)"
  ],
- "Work": [
-  "unreached: menu Menu id:newBtn id:newDecMenu (src/components/work/NewTile.jsx)",
-  "unreached: menu Menu id:vmenuPop (src/work.js)",
-  "unreached: menu Opener label:Options for the (src/work.js)"
- ]
+ "Work": []
 }
