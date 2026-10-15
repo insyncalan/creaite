@@ -1573,6 +1573,17 @@ def merge_closes(keep, drop):
         keep["closes"] = dc
         if dc.get("staged") and (keep.get("match") or {}).get("id") != dc.get("id") and drop.get("match"):
             keep["match"] = drop["match"]
+    elif kc and dc and isinstance(kc.get("staged"), dict) and isinstance(dc.get("staged"), dict):
+        merge_staged(kc, dc, drop)
+
+
+def merge_staged(kc, dc, drop):
+    """Review (d): both cards had a staged close. The kept card's close carries the dropped one's (and any it carried) in
+    staged.merged, so Undo on the kept card takes out both and leaves no proposal for either."""
+    ds = dc["staged"]
+    carried = [{"proposal": ds.get("proposal"), "line": ds.get("line"), "card": ds.get("card") or drop.get("id"),
+                "id": dc.get("id")}] + [m for m in ds.get("merged") or [] if isinstance(m, dict)]
+    kc["staged"]["merged"] = [m for m in kc["staged"].get("merged") or [] if isinstance(m, dict)] + carried
 
 
 def merge_state(keep, drop, newer):
@@ -3109,6 +3120,9 @@ def vip_close_unstage(aid):
     out = paths.STAGING / str(was["proposal"])
     if state == "staged":
         _unstage_in(out, c["id"], was, [was.get("card"), aid, *(a.get("ids") or [])])
+    for m in was.get("merged") or []:                                   # review (d): a merged card's own staged close
+        if isinstance(m, dict) and m.get("card") and logged_state(m, m.get("id")) == "staged":
+            _unstage_in(paths.STAGING / str(m["proposal"]), m["id"], m, [m["card"]])
     c.pop("staged", None)
     vip_save(st)
     return {"proposal": out.name, "id": c.get("id"), "state": "undone"}

@@ -691,6 +691,30 @@ class MergeCloseTests(Base):
         self.assertEqual(self.stage("vip_close_unstage", b)["state"], "undone")
         self.assertEqual(self.proposals(), [])
 
+    def test_when_both_closes_are_staged_undo_on_the_kept_card_leaves_no_proposal_for_either(self):
+        # Review (d): the dropped card's staged close is carried, so it is never left pending with nothing pointing to it.
+        b = self.second(close=True)
+        self.stage("vip_close_stage", self.a)
+        self.stage("vip_close_stage", b)
+        [(name, item)] = self.proposals()                                                    # one pending item, both lines
+        self.assertEqual(item["suggested"]["closes"], [self.a, b])
+        kept = self.merge(self.a, b)
+        self.assertEqual([m["card"] for m in kept["closes"]["staged"]["merged"]], [b])
+        self.assertEqual(self.stage("vip_close_unstage", self.a)["state"], "undone")
+        self.assertEqual(self.proposals(), [])                                              # neither close left
+
+    def test_when_both_closes_are_staged_after_a_log_undo_leaves_logs_line_only(self):
+        b = self.second(close=True)
+        self.stage("vip_log", self.a)
+        self.stage("vip_close_stage", self.a)
+        self.stage("vip_close_stage", b)
+        self.merge(b, self.a)
+        self.stage("vip_close_unstage", b)
+        [(name, item)] = self.proposals()
+        self.assertNotIn("status", item["changes"])
+        self.assertNotIn("closes", item["suggested"])
+        self.assertFalse(any("Looks done" in ln for ln in item["changes"]["latest_update"].splitlines()))
+
     def test_an_older_staged_close_without_its_card_is_found_by_the_merged_id(self):
         b = self.second()
         self.stage("vip_close_stage", self.a)
