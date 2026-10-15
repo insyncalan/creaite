@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | The pinned Head issue (#82) holds where Jarvis is, the baton procedure, the start-up brief and the handover notes; `dev/HOW-WE-WORK.md` points to it | Alan asked for a procedure to move Jarvis between laptops; the charter's Head item didn't exist yet |
 | 15-10-2026 | Alan | BL-341 (#81) is in v1.9.5 and gates its cut (#52 blocked by #81); v1.9.4 ships as planned with hand checks run by hand | "Keep as planned with 1.9.5", after the trade-off (gating v1.9.4 would have held finished work back by an L-size job) |
 | 15-10-2026 | Jarvis | Four P4 follow-up defects on `v210-p4-minutes` (stale comments, refused-save drafts piling up, "Edit in Word" on a record, Review edits not updating the draft row); the hidden Edit in Word goes to Alan for sign-off | Defects inside v2.1.0 are the Head's; visible changes are Alan's |
 | 15-10-2026 | Alan | BL-341 automated release hand checks, Priority High, on the existing CDP harness (no Playwright); plan #81, Team Stark, Unscheduled and not a release gate. The next new item is **BL-342** | "Yes please - make it a priority" (relayed by the Product Manager session); Jarvis placed it and asked Alan to confirm |

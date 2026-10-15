@@ -11,7 +11,7 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 
 ## Who does what
 
-- **Jarvis** runs the plan: a fresh Claude session given the charter. There is one Jarvis at a time, and Jarvis moves with Alan (the baton).
+- **Jarvis** runs the plan: a fresh Claude session given the charter. There is one Jarvis at a time, and Jarvis moves with Alan (the baton). The pinned "Head" issue on the board (insyncalan/creaite-plan#82) says which laptop Jarvis is on, and holds the baton procedure, the start-up brief and each handover note.
 - **A team lead per laptop** runs the build agents: **Team Cap** on laptop 1, **Team Stark** on laptop 2. There is no cap on build agents.
 - **Alan** decides what the charter keeps for him. A default Jarvis raises goes ahead at the second digest after it was raised, never overnight.
 - **Digests:** four a day (full at 08:00 and 16:00, lite at 12:00 and 20:00), and on demand.
