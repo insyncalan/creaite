@@ -4,7 +4,9 @@ Nothing that isn't client-visible, is Sensitive or is partner-only can reach a c
 BL-338). The check reads a creaite document's data (creaite_doc.py), never a Word file:
   - item_problem: why one item may not appear for a client, or None (the tracker as it is now, and the item's labels);
   - make_safe: a copy of a client document with every row, tag, milestone and item that fails dropped, and what was dropped;
-  - findings: what is still wrong with a client document (items, and internal wording found in its text), for approve and export;
+  - findings: what is still wrong with a client document (items, internal wording found in its text, the tracker's internal health
+    reason or an internal-only marker, and the name of someone who owns only items a client can't see), for approve and export:
+    the gate at the end, whatever route or place the text came through (#123);
   - people: the names (and register aliases) of the owners of the items a client report may show, and of everyone else on the
     project's items: the names check edit_ai.client_problems and findings share (#123);
   - text_findings: the wording check on any text, moved here from review.client_findings (which still reads the Word flow's drafts
@@ -268,7 +270,11 @@ def findings(doc, con=None):
     none."""
     if (doc.get("audience") or "internal") == "internal":
         return []
+    import drafts
     con = con or connect()
     blocking = blocking_labels(con)
+    code, text = doc.get("project") or "", doc_text(doc)
     found = [why for why in (item_problem(con, r, blocking) for r in sorted(refs(doc))) if why]
-    return found + text_findings(con, doc.get("project") or "", doc_text(doc))
+    found += text_findings(con, code, text)
+    found += [f"it holds {why}" for why in drafts.internal_findings(con, code, text)]   # #123: the gate at the end, any route
+    return found + name_findings(con, code, text, blocking)

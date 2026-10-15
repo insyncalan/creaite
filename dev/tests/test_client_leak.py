@@ -208,6 +208,59 @@ REGISTER = ("# People register\n\n## People\n\n| Full name | Email | Aliases | O
             "| Mia Hale | mia@example.com | Mia | Example Partner | Adviser | | | |\n")
 
 
+class TheGateAtTheEnd(Base):
+    """#123 (Jarvis): client_leak.findings, the approve and export gate, also runs the tracker's internal health reason and the
+    internal-only markers (drafts.internal_findings) and the names check (someone who owns only items a client can't see) on the
+    client document's text, so whatever route or place a text came through, it is caught at approval and export. A clean client
+    report, the names of client-visible owners and their aliases, and Alan's own name still pass."""
+    REASON = "ZEBRAINTERNAL vendor is failing to deliver the build on time"
+
+    def setUp(self):
+        super().setUp()
+        import sqlite3
+        from contextlib import closing
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:     # a test vault: set directly
+            con.execute("UPDATE projects SET health = 'Off track', health_reason = ? WHERE code = 'ABC'", (self.REASON,))
+            con.commit()
+        (self.v.root / "projects/_portfolio/people-register.md").write_text(REGISTER, encoding="utf-8")
+
+    def findings(self, summary):
+        return self.py("d = report_doc.client_doc('ABC')\n"
+                       "next(s for s in d['sections'] if s['id'] == 'summary')['text'] = " + repr(summary) + "\n"
+                       "print(json.dumps(client_leak.findings(d)))")
+
+    def test_a_clean_client_report_passes(self):
+        self.assertEqual(self.findings("Testing starts on plan."), [])
+        for ok in ("Jane Doe signs the statement of work this week.", "Jane signs the statement of work this week.",
+                   "Alan Carter sends the revised plan.", "Alan will send the revised plan.",
+                   "Mia Hale joined the steering committee.",                      # a register name who owns nothing here
+                   "The vendor is late."):                                         # fewer than five of the reason's words in order
+            self.assertEqual(self.findings(ok), [], ok)
+
+    def test_the_health_reason_a_marker_or_an_internal_owners_name_is_found(self):
+        for text, why in (("The " + self.REASON + ".", "the internal health reason"),
+                          ("We think the vendor is failing to deliver soon.", "the internal health reason"),   # a 5-word run
+                          ("Internal only: the vendor.", "an internal-only marker"),
+                          ("Not for the client: the vendor.", "an internal-only marker"),
+                          ("Omar Ali confirms the testers.", "Omar Ali is named"),       # owns only ABC-A-004 (not client-visible)
+                          ("Omar confirms the testers.", "Omar is named")):              # and his alias
+            got = self.findings(text)
+            self.assertTrue(any(why in f for f in got), (text, got))
+
+    def test_approve_and_export_refuse_it(self):
+        self.approve_week()
+        r = self.py("d = report_doc.client_doc('ABC')\n"
+                    "next(s for s in d['sections'] if s['id'] == 'summary')['text'] = 'Omar Ali confirms the testers. Internal only.'\n"
+                    "r = report_doc.save_draft(d)\nreport_doc.stage_client(r['path'])", ok=False)
+        self.assertIn("possible internal content", r.stderr)
+        self.assertIn("Omar Ali is named", r.stderr)
+        self.assertIn("an internal-only marker", r.stderr)
+        got = self.py("import client_check\n"
+                      "d = creaite_doc.read('system/staging/drafts/2026-10-09 Client report - Example Programme (Example Client Ltd).html')\n"
+                      "print(json.dumps(client_check.left_out(d)['findings']))")             # what the export route checks first
+        self.assertTrue(any("Omar Ali" in f for f in got), got)
+
+
 class ReviewReadsTheData(Base):
     def test_client_findings_reads_a_creaite_draft_from_its_data(self):
         got = self.py("import review\n"
