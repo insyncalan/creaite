@@ -309,19 +309,20 @@ def hook_runner():
 # CREAITE_PYTHON, which system/scripts/run uses before it searches PATH.
 def run_env(kind=None):
     """The environment for everything the server starts (ask creaite and other headless runs, the guard hook, the VIP check).
-    #60 option (a): a Prep page run's also says so (CREAITE_RUN_KIND=prep), for search.py; set here only, never by the run."""
+    #60: a run creaite starts itself also says its kind (CREAITE_RUN_KIND, held_run), so search.py holds confidential notes back;
+    set here only, never by the run, and never for ask creaite."""
     import launch as launcher
     env = dict(os.environ)
-    env.pop(PREP_ENV, None)                 # #60: only a Prep page run says it is one
+    env.pop(PREP_ENV, None)                 # #60: only a run creaite starts itself says what kind it is
     env["PATH"] = launcher.run_path(env.get("PATH", ""))
     env["CREAITE_PYTHON"] = sys.executable
     env["CREAITE_HEADLESS_RUN"] = "1"       # BL-323: a headless run's tools never run Tidy up (backup.ask_run)
-    if kind == "prep":
-        env[PREP_ENV] = "prep"
+    if kind:
+        env[PREP_ENV] = kind
     return env
 
 
-PREP_ENV = "CREAITE_RUN_KIND"               # #60 option (a): search.py's sign that it runs inside a Prep page run
+PREP_ENV = "CREAITE_RUN_KIND"               # #60: search.py's sign that it runs inside a run creaite started itself
 
 
 PRESTART = re.compile(r"xcrun: error|dlopen\(|No module named|command not found|bad interpreter|found no Python 3\.9|creaite start-up fault")
@@ -359,11 +360,13 @@ def never_denies():
     return [d for d in dict.fromkeys(out) if d not in DENY_TOOLS]
 
 
-def guard_settings(run_id, mode):
+def guard_settings(run_id, mode, held=False):
     """The --settings for an ask creaite run: the PreToolUse hook that checks every tool call (reach.py hook). Hooks can't be
-    switched off from a settings file the run can't change, and the hook refuses anything it can't check."""
+    switched off from a settings file the run can't change, and the hook refuses anything it can't check. #60 follow-ups:
+    `held` (a run creaite starts itself in a guarded mode: Close the day's sweep) adds `--held 1`, the confidential-note check."""
     import shlex
-    cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode))     # BL-237
+    cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode,     # BL-237
+                                            *(("--held", "1") if held else ())))
     return json.dumps({"disableAllHooks": False,
                        "hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}})
 
@@ -1921,6 +1924,27 @@ def run_policy(kind, confirmed, only=None):
     return tools, deny, guarded
 
 
+LIKE_ASK = ("ask", "search")     # #60 (Alan, 15-10-2026): Search's answer is Alan's own question, like ask creaite
+
+
+def held_run(kind, confirmed, only, sweep, tools):
+    """#60 follow-ups (Alan, 15-10-2026): whether this run is one creaite starts itself that may read files, so the guard hook and
+    search.py hold confidential notes back: not ask creaite (a chat, a typed sweep, a confirmed request), not a run with no
+    tools, and not a narrowed run (`only`: Microsoft 365 reading only, no files). Search's answer (kind "search") is treated like ask
+    creaite (Alan, 15-10-2026, #60)."""
+    return kind not in LIKE_ASK and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
+
+
+def guard_args(run_id, mode, held, session):
+    """The guard hook's --settings for a run: a guarded run's mode (BL-141, BL-295; the run written to system/guard/run.json),
+    with `--held 1` when creaite started it (#60); else mode "held" for a run creaite starts itself; else none."""
+    if mode:
+        settings = guard_settings(run_id, mode, held)
+        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session)
+        return ["--settings", settings]
+    return ["--settings", guard_settings(run_id, "held")] if held else []   # #60: the hook refuses a confidential note
+
+
 class Run:
     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
 
@@ -1936,12 +1960,8 @@ class Run:
                "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
-        if guarded:
-            mode = guard_mode(policy, None if sweep else confirmed)
-            cmd += ["--settings", guard_settings(run_id, mode)]
-            reach.start_run(run_id, mode, OUTSIDE_CONTENT, session)
-        elif policy == "prep":                                  # #60 option (a): the hook refuses a confidential note, nothing else
-            cmd += ["--settings", guard_settings(run_id, "prep")]
+        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+        cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
         self.guarded = guarded
         if session:
             cmd += ["--resume", session]
@@ -1957,7 +1977,7 @@ class Run:
         self.stop = self.deferred = self.done = self.seen = False
         self.started, self.recorded = time.time(), 0       # BL-262: how many events the chat's history reaches
         try:
-            env = run_env(policy)                                                      # BL-248; #60: a Prep run's kind
+            env = run_env(kind if held else None)                                      # BL-248; #60: a held run's kind
             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
             self.proc = subprocess.Popen(cmd, cwd=paths.ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                          bufsize=1, env=env)

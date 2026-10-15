@@ -440,9 +440,9 @@ def understand(text, project=(), person=(), kind=(), frm=None, to=None, skip=(),
     return parsed["terms"], chips, flt
 
 
-def search(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), parse=True, refresh=True, now=None):
+def search(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), parse=True, refresh=True, now=None, hold=False):
     """Grouped results for the text and filters: {terms, chips, groups, totals, rebuilt}. Explicit filters (project,
-    person, kind, from, to) are added as chips of their own."""
+    person, kind, from, to) are added as chips of their own. #60: `hold` leaves confidential notes out entirely."""
     vocab = vocabulary()
     terms, chips, flt = understand(text, project, person, kind, frm, to, skip, parse, now, vocab)
     out = {"q": text, "terms": terms, "chips": chips, "groups": {g: [] for g in GROUPS}, "totals": {g: 0 for g in GROUPS},
@@ -464,7 +464,7 @@ def search(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), par
             found["items"].sort(key=lambda r: (r["id"].lower() not in ids,))      # an exact ID first; then newest (stable)
         if flt["groups"] is None or flt["groups"] - {"items"}:
             for g, rows in file_results(con, vocab, terms, flt, opts).items():
-                found[g] = rows
+                found[g] = held_out(rows, hold)                                  # #60
     finally:
         con.close()
     for g in GROUPS:
@@ -505,51 +505,37 @@ def preview(rel, q=""):
             "html": "".join(f"<p>{mark(line, terms)}</p>" for line in text[:PREVIEW_LIMIT].split("\n") if line.strip())}
 
 
-# ===== #60 option (a) (Alan, 15-10-2026): a Prep page run sees a confidential note as its title and link only =====
-# The live server starts the Prep page run with CREAITE_RUN_KIND=prep in its environment (live_server.run_env), and its guard hook
-# lets a Bash call through only as one creaite script on its own, so the run can't change it. There, query and preview give a
-# confidential note (notes.held: fail closed) without its text; everyone else's results are unchanged.
-HELD_MESSAGE = "This note is confidential: a Prep page never reads its text."
+# ===== #60 (Alan, 15-10-2026): a run creaite starts itself never sees a confidential note =====
+# The live server starts every run of its own that may read files (Prep, Shape the meeting, Current state, the AI drafts,
+# a transcript check or load, Close the day's sweep) with CREAITE_RUN_KIND=<its kind> (live_server.run_env), never ask
+# creaite or Search's answer, and the guard hook lets a Bash call through only as one creaite script on its own, so the run
+# can't change it. There,
+# query leaves a confidential note out entirely (no title, link or match on its words: notes.held, fail closed) and preview answers
+# as for a file the index doesn't hold. Everyone else's results are unchanged. (Option (a)'s title and link replaced: #60 follow-ups.)
 
 
-def prep_run():
-    """Whether this command runs inside a Prep page run (set by the live server, never by the run)."""
-    return os.environ.get("CREAITE_RUN_KIND") == "prep"
+def held_run():
+    """Whether this command runs inside a run creaite started itself (set by the live server, never by the run or ask creaite)."""
+    return bool(os.environ.get("CREAITE_RUN_KIND"))
 
 
 def held_note(rel):
-    """Whether the stored path `rel` is a note a Prep run must not read (marked confidential, or unreadable)."""
+    """Whether the stored path `rel` is a note such a run must not see (marked confidential, or unreadable)."""
     p = paths.resolve(rel)
     return paths.is_note(p) and notes.held(p)
 
 
-def prep_query(res):
-    """search()'s results with each confidential note as its title and link only (no snippet, date or summary)."""
-    for g, rows in res.get("groups", {}).items():
-        res["groups"][g] = [{"group": r["group"], "kind": r["kind"], "title": r["title"], "path": r["path"], "opens": r["opens"],
-                             "project": r.get("project"), "snippet": "", "confidential": True}
-                            if r.get("path") and held_note(r["path"]) else r for r in rows]
-    return res
-
-
-def prep_preview(rel, q=""):
-    """preview() for a Prep run: a confidential note as its name and link only; anything else as preview() gives it."""
-    p = indexed(rel)
-    if p and held_note(rel):
-        return {"ok": True, "name": p.name, "path": str(rel), "confidential": True, "html": "", "cut": False, "empty": False,
-                "open": False, "message": HELD_MESSAGE}
-    return preview(rel, q)
-
-
-def query_for_run(res):
-    """The command line's query results: a Prep run's with confidential notes held back (prep_query), anyone else's as they are."""
-    return prep_query(res) if prep_run() else res
+def held_out(rows, hold=True):
+    """Search results without the confidential notes when `hold` (#60: no title, no link, no match on their words); else as given."""
+    return [r for r in rows if not (hold and r["kind"] == "note" and held_note(r["path"]))]
 
 
 def preview_for_run(rel, q=""):
-    """The command line's preview: a Prep run's through prep_preview, anyone else's through preview."""
-    return prep_preview(rel, q) if prep_run() else preview(rel, q)
-# ===== end #60 option (a) =====
+    """The command line's preview: in a run creaite started, a confidential note answers as a file the index doesn't hold."""
+    if held_run() and indexed(rel) and held_note(rel):
+        return {"ok": False, "message": "That file isn't in the search index."}
+    return preview(rel, q)
+# ===== end #60 =====
 
 
 # ── Ask: what Claude reads first (BL-07) ───────────────────────────────────────
@@ -635,7 +621,7 @@ def file_passages(files, terms):
     """([(result, passages)] for the best 14 files, [confidential notes left out]). BL-301: a note marked confidential is never
     read here, so its text doesn't reach Claude; it is only counted."""
     ordered = [r for g in ("meetings", "reports", "documents", "notes") for r in files[g]]
-    held = [r for r in ordered if r["kind"] == "note" and notes.is_confidential(paths.resolve(r["path"]))]
+    held = [r for r in ordered if r["kind"] == "note" and notes.held(paths.resolve(r["path"]))]   # #60: fail closed
     out = []
     for r in [r for r in ordered if r not in held][:14]:
         f = paths.resolve(r["path"])
@@ -687,7 +673,7 @@ def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), no
         else:
             continue
         break
-    if held:
+    if held and not held_run():                 # #60 (Jarvis, 15-10-2026): a run creaite starts itself isn't told one matched
         body.append(f"({len(held)} confidential note(s) also matched; their text is left out)")
     out = head + ["", "## Passages from meetings, reports, documents and notes"] + (body or ["(none found)"]) + \
         ["", "## Tracker items"] + ([items_text[:max(0, budget - sum(len(x) for x in head + body) - 200)]] if items_block else ["(none found)"])
@@ -780,8 +766,7 @@ def main(argv):
             else:
                 sys.exit(f"creaite search: unexpected {args[i]}")
         res = search(args[0], multi["--project"], multi["--person"], multi["--kind"], single.get("from"), single.get("to"),
-                     multi["--skip"], single.get("parse", True))
-        res = query_for_run(res)                                         # #60 option (a)
+                     multi["--skip"], single.get("parse", True), hold=held_run())     # #60
         print(json.dumps(res, ensure_ascii=False, indent=2))
         return 0
     if cmd == "enrich":
@@ -832,7 +817,7 @@ def main(argv):
         print(json.dumps(res, ensure_ascii=False) if as_json else res["text"])
         return 0
     if cmd == "preview" and args:
-        print(json.dumps(preview_for_run(args[0], args[1] if len(args) > 1 else ""), ensure_ascii=False))   # #60 option (a)
+        print(json.dumps(preview_for_run(args[0], args[1] if len(args) > 1 else ""), ensure_ascii=False))   # #60
         return 0
     print(__doc__)
     return 2
