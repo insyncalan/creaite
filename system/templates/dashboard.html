@@ -25519,6 +25519,13 @@ ${s5}`;
   var healthResult = y3(null);
   var healthBusy = y3(false);
   var healthError = y3("");
+  var healthCardWaiting = y3(
+    /** @type {string[]} */
+    []
+  );
+  var markCardWaiting = (id2) => {
+    if (id2 && !healthCardWaiting.value.includes(id2)) healthCardWaiting.value = [...healthCardWaiting.value, id2];
+  };
   var COUNT_KEY = "creaite-health-count";
   var healthCount = y3(0);
   var healthCheckedAt = g3(() => healthResult.value ? healthResult.value.checked : "");
@@ -25573,6 +25580,8 @@ ${s5}`;
         healthResult.value = /** @type {HealthResult} */
         r4;
         healthCount.value = (r4.problems || []).length;
+        const still = (r4.problems || []).map((p6) => p6.fix && p6.fix.id);
+        healthCardWaiting.value = healthCardWaiting.value.filter((id2) => still.includes(id2));
         store.set(COUNT_KEY, { n: healthCount.value, at: Date.now() });
       } else healthError.value = r4.message || "The health check didn't run";
     } finally {
@@ -25944,9 +25953,13 @@ ${s5}`;
     const m5 = CMD.exec(how || "");
     return m5 ? m5[0].trim() : "";
   };
+  var CARD_WAITING = "On the approval card, waiting for you";
   async function runHealthFix(f5) {
     const r4 = await api(`/api/health/fix/${encodeURIComponent(f5.id || "")}`);
-    snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
+    if (r4.ok && r4.card) {
+      markCardWaiting(f5.id || "");
+      snack(CARD_WAITING + ": nothing moves until you approve it.");
+    } else snack(r4.message || (r4.ok ? "Done" : "It wasn't fixed"));
     if (r4.ok && r4.url) window.open(r4.url, "_blank", "noopener");
     if (r4.ok && r4.card) await pendingEdit();
     if (r4.ok && !r4.url) checkHealth();
@@ -26071,6 +26084,10 @@ ${s5}`;
         ] }),
         p6.detail && /* @__PURE__ */ u2("div", { class: "d", children: p6.detail }),
         p6.fix.built && /* @__PURE__ */ u2("div", { class: "hdoes", children: p6.fix.does }),
+        p6.fix.id && healthCardWaiting.value.includes(p6.fix.id) && /* @__PURE__ */ u2("div", { class: "hdoes hwait", role: "status", children: [
+          CARD_WAITING,
+          "."
+        ] }),
         !p6.fix.built && open2 && /* @__PURE__ */ u2("div", { class: "hhow", id: hid, children: [
           p6.fix.how ? /* @__PURE__ */ u2("span", { children: p6.fix.how }) : /* @__PURE__ */ u2("span", { children: "Only you can take this step: the line above says what is wrong." }),
           cmd && /* @__PURE__ */ u2("button", { type: "button", class: "mini", "aria-label": `Copy the command: ${cmd}`, onClick: copy, children: "Copy" })
