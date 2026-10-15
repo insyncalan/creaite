@@ -67,7 +67,7 @@ SCRIPT = r"""
     go("person","Nobody Here"); out.nobody=pp().textContent.replace(/\s+/g," ").trim();
     // links both ways: from Work, the detail panel and Review; the palette
     clearAllFilters(); WT="actions"; applyView("open"); go("work"); const wl=document.querySelector('#v-work td[data-f=o] a[data-person="Sara Example"]'); out.workLink=!!wl; wl.click(); out.workLinkWent=[VIEW,PERSON];
-    go("work"); openRecord("actions",A.find(a=>a.o==="Sara Example").id); document.querySelector('#panel [data-pkp="o"]').click(); const pl=[...document.querySelectorAll('.pkpop .pkopt')].find(o=>/page$/.test(o.textContent.trim())); out.panelLink=pl&&pl.textContent.trim().replace(/^Open (.*)'s page$/,"$1"); pkPopClose(false); closePanel();   /* BL-176: the owner chip's list ends with the person's page */
+    go("work"); openRecord("actions",A.find(a=>a.o==="Sara Example").id); document.querySelector('#panel [data-pkp="o"]').click(); const pl=[...document.querySelectorAll('.pkpop .pkopt')].find(o=>/page$/.test(o.textContent.trim())); out.panelLink=pl&&pl.textContent.trim().replace(/^Open (.*)'s page$/,"$1"); closePicker("owner",false); closePanel();   /* BL-176: the owner chip's list ends with the person's page */
     out.reviewLink=revDetail({kind:"actions",rec:{o:"Omar Ali",due:null,pr:"Medium"}}).includes('data-person="Omar Ali"');
     out.palette=[ckItems("omar").filter(i=>i.g==="People").map(i=>[i.l,i.h]),ckItems("people").some(i=>i.g==="Go to"&&i.l==="People")];
     go("today");
@@ -89,7 +89,7 @@ SCRIPT = r"""
     const chip=f=>document.querySelector(`#panel [data-pkp="${f}"]`), q=v=>{ const i=document.querySelector(".pkpop .pkq"); i.value=v; i.dispatchEvent(new Event("input",{bubbles:true})); return [...document.querySelectorAll(".pkpop .pkopt")].map(o=>(o.querySelector("span")||o).firstChild.textContent.trim()); };
     let nid=await peekNew("actions"); chip("o").click(); await wait(20);
     out.pickPartial=q("sar"); out.pickStranger=q("Zed Quill");
-    let pr=pkOwner("actions",nid,"Zed Quill",true); pkPopClose(false); await wait(30); out.newDlg=[el("personDlg").open,el("pd_name").value,el("pdMatch").hidden]; await fillDlg({email:"zed@quill.example"}); await pr; await settle();
+    let pr=pkOwner("actions",nid,"Zed Quill",true); closePicker("owner",false); await wait(30); out.newDlg=[el("personDlg").open,el("pd_name").value,el("pdMatch").hidden]; await fillDlg({email:"zed@quill.example"}); await pr; await settle();
     out.pickedNew=[CUR.draft.o,REG.some(p=>p.name==="Zed Quill")];
     // 5. saving with a typed name: a known alias maps silently ...
     await pkOwner("actions",nid,"sara e",true); await commitTitle("actions",nid,"Picker test"); out.mapped=[CUR.draft.o,el("personDlg").open]; closePanel();

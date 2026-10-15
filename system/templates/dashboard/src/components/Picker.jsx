@@ -7,7 +7,8 @@
      the list for what is typed (it does its own matching, as the owner list's ownerMatches does);
    - `openDatePicker(anchor, props)`: a month's calendar (role="dialog"): ← → ↑ ↓ move a day or a week (across months), Enter or a
      click picks, the quick days, a typed box (`parse` reads it), Esc closes with focus back; weekend days marked when `weekend` says;
-   - `openPopover(anchor, props)`: a small dialog with its own contents (a vnode): focus to `focus` or its first field, Esc closes
+   - `openPopover(anchor, props)`: a small dialog with its own contents (a vnode, or a function that makes one, so flushPicker
+     draws a component inside it again at once): focus to `focus` or its first field, Esc closes
      with focus back, Tab out of either end closes it and moves on from the control.
    It keeps the old pickers' classes (.pkpop, .pkopt, .pkq, .pkcal, .pkday …), so nothing looks different. The control's
    aria-expanded follows; a click away and a window resize close it; it sits inside an open dialog when its control does (as the
@@ -35,11 +36,17 @@ import { IconButton } from "./IconButton.jsx";
 /** @typedef {{value?: string, label: string, onPick: (iso: string) => any, parse: (text: string) => string | null, error?: string,
     weekend?: (iso: string) => boolean, typedNote?: (text: string) => string, placeholder?: string,
     onClose?: (how: PickerClose) => any}} DatePickerProps */
-/** @typedef {{label: string, content?: any, cls?: string, id?: string, role?: string, focus?: string,
+/** `via` is the id of the option (in another picker) that opens it, its way in for a keyboard user (the shared behaviour test
+    reads it).
+    @typedef {{label: string, content?: any, cls?: string, id?: string, role?: string, focus?: string, via?: string,
     onClose?: (how: PickerClose) => any}} PopoverProps */
 
-/** @type {{host: HTMLDivElement, el: HTMLElement | null, anchor: HTMLElement, onClose?: (how: PickerClose) => any} | null} */
+/** @type {{host: HTMLDivElement, el: HTMLElement | null, anchor: HTMLElement, make: () => any, onClose?: (how: PickerClose) => any} | null} */
 let PICK = null;
+
+/** Draw the open popup again at once, so a change it has just made (a search typed, a month turned) is in the page before the
+    handler returns, as the old pickers' were (code that types and then reads the list, and the tests, rely on it). */
+export function flushPicker() { if (PICK) render(PICK.make(), PICK.host); }   /* a new vnode: Preact skips one it has drawn */
 
 /** Place a popup under its control (above it when there is no room), inside the window.
     @param {HTMLElement} el @param {HTMLElement} anchor */
@@ -107,7 +114,7 @@ function PickerList({ anchor, props }) {
   return (
     <Frame cls={cls} anchor={anchor} boxRef={box} onKey={keys}>
       {search ? <input class="pkq" type="search" placeholder="Search" aria-label={`Search: ${label}`} autocomplete="off" ref={field}
-        value={q} onInput={e => setQ(/** @type {HTMLInputElement} */ (e.currentTarget).value)} /> : null}
+        value={q} onInput={e => { setQ(/** @type {HTMLInputElement} */ (e.currentTarget).value); flushPicker(); }} /> : null}
       <div role={role} aria-label={label}>
         {shown.length || useNew ? <>
           {shown.map(([o, i]) => (
@@ -154,7 +161,7 @@ function DateCalendar({ anchor, props }) {
   /** @param {string} iso */
   const pick = iso => { closePicker("pick"); onPick(iso); };
   /** @param {number} by */
-  const month = by => { let mm = m + by, yy = y; if (mm < 0) { mm = 11; yy--; } if (mm > 11) { mm = 0; yy++; } setFocusIso(null); setYm([yy, mm]); };
+  const month = by => { let mm = m + by, yy = y; if (mm < 0) { mm = 11; yy--; } if (mm > 11) { mm = 0; yy++; } setFocusIso(null); setYm([yy, mm]); flushPicker(); };
   /** @param {KeyboardEvent} e */
   const keys = e => {
     const tg = /** @type {HTMLElement} */ (e.target);
@@ -162,12 +169,12 @@ function DateCalendar({ anchor, props }) {
     if (tg.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
       e.preventDefault();
       const to = calAdd(tg.dataset.d || TODAY, /** @type {Record<string, number>} */ ({ ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 })[e.key]);
-      setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]); setFocusIso(to); return;
+      setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]); setFocusIso(to); flushPicker(); return;
     }
     if (e.key === "Enter" && tg.matches(".pkdt") && !e.metaKey && !e.ctrlKey) {
       e.preventDefault(); const t = /** @type {HTMLInputElement} */ (tg).value.trim();
       if (!t) { pick(""); return; }
-      const iso = parse(t); if (iso) pick(iso); else setBad(true);
+      const iso = parse(t); if (iso) pick(iso); else { setBad(true); flushPicker(); }
       return;
     }
     tabOut(e, box.current);
@@ -193,7 +200,7 @@ function DateCalendar({ anchor, props }) {
       <div class="pkquick">{quick.map(([w, d]) => <button key={w} type="button" class="mini" data-d={d} onClick={() => pick(d)}>{w}</button>)}</div>
       <input class={`pkdt${bad ? " bad" : ""}`} type="text" ref={typed} placeholder={placeholder || "DD-MM-YYYY, or words like fri or +3d"}
         aria-label={`${label}, typed`} aria-invalid={bad ? "true" : undefined} autocomplete="off"
-        onInput={e => { setBad(false); if (typedNote) setNote(typedNote(/** @type {HTMLInputElement} */ (e.currentTarget).value.trim())); }} />
+        onInput={e => { setBad(false); if (typedNote) setNote(typedNote(/** @type {HTMLInputElement} */ (e.currentTarget).value.trim())); flushPicker(); }} />
       <div class="pkerr" role="alert">{bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : ""}</div>
       {note ? <div class="wkline" role="status" aria-live="polite">{note}</div> : null}
     </Frame>
@@ -211,19 +218,19 @@ function Popover({ anchor, props }) {
   }, []);
   /** @param {KeyboardEvent} e */
   const keys = e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closePicker("esc"); return; } tabOut(e, box.current); };
-  return <Frame cls={cls} role={role} label={label} id={id} anchor={anchor} boxRef={box} onKey={keys}>{content}</Frame>;
+  return <Frame cls={cls} role={role} label={label} id={id} anchor={anchor} boxRef={box} onKey={keys}>{typeof content === "function" ? content() : content}</Frame>;
 }
 
 /** Open one of the three in a host at the end of the page (or of the open dialog the control is in).
-    @param {HTMLElement} anchor @param {any} vnode @param {((how: PickerClose) => any) | undefined} onClose @returns {HTMLElement} */
-function popupMount(anchor, vnode, onClose) {
+    @param {HTMLElement} anchor @param {() => any} make @param {((how: PickerClose) => any) | undefined} onClose @returns {HTMLElement} */
+function popupMount(anchor, make, onClose) {
   closePicker("owner", false);
   bootPicker();
   const host = document.createElement("div"); host.className = "pophost";
   (anchor.closest("dialog[open]") || document.body).appendChild(host);
-  PICK = { host, el: null, anchor, onClose };
+  PICK = { host, el: null, anchor, make, onClose };
   if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-  render(vnode, host);
+  render(make(), host);
   PICK.el = /** @type {HTMLElement} */ (host.firstElementChild);
   shared.PKPOP = { el: PICK.el, anchor };
   return PICK.el;
@@ -231,15 +238,15 @@ function popupMount(anchor, vnode, onClose) {
 
 /** Open a list from `anchor`. Returns the popup (.pkpop).
     @param {HTMLElement} anchor @param {PickerProps} props @returns {HTMLElement} */
-export function openPicker(anchor, props) { return popupMount(anchor, <PickerList anchor={anchor} props={props} />, props.onClose); }
+export function openPicker(anchor, props) { return popupMount(anchor, () => <PickerList anchor={anchor} props={props} />, props.onClose); }
 
 /** Open a calendar from `anchor`. Returns the popup (.pkpop.pkcal).
     @param {HTMLElement} anchor @param {DatePickerProps} props @returns {HTMLElement} */
-export function openDatePicker(anchor, props) { return popupMount(anchor, <DateCalendar anchor={anchor} props={props} />, props.onClose); }
+export function openDatePicker(anchor, props) { return popupMount(anchor, () => <DateCalendar anchor={anchor} props={props} />, props.onClose); }
 
 /** Open a small dialog from `anchor`; without `content` it is an empty box the caller fills. Returns the popup (.pkpop).
     @param {HTMLElement} anchor @param {PopoverProps} props @returns {HTMLElement} */
-export function openPopover(anchor, props) { return popupMount(anchor, <Popover anchor={anchor} props={props} />, props.onClose); }
+export function openPopover(anchor, props) { return popupMount(anchor, () => <Popover anchor={anchor} props={props} />, props.onClose); }
 
 /** Close the open picker. Focus goes back to its control (unless `how` is a click away, or `focus` is false, or the owner's
     onClose put it somewhere itself); after Tab it is on the control, so Tab moves on from there.

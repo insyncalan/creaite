@@ -1892,7 +1892,7 @@ body.pkstaged .snack{bottom:68px}
 .pk-vbtn:hover{background:var(--sunk)} .pk-vbtn.empty{color:var(--faint)} .pk-vbtn:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .pk-vtext{padding:8px 10px;margin-left:-10px;font-size:var(--fs-md);white-space:pre-wrap}
 .pk-vro{padding:8px 0;color:var(--ink);font-size:var(--fs-md)} .pk-vro .sub{font-size:var(--fs-xs)}
-.pk-sw{width:36px;height:20px;border-radius:var(--r-pill);border:0;background:var(--line);position:relative;cursor:pointer;margin-top:8px;flex:none;padding:0}
+.pk-sw{width:36px;height:24px;border-radius:var(--r-pill);border:2px solid transparent;border-left:0;border-right:0;background:var(--line);background-clip:padding-box;position:relative;cursor:pointer;margin-top:6px;flex:none;padding:0}   /* BL-316: a 24px target, the same 20px track (WCAG 2.5.8) */
 .pk-sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--knob);transition:transform var(--d1,.12s)}
 .pk-sw[aria-checked="true"]{background:var(--accent)} .pk-sw[aria-checked="true"]::after{transform:translateX(16px)} .pk-sw:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .pk-tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:16px 0 12px}

@@ -3,7 +3,7 @@
    Impact and Likelihood, a proposal's Project), each a Chip: a full name ("Owner: not set"), aria-haspopup="listbox" for its
    picker, the field's name as the tooltip and data-pkp, which panel.js's click handler, focus keeping and checks read. A RAID
    item's calculated priority is a read-only chip (role="note"). The marks beside the words (a status ring, priority bars,
-   initials) are drawn here as elements; panel.js keeps their string twins (pkSt, pkPr, pkAv) for the pickers' options.
+   initials) are drawn here as elements; the pickers' options use the same marks (peekMark).
    panel.js draws the row afresh each time, as before (peekPropNodes): the nodes are new on every draw, so nothing another
    piece of code marks on a chip (a check's .pkbad, Sneak peek's flash) outlives the draw. Text goes through JSX only. */
 import { render } from "preact";
@@ -12,9 +12,10 @@ import { Icon } from "../Icon.jsx";
 
 /** @typedef {{st?: string, pr?: string, who?: string, icon?: string}} PeekMark  one of: a status, a priority, a person, an icon
     @typedef {{f: string, name: string, mark: PeekMark, value: string, empty?: boolean, cls?: string, nw?: boolean,
-      you?: boolean, late?: boolean, ro?: string, roTip?: string}} PeekProp
+      you?: boolean, late?: boolean, ro?: string, roTip?: string, popup?: string}} PeekProp
     `value` is the words; `nw` keeps them on one line (a date); `you` adds "(you)"; `late` adds the overdue tag; `ro` makes
-    it a read-only note with that accessible name (and `roTip` as its tooltip). */
+    it a read-only note with that accessible name (and `roTip` as its tooltip); `popup` what it opens (default "listbox"; a
+    date's calendar is a "dialog"). */
 
 const ST_COLOUR = /** @type {Record<string, string>} */ ({ Open: "var(--accent)", Delayed: "var(--warn)", Closed: "var(--ok)",
   Cancelled: "var(--faint)", Pending: "var(--muted)", Made: "var(--ok)", Withdrawn: "var(--faint)" });
@@ -24,7 +25,7 @@ const ST_INNER = /** @type {Record<string, any>} */ ({ Open: { d: "M12 4a8 8 0 0
 const PR_N = /** @type {Record<string, number>} */ ({ Urgent: 4, High: 3, Medium: 2, Low: 1 });
 const PR_COLOUR = /** @type {Record<string, string>} */ ({ Urgent: "var(--bad)", High: "var(--warn)", Medium: "var(--accent)", Low: "var(--faint)" });
 
-/** The status ring (pkSt's twin). @param {{st: string}} props */
+/** The status ring. @param {{st: string}} props */
 function StatusRing({ st }) {
   const inner = ST_INNER[st];
   return (
@@ -35,7 +36,7 @@ function StatusRing({ st }) {
   );
 }
 
-/** The priority bars (pkPr's twin). @param {{pr: string}} props */
+/** The priority bars. @param {{pr: string}} props */
 function PriorityBars({ pr }) {
   const n = PR_N[pr] || 0, c = PR_COLOUR[pr] || "var(--faint)";
   return (
@@ -45,7 +46,7 @@ function PriorityBars({ pr }) {
   );
 }
 
-/** A person's initials, or the person icon when nobody is set (pkAv's twin). @param {{who: string}} props */
+/** A person's initials, or the person icon when nobody is set. @param {{who: string}} props */
 function Initials({ who }) {
   if (!who) return <Icon name="user" />;
   const i = who.split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase();
@@ -73,11 +74,14 @@ function Prop({ p }) {
   if (p.ro) return <div class="pk-prop"><Chip cls="pk-chip ro" role="note" aria-label={p.ro} tip={p.roTip}><Mark mark={p.mark} />{words}</Chip></div>;
   return (
     <div class="pk-prop">
-      <Chip button cls={["pk-chip", p.empty ? "empty" : "", p.cls || ""].filter(Boolean).join(" ")} data-pkp={p.f} aria-haspopup="listbox"
+      <Chip button cls={["pk-chip", p.empty ? "empty" : "", p.cls || ""].filter(Boolean).join(" ")} data-pkp={p.f} aria-haspopup={/** @type {any} */ (p.popup || "listbox")}
         name={`${p.name}: ${p.empty ? "not set" : plain}`} tip={p.name}><Mark mark={p.mark} />{words}</Chip>
     </div>
   );
 }
+
+/** A mark as a vnode, for the Picker's options (a status ring, priority bars, initials or an icon). @param {PeekMark} mark */
+export function peekMark(mark) { return <Mark mark={mark} />; }
 
 /** The properties as new nodes, for panel.js to put in place of the old ones.
     @param {PeekProp[]} list @returns {ChildNode[]} */

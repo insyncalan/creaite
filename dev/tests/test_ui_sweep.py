@@ -39,6 +39,17 @@ SCREENS["work-board"] = ("go('work'); setLayout(WT,'board')",
                          "#v-work")
 SCREENS["work-panel"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), ts.open_first_item(b)),
                          ts.SCREENS["work-panel"][1], ts.SCREENS["work-panel"][2])
+# BL-316: the peek's other states, so every picker it makes is reached: Details open (Project, Workstream, Milestone), a RAID
+# item (Type, Impact and Likelihood), a made decision (Date made, Replaces) and a new item (its Project).
+DETAILS = "{ const t=document.getElementById('pkDetT'); if(t.getAttribute('aria-expanded')!=='true') t.click(); }"
+PEEK_ON = "document.getElementById('panel').classList.contains('on') && !document.getElementById('pkDet').hidden"
+SCREENS["work-panel-details"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), ts.open_first_item(b),
+                                            b.wait("document.getElementById('panel').classList.contains('on')"), b.eval(DETAILS)),
+                                 PEEK_ON, "#panel")
+SCREENS["work-panel-raid"] = (f"go('work'); openRecord('raid',(R.find(r=>r.st==='Open')||R[0]).id); {DETAILS}", PEEK_ON, "#panel")
+SCREENS["work-panel-decision"] = (f"go('work'); openRecord('decisions',(DEC.find(d=>d.st==='Made')||DEC[0]).id); {DETAILS}", PEEK_ON, "#panel")
+SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
+                             "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#pkId [data-pkp=\"p\"]')", "#panel")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 

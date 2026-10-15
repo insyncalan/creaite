@@ -6,6 +6,7 @@ import { chatScroll, nowIso, stampMsg, step } from "../ask.js";
 import { A, DEC, peopleAll, R, REV, useCount } from "./data.js";
 import { $, addHTML, esc, html, ic, putHTML, raw } from "./dom.js";
 import { mountCombobox } from "../components/Combobox.jsx";
+import { openDatePicker } from "../components/Picker.jsx";
 import { D, DATE, DDATE, fd, isMe, S, TODAY, toIso } from "./page.js";
 import { api, apply, editProposal, needVault, oneLine, refreshAll, save, snack, split, viaServer } from "./server.js";
 import { shared } from "./state.js";
@@ -261,6 +262,14 @@ export function wkAsk(iso,anchor,apply,o={}){ const n=weekendNote(iso); if(!n) r
 /* the calendars: weekend days marked, in their names too */
 export function wkMark(root){ if(!root) return; root.querySelectorAll(".cg button[data-v],.pkday[data-d]").forEach(b=>{ const v=b.dataset.d||(b.dataset.v?toIso(b.dataset.v):""); if(!v||!DATE.test(v)||b.classList.contains("wkend")) return;
   if(wkDays().has(wkDow(v))){ b.classList.add("wkend"); b.setAttribute("aria-label",(b.getAttribute("aria-label")||fd(v))+", weekend"); } }); }
+/* BL-316: a work item's date from its control: the Picker block's calendar with BL-181's weekend rule. A due or needed-by date
+   (`due`) marks the weekend days, says so as one is typed, and waits for the choice of a working day (wkAsk) before onPick. */
+/** @param {HTMLElement} anchor @param {{value?: string, label: string, due?: boolean, onPick: (iso: string) => any, onClose?: (how: string) => any}} o */
+export function itemDatePicker(anchor,o){ const gate=!!o.due, op=o.onPick;
+  return openDatePicker(anchor,{value:o.value||"",label:o.label,parse:t=>parseWhen(t,TODAY,gate),onClose:o.onClose,
+    onPick:gate?v=>{ if(v&&!WK.ok&&wkAsk(v,anchor,op)) return; op(v); }:op,
+    weekend:gate?iso=>wkDays().has(wkDow(iso)):undefined,
+    typedNote:gate?t=>{ const iso=t?parseWhen(t,TODAY,true):null, n=weekendNote(iso); return n?`${n.text} You'll be offered the nearest working days.`:""; }:undefined}); }
 /* ===== end BL-181 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0180's place) */
 export function bootWeekendNote(){

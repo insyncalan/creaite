@@ -8,17 +8,6 @@
   "unreached: listbox Opener label:Add person (src/milestones.js)",
   "unreached: listbox Opener label:Owner, (src/milestones.js)"
  ],
- "Peek": [
-  "keys: work-panel button.chip.pk-chip “Due date: 06-10-2026 overdue”: Tab leaves it open",
-  "unreached: dialog Picker class:pkws (src/panel.js)",
-  "unreached: listbox Combobox class:combo (src/panel.js)",
-  "unreached: listbox Opener label:Project: (src/panel.js)",
-  "unreached: listbox Opener label:Type: (src/panel.js)",
-  "unreached: listbox Picker label:Milestone (src/panel.js)",
-  "unreached: listbox Picker label:Replaces (src/panel.js)",
-  "unreached: listbox Picker label:Type (src/panel.js)",
-  "unreached: listbox Picker label:Workstream (src/panel.js)"
- ],
  "Projects": [
   "unreached: menu Menu label:Draft agenda (src/components/prep/PrepToolbar.jsx)"
  ],
