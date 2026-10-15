@@ -2585,6 +2585,18 @@ input[type=checkbox]:not(.switch,.vh):indeterminate::after{content:"";position:a
 input[type=checkbox]:not(.switch,.vh):focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 input[type=checkbox]:not(.switch,.vh):disabled{opacity:.45;cursor:default}
 @media (forced-colors:active){input[type=checkbox]:not(.switch,.vh){appearance:auto;-webkit-appearance:checkbox;border:0;margin:4px;width:16px;height:16px}}
+/* ===== v2.0.0 polish A (#61, check 44 item 5): the switch in forced colours. The browser overrides the track's and thumb's
+   background colours there, so both vanished. The track gets a border and the thumb a system colour (forced-color-adjust:none
+   keeps these), and on is told from off by the filled Highlight track and the thumb's side, not by colour alone. ===== */
+@media (forced-colors: active){
+  .switch{forced-color-adjust:none;box-sizing:border-box;background:Canvas;border:2px solid ButtonText}
+  .switch::after,html .capconf .switch::after{forced-color-adjust:none;top:1px;left:1px;background:ButtonText}
+  .switch:checked{background:Highlight;border-color:Highlight}
+  .switch:checked::after{background:HighlightText}
+  .switch:focus-visible{outline:2px solid Highlight;outline-offset:2px}
+  .switch:disabled{border-color:GrayText} .switch:disabled::after{background:GrayText}
+}
+/* ===== end v2.0.0 polish A (5) ===== */
 /* ===== end BL-325 touch targets ===== */
 /* ===== BL-125 A: promises (Today's You owe and Waiting on, a person's Promises card) ===== */
 .tbrief .pt{color:var(--day-ink);font-weight:700}
