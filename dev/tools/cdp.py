@@ -233,7 +233,19 @@ class Browser:
             if last:
                 return last
             self.pump(every)
-        raise TimeoutError(f"timed out waiting for: {js}\npage errors: {self.errors[-3:]}")
+        raise TimeoutError(f"timed out waiting for: {js}\npage errors: {self.errors[-3:]}\n{self._where()}")
+
+    WHERE_JS = """(()=>{ const a=document.activeElement, s=getSelection();
+      const name=a?a.tagName+(a.id?'#'+a.id:'')+(a.className?'.'+String(a.className).split(' ')[0]:''):null;
+      return {platform:navigator.platform, hasFocus:document.hasFocus(), visibility:document.visibilityState, active:name,
+              selection:s?{type:s.type, len:String(s).length}:null}; })()"""
+
+    def _where(self):
+        """One line of where the page is, for a timeout: platform, focus, visibility, the active element and the selection."""
+        try:
+            return "page state: " + json.dumps(self.eval(self.WHERE_JS, wait=False))
+        except Exception as e:                        # the page may be gone; a timeout still reports what it was waiting for
+            return f"page state unavailable ({type(e).__name__})"
 
     def box(self, selector):
         """The centre of the first element matching `selector`, scrolled into view, or None."""
@@ -298,11 +310,19 @@ class Browser:
         codes = {"Enter": 13, "Escape": 27, "Backspace": 8, "Tab": 9, "ArrowLeft": 37, "ArrowUp": 38, "ArrowRight": 39,
                  "ArrowDown": 40, "Delete": 46, "Home": 36, "End": 35, "PageUp": 33, "PageDown": 34}
         code = codes.get(name) or ord(name.upper())
+        if name.lower() in ("a", "z", "y") and modifiers & 4 and not self.is_mac():
+            modifiers = (modifiers & ~4) | 2                # ⌘A, ⌘Z, ⇧⌘Z are Control+A, +Z, +⇧Z elsewhere (Chrome on Linux)
         base = {"key": name if len(name) > 1 else name, "windowsVirtualKeyCode": code, "modifiers": modifiers}
         text = "\r" if name == "Enter" else None
         self.call("Input.dispatchKeyEvent", type="keyDown", **base, **({"text": text} if text else {}))
         self.call("Input.dispatchKeyEvent", type="keyUp", **base)
         self.pump(0.05)
+
+    def is_mac(self):
+        """True when this Chrome reports a Mac (its shortcuts use ⌘); read once from the page."""
+        if getattr(self, "_mac", None) is None:
+            self._mac = bool(self.eval("/Mac/i.test(navigator.platform)"))
+        return self._mac
 
     def set_files(self, selector, files):
         """Choose real files on disk in an <input type=file>, as the file chooser would."""
