@@ -17,6 +17,7 @@ Commands (read only):
   never                                                 the never list, one row a line
 """
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -283,6 +284,17 @@ def _whose_file(p):
 #               overwritten: the note comes back as <name>-2.md (-3…, paths.free_path), the only difference allowed from its old name
 ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
 FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
+# #124 F3: the moves only Approve on the live server's own card makes (propose.SERVER_CARD_ONLY's kinds; a test keeps them equal).
+# tracker._op_move refuses one unless the server wrote its marker on Approve (card_move_marker), for exactly that move and that
+# proposal file, under CARD_MOVE_SECONDS old: a proposal written into staging by hand is never applied as one of these moves.
+CARD_ONLY_MOVES = ("reports_back", "notes", "notes_back")
+CARD_MOVE_SECONDS = 300
+
+
+def card_move_marker(kind, src, dst):
+    """#124 F3: the one-time marker the live server writes in system/guard/ (on the never list) on Approve, for this move."""
+    fp = hashlib.sha256(f"{kind}\0{src}\0{dst}".encode("utf-8")).hexdigest()[:32]
+    return paths.GUARD / f"move-{fp}"
 
 
 def _top_folder(name):

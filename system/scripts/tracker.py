@@ -1507,12 +1507,16 @@ def stash(apply_id, src):
     return paths.rel(dest)
 
 
-def run_file_ops(apply_id, blk, field, ops, done):
-    """Run ops in order, appending an undo record for each to `done`. BL-229: each operation is its own function."""
+def run_file_ops(apply_id, blk, field, ops, done, prop=None):
+    """Run ops in order, appending an undo record for each to `done`. BL-229: each operation is its own function. prop: the
+    proposal file being applied (a move checks the live server's marker against it, #124 F3)."""
     _stamp_approved(apply_id, blk, field, done)
     for fop in ops:
         check_file_op(fop, blk)
-        FILE_OPS[fop["op"]](apply_id, fop, blk, done)
+        if fop["op"] == "move":
+            _op_move(apply_id, fop, blk, done, prop)
+        else:
+            FILE_OPS[fop["op"]](apply_id, fop, blk, done)
 
 
 def _stamp_approved(apply_id, blk, field, done):
@@ -1865,7 +1869,36 @@ def _renamed_back(was, dst):
     return a.parent == b.parent and reach._note_name(a.name, b.name)
 
 
-def _op_move(apply_id, fop, blk, done):
+def card_move_problem(fop, blk, prop):
+    """#124 F3: why this move can't be applied here, or None. A move only the live server's card makes (reach.CARD_ONLY_MOVES)
+    needs the marker the server writes on Approve (reach.card_move_marker): a regular file (never a symlink), under
+    reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and its SHA-256. Checked only by the apply, never by
+    check_move (propose.py check runs that for the card's preview, before Approve)."""
+    import reach
+    import stat
+    if blk.get("archive") not in reach.CARD_ONLY_MOVES:
+        return None
+    m = reach.card_move_marker(blk.get("archive"), fop.get("from"), fop.get("to"))
+    try:
+        fd = os.open(m, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            st = os.fstat(fd)
+            age = time.time() - st.st_mtime
+            ok = stat.S_ISREG(st.st_mode) and -5 <= age < reach.CARD_MOVE_SECONDS
+            got = json.loads(os.read(fd, 4096).decode("utf-8")) if ok else None
+        finally:
+            os.close(fd)
+        ok = ok and isinstance(got, dict) and prop is not None and got.get("proposal") == Path(prop).name \
+            and got.get("sha256") == file_hash(prop)
+    except (OSError, ValueError):                 # no marker, a symlink, unreadable: refused
+        ok = False
+    return None if ok else f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
+
+
+def _op_move(apply_id, fop, blk, done, prop=None):
+    why = card_move_problem(fop, blk, prop)       # #124 F3: before anything is made or moved
+    if why:
+        raise Invalid(why)
     a, b = paths.resolve(fop["from"], archived=False), paths.resolve(fop["to"], archived=False)
     made = b.parent
     while not made.parent.exists():               # BL-03: the highest folder this move makes (_Archive/04 Reporting/Weekly)
@@ -2115,7 +2148,7 @@ def cmd_apply(args):
             via = via_for(p, data)
             for item in data.get("items", []):
                 _apply_item(con, p, data, item, held, apply_id, via, summary)
-            _apply_blocks(data, apply_id, summary, file_records)
+            _apply_blocks(data, apply_id, summary, file_records, p)
         con.execute("UPDATE applies SET file_ops = ? WHERE apply_id = ?", (json.dumps(file_records), apply_id))
         con.execute("COMMIT")
     except Exception as e:
@@ -2389,14 +2422,15 @@ def _apply_item(con, p, data, item, held, apply_id, via, summary):
         _write_approved(con, p, item, apply_id, via, summary)
 
 
-def _apply_blocks(data, apply_id, summary, file_records):
-    """The proposal's decided file blocks (minutes, reports): their file operations, and the processed.txt lines."""
+def _apply_blocks(data, apply_id, summary, file_records, prop=None):
+    """The proposal's decided file blocks (minutes, reports): their file operations, and the processed.txt lines. prop: the
+    proposal file (#124 F3)."""
     processed = []
     for blk, field in blocks(data):
         if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
             continue
         ops = selected_ops(blk, field)
-        run_file_ops(apply_id, blk, field, ops, file_records)
+        run_file_ops(apply_id, blk, field, ops, file_records, prop)
         if ops:
             summary["filed"] += 1
         if field == "minutes_decision" and blk.get("key"):

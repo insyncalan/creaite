@@ -3127,6 +3127,7 @@ def main():
     mark_interrupted()
     vault_permissions.recover()                          # BL-96: deny entries left lifted by a run that never finished
     reach.RUN_FILE.unlink(missing_ok=True)                # BL-141: no run is in progress at start; old requests make no card
+    clear_card_marks(0)                                  # #124 F3: no Approve is in progress at start
     for f in (paths.STAGING / "changes").glob("*.json") if (paths.STAGING / "changes").is_dir() else []:
         f.unlink(missing_ok=True)
     if LAUNCHED:
@@ -4330,13 +4331,55 @@ def edit_stage(c, how):
     return (Path(m.group(1)).name, None) if code == 0 and m else (None, out.strip() or "propose.py stage failed")
 
 
+def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
+    """#124 F3: remove the move markers in system/guard/ older than `older` seconds (a crash's leftovers; never used anyway)."""
+    for m in paths.GUARD.glob("move-*") if paths.GUARD.is_dir() else []:
+        try:
+            if time.time() - m.lstat().st_mtime >= older:
+                m.unlink()
+        except OSError:                                # gone meanwhile, or can't be removed: tracker ignores a stale one
+            pass
+
+
+@contextlib.contextmanager
+def card_moves_allowed(name):
+    """#124 F3: while the card's own proposal `name` (staged by edit_stage) is applied, one marker per move of a card-only kind
+    (reach.CARD_ONLY_MOVES), naming that file and its SHA-256, so tracker._op_move makes exactly these moves; removed
+    afterwards, whatever happens. LOCK is held, and NOTES_LOCK too for a note's card."""
+    clear_card_marks()
+    f = paths.STAGING / name
+    raw = f.read_bytes()
+    fc = json.loads(raw.decode("utf-8")).get("file_changes") or {}
+    kind = fc.get("archive")
+    marks = [reach.card_move_marker(kind, op.get("from"), op.get("to")) for op in fc.get("file_ops") or []
+             if kind in reach.CARD_ONLY_MOVES and isinstance(op, dict) and op.get("op") == "move"]
+    body = json.dumps({"proposal": name, "sha256": hashlib.sha256(raw).hexdigest()}).encode("utf-8")
+    try:
+        for m in marks:
+            m.parent.mkdir(parents=True, exist_ok=True)
+            m.unlink(missing_ok=True)
+            fd = os.open(m, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            try:
+                os.write(fd, body)
+            finally:
+                os.close(fd)
+        yield
+    finally:
+        for m in marks:
+            m.unlink(missing_ok=True)
+
+
 def edit_apply(c):
     """Approve: stage the snapshot and apply only that proposal (LOCK held). The answer for the page."""
     name, why = edit_stage(c, "approve")
     if not name:
         c["state"] = "failed"
         return {"ok": False, "message": f"Not applied: {why}"}
-    code, out = run("tracker.py", "apply", name)
+    try:
+        with card_moves_allowed(name):                 # #124 F3: only this Approve makes a card-only move
+            code, out = run("tracker.py", "apply", name)
+    except (OSError, ValueError) as e:                 # the marker couldn't be written: nothing applied
+        code, out = 1, f"the approval couldn't be recorded ({type(e).__name__})"
     if code:                                            # validation failed: nothing written, and nothing left in staging
         (paths.STAGING / name).unlink(missing_ok=True)
         c["state"] = "failed"
