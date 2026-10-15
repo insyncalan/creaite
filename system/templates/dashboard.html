@@ -1006,6 +1006,8 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 .rvbar select,.rvbar .dwrap input{height:30px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px;font:inherit;font-size:var(--fs-sm)} .rvbar .dwrap input{width:116px} .rvbar select:disabled,.rvbar input:disabled{opacity:.55;cursor:not-allowed}
 /* #114: the multi-select bar floats at the bottom edge, in Review's column, under the peek and the dialogs (--z-menu < --z-panel); fixed, so the list never moves */
 .rvbar{position:fixed;bottom:16px;left:var(--rvl,50%);width:var(--rvw,min(1100px,94vw));box-sizing:border-box;margin:0;z-index:var(--z-menu);box-shadow:var(--shadow-md);max-height:40vh;overflow:auto}
+body:has(#v-review.rvfloat:not([hidden])) .snack{bottom:calc(var(--rvh,0px) + 28px)}   /* the toast sits above the floating bar, not on it */
+@media (max-width:1000px){.rvbar{padding-right:44px} .rvbar #rvClear{position:absolute;top:8px;right:8px}}   /* the clear X stays on the first row */
 #v-review.rvfloat{padding-bottom:calc(40px + var(--rvh,0px) + 16px);scroll-padding-bottom:calc(var(--rvh,0px) + 32px)}
 .rvbar .btn,.rvbar .linkbtn,.rvbar select,.rvbar .dbtn{min-height:24px}
 @media (forced-colors:active){.rvbar{border:1px solid CanvasText}}
@@ -31733,13 +31735,33 @@ ${s5}`;
     if (!bar || !view) return;
     if (bar.hidden) {
       view.classList.remove("rvfloat");
+      document.documentElement.style.removeProperty("--rvh");
+      rvWatch(false);
       return;
     }
+    rvWatch(true);
+    if (view.hidden) return;
     const r4 = view.getBoundingClientRect(), w6 = Math.min(view.clientWidth - 48, 1500);
     bar.style.setProperty("--rvw", `${w6}px`);
     bar.style.setProperty("--rvl", `${Math.round(r4.left + (view.clientWidth - w6) / 2)}px`);
-    view.style.setProperty("--rvh", `${bar.offsetHeight}px`);
+    const h5 = `${bar.offsetHeight}px`;
+    view.style.setProperty("--rvh", h5);
+    document.documentElement.style.setProperty("--rvh", h5);
     view.classList.add("rvfloat");
+  }
+  var rvRO = null;
+  function rvWatch(on2) {
+    if (!on2) {
+      if (rvRO) {
+        rvRO.disconnect();
+        rvRO = null;
+      }
+      return;
+    }
+    if (rvRO || typeof ResizeObserver === "undefined") return;
+    rvRO = new ResizeObserver(() => rvDock());
+    const bar = $("#rvbar"), view = $("#v-review"), shell = view && view.parentElement;
+    [view, shell, bar].forEach((el2) => el2 && rvRO.observe(el2));
   }
   window.addEventListener("resize", rvDock);
   function rvBar() {
@@ -59732,6 +59754,7 @@ ${d5.text}`);
         "rvAdvance",
         "rvBulkOK",
         "rvChanged",
+        "rvDate",
         "rvKey",
         "rvMatching",
         "rvMoveTo",

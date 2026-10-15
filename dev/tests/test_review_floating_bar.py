@@ -75,6 +75,71 @@ class FloatingBar(LiveBrowserCase):
     def test_900(self):
         self.check(900)
 
+    def centred(self, b):
+        return b.eval("(()=>{ const v=document.getElementById('v-review'), r=v.getBoundingClientRect(), a=document.getElementById('rvbar').getBoundingClientRect();"
+                      " return Math.abs((a.left+a.right)/2-(r.left+v.clientWidth/2)) })()")
+
+    def settle(self, b):
+        b.eval("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(r,150))))")
+
+    def redock(self, width):
+        b = self.open_review(width)
+        ns = b.eval("REV.filter(r=>!r.done&&rvBulkOK(r)).map(r=>r.n)")
+        self.select(ns[:3])
+        self.settle(b)
+        self.assertLessEqual(self.centred(b), 1)
+        w0 = b.eval("document.getElementById('v-review').clientWidth")
+        b.eval("document.getElementById('railTog').click()")                    # collapse (or widen) the sidebar: the column changes
+        self.settle(b)
+        if width > 1000:                          # at 900 the rail is already narrow and the toggle does nothing
+            self.assertNotEqual(w0, b.eval("document.getElementById('v-review').clientWidth"))   # the column really moved
+        self.assertLessEqual(self.centred(b), 1)
+        b.eval("document.getElementById('railTog').click()")
+        self.settle(b)
+        self.assertLessEqual(self.centred(b), 1)
+        b.eval("document.getElementById('askBtn').click()")                      # the ask creaite panel shifts the shell
+        self.settle(b)
+        self.assertLessEqual(self.centred(b), 1)
+        b.eval("document.getElementById('chat').classList.remove('on')")
+        self.select([])
+        self.assertEqual(b.errors, [])
+
+    def test_redocks_1400(self):
+        self.redock(1400)
+
+    def test_redocks_900(self):
+        self.redock(900)
+
+    def toast_clear(self, width):
+        b = self.open_review(width)
+        ns = b.eval("REV.filter(r=>!r.done&&rvBulkOK(r)).map(r=>r.n)")
+        snack = "document.querySelector('.snack').getBoundingClientRect().bottom"
+        b.eval("snack('Probe toast')"); self.settle(b)
+        base = b.eval(snack)
+        self.assertEqual(base, b.eval("innerHeight") - 20)                      # no selection: where it was
+        self.select(ns[:3]); self.settle(b)
+        b.eval("(()=>{ const i=document.getElementById('rvDate'); i.value='31-02-2026'; i.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); })()"); self.settle(b)
+        self.assertTrue(b.eval("document.querySelector('.snack').classList.contains('on')"))
+        self.assertLessEqual(b.eval(snack), b.eval(BAR)["top"])                 # clear of the bar
+        self.select([]); b.eval("snack('Probe toast')"); self.settle(b)
+        self.assertEqual(b.eval(snack), base)
+        self.assertEqual(b.errors, [])
+
+    def test_toast_above_bar_1400(self):
+        self.toast_clear(1400)
+
+    def test_toast_above_bar_900(self):
+        self.toast_clear(900)
+
+    def test_clear_x_on_first_row_900(self):
+        b = self.open_review(900)
+        ns = b.eval("REV.filter(r=>!r.done&&rvBulkOK(r)).map(r=>r.n)")
+        self.select(ns[:3]); self.settle(b)
+        x = b.eval("document.getElementById('rvClear').getBoundingClientRect().top")
+        bar = b.eval(BAR)
+        self.assertLess(x, bar["top"] + 50)
+        self.assertGreaterEqual(b.eval("document.getElementById('rvClear').getBoundingClientRect().right"), bar["right"] - 14)
+
     def test_approve_still_follows_the_bulk_rule(self):
         b = self.open_review(1400)
         info = b.eval("REV.filter(r=>!r.done).map(r=>({n:r.n,t:r.rec.t,ok:rvBulkOK(r)}))")

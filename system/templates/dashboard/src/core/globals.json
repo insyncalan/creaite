@@ -470,6 +470,7 @@
    "rvAdvance",
    "rvBulkOK",
    "rvChanged",
+   "rvDate",
    "rvKey",
    "rvMatching",
    "rvMoveTo",

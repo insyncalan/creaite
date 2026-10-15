@@ -251,10 +251,16 @@ export function rvSetFields(L){ const items=L.filter(r=>["actions","raid","decis
 /* #114: the bar floats at the bottom edge of the window, centred in Review's column, while rows are selected. It is fixed, so it takes no
    room in the list (nothing moves when it appears); the page gets the bar's height as bottom padding so the last row scrolls clear of it. */
 export function rvDock(){ const bar=$("#rvbar"), view=$("#v-review"); if(!bar||!view) return;
-  if(bar.hidden){ view.classList.remove("rvfloat"); return; }
+  if(bar.hidden){ view.classList.remove("rvfloat"); document.documentElement.style.removeProperty("--rvh"); rvWatch(false); return; }
+  rvWatch(true); if(view.hidden) return;
   const r=view.getBoundingClientRect(), w=Math.min(view.clientWidth-48,1500);
   bar.style.setProperty("--rvw",`${w}px`); bar.style.setProperty("--rvl",`${Math.round(r.left+(view.clientWidth-w)/2)}px`);
-  view.style.setProperty("--rvh",`${bar.offsetHeight}px`); view.classList.add("rvfloat"); }
+  const h=`${bar.offsetHeight}px`; view.style.setProperty("--rvh",h); document.documentElement.style.setProperty("--rvh",h); view.classList.add("rvfloat"); }
+/* Re-dock when Review's column changes size (the sidebar collapsing, the ask creaite panel opening) or the bar re-wraps; watched only while the bar is showing. */
+let rvRO=null;
+function rvWatch(on){ if(!on){ if(rvRO){ rvRO.disconnect(); rvRO=null; } return; }
+  if(rvRO||typeof ResizeObserver==="undefined") return;
+  rvRO=new ResizeObserver(()=>rvDock()); const bar=$("#rvbar"), view=$("#v-review"), shell=view&&view.parentElement; [view,shell,bar].forEach(el=>el&&rvRO.observe(el)); }
 window.addEventListener("resize",rvDock);
 export function rvBar(){ const bar=$("#rvbar"); if(!bar) return; const L=rvSel(); if(!L.length){ bar.hidden=true; rvDock(); $("#bulkApprove").disabled=$("#bulkReject").disabled=true; if(rjMenu.value&&rjMenu.value.anchor===$("#bulkReject")) rjCloseMenu(false); return; }
   const ok=L.filter(rvBulkOK), rej=L.filter(rvRejectOK), left=L.filter(r=>!rvBulkOK(r)), M=rvMatching();
