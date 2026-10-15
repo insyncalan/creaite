@@ -4,6 +4,8 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | BL-341 (#81) is in v1.9.5 and gates its cut (#52 blocked by #81); v1.9.4 ships as planned with hand checks run by hand | "Keep as planned with 1.9.5", after the trade-off (gating v1.9.4 would have held finished work back by an L-size job) |
+| 15-10-2026 | Jarvis | Four P4 follow-up defects on `v210-p4-minutes` (stale comments, refused-save drafts piling up, "Edit in Word" on a record, Review edits not updating the draft row); the hidden Edit in Word goes to Alan for sign-off | Defects inside v2.1.0 are the Head's; visible changes are Alan's |
 | 15-10-2026 | Alan | BL-341 automated release hand checks, Priority High, on the existing CDP harness (no Playwright); plan #81, Team Stark, Unscheduled and not a release gate. The next new item is **BL-342** | "Yes please - make it a priority" (relayed by the Product Manager session); Jarvis placed it and asked Alan to confirm |
 | 15-10-2026 | Alan | Confidential notes and Prep runs, option (a): the guard hook refuses a Prep-kind run reading a confidential note, and search gives Prep runs title and link without text; ask creaite and other runs unchanged (v2.0.0, #60, Team Stark) | His choice between Prep runs only, every run, or accepting the gaps; it keeps Help's promise without cutting off his own assistant |
 | 15-10-2026 | Jarvis | release-195 fast-forwarded with the #parchDlg browser test (66a67d2) and the final v1.9.5 notes (48bed53); Actions dispatched on release-195 for #51 | Test and docs only |
