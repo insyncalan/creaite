@@ -602,11 +602,22 @@ def m365_problem(rule):
 # one added later) may write or act where nothing here can undo it, so no allow rule for it is written, whatever is approved. The
 # same goes for the built-in tools that act outside the laptop or the vault and that no creaite feature needs.
 MCP_SAFE = ()                                            # other MCP tools creaite has checked and allows: none
+# Every built-in tool name Claude Code is known to have: the default set of 2.1.300 (`claude -p --output-format stream-json
+# --verbose`, the init event's tools, no --tools) and the names other versions use (Grep, Glob, LS, MultiEdit, Agent). The ONE
+# list of built-in names (Jarvis, 15-10-2026): live_server's run and VIP deny lists and the subsets below are taken from it, and
+# dev/tests/test_vip_tools_pinned.py keeps a copy of the 2.1.300 list; refresh both when Claude Code adds a built-in.
+KNOWN_BUILTINS = ("Task", "Agent", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList",
+                  "DesignSync", "Edit", "MultiEdit", "EnterWorktree", "ExitWorktree", "Glob", "Grep", "LS", "ListAgents",
+                  "ListMcpResourcesTool", "Monitor", "NotebookEdit", "PushNotification", "Read", "ReadMcpResourceDirTool",
+                  "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill",
+                  "TaskStop", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write")
+# The subsets of KNOWN_BUILTINS no allow rule may grant (each name must be in it: test_permissions_mcp):
 ACTING_BUILTINS = ("EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
                    "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments",
                    "ArtifactData", "TaskStop")
 # F3 follow-up (Jarvis, 15-10-2026): every name above is in Claude Code 2.1.300's default tool list (probe; pinned in
-# test_permissions_mcp). TaskStop stops background work no creaite feature starts. One more built-in gets no allow rule either:
+# test_permissions_mcp against KNOWN_BUILTINS). TaskStop stops background work no creaite feature starts. One more built-in
+# gets no allow rule either:
 WRITING_BUILTINS = ("NotebookEdit",)    # writes a file without filechange.py's backup, log and undo; denied in every run too
 # WebSearch stays approvable on the one card (BL-141's own example): each run's --tools list decides whether it has it at all.
 NON_M365_MCP_DENY = ("mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI", "mcp__claude_ai_Linear",

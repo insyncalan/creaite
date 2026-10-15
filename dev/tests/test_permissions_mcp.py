@@ -29,17 +29,16 @@ REFUSED = ["mcp__claude_ai_Todoist", "mcp__claude_ai_Todoist__*", "mcp__claude_a
           list(P.ACTING_BUILTINS) + list(P.WRITING_BUILTINS) + \
           ["Monitor(*)", "SendMessage(*)", "NotebookEdit(projects/**)"]
 
-# Claude Code 2.1.300's default built-in tool list, from a probe (Jarvis, 15-10-2026). To refresh it after a CLI update, start
-# `claude -p` from a scratch folder outside the vault with no --tools and ask it to list its tool names (or read the stream-json
-# `init` event's "tools" field), then paste the built-in names here (not the mcp__ ones) and sort each new name into
-# P.ACTING_BUILTINS, P.WRITING_BUILTINS or LEFT_OUT below, with its reason.
-CLI_BUILTINS_2_1_300 = (
-    "Task", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
-    "EnterWorktree", "ExitWorktree", "ListAgents", "ListMcpResourcesTool", "Monitor", "NotebookEdit", "PushNotification", "Read",
-    "ReadMcpResourceDirTool", "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill",
-    "TaskStop", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write")
+# The one list of built-in names is P.KNOWN_BUILTINS (Claude Code 2.1.300's default set, from a probe, plus the names other
+# versions use); test_vip_tools_pinned keeps the copy of the 2.1.300 probe and says how to refresh it. Every known built-in is
+# either refused (P.ACTING_BUILTINS, P.WRITING_BUILTINS) or deliberately left out here, with its reason: a new name added to
+# KNOWN_BUILTINS fails test_refused_builtins_match_the_known_list until it is sorted into one of them.
+from test_vip_tools_pinned import CLI_DEFAULT_BUILTINS_2_1_300  # noqa: E402
+
 LEFT_OUT = {
     "Task", "Bash", "Edit", "Read", "Write", "Skill",   # creaite's own runs use them; their allow rules have their own checks
+    "Grep", "Glob", "LS", "MultiEdit",                  # other versions' reading and editing tools, the same checks
+    "Agent",                                            # other versions' name for Task
     "ToolSearch",                                       # only loads deferred tools' schemas
     "WebFetch",                                         # reading a web page is outside content; .claude/settings.json denies it
     "ListAgents", "ListMcpResourcesTool", "ReadMcpResourceTool", "ReadMcpResourceDirTool",   # read only
@@ -84,6 +83,8 @@ class Table(unittest.TestCase):
 
     def test_constants_are_pinned(self):
         self.assertEqual(P.MCP_SAFE, ())
+        import live_server
+        self.assertEqual(live_server.KNOWN_BUILTINS, list(P.KNOWN_BUILTINS))     # one list: live_server takes it from here
         self.assertEqual(P.ACTING_BUILTINS, (
             "EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
             "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments", "ArtifactData",
@@ -93,13 +94,16 @@ class Table(unittest.TestCase):
                                                "mcp__claude_ai_Linear", "mcp__claude-vscode"))
         self.assertEqual(P.run_deny_extras(), list(P.NON_M365_MCP_DENY) + list(P.ACTING_BUILTINS) + list(P.WRITING_BUILTINS))
 
-    def test_refused_builtins_match_the_cli_list(self):
+    def test_refused_builtins_match_the_known_list(self):
         refused = P.ACTING_BUILTINS + P.WRITING_BUILTINS
         self.assertEqual(sorted(set(refused)), sorted(refused), "a name is listed twice")
-        self.assertEqual([n for n in refused if n not in CLI_BUILTINS_2_1_300], [], "not a Claude Code 2.1.300 tool name")
+        self.assertEqual(len(P.KNOWN_BUILTINS), len(set(P.KNOWN_BUILTINS)), "a name is listed twice")
+        self.assertEqual([n for n in refused if n not in CLI_DEFAULT_BUILTINS_2_1_300], [], "not a Claude Code 2.1.300 tool name")
+        self.assertEqual([n for n in refused + tuple(LEFT_OUT) if n not in P.KNOWN_BUILTINS], [], "not in KNOWN_BUILTINS")
         self.assertEqual(LEFT_OUT & set(refused), set())
-        self.assertEqual(set(refused), set(CLI_BUILTINS_2_1_300) - LEFT_OUT,
-                         "every CLI built-in is either refused or deliberately left out")
+        self.assertEqual(set(refused), set(P.KNOWN_BUILTINS) - LEFT_OUT,
+                         "every known built-in is either refused or deliberately left out")
+        self.assertTrue(set(CLI_DEFAULT_BUILTINS_2_1_300) <= set(P.KNOWN_BUILTINS))
         for name in LEFT_OUT:                                   # left out: no refusal from the connector check
             self.assertIsNone(P.tool_problem(name), name)
 

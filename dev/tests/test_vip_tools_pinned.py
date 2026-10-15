@@ -26,7 +26,7 @@ TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_M
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
 BUILTIN = ["Bash", "Read", "Grep", "Glob", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent"]
 # The built-in tools of Claude Code 2.1.300 with no --tools (`claude -p --output-format stream-json --verbose "hi"`: the init
-# event's "tools", the mcp__ ones left out). REFRESH this copy, and live_server.KNOWN_BUILTINS, when Claude Code adds one: a new
+# event's "tools", the mcp__ ones left out). REFRESH this copy, and permissions.KNOWN_BUILTINS, when Claude Code adds one: a new
 # built-in must be denied in the VIP check or named in ALLOWED_BUILTINS with a reason.
 CLI_DEFAULT_BUILTINS_2_1_300 = [
     "Task", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
