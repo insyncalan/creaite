@@ -147,12 +147,14 @@ class PageInputsTests(unittest.TestCase):
         for name in ("live-server.json", "live-server-starting.json"):
             put(self.v, f"system/staging/{name}", '{"pid": 1, "port": 1}\n')
         put(self.v, "system/staging/proposed-x.json", "{}")
+        put(self.v, "system/staging/evidence/ABC-current.json", "{}")    # BL-207: saved after the page was built
         r = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, 'system/scripts'); import live_server\n"
                             "print('\\n'.join(f.name for f in live_server.page_inputs()))"],
                            cwd=self.v.root, capture_output=True, text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         names = r.stdout.split()
         self.assertIn("proposed-x.json", names)
+        self.assertIn("ABC-current.json", names)
         self.assertNotIn("live-server.json", names)
         self.assertNotIn("live-server-starting.json", names)
 
