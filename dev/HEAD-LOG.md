@@ -4,6 +4,9 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | #56 the notes guard change (v20-notes-guard f906213) is signed off as is; listing the notes folder (names only) becomes a follow-up only if runs get marked in practice | His comment on #56, confirmed to Jarvis directly |
+| 15-10-2026 | Alan | #65 P2: two defaults for filing an export beside its source, reports off (BL-335) and minutes on (BL-338) | His comment on #65, confirmed to Jarvis directly |
+| 15-10-2026 | Jarvis | #60's guard diff (v20-confidential-prep cccb49b) reviewed against option (a) and pushed: Prep runs only, fail closed, hook_decision unchanged, guard tests pass. Three security follow-ups (generate runs, Prep search titles, search context failing open) put to Alan | Guard changes are checked against Alan's decision before merge |
 | 15-10-2026 | Jarvis | BL-341's six points: v1.9.5.md's two Setup steps fixed; check 15 measures Today's primary in a state that shows one (or goes on the sheet); check 13 seeds "Decisions needed"; check 20 uses the new sheet; the hand-check rule added to `dev/HOW-WE-WORK.md` | A check that skips what it names isn't a pass; the rule is BL-341's Done-when |
 | 15-10-2026 | Jarvis | The pinned Head issue (#82) holds where Jarvis is, the baton procedure, the start-up brief and the handover notes; `dev/HOW-WE-WORK.md` points to it | Alan asked for a procedure to move Jarvis between laptops; the charter's Head item didn't exist yet |
 | 15-10-2026 | Alan | BL-341 (#81) is in v1.9.5 and gates its cut (#52 blocked by #81); v1.9.4 ships as planned with hand checks run by hand | "Keep as planned with 1.9.5", after the trade-off (gating v1.9.4 would have held finished work back by an L-size job) |
