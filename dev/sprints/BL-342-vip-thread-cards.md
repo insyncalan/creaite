@@ -233,3 +233,8 @@ Run in the review round: `test_vip_threads.py` (new), `test_vip_conversations.py
 ## Report
 
 To be written by the build sprint: what was built per part, the step 0 figures (measured cost per check and per day), which UX checks were made, and anything Jarvis changed in review.
+
+## Notes for Part 3 (from review)
+
+- Team Cap's review of `bl342-p1p2` found that `vip.json` is also written by the command line (`sweep.py vip ...`: record, seen, dismiss, undismiss, handled, replied and the like) outside the live server's `VIP_WRITE` lock. This is pre-existing, not introduced by Parts 1, 2 or 4, and the same lost-update risk applies: a CLI write between a route's read and its save is overwritten.
+- Part 3's `vip_lock` should cover those CLI paths as well as the routes, so every read-modify-write of `vip.json` (`vip_state` then `vip_save`) holds one lock, not only the ones the server makes. Opus should judge `vip.json`'s writers as a whole, including `vip_save` (which now also recomputes each match's count) and the `sweep.py vip record` path run by the VIP check.
