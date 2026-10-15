@@ -7,6 +7,9 @@ Changed (15-10-2026, plan #65; Jarvis's decision): "File the exports beside it" 
 `report_server` uses it (its own `FILE_BESIDE_DEFAULT` is gone). `export`'s signature is unchanged.
 Changed (15-10-2026, before P5): §4, Sheet.jsx's props and slots, written (it was a placeholder); `components/report/SheetStub.jsx`
 added for Team Stark's P7 parts. Additions only.
+Changed (15-10-2026, P5, additions; Jarvis for P8): §4.1 `leftReadOnly` (Side by side with the left, internal page read only and the right page editable);
+§4.6 `partner.match(id)` (optional: Match internal calls it when given, else the generic copy); §4.1 notes: a hidden section keeps its
+content in the draft until it is saved, the editors' `readonly` AI place. Additions only.
 Changed (15-10-2026, P3; Alan's decision, option C): **a filed report or minutes is never changed in place.** Save on an approved,
 filed document writes a new draft in `system/staging/drafts/` (the filed version as its base); the filed file stays exactly as it
 is until Alan approves that draft, and that approve is the normal one apply with Undo (tracker.py replaces the filed file whole and
@@ -246,6 +249,7 @@ JSDoc types below are in `SheetStub.jsx` until P5, then exported from `Sheet.jsx
   zoom={0.8} onZoom={z => …}     // optional: controlled zoom; omitted, Sheet keeps its own (0.8 to start)
   exported={false} onExported={b => …}         // Show as exported (controlled; the toolbar's toggle calls onExported)
   readOnly={false}               // approved and not yet Edit again, or a version opened from versions(): no editing controls
+  leftReadOnly={false}           // Side by side only: the left (internal) page is read only (no controls, no saves) and the right stays editable (P8)
   renderers={{ byId: {…}, byType: {…}, row: {…} }}   // §4.3
   extras={[…]}                   // creaite-only blocks between sections (minutes' coverage, the milestone note) §4.3
   checks={[…]}                   // inline checks to underline (§4.5); the view works them out
@@ -268,6 +272,7 @@ JSDoc types below are in `SheetStub.jsx` until P5, then exported from `Sheet.jsx
 | `zoom` | The page's width as a share of the sheet area's width, **0.4 to 0.8** (BL-335: 80% by default). − and + in the bar (steps of 0.05), trackpad pinch (a `wheel` with `ctrlKey`, its default prevented), ⌘+ ⌘− and ⌘0 (back to 0.8) while focus is in the sheet area. Clamped; the point under the pointer (or the top of the view for keys) stays put. |
 | `scrollKey` | **The scroll position is never reset by a redraw** (P5's first rule). Sheet owns its scroller and never sets `scrollTop` except to restore: it remembers, per `scrollKey`, the top-most visible section's id and the offset into it, and restores that after a zoom, a section move, a show-as-exported toggle, a doc replaced by a save or reload, and on switching views (each view passes its own key; switching back returns to the place). |
 | `exported` | Show as exported: the page exactly as `creaite_doc.render(doc, editing=False)` gives it: no handles, bars, ✦, checks, tags, ≠ markers, extras, hidden-section bars or hidden rows; read only. Sheet's page markup uses render's classes (`.page`, `header.doc`, `section[data-id]`, `h2`, `table`, `.figure`) and the same type sizes (body 14px, tables 12.5px), so editing and exported differ only by the controls. |
+| `leftReadOnly` | With a `partner`: the left page is drawn and behaves as `readOnly` (no controls, no saves, `onChange` never called for it) while the right page stays editable. Ignored without a `partner`. |
 | `readOnly` | No editing controls and no saves; ✦, selection actions, the peek and Show as exported still work. |
 
 **Page breaks.** The page is A4 at the chosen width (210 × 297 mm, padded 16 mm like the print `@page` margin, so a page holds
@@ -365,7 +370,9 @@ draws `doc` (always the internal one) on the left and `partner.doc` on the right
   health flag) gets "≠ Client" (or "≠ Distributed"); hover shows both versions. creaite only.
 - **Match internal** on each right-hand section and **Match internal for every section** in the bar copy the left section's
   content in (keeping the right page's hidden sections, logos and row eyes), as `partner.onChange(doc, "Matched internal")`.
-  The label "Matching internal" or "Edited for the client" is worked out by comparing, not stored.
+  The label "Matching internal" or "Edited for the client" is worked out by comparing, not stored. **`partner.match(id)`** (optional): when the
+  view gives it, a section's Match internal calls it instead of the generic copy (the view does its own `partner.onChange`), and the bar's
+  Match internal for every section calls it once for each section that differs; without it Sheet makes the generic copy above.
 
 ### 4.7 Item IDs and the peek
 

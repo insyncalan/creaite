@@ -3053,3 +3053,94 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+/* ===== v2.1.0 P5 (BL-335, BL-338): the A4 sheet (components/report/Sheet.jsx). The chrome (bar, handles, pop-ups) uses the page's
+   tokens; the page itself is a document, the same in every theme as it exports (creaite_doc.CSS: paper, ink, rules), so it has
+   its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
+:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
+.sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
+.sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.sheet-zoom{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 4px;height:var(--ctl-h)}
+.sheet-zoom .btn{border:0;min-width:26px}
+.sheet-zv{min-width:44px;text-align:center;font-size:var(--fs-xs);font-variant-numeric:tabular-nums}
+.sheet-tog{display:inline-flex;gap:6px;align-items:center;font-size:var(--fs-xs)}
+.sheet-status{font-size:var(--fs-xs);color:var(--muted)}
+.sheet-checks{background:var(--warn-soft);color:var(--warn);border-radius:var(--r-pill);padding:2px 8px;font-size:var(--fs-xs)}
+.sheet-barr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.sheet-note{margin:8px 16px 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sheet-removed{background:var(--sunk);color:var(--ink)}
+.sheet-area{flex:1;min-height:0;display:flex;background:var(--sunk)}
+.sheet-area.sheet-split>.sheet-scroll{flex:1 1 0;min-width:0}
+.sheet-area.sheet-split>.sheet-scroll+.sheet-scroll{border-left:1px solid var(--line)}
+.sheet-scroll{flex:1;min-width:0;min-height:0;overflow:auto;overflow-anchor:none;padding:20px 16px 48px}
+.sheet-one,.sheet-pair{margin:0 auto;display:flex;gap:16px;justify-content:center;align-items:flex-start}
+.sheet-fit{position:relative;flex:none}
+.sheet-a4{position:absolute;left:0;top:0;width:210mm;transform-origin:0 0}
+.sheet-a4 .page{position:relative;box-sizing:border-box;width:210mm;min-height:297mm;padding:16mm;background:var(--paper);color:var(--paper-ink);
+  font:14px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;box-shadow:var(--shadow-md)}
+.sheet-a4 .page header.doc{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--paper-ink);margin-bottom:14px}
+.sheet-a4 .page header.doc h1{font-size:20px;margin:0 0 6px;color:var(--paper-ink)}
+.sheet-a4 .page header.doc .sub{color:var(--paper-mute);font-size:12.5px}
+.sheet-a4 .page section{position:relative;margin:0 0 16px;break-inside:avoid-page}
+.sheet-a4 .page section h2{font-size:15px;margin:0 0 6px;border-bottom:1px solid var(--paper-rule);padding-bottom:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--paper-ink)}
+.sheet-a4 .page h3{font-size:14px;margin:6px 0 4px}
+.sheet-a4 .page p{margin:0 0 8px}
+.sheet-a4 .page ul,.sheet-a4 .page ol{margin:0 0 8px;padding-left:20px}
+.sheet-a4 .page table{border-collapse:collapse;width:100%;font-size:12.5px}
+.sheet-a4 .page th,.sheet-a4 .page td{border:1px solid var(--paper-rule);padding:4px 6px;text-align:left;vertical-align:top}
+.sheet-a4 .page th{background:var(--paper-sunk);color:var(--paper-ink);font:inherit;font-weight:600;text-transform:none;letter-spacing:normal}
+.sheet-a4 .page .figures{display:flex;flex-wrap:wrap;gap:10px}
+.sheet-a4 .page .figure{position:relative;border:1px solid var(--paper-rule);border-radius:var(--r-md);padding:6px 30px 6px 10px;min-width:110px}
+.sheet-a4 .page .figure b{display:block;font-size:18px}
+.sheet-a4 .page .panes{display:flex;gap:14px}.sheet-a4 .page .panes>div{flex:1;min-width:0}
+.sheet-a4 .page .flag{font-weight:700}
+.sheet-a4 .page .sheet-md>:last-child{margin-bottom:0}
+.sheet-a4 .page .linkbtn{color:var(--paper-link);font-size:inherit}
+.sheet-break{position:absolute;left:0;right:0;border-top:1px dashed var(--paper-rule);pointer-events:none;z-index:var(--z-raised)}
+.sheet-break span{position:absolute;right:6px;top:2px;font-size:var(--fs-2xs);color:var(--paper-mute);white-space:nowrap}
+/* the one editor on the page: no box until it is hovered or has the focus */
+.sheet-ed{min-height:1.5em;border-radius:var(--r-sm);outline:none}
+.sheet-ed.ProseMirror{white-space:pre-wrap}
+.sheet-ed p{margin:0 0 8px} .sheet-ed p:last-child{margin-bottom:0}
+.sheet-a4 .page .sheet-ed:hover{background:var(--paper-sunk)}
+.sheet-a4 .page .sheet-ed:focus-within{background:var(--paper);box-shadow:0 0 0 2px var(--accent)}
+.sheet-ed.blank::before{content:attr(data-ph);color:var(--paper-mute);float:left;height:0;pointer-events:none}
+.sheet-a4 .page .claim{text-decoration:underline wavy var(--warn);text-underline-offset:3px;cursor:pointer}
+/* section chrome (editing only) */
+.sheet-handle{position:absolute;left:-44px;top:-2px;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .15s}
+.sheet-a4 .page section:hover>.sheet-handle,.sheet-a4 .page section:focus-within>.sheet-handle{opacity:1}
+.sheet-grip,.sheet-hbtn{width:28px;height:24px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:grab;border-radius:var(--r-sm);padding:0;font-size:var(--fs-xs);line-height:1}
+.sheet-hbtn{cursor:pointer}
+.sheet-handle .dd{display:block}
+.sheet-a4 .page .sheet-h{font:inherit;font-weight:700;color:inherit;border:0;background:none;padding:0 2px;min-width:8ch;max-width:100%;border-radius:var(--r-sm)}
+.sheet-a4 .page .sheet-h:hover{background:var(--paper-sunk)} .sheet-a4 .page .sheet-h:focus{background:var(--paper);box-shadow:0 0 0 2px var(--accent);outline:none}
+.sheet-reset,.sheet-untag{border:0;background:none;color:var(--paper-link);font-size:var(--fs-xs);font-weight:400;cursor:pointer;padding:0;text-decoration:underline}
+.sheet-untag{margin-left:auto}
+.sheet-spark{border:0;background:none;color:var(--paper-link);cursor:pointer;width:24px;height:24px;display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
+.sheet-spark:hover{background:var(--paper-sunk)}
+.sheet-diff{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-pill);padding:0 6px}
+.sheet-match{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);margin-left:auto}
+.sheet-hidden{margin:0 0 16px;padding:4px 8px;border:1px dashed var(--paper-rule);font-size:var(--fs-xs);color:var(--paper-mute)}
+.sheet-over-above{box-shadow:0 -3px 0 var(--accent)} .sheet-over-below{box-shadow:0 3px 0 var(--accent)}
+.sheet-dragging{opacity:.4}
+.sheet-extra{margin:0 0 16px}
+.sheet-count{font-size:var(--fs-xs);color:var(--paper-mute);margin-top:4px}
+.sheet-a4 .page td.eyec,.sheet-a4 .page th.eyec{width:28px;padding:2px;border-left:0;border-top:0;border-bottom:0;background:none}
+.sheet-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sheet-a4 .page .eye{border:0;background:none;color:var(--paper-mute);cursor:pointer;width:22px;height:20px;padding:0}
+.sheet-a4 .page .eye[aria-pressed="false"]{opacity:.5}
+.sheet-a4 .page .sheet-figeye{position:absolute;top:2px;right:2px}
+.sheet-rowoff td:not(.eyec),.sheet-figoff{opacity:.4}
+.sheet-tags{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:4px;vertical-align:baseline}
+.sheet-tagw{display:inline-flex;align-items:center}
+.sheet-tag{color:var(--paper-ink);background:var(--paper-sunk);border-color:var(--paper-rule);font-size:var(--fs-2xs);padding:0 6px;min-height:20px;cursor:pointer}
+.sheet-tagx{border:0;background:none;color:var(--paper-mute);cursor:pointer;font-size:var(--fs-2xs);opacity:0;padding:0 2px}
+.sheet-tagw:hover .sheet-tagx,.sheet-tagx:focus-visible{opacity:1}
+.sheet-redraft{margin:6px 0;padding:8px 12px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:var(--r-md);font-size:var(--fs-sm)}
+.sheet-redraft .page{display:none}
+.sheet-rdh{display:flex;gap:6px;align-items:center;font-weight:600;margin-bottom:4px}
+.sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
+.sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
+.sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
+.sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
+.sheet-exported .sheet-handle{display:none}

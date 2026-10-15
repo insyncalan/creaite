@@ -54,6 +54,9 @@ OPTIONS = {
     "summary": ("Summarise at the top", "A short summary first; the text kept below it",
                 "Write a two- or three-sentence summary of the text, as a paragraph that starts with \"**Summary.**\", then a blank "
                 "line, then the text exactly as it was."),
+    "polish": ("Polish", "Spelling, grammar and a lighter touch on the wording; the facts and length kept",
+               "Polish the text: correct spelling, grammar and punctuation in British English, and smooth awkward wording lightly. "
+               "Keep its facts, its order, its length and its voice; add and remove nothing."),
     "formal": ("More formal", "A more formal tone for the email",
                "Rewrite the text in a more formal, professional tone. Keep its facts and its length."),
     "warmer": ("Warmer", "A warmer, friendlier tone for the email",
@@ -70,8 +73,12 @@ PLACES = {
     "plain": ["rewrite", "shorter", "longer", "executive", "spelling", "custom"],
     "email": ["rewrite", "shorter", "longer", "formal", "warmer", "spelling", "custom"],
     "line": ["rewrite", "shorter", "executive", "spelling", "custom"],
+    "report": ["shorter", "executive", "polish", "custom"],      # v2.1.0 P5: the A4 sheet (reports and minutes)
+    "minutes": ["shorter", "executive", "polish", "custom"],
+    "readonly": [],      # a sheet that can't be edited offers only Find the source, which is the page's own and runs no Claude
 }
-FORMATS = {"notes": "markdown", "current": "markdown", "plain": "plain", "email": "plain", "line": "line"}
+FORMATS = {"notes": "markdown", "current": "markdown", "plain": "plain", "email": "plain", "line": "line", "report": "markdown",
+           "minutes": "markdown", "readonly": "plain"}
 FORMAT_RULES = {
     "markdown": "The text is Markdown. Reply in Markdown, using only bold, italic, \"- \" bullets, numbered lists, \"### \" "
                 "sub-headings, quotes, links{tasks}. Keep any link, image or HTML comment exactly as it is.",
