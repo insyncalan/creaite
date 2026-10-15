@@ -1057,8 +1057,7 @@ WILDCARDS = set("*?[")
 def held_arg_paths(command):
     """Every path a held run's Bash call could hand a script: prep_paths' (each path-like argument, `--x=path` too), every
     path-like piece of an argument after = : or , (`//…` too, unless it follows http: or https:), a piece
-    with $ as a script could expand it, and, for a piece with a wildcard, what the shell would expand it to."""
-    import glob
+    with $ as a script could expand it, and, for a piece with a wildcard, what a script globbing it would find."""
     import re
     out = list(prep_paths("Bash", {"command": command}))
     for piece, before in held_pieces(command):
@@ -1069,15 +1068,18 @@ def held_arg_paths(command):
     for p in list(out):
         if "$" in p and os.path.expandvars(p) not in out:   # quoted from the shell, but a script could still expand it
             out.append(os.path.expandvars(p))
-    for p in list(out):
+    return out + [m for m in _held_globbed(out) if m not in out]
+
+
+def _held_globbed(found):
+    """For each path with a wildcard (a quoted one: held_form_reason refuses the others), what a script globbing it would find."""
+    import glob
+    out = []
+    for p in found:
         if WILDCARDS & set(p):
             pattern = os.path.expanduser(p)
             pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
-            try:                                           # a quoted one: what a script globbing it would find, hidden folders too
-                found = glob.glob(pattern, recursive=True, include_hidden=True)
-            except TypeError:                              # Python before 3.11
-                found = glob.glob(pattern, recursive=True)
-            out += [m for m in found if m not in out]
+            out += [m for m in glob.glob(pattern, recursive=True) if m not in out]
     return out
 
 
