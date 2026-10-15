@@ -84,3 +84,6 @@ def spread(v):
             con.execute("UPDATE change_log SET at = ? WHERE apply_id = ?", (stamp, a))
             con.execute("UPDATE applies SET at = ? WHERE apply_id = ?", (stamp, a))
         con.commit()
+    # BL-327: the server's first page is the last built dashboard.html while the records' version (change_log, applies) is
+    # unchanged, and re-dating the history doesn't move it; build the page again so Movement shows the spread weeks
+    v.run(script="build_dashboard.py")
