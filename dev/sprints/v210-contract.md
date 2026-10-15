@@ -1,6 +1,7 @@
 # v2.1.0 contract: creaite's document format, its calls and the export call
 
 Team Cap, branch `sprint-reporting` (P1 `v210-p1-doc`, P2 `v210-p2-exports`). Team Stark builds P4 against this from day 1.
+Changed (15-10-2026, Team Stark): §4.6 matches Sheet as built. `partner.match(id)` is an action: Sheet ignores its return value and the partner applies the result; "every section" is a loop of single calls, never `null`. Rewrite only; no code changed.
 Changed (15-10-2026, plan #65; Jarvis's decision): "File the exports beside it" is split by kind, one source of truth.
 `reports.file_exports_beside` (weekly and client reports, **off** by default, BL-335) and `reports.file_minutes_exports_beside`
 (minutes, **on** by default, BL-338); `creaite_doc.file_beside_default(kind)` picks by the document's kind, and
@@ -370,13 +371,16 @@ draws `doc` (always the internal one) on the left and `partner.doc` on the right
 - **Scroll together** (on by default, a toggle in the bar): one scroller for both.
 - **≠ markers** on the left page: a section whose shown content differs from its peer (headings, text, rows shown, figures,
   health flag) gets "≠ Client" (or "≠ Distributed"); hover shows both versions. creaite only.
-- **Match internal** on each right-hand section and **Match internal for every section** in the bar copy the left section's
-  content in (keeping the right page's hidden sections, logos and row eyes), as `partner.onChange(doc, "Matched internal")`.
-  **`partner.match(id | null) => SheetDoc`** (optional; P5 added it, P8 settled the shape, 15-10-2026): when the view gives it, a section's
-  Match internal calls it instead of copying (`id` the section), and the bar's Match internal for every section calls it with `null`; Sheet
-  passes the returned document to `partner.onChange(doc, "Matched internal")`. A Client view must give it: a verbatim copy would put
-  internal rows and wording on the client's page (P8's `clientDoc.matchClientSection` copies only what a client may see). Without it, Sheet makes
-  the generic copy above (distributed minutes). SheetStub draws both buttons only when `match` is given.
+- **Match internal** on each right-hand section and **Match internal for every section** in the bar. Both are actions:
+  **`partner.match?: (id: string) => void`** (optional; P5 added it, Sheet as built, 15-10-2026). When the view gives it, Sheet
+  calls `partner.match(id)` for the section and ignores any return value; the partner applies the result itself (the Client view:
+  `match: id => setClientDoc(matchFor(id))`). The bar's button loops over the sections whose content differs from the peer and calls
+  `partner.match(id)` once for each, never with `null`, so "every section" is a loop of single calls. Each call must read the
+  partner's latest doc when it runs, because one click makes several calls in a row.
+  A Client view must give `match`: a verbatim copy would put internal rows and wording on the client's page (P8's
+  `clientDoc.matchClientSection` copies only what a client may see). Without it, Sheet makes the generic copy: the left section's
+  content goes in, keeping the right page's hidden sections, logos and row eyes, as `partner.onChange(doc, "Matched internal")`
+  (distributed minutes).
   The label "Matching internal" or "Edited for the client" is worked out by comparing, not stored.
 
 ### 4.7 Item IDs and the peek
