@@ -43,7 +43,7 @@ CARRIED OVER:
 FAKE = r'''#!/usr/bin/env python3
 import json, sys
 args = sys.argv[1:]
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 open(__file__ + ".calls", "a", encoding="utf-8").write(json.dumps({"prompt": p[:200], "allowed": args[args.index("--allowedTools") + 1],
      "denied": args[args.index("--disallowedTools") + 1]}) + "\n")
 out = lambda o: print(json.dumps(o), flush=True)

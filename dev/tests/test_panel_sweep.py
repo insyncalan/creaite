@@ -30,7 +30,7 @@ FAKE = r'''#!/usr/bin/env python3
 import json, subprocess, sys, time
 from pathlib import Path
 args = sys.argv[1:]
-prompt = args[args.index("-p") + 1] if "-p" in args else ""
+prompt = args[args.index("--") + 1] if "-p" in args else ""
 root = Path.cwd()
 verdicts = {}
 if "--settings" in args and prompt.lower().startswith(("sweep", "refresh")):

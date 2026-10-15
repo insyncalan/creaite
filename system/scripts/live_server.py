@@ -527,6 +527,11 @@ def claude_path():
             or str(Path.home() / ".local/bin/claude"))
 
 
+def prompt_last(cmd, prompt):
+    """A `claude -p` command with its prompt after `--` (#91): nothing in the prompt can be read as an option or a command."""
+    return cmd + ["--", prompt]
+
+
 def script_env():
     """The environment a script runs in from the server: BL-327, an apply leaves its index refresh and OneDrive copy to the
     server's background worker (tracker.after_apply), so the save answers as soon as the tracker and dashboard are done."""
@@ -2008,7 +2013,7 @@ class Run:
         prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
         self.images = list(images)
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
-        cmd = [claude_path(), "-p", said, "--output-format", "stream-json", "--verbose",
+        cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
                "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
@@ -2018,6 +2023,7 @@ class Run:
         self.guarded = guarded
         if session:
             cmd += ["--resume", session]
+        cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
         self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
         self.sweep = bool(sweep)                                # BL-309
         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
@@ -3203,8 +3209,8 @@ def vip_check(how="check"):
         st = sweep.vip_state()
         since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
         prompt = VIP_PROMPT.format(since=since, addresses=", ".join(sorted(vips)))
-        cmd = [claude_path(), "-p", prompt, "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
-               "--disallowedTools", ",".join(DENY_TOOLS)]
+        cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
+                           "--disallowedTools", ",".join(DENY_TOOLS)], prompt)                       # #91: after `--`
         found, why = None, "no reply"
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
