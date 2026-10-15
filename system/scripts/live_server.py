@@ -2007,6 +2007,19 @@ def held_run(kind, confirmed, only, sweep, tools):
     return kind not in LIKE_ASK and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
 
 
+# A run in mode "held" (Prep page, Current state's draft and rewrite, the AI drafts, Shape the meeting, a transcript check or load)
+# reads outside content and writes nothing itself: the server writes the page, the draft, the proposals and the transcript from
+# its reply or its tool results. So it is started with the file writers denied by name: the vault's .claude/settings.json allow
+# rules (Edit projects/**, Edit system/config/settings.json, Edit system/staging/**, Edit inbox/**) can't apply in it. Not a
+# guarded run with --held 1 (Close the day's sweep writes its input files in system/staging/drafts/, under the hook's "sweep" mode).
+HELD_DENIES = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
+
+
+def held_deny(deny, held, guarded):
+    """A run's deny list, with HELD_DENIES added for a run in mode "held" (held and not guarded)."""
+    return deny + [t for t in HELD_DENIES if t not in deny] if held and not guarded else deny
+
+
 def guard_args(run_id, mode, held, session):
     """The guard hook's --settings for a run: a guarded run's mode (BL-141, BL-295; the run written to system/guard/run.json),
     with `--held 1` when creaite started it (#60); else mode "held" for a run creaite starts itself; else none."""
@@ -2024,6 +2037,8 @@ class Run:
                  sweep=False, lines=None, closer=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
+        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+        deny = held_deny(deny, held, guarded)                   # and, in mode "held", no file writes at all
         prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
         self.images = list(images)
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
@@ -2032,7 +2047,6 @@ class Run:
                "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
-        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
         self.guarded = guarded
         if session:
