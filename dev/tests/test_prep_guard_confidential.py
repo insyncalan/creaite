@@ -172,7 +172,7 @@ class Search(unittest.TestCase):
         plain = search(self.v, "query", "restructure")
         self.assertIn(SECRET_REL, self.notes_of(plain))
         self.assertIn("plan stays", json.dumps(plain), "ask creaite (no run kind) still gets it, as before")
-        for kind in ("prep", "generate", "search", "sweep"):
+        for kind in ("prep", "generate", "sweep"):
             held = search(self.v, "query", "restructure", kind=kind)
             self.assertEqual(held["groups"]["notes"], [], kind)
             self.assertEqual(held["totals"]["notes"], 0, kind)                # no match on its words
@@ -191,7 +191,25 @@ class Search(unittest.TestCase):
             self.assertEqual(search(self.v, "preview", SECRET_REL, "board", kind=kind), missing, kind)
         self.assertEqual(search(self.v, "preview", OPEN_REL, kind="prep"), search(self.v, "preview", OPEN_REL))
 
-    def test_3_context_fails_closed_for_every_caller(self):
+    def test_3_context_leaves_out_the_count_only_in_a_held_run(self):
+        """#60 (Jarvis, 15-10-2026): a run creaite starts itself isn't told a confidential note matched; ask creaite and Search's
+        answer (whose context the server builds without a run kind) still are."""
+        def ctx(kind):
+            r = subprocess.run([sys.executable, "system/scripts/search.py", "context", "restructure", "--json"], cwd=self.v.root,
+                               capture_output=True, text=True, timeout=120,
+                               env={**{k: x for k, x in os.environ.items() if k != "CREAITE_RUN_KIND"},
+                                    **({"CREAITE_RUN_KIND": kind} if kind else {})})
+            return json.loads(r.stdout)
+        plain = ctx(None)
+        self.assertIn("1 confidential note(s) also matched", plain["text"])
+        for kind in ("prep", "generate", "sweep"):
+            held = ctx(kind)
+            self.assertNotIn("confidential note(s) also matched", held["text"], kind)
+            self.assertNotIn("plan stays", held["text"], kind)
+            self.assertEqual(held["text"], plain["text"].replace("(1 confidential note(s) also matched; their text is left out)",
+                                                                 "(none found)"), kind)            # as if nothing matched
+
+    def test_4_context_fails_closed_for_every_caller(self):
         v = make()
         try:
             locked = v.root / ABC / "notes" / "Locked.md"
@@ -201,13 +219,15 @@ class Search(unittest.TestCase):
             if os.access(locked, os.R_OK):
                 self.skipTest("running as a user who can read anything")
             try:
-                for kind in (None, "prep"):                                   # ask creaite and a run creaite starts: the same
+                for kind in (None, "prep"):                                   # ask creaite and a run creaite starts: held back
                     r = subprocess.run([sys.executable, "system/scripts/search.py", "context", "freeze", "--json"], cwd=v.root,
                                        capture_output=True, text=True, timeout=120,
                                        env={**{k: x for k, x in os.environ.items() if k != "CREAITE_RUN_KIND"},
                                             **({"CREAITE_RUN_KIND": kind} if kind else {})})
                     ctx = json.loads(r.stdout)
-                    self.assertIn("1 confidential note(s) also matched", ctx["text"], kind)
+                    if kind is None:                                          # a held run isn't told (test_3)
+                        self.assertIn("1 confidential note(s) also matched", ctx["text"])
+                    self.assertNotIn("freeze stays", ctx["text"], kind)
                     self.assertNotIn("Locked.md", json.dumps(ctx["sources"]), kind)
             finally:
                 locked.chmod(stat.S_IRUSR | stat.S_IWUSR)
@@ -228,6 +248,8 @@ if "--settings" in args:
 out = subprocess.run(["/bin/sh", "system/scripts/run", "search.py", "preview", os.environ["SECRET_REL"]], capture_output=True,
                      text=True).stdout
 rec["sees_text"] = "restructure" in out
+ctx = subprocess.run(["/bin/sh", "system/scripts/run", "search.py", "context", "restructure"], capture_output=True, text=True).stdout
+rec["told_of_match"] = "confidential note(s) also matched" in ctx
 open(__file__ + ".calls", "a", encoding="utf-8").write(json.dumps(rec) + "\n")
 print(json.dumps({"type": "system", "subtype": "init", "session_id": "sess-g"}), flush=True)
 print(json.dumps({"type": "result", "result": "{}", "session_id": "sess-g"}), flush=True)
@@ -248,7 +270,8 @@ for name, kw in starts:
         if r.done:
             break
         time.sleep(0.1)
-held = {k: L.held_run(k, None, None, False, L.run_policy(k, None)[0]) for k in ("check", "load", "shape-closed", "notes-find")}
+held = {k: L.held_run(k, None, None, False, L.run_policy(k, None)[0])
+        for k in ("check", "load", "shape-closed", "notes-find", "search", "ask")}
 print(json.dumps(held))
 '''
 
@@ -265,16 +288,21 @@ class ThroughTheRunEngine(unittest.TestCase):
             r = subprocess.run([sys.executable, "-c", RUNS], cwd=v.root, env=env, capture_output=True, text=True, timeout=300)
             self.assertEqual(r.returncode, 0, r.stderr[-2000:])
             self.assertEqual(json.loads(r.stdout.strip().splitlines()[-1]),
-                             {"check": True, "load": True, "shape-closed": False, "notes-find": False})
+                             {"check": True, "load": True, "shape-closed": False, "notes-find": False, "search": False,
+                              "ask": False})
             calls = dict(zip(["ask", "confirmed", "typed sweep", "prep", "generate", "search", "sweep", "narrow", "notes-find",
                               "edit-ai"], [json.loads(x) for x in Path(str(fake) + ".calls").read_text().splitlines()]))
-            mine = {"run_kind": None, "held": False, "hook": 0, "sees_text": True}        # ask creaite: as before
+            mine = {"run_kind": None, "held": False, "hook": 0, "sees_text": True, "told_of_match": True}   # ask creaite: as before
             self.assertEqual(calls["ask"], {**mine, "mode": "ask"})
             self.assertEqual(calls["confirmed"], {**mine, "mode": "confirmed"})
             self.assertEqual(calls["typed sweep"], {**mine, "mode": "sweep"})
-            for kind in ("prep", "generate", "search"):
-                self.assertEqual(calls[kind], {"run_kind": kind, "mode": "held", "held": False, "hook": 2, "sees_text": False})
-            self.assertEqual(calls["sweep"], {"run_kind": "sweep", "mode": "sweep", "held": True, "hook": 2, "sees_text": False})
+            # Search's answer is treated like ask creaite (Alan, 15-10-2026, #60): no hook, no run kind, search as for ask creaite
+            self.assertEqual(calls["search"], {**mine, "mode": None, "hook": None})
+            for kind in ("prep", "generate"):
+                self.assertEqual(calls[kind], {"run_kind": kind, "mode": "held", "held": False, "hook": 2, "sees_text": False,
+                                               "told_of_match": False})
+            self.assertEqual(calls["sweep"], {"run_kind": "sweep", "mode": "sweep", "held": True, "hook": 2, "sees_text": False,
+                                              "told_of_match": False})
             for name in ("narrow", "notes-find", "edit-ai"):                 # no file tools: no hook, as before
                 self.assertEqual({k: calls[name][k] for k in ("run_kind", "mode", "hook")}, {"run_kind": None, "mode": None,
                                                                                               "hook": None}, name)

@@ -503,9 +503,10 @@ def preview(rel, q=""):
 
 
 # ===== #60 (Alan, 15-10-2026): a run creaite starts itself never sees a confidential note =====
-# The live server starts every run of its own that may read files (Prep, Shape the meeting, Current state, the AI drafts, Search's
-# answer, a transcript check or load, Close the day's sweep) with CREAITE_RUN_KIND=<its kind> (live_server.run_env), never ask
-# creaite, and the guard hook lets a Bash call through only as one creaite script on its own, so the run can't change it. There,
+# The live server starts every run of its own that may read files (Prep, Shape the meeting, Current state, the AI drafts,
+# a transcript check or load, Close the day's sweep) with CREAITE_RUN_KIND=<its kind> (live_server.run_env), never ask
+# creaite or Search's answer, and the guard hook lets a Bash call through only as one creaite script on its own, so the run
+# can't change it. There,
 # query leaves a confidential note out entirely (no title, link or match on its words: notes.held, fail closed) and preview answers
 # as for a file the index doesn't hold. Everyone else's results are unchanged. (Option (a)'s title and link replaced: #60 follow-ups.)
 
@@ -669,7 +670,7 @@ def context(text, project=(), person=(), kind=(), frm=None, to=None, skip=(), no
         else:
             continue
         break
-    if held:
+    if held and not held_run():                 # #60 (Jarvis, 15-10-2026): a run creaite starts itself isn't told one matched
         body.append(f"({len(held)} confidential note(s) also matched; their text is left out)")
     out = head + ["", "## Passages from meetings, reports, documents and notes"] + (body or ["(none found)"]) + \
         ["", "## Tracker items"] + ([items_text[:max(0, budget - sum(len(x) for x in head + body) - 200)]] if items_block else ["(none found)"])

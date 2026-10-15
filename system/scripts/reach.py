@@ -832,7 +832,7 @@ def direct_write_area(mode):
 # allow list otherwise; a Bash call must still be one creaite script on its own (bash_refusal), so its environment, where the server
 # tells search.py it is a Prep run, can't be changed. ask creaite and every other run are unchanged: this mode is the Prep run's only.
 # #60 follow-ups (Alan, 15-10-2026): every run creaite starts itself that may read files (Prep, Shape the meeting, Current state's
-# draft and rewrite, the AI drafts, Search's answer, a transcript check or load) is started in mode "held", the same rules as
+# draft and rewrite, the AI drafts, a transcript check or load) is started in mode "held", the same rules as
 # "prep"; Close the day's sweep keeps its mode "sweep" and adds `--held 1`, the confidential check first. ask creaite (a chat, a
 # typed sweep, a confirmed request) never gets either: its decisions are hook_decision's, unchanged.
 HELD_MODES = ("prep", "held")

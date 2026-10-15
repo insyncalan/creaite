@@ -1729,11 +1729,15 @@ def run_policy(kind, confirmed, only=None):
     return tools, deny, guarded
 
 
+LIKE_ASK = ("ask", "search")     # #60 (Alan, 15-10-2026): Search's answer is Alan's own question, like ask creaite
+
+
 def held_run(kind, confirmed, only, sweep, tools):
     """#60 follow-ups (Alan, 15-10-2026): whether this run is one creaite starts itself that may read files, so the guard hook and
     search.py hold confidential notes back: not ask creaite (a chat, a typed sweep, a confirmed request), not a run with no
-    tools, and not a narrowed run (`only`: Microsoft 365 reading only, no files)."""
-    return kind != "ask" and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
+    tools, and not a narrowed run (`only`: Microsoft 365 reading only, no files). Search's answer (kind "search") is treated like ask
+    creaite (Alan, 15-10-2026, #60)."""
+    return kind not in LIKE_ASK and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
 
 
 def guard_args(run_id, mode, held, session):
