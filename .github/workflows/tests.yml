@@ -42,7 +42,6 @@ jobs:
   tests:
     name: ${{ matrix.os }} · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/3
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.os == 'macos-latest' }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -50,15 +49,10 @@ jobs:
       # is about a third. Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
       # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
       # The "Tests passed" job below is green only if every shard is.
-      # macOS runs on release branches only (release-*; Alan, 15-10-2026, #89). It needs about 2 hours and GitHub runs only five
-      # macOS jobs at once, so on a push to main or a pull request it held the run open for nothing; Linux decides those. It
-      # is still continue-on-error: a macOS runner that fails to start never blocks a cut.
       matrix:
-        os: ${{ fromJSON(startsWith(github.head_ref || github.ref_name, 'release-') && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
+        os: [ubuntu-latest]
         python: ["3.9", "3.14"]
         shard: [1, 2, 3]
-        exclude:
-          - {os: macos-latest, python: "3.9"}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -82,7 +76,7 @@ jobs:
       - name: Tests
         env:
           FILES: ${{ github.event.inputs.files }}
-          JOBS: ${{ matrix.os == 'macos-latest' && 3 || 4 }}
+          JOBS: 4
           SHARD: ${{ matrix.shard }}
           SCOPE: ${{ matrix.python == '3.9' && '--quick' || '' }}
         run: |
@@ -96,9 +90,61 @@ jobs:
             python3 dev/tools/run_tests.py -j "$JOBS" $SCOPE --shard "$SHARD/3" --max-fail 8
           fi
 
+
+  macos:
+    # macOS (3.14, every file, 3 shards) runs on release branches only (release-*; Alan, 15-10-2026, #89). It needs about 2
+    # hours and GitHub runs only five macOS jobs at once, so on a push to main or a pull request it held the run open for
+    # nothing; Linux decides those. It is a job of its own, continue-on-error, and "Tests passed" does not wait for it, so
+    # a release run is green with Linux while macOS is still running. A macOS runner that fails never blocks a cut.
+    if: startsWith(github.head_ref || github.ref_name, 'release-')
+    name: macos-latest · Python 3.14 · shard ${{ matrix.shard }}/3
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Find Chrome
+        # The browser tests find Chrome through dev/tools/cdp.py chrome_path(): CREAITE_CHROME, then the PATH, then macOS.
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          MAC="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          if [ -z "$CHROME" ] && [ -x "$MAC" ]; then CHROME="$MAC"; fi
+          test -n "$CHROME" || { echo "No Chrome on this runner"; exit 1; }
+          echo "CREAITE_CHROME=$CHROME" >> "$GITHUB_ENV"
+          "$CHROME" --version
+          python3 --version
+
+      - name: Tests
+        env:
+          FILES: ${{ github.event.inputs.files }}
+          JOBS: 3
+          SHARD: ${{ matrix.shard }}
+          SCOPE: ''
+        run: |
+          if [ -n "$FILES" ]; then
+            # named files: shard 1 runs them, the others have nothing to do
+            [ "$SHARD" = "1" ] || { echo "Named files run in shard 1."; exit 0; }
+            fail=0
+            for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
+            exit $fail
+          else
+            python3 dev/tools/run_tests.py -j "$JOBS" $SCOPE --shard "$SHARD/3" --max-fail 8
+          fi
+
   passed:
-    # The one result to wait for (and to require): green only if every shard of every job passed. A skipped or cancelled
-    # shard counts as a failure here; the macOS shards are optional and don't count.
+    # The one result to wait for (and to require): green only if every Linux shard passed. A skipped or cancelled
+    # shard counts as a failure here. The optional macOS job is not in needs, so this never waits for it.
     name: Tests passed
     needs: tests
     if: always()
