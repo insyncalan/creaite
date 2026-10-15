@@ -2634,7 +2634,16 @@ def why_not(con, r, reverted, done_ids):
         return "history only; nothing to put back"
     if r["op"] == "insert" and r["tbl"] not in REVERT_CREATED:
         return "a new " + r["tbl"].rstrip("s") + " can't be removed here; use “undo last apply”"
+    if r["field"] == "archived" and is_age_archive_via(r["via"]):
+        return "archived for its age: use Undo on the archive apply, or edit the item to bring it back"    # BL-10
     return None
+
+
+def is_age_archive_via(via):
+    """BL-10: whether a change_log source is the daily archiving: "archive" (via_for), or its proposal's file name as
+    recorded before v1.9.5's fix (proposed-<stamp>-archive.json)."""
+    via = str(via or "")
+    return via == AGE_SOURCE or bool(re.fullmatch(r"proposed-[\d-]+-archive(-\d+)?\.json", via))
 
 
 def revert_plan(con, rowids, apply_id, via):
