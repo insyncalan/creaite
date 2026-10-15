@@ -309,7 +309,7 @@ export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
         else if(ev.type==="draft"){ const {type,...d}=ev; Object.assign(out,d,{got:true}); } } }
     api("/api/ask/ack",{run:id}).catch(()=>{});
     if(out.stopped){ shared.RBOUT="stopped"; return {ok:false,stopped:true,message:"Stopped; nothing changed"}; }
-    if(!out.got||(!out.text&&!out.items&&!out.prefill)){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back"}; }
+    if(!out.got||(!out.text&&!out.items&&!out.prefill)){ shared.RBOUT="failed"; return {ok:false,message:out.message||"No draft came back",length_notes:out.length_notes||[]}; }
     out.ok=true; return out;
   } finally{ DRRUN=null; status(""); if(started) rbEnd(shared.RBOUT||"done"); shared.RBOUT=""; } }
 export function draftTextHtml(d){ const src=d.sources||[], S2=d.sentences||[];
@@ -385,7 +385,7 @@ export function genFormText(d){ const src=d.sources||[], lines=d.form==="steerin
   return `<div class="drtext">${(d.sentences||[]).map(one).join(lines?"<br>":" ")}</div>`; }
 let GENSEQ=0, GENCALL=false;                                   /* which dialog session a draft belongs to; a form draft is being written */
 export async function genFormDraft(body){ const out=$("#genOut"), why=draftWhyNot("status-form"); if(why){ snack(why); return; }
-  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form, mine=++GENSEQ;
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; refineUnmount(); const form=shared.GEN.form, mine=++GENSEQ;   /* a new draft: the old one's refine box and versions go */
   genFold(); genBusy(true);                                  /* #110: the setup folds to its summary while it is written; Generate again waits */
   let res; GENCALL=true; try{ res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>{ if(mine===GENSEQ) putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:""); }}); }
   finally{ GENCALL=false; if(mine===GENSEQ) genBusy(false); }
@@ -406,33 +406,38 @@ export async function genFormCopy(rich,btn){ const d=GENFM.d, html=d.form==="ste
    period and audience, so a version draws on exactly what the first did, and the server keeps only sourced sentences for any audience
    but Internal. Each is a new version; Back and On move between them; Discard, closing and Change settings drop them all. Nothing is
    saved or sent by a refine; the editor's Save is the only save. ===== */
-export const REFINE_TEXT_MAX=1500, REFINE_NOTE_MAX=500;      /* what /api/draft takes for `text` and `note` */
+export const REFINE_TEXT_MAX=1500, REFINE_NOTE_MAX=500, REFINE_INS_MAX=300;      /* what /api/draft takes for `text` and `note`; the change itself, leaving room for the first steer */
 export const REFINE_STARTERS=[["shorter","Shorter","Make it shorter."],["plainer","Plainer words","Use plainer words."],["decision","Lead with the decision","Lead with the decision."],["risks","Add the risks","Add the risks."]];
 export function refineNote(ins,steer){ ins=String(ins||"").replace(/\s+/g," ").trim().slice(0,300); const first=String(steer||"").replace(/\s+/g," ").trim(), room=REFINE_NOTE_MAX-ins.length-27;
   return first&&room>20?`${ins} (The first steer was: ${first.slice(0,room)})`:ins; }
 export function versBarHtml(at,n,attr){ return `<span class="vers" role="group" aria-label="Versions">Version ${at+1} of ${n}${at>0?` · <button type="button" class="genlink" data-${attr}="back">Back to version ${at}</button>`:""}${at<n-1?` · <button type="button" class="genlink" data-${attr}="next">On to version ${at+2}</button>`:""}</span>`; }
+export const refineStatusHtml=h=>h?`<div class="drstatus" role="status">${h}</div>`:"";
 export function refineHtml(scope,o={}){ const cur=scope==="cur";
   return `<div class="genref" id="${scope}Refine" data-refine="${scope}"><label for="${scope}RefineNote">Steer it further <span class="sub">Each change makes a new version. ${cur?"Nothing is saved until you press Save.":"Nothing is saved or sent."}</span></label>
     <textarea id="${scope}RefineNote" rows="2" placeholder="For example: shorter, lead with the decision, leave out the overdue actions">${esc(o.note||"")}</textarea>
-    <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-rstart="${k}">${esc(l)}</button>`).join(" ")}</span><span class="sp"></span>${cur?'<span id="curVers"></span>':""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}">Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
-    <div id="${scope}RefineWork" aria-live="polite"></div></div>`; }
+    <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-rstart="${k}">${esc(l)}</button>`).join(" ")}</span><span class="sp"></span>${cur?'<span id="curVers"></span>':""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}"${o.busy?' aria-disabled="true"':""}>Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
+    <div id="${scope}RefineWork" aria-live="polite">${refineStatusHtml(o.status)}</div><div id="${scope}RefineMsg">${o.msg?`<div class="drnote" role="note">${esc(o.msg)}</div>`:""}</div></div>`; }
 /* one refine on the run engine: the new version's draft, or null (the reason shown) */
 export async function refineAsk(o){ const why=draftWhyNot("status-form"); if(why){ snack(why); return null; }
+  const ins=String(o.ins||"").replace(/\s+/g," ").trim();
+  if(ins.length>REFINE_INS_MAX){ snack(`A change can be ${REFINE_INS_MAX} characters at most; yours is ${ins.length}. Shorten it.`); return null; }
   if(o.text.length>REFINE_TEXT_MAX){ snack(`This draft is over ${REFINE_TEXT_MAX} characters, more than a refine can take. Shorten it first.`); return null; }
-  const b=o.body, res=await draftAsk({kind:"status-form",code:b.code,from:b.from,to:b.to,audience:b.audience,length:b.length,form:o.form,text:o.text,note:refineNote(o.ins,b.note)},
-    {label:`Refining version ${o.fromV} into version ${o.toV}…`,status:h=>putHtml(o.work,h?`<div class="drstatus" role="status">${h}</div>`:"")});
-  if(res.nothing){ snack(res.nothing); return null; } if(!res.ok){ snack(res.message||"No new version came back"); return null; } return res; }
+  const b=o.body, res=await draftAsk({kind:"status-form",code:b.code,from:b.from,to:b.to,audience:b.audience,length:b.length,form:o.form,text:o.text,note:refineNote(ins,b.note)},
+    {label:`Refining version ${o.fromV} into version ${o.toV}…`,status:o.status});
+  if(res.nothing){ snack(res.nothing); return null; }
+  if(!res.ok){ const n=(res.length_notes||[]).join(" "); snack(n?`${n} No new version was made.`:res.message||"No new version came back"); return null; }   /* the server's count of what it left out, when there is one */
+  return res; }
 export function refineMount(){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw(refineHtml("gen"))); h.hidden=false; }
 export function refineUnmount(){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw("")); h.hidden=true; }
 let GENREF=false;                                              /* a refine is being written in the dialog */
 export async function genRefine(){ const g=GENFM; if(!g||GENREF||!$("#genDlg").open) return; const box=$("#genRefineNote"), ins=box.value.trim();
   if(!ins){ snack("Say what to change first, or pick one of the quick ones."); box.focus(); return; }
   GENREF=true; GENCALL=true; $("#genRefineGo").setAttribute("aria-disabled","true"); genBusy(true);   /* GENCALL: closing or Change settings stops it */
-  let res=null; try{ res=await refineAsk({body:g.body,form:g.form,text:g.vers[g.at].text,ins,fromV:g.at+1,toV:g.vers.length+1,work:$("#genRefineWork")}); }
+  let res=null; try{ res=await refineAsk({body:g.body,form:g.form,text:g.vers[g.at].text,ins,fromV:g.at+1,toV:g.vers.length+1,status:h=>{ const el=$("#genRefineWork"); if(el&&GENFM===g) putHtml(el,refineStatusHtml(h)); }}); }
   finally{ GENREF=false; GENCALL=false; if(GENFM===g) genBusy(false); $("#genRefineGo")?.removeAttribute("aria-disabled"); }
   if(GENFM!==g||!$("#genDlg").open||!res) return;              /* closed or discarded while it was written, or it failed: nothing changes */
   g.vers.push(res); g.at=g.vers.length-1; g.d=res; if(!g.edited){ g.edited=true; draftStat("forms","edited"); }   /* a refine is an edit of the same draft */
-  box.value=""; putHtml($("#genOut"),genFormCard(res,{at:g.at,n:g.vers.length})); $("#genOut .drcard")?.focus?.(); }
+  box.value=""; putHtml($("#genOut"),genFormCard(res,{at:g.at,n:g.vers.length})); box.focus(); }   /* focus stays in the box, so ⌘↵ goes on refining and never regenerates */
 export function genVersion(way){ const g=GENFM; if(!g||GENREF) return; const at=g.at+(way==="next"?1:-1); if(at<0||at>=g.vers.length) return;
   g.at=at; g.d=g.vers[at]; putHtml($("#genOut"),genFormCard(g.d,{at,n:g.vers.length})); $("#genOut .drcard")?.focus?.(); }
 /* ===== end #110 B ===== */

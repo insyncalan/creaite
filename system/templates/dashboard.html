@@ -3602,6 +3602,7 @@ button.nchip{font:inherit;font-size:12px}
     RECENT_DEC_DAYS: () => RECENT_DEC_DAYS,
     RECORD_KINDS: () => RECORD_KINDS,
     RECSTAT: () => RECSTAT,
+    REFINE_INS_MAX: () => REFINE_INS_MAX,
     REFINE_NOTE_MAX: () => REFINE_NOTE_MAX,
     REFINE_STARTERS: () => REFINE_STARTERS,
     REFINE_TEXT_MAX: () => REFINE_TEXT_MAX,
@@ -4196,6 +4197,7 @@ button.nchip{font:inherit;font-size:12px}
     curPanes: () => curPanes,
     curReadHtml: () => curReadHtml,
     curRefine: () => curRefine,
+    curSnap: () => curSnap,
     curVersSync: () => curVersSync,
     curVersion: () => curVersion,
     cxCopy: () => cxCopy,
@@ -5209,6 +5211,7 @@ button.nchip{font:inherit;font-size:12px}
     refineHtml: () => refineHtml,
     refineMount: () => refineMount,
     refineNote: () => refineNote,
+    refineStatusHtml: () => refineStatusHtml,
     refineUnmount: () => refineUnmount,
     refinedMd: () => refinedMd,
     refreshAll: () => refreshAll,
@@ -41678,10 +41681,13 @@ ${s5}`;
     snack("Draft ready — edit it, then Save. Nothing is written until you do.");
   }
   function curVersSync() {
-    const c5 = shared.CURED, el2 = $("#curVers");
-    if (!el2 || !c5) return;
-    const n4 = (c5.vers || []).length;
-    putHtml(el2, n4 > 1 ? versBarHtml(c5.at || 0, n4, "cver") : "");
+    const c5 = shared.CURED;
+    if (!c5) return;
+    const n4 = (c5.vers || []).length, v5 = (c5.vers || [])[c5.at || 0] || {};
+    const el2 = $("#curVers");
+    if (el2) putHtml(el2, n4 > 1 ? versBarHtml(c5.at || 0, n4, "cver") : "");
+    const m5 = $("#curRefineMsg");
+    if (m5) putHtml(m5, v5.msg ? `<div class="drnote" role="note">${esc(v5.msg)}</div>` : "");
   }
   function refinedMd(res) {
     let md2 = String(res.text || ""), pos = 0;
@@ -41698,8 +41704,25 @@ ${s5}`;
     }
     return md2;
   }
-  function curShow(c5, md2) {
-    curLoad(1, md2);
+  function curSnap(c5) {
+    const root = $("#curEd");
+    if (!root) return null;
+    const set = c5.claims || {};
+    let md2 = stripMarks(edValue(root)), pos = 0;
+    for (const n4 of claimOrder(root)) {
+      const cl2 = set[n4];
+      if (!cl2) continue;
+      const t47 = claimText(root, n4), i5 = md2.indexOf(t47, pos);
+      if (i5 < 0) continue;
+      pos = i5 + t47.length;
+      const mark = (cl2.ids || []).length ? ` {${cl2.ids.join(", ")}}` : " {}";
+      md2 = md2.slice(0, pos) + mark + md2.slice(pos);
+      pos += mark.length;
+    }
+    return { md: md2 };
+  }
+  function curShow(c5, v5) {
+    curLoad(1, v5.md);
     c5.dirty = true;
     c5.notes = null;
     c5.claims = null;
@@ -41707,6 +41730,12 @@ ${s5}`;
     mountCurEdit();
     claimsInit("ed");
     curCheck();
+    curVersSync();
+  }
+  function curStatus(c5, h5) {
+    c5.refineStatus = h5;
+    const el2 = $("#curRefineWork");
+    if (el2) putHtml(el2, refineStatusHtml(h5));
   }
   async function curRefine() {
     const c5 = shared.CURED;
@@ -41717,38 +41746,44 @@ ${s5}`;
       if (box) box.focus();
       return;
     }
-    const md0 = edValue($("#curEd"));
-    c5.vers = c5.vers || [{ md: md0 }];
-    c5.at = c5.at || 0;
-    c5.vers[c5.at].md = md0;
+    const fromAt = c5.at || 0, snap = curSnap(c5);
+    if (!snap) return;
+    c5.vers = c5.vers || [{}];
+    Object.assign(c5.vers[fromAt], snap);
     c5.refining = true;
+    c5.refineStatus = "";
     $("#curRefineGo")?.setAttribute("aria-disabled", "true");
     let res = null;
     try {
-      res = await refineAsk({ body: { code: c5.code, ...c5.opts }, form: "current", text: stripMarks(md0).trim(), ins, fromV: c5.at + 1, toV: c5.vers.length + 1, work: $("#curRefineWork") });
+      res = await refineAsk({ body: { code: c5.code, ...c5.opts }, form: "current", text: stripMarks(snap.md).trim(), ins, fromV: fromAt + 1, toV: c5.vers.length + 1, status: (h5) => curStatus(c5, h5) });
     } finally {
       c5.refining = false;
+      c5.refineStatus = "";
       $("#curRefineGo")?.removeAttribute("aria-disabled");
     }
-    if (shared.CURED !== c5 || !res) return;
-    const md2 = fdMd(refinedMd(res));
-    c5.vers.push({ md: md2 });
+    if (shared.CURED !== c5) return;
+    const late = curSnap(c5);
+    if (late) Object.assign(c5.vers[fromAt], late);
+    if (!res) return;
+    const v5 = { md: fdMd(refinedMd(res)), msg: (res.length_notes || []).join(" ") };
+    c5.vers.push(v5);
     c5.at = c5.vers.length - 1;
     c5.refineNote = "";
     if (!c5.edited) {
       c5.edited = true;
       draftStat("forms", "edited");
     }
-    curShow(c5, md2);
+    curShow(c5, v5);
   }
   function curVersion(way) {
     const c5 = shared.CURED;
     if (!c5 || c5.refining || !c5.vers) return;
     const at2 = (c5.at || 0) + (way === "next" ? 1 : -1);
     if (at2 < 0 || at2 >= c5.vers.length) return;
-    c5.vers[c5.at || 0].md = edValue($("#curEd"));
+    const snap = curSnap(c5);
+    if (snap) Object.assign(c5.vers[c5.at || 0], snap);
     c5.at = at2;
-    curShow(c5, c5.vers[at2].md);
+    curShow(c5, c5.vers[at2]);
   }
   function bootProjects0054() {
     if (!GEN_AUD.some((a5) => a5[0] === shared.GEN.aud)) shared.GEN.aud = "internal";
@@ -41790,6 +41825,10 @@ ${s5}`;
       const d5 = $("#genDlg");
       return !!d5 && d5.open && (t47 === d5 || d5.contains(t47)) && !(t47.closest && t47.closest("[data-refine]"));
     }, () => {
+      if (GENFM && GENFM.vers && GENFM.vers.length > 1) {
+        snack(`${MOD}↵ refines from here. Press Generate again to start over; it drops the versions.`);
+        return;
+      }
       if (pickerOpenFor()) {
         closePicker("owner");
         return;
@@ -42114,7 +42153,7 @@ ${s5}`;
       putHTML(box, html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map((t47) => t47[0] === "|" ? html`<span class="rtesep"></span>` : html`<button type="button" data-rc="${t47[0]}" title="${t47[2]}" aria-label="${t47[2]}">${t47[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`, `<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`, "edit", !!splitPanes(shared.CURED.orig)[1] || !!String(shared.CURED.ed2 ? edValue(shared.CURED.ed2.el) : shared.CURED.src2 || "").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
-    ${shared.CURED.opts && viaServer() ? raw(refineHtml("cur", { note: shared.CURED.refineNote || "" })) : ""}
+    ${shared.CURED.opts && viaServer() ? raw(refineHtml("cur", { note: shared.CURED.refineNote || "", busy: shared.CURED.refining, status: shared.CURED.refineStatus, msg: ((shared.CURED.vers || [])[shared.CURED.at || 0] || {}).msg })) : ""}
     ${shared.CURED.sources ? html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>` : ""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts ? "" : "hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);
@@ -44372,7 +44411,7 @@ ${pre}**Current state title:** ${title}`);
       }
       if (!out.got || !out.text && !out.items && !out.prefill) {
         shared.RBOUT = "failed";
-        return { ok: false, message: out.message || "No draft came back" };
+        return { ok: false, message: out.message || "No draft came back", length_notes: out.length_notes || [] };
       }
       out.ok = true;
       return out;
@@ -44523,6 +44562,7 @@ ${pre}**Current state title:** ${title}`);
     }
     if (GENFM && !GENFM.used) draftStat("forms", "rejected");
     GENFM = null;
+    refineUnmount();
     const form = shared.GEN.form, mine = ++GENSEQ;
     genFold();
     genBusy(true);
@@ -44574,7 +44614,7 @@ ${pre}**Current state title:** ${title}`);
       draftStat("forms", "used");
     }
   }
-  var REFINE_TEXT_MAX = 1500, REFINE_NOTE_MAX = 500;
+  var REFINE_TEXT_MAX = 1500, REFINE_NOTE_MAX = 500, REFINE_INS_MAX = 300;
   var REFINE_STARTERS = [["shorter", "Shorter", "Make it shorter."], ["plainer", "Plainer words", "Use plainer words."], ["decision", "Lead with the decision", "Lead with the decision."], ["risks", "Add the risks", "Add the risks."]];
   function refineNote(ins, steer) {
     ins = String(ins || "").replace(/\s+/g, " ").trim().slice(0, 300);
@@ -44584,12 +44624,13 @@ ${pre}**Current state title:** ${title}`);
   function versBarHtml(at2, n4, attr2) {
     return `<span class="vers" role="group" aria-label="Versions">Version ${at2 + 1} of ${n4}${at2 > 0 ? ` · <button type="button" class="genlink" data-${attr2}="back">Back to version ${at2}</button>` : ""}${at2 < n4 - 1 ? ` · <button type="button" class="genlink" data-${attr2}="next">On to version ${at2 + 2}</button>` : ""}</span>`;
   }
+  var refineStatusHtml = (h5) => h5 ? `<div class="drstatus" role="status">${h5}</div>` : "";
   function refineHtml(scope, o5 = {}) {
     const cur = scope === "cur";
     return `<div class="genref" id="${scope}Refine" data-refine="${scope}"><label for="${scope}RefineNote">Steer it further <span class="sub">Each change makes a new version. ${cur ? "Nothing is saved until you press Save." : "Nothing is saved or sent."}</span></label>
     <textarea id="${scope}RefineNote" rows="2" placeholder="For example: shorter, lead with the decision, leave out the overdue actions">${esc(o5.note || "")}</textarea>
-    <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k5, l6]) => `<button type="button" class="genlink" data-rstart="${k5}">${esc(l6)}</button>`).join(" ")}</span><span class="sp"></span>${cur ? '<span id="curVers"></span>' : ""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}">Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
-    <div id="${scope}RefineWork" aria-live="polite"></div></div>`;
+    <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k5, l6]) => `<button type="button" class="genlink" data-rstart="${k5}">${esc(l6)}</button>`).join(" ")}</span><span class="sp"></span>${cur ? '<span id="curVers"></span>' : ""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}"${o5.busy ? ' aria-disabled="true"' : ""}>Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
+    <div id="${scope}RefineWork" aria-live="polite">${refineStatusHtml(o5.status)}</div><div id="${scope}RefineMsg">${o5.msg ? `<div class="drnote" role="note">${esc(o5.msg)}</div>` : ""}</div></div>`;
   }
   async function refineAsk(o5) {
     const why = draftWhyNot("status-form");
@@ -44597,20 +44638,26 @@ ${pre}**Current state title:** ${title}`);
       snack(why);
       return null;
     }
+    const ins = String(o5.ins || "").replace(/\s+/g, " ").trim();
+    if (ins.length > REFINE_INS_MAX) {
+      snack(`A change can be ${REFINE_INS_MAX} characters at most; yours is ${ins.length}. Shorten it.`);
+      return null;
+    }
     if (o5.text.length > REFINE_TEXT_MAX) {
       snack(`This draft is over ${REFINE_TEXT_MAX} characters, more than a refine can take. Shorten it first.`);
       return null;
     }
     const b5 = o5.body, res = await draftAsk(
-      { kind: "status-form", code: b5.code, from: b5.from, to: b5.to, audience: b5.audience, length: b5.length, form: o5.form, text: o5.text, note: refineNote(o5.ins, b5.note) },
-      { label: `Refining version ${o5.fromV} into version ${o5.toV}…`, status: (h5) => putHtml(o5.work, h5 ? `<div class="drstatus" role="status">${h5}</div>` : "") }
+      { kind: "status-form", code: b5.code, from: b5.from, to: b5.to, audience: b5.audience, length: b5.length, form: o5.form, text: o5.text, note: refineNote(ins, b5.note) },
+      { label: `Refining version ${o5.fromV} into version ${o5.toV}…`, status: o5.status }
     );
     if (res.nothing) {
       snack(res.nothing);
       return null;
     }
     if (!res.ok) {
-      snack(res.message || "No new version came back");
+      const n4 = (res.length_notes || []).join(" ");
+      snack(n4 ? `${n4} No new version was made.` : res.message || "No new version came back");
       return null;
     }
     return res;
@@ -44643,7 +44690,10 @@ ${pre}**Current state title:** ${title}`);
     genBusy(true);
     let res = null;
     try {
-      res = await refineAsk({ body: g5.body, form: g5.form, text: g5.vers[g5.at].text, ins, fromV: g5.at + 1, toV: g5.vers.length + 1, work: $("#genRefineWork") });
+      res = await refineAsk({ body: g5.body, form: g5.form, text: g5.vers[g5.at].text, ins, fromV: g5.at + 1, toV: g5.vers.length + 1, status: (h5) => {
+        const el2 = $("#genRefineWork");
+        if (el2 && GENFM === g5) putHtml(el2, refineStatusHtml(h5));
+      } });
     } finally {
       GENREF = false;
       GENCALL = false;
@@ -44660,7 +44710,7 @@ ${pre}**Current state title:** ${title}`);
     }
     box.value = "";
     putHtml($("#genOut"), genFormCard(res, { at: g5.at, n: g5.vers.length }));
-    $("#genOut .drcard")?.focus?.();
+    box.focus();
   }
   function genVersion(way) {
     const g5 = GENFM;
@@ -51634,6 +51684,7 @@ ${d5.text}`);
       const ed3 = CMDENTER.find((x5) => x5.when(e4.target));
       if (!ed3) return;
       if (cmdEnterPicker()) {
+        if (isDateField(e4.target)) dateSettle(e4.target);
         e4.preventDefault();
         e4.stopImmediatePropagation();
         if (!e4.repeat) setTimeout(() => ed3.save(), 0);

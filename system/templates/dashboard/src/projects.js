@@ -16,7 +16,7 @@ import { countLink, go, navBlocked, navOf, navWrite, pkNewPending, pLink, seeAll
 import { cmdOK, cmOK, D, days, DDATE, fd, fdMd, health, ico, kindOf, MOD, mScroll, rel, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, freeBackup, memPath, needVault, OLDSERVER, oneLine, reloadData, SERVED, snack, stampFile, stampFull, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { draftBtn, draftStat, draftWhyNot, DRRUN, genFormDraft, genFormOptions, genReset, refineAsk, refineHtml, REFINE_TEXT_MAX, versBarHtml } from "./drafts.js";
+import { draftBtn, draftStat, draftWhyNot, DRRUN, GENFM, genFormDraft, genFormOptions, genReset, refineAsk, refineHtml, refineStatusHtml, versBarHtml } from "./drafts.js";
 import { FOPEN } from "./files.js";
 import { pdDrop } from "./help.js";
 import { AGD, decAsked, decLate, decLateWords, decPending, decRank, decRevisit, dnBlock, dnDecisionHtml, dnList, dnOk, isSteering, prepReports, putHtml } from "./meetings.js";
@@ -166,26 +166,36 @@ export function genDraft(code,md,sources,opts){ if(shared.VIEW!=="cockpit"||shar
    a new version of it (drafts.js refineAsk: the same facts, the version shown and the change), with each sentence's fact marks put
    back so the sources and the no-source marks are worked out again for it. Versions live in the editor (CURED.vers) until it is
    closed; Save is still the only save. ===== */
-export function curVersSync(){ const c=shared.CURED, el=$("#curVers"); if(!el||!c) return; const n=(c.vers||[]).length; putHtml(el,n>1?versBarHtml(c.at||0,n,"cver"):""); }
+export function curVersSync(){ const c=shared.CURED; if(!c) return; const n=(c.vers||[]).length, v=(c.vers||[])[c.at||0]||{};
+  const el=$("#curVers"); if(el) putHtml(el,n>1?versBarHtml(c.at||0,n,"cver"):""); const m=$("#curRefineMsg"); if(m) putHtml(m,v.msg?`<div class="drnote" role="note">${esc(v.msg)}</div>`:""); }
 /* a version's Markdown with each sentence's fact marks ({F3, F5}) put after it, from the draft's own sentences and sources */
 export function refinedMd(res){ let md=String(res.text||""), pos=0; const ids=r=>((res.sources||[]).find(x=>x.ref===r)||{}).id;
   for(const s of res.sentences||[]){ const i=md.indexOf(s.text,pos); if(i<0) continue; pos=i+s.text.length;
     const f=[...new Set((s.refs||[]).map(ids).filter(x=>/^F\d+$/.test(String(x||""))))]; if(!f.length) continue;
     const mark=` {${f.join(", ")}}`; md=md.slice(0,pos)+mark+md.slice(pos); pos+=mark.length; }
   return md; }
-function curShow(c,md){ curLoad(1,md); c.dirty=true; c.notes=null; c.claims=null; c.rewrite=null; mountCurEdit(); claimsInit("ed"); curCheck(); }
+/* the editor's words as they stand, with each sentence's fact marks put back: after a hand edit the editor's Markdown has none, and without them a restored
+   version would be one claim with no source. A sentence with no source gets an empty mark ({}) so its edge is kept; one the text no longer matches goes unmarked. */
+export function curSnap(c){ const root=$("#curEd"); if(!root) return null; const set=c.claims||{}; let md=stripMarks(edValue(root)), pos=0;
+  for(const n of claimOrder(root)){ const cl=set[n]; if(!cl) continue; const t=claimText(root,n), i=md.indexOf(t,pos); if(i<0) continue; pos=i+t.length;
+    const mark=(cl.ids||[]).length?` {${cl.ids.join(", ")}}`:" {}"; md=md.slice(0,pos)+mark+md.slice(pos); pos+=mark.length; }
+  return {md}; }
+function curShow(c,v){ curLoad(1,v.md); c.dirty=true; c.notes=null; c.claims=null; c.rewrite=null; mountCurEdit(); claimsInit("ed"); curCheck(); curVersSync(); }
+function curStatus(c,h){ c.refineStatus=h; const el=$("#curRefineWork"); if(el) putHtml(el,refineStatusHtml(h)); }   /* kept in state: the editor can be drawn again while it is written */
 export async function curRefine(){ const c=shared.CURED; if(!c||!c.opts||c.refining) return; const box=$("#curRefineNote"), ins=box?box.value.trim():"";
   if(!ins){ snack("Say what to change first, or pick one of the quick ones."); if(box) box.focus(); return; }
-  const md0=edValue($("#curEd")); c.vers=c.vers||[{md:md0}]; c.at=c.at||0; c.vers[c.at].md=md0;   /* the words as they stand, edits and all */
-  c.refining=true; $("#curRefineGo")?.setAttribute("aria-disabled","true");
-  let res=null; try{ res=await refineAsk({body:{code:c.code,...c.opts},form:"current",text:stripMarks(md0).trim(),ins,fromV:c.at+1,toV:c.vers.length+1,work:$("#curRefineWork")}); }
-  finally{ c.refining=false; $("#curRefineGo")?.removeAttribute("aria-disabled"); }
-  if(shared.CURED!==c||!res) return;                            /* closed while it was written, or it failed: the editor is as it was */
-  const md=fdMd(refinedMd(res)); c.vers.push({md}); c.at=c.vers.length-1; c.refineNote="";
+  const fromAt=c.at||0, snap=curSnap(c); if(!snap) return; c.vers=c.vers||[{}]; Object.assign(c.vers[fromAt],snap);   /* the words as they stand, edits and all */
+  c.refining=true; c.refineStatus=""; $("#curRefineGo")?.setAttribute("aria-disabled","true");
+  let res=null; try{ res=await refineAsk({body:{code:c.code,...c.opts},form:"current",text:stripMarks(snap.md).trim(),ins,fromV:fromAt+1,toV:c.vers.length+1,status:h=>curStatus(c,h)}); }
+  finally{ c.refining=false; c.refineStatus=""; $("#curRefineGo")?.removeAttribute("aria-disabled"); }
+  if(shared.CURED!==c) return;                                   /* closed while it was written */
+  const late=curSnap(c); if(late) Object.assign(c.vers[fromAt],late);   /* whatever was typed while it was written stays in the version it was typed in */
+  if(!res) return;                                               /* it failed: the editor is as it was */
+  const v={md:fdMd(refinedMd(res)),msg:(res.length_notes||[]).join(" ")}; c.vers.push(v); c.at=c.vers.length-1; c.refineNote="";
   if(!c.edited){ c.edited=true; draftStat("forms","edited"); }   /* a refine is an edit of the same draft */
-  curShow(c,md); }
+  curShow(c,v); }
 export function curVersion(way){ const c=shared.CURED; if(!c||c.refining||!c.vers) return; const at=(c.at||0)+(way==="next"?1:-1); if(at<0||at>=c.vers.length) return;
-  c.vers[c.at||0].md=edValue($("#curEd")); c.at=at; curShow(c,c.vers[at].md); }
+  const snap=curSnap(c); if(snap) Object.assign(c.vers[c.at||0],snap); c.at=at; curShow(c,c.vers[at]); }
 /* ===== end #110 B ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootProjects0054(){
@@ -202,7 +212,8 @@ $("#genDlg").addEventListener("click",e=>{ const st=e.target.closest("[data-gsta
 $("#genSrc").addEventListener("change",()=>genSrcLine());
 document.addEventListener("input",e=>{ if(e.target.id==="curRefineNote"&&shared.CURED) shared.CURED.refineNote=e.target.value; });   /* #110 B: what is typed survives the editor being drawn again */
 /* ⌘↵ generates here (#101 has not built the shared dialog key yet; this is the one on this dialog) */
-onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t))&&!(t.closest&&t.closest("[data-refine]")); },()=>{ if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
+onCmdEnter("generate",t=>{ const d=$("#genDlg"); return !!d&&d.open&&(t===d||d.contains(t))&&!(t.closest&&t.closest("[data-refine]")); },()=>{ if(GENFM&&GENFM.vers&&GENFM.vers.length>1){ snack(`${MOD}↵ refines from here. Press Generate again to start over; it drops the versions.`); return; }   /* never regenerate over versions by a stray key */
+  if(pickerOpenFor()){ closePicker("owner"); return; }   /* a menu open: ⌘↵ only closes it, so what is generated is what the strip shows */
   $("#genGo").click(); });
 $("#genDlg").addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("#genFrom,#genTo")){ e.preventDefault(); $("#genGo").click(); } });   /* Enter in a date box generates, as the primary button; it never closes the dialog */
 $("#genForm").addEventListener("submit",e=>{ if(e.submitter&&e.submitter.value!=="go") return; e.preventDefault(); if($("#genGo").getAttribute("aria-disabled")==="true") return;   /* a draft is being written */
@@ -303,7 +314,7 @@ export function mountCurEdit(){ (()=>{ const card=$("#v-cockpit .curcard"), box=
   putHTML(box,html`<div class="rte inplace"><div class="rtebar" role="toolbar" aria-label="Formatting">${RTE_TOOLS.map(t=>t[0]==="|"?html`<span class="rtesep"></span>`:html`<button type="button" data-rc="${t[0]}" title="${t[2]}" aria-label="${t[2]}">${t[1]}</button>`)}<span class="rtelink" hidden><input type="url" placeholder="Paste a web or mail link" aria-label="Link address"><button type="button" data-rl="add">Add</button><button type="button" data-rl="cancel">Cancel</button></span></div>
     ${raw(curPanes(`<div class="rted" id="curEd" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, left pane" spellcheck="true"></div>`,`<div class="rted" id="curEd2" data-ph="Write here…" role="textbox" aria-multiline="true" aria-label="Current state, right pane" spellcheck="true"></div>`,"edit",!!splitPanes(shared.CURED.orig)[1]||!!String(shared.CURED.ed2?edValue(shared.CURED.ed2.el):shared.CURED.src2||"").trim()))}<input type="file" id="curImgFile" accept="image/png,image/jpeg" multiple hidden></div>
     <div class="gennotes" id="genNotes" aria-live="polite">${raw(notesHtml())}</div>${raw(rewriteHtml())}
-    ${shared.CURED.opts&&viaServer()?raw(refineHtml("cur",{note:shared.CURED.refineNote||""})):""}
+    ${shared.CURED.opts&&viaServer()?raw(refineHtml("cur",{note:shared.CURED.refineNote||"",busy:shared.CURED.refining,status:shared.CURED.refineStatus,msg:((shared.CURED.vers||[])[shared.CURED.at||0]||{}).msg})):""}
     ${shared.CURED.sources?html`<details class="gensrc" open><summary>Drafted from</summary>${raw(mdHtml(shared.CURED.sources))}</details>`:""}
     <details class="gensrc" id="genFacts" ${shared.CURED.facts?"":"hidden"}><summary>Facts it was written from</summary>${raw(factsHtml(shared.CURED.facts))}</details>
     <div class="curacts"><span class="sub">⌘↵ saves · Esc cancels</span><span class="sp"></span><span id="curAi" class="curai"></span><button class="btn" data-cure="cancel">Cancel</button><button class="btn primary" data-cure="save">Save</button></div>`);

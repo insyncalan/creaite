@@ -169,7 +169,8 @@ export const cmdEnterPicker=()=>!!document.querySelector(".combo.open,#mvCal:not
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0057's place) */
 export function bootCmdEnter(){
 window.addEventListener("keydown",e=>{ if(!(e.key==="Enter"&&(e.metaKey||e.ctrlKey))) return; const ed=CMDENTER.find(x=>x.when(e.target)); if(!ed) return;
-  if(cmdEnterPicker()){ e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) setTimeout(()=>ed.save(),0); return; }   /* pick, then save: the key is this handler's alone, so nothing later in the page acts on it too */
+  if(cmdEnterPicker()){ if(isDateField(e.target)) dateSettle(e.target);   /* a typed "tomorrow" is read first: the date settle on Enter is on the document, which this stops the key short of */
+    e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) setTimeout(()=>ed.save(),0); return; }   /* pick, then save: the key is this handler's alone, so nothing later in the page acts on it too */
   e.preventDefault(); e.stopImmediatePropagation(); if(!e.repeat) ed.save(); },true);
 /* the project panel and the forms (project details, health, a proposal): BL-78 */
 onCmdEnter("panel",t=>!!shared.CUR&&shared.EDITING&&!pkOn()&&(t===document.body||!!(t.closest&&t.closest("#panel"))),saveAndClose);
