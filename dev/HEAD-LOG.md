@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | P8 (#71): the client health-difference reason is kept only in the draft, never in the filed client file or its data block. Jarvis agreed Team Stark's four technical points (P3 re-locks client drafts on internal approval, partner.match hook, leftReadOnly on Sheet in P5, entry via P9 and ⌘K). | Alan accepted the recommendation (read as the confidential item on #71; Jarvis to confirm if he meant otherwise). A filed client file can be shared directly, so the reason must not travel with it. |
 | 15-10-2026 | Alan | P10 (#73): Draft the follow-up email moves to P7's minutes view, in the Export menu, drawing on the active version (internal or distributed), as he drafts for both. The item-source Meeting link is kept, routed through meetingRoute; the Intake and Files links are dropped. | Alan's answers to the two P10 points. A distributed draft must never carry Internal-only or withheld lines. |
 | 15-10-2026 | Alan | #66 point 2: yes. Partner-only as a label can only withhold an item from a client report, never add one. | The confidentiality rule stands: only client-visible items reach a client report. |
 | 15-10-2026 | Alan | Testing widths: 900px checks stay; only 320 and 640 are dropped (this refines the earlier desktop-only decision). | Alan's correction, 15-10-2026. |
