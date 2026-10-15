@@ -2008,17 +2008,38 @@ def _pending_for(item_id):
     return None
 
 
-def _new_update_spec(a, m, row, line, source):
-    """A fresh pending proposal for an item's update: one op: update on latest_update, based_on the row's updated_at."""
+def _thread_source(a):
+    """The thread as an update's source. A confidential card gives only "Email thread · link" or "Teams chat · link", never the
+    subject or title."""
+    if not (a.get("marker") == "confidential" or a.get("confidential")):
+        return alert_source(a)
+    return f"{'Teams chat' if a.get('kind') == 'teams' else 'Email thread'} · Link: {a.get('link') or ''}".rstrip(" :")
+
+
+def _set_lines(item):
+    """latest_update = the item's existing text, then each thread's line (Review shows a replacement, and approving it would
+    otherwise lose the old text)."""
+    sg = item["suggested"]
+    item["changes"]["latest_update"] = "\n".join(([sg["base"]] if sg.get("base") else []) + sg["lines"])
+
+
+def _new_update_spec(a, m, row, line, source, confidential):
+    """A fresh pending proposal for an item's update: one op: update on latest_update (the item's existing text first, then the
+    thread's line), based_on the row's updated_at; suggested.threads lists the card ids already in it."""
     import propose
+    sg = {"feature": "thread", "threads": [a["id"]], "lines": [line], "base": row.get("latest_update") or ""}
     spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [],
-            "items": [{"n": 1, "op": "update", "table": "actions", "id": m["id"], "changes": {"latest_update": line},
-                       "why": "Logged from a confidential thread" if line.startswith("Discussed in a confidential")
+            "items": [{"n": 1, "op": "update", "table": "actions", "id": m["id"], "changes": {},
+                       "why": "Logged from a confidential thread" if confidential
                        else f"Logged from a thread: {a.get('title') or 'conversation'}"[:200],
-                       "source": source, "suggested": {"feature": "thread"}, "match": "strong", "flags": [],
+                       "source": source, "suggested": sg, "match": "strong", "flags": [],
                        "decision": "pending", "edited_in": "dashboard"}]}
+    _set_lines(spec["items"][0])
     propose.complete(spec)
     spec["items"][0]["based_on"] = row["updated_at"]
+    bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
+    if bad:
+        raise ValueError(f"Not staged: {bad[0]}")
     return spec
 
 
@@ -2031,23 +2052,29 @@ def _free_name():
     return out
 
 
-def _add_line(item, line, source):
-    """Add a thread's line and source to a pending update; False when this thread is already in it."""
-    if link_of(source) and link_of(source) in str(item.get("source") or ""):
+def _add_line(item, a, line, source):
+    """Add a thread's line and source to a pending update; False when this card is already in it. Keyed on the card's stable id
+    (the hash of kind and conversation), not on the newest message's link, so a thread with a new message adds nothing. When
+    Part 1's `keys` land, any of the card's keys should count here too."""
+    sg = item["suggested"]
+    ids = {a["id"], *(a.get("keys") or [])}
+    if ids & set(sg.get("threads") or []):
         return False
-    have = (item["changes"].get("latest_update") or "").split("\n")
-    if line not in have:
-        item["changes"]["latest_update"] = "\n".join(have + [line])
+    sg["threads"] = list(sg.get("threads") or []) + [a["id"]]
+    sg["lines"] = list(sg.get("lines") or []) + [line]
     item["source"] = f"{item.get('source') or ''} ; {source}"
+    _set_lines(item)
     return True
 
 
 def vip_update_stage(aid):
     """Stage the update a matched card offers (Part 2; Part 1's Log click calls it): one pending proposal for Review with one
-    op: update on the item's latest_update, based_on its updated_at, the thread as source. A second thread for the same item
-    adds its line to that pending proposal (never a second file); the same thread again adds nothing. Returns
-    {"proposal", "id", "line", "lines", "added"}; raises LookupError (no such card), ValueError with a reason to show (no match,
-    item no longer open). Records {"proposal", "at"} as match["logged"]. The only thing written besides the proposal is that."""
+    op: update on the item's latest_update (its existing text kept, the thread's line after it), based_on its updated_at, the
+    thread as source, checked by propose.check as vip_make's is. A second thread for the same item adds its line to that pending
+    proposal (never a second file); the same card again adds nothing. Returns {"proposal", "id", "line", "lines", "added"};
+    raises LookupError (no such card), ValueError with a reason to show (no match, item no longer open, fails validation).
+    Records {"proposal", "at"} as match["logged"]. Locking: this reads and writes vip.json like mark_made, which has no lock of
+    its own; the live server's route must hold VIP_WRITE around the call (Part 3's vip_lock keeps that pattern)."""
     st = vip_state()
     a = next((x for x in st["alerts"] if x.get("id") == aid), None)
     if a is None:
@@ -2061,21 +2088,21 @@ def vip_update_stage(aid):
         row = None
     if row is None:
         raise ValueError(f"{m['id']} is no longer open.")
-    line, source = vip_update_line(a), alert_source(a)
+    confidential = a.get("marker") == "confidential" or bool(a.get("confidential"))
+    line, source = vip_update_line(a), _thread_source(a)
     found = _pending_for(m["id"])
     if found:
         out, spec, item = found
-        added = _add_line(item, line, source)
+        added = _add_line(item, a, line, source)
     else:
-        spec, out, added = _new_update_spec(a, m, row, line, source), _free_name(), True
+        spec, out, added = _new_update_spec(a, m, row, line, source, confidential), _free_name(), True
         item = spec["items"][0]
     if added:
         paths.STAGING.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     m["logged"] = {"proposal": out.name, "at": now().strftime("%Y-%m-%d %H:%M")}
     vip_save(st)
-    return {"proposal": out.name, "id": m["id"], "line": line, "lines": item["changes"]["latest_update"].split("\n"),
-            "added": added}
+    return {"proposal": out.name, "id": m["id"], "line": line, "lines": item["suggested"]["lines"], "added": added}
 # ===== end BL-342 part 2 =====
 
 

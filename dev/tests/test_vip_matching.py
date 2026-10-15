@@ -153,7 +153,7 @@ class MatchTests(unittest.TestCase):
         self.assertEqual(len(it["changes"]["latest_update"].split("\n")), 2)
         self.assertIn("08-10-2026: Mia wants the SOW by Friday (from a Teams chat)", it["changes"]["latest_update"])
         self.assertTrue(it["based_on"])
-        self.assertEqual(it["suggested"], {"feature": "thread"})
+        self.assertEqual((it["suggested"]["feature"], len(it["suggested"]["threads"])), ("thread", 2))
         self.assertIn("19:chat-1", it["source"])
         self.assertEqual(vip_file(self.v)["alerts"][0]["match"]["logged"]["proposal"], first["proposal"])
         self.assertNotIn(SECRET, json.dumps(spec))
@@ -169,6 +169,50 @@ class MatchTests(unittest.TestCase):
         spec = json.loads(next((self.v.root / "system/staging").glob("proposed-*-dashboard*.json")).read_text())
         self.assertEqual(spec["items"][0]["changes"]["latest_update"], "Discussed in a confidential thread, 08-10-2026")
         self.assertNotIn("Salary", json.dumps(spec))
+
+    def test_a_thread_with_a_new_message_is_the_same_card_and_adds_nothing(self):
+        m = {"id": "ABC-A-001", "relation": "update", "why": "x"}
+        record(self.v, [conv(1, match=m)], "check")
+        aid = vip_file(self.v)["alerts"][0]["id"]
+        first = py(self.v, f"print(json.dumps(sweep.vip_update_stage('{aid}')))")
+        record(self.v, [conv(1, match=m, last="2026-10-08 09:10", link="https://teams.microsoft.com/l/chat/19:chat-1/newer")], "check")
+        card = vip_file(self.v)["alerts"][0]
+        self.assertEqual(card["id"], aid)
+        again = py(self.v, f"print(json.dumps(sweep.vip_update_stage('{aid}')))")
+        self.assertFalse(again["added"])
+        spec = json.loads((self.v.root / "system/staging" / first["proposal"]).read_text())
+        self.assertEqual(len(spec["items"][0]["suggested"]["lines"]), 1)
+        self.assertEqual(spec["items"][0]["source"].count("19:chat-1"), 1)
+        card.pop("link")                                                                      # a card with no link is still refused
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps({"alerts": [card]}))
+        self.assertFalse(py(self.v, f"print(json.dumps(sweep.vip_update_stage('{aid}')))")["added"])
+
+    def test_a_confidential_proposal_carries_neither_subject_nor_summary(self):
+        record(self.v, [conv(1, title="Salary review for the Falcon team", sensitivity="confidential",
+                             summary="Compensation changes for Omar.", match={"id": "ABC-A-001", "relation": "update", "why": "x"})], "check")
+        aid = vip_file(self.v)["alerts"][0]["id"]
+        out = py(self.v, f"print(json.dumps(sweep.vip_update_stage('{aid}')))")
+        text = (self.v.root / "system/staging" / out["proposal"]).read_text()
+        for word in ("Salary", "Compensation"):
+            self.assertNotIn(word, text)
+        self.assertEqual(json.loads(text)["items"][0]["source"], "Teams chat · Link: https://teams.microsoft.com/l/chat/19:chat-1")
+        self.assertEqual(json.loads(text)["items"][0]["why"], "Logged from a confidential thread")
+
+    def test_the_items_existing_latest_update_is_kept_in_front_of_the_new_lines(self):
+        import sqlite3
+        from contextlib import closing
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("UPDATE actions SET latest_update = 'Draft sent to legal' WHERE id = 'ABC-A-001'")
+            con.commit()
+        m = {"id": "ABC-A-001", "relation": "update", "why": "x"}
+        record(self.v, [conv(1, summary="Mia wants it Friday.", match=m), conv(2, summary="Ben agrees.", match=m)], "check")
+        for a in vip_file(self.v)["alerts"]:
+            out = py(self.v, f"print(json.dumps(sweep.vip_update_stage('{a['id']}')))")
+        spec = json.loads((self.v.root / "system/staging" / out["proposal"]).read_text())
+        lines = spec["items"][0]["changes"]["latest_update"].split("\n")
+        self.assertEqual(lines[0], "Draft sent to legal")
+        self.assertEqual(len(lines), 3)
+        self.assertTrue(spec["items"][0]["based_on"])
 
     def test_a_private_thread_has_no_match_and_a_missing_match_refuses_to_log(self):
         record(self.v, [conv(1, sensitivity="private", match={"id": "ABC-A-001", "relation": "update", "why": "x"})], "check")
