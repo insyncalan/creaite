@@ -5,7 +5,8 @@ both teams' screen branches work to (v1.9.5, step 2).
 real key presses: focus it and press Enter: the popup opens, the control says so (aria-expanded) and focus goes into it; in a
 menu or a list, ↓ and ↑ move between its items; Esc closes it and focus is back on the control that opened it; opened again,
 Tab closes a menu or a list. A dialog keeps Tab inside itself, so for a dialog only Enter and Esc are checked. ⌘K, the one
-dialog opened by a key from anywhere, gets the same Enter-less script from the key. **Undo:** in a second sample vault each
+dialog opened by a key from anywhere, gets the same Enter-less script from the key; the archive prompt (#parchDlg, opened by
+Archive only when the server finds open items) gets the dialog script from its Archive button. **Undo:** in a second sample vault each
 menu and list is opened once more and an item chosen (↓, Enter); when that saves a change, the message at the foot (or, in
 the peek, its staging bar's Undo last) must offer Undo (and Undo is pressed, so the next control sees the sample as it was). Each screen is the snapshot sample vault's
 (test_snapshots), at 1400 by 1000.
@@ -59,7 +60,8 @@ SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-di
                 "review": "Review", "review-peek": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "activity-selected": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
-                "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones"}
+                "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
+                "archive-ask": "Settings"}
 
 
 def screen_area(name):
@@ -425,6 +427,46 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             bad.append("Esc doesn't return focus to where it was")
         return bad
 
+    def parch(self):
+        """BL-09: Archive on a project with open items opens #parchDlg only after the server lists them, so its button can't
+        say aria-haspopup: Enter on ABC's Archive (Settings › Projects and register) opens it with focus in it; Esc closes it
+        and focus is back on the button. Nothing is staged: the server only lists the open items."""
+        b = self.b
+        self.goto("settings-people")
+        b.eval(PROBE + ";true")
+        sel = json.dumps('#projArch [data-parch="archive"][data-pcode="ABC"]')
+        b.eval(f"(()=>{{ const e=document.querySelector({sel}); e.scrollIntoView({{block:'center'}}); e.focus(); }})()")
+        self.press("Enter", 0.5)
+        try:
+            b.wait("document.getElementById('parchDlg')?.open", 20)
+        except TimeoutError:
+            return ["Enter opens nothing"]
+        self.seen.append({"ids": ["parchDlg"], "labels": [], "classes": []})
+        bad = []
+        if not b.eval("document.getElementById('parchDlg').contains(document.activeElement)"):
+            bad.append("focus stays outside the dialog")
+        self.press("Escape", 0.4)
+        if b.eval("document.getElementById('parchDlg').open"):
+            bad.append("Esc leaves it open")
+        elif not b.eval(f"document.activeElement===document.querySelector({sel})"):
+            bad.append("Esc doesn't return focus to the control")
+        return bad
+
+    # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the
+    # script, its name in the report and the expected-failures list, its area, what it opens).
+    KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
+             ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"))
+
+    def keyed_dialogs(self, only, report, found):
+        for screen, script, sig, area, how, label in self.KEYED:
+            if screen not in only:
+                continue
+            bad = getattr(self, script)()
+            if report:
+                print(f"{script:16} {'dialog':8} {how:48} {label:40} {'; '.join(bad) or 'ok'}")
+            if bad:
+                found.add((area, f"keys: {sig} “{label}”: {'; '.join(bad)}"))
+
     def test_every_menu_picker_and_dialog_answers_the_same_keys(self):
         report = os.environ.get("SB_REPORT")
         only = os.environ.get("SB_ONLY", "").split(",") if os.environ.get("SB_ONLY") else list(SCREENS)
@@ -435,13 +477,8 @@ class SharedBehaviour(Driver, us.UiSweepCase):
                     print(f"{name:16} {o['kind']:8} {o['sig'][:48]:48} {o['name'][:40]:40} {'; '.join(bad) or 'ok'}")
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
-        if "today" in only:
-            bad = self.cmdk()
-            if report:
-                print(f"{'cmdk':16} {'dialog':8} {'⌘K':48} {'Search or jump to':40} {'; '.join(bad) or 'ok'}")
-            if bad:
-                found.add(("Shell", f"keys: cmdk dialog#cmdk “Search or jump to”: {'; '.join(bad)}"))
-        msg = judge("keys", found, set(only) | {"cmdk"})
+        self.keyed_dialogs(only, report, found)
+        msg = judge("keys", found, set(only) | {"cmdk", "parch"})
         if os.environ.get("SB_ONLY"):
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding
