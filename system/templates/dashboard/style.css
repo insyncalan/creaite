@@ -46,7 +46,7 @@
   --scrim:rgba(0,0,0,.25);   /* a modal dialog's backdrop; darker in dark mode (below), where .25 black barely shows */
   --z-under:0; --z-raised:1; --z-raised-2:2; --z-sticky:3; --z-sticky-2:4; --z-local:5;
   --z-menu:30; --z-popup-scrim:38; --z-popup:39; --z-panel:40; --z-panel-over:41; --z-chat:45; --z-badge:46; --z-stage:47;
-  --z-pop:60; --z-pop-over:65; --z-toast:70; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210;
+  --z-pop:60; --z-pop-over:65; --z-drag:80; --z-viewer:90; --z-tip:200; --z-top:210; --z-toast:220;   /* v1.9.5 check 19: a toast is over everything, menus included (inside a modal it sits in the dialog, BL-316) */
   --ctl-h:32px; --ctl-h-sm:26px; --ctl-r:var(--r-md); --ctl-fs:var(--fs-sm);
   --ctl-h-lg:40px; --ctl-r-lg:10px;   /* the large search variant: Files' centred bar only */
 }
@@ -1573,7 +1573,7 @@ body:has(#liveAlert.on) .bar::after{opacity:0;animation:none}
 textarea.agfit{overflow-y:hidden} textarea.agfit.agscroll{overflow-y:auto}
 /* ===== end BL-146 (CSS) ===== */
 /* ===== BL-147 (sprint-ux) ===== what a typed date was understood as, under the field */
-.datehint{position:fixed;z-index:var(--z-toast);max-width:420px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 8px;font-size:var(--fs-xs);line-height:18px;box-shadow:var(--shadow-sm);pointer-events:none}
+.datehint{position:fixed;z-index:var(--z-tip);max-width:420px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 8px;font-size:var(--fs-xs);line-height:18px;box-shadow:var(--shadow-sm);pointer-events:none}
 .datehint.bad{color:var(--bad);border-color:var(--bad)}
 /* ===== end BL-147 (CSS) ===== */
 /* ===== BL-148 (sprint-ux) ===== Copy on a reply, Edit on Alan's last message (shown on hover and on focus); the draft note */
@@ -1740,7 +1740,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail.collapsed button.nv{justify-content:center;padding:0} .rail.collapsed .rl{display:none}
 .rail.collapsed .badge{position:absolute;top:2px;right:2px;margin:0;min-width:14px;height:14px;font-size:var(--fs-2xs);line-height:14px;padding:0 4px}
 .railmore{flex:none}
-#railMoreMenu{position:fixed;z-index:var(--z-toast);width:220px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:2px}
+#railMoreMenu{position:fixed;z-index:var(--z-top);width:220px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:6px;display:grid;gap:2px}
 #railMoreMenu[hidden]{display:none}
 .rail #railMoreMenu button.nv{justify-content:flex-start;padding:0 8px} .rail #railMoreMenu .rl{display:inline}
 .rail #railMoreMenu .badge{position:static;margin-left:auto;min-width:18px;height:18px;font-size:var(--fs-xs);line-height:18px;padding:0 4px}
@@ -2226,7 +2226,7 @@ textarea.mv-in{height:auto;min-height:64px;padding:8px 10px;resize:vertical}
 .mv-dp{display:inline-flex;align-items:center;gap:8px;height:34px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 10px;cursor:pointer;font:inherit;font-size:var(--fs-md);min-width:150px;justify-content:space-between}
 .mv-dp:hover{background:var(--sunk)} .mv-dp.chg{border-color:var(--accent);background:var(--accent-soft)} .mv-dp svg{width:16px;height:16px}
 .mv-dp:focus-visible,.mv-cb:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.mv-cal,.mv-pop{position:fixed;z-index:var(--z-toast);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px}
+.mv-cal,.mv-pop{position:fixed;z-index:var(--z-top);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px}
 .mv-cal{width:292px} .mv-pop{width:300px;padding:8px}
 .mv-cal[hidden],.mv-pop[hidden]{display:none}
 .mv-calh{display:flex;align-items:center;gap:6px;margin:0 0 6px} .mv-calh b{flex:1;text-align:center;font-weight:600}
