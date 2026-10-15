@@ -304,7 +304,7 @@ def files(folders, documents=False):
             add(code, kind, f, sub)
     if paths.portfolio_dir().is_dir():
         for f, kind, sub in paths.project_files("_portfolio", online=True, documents=False):
-            if kind in ("minutes", "transcripts"):
+            if kind in ("minutes", "transcripts", "notes"):            # BL-301 B: portfolio notes are listed too
                 add("_portfolio", kind, f)
     if paths.INBOX.is_dir():
         for f in sorted(paths.INBOX.iterdir()):
@@ -1508,6 +1508,8 @@ def collect(now=None, timings=None):
         "activity_older": act_flags.get("older", {}),          # BL-250 (fix-history-feed): older changes, for the items' own feeds
         "files": file_list,
         "files_archived": archived_files(folders),            # BL-331: Files' Archived, each with Move back
+        "notes": notes_data(folders),                          # BL-301 B: each project's notes (front matter and references, no text)
+        "note_templates": note_templates(),                    # BL-301 B: the templates' bodies, for the editor's / menu
         "folders": {c: f.name for c, f in folders.items()},
         "image_dirs": {c: paths.rel(paths.folder(c, "images")) for c in folders},     # BL-85: where the editor files new pictures
         "stakeholders": stakeholders(),
@@ -2651,6 +2653,33 @@ def prep_rank(ev, code, items, ms_names, vips, since, today=None):
 # BL-87: the Files page is fresh when it is looked at. files_view() is the files-only entry point: it rescans just the two
 # file lists (Files and Intake) with the same files() and inbox() as a full build, without rebuilding the rest of the data.
 # The live server's GET /api/files serves it.
+
+def note_templates():
+    """{name: body} of the four note templates (BL-301 B), for the note editor's insert menu."""
+    import notes
+    out = {}
+    for name in notes.TEMPLATES:
+        try:
+            out[name] = notes.parse((notes.TEMPLATE_DIR / f"{name}.md").read_text(encoding="utf-8"))[1].strip("\n")
+        except OSError:  # a template that can't be read is simply not offered in the / menu
+            continue
+    return out
+
+
+def notes_data(folders):
+    """{code: [note summary]} for every project with notes, and `_portfolio` (BL-301 B): what the Notes tab lists and the peek's "notes
+    mention this" reads. Front matter and references only, never a note's text."""
+    import notes
+    out = {}
+    for code in [*folders, "_portfolio"]:
+        try:
+            got = notes.listing(code)
+        except (OSError, LookupError):  # a project whose folder can't be read simply has no notes to list
+            continue
+        if got:
+            out[code] = got
+    return out
+
 
 def files_view(now=None):
     """{files, inbox, at}: the file lists alone (BL-87), for the live server's /api/files."""

@@ -592,6 +592,11 @@ class Staging:
         self.rejected = {r[0] for r in self.con.execute("SELECT fingerprint FROM rejected")}
         self.items, self.notes, self.updated = [], [], {}
 
+    def mention(self, ids):
+        """Log open items raised again (BL-51). BL-301 E: Find updates' staging collects them instead and logs them only for the
+        rows Alan applies or saves."""
+        note_mention(ids, self.key, "cx-minutes", self.day)
+
     def source_for(self, project, section, table):
         """Where an item came from: the note, the filed minutes, or the filed transcript, and the section. A promise cites the
         transcript when there is one: it was said in passing, so it isn't in the minutes (BL-125 A)."""
@@ -628,7 +633,7 @@ class Staging:
         if why_not:
             self.notes.append(f"rejected update: {why_not}")
             return
-        note_mention([item_id], self.key, "cx-minutes", self.day)        # discussed again: BL-51
+        self.mention([item_id])                                          # discussed again: BL-51
         changes = made_on(table, update_changes(row, wanted, table), self.day)
         if not changes:
             self.notes.append(f"no change to {item_id} (already as the meeting left it); logged as discussed")
@@ -676,7 +681,7 @@ class Staging:
     def as_duplicate(self, table, values, dupes):
         """An item already open: what changed goes to the first as an update, never a second item (BL-65)."""
         text = values.get("description") or values.get("decision")
-        note_mention(dupes, self.key, "cx-minutes", self.day)     # raised again: BL-51
+        self.mention(dupes)                                       # raised again: BL-51
         row = dict(tracker.fetch(self.rcon, table, dupes[0])) if table in UPDATE_FIELDS else None
         if row and table == "decisions" and row["status"] != "Pending":
             row = None                                   # only a pending decision is made by a later meeting

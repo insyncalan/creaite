@@ -29,23 +29,7 @@ class UxSweepFixes(LiveBrowserCase):
         self.assertNotIn("Claude Code", b.eval("$('#actTbl').textContent"))
         self.assertNotIn("undo last apply", b.eval("$('#actTbl').textContent"))
 
-    def test_quick_capture_keeps_an_unsent_note(self):
-        b = self.b
-        b.eval("openCapture()")
-        b.pump(0.2)
-        b.eval("$('#qcNotes').focus()")
-        b.type("Agreed with Sara: UAT booked by Friday")
-        b.pump(0.5)
-        b.reload()
-        b.wait("typeof go==='function' && LIVE")
-        b.eval("go('inbox')")
-        b.pump(0.3)
-        self.assertEqual(b.eval("$('#qcNotes').value"), "Agreed with Sara: UAT booked by Friday")
-        b.eval("$('#qcCancel').click()")                                       # Clear forgets it
-        b.pump(0.2)
-        b.reload()
-        b.wait("typeof go==='function' && LIVE")
-        self.assertEqual(b.eval("$('#qcNotes').value"), "")
+    # BL-301 C: Quick Capture's unsent note (check 3) is now the capture drawer's draft, kept on the server (test_capture_drawer).
 
     def test_the_baseline_is_written_down(self):
         build = (ROOT / "dev/BUILD.md").read_text(encoding="utf-8")

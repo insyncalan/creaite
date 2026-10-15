@@ -36,7 +36,7 @@ import json, os, subprocess, sys
 from pathlib import Path
 args = sys.argv[1:]
 vault = Path.cwd()
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 hook = json.loads(args[args.index("--settings") + 1])["hooks"]["PreToolUse"][0]["hooks"][0]["command"] if "--settings" in args else None
 out = lambda o: print(json.dumps(o), flush=True)
 n = [0]

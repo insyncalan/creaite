@@ -35,6 +35,7 @@ GLOBAL_NAME = "CREAITE"
 # esbuild add "use strict", so the page built differently on laptop 2, 13-10-2026); the build depends on the repo alone.
 FLAGS = ["--bundle", "--charset=utf8", "--tree-shaking=false", "--log-level=warning", "--tsconfig-raw={}"]
 VENDOR = REPO / "system" / "templates" / "vendor" / "preact"
+TIPTAP = REPO / "system" / "templates" / "vendor" / "tiptap" / "tiptap.module.js"   # dev/tools/tiptap.py vendor
 
 
 def preact_flags(folder=SRC):
@@ -45,8 +46,11 @@ def preact_flags(folder=SRC):
     if not (vendor / "manifest.json").is_file():
         vendor = VENDOR                                    # a copy of dashboard/ alone (a test's): the repo's
     modules = json.loads((vendor / "manifest.json").read_text(encoding="utf-8"))["modules"]
+    tiptap = folder.parent / "vendor" / "tiptap" / "tiptap.module.js"   # BL-301 A: the one editor's Tiptap, as "tiptap"
+    if not tiptap.is_file():
+        tiptap = TIPTAP
     return ["--jsx=automatic", "--jsx-import-source=preact", "--loader:.jsx=jsx",
-            *(f"--alias:{spec}={vendor / path}" for spec, path in sorted(modules.items()))]
+            *(f"--alias:{spec}={vendor / path}" for spec, path in sorted(modules.items())), f"--alias:tiptap={tiptap}"]
 WORD = re.compile(r"[A-Za-z_$][\w$]*")
 REBUILD_IMPORTS = "python3 dev/tools/build_dashboard_js.py imports"
 
@@ -73,7 +77,9 @@ def bundle(folder=SRC):
         _esbuild(folder, "esm", esm, [f"--metafile={meta}"])
         outputs = json.loads(meta.read_text(encoding="utf-8"))["outputs"]
         names = next(o["exports"] for o in outputs.values() if "exports" in o)
-        return iife.read_text(encoding="utf-8"), sorted(names)
+        # BL-301 A: Tiptap's HTML helper holds the text "</body>" (in a template string); written "<\/body>" (the same
+        # text in JavaScript) so the page has one "</body>", its own, for anything that finds the page's end by it.
+        return iife.read_text(encoding="utf-8").replace("</body", "<\\/body"), sorted(names)
 
 
 def globals_json(folder=SRC):

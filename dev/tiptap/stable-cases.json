@@ -1,0 +1,122 @@
+[
+ {
+  "name": "table typed with a header row",
+  "features": "notes",
+  "script": "const c = editor.chain().insertTable({ rows: 3, cols: 2, withHeaderRow: true }); for (const t of ['Name', 'Role', 'Sara Khan', 'Sponsor', 'Omar', 'PM']) c.insertContent(t).goToNextCell(); c.run();",
+  "contains": ["| Name | Role |", "| --- | --- |", "| Omar | PM |"],
+  "why": "the insert menu's table, typed cell by cell (Tab to the next cell)"
+ },
+ {
+  "name": "table with marks and awkward text in cells",
+  "features": "notes",
+  "script": "const c = editor.chain().insertTable({ rows: 2, cols: 3, withHeaderRow: true }); c.insertContent('Item').goToNextCell().insertContent('Owner').goToNextCell().insertContent('Notes').goToNextCell(); c.insertContent({ type: 'text', text: 'ABC-A-003', marks: [{ type: 'bold' }] }).goToNextCell(); c.insertContent({ type: 'text', text: 'plan', marks: [{ type: 'link', attrs: { href: 'https://example.com/plan' } }] }).goToNextCell(); c.insertContent('Q&A on a | b, weekly_report_v2 and `code` < 8% * maybe').run();",
+  "contains": ["**ABC-A-003**", "[plan](https://example.com/plan)", "a \\| b"],
+  "why": "bold, a link and text Markdown could misread in a cell; a | must be escaped or the row splits (upstream loses the rest of the cell)"
+ },
+ {
+  "name": "table with an empty cell",
+  "features": "notes",
+  "script": "const c = editor.chain().insertTable({ rows: 2, cols: 3, withHeaderRow: true }); for (const t of ['A', 'B', 'C', 'one', '', 'three']) c.insertContent(t || []).goToNextCell(); c.run();",
+  "contains": ["| one |  | three |"],
+  "why": "a cell left empty keeps its place"
+ },
+ {
+  "name": "table with columns and rows added and removed",
+  "features": "notes",
+  "script": "editor.chain().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).insertContent('Name').goToNextCell().insertContent('Role').run(); editor.chain().addColumnAfter().run(); editor.chain().insertContent('Since').goToNextCell().insertContent('Sara').goToNextCell().insertContent('Sponsor').goToNextCell().insertContent('2026').run(); editor.chain().addRowAfter().goToNextCell().insertContent('Omar').goToNextCell().insertContent('PM').goToNextCell().insertContent('2025').run(); editor.chain().goToPreviousCell().goToPreviousCell().goToPreviousCell().goToPreviousCell().deleteRow().run();",
+  "contains": ["| --- | --- | --- |"],
+  "why": "the table menu's add column, add row and delete row"
+ },
+ {
+  "name": "table between paragraphs",
+  "features": "notes",
+  "script": "editor.chain().insertContent('Before the table.').run(); editor.chain().insertContentAt(editor.state.doc.content.size, { type: 'paragraph' }).run(); editor.chain().setTextSelection(editor.state.doc.content.size - 1).insertTable({ rows: 2, cols: 2, withHeaderRow: true }).insertContent('x').goToNextCell().insertContent('y').goToNextCell().insertContent('1').goToNextCell().insertContent('2').run(); editor.chain().insertContentAt(editor.state.doc.content.size, { type: 'paragraph', content: [{ type: 'text', text: 'After the table.' }] }).run();",
+  "contains": ["Before the table.\n\n| x | y |", "After the table."],
+  "why": "a table inserted in the middle of a note, with an empty line left after it"
+ },
+ {
+  "name": "table with a line break in a cell",
+  "features": "notes",
+  "script": "editor.chain().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).insertContent('Step').goToNextCell().insertContent('Detail').goToNextCell().insertContent('One').goToNextCell().insertContent('first line').setHardBreak().insertContent('second line').run();",
+  "contains": ["first line<br>second line"],
+  "why": "Shift+Enter in a cell: a table row is one line, so the break is <br> there (it reads back as a hard break)"
+ },
+ {
+  "name": "table pasted as HTML",
+  "features": "notes",
+  "script": "editor.commands.insertContent('<table><tr><th>Risk</th><th>Score</th></tr><tr><td><strong>Data access</strong> late</td><td>12</td></tr><tr><td>UAT <em>slips</em></td><td>8</td></tr></table>');",
+  "contains": ["| **Data access** late | 12 |", "| UAT _slips_ | 8 |"],
+  "why": "a table pasted from a web page or Word"
+ },
+ {
+  "name": "table with no header row",
+  "features": "notes",
+  "script": "const c = editor.chain().insertTable({ rows: 2, cols: 2, withHeaderRow: false }); for (const t of ['a', 'b', 'c', 'd']) c.insertContent(t).goToNextCell(); c.run();",
+  "contains": ["| a | b |\n| --- | --- |\n| c | d |"],
+  "unfaithful": true,
+  "why": "known loss: a Markdown table always has a header row, so the first row comes back as headers. Stable, and the writer says so (faithful: false); the Notes insert menu always makes a header row"
+ },
+ {
+  "name": "checklist typed, one ticked",
+  "features": "notes",
+  "script": "editor.chain().insertContent('Send the SOW').toggleTaskList().splitListItem('taskItem').insertContent('Book UAT').run(); editor.commands.updateAttributes('taskItem', { checked: true });",
+  "contains": ["- [ ] Send the SOW\n- [x] Book UAT"],
+  "why": "the insert menu's checklist: Enter for the next item, a box ticked"
+ },
+ {
+  "name": "checklist nested",
+  "features": "notes",
+  "script": "editor.chain().insertContent('Prepare the steering pack').toggleTaskList().splitListItem('taskItem').insertContent('Health and risks').sinkListItem('taskItem').splitListItem('taskItem').insertContent('Milestones').run(); editor.commands.updateAttributes('taskItem', { checked: true }); editor.chain().splitListItem('taskItem').liftListItem('taskItem').insertContent('Send it').run();",
+  "contains": ["\n  - [ ] Health and risks\n  - [x] Milestones\n- [ ] Send it"],
+  "why": "Tab and Shift+Tab in a checklist; nested items 2 spaces in (creaite's style)"
+ },
+ {
+  "name": "checklist with marks, links, item IDs and mentions",
+  "features": "notes",
+  "script": "editor.chain().toggleTaskList().insertContent([{ type: 'text', text: 'Chase ' }, { type: 'text', text: 'ABC-A-003', marks: [{ type: 'bold' }] }, { type: 'text', text: ' with @Sara Khan, see ' }, { type: 'text', text: 'the plan', marks: [{ type: 'link', attrs: { href: 'https://example.com/plan' } }] }]).splitListItem('taskItem').insertContent('Q&A on #3 and weekly_report_v2 * maybe').splitListItem('taskItem').insertContent([{ type: 'text', text: 'provisional', marks: [{ type: 'italic' }] }, { type: 'text', text: ' date' }]).run();",
+  "contains": ["**ABC-A-003** with @Sara Khan", "Q&A on #3 and weekly_report_v2 * maybe", "_provisional_ date"],
+  "why": "what a Working session note's actions look like; text written as it is, not escaped"
+ },
+ {
+  "name": "checklist ticked, unticked and ticked again",
+  "features": "notes",
+  "script": "editor.chain().insertContent('One').toggleTaskList().splitListItem('taskItem').insertContent('Two').run(); for (const v of [true, false, true]) editor.commands.updateAttributes('taskItem', { checked: v });",
+  "contains": ["- [ ] One\n- [x] Two"],
+  "why": "a box clicked several times"
+ },
+ {
+  "name": "checklist then an empty line, a bullet list and a paragraph",
+  "features": "notes",
+  "script": "editor.chain().insertContent('Task').toggleTaskList().run(); editor.commands.insertContentAt(editor.state.doc.content.size, [{ type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'A bullet' }] }] }] }, { type: 'paragraph', content: [{ type: 'text', text: 'A paragraph.' }] }]);",
+  "contains": ["- [ ] Task\n\n- A bullet\n\nA paragraph."],
+  "why": "an empty paragraph straight after a list can't be written (the list takes in blank lines): the writer leaves it out, so the first save is already stable"
+ },
+ {
+  "name": "two checklists with a paragraph between",
+  "features": "notes",
+  "script": "editor.chain().insertContent('First').toggleTaskList().run(); editor.commands.insertContentAt(editor.state.doc.content.size, [{ type: 'paragraph', content: [{ type: 'text', text: 'Between.' }] }, { type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: true }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Second' }] }] }] }]);",
+  "contains": ["- [ ] First\n\nBetween.\n\n- [x] Second"],
+  "why": "two checklists apart, the editor's trailing empty paragraph between them"
+ },
+ {
+  "name": "checklist then a numbered list",
+  "features": "notes",
+  "script": "editor.chain().insertContent('Re-plan UAT').toggleTaskList().run(); editor.commands.insertContentAt(editor.state.doc.content.size - 2, { type: 'orderedList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Escalate' }] }] }, { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Agree dates' }] }] }] });",
+  "contains": ["- [ ] Re-plan UAT\n\n1. Escalate\n2. Agree dates"],
+  "why": "a checklist and a numbered list side by side"
+ },
+ {
+  "name": "checklist pasted as HTML",
+  "features": "notes",
+  "script": "editor.commands.insertContent('<ul data-type=\"taskList\"><li data-type=\"taskItem\" data-checked=\"true\"><p>Done thing</p></li><li data-type=\"taskItem\" data-checked=\"false\"><p>Open <strong>thing</strong></p></li></ul>');",
+  "contains": ["- [x] Done thing\n- [ ] Open **thing**"],
+  "why": "a checklist pasted from another note"
+ },
+ {
+  "name": "note with a heading, a table and a checklist",
+  "features": "notes",
+  "script": "editor.chain().setNode('heading', { level: 3 }).insertContent('Working session').run(); editor.commands.insertContentAt(editor.state.doc.content.size, [{ type: 'paragraph', content: [{ type: 'text', text: 'With Sara and Omar.' }] }, { type: 'table', content: [{ type: 'tableRow', content: [{ type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Topic' }] }] }, { type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Outcome' }] }] }] }, { type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Budget' }] }] }, { type: 'tableCell', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Agreed' }] }] }] }] }, { type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Send minutes' }] }] }] }]);",
+  "contains": ["### Working session", "| Topic | Outcome |", "| Budget | Agreed |\n\n- [ ] Send minutes"],
+  "why": "the Working session template's shape: a heading, a table and actions"
+ }
+]

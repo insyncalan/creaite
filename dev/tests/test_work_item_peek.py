@@ -78,7 +78,8 @@ class OpensEditable(PeekCase):
     def test_the_title_key_row_and_free_text_are_live_with_no_edit_save_or_cancel(self):
         b = self.b
         self.open()
-        self.assertEqual(b.eval("document.getElementById('pkTitle').getAttribute('contenteditable')"), "plaintext-only")
+        self.assertEqual(b.eval("document.getElementById('pkTitle').getAttribute('contenteditable')"), "true")
+        self.assertEqual(b.eval("document.getElementById('pkTitle').cxed.features"), "plain")   # BL-301 A: the one editor, plain text
         self.assertEqual(b.eval("document.getElementById('pkTitle').getAttribute('role')"), "textbox")
         self.assertEqual(b.eval("document.getElementById('pkTitle').getAttribute('aria-label')"), "Action")
         self.assertEqual(b.eval("document.getElementById('pkDesc').getAttribute('aria-label')"), "Latest update")

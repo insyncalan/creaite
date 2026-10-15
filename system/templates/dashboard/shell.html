@@ -53,8 +53,9 @@
         </div>
         <p class="calfoot" id="calFoot" hidden></p><!-- BL-270: "Calendar as read on …", at the page's foot -->
       </section>
-      <section class="view" id="v-projects" hidden><div class="wrapmax"><h1>Projects</h1><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
+      <section class="view" id="v-projects" hidden><div class="wrapmax"><div class="hhead"><h1 style="flex:1">Projects</h1><button type="button" class="btn" data-go-notes="_portfolio" id="portfolioNotes">Portfolio notes</button></div><p class="sub" style="margin:4px 0 14px">Health with its evidence. Select a project to open its cockpit.</p><div class="tbl" id="projTbl"></div></div></section>
       <section class="view" id="v-cockpit" hidden></section>
+      <section class="view" id="v-notes" hidden></section><!-- BL-301 B: a project's Notes tab, and the portfolio's notes -->
       <section class="view" id="v-milestones" hidden></section><!-- BL-186: Milestones: Plan and Movement -->
             <section class="view" id="v-people" hidden><div class="wrapmax"><h1>People</h1><p class="sub" style="margin:4px 0 14px">Everyone creaite knows: who has work now, and who has nothing assigned. Counts only. Select a name for their page.</p><div class="tbl" id="peopleTbl"></div></div></section>
       <section class="view" id="v-person" hidden></section>
@@ -101,8 +102,6 @@
         <div class="toolbar" style="margin-top:12px"><button class="btn" id="inboxNew">Select new</button><span class="sp"></span><button class="btn primary" id="inboxGo" disabled>Process selected</button></div>
         <div class="tbl"><table id="inboxTbl"></table></div>
         </section>
-        <section class="card isec" id="isecQuick" aria-labelledby="isecQuickH"><header class="ish"><h2 id="isecQuickH">Quick capture</h2></header>
-          <p class="sub ipurpose">Type rough notes from a call or conversation that has no transcript.</p><div id="isecQuickBody"></div></section>
       </div></section>
       <section class="view" id="v-files" hidden><div class="wrapmax">
         <h1>Files</h1>

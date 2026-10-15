@@ -105,7 +105,9 @@ class ExecBrowser(LiveBrowserCase):
     def test_make_it_executive_shows_a_draft_and_changes_nothing_until_it_is_used(self):
         self.open_editor("<p>Go-live is 20-11-2026.</p>")
         b = self.b
-        b.click("[data-exec]")
+        b.click("#curAi button[aria-haspopup]")   # BL-301 D: Make it executive is an option of AI ▾
+        b.wait("document.querySelector('#curAi [data-exec]')")
+        b.click("#curAi [data-exec]")
         b.wait("document.querySelector('#genRewrite .rwbody') && document.querySelectorAll('#genRewrite .rwnotes li').length>0", 30)
         self.assertEqual(self.editor_text(), "Go-live is 20-11-2026.")                                      # unchanged
         self.assertIn("On track for 20-11-2026.", b.eval("document.querySelector('#genRewrite .rwbody').innerText"))
@@ -118,7 +120,9 @@ class ExecBrowser(LiveBrowserCase):
     def test_using_the_executive_version_replaces_the_text_and_checks_it(self):
         self.open_editor("<p>Go-live is 20-11-2026.</p>")
         b = self.b
-        b.click("[data-exec]")
+        b.click("#curAi button[aria-haspopup]")   # BL-301 D: Make it executive is an option of AI ▾
+        b.wait("document.querySelector('#curAi [data-exec]')")
+        b.click("#curAi [data-exec]")
         b.wait("document.querySelector('#genRewrite .rwnotes')", 30)
         b.click("[data-rw=use]")
         self.assertIn("On track for 20-11-2026.", self.editor_text())
@@ -128,7 +132,9 @@ class ExecBrowser(LiveBrowserCase):
 
     def test_make_it_executive_needs_some_text(self):
         self.open_editor("<p><br></p>")
-        self.b.click("[data-exec]")
+        self.b.click("#curAi button[aria-haspopup]")   # BL-301 D: Make it executive is an option of AI ▾
+        self.b.wait("document.querySelector('#curAi [data-exec]')")
+        self.b.click("#curAi [data-exec]")
         self.b.wait("document.getElementById('snack').classList.contains('on')")
         self.assertIn("Write something first", self.b.eval("document.getElementById('snack').textContent"))
         self.assertFalse(self.b.eval("!!document.getElementById('genRewrite')"))

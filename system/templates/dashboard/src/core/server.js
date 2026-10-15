@@ -16,7 +16,7 @@ import { shared } from "./state.js";
 import { ovAdd, ovBusy, ovDrop, ovReapply, RECORD_KINDS, RECSTAT, recordsRefresh, saveQueue } from "./instant.js";
 import { refreshFiles } from "../files.js";
 import { inboxBadge, renderInbox } from "../intake.js";
-import { qcFill, renderMeeting } from "../meetings.js";
+import { renderMeeting } from "../meetings.js";
 import { mvEdDraw, mvSig, renderMilestones } from "../milestones.js";
 import { drawPanel, errBanner, MD_IMG, markStagedRows, pkReconcile, pkStageDraw, REC } from "../panel.js";
 import { drawPrep, renderCockpit, renderProjects } from "../projects.js";
@@ -290,7 +290,7 @@ shared.PENDING=[];
 export async function applyPending(){ if(viaServer()){ const r=await applyNow(); shared.PENDING=[]; refreshAll(); snack(r.ok?oneLine(r.message):"Apply stopped: "+oneLine(r.message),r.ok?()=>undoApply(r.apply_id):null); return; }
   snack("Say “apply” in Claude Code, or start the live server"); }
 export function refreshAll(){ const cells=mCells(), cnts=mCounts(), hp=new Map(P.map(p=>[p.code,p.health])), wt=typeof shared.WT==="undefined"?"":shared.WT, v=shared.VIEW;   /* BL-263 */
-  if(typeof qcFill==="function") qcFill(); status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
+  status(); renderBadge(); inboxBadge(); if(shared.VIEW==="inbox") renderInbox(); if(shared.VIEW==="today") renderToday(); if(shared.VIEW==="work"||shared.VIEW==="mine") renderWork(); if(shared.VIEW==="review") renderReview(); if(shared.VIEW==="activity") renderActivity(); if(shared.VIEW==="cockpit") renderCockpit(shared.COCK); if(shared.VIEW==="projects") renderProjects(); if(shared.VIEW==="people") renderPeople(); if(shared.VIEW==="person") renderPerson(shared.PERSON); if(shared.CUR&&!shared.EDITING) drawPanel(); 
   if(!reduced()&&v===shared.VIEW){
     const hit=[]; if(cells&&wt===shared.WT){ const cols=$$("#workTbl thead th").map(th=>th.dataset.col||""); $$("#workTbl tr[data-row]").slice(0,300).forEach(tr=>[...tr.children].forEach((td,i)=>{ const k=tr.dataset.row+"|"+cols[i]; if(cols[i]&&cells.has(k)&&cells.get(k)!==td.textContent.trim()) hit.push(td); })); }
     if(cnts) $$("#v-today .th .cnt").forEach(e=>{ const k=e.id||e.parentElement.id; if(cnts.has(k)&&cnts.get(k)!==e.textContent.trim()) hit.push(e); });

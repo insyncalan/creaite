@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
+import { isNotePath, openNoteAt } from "./notes.js";
 import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
@@ -15,7 +16,8 @@ import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, renderMeetings } from "./intake.js";
-import { captureNote, hubFor, hubLink, openCapture, prepPage } from "./meetings.js";
+import { hubFor, hubLink, prepPage } from "./meetings.js";
+import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
 import { mdHtml, newItemOf, norm, openNew, openProject, openRecord, pkArr, pkCommit, pkPersist, pkStatuses, pkUndoLast, REC, validate } from "./panel.js";
 import { openGen, openPrep, pickImage, prepOf, startCurEdit, vsAskSync } from "./projects.js";
@@ -34,7 +36,7 @@ import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 export const SRCH={skip:[],seq:0,timer:null,res:null,q:""};
 export const SEARCHCFG=Object.assign({debounce_ms:150},D.search||{});
 export const SKIND={action:"Action",risk:"Risk",issue:"Issue",assumption:"Assumption",dependency:"Dependency",decision:"Decision",milestone:"Milestone",minutes:"Minutes",transcript:"Transcript",report:"Report",document:"Document"};
-export const SGROUP={items:"Items",meetings:"Meetings",reports:"Reports",documents:"Documents"};
+export const SGROUP={items:"Items",meetings:"Meetings",reports:"Reports",documents:"Documents",notes:"Notes"};   /* BL-301 B: notes, their own group */
 export const searchIco=k=>ico(k==="action"?"action":k==="decision"?"decision":k==="milestone"?"milestone":["risk","issue","assumption","dependency"].includes(k)?k[0].toUpperCase()+k.slice(1):"");
 export async function searchFetch(q,skip){ const p=new URLSearchParams({q}); if(skip&&skip.length) p.set("skip",skip.join(","));
   const r=await fetch("/api/search?"+p,{headers:{"X-Creaite-Token":D.token||""}}); if(r.status===404) throw new Error(OLDSERVER); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||"Search failed"); return await r.json(); }
@@ -65,6 +67,7 @@ export async function openFound(r){ const o=r.opens;
     if(!REC(o.table,o.id)) await recordsRefresh([o.id],{aged:true});
     if(!REC(o.table,o.id)){ snack(`Archived for its age: ${SHOWARCH} shows it`); return; } }
   if(o.type==="item"){ if(o.table==="milestones"){ openMilestone(o.id); return; }   /* BL-186: the Milestones page, its editor open */ const k=o.table; shared.WT=k; go("work"); openRecord(k,o.id); return; }
+  if(o.type==="preview"&&isNotePath(o.path)){ openNoteAt(o.path); return; }   /* BL-301 B: a note opens in its Notes tab */
   if(o.type==="preview") return searchPreview(o.path,o.q);
   openPath(o.path); }
 export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing needs the live server"); return; }
@@ -93,7 +96,7 @@ export const ITEMID=/^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/;
 export const itemTable=id=>A.some(a=>a.id===id)?"actions":R.some(r=>r.id===id)?"raid":DEC.some(d=>d.id===id)?"decisions":P.some(p=>(p.ms||[]).some(m=>m[3]===id))?"milestones":null;
 export function citeFind(name){ const n=name.trim().toLowerCase(), stem=x=>x.replace(/\.[^.]+$/,"").toLowerCase();
   const s=(shared.ASKQ.sources||[]).find(x=>x.kind!=="item"&&(x.name.toLowerCase()===n||(x.stem||"").toLowerCase()===n)); if(s) return s;
-  const f=FILES.find(x=>x.n.toLowerCase()===n||stem(x.n)===n); return f?{name:f.n,path:f.path,kind:f.f==="reports"?"report":f.f==="documents"||f.f==="agendas"?"document":f.f==="transcripts"?"transcript":"minutes"}:null; }
+  const f=FILES.find(x=>x.n.toLowerCase()===n||stem(x.n)===n); return f?{name:f.n,path:f.path,kind:f.f==="notes"?"note":f.f==="reports"?"report":f.f==="documents"||f.f==="agendas"?"document":f.f==="transcripts"?"transcript":"minutes"}:null; }
 /* [file › section], [ABC-A-003] and [a; b] in the answer's HTML become links when every part is a source we know */
 export function vsCite(h){ return h.replace(/\[([^\[\]<>]{2,200})\]/g,(m,inner)=>{ const parts=decodeHtml(inner).split(/;\s*/).map(p=>{ const [file,...sec]=p.split("›").map(x=>x.trim());
       if(ITEMID.test(file)&&!sec.length&&itemTable(file)) return `<a href="#" class="cite" data-citeitem="${esc(file)}">${esc(file)}</a>`;
@@ -524,7 +527,10 @@ export async function drawHistory(){ let shown=false; const t=setTimeout(()=>{ s
   finally{ clearTimeout(t); const M=$("#chHistMenu"); if(M) anim(M,[{opacity:.4,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } }
 
 export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "note: …" in ask creaite */
-  if(m){ if(!viaServer()){ await say("Quick capture needs the live server."); return; } if(!await captureNote({notes:m[1].trim(),date:TODAY})) await say("Pick the project in Quick capture on the Inbox page, then press Process."); return; }
+  if(m){ if(!viaServer()){ await say("Saving a note needs the live server."); return; }   /* BL-301 C: saved as a note, the drawer's way (never the model) */
+    const r=await api("/api/notes/capture/done",{code:"auto",body:m[1].trim(),template:"blank"});
+    if(!r.ok){ await say(oneLine(r.message||"The note wasn't saved.")); return; }
+    const un=r.code==="_portfolio"; await say(`Saved the note “${r.title}” in ${un?"Unfiled":pName(r.code)}${r.reason?(un?`: ${r.reason}`:` (${r.reason})`):""}. Find updates on the note turns it into tracker changes.`); return; }
   if(!viaServer()){ await say(SERVED?"The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
   await askLive(q,null); }
 /* BL-33: a running request can be stopped (the Send button becomes Stop; Esc in the input). Read-only requests stop
@@ -943,7 +949,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
   return [...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...searchCkItems()]; })(q);
-  if(!q||"quick capture note".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"Quick capture",h:"",fn:()=>openCapture()});   /* BL-126 */
+  if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
   MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
     if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("inbox"); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
   { const c=ckParse(q); if(c){ const pre=[], ql=String(q||"").trim().toLowerCase();

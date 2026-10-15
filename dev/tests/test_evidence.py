@@ -23,7 +23,7 @@ NOW = "2026-10-09 13:00"
 FAKE = r'''#!/usr/bin/env python3
 import json, sys
 args = sys.argv[1:]
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 open(__file__ + ".prompt", "w", encoding="utf-8").write(message)
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-x"})
@@ -281,7 +281,9 @@ class EvidenceBrowser(LiveBrowserCase):
         b.click("#v-cockpit .curcard [data-edcur]")
         b.wait("document.getElementById('curEd')")
         b.eval("document.getElementById('curEd').innerHTML='<p>UAT is 14 days late.</p>'")
-        b.click("[data-exec]")
+        b.click("#curAi button[aria-haspopup]")   # BL-301 D: Make it executive is an option of AI ▾
+        b.wait("document.querySelector('#curAi [data-exec]')")
+        b.click("#curAi [data-exec]")
         b.wait("document.querySelectorAll('#genRewrite .rwbody .claim').length===2 && CURED.rewrite.claims && Object.values(CURED.rewrite.claims).every(c=>c.how)", 30)
         self.assertNotIn("{", b.eval("document.querySelector('#genRewrite .rwbody').innerText"))
         self.assertEqual(b.eval("Object.values(CURED.rewrite.claims).map(claimState)"), ["ok", "none"])

@@ -19,17 +19,21 @@ import { pkAdd } from "../today.js";
 import { items } from "../work.js";
 /* ======================= sources ======================= */
 export function srcParse(x){ if(!x) return null; if(/^(Email|Teams) · /.test(x)){ const parts=x.split(" · "), o={type:parts[0]}; parts.slice(1).forEach(p=>{ const i=p.indexOf(": "); if(i>0) o[p.slice(0,i)]=p.slice(i+2); }); return o; }
-  const m=x.match(/^((?:projects|system)\/.+?\.(docx|pdf|vtt|xlsx|txt|md))(?: — (.+))?$/); if(m) return {type:"File",path:m[1],section:m[3]||"",name:m[1].split("/").pop()}; return {type:"Text",text:x}; }
+  const m=x.match(/^((?:projects|system)\/.+?\.(docx|pdf|vtt|xlsx|txt|md))(?:#p(\d+))?(?: — (.+))?$/);   /* BL-301 E: a note's line, "#p4" */
+  if(m) return {type:"File",path:m[1],line:m[3]?+m[3]:0,section:m[4]||(m[3]?`line ${m[3]}`:""),name:m[1].split("/").pop()}; return {type:"Text",text:x}; }
+/* BL-301 E: how a note's source ("…/08 Notes/<title>.md#p4") opens: the Notes tab (part B) sets NOTE_OPEN.fn(path, line) to open
+   the note at that line, highlighted; until it does, the file opens as any other. */
+export const NOTE_OPEN={fn:null};
 export const srcShort=x=>{ const o=srcParse(x); if(!o) return "—"; if(o.type==="File") return o.name.replace(/\.[a-z]+$/,""); if(o.type==="Email") return "Email · "+(o.Subject||""); if(o.type==="Teams") return "Teams · "+(o.Channel||o.Chat||""); return o.text; };
 export function srcHTML(x){ const o=srcParse(x); if(!o) return "—";
-  if(o.type==="File"){ const t=!shared.LOADING&&hubFor({path:o.path}); return `<a href="#" class="srclink" data-openfile="${esc(o.path)}">${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>${t?`<div>${hubLink(t)}</div>`:""}`; }
+  if(o.type==="File"){ const t=!shared.LOADING&&hubFor({path:o.path}); return `<a href="#" class="srclink" data-openfile="${esc(o.path)}"${o.line?` data-noteline="${o.line}"`:""}>${esc(o.name)}</a>${o.section?` <span class="sub">· ${esc(o.section)}</span>`:""}<div class="sub">${esc(o.path.slice(0,o.path.lastIndexOf("/")))}</div>${t?`<div>${hubLink(t)}</div>`:""}`; }
   if(o.type==="Email") return `<dl class="srcmeta"><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Subject</dt><dd>${esc(o.Subject||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Outlook</a>`:'<span class="sub">No message link stored</span>'}`;
   if(o.type==="Teams") return `<dl class="srcmeta"><dt>${o.Channel?"Channel":"Chat"}</dt><dd>${esc(o.Channel||o.Chat)}</dd><dt>From</dt><dd>${esc(o.From||"—")}</dd><dt>Sent</dt><dd>${esc(fd(o.Sent||"—"))}</dd></dl>${o.Link?`<a href="${esc(o.Link)}" target="_blank" rel="noopener" class="srclink">Open in Teams</a>`:'<span class="sub">No message link stored</span>'}`;
   return esc(o.text); }
 export let openPath = function(p){ if(!p) return; if(viaServer()){ api("/api/open",{path:p.replace(/\/$/,"")}).then(r=>{ if(!r.ok) snack(oneLine(r.message)); }); return; } window.open(p.split("/").map(encodeURIComponent).join("/"),"_blank","noopener"); };
 /* BL-231: what this block did at load, run in today's order by src/main.js (piece 0042's place) */
 export function bootSources(){
-document.addEventListener("click",e=>{ const f=e.target.closest("[data-openfile]"); if(f){ e.preventDefault(); openPath(f.dataset.openfile); } });
+document.addEventListener("click",e=>{ const f=e.target.closest("[data-openfile]"); if(f){ e.preventDefault(); if(f.dataset.noteline&&NOTE_OPEN.fn) NOTE_OPEN.fn(f.dataset.openfile,+f.dataset.noteline); else openPath(f.dataset.openfile); } });
 }
 /* ======================= calendar picker ======================= */
 shared.CAL=null;
@@ -95,7 +99,7 @@ export function parseWhen(text,today=TODAY,due=false){ let s=String(text||"").tr
 export const dateSaid=iso=>`${new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(iso)}`;
 /* which fields: every typed date field (item forms, inline cells, the project page's No due date card, filters' From and To,
    Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick capture); read-only ones are picker only */
-export const isDateField=el=>!!(el&&el.tagName==="INPUT"&&!el.readOnly&&el.matches('[data-date],[placeholder="DD-MM-YYYY"],#qcDate,#bdDate,[data-und]'));
+export const isDateField=el=>!!(el&&el.tagName==="INPUT"&&!el.readOnly&&el.matches('[data-date],[placeholder="DD-MM-YYYY"],#bdDate,[data-und]'));
 export const dueField=el=>/(^|_)due$/.test(el.name||el.id||"")||el.dataset.cf==="due"||el.dataset.bf==="due"||["rvDate","bdDate","bkDate","deReply"].includes(el.id)||el.dataset.und!=null||el.name==="fc";
 export function dateRead(el){ const v=el.value.trim(); if(!v) return {empty:true}; const iso=parseWhen(v,TODAY,dueField(el)); if(!iso) return {bad:true};
   const max=el.dataset.max==="today"?TODAY:el.dataset.max, min=el.dataset.min==="today"?TODAY:el.dataset.min;

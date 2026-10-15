@@ -6,7 +6,9 @@ Two parts, both in a throwaway vault with a fake home folder (a stand-in .ssh ke
 LaunchAgents, a shell start-up file, browser logins), so the home-folder rules are exercised for real and nothing touches
 the real home folder:
 - decisions: reach.classify (paths × operations, marked or not, a bulk count), reach.tier, reach.bash_problem,
-  reach.hook_decision (tool calls in both modes), permissions.check_full (rules), permissions.settings_problem and
+  reach.hook_decision (tool calls in both modes), reach.decide (#60 option (a): ask and the Prep page run's mode "prep",
+  with a notes folder holding a confidential note; #60 follow-ups: "held", and "sweep" with and without --held), live_server.held_run (#60: which runs get that guard, by kind; Search's answer like
+  ask creaite), permissions.check_full (rules), permissions.settings_problem and
   validate_edit (edited settings files), permissions.preview_list (list edits);
 - flows, end to end through the command lines: filechange.py create, edit, move, delete, a settings file, outside the
   vault, a never path, list and undo; permissions.py edit, list and undo; begin_file_edit and finish_file_edit (kept,
@@ -63,7 +65,7 @@ paths = ["system/tracker.db", "system/scripts/tracker.py", "system/scripts/new.p
          H + "/.claude/settings.json", H + "/Documents/new.txt", "/etc/hosts", "/usr/bin/python3", "/System/Library/x",
          "/tmp/x.txt", "~/Documents/notes.txt"]
 out = {"classify": {}, "tier": {}, "bash": {}, "hook": {}, "rules": {}, "settings_problem": {}, "validate_edit": {},
-       "preview_list": {}}
+       "preview_list": {}, "outside": {}}
 for p in paths:
     for op in reach.OPERATIONS:
         variants = [(False, 0)] if op == "read" else [(False, 0), (True, 0), (False, 11)]
@@ -107,6 +109,37 @@ calls = [("Read", {"file_path": ABC + "/notes.md"}), ("Read", {"file_path": H + 
 for mode in ("ask", "confirmed"):
     for tool, inp in calls:
         out["hook"][f"{mode} | {tool} | {short(json.dumps(inp, sort_keys=True), 140)}"] = list(reach.hook_decision(tool, inp, mode, ""))
+# BL-301 (Alan, 15-10-2026, re-pinned deliberately): what a read marks under the server's table, with and without the notes
+# exemption. Only a .md directly in a notes folder is exempt; its _images, a subfolder, transcripts and documents still mark.
+import live_server
+out["outside_table"] = {k: v for k, v in live_server.OUTSIDE_CONTENT.items() if k != "tools"}
+for p in [ABC + "/notes/kickoff.md", ABC + "/notes/_images/a.png", ABC + "/notes/_images/a.md", ABC + "/notes/old/b.md",
+          ABC + "/notes/c.txt", ABC + "/notes.md", ABC + "/transcripts/2026-10-01 Steering.vtt", ABC + "/documents/plan.md",
+          ABC + "/documents/notes/d.md", "projects/_portfolio/notes/themes.md", "inbox/forward.txt", H + "/Documents/notes.txt"]:
+    for exempt in (True, False):
+        t = {**live_server.OUTSIDE_CONTENT, "notes_exempt": exempt}
+        out["outside"][f"{short(p, 80)} | notes_exempt={exempt}"] = reach.outside_reason("Read", {"file_path": p}, t)
+# #60 option (a) (Alan, 15-10-2026): the Prep page run's mode, through reach.decide, as the hook calls it. The same calls, then
+# a notes folder with an ordinary note and a confidential one (made here, after every other decision, so none of them changes)
+os.makedirs(ABC + "/notes", exist_ok=True)
+open(ABC + "/notes/Open.md", "w").write("---\ntitle: Open\nconfidential: false\n---\n\nOrdinary.\n")
+open(ABC + "/notes/Closed.md", "w").write("---\ntitle: Closed\nconfidential: true\n---\n\nKept back.\n")
+prep_calls = calls + [("Read", {"file_path": ABC + "/notes/Open.md"}), ("Read", {"file_path": ABC + "/notes/Closed.md"}),
+                      ("Grep", {"pattern": "x", "path": ABC + "/notes"}), ("Grep", {"pattern": "x", "path": ABC + "/minutes"}),
+                      ("Glob", {"pattern": "*.md", "path": ABC + "/notes"}), ("Grep", {"pattern": "x"}),
+                      ("Read", {"file_path": "system/tracker.db"}), ("LS", {"path": "system/backups"}),
+                      ("Bash", {"command": "system/scripts/run search.py preview '" + ABC + "/notes/Closed.md'"}),
+                      ("Bash", {"command": "system/scripts/run search.py preview '" + ABC + "/notes/Open.md'"}),
+                      ("Bash", {"command": "CREAITE_RUN_KIND= system/scripts/run search.py query x"})]
+for mode in ("ask", "prep"):
+    for tool, inp in prep_calls:
+        out["hook"][f"{mode} | notes | {tool} | {short(json.dumps(inp, sort_keys=True), 140)}"] = list(reach.decide(tool, inp, mode, ""))
+# #60 follow-ups (Alan, 15-10-2026): mode "held" (every run creaite starts itself) and Close the day's sweep (mode sweep, held),
+# beside a typed sweep (mode sweep, not held: ask creaite, unchanged)
+for mode, held in (("held", False), ("sweep", True), ("sweep", False)):
+    for tool, inp in prep_calls:
+        out["hook"][f"{mode}{' held' if held else ''} | notes | {tool} | {short(json.dumps(inp, sort_keys=True), 140)}"] = \
+            list(reach.decide(tool, inp, mode, "", held))
 for r in ["Bash(python3 system/scripts/tracker.py *)", "Bash(python3 system/scripts/tracker.py:*)",
           "Bash(python3 system/scripts/report.py *)", "Bash(python3 system/scripts/permissions.py *)", "Bash(rm *)",
           "Bash(*)", "Bash", "Bash(python3 *)", "Bash(system/scripts/run tracker.py *)", "Edit(**)", "Edit(inbox/**)",
@@ -153,6 +186,16 @@ for spec in ["settings add allow Bash(python3 system/scripts/report.py *)", "set
         out["preview_list"][spec] = f"exit: {e}"
     except Exception as e:
         out["preview_list"][spec] = f"raised {type(e).__name__}: {e}"
+# #60 (Alan, 15-10-2026): which runs creaite starts get the confidential-note guard (live_server.held_run), by kind; Search's
+# answer like ask creaite
+import live_server as L
+out["held_run"] = {}
+for kind in ("ask", "search", "prep", "generate", "check", "load", "sweep", "shape-closed", "edit-ai", "notes-find"):
+    for confirmed, only, sweep in ((None, None, False), ("Close ABC-A-001", None, False), (None, L.ALERT_DRAFT_TOOLS, False),
+                                   (None, None, True)):
+        tools = L.run_policy("sweep" if sweep else kind, confirmed, only)[0]
+        out["held_run"][f"{kind} | confirmed={bool(confirmed)} | only={only is not None} | sweep={sweep}"] = \
+            L.held_run(kind, confirmed, only, sweep, tools)
 print(json.dumps(out, sort_keys=True, ensure_ascii=False, default=str))
 '''
 

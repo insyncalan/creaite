@@ -180,7 +180,8 @@ def context(key):
             "due_soon_days": due_soon_days(), "reporting": _prep_reporting(d, codes),
             "reports": [r for c in codes for r in ((d.get("prep") or {}).get("reports") or {}).get(c, [])],
             "research": {"minutes_and_transcripts": [f["path"] for f in _prep_recent(d, codes, allp, m["since"])],
-                         "documents": _prep_documents(codes), "mail_and_teams_days": MAIL_DAYS, "codes": codes},
+                         "documents": _prep_documents(codes), "mail_and_teams_days": MAIL_DAYS, "codes": codes,
+                         **_prep_notes(codes)},                    # BL-301: only the notes not marked confidential
             "port": int(__import__("os").environ.get("CREAITE_PORT") or
                         (paths.load_settings().get("live_mode") or {}).get("port", 8765))}   # as live_server.main picks it
 
@@ -341,6 +342,100 @@ def _prep_meeting(ev, title, invite):
 # ===== end BL-229 (context) =====
 
 
+# ===== BL-301 (v20-confidential-prep) ===== A note marked confidential (front matter `confidential: true`, notes.is_confidential)
+# is kept out of Prep, by plain code: it is never listed for the research and never named to Claude (a note's file name is its
+# title), and anything in Claude's reply that cites one or quotes it (a finding, a question, an item's reason, the summary) is
+# dropped before the page is built, stored or shown (hold_confidential; prep_view.assemble applies it again, so a note marked
+# confidential later is dropped from a stored page too). The research run's read tools could still open the file by path: the
+# prompt tells it not to, and what comes back is filtered.
+QUOTE_WORDS = 8          # this many words in a row from a confidential note, found in the reply, counts as quoting it
+
+
+def note_split(codes):
+    """(ordinary notes, confidential notes) of these projects (or `_portfolio`), as vault paths, by name."""
+    import notes
+    ordinary, held = [], []
+    for c in dict.fromkeys(codes):
+        try:
+            files = paths.note_files(c)
+        except (LookupError, ValueError, OSError):  # a project without a folder has no notes
+            continue
+        for f in files:
+            (held if notes.is_confidential(f) else ordinary).append(paths.rel(f))
+    return ordinary, held
+
+
+def _prep_notes(codes):
+    """The research's notes: {"notes": [the ordinary notes' paths], "confidential_notes_left_out": n}, each key only when there
+    is something to say (a project without notes keeps the context it always had). A confidential note is counted, never named."""
+    ordinary, held = note_split(list(codes) + ["_portfolio"])
+    return {**({"notes": ordinary} if ordinary else {}), **({"confidential_notes_left_out": len(held)} if held else {})}
+
+
+def _words(text):
+    return re.findall(r"[a-z0-9]+", str(text or "").lower())
+
+
+def held_notes():
+    """[{path, real, name, runs}] for every confidential note in the vault (every project and the portfolio): what a reply is
+    checked against. `runs` are the note's QUOTE_WORDS-word runs, as joined words."""
+    import notes
+    try:
+        codes = [c for c, _ in paths.project_folders()]
+    except (LookupError, ValueError, OSError):
+        codes = ["_portfolio"]
+    out = []
+    for rel in note_split(codes)[1]:
+        real = paths.resolve(rel)
+        w = _words(notes.read(real)[1])
+        out.append({"path": rel.lower(), "real": str(real).lower(), "name": real.name.lower(),
+                    "runs": {" ".join(w[i:i + QUOTE_WORDS]) for i in range(max(0, len(w) - QUOTE_WORDS + 1))}})
+    return out
+
+
+def _leaks(text, held, source=False):
+    """Whether `text` points at a confidential note (as a source: its path, real path or file name) or quotes one."""
+    if source:
+        s = str(text or "").lower().replace("\\", "/")
+        if any(h["path"] in s or h["real"] in s or h["name"] in s for h in held):
+            return True
+    w = _words(text)
+    joined = {" ".join(w[i:i + QUOTE_WORDS]) for i in range(max(0, len(w) - QUOTE_WORDS + 1))}
+    return any(joined & h["runs"] for h in held)
+
+
+def hold_confidential(reply, held=None):
+    """(Claude's reply with nothing from a confidential note, how many parts were dropped). A finding is dropped when its source
+    is a confidential note or its text quotes one; so is a question, an item's reason or the summary that quotes one."""
+    reply = reply if isinstance(reply, dict) else {}
+    held = held_notes() if held is None else held
+    if not held:
+        return reply, 0
+    out, dropped = dict(reply), 0
+    if isinstance(reply.get("notes"), list):
+        keep = [n for n in reply["notes"]
+                if not (isinstance(n, dict) and (_leaks(n.get("source"), held, True) or _leaks(n.get("text"), held)))]
+        dropped += len(reply["notes"]) - len(keep)
+        out["notes"] = keep
+    if isinstance(reply.get("questions"), list):
+        keep = [q for q in reply["questions"] if not _leaks(q, held)]
+        dropped += len(reply["questions"]) - len(keep)
+        out["questions"] = keep
+    if isinstance(reply.get("item_reasons"), dict):
+        keep = {k: v for k, v in reply["item_reasons"].items() if not _leaks(v, held)}
+        dropped += len(reply["item_reasons"]) - len(keep)
+        out["item_reasons"] = keep
+    if reply.get("about") and _leaks(reply["about"], held):
+        out["about"], dropped = "", dropped + 1
+    return out, dropped
+
+
+NOTES_RULE = ("Notes: read only the notes listed under research \"notes\" (Alan's own notes, internal: label what comes from them). "
+              "Never open, read, search or cite any other file in a notes folder: a note marked confidential is kept out of prep, "
+              "and anything that cites or quotes one is removed from the page.")
+# ===== end BL-301 (v20-confidential-prep) =====
+
+
 PROMPT = """creaite prep page. Research one meeting for Alan and reply with ONLY a JSON object, nothing else.
 Read-only: never write, send or change anything. Nothing you write is copied into the vault except the page itself.
 
@@ -360,6 +455,7 @@ Do this:
    {days} days (read-only search tools only). Each finding is one line with its source (a file path, or "Email · From …
    · Subject … · Sent YYYY-MM-DD" or "Teams · Channel … · Sent …") and its date. Never quote long passages; never
    invent a finding. If Microsoft 365 isn't available, say so in "m365".
+   {notes_rule}
 4. Suggest up to five short questions or asks for the meeting.
 
 Reply exactly in this shape:
@@ -391,7 +487,7 @@ def prompt(ctx):
     """The research prompt for Claude: PROMPT filled with the meeting's context as JSON (cut at 60,000 characters) and the mail look-back
     in days."""
     slim = {k: v for k, v in ctx.items() if k not in ("port",)}
-    return PROMPT.format(ctx=json.dumps(slim, ensure_ascii=False, indent=1)[:60000], days=MAIL_DAYS)
+    return PROMPT.format(ctx=json.dumps(slim, ensure_ascii=False, indent=1)[:60000], days=MAIL_DAYS, notes_rule=NOTES_RULE)
 
 
 def parse_reply(text):
@@ -453,6 +549,7 @@ def shown(iso):
 def render(ctx, reply):
     """The page's HTML: one file, no external scripts, fonts or images; collapsible sections; a print style."""
     mt, port, code = ctx["meeting"], ctx.get("port", 8765), ctx["project"]
+    reply = hold_confidential(reply)[0]                       # BL-301: a confidential note's findings never reach the page
     why_more = {k: str(v)[:200] for k, v in (reply.get("item_reasons") or {}).items() if isinstance(v, (str, int, float))}
     items = ctx["items"]                                      # BL-126: only what is urgent, overdue or due soon, in that order
     sources = []
@@ -757,6 +854,7 @@ def build(key, reply_text, ctx=None):
         raise ValueError(ctx["error"])
     import prep_view
     reply = parse_reply(reply_text) if isinstance(reply_text, str) else reply_text or {}
+    reply = hold_confidential(reply)[0]                       # BL-301: nothing from a confidential note is built or stored
     page = prep_view.page_for(ctx, reply)                     # BL-286: the Briefing layout, with the accepted focus
     rel = save(ctx, page)
     prep_view.store(ctx, reply, rel)                          # BL-286: the content, so the in-app page needs no new run
@@ -813,7 +911,7 @@ def main(argv):
             if ctx.get("error"):
                 raise ValueError(ctx["error"])
             import prep_view
-            reply = parse_reply(Path(argv[2]).read_text(encoding="utf-8"))
+            reply = hold_confidential(parse_reply(Path(argv[2]).read_text(encoding="utf-8")))[0]   # BL-301
             page = prep_view.page_for(ctx, reply)                                  # BL-286: the Briefing layout
         except (OSError, ValueError) as e:
             print(f"Not built: {e}")

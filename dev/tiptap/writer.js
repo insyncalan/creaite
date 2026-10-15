@@ -102,7 +102,9 @@ function writeInline(nodes, opt, ctx) {
       else if (!opt.escape) parts.push({ k: "text", s: n.text });
       else parts.push({ k: "text", s: escapeText(n.text, i === 0 && ctx.lineStart, ctx.table) });
     } else if (n.type === "hardBreak") {
-      parts.push({ k: "text", s: (n.attrs && n.attrs.raw) || "  \n", br: true });
+      // A table row is one line: a break in a cell is "<br>" there (it reads back as a hard break, source.js).
+      const kept = (n.attrs && n.attrs.raw) || "  \n";
+      parts.push({ k: "text", s: ctx.table && kept.includes("\n") ? "<br>" : kept, br: true });
     } else if (n.type === "htmlInline") {
       parts.push({ k: "text", s: (n.attrs && n.attrs.raw) || "" });
     } else if (n.type === "image") {
@@ -258,6 +260,15 @@ export function writeMarkdown(json, parse) {
   const nodes = [...(json.content || [])];
   while (nodes.length > 1 && nodes[nodes.length - 1].type === "paragraph" && !(nodes[nodes.length - 1].content || []).length) {
     nodes.pop();
+  }
+  // An empty paragraph straight after a list can't be written: the list takes in the blank lines, so the next load
+  // would lose it and the next save differ (BL-301's notes gate: save, load, save gives the same bytes). It is layout,
+  // not content, and is left out (as the trailing ones are), so the first save is already the stable one.
+  for (let i = nodes.length - 1; i > 0; i--) {
+    const empty = nodes[i].type === "paragraph" && !(nodes[i].content || []).length;
+    let j = i - 1;
+    while (j >= 0 && nodes[j].type === "paragraph" && !(nodes[j].content || []).length) j--;
+    if (empty && j >= 0 && isList(nodes[j])) nodes.splice(i, 1);
   }
   json = { ...json, content: nodes };
   const blocks = nodes.map((node) => {

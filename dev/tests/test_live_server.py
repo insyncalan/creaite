@@ -25,7 +25,7 @@ FAKE_CLAUDE = r'''#!/usr/bin/env python3
 import json, sys, time
 args = sys.argv[1:]
 allowed = args[args.index("--allowedTools") + 1]
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-1"})
 if message.startswith("Draft the Current state"):   # BL-46
@@ -430,6 +430,22 @@ LIVE_SCRIPT = r"""
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre); })();
 </script>
 """
+
+
+class OutsideContentTable(unittest.TestCase):
+    """BL-141's table of what marks a run, as the server hands it to reach.start_run. BL-301 (Alan, 15-10-2026): one of Alan's
+    notes is exempt; nothing else changed (test_notes_guard.py reads notes, pictures and transcripts through the hook)."""
+
+    def test_the_table(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
+        import live_server
+        import permissions
+        t = live_server.OUTSIDE_CONTENT
+        self.assertEqual(sorted(t), ["folders", "notes_exempt", "outside_vault", "tools"])
+        self.assertEqual(t["folders"], ["inbox", "transcripts", "documents"])
+        self.assertIs(t["outside_vault"], True)
+        self.assertIs(t["notes_exempt"], True)
+        self.assertEqual(t["tools"], [*permissions.m365_read_tools(), "WebFetch", "WebSearch"])
 
 
 @unittest.skipUnless(CHROME.exists(), "Google Chrome not installed")

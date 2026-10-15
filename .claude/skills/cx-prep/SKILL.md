@@ -22,6 +22,7 @@ The live server makes the page, never the panel (BL-98, BL-307). Find the meetin
 3. **Research, read-only and brief,** only what bears on the invite or the listed items:
    - the minutes and transcripts it lists (`docx_tools.py text`, `minutes.py transcript`);
    - the project's documents folder (internal: label what comes from it);
+   - Alan's notes listed under `research.notes` in the context, and only those (internal: label what comes from them). A note marked confidential is kept out of prep pages: the context never lists or names it (`confidential_notes_left_out` only counts them), so never open, read, search or cite any other file in a notes folder. `prep_page.py build` drops any finding, question or reason that cites or quotes a confidential note anyway;
    - Microsoft 365 mail and Teams for the project over the last 14 days, with the search tools only. If Microsoft 365 isn't available, say so.
    Never invent a finding; a section with no evidence stays empty ("Nothing found"). Never copy long passages.
 4. **Reply file:** write `system/staging/drafts/prep-reply.json`:

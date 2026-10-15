@@ -56,9 +56,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          status_checks.py, plain code, never blocking) and the facts sheet it was written from
 - POST /api/current/rewrite {code, text, from, to, audience, length, run}: "Make it executive" (BL-106): Claude rewrites the
                          text in the executive voice, keeping its facts; streamed like generate, nothing written
-- POST /api/capture      {notes, code, date, title, who}: save a quick note (BL-54) as projects/<CODE> <Name>/minutes/
-                         YYYY-MM-DD Quick note - <title>.md, never overwriting; with no code, the project is matched
-                         from the note (409 with the candidates if it's unclear). The page then runs cx-minutes on it
+- POST /api/notes/capture/guess|start|draft|done|recent|discard: the capture drawer (BL-301 C, capture.py): the project guessed
+                         from the register's signals with its reason, the text kept as a draft as Alan types, the note
+                         written through filechange.py on Done (Unfiled when nothing names a project). Replaces BL-54's
+                         /api/capture; old quick notes stay in minutes/
 - POST /api/ask/running  the run in progress (or the last one not yet seen); /api/ask/attach {run, after} sends its events
                          after sequence number `after` (each event carries `seq`; BL-262) and follows it; /api/ask/ack {run}
                          marks a finished run as seen
@@ -133,6 +134,9 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          a reject instead (review.py; BL-315)
 - POST /api/draft {kind, …}: an AI draft (drafts.py context, then Claude, streamed; nothing reaches the tracker); /api/draft/stat
                          {feature, event, n} counts what was done with one; /api/drafts each feature and its counts (BL-219 on)
+- POST /api/edit/ai {option, text, code, place, instruction}: AI on selected text (BL-301 D): edit_ai.py's prompt (the text, the
+                         option, the project's name, people and open item IDs only), Claude with no tools at all (kind "edit-ai"),
+                         streamed; the "draft" event is the suggestion and its check. Nothing is written
 - POST /api/agenda/save {key, parts, agenda, attendees}: write a drafted agenda into the Agendas folder, never overwriting (BL-223)
 - POST /api/email/followup {key, eid, day, start, title, files}: a follow-up email's attendees and summary, nothing sent;
                          /api/chases {ids, mode} records a chase Alan says he sent (system/staging/chases.json, IDs only;
@@ -196,7 +200,6 @@ ASK_IMAGE_KEEP = 24 * 3600            # an image that never reached a message is
 INBOX_LIMIT = 25 * 1024 * 1024
 PREVIEW_CHARS = 200_000               # an inbox file's preview        # a file added to the Inbox (BL-42)
 INBOX_TYPES = (".vtt", ".docx", ".txt", ".md", ".pdf")
-NOTE_LIMIT = 20000                    # a quick note's text (BL-54)
 BODY_LIMIT = 40 * 1024 * 1024         # any request (base64 makes a 25 MB file about 34 MB)
 CLIENT_LEFT = (BrokenPipeError, ConnectionResetError)   # the page went mid-reply (BL-263, BL-284): logged at info, never a 500
 RELEASE_LIMIT = 60 * 1024 * 1024     # a release zip (BL-36)
@@ -269,7 +272,8 @@ OPEN_TOOLS = ["Bash(python3 system/scripts/filechange.py *)", "Write(system/stag
 # stream, and the hook reads this same table from system/guard/run.json and marks it before the tool runs.
 OUTSIDE_CONTENT = {"tools": [*vault_permissions.m365_read_tools(), "WebFetch", "WebSearch"],
                    "folders": ["inbox", "transcripts", "documents"],
-                   "outside_vault": True}                    # and any file read outside the vault and the projects folder
+                   "outside_vault": True,                    # and any file read outside the vault and the projects folder
+                   "notes_exempt": True}                     # BL-301 (Alan, 15-10-2026): except one of Alan's notes (reach.is_note)
 
 
 
@@ -306,14 +310,22 @@ def hook_runner():
 # Started from creaite.app the server has launchd's bare PATH, where `python3` is Apple's /usr/bin/python3 stub (and, under
 # Rosetta, an xcrun error). So every run, the hook inside it and the VIP check get this Python's folder first on PATH, and
 # CREAITE_PYTHON, which system/scripts/run uses before it searches PATH.
-def run_env():
-    """The environment for everything the server starts (ask creaite and other headless runs, the guard hook, the VIP check)."""
+def run_env(kind=None):
+    """The environment for everything the server starts (ask creaite and other headless runs, the guard hook, the VIP check).
+    #60: a run creaite starts itself also says its kind (CREAITE_RUN_KIND, held_run), so search.py holds confidential notes back;
+    set here only, never by the run, and never for ask creaite."""
     import launch as launcher
     env = dict(os.environ)
+    env.pop(PREP_ENV, None)                 # #60: only a run creaite starts itself says what kind it is
     env["PATH"] = launcher.run_path(env.get("PATH", ""))
     env["CREAITE_PYTHON"] = sys.executable
     env["CREAITE_HEADLESS_RUN"] = "1"       # BL-323: a headless run's tools never run Tidy up (backup.ask_run)
+    if kind:
+        env[PREP_ENV] = kind
     return env
+
+
+PREP_ENV = "CREAITE_RUN_KIND"               # #60: search.py's sign that it runs inside a run creaite started itself
 
 
 PRESTART = re.compile(r"xcrun: error|dlopen\(|No module named|command not found|bad interpreter|found no Python 3\.9|creaite start-up fault")
@@ -351,11 +363,13 @@ def never_denies():
     return [d for d in dict.fromkeys(out) if d not in DENY_TOOLS]
 
 
-def guard_settings(run_id, mode):
+def guard_settings(run_id, mode, held=False):
     """The --settings for an ask creaite run: the PreToolUse hook that checks every tool call (reach.py hook). Hooks can't be
-    switched off from a settings file the run can't change, and the hook refuses anything it can't check."""
+    switched off from a settings file the run can't change, and the hook refuses anything it can't check. #60 follow-ups:
+    `held` (a run creaite starts itself in a guarded mode: Close the day's sweep) adds `--held 1`, the confidential-note check."""
     import shlex
-    cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode))     # BL-237
+    cmd = " ".join(shlex.quote(x) for x in (*hook_runner(), "hook", "--run", run_id, "--mode", mode,     # BL-237
+                                            *(("--held", "1") if held else ())))
     return json.dumps({"disableAllHooks": False,
                        "hooks": {"PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]}})
 
@@ -513,6 +527,11 @@ def claude_path():
     """The `claude` command a run starts: CREAITE_CLAUDE, else found on the run's PATH (BL-248), else ~/.local/bin/claude."""
     return (os.environ.get("CREAITE_CLAUDE") or shutil.which("claude", path=run_env()["PATH"])     # BL-248: the run's PATH
             or str(Path.home() / ".local/bin/claude"))
+
+
+def prompt_last(cmd, prompt):
+    """A `claude -p` command with its prompt after `--` (#91): nothing in the prompt can be read as an option or a command."""
+    return cmd + ["--", prompt]
 
 
 def script_env():
@@ -1130,8 +1149,7 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/ask/image/remove": self.ask_image_remove, "/api/here": self.here, "/api/stop": self.stop_server, "/api/inbox/upload": self.inbox_upload, "/api/inbox/preview": self.inbox_preview, "/api/inbox/remove": self.inbox_remove, "/api/inbox/restore": self.inbox_restore, "/api/current/generate": self.generate, "/api/current/check": self.current_check, "/api/current/rewrite": self.current_rewrite, "/api/current/sources": self.current_sources, "/api/current/evidence": self.current_evidence, "/api/meeting/carry": self.meeting_carry, "/api/day/close": self.day_close, "/api/update/status": self.update_status,
                  "/api/update/upload": self.update_upload, "/api/update/inspect": self.update_inspect,
                  "/api/update/install": self.update_install, "/api/update/undo": self.update_undo}.get(self.path)
-        route = route or {"/api/capture": self.capture,                     # Insight (BL-54)
-                          "/api/ask/queue": lambda r: queue_route(self, r)}.get(self.path)   # BL-257
+        route = route or {"/api/ask/queue": lambda r: queue_route(self, r)}.get(self.path)   # BL-257
         route = route or {"/api/search/preview": self.search_preview, "/api/search/ask": self.search_ask,
                           "/api/search/continue": self.search_continue}.get(self.path)   # Search (BL-07)
         route = route or {"/api/permissions/undo": self.permission_undo}.get(self.path)  # BL-75: undo a rule added before BL-141
@@ -1609,56 +1627,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"ok": False, "message": "That day isn't valid."})
         return self.send(200, {"ok": True, "count": n})
 
-    # ===== Insight (BL-51, BL-49, BL-54) =====
-    def capture(self, req):
-        """Quick capture (BL-54): save rough notes as a project's quick note, so items keep a traceable source. The
-        project is Alan's choice, else matched from the title and notes; unclear → 409 with the candidates."""
-        notes = str(req.get("notes") or "").strip()
-        if not notes:
-            return self.send(400, {"ok": False, "message": "Write the note first."})
-        if len(notes) > NOTE_LIMIT:
-            return self.send(413, {"ok": False, "message": "A quick note can be 20,000 characters at most."})
-        day = str(req.get("date") or datetime.now().strftime("%Y-%m-%d"))
-        try:
-            datetime.strptime(day, "%Y-%m-%d")
-        except ValueError:
-            return self.send(400, {"ok": False, "message": "The date must be YYYY-MM-DD."})
-        title = re.sub(r'[\\/:*?"<>|\x00-\x1f\[\]]+', " ", str(req.get("title") or "")).strip(" .")
-        if not title:          # the note's first words
-            title = " ".join(re.sub(r'[\\/:*?"<>|\x00-\x1f\[\]#*_`]+', " ", notes.splitlines()[0]).split()[:8]).strip(" .")
-        title = re.sub(r"\s+", " ", title)[:60].strip(" .") or "Note"
-        who = re.sub(r"\s+", " ", str(req.get("who") or "")).strip()[:300]
-        import sqlite3
-        from contextlib import closing
-        with closing(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)) as con:
-            projects = [{"code": c, "name": n} for c, n in con.execute("SELECT code, name FROM projects WHERE active = 1")]
-        code, matched = str(req.get("code") or ""), False
-        if code and code not in {p["code"] for p in projects}:
-            return self.send(400, {"ok": False, "message": f"{code} isn't an active project."})
-        if not code:
-            hits = sorted(build_dashboard.project_hits(f"{title}\n{notes}", projects))
-            if len(hits) != 1:
-                return self.send(409, {"ok": False, "candidates": hits, "message": (
-                    f"This could be {' or '.join(hits)}: pick the project." if hits else
-                    "creaite couldn't tell which project this is: pick it.")})
-            code, matched = hits[0], True
-        try:
-            folder = paths.folder(code, "minutes")
-        except LookupError:
-            return self.send(400, {"ok": False, "message": f"{code} has no project folder."})
-        folder.mkdir(parents=True, exist_ok=True)
-        target, n = folder / f"{day} Quick note - {title}.md", 2
-        while target.exists():                 # never overwrite
-            target, n = folder / f"{day} Quick note - {title} ({n}).md", n + 1
-        name = next((p["name"] for p in projects if p["code"] == code), "")
-        shown = lambda d: f"{d[8:10]}-{d[5:7]}-{d[:4]}"  # noqa: E731
-        target.write_text(f"# Quick note — {title}\n\n- **Date:** {shown(day)}\n- **Project:** {code} {name}\n"
-                          f"- **Who was there:** {who or 'Not recorded'}\n"
-                          f"- **Captured:** {shown(datetime.now().strftime('%Y-%m-%d'))} "
-                          f"{datetime.now():%H:%M} in the dashboard (quick capture)\n\n{notes}\n", encoding="utf-8")
-        return self.send(200, {"ok": True, "path": paths.rel(target), "name": target.name, "code": code,
-                               "title": title, "matched": matched})
-
+    # ===== Insight (BL-51, BL-49) =====
     def generate(self, req):
         """Draft a project's Current state from the vault (BL-46): the material is gathered here, then Claude writes
         the draft with read-only tools. Nothing is written; the draft goes to the page's editor."""
@@ -1968,6 +1937,18 @@ PANEL_SWEEP_PROMPT = (
 PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
 # ===== end BL-309 =====
 KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools()]}
+# ===== BL-301 D (v20-ai-select) ===== AI on selected text (/api/edit/ai): Claude sees only the prompt edit_ai.py builds (the selected
+# text, the option, the project's name, people and open item IDs). The run "edit-ai" has no tools at all: its allow list is empty,
+# Claude Code is started with no built-in tools (`--tools ""`) and no MCP servers (`--strict-mcp-config`), no --add-dir, and every
+# tool that reads, runs, writes or reaches out is denied as well, so it cannot read a file or mail, run anything or write.
+TOOLLESS_KINDS = ("edit-ai",)
+KIND_TOOLS["edit-ai"] = []
+KIND_DENIES["edit-ai"] = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent",
+                          "Skill", *vault_permissions.m365_read_tools()]
+KIND_ARGS = {"edit-ai": ["--tools", "", "--strict-mcp-config"]}
+KIND_PROMPTS["edit-ai"] = ("You are creaite's editor assistant (BL-301 D). You have no tools. Reply only with the suggestion the "
+                           "message asks for, between its marker lines; never anything else.")
+# ===== end BL-301 D =====
 
 
 def run_prompt(kind, confirmed):
@@ -2003,6 +1984,27 @@ def run_policy(kind, confirmed, only=None):
     return tools, deny, guarded
 
 
+LIKE_ASK = ("ask", "search")     # #60 (Alan, 15-10-2026): Search's answer is Alan's own question, like ask creaite
+
+
+def held_run(kind, confirmed, only, sweep, tools):
+    """#60 follow-ups (Alan, 15-10-2026): whether this run is one creaite starts itself that may read files, so the guard hook and
+    search.py hold confidential notes back: not ask creaite (a chat, a typed sweep, a confirmed request), not a run with no
+    tools, and not a narrowed run (`only`: Microsoft 365 reading only, no files). Search's answer (kind "search") is treated like ask
+    creaite (Alan, 15-10-2026, #60)."""
+    return kind not in LIKE_ASK and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
+
+
+def guard_args(run_id, mode, held, session):
+    """The guard hook's --settings for a run: a guarded run's mode (BL-141, BL-295; the run written to system/guard/run.json),
+    with `--held 1` when creaite started it (#60); else mode "held" for a run creaite starts itself; else none."""
+    if mode:
+        settings = guard_settings(run_id, mode, held)
+        reach.start_run(run_id, mode, OUTSIDE_CONTENT, session)
+        return ["--settings", settings]
+    return ["--settings", guard_settings(run_id, "held")] if held else []   # #60: the hook refuses a confidential note
+
+
 class Run:
     """One ask creaite request: headless Claude Code, its events kept for any page that attaches (BL-37)."""
 
@@ -2013,18 +2015,17 @@ class Run:
         prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
         self.images = list(images)
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
-        cmd = [claude_path(), "-p", said, "--output-format", "stream-json", "--verbose",
+        cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
-               "--append-system-prompt", prompt]
-        for d in (reach_dirs() if guarded else extra_dirs()):
+               "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
+        for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
-        if guarded:
-            mode = guard_mode(policy, None if sweep else confirmed)
-            cmd += ["--settings", guard_settings(run_id, mode)]
-            reach.start_run(run_id, mode, OUTSIDE_CONTENT, session)
+        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+        cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
         self.guarded = guarded
         if session:
             cmd += ["--resume", session]
+        cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
         self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
         self.sweep = bool(sweep)                                # BL-309
         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
@@ -2037,7 +2038,7 @@ class Run:
         self.stop = self.deferred = self.done = self.seen = False
         self.started, self.recorded = time.time(), 0       # BL-262: how many events the chat's history reaches
         try:
-            env = run_env()                                                            # BL-248
+            env = run_env(kind if held else None)                                      # BL-248; #60: a held run's kind
             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
             self.proc = subprocess.Popen(cmd, cwd=paths.ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                          bufsize=1, env=env)
@@ -3210,8 +3211,8 @@ def vip_check(how="check"):
         st = sweep.vip_state()
         since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
         prompt = VIP_PROMPT.format(since=since, addresses=", ".join(sorted(vips)))
-        cmd = [claude_path(), "-p", prompt, "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
-               "--disallowedTools", ",".join(DENY_TOOLS)]
+        cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
+                           "--disallowedTools", ",".join(DENY_TOOLS)], prompt)                       # #91: after `--`
         found, why = None, "no reply"
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
@@ -5047,13 +5048,15 @@ class DraftJob:
         """The job hook's tool observer: a draft run needs none."""
         return None
 
+    SCRIPT = "drafts.py"                                    # BL-301 D: EditJob's is edit_ai.py
+
     def finish(self):
         """At the run's end: check the reply with drafts.py result (a bulk draft is staged there) and emit one "draft" event."""
         self.ready.wait(5)
         reply = "\n\n".join(self.run.said) if self.run else ""
         got = None
         if self.run and reply.strip():
-            rc, out = run_stdin("drafts.py", {"request": self.req, "context": self.ctx, "reply": reply}, "result")
+            rc, out = run_stdin(self.SCRIPT, {"request": self.req, "context": self.ctx, "reply": reply}, "result")
             try:
                 got = json.loads(out) if rc == 0 else None
             except ValueError:
@@ -5137,6 +5140,57 @@ def drafts_state_route(handler, req):
 
 DRAFT_ROUTES = {"/api/draft": draft_route, "/api/draft/stat": draft_stat_route, "/api/drafts": drafts_state_route}
 # ===== end AI drafts =====
+
+# ===== BL-301 D (v20-ai-select) ===== POST /api/edit/ai {option, text, code, place, instruction?, run?}: a suggestion for selected text.
+# edit_ai.py builds the prompt (the text, the option, the project's name, people and open item IDs; nothing else), Claude runs
+# through the run engine as the toolless kind "edit-ai" (one run at a time, progress, Stop), and the reply is parsed and checked by
+# edit_ai.py (BL-106's plain-code check). The last event before "done" is "draft" {text, notes}. Nothing is written; the debug log
+# gets the option, the place and sizes only, never the text.
+
+
+class EditJob(DraftJob):
+    """The run engine's job hook for a suggestion: edit_ai.py result parses and checks the reply."""
+    SCRIPT = "edit_ai.py"
+    quiet = True                                            # the page shows the suggestion, not the reply as it streams
+
+
+def edit_ai_request(req):
+    """The request as edit_ai.py takes it: known keys, sizes capped (edit_ai.py checks them again)."""
+    body = {k: str(req.get(k) or "")[:40] for k in ("option", "code", "place")}
+    body["text"] = str(req.get("text") or "")[:12001]
+    body["instruction"] = str(req.get("instruction") or "")[:401]
+    return body
+
+
+def edit_ai_route(handler, req):
+    """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
+    body = edit_ai_request(req if isinstance(req, dict) else {})
+    busy = current_run()
+    if busy and not busy.done:
+        return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
+    rc, out = run_stdin("edit_ai.py", body, "context")
+    try:
+        ctx = json.loads(out) if rc == 0 else {"refused": "The suggestion couldn't be prepared."}
+    except ValueError:
+        ctx = {"refused": "The suggestion couldn't be prepared."}
+    if ctx.get("refused"):
+        return handler.send(200, {"ok": False, "message": ctx["refused"]})
+    run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
+        else f"e-{secrets.token_hex(6)}"
+    job = EditJob(body, ctx)
+    try:
+        r = Run(run_id, ctx["prompt"], None, None, None, kind="edit-ai", job=job, label=f"{ctx['label']}, with Claude")
+    except OSError as e:
+        return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
+    job.run = r
+    job.ready.set()
+    if globals().get("debuglog") is not None:
+        debuglog.info("edit", f"{run_id}: {ctx['option']} in {ctx['place']}, {len(body['text'])} characters")
+    return handler.follow(r)
+
+
+DRAFT_ROUTES["/api/edit/ai"] = edit_ai_route
+# ===== end BL-301 D =====
 
 # ===== BL-223 (sprint-drafts-writing) ===== Draft agenda: the kind "agenda" on /api/draft (the meeting's key and the style), and
 # POST /api/agenda/save {key, parts, agenda, attendees}: the agenda Alan chose to keep, written by the server into the Agendas folder
@@ -5813,6 +5867,131 @@ def chase_pane_route(handler, req):
 
 DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
 
+
+# ===== BL-301 C (v20-capture): the capture drawer (⌘⇧N) =====
+# The drawer's server side (capture.py): the project guessed from the register's signals with its reason, the text kept as a
+# draft in system/staging/drafts/notes/ as Alan types, and the note written through filechange.py on Done (backed up, logged,
+# undoable). Nothing reaches the tracker; Find updates (part E) does that from the note. "note: …" in ask creaite comes here too
+# (the page sends it, not the model).
+def _capture_projects():
+    """The active projects as [{code, name}], from the database (read only)."""
+    import sqlite3
+    from contextlib import closing
+    with closing(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)) as con:
+        return [{"code": c, "name": n} for c, n in con.execute("SELECT code, name FROM projects WHERE active = 1 ORDER BY name")]
+
+
+def capture_guess_route(handler, req):
+    """POST /api/notes/capture/guess {title, body}: {ok, code, reason, candidates}. No guess: code null (Unfiled)."""
+    import capture
+    text = f"{str(req.get('title') or '')}\n{str(req.get('body') or '')}"[:capture.TEXT_LIMIT]
+    g = capture.guess(text, {p["code"] for p in _capture_projects()})
+    return handler.send(200, {"ok": True, "code": g["code"], "reason": g["reason"], "candidates": g["candidates"]})
+
+
+def capture_start_route(handler, req):
+    """POST /api/notes/capture/start {meeting: {day, start, title}} | {}: what the drawer opens with: the template, the title,
+    the date, who was there and the project. A meeting gives the Working session template, its date and attendees (from the saved
+    calendar) and the project Prep matched."""
+    import capture
+    import notes as notes_lib
+    m = req.get("meeting") if isinstance(req.get("meeting"), dict) else None
+    if not m:
+        return handler.send(200, {"ok": True, "template": "blank", "title": "", "date": "", "with": [], "code": None,
+                                  "body": "", "drafts": capture.drafts()[:3]})
+    day, start, title = str(m.get("day") or ""), str(m.get("start") or ""), str(m.get("title") or "")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) or not title:
+        return handler.send(400, {"ok": False, "message": "Not a meeting creaite knows."})
+    s = paths.load_settings()
+    me = ((s.get("identity") or {}).get("name") or "")
+    remembered = ((s.get("prep") or {}).get("series") or {})
+    found = capture.meeting(day, start, title, _capture_projects(), remembered, me)
+    if not found:
+        return handler.send(404, {"ok": False, "message": "That meeting isn't in the saved calendar."})
+    body = notes_lib.parse(notes_lib.template("working-session", title))[1]
+    return handler.send(200, {"ok": True, "template": "working-session", "title": found["title"], "date": found["date"],
+                              "with": found["with"], "code": found["code"] if found["code"] != "_portfolio" else None,
+                              "body": body})
+
+
+def capture_draft_route(handler, req):
+    """POST /api/notes/capture/draft {id, code, title, body, template, date, with, confidential}: keep the drawer's text as a draft."""
+    import capture
+    try:
+        fields = capture.clean(req)
+        at = capture.draft(str(req.get("id") or ""), fields)
+    except ValueError as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True, "at": at})
+
+
+def _capture_fields(req, projects):
+    """(fields, reason) of a Done request, or raises ValueError: "auto" guesses the project (no guess is Unfiled)."""
+    import capture
+    auto = req.get("code") == "auto"
+    fields = capture.clean({**req, "code": "" if auto else req.get("code")})
+    if not (fields["body"].strip() or fields["title"]):
+        raise ValueError("Write the note first.")
+    if fields["code"] != capture.UNFILED and fields["code"] not in {p["code"] for p in projects}:
+        raise ValueError(f"{fields['code']} isn't an active project.")
+    if not auto:
+        return fields, ""
+    g = capture.guess(f"{fields['title']}\n{fields['body']}", {p["code"] for p in projects})
+    fields["code"] = g["code"] or capture.UNFILED
+    return fields, g["reason"]
+
+
+def capture_done_route(handler, req):
+    """POST /api/notes/capture/done {id?, code | "auto", title, body, template, date, with, confidential}: write the note through
+    filechange.py (`confidential` true marks it in its front matter, as notes.py records it).
+    "auto" guesses the project (for "note: …" in ask creaite); no guess is Unfiled. The draft goes once the file is written; when
+    the change has to wait (an ask creaite run has read outside content) the draft stays and the page says so."""
+    import capture
+    did = str(req.get("id") or "")
+    if did and not capture.ID_RE.fullmatch(did):
+        return handler.send(400, {"ok": False, "message": "Not a draft id."})
+    try:
+        fields, reason = _capture_fields(req, _capture_projects())
+    except ValueError as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    code, msg, path = capture.save(fields)
+    if code:
+        if did:
+            capture.draft(did, fields)
+        return handler.send(200, {"ok": False, "waiting": code == 3, "message": (
+            "The note is kept as a draft: ask creaite has read outside content, so creaite won't write files until it "
+            "has finished. Press Done again then." if code == 3 else msg)})
+    if did:
+        capture.discard(did)
+    return handler.send(200, {"ok": True, "path": path, "title": capture.title_of(fields), "code": fields["code"],
+                              "reason": reason})
+
+
+def capture_recent_route(handler, req):
+    """POST /api/notes/capture/recent: the newest notes (path, title, project, when) and the drafts not yet saved."""
+    import capture
+    notes_list = capture.recent([p["code"] for p in _capture_projects()])
+    drafts = [{k: d.get(k) for k in ("id", "title", "code", "at", "body", "template", "date", "with", "confidential")}
+              for d in capture.drafts()[:3]]
+    return handler.send(200, {"ok": True, "notes": notes_list, "drafts": drafts})
+
+
+def capture_discard_route(handler, req):
+    """POST /api/notes/capture/discard {id}: drop a draft the drawer kept."""
+    import capture
+    try:
+        capture.discard(str(req.get("id") or ""))
+    except ValueError as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True})
+
+
+NOTE_CAPTURE_ROUTES = {"/api/notes/capture/guess": capture_guess_route, "/api/notes/capture/start": capture_start_route,
+                       "/api/notes/capture/draft": capture_draft_route, "/api/notes/capture/done": capture_done_route,
+                       "/api/notes/capture/recent": capture_recent_route, "/api/notes/capture/discard": capture_discard_route}
+DRAFT_ROUTES.update(NOTE_CAPTURE_ROUTES)          # dispatched with the drafts' routes (do_POST unchanged)
+# ===== end BL-301 C =====
+
 # Polish in the pane (Alan, 13-10-2026, option A): the kind "polish-help" on /api/draft, for Alan's own item, takes the item's ID, the
 # opening, the tone and his two lines (outcome, need); drafts.py reads the item itself. Someone else's item and a decision use "polish".
 DRAFT_KINDS |= {"polish-help"}
@@ -6162,6 +6341,347 @@ def main_with_restart():
 main = main_with_restart
 # ===== end BL-320 =====
 
+# ===== BL-301 B (v20-notes-tab): the Notes tab =====
+# POST /api/notes/list  {code}                                  a project's (or _portfolio's) notes: front matter and references, no text
+# POST /api/notes/get   {path}                                  one note: its body, front matter, the text's fingerprint and any draft
+# POST /api/notes/new   {code, template, title, date?, with?}   a new note from one of the four templates, created through filechange.py
+# POST /api/notes/draft {path, body?, changes?, base}           what Alan has typed, kept in system/staging/drafts/notes/ (no project file)
+# POST /api/notes/save  {path, body?, changes?, base}           the note's file written through filechange.py: backed up, logged, undoable
+# The page saves a draft as Alan types and the file once per editing session (on leaving the note, or after 30 seconds without
+# typing). A note changed outside creaite since it was opened is never overwritten: the draft is kept and the page says so. The
+# search index is refreshed after a save, in the background. Notes are internal and passive: nothing here extracts or stages.
+NOTES_LOCK = threading.Lock()
+NOTES_INDEX = {"busy": False, "again": False}
+NOTE_BODY_LIMIT = 400_000
+NOTE_WHY = "a note saved in the Notes tab"
+
+
+def notes_code(code):
+    """A project code (or _portfolio) that has a folder, else None."""
+    code = str(code or "")
+    if code == "_portfolio":
+        return code
+    if not re.fullmatch(r"[A-Z][A-Z0-9]{2,6}", code):
+        return None
+    try:
+        paths.project_dir(code)
+    except LookupError:
+        return None
+    return code
+
+
+def notes_reindex():
+    """Refresh the search index after a note is written, in the background; a second ask while one runs runs once more after it."""
+    if NOTES_INDEX["busy"]:
+        NOTES_INDEX["again"] = True
+        return
+
+    def work():
+        """Rebuild the index until no save asked for it again meanwhile."""
+        import tracker
+        try:
+            while True:
+                NOTES_INDEX["again"] = False
+                tracker.refresh_index()
+                if not NOTES_INDEX["again"]:
+                    break
+        except Exception as e:  # noqa: BLE001  the index is derived: a failure never stops a save
+            swallowed("notes index", e)
+        finally:
+            NOTES_INDEX["busy"] = False
+    NOTES_INDEX["busy"] = True
+    threading.Thread(target=work, daemon=True).start()
+
+
+def notes_list_route(handler, req):
+    """The notes of one project, or of the portfolio."""
+    import notes
+    code = notes_code(req.get("code"))
+    if not code:
+        return handler.send(400, {"ok": False, "message": "Which project?"})
+    return handler.send(200, {"ok": True, "code": code, "notes": notes.listing(code)})
+
+
+def notes_target(handler, req):
+    """(notes module, code, real path, stored path) of the note the request names, or None after answering why not."""
+    import notes
+    rel = str(req.get("path") or "")
+    hit = notes.note_of(rel)
+    if not hit or not hit[1].is_file():
+        handler.send(404, {"ok": False, "message": "That note isn't there any more."})
+        return None
+    return notes, hit[0], hit[1], paths.rel(hit[1])
+
+
+def notes_get_route(handler, req):
+    """One note to open: its body and front matter, the fingerprint a save is checked against, and a draft not yet written."""
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, code, p, rel = t
+    text = p.read_text(encoding="utf-8", errors="ignore")
+    meta, body = notes.parse(text)
+    draft = notes.read_draft(rel)
+    if draft and draft.get("base") != notes.text_sha(text):
+        draft["stale"] = True                       # the file changed since the draft was typed: the page asks which to keep
+    return handler.send(200, {"ok": True, "code": code, "note": notes.summary(p, code), "body": body,
+                              "meta": {k: meta.get(k) for k in notes.FIELDS if k in meta}, "base": notes.text_sha(text),
+                              "draft": draft, "sent": note_sent_lines(notes, rel, body),
+                              "images": note_images(code, body + "\n" + str((draft or {}).get("body") or ""))})     # BL-301 B gaps
+
+
+def note_sent_lines(notes, rel, body=None):
+    """BL-301 B, the margin ticks: the note's lines (of `body`, else the file as it is now) that Find updates already sent, as
+    [{p, ids, text}] from notes.sent_ids. The page matches each to its line by its text, so a moved line keeps its tick and an edited
+    one loses it. The text is the note's own, already on the page; notes-sent.json itself still holds none."""
+    if body is None:
+        p = paths.resolve(rel)
+        if not p.is_file():
+            return []
+        body = notes.parse(p.read_text(encoding="utf-8", errors="ignore"))[1]
+    got, lines = notes.sent_ids(rel, body), dict(notes.paragraphs(body))
+    return [{"p": n, "ids": ids, "text": lines[n]} for n, ids in sorted(got.items())]
+
+
+def notes_new_route(handler, req):
+    """Create a note from a template, named by its title (a taken name gets a number), through filechange.py."""
+    import filechange
+    import notes
+    code = notes_code(req.get("code"))
+    if not code:
+        return handler.send(400, {"ok": False, "message": "Which project?"})
+    tpl = str(req.get("template") or "blank")
+    if tpl not in notes.TEMPLATES:
+        return handler.send(400, {"ok": False, "message": "Which template?"})
+    title = re.sub(r"\s+", " ", str(req.get("title") or "")).strip()[:160] or {
+        "blank": "Untitled note", "stakeholder": "Stakeholder", "lessons-learned": "Lessons learned",
+        "working-session": "Working session"}[tpl]
+    when = str(req.get("date") or "")
+    when = when if re.fullmatch(r"\d{4}-\d{2}-\d{2}", when) else None
+    people = [str(x)[:80] for x in (req.get("with") or [])[:20]] if isinstance(req.get("with"), list) else []
+    with NOTES_LOCK:
+        target = notes.new_path(code, title)
+        text = notes.template(tpl, title, when=when, people=people)
+        code_, msg = filechange.perform({"op": "create", "path": paths.rel(target), "data": text.encode("utf-8"),
+                                         "why": NOTE_WHY}, via="dashboard")
+    if code_ != 0:
+        return handler.send(200, {"ok": False, "message": msg})
+    notes_reindex()
+    meta, body = notes.parse(text)
+    return handler.send(200, {"ok": True, "code": code, "note": notes.summary(target, code), "body": body,
+                              "meta": {k: meta.get(k) for k in notes.FIELDS if k in meta}, "base": notes.text_sha(text),
+                              "message": msg})
+
+
+def notes_body(req):
+    """The body a request carries (None: unchanged), or False when it is too long."""
+    body = req.get("body")
+    if body is None:
+        return None
+    body = str(body)
+    return False if len(body) > NOTE_BODY_LIMIT else body
+
+
+def notes_draft_route(handler, req):
+    """Keep what Alan typed (the body and the front-matter changes) as the note's draft. No project file is written."""
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, _code, _p, rel = t
+    body = notes_body(req)
+    if body is False:
+        return handler.send(400, {"ok": False, "message": "That note is too long to save."})
+    at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
+    return handler.send(200, {"ok": True, "at": at})
+
+
+def notes_save_route(handler, req):
+    """Write the note's file through filechange.py (backed up, logged, undoable), unless it changed outside creaite since it was
+    opened (`base`): then nothing is written and the draft is kept."""
+    import filechange
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, code, p, rel = t
+    body = notes_body(req)
+    if body is False:
+        return handler.send(400, {"ok": False, "message": "That note is too long to save."})
+    with NOTES_LOCK:
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        if str(req.get("base") or "") != notes.text_sha(text):
+            notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""),
+                             datetime.now().strftime("%Y-%m-%d %H:%M:%S"))          # the typing is kept, never lost
+            return handler.send(200, {"ok": False, "conflict": True, "message": "This note was changed outside creaite since you "
+                                      "opened it, so it wasn't saved. Your typing is kept as a draft."})
+        new = notes.saved_text(text, body, req.get("changes"))
+        if new is None:
+            notes.drop_draft(rel)
+            return handler.send(200, {"ok": True, "unchanged": True, "note": notes.summary(p, code), "base": notes.text_sha(text)})
+        done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_WHY}, via="dashboard")
+        if done != 0:
+            return handler.send(200, {"ok": False, "wait": done == filechange.NEEDS, "message": msg})
+        notes.drop_draft(rel)
+    notes_reindex()
+    m = re.search(r"\(change (\d+)", msg)
+    return handler.send(200, {"ok": True, "note": notes.summary(p, code), "base": notes.text_sha(new),
+                              "change": int(m.group(1)) if m else None})
+
+
+NOTES_ROUTES = {"/api/notes/list": notes_list_route, "/api/notes/get": notes_get_route, "/api/notes/new": notes_new_route,
+                "/api/notes/draft": notes_draft_route, "/api/notes/save": notes_save_route}
+DRAFT_ROUTES.update(NOTES_ROUTES)              # dispatched with the drafts' routes (do_POST stays as it is)
+# ===== end BL-301 B =====
+
+# ===== BL-301 B gaps (v20-notes-gaps): a note's pictures, and a renamed title renames its file =====
+# POST /api/notes/image  {path, name, data}   a PNG or JPEG (2 MB at most) for the note at `path`, created through filechange.py in
+#                                             the notes folder's _images/ (a taken name gets a number); answers its reference
+# POST /api/notes/rename {path, base, old}    after a save that changed the title: the file renamed to match (a move through
+#                                             filechange.py) and the [[old]] links in other notes pointed at the new title
+# A move is sensitive in BL-141 ("it moves or renames a file that exists"): filechange.perform makes it only with a one-time
+# approval from this process (reach.APPROVALS). The rename is Alan's own act in the dashboard (he changed the title), so this route
+# issues that approval itself, bound to exactly this move, and only when the move's ONLY reason for approval is that it is a move:
+# the note and the new name must each be ordinary on their own (a note directly in a notes folder; never in a run marked by
+# outside content, never a settings file, never someone else's). Otherwise nothing is moved and the note keeps its name. A link in
+# another note is changed through filechange.py (ordinary: Alan's own notes); a note being typed in (it has a draft), or one
+# filechange won't change, is listed instead, never touched.
+NOTE_IMAGE_MAX = 40                         # pictures sent with an opened note at most
+NOTE_RENAME_WHY = "the note's title changed in the Notes tab"
+NOTE_RELINK_WHY = "a link to a note whose title changed"
+
+
+def note_image_data(code, ref):
+    """A note picture as a data URL for the editor, or None (not a PNG or JPEG directly in the notes folder's _images/)."""
+    import base64
+    import notes
+    base = notes.images(code)
+    p = base / ref.split("/", 1)[1]
+    try:
+        if p.parent.resolve() != base.resolve() or not p.is_file() or p.stat().st_size > UPLOAD_LIMIT or paths.is_online_only(p):
+            return None
+        raw = p.read_bytes()
+    except OSError:  # a picture that can't be read is shown as missing, never an error
+        return None
+    kind = "png" if raw.startswith(b"\x89PNG\r\n\x1a\n") else "jpeg" if raw.startswith(b"\xff\xd8\xff") else None
+    return f"data:image/{kind};base64,{base64.b64encode(raw).decode()}" if kind else None
+
+
+def note_images(code, body):
+    """{ref: data URL} of the pictures a note's body shows, for the editor (at most NOTE_IMAGE_MAX)."""
+    import notes
+    out = {}
+    for ref in notes.image_refs(body)[:NOTE_IMAGE_MAX]:
+        src = note_image_data(code, ref)
+        if src:
+            out[ref] = src
+    return out
+
+
+def notes_image_route(handler, req):
+    """A picture added to a note: checked (PNG or JPEG, 2 MB at most) and created through filechange.py in _images/."""
+    import base64
+    import filechange
+    import notes
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    _notes, code, _p, _rel = t
+    try:
+        raw = base64.b64decode(str(req.get("data") or ""), validate=True)
+    except ValueError:
+        return handler.send(400, {"ok": False, "message": "That picture couldn't be read."})
+    if len(raw) > UPLOAD_LIMIT:
+        return handler.send(413, {"ok": False, "message": "Pictures can be 2 MB at most."})
+    ext = "png" if raw.startswith(b"\x89PNG\r\n\x1a\n") else "jpg" if raw.startswith(b"\xff\xd8\xff") else None
+    if not ext:
+        return handler.send(415, {"ok": False, "message": "Only PNG or JPEG pictures."})
+    label = re.sub(r"\.[A-Za-z0-9]{1,5}$", "", str(req.get("name") or ""))
+    with NOTES_LOCK:
+        target = paths.free_path(notes.images(code), notes.image_name(label, ext)[:-len(ext) - 1], f".{ext}")
+        done, msg = filechange.perform({"op": "create", "path": paths.rel(target), "data": raw,
+                                        "why": "a picture added to a note in the Notes tab"}, via="dashboard")
+    if done != 0:
+        return handler.send(200, {"ok": False, "wait": done == filechange.NEEDS, "message": msg})
+    return handler.send(200, {"ok": True, "ref": f"{paths.NOTE_IMAGES}/{target.name}"})
+
+
+def notes_move_ordinary(rel, to):
+    """Whether the move's only reason for approval is that it is a move: the note (as a change) and the new name (as a create)
+    are each ordinary, as filechange.py judges them now (the run's mark and count included)."""
+    import filechange
+    return filechange.verdict("edit", rel)[0] == "ordinary" and filechange.verdict("create", to)[0] == "ordinary"
+
+
+def notes_relink(skip, old_names, title):
+    """Point [[old]] links in every other note at `title`, through filechange.py. ([changed paths], [{path, title, why}] listed)."""
+    import filechange
+    import notes
+    changed, listed = [], []
+    for code, _d in paths.project_folders():
+        for f in paths.note_files(code):
+            rel = paths.rel(f)
+            if rel == skip:
+                continue
+            try:
+                text = f.read_text(encoding="utf-8", errors="ignore")
+            except OSError:  # a note that went while the links were changed has none to change
+                continue
+            new = notes.relinked(text, old_names, title)
+            if new is None:
+                continue
+            name = str(notes.parse(text)[0].get("title") or f.stem)
+            if not notes.link_safe(title):
+                listed.append({"path": rel, "title": name, "why": "the new title can't stand in a [[…]] link"})
+            elif notes.read_draft(rel):
+                listed.append({"path": rel, "title": name, "why": "it has typing not yet saved"})
+            else:
+                done, msg = filechange.perform({"op": "edit", "path": rel, "data": new.encode("utf-8"), "why": NOTE_RELINK_WHY},
+                                               via="dashboard")
+                if done == 0:
+                    changed.append(rel)
+                else:
+                    listed.append({"path": rel, "title": name, "why": msg})
+    return changed, listed
+
+
+def notes_rename_route(handler, req):
+    """Rename a note's file to its title, after a save (`base`: the saved text's fingerprint), and change the links to it."""
+    import filechange
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, code, p, rel = t
+    with NOTES_LOCK:
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        if str(req.get("base") or "") != notes.text_sha(text):
+            return handler.send(200, {"ok": False, "message": "Not renamed: the note changed since it was saved."})
+        title = str(notes.parse(text)[0].get("title") or "").strip()
+        if not title or notes.name_fits(p, title):
+            return handler.send(200, {"ok": True, "renamed": False, "note": notes.summary(p, code)})
+        target = paths.free_path(notes.folder(code), notes.file_name(title), ".md")
+        to = paths.rel(target)
+        if not notes_move_ordinary(rel, to):
+            return handler.send(200, {"ok": False, "wait": True, "message": "Saved, but the file keeps its name: renaming it needs "
+                                      "your approval now (ask creaite has read outside content, or the file isn't only yours)."})
+        ch = {"op": "move", "path": rel, "to": to, "why": NOTE_RENAME_WHY}
+        token = reach.APPROVALS.issue(filechange.fingerprint(ch))         # Alan's own rename: this move, once, in this process only
+        done, msg = filechange.perform(ch, token, "dashboard")
+        if done != 0:
+            return handler.send(200, {"ok": False, "message": f"Saved, but the file keeps its name: {msg}"})
+        notes.drop_draft(rel)
+        old = [str(req.get("old") or ""), p.stem]
+        changed, listed = notes_relink(to, old, title)
+    notes_reindex()
+    m = re.search(r"\(change (\d+)", msg)
+    return handler.send(200, {"ok": True, "renamed": True, "from": rel, "note": notes.summary(target, code),
+                              "base": notes.text_sha(target.read_text(encoding="utf-8", errors="ignore")),
+                              "change": int(m.group(1)) if m else None, "relinked": changed, "listed": listed})
+
+
+DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
+                     "/api/notes/rename": notes_rename_route})
+# ===== end BL-301 B gaps =====
+
 # ===== Debug log (BL-102 part 2, stage A) =====
 # What the live server does is recorded through log.py. It is installed by wrapping the code above, so that code is left
 # as it is. Nothing from a request body, a prompt or a reply is ever logged: only routes, status codes, times, run IDs,
@@ -6178,6 +6698,150 @@ def swallowed(where, e):
     if debuglog:
         debuglog.debug("server", f"{where}: {type(e).__name__} ignored")
 # ===== end BL-228 =====
+
+# ===== BL-301 E (v20-find-updates): Find updates, from a note to the tracker =====
+# The panel beside a note (notes_find.py, a library: no command line, so no reach.SCRIPT_COMMANDS entry):
+#   /api/notes/find {path, p?, confirm?}   the note's new or changed lines (or line p) to Claude through the run engine, streamed (one
+#                                          run at a time, Stop); the run is "notes-find": no tools at all, every reading tool denied
+#                                          (as BL-286's closed run), so Claude sees only the lines, the IDs and the names it is given.
+#                                          A confidential note asks first (`confirm`). The "draft" event carries the checked rows.
+#   /api/notes/apply {path, rows, mode}    the ticked rows: "apply" stages them approved (source_run "note") and runs tracker.py apply
+#                                          on that one proposal, here, as Alan's own click (the dashboard's apply path; no Claude run
+#                                          is involved, so BL-267's record gate isn't crossed); "later" stages them pending for Review.
+#                                          notes-sent.json records the lines (fingerprints and IDs, never text).
+#   /api/notes/undo {path, apply_id}       Undo: tracker.py undo of that apply when it is still the latest; its lines are new again.
+KIND_TOOLS["notes-find"] = []
+KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])
+
+
+class FindJob:
+    """The run engine's job hook for Find updates: at the run's end Claude's reply is checked by plain code (notes_find.rows) and the
+    rows go to the page as one "draft" event. The raw reply is never streamed."""
+    quiet = True
+
+    def __init__(self, ctx):
+        self.ctx, self.run, self.ready = ctx, None, threading.Event()
+
+    def observe(self, *_):
+        """The job hook's tool observer: the run has no tools."""
+        return None
+
+    def finish(self):
+        """At the run's end: the reply checked by notes_find.rows, sent as one "draft" event (counts only in the debug log)."""
+        import notes_find
+        self.ready.wait(5)
+        reply = "\n\n".join(self.run.said) if self.run else ""
+        try:
+            got = notes_find.rows(self.ctx, reply) if reply.strip() else None
+        except Exception as e:  # noqa: BLE001  a fault is the page's message, never a crash
+            got = None
+            if globals().get("debuglog") is not None:
+                debuglog.warn("notes", f"find {self.run.id if self.run else ''}: rows failed ({type(e).__name__})")
+        if self.run:
+            if got is not None and globals().get("debuglog") is not None:      # counts only, never a line of the note
+                debuglog.info("notes", f"find {self.run.id}: {len(got['rows'])} row(s), {got['quiet']} quiet line(s)")
+            self.run.emit("draft", ok=got is not None, **({"items": got["rows"], **{k: v for k, v in got.items() if k != "rows"}}
+                                                          if got is not None else {"message": "No updates came back."}))
+        return {"status": None, "files": [], "message": ""}
+
+
+def note_path(req):
+    """The request's note path (a stored projects/… path), or ""."""
+    p = req.get("path") if isinstance(req, dict) else None
+    return p if isinstance(p, str) and len(p) <= 600 and p.startswith("projects/") else ""
+
+
+def notes_find_route(handler, req):
+    """POST /api/notes/find: Find updates on one note (BL-301 E), streamed like /api/draft. Nothing is staged or written."""
+    import notes_find
+    rel = note_path(req)
+    if not rel:
+        return handler.send(400, {"ok": False, "message": "Which note?"})
+    busy = current_run()
+    if busy and not busy.done:
+        return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
+    only = req.get("p") if isinstance(req.get("p"), int) and req["p"] > 0 else None
+    ctx = notes_find.context(rel, only)
+    if ctx.get("refused") or ctx.get("nothing"):
+        return handler.send(200, {"ok": bool(ctx.get("nothing")), "nothing": ctx.get("nothing"), "message": ctx.get("refused"),
+                                  "sent": ctx.get("sent", 0)})
+    if ctx.get("confidential") and req.get("confirm") is not True:      # BL-301: a confidential note asks once before Claude sees it
+        return handler.send(200, {"ok": False, "confidential": True,
+                                  "message": "This note is confidential. Send its new lines to Claude to find updates?"})
+    ctx["rel"] = rel
+    run_id = req.get("run") if isinstance(req.get("run"), str) and re.fullmatch(r"[A-Za-z0-9-]{6,64}", req["run"]) \
+        else f"n-{secrets.token_hex(6)}"
+    job = FindJob(ctx)
+    try:
+        r = Run(run_id, ctx["prompt"], None, None, None, kind="notes-find", job=job, label="Finding updates in the note")
+    except OSError as e:
+        return handler.send(200, {"ok": False, "message": f"Couldn't start Claude Code ({e})."})
+    job.run = r
+    job.ready.set()
+    if globals().get("debuglog") is not None:
+        debuglog.info("notes", f"find {run_id}: {len(ctx['lines'])} new line(s), {ctx['sent']} already sent")
+    r.emit("sources", feature="find", draft_kind="find", sources=[], lines=ctx["lines"], confidential=bool(ctx.get("confidential")))
+    return handler.follow(r)
+
+
+def notes_apply_route(handler, req):
+    """POST /api/notes/apply {path, rows, mode}: the ticked rows as one proposal (source_run "note"); "apply" applies it at once as one
+    apply (Undo reverses all of it), "later" leaves it pending in Review."""
+    import notes_find
+    rel, mode = note_path(req), req.get("mode")
+    if not rel or mode not in ("apply", "later") or not isinstance(req.get("rows"), list) or len(req["rows"]) > 80:
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    with LOCK:
+        got = notes_find.stage(rel, req["rows"], mode)
+        if not got.get("ok"):
+            return handler.send(200, got)
+        name = got["file"]
+        if mode == "later":
+            ids = notes_find.record(rel, name)
+            n = got["items"] + got["files"]
+            return handler.send(200, {"ok": True, "later": True, "file": name, "ids": ids,
+                                      "message": f"{n} change{'s' if n != 1 else ''} saved for Review"})
+        return handler.send(200, notes_apply_now(rel, got))
+
+
+def notes_apply_now(rel, got):
+    """tracker.py apply on the one note proposal `got["file"]` (one apply); then what each line became goes to notes-sent.json. When
+    nothing could be applied the proposal is removed, so no approved change is left for the next apply."""
+    import notes_find
+    name = got["file"]
+    code, out = run("tracker.py", "apply", name)
+    apply_id, staged = latest_apply(), paths.STAGING / name
+    applied = not staged.exists() or any(it.get("applied") for it in json.loads(staged.read_text(encoding="utf-8")).get("items") or [])
+    if code != 0 or not applied:
+        if staged.exists() and not applied:
+            staged.unlink()
+        return {"ok": False, "message": out.strip().splitlines()[-1] if out.strip() else "The apply stopped."}
+    ids, n = notes_find.record(rel, name, apply_id), got["items"] + got["files"]
+    import notes
+    return {"ok": True, "apply_id": apply_id, "ids": ids, "file": name, "held": staged.exists(), "sent": note_sent_lines(notes, rel),
+            "message": f"{n} change{'s' if n != 1 else ''} applied to {notes_find.note_of(rel).get('name', '')}"}
+
+
+def notes_undo_route(handler, req):
+    """POST /api/notes/undo {path, apply_id}: Undo in the snackbar: tracker.py undo, only when that apply is still the latest; the
+    note's lines it sent count as new again."""
+    import notes_find
+    rel, aid = note_path(req), req.get("apply_id")
+    if not rel or not isinstance(aid, int):
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    with LOCK:
+        if latest_apply() != aid:
+            return handler.send(200, {"ok": False, "message": "A later change has been applied since; undo that first "
+                                                               "(Activity, or “undo last apply”)."})
+        code, out = run("tracker.py", "undo")
+        if code == 0:
+            notes_find.forget(rel, aid)
+        import notes
+        return handler.send(200, {"ok": code == 0, "message": out, "sent": note_sent_lines(notes, rel)})
+
+
+DRAFT_ROUTES.update({"/api/notes/find": notes_find_route, "/api/notes/apply": notes_apply_route, "/api/notes/undo": notes_undo_route})
+# ===== end BL-301 E =====
 
 QUIET_ROUTES = ("/health", "/api/here", "/api/ask/running", "/api/files", "/api/pulse",
                 "/api/events", CSP_REPORT_ROUTE)          # polled often (BL-253: the change stream too; BL-255: the policy's

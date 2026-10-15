@@ -95,31 +95,8 @@ export async function choosePrep(code){ const m=prepOf(shared.PREPEV); if(!m||!c
   Object.values(D.prep.meetings).forEach(x=>{ if(x.series===m.series){ x.p=code; x.how=kept?"remembered":"chosen"; } }); drawPrep(); if(kept) snack("Remembered for this series"); }
    /* those handlers stop the click early */
 
-/* BL-54 quick capture (on the Inbox page, below the files: BL-66): rough notes from a conversation with no transcript. Process saves the note as
-   projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick note - <title>.md (/api/capture; the project is matched from the
-   note if not chosen) and runs cx-minutes on it through the run engine, as the Inbox does: proposals in Review, no
-   Word minutes. Also "Quick capture" in ⌘K, and "note: …" in ask creaite. Needs the live server. */
-     /* BL-73: inside the Quick capture section */
-export function qcFill(){ const sel=$("#qcProj"), cur=sel.value;      /* the list is always current: at load, on open and after every data reload */
-  putHTML(sel,html`<option value="">Match from the note</option>${P.map(p=>html`<option value="${p.code}">${p.name}</option>`)}`); sel.value=cur; }
-export function qcOpen(show){ const was=$("#qcMore").hidden; $("#qcMore").hidden=!show; if(show&&(was||!$("#qcDate").value)) $("#qcDate").value=fd(TODAY);    /* BL-74: today whenever the form opens */
-  qcFill();
-  $("#qcGo").disabled=!viaServer()||!!shared.RUN; $("#qcMsg").textContent=!viaServer()?"Quick capture needs the live server.":shared.RUN?"ask creaite is busy; process when it's finished.":""; }
-export const QCK="creaite-qc-draft"; shared.QCT=null;   /* BL-157: the unsent note kept in this browser, and its save timer */
-export function qcClear(){ clearTimeout(shared.QCT); store.set(QCK,""); ["qcNotes","qcWho","qcTitle"].forEach(id=>$("#"+id).value=""); $("#qcProj").value=""; $("#qcDate").value=fd(TODAY); $("#qcMsg").textContent=""; qcOpen(false); }
-export function openCapture(notes){ go("inbox"); if(notes!=null) $("#qcNotes").value=notes; qcOpen(true); $("#qcDate").value=fd(TODAY); $("#qcNotes").focus(); }
-export async function captureNote(f){ const r=await api("/api/capture",f);
-  if(!r.ok){ openCapture(f.notes); if(f.date) $("#qcDate").value=fd(f.date); $("#qcMsg").textContent=oneLine(r.message||"The note wasn't saved."); if(r.candidates) $("#qcProj").focus(); return false; }
-  openChat(); addEl("msg u",html`${`Quick capture: ${r.title} (${pName(r.code)}${r.matched?", matched from the note":""})`}`);
-  try{ await askLive(`process ${r.path}`,`Process the quick note "${r.title}" (${pName(r.code)}) into proposed items, without Word minutes`); } finally{ await reloadData(); }
-  return true; }
-export async function qcProcess(){ const notes=$("#qcNotes").value.trim(), dd=$("#qcDate").value.trim();
-  if(!notes){ $("#qcMsg").textContent="Write the note first."; return; }
-  if(dd&&(!DDATE.test(dd)||toIso(dd)>TODAY)){ $("#qcMsg").textContent=DDATE.test(dd)?"The date can't be after today.":"Not a date creaite knows. "+DATE_HELP; $("#qcDate").focus(); return; }   /* BL-147: the date is typed too */
-  if(!viaServer()||shared.RUN){ qcOpen(true); return; }
-  const f={notes,code:$("#qcProj").value,date:dd&&DDATE.test(dd)&&toIso(dd)<=TODAY?toIso(dd):TODAY,who:$("#qcWho").value.trim(),title:$("#qcTitle").value.trim()};
-  $("#qcGo").disabled=true; if(await captureNote(f)) qcClear(); else $("#qcGo").disabled=false; }
-     /* still focused after Clear or Process: a click reopens it */
+/* BL-54's Quick capture form (FR-71) is replaced by the capture drawer (BL-301 C, components/notes/CaptureDrawer.jsx): ⌘⇧N,
+   ⌘K "New note" and "note: …" in ask creaite save a note in the project's notes folder. Old quick notes stay in minutes/. */
  
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootMeetings0126(){
@@ -133,18 +110,6 @@ document.addEventListener("click",e=>{ const g=e.target.closest("[data-prepgo]")
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-prepday]"); if(!b) return; e.preventDefault(); const day=b.dataset.prepday;
   const ev=(((D.calendar||{}).days||{})[day]||[]).find(x=>!x.all_day&&x.start===b.dataset.start&&x.title===b.dataset.title); if(ev) openPrep(ev,day); });
 document.addEventListener("click",e=>{ if(e.target.closest("#prepDlg [data-nav], #prepDlg [data-proj]")) $("#prepDlg").close(); },true);
-putHTML($("#isecQuickBody"),html`<div class="qcap" id="qcap"><label for="qcNotes" class="vh">Quick capture notes</label>
-  <textarea id="qcNotes" rows="2" placeholder="Notes from a call or a conversation: what was agreed, who will do what by when, any new risk…"></textarea>
-  <div class="qcrow" id="qcMore" hidden><label>Project <select id="qcProj"></select></label><div class="qcf"><label for="qcDate">Date</label><span class="dwrap qcdate"><input id="qcDate" type="text" data-max="today" data-noclear size="12" autocomplete="off" aria-describedby="qcMsg"><button type="button" class="dbtn" data-cal="qcDate" aria-label="Choose date">${raw(CALI)}</button></span></div>
-    <label>Who was there <input id="qcWho" placeholder="Sara, Omar"></label><label class="qct">Title <input id="qcTitle" placeholder="From the first line"></label><span class="sp"></span>
-    <button class="btn" id="qcCancel" type="button">Clear</button><button class="btn primary" id="qcGo" type="button">Process</button></div>
-  <div class="sub" id="qcMsg" aria-live="polite"></div></div>`);
-qcFill();
-$("#qcNotes").addEventListener("focus",()=>qcOpen(true));
-$("#qcNotes").addEventListener("click",()=>{ if($("#qcMore").hidden) qcOpen(true); });
-$("#qcNotes").addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); qcProcess(); } });
-$("#qcGo").onclick=qcProcess;
-$("#qcCancel").onclick=qcClear;
 }
 /* ===== Decisions and schema (BL-53, sprint 5) ===== */
 /* A decision can be Pending before it is made: it has a decision maker (who it is asked of), a needed-by date (`due` here) and no

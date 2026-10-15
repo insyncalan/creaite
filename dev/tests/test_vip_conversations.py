@@ -125,7 +125,8 @@ class ConversationServerTests(unittest.TestCase):
         self.wait_for(lambda g: len(g["alerts"]) == 2, "two conversations")
         args = json.loads((self.v.root / "vip-call-1.json").read_text())
         self.assertEqual(args[args.index("--allowedTools") + 1].split(","), TOOLS)          # unchanged allow list
-        prompt = args[args.index("-p") + 1]
+        prompt = args[args.index("--") + 1]
+        self.assertEqual(args[-2:], ["--", prompt])                    # #91: the prompt last, after `--`, never an option
         self.assertIn("one object per conversation", prompt)
         self.assertIn("everyone's messages", prompt)
         self.assertIn("Never use the word VIP in a gist, a summary, an item or anywhere in the reply", prompt)

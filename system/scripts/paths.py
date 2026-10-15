@@ -25,8 +25,8 @@ INBOX       = ROOT / "inbox"
 # Projects. Where they live is the `locations` setting (BL-85): by default the vault's own projects/ folder; with
 # `locations.projects_root` set, the engagement folders (and the portfolio folder) live there, e.g. in the company OneDrive.
 # PROJECTS, PORTFOLIO, REGISTER, PORTFOLIO_MEMORY and PEOPLE_REGISTER are therefore worked out on each use (see __getattr__ below).
-PROJECT_SUBFOLDERS = ("minutes", "transcripts", "documents", "reports")      # the default layout's subfolders
-EXTRACT_FROM = ("minutes", "transcripts")          # documents and reports are never extracted
+PROJECT_SUBFOLDERS = ("minutes", "transcripts", "documents", "reports", "notes")      # the default layout's subfolders (notes: BL-301)
+EXTRACT_FROM = ("minutes", "transcripts")          # documents, reports and notes are never extracted
 
 # System (engine; not edited by hand)
 SYSTEM      = ROOT / "system"
@@ -52,6 +52,7 @@ CALENDAR    = STAGING / "calendar.json"             # Alan's meetings, today and
 MENTIONS    = STAGING / "mentions.jsonl"            # open items raised again in a later meeting or sweep (BL-51 early warnings)
 INTAKE_CLEARED = STAGING / "intake-cleared.json"   # meetings set aside in Intake's Calendar import (BL-104 Clear day); never processed.txt
 TRANSCRIPTS = STAGING / "transcripts.json"       # each meeting's transcript status from the sweep (BL-42 phase 3): never text, a passcode or a PIN
+NOTES_SENT  = STAGING / "notes-sent.json"        # BL-301: what Find updates applied from each note (paragraph, fingerprint, IDs)
 MINUTES_TEMPLATE = TEMPLATES / "minutes-template.docx"
 WEEKLY_TEMPLATE  = TEMPLATES / "weekly-report-template.docx"
 CLIENT_TEMPLATE  = TEMPLATES / "client-report-template.docx"
@@ -130,7 +131,8 @@ LOCATION_DEFAULTS = {"projects_root": "", "portfolio": "_Portfolio", "skeleton":
                                  "weekly_reports": "04 Reporting/Weekly", "client_reports": "04 Reporting/Weekly",
                                  "adhoc_documents": "04 Reporting/Adhoc", "images": "04 Reporting/Content",
                                  "steerco": "04 Reporting/Steerco",       # BL-93, BL-87: listed in Files; creaite may file into it when asked
-                                 "agendas": "02 Meetings/Agendas"},                    # BL-98: meeting prep pages
+                                 "agendas": "02 Meetings/Agendas",                     # BL-98: meeting prep pages
+                                 "notes": "08 Notes"},                                 # BL-301: Alan's notes, made on the first note
                      "never_index": ["_Archive", "_Templates", "99 System"],     # BL-112: 99 System holds the backup copies
                      "offsite_backup": "_Portfolio/99 System/creaite backups"}
 ARCHIVE = "_Archive"               # BL-09: archived projects (<projects root>/_Archive/<folder>) and each engagement's own archive folder
@@ -138,7 +140,8 @@ OLD_ARCHIVE = "zz Archive"         # BL-09: the old name, still skipped for one 
 ALWAYS_NEVER_INDEX = (ARCHIVE, "_Templates", "99 System")      # skipped whatever the saved list says (BL-112, BL-09)
 DEFAULT_FOLDERS = {"minutes": "minutes", "transcripts": "transcripts", "weekly_reports": "reports", "client_reports": "reports",
                    "adhoc_documents": "reports", "images": "images", "documents": "documents", "steerco": "reports/Steerco",
-                   "agendas": "agendas"}   # the default layout (Steerco its own folder so Files can label it; agendas: BL-98)
+                   "agendas": "agendas", "notes": "notes"}   # the default layout (Steerco its own folder so Files can label it;
+#                                                               agendas: BL-98; notes: BL-301)
 LOGICAL = "projects"
 LOGICAL_PORTFOLIO = "projects/_portfolio"
 
@@ -386,7 +389,7 @@ def project_folders() -> list:
 
 def folder_name(kind: str) -> str:
     """The folder for a kind of file, relative to the engagement folder: transcripts, minutes, weekly_reports, client_reports,
-    adhoc_documents, images, agendas (documents has no folder of its own with an outside root: see document_files)."""
+    adhoc_documents, images, agendas, notes (documents has no folder of its own with an outside root: see document_files)."""
     return (locations()["folders"] if external() else DEFAULT_FOLDERS).get(kind) or DEFAULT_FOLDERS[kind]
 
 
@@ -425,7 +428,8 @@ def skipped_names() -> list:
 
 def _excluded_dirs(code: str) -> list:
     base = portfolio_dir() if code == "_portfolio" else project_dir(code)
-    skip = [folder(code, k) for k in ("minutes", "transcripts", "weekly_reports", "client_reports", "adhoc_documents", "images", "steerco", "agendas")]   # BL-135: agendas are their own kind in Files
+    kinds = ("minutes", "transcripts", "weekly_reports", "client_reports", "adhoc_documents", "images", "steerco", "agendas", "notes")
+    skip = [folder(code, k) for k in kinds]   # BL-135: agendas are their own kind in Files; BL-301: so are notes
     return skip, [base / n for n in skipped_names()]
 
 
@@ -470,6 +474,35 @@ def document_files(code: str, online: bool = False) -> list:
     return out
 
 
+# ===== BL-301 (v20-notes-server): notes, one Markdown file each, flat in the notes folder; pictures in its _images folder
+NOTE_IMAGES = "_images"
+
+
+def note_files(code: str, online: bool = False) -> list:
+    """A project's (or _portfolio's) notes: the .md files directly in its notes folder, by name. The folder is made on the first
+    note, so a project without one has none. Hidden and online-only files are left out (unless `online`)."""
+    d = folder(code, "notes")
+    if not d.is_dir():
+        return []
+    return [f for f in sorted(d.iterdir()) if f.is_file() and f.suffix.lower() == ".md" and not f.name.startswith((".", "~$"))
+            and (online or not is_online_only(f))]
+
+
+def is_note(p) -> bool:
+    """Whether the real or stored path `p` is a note: a .md file directly in a project's or the portfolio's notes folder."""
+    p = (resolve(p) if not Path(str(p)).is_absolute() else Path(p)).resolve()
+    if p.suffix.lower() != ".md":
+        return False
+    area = project_area(p)
+    if area is None:
+        return False
+    try:
+        return p.parent == folder(area[0], "notes").resolve()
+    except (LookupError, OSError):          # a project without a folder: no notes
+        return False
+# ===== end BL-301 =====
+
+
 REPORT_LABELS = (("steerco", "Steerco"), ("weekly_reports", "Weekly"), ("client_reports", "Weekly"), ("adhoc_documents", "Adhoc"))
 
 
@@ -493,6 +526,7 @@ def report_files(code: str, online: bool = False) -> list:
 
 def project_files(code: str, online: bool = False, documents: bool = True) -> list:
     """[(file, kind, sub)] for one project: minutes, transcripts, agendas (BL-135: their own kind, `sub` the folder path below Agendas),
+    notes (BL-301: their own kind, the note files only: the pictures in _images are not listed),
     reports (Steerco, weekly, client and ad hoc folders) and documents, wherever the `locations` setting puts them. `sub` is a report's folder label (Steerco, Weekly, Adhoc: BL-87) or a
     document's folder path below its root, joined with " › ". `documents=False` leaves documents out and doesn't walk them
     (the Files page's default: the bulk of a large OneDrive); search indexing still reads them."""
@@ -513,6 +547,10 @@ def project_files(code: str, online: bool = False, documents: bool = True) -> li
         seen.add(ag.resolve())
         out.extend((f, "agendas", " › ".join(f.relative_to(ag).parts[:-1])) for f in sorted(ag.rglob("*"))
                    if f.is_file() and not f.name.startswith((".", "~$")) and (online or not is_online_only(f)))
+    nd = folder(code, "notes")
+    if nd.is_dir() and nd.resolve() not in seen:          # BL-301: notes are their own kind, never documents
+        seen.add(nd.resolve())
+        out.extend((f, "notes", "") for f in note_files(code, online))
     out.extend((f, "reports", label) for f, label in report_files(code, online))
     if documents:
         root = base if external() else base / "documents"

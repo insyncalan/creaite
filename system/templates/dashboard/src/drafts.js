@@ -12,7 +12,7 @@ import { CALI, closeCal, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { HUB, putHtml, QCK, qcOpen } from "./meetings.js";
+import { HUB, putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
 import { DRAFTKIND, GEN_AUD, GEN_FORMS } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
@@ -253,14 +253,11 @@ document.addEventListener("click",e=>{ if(!shared.DE) return; const t=e.target;
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-defollow]"); if(b){ e.preventDefault(); e.stopPropagation(); openFollowup(b.dataset.defollow); } },true);
 }
 /* ===== BL-157 (sprint-ux) ===== fixes from the one-off UX sweep (each under an hour; the rest are BL-165 onwards):
-   an empty Activity and an empty Projects page say what to do next (baseline check 6), and Quick capture's unsent note is kept
-   in this browser across a reload and cleared by Process or Clear (check 3). */
+   an empty Activity and an empty Projects page say what to do next (baseline check 6), and Quick capture's unsent note was kept
+   in this browser (check 3; the capture drawer, BL-301 C, keeps its drafts on the server now). */
 /* ===== end BL-157 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootDrafts0160(){
-{ const el=$("#qcNotes");
-  if(el){ const d=store.get(QCK,""); if(d&&!el.value){ el.value=d; qcOpen(true); }
-    el.addEventListener("input",()=>{ clearTimeout(shared.QCT); shared.QCT=setTimeout(()=>store.set(QCK,el.value),250); }); } }
 }
 /* ===== AI drafts: the scaffold (sprint-drafts-fields; used by drafts-extraction and drafts-writing) =====
    A draft is a suggestion, never a write: it lands in an unsaved field, a pending proposal or a dialog, and nothing is saved, applied
@@ -301,7 +298,7 @@ export async function draftAsk(body,o={}){ const status=o.status||(()=>{});
     try{ res=await fetch(o.url||"/api/draft",{method:"POST",signal:ctl.signal,headers:{"Content-Type":"application/json","X-Creaite-Token":D.token},body:JSON.stringify({...body,run:id})}); }   /* o.url: BL-296's /api/alerts/draft */
     catch(e){ return {ok:false,message:"The live server isn't reachable"}; }
     if(!res.ok||!res.body||(res.headers.get("Content-Type")||"").includes("json")){ const j=await res.json().catch(()=>({}));
-      return {ok:!!j.ok&&!!j.nothing,nothing:j.nothing||"",off:!!j.off,message:res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message||"")||"The draft couldn't be started"}; }
+      return {ok:!!j.ok&&!!j.nothing,nothing:j.nothing||"",off:!!j.off,confidential:!!j.confidential,message:res.status===404&&j.message==="Not found"?OLDSERVER:oneLine(j.message||"")||"The draft couldn't be started"}; }
     started=true; rbStart(o.label||"Drafting with Claude");
     const rd=res.body.getReader(), dec=new TextDecoder(); let buf="";
     for(;;){ let c; try{ c=await rd.read(); }catch(e){ out.stopped=true; break; } if(c.done) break; buf+=dec.decode(c.value,{stream:true}); let i;
@@ -449,12 +446,6 @@ export function shRvHtml(r){ if(!r||r.done||r.kind!=="actions"||(S.drafting&&S.d
 export function ckChipsHtml(c){ if(c.k!=="actions"||!c.new) return ""; c.chips=capChips(c.new.t,c.new.p,{...c.new,o:c.new.o==="TBC"?"":c.new.o,pr:""}).filter(x=>!(x.f==="pr"&&x.v===c.new.pr));
   const v=vagueWhy(c.new.t);
   return `${c.chips.length?`<div class="ckchips" role="group" aria-label="Suggested fields">${c.chips.map((x,i)=>`<button type="button" class="chip capchip" data-ckchip="${i}" title="Suggested ${esc(x.why)}; click to set it">+ ${esc(x.label)}</button>`).join("")}</div>`:""}${v?`<div class="sub ckvague">The title is vague (${esc(v)}): write what is to be done, or stage it and Sharpen it in the item.</div>`:""}`; }
-export function qcLine(){ const ta=$("#qcNotes"), v=ta.value, at=ta.selectionStart??v.length, a=v.lastIndexOf("\n",at-1)+1, b=v.indexOf("\n",at); return {a,b:b<0?v.length:b,text:v.slice(a,b<0?v.length:b)}; }
-export function qcChipsDraw(){ const ln=qcLine(), code=$("#qcProj").value||(P.find(p=>new RegExp(`\\b${p.code}\\b`).test(ln.text))||{}).code||"";
-  const words={o:"owner",due:"due",ws:"workstream",ms:"milestone",pr:"priority"};
-  capChipsDraw($("#qcChips"),ln.text.trim().split(/\s+/).length>=3?capChips(ln.text,code,{}).filter(c=>!new RegExp(`\\b${words[c.f]}\\b`,"i").test(ln.text)):[],c=>{
-    const ta=$("#qcNotes"), cur=qcLine(), v=ta.value, show=c.f==="due"?fd(c.v):c.f==="ms"?c.label.replace(/^Milestone: /,""):c.v, add=` (${words[c.f]} ${show})`;
-    ta.value=v.slice(0,cur.b)+add+v.slice(cur.b); ta.focus(); ta.selectionStart=ta.selectionEnd=cur.b+add.length; qcChipsDraw(); }); }
 /* ===== end BL-220 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootDrafts0204(){
@@ -473,7 +464,4 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-shrv]"); 
   setTimeout(()=>{ const t=$('#pkChips [data-draft="sharpen"]'); if(t) t.click(); else snack("This title isn't vague any more"); },0); },true);
 document.addEventListener("click",e=>{ const b=e.target.closest("#cmdk [data-ckchip]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const it=shared.CK[shared.CKI], c=it&&it.change, ch=c&&c.chips&&c.chips[+b.dataset.ckchip]; if(!ch||!c.new) return; c.new[ch.f]=ch.v; drawCk(); $("#cmdkIn").focus(); },true);
-/* Quick capture: chips for the line being written; a click adds that field to the line, in words cx-minutes reads */
-{ const host=document.createElement("div"); host.id="qcChips"; host.className="qcchips"; host.setAttribute("role","group"); host.setAttribute("aria-label","Suggested fields for this line"); $("#qcNotes").after(host); }
-["input","click","keyup"].forEach(ev=>$("#qcNotes").addEventListener(ev,()=>qcChipsDraw()));
 }

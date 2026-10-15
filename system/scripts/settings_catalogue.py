@@ -69,7 +69,8 @@ FIXED = ("excel.export", "live_mode.required", "live_mode.port", "assistant.enab
          "workstreams.added", "workstreams.hidden", "locations.projects_root", "locations.portfolio", "locations.skeleton",
          "locations.folders.transcripts", "locations.folders.minutes", "locations.folders.weekly_reports",
          "locations.folders.client_reports", "locations.folders.adhoc_documents", "locations.folders.images",
-         "locations.folders.steerco", "locations.folders.agendas", "locations.never_index", "locations.offsite_backup")
+         "locations.folders.steerco", "locations.folders.agendas", "locations.folders.notes", "locations.never_index",
+         "locations.offsite_backup")
 FIXED_WHY = {
     "excel.export": "a description of how the export runs, not a choice",
     "live_mode.required": "the dashboard needs the live server (IT-approved); not a choice",
@@ -351,6 +352,8 @@ CATALOGUE = {
     "locations.folders.steerco": ("Folders and OneDrive", "Steerco folder", "Inside each engagement.", "As in your engagement template."),
     "locations.folders.agendas": ("Folders and OneDrive", "Agendas folder", "Where prep pages and agendas are saved.",
                                   "Beside the meetings, as in your template."),
+    "locations.folders.notes": ("Folders and OneDrive", "Notes folder", "Where each engagement's notes are saved (BL-301).",
+                                "Its own folder, as in your template; made on the first note."),
     "locations.never_index": ("Folders and OneDrive", "Never read", "Folders creaite never reads or indexes.",
                               "Archive, templates and creaite's own files are never project content."),
     "locations.offsite_backup": ("Folders and OneDrive", "OneDrive backup copy folder", "Where the daily backup's closed copy goes.",
