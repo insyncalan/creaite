@@ -82,10 +82,11 @@ To update a live vault, say **"update creaite"**: with `gh` installed and signed
 
 | Document | Purpose |
 |----------|---------|
-| [`dev/START-HERE.md`](dev/START-HERE.md) | GitHub and Claude Code setup; development repo vs live vault |
+| [`dev/HOW-WE-WORK.md`](dev/HOW-WE-WORK.md) | How development is run: the Head, the teams, the board, pull requests and worktrees |
+| [`dev/HEAD-LOG.md`](dev/HEAD-LOG.md) | Every development decision, newest first |
 | [`dev/SETUP.md`](dev/SETUP.md) | New-machine checklist, Outlook rules, releasing and updating |
 | [`dev/BUILD.md`](dev/BUILD.md) | The build plan, step by step |
-| [`dev/HANDOVER.md`](dev/HANDOVER.md) | Every design decision |
+| [`dev/archive/HANDOVER.md`](dev/archive/HANDOVER.md) | The design decisions to v1.9.3 (archived) |
 | [`dev/BRD.md`](dev/BRD.md) | Requirements |
 | [`dev/BACKLOG.md`](dev/BACKLOG.md) | Backlog |
 | [`dev/staging-format.md`](dev/staging-format.md) | Proposal format and Excel round-trip |

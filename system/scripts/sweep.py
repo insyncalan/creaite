@@ -1036,6 +1036,7 @@ def msg_record(st, m, vips, how, have):
              "subject": " ".join(str(m.get("subject") or "(no subject)").split())[:200],
              "sent": str(m.get("sent") or "")[:16], "link": str(m.get("link") or "")[:1000] or None,
              "p": vip_project(m), "gist": " ".join(str(m.get("gist") or "").split())[:GIST], "marker": marker_of(m),
+             **({"confidential": True} if marker_of(m) == "confidential" else {}),
              "found": how, "at": now().strftime("%Y-%m-%d %H:%M"), "seen": None}
     st["alerts"].append(alert)
     have.add(aid)
@@ -1186,6 +1187,7 @@ def conv_record(st, m, vips, how, held):
              "who": vips[followed], "address": followed, "found": how, "at": now().strftime("%Y-%m-%d %H:%M"),
              "seen": None, "candidates": []}
         st["alerts"].append(a)
+    a.pop("confidential", None)                                        # set again below while it is still confidential
     a.update(conv_content(m, conv_people(people_raw, vips), people_raw))
     return conv_finish(a, last, m.get("link"))
 
@@ -1204,9 +1206,10 @@ def conv_finish(a, last, link):
     """Merge the candidates, set the quiet flag and the times; a card seen before comes back when there is something new."""
     a["candidates"] = conv_merge(a.get("candidates") or [], a.pop("_cands"))
     fresh = any(not (c.get("made") or c.get("dismissed")) for c in a["candidates"])
-    a.update({"quiet": not a["marker"] and not fresh, "sent": last, "last": last,
+    private = a["marker"] == "private"                                 # a confidential one is a card like any other
+    a.update({"quiet": not private and not fresh, "sent": last, "last": last,
               "updated": now().strftime("%Y-%m-%d %H:%M"), "link": str(link or a.get("link") or "")[:1000] or None})
-    if a.get("seen") and (fresh or a["marker"]):
+    if a.get("seen") and (fresh or private):
         a["seen"] = None                                               # carried on with something new: back on Today
     return a
 
@@ -1241,19 +1244,26 @@ def conv_people(people_raw, vips):
 
 def conv_content(m, people, people_raw):
     """What a conversation's card shows: its title, people, attachment names, project, summary and marker, and its
-    candidates under "_cands". A private or confidential one keeps only a neutral line, the people as its title and no
-    project or candidates."""
+    candidates under "_cands". A private one keeps only a neutral line, the people as its title and no project or
+    candidates. A confidential one (Alan, 15-10-2026, plan #17) keeps Claude's own summary and candidates like any other,
+    marked "confidential": true: internal only, so no attachment names, and anything made from it is never client-visible
+    and carries the Sensitive label (vip_make); it never reaches a client report."""
     marker = marker_of(m)
     attachments = [_clean(x, 120) for x in (m.get("attachments") or []) if str(x or "").strip()][:20]
-    if marker:
+    if marker == "private":
         title = ", ".join(people[:4]) or "Conversation"
         return {"subject": title, "title": title, "people": people[:12], "attachments": [], "p": None,
                 "summary": f"{marker} conversation", "gist": f"{marker} conversation", "marker": marker, "_cands": []}
+    closed = marker == "confidential"
+    if closed:
+        attachments = []
     summary, cands = _clean(m.get("summary") or m.get("gist"), SUMMARY), conv_candidates(m.get("items"))
+    if closed and re.fullmatch(r"(private|confidential)( conversation)?", summary, re.I):
+        summary = ""                                                    # an older reply's placeholder is not a summary
     title = conv_title(m, people)
     return {"subject": title, "title": title, "people": people[:12], "attachments": attachments,
             "p": conv_project(m, title, people_raw, attachments, summary, cands), "summary": summary,
-            "gist": summary[:GIST], "marker": None, "_cands": cands}
+            "gist": summary[:GIST], "marker": marker, **({"confidential": True} if closed else {}), "_cands": cands}
 
 
 def conv_merge(old, cands):
@@ -1332,6 +1342,10 @@ MADE_FIELDS = {"actions": ("description", "owner", "due_date", "priority", "work
                         "milestone"),
                "decisions": ("decision", "made_by", "needed_by", "options", "reasoning", "status")}
 LONG_FIELDS = ("options", "reasoning", "latest_update", "response_action")
+# A work item made from a confidential conversation (Alan, 15-10-2026, plan #17): internal only. It is never client-visible
+# (whatever the form sent) and carries the built-in Sensitive label, which keeps it out of a client report or a client-safe
+# one-pager unless Alan himself makes it client-visible and includes it.
+CONFIDENTIAL_MADE = {"client_visible": 0, "labels": ["Sensitive"], "label_reason": "Made from a confidential message"}
 
 
 def vip_find(aid):
@@ -1361,7 +1375,8 @@ def cand_of(a, cand):
 
 
 def cand_dismiss(ids, cand, on):
-    """BL-334: dismiss (on) or put back one candidate item of the conversations named. Nothing is staged. Returns the IDs."""
+    """BL-334: dismiss (on) or put back one candidate item of the conversations named (a made one whose proposal has gone is
+    forgotten, as vip_undismiss does for a message). Nothing is staged. Returns the IDs."""
     st, done = vip_state(), []
     for a in st["alerts"]:
         c = cand_of(a, cand) if a["id"] in ids else None
@@ -1369,8 +1384,10 @@ def cand_dismiss(ids, cand, on):
             c["dismissed"] = now().strftime("%Y-%m-%d %H:%M")
             cand_settled(a)
             done.append(a["id"])
-        elif c and not on and c.get("dismissed"):
-            c.pop("dismissed")
+        elif c and not on and (c.get("dismissed") or (isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone")):
+            c.pop("dismissed", None)
+            if isinstance(c.get("made"), dict) and made_state(c["made"]) == "gone":
+                c.pop("made")                                          # its proposal was removed before an apply (Undo)
             a["seen"] = None
             done.append(a["id"])
     if done:
@@ -1534,14 +1551,17 @@ def made_day(pre, v):
 
 
 def vip_make(aid, kind=None, values=None, cand=None):
-    """Stage a work item made from an alert as the dashboard's own approved proposal (proposed-…-dashboard.json; nothing is
-    applied here), dismiss the alert and record the proposal on it. Returns {"proposal", "n", "table", "values"}; raises
+    """Stage a work item made from an alert as a pending proposal for Review (proposed-…-dashboard.json; BL-334: "Create work
+    item stages that item as a proposal for Review", check 45; nothing is applied here or by the page's Save), dismiss the
+    alert and record the proposal on it. Returns {"proposal", "n", "table", "values"}; raises
     LookupError, or ValueError with a reason to show (no project, no description, a field that fails validation)."""
     import propose
     pre = vip_prefill(aid, kind, cand)
     if cand is not None and pre.get("made"):
         raise ValueError("That item is already made.")
     v = made_values(pre, values)
+    if pre.get("marker") == "confidential":
+        v.update(CONFIDENTIAL_MADE)                                     # never client-visible; the Sensitive label carried
     if v["project"] not in active_projects():
         raise ValueError("Choose a project for it first.")
     head = "decision" if pre["table"] == "decisions" else "description"
@@ -1549,7 +1569,7 @@ def vip_make(aid, kind=None, values=None, cand=None):
         raise ValueError("Give it a description.")
     spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [],
             "items": [{"n": 1, "op": "new", "table": pre["table"], "values": v, "match": "strong", "flags": [],
-                       "decision": "approved", "edited_in": "dashboard"}]}
+                       "decision": "pending", "edited_in": "dashboard"}]}
     propose.complete(spec)
     propose.people_check_spec(spec)                                     # BL-55: a registered name as the register has it
     bad = [why for k, why in propose.check(spec).values() if k == "invalid"]

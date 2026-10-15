@@ -23,6 +23,12 @@ class AutosizeFields(LiveBrowserCase):
     shared_server = True
     width, height = 1400, 900
 
+    def setUp(self):
+        super().setUp()
+        # BL-327: the shared server's data is soon older than PAGE_FRESH, so each load re-reads /api/data after its first paint;
+        # under load that reload redrew the open editor mid-test (a hand-dragged 260px box came back at its automatic 78px)
+        self.b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)
+
     def geo(self, sel):
         return self.b.eval(f"{GEO}({sel!r})")
 
@@ -120,7 +126,7 @@ class AutosizeFields(LiveBrowserCase):
         b.wait("document.getElementById('mvDesc').dataset.ag")              # fitted once (the next frame), as before any real drag
         self.fill("#mvDesc", 2)
         b.eval("$('#mvDesc').style.height='260px'")                          # as the drag handle does
-        b.pump(0.3)
+        b.wait("($('#mvDesc')._agMin||0)>=258", 5)                           # its ResizeObserver has seen the drag (not a fixed 0.3 s)
         b.key("Backspace")
         b.pump(0.1)
         self.assertGreaterEqual(self.geo("#mvDesc")["h"], 258)

@@ -18,7 +18,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          X-Creaite-Vault to learn whether this is its own vault ({"this_vault": bool})
 - GET  /api/data         fresh dashboard data
 - GET  /api/records?ids=A,B  BL-304: just those actions, RAID items and decisions (the page's shape), with Review, Activity
-                         and the latest apply: the page's targeted refresh after a save or a live update. Read only
+                         and the latest apply: the page's targeted refresh after a save or a live update. Read only.
+                         &aged=1 (BL-10): an item archived for its age too, for search to open it
 - GET  /api/events       BL-253: one server-sent events stream per page: `hello` (the fingerprint), then `changed` {seq, parts, v}
                          (BL-304: and `ids`, {table: [item IDs]} from the change log, when the tracker changed)
                          within about a second of a change on disk (at once for a save through the server), `ping` every 25 s.
@@ -107,7 +108,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          form from the alert's references only; /api/alerts/draft {id, type, run} "Draft from the message":
                          one read-only Microsoft 365 read (its own allow list, no Bash or writes; never in the development
                          repository), streamed, ending in a "draft" event with the filled form; /api/alerts/make {id, type,
-                         values} stages the item as an approved dashboard proposal, dismisses the message and records the
+                         values} stages the item as a pending proposal for Review, dismisses the message and records the
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
@@ -644,7 +645,11 @@ PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json",   #
 def page_inputs():
     """The files the page's data is built from, other than the database: every file directly in staging (proposals, the
     sweep, calendar, transcripts and the rest), its drafts and its evidence (BL-207: a saved Current state's links),
-    system/config, the registers, the portfolio and each project's memory, the page template and help. Files the build and the server write themselves (PAGE_IGNORE) are left out."""
+    system/config, the registers, the portfolio and each project's memory, the page template and help, processed.txt, inbox/
+    (its files and the folder itself: a file moved in keeps its older time) and each project's listed folders (page_folders).
+    Files the build and the server write themselves (PAGE_IGNORE) are left out, and so are system/staging/applied/ (a
+    proposal moves there only in an apply, which changes the records' version) and system/history/ (written by the build
+    itself, just after dashboard.html, so it would always look newer)."""
     def listed(d):
         """The files directly in `d` that count."""
         try:
@@ -653,10 +658,54 @@ def page_inputs():
             return []
     out = [f for d in (paths.STAGING, paths.DRAFTS, paths.EVIDENCE, paths.SETTINGS.parent) for f in listed(d)]
     out += [build_dashboard.TEMPLATE, paths.TEMPLATES / "help.md", paths.REGISTER, paths.PEOPLE_REGISTER, paths.PORTFOLIO_MEMORY]
+    out += [paths.PROCESSED] + listed(paths.INBOX) + [paths.INBOX]      # processed.txt (minutes.py baseline); inbox/, folder too
     try:
-        out += [d / "CLAUDE.md" for _c, d in paths.project_folders()]
+        documents = bool((paths.load_settings().get("dashboard") or {}).get("files_show_documents"))
+    except (OSError, ValueError, AttributeError):        # no settings yet: Files leaves documents out
+        documents = False
+    try:
+        for code, d in paths.project_folders():
+            out.append(d / "CLAUDE.md")
+            out += page_folders(code, d, documents)
     except Exception as e:  # noqa: BLE001  no projects folder yet: the key still works
         swallowed("page inputs", e)
+    return out
+
+
+PAGE_FOLDER_KINDS = ("minutes", "transcripts", "agendas", "weekly_reports", "client_reports", "adhoc_documents", "steerco")
+PAGE_FOLDER_DEPTH = 3    # levels of subfolders stamped below each listed folder
+PAGE_FOLDER_CAP = 200    # folders stamped per project at most
+
+
+def page_folders(code, base, documents=False):
+    """The folders whose listings the page shows for one project (Files, the Inbox's filed transcripts, Latest reports, Prep):
+    its meeting, agenda and report folders and, when Files shows documents, its document folders, each with its subfolders
+    PAGE_FOLDER_DEPTH deep, at most PAGE_FOLDER_CAP in all. Folders only: a file added, removed or renamed (OneDrive sync
+    included) changes its folder's time; no file is listed or read. never_index folders and hidden ones are skipped."""
+    kinds = ("minutes", "transcripts") if code == "_portfolio" else PAGE_FOLDER_KINDS
+    roots = [base / paths.folder_name(k) for k in kinds]
+    if documents and code != "_portfolio":
+        roots.append(base if paths.external() else base / "documents")
+    skip, out, seen = set(paths.skipped_names()), [], set()
+
+    def walk(d, depth):
+        """d and its subfolders, depth levels down, within the cap."""
+        if d in seen or len(out) >= PAGE_FOLDER_CAP:
+            return
+        seen.add(d)
+        out.append(d)
+        if depth <= 0:
+            return
+        try:
+            with os.scandir(d) as it:
+                subs = sorted(e.path for e in it if e.is_dir(follow_symlinks=False) and not e.name.startswith(".")
+                              and e.name not in skip)
+        except OSError:                                  # not there (yet): its stamp is a dash
+            return
+        for s in subs:
+            walk(Path(s), depth - 1)
+    for r in roots:
+        walk(r, PAGE_FOLDER_DEPTH)
     return out
 
 
@@ -747,7 +796,8 @@ def records_route(handler):
     ids = [x.strip() for v in q.get("ids", []) for x in v.split(",") if x.strip()]
     if len(ids) > build_dashboard.RECORD_MAX or any(not RECORD_ID.fullmatch(i) for i in ids):
         return handler.send(400, {"ok": False, "message": "Bad item IDs"})
-    return handler.send(200, {"ok": True, **build_dashboard.records(ids), "latest_apply": latest_apply()})
+    aged = q.get("aged", [""])[0] == "1"              # BL-10: search opening an item archived for its age
+    return handler.send(200, {"ok": True, **build_dashboard.records(ids, aged=aged), "latest_apply": latest_apply()})
 # ===== end BL-304 =====
 
 
@@ -1154,8 +1204,11 @@ class Handler(BaseHTTPRequestHandler):
             p.write_bytes(raw)
             return self.send(200, {"ok": True})
         p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "a" if op == "append" else "w", encoding="utf-8") as f:
-            f.write(req.get("text", ""))
+        if op == "append":
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(req.get("text", ""))
+        else:                                      # a reader (the page, a script) never sees a half-written file
+            paths.write_text_atomic(p, req.get("text", ""))
         return self.send(200, {"ok": True})
 
     def apply(self, req):
@@ -2945,6 +2998,21 @@ def watch_for_close(httpd):
             return
 
 
+class LocalServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer without the reverse DNS lookup at bind (#83). http.server's server_bind calls
+    socket.getfqdn(host), which on some Macs (GitHub's macOS runner) stalls in gethostbyaddr for 30 s or more
+    before the server answers anything. The server only ever listens on 127.0.0.1 and nothing reads server_name,
+    so the name is set without a lookup."""
+
+    def server_bind(self):
+        """Bind as TCPServer does, then name the server after its own address instead of looking the name up."""
+        import socketserver
+        socketserver.TCPServer.server_bind(self)
+        host, port = self.server_address[:2]
+        self.server_name = host
+        self.server_port = port
+
+
 def main():
     """Start the live server on 127.0.0.1 (live_mode.port, or CREAITE_PORT) and serve until stopped; ends any run on the
     way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
@@ -2955,7 +3023,7 @@ def main():
     if held_by_this_vault(port):
         return already_running(port)
     try:
-        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        httpd = LocalServer(("127.0.0.1", port), Handler)
     except OSError as e:
         if held_by_this_vault(port):
             return already_running(port)
@@ -3109,9 +3177,10 @@ VIP_PROMPT = ("creaite VIP check. Read-only: search Alan's Microsoft 365 for mes
               "\"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own words\", "
               "\"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else null\"}}]}}. Report "
               "the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a conversation with "
-              "nothing actionable has \"items\": []. For a private or confidential conversation give only \"summary\": "
-              "\"private\" and no items. Never use the word VIP in a gist, a summary, an item or anywhere in the reply "
-              "(BL-288). Reply [] if there are none.")
+              "nothing actionable has \"items\": []. For a private conversation give only \"summary\": \"private\" and no "
+              "items. A confidential one is summarised like any other, in your own words, with its sensitivity "
+              "\"confidential\" (it stays inside creaite, internal only, never quoted). Never use the word VIP in a gist, "
+              "a summary, an item or anywhere in the reply (BL-288). Reply [] if there are none.")
 VIP_LOCK = threading.Lock()       # one check at a time
 VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never write at once
 VIP_STATUS = {"running": False, "last_error": None}
@@ -3497,8 +3566,8 @@ def alert_draft_route(handler, req):
 
 
 def alert_make_route(handler, req):
-    """POST /api/alerts/make {id, type, values}: stage the item as an approved proposal (nothing is applied here), dismiss
-    the message and record the proposal on it; with auto-apply the page applies it as it does any staged item."""
+    """POST /api/alerts/make {id, type, values}: stage the item as a pending proposal for Review (BL-334, check 45: nothing
+    is applied here, and the page's Save doesn't apply it), dismiss the message and record the proposal on it."""
     import sweep
     values = req.get("values") if isinstance(req.get("values"), dict) else {}
     try:
@@ -3509,7 +3578,7 @@ def alert_make_route(handler, req):
     word = {"actions": "action", "decisions": "decision"}.get(got["table"]) or str(got["values"].get("type") or "item").lower()
     return handler.send(200, {"ok": True, **got, "made": {"proposal": got["proposal"], "n": got["n"], "id": None,
                                                          "state": "staged"},
-                              "message": f"Staged the new {word}. It's written when you apply."})
+                              "message": f"Staged the new {word} for Review."})
 
 
 SWEEP_ALERT_ROUTES.update({"/api/alerts/dismiss": alert_dismiss_route, "/api/alerts/undo": alert_undo_route,

@@ -4,6 +4,8 @@
 
 **Goes into:** vX.Y.Z. Branch `sprint-<name>`, worktree `../creaite-<name>`, from the tip of `main`.
 
+**Cutting it:** set VERSION, then run `python3 dev/tools/build_guides.py` and `python3 dev/tools/run_tests.py test_help`, and commit them together; then merge to main and publish.
+
 ## Goal
 
 ## When it can start

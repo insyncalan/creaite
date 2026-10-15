@@ -432,10 +432,10 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
     tdl.push({key:"tx"+m.id,kind:"transcript",id:m.id,at,tag:"Transcript",tone:"",t:m.title||"Meeting",
       meta:["Ready in Intake",m.p&&m.p!=="_portfolio"?pName(m.p):"",whenWords(at)].filter(Boolean).join(" · "),
       acts:[{id:"process",icon:"play",label:"Process the transcript",name:`Process the transcript of ${m.title||"the meeting"}`,primary:true,why}]}); });
-  VIPS().forEach(a=>{ if("summary" in a&&!a.marker){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card */
+  VIPS().forEach(a=>{ if("summary" in a&&a.marker!=="private"){ tdl.push(convRow(a)); return; }   /* BL-334: a conversation's card (a confidential one too, marked) */
     const at=String(a.sent||"").replace("T"," ").slice(0,16), name=`${a.who??""}, ${a.subject??""}`;
-    tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",
-      meta:[`${VIPKIND[a.kind]||"Message"}${vipWhen(a)?" "+vipWhen(a):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",a.marker||"",a.found==="start-up"?`found on start-up, received ${vipWhen(a)}`:""].filter(Boolean).join(" · ")+(a.gist?`. ${a.gist}`:""),
+    tdl.push({key:"al"+a.id,kind:"message",id:a.id,at,tag:"Message",tone:"warn",t:`${a.who??""}: ${a.subject??""}`,link:a.link||"",mark:confMark(a),
+      meta:[`${VIPKIND[a.kind]||"Message"}${vipWhen(a)?" "+vipWhen(a):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",confMark(a)?"":a.marker||"",a.found==="start-up"?`found on start-up, received ${vipWhen(a)}`:""].filter(Boolean).join(" · ")+(a.gist?`. ${a.gist}`:""),
       acts:[{id:"make",icon:"plus",label:"Make a work item",name:`Create work item from: ${name}`,data:{alertdo:"make",id:a.id}},
             {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${name}`,data:{alertdo:"dismiss",id:a.id}}]}); });
   VIPQ().forEach(a=>tdl.push(quietRow(a)));                                     /* BL-334: nothing for Alan: one quiet line */
@@ -444,8 +444,14 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
    "updated HH:MM", Claude's summary, then each candidate item with Create work item and Dismiss (Dismiss stages nothing). A
    conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
 const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
+/** "Confidential" on a confidential conversation's card or message (Alan, 15-10-2026, plan #17): its summary is shown like any
+    other, internal only; never the word that says how the sender is followed (BL-288) @param {any} a */
+export const confMark=a=>a.confidential||a.marker==="confidential"?"Confidential":"";
 const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
-const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${a.updated?" · updated "+whenWords(a.updated):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
+/* "updated" is when the conversation's last message was sent, not when the check recorded it (plan #81); an older record
+   without that time falls back to when it was recorded */
+const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
+const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
   a.found==="start-up"?"found on start-up":""].filter(Boolean).join(" · ");
 /** @param {any} a */
 export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
@@ -453,7 +459,7 @@ export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
     sub:[c.owner||"",c.due?`due ${fd(c.due)}`:""].filter(Boolean).join(" · "),
     acts:[{id:"make",icon:"plus",label:"Create work item",name:`Create work item: ${c.text}`,data:{alertdo:"make",id:a.id,cand:String(c.n),ctype:c.type}},
           {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${c.text}`,data:{alertdo:"dismiss",id:a.id,cand:String(c.n)}}]}));
-  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:"Message",tone:"warn",t,link:a.link||"",meta:convMeta(a),summary:String(a.summary||""),cands,acts:[]}; }
+  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts:[]}; }
 /** "Mia Hale with Omar Ali: nothing for you" @param {any} a */
 export function quietRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:convAt(a),tag:"",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: nothing for you`,

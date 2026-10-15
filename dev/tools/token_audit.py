@@ -30,7 +30,8 @@ browser does. The default palette is the one `themeOf` falls back to.
 
 Contrast pairs come from the token names: text tokens (ink, muted, faint, accent, bad, warn, ok) on the grounds (bg, surface,
 sunk); `X-ink` on `X`; a status colour on its `-soft` fill; Today's `--day-*` and Help's `--hp-*` equivalents; and UI marks
-(focus, saffron, day-sun, day-past) at 3:1. Text below 4.5:1 and UI below 3:1 are P1.
+(focus, saffron, day-sun and day-past on the page and the band) and Today's dimmed past words
+(day-past-text, on the band) at 3:1. Text below 4.5:1 and UI below 3:1 are P1.
 
 It is an audit, not a gate: it exits 0 unless --strict is given and a P1 is found.
 """
@@ -1140,7 +1141,11 @@ def contrast_pairs(names):
     pairs = [(f"--{fg}", f"--{bg}", 4.5, "text on a ground") for fg in TEXT_FG for bg in GROUNDS]
     pairs += _named_pairs(names)
     pairs += [(fg, bg, 4.5, "Today text") for fg in ("--day-ink", "--day-muted") for bg in ("--day-page", "--day-band")]
-    pairs += [("--day-past", "--day-page", 3.0, "Today past marks"), ("--day-sun", "--day-page", 3.0, "Today now-line")]
+    # v1.9.5 check 6: the past dot and the sun are drawn on the band, not the page, so both grounds; the past meeting's dimmed
+    # words (--day-past-text) are held to 3:1 on the band, the agreed bar for de-emphasised past text
+    pairs += [("--day-past", bg, 3.0, "Today past marks") for bg in ("--day-page", "--day-band")]
+    pairs += [("--day-sun", bg, 3.0, "Today now-line") for bg in ("--day-page", "--day-band")]
+    pairs += [("--day-past-text", "--day-band", 3.0, "Today past words")]
     pairs += [(fg, bg, 4.5, "Help text") for fg in ("--hp-ink", "--hp-soft", "--hp-teal", "--hp-amber", "--hp-green")
               for bg in ("--hp-ground", "--hp-paper")]
     pairs += [("--focus", "--bg", 3.0, "UI mark"), ("--focus", "--surface", 3.0, "UI mark"),

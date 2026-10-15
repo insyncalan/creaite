@@ -157,7 +157,12 @@
   "system/scripts/update.py::install": 29,
   "system/scripts/update.py::main": 32,
   "system/scripts/update.py::new_vault": 24,
-  "system/scripts/update.py::read_release": 22
+  "system/scripts/update.py::read_release": 22,
+  "dev/tools/board_import.py::build_plan": 33,
+  "dev/tools/board_import.py::cmd_apply": 57,
+  "dev/tools/board_import.py::derive": 27,
+  "dev/tools/board_import.py::parse_backlog": 16,
+  "dev/tools/board_import.py::render": 28
  },
  "js": {
   "empty_catch": 38,
@@ -169,7 +174,8 @@
   "dev/tools/demo_data.py::load": 123,
   "system/scripts/build_dashboard.py::early_warnings": 115,
   "system/scripts/excel_sync.py::cmd_import": 103,
-  "system/scripts/propose.py::cmd_recode": 104
+  "system/scripts/propose.py::cmd_recode": 104,
+  "dev/tools/board_import.py::cmd_apply": 123
  },
  "long_lines": {
   "dev/tools/build_icons.py": 1,
@@ -198,7 +204,8 @@
   "system/scripts/sweep.py": 2,
   "system/scripts/tracker.py": 9,
   "system/scripts/transcripts.py": 2,
-  "system/scripts/update.py": 4
+  "system/scripts/update.py": 4,
+  "dev/tools/board_import.py": 19
  },
  "missing_docstrings": {
   "dev/tools/build_guides.py": 2,
@@ -214,7 +221,8 @@
   "dev/tools/vendor_manifest.py": 1,
   "system/scripts/excel_sync.py": 1,
   "system/scripts/live_server.py": 11,
-  "system/scripts/propose.py": 1
+  "system/scripts/propose.py": 1,
+  "dev/tools/board_import.py": 20
  },
  "old_helpers": {
   "Chip": 0,

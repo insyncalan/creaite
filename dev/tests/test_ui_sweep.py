@@ -1,4 +1,4 @@
-"""sprint-ui-sweep (v1.7.0): the measured UI checks from dev/sprints/ui-sweep-audit.md, in a real browser on the snapshot
+"""sprint-ui-sweep (v1.7.0): the measured UI checks from dev/archive/sprints/ui-sweep-audit.md, in a real browser on the snapshot
 sample vault (test_snapshots: fixed day, UTC, en-GB).
 
 - BL-216: every pointer target on every screen is at least 24 by 24, or its 24-pixel circle touches no other target
@@ -78,6 +78,11 @@ SCREENS["milestone-editor"] = ("MVAUD='int'; mvOpenPage('ABC','plan'); setTimeou
 SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='ABC-M-001'; "
                               "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
                               "document.getElementById('mvRbAdd')", "#v-milestones")
+# BL-09: archiving a project with open items asks first (#parchDlg, the Dialog block): Settings › Projects and register,
+# ABC's Archive pressed; the server only lists the open items (nothing is staged until "Cancel them all and archive").
+SCREENS["archive-ask"] = ("go('settings','people'); (function t(n){ const b=document.querySelector('#projArch [data-parch=archive][data-pcode=ABC]'); "
+                          "b ? (b.focus(), b.click()) : n && setTimeout(()=>t(n-1),50); })(100)",
+                          "document.getElementById('parchDlg')?.open && document.querySelector('#parchDlg .parchlist li')", "#parchDlg")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
@@ -95,6 +100,7 @@ class UiSweepCase(ts.Snapshots):
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
                "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
                "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
+               "document.getElementById('parchDlg')?.open && document.getElementById('parchDlg').close(); "
                "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)

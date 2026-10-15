@@ -49,6 +49,11 @@ snapshots-update *screens:
 flaky:
     python3 dev/tools/run_tests.py --flaky
 
+# BL-341: a release's hand checks, unattended, in a fresh vault from its zip (e.g. just handchecks v1.9.5; add --write to
+# fill dev/handchecks/<version>.md itself, --only 1,2,13 for some). Prints the Results copy, the screenshot sheet and the run folder
+handchecks version *args:
+    python3 dev/tools/handcheck.py {{version}} {{args}}
+
 # ---------- static checks ----------
 
 # The full static check: stdlib checks, ratchet, Chrome compile, and ruff/Biome/vulture when installed

@@ -621,7 +621,7 @@ LOG_SQL = ("SELECT c.rowid AS rowid, c.*, a.undone_at FROM change_log c LEFT JOI
            "WHERE c.tbl != 'rejected' AND c.field != 'updated_at' {where} ORDER BY c.rowid DESC {limit}")
 LINKED = {"links": "from_item", "item_labels": "item_id"}   # the one logged field that stands for a whole link or label row
 BY = {"dashboard": "You, in the dashboard", "cx-edit": "You, via cx-edit", "excel-import": "Excel import",
-      "assistant": "ask creaite", "undo": "Undo"}
+      "assistant": "ask creaite", "undo": "Undo", "archive": "Archived for age"}     # BL-10: the daily archiving
 
 
 def _act_context(con):
@@ -1310,7 +1310,13 @@ def action_row(a):
             "pr": a["priority"], "due": a["due_date"], "st": a["status"], "raised": a["raised"], "closed": a["closed"],
             "upd": a["latest_update"] or "", "client": bool(a["client_visible"]), "cm": a["client_message"],
             "src": a["source"], "upd_at": (a["updated_at"] or "")[:16], "updated_at": a["updated_at"],
-            "ms": a.get("milestone")}
+            "ms": a.get("milestone"), **archived_mark(a)}
+
+
+def archived_mark(r):
+    """BL-10: {"ar": True} on an archived row (its own age or its project's), shown only with Show archived on; else nothing,
+    so a page without archived items is unchanged."""
+    return {"ar": True} if r.get("archived") else {}
 
 
 def raid_row(r):
@@ -1320,7 +1326,7 @@ def raid_row(r):
             "lik": r["likelihood"], "st": r["status"], "raised": r["raised"], "closed": r["closed"],
             "client": bool(r["client_visible"]), "cm": r["client_message"], "src": r["source"],
             "upd_at": (r["updated_at"] or "")[:16], "updated_at": r["updated_at"], "ms": r.get("milestone"),
-            "pr": r.get("priority")}
+            "pr": r.get("priority"), **archived_mark(r)}
 
 
 def replaced_by_map(con):
@@ -1334,7 +1340,7 @@ def decision_row(d, replaced_by):
             "st": d["status"], "due": d["needed_by"], "why": d["reasoning"], "opts": d["options"], "revisit": d["revisit"],
             "replaces": d["replaces"], "rby": replaced_by.get(d["id"]),
             "client": bool(d["client_visible"]), "cmd": d["client_message"], "src": d["source"],
-            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"]}
+            "upd_at": (d["updated_at"] or "")[:16], "updated_at": d["updated_at"], **archived_mark(d)}
 
 
 RECORD_TABLES = ("actions", "raid", "decisions")
@@ -1356,17 +1362,37 @@ def records_of(con, ids):
     return out, [i for i in ids if i not in found]
 
 
-def records(ids, now=None):
+def aged_records(con, ids):
+    """BL-10: {table: [row]} for those of `ids` that are archived for their age (actions and RAID; their project is live),
+    read from the tables themselves (main.<table>), past the views that hide them. Never an archived project's item."""
+    out = {}
+    if not ids:
+        return out
+    marks = ",".join("?" * len(ids))
+    live = "project NOT IN (SELECT code FROM main.projects WHERE archived = 1)"
+    for t, make in (("actions", action_row), ("raid", raid_row)):
+        out[t] = [make(r) for r in rows(con, f"SELECT * FROM main.{t} WHERE archived = 1 AND {live} AND id IN ({marks}) "
+                                             "ORDER BY id", *ids)]
+    return out
+
+
+def records(ids, now=None, aged=False):
     """BL-304: just these items (actions, RAID, decisions) in the page's shape, for the page's targeted refresh after a save
     or a live update, with the parts an apply always changes (Review, Activity, the latest apply's time, the peek's staged
     changes, milestone names). Read only; the IDs are only looked up, never written. {"records": {table: [row]},
-    "missing": [IDs in none of the tables], ...}."""
+    "missing": [IDs in none of the tables], ...}. `aged` (BL-10): an item archived for its age is handed over too (marked
+    "ar"), so search can open it with Show archived off; an archived project's item stays missing."""
     now = now or clock()
     ids = list(dict.fromkeys(i for i in ids if isinstance(i, str) and i))[:RECORD_MAX]
     con = ro_db()                        # BL-09: an archived item stays out of the views
     con.row_factory = sqlite3.Row
     try:
         recs, missing = records_of(con, ids)
+        if aged and missing:
+            for t, got in aged_records(con, missing).items():
+                recs[t] += got
+            found = {x["id"] for t in RECORD_TABLES for x in recs[t]}
+            missing = [i for i in missing if i not in found]
         last_apply = con.execute("SELECT max(at) FROM applies WHERE undone_at IS NULL").fetchone()[0]
         flags, settings, rq = {}, paths.load_settings(), review_queue(con)
         first = con.execute("SELECT min(at) FROM applies").fetchone()[0]
@@ -1772,14 +1798,8 @@ def build_lock():
 
 
 def write_atomic(path, text):
-    """Write to a temporary name, then rename, so a reader never sees half a page."""
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        if tmp.exists():
-            tmp.unlink()
+    """Write to a temporary name, then rename, so a reader never sees half a page (paths.write_text_atomic)."""
+    paths.write_text_atomic(path, text)
 
 
 def build(now=None):

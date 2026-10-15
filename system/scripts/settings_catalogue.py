@@ -156,9 +156,9 @@ CATALOGUE = {
                                        "On: cross-project meetings matter as much as project ones."),
     "dashboard.files_show_documents": ("Work and views", "Files: show documents", "List each project's documents on Files.",
                                        "Off: documents are many and passive; search still reads them."),
-    "dashboard.show_archived": ("Work and views", "Show archived projects and items",
-                                "Show archived projects' items, and items archived for their age, in Work, Today and the Excel "
-                                "export (BL-09, BL-10).",
+    "dashboard.show_archived": ("Work and views", "Show archived projects",
+                                "People and projects › Projects and register: archived projects' items, and items archived for "
+                                "their age, in the views.",
                                 "Off: archived work is finished; search still finds it, marked Archived."),
     "dashboard.week_ahead_priorities": ("Saving and review", "Week ahead shows", "The priorities listed in Today's Week ahead.",
                                         ("Urgent only keeps the week short; add High for a fuller view (Alan, 14-10-2026, "
@@ -517,7 +517,7 @@ def save(changes, now=None):
             o[parts[-1]] = val
         paths.BACKUPS.mkdir(parents=True, exist_ok=True)
         paths.free_path(paths.BACKUPS, "settings-" + now.strftime("%Y-%m-%d-%H%M%S"), ".json").write_text(text, encoding="utf-8")
-        paths.SETTINGS.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        paths.write_text_atomic(paths.SETTINGS, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
         with open(paths.SETTINGS_LOG, "a", encoding="utf-8") as f:
             f.write("".join(json.dumps(x, ensure_ascii=False, separators=(",", ":")) + "\n" for x in logs))
     return logs

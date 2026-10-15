@@ -10,6 +10,8 @@ import { isHiddenPerson, resolver, WSD, wsTable } from "../settings.js";
 export const P=D.projects, A=D.actions, R=D.raid, DEC=D.decisions, REV=D.review, FILES=D.files, REMINDERS=D.reminders;
 shared.ACT=D.activity;
 export const pName=c=>(P.find(p=>p.code===c)||{}).name||c;
+/* BL-101 (v1.9.5 hand checks, plan #81): a file's project as people read it; the portfolio's files are "Portfolio", never _portfolio (Files, ⌘K) */
+export const fpName=c=>c==="_portfolio"?"Portfolio":pName(c);
 export const LASTVISIT=store.get("creaite-lastvisit",D.data_at); 
 export const SWEPT=D.last_sweep||"never";
 export const WEEKSTART=(()=>{ const d=new Date(TODAY); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d.toISOString().slice(0,10); })();

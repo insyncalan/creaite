@@ -99,6 +99,27 @@ def free_path(folder, stem: str, ext: str = "") -> Path:
 # ===== end BL-266 =====
 
 
+def write_text_atomic(path, text: str) -> None:
+    """Write text to path through a temporary file in the same folder, then os.replace: a reader sees the old file or the new
+    one, never an empty or half-written one (Path.write_text truncates first). An existing file keeps its mode."""
+    import secrets
+    import threading
+    path = Path(path)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.{secrets.token_hex(4)}.tmp")
+    fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)      # the umask applies, as with open(…, "w")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(text)
+        try:
+            os.chmod(tmp, path.stat().st_mode & 0o7777)
+        except FileNotFoundError:
+            pass  # a new file: no old mode to keep
+        os.replace(tmp, path)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
 # ── Where the projects are (BL-85) ────────────────────────────────────────────
 # Stored paths (the database's sources, proposals' file operations, links) are vault-relative with forward slashes. A path in a
 # project folder is `projects/<engagement folder>/<path inside it>`; `projects/` is a logical prefix that `resolve` maps to the

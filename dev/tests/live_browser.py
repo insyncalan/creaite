@@ -5,9 +5,11 @@
 """
 import os
 import re
+import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 import urllib.request
@@ -66,24 +68,52 @@ class LiveBrowserCase(unittest.TestCase):
         cls.load(cls.v)
         cls.port = free_port()
         cls.base = f"http://127.0.0.1:{cls.port}"
-        cls.proc = proc_guard.spawn([sys.executable, str(cls.v.root / "system/scripts/live_server.py")],   # BL-247
-                                    env={**os.environ, "CREAITE_PORT": str(cls.port), **cls.server_env()},
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        deadline = time.time() + 30            # dev-test-steadiness: it gave up silently after 10 s; a loaded runner can need more
+        # ci-macos-hang: the server's output goes to a file outside the vault (not DEVNULL), and PYTHONFAULTHANDLER lets a
+        # SIGABRT print where every thread is, so a server that never answers says why instead of failing silently
+        fd, cls.server_log = tempfile.mkstemp(prefix="creaite-server-", suffix=".log")
+        with os.fdopen(fd, "wb") as log:
+            cls.proc = proc_guard.spawn([sys.executable, str(cls.v.root / "system/scripts/live_server.py")],   # BL-247
+                                        env={**os.environ, "CREAITE_PORT": str(cls.port), "PYTHONFAULTHANDLER": "1",
+                                             **cls.server_env()}, stdout=log, stderr=log)
+        started = time.time()
+        deadline = started + 30                # dev-test-steadiness: it gave up silently after 10 s; a loaded runner can need more
         while True:
             try:
                 urllib.request.urlopen(cls.base + "/health", timeout=1)
                 break
-            except OSError:
+            except OSError as e:
                 if time.time() > deadline or cls.proc.poll() is not None:
-                    raise
+                    raise RuntimeError(cls.server_trouble(e, time.time() - started)) from e
                 time.sleep(0.1)
+
+    @classmethod
+    def server_trouble(cls, err, secs):
+        """Why the server never answered /health: whether it is still running, and the end of its output (with every
+        thread's stack when it was still running: SIGABRT and PYTHONFAULTHANDLER)."""
+        running = cls.proc.poll() is None
+        if running:
+            try:
+                os.kill(cls.proc.pid, signal.SIGABRT)
+                cls.proc.wait(timeout=5)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+        try:
+            lines = Path(cls.server_log).read_text(encoding="utf-8", errors="replace").splitlines()
+            tail = [ln for ln in lines if not ln.lstrip().startswith("Binary file")][-60:]   # 3.14 adds the C stack too
+        except OSError:
+            tail = []
+        state = "still running, not answering" if running else f"exited with {cls.proc.returncode}"
+        return (f"The live server on port {cls.port} didn't answer /health after {secs:.0f}s ({state}; last error: {err}). "
+                "Its output:\n" + ("\n".join(tail) or "(none)"))
 
     @classmethod
     def stop_server(cls):
         # BL-172 (sprint-polish-2): safe to call twice and after a start that failed half-way, so it can be a cleanup
         proc, cls.proc = getattr(cls, "proc", None), None
         proc_guard.stop(proc, grace=10)                # BL-247: the server and every run it started
+        log, cls.server_log = getattr(cls, "server_log", None), None
+        if log:
+            Path(log).unlink(missing_ok=True)
         v, cls.v = getattr(cls, "v", None), None
         if v:
             v.cleanup()

@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_close_day_card.py   (needs Google Chrome; skipped otherwise)
 The clock is fixed on Tuesday 13-10-2026 at 17:30 and a stand-in Claude is used (test_close_day_guided's), so the catch-up sweep
-stages one proposal and nothing reads Microsoft 365. One test per point of BL-295's Done when (dev/V190-CLOSE-DAY-NOTE.md): the
+stages one proposal and nothing reads Microsoft 365. One test per point of BL-295's Done when (dev/archive/notes/v1.9.0/V190-CLOSE-DAY-NOTE.md): the
 four steps and the end line; the catch-up starting as the card opens, its progress and its find in step 1 and Loose ends; Skip and
 Stop; each loose end's place kept and acted on (Review now opens Review highlighted, Work for an item, Intake for a file; a prep
 page made after closing); closing during the sweep closing when it ends; nothing approved or applied; a quiet step passed over;

@@ -38,11 +38,21 @@ def refuse_stale_dashboard():
         raise update.UpdateError(stale)
 
 
+def refuse_stale_guides(version, guide=None):
+    """The guides are generated (build_guides.py) and carry the version; a cut that forgot to rebuild them fails here,
+    not in the release workflow's test_help (the string is the one test_help asserts)."""
+    guide = Path(guide or paths.TEMPLATES / "guide-first-day.html")
+    if f"creaite {version} \u00b7 first day" not in guide.read_text(encoding="utf-8"):
+        raise update.UpdateError(f"{guide.name} doesn't say {version}: run python3 dev/tools/build_guides.py, "
+                                 "check test_help, and commit the guides with VERSION.")
+
+
 def build(tag=None, notes="", out=None, dirty=False):
     version = paths.VERSION_FILE.read_text(encoding="utf-8").strip()
     update.version_tuple(version)
     if tag and tag != f"v{version}":
         raise update.UpdateError(f"The tag {tag} doesn't match VERSION ({version}); expected v{version}.")
+    refuse_stale_guides(version)
     scope = list(paths.ENGINE) + list(paths.ENGINE_MERGED)
     listed = git("ls-files", "-z", *(["--cached", "--others", "--exclude-standard"] if dirty else []), "--", *scope)
     files = sorted({f for f in listed.split("\0") if f and not update.SKIP.search(f) and (REPO / f).is_file()})
