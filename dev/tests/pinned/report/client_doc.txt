@@ -1,0 +1,314 @@
+exit 0
+{
+ "approved_at": null,
+ "audience": "client",
+ "based_on": null,
+ "client": "Example Client Ltd",
+ "date": "2026-10-09",
+ "format": "creaite-doc",
+ "items": {
+  "ABC-006": {
+   "id": "ABC-006",
+   "status": "Open",
+   "table": "raid",
+   "title": "Test licences are not yet ordered. Testing could start late. Purchase order raised this week.",
+   "type": "Issue"
+  },
+  "ABC-A-002": {
+   "client_owned": true,
+   "closed": null,
+   "due_date": "2026-10-16",
+   "id": "ABC-A-002",
+   "owner": "Jane Doe (Example Client Ltd)",
+   "status": "In progress",
+   "table": "actions",
+   "title": "The signed statement of work."
+  },
+  "ABC-D-007": {
+   "date": "2026-10-06",
+   "id": "ABC-D-007",
+   "made_by": "Steering committee",
+   "needed_by": null,
+   "status": "Made",
+   "table": "decisions",
+   "title": "Go-live remains on 20 November."
+  }
+ },
+ "kind": "client",
+ "layout": {
+  "glance": [
+   "next_milestone",
+   "client_asks",
+   "watch"
+  ],
+  "headings": {},
+  "hidden": [],
+  "logos": [
+   "firm",
+   "client",
+   "partner"
+  ],
+  "milestones": null,
+  "order": [
+   "header",
+   "health",
+   "glance",
+   "summary",
+   "milestones",
+   "asks",
+   "this_week",
+   "next_week",
+   "decisions",
+   "risks",
+   "overdue",
+   "current_state"
+  ],
+  "rows": {
+   "risks": {
+    "top": 5
+   }
+  }
+ },
+ "meta": {
+  "facts_on": "2026-10-09",
+  "facts_week": null,
+  "locked": false,
+  "period_end": "2026-10-09",
+  "period_start": "2026-10-05"
+ },
+ "project": "ABC",
+ "project_name": "Example Programme",
+ "saved_at": null,
+ "schema": 1,
+ "sections": [
+  {
+   "data": {
+    "client": "Example Client Ltd",
+    "facts_week": null,
+    "label": "Client report",
+    "logos": [],
+    "period_end": "2026-10-09",
+    "period_start": "2026-10-05"
+   },
+   "default_heading": "Client report",
+   "heading": "Client report",
+   "hidden": false,
+   "id": "header",
+   "text": "",
+   "type": "header"
+  },
+  {
+   "data": {
+    "flag": "On track"
+   },
+   "default_heading": "Health",
+   "heading": "Health",
+   "hidden": false,
+   "id": "health",
+   "text": "",
+   "type": "health"
+  },
+  {
+   "default_heading": "At a glance",
+   "figures": [
+    {
+     "key": "next_milestone",
+     "label": "Next milestone",
+     "note": "",
+     "shown": true,
+     "value": "None planned"
+    },
+    {
+     "key": "client_asks",
+     "label": "What we need from you",
+     "note": "",
+     "shown": true,
+     "value": "1"
+    },
+    {
+     "key": "watch",
+     "label": "Points to watch",
+     "note": "",
+     "shown": true,
+     "value": "1"
+    }
+   ],
+   "heading": "At a glance",
+   "hidden": false,
+   "id": "glance",
+   "type": "figures"
+  },
+  {
+   "default_heading": "Summary",
+   "heading": "Summary",
+   "hidden": false,
+   "id": "summary",
+   "text": "",
+   "type": "text"
+  },
+  {
+   "data": {
+    "milestones": [],
+    "timeline": []
+   },
+   "default_heading": "Milestones",
+   "heading": "Milestones",
+   "hidden": false,
+   "id": "milestones",
+   "text": "",
+   "type": "timeline"
+  },
+  {
+   "columns": [
+    {
+     "key": "ask",
+     "label": "Ask"
+    },
+    {
+     "key": "from",
+     "label": "From"
+    },
+    {
+     "key": "by",
+     "label": "By"
+    },
+    {
+     "key": "why",
+     "label": "Why it matters"
+    }
+   ],
+   "default_heading": "What we need from you",
+   "heading": "What we need from you",
+   "hidden": false,
+   "id": "asks",
+   "rows": [
+    {
+     "cells": {
+      "ask": "The signed statement of work.",
+      "by": "16-10-2026",
+      "from": "Jane Doe (Example Client Ltd)",
+      "why": ""
+     },
+     "ref": "ABC-A-002",
+     "shown": true
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "default_heading": "Progress",
+   "heading": "Progress",
+   "hidden": false,
+   "id": "this_week",
+   "tags": [],
+   "text": "",
+   "type": "text"
+  },
+  {
+   "default_heading": "Next steps",
+   "heading": "Next steps",
+   "hidden": false,
+   "id": "next_week",
+   "text": "",
+   "type": "text"
+  },
+  {
+   "columns": [
+    {
+     "key": "decision",
+     "label": "Decision"
+    },
+    {
+     "key": "date",
+     "label": "Date"
+    }
+   ],
+   "default_heading": "Decisions",
+   "heading": "Decisions",
+   "hidden": false,
+   "id": "decisions",
+   "rows": [
+    {
+     "cells": {
+      "date": "06-10-2026",
+      "decision": "Go-live remains on 20 November."
+     },
+     "ref": "ABC-D-007",
+     "shown": true
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "columns": [
+    {
+     "key": "type",
+     "label": "Type"
+    },
+    {
+     "key": "risk",
+     "label": "What it is"
+    }
+   ],
+   "default_heading": "Risks and issues",
+   "heading": "Risks and issues",
+   "hidden": false,
+   "id": "risks",
+   "rows": [
+    {
+     "cells": {
+      "risk": "Test licences are not yet ordered. Testing could start late. Purchase order raised this week.",
+      "type": "Issue"
+     },
+     "ref": "ABC-006",
+     "shown": true
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "columns": [
+    {
+     "key": "action",
+     "label": "Action"
+    },
+    {
+     "key": "owner",
+     "label": "Owner"
+    },
+    {
+     "key": "due",
+     "label": "Due"
+    }
+   ],
+   "default_heading": "Overdue actions",
+   "heading": "Overdue actions",
+   "hidden": false,
+   "id": "overdue",
+   "rows": [],
+   "type": "table"
+  },
+  {
+   "default_heading": "Current state",
+   "heading": "Current state",
+   "hidden": false,
+   "id": "current_state",
+   "panes": [
+    {
+     "text": "",
+     "title": ""
+    }
+   ],
+   "type": "panes"
+  }
+ ],
+ "sources": [
+  {
+   "label": "creaite tracker",
+   "ref": "tracker"
+  }
+ ],
+ "state": "draft",
+ "title": "Client report",
+ "version": 0
+}

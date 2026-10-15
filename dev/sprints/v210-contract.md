@@ -1,6 +1,17 @@
 # v2.1.0 contract: creaite's document format, its calls and the export call
 
 Team Cap, branch `sprint-reporting` (P1 `v210-p1-doc`, P2 `v210-p2-exports`). Team Stark builds P4 against this from day 1.
+Changed (15-10-2026, P3; Alan's decision, option C): **a filed report or minutes is never changed in place.** Save on an approved,
+filed document writes a new draft in `system/staging/drafts/` (the filed version as its base); the filed file stays exactly as it
+is until Alan approves that draft, and that approve is the normal one apply with Undo (tracker.py replaces the filed file whole and
+Undo puts it back). There is no approval card for it and the live server never passes `approver=reach.APPROVALS.issue`: `save`'s
+`approver` stays only for a caller that needs it (none in v2.1.0). P3's reports: `report_doc.save_draft`; P4 does the same for minutes.
+Changed (15-10-2026, P3): `export` is looked up as `creaite_doc.export`, then `doc_export.export`, then `report_export.export`
+(`report_server.export_call`); the live server opens the filed copy itself. A report's export is filed beside it only when Alan
+ticks it (BL-335; the route's `file_beside` defaults to false, the backlog winning over the plan's "on by default").
+Changed (15-10-2026, P3, additions): an approved weekly report's `meta.client_facts` keeps the week's client-safe facts, which that
+week's client reports lock to (`based_on`); a client report's `meta` has `period_start`, `period_end`, `locked`, `facts_on`,
+`facts_week`. The layouts are kept in settings.json `report_layouts.<CODE>` (`weekly`, `clients.<client>`).
 Changed (15-10-2026, before any use): no command line (a script command line must be classified in `reach.SCRIPT_COMMANDS`, a
 guard change; P3 and P4 call it from Python); `save` takes `approver` instead of `approval`; `project_name` added.
 Changed (15-10-2026, P2): `export` answers also carry `open_after`; `out_dir` is a stored folder to file in instead of beside

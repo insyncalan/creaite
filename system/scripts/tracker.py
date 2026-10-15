@@ -1488,8 +1488,22 @@ def _stamp_approved(apply_id, blk, field, done):
         if draft.exists():
             kept = stash(apply_id, draft)
             on = (os.environ.get("CREAITE_NOW") or today())[:10]          # creaite's clock: CREAITE_NOW fixes it in tests
-            if set_status_line(draft, f"Approved by {approved_by} on {long_date(on)}"):
+            if stamp_draft(draft, f"Approved by {approved_by} on {long_date(on)}", on):
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
+
+
+def stamp_draft(draft, text, on):
+    """Mark an approved draft before it is filed: a Word draft's status line, or (v2.1.0 P3) a creaite document's state, approved
+    on `on`, its page rendered again from the data (creaite_doc.py). Returns whether it changed."""
+    if draft.suffix.lower() != ".html":
+        return set_status_line(draft, text)
+    import creaite_doc
+    if not creaite_doc.is_doc(draft):
+        return False
+    doc = creaite_doc.read(draft)
+    doc.update(state="approved", approved_at=on)
+    draft.write_text(creaite_doc.dumps(doc), encoding="utf-8")
+    return True
 
 
 def _op_copy(apply_id, fop, blk, done):
