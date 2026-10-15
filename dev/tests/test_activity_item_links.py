@@ -45,16 +45,18 @@ class ActivityItemLinks(LiveBrowserCase):
     def view(self):
         return self.b.eval("VIEW")
 
-    def click_id(self, selector):
+    def click_id(self, selector, id_=None):
         b = self.b
         b.click(selector)
         b.wait("document.getElementById('panel').classList.contains('on')")
+        if id_:                                                              # the panel is for this item, not one left open before
+            b.wait(f"CUR&&CUR.id==={id_!r}", 20)
 
     def test_item_ids_open_the_panel_on_activity(self):
         b = self.b
         for kind in ("actions", "raid", "decisions"):
             id_ = self.ids[kind]
-            self.click_id(f'#actTbl a[data-open="{kind}:{id_}"]')
+            self.click_id(f'#actTbl a[data-open="{kind}:{id_}"]', id_)
             self.assertEqual(self.view(), "activity", kind)
             self.assertEqual(b.eval("CUR&&CUR.id"), id_)
             self.assertIn(f"item={id_}", b.eval("location.hash"))
@@ -82,6 +84,7 @@ class ActivityItemLinks(LiveBrowserCase):
           document.getElementById('v-activity').scrollTop=400; })()""")
         b.click('#actTbl tr:nth-child(12) a[data-open]')                                            # (the click scrolls its target into view)
         b.wait("document.getElementById('panel').classList.contains('on')")
+        b.wait(f"CUR&&CUR.id==={self.ids['actions']!r}", 20)                                        # this item's panel, not one left open before
         before = b.eval("document.getElementById('v-activity').scrollTop")
         self.assertGreater(before, 100)
         b.key("Escape")
@@ -118,7 +121,7 @@ class ActivityItemLinks(LiveBrowserCase):
         b.eval(f"go('cockpit', REC('actions', {id_!r}).p)")
         b.eval(f"""(()=>{{ const l=document.createElement("a"); l.href="#"; l.className="hlink"; l.id="probe"; l.dataset.open="actions:{id_}"; l.textContent="probe";
           document.getElementById("v-cockpit").prepend(l); }})()""")
-        self.click_id("#probe")
+        self.click_id("#probe", id_)
         self.assertEqual(self.view(), "cockpit")
         self.assertNotEqual(b.eval("location.hash"), "")
 
