@@ -46,7 +46,8 @@ PAGES_9 = ("today", "work", "review", "intake", "settings-essentials", "activity
 
 
 class Scriptable1(HandcheckCase):
-    """Start-up and BL-325's wording and primary actions."""
+    """Start-up and BL-325's wording and primary actions. Own vault: check 13 adds a pending decision and 15 records a sweep."""
+    own_vault = True
 
     def test_c01_doctor(self):
         """1. `system/scripts/run doctor.py` → every check passes, including the two archiving checks (items, reports). The
@@ -81,12 +82,26 @@ class Scriptable1(HandcheckCase):
         """13. Today → the section headings (Decisions needed, Needs attention, Week ahead, Portfolio …) are sentence-case
         headings like Settings', not small capitals. Today's large title is unchanged."""
         b = self.b
+        # Decisions needed shows only while a pending decision has a decision maker and a needed-by date: add one, as cx-edit
+        # does (propose.py stage, then tracker.py apply)
+        from datetime import date, timedelta
+        day = date.fromisoformat((self.now or date.today().isoformat())[:10])
+        spec = self.vault / "system/staging/drafts/hc-decision.json"
+        spec.write_text(json.dumps({"source_run": "cx-edit", "items": [{"op": "new", "table": "decisions", "values": {
+            "project": "FAL", "decision": "Approve the go-live date for the data platform", "status": "Pending",
+            "made_by": "Rashid Al Suwaidi", "needed_by": (day + timedelta(days=5)).isoformat(), "source": "hand check 13 (BL-341)"}}]}),
+            encoding="utf-8")
+        code, out = self.run_in_vault("propose.py", "stage", "system/staging/drafts/hc-decision.json")
+        self.assertEqual(code, 0, out)
+        code, out = self.run_in_vault("tracker.py", "apply")
+        self.assertEqual(code, 0, out)
+        b.reload("typeof go==='function' && LIVE")
         style = "e=>{const s=getComputedStyle(e); return [s.fontSize,s.fontWeight,s.fontFamily,s.textTransform,s.fontVariantCaps,s.letterSpacing].join('|')}"
         self.screen("today")
         today = b.eval(f"[...document.querySelectorAll('#v-today h2')].filter(e=>e.offsetParent).map(e=>({{t:e.firstChild?.textContent?.trim()||e.innerText.split('\\n')[0], s:({style})(e)}}))")
         self.assertTrue(today, "Today has section headings")
         names = [h["t"] for h in today]
-        for want in ("Needs attention", "Week ahead", "Portfolio"):    # Decisions needed shows only when one is waiting
+        for want in ("Decisions needed", "Needs attention", "Week ahead", "Portfolio"):
             self.assertIn(want, names)
         for h in today:
             self.assertNotIn("|uppercase|", h["s"], h["t"])
@@ -99,7 +114,7 @@ class Scriptable1(HandcheckCase):
         self.screen("today")
         title = b.eval("(()=>{const e=document.querySelector('#v-today h1'); return e?getComputedStyle(e).fontSize:null})()")
         self.assertEqual(title, "34px", "Today's large title keeps its 34 px (by design)")
-        self.note(13, f"{len(today)} headings, same font as Settings' ({settings[0].split('|')[0]}), none uppercase or small caps; title 34px")
+        self.note(13, f"{len(today)} headings (Decisions needed seeded: a pending FAL decision through propose.py stage and tracker.py apply), same font as Settings' ({settings[0].split('|')[0]}), none uppercase or small caps; title 34px")
 
     def test_c14_intake_names(self):
         """14. Intake → "Calendar import", "Upload files" and "Quick capture" in sentence case, with no icons beside them.
@@ -127,12 +142,17 @@ class Scriptable1(HandcheckCase):
         b = self.b
         look = "e=>{const s=getComputedStyle(e); return {bg:s.backgroundColor, border:s.borderTopColor, bw:s.borderTopWidth, color:s.color, text:e.innerText.trim().slice(0,30)}}"
         transparent = ("rgba(0, 0, 0, 0)", "transparent")
+        # Today's filled button is Getting started's next step. Before the first sweep that step is Connect Microsoft 365, which
+        # has Copy, Check again and How instead of a button; once a sweep is recorded, Open Review is the filled one. So: Today
+        # once (the checklist is seen, as on a first run), a sweep recorded (sweep.py done --normal), Today again.
+        self.screen("today")
+        self.assertTrue(b.eval("!!document.querySelector('#setupList')"), "Getting started shows before the first sweep")
+        before = b.eval("[...document.querySelectorAll('#v-today .btn.primary')].filter(e=>e.offsetParent).length")
+        code, out = self.run_in_vault("sweep.py", "done", "--started", f"{(self.now or '')[:10]} 09:00", "--normal")
+        self.assertEqual(code, 0, out)
+        b.reload("typeof go==='function' && LIVE")
         self.screen("today")
         today = b.eval(f"[...document.querySelectorAll('#v-today .btn.primary')].filter(e=>e.offsetParent).map({look})")
-        probed = not today
-        if probed:                             # none on show in the demo's state: the rule itself, on a button in Today's view
-            today = b.eval(f"""(()=>{{ const e=document.createElement('button'); e.className='btn primary'; e.textContent='Probe';
-              document.getElementById('v-today').append(e); const r=({look})(e); e.remove(); return [r]; }})()""")
         self.screen("intake")
         intake = b.eval(f"[...document.querySelectorAll('#v-inbox .btn.primary')].filter(e=>e.offsetParent).map({look})")
         for where, bs in (("Today", today), ("Intake", intake)):
