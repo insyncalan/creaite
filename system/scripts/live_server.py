@@ -3267,7 +3267,7 @@ VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send
               "newest message in it after its time (mail: search Sent Items for its subject; Teams: his own message in that "
               "chat) and give its time as \"replied\", or null. For an OPEN conversation with nothing new from anyone "
               "else, give only {{\"conversation\": copied exactly as given below, \"kind\", \"replied\"}}, plus "
-              "\"closes\" as below when it applies. OPEN: {open}. Finished work: when a conversation shows that the OPEN "
+              "\"closes\", \"promises\" and \"kept\" as below when they apply. OPEN: {open}. Finished work: when a conversation shows that the OPEN "
               "WORK action you gave as its match is now finished, add \"closes\": {{\"id\": \"the same ID as match.id, "
               "copied exactly\", \"evidence\": \"why it looks finished, in your own words, at most 100 characters; never "
               "quote the message\"}}. Finished means one of two things only: Alan's own message delivers it (for example "
@@ -3276,8 +3276,21 @@ VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send
               "never for an ID you did not give as match.id. If the message only promises it, plans it, asks about it or "
               "mentions it, or if you are unsure, leave \"closes\" out. An OPEN conversation's reply-only object may carry "
               "\"closes\" too, for the action its card was matched to, when Alan's newest message delivers it. Never for a "
-              "private conversation. For a private conversation give only \"summary\": \"private\" and no items, type, "
-              "ask, due, owners, match or closes. A confidential one is summarised like any other, in your own words, "
+              "private conversation. Alan's promises: in Alan's own message that you give as \"replied\" (or the newest "
+              "message, when it is his), look for a commitment he made in passing to someone else, such as 'I'll send the "
+              "revised plan by Friday'. For each, add to that conversation's \"promises\" list {{\"what\": \"what he will "
+              "do, verb first, in your own words, at most 100 characters; never quote\", \"to\": \"the full name of the "
+              "person he promised it to\", \"due\": \"YYYY-MM-DD in {zone}, worked out from the date of his message "
+              "('Friday' is the next Friday after it), or null when he gave no time\", \"at\": \"his message's time, "
+              "exactly as you gave it for replied or last, YYYY-MM-DDTHH:MM{offset}\"}}. At most 3 a conversation. Not a "
+              "promise: a question, a plan without a commitment, a promise made to Alan, a task someone formally gave him "
+              "(that is an action), or anything in OPEN PROMISES already. OPEN PROMISES, each project's open promises by "
+              "project code: {open_promises}. Promises kept: when a message in the conversation, from Alan or from the "
+              "person who made it, shows that one of OPEN PROMISES for this conversation's project has now been done, add "
+              "\"kept\": {{\"id\": \"the ID exactly as listed\", \"evidence\": \"why it looks kept, in your own "
+              "words, at most 100 characters; never quote\"}}. If unsure, leave it out. Never for a private conversation. "
+              "For a private conversation give only \"summary\": \"private\" and no items, type, "
+              "ask, due, owners, match, closes, promises or kept. A confidential one is summarised like any other, in your own words, "
               "never quoted, with its sensitivity \"confidential\" and its type, ask, due, owners and match (it stays "
               "inside creaite, internal only). Never use the word VIP in a gist, a summary, an item or anywhere in the "
               "reply (BL-288). Reply [] if there is nothing to report.")
@@ -3285,11 +3298,12 @@ VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send
 
 def vip_prompt(since, vips, zone, parts):
     """The check's prompt: VIP_PROMPT filled with the window in the laptop's zone, the addresses and the parts plain code
-    gives (sweep.vip_prompt_parts: the open cards and each project's open work)."""
+    gives (sweep.vip_prompt_parts: the open cards, each project's open work and, BL-342 Part 5, its open promises)."""
     import sweep
     return VIP_PROMPT.format(since=sweep.zoned_out(since, zone) or since, zone=zone["zone"], offset=zone["offset"],
                              sources=VIP_SOURCES[bool(VIP_INVITES)], kinds=VIP_KINDS[bool(VIP_INVITES)],
-                             addresses=", ".join(sorted(vips)), open=parts["open"], open_work=parts["open_work"])
+                             addresses=", ".join(sorted(vips)), open=parts["open"], open_work=parts["open_work"],
+                             open_promises=parts["open_promises"])
 
 
 VIP_LOCK = threading.Lock()       # one check at a time
@@ -3344,7 +3358,7 @@ def vip_check(how="check"):
                 vip_debug(f"check dropped: a sweep started during it, {took:.1f}s")
                 return "skipped: a sweep started during the check"
             clean, counts = sweep.vip_clean(found, since, zone, sweep.vip_state()["alerts"], invites=bool(VIP_INVITES))
-            checked = {"offered": parts["offered"], "counts": counts}
+            checked = {"offered": parts["offered"], "offered_promises": parts["offered_promises"], "counts": counts}
             new = sweep.vip_record(clean, how, checked=checked)
         VIP_STATUS["last_error"] = None
         vip_debug(sweep.vip_check_line(checked["counts"], new, took, cost))
@@ -3806,6 +3820,28 @@ def alert_close_route(handler, req):
 
 SWEEP_ALERT_ROUTES.update({"/api/alerts/close": alert_close_route})
 # ===== end BL-342 Part 3 B, step 9 =====
+
+# ===== BL-342 Part 5: "Add a promise" and "Looks kept: mark kept" on a thread's card (a route, not a run) =====
+# /api/alerts/promise {id, what: add | kept | dismiss, key, undo}: by the card's ID and the promise's key, stages one pending
+# new promise or one change of a promise to Done for Review, dismisses a promise (nothing staged), or with undo takes it back
+# while it is still pending. Nothing is applied.
+
+
+def alert_promise_route(handler, req):
+    """POST /api/alerts/promise {id, what, key, undo}: stage, undo or dismiss a card's promise or kept promise for Review."""
+    import sweep
+    aid = str(req.get("id") or "")
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_promise_action(aid, req.get("what"), req.get("key"), bool(req.get("undo")))
+            card = sweep.vip_find(aid) or {}
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "error": str(e), "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "promises": card.get("promises"), "kept": card.get("kept")})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/promise": alert_promise_route})
+# ===== end BL-342 Part 5 =====
 
 
 # ===== Chat and sweep (BL-108, BL-109, BL-110; sprint-chat-sweep) =====
