@@ -4817,6 +4817,7 @@ button.nchip{font:inherit;font-size:12px}
     nowStamp: () => nowStamp,
     onCmdEnter: () => onCmdEnter,
     onDayWheel: () => onDayWheel,
+    onceFor: () => onceFor,
     oneLine: () => oneLine,
     open: () => open,
     openCal: () => openCal,
@@ -27528,14 +27529,17 @@ ${s5}`;
     if (shared.VIEW === "today") renderSetup();
   }
   var SU = { status: null, health: null, confirm: false, busy: "" };
-  async function suStatus() {
-    if (!viaServer()) return null;
+  var suRead = onceFor(2e3, async () => {
     const r4 = await api("/api/setup/status", {});
     if (r4 && r4.ok) {
       SU.status = r4;
       if (r4.swept && (!D.last_sweep || D.last_sweep === "never")) D.last_sweep = r4.swept;
     }
     return SU.status;
+  });
+  async function suStatus(force) {
+    if (!viaServer()) return null;
+    return suRead(force);
   }
   async function suCopy(text, btn) {
     try {
@@ -27579,7 +27583,7 @@ ${s5}`;
   }
   async function suCheck(what, btn) {
     if (btn) btn.disabled = true;
-    const r4 = await suStatus();
+    const r4 = await suStatus(true);
     if (btn && btn.isConnected) btn.disabled = false;
     if (!r4) {
       snack("Checking needs the live server");
@@ -28299,9 +28303,10 @@ ${s5}`;
     },
     { id: "diag", cat: "system", title: "Diagnostics", raw: true, kw: "diagnostics log level errors debug copy report folder", render: () => diagCardHtml(), after: () => {
       if (SERVED) diagLoad().then(() => {
-        if (shared.VIEW === "settings" && shared.SCAT === "system") diagRedraw();
+        if (shared.VIEW === "settings") diagRedraw();
       });
     } },
+    /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
     { id: "version", cat: "system", title: "creaite version", raw: true, kw: "version update install release zip undo", render: () => '<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>', after: () => drawUpdates() },
     {
       id: "danger",
@@ -28589,14 +28594,15 @@ ${s5}`;
   }
   var vnum = (v5) => String(v5 || "0.0.0").split(".").reduce((a5, x5) => a5 * 1e3 + Number(x5 || 0), 0);
   var fdt = (at2) => at2 ? `${fd(at2.slice(0, 10))} ${at2.slice(11, 16)}` : "";
-  async function drawUpdates() {
+  var updStatus = onceFor(2e3, () => api("/api/update/status"));
+  async function drawUpdates(force) {
     const c5 = document.getElementById("updCard");
     if (!c5) return;
     if (!viaServer()) {
       putHTML(c5, html`<h2>creaite version</h2><p class="sub">Needs the live server.</p>`);
       return;
     }
-    const r4 = await api("/api/update/status");
+    const r4 = await updStatus(force);
     if (!document.getElementById("updCard")) return;
     if (!r4.ok) {
       putHTML(c5, html`<h2>creaite version</h2><p class="sub">${r4.message || "Couldn't read the version."}</p>`);
@@ -28636,7 +28642,7 @@ ${s5}`;
       updOut(updMsg(r4.message, true));
       return;
     }
-    await drawUpdates();
+    await drawUpdates(true);
     updReview("releases", false);
   }
   async function updReview(source, reinstall) {
@@ -28665,7 +28671,7 @@ ${s5}`;
       e4.currentTarget.disabled = true;
       e4.currentTarget.textContent = "Installing…";
       const res = await api("/api/update/install", { source, reinstall });
-      await drawUpdates();
+      await drawUpdates(true);
       updOut(updMsg(res.message, !res.ok));
       snack(res.ok ? `creaite ${p6.to} installed; restart the live server` : "The update didn't install");
     };
@@ -28688,7 +28694,7 @@ ${s5}`;
       btn.disabled = false;
       return;
     }
-    await drawUpdates();
+    await drawUpdates(true);
     updOut(updMsg(r4.message, !r4.ok));
     if (r4.ok) snack("Update undone; restart the live server");
   }
@@ -30516,7 +30522,7 @@ ${s5}`;
         return;
       }
       if (e4.target.closest("#diagRefresh")) {
-        await diagLoad();
+        await diagLoad(true);
         diagRedraw();
         return;
       }
@@ -59156,17 +59162,35 @@ ${d5.text}`);
       keepalive: true,
       body: JSON.stringify({ message: String(message || "").slice(0, 300), view: typeof shared.VIEW === "string" ? shared.VIEW : "", source: String(source || "").slice(0, 300), line: line || 0 })
     }).then(() => {
-      diagLoad().then(() => {
+      diagLoad(true).then(() => {
         status();
       });
     }).catch(() => {
     });
   };
-  async function diagLoad() {
+  function onceFor(ttl, fn2) {
+    let pend = null, at2 = -Infinity, last;
+    const run = () => {
+      const p6 = Promise.resolve().then(fn2).then((v5) => {
+        last = v5;
+        at2 = Date.now();
+        return v5;
+      }).finally(() => {
+        if (pend === p6) pend = null;
+      });
+      pend = p6;
+      return p6;
+    };
+    return (force) => {
+      if (pend) return force ? pend.then(run, run) : pend;
+      return !force && Date.now() - at2 < ttl ? Promise.resolve(last) : run();
+    };
+  }
+  var diagLoad = onceFor(2e3, async () => {
     if (!SERVED) return;
     const r4 = await api("/api/diagnostics", {});
     if (r4 && r4.ok) Object.assign(DIAG, { level: r4.level, days: r4.days, errors: r4.errors, last24: r4.last24, groups: r4.groups || [], newest: r4.newest || null, refusals: r4.refusals || [], repeats: r4.repeats || [], loaded: true });
-  }
+  });
   var diagErr = (e4) => `<details class="diagerr"><summary><span class="x">${esc(fd(e4.at.slice(0, 10)))} ${esc(e4.at.slice(11, 16))}</span> · ${esc(e4.area)} · ${esc(e4.message)}</summary>${e4.detail.length ? `<pre class="diagtb">${esc(e4.detail.join("\n"))}</pre>` : '<div class="sub">No traceback.</div>'}</details>`;
   function bootDebugLog() {
     window.addEventListener("error", (e4) => diagHook(e4.message, e4.filename, e4.lineno));

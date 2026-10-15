@@ -20,7 +20,7 @@ import { typing } from "./core/keys.js";
 import { mDots } from "./core/motion.js";
 import { countLink, go, pLink, tabTitle } from "./core/nav.js";
 import { applyMotion, applyTheme, cmdBox, copied, D, fd, ico, isMe, kindOf, MOD, MTICK, nowStamp, reduced, S, store, themeFade, themeOf, THEMES, TODAY, who } from "./core/page.js";
-import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
+import { api, applyPending, DIAG, diagErr, diagLoad, editProposal, needVault, oneLine, onceFor, refreshAll, reloadData, save, SERVED, setLive, setRhythm, SKEY, snack, status, toDb, viaServer, vq, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { catalogue, changedOnly, checkHealth, lastCheckAt, loadCatalogue, query, resetSettings, SAVED, settingOf, startSettingsStore } from "./stores/settings.js";
 import { chaseNote, draftAsk, openDraftEmail } from "./drafts.js";
@@ -149,7 +149,7 @@ export const SETSECTIONS=[
    +row("Mail, Teams and data",esc(`${SWEPT==="never"?"Mail and Teams never swept":`Mail and Teams last swept ${fd(SWEPT)}`} · data as of ${fd(shared.DATA_AT).slice(0,16)}`))
    +row("Port",nm("port"),"The creaite app belongs to this port: if you change it, install the app again and reconnect the vault")
    +`<div class="srow" style="display:block"><div>Start the live server<small>Paste into Terminal</small></div>${cmdBox()}</div><div style="display:flex;gap:8px;margin-top:8px">${ibtn("refresh","Check now",'id="liveCheck"',"bd")}</div>`},
- {id:"diag",cat:"system",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings"&&shared.SCAT==="system") diagRedraw(); }); }},
+ {id:"diag",cat:"system",title:"Diagnostics",raw:true,kw:"diagnostics log level errors debug copy report folder",render:()=>diagCardHtml(),after:()=>{ if(SERVED) diagLoad().then(()=>{ if(shared.VIEW==="settings") diagRedraw(); }); }},   /* #96: no test of the category: Diagnostics is no longer in "system", so its first read never redrew the card */
  {id:"version",cat:"system",title:"creaite version",raw:true,kw:"version update install release zip undo",render:()=>'<div class="card" id="updCard" data-sec="version"><h2>creaite version</h2><p class="sub">Checking…</p></div>',after:()=>drawUpdates()},
  {id:"danger",cat:"system",title:"Stop the live server",elid:"dangerCard",kw:"stop live server quit",
   render:()=>row("Stop the live server",'<button class="btn danger" id="liveStop" title="Stops the live server; open creaite again from its launcher or Terminal">Stop</button>',"Open creaite again from its launcher or Terminal. Edits wait until it is running again")},
@@ -276,9 +276,10 @@ export function showSaved(){ if(!SETFLASH) return; const left=2500-(Date.now()-S
    ("releases" or "downloads"), never a path. Nothing installs without the second, confirming click. */
 export const vnum=v=>String(v||"0.0.0").split(".").reduce((a,x)=>a*1000+Number(x||0),0);
 export const fdt=at=>at?`${fd(at.slice(0,10))} ${at.slice(11,16)}`:"";
-export async function drawUpdates(){ const c=document.getElementById("updCard"); if(!c) return;
+const updStatus=onceFor(2000,()=>api("/api/update/status"));   /* #96 */
+export async function drawUpdates(force){ const c=document.getElementById("updCard"); if(!c) return;
   if(!viaServer()){ putHTML(c,html`<h2>creaite version</h2><p class="sub">Needs the live server.</p>`); return; }
-  const r=await api("/api/update/status"); if(!document.getElementById("updCard")) return;
+  const r=await updStatus(force); if(!document.getElementById("updCard")) return;
   if(!r.ok){ putHTML(c,html`<h2>creaite version</h2><p class="sub">${(r.message||"Couldn't read the version.")}</p>`); return; }
   const src=r.releases&&(!r.downloads||vnum(r.releases.version)>=vnum(r.downloads.version))?"releases":(r.downloads?"downloads":null);
   const z=src&&r[src], newer=!!z&&vnum(z.version)>vnum(r.installed);
@@ -297,7 +298,7 @@ export async function updUpload(f){ if(!f) return;
   updOut('<p class="sub">Copying to system/releases…</p>');
   const data=await new Promise((ok,no)=>{ const rd=new FileReader(); rd.onload=()=>ok(String(rd.result).split(",")[1]||""); rd.onerror=no; rd.readAsDataURL(f); });
   const r=await api("/api/update/upload",{name:f.name,data}); if(!r.ok){ updOut(updMsg(r.message,true)); return; }
-  await drawUpdates(); updReview("releases",false); }
+  await drawUpdates(true); updReview("releases",false); }
 export async function updReview(source,reinstall){ updOut('<p class="sub">Checking the release…</p>');
   const r=await api("/api/update/inspect",{source,reinstall}); if(!r.ok){ updOut(updMsg(r.message,true)); return; }
   const p=r.plan, n=(a,w)=>`${a.length} ${w}${a.length===1?"":"s"}`, adds=Object.entries(p.settings||{});
@@ -313,12 +314,12 @@ export async function updReview(source,reinstall){ updOut('<p class="sub">Checki
   const nc=document.getElementById("updNotesCopy"); if(nc) nc.onclick=()=>(navigator.clipboard?navigator.clipboard.writeText(p.notes):Promise.reject()).then(()=>{ copied(nc); snack("Copied"); },()=>snack("Couldn't copy"));   /* BL-196: the original text */
   document.getElementById("updGo").onclick=async e=>{ e.currentTarget.disabled=true; e.currentTarget.textContent="Installing…";
     const res=await api("/api/update/install",{source,reinstall});
-    await drawUpdates(); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart the live server`:"The update didn't install"); }; }
+    await drawUpdates(true); updOut(updMsg(res.message,!res.ok)); snack(res.ok?`creaite ${p.to} installed; restart the live server`:"The update didn't install"); }; }
 export async function updUndo(btn,keep){ if(!btn.dataset.armed){ btn.dataset.armed="1"; btn.textContent="Confirm undo"; btn.classList.add("danger"); return; }
   btn.disabled=true; const r=await api("/api/update/undo",{keep_database:keep});
   if(!r.ok&&/--keep-database/.test(r.message||"")){ updOut(updMsg("The database has changed since the update; undoing it would lose those changes.",true)+'<div style="margin-top:8px"><button class="btn" id="updKeep">Undo engine and settings only</button></div>');
     document.getElementById("updKeep").onclick=e=>{ e.currentTarget.dataset.armed="1"; updUndo(e.currentTarget,true); }; btn.disabled=false; return; }
-  await drawUpdates(); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart the live server"); }
+  await drawUpdates(true); updOut(updMsg(r.message,!r.ok)); if(r.ok) snack("Update undone; restart the live server"); }
 export function renderMgr(kind){ if(kind==="ws"&&D.ws_table&&(wsTable()||![...A,...R].some(x=>x.ws))){ drawWsMgr(); return; }   /* not yet migrated: BL-57's lists */
   const isP=kind==="people", L=isP?PEOPLE:WSL; const names=isP?[...new Set([...A.map(a=>a.o),...R.map(r=>r.o),...L.added,...L.hidden])].filter(n=>n&&n!=="TBC"):[...new Set([...wsUsed(),...L.added.filter(k=>k.includes("|")),...L.hidden.filter(k=>k.includes("|"))])];
   const on=(x,k)=>{ const [pc,nm]=wsParts(k); return x.p===pc&&x.ws===nm; };
@@ -979,14 +980,14 @@ export function bootSettings0155(){
 /* BL-180 (sprint-peek-new): the header's "n errors in the last day" link is gone; the errors banner below the header replaces it */
 document.addEventListener("click",async e=>{
   if(e.target.closest("[data-diag]")){ e.preventDefault(); go("settings","diag"); return; }
-  if(e.target.closest("#diagRefresh")){ await diagLoad(); diagRedraw(); return; }
+  if(e.target.closest("#diagRefresh")){ await diagLoad(true); diagRedraw(); return; }
   if(e.target.closest("#diagOpen")){ openPath("system/logs"); return; }
   if(e.target.closest("#diagCopy")){ const r=await api("/api/diagnostics",{report:true}); if(!r||!r.ok){ snack("Couldn't build the report"); return; }
     try{ await navigator.clipboard.writeText(r.report); copied(e.target.closest("#diagCopy")); snack("Diagnostics copied: paste them into the chat"); }
     catch(err){ putHTML($("#diagOut"),html`<textarea id="diagReport" readonly aria-label="Diagnostics report"></textarea><div class="sub">Select all and copy: the browser wouldn't copy it for you.</div>`); $("#diagReport").value=r.report; $("#diagReport").select(); } } });
 document.addEventListener("change",async e=>{ const el=e.target; if(el.id!=="diagLevel") return; const was=DIAG.level;
   if(await writeSettings({"logging.level":el.value})){ DIAG.level=el.value; snack(`Log level saved: ${el.value}`); } else el.value=was; });
-if(SERVED) diagLoad().then(()=>{ status(); if(shared.VIEW==="settings") renderSettings(); });
+if(SERVED) diagLoad().then(()=>{ status(); if(shared.VIEW==="settings") renderSettings(); });   /* #96: this redraw is needed (a page restored onto Settings drew before the Set-up card was registered); its reads are now shared */
 }
 /* ===== BL-165 (sprint-polish-2) ===== wide tables show that they scroll. Every table frame (.tbl) in the page whose table is wider
    than the frame gets the cue: a fade at the right edge and a "more columns →" button (it scrolls right by most of the frame),
