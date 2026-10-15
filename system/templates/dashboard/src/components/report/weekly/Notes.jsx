@@ -4,7 +4,7 @@
    next"; when the second is empty the first takes the full width). Words open for editing on a click (Rich). */
 import { Rich } from "./Rich.jsx";
 
-/** @typedef {import("../SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
 const TITLES = ["Where we are", "What happens next"];
 
 /** Words with the section's source tags placed after the lines they name. @param {{ctx: SectionCtx, label: string, empty: string}} props */
@@ -14,16 +14,13 @@ export function Words({ ctx, label, empty }) {
   return <Rich ctx={ctx} text={s.text} label={label} empty={empty} after={after} />;
 }
 
-/** One pane of Current state, edited in place as plain words. @param {{ctx: SectionCtx, i: number}} props */
-function Pane({ ctx, i }) {
+/** One pane of Current state: the words, edited on a click in the sheet's one editor. @param {{ctx: SectionCtx, i: number}} props */
+function StatePane({ ctx, i }) {
   const panes = ctx.section.panes || [], p = panes[i] || { title: "", text: "" };
-  const set = (/** @type {string} */ text) => ctx.update({ panes: Object.assign([], panes.length ? panes : [{ title: "", text: "" }], { [i]: { ...p, text } }) }, "Text edited");
   return (
     <div class="wr-pane">
       <div class="wr-panet">{p.title || TITLES[i] || ""}</div>
-      {ctx.editing
-        ? <textarea class="sheet-text wr-pta" aria-label={p.title || TITLES[i]} value={p.text} placeholder="Say where things stand" onInput={e => set(/** @type {HTMLTextAreaElement} */ (e.currentTarget).value)} />
-        : <div class="wr-rich">{String(p.text || "").split(/\n{2,}/).map((t, j) => t.trim() ? <p key={j}>{t.trim()}</p> : null)}</div>}
+      <Rich ctx={ctx} text={p.text} pane={i} label={p.title || TITLES[i]} empty="Say where things stand" />
     </div>);
 }
 
@@ -35,8 +32,8 @@ export function CurrentState({ ctx }) {
   const two = second || (ctx.editing && panes.length > 1);
   return (
     <div class={`wr-two${two ? "" : " single"}`}>
-      <Pane ctx={ctx} i={0} />
-      {two ? <div><Pane ctx={ctx} i={1} />{ctx.editing && !second ? <button type="button" class="wr-link" onClick={dropSecond}>Remove the second pane</button> : null}</div>
+      <StatePane ctx={ctx} i={0} />
+      {two ? <div><StatePane ctx={ctx} i={1} />{ctx.editing && !second ? <button type="button" class="wr-link" onClick={dropSecond}>Remove the second pane</button> : null}</div>
         : ctx.editing ? <div><button type="button" class="wr-link" onClick={addSecond}>+ Add a second pane</button></div> : null}
     </div>);
 }

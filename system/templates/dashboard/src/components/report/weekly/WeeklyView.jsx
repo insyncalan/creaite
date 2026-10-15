@@ -1,12 +1,12 @@
 // @ts-check
 /* WeeklyView (v2.1.0 P6, BL-335): the weekly report in creaite (#weekly=<code>&week=<Friday>), drawn on the sheet's contract
-   (dev/sprints/v210-contract.md §4) with the stub sheet for now (components/report/SheetStub.jsx); moving to P5's Sheet.jsx is
-   changing the import. The view supplies the renderers for the weekly sections, keeps the document (stores/weekly.js) and makes
-   P3's /api/report/* calls. The bar: zoom, Show as exported (the sheet's), Export, Edit again or Approve and file. Nothing here
+   (dev/sprints/v210-contract.md §4) on P5's Sheet (components/report/Sheet.jsx), which does the zoom, move and hide, eyes, Show as exported and
+   autosave. The view supplies the renderers for the weekly sections, keeps the document (stores/weekly.js) and makes
+   P3's /api/report/* calls. The bar (the sheet's toolbar slot): Export, Edit again or Approve and file. Nothing here
    sends anything. */
 import { render } from "preact";
 import { Menu } from "../../Menu.jsx";
-import { SheetStub } from "../SheetStub.jsx";
+import { Sheet } from "../Sheet.jsx";
 import { Glance } from "./Glance.jsx";
 import { CurrentState, Words } from "./Notes.jsx";
 import { Asks, Decisions, Overdue, Risks } from "./Tables.jsx";
@@ -17,9 +17,9 @@ import { navWrite, tabTitle } from "../../../core/nav.js";
 import { fd } from "../../../core/page.js";
 import { snack } from "../../../core/server.js";
 import { approveWeekly, editDoc, exportWeekly, loadWeekly, saveWeekly, setWeeklyDirty, weeklyArg, weeklyBase, weeklyBusy, weeklyDirty,
-  weeklyDoc, weeklyEditing, weeklyExported, weeklyView, weeklyZoom } from "../../../stores/weekly.js";
+  weeklyDoc, weeklyEditing, weeklyView } from "../../../stores/weekly.js";
 
-/** @typedef {import("../SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../Sheet.jsx").SheetDoc} SheetDoc */
 
 const sectionWords = (/** @type {string} */ label, /** @type {string} */ empty) => (/** @type {any} */ ctx) => <Words ctx={ctx} label={label} empty={empty} />;
 const RENDER = { byId: {
@@ -39,8 +39,7 @@ async function saveFirst() {
 
 /** The bar's buttons (the sheet's `toolbar` slot). @param {{doc: SheetDoc, readOnly: boolean}} props */
 function Bar({ doc, readOnly }) {
-  const z = weeklyZoom.value, approved = doc.state === "approved";
-  const zoom = (/** @type {number} */ d) => { weeklyZoom.value = Math.min(0.8, Math.max(0.4, Math.round((z + d) * 100) / 100)); };
+  const approved = doc.state === "approved";
   const exp = async (/** @type {string} */ fmt) => {
     if (!(await saveFirst())) return;
     const r = await exportWeekly(doc, fmt);
@@ -54,11 +53,6 @@ function Bar({ doc, readOnly }) {
   };
   return (
     <span class="wr-barr">
-      <span class="wr-zoom" role="group" aria-label="Zoom">
-        <button type="button" aria-label="Zoom out" disabled={z <= 0.4} onClick={() => zoom(-0.05)}>−</button>
-        <span>{Math.round(z * 100)}%</span>
-        <button type="button" aria-label="Zoom in" disabled={z >= 0.8} onClick={() => zoom(0.05)}>+</button>
-      </span>
       <Menu label="Export" btnCls="btn sm" menuLabel="Export the report" data={{ wrexport: "" }} onPick={exp}
         items={[{ id: "docx", name: "Word (.docx)", line: "The firm's template, to send" }, { id: "pdf", name: "PDF", line: "Printed from the page" },
           { id: "html", name: "HTML (to share)", line: "One page that opens in any browser; read only" }]} />
@@ -82,8 +76,7 @@ export function WeeklyView() {
         <p class="sub wrmeta">{doc.project_name} · week ending {fd(doc.date)} · {state}{doc.version ? ` · version ${doc.version}` : ""}</p>
       </header>
       <div class="wrsheet">
-        <SheetStub doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} zoom={weeklyZoom.value}
-          onZoom={z => { weeklyZoom.value = z; }} exported={weeklyExported.value} onExported={b => { weeklyExported.value = b; }} readOnly={readOnly}
+        <Sheet doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={readOnly}
           renderers={RENDER} onChange={editDoc} onSave={async req => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
           onEvent={ev => { if (ev.type === "reload") loadWeekly(/** @type {any} */ (weeklyArg.value)); }}
           toolbar={<Bar doc={doc} readOnly={readOnly} />} />
@@ -97,7 +90,7 @@ export function renderWeekly(arg) {
   const el = $("#v-weekly"); if (!el) return;
   if (!wkMounted) { render(<WeeklyView />, el); wkMounted = true; }
   const a = typeof arg === "string" ? parseWeekly(arg) : arg;
-  if (a && a.code) { setWeeklyDirty(false); weeklyExported.value = false; loadWeekly(a).then(() => { navWrite(false); tabTitle(); }); }
+  if (a && a.code) { setWeeklyDirty(false); loadWeekly(a).then(() => { navWrite(false); tabTitle(); }); }
 }
 
 /** "ABC" or "ABC&week=2026-10-16" as the address keeps it. @param {string} s @returns {{code: string, week?: string}|null} */

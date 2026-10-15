@@ -7,7 +7,7 @@ import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { editDoc } from "../../../stores/weekly.js";
 import { dayNo, wkDm, wkDmy, wkMsState, todayIso, withSection } from "./weeklyDoc.js";
 
-/** @typedef {import("../SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const PX = 6, H = 92;
 

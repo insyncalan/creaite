@@ -3,8 +3,8 @@
    sheet shows, health tones, milestone states and the changes the sections make to the document (a section and the layout
    together, as the sheet's contract §4.1 asks, so P3's remember_layout gets a consistent layout). No DOM here. */
 
-/** @typedef {import("../SheetStub.jsx").SheetDoc} SheetDoc */
-/** @typedef {import("../SheetStub.jsx").SheetSection} SheetSection */
+/** @typedef {import("../Sheet.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../Sheet.jsx").SheetSection} SheetSection */
 
 const WK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const WK_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -45,7 +45,7 @@ export function wkMdBlocks(text) {
 }
 
 /** A line's inline marks as parts: {s, b?, i?}. @param {string} line @returns {{s: string, b?: boolean, i?: boolean}[]} */
-export function inline(line) {
+export function wkInline(line) {
   /** @type {{s: string, b?: boolean, i?: boolean}[]} */ const parts = [];
   let at = 0;
   for (const m of line.matchAll(/\*\*([^*]+)\*\*|\*([^*]+)\*/g)) {

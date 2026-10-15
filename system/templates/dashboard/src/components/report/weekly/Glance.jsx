@@ -6,7 +6,7 @@ import { useState } from "preact/hooks";
 import { editDoc } from "../../../stores/weekly.js";
 import { withSection } from "./weeklyDoc.js";
 
-/** @typedef {import("../SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
 
 /** At a glance. @param {{ctx: SectionCtx}} props */
 export function Glance({ ctx }) {

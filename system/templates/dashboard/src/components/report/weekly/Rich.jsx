@@ -1,15 +1,15 @@
 // @ts-check
 /* Rich (v2.1.0 P6): words on the report page. Shown as the page shows them (paragraphs, bullets, bold, italic); a click, or Enter,
-   opens the sheet's Text for those words (a textarea on the stub sheet, the one editor on P5's), and leaving it shows them again.
+   opens the sheet's Text for those words (the sheet's one editor), and leaving it shows them again.
    Read only (approved, or Show as exported): the words and nothing to click. */
 import { useEffect, useRef, useState } from "preact/hooks";
-import { inline, wkMdBlocks } from "./weeklyDoc.js";
+import { wkInline, wkMdBlocks } from "./weeklyDoc.js";
 
-/** @typedef {import("../SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
 
 /** One line with its bold and italic marks. @param {{line: string}} props */
 export function RpLine({ line }) {
-  return <>{inline(line).map((p, i) => p.b ? <b key={i}>{p.s}</b> : p.i ? <i key={i}>{p.s}</i> : p.s)}</>;
+  return <>{wkInline(line).map((p, i) => p.b ? <b key={i}>{p.s}</b> : p.i ? <i key={i}>{p.s}</i> : p.s)}</>;
 }
 
 /** Markdown as blocks. `after(line)` may add something after a bullet or a line (a source tag).
@@ -21,9 +21,9 @@ export function Md({ text, after }) {
 }
 
 /** Words that open for editing on a click.
-    @param {{ctx: SectionCtx, text: string|null|undefined, field?: string, row?: number, col?: string, label?: string, cls?: string,
+    @param {{ctx: SectionCtx, text: string|null|undefined, field?: string, pane?: number, row?: number, col?: string, label?: string, cls?: string,
       empty?: string, after?: (line: string) => any}} props */
-export function Rich({ ctx, text, field, row, col, label, cls = "", empty = "Click to write", after }) {
+export function Rich({ ctx, text, field, pane, row, col, label, cls = "", empty = "Click to write", after }) {
   const [on, setOn] = useState(false), box = useRef(/** @type {HTMLDivElement|null} */ (null));
   useEffect(() => { if (on) /** @type {HTMLElement|null} */ (box.current?.querySelector("textarea,[contenteditable]"))?.focus(); }, [on]);
   const { Text } = ctx;
@@ -32,7 +32,7 @@ export function Rich({ ctx, text, field, row, col, label, cls = "", empty = "Cli
     <div class={`wr-rich wr-open ${cls}`} ref={box}
       onFocusOut={e => { const to = /** @type {Node|null} */ (e.relatedTarget); if (!to || !box.current?.contains(to)) setOn(false); }}
       onKeyDown={e => { if (e.key === "Escape") { e.stopPropagation(); setOn(false); } }}>
-      <Text field={field} row={row} col={col} label={label} rich />
+      <Text field={field} pane={pane} row={row} col={col} label={label} rich />
     </div>);
   return (
     <div class={`wr-rich wr-edit ${cls}`} role="button" tabindex={0} aria-label={`${label || ctx.section.heading}: edit`}

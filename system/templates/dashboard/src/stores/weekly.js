@@ -7,7 +7,7 @@
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
 
-/** @typedef {import("../components/report/SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{ok: boolean, message?: string, doc?: SheetDoc, path?: string, where?: string, version?: number, filed?: boolean,
     logos?: {kind: string, path: string}[]}} WeeklyView */
 
@@ -20,9 +20,6 @@ export const weeklyDoc = signal(/** @type {SheetDoc|null} */ (null));
 /** The version the page was opened at, sent with each save. */
 export const weeklyBase = signal(/** @type {number|undefined} */ (undefined));
 export const weeklyBusy = signal("");
-/** The page's width as a share of the sheet area (the sheet's zoom, 0.4 to 0.8) and Show as exported. */
-export const weeklyZoom = signal(0.8);
-export const weeklyExported = signal(false);
 /** An approved report opened to change (Edit again): its first save starts a new draft. */
 export const weeklyEditing = signal(false);
 /** The logo files as data, by their stored path (read once per project). */

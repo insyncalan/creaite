@@ -67,8 +67,8 @@ class WeeklyReportView(LiveBrowserCase):
         self.ev("document.querySelector('#v-weekly [data-id=risks] tbody tr .wr-eye').click()")
         self.b.wait("document.querySelector('#v-weekly [data-id=risks] tr.hidrow')", 5)
         self.assertIn("Showing", self.ev("document.querySelector('#v-weekly [data-id=risks] .wr-count').textContent"))
-        self.ev("[...document.querySelectorAll('#v-weekly .sheet-bar button')].find(b=>b.textContent==='Save').click()")
-        self.b.wait("/Saved · version/.test(document.querySelector('#v-weekly .sheet-bar [role=status]').textContent)", 10)
+        self.ev("document.querySelector('#v-weekly .sheet-root').dispatchEvent(new KeyboardEvent('keydown',{key:'s',metaKey:true,bubbles:true,cancelable:true}))")
+        self.b.wait("/Saved · version/.test(document.querySelector('#v-weekly .sheet-status').textContent)", 10)
         draft = next((self.v.root / "system/staging/drafts").glob("*Weekly report*.html"))
         text = draft.read_text(encoding="utf-8")
         data = json.loads(text.split('id="creaite-data">', 1)[1].split("</script>", 1)[0])
@@ -93,9 +93,12 @@ class WeeklyReportView(LiveBrowserCase):
 
     def test_click_words_edit_in_place(self):
         self.ev("document.querySelector('#v-weekly [data-id=summary] .wr-edit').click()")
-        self.b.wait("document.querySelector('#v-weekly [data-id=summary] textarea')", 5)
-        self.ev("(()=>{const t=document.querySelector('#v-weekly [data-id=summary] textarea'); t.value='A new line.'; t.dispatchEvent(new Event('input',{bubbles:true}));})()")
-        self.b.wait("document.querySelector('#v-weekly [data-id=summary] textarea').value==='A new line.'", 5)
+        self.b.wait("document.querySelector('#v-weekly [data-id=summary] .sheet-rich.ProseMirror')", 5)
+
+    def test_current_state_panes_use_the_one_editor(self):
+        self.assertEqual(self.ev("document.querySelectorAll('#v-weekly [data-id=current_state] textarea').length"), 0)
+        self.ev("document.querySelector('#v-weekly [data-id=current_state] .wr-edit').click()")
+        self.b.wait("document.querySelector('#v-weekly [data-id=current_state] .sheet-rich.ProseMirror')", 5)
 
 
 if __name__ == "__main__":

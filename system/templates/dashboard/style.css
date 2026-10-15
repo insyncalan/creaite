@@ -3144,8 +3144,8 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
 .sheet-exported .sheet-handle{display:none}
-/* ===== v2.1.0 P6 (BL-335): the weekly report view (#weekly=<code>&week=<Friday>, components/report/weekly/), on the stub sheet
-   (components/report/SheetStub.jsx) until P5's Sheet.jsx. The page is a fixed light sheet in the firm's brand, the same in both
+/* ===== v2.1.0 P6 (BL-335): the weekly report view (#weekly=<code>&week=<Friday>, components/report/weekly/), on P5's sheet
+   (components/report/Sheet.jsx). The page is a fixed light sheet in the firm's brand, the same in both
    themes, as it exports (the mockup "Weekly report redesign"); everything around it follows the theme. ===== */
 :root{--rp-paper:#F8F8FF; --rp-ink:#1E1F1E; --rp-grey:#5E6270; --rp-rule:#D9DCE6; --rp-soft:#ECEDF4; --rp-green:#91FF01; --rp-red:#C0392B;
   --rp-amber:#D68910; --rp-ok:#2E7D32; --rp-blue:#2C6FAA; --rp-white:#FFFFFF}
@@ -3162,10 +3162,6 @@ button.nchip{font:inherit;font-size:12px}
 .wrsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
 .wrsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
 .wr-barr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
-.wr-zoom{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:8px;height:32px;padding:0 4px}
-.wr-zoom button{border:0;background:none;color:var(--ink);width:26px;height:26px;cursor:pointer;border-radius:6px;font-size:15px}
-.wr-zoom button:hover:not(:disabled){background:var(--sunk)} .wr-zoom button:disabled{color:var(--faint);cursor:default}
-.wr-zoom span{min-width:44px;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums}
 .wrsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:24px 16px 64px;background:var(--sunk)}
 .wrsheet .sheet-one{max-width:100%}
 .wrsheet .page{position:relative;background:var(--rp-paper);color:var(--rp-ink);font:14px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;box-shadow:var(--shadow-card);padding:30px 48px 26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;row-gap:22px;overflow-wrap:anywhere}
@@ -3196,6 +3192,7 @@ button.nchip{font:inherit;font-size:12px}
 .wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
 .wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
 .wr-chg{margin-top:6px}
+.wrsheet .page .btn{background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule)} .wrsheet .page .btn:hover{background:var(--rp-soft)}
 .wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:16px;line-height:1.35;margin-bottom:6px}
 .wr-last{font-size:12px;color:var(--rp-grey);margin-top:4px}
 .wr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-top:1px solid var(--rp-rule);border-bottom:1px solid var(--rp-rule)}

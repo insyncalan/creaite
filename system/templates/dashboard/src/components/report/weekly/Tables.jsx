@@ -7,8 +7,8 @@
 import { Rich } from "./Rich.jsx";
 import { cellsFromItem, daysLate } from "./weeklyDoc.js";
 
-/** @typedef {import("../SheetStub.jsx").SectionCtx} SectionCtx */
-/** @typedef {import("../SheetStub.jsx").SheetRow} SheetRow */
+/** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../Sheet.jsx").SheetRow} SheetRow */
 /** @typedef {{key: string, label: string, w?: string, num?: boolean, cell: (r: Row) => any}} Col */
 /** @typedef {{ctx: SectionCtx, row: SheetRow, i: number, cells: Record<string, string>, item: any}} Row */
 

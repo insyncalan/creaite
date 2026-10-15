@@ -8,7 +8,7 @@ import { editDoc, weeklyLogos, weeklyView } from "../../../stores/weekly.js";
 import { Rich } from "./Rich.jsx";
 import { wkDm, wkLongDate, wkTone, withSection } from "./weeklyDoc.js";
 
-/** @typedef {import("../SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
 const KIND = { firm: "Firm", client: "Client", partner: "Partner" };
 
 /** The header: what the report is, the project, the week, the client; the logos. @param {{ctx: SectionCtx}} props */
