@@ -1306,8 +1306,40 @@ def ask_arg_paths(command):
         if ASK_WILDCARDS & set(p):
             pattern = os.path.expanduser(p)
             pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
-            out += [m for m in glob.glob(pattern, recursive=False) if m not in out]
+            out += [m for m in glob.glob(pattern, recursive=False) + _ask_glob_dots(pattern) if m not in out]
     return out
+
+
+ASK_GLOB_LIMIT = 2000
+
+
+class AskGlobTooBig(Exception):
+    """A wildcard reaches more entries than the guard checks: refused, never let through."""
+
+
+def _ask_glob_dots(pattern):
+    """What the shell would expand a wildcard to with hidden files matched too (#116 A6 F3: zsh's GLOB_DOTS, bash's dotglob, so
+    `~/*/id_rsa` can reach ~/.ssh), one level per part, as glob does but with fnmatch, which matches a leading dot. At most
+    ASK_GLOB_LIMIT entries are looked at; more raises AskGlobTooBig, which ask_never_reason refuses."""
+    import fnmatch
+    parts = pattern.split("/")
+    found, seen = ["/" if pattern.startswith("/") else ""], 0
+    for part in (x for x in parts if x):
+        nxt = []
+        for base in found:
+            if ASK_WILDCARDS & set(part):
+                try:
+                    names = os.listdir(base or ".")
+                except OSError:
+                    continue
+                seen += len(names)
+                if seen > ASK_GLOB_LIMIT:
+                    raise AskGlobTooBig()
+                nxt += [os.path.join(base, n) for n in names if fnmatch.fnmatchcase(n, part)]
+            elif os.path.lexists(os.path.join(base, part)):
+                nxt.append(os.path.join(base, part))
+        found = nxt
+    return found
 
 
 def ask_never_reason(command):
@@ -1317,6 +1349,8 @@ def ask_never_reason(command):
             kind, why = classify(p, "read")
             if kind == "never":
                 return f"{p}: {why}"
+    except AskGlobTooBig:
+        return "the wildcard reaches too many files for the guard to check: name the file"
     except Exception as e:  # noqa: BLE001  fail closed
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
@@ -1329,11 +1363,13 @@ def ask_never_reason(command):
 # "~-5 days" or "**bold**" still runs):
 # - a `#` starting a word starts a comment: the shell drops the rest, while the guard (shlex, no comments) still read it, so
 #   `review.py assign … # --dry-run` was classed read (command_kind) and ran for real;
-# - `~+`, `~-` and `~N` at the start of a word (or after = or :) are $PWD, $OLDPWD and the directory stack, which expanduser
-#   leaves alone, so the guard judged a folder named `~-` in the vault;
+# - `~+`, `~-` and `~N` at the start of a word (or after = : or ,) are $PWD, $OLDPWD and the directory stack, which expanduser
+#   leaves alone, so the guard judged a folder named `~-` in the vault; #116 A6 F2: so are ~user and, in zsh, ~NAME for any
+#   variable holding a folder (~HOME, ~TMPDIR), so a ~ followed by anything but / is refused;
 # - `**` recurses in zsh (and bash's globstar), where the guard's own expansion goes one folder deep.
 def ask_shell_refusal(command):
-    """Why an ask creaite Bash call has an unquoted comment, ~+ ~- ~N or ** the shell would act on, or None."""
+    """Why an ask creaite Bash call has an unquoted comment, a ~ followed by anything but / (~+ ~- ~N ~user ~NAME) or ** the
+    shell would act on, or None."""
     cmd = vault_relative(command)
     quote, prev = None, " "
     for i, ch in enumerate(cmd):
@@ -1344,8 +1380,11 @@ def ask_shell_refusal(command):
             quote = ch
         elif ch == "#" and prev in " \t":
             return "the command has a # comment, which the shell would drop: run the script on its own, without one"
-        elif ch == "~" and prev in " \t=:" and cmd[i + 1:i + 2] in tuple("+-0123456789"):
-            return f"the command has {cmd[i:i + 2]}, which the shell turns into another folder: give the path itself"
+        elif ch == "~" and prev in " \t=:," and cmd[i + 1:i + 2] not in ("", "/", " ", "\t"):
+            # #116 A6 F2: ~+ ~- ~N, ~user and zsh's ~NAME (any variable holding a folder: ~HOME, ~TMPDIR, ~PWD) are folders
+            # expanduser doesn't resolve as the shell does; only ~ and ~/ are read the same by both
+            return (f"the command has {cmd[i:i + 2]}…, which the shell turns into another folder: give the path itself, or "
+                    f"start it with ~/")
         elif ch == "*" and cmd[i + 1:i + 2] == "*":
             return "the command has **, which the shell would expand through every folder: give the path itself"
         prev = ch
@@ -1395,11 +1434,12 @@ def read_write_refusal(command):
         return None
     why = "tracker.py validate writes its findings back into the file, so it runs only on a proposal in system/staging/"
     try:
-        given = [w for w in words if w != "validate"]
-        if len(given) != 1:                                   # one proposal only (resolve_proposal reads the first)
-            return why
-        # The first that exists, in tracker.resolve_proposal's order; nothing found is refused (an unquoted ~ the shell
-        # expands isn't found here, so it can't be checked).
+        given = list(words)
+        given.remove("validate")                              # the command word only: a file named validate is still checked
+        if len(given) != 1 or given[0].startswith("~") or ASK_WILDCARDS & set(given[0]):
+            return why     # one proposal only (resolve_proposal reads the first); #116 A6 F1: a ~ or a wildcard is what the shell
+                           # expands, so a namesake found in system/staging/ here is not the file tracker.py would rewrite
+        # The first that exists, in tracker.resolve_proposal's order; nothing found is refused.
         found = next((c for c in (Path(given[0]), paths.ROOT / given[0], paths.STAGING / Path(given[0]).name)
                       if c.exists()), None)
         if found is None or parts_under(Path(os.path.realpath(found)), Path(os.path.realpath(paths.STAGING))) is None:
