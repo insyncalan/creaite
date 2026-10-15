@@ -26,24 +26,32 @@ import json
 import re
 import subprocess
 import sys
+import unittest
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hcbase
 import measure
+import v210_items
 from hcbase import NOTES, SCREENS, HandcheckCase
 from live_browser import pin_page_clock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "system" / "scripts"))
-import date_words
+try:
+    import date_words
+except ImportError:                  # not on main yet (P4, branch v210-star-fix): every check that needs it is an expected skip
+    date_words = None
 
 KIND = {**{n: "scriptable" for n in (1, 2, 3, 7, 8, 9, 10, 11, 12, 73, 74, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
                                     *range(33, 51), 52, 53, 54, 55, 56, 57, 58, 61, 62, 63, 64, 65, 67, 68, 69)},
         **{n: "measurable" for n in (5, 6, 51, 70)},
         **{n: "judgement" for n in (4, 32, 59, 66, 71)},
         **{n: "live only" for n in (19, 60, 72)}}
+for _it in v210_items.ITEMS:                       # checks 75 on: see v210_items.py
+    KIND[_it["n"]] = _it["kind"]
 
 LIVE_ONLY = {
     72: "needs a real model: the hand-check vault answers ✦, Shorten, Polish and Find the source with a fixed stand-in reply, "
@@ -53,6 +61,7 @@ LIVE_ONLY = {
     60: "needs a real model reading a real transcript: the check stages a hand-written minutes record (the output of cx-minutes), "
         "never Claude's reading of the speech, and never Microsoft 365",
 }
+LIVE_ONLY.update({_it["n"]: _it["live"] for _it in v210_items.ITEMS if _it["kind"] == "live only"})
 NOTES.update({18: "opening in Safari or Word by hand is check 19 (live only)"})
 
 # ── the clock and the week ────────────────────────────────────────────────────
@@ -207,16 +216,20 @@ class StartUp(V210Case):
         report) → no page errors. Settings › Diagnostics says "No errors in the last 7 days"."""
         b = self.b
         names = ["today", "work", "review", "intake", "files", "activity", "projects", "cockpit", "people", "help",
-                 "settings-essentials", "settings-advanced", "settings-health", "reports", "reporting", "weekly"]
+                 "settings-essentials", "settings-advanced", "settings-health"]
+        if REPORTING_LANDED:         # the new screens are on main only once the integration is (otherwise this visits the old ones)
+            names += ["reports", "reporting", "weekly"]
         for name in names:
             with self.subTest(name):
                 self.screen(name)
-        b.eval(f"go('clientreport',{{code:'FAL',week:'{self.week}'}})")
-        b.wait("!!document.querySelector('#v-clientreport .crhealth')", 25)
+        if REPORTING_LANDED:
+            b.eval(f"go('clientreport',{{code:'FAL',week:'{self.week}'}})")
+            b.wait("!!document.querySelector('#v-clientreport .crhealth')", 25)
         self.assertEqual(b.errors, [], "page errors")
         diag = b.eval("api('/api/diagnostics',{}).then(r=>r)")
         self.assertEqual((diag or {}).get("errors"), [], f"Diagnostics lists errors: {str((diag or {}).get('errors'))[:200]}")
-        self.note(2, f"{len(names) + 1} screens, 0 page errors; Diagnostics clean")
+        self.note(2, f"{len(names) + int(REPORTING_LANDED)} screens, 0 page errors; Diagnostics clean"
+                  + ("" if REPORTING_LANDED else " (the reporting screens are not on main yet: v210-star-fix)"))
 
 
 # ── BL-335: the weekly report in the A4 sheet (P5, P6) ───────────────────────
@@ -2007,3 +2020,184 @@ class Judgement(Seeded):
         """71. Help (it now explains the reporting space, the A4 sheet and the minutes view) in two themes, light and dark →
         readable throughout, with the theme's own fonts."""
         self.shots(71, ["help"])
+
+
+# ── What has landed on main, and the expected skips ──────────────────────────
+#
+# This file is written for the finished release, and run after each merge. A check whose code is not on this checkout yet is an
+# EXPECTED SKIP that names the branch (the Results row says "expected skip: not on main yet (<branch>)"); nothing fails for a
+# merge that has not happened. Once the branch is merged the same check runs by itself.
+
+ROOT = Path(__file__).resolve().parents[3]
+TESTS = ROOT / "dev" / "tests"
+
+
+def source_has(rel, text):
+    """Does a file of this checkout (relative to the repository root) contain `text`? False when the file is not there."""
+    try:
+        return text in (ROOT / rel).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+
+def probe_ok(probe):
+    """One landing probe of v210_items: (test file, test name) = the test is in this checkout (name "" = the file is);
+    ("absent", test file, text) = that text has gone from the file."""
+    if probe[0] == "absent":
+        f = TESTS / probe[1]
+        return f.is_file() and probe[2] not in f.read_text(encoding="utf-8", errors="replace")
+    f = TESTS / probe[0]
+    return f.is_file() and (not probe[1] or f"def {probe[1]}(" in f.read_text(encoding="utf-8", errors="replace"))
+
+
+def item_landed(item):
+    return item["branch"] != "none" and all(probe_ok(p) for p in item["probes"]) and (bool(item["probes"]) or item["branch"] == "main")
+
+
+def expected_skip(item):
+    """The reason a check is skipped, or "" when its code is here."""
+    if item["branch"] == "none":
+        return "expected skip: not built yet (no branch)"
+    return "" if item_landed(item) else f"expected skip: not on main yet ({item['branch']})"
+
+
+REPORTING = "expected skip: not on main yet (v210-star-fix, the integration tip; also v210-int2 for P1 to P10)"
+REPORTING_LANDED = source_has("system/scripts/live_server.py", "api/report/draft")
+STAR_LANDED = probe_ok(("test_drafts_report.py", "test_the_internal_health_and_its_reason_never_reach_a_client_draft"))
+
+
+def gate(cls, reason, only_methods=None):
+    """Mark the class's checks (or just `only_methods`) as expected skips: unittest skips a decorated method before setUp, and
+    the `phase2` reason makes HandcheckCase.runnable() leave a class with nothing left to run without a vault or a browser."""
+    for name in list(vars(cls)):
+        if name.startswith("test_c") and (only_methods is None or name in only_methods):
+            skipped = unittest.skip(reason)(vars(cls)[name])    # skipped before setUp, which some groups' setUp would start a vault in
+            skipped.phase2 = reason                                  # and runnable() leaves the class without a vault or browser
+            setattr(cls, name, skipped)
+
+
+if not REPORTING_LANDED:            # checks 3 to 74: the weekly and client reports, the minutes, Reports, the hub (P1 to P10)
+    for _cls in (WeeklyView, WeeklyFiling, ClientSafety, ClientView, MinutesFlow, MinutesView, ReportingSpace, HubRetired,
+                 Layout900, Judgement):
+        gate(_cls, REPORTING)
+elif not STAR_LANDED:               # the integration is here but #90 (the ✦) is not
+    gate(WeeklyView, "expected skip: not on main yet (v210-star-fix, #90: the ✦ on the sheets)", {"test_c11_spark_per_section"})
+if date_words is None:
+    for _cls in (MinutesFlow, MinutesView):
+        gate(_cls, REPORTING)
+
+
+# ── Checks 75 on: the other v2.1.0 items (v210_items.py) ─────────────────────
+
+_RESULTS = {}      # test file: (ok, note)
+
+
+def run_file(name):
+    """One test file in its own process (python3 -m unittest <module>, from dev/tests). Passes only when it ran at least one
+    test and none failed or was skipped (a skipped test proves nothing)."""
+    try:
+        r = subprocess.run([sys.executable, "-m", "unittest", name[:-3]], cwd=TESTS, capture_output=True, text=True, timeout=1200)
+    except subprocess.TimeoutExpired:
+        return False, f"{name}: timed out after 1200 s"
+    out = r.stdout + r.stderr
+    ran = re.search(r"Ran (\d+) test", out)
+    n = int(ran.group(1)) if ran else 0
+    if r.returncode == 0 and n >= 1 and "skipped" not in out:
+        return True, f"{n} test(s) in {name}"
+    why = "skipped (no Chrome?)" if r.returncode == 0 and n >= 1 else next(
+        (ln for ln in reversed(out.strip().splitlines()) if re.match(r"(\w*Error|AssertionError|FAILED|Error)", ln)), out.strip()[-200:])
+    return False, f"{name}: {why}"[:300]
+
+
+def setUpModule():
+    """Run, four at a time, every test file the selected, landed, scripted checks need, before the checks report them."""
+    want = set()
+    for it in v210_items.ITEMS:
+        if it["kind"] == "scriptable" and not expected_skip(it) and (not hcbase.only() or it["n"] in hcbase.only()):
+            want.update(it["tests"])
+    with ThreadPoolExecutor(4) as pool:
+        for name, res in zip(sorted(want), pool.map(run_file, sorted(want))):
+            _RESULTS[name] = res
+
+
+class Items(unittest.TestCase):
+    """Checks 75 on that run the tests their row names (no vault, no browser of their own). Methods are made from v210_items."""
+
+
+def _make(it):
+    def test(self):
+        if hcbase.only() and it["n"] not in hcbase.only():
+            self.skipTest("not in --only")
+        why = expected_skip(it)
+        if why:
+            self.skipTest(why)
+        bad = [_RESULTS[t][1] for t in it["tests"] if not _RESULTS[t][0]]
+        if bad:
+            self.fail("; ".join(bad))
+        NOTES[it["n"]] = "ran " + ", ".join(it["tests"])
+    test.__doc__ = f"{it['n']}. {it['issue']}: {it['title']}. {it['do']} → {it['see']}"
+    test.__name__ = "test_c%d_%s" % (it["n"], re.sub(r"[^a-z0-9]+", "_", it["title"].lower()).strip("_")[:40])
+    return test
+
+
+SHEET_CHECKS = {116, 117, 118, 119}            # drawn on the sheet by ItemSheet below
+for _it in v210_items.ITEMS:
+    if _it["kind"] == "scriptable" or (_it["kind"] == "judgement" and _it["n"] not in SHEET_CHECKS):
+        _t = _make(_it)
+        setattr(Items, _t.__name__, _t)
+
+
+SCREENS.update({
+    "review-selected": ("go('review')", "document.querySelector('#reviewBody tr[data-n]')"),
+    "notes": ("go('notes','FAL')", "!!document.getElementById('notesSplit')"),
+    "generate": ("openGen('FAL')", "document.getElementById('genDlg').open"),
+})
+
+
+class ItemSheet(HandcheckCase):
+    """The judgement checks of the other items, drawn on the screenshot sheet (desktop and 900 px, two themes, light and dark).
+    Each is an expected skip until its screen is on main. Notes need a note in the project (the demo has none: make one first)."""
+
+    def shots(self, n, screens, prepares=None):
+        total = 0
+        for s in screens:
+            total += self.sheet(n, s, palettes=measure.themes(self.b)[:2], widths=WIDTHS, prepare=(prepares or {}).get(s))
+        self.note(n, f"{total} screenshots: {', '.join(screens)}; light and dark; {' and '.join(map(str, WIDTHS))} px")
+
+    @classmethod
+    def runnable(cls):
+        """The sheet checks that will run (three-digit numbers: the base class reads two)."""
+        names = [m for m in dir(cls) if m.startswith("test_c") and not getattr(getattr(cls, m), "phase2", None)]
+        return [m for m in names if not hcbase.only() or int(re.match(r"test_c(\d+)", m).group(1)) in hcbase.only()]
+
+    def check_number(self):
+        return int(re.match(r"test_c(\d+)", self._testMethodName).group(1))
+
+    def setUp(self):
+        n = self.check_number()
+        it = next((i for i in v210_items.ITEMS if i["n"] == n), None)
+        if it and expected_skip(it):
+            self.skipTest(expected_skip(it))
+        super().setUp()
+
+    def test_c116_review_bar(self):
+        """116. Review with several rows selected → the bar floats at the bottom edge, centred, covering no row action."""
+        def select(b):
+            b.eval("RHL.clear(); REV.filter(r=>!r.done&&rvBulkOK(r)).slice(0,3).forEach(r=>RHL.add(r.n)); rvSyncChk(); renderReview()")
+        self.shots(116, ["review-selected"], {"review-selected": select})
+
+    def test_c117_today(self):
+        """117. Today → content 80% wide and centred under a full-width band; Week ahead folds like Resolved."""
+        self.shots(117, ["today"])
+
+    def test_c118_notes_header(self):
+        """118. A note → one tidy title row, one property line, Tags on their own line, nothing wrapping."""
+        self.shots(118, ["notes"])
+
+    def test_c119_generate_dialog(self):
+        """119. Generate current state → quiet fields, a readable hint line, the footer in view."""
+        self.shots(119, ["generate"])
+
+
+if __name__ == "__main__":
+    unittest.main()
