@@ -4,6 +4,7 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Jarvis | The macOS CI hang raised as plan #79: v1.9.5, Normal, S, Team Cap | Two macOS jobs ran to the 2-hour timeout; not a required check, but it hides real failures |
 | 15-10-2026 | Jarvis | #47 (Team Cap's v1.9.5 screens) moves to Team Stark for the night (04:32); Team Cap can reclaim it with a comment | Team Cap silent since 02:26; Stark had an agent free |
 | 15-10-2026 | Jarvis | #49's points: the stale hand-check lines fixed on `v195-notes`; doctor's count checked at #48; the first day's archive gets a dry-run hint, not a count. v1.9.5's guard pieces (`ARCHIVE_MOVES`, `archive.py`, `/api/files/move-back`) to be confirmed by Alan directly | Docs are the Head's; guard is Alan's |
 | 15-10-2026 | Jarvis | BL-316 (#45): goldens are re-recorded per screen branch with Alan's sign-off; the wider measure's higher baseline is accepted; Team Stark owns Peek, Core, Meetings and Drafts, Team Cap owns Activity, People and Shell; the strict expected-failures list is kept. Team Stark's next work: #46, #60 and #49 (drafts) | Within the charter (test and tooling decisions, order of work); visible changes stay Alan's |
