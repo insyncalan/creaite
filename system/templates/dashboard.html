@@ -2943,14 +2943,44 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nnone{margin:8px 4px}
 .ndoc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0;position:relative}
 .ndoc.empty h2{font-size:16px;margin:0 0 6px}
-.nhead .ntitle{width:100%;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0 0 4px}
+.nhead .ntitle{flex:1;min-width:0;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0}
 .nhead .ntitle:hover{border-bottom-color:var(--line)} .nhead .ntitle:focus{outline:none;border-bottom-color:var(--accent)}
-.nhead .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px}
-.nhead .meta .sp{flex:1}
-.nhead .tag{border:1px solid var(--line);border-radius:999px;padding:0 8px;min-height:20px;display:inline-flex;align-items:center;font-size:11px}
+/* #115: the title row (focus, title, Saved, Find updates, more), one line of properties, one line of tags */
+.nhead .trow{display:flex;align-items:center;gap:8px;min-width:0}
+.nhead .meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:6px 0 0}
+.nhead .meta .nk{font:500 var(--fs-xs) var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-right:6px}
+.nhead .nprop{display:inline-flex;align-items:center;position:relative}
+.nhead .ndwrap{display:inline-flex;gap:6px}
+.nhead .nin{height:28px;border:1px dashed var(--line);border-radius:var(--r-pill);padding:0 10px;background:none;color:var(--ink);font-size:var(--fs-sm)}
+.nhead .nin:focus{outline:none;border-style:solid;border-color:var(--accent)} .nhead .nin[aria-invalid="true"]{border-color:var(--bad)}
+.nhead .nin.date{width:140px} .nhead .nin.who{width:min(280px,100%)}
+.nhead .ndbtn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);width:28px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:pointer;padding:0}
+.nhead .ndbtn:hover{background:var(--sunk);color:var(--ink)} .nhead .ndbtn svg.i{width:16px;height:16px}
+.nhead .dpop{position:absolute;top:34px;left:0;z-index:var(--z-pop);width:292px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px 12px 12px;text-align:left}
+.nhead .dpop .typed{margin:0 0 8px;font-size:var(--fs-xs);color:var(--muted);min-height:20px} .nhead .dpop .typed b{color:var(--ink);font-weight:600} .nhead .dpop .typed.bad{color:var(--bad)}
+.nhead .dpop .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.nhead .dpop .mh button{border:0;background:none;width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;color:var(--muted);font-size:var(--fs-lg)} .nhead .dpop .mh button:hover{background:var(--sunk)}
+.nhead .dpop .g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.nhead .dpop .dn{font:500 var(--fs-2xs) var(--mono);color:var(--faint);padding:4px 0;text-transform:uppercase}
+.nhead .dpop .g button{height:32px;border:0;border-radius:var(--r-md);background:none;cursor:pointer;font-size:var(--fs-sm);color:var(--ink)} .nhead .dpop .g button:hover{background:var(--sunk)}
+.nhead .dpop .g button.o{color:var(--faint)} .nhead .dpop .g button.t{box-shadow:inset 0 0 0 1px var(--accent)} .nhead .dpop .g button.s{background:var(--accent);color:var(--accent-ink)}
+.nhead .dpop .foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.nhead .dpop .foot button{border:0;background:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:2px 4px;min-height:24px}
+.nhead .dpop button:focus-visible,.nhead .ndbtn:focus-visible,.nhead .chip .x:focus-visible,.nhead .addl:focus-visible,.nhead .sugg button:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:1px}
+.nlabels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.nhead .tag{border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;min-height:24px;display:inline-flex;align-items:center;font-size:var(--fs-xs);color:var(--muted)}
 .nhead .tag.int{border-color:var(--warn);color:var(--warn)}
-.ntags input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:90px;max-width:220px}
-.nsave{font-size:12px;color:var(--muted)} .nsave.saved{color:var(--ok)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
+.nlabels .chip{display:inline-flex;align-items:center;gap:2px;height:24px;border:1px solid var(--line);border-radius:var(--r-pill);padding:0 4px 0 10px;font-size:var(--fs-xs);background:var(--sunk);color:var(--ink)}
+.nlabels .chip .t{border:0;background:none;color:inherit;font:inherit;padding:0;min-width:2ch;max-width:24ch;border-radius:var(--r-sm);cursor:text}
+.nlabels .chip .t:focus{outline:none;box-shadow:0 0 0 2px var(--accent-soft);background:var(--surface)}
+.nlabels .chip .x{border:0;background:none;color:var(--faint);width:24px;height:24px;border-radius:50%;cursor:pointer;line-height:1;padding:0;font-size:var(--fs-md)} .nlabels .chip .x:hover{background:var(--line);color:var(--ink)}
+.nhead .addl{height:24px;border:1px dashed var(--line);border-radius:var(--r-pill);background:none;color:var(--muted);padding:0 10px;font-size:var(--fs-xs);cursor:pointer} .nhead .addl:hover{border-color:var(--accent);color:var(--accent)}
+.nhead .addin{height:24px;width:140px;border:1px solid var(--accent);border-radius:var(--r-pill);padding:0 10px;font-size:var(--fs-xs);background:var(--surface);color:var(--ink)} .nhead .addin:focus{outline:none}
+.nlabels .sugg{color:var(--faint);font-size:var(--fs-xs)} .nlabels .sugg button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);padding:0 4px;min-height:24px}
+/* the list's quiet collapse control, at the right edge of the NOTES header */
+.nlist .lhead .sp{flex:1}
+.nlist .lhead .col{border:0;background:none;color:var(--faint);opacity:.75;width:var(--ctl-h-sm);height:var(--ctl-h-sm)} .nlist .lhead .col:hover,.nlist .lhead .col:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}
+.nsave{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap} .nsave.saved{color:var(--muted)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
 .nslot:empty{display:none}
 .nmore .nch{display:none} .nmore>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .nmore::before{content:"⋯";font-size:16px;line-height:1}
@@ -3045,13 +3075,6 @@ button.nchip{font:inherit;font-size:12px}
 @media (max-width:420px){.fu-fields{grid-template-columns:1fr}}
 /* ===== end BL-301 E ===== */
 /* ===== BL-301 B gaps (v20-notes-gaps): a Working session's date and attendees in the header; pictures ===== */
-.nws{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
-.nwsf{display:inline-flex;gap:4px;align-items:center;min-width:0}
-.nws input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:0}
-.nws .nwsdate{width:96px} .nws .nwswith{width:200px;max-width:100%}
-.nws input:focus{outline:none;border-style:solid;border-color:var(--accent)}
-.nws input[aria-invalid="true"]{border-color:var(--bad)}
-.nwsbad{color:var(--bad);font-size:11px}
 .nbody figure.cimg img{max-width:100%;height:auto}
 /* ===== end BL-301 B gaps ===== */
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
@@ -5153,6 +5176,7 @@ button.nchip{font:inherit;font-size:12px}
     rbTick: () => rbTick,
     rbUnmark: () => rbUnmark,
     readClaims: () => readClaims,
+    readDate: () => readDate,
     readForm: () => readForm,
     reattach: () => reattach,
     reattachSearch: () => reattachSearch,
@@ -5832,6 +5856,9 @@ button.nchip{font:inherit;font-size:12px}
     arrowup: '<path d="M12 19V5M5 12l7-7 7 7"/>',
     external: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
     chevdown: '<path d="m6 9 6 6 6-6"/>',
+    /* Notes header (#115): the list's quiet double chevrons  */
+    chevsright: '<path d="M13 6l6 6-6 6M5 6l6 6-6 6"/>',
+    chevsleft: '<path d="M11 6l-6 6 6 6M19 6l-6 6 6 6"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     filetext: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/>',
     mail: '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-9.1 5.7a2 2 0 0 1-2 0L2 7"/>',
@@ -5993,6 +6020,44 @@ button.nchip{font:inherit;font-size:12px}
   })(), DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
   var fd = (iso) => iso && DATE.test(iso.slice(0, 10)) ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}${iso.length > 10 ? iso.slice(10) : ""}` : iso || "";
   var toIso = (dd2) => DDATE.test(dd2) ? `${dd2.slice(6, 10)}-${dd2.slice(3, 5)}-${dd2.slice(0, 2)}` : dd2;
+  function readDate(text, today = TODAY) {
+    const s5 = String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!s5) return null;
+    const z4 = (n4) => String(n4).padStart(2, "0"), iso = (d5) => `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`, t02 = /* @__PURE__ */ new Date(today + "T12:00:00");
+    const add = (n4) => {
+      const d5 = new Date(t02);
+      d5.setDate(d5.getDate() + n4);
+      return iso(d5);
+    };
+    const real = (y5, m6, d5) => {
+      const x5 = new Date(y5, m6 - 1, d5, 12);
+      return x5.getFullYear() === y5 && x5.getMonth() === m6 - 1 && x5.getDate() === d5 ? iso(x5) : null;
+    };
+    let m5 = s5.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/);
+    if (m5) return real(+m5[3], +m5[2], +m5[1]);
+    m5 = s5.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m5) return real(+m5[1], +m5[2], +m5[3]);
+    if (s5 === "today") return today;
+    if (s5 === "yesterday") return add(-1);
+    if (s5 === "tomorrow") return add(1);
+    m5 = s5.match(/^in (\d{1,4}) days?$/);
+    if (m5) return add(+m5[1]);
+    m5 = s5.match(/^(\d{1,4}) days? ago$/);
+    if (m5) return add(-m5[1]);
+    m5 = s5.match(/^(last|next|this )?\s*([a-z]{3,9})$/);
+    if (m5) {
+      const names = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"], w6 = names.findIndex((n4) => n4 === m5[2] || m5[2].length >= 3 && n4.startsWith(m5[2]));
+      if (w6 < 0) return null;
+      const cur = t02.getDay(), how = (m5[1] || "").trim();
+      if (how === "last") return add(-((cur - w6 + 7) % 7 || 7));
+      if (how === "this") {
+        const mon = (cur + 6) % 7, at2 = (w6 + 6) % 7;
+        return add(at2 - mon);
+      }
+      return add((w6 - cur + 7) % 7 || 7);
+    }
+    return null;
+  }
   var fdText = (s5) => String(s5 ?? "").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3-$2-$1");
   var fdMd = (s5) => String(s5 ?? "").replace(/(\]\([^)\s]*\))|(\bhttps?:\/\/[^\s)<>]+)|\b(\d{4})-(\d{2})-(\d{2})\b/g, (m5, t47, u5, y5, mo2, d5) => y5 ? `${d5}-${mo2}-${y5}` : m5);
   var MAC = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent), MOD = MAC ? "⌘" : "Ctrl";
@@ -25082,7 +25147,7 @@ ${s5}`;
   }
 
   // components/work/NewTile.jsx
-  function NewTile({ word, decisions, hidden, onNew, onDecision }) {
+  function NewTile({ word, decisions, hidden, onNew, onDecision, id: id2 = "newBtn", popup }) {
     if (decisions) {
       return /* @__PURE__ */ u2(
         Menu,
@@ -25097,7 +25162,7 @@ ${s5}`;
           hidden,
           menuId: "newDecMenu",
           menuLabel: "New decision",
-          onPick: (id2) => onDecision(id2 === "needed" ? "needed" : "made"),
+          onPick: (id3) => onDecision(id3 === "needed" ? "needed" : "made"),
           items: [
             { id: "made", icon: "check", name: "Record a decision", line: "Already taken. Opens as Made, dated today.", data: { newd: "made" } },
             { id: "needed", icon: "flag", name: "Ask for a decision", line: "Waiting on someone. Opens as Pending, with a needed-by date.", data: { newd: "needed" } }
@@ -25105,7 +25170,7 @@ ${s5}`;
         }
       );
     }
-    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: "newBtn", "aria-label": word, "data-tip": word, hidden, onClick: onNew, children: [
+    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: id2, "aria-label": word, "data-tip": word, hidden, "aria-haspopup": popup, onClick: onNew, children: [
       /* @__PURE__ */ u2(Icon, { name: "plus" }),
       /* @__PURE__ */ u2("span", { class: "w", children: word }),
       /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
@@ -51992,6 +52057,404 @@ ${d5.text}`);
     return { close: done };
   }
 
+  // components/notes/NoteHeader.jsx
+  var NH_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var NH_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var nhPad = (
+    /** @param {number} n */
+    (n4) => String(n4).padStart(2, "0")
+  );
+  var nhIso = (d5) => `${d5.getFullYear()}-${nhPad(d5.getMonth() + 1)}-${nhPad(d5.getDate())}`;
+  var sayDate = (iso) => `${(/* @__PURE__ */ new Date(`${iso}T12:00:00`)).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso)}`;
+  function NoteDate({ date }) {
+    const [text, setText] = d2(date ? fd(date) : ""), [open2, setOpen2] = d2(false);
+    const [view, setView] = d2(() => (date || TODAY).slice(0, 7));
+    const box = A2(
+      /** @type {HTMLSpanElement | null} */
+      null
+    ), inp = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    ), grid = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), via = A2(
+      /** @type {"box" | "btn"} */
+      "box"
+    );
+    const t47 = text.trim(), read = t47 ? readDate(t47) : null, bad = !!t47 && !read;
+    const chosen = read || date;
+    h2(() => {
+      if (read) setView(read.slice(0, 7));
+    }, [read]);
+    const back2 = (toBox) => {
+      const el2 = !toBox && via.current === "btn" ? btn.current : inp.current;
+      if (!el2 || document.activeElement === el2) return;
+      el2.focus();
+    };
+    const commit = (iso, refocus) => {
+      setText(iso ? fd(iso) : "");
+      setOpen2(false);
+      if (refocus) back2(true);
+      if (iso !== date) noteMeta({ date: iso });
+    };
+    const settle = () => {
+      const v5 = text.trim();
+      if (!v5) {
+        commit("");
+        return;
+      }
+      const r4 = readDate(v5);
+      if (r4) commit(r4);
+      else {
+        setText(date ? fd(date) : "");
+        setOpen2(false);
+      }
+    };
+    const y5 = +view.slice(0, 4), m5 = +view.slice(5, 7) - 1;
+    const first = (new Date(y5, m5, 1).getDay() + 6) % 7, start = new Date(y5, m5, 1 - first);
+    const cells = Array.from({ length: 42 }, (_6, i5) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i5));
+    const step2 = (
+      /** @param {number} n */
+      (n4) => {
+        const d5 = new Date(y5, m5 + n4, 1);
+        setView(`${d5.getFullYear()}-${nhPad(d5.getMonth() + 1)}`);
+      }
+    );
+    const focusDay = (
+      /** @param {string} iso */
+      (iso) => {
+        setView(iso.slice(0, 7));
+        let tries = 0;
+        const go3 = () => {
+          const b5 = grid.current && grid.current.querySelector(`[data-d="${iso}"]`);
+          if (b5) b5.focus();
+          else if (++tries < 8) setTimeout(go3, 15);
+        };
+        setTimeout(go3, 0);
+      }
+    );
+    const arrow = (
+      /** @param {KeyboardEvent} e @param {string} iso */
+      (e4, iso) => {
+        const d5 = /* @__PURE__ */ new Date(`${iso}T12:00:00`), s5 = (
+          /** @type {Record<string, number>} */
+          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
+        );
+        if (s5 === void 0) return;
+        e4.preventDefault();
+        d5.setDate(d5.getDate() + s5);
+        focusDay(nhIso(d5));
+      }
+    );
+    return /* @__PURE__ */ u2("span", { class: "nprop", ref: box, onFocusOut: (e4) => {
+      const to2 = (
+        /** @type {Node|null} */
+        e4.relatedTarget
+      );
+      if (open2 && (!to2 || !(box.current && box.current.contains(to2)))) settle();
+    }, children: [
+      /* @__PURE__ */ u2("span", { class: "ndwrap", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            ref: inp,
+            type: "text",
+            id: "noteWsDate",
+            class: "nin date",
+            value: text,
+            placeholder: "Date, or e.g. last monday",
+            autoComplete: "off",
+            maxLength: 40,
+            "aria-label": "Date of the session, a date or words like last monday",
+            "aria-invalid": bad ? "true" : void 0,
+            "aria-describedby": open2 ? "noteDateRead" : void 0,
+            onClick: () => {
+              via.current = "box";
+              setOpen2(true);
+            },
+            onInput: (e4) => {
+              setText(
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              );
+              via.current = "box";
+              setOpen2(true);
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                e4.stopPropagation();
+                if (!t47) commit("");
+                else if (read) commit(read);
+                else setOpen2(true);
+              } else if (e4.key === "Escape" && open2) {
+                e4.preventDefault();
+                e4.stopPropagation();
+                setText(date ? fd(date) : "");
+                setOpen2(false);
+              } else if (e4.key === "ArrowDown") {
+                e4.preventDefault();
+                via.current = "box";
+                setOpen2(true);
+                focusDay(chosen || TODAY);
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "ndbtn",
+            id: "noteDateBtn",
+            ref: btn,
+            "aria-label": "Choose date",
+            "data-tip": "Choose a date",
+            "aria-expanded": open2 ? "true" : "false",
+            "aria-haspopup": "dialog",
+            onClick: (e4) => {
+              if (open2) {
+                setOpen2(false);
+                return;
+              }
+              setOpen2(true);
+              if (e4.detail === 0) {
+                via.current = "btn";
+                focusDay(chosen || TODAY);
+              } else {
+                via.current = "box";
+                if (inp.current) inp.current.focus();
+              }
+            },
+            children: /* @__PURE__ */ u2(Icon, { name: "calendar" })
+          }
+        )
+      ] }),
+      open2 ? /* @__PURE__ */ u2(
+        "div",
+        {
+          class: "dpop",
+          id: "noteDatePop",
+          role: "dialog",
+          "aria-label": "Choose a date",
+          onMouseDown: (e4) => {
+            if (!/** @type {Element} */
+            e4.target.closest("input")) e4.preventDefault();
+          },
+          onKeyDown: (e4) => {
+            if (e4.key === "Escape") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              setText(date ? fd(date) : "");
+              setOpen2(false);
+              back2();
+            }
+          },
+          children: [
+            /* @__PURE__ */ u2("div", { class: `typed${bad ? " bad" : ""}`, id: "noteDateRead", role: "status", "aria-live": "polite", children: !t47 ? "Type a date or words like last monday." : read ? /* @__PURE__ */ u2(S2, { children: [
+              "Reads as ",
+              /* @__PURE__ */ u2("b", { children: sayDate(read) }),
+              " · Enter to use"
+            ] }) : "Not a date I can read. Try 12-10-2026 or last monday." }),
+            /* @__PURE__ */ u2("div", { class: "mh", children: [
+              /* @__PURE__ */ u2("button", { type: "button", id: "noteDatePrev", "aria-label": "Previous month", onClick: () => step2(-1), children: "‹" }),
+              /* @__PURE__ */ u2("b", { children: [
+                NH_MONTHS[m5],
+                " ",
+                y5
+              ] }),
+              /* @__PURE__ */ u2("button", { type: "button", id: "noteDateNext", "aria-label": "Next month", onClick: () => step2(1), children: "›" })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "g", ref: grid, children: [
+              NH_DAYS.map((d5) => /* @__PURE__ */ u2("div", { class: "dn", "aria-hidden": "true", children: d5 }, d5)),
+              cells.map((d5) => {
+                const iso = nhIso(d5), on2 = iso === chosen;
+                return /* @__PURE__ */ u2(
+                  "button",
+                  {
+                    type: "button",
+                    "data-d": iso,
+                    class: `${d5.getMonth() !== m5 ? "o " : ""}${iso === TODAY ? "t " : ""}${on2 ? "s" : ""}`,
+                    "aria-label": sayDate(iso),
+                    "aria-pressed": on2 ? "true" : "false",
+                    tabIndex: iso === (chosen && chosen.slice(0, 7) === view ? chosen : `${view}-01`) ? 0 : -1,
+                    onKeyDown: (e4) => arrow(e4, iso),
+                    onClick: () => commit(iso, true),
+                    children: d5.getDate()
+                  },
+                  iso
+                );
+              })
+            ] }),
+            /* @__PURE__ */ u2("div", { class: "foot", children: [["Today", "today"], ["Last Monday", "last monday"], ["Yesterday", "yesterday"]].map(([name, q5]) => /* @__PURE__ */ u2("button", { type: "button", "data-q": q5, onClick: () => {
+              const r4 = readDate(q5);
+              if (r4) commit(r4, true);
+            }, children: name }, q5)) })
+          ]
+        }
+      ) : null
+    ] });
+  }
+  var TAG_MAX = 60, TAG_N = 20;
+  var cleanTag = (v5) => v5.replace(/[\s,]+/g, " ").trim().slice(0, TAG_MAX).trim();
+  var tagsNow = () => (
+    /** @type {string[]} */
+    (noteCur.value && noteCur.value.meta || {}).tags || []
+  );
+  var SUGGEST = ["stakeholder", "decision", "follow-up"];
+  function NoteTags({ tags }) {
+    const [adding, setAdding] = d2(false);
+    const addBtn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    ), newIn = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    h2(() => {
+      if (adding && newIn.current) newIn.current.focus();
+    }, [adding]);
+    const add = (raw2) => {
+      const next = tagsNow().slice();
+      for (const part of raw2.split(",")) {
+        const v5 = cleanTag(part);
+        if (!v5 || next.some((x5) => x5.toLowerCase() === v5.toLowerCase())) continue;
+        if (next.length >= TAG_N) {
+          snack(`Notes keep up to ${TAG_N} tags`);
+          break;
+        }
+        next.push(v5);
+      }
+      if (next.length !== tagsNow().length) noteMeta({ tags: next });
+    };
+    const remove = (i5) => {
+      const L3 = tagsNow();
+      if (i5 >= 0 && i5 < L3.length) noteMeta({ tags: L3.filter((_6, j5) => j5 !== i5) });
+    };
+    const rename = (i5, el2) => {
+      const L3 = tagsNow();
+      if (i5 < 0 || i5 >= L3.length) return;
+      const v5 = cleanTag(el2.value);
+      if (!v5) {
+        remove(i5);
+        return;
+      }
+      if (v5 === L3[i5]) {
+        el2.value = L3[i5];
+        return;
+      }
+      if (L3.some((x5, j5) => j5 !== i5 && x5.toLowerCase() === v5.toLowerCase())) {
+        el2.value = L3[i5];
+        snack(`There is already a tag "${v5}"`);
+        return;
+      }
+      noteMeta({ tags: L3.map((x5, j5) => j5 === i5 ? v5 : x5) });
+    };
+    const doneAdding = (
+      /** @param {boolean} focusBack */
+      (focusBack) => {
+        setAdding(false);
+        if (focusBack) setTimeout(() => {
+          if (addBtn.current) addBtn.current.focus();
+        }, 0);
+      }
+    );
+    return /* @__PURE__ */ u2("div", { class: "nlabels", id: "noteTags", role: "group", "aria-label": "Tags", children: [
+      /* @__PURE__ */ u2(TagFlag, {}),
+      tags.map((t47, i5) => /* @__PURE__ */ u2("span", { class: "chip", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "text",
+            class: "t",
+            defaultValue: t47,
+            maxLength: TAG_MAX,
+            "aria-label": `Tag ${t47}, edit to rename`,
+            style: { width: `${Math.max(2, t47.length + 1)}ch` },
+            onInput: (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              );
+              el2.style.width = `${Math.max(2, el2.value.length + 1)}ch`;
+            },
+            onKeyDown: (e4) => {
+              const el2 = (
+                /** @type {HTMLInputElement} */
+                e4.target
+              );
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                el2.blur();
+              } else if (e4.key === "Escape") {
+                e4.preventDefault();
+                e4.stopPropagation();
+                el2.value = t47;
+                el2.blur();
+              }
+            },
+            onBlur: (e4) => rename(
+              i5,
+              /** @type {HTMLInputElement} */
+              e4.target
+            )
+          }
+        ),
+        /* @__PURE__ */ u2("button", { type: "button", class: "x", "aria-label": `Remove tag ${t47}`, "data-tip": `Remove ${t47}`, onClick: () => remove(i5), children: "×" })
+      ] }, `${i5}|${t47}`)),
+      adding ? /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          class: "addin",
+          id: "noteTagNew",
+          placeholder: "Tag",
+          "aria-label": "New tag",
+          maxLength: 80,
+          ref: newIn,
+          onKeyDown: (e4) => {
+            const el2 = (
+              /** @type {HTMLInputElement} */
+              e4.target
+            );
+            if (e4.key === "Enter") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              add(el2.value);
+              el2.value = "";
+              doneAdding(true);
+            } else if (e4.key === "Escape") {
+              e4.preventDefault();
+              e4.stopPropagation();
+              el2.value = "";
+              doneAdding(true);
+            }
+          },
+          onBlur: (e4) => {
+            add(
+              /** @type {HTMLInputElement} */
+              e4.target.value
+            );
+            doneAdding(false);
+          }
+        }
+      ) : /* @__PURE__ */ u2("button", { type: "button", class: "addl", id: "noteTagAdd", ref: addBtn, onClick: () => setAdding(true), children: "+ Tags" }),
+      !tags.length ? /* @__PURE__ */ u2("span", { class: "sugg", id: "noteTagSugg", children: [
+        "Suggested: ",
+        SUGGEST.map((s5) => /* @__PURE__ */ u2("button", { type: "button", onMouseDown: (e4) => e4.preventDefault(), onClick: () => add(s5), children: s5 }, s5))
+      ] }) : null
+    ] });
+  }
+  function TagFlag() {
+    const conf = !!(noteCur.value && noteCur.value.meta || {}).confidential;
+    return /* @__PURE__ */ u2("span", { class: `tag${conf ? " int" : ""}`, children: conf ? "Confidential" : "Internal" });
+  }
+
   // components/project/ProjectTabs.jsx
   function ProjectTabs({ code, selected, count, onGo }) {
     const items2 = [
@@ -52599,14 +53062,14 @@ ${d5.text}`);
           "button",
           {
             type: "button",
-            class: "ib sm bd",
+            class: "ib sm col",
             id: "notesCollapse",
             "aria-expanded": open2 ? "true" : "false",
             "aria-controls": "notesListBody",
             "aria-label": label,
             "data-tip": `${label} (⌘\\)`,
             onClick: () => toggleNotesList(),
-            children: open2 ? "«" : "»"
+            children: /* @__PURE__ */ u2(Icon, { name: open2 ? "chevsleft" : "chevsright" })
           }
         ),
         /* @__PURE__ */ u2("span", { class: "vlabel", "aria-hidden": "true", children: [
@@ -52797,48 +53260,21 @@ ${d5.text}`);
     const created = String(m5.created || n4.created || "");
     return /* @__PURE__ */ u2("article", { class: "ndoc", "aria-labelledby": "noteTitle", children: [
       /* @__PURE__ */ u2("div", { class: "nhead", children: [
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            class: "ntitle",
-            id: "noteTitle",
-            "aria-label": "Title",
-            value: String(m5.title ?? n4.title),
-            maxLength: 160,
-            onInput: (e4) => noteMeta({ title: (
-              /** @type {HTMLInputElement} */
-              e4.target.value
-            ) })
-          }
-        ),
-        /* @__PURE__ */ u2("div", { class: "meta", children: [
-          created ? /* @__PURE__ */ u2("span", { children: [
-            "Created ",
-            fd(created)
-          ] }) : null,
-          m5.date || n4.kind === "Working session" ? /* @__PURE__ */ u2(WorkingSession, { date: String(m5.date || ""), people: (
-            /** @type {string[]} */
-            m5.with || []
-          ) }, `ws|${cur.path}|${cur.load}`) : null,
-          /* @__PURE__ */ u2("span", { class: `tag${conf ? " int" : ""}`, children: conf ? "Confidential" : "Internal" }),
-          /* @__PURE__ */ u2("label", { class: "ntags", children: [
-            /* @__PURE__ */ u2("span", { class: "vh", children: "Tags" }),
-            /* @__PURE__ */ u2(
-              "input",
-              {
-                type: "text",
-                placeholder: "Add tags",
-                "aria-label": "Tags, separated by commas",
-                defaultValue: tags.join(", "),
-                onChange: (e4) => noteMeta({ tags: (
-                  /** @type {HTMLInputElement} */
-                  e4.target.value.split(",").map((x5) => x5.trim()).filter(Boolean)
-                ) })
-              },
-              `${cur.path}|${cur.load}`
-            )
-          ] }),
-          /* @__PURE__ */ u2("span", { class: "sp" }),
+        /* @__PURE__ */ u2("div", { class: "trow", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              class: "ntitle",
+              id: "noteTitle",
+              "aria-label": "Title",
+              value: String(m5.title ?? n4.title),
+              maxLength: 160,
+              onInput: (e4) => noteMeta({ title: (
+                /** @type {HTMLInputElement} */
+                e4.target.value
+              ) })
+            }
+          ),
           /* @__PURE__ */ u2(SaveLine, {}),
           /* @__PURE__ */ u2("span", { class: "nslot", id: "noteFindSlot", "data-slot": "find-updates", children: /* @__PURE__ */ u2(FindButton, {}) }),
           /* @__PURE__ */ u2(
@@ -52861,7 +53297,18 @@ ${d5.text}`);
               }
             }
           )
-        ] })
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "meta props", children: [
+          created ? /* @__PURE__ */ u2("span", { children: [
+            "Created ",
+            fd(created)
+          ] }) : null,
+          m5.date || n4.kind === "Working session" ? /* @__PURE__ */ u2(WorkingSession, { date: String(m5.date || ""), people: (
+            /** @type {string[]} */
+            m5.with || []
+          ) }, `ws|${cur.path}|${cur.load}`) : null
+        ] }),
+        /* @__PURE__ */ u2(NoteTags, { tags })
       ] }),
       cur.stale ? /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", children: [
         /* @__PURE__ */ u2("span", { children: [
@@ -52905,55 +53352,19 @@ ${d5.text}`);
     ] });
   }
   function WorkingSession({ date, people }) {
-    const [day, setDay] = d2(date ? fd(date) : ""), [bad, setBad] = d2(false);
-    const setDate = (
-      /** @param {string} v */
-      (v5) => {
-        const t47 = v5.trim();
-        if (t47 && !DDATE.test(t47)) {
-          setBad(true);
-          return;
-        }
-        setBad(false);
-        if ((t47 ? toIso(t47) : "") !== date) noteMeta({ date: t47 ? toIso(t47) : "" });
-      }
-    );
-    return /* @__PURE__ */ u2("span", { class: "nws", role: "group", "aria-label": "Working session", children: [
-      /* @__PURE__ */ u2("span", { children: "Working session" }),
-      /* @__PURE__ */ u2("label", { class: "nwsf", children: [
-        /* @__PURE__ */ u2("span", { class: "vh", children: "Date (DD-MM-YYYY)" }),
-        /* @__PURE__ */ u2(
-          "input",
-          {
-            type: "text",
-            id: "noteWsDate",
-            class: "nwsdate",
-            value: day,
-            placeholder: "DD-MM-YYYY",
-            inputMode: "numeric",
-            maxLength: 10,
-            "aria-invalid": bad ? "true" : void 0,
-            "aria-describedby": bad ? "noteWsBad" : void 0,
-            onInput: (e4) => setDay(
-              /** @type {HTMLInputElement} */
-              e4.target.value
-            ),
-            onChange: (e4) => setDate(
-              /** @type {HTMLInputElement} */
-              e4.target.value
-            )
-          }
-        )
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("span", { class: "nprop", children: [
+        /* @__PURE__ */ u2("span", { class: "nk", children: "Date" }),
+        /* @__PURE__ */ u2(NoteDate, { date })
       ] }),
-      bad ? /* @__PURE__ */ u2("span", { class: "nwsbad", id: "noteWsBad", role: "alert", children: "Use DD-MM-YYYY" }) : null,
-      /* @__PURE__ */ u2("label", { class: "nwsf", children: [
-        /* @__PURE__ */ u2("span", { children: "with" }),
+      /* @__PURE__ */ u2("span", { class: "nprop", children: [
+        /* @__PURE__ */ u2("span", { class: "nk", children: "With" }),
         /* @__PURE__ */ u2(
           "input",
           {
             type: "text",
             id: "noteWsWith",
-            class: "nwswith",
+            class: "nin who",
             defaultValue: people.join(", "),
             placeholder: "Names, separated by commas",
             "aria-label": "With, names separated by commas",
@@ -52976,11 +53387,11 @@ ${d5.text}`);
         setBusy(false);
       }
     }, [open2, title]);
-    const bad = tpl === "working-session" && day && !DDATE.test(day);
+    const bad = tpl === "working-session" && day.trim() && !readDate(day);
     const make = async () => {
       if (busy || bad) return;
       setBusy(true);
-      const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: toIso(day), with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
+      const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: readDate(day) || TODAY, with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
       setBusy(false);
       if (made) onMade();
     };
@@ -53012,7 +53423,7 @@ ${d5.text}`);
       tpl === "working-session" ? /* @__PURE__ */ u2("div", { class: "nnws", children: [
         /* @__PURE__ */ u2("label", { class: "fl", children: [
           "Date",
-          /* @__PURE__ */ u2("input", { type: "text", value: day, placeholder: "DD-MM-YYYY", "aria-invalid": bad ? "true" : void 0, onInput: (e4) => setDay(
+          /* @__PURE__ */ u2("input", { type: "text", value: day, placeholder: "DD-MM-YYYY, or e.g. last monday", "aria-invalid": bad ? "true" : void 0, onInput: (e4) => setDay(
             /** @type {HTMLInputElement} */
             e4.target.value
           ) })
@@ -53067,10 +53478,8 @@ ${d5.text}`);
           /* @__PURE__ */ u2("h1", { children: code === "_portfolio" ? "Portfolio notes" : name }),
           code === "_portfolio" ? /* @__PURE__ */ u2("div", { class: "sub", children: "Notes that cover several projects, and anything not yet filed under one." }) : proj && proj.client ? /* @__PURE__ */ u2("div", { class: "sub", children: proj.client }) : null
         ] }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "notesNew", onClick: () => setDlg(""), "aria-haspopup": "dialog", children: [
-          /* @__PURE__ */ u2(Icon, { name: "plus" }),
-          "New note"
-        ] })
+        /* @__PURE__ */ u2(NewTile, { id: "notesNew", popup: "dialog", word: "New note", decisions: false, hidden: false, onNew: () => setDlg(""), onDecision: () => {
+        } })
       ] }),
       code !== "_portfolio" ? /* @__PURE__ */ u2(ProjectTabs, { code, selected: "notes", count: notesList.value.length, onGo: (id2) => {
         if (id2 === "overview") onGo("cockpit", code);
@@ -59480,6 +59889,7 @@ ${d5.text}`);
         "fd",
         "firstHelp",
         "fitFilterBar",
+        "flip",
         "flowCard",
         "fuApply",
         "fuFind",
@@ -59669,6 +60079,7 @@ ${d5.text}`);
         "rbStop",
         "rbTick",
         "rbUnmark",
+        "readDate",
         "readForm",
         "reattach",
         "reduced",

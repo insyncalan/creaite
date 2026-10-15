@@ -79,13 +79,34 @@ def _notes_ai(b):
     b.pump(0.3)
 
 
+def _notes_session(b):
+    """A Working session note open (its header has the Date box and its calendar pop-up, #115). Made once through the real controls."""
+    origin = b.eval("location.origin")
+    if NOTE.get("origin") != origin:
+        NOTE.clear()
+        NOTE["origin"] = origin
+    if "session" not in NOTE:
+        _notes_open(b)
+        b.click("#notesNew")
+        b.wait("document.getElementById('newNoteDlg').open")
+        b.eval("(()=>{ const i=document.getElementById('nnTitle'); i.value='Session check'; i.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.eval("document.querySelector('#newNoteDlg input[value=\"working-session\"]').click()")
+        b.click("#nnMake")
+        b.wait("noteCur.value&&noteCur.value.note.title==='Session check'&&!!document.getElementById('noteDateBtn')", 15)
+        NOTE["session"] = b.eval("noteCur.value.path")
+    else:
+        b.eval(f"go('notes','ABC'); location.hash='#notes=ABC&n='+encodeURIComponent({json.dumps(NOTE['session'].rsplit('/', 1)[1])})")
+        b.wait(f"noteCur.value&&noteCur.value.path==={json.dumps(NOTE['session'])}&&!!document.getElementById('noteDateBtn')", 15)
+
+
 SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
 SCREENS["notes"] = (_notes_open, "!!document.getElementById('notesNew')", "#v-notes")
 SCREENS["notes-ai"] = (_notes_ai, "!!document.querySelector('#aiLayer .aibar')", "#aiLayer")
-us.SCREENS["notes"], us.SCREENS["notes-ai"] = SCREENS["notes"], SCREENS["notes-ai"]
+SCREENS["notes-session"] = (_notes_session, "!!document.getElementById('noteDateBtn')", "#v-notes")
+us.SCREENS["notes"], us.SCREENS["notes-ai"], us.SCREENS["notes-session"] = SCREENS["notes"], SCREENS["notes-ai"], SCREENS["notes-session"]
 ONLY = {"shell": ".rail,header.bar"}   # the shell's own controls, not the page inside it
 # Still on the screen (settle goes back when not): its ready test, except where that test is a popup being open.
 ON_SCREEN = {"work-display": "VIEW==='work'"}
@@ -100,7 +121,7 @@ SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-di
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
                 "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
-                "archive-ask": "Settings", "notes": "Core", "notes-ai": "Core"}
+                "archive-ask": "Settings", "notes": "Core", "notes-ai": "Core", "notes-session": "Core"}
 
 
 def screen_area(name):
