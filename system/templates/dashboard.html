@@ -2791,6 +2791,104 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   #tBrief .wkwhy{margin-left:0}
 }
 /* ===== end BL-319 ===== */
+/* ===== v2.1.0 P7 (BL-338): the minutes view (#minutes=<path>, components/minutes/), on the stub sheet (components/report/
+   SheetStub.jsx) until P5's Sheet.jsx. Tokens only. The sheet and the transcript pane side by side, each scrolling on its own;
+   the pane goes under the sheet below 900 px; nothing scrolls sideways at 320 px (BL-217). ===== */
+#v-minutes{padding:0}
+#v-minutes:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.mnview{display:flex;flex-direction:column;min-height:0;flex:1}
+.mnhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.mnhead .crumb{font-size:12px;color:var(--muted)} .mnhead .crumb a{color:var(--muted)} .mnhead .crumb a:hover{color:var(--accent)}
+.mnhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600;overflow-wrap:anywhere}
+.mnmeta{margin:0;font-size:13px}
+.mnerr{color:var(--bad);margin:16px 24px}
+.mnwrap{display:flex;flex:1;min-height:0}
+.mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
+.mnsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
+.mnsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.mnsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+.mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.mnckcount{background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:2px 8px;font-size:12px}
+.mnsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:20px 16px 48px;background:var(--sunk)}
+.mnsheet .sheet-one,.mnsheet .sheet-pair{max-width:100%}
+.mnsheet .sheet-pair{gap:16px;align-items:flex-start}
+.mnsheet .sheet-pair>.page{flex:1 1 0;min-width:0}
+.mnsheet .page{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow-card);padding:clamp(16px,5%,56px);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.mnsheet .page section{margin:0 0 18px}
+.mnsheet .page h2{font-size:15px;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.mnsheet .page table{width:100%;border-collapse:collapse;font-size:12.5px}
+.mnsheet .page th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding:4px 6px}
+.mnsheet .page td{vertical-align:top;border-bottom:1px solid var(--line);padding:6px}
+.mnsheet .sheet-text{width:100%;min-height:120px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.mnsheet .sheet-hidden{color:var(--muted);font-size:12px;margin:0 0 12px}
+.mnlines p,.mnlines li{margin:0 0 4px}
+.mnlines ul{margin:0 0 6px;padding-left:20px}
+.mntopic{font-size:14px;margin:8px 0 2px}
+.mnflag{font-size:11px;letter-spacing:.03em;color:var(--accent)}
+.mntext{cursor:text}
+.mnedbtn{font-size:12px}
+.mnedit{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.mntagw{display:inline-flex;align-items:center;margin-left:6px;vertical-align:baseline}
+.mntag{border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:999px;font:11px/16px var(--mono,monospace);padding:2px 7px;min-height:24px;cursor:pointer}
+.mntag:hover,.mntag:focus-visible{color:var(--accent);border-color:var(--accent)}
+.mntagx{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;opacity:0;font-size:11px}
+.mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
+.mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
+.btn.mncheck{text-decoration:underline wavy var(--warn)}
+.mnio{border:1px dashed var(--line);background:none;color:var(--muted);border-radius:999px;font-size:11px;padding:2px 8px;min-height:24px;margin-left:6px;cursor:pointer}
+.mnio.on{border-style:solid;border-color:var(--ink);color:var(--ink)}
+.mnline.internal,.mnrow.internal td{background:var(--sunk)}
+.mnpopw{position:relative;display:inline-block}
+.pkpop.mnpop{position:absolute;top:calc(100% + 4px);left:0;min-width:240px}
+.pkpop.mnpop.wide{width:min(340px,calc(100vw - 32px));max-width:min(340px,calc(100vw - 32px));padding:10px 12px}
+.pkpop.mnpop.mndl{width:min(290px,calc(100vw - 32px))}
+.mndl-l{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+.mndl-said{min-height:28px;font-size:13px;display:flex;align-items:center} .mndl-said.bad{color:var(--bad);font-size:12px}
+.mndl-said .btn{margin-left:8px}
+.pkday.wk{color:var(--muted)}
+.mnck-note{margin:0 0 4px;font-weight:500} .mnck-last{margin:0 0 8px;font-size:12.5px}
+.mnck-acts{display:flex;flex-wrap:wrap;gap:6px}
+.mnchanges{margin:4px 0 0;padding-left:18px;font-size:13px}
+.mnremember{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:6px}
+.mncell{width:100%;font:inherit;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 4px;resize:vertical;field-sizing:content;min-height:24px}
+.mncell:hover,.mncell:focus{border-color:var(--line);background:var(--bg)}
+.mnbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;font-size:12px}
+.mndoes{display:inline-flex;gap:6px;align-items:center;color:var(--muted)} .mndoes.new .mndoes-t{color:var(--accent)}
+.mnlooks{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--warn)}
+.mnrow.kept td{color:var(--muted)}
+.mntype{font:inherit;font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;min-height:24px}
+.mndue{white-space:nowrap}
+.sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
+.mncov-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline} .mncov-h h2{border:0!important;margin:0!important}
+.mncov-l,.mncov-ms{list-style:none;margin:6px 0 0;padding:0}
+.mncov-l li,.mncov-ms li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:4px 0}
+.mnverdict{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--sunk);color:var(--muted)}
+.mnverdict.ok{background:var(--ok-soft);color:var(--ok)} .mnverdict.warn{background:var(--warn-soft);color:var(--warn)} .mnverdict.bad{background:var(--bad-soft);color:var(--bad)}
+.mncov-p{flex:1;min-width:120px} .mncov-done{color:var(--muted);font-size:12px}
+.mncov-line{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:4px}
+.mnpane{width:340px;flex:none;border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.mnpane-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line)} .mnpane-h h2{font-size:14px;margin:0}
+.mnpane-q{padding:8px 12px;display:flex;gap:8px;align-items:center} .mnpane-q input{margin:0;flex:1;min-width:0;height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:var(--bg);color:var(--ink);font:inherit}
+.mnturns{list-style:none;margin:0;padding:0 12px 24px;overflow:auto;flex:1;min-height:0;position:relative}
+.mnturns li{padding:6px 8px;border-radius:6px;margin:0 0 2px;font-size:13px;line-height:1.45}
+.mnturns li.on{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mnturns li.dim{opacity:.5}
+.mnwho{display:block;font-weight:600;font-size:12px} .mntime{font-weight:400;color:var(--muted);font-family:var(--mono,monospace)}
+.mnturns mark{background:var(--warn-soft);color:inherit}
+.mnpane-none{padding:12px}
+dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px);border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
+.mnap{padding:18px 22px;max-height:calc(100vh - 64px);overflow:auto}
+.mnap h2{margin:0 0 6px;font-size:18px}
+.mnap fieldset{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:8px 12px} .mnap legend{font-weight:600;padding:0 4px}
+.mnap ul{margin:6px 0 0;padding-left:20px;font-size:13px}
+.mnap-all,.mnap-one{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}
+.mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
+.mnap-err{color:var(--bad)}
+.mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-scroll{overflow:visible}
+  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} .mnsheet .sheet-pair{flex-direction:column} .mnsheet .sheet-pair>.page{width:100%} }
+@media (max-width:480px){ .mnhead{padding:12px 16px 8px} .mnsheet .sheet-bar{padding:8px} .mnsheet .sheet-scroll{padding:12px 8px 32px} .mnbarr{margin-left:0} }
+/* ===== end v2.1.0 P7 ===== */
 </style>
 </head>
 <body>
@@ -2844,6 +2942,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-meeting" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
+      <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
       <section class="view" id="v-work" hidden><div class="wrapmax">
         <nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden></nav>
         <h1>Work</h1>
@@ -5372,8 +5471,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function swapHTML(el, h5) {
     el.outerHTML = htmlPart(h5);
   }
-  function addHTML(el, where, h5) {
-    el.insertAdjacentHTML(where, htmlPart(h5));
+  function addHTML(el, where2, h5) {
+    el.insertAdjacentHTML(where2, htmlPart(h5));
   }
   function writeDoc(w5, h5) {
     w5.document.write(htmlPart(h5));
@@ -5831,8 +5930,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function weekdayOf(w5) {
     return DAYS.findIndex((d5) => w5.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w5)));
   }
-  function workingDay(day, weekend = [0, 6]) {
-    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
+  function workingDay(day, weekend2 = [0, 6]) {
+    const off = (s5) => weekend2.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
     if (!off(day)) return day;
     for (let n4 = 1; n4 < 7; n4++) {
       const back = shift(day, -n4, "d"), on = shift(day, n4, "d");
@@ -5841,16 +5940,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     return day;
   }
-  function lastWorkingDay(day, weekend) {
+  function lastWorkingDay(day, weekend2) {
     const d5 = /* @__PURE__ */ new Date(day + "T12:00:00");
     let s5 = iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
-    for (let n4 = 0; n4 < 7 && weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
+    for (let n4 = 0; n4 < 7 && weekend2.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
     return s5;
   }
-  function deadlineOnly(s5, today, weekend) {
+  function deadlineOnly(s5, today, weekend2) {
     const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), monday = (1 - dow + 7) % 7 || 7;
     if (s5 === "next week") return shift(today, monday + 4, "d");
-    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend);
+    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend2);
     const m5 = s5.match(/^next ([a-z]{3,9})$/), w5 = m5 ? weekdayOf(m5[1]) : -1;
     if (w5 >= 0) return shift(today, monday + (w5 + 6) % 7, "d");
     return null;
@@ -5873,17 +5972,17 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (m5 && monthOf(m5[1])) return dm(m5[2], monthOf(m5[1]), m5[3]);
     return null;
   }
-  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
+  function parseWords(text, today, due = false, mode = "", weekend2 = [0, 6]) {
     let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
     if (!s5) return null;
     const deadline = mode === "deadline";
     if (deadline) {
       due = true;
       s5 = s5.replace(/^(?:by|on) /, "");
-      const d5 = deadlineOnly(s5, today, weekend);
+      const d5 = deadlineOnly(s5, today, weekend2);
       if (d5) return d5;
     }
-    const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend) : r4;
+    const dow = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend2) : r4;
     if (s5 === "today" || s5 === "now") return today;
     if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return shift(today, 1, "d");
     if (s5 === "yesterday") return shift(today, -1, "d");
@@ -9606,7 +9705,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       /** @type {any[]} */
       []
     ), quiet = (i5, first) => first && i5.kind === "actions" && isMe(i5.o);
-    const tagOf = (i5) => {
+    const tagOf2 = (i5) => {
       const k5 = i5.kind === "milestone" ? "Milestone" : i5.kind === "decisions" ? "Decision" : i5.kind === "raid" ? i5.type || "Risk" : "Action";
       return i5.pr === "Urgent" || i5.pr === "High" ? `${k5} · ${i5.pr}` : k5;
     };
@@ -9622,7 +9721,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const item = (i5, key, further, undated = false) => ({
       key,
       kind: i5.kind,
-      tag: tagOf(i5),
+      tag: tagOf2(i5),
       tone: toneOf(i5),
       t: i5.t || i5.id,
       open: i5.kind === "milestone" ? { cock: i5.p } : { open: `${i5.kind}:${i5.id}` },
@@ -10201,8 +10300,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     const src = r4.releases && (!r4.downloads || vnum(r4.releases.version) >= vnum(r4.downloads.version)) ? "releases" : r4.downloads ? "downloads" : null;
     const z3 = src && r4[src], newer = !!z3 && vnum(z3.version) > vnum(r4.installed);
-    const where = src === "releases" ? "system/releases" : "Downloads";
-    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z3.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z3.name)} in ${where}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
+    const where2 = src === "releases" ? "system/releases" : "Downloads";
+    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z3.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z3.name)} in ${where2}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
     const b5 = (id) => document.getElementById(id);
     if (b5("updReview")) b5("updReview").onclick = () => updReview(src, false);
     if (b5("updFile")) b5("updFile").onclick = () => b5("updPick").click();
@@ -10486,26 +10585,26 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var pKey = (t5) => String(t5 || "").replace(/\([^)]*\)/g, " ").toLowerCase().replace(/[.,]/g, " ").split(/\s+/).filter(Boolean).join(" ");
   var pCell = (v4) => String(v4 ?? "").replace(/\|/g, "/").replace(/\n/g, " ").trim();
   var pSplit = (line) => line.trim().replace(/^\|+|\|+$/g, "").split("|").map((c5) => c5.trim());
-  function pTable(lines) {
-    const at = lines.indexOf("## People");
+  function pTable(lines2) {
+    const at = lines2.indexOf("## People");
     if (at < 0) return null;
     let i5 = at + 1;
-    while (i5 < lines.length && !lines[i5].startsWith("|")) {
-      if (lines[i5].startsWith("## ")) return null;
+    while (i5 < lines2.length && !lines2[i5].startsWith("|")) {
+      if (lines2[i5].startsWith("## ")) return null;
       i5++;
     }
-    if (i5 >= lines.length) return null;
+    if (i5 >= lines2.length) return null;
     const head = i5, rows2 = [];
     i5 += 2;
-    while (i5 < lines.length && lines[i5].startsWith("|")) rows2.push(i5++);
+    while (i5 < lines2.length && lines2[i5].startsWith("|")) rows2.push(i5++);
     return { head, rows: rows2 };
   }
   function peopleParse(text) {
-    const lines = text.split("\n"), t5 = pTable(lines);
+    const lines2 = text.split("\n"), t5 = pTable(lines2);
     if (!t5) return [];
-    const cols = pSplit(lines[t5.head]), out = [];
+    const cols = pSplit(lines2[t5.head]), out = [];
     for (const i5 of t5.rows) {
-      const cells = pSplit(lines[i5]), row2 = {};
+      const cells = pSplit(lines2[i5]), row2 = {};
       cols.forEach((c5, j4) => {
         row2[c5] = cells[j4] || "";
       });
@@ -10528,10 +10627,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return out;
   }
   function peopleText(text, people) {
-    const lines = text.split("\n");
-    if (lines[lines.length - 1] === "") lines.pop();
-    const t5 = pTable(lines);
-    let cols = t5 ? pSplit(lines[t5.head]) : [];
+    const lines2 = text.split("\n");
+    if (lines2[lines2.length - 1] === "") lines2.pop();
+    const t5 = pTable(lines2);
+    let cols = t5 ? pSplit(lines2[t5.head]) : [];
     cols = [...cols, ...PCOLS.filter((c5) => !cols.includes(c5))];
     people.forEach((p6) => Object.keys(p6.extra || {}).forEach((c5) => {
       if (!cols.includes(c5)) cols.push(c5);
@@ -10544,11 +10643,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const row2 = (a5) => "| " + a5.join(" | ") + " |", table = [row2(cols), "|" + cols.map((c5) => "-".repeat(c5.length + 2)).join("|") + "|", ...people.map((p6) => row2(cols.map((c5) => cell2(p6, c5))))];
     if (t5) {
       const end = (t5.rows.length ? t5.rows[t5.rows.length - 1] : t5.head + 1) + 1;
-      lines.splice(t5.head, end - t5.head, ...table);
-    } else if (lines.includes("## People")) {
-      lines.splice(lines.indexOf("## People") + 1, 0, "", ...table);
-    } else lines.push("", "## People", "", ...table);
-    return lines.join("\n") + "\n";
+      lines2.splice(t5.head, end - t5.head, ...table);
+    } else if (lines2.includes("## People")) {
+      lines2.splice(lines2.indexOf("## People") + 1, 0, "", ...table);
+    } else lines2.push("", "## People", "", ...table);
+    return lines2.join("\n") + "\n";
   }
   var lev = (a5, b5) => {
     let prev = Array.from({ length: b5.length + 1 }, (_5, i5) => i5);
@@ -11928,8 +12027,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         return;
       }
       if (k5 === "save") {
-        const name = $("#igName").value.trim(), text = $("#igText").value.trim(), where = $$("#igForm [data-igw]").filter((c5) => c5.checked).map((c5) => c5.dataset.igw);
-        if (!name || !text || !where.length) {
+        const name = $("#igName").value.trim(), text = $("#igText").value.trim(), where2 = $$("#igForm [data-igw]").filter((c5) => c5.checked).map((c5) => c5.dataset.igw);
+        if (!name || !text || !where2.length) {
           snack(!name ? "Give the rule a name" : !text ? "Say what text to match" : "Choose where it applies");
           return;
         }
@@ -11937,7 +12036,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           snack("Another rule has that name");
           return;
         }
-        const rule = { name, where, field: $("#igField").value, how: $("#igHow").value, text, on: IGEDIT >= 0 ? L2[IGEDIT].on !== false : true };
+        const rule = { name, where: where2, field: $("#igField").value, how: $("#igHow").value, text, on: IGEDIT >= 0 ? L2[IGEDIT].on !== false : true };
         if (IGEDIT >= 0) L2[IGEDIT] = rule;
         else L2.push(rule);
         if (await saveIgnore(L2, `Rule “${name}” saved`)) {
@@ -12852,34 +12951,34 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     if (RVG === "source") {
       [...new Set(REV.map((r4) => r4.file))].forEach((file) => {
-        const L2 = REV.filter((r4) => r4.file === file), used = /* @__PURE__ */ new Set(), blocks = [];
+        const L2 = REV.filter((r4) => r4.file === file), used = /* @__PURE__ */ new Set(), blocks2 = [];
         L2.forEach((r4) => {
           if (isMin(r4)) {
             kidsOf(r4, "*").forEach((k5) => used.add(k5));
             const b5 = minBlock(r4, "*");
-            if (b5) blocks.push(b5);
+            if (b5) blocks2.push(b5);
             return;
           }
-          if (!used.has(r4) && ok(r4)) blocks.push([{ r: r4, g: "*" }]);
+          if (!used.has(r4) && ok(r4)) blocks2.push([{ r: r4, g: "*" }]);
         });
-        if (blocks.length) out.push({ key: file, title: revGroupTitle(file, L2), label: revGroupTitle(file, L2).replace(/<[^>]+>/g, ""), blocks });
+        if (blocks2.length) out.push({ key: file, title: revGroupTitle(file, L2), label: revGroupTitle(file, L2).replace(/<[^>]+>/g, ""), blocks: blocks2 });
       });
       return out;
     }
     const gs = [...new Set(REV.flatMap((r4) => isMin(r4) ? (r4.projects || [r4.p]).map((p6) => p6 || "?") : [r4.p || "?"]))].sort((a5, b5) => a5 === "?" ? -1 : b5 === "?" ? 1 : 0);
     gs.forEach((g5) => {
-      const used = /* @__PURE__ */ new Set(), blocks = [];
+      const used = /* @__PURE__ */ new Set(), blocks2 = [];
       REV.forEach((r4) => {
         if (isMin(r4)) {
           if (!(r4.projects || [r4.p]).map((p6) => p6 || "?").includes(g5)) return;
           kidsOf(r4, g5).forEach((k5) => used.add(k5));
           const b5 = minBlock(r4, g5);
-          if (b5) blocks.push(b5);
+          if (b5) blocks2.push(b5);
           return;
         }
-        if ((r4.p || "?") === g5 && !used.has(r4) && ok(r4)) blocks.push([{ r: r4, g: g5 }]);
+        if ((r4.p || "?") === g5 && !used.has(r4) && ok(r4)) blocks2.push([{ r: r4, g: g5 }]);
       });
-      if (blocks.length) out.push({ key: g5, title: g5 === "?" ? "Needs a project" : `<a href="#" class="hlink" data-proj="${g5}">${esc(pName(g5))}</a>`, label: g5 === "?" ? "Needs a project" : pName(g5), blocks });
+      if (blocks2.length) out.push({ key: g5, title: g5 === "?" ? "Needs a project" : `<a href="#" class="hlink" data-proj="${g5}">${esc(pName(g5))}</a>`, label: g5 === "?" ? "Needs a project" : pName(g5), blocks: blocks2 });
     });
     return out;
   }
@@ -16204,8 +16303,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (e4.key === "Enter" && e4.target.matches && e4.target.matches("[data-ms]")) openMilestone(e4.target.dataset.ms);
     });
   }
-  function feedLines(lines, typeOf, textOf2) {
-    return lines.map((a5) => {
+  function feedLines(lines2, typeOf, textOf2) {
+    return lines2.map((a5) => {
       const ch = String(a5.change || a5.what || "");
       return { type: typeOf(ch, a5), who: a5.by, html: `<span class="chg">${esc(textOf2 ? textOf2(ch, a5) : ch)}</span>`, when: a5.at, state: a5.reverted || a5.undone ? "undone" : PKAPPLIED.has(a5.apply_id) ? "applied" : "" };
     });
@@ -16465,10 +16564,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return `<div class="mv-hint">Revised from ${fd(m5.orig)}${rb.date ? `, agreed ${fd(rb.date)}` : ""}${rb.decision ? ` (decision ${esc(rb.decision)})` : ""}</div>`;
   }
   var MVPXD = 8;
-  function mvAxis(list, pad2) {
+  function mvAxis(list, pad3) {
     const ds = [TODAY];
     list.forEach((m5) => {
-      [mvWhen(m5), m5.state !== "achieved" && m5.fc > m5.agr ? m5.fc : "", m5.orig && pad2 ? m5.orig : ""].forEach((d5) => {
+      [mvWhen(m5), m5.state !== "achieved" && m5.fc > m5.agr ? m5.fc : "", m5.orig && pad3 ? m5.orig : ""].forEach((d5) => {
         if (d5 && DATE.test(d5)) ds.push(d5);
       });
     });
@@ -19890,9 +19989,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   var VRENAME = null;
   function renderViewChips() {
-    const el = $("#wviews"), V2 = allViews(shared.WT), dirty = !shared.WVIEW && !!WB[shared.WT], act = shared.WVIEW || WB[shared.WT];
+    const el = $("#wviews"), V2 = allViews(shared.WT), dirty2 = !shared.WVIEW && !!WB[shared.WT], act = shared.WVIEW || WB[shared.WT];
     const chip = (v4) => {
-      const on = v4.id === act, dot = dirty && on;
+      const on = v4.id === act, dot = dirty2 && on;
       if (VRENAME && v4.id === "saved:" + VRENAME) return `<span class="vwrap vren"><input id="vrename" value="${esc(v4.label)}" aria-label="New name for the ${esc(v4.label)} view"><button class="mini ok" type="button" data-vren="save">Save</button><button class="mini" type="button" data-vren="cancel">Cancel</button></span>`;
       return `<span class="vwrap"><button class="vchip${dot ? " dirty" : ""}" data-wv="${esc(v4.id)}" aria-pressed="${on}"${dot ? ' title="Changed since it was opened: Update view or Save as new view"' : ""}>${esc(v4.label)}${dot ? '<span class="vdot" aria-hidden="true">●</span><span class="vh"> (changed, not saved)</span>' : ""}</button>${v4.builtin ? "" : `<button class="vmenu" type="button" data-vmenu="${esc(v4.label)}" aria-haspopup="menu" aria-label="Options for the ${esc(v4.label)} view" title="Rename, move or delete">▾</button>`}</span>`;
     };
@@ -21748,13 +21847,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     document.body.classList.add("keys-seen");
   }
-  function keysChip(where, after) {
+  function keysChip(where2, after) {
     const host2 = document.querySelector(after);
-    if (!host2 || $("#" + where + "Keys")) return;
-    addHTML(host2, "afterend", html`<span class="dd keysdd"><button type="button" class="btn keyschip" id="${raw(where)}Keys" aria-haspopup="dialog" aria-expanded="false" aria-controls="${raw(where)}KeysMenu" title="Keyboard keys for this list">Keys</button><div class="ddmenu keysmenu" id="${raw(where)}KeysMenu" role="dialog" aria-label="Keys" hidden></div></span>`);
+    if (!host2 || $("#" + where2 + "Keys")) return;
+    addHTML(host2, "afterend", html`<span class="dd keysdd"><button type="button" class="btn keyschip" id="${raw(where2)}Keys" aria-haspopup="dialog" aria-expanded="false" aria-controls="${raw(where2)}KeysMenu" title="Keyboard keys for this list">Keys</button><div class="ddmenu keysmenu" id="${raw(where2)}KeysMenu" role="dialog" aria-label="Keys" hidden></div></span>`);
   }
-  function keysHtml(where) {
-    const h5 = where === "w" ? (layoutOf(shared.WT) === "board" ? $("#whintBoard") : $("#whintList")).innerHTML || workHint(layoutOf(shared.WT)) : $("#rvHint").innerHTML || String(rvHintHtml());
+  function keysHtml(where2) {
+    const h5 = where2 === "w" ? (layoutOf(shared.WT) === "board" ? $("#whintBoard") : $("#whintList")).innerHTML || workHint(layoutOf(shared.WT)) : $("#rvHint").innerHTML || String(rvHintHtml());
     return `<h3>Keys</h3><ul>${h5.split(" · ").map((x5) => `<li>${x5}</li>`).join("")}</ul><p class="sub">Press <span class="kbd">?</span> for every shortcut.</p>`;
   }
   function keysClose() {
@@ -21770,10 +21869,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const b5 = e4.target.closest(".keyschip");
       if (b5) {
         e4.stopPropagation();
-        const where = b5.id.replace(/Keys$/, ""), m5 = $("#" + where + "KeysMenu"), was = !m5.hidden;
+        const where2 = b5.id.replace(/Keys$/, ""), m5 = $("#" + where2 + "KeysMenu"), was = !m5.hidden;
         keysClose();
         if (was) return;
-        putHTML(m5, raw(keysHtml(where)));
+        putHTML(m5, raw(keysHtml(where2)));
         m5.hidden = false;
         m5.classList.add("on");
         b5.setAttribute("aria-expanded", "true");
@@ -22205,7 +22304,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     /** @type {Notes} */
     Object.fromEntries(SHAPE_SECTIONS.map(([k5]) => [k5, []]))
   );
-  var textOf = (lines) => (lines || []).map((l6) => l6.text).join("\n");
+  var textOf = (lines2) => (lines2 || []).map((l6) => l6.text).join("\n");
   function shapeLinesFrom(text, before) {
     const old = before || [];
     return String(text || "").split("\n").map((s5) => s5.trim()).filter(Boolean).slice(0, 12).map((t5, i5) => {
@@ -22819,7 +22918,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ": the notes are on the prep page. Accept again after a change."
       ] }) : null,
       SHAPE_SECTIONS.map(([k5, label]) => {
-        const lines = now[k5] || [];
+        const lines2 = now[k5] || [];
         return /* @__PURE__ */ u2("div", { class: "shsec", children: [
           /* @__PURE__ */ u2("div", { class: "shsech", children: [
             /* @__PURE__ */ u2("label", { for: `shN-${k5}`, children: label }),
@@ -22833,9 +22932,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
             {
               id: `shN-${k5}`,
               class: "shgrow shbox",
-              rows: Math.max(2, lines.length + 1),
+              rows: Math.max(2, lines2.length + 1),
               value: texts[k5] || "",
-              "aria-describedby": lines.length ? `shC-${k5}` : void 0,
+              "aria-describedby": lines2.length ? `shC-${k5}` : void 0,
               onInput: (e4) => {
                 shapeText.value = { ...shapeText.value, [k5]: (
                   /** @type {HTMLTextAreaElement} */
@@ -22844,7 +22943,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
               }
             }
           ),
-          lines.length ? /* @__PURE__ */ u2("ol", { class: "shcites", id: `shC-${k5}`, "aria-label": `${label}: each line's source`, children: lines.map((l6, i5) => /* @__PURE__ */ u2("li", { children: (l6.sources || []).length ? (l6.sources || []).map((s5, j4) => /* @__PURE__ */ u2(ShapeSource, { s: s5 }, j4)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" }) }, i5)) }) : null
+          lines2.length ? /* @__PURE__ */ u2("ol", { class: "shcites", id: `shC-${k5}`, "aria-label": `${label}: each line's source`, children: lines2.map((l6, i5) => /* @__PURE__ */ u2("li", { children: (l6.sources || []).length ? (l6.sources || []).map((s5, j4) => /* @__PURE__ */ u2(ShapeSource, { s: s5 }, j4)) : /* @__PURE__ */ u2("span", { class: "drtag", role: "note", children: "no source" }) }, i5)) }) : null
         ] }, k5);
       })
     ] });
@@ -25267,13 +25366,13 @@ ${pre}**Current state title:** ${title}`);
     return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID", "9%")}${deTh("Item")}${deTh("Due", "18%")}${deTh("Priority", "10%")}</tr>${list.map((i5) => deRowHtml(i5, o5)).join("")}</table>`;
   }
   function deTextRows(list, o5) {
-    const w5 = Math.max(...list.map((i5) => i5.id.length)), out = [], pad2 = "".padEnd(w5);
+    const w5 = Math.max(...list.map((i5) => i5.id.length)), out = [], pad3 = "".padEnd(w5);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
       out.push(`  ${i5.id.padEnd(w5)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
-      if (i5.k === "raid") out.push(`  ${pad2}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
-      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad2}  Latest update: ${i5.upd}`);
-      if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad2}  ${deChasedWords(o5.chased[i5.id])}`);
+      if (i5.k === "raid") out.push(`  ${pad3}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
+      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad3}  Latest update: ${i5.upd}`);
+      if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad3}  ${deChasedWords(o5.chased[i5.id])}`);
     });
     return out;
   }
@@ -25285,12 +25384,12 @@ ${pre}**Current state title:** ${title}`);
     if (o5.mode === "chase") return deChase(o5);
     const e4 = esc, today = o5.today, first = o5.first || String(o5.name || "").split(/\s+/)[0] || "";
     const items2 = dePicked(o5), codes = [...new Set(items2.map((i5) => i5.p))].sort(), reply = deReplyBy(o5.replyBy), open2 = o5.cover || DE_OPEN, ask = `${DE_ASK}${items2.some((i5) => i5.k === "decisions") ? " " + DE_DECIDE : ""}${reply} ${DE_THANKS}`;
-    const blocks = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join(""), [endH, endT] = deClose(o5);
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks}${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
-    codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
-    lines.push(ask, ...endT);
-    return { to: o5.email || "", subject: deSubject(items2, today), html: html2, text: lines.join("\n"), items: items2 };
+    const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join(""), [endH, endT] = deClose(o5);
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
+    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
+    codes.forEach((c5) => lines2.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
+    lines2.push(ask, ...endT);
+    return { to: o5.email || "", subject: deSubject(items2, today), html: html2, text: lines2.join("\n"), items: items2 };
   }
   var DE_CHASE = [
     { subj: "Reminder", open: "A quick reminder about the items below, which are now past their due dates.", ask: "Could you let me know where each one stands, and when I can expect it?" },
@@ -25305,13 +25404,13 @@ ${pre}**Current state title:** ${title}`);
     const e4 = esc, today = o5.today, first = o5.first || String(o5.name || "").split(/\s+/)[0] || "", items2 = dePicked(o5), codes = [...new Set(items2.map((i5) => i5.p))].sort();
     const lv = deChaseLevel(items2, o5.chased), t5 = DE_CHASE[lv.level], open2 = o5.cover || t5.open.replace("{last}", lv.last ? ` of ${fd(lv.last)}` : "").replace("{n}", deTimes(lv.n)).replace("{since}", lv.last ? `, most recently on ${fd(lv.last)}` : "");
     const ask = `${t5.ask}${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5);
-    const blocks = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join("");
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks}${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
-    codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
-    lines.push(ask, ...endT);
+    const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join("");
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
+    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
+    codes.forEach((c5) => lines2.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
+    lines2.push(ask, ...endT);
     const subject = !items2.length ? t5.subj : items2.length === 1 ? `${items2[0].id} · ${t5.subj}` : `${codes.join(" / ")} · ${t5.subj}: ${items2.length} overdue items`;
-    return { to: o5.email || "", subject, html: html2, text: lines.join("\n"), items: items2, level: lv.level };
+    return { to: o5.email || "", subject, html: html2, text: lines2.join("\n"), items: items2, level: lv.level };
   }
   function deOwners(acts2, o5) {
     const names = [o5.lead, ...(o5.attendees || []).map((a5) => a5.name)].filter(Boolean), all = [...new Set(acts2.map((i5) => i5.o || "No owner"))];
@@ -25324,15 +25423,15 @@ ${pre}**Current state title:** ${title}`);
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
     const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
-    if (o5.summary) lines.push("Summary", o5.summary, "");
-    if (decs.length) lines.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
+    const lines2 = [deGreeting(o5.now, first), "", open2, ""];
+    if (o5.summary) lines2.push("Summary", o5.summary, "");
+    if (decs.length) lines2.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
     if (acts2.length) {
-      lines.push("Actions");
-      owners.forEach((n4) => lines.push(n4, ...deTextRows(mine(n4), o5), ""));
+      lines2.push("Actions");
+      owners.forEach((n4) => lines2.push(n4, ...deTextRows(mine(n4), o5), ""));
     }
-    lines.push(ask, ...endT);
-    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
+    lines2.push(ask, ...endT);
+    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines2.join("\n"), items: items2 };
   }
   shared.DE = null;
   var deHost = (addr) => String(addr || "").split("@")[1]?.trim().toLowerCase() || "";
@@ -25960,9 +26059,9 @@ ${pre}**Current state title:** ${title}`);
     <div class="drfoot"><span class="sp"></span><button type="button" class="btn" data-gfdo="discard">Discard</button><button type="button" class="btn" data-gfdo="plain">Copy as plain text</button>${d5.form === "teams" ? "" : '<button type="button" class="btn primary" data-gfdo="rich">Copy</button>'}</div><div class="sub" id="gfMsg" role="status"></div></div>`;
   }
   function genFormText(d5) {
-    const src = d5.sources || [], lines = d5.form === "steering" || d5.form === "three", fmt = (t5) => esc(t5.replace(/^[-*]\s+/, "• ")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+    const src = d5.sources || [], lines2 = d5.form === "steering" || d5.form === "three", fmt = (t5) => esc(t5.replace(/^[-*]\s+/, "• ")).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
     const one = (x5) => x5.unsourced ? `<mark class="drloose">${fmt(x5.text)}</mark><span class="drtag" role="note">no source</span>` : `<span>${fmt(x5.text)}</span>${x5.refs.map((r4) => `<sup class="drref" data-tip="${esc((src.find((y5) => y5.ref === r4) || {}).text || r4)}">${esc(r4)}</sup>`).join("")}`;
-    return `<div class="drtext">${(d5.sentences || []).map(one).join(lines ? "<br>" : " ")}</div>`;
+    return `<div class="drtext">${(d5.sentences || []).map(one).join(lines2 ? "<br>" : " ")}</div>`;
   }
   async function genFormDraft(body) {
     const out = $("#genOut"), why = draftWhyNot("status-form");
@@ -26802,9 +26901,9 @@ ${d5.text}`);
         quote = [];
       }
     };
-    const marks = paneLines(text), lines = String(text || "").split("\n").concat([""]);
-    for (let n4 = 0; n4 < lines.length; n4++) {
-      const line = lines[n4];
+    const marks = paneLines(text), lines2 = String(text || "").split("\n").concat([""]);
+    for (let n4 = 0; n4 < lines2.length; n4++) {
+      const line = lines2[n4];
       if (marks.has(n4)) {
         flush();
         continue;
@@ -26859,7 +26958,7 @@ ${d5.text}`);
     return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
   }
   function htmlToMd(root) {
-    const blocks = [];
+    const blocks2 = [];
     let cur = "";
     const inl = (n4) => {
       if (n4.nodeType === 3) return n4.nodeValue.replace(/ /g, " ").replace(/\s+/g, " ");
@@ -26902,7 +27001,7 @@ ${d5.text}`);
     };
     const flush = () => {
       const t5 = flat(cur);
-      if (t5) blocks.push(t5);
+      if (t5) blocks2.push(t5);
       cur = "";
     };
     const walk = (el) => {
@@ -26910,20 +27009,20 @@ ${d5.text}`);
         const tag = n4.nodeType === 1 ? n4.tagName : "";
         if (tag === "UL" || tag === "OL") {
           flush();
-          const lines = listMd(n4, 0, []);
-          if (lines.length) blocks.push(lines.join("\n"));
+          const lines2 = listMd(n4, 0, []);
+          if (lines2.length) blocks2.push(lines2.join("\n"));
         } else if (/^H[1-6]$/.test(tag)) {
           flush();
           const t5 = flat(inl(n4));
-          if (t5) blocks.push("### " + t5);
+          if (t5) blocks2.push("### " + t5);
         } else if (tag === "BLOCKQUOTE") {
           flush();
           const t5 = flat(inl(n4));
-          if (t5) blocks.push("> " + t5);
+          if (t5) blocks2.push("> " + t5);
         } else if (tag === "FIGURE" && n4.dataset.ref) {
           flush();
           const c5 = flat((n4.querySelector("figcaption") || {}).textContent || "").replace(/[\[\]]/g, "");
-          blocks.push(`![${c5}](${n4.dataset.ref})`);
+          blocks2.push(`![${c5}](${n4.dataset.ref})`);
         } else if (/^(P|DIV|LI|SECTION|ARTICLE)$/.test(tag)) {
           flush();
           walk(n4);
@@ -26933,7 +27032,7 @@ ${d5.text}`);
     };
     walk(root);
     flush();
-    return blocks.join("\n\n");
+    return blocks2.join("\n\n");
   }
   function viewVal(n4, t5, v4, x5) {
     if (t5 === "dref") return v4 ? `<a href="#" data-open="decisions:${esc(v4)}">${esc(v4)}</a>` : '<span class="sub">—</span>';
@@ -27030,8 +27129,12 @@ ${d5.text}`);
       return;
     }
     if (r4.kind === "draft" && /\.html$/i.test(r4.src || "")) {
+      if (viaServer()) {
+        go("minutes", { file: r4.file });
+        return;
+      }
       openPath(r4.src);
-      snack(viaServer() ? "Check the minutes, change their items here in Review, then press Approve" : "Check the minutes, then approve them in Claude Code (the live server isn't running)");
+      snack("Check the minutes, then approve them in Claude Code (the live server isn't running)");
       return;
     }
     if (r4.kind === "draft") {
@@ -28587,7 +28690,7 @@ ${d5.text}`);
   function pkHistory(id) {
     const own = (a5) => actId(a5) === id || !!(a5.sides && Object.prototype.hasOwnProperty.call(a5.sides, id));
     const O3 = D.activity_older || {}, by = O3.by || [];
-    return shared.ACT.filter(own).map((a5) => a5.sides ? { ...a5, change: a5.sides[id] } : a5).concat(((O3.items || {})[id] || []).map(([at, change, b5, apply_id, un]) => ({ at, change, by: by[b5] || "", apply_id, undone: !!un })));
+    return shared.ACT.filter(own).map((a5) => a5.sides ? { ...a5, change: a5.sides[id] } : a5).concat(((O3.items || {})[id] || []).map(([at, change2, b5, apply_id, un]) => ({ at, change: change2, by: by[b5] || "", apply_id, undone: !!un })));
   }
   function pkFeedItems(x5, k5) {
     const id = pkCid(), out = [], ul = pkUpdLabel(k5);
@@ -29577,8 +29680,8 @@ ${d5.text}`);
         snack(draftWhyNot("update-bulk"));
         return;
       }
-      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where = b5.parentElement.querySelector(".drbst");
-      draftBulk(ids, where);
+      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where2 = b5.parentElement.querySelector(".drbst");
+      draftBulk(ids, where2);
     });
     if (shared.VIEW === "today") renderToday();
   }
@@ -30508,13 +30611,13 @@ ${d5.text}`);
       ] }) : null
     ] });
   }
-  function NoteBox({ sec, label, lines, onSave }) {
-    const start = lines.map((l6) => l6.text).join("\n");
+  function NoteBox({ sec, label, lines: lines2, onSave }) {
+    const start = lines2.map((l6) => l6.text).join("\n");
     const [text, setText] = d2(start);
     h2(() => {
       setText(start);
     }, [start]);
-    const cites = lines.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
+    const cites = lines2.flatMap((l6) => l6.sources || []).filter((s5, i5, a5) => a5.findIndex((x5) => (x5.path || x5.url || x5.id || x5.label) === (s5.path || s5.url || s5.id || s5.label)) === i5);
     return /* @__PURE__ */ u2("div", { class: "ppnote", children: [
       /* @__PURE__ */ u2("label", { for: `pp-n-${sec}`, children: label }),
       /* @__PURE__ */ u2(
@@ -30522,7 +30625,7 @@ ${d5.text}`);
         {
           id: `pp-n-${sec}`,
           class: "ppbox",
-          rows: Math.max(2, lines.length + 1),
+          rows: Math.max(2, lines2.length + 1),
           value: text,
           onInput: (e4) => setText(
             /** @type {HTMLTextAreaElement} */
@@ -30890,6 +30993,1697 @@ ${d5.text}`);
     if (key) loadPrep(key).then(() => tabTitle());
   }
 
+  // components/report/SheetStub.jsx
+  var ZOOM_MIN = 0.4, ZOOM_MAX = 0.8;
+  var SCROLL = /* @__PURE__ */ new Map();
+  function openRef(ref, own) {
+    if (own && own(ref)) return;
+    if (/-M-\d+$/.test(ref)) openMilestone(ref);
+    else openRecord("all", ref);
+  }
+  var HERE = X(
+    /** @type {Here|null} */
+    null
+  );
+  function StubText({ field = "text", row: row2, col, label }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    ), s5 = h5.s;
+    const v4 = row2 != null && col ? ((s5.rows || [])[row2]?.cells || {})[col] || "" : (
+      /** @type {any} */
+      s5[field] || ""
+    );
+    if (!h5.editing) return /* @__PURE__ */ u2("span", { class: "sheet-text", children: v4 });
+    return /* @__PURE__ */ u2("textarea", { class: "sheet-text", "aria-label": label || s5.heading, value: v4, onInput: (e4) => {
+      const t5 = (
+        /** @type {HTMLTextAreaElement} */
+        e4.currentTarget.value
+      );
+      if (row2 != null && col) {
+        const rows2 = (s5.rows || []).slice();
+        rows2[row2] = { ...rows2[row2], cells: { ...rows2[row2].cells || {}, [col]: t5 } };
+        h5.update({ rows: rows2 }, "Row edited");
+      } else h5.update({ [field]: t5 }, "Text edited");
+    } });
+  }
+  function StubItemRef({ id }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return /* @__PURE__ */ u2("span", { children: id });
+    return /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => {
+      openRef(id, h5.onOpenItem);
+      h5.onEvent({ type: "item", ref: id });
+    }, children: id });
+  }
+  function StubTag({ tag }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return null;
+    return /* @__PURE__ */ u2("button", { type: "button", class: "chip", onClick: () => {
+      if (tag.ref.startsWith("t:")) h5.onEvent({ type: "tag", tag });
+      else openRef(tag.ref, h5.onOpenItem);
+    }, children: tag.text || tag.ref });
+  }
+  var NoSpark = () => null;
+  function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, onChange, onOpenItem, onEvent }) {
+    const editing = !exported && !readOnly;
+    const setSection = (i5, patch, why) => {
+      const sections = doc.sections.slice();
+      sections[i5] = { ...sections[i5], ...patch };
+      onChange({ ...doc, sections }, why);
+    };
+    const setMeta = (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why);
+    const here0 = { editing, exported, readOnly, onOpenItem, onEvent };
+    const extra = (x5) => /* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: (
+      /** @type {SheetSection} */
+      { id: "", type: "", heading: "" }
+    ), update: () => {
+    } }, children: /* @__PURE__ */ u2("div", { class: "sheet-extra", children: x5.render({ doc, editing, readOnly, setMeta, ItemRef: StubItemRef }) }) }, `x-${x5.key}`);
+    const out = [];
+    doc.sections.forEach((s5, i5) => {
+      if (s5.hidden) {
+        if (editing) out.push(/* @__PURE__ */ u2("div", { class: "sheet-hidden", children: [
+          "Hidden: ",
+          s5.heading,
+          " ",
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "linkbtn",
+              onClick: () => {
+                setSection(i5, { hidden: false }, "Section shown");
+                onEvent({ type: "section-shown", id: s5.id });
+              },
+              children: "Show"
+            }
+          )
+        ] }, s5.id));
+      } else {
+        const update = (p6, why) => setSection(i5, p6, why);
+        const ctx = {
+          section: s5,
+          doc,
+          editing,
+          exported,
+          readOnly,
+          update,
+          setMeta,
+          Text: StubText,
+          ItemRef: StubItemRef,
+          Tag: StubTag,
+          Spark: NoSpark,
+          level: (key) => ({ "data-level": key }),
+          peer: peerDoc ? peerDoc.sections.find((x5) => x5.id === s5.id) || null : null
+        };
+        const own = (renderers.byId || {})[s5.id] || (renderers.byType || {})[s5.type];
+        out.push(/* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: s5, update }, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, children: [
+          /* @__PURE__ */ u2("h2", { children: s5.heading }),
+          own ? own(ctx) : /* @__PURE__ */ u2(Default, { ctx, rowFn: (renderers.row || {})[s5.id] })
+        ] }) }, s5.id));
+      }
+      if (!exported) for (const x5 of extras.filter((e4) => e4.after === s5.id)) out.push(extra(x5));
+    });
+    if (!exported) for (const x5 of extras.filter((e4) => e4.after == null)) out.push(extra(x5));
+    return /* @__PURE__ */ u2("div", { class: "page", children: out });
+  }
+  function Default({ ctx, rowFn }) {
+    const s5 = ctx.section, { Text, ItemRef, Tag } = ctx;
+    if (s5.type === "table") {
+      const rows2 = s5.rows || [];
+      return /* @__PURE__ */ u2("table", { children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key)) }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, index) => {
+          if (row2.shown === false && !ctx.editing) return null;
+          const setRow = (p6, why) => {
+            const r4 = rows2.slice();
+            r4[index] = { ...row2, ...p6 };
+            ctx.update({ rows: r4 }, why);
+          };
+          const removeRow = (why) => ctx.update({ rows: rows2.filter((_5, j4) => j4 !== index) }, why);
+          const rc = {
+            row: row2,
+            index,
+            section: s5,
+            item: (ctx.doc.items || {})[row2.ref || ""] || null,
+            editing: ctx.editing,
+            exported: ctx.exported,
+            readOnly: ctx.readOnly,
+            setRow,
+            removeRow,
+            Text,
+            ItemRef,
+            Tag
+          };
+          return rowFn ? rowFn(rc) : /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(Text, { row: index, col: c5.key, label: c5.label }) }, c5.key)) }, row2.ref || index);
+        }) })
+      ] });
+    }
+    if (s5.type === "figures") return /* @__PURE__ */ u2("div", { class: "figures", children: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => /* @__PURE__ */ u2("div", { class: "figure", children: [
+      /* @__PURE__ */ u2("b", { children: f5.value }),
+      f5.label
+    ] }, f5.key)) });
+    if (s5.type === "panes") return /* @__PURE__ */ u2("div", { class: "panes", children: (s5.panes || []).map((p6, i5) => /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("h3", { children: p6.title }),
+      /* @__PURE__ */ u2("p", { children: p6.text })
+    ] }, i5)) });
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2(Text, { rich: true }),
+      (s5.tags || []).map((t5) => /* @__PURE__ */ u2(Tag, { tag: t5 }, t5.ref))
+    ] });
+  }
+  function SheetStub(props) {
+    const { doc, baseVersion, scrollKey = "", zoom = ZOOM_MAX, exported = false, readOnly = false, partner = null, onSave, onEvent = () => {
+    } } = props;
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [base, setBase] = d2(baseVersion);
+    const [line, setLine] = d2("");
+    _2(() => {
+      const el = box.current;
+      if (el && SCROLL.has(scrollKey)) el.scrollTop = SCROLL.get(scrollKey) || 0;
+    });
+    const save2 = async () => {
+      if (!onSave || readOnly) return;
+      const answer = await onSave({ doc, base_version: base });
+      if (answer.ok) {
+        setBase(answer.version ?? void 0);
+        setLine(`Saved · version ${answer.version}`);
+        onEvent({ type: "saved", version: answer.version, answer });
+      } else {
+        setLine(answer.message || "Not saved.");
+        onEvent({ type: "save-failed", answer });
+      }
+    };
+    const width = `${Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom)) * 100)}%`;
+    const page = (d5, p6) => /* @__PURE__ */ u2(
+      Page,
+      {
+        doc: d5,
+        renderers: p6 ? p6.renderers || props.renderers : props.renderers,
+        extras: p6 ? [] : props.extras,
+        exported,
+        readOnly: readOnly || !!(p6 && p6.readOnly),
+        peerDoc: p6 ? doc : partner ? partner.doc : null,
+        onChange: p6 ? p6.onChange : props.onChange,
+        onOpenItem: props.onOpenItem,
+        onEvent
+      }
+    );
+    return /* @__PURE__ */ u2("div", { class: "sheet-stub", onKeyDown: (e4) => {
+      if ((e4.metaKey || e4.ctrlKey) && e4.key === "s") {
+        e4.preventDefault();
+        save2();
+      }
+    }, children: [
+      /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": exported ? "true" : "false", onClick: () => {
+          props.onExported?.(!exported);
+          onEvent({ type: "exported", on: !exported });
+        }, children: "Show as exported" }),
+        onSave && !readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: save2, children: "Save" }) : null,
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: line }),
+        props.toolbar || null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: box, onScroll: (e4) => SCROLL.set(
+        scrollKey,
+        /** @type {HTMLDivElement} */
+        e4.currentTarget.scrollTop
+      ), children: /* @__PURE__ */ u2("div", { class: partner ? "sheet-pair" : "sheet-one", style: { width: partner ? "100%" : width, margin: "0 auto", display: partner ? "flex" : "block" }, children: [
+        page(doc, null),
+        partner ? page(partner.doc, partner) : null
+      ] }) })
+    ] });
+  }
+
+  // components/Dialog.jsx
+  var FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  function Dialog({ open: open2, onClose, labelledBy, id, class: cls, focus, dirty: dirty2, children }) {
+    const ref = A2(
+      /** @type {HTMLDialogElement | null} */
+      null
+    );
+    const opener = A2(
+      /** @type {Element | null} */
+      null
+    );
+    h2(() => {
+      const d5 = ref.current;
+      if (!d5) return;
+      if (open2 && !d5.open) {
+        opener.current = document.activeElement;
+        d5.showModal();
+        const f5 = (
+          /** @type {HTMLElement | null} */
+          focus && d5.querySelector(focus) || d5.querySelector(FOCUSABLE)
+        );
+        if (f5) f5.focus();
+      } else if (!open2 && d5.open) d5.close();
+    }, [open2]);
+    const cancel = (e4) => {
+      e4.preventDefault();
+      onClose();
+    };
+    const closed = () => {
+      const o5 = (
+        /** @type {HTMLElement | null} */
+        opener.current
+      );
+      opener.current = null;
+      if (o5 && o5.isConnected && typeof o5.focus === "function") o5.focus();
+      if (open2) onClose();
+    };
+    const scrim = (e4) => {
+      const d5 = ref.current;
+      if (!d5 || e4.target !== d5 || dirty2) return;
+      const r4 = d5.getBoundingClientRect();
+      if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) onClose();
+    };
+    return /* @__PURE__ */ u2("dialog", { ref, id, class: cls, "aria-labelledby": labelledBy, onCancel: cancel, onClose: closed, onClick: scrim, children });
+  }
+
+  // stores/minutes.js
+  var minutesArg = y3(
+    /** @type {{file?: string, path?: string}|null} */
+    null
+  );
+  var minutesView = y3(
+    /** @type {MinutesView|null} */
+    null
+  );
+  var minutesDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var minutesBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var minutesBusy = y3("");
+  var paneOpen = y3(true);
+  var paneTurn = y3(
+    /** @type {number|null} */
+    null
+  );
+  var paneQuery = y3("");
+  var keptChecks = y3(
+    /** @type {string[]} */
+    []
+  );
+  var minutesMode = y3(
+    /** @type {"internal"|"distributed"|"side"} */
+    "internal"
+  );
+  var approveOpen = y3(false);
+  var asked2 = 0;
+  async function loadMinutes(arg) {
+    const mine = ++asked2;
+    minutesArg.value = arg;
+    if (!viaServer()) {
+      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
+      return;
+    }
+    minutesBusy.value = "Opening the minutes…";
+    const r4 = await api("/api/minutes/draft", arg);
+    if (mine !== asked2) return;
+    minutesBusy.value = "";
+    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
+  }
+  function take(r4) {
+    minutesView.value = r4;
+    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function reloadMinutes() {
+    const v4 = minutesView.value;
+    if (v4 && v4.ok && v4.path) return loadMinutes({ path: v4.path });
+    if (minutesArg.value) return loadMinutes(minutesArg.value);
+  }
+  async function changeMinutes(op) {
+    const v4 = minutesView.value;
+    if (!v4 || !v4.ok || !v4.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v4.path, op, base_version: minutesBase.value });
+    if (r4 && r4.ok && r4.doc) {
+      minutesDoc.value = r4.doc;
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      minutesView.value = { ...v4, doc: r4.doc };
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
+  }
+  async function refreshPlan() {
+    const v4 = minutesView.value;
+    if (!v4 || !v4.ok || !v4.path) return;
+    const r4 = await api("/api/minutes/draft", { path: v4.path });
+    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions };
+  }
+  async function saveMinutesPage(req) {
+    const v4 = minutesView.value;
+    if (!v4 || !v4.ok || !v4.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v4.path, doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
+  }
+  async function approveMinutes(group, own) {
+    const v4 = minutesView.value;
+    if (!v4 || !v4.ok || !v4.proposal) return { ok: false, message: "These minutes have nothing pending." };
+    const r4 = await api("/api/minutes/approve", { file: v4.proposal, group, own });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportMinutes(format) {
+    const v4 = minutesView.value;
+    if (!v4 || !v4.ok || !v4.path) return { ok: false, message: "The minutes aren't open." };
+    return await api("/api/minutes/export", { path: v4.path, format, file_beside: true }) || { ok: false, message: "Not exported." };
+  }
+
+  // components/minutes/ApprovePopup.jsx
+  var where = (p6) => {
+    const parts = p6.split("/");
+    return { name: parts.pop() || p6, folder: parts.slice(-2).join(" › ") };
+  };
+  function ApprovePopup({ checks }) {
+    const v4 = minutesView.value, plan = v4 && v4.plan;
+    const [group, setGroup] = d2(true), [own, setOwn] = d2(
+      /** @type {number[]} */
+      []
+    ), [err, setErr] = d2(""), [busy, setBusy] = d2(false);
+    const close = () => {
+      approveOpen.value = false;
+      setErr("");
+    };
+    if (!plan) return /* @__PURE__ */ u2(Dialog, { open: false, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", children: /* @__PURE__ */ u2("span", {}) });
+    const items2 = plan.items, grp = items2.filter((i5) => i5.group === "group"), ones = items2.filter((i5) => i5.group === "own");
+    const waits = items2.filter((i5) => i5.group === "waits" || i5.group === "milestone"), removed = items2.filter((i5) => i5.group === "removed");
+    const tick = (n4, on) => setOwn(on ? [...own, n4] : own.filter((x5) => x5 !== n4));
+    const go2 = async () => {
+      setBusy(true);
+      setErr("");
+      const r4 = await approveMinutes(group, own);
+      setBusy(false);
+      if (!r4.ok) {
+        setErr(String(r4.message || "The apply didn't run; nothing was changed.").split("\n")[0]);
+        return;
+      }
+      approveOpen.value = false;
+      const n4 = r4.approved || 0, left = (r4.waiting || []).length;
+      snack(`Minutes approved with ${n4} item${n4 === 1 ? "" : "s"}${left ? `; ${left} wait in Review` : ""}`, r4.apply_id ? () => undoApply(r4.apply_id) : null);
+      await reloadData();
+      if (plan.files[0]) loadMinutes({ path: plan.files[0] });
+    };
+    const filed = plan.files.map(where);
+    return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
+      /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Approve the minutes" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: [
+        filed.length ? /* @__PURE__ */ u2("span", { children: [
+          "Files the minutes as ",
+          /* @__PURE__ */ u2("b", { children: filed[0].name }),
+          " in ",
+          filed[0].folder,
+          plan.transcripts.length ? ", with the transcript in Transcripts" : "",
+          ". "
+        ] }) : null,
+        "The minutes and what you tick are applied together, in one apply you can undo. Nothing is sent."
+      ] }),
+      checks.length ? /* @__PURE__ */ u2("div", { class: "mnap-ck", role: "note", children: [
+        /* @__PURE__ */ u2("b", { children: [
+          checks.length,
+          " check",
+          checks.length === 1 ? "" : "s",
+          " still open"
+        ] }),
+        /* @__PURE__ */ u2("ul", { children: checks.map((c5) => /* @__PURE__ */ u2("li", { children: c5.note }, c5.id)) })
+      ] }) : null,
+      grp.length ? /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
+        /* @__PURE__ */ u2("legend", { children: "Actions and updates" }),
+        /* @__PURE__ */ u2("label", { class: "mnap-all", children: [
+          /* @__PURE__ */ u2("input", { type: "checkbox", id: "mnApAll", checked: group, onChange: (e4) => setGroup(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked
+          ) }),
+          "Approve all ",
+          grp.length,
+          " as reviewed in the minutes"
+        ] }),
+        /* @__PURE__ */ u2("ul", { children: grp.map((i5) => /* @__PURE__ */ u2("li", { children: i5.label }, i5.n)) })
+      ] }) : null,
+      ones.length ? /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
+        /* @__PURE__ */ u2("legend", { children: "One tick each" }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "A new decision, a decision recorded or withdrawn, a new risk and a closure are each approved on their own." }),
+        ones.map((i5) => /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "checkbox",
+              "data-own": i5.n,
+              checked: own.includes(i5.n),
+              onChange: (e4) => tick(
+                i5.n,
+                /** @type {HTMLInputElement} */
+                e4.currentTarget.checked
+              )
+            }
+          ),
+          " ",
+          /* @__PURE__ */ u2("span", { children: [
+            i5.label,
+            /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " · ",
+              i5.why
+            ] })
+          ] })
+        ] }, i5.n))
+      ] }) : null,
+      waits.length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Waiting in Review whatever you tick: ",
+        waits.map((i5) => i5.label).join("; "),
+        "."
+      ] }) : null,
+      removed.length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Removed in the minutes: ",
+        removed.length,
+        " item",
+        removed.length === 1 ? "" : "s",
+        ", recorded as rejected."
+      ] }) : null,
+      /* @__PURE__ */ u2("p", { class: "sub", children: "Anything you leave unticked waits in Review." }),
+      err ? /* @__PURE__ */ u2("p", { class: "mnap-err", role: "alert", children: err }) : null,
+      /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy, onClick: go2, children: busy ? "Approving…" : "Approve the minutes" })
+      ] })
+    ] }) });
+  }
+
+  // components/minutes/context.js
+  var MinutesCtx = X(
+    /** @type {MinutesCtxValue|null} */
+    null
+  );
+
+  // components/minutes/Coverage.jsx
+  var HOW = [
+    { id: "carry", name: "Carry it to the next meeting", line: "On the series' next agenda and Prep, marked carried" },
+    { id: "session", name: "Set up a separate session", line: "Adds an action for you, due Friday; creaite never makes the invite" },
+    { id: "drop", name: "No longer needed", line: "Nothing more is done about it" },
+    { id: "enough", name: "Covered enough", line: "It was covered well enough in this meeting" }
+  ];
+  var DONE = { carry: "Carried to the next meeting", session: "A separate session is to be set up", drop: "No longer needed", enough: "Covered enough" };
+  var CLS = { "Covered": "ok", "Touched on": "warn", "Not discussed": "bad" };
+  function Coverage({ c: c5 }) {
+    const m5 = x2(MinutesCtx);
+    const [line, setLine] = d2(true);
+    const meta = c5.doc.meta || {}, points = (
+      /** @type {Point[]} */
+      meta.coverage || []
+    ), notes = (
+      /** @type {{id: string, note: string}[]} */
+      meta.milestones || []
+    );
+    if (!points.length && !notes.length) return null;
+    const live = c5.editing && !!m5;
+    return /* @__PURE__ */ u2("div", { class: "mncov", "aria-labelledby": "mnCovH", children: [
+      /* @__PURE__ */ u2("div", { class: "mncov-h", children: [
+        /* @__PURE__ */ u2("h2", { id: "mnCovH", children: "Agenda coverage" }),
+        /* @__PURE__ */ u2("span", { class: "sub", children: "In creaite only, never in the minutes sent" })
+      ] }),
+      points.length ? /* @__PURE__ */ u2("ul", { class: "mncov-l", children: points.map((p6) => /* @__PURE__ */ u2("li", { "data-point": p6.point, children: [
+        /* @__PURE__ */ u2("span", { class: `mnverdict ${CLS[
+          /** @type {keyof CLS} */
+          p6.verdict
+        ] || ""}`, children: p6.verdict }),
+        /* @__PURE__ */ u2("span", { class: "mncov-p", children: p6.point }),
+        p6.action ? /* @__PURE__ */ u2("span", { class: "mncov-done", children: [
+          DONE[
+            /** @type {keyof DONE} */
+            p6.action.how
+          ] || p6.action.how,
+          live && m5 ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => m5.change({ op: "uncover", point: p6.point }), children: "Undo" }) : null
+        ] }) : live && m5 && p6.verdict !== "Covered" ? /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "Deal with it…",
+            btnCls: "btn sm",
+            menuLabel: `Deal with ${p6.point}`,
+            items: HOW,
+            data: { mncover: p6.point },
+            onPick: (how) => m5.change({ op: "cover", point: p6.point, how, line }, { op: "uncover", point: p6.point })
+          }
+        ) : null
+      ] }, p6.point)) }) : null,
+      live && points.some((p6) => p6.verdict !== "Covered" && !p6.action) ? /* @__PURE__ */ u2("label", { class: "mncov-line", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            checked: line,
+            onChange: (e4) => setLine(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.checked
+            )
+          }
+        ),
+        " Add a line to the minutes"
+      ] }) : null,
+      notes.length ? /* @__PURE__ */ u2("ul", { class: "mncov-ms", children: notes.map((x5) => /* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2("span", { children: x5.note }),
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => openMilestone(x5.id), children: [
+          "Review the ",
+          x5.id,
+          " milestone"
+        ] })
+      ] }, x5.id)) }) : null
+    ] });
+  }
+
+  // components/minutes/Pop.jsx
+  var FOCUSABLE2 = 'input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  function Pop({ open: open2, onClose, label, anchor, focus, cls, wide, children }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const back = A2(true);
+    h2(() => {
+      if (!open2) return;
+      back.current = true;
+      const b5 = box.current;
+      const f5 = (
+        /** @type {HTMLElement|null} */
+        b5 && (focus && b5.querySelector(focus) || b5.querySelector(FOCUSABLE2))
+      );
+      if (f5) f5.focus();
+      const away = (e4) => {
+        const t5 = (
+          /** @type {Node} */
+          e4.target
+        );
+        if (box.current && !box.current.contains(t5) && !(anchor.current && anchor.current.contains(t5))) {
+          back.current = false;
+          onClose();
+        }
+      };
+      document.addEventListener("pointerdown", away, true);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        const a5 = anchor.current;
+        if (back.current && a5 && a5.isConnected) a5.focus();
+      };
+    }, [open2]);
+    if (!open2) return null;
+    const key = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        onClose();
+      }
+    };
+    return /* @__PURE__ */ u2("div", { ref: box, class: `pkpop on mnpop${wide ? " wide" : ""}${cls ? " " + cls : ""}`, role: "dialog", "aria-label": label, onKeyDown: key, children });
+  }
+
+  // components/minutes/Checks.jsx
+  function CheckMark({ check, children }) {
+    const m5 = x2(MinutesCtx);
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          class: "mncheck",
+          "data-check": check.id,
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": `Check: ${check.note}`,
+          onClick: () => setOpen2(!open2),
+          children: children || check.quote
+        }
+      ),
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: "Check against the transcript", anchor: btn, cls: "mnck", wide: true, children: [
+        /* @__PURE__ */ u2("p", { class: "mnck-note", children: check.note }),
+        check.last ? /* @__PURE__ */ u2("p", { class: "sub mnck-last", children: check.last }) : null,
+        /* @__PURE__ */ u2("div", { class: "mnck-acts", children: check.actions.map((a5) => /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: `btn sm${a5.id === "use" ? " primary" : ""}`,
+            "data-ckact": a5.id,
+            onClick: () => {
+              setOpen2(false);
+              if (m5) m5.onCheck(check, a5.id);
+            },
+            children: a5.label
+          },
+          a5.id
+        )) })
+      ] })
+    ] });
+  }
+  function Checked({ text, checks }) {
+    const marks = checks.map((c5) => ({ c: c5, at: c5.quote ? text.indexOf(c5.quote) : -1 })).filter((x5) => x5.at >= 0).sort((a5, b5) => a5.at - b5.at);
+    if (!marks.length) return /* @__PURE__ */ u2("span", { children: text });
+    const out = [];
+    let i5 = 0;
+    for (const { c: c5, at } of marks) {
+      if (at < i5) continue;
+      out.push(text.slice(i5, at));
+      out.push(/* @__PURE__ */ u2(CheckMark, { check: c5, children: c5.quote }, c5.id));
+      i5 = at + c5.quote.length;
+    }
+    out.push(text.slice(i5));
+    return /* @__PURE__ */ u2("span", { children: out });
+  }
+
+  // components/minutes/DeadlinePopover.jsx
+  var WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var MONTHS2 = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var QUICK = [["Friday", "Friday"], ["Next week", "next week"], ["Next Wednesday", "next wednesday"], ["End of month", "end of month"]];
+  var weekend = () => [...wkDays()].map((d5) => (d5 + 1) % 7);
+  var deadlineOf = (words, day) => parseWords(words, day, true, "deadline", weekend());
+  var longDay2 = (iso2) => `${LONG[(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay()]} ${fd(iso2)}`;
+  var pad2 = (n4) => String(n4).padStart(2, "0");
+  function DeadlinePopover({ due, day, label, readOnly, onSet }) {
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    if (readOnly) return /* @__PURE__ */ u2("span", { class: "mndue", children: due ? fd(due) : "Not set" });
+    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          class: "mndue btn sm",
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": `Deadline: ${due ? longDay2(due) : "not set"}. Change the deadline of ${label}`,
+          onClick: () => setOpen2(!open2),
+          children: due ? fd(due) : "Not set"
+        }
+      ),
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Deadline for ${label}`, anchor: btn, focus: "input", cls: "pkcal mndl", children: open2 ? /* @__PURE__ */ u2(DeadlineBody, { due, day, onPick: async (w5) => {
+        if (await onSet(w5)) setOpen2(false);
+      } }) : null })
+    ] });
+  }
+  function DeadlineBody({ due, day, onPick }) {
+    const [words, setWords] = d2("");
+    const start = due || day;
+    const [month, setMonth] = d2(start.slice(0, 7));
+    const got = words.trim() ? deadlineOf(words, day) : null;
+    const set = () => {
+      if (got) onPick(words.trim());
+    };
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("label", { class: "mndl-l", for: "mnDlWords", children: [
+        "Type a deadline, worked out from the meeting on ",
+        fd(day)
+      ] }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          id: "mnDlWords",
+          class: "pkdt",
+          type: "text",
+          autocomplete: "off",
+          placeholder: "Friday, next week, 30-10…",
+          value: words,
+          "aria-describedby": "mnDlSaid",
+          onInput: (e4) => setWords(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          ),
+          onKeyDown: (e4) => {
+            if (e4.key === "Enter") {
+              e4.preventDefault();
+              set();
+            }
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { id: "mnDlSaid", class: `mndl-said${words.trim() && !got ? " bad" : ""}`, role: "status", children: !words.trim() ? "" : got ? /* @__PURE__ */ u2("span", { children: [
+        longDay2(got),
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", onClick: set, children: "Set" })
+      ] }) : "Not a date creaite can read. Try “Friday”, “next week” or 30-10." }),
+      /* @__PURE__ */ u2("div", { class: "pkquick", role: "group", "aria-label": "Quick picks", children: QUICK.map(([name, w5]) => {
+        const d5 = deadlineOf(w5, day);
+        return d5 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-quick": w5, "aria-label": `${name}: ${longDay2(d5)}`, onClick: () => onPick(w5), children: [
+          name,
+          " ",
+          /* @__PURE__ */ u2("span", { class: "sub", children: fd(d5).slice(0, 5) })
+        ] }, w5) : null;
+      }) }),
+      /* @__PURE__ */ u2(Calendar, { month, setMonth, due, day, onPick: (iso2) => onPick(fd(iso2)) }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", "data-quick": "not set", onClick: () => onPick("not set"), children: "Not set" })
+    ] });
+  }
+  function Calendar({ month, setMonth, due, day, onPick }) {
+    const y5 = +month.slice(0, 4), m5 = +month.slice(5, 7);
+    const first = new Date(y5, m5 - 1, 1, 12), lead = (first.getDay() + 6) % 7, count = new Date(y5, m5, 0, 12).getDate();
+    const step2 = (k5) => {
+      const d5 = new Date(y5, m5 - 1 + k5, 1, 12);
+      setMonth(`${d5.getFullYear()}-${pad2(d5.getMonth() + 1)}`);
+    };
+    const off = new Set(weekend());
+    const cells = [];
+    for (let i5 = 0; i5 < lead; i5++) cells.push(/* @__PURE__ */ u2("span", {}, `b${i5}`));
+    for (let d5 = 1; d5 <= count; d5++) {
+      const iso2 = `${month}-${pad2(d5)}`, dow = (/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay();
+      cells.push(/* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `pkday${iso2 === due ? " on" : ""}${iso2 === day ? " today" : ""}${off.has(dow) ? " wk" : ""}`,
+          "data-day": iso2,
+          "aria-label": longDay2(iso2),
+          "aria-pressed": iso2 === due ? "true" : "false",
+          onClick: () => onPick(iso2),
+          children: d5
+        },
+        iso2
+      ));
+    }
+    return /* @__PURE__ */ u2("div", { class: "mncal", children: [
+      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Previous month", onClick: () => step2(-1), children: "‹" }),
+        /* @__PURE__ */ u2("b", { children: [
+          MONTHS2[m5 - 1],
+          " ",
+          y5
+        ] }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Next month", onClick: () => step2(1), children: "›" })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkgrid", children: [
+        WEEK.map((w5) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w5.slice(0, 2) }, w5)),
+        cells
+      ] })
+    ] });
+  }
+
+  // components/minutes/minutesDoc.js
+  var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
+  var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
+  function lines(text) {
+    const out = [];
+    for (const raw2 of String(text || "").split("\n")) {
+      const s5 = raw2.trim();
+      if (!s5) continue;
+      const topic = /^\*\*([^*]+)\*\*$/.exec(s5);
+      if (topic) {
+        out.push({ kind: "topic", text: topic[1], flag: "" });
+        continue;
+      }
+      const b5 = /^[-*] (.*)$/.exec(s5), body = b5 ? b5[1] : s5;
+      const f5 = /^\*\*([A-Z ]+)\*\* (.*)$/.exec(body);
+      const flag = f5 && FLAGS.includes(f5[1]) ? f5[1] : "";
+      out.push({ kind: b5 ? "bullet" : "para", text: unbold(flag && f5 ? f5[2] : body), flag });
+    }
+    return out;
+  }
+  function unlines(ls) {
+    const out = [];
+    ls.forEach((l6, i5) => {
+      if (l6.kind === "topic") {
+        if (i5) out.push("");
+        out.push(`**${l6.text}**`);
+      } else if (l6.kind === "bullet") out.push(`- ${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
+      else {
+        if (i5) out.push("");
+        out.push(`${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
+      }
+    });
+    return out.join("\n");
+  }
+  var squash = (s5) => String(s5 || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function tagOf(line, tags) {
+    const l6 = squash(line.text);
+    return (tags || []).find((t5) => t5.ref === "transcript" && t5.time && (squash(t5.text) === l6 || l6 && squash(t5.text).startsWith(l6) || l6 && l6.startsWith(squash(t5.text)))) || null;
+  }
+  var sensitive = (item) => !!item && ((item.flags || []).some((f5) => /sensitive/i.test(f5)) || ((item.values || {}).labels || []).some((l6) => /sensitive/i.test(l6)) || !!(item.values || {}).sensitive);
+  var internalOnly = (doc) => Array.isArray((doc.layout || {}).internal_only) ? doc.layout.internal_only : [];
+  var isInternal = (doc, section, what) => internalOnly(doc).some((x5) => x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text));
+  function toggleInternal(doc, section, what) {
+    const was = internalOnly(doc), on = isInternal(doc, section, what);
+    const next = on ? was.filter((x5) => !(x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text))) : [...was, { section, ...what }];
+    return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
+  }
+  function distributedOf(doc) {
+    const sections = doc.sections.map((s5) => {
+      if (s5.type === "table") {
+        const rows2 = (s5.rows || []).filter((r4) => !(r4.ref && (sensitive((doc.items || {})[r4.ref]) || isInternal(doc, s5.id, { ref: r4.ref }))));
+        return { ...s5, rows: rows2, text: rows2.length ? "" : "None recorded." };
+      }
+      if (s5.type === "header" || !s5.text) return s5;
+      const kept = lines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
+      return { ...s5, text: unlines(kept) || "None recorded." };
+    });
+    return { ...doc, audience: "distributed", sections };
+  }
+  function leftOut(doc) {
+    const out = [];
+    for (const s5 of doc.sections) {
+      for (const r4 of s5.rows || []) {
+        const it = r4.ref ? (doc.items || {})[r4.ref] : null;
+        if (it && sensitive(it)) out.push(`${s5.heading}: a Sensitive item`);
+        else if (r4.ref && isInternal(doc, s5.id, { ref: r4.ref })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
+      }
+      if (s5.type !== "table" && s5.type !== "header") {
+        for (const l6 of lines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
+      }
+    }
+    return out;
+  }
+  var DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
+  var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
+  function rowChecks(doc, s5, r4, i5, turns, unknown) {
+    const out = [], it = (doc.items || {})[r4.ref], v4 = it && it.values || {};
+    if (!it || it.op !== "new") return out;
+    const n4 = it.n, label = v4.description || v4.decision || "";
+    const owner = s5.id === "decisions" ? "" : String(v4.owner || "").trim();
+    if (s5.id !== "decisions" && owner && owner !== "TBC" && unknown(owner))
+      out.push({
+        id: `owner:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "owner",
+        quote: owner,
+        kind: "owner",
+        n: n4,
+        note: `${owner} isn't in the people register.`,
+        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
+      });
+    else if (s5.id === "actions" && (!owner || owner === "TBC"))
+      out.push({
+        id: `owner:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "owner",
+        quote: owner || "TBC",
+        kind: "owner",
+        n: n4,
+        note: "No owner yet.",
+        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
+      });
+    const turn = r4.at && r4.at.turn ? turns.find((t5) => t5.n === r4.at.turn) : null;
+    const said2 = turn && s5.id === "actions" ? DEADLINE.exec(turn.text) : null;
+    const meant = said2 ? deadlineOf(said2[0], doc.date) : null;
+    if (said2 && meant && meant !== (v4.due_date || null))
+      out.push({
+        id: `due:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "due",
+        quote: v4.due_date ? fd(v4.due_date) : "Not set",
+        kind: "due",
+        n: n4,
+        turn: turn.n,
+        words: said2[0],
+        note: `${turn.who || "Someone"} said “${said2[0]}”: ${longDay2(meant)}.`,
+        last: v4.due_date ? `The row says ${longDay2(v4.due_date)}.` : "The row has no deadline.",
+        actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+      });
+    if (turn) {
+      for (const f5 of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f5))
+        out.push({
+          id: `fig:${r4.ref}:${f5}`,
+          section: s5.id,
+          row: i5,
+          quote: f5,
+          kind: "figure",
+          n: n4,
+          turn: turn.n,
+          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+        });
+    }
+    if ((it.flags || []).some((f5) => f5 === "invalid" || f5 === "conflict"))
+      out.push({
+        id: `item:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        quote: "",
+        kind: "item",
+        n: n4,
+        note: "The tracker's checks refused this item as it stands: change it in Review.",
+        actions: [{ id: "keep", label: "Keep mine" }]
+      });
+    return out;
+  }
+  function lineChecks(s5, turns) {
+    const out = [];
+    lines(s5.text || "").forEach((l6, i5) => {
+      const t5 = tagOf(
+        l6,
+        /** @type {TimeTag[]} */
+        s5.tags || []
+      ), turn = t5 ? turns.find((x5) => x5.n === t5.turn) : null;
+      if (!turn) return;
+      for (const f5 of new Set(l6.text.match(FIGURE) || [])) if (!turn.text.includes(f5))
+        out.push({
+          id: `fig:${s5.id}:${i5}:${f5}`,
+          section: s5.id,
+          line: i5,
+          field: "text",
+          quote: f5,
+          kind: "figure",
+          turn: turn.n,
+          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+        });
+    });
+    return out;
+  }
+  function checksOf(doc, turns, unknown, kept) {
+    if (!doc || doc.state !== "draft") return [];
+    const out = [];
+    for (const s5 of doc.sections) {
+      if (s5.hidden) continue;
+      if (s5.type === "table") (s5.rows || []).forEach((r4, i5) => {
+        if (r4.ref) out.push(...rowChecks(doc, s5, r4, i5, turns || [], unknown));
+      });
+      else if (s5.type === "text") out.push(...lineChecks(s5, turns || []));
+    }
+    return out.filter((c5) => !kept.includes(c5.id));
+  }
+
+  // components/minutes/TranscriptPane.jsx
+  function jumpTo(turn) {
+    paneOpen.value = true;
+    paneTurn.value = null;
+    queueMicrotask(() => {
+      paneTurn.value = turn;
+    });
+  }
+  function Marked({ text, q: q4 }) {
+    if (!q4) return /* @__PURE__ */ u2("span", { children: text });
+    const out = [], low = text.toLowerCase(), k5 = q4.toLowerCase();
+    let i5 = 0, j4 = low.indexOf(k5);
+    while (j4 >= 0) {
+      out.push(text.slice(i5, j4));
+      out.push(/* @__PURE__ */ u2("mark", { children: text.slice(j4, j4 + k5.length) }, j4));
+      i5 = j4 + k5.length;
+      j4 = low.indexOf(k5, i5);
+    }
+    out.push(text.slice(i5));
+    return /* @__PURE__ */ u2("span", { children: out });
+  }
+  function TranscriptPane() {
+    const list = A2(
+      /** @type {HTMLOListElement|null} */
+      null
+    );
+    const v4 = minutesView.value, tr = v4 && v4.turns || { timed: false, turns: [] };
+    const q4 = paneQuery.value.trim(), on = paneTurn.value;
+    const hits = q4 ? tr.turns.filter((t5) => t5.text.toLowerCase().includes(q4.toLowerCase()) || String(t5.who || "").toLowerCase().includes(q4.toLowerCase())) : [];
+    h2(() => {
+      const ol = list.current, li = ol && on != null ? (
+        /** @type {HTMLElement|null} */
+        ol.querySelector(`[data-turn="${on}"]`)
+      ) : null;
+      if (ol && li) ol.scrollTop = li.offsetTop - ol.offsetTop - ol.clientHeight / 3;
+    }, [on, paneOpen.value]);
+    if (!paneOpen.value) return null;
+    const next = () => {
+      if (!hits.length) return;
+      const after = hits.find((t5) => on == null || t5.n > on) || hits[0];
+      paneTurn.value = after.n;
+    };
+    return /* @__PURE__ */ u2("aside", { class: "mnpane", "aria-labelledby": "mnPaneH", children: [
+      /* @__PURE__ */ u2("div", { class: "mnpane-h", children: [
+        /* @__PURE__ */ u2("h2", { id: "mnPaneH", children: "Transcript" }),
+        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close the transcript", onClick: () => {
+          paneOpen.value = false;
+        }, data: { mnpane: "close" } })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "mnpane-q", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "search",
+            class: "pkdt",
+            id: "mnPaneQ",
+            "aria-label": "Search the transcript",
+            placeholder: "Search the transcript",
+            value: paneQuery.value,
+            onInput: (e4) => {
+              paneQuery.value = /** @type {HTMLInputElement} */
+              e4.currentTarget.value;
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                next();
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: q4 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr.turns.length ? `${tr.turns.length} turns` : "" })
+      ] }),
+      tr.turns.length ? /* @__PURE__ */ u2("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr.turns.map((t5) => /* @__PURE__ */ u2("li", { "data-turn": t5.n, class: `${t5.n === on ? "on" : ""}${q4 && !hits.includes(t5) ? " dim" : ""}`, "aria-current": t5.n === on ? "true" : void 0, children: [
+        /* @__PURE__ */ u2("span", { class: "mnwho", children: [
+          t5.who || "Someone",
+          t5.start ? /* @__PURE__ */ u2("span", { class: "mntime", children: [
+            " · ",
+            t5.start
+          ] }) : null
+        ] }),
+        /* @__PURE__ */ u2(Marked, { text: t5.text, q: q4 })
+      ] }, t5.n)) }) : /* @__PURE__ */ u2("p", { class: "sub mnpane-none", children: "No transcript was kept with these minutes." })
+    ] });
+  }
+
+  // components/minutes/TextLines.jsx
+  var shortTime = (t5) => String(t5 || "").replace(/^00:/, "");
+  function TimeTag({ tag, onRemove }) {
+    return /* @__PURE__ */ u2("span", { class: "mntagw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "mntag",
+          "data-turn": tag.turn,
+          "aria-label": `Show in the transcript: ${tag.time}`,
+          onClick: () => {
+            if (tag.turn) jumpTo(tag.turn);
+          },
+          children: shortTime(tag.time || "")
+        }
+      ),
+      onRemove ? /* @__PURE__ */ u2("button", { type: "button", class: "mntagx", "aria-label": `Remove the time tag ${tag.time}`, onClick: onRemove, children: "✕" }) : null
+    ] });
+  }
+  function TextLine({ ctx, line, i: i5, li, onEdit }) {
+    const m5 = x2(MinutesCtx), s5 = ctx.section, live = ctx.editing && !ctx.exported;
+    const tags = (
+      /** @type {TimeTag[]} */
+      s5.tags || []
+    ), tag = live ? tagOf(line, tags) : null;
+    const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
+    const internal = m5 ? isInternal(m5.doc, s5.id, { text: line.text }) : false;
+    const Tag = li ? "li" : "p";
+    return /* @__PURE__ */ u2(Tag, { class: `mnline${internal ? " internal" : ""}`, "data-line": i5, children: [
+      line.flag ? /* @__PURE__ */ u2("b", { class: "mnflag", children: line.flag }) : null,
+      line.flag ? " " : null,
+      live ? /* @__PURE__ */ u2("span", { class: "mntext", onClick: (e4) => {
+        if (!/** @type {HTMLElement} */
+        e4.target.closest("button")) onEdit();
+      }, children: /* @__PURE__ */ u2(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u2("span", { children: line.text }),
+      tag ? /* @__PURE__ */ u2(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t5) => t5 !== tag) }, "Time tag removed") }) : null,
+      live && m5 && m5.distributed ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `mnio${internal ? " on" : ""}`,
+          "aria-pressed": internal ? "true" : "false",
+          "aria-label": `Internal only: ${line.text.slice(0, 60)}`,
+          onClick: () => m5.setDoc(toggleInternal(m5.doc, s5.id, { text: line.text }), internal ? "Shown to attendees" : "Internal only"),
+          children: "Internal only"
+        }
+      ) : null
+    ] });
+  }
+  function blocks(ls) {
+    const out = [];
+    ls.forEach((line, i5) => {
+      if (line.kind === "topic" || !out.length) out.push({ topic: line.kind === "topic" ? line : null, items: [] });
+      if (line.kind !== "topic") out[out.length - 1].items.push({ line, i: i5 });
+    });
+    return out;
+  }
+  function TextLines({ ctx }) {
+    const [ed, setEd] = d2(false);
+    const s5 = ctx.section, { Text } = ctx;
+    if (ctx.editing && ed) {
+      return /* @__PURE__ */ u2("div", { class: "mnedit", children: [
+        /* @__PURE__ */ u2(Text, { field: "text", rich: true, label: s5.heading }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => setEd(false), children: "Done" })
+      ] });
+    }
+    const ls = lines(s5.text || "");
+    return /* @__PURE__ */ u2("div", { class: "mnlines", children: [
+      blocks(ls).map((b5, k5) => {
+        const bullets = b5.items.some((x5) => x5.line.kind === "bullet");
+        const body = b5.items.map(({ line, i: i5 }) => /* @__PURE__ */ u2(TextLine, { ctx, line, i: i5, li: bullets, onEdit: () => setEd(true) }, i5));
+        return /* @__PURE__ */ u2("div", { class: "mnblock", ...b5.topic ? ctx.level(`topic:${b5.topic.text}`) : {}, children: [
+          b5.topic ? /* @__PURE__ */ u2("h3", { class: "mntopic", children: b5.topic.text }) : null,
+          bullets ? /* @__PURE__ */ u2("ul", { children: body }) : body
+        ] }, k5);
+      }),
+      ctx.editing ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnedbtn", "aria-label": `Edit ${s5.heading}`, onClick: () => setEd(true), children: "Edit" }) : null
+    ] });
+  }
+
+  // components/minutes/ItemRow.jsx
+  var MAIN = { actions: "action", decisions: "decision", raid: "description" };
+  var FIELD2 = { actions: "description", decisions: "decision", raid: "description" };
+  var TYPES = ["Risk", "Issue", "Assumption", "Dependency"];
+  var ID2 = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+  var recOf = (id) => A4.find((x5) => x5.id === id) || R2.find((x5) => x5.id === id) || DEC.find((x5) => x5.id === id) || null;
+  function Does({ does, row: row2, onOpen }) {
+    const parts = [], s5 = String(does || "");
+    let i5 = 0;
+    for (const m5 of s5.matchAll(ID2)) {
+      parts.push(s5.slice(i5, m5.index));
+      parts.push(/* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openRef(m5[0], () => false), children: m5[0] }, m5.index));
+      i5 = (m5.index || 0) + m5[0].length;
+    }
+    parts.push(s5.slice(i5));
+    const done = /^Closes /.test(s5);
+    return /* @__PURE__ */ u2("span", { class: `mndoes${/^New /.test(s5) ? " new" : ""}`, children: [
+      /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnopen", "aria-label": `Open the staged item: ${s5}`, onClick: () => onOpen(row2.ref), children: "Open" }),
+      /* @__PURE__ */ u2("span", { class: "mndoes-t", children: [
+        parts,
+        done ? " · Looks done" : ""
+      ] })
+    ] });
+  }
+  function OwnerPicker({ owner, label, n: n4, field, check, onPick }) {
+    const [open2, setOpen2] = d2(false), [q4, setQ] = d2(""), [remember, setRemember] = d2(true);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => p6.name).sort();
+    const shown = people.filter((p6) => !q4 || p6.toLowerCase().includes(q4.toLowerCase())).slice(0, 30);
+    const unknown = !!owner && owner !== "TBC" && unknownOwner(owner);
+    const pick = async (name) => {
+      if (!await onPick(name)) return;
+      setOpen2(false);
+      if (unknown && remember && name !== owner) regAddAlias(name, owner);
+    };
+    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          class: `btn sm mnowner${check ? " mncheck" : ""}`,
+          "data-owner": n4,
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": `${field === "made_by" ? "Made by" : "Owner"}: ${owner || "not set"}. Change it for ${label}`,
+          "data-tip": check ? check.note : void 0,
+          onClick: () => setOpen2(!open2),
+          children: owner || "TBC"
+        }
+      ),
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Owner for ${label}`, anchor: btn, focus: "input", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            class: "pkq",
+            type: "search",
+            "aria-label": "Find a person in the register",
+            placeholder: "Find a person",
+            value: q4,
+            onInput: (e4) => setQ(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            ),
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter" && shown.length) {
+                e4.preventDefault();
+                pick(shown[0]);
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2("div", { role: "listbox", "aria-label": "People in the register", children: shown.length ? shown.map((p6) => /* @__PURE__ */ u2("button", { type: "button", role: "option", class: "pkopt", "aria-selected": p6 === owner ? "true" : "false", onClick: () => pick(p6), children: p6 }, p6)) : /* @__PURE__ */ u2("p", { class: "sub", children: "No match in the people register." }) }),
+        unknown ? /* @__PURE__ */ u2("label", { class: "mnremember", children: [
+          /* @__PURE__ */ u2("input", { type: "checkbox", checked: remember, onChange: (e4) => setRemember(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked
+          ) }),
+          "Remember “",
+          owner,
+          "” as their alias"
+        ] }) : null
+      ] })
+    ] });
+  }
+  function LooksLike({ item, n: n4 }) {
+    const m5 = x2(MinutesCtx);
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const ll = item.looks_like || {}, rec = recOf(ll.id), v4 = item.values || {};
+    if (!ll.id || ll.kept || ll.merged || !m5) return null;
+    const changes = [
+      `Latest update: “${(v4.description || v4.decision || "").slice(0, 120)}”`,
+      ...v4.due_date && rec && rec.due !== v4.due_date ? [`Due date: ${rec.due ? fd(rec.due) : "not set"} → ${fd(v4.due_date)}`] : [],
+      "Title, owner, priority and response stay as they are",
+      "The earlier update is kept in the history",
+      "These minutes are added as a source"
+    ];
+    return /* @__PURE__ */ u2("span", { class: "mnlooks", children: [
+      /* @__PURE__ */ u2("span", { children: [
+        "Looks like ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openRef(ll.id, () => false), children: ll.id }),
+        ll.why ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          ll.why
+        ] }) : null
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-mnact": "update", onClick: () => m5.change({ op: "update", n: n4, id: ll.id }, { op: "keep_new", n: n4 }), children: "Update that one" }),
+      /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+        /* @__PURE__ */ u2("button", { type: "button", ref: btn, class: "linkbtn", "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", onClick: () => setOpen2(!open2), children: "What changes" }),
+        /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `What changes on ${ll.id}`, anchor: btn, wide: true, children: [
+          /* @__PURE__ */ u2("p", { class: "mnck-note", children: [
+            "Updating ",
+            ll.id,
+            rec ? ` (${rec.t})` : "",
+            ":"
+          ] }),
+          /* @__PURE__ */ u2("ul", { class: "mnchanges", children: changes.map((c5) => /* @__PURE__ */ u2("li", { children: c5 }, c5)) })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-mnact": "keepnew", onClick: () => m5.change({ op: "keep_new", n: n4 }), children: "Keep as new" })
+    ] });
+  }
+  function CellText({ value, label, onSave }) {
+    const [t5, setT] = d2(
+      /** @type {string|null} */
+      null
+    );
+    const shown = t5 == null ? value : t5;
+    const commit = async () => {
+      if (t5 != null && t5.trim() && t5 !== value) {
+        if (!await onSave(t5.trim())) return;
+      }
+      setT(null);
+    };
+    return /* @__PURE__ */ u2(
+      "textarea",
+      {
+        class: "mncell",
+        rows: 1,
+        "aria-label": label,
+        value: shown,
+        onInput: (e4) => setT(
+          /** @type {HTMLTextAreaElement} */
+          e4.currentTarget.value
+        ),
+        onBlur: commit,
+        onKeyDown: (e4) => {
+          if (e4.key === "Enter" && !e4.shiftKey) {
+            e4.preventDefault();
+            e4.currentTarget.blur();
+          }
+          if (e4.key === "Escape" && t5 != null) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            setT(null);
+          }
+        }
+      }
+    );
+  }
+  function KeptLine({ rc }) {
+    const m5 = x2(MinutesCtx), cols = rc.section.columns || [], main = MAIN[
+      /** @type {keyof MAIN} */
+      rc.section.id
+    ];
+    const n4 = Number(String(
+      /** @type {any} */
+      rc.row.was || ""
+    ).replace("@", ""));
+    return /* @__PURE__ */ u2("tr", { class: "mnrow kept", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: [
+      (rc.row.cells || {})[c5.key] || "",
+      c5.key === main && rc.editing && m5 ? /* @__PURE__ */ u2("div", { class: "mnbar", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", children: "The line only: no item is made." }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => m5.change({ op: "restore", n: n4 }), children: "Make it an item again" })
+      ] }) : null
+    ] }, c5.key)) });
+  }
+  function ItemRow({ rc }) {
+    const m5 = x2(MinutesCtx);
+    const row2 = (
+      /** @type {any} */
+      rc.row
+    ), s5 = rc.section, cols = s5.columns || [], sid = (
+      /** @type {keyof MAIN} */
+      s5.id
+    );
+    if (row2.kept_line) return /* @__PURE__ */ u2(KeptLine, { rc });
+    if (row2.shown === false && !rc.editing) return null;
+    const item = rc.item || {}, n4 = row2.n, cells = row2.cells || {}, isNew = item.op === "new";
+    const live = rc.editing && !rc.exported && !!m5 && !!item.op;
+    if (!live || !m5) return /* @__PURE__ */ u2("tr", { class: "mnrow", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: cells[c5.key] || "" }, c5.key)) });
+    const label = (cells[MAIN[sid]] || "").slice(0, 80), checks = m5.checks.filter((c5) => c5.section === s5.id && c5.n === n4);
+    const own = checks.find((c5) => c5.field === "owner") || null, internal = isInternal(m5.doc, s5.id, { ref: row2.ref });
+    const edit = (values) => m5.change({ op: "edit", n: n4, values });
+    const remove = (how) => m5.change({ op: "remove", n: n4, keep_line: how === "keep" }, { op: "restore", n: n4 });
+    const cell2 = (c5) => {
+      if (!isNew) return cells[c5.key] || "";
+      if (c5.key === "owner" || c5.key === "by") return /* @__PURE__ */ u2(
+        OwnerPicker,
+        {
+          owner: (item.values || {})[c5.key === "by" ? "made_by" : "owner"] || "",
+          label,
+          n: n4,
+          field: c5.key === "by" ? "made_by" : "owner",
+          check: own,
+          onPick: (name) => edit({ [c5.key === "by" ? "made_by" : "owner"]: name })
+        }
+      );
+      if (c5.key === "due") return /* @__PURE__ */ u2(DeadlinePopover, { due: (item.values || {}).due_date || null, day: m5.day, label, onSet: (words) => m5.change({ op: "deadline", n: n4, words }) });
+      if (c5.key === "type") return /* @__PURE__ */ u2(
+        "select",
+        {
+          class: "mntype",
+          "aria-label": `Type of ${label}`,
+          value: (item.values || {}).type || "Risk",
+          onChange: (e4) => edit({ type: (
+            /** @type {HTMLSelectElement} */
+            e4.currentTarget.value
+          ) }),
+          children: TYPES.map((t5) => /* @__PURE__ */ u2("option", { children: t5 }, t5))
+        }
+      );
+      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[FIELD2[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t5) => edit({ [FIELD2[sid]]: t5 }) });
+      return cells[c5.key] || "";
+    };
+    return /* @__PURE__ */ u2("tr", { class: `mnrow${internal ? " internal" : ""}`, "data-n": n4, "data-ref": row2.ref, children: cols.map((c5) => /* @__PURE__ */ u2("td", { class: `mncol-${c5.key}`, children: [
+      cell2(c5),
+      c5.key === MAIN[sid] ? /* @__PURE__ */ u2("div", { class: "mnbar", children: [
+        /* @__PURE__ */ u2(Does, { does: row2.does || "", row: row2, onOpen: m5.openItem }),
+        row2.at && row2.at.time ? /* @__PURE__ */ u2(TimeTag, { tag: { ref: "transcript", turn: row2.at.turn, time: row2.at.time, text: "" } }) : null,
+        isNew ? /* @__PURE__ */ u2(LooksLike, { item, n: n4 }) : null,
+        checks.filter((c6) => c6.field !== "owner" || !own).map((c6) => /* @__PURE__ */ u2(CheckMark, { check: c6, children: c6.kind === "due" ? "Deadline?" : c6.kind === "figure" ? `${c6.quote}?` : "Check" }, c6.id)),
+        own ? /* @__PURE__ */ u2(CheckMark, { check: own, children: own.note }) : null,
+        m5.distributed ? /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: `mnio${internal ? " on" : ""}`,
+            "aria-pressed": internal ? "true" : "false",
+            "aria-label": `Internal only: ${label}`,
+            onClick: () => m5.setDoc(toggleInternal(m5.doc, s5.id, { ref: row2.ref }), internal ? "Shown to attendees" : "Internal only"),
+            children: "Internal only"
+          }
+        ) : null,
+        /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "Remove",
+            icon: "x",
+            btnCls: "btn sm mnrm",
+            menuLabel: `Remove ${label}`,
+            data: { mnremove: String(n4) },
+            items: [
+              { id: "remove", name: "Remove the item and its line", line: "Nothing is made; the line leaves the minutes", icon: "x" },
+              { id: "keep", name: "Keep the line only", line: "The words stay in the minutes; no item is made", icon: "list" }
+            ],
+            onPick: remove
+          }
+        )
+      ] }) : null
+    ] }, c5.key)) });
+  }
+
+  // components/minutes/MinutesView.jsx
+  var dirty = false;
+  function levelPair(box) {
+    const pages = box ? (
+      /** @type {HTMLElement[]} */
+      [...box.querySelectorAll(".sheet-pair > .page")]
+    ) : [];
+    if (pages.length !== 2) return;
+    const [l6, r4] = pages;
+    const pairs = (sel, attr2, a5, b5) => (
+      /** @type {HTMLElement[]} */
+      [...a5.querySelectorAll(sel)].map((x5) => [
+        x5,
+        /** @type {HTMLElement|null} */
+        b5.querySelector(`${sel.split("[")[0]}[${attr2}="${CSS.escape(x5.getAttribute(attr2) || "")}"]`)
+      ])
+    );
+    const even = (ps) => {
+      for (const [a5, b5] of ps) {
+        a5.style.minHeight = "";
+        if (b5) b5.style.minHeight = "";
+      }
+      for (const [a5, b5] of ps) {
+        if (!b5) continue;
+        const h5 = Math.max(a5.getBoundingClientRect().height, b5.getBoundingClientRect().height);
+        a5.style.minHeight = b5.style.minHeight = `${h5}px`;
+      }
+    };
+    const secs = (
+      /** @type {[HTMLElement, HTMLElement|null][]} */
+      pairs("section[data-id]", "data-id", l6, r4)
+    );
+    for (const [a5, b5] of secs) if (b5) even(
+      /** @type {[HTMLElement, HTMLElement|null][]} */
+      pairs("[data-level]", "data-level", a5, b5)
+    );
+    even(secs);
+  }
+  function openStaged(ref) {
+    const v4 = minutesView.value, n4 = Number(String(ref).replace(/^@/, ""));
+    const r4 = v4 && REV.find((x5) => x5.file === v4.proposal && x5.ref === n4);
+    if (r4) openProposal(r4.n);
+    else snack("That item is no longer pending in Review.");
+    return true;
+  }
+  function Bar({ doc, checks }) {
+    const v4 = minutesView.value, versions = v4 && v4.versions || [], draft = doc.state === "draft";
+    const dist = !!(doc.layout || {}).distributed, mode = minutesMode.value;
+    const setDist = (on) => {
+      onDoc({ ...doc, layout: { ...doc.layout || {}, distributed: on } }, on ? "Distributed version on" : "One version");
+      if (!on) minutesMode.value = "internal";
+    };
+    const exp = async (fmt) => {
+      if (dist && fmt) {
+        const out = leftOut(doc);
+        if (out.length) snack(`The distributed version leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}`);
+      }
+      const r4 = await exportMinutes(fmt);
+      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+    };
+    return /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
+      /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: `Version ${doc.version || 1}`,
+          icon: "history",
+          btnCls: "btn sm",
+          menuLabel: "Versions of these minutes",
+          data: { mnversions: "" },
+          items: versions.map((x5) => ({
+            id: String(x5.version),
+            name: `Version ${x5.version}${x5.current ? " · on screen" : ""}`,
+            line: `${x5.at ? fd(x5.at) : ""}${x5.why ? ` · ${x5.why}` : ""}${!x5.current && x5.backup ? " · opens the kept copy" : ""}`
+          })),
+          onPick: (id) => {
+            const x5 = versions.find((y5) => String(y5.version) === id);
+            if (x5 && !x5.current && x5.backup) openPath(x5.backup);
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Versions to keep", children: [
+        /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "false" : "true", disabled: !draft, onClick: () => setDist(false), children: "One version" }),
+        /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "true" : "false", disabled: !draft, onClick: () => setDist(true), children: "Internal + distributed" })
+      ] }),
+      dist ? /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
+        minutesMode.value = /** @type {any} */
+        k5;
+      }, children: l6 }, k5)) }) : null,
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
+        paneOpen.value = !paneOpen.value;
+      }, children: "Transcript" }),
+      draft && checks.length ? /* @__PURE__ */ u2("span", { class: "tag mnckcount", role: "status", children: [
+        checks.length,
+        " check",
+        checks.length === 1 ? "" : "s",
+        " open"
+      ] }) : null,
+      /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: "Export",
+          icon: "filetext",
+          btnCls: "btn sm",
+          menuLabel: "Export the minutes",
+          data: { mnexport: "" },
+          items: [
+            { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
+            { id: "docx", name: "Word", line: "The minutes template" },
+            { id: "pdf", name: "PDF", line: "Printed from the page" }
+          ],
+          onPick: exp
+        }
+      ),
+      draft ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm primary",
+          id: "mnApproveBtn",
+          disabled: !(v4 && v4.plan),
+          "data-tip": v4 && v4.plan ? void 0 : "Nothing pending to approve",
+          onClick: () => {
+            approveOpen.value = true;
+          },
+          children: "Approve minutes"
+        }
+      ) : null
+    ] });
+  }
+  function onDoc(d5, _why) {
+    minutesDoc.value = d5;
+    dirty = true;
+  }
+  async function change(op, undo) {
+    const d5 = minutesDoc.value;
+    if (dirty && d5) {
+      const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
+      if (!s5.ok) {
+        snack(s5.message || "The minutes weren't saved");
+        return false;
+      }
+      dirty = false;
+    }
+    const r4 = await changeMinutes(op);
+    if (!r4.ok) {
+      snack(r4.message || "That didn't change");
+      return false;
+    }
+    snack(r4.message || "Changed", undo ? () => {
+      change(undo);
+    } : null);
+    return true;
+  }
+  function onCheck(c5, action) {
+    if (action === "keep") keptChecks.value = [...keptChecks.value, c5.id];
+    else if (action === "show" && c5.turn) jumpTo(c5.turn);
+    else if (action === "use" && c5.kind === "due" && c5.n && c5.words) change({ op: "deadline", n: c5.n, words: c5.words });
+    else if (action === "pick") document.querySelector(`[data-owner="${c5.n}"]`)?.click();
+  }
+  var RENDER = {
+    byType: { text: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }), header: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }) },
+    row: { actions: (rc) => /* @__PURE__ */ u2(ItemRow, { rc }), decisions: (rc) => /* @__PURE__ */ u2(ItemRow, { rc }), raid: (rc) => /* @__PURE__ */ u2(ItemRow, { rc }) }
+  };
+  var EXTRAS = [{ key: "coverage", after: "open_questions", render: (c5) => /* @__PURE__ */ u2(Coverage, { c: c5 }) }];
+  function MinutesView() {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const v4 = minutesView.value, doc = minutesDoc.value, mode = minutesMode.value;
+    const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
+    _2(() => {
+      const el = box.current;
+      if (!side || !el) return;
+      levelPair(el);
+      const ro = new ResizeObserver(() => levelPair(el));
+      el.querySelectorAll(".sheet-pair > .page").forEach((p6) => ro.observe(p6));
+      return () => ro.disconnect();
+    });
+    if (!v4) return /* @__PURE__ */ u2("div", { class: "mnview", children: /* @__PURE__ */ u2("p", { class: "sub", children: minutesBusy.value || "Opening the minutes…" }) });
+    if (!v4.ok || !doc) return /* @__PURE__ */ u2("div", { class: "mnview", children: [
+      /* @__PURE__ */ u2("h1", { id: "mnTitle", children: "Minutes" }),
+      /* @__PURE__ */ u2("p", { class: "mnerr", role: "alert", children: v4.message || "Couldn't open the minutes" })
+    ] });
+    const draft = doc.state === "draft", turns = (v4.turns || { turns: [] }).turns;
+    const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
+    const shown = dist && mode === "distributed" ? distributedOf(doc) : doc;
+    const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged };
+    return /* @__PURE__ */ u2("div", { class: "mnview", ref: box, children: [
+      /* @__PURE__ */ u2("header", { class: "mnhead", children: [
+        /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
+          /* @__PURE__ */ u2("a", { href: "#", "data-go": "review", children: "Review" }),
+          " › ",
+          /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Minutes" })
+        ] }),
+        /* @__PURE__ */ u2("h1", { id: "mnTitle", children: doc.title }),
+        /* @__PURE__ */ u2("p", { class: "sub mnmeta", children: [
+          doc.project_name || "",
+          " · ",
+          fd(doc.date),
+          " · ",
+          draft ? "Draft, not yet approved" : "Approved and filed",
+          !draft ? " · Filed minutes are never saved over" : ""
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: `mnwrap${paneOpen.value ? " withpane" : ""}`, children: [
+        /* @__PURE__ */ u2("div", { class: "mnsheet", children: /* @__PURE__ */ u2(MinutesCtx.Provider, { value: ctx, children: /* @__PURE__ */ u2(
+          SheetStub,
+          {
+            doc: shown,
+            baseVersion: minutesBase.value,
+            scrollKey: `minutes:${v4.path}:${mode}`,
+            readOnly: !draft || dist && mode === "distributed",
+            renderers: RENDER,
+            extras: EXTRAS,
+            checks,
+            onOpenItem: (ref) => ref.startsWith("@") ? openStaged(ref) : false,
+            partner: side ? { doc: distributedOf(doc), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {
+            } } : null,
+            onChange: onDoc,
+            onSave: async (req) => {
+              const r4 = await saveMinutesPage(req);
+              if (r4.ok) dirty = false;
+              return r4;
+            },
+            onEvent: (ev) => {
+              if (ev.type === "reload") loadMinutes({ path: v4.path });
+            },
+            toolbar: /* @__PURE__ */ u2(Bar, { doc, checks })
+          }
+        ) }) }),
+        /* @__PURE__ */ u2(TranscriptPane, {})
+      ] }),
+      /* @__PURE__ */ u2(ApprovePopup, { checks })
+    ] });
+  }
+  var mounted2 = false;
+  function renderMinutes(arg) {
+    const el = $("#v-minutes");
+    if (!el) return;
+    if (!mounted2) {
+      R(/* @__PURE__ */ u2(MinutesView, {}), el);
+      mounted2 = true;
+    }
+    const a5 = typeof arg === "string" ? { path: arg } : arg;
+    if (a5 && (a5.file || a5.path)) {
+      dirty = false;
+      keptChecks.value = [];
+      minutesMode.value = "internal";
+      loadMinutes(a5).then(() => {
+        navWrite(false);
+        tabTitle();
+      });
+    }
+  }
+  var minutesPath = () => {
+    const v4 = minutesView.value;
+    return v4 && v4.ok && v4.path ? v4.path : null;
+  };
+
   // core/nav.js
   shared.VIEW = "today";
   shared.COCK = null;
@@ -30925,11 +32719,13 @@ ${d5.text}`);
     }
     if (shared.VIEW === "meeting") st.arg = shared.MEETING;
     if (shared.VIEW === "prep") st.arg = prepViewKey.value;
+    if (shared.VIEW === "minutes") st.arg = minutesPath();
     return st;
   }
   function hashOf(st) {
     if (st && st.v === "meeting") return `#meeting=${st.arg || ""}`;
     if (st && st.v === "prep") return prepHref(st.arg || "");
+    if (st && st.v === "minutes") return `#minutes=${encodeURIComponent(typeof st.arg === "string" ? st.arg : "")}`;
     if (st && st.v === "milestones") return `#milestones=${st.arg}&v=${st.mv === "move" ? "movement" : "plan"}${st.ms ? `&ms=${st.ms}` : ""}`;
     if (st && st.v === "people") return "#people" + (st.arg === "none" ? "/none" : "");
     let h5 = st.v === "help" ? `help-${st.arg || "start"}` : st.v === "settings" ? `settings/${st.arg || "general"}` : st.v === "cockpit" ? `cockpit=${st.arg}` : st.v === "person" ? `person=${encodeURIComponent(st.arg)}` : st.v === "work" ? `work=${st.wt}${st.wv ? `&v=${encodeURIComponent(st.wv)}` : ""}${st.p && st.p.length ? `&p=${st.p.join(",")}` : ""}${!st.wv && st.fx ? Object.keys(st.fx).length ? Object.entries(st.fx).map(([k5, v4]) => `&${k5}=${v4.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st.lay === "board" ? `&lay=board&g=${st.g}` : st.lg && st.lg !== "none" ? `&lg=${st.lg}` : ""}${st.sg && st.sg !== "none" ? `&sg=${st.sg}` : ""}${st.sort ? `&s=${st.sort.col}.${st.sort.dir}` : ""}${st.q && st.q.trim() ? `&q=${encodeURIComponent(st.q.trim().replace(/[&=#]/g, " "))}` : ""}${st.from ? `&from=${st.from}` : ""}${!st.wv && st.vb ? `&vb=${encodeURIComponent(st.vb)}` : ""}` : st.v === "inbox" ? "intake" : st.v;
@@ -30954,6 +32750,18 @@ ${d5.text}`);
     {
       const k5 = prepKeyOf(h5);
       if (k5) return { v: "prep", arg: k5, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+    }
+    {
+      const mm = /^#?minutes=(.+)$/.exec(String(h5 || ""));
+      if (mm) {
+        let a5 = "";
+        try {
+          a5 = decodeURIComponent(mm[1]);
+        } catch (e4) {
+          return null;
+        }
+        return /\.html$/i.test(a5) ? { v: "minutes", arg: a5, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 } : null;
+      }
     }
     {
       const q4 = String(h5 || "").replace(/^#/, ""), mm = /^milestones=([^&]+)(.*)$/.exec(q4);
@@ -31161,7 +32969,7 @@ ${d5.text}`);
       const id = { cockpit: "v-cockpit", mine: "v-work" }[v5] || "v-" + v5;
       $("#" + id).hidden = false;
       $("#" + id).scrollTop = 0;
-      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today" }[v5] || v5;
+      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", minutes: "review" }[v5] || v5;
       setRailView(railKey);
       if (v5 === "mine") {
         shared.WT = "actions";
@@ -31172,7 +32980,7 @@ ${d5.text}`);
       if (v5 === "cockpit") shared.COCK = arg2;
       if (v5 === "person") shared.PERSON = arg2;
       if (v5 === "settings" && arg2) STAB = arg2;
-      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2) }[v5] || (() => {
+      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), minutes: () => renderMinutes(arg2) }[v5] || (() => {
       }))();
       if (!opt2.restore) navWrite(true);
       return true;
@@ -31352,9 +33160,10 @@ ${d5.text}`);
       const v4 = prepView.value, t6 = v4 && v4.ok && v4.model ? v4.model.meeting.title : "";
       TABNAME.prep = t6 ? `Prep · ${t6}` : "Prep";
     }
+    if (shared.VIEW === "minutes") TABNAME.minutes = "Minutes";
     const n4 = REV.filter((r4) => !r4.done).length, vips = VIPS().length;
-    const where = shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
-    const t5 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where ? ` · ${where}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
+    const where2 = shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
+    const t5 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where2 ? ` · ${where2}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
     if (document.title !== t5) document.title = t5;
     if (shared.VIEW === "milestones" && shared.MSCODE) {
       const t6 = document.title.replace(/ · [^·]*$/, "").replace(/ \(\d+\)$/, "") + ` · ${pName(shared.MSCODE)} milestones`;
@@ -31459,12 +33268,12 @@ ${d5.text}`);
         snack("A prep page is already being made");
         return;
       }
-      const asked2 = typeof given === "string" && !!given;
-      if (shared.BUSY && !asked2) {
+      const asked3 = typeof given === "string" && !!given;
+      if (shared.BUSY && !asked3) {
         snack("ask creaite is busy; try again when it's finished");
         return;
       }
-      const key = asked2 ? given : prepKey(shared.PREPEV, shared.PREPDAY);
+      const key = asked3 ? given : prepKey(shared.PREPEV, shared.PREPDAY);
       if (SA().agendas_shared && !store.get("creaite-prep-shared-ok", false)) {
         if (!confirm("The page is saved in the project's Agendas folder, in OneDrive, where other people may see it if the folder is shared. It's marked Internal. Save it there?")) return;
         store.set("creaite-prep-shared-ok", true);
@@ -32206,12 +34015,12 @@ ${d5.text}`);
     const r4 = btn.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
-    const pad2 = (n4) => String(n4).padStart(2, "0"), isoOf = (d5) => `${d5.getFullYear()}-${pad2(d5.getMonth() + 1)}-${pad2(d5.getDate())}`;
+    const pad3 = (n4) => String(n4).padStart(2, "0"), isoOf = (d5) => `${d5.getFullYear()}-${pad3(d5.getMonth() + 1)}-${pad3(d5.getDate())}`;
     const draw = (focus) => {
       const f5 = new Date(y5, m5, 1), st = (f5.getDay() + 6) % 7, dn = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st);
       for (let d5 = 1; d5 <= dn; d5++) {
-        const v4 = `${y5}-${pad2(m5 + 1)}-${pad2(d5)}`, off = max && v4 > max || min && v4 < min;
+        const v4 = `${y5}-${pad3(m5 + 1)}-${pad3(d5)}`, off = max && v4 > max || min && v4 < min;
         g5 += `<button type="button" data-v="${fd(v4)}" tabindex="${v4 === cur ? 0 : -1}" ${off ? 'disabled aria-disabled="true"' : ""} aria-label="${fd(v4)}" class="${v4 === TODAY ? "today" : ""} ${v4 === toIso(inp.value) ? "sel" : ""} ${off ? "off" : ""}">${d5}</button>`;
       }
       putHTML(box, html`<div class="ch"><button type="button" data-n="-1" aria-label="Previous month">‹</button><span>${raw(f5.toLocaleString("en-GB", { month: "long" }))} ${raw(y5)}</span><button type="button" data-n="1" aria-label="Next month">›</button></div><div class="cg">${raw(g5)}</div><div class="cf"><button type="button" data-v="${fd(min && TODAY < min ? min : max && TODAY > max ? max : TODAY)}">Today</button>${noclear ? "" : html`<button type="button" data-v="">Clear</button>`}</div>`);
@@ -32243,7 +34052,7 @@ ${d5.text}`);
           m5 = 0;
           y5++;
         }
-        cur = `${y5}-${pad2(m5 + 1)}-${pad2(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
+        cur = `${y5}-${pad3(m5 + 1)}-${pad3(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
         if (max && cur > max) cur = max;
         if (min && cur < min) cur = min;
         draw(false);
@@ -33385,52 +35194,6 @@ ${d5.text}`);
     ap.render = () => r0() + row("Sidebar", `<button type="button" class="btn" id="railCustSet" data-railcust aria-haspopup="dialog">${ic("sliders")}Customise…</button>`, "Choose what is in the sidebar and what is in More, put them in your own order, or show icons only");
   }
 
-  // components/Dialog.jsx
-  var FOCUSABLE = 'button:not([disabled]),[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-  function Dialog({ open: open2, onClose, labelledBy, id, class: cls, focus, dirty, children }) {
-    const ref = A2(
-      /** @type {HTMLDialogElement | null} */
-      null
-    );
-    const opener = A2(
-      /** @type {Element | null} */
-      null
-    );
-    h2(() => {
-      const d5 = ref.current;
-      if (!d5) return;
-      if (open2 && !d5.open) {
-        opener.current = document.activeElement;
-        d5.showModal();
-        const f5 = (
-          /** @type {HTMLElement | null} */
-          focus && d5.querySelector(focus) || d5.querySelector(FOCUSABLE)
-        );
-        if (f5) f5.focus();
-      } else if (!open2 && d5.open) d5.close();
-    }, [open2]);
-    const cancel = (e4) => {
-      e4.preventDefault();
-      onClose();
-    };
-    const closed = () => {
-      const o5 = (
-        /** @type {HTMLElement | null} */
-        opener.current
-      );
-      opener.current = null;
-      if (o5 && o5.isConnected && typeof o5.focus === "function") o5.focus();
-      if (open2) onClose();
-    };
-    const scrim = (e4) => {
-      const d5 = ref.current;
-      if (!d5 || e4.target !== d5 || dirty) return;
-      const r4 = d5.getBoundingClientRect();
-      if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) onClose();
-    };
-    return /* @__PURE__ */ u2("dialog", { ref, id, class: cls, "aria-labelledby": labelledBy, onCancel: cancel, onClose: closed, onClick: scrim, children });
-  }
-
   // components/closeday/CloseDay.jsx
   var CD_STEPS = ["Catch up", "Today", "Loose ends", "Tomorrow"];
   var PLACES = [["review", "Review now"], ["first", "First thing tomorrow"], ["leave", "Leave"]];
@@ -34468,10 +36231,10 @@ ${d5.text}`);
     return false;
   }
   function permissionInfoText(ev) {
-    const asked2 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
-    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked2} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
-    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
-    return `ask creaite asked for ${ev.rule}${asked2}, which creaite won't add: ${ev.reason}.`;
+    const asked3 = ev.asked && ev.asked !== ev.rule ? ` (asked as ${ev.asked})` : "", shapes = (ev.refused || []).filter(Boolean);
+    if (ev.state === "allowed" || ev.covered) return `Nothing to add: ${ev.rule}${asked3} is already allowed by ${ev.covered}. The request was refused for another reason` + (shapes.length ? `: ${shapes.join("; ")}.` : ".") + " ask creaite can run the script on its own instead.";
+    if (ev.state === "out_of_bounds") return `ask creaite asked for ${ev.rule}${asked3}, which creaite won't add: ${ev.reason}. If you do want it, edit .claude/settings.json yourself in Terminal.`;
+    return `ask creaite asked for ${ev.rule}${asked3}, which creaite won't add: ${ev.reason}.`;
   }
   function permissionInfo(ev) {
     const d5 = addEl("msg a info", html`${permissionInfoText(ev)}`);
@@ -34560,8 +36323,8 @@ ${d5.text}`);
     }
     putHTML(acts2, html`<span class='sub'>${r4.ok ? html`${raw(MTICK)}Approved` : "Approved, with problems"}</span>`);
     chgRollbackNumbers(d5, r4.results);
-    const lines = (r4.results || []).map((x5) => `${x5.ok ? "✓" : "✗"} ${oneLine(x5.message)}`);
-    addEl("msg a", html`${lines.length ? lines.join("\n") : oneLine(r4.message || "")}`);
+    const lines2 = (r4.results || []).map((x5) => `${x5.ok ? "✓" : "✗"} ${oneLine(x5.message)}`);
+    addEl("msg a", html`${lines2.length ? lines2.join("\n") : oneLine(r4.message || "")}`);
     if (!(r4.results || []).some((x5) => x5.ok)) return false;
     snack(oneLine(r4.message || "Changes made"), () => go("activity"));
     const msg = "The approved changes are made. Carry on with my last request.";
@@ -34879,14 +36642,14 @@ ${d5.text}`);
     return s5.replace(/\*\*(?=\S)([\s\S]*?\S)\*\*/g, "<strong>$1</strong>").replace(/(^|[^\w])__(?=\S)([\s\S]*?\S)__(?!\w)/g, "$1<strong>$2</strong>").replace(/~~(?=\S)([\s\S]*?\S)~~/g, "<del>$1</del>").replace(/(^|[^\w*\u0001])\*(?=[^\s*])([^*\n]*?[^\s*])\*(?!\*)/g, "$1<em>$2</em>").replace(/(^|[^\w])_(?=[^\s_])([^_\n]*?[^\s_])_(?!\w)/g, "$1<em>$2</em>");
   }
   var ITEMCODE = (c5) => /^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/.test(c5.trim()) && !!itemTable(c5.trim());
-  function chatMdBlocks(lines, st, depth) {
-    const out = [], n4 = lines.length, blank = (l6) => /^\s*$/.test(l6), inl = (t5) => chatMdInline(t5, st);
+  function chatMdBlocks(lines2, st, depth) {
+    const out = [], n4 = lines2.length, blank = (l6) => /^\s*$/.test(l6), inl = (t5) => chatMdInline(t5, st);
     const cells = (l6) => l6.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c5) => c5.trim().replace(/\\\|/g, "|"));
-    const tableAt = (i6) => i6 + 1 < n4 && lines[i6].includes("|") && MDC.SEP.test(lines[i6 + 1]) && lines[i6 + 1].includes("-") && cells(lines[i6]).length === cells(lines[i6 + 1]).length;
-    const startsBlock = (i6) => MDC.FENCE.test(lines[i6]) || MDC.HEAD.test(lines[i6]) || MDC.HR.test(lines[i6]) || MDC.QUOTE.test(lines[i6]) || MDC.LI.test(lines[i6]) || tableAt(i6);
+    const tableAt = (i6) => i6 + 1 < n4 && lines2[i6].includes("|") && MDC.SEP.test(lines2[i6 + 1]) && lines2[i6 + 1].includes("-") && cells(lines2[i6]).length === cells(lines2[i6 + 1]).length;
+    const startsBlock = (i6) => MDC.FENCE.test(lines2[i6]) || MDC.HEAD.test(lines2[i6]) || MDC.HR.test(lines2[i6]) || MDC.QUOTE.test(lines2[i6]) || MDC.LI.test(lines2[i6]) || tableAt(i6);
     let i5 = 0;
     while (i5 < n4) {
-      const l6 = lines[i5];
+      const l6 = lines2[i5];
       if (blank(l6)) {
         i5++;
         continue;
@@ -34895,7 +36658,7 @@ ${d5.text}`);
       if (m5) {
         const mark = m5[1], code = [];
         i5++;
-        while (i5 < n4 && !(lines[i5].trim().startsWith(mark[0].repeat(mark.length)) && /^[`~]+\s*$/.test(lines[i5].trim()))) code.push(lines[i5++]);
+        while (i5 < n4 && !(lines2[i5].trim().startsWith(mark[0].repeat(mark.length)) && /^[`~]+\s*$/.test(lines2[i5].trim()))) code.push(lines2[i5++]);
         i5++;
         out.push(`<div class="mdcode"><button type="button" class="mini mdcopy" data-mdcopy aria-label="Copy the code">Copy</button><pre><code>${code.join("\n")}</code></pre></div>`);
         continue;
@@ -34907,10 +36670,10 @@ ${d5.text}`);
         continue;
       }
       if (tableAt(i5)) {
-        const head = cells(lines[i5]), al = cells(lines[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
+        const head = cells(lines2[i5]), al = cells(lines2[i5 + 1]).map((c5) => /^:-+:$/.test(c5) ? "c" : /-:$/.test(c5) ? "r" : "");
         i5 += 2;
         const rows2 = [];
-        while (i5 < n4 && !blank(lines[i5]) && lines[i5].includes("|")) rows2.push(cells(lines[i5++]));
+        while (i5 < n4 && !blank(lines2[i5]) && lines2[i5].includes("|")) rows2.push(cells(lines2[i5++]));
         const td = (t5, k5, tag) => `<${tag}${al[k5] ? ` class="ta-${al[k5]}"` : ""}>${inl(t5 || "")}</${tag}>`;
         out.push(`<div class="mdtable"><table><thead><tr>${head.map((c5, k5) => td(c5, k5, "th")).join("")}</tr></thead><tbody>${rows2.map((r4) => `<tr>${head.map((_5, k5) => td(r4[k5], k5, "td")).join("")}</tr>`).join("")}</tbody></table></div>`);
         continue;
@@ -34922,7 +36685,7 @@ ${d5.text}`);
       }
       if (MDC.QUOTE.test(l6)) {
         const q4 = [];
-        while (i5 < n4 && MDC.QUOTE.test(lines[i5])) q4.push(lines[i5++].replace(MDC.QUOTE, ""));
+        while (i5 < n4 && MDC.QUOTE.test(lines2[i5])) q4.push(lines2[i5++].replace(MDC.QUOTE, ""));
         out.push(`<blockquote>${depth < 6 ? chatMdBlocks(q4, st, depth + 1) : inl(q4.join("\n")).replace(/\n/g, "<br>")}</blockquote>`);
         continue;
       }
@@ -34930,7 +36693,7 @@ ${d5.text}`);
         const items2 = [];
         let fence = null;
         while (i5 < n4) {
-          const x5 = lines[i5], lm = fence ? null : MDC.LI.exec(x5);
+          const x5 = lines2[i5], lm = fence ? null : MDC.LI.exec(x5);
           if (lm) {
             items2.push({ ind: lm[1].length, ord: /\d/.test(lm[2]), num: parseInt(lm[2]), off: lm[1].length + lm[2].length + 1, lines: [lm[3]] });
             i5++;
@@ -34938,9 +36701,9 @@ ${d5.text}`);
           }
           if (blank(x5)) {
             let j4 = i5;
-            while (j4 < n4 && blank(lines[j4])) j4++;
-            if (items2.length && j4 < n4 && (MDC.LI.test(lines[j4]) || /^ {2,}\S/.test(lines[j4]))) {
-              if (!MDC.LI.test(lines[j4])) items2[items2.length - 1].lines.push("");
+            while (j4 < n4 && blank(lines2[j4])) j4++;
+            if (items2.length && j4 < n4 && (MDC.LI.test(lines2[j4]) || /^ {2,}\S/.test(lines2[j4]))) {
+              if (!MDC.LI.test(lines2[j4])) items2[items2.length - 1].lines.push("");
               i5 = j4;
               continue;
             }
@@ -34986,7 +36749,7 @@ ${d5.text}`);
       }
       const para = [l6];
       i5++;
-      while (i5 < n4 && !blank(lines[i5]) && !startsBlock(i5)) para.push(lines[i5++]);
+      while (i5 < n4 && !blank(lines2[i5]) && !startsBlock(i5)) para.push(lines2[i5++]);
       out.push(`<p>${inl(para.join("\n")).replace(/\n/g, "<br>")}</p>`);
     }
     return out.join("");
@@ -34994,9 +36757,9 @@ ${d5.text}`);
   function mdChat(text, o5) {
     text = String(text ?? "");
     if (text.length > MDC.MAX) return `<div class="mdraw">${esc(text)}</div>`;
-    const st = [], lines = esc(text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/\r\n?/g, "\n")).split("\n");
+    const st = [], lines2 = esc(text.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").replace(/\r\n?/g, "\n")).split("\n");
     st.hb = o5 && o5.hBase || 0;
-    let h5 = chatMdBlocks(lines, st, 0);
+    let h5 = chatMdBlocks(lines2, st, 0);
     for (let k5 = 0; k5 < 6 && /\u0001\d+\u0001/.test(h5); k5++) h5 = h5.replace(/\u0001(\d+)\u0001/g, (m5, x5) => st[x5]);
     return h5;
   }
@@ -37094,17 +38857,17 @@ ${d5.text}`);
     return x5 ? `#work=${kind}${x5.p ? `&p=${x5.p}` : ""}&item=${id}` : "#";
   }
   function actLine(a5) {
-    let id = a5.id, text = a5.item, change = a5.change;
+    let id = a5.id, text = a5.item, change2 = a5.change;
     if (!id) {
       const m5 = String(a5.what).match(ID_RE);
       if (!m5) return html`${String(a5.what ?? "")}`;
       id = m5[1];
       text = itemText(id);
-      change = a5.what.slice(id.length).replace(/^[\s·:]+/, "");
+      change2 = a5.what.slice(id.length).replace(/^[\s·:]+/, "");
     }
     if (!text) return html`${String(a5.what ?? "")}`;
     const short = text.length > 80 ? text.slice(0, 79) + "…" : text, kind = /-A-/.test(id) ? "actions" : /-D-/.test(id) ? "decisions" : /-M-/.test(id) ? "ms" : /-\d{3}$/.test(id) ? "raid" : /^[A-Z][A-Z0-9]{2,6}$/.test(id) ? "proj" : "";
-    const ch = String(change ?? "");
+    const ch = String(change2 ?? "");
     if (kind === "proj") return html`<a href="#" class="hlink" data-proj="${id}">${pName(id)}</a> — ${ch}`;
     const upd = id.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/);
     if (upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch}`;
@@ -37269,15 +39032,15 @@ ${d5.text}`);
       dlg = $("#actDlg");
     }
     const done = plan.done || [], skipped = plan.skipped || [], n4 = done.length;
-    let asked2 = false;
+    let asked3 = false;
     putHTML(dlg, html`<h2 id="actDlgH" style="margin:0 0 6px">${n4 ? html`Undo ${raw(n4)} change${n4 === 1 ? "" : "s"}?` : "Nothing here can be undone"}</h2>
     <p class="sub" id="actDlgAsk" style="margin:0 0 10px">${n4 ? "Each goes back to what it was before, only where it still holds the value that change gave it. It is one new apply, so you can undo it too." : html`Each of these has changed since, or can't be put back here.`}</p>
     <ul class="actplan">${raw(done.map(actPlanLine).join(""))}${raw(skipped.map(actPlanLine).join(""))}</ul>
     <div class="curacts"><span class="sp"></span><button type="button" class="btn" id="actDlgCancel">${n4 ? "Cancel" : "Close"}</button>${n4 ? html`<button type="button" class="btn primary" id="actDlgGo">Undo ${raw(n4)}</button>` : ""}</div>`);
     $("#actDlgCancel").onclick = () => dlg.close();
     if (n4) $("#actDlgGo").onclick = async () => {
-      if (n4 > ACT_ASK_AGAIN && !asked2) {
-        asked2 = true;
+      if (n4 > ACT_ASK_AGAIN && !asked3) {
+        asked3 = true;
         $("#actDlgAsk").textContent = `This undoes ${n4} changes at once. Are you sure? (It can itself be undone.)`;
         $("#actDlgGo").textContent = `Yes, undo ${n4}`;
         $("#actDlgGo").focus();
@@ -38003,7 +39766,7 @@ ${d5.text}`);
     if (!re.test(md)) return md.replace(/\s*$/, "\n\n## Current state\n\n" + text.trim() + "\n");
     const placed2 = new Set(text.split("\n").map((l6) => (l6.match(MD_IMG) || [])[2]).filter(Boolean));
     return md.replace(re, (m5, h5, body) => {
-      const lines = body.split("\n"), g5 = lines.filter((l6) => /^_.*_$/.test(l6.trim())), im = lines.filter((l6) => l6.trim().startsWith("![") && !placed2.has((l6.match(MD_IMG) || [])[2]) && !dropped.includes((l6.match(MD_IMG) || [])[2]));
+      const lines2 = body.split("\n"), g5 = lines2.filter((l6) => /^_.*_$/.test(l6.trim())), im = lines2.filter((l6) => l6.trim().startsWith("![") && !placed2.has((l6.match(MD_IMG) || [])[2]) && !dropped.includes((l6.match(MD_IMG) || [])[2]));
       return h5 + "\n" + (g5.length ? g5.join("\n") + "\n\n" : "") + text.trim() + "\n" + (im.length ? "\n" + im.join("\n") + "\n" : "") + "\n";
     });
   }
@@ -38579,8 +40342,10 @@ ${d5.text}`);
         "CHK",
         "CMDENTER",
         "COLS",
+        "Checked",
         "Chip",
         "CloseDay",
+        "Coverage",
         "D",
         "DDATE",
         "DEC",
@@ -38804,6 +40569,7 @@ ${d5.text}`);
         "kindLabel",
         "laneDrop",
         "layoutOf",
+        "lines",
         "loadChat",
         "loadPrep",
         "loadTab",
@@ -38988,6 +40754,7 @@ ${d5.text}`);
         "sayMd",
         "seeAll",
         "send",
+        "sensitive",
         "setChatWidth",
         "setLayout",
         "setLive",
@@ -39033,6 +40800,7 @@ ${d5.text}`);
         "vsAnswerDraw",
         "vsClear",
         "warnsOf",
+        "weekend",
         "wfFit",
         "wflag",
         "who",
