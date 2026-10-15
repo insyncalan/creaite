@@ -169,7 +169,7 @@ class Scriptable1(HandcheckCase):
         plus = b.eval(f"(()=>{{const e=document.getElementById('newBtn'); return e&&({look})(e)}})()")
         self.assertTrue(plus, "Work's + button")
         self.assertNotIn(plus["bg"], transparent, "Work's + is tinted")
-        self.note(15, f"Today {today[0]['bg']}{' (the .btn.primary rule: none on show)' if probed else ''}, Intake {intake[0]['bg']}, Approve outlined ({approve[0]['bw']} {approve[0]['border']}; surface {surface}), Work + {plus['bg']}")
+        self.note(15, f"Today's {today[0]['text']} {today[0]['bg']} (after a sweep; before it, Getting started had {before or 'no'} filled button: its next step, Connect Microsoft 365, has none), Intake {intake[0]['bg']}, Approve outlined ({approve[0]['bw']} {approve[0]['border']}; surface {surface}), Work + {plus['bg']}")
 
     def test_c17_in_24_days(self):
         """17. Projects → a next milestone reads "(in 24 days)", lower case; its written-out date is unchanged."""
