@@ -121,7 +121,10 @@ window.AUD = (() => {
     res.scopeW = scope ? Math.round(scope.getBoundingClientRect().width) : 0;
     // culprits: elements that run past the scope's right edge (or the window), not inside an inner horizontal scroller
     const sr = scope ? scope.getBoundingClientRect() : { left: 0, right: W };
-    const right = Math.min(sr.right, W);
+    // v1.9.5 (plan #51): the edge is where the scope's content may reach, not its border box. A classic scrollbar (Linux,
+    // Windows; the Mac hides it) takes its width from the inside, so an element 6 px past the content stayed inside the
+    // border box and no culprit was named.
+    const right = Math.min(scope ? sr.left + scope.clientLeft + scope.clientWidth : sr.right, W);
     const scroller = el => { let p = el.parentElement; while (p && p !== scope) { const s = getComputedStyle(p); if (/(auto|scroll|hidden|clip)/.test(s.overflowX) && p.scrollWidth > p.clientWidth + 1) return p; p = p.parentElement; } return null; };
     const culprits = [];
     if (scope) for (const e of scope.querySelectorAll('*')) {
