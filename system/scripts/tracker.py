@@ -2124,6 +2124,8 @@ def cmd_apply(args):
     (BL-111). Then moves finished proposals to applied/ and rebuilds the dashboard, Excel export and search index.
     """
     work = _load_work(args)
+    if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
+        work = _skip_card_leftovers(work)
     if not work:
         print("Nothing to apply: no decided items.")
         return 0
@@ -2192,6 +2194,7 @@ def _validate_work(con, work):
             else:
                 held[(p, n)] = (kind, reason)
         blocked += _file_op_problems(p, data, written)
+        blocked += card_move_problems(p, data)         # #124 F3: here too, so a refusal comes before the backup
         blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
@@ -2222,6 +2225,32 @@ def minutes_draft_problems(p, data):
     debuglog.warn("tracker", f"minutes approval refused in {p.name}: no draft minutes")
     return [f"{p.name} minutes: {NO_DRAFT_MSG} ({blk.get('title') or blk.get('key') or 'untitled'})."]
 # ===== end BL-260 point 4 =====
+
+
+def card_move_problems(p, data):
+    """#124 F3: the apply's dry run: each undone move of a card-only kind in proposal `p` that has no marker from the live
+    server's Approve (card_move_problem). Only the apply runs this, never propose.py check (the card's preview and stage)."""
+    out = []
+    for blk, field in blocks(data):
+        if blk.get(field) in ("approved", "rejected") and not blk.get("applied"):
+            out += [f"{p.name} {field}: {why}" for fop in selected_ops(blk, field) if fop.get("op") == "move"
+                    for why in [card_move_problem(fop, blk, p)] if why]
+    return out
+
+
+def _skip_card_leftovers(work):
+    """#124 F3: a full apply (no names) leaves out a proposal with a card-only move and no marker (an Approve that stopped
+    before its apply finished left it in staging), so the rest still applies. A proposal named on the command line is refused
+    instead (the dry run)."""
+    keep = []
+    for p, data in work:
+        why = card_move_problems(p, data)
+        if why:
+            debuglog.warn("tracker", f"apply: left {p.name} in staging: a card-only move with no approval card")
+            print(f"Left in staging, not applied: {why[0]}. Delete note or Move back again, or remove {p.name}.")
+        else:
+            keep.append((p, data))
+    return keep
 
 
 def _file_op_problems(p, data, written):

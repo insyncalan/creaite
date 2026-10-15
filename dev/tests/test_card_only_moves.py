@@ -6,8 +6,10 @@ The mover enforces it (Jarvis's ruling, 16-10-2026): tracker._op_move refuses a 
 "reports_back" (reach.CARD_ONLY_MOVES) unless the live server wrote its marker in system/guard/ on Approve
 (live_server.card_moves_allowed: reach.card_move_marker, naming the card's own proposal file and its SHA-256, under
 reach.CARD_MOVE_SECONDS old). What is covered:
-- a proposal written by hand into staging (the page's /api/fs, or a file from Terminal) is refused by /api/apply and by
-  tracker.py apply, for each of the three kinds: nothing moves and the reason is said;
+- a proposal written by hand into staging (the page's /api/fs, or a file from Terminal), for each of the three kinds: a full
+  apply (/api/apply) leaves it in staging and says which file, and the rest still applies (a crash's leftover never stops
+  an Apply); tracker.py apply naming it is refused in the dry run, before the backup; nothing moves and the reason is said;
+- the card's preview and stage (propose.py check) need no marker;
 - Approve on the card still moves the file (Delete note, Move back for a note and for a report), and no marker is left
   afterwards, when the apply succeeds, fails or raises;
 - a marker for another move, a stale one, one in the future, a symlink, a folder, one naming another proposal or another
@@ -26,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import test_notes_delete  # noqa: E402
 from test_archive_move_back import DUE, archive_old_files  # noqa: E402
-from test_tracker import ABC  # noqa: E402
+from test_tracker import ABC, action  # noqa: E402
 
 REFUSED = "is moved only by Approve on the live server's approval card"
 
@@ -57,17 +59,26 @@ class CardOnly(CardOnlyMoves):
         g = self.v.root / "system/guard"
         return sorted(f.name for f in g.glob("move-*")) if g.is_dir() else []
 
+    def backups(self):
+        return sorted(f.name for f in (self.v.root / "system/backups").glob("tracker-*-apply*.db"))
+
     def assert_refused_both_ways(self, kind, src, dst, there, gone):
-        self.hand(kind, src, dst)
-        r = self.post("/api/apply", {})
-        self.assertFalse(r["ok"], r)
-        self.assertIn(REFUSED, r["message"])
+        rel = self.hand(kind, src, dst)
+        name = Path(rel).name
+        before = self.backups()
+        r = self.post("/api/apply", {})                                            # a full apply leaves it in staging
+        self.assertTrue(r["ok"], r)
+        self.assertIn(f"Left in staging, not applied: {name} file_changes_decision: move: {src} {REFUSED}", r["message"])
+        self.assertTrue((self.v.root / rel).is_file())
         self.assertTrue(there.is_file())
         self.assertFalse(gone.exists())
-        self.hand(kind, src, dst, via="file")                                      # Terminal (or another session)
-        r = self.run_at("tracker.py", "apply", f"proposed-2026-10-16-hand-{kind}.json")
+        self.assertEqual(self.backups(), before)                                   # nothing else to apply: no backup
+        self.hand(kind, src, dst, via="file")                                      # Terminal (or another session), by name
+        r = self.run_at("tracker.py", "apply", name)
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn(REFUSED, r.stdout)
+        self.assertIn("Apply stopped. Nothing was written.", r.stdout)            # refused in the dry run
+        self.assertIn(f"{name} file_changes_decision: move: {src} {REFUSED}", r.stdout)
+        self.assertEqual(self.backups(), before)                                   # before the backup
         self.assertTrue(there.is_file())
         self.assertFalse(gone.exists())
         self.assertEqual(self.markers(), [])
@@ -180,6 +191,50 @@ class CardOnly(CardOnlyMoves):
                   "future", "symlink", "folder", "garbled"):
             self.assertIn(REFUSED, got[k] or "", k)
         self.assertEqual(got["free"], {"reports": None, "archive": None, "restore": None, "rename": None})
+
+    def test_g_a_leftover_never_stops_a_full_apply(self):
+        """An Approve that stopped before its apply finished (a crash) leaves an approved card-only proposal in staging with no
+        marker: a full Apply leaves it there, says which file, and applies the rest; named, it is refused before the backup."""
+        self.new("Leftover")
+        src, dst = f"{ABC}/notes/Leftover.md", f"{ABC}/_Archive/notes/Leftover.md"
+        left = Path(self.hand("notes", src, dst, via="file")).name
+        normal = self.v.root / "system/staging/proposed-2026-10-16-normal.json"
+        normal.write_text(json.dumps({"source_run": "dashboard", "items": [action(1, description="Send the plan")]}),
+                          encoding="utf-8")
+        before = self.backups()
+        r = self.post("/api/apply", {})
+        self.assertTrue(r["ok"], r)
+        self.assertIn(f"Left in staging, not applied: {left} file_changes_decision: move: {src} {REFUSED}", r["message"])
+        self.assertFalse(normal.exists())                                              # the normal one applied
+        self.assertEqual(len(self.backups()), len(before) + 1)
+        self.assertTrue((self.v.root / "system/staging" / left).is_file())             # the leftover stays, unapplied
+        self.assertTrue((self.folder() / "Leftover.md").is_file())
+        self.assertFalse((self.archive() / "Leftover.md").exists())
+        before = self.backups()
+        r = self.post("/api/apply", {})                                                # again: still no failure, no backup
+        self.assertTrue(r["ok"], r)
+        self.assertIn(f"Left in staging, not applied: {left}", r["message"])
+        self.assertEqual(self.backups(), before)
+        d = self.delete(self.post("/api/notes/get", {"path": src}))                   # the card's own Approve still works
+        done = self.post("/api/edit/approve", {"card": d["card"]["card"]})
+        self.assertTrue(done["ok"], done)
+        self.assertTrue((self.archive() / "Leftover.md").is_file())
+        self.assertEqual(self.markers(), [])
+
+    def test_h_the_card_preview_and_stage_need_no_marker(self):
+        """check_file_op (propose.py check runs it for the card's preview and stage, before Approve) never asks for a marker;
+        the card goes up with none written (and every Approve above stages its proposal before the marker exists)."""
+        self.new("Previewed")
+        got = self.py_json(
+            "import archive, tracker\n"
+            f"spec, why = archive.note_delete_spec({f'{ABC}/notes/Previewed.md'!r})\n"
+            "fc = spec['file_changes']\n"
+            "for op in fc['file_ops']: tracker.check_file_op(op, fc)\n"
+            "print(json.dumps([why, len(fc['file_ops'])]))")
+        self.assertEqual(got, [None, 1])
+        d = self.delete(self.post("/api/notes/get", {"path": f"{ABC}/notes/Previewed.md"}))
+        self.assertTrue(d["ok"], d)
+        self.assertEqual(self.markers(), [])
 
     def test_f_the_lists_agree_and_nobody_else_writes_the_marker(self):
         got = self.py_json(
