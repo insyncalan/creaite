@@ -537,6 +537,30 @@ class GenerateDialog(DraftCase):
         b.key("Enter", modifiers=4)                                                                    # with no menu open it generates, as the strip says
         b.wait("window.__sent===1")
 
+    def test_cmd_enter_with_an_open_picker_is_this_handlers_alone_and_sends_one_request(self):
+        """The key is stopped before it reaches the dialog, so a shared handler there (#101) can't press the button a second time."""
+        b = self.b
+        self.hold_drafts()
+        self.pick("#genFormKind", "Teams message")
+        b.eval("""(()=>{ window.__reached=0; document.getElementById('genDlg').addEventListener('keydown',e=>{ if(e.key==='Enter'&&e.metaKey) window.__reached++; });
+          const c=document.createElement('div'); c.className='combo open'; c.id='fakeCombo'; document.body.appendChild(c); })()""")   # a picker the shared key handler knows
+        b.eval("document.getElementById('genNote').focus()")
+        b.key("Enter", modifiers=4)
+        b.wait("window.__sent>=1")
+        b.pump(0.3)
+        self.assertEqual(b.eval("window.__sent"), 1)
+        self.assertEqual(b.eval("window.__reached"), 0)                                                 # nothing later in the page saw the key
+
+    def test_with_a_draft_shown_the_cmd_enter_marker_is_on_generate_again_not_copy(self):
+        b = self.b
+        self.assertTrue(b.eval("document.getElementById('genGo').hasAttribute('data-cmdenter')"))
+        self.pick("#genFormKind", "Teams message")
+        b.click("#genGo")
+        b.wait("document.querySelector('#genOut .drcard')", 30)
+        self.assertFalse(b.eval("document.getElementById('genGo').classList.contains('primary')"))
+        self.assertTrue(b.eval("document.getElementById('genGo').hasAttribute('data-cmdenter')"))
+        self.assertEqual(b.eval("[...document.querySelectorAll('#genDlg [data-cmdenter]')].map(x=>x.id)"), ["genGo"])   # Copy has none
+
     def test_enter_in_a_date_box_generates_and_never_closes_the_dialog(self):
         b = self.b
         self.hold_drafts()

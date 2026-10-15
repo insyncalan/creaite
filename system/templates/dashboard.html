@@ -7035,7 +7035,7 @@ button.nchip{font:inherit;font-size:12px}
         /* @__PURE__ */ u2("div", { class: "genfoot", children: [
           /* @__PURE__ */ u2("span", { class: "sub", id: "genSweep" }),
           /* @__PURE__ */ u2("button", { class: "btn", id: "genCancel", value: "cancel", formnovalidate: true, children: "Cancel" }),
-          /* @__PURE__ */ u2("button", { class: "btn primary", id: "genGo", value: "go", children: [
+          /* @__PURE__ */ u2("button", { class: "btn primary", id: "genGo", value: "go", "data-cmdenter": "", children: [
             /* @__PURE__ */ u2("span", { id: "genGoT", children: "Generate" }),
             /* @__PURE__ */ u2("span", { class: "kbd", id: "genKbd", "aria-hidden": "true" })
           ] })
@@ -51394,6 +51394,8 @@ ${d5.text}`);
       const ed3 = CMDENTER.find((x5) => x5.when(e4.target));
       if (!ed3) return;
       if (cmdEnterPicker()) {
+        e4.preventDefault();
+        e4.stopImmediatePropagation();
         if (!e4.repeat) setTimeout(() => ed3.save(), 0);
         return;
       }

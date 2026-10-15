@@ -102,7 +102,7 @@ export function PageDialogs() {
           </div>
           <div class="genfoot"><span class="sub" id="genSweep"></span>
             <button class="btn" id="genCancel" value="cancel" formnovalidate>Cancel</button>
-            <button class="btn primary" id="genGo" value="go"><span id="genGoT">Generate</span><span class="kbd" id="genKbd" aria-hidden="true"></span></button></div>
+            <button class="btn primary" id="genGo" value="go" data-cmdenter=""><span id="genGoT">Generate</span><span class="kbd" id="genKbd" aria-hidden="true"></span></button></div>
         </form>
       </Dialog>
       {/* People (BL-55, BL-56); the VIP field shows when editing (BL-99) */}
