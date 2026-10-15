@@ -84,6 +84,7 @@ Every edit you make on the dashboard is written as a proposal and applied at onc
 - **Today**: A morning brief: your meetings, what needs attention, your commitments, what was resolved, the week ahead
 - **Intake**: Two ways in: Calendar import and Upload files (a note is [[⌘⇧N]], from any page)
 - **Projects**: Current state, health checked against evidence, milestones, early warnings, and each project's Notes
+- **Reports**: Every project's week at once: its internal report and each client's report, with a count of what needs you
 - **Work**: Every action, risk, issue and decision, with filters and saved views
 - **People**: Each person's open work, Draft email, and handover
 - **Review**: Proposals grouped by project, nested under their minutes
@@ -427,7 +428,7 @@ Or say: `close all of Sara's overdue actions` to ask creaite to change several i
 
 Where: Today's reminder · Claude Code
 
-1. From Friday 12:00, Today reminds you. Press **Draft weekly report** on the reminder (or **Weekly report** at the foot of the project page) (it needs the live server), or say the phrase below.
+1. From Friday 12:00, Today reminds you, and the reminder opens **Reports**, where you see every project's week. Press **Draft weekly report** on the reminder (or **Weekly report** at the foot of the project page) (it needs the live server), or say the phrase below. **Open** on a project's row goes to its reporting space (also **Open reporting** on the project page's Reporting card, or [[⌘K]] and ``weekly report ABC``).
 2. Clear Review first. A project with pending items is held back.
 3. For each project, check the proposed health, its reasons and the current state, then approve. The Word report is filed in the project's `reports/` folder.
 
@@ -791,6 +792,13 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 - **AI on selected text:** select text in any editor and choose **AI** (or Alt + /): a suggestion for just that text, with Accept, Discard, Try again and Show changes, and the plain-code check under it. Claude runs with no tools at all and sees only the text and the project's name, people and open item IDs (`/api/edit/ai`). Counted under **edit** in `draft-stats.json` (offered, used, rejected); never the text. Make it executive on a selection is this quick path; on the whole Current state it keeps the full flow with facts and sources.
 - **Spotted at extraction, by plain code:** a proposal that repeats an existing item (**Looks like**, merged as an update in Review) and an open item a message or meeting shows finished (**Looks done**). Claude, running the minutes or the sweep, judges only the close matches. Both are proposals you decide; neither changes anything by itself. Chips for a typed action are plain code too.
 - **Counted, never read:** `system/staging/draft-stats.json` keeps, for each kind, how many drafts were offered, used as written, used after an edit and rejected. Counts only. Settings › Advanced › AI drafts shows them and turns each kind on or off.
+
+## Reports
+- **Reports** in the left menu shows every project's week, with a count of the projects that need you: a weekly report not yet drafted or still in Review, or a client report that is due. The week is the reminder's: Friday from 12:00 (Settings › Essentials › Your day), then the Friday before.
+- **One row per project:** its health, the internal weekly report's state (**Not drafted**, **Draft**, **Filed**) and each client's report with its rhythm (**Due**, **Filed**, **Not due (fortnightly)**). **Needs me** keeps the projects with something to do; **All projects** shows everything, filed ones too. The week control goes back one week.
+- **Open** goes to the project's **reporting space**, the same one the project page's **Reporting** card opens. The space has the weeks down the left, newest first, with both reports' state; the internal and the client report as two cards (state, who it is for, how the client version differs, **Open**, **Draft it**); **Edit both** side by side; and the files filed for the week, each of which opens. A client not due that week says **Not due**, with **Make one anyway**. The client report's **Approve** waits until the internal one is approved.
+- **Internal, Client or Side by side** switch at the top of the editor without leaving the page; the address keeps the project, the week and the view, so a reload, Back and a copied link return to the same place. Approve and Export arrive with the report editor; until then the pages show as outlines.
+- It only reads: nothing here drafts, approves or sends a report by itself, and creaite never sends one.
 
 ## Review
 - Claude's proposals wait here until you decide. An action, RAID item or decision opens over the page in the same layout as a work item (title, key values, text, Details and Source), with **Reject**, **Cancel**, **Save** and **Save and approve** at its foot: edits stay in the proposal until you choose. The "needs a project" note, the duplicate note and the **Remember** tick are there as before.

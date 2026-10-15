@@ -404,7 +404,7 @@ class TodayBriefTests(PageTests):
         self.assertEqual([m[0] for m in o["menu"]][1:], ["Dismiss for this session", "Dismiss forever"])
         self.assertTrue(o["open"])
         self.assertFalse(o["old"])                                                  # the pill row is gone
-        self.assertEqual(o["links"], ["projects", "ABC"])
+        self.assertEqual(o["links"], ["reports", "ABC"])   # BL-337: the weekly reminder opens Reports
         self.assertTrue(o["label"].startswith("Options: Weekly report"))
 
     def test_needs_attention_lists_work_with_no_owner_or_due_date(self):
