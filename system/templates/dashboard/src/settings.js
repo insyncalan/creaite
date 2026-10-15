@@ -810,13 +810,17 @@ export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.igno
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
    is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
-export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet&&a.state!=="replied");
+/* BL-342 Part 5: a card with a promise of Alan's to add (or one staged) or a promise that looks kept stays a full card, even
+   when he replied last (his promise is usually in that reply) or the thread is otherwise quiet, until he acts on it */
+const vipOffers=/** @param {any} a */a=>a.marker!=="private"&&((a.promises||[]).some(/** @param {any} p */p=>p&&(p.state==="offered"||p.state==="staged"))||!!(a.kept&&a.kept.id&&a.kept.open!==false));
+export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&(vipOffers(a)||(!a.quiet&&a.state!=="replied")));
 /* BL-334: a conversation with nothing for Alan is one quiet line on Today (no buttons, no count), shown the day it was updated */
-export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&a.state!=="replied"&&String(a.updated||"").slice(0,10)===TODAY);
+export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&a.state!=="replied"&&!vipOffers(a)&&String(a.updated||"").slice(0,10)===TODAY);
 /* BL-342: a thread Alan has answered (his own message after the last one) is one quiet "Replied" line the day he answered; a later message from someone else opens it again */
-export const VIPR=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.state==="replied"&&String(a.replied_at||"").slice(0,10)===TODAY);
+export const VIPR=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.state==="replied"&&!vipOffers(a)&&String(a.replied_at||"").slice(0,10)===TODAY);
 /** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
-const vipSig=()=>(VIPD().alerts||[]).map(a=>`${a.id}@${a.updated||""}@${a.seen?1:0}@${a.state||""}@${(a.match&&a.match.count)||0}`).join();
+const vipSig=()=>(VIPD().alerts||[]).map(a=>`${a.id}@${a.updated||""}@${a.seen?1:0}@${a.state||""}@${(a.match&&a.match.count)||0}`
+  +`@${(a.promises||[]).map(/** @param {any} p */p=>`${p.key}:${p.state}`).join("+")}@${a.kept?`${a.kept.id}:${a.kept.staged?1:0}:${a.kept.open===false?0:1}`:""}`).join();   /* BL-342 Part 5 */
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
@@ -861,6 +865,16 @@ export async function alertClose(id,undo){ if(!viaServer()){ snack("Closing need
   const r=await api("/api/alerts/close",{id,...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a) a.closes=r.closes;
   await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertClose(id,true)); }
+/* BL-342 Part 5: Add a promise, Dismiss a promise and Looks kept: mark kept, each by the card's ID and the promise's key (never
+   its position or words). Add and mark kept stage one pending proposal for Review (nothing is applied) and Undo takes it back
+   while it is still pending; Dismiss stages nothing, and its Undo puts the promise back. The page's data is reloaded, so the
+   Review count follows. */
+/** data-alertdo → [what, undo] for /api/alerts/promise */
+const PROMISEDO=/** @type {Record<string,[string,boolean]>} */({promise:["add",false],promiseundo:["add",true],promisedismiss:["dismiss",false],kept:["kept",false],keptundo:["kept",true]});
+export async function alertPromise(id,what,key,undo){ if(!viaServer()){ snack("Promises need the live server"); return; }
+  const r=await api("/api/alerts/promise",{id,what,key:key||"",...(undo?{undo:true}:{})}); if(!r.ok){ snack(r.message||r.error||"Not staged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a){ a.promises=r.promises; a.kept=r.kept; }
+  await reloadData(); renderToday(); snack(r.message||(undo?"Taken back":"Staged for Review"),undo?undefined:()=>alertPromise(id,what,key,true)); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
    leaves the message as it was. */
@@ -966,6 +980,7 @@ document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
   if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
   else if(b.dataset.alertdo==="close") alertClose(b.dataset.id,false); else if(b.dataset.alertdo==="closeundo") alertClose(b.dataset.id,true);
+  else if(PROMISEDO[b.dataset.alertdo||""]){ const [w,u]=PROMISEDO[b.dataset.alertdo||""]; alertPromise(b.dataset.id,w,b.dataset.pkey||"",u); }   /* BL-342 Part 5 */
   else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
   else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */

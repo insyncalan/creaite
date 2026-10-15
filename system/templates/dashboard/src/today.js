@@ -478,11 +478,25 @@ export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
      staged, "Staged for Review" with Undo. Hidden on a private card, a New match or an item no longer open. */
   const cl=cardClose(a,mt);
   if(cl&&!cl.staged) acts.push({id:"close",icon:"checks",label:`Looks done: close ${cl.id}`,name:`Stage a close of ${cl.id} for Review`,data:{alertdo:"close",id:a.id}});
+  /* BL-342 Part 5: a promise of the project that looks kept: "Looks kept: mark kept" beside Log; once staged, Staged for Review with Undo */
+  const kp=cardKept(a);
+  if(kp&&!kp.staged) acts.push({id:"kept",icon:"checks",label:"Looks kept: mark kept",name:`Stage ${kp.id} as kept for Review`,data:{alertdo:"kept",id:a.id}});
   const files=a.type==="fyi"&&(a.attachments||[]).length?`Files: ${(a.attachments||[]).slice(0,4).join(", ")}${a.attachments.length>4?` and ${a.attachments.length-4} more`:""}`:"";
   return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:CARDTYPE[a.type]||"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts,
     rel,relId:mt&&mt.id&&mt.relation!=="new"?String(mt.id):"",relT:mt&&mt.id&&mt.relation!=="new"?String(mt.t||""):"",relWhy:mt?String(mt.why||""):"",
     count:others?`also on ${others} other thread${others===1?"":"s"}`:"",ask:String(a.ask||""),due:a.due||"",overdue:!!(due&&due.over),dueText:due?due.text:"",owners:(a.owners||[]).join(", "),files,
-    closeWhy:cl?`Looks done: ${confMark(a)?"the thread shows it finished":String(cl.evidence||"").replace(/\.$/,"")}`:"",closeStaged:cl&&cl.staged?String(cl.id):"",closeCard:cl?a.id:""}; }
+    closeWhy:cl?`Looks done: ${confMark(a)?"the thread shows it finished":String(cl.evidence||"").replace(/\.$/,"")}`:"",closeStaged:cl&&cl.staged?String(cl.id):"",closeCard:cl?a.id:"",
+    proms:cardPromises(a),keptWhy:kp?`Looks kept: ${kp.id}, ${confMark(a)?"the thread shows it done":String(kp.evidence||"").replace(/\.$/,"")}`:"",keptStaged:kp&&kp.staged?String(kp.id):"",keptCard:kp?a.id:""}; }
+/** BL-342 Part 5: the promises Alan made in his own messages in the thread, each with Add a promise and Dismiss (by the card's ID
+    and the promise's key, never its position or words); a staged one says so, with Undo. None on a private card. @param {any} a */
+export function cardPromises(a){ if(a.marker==="private") return [];
+  return (a.promises||[]).filter(/** @param {any} p */p=>p&&p.key&&(p.state==="offered"||p.state==="staged")).map(/** @param {any} p */p=>({key:`p${p.key}`,pkey:String(p.key),card:String(a.id),tag:"Promise",
+    t:`You promised ${p.to||"someone"}: ${p.what||""}`,sub:p.due?`by ${fd(p.due)}`:"no date given",staged:p.state==="staged",
+    acts:p.state==="staged"?[]:[{id:"padd",icon:"plus",label:"Add a promise",name:`Add a promise: ${p.what||""}`,data:{alertdo:"promise",id:a.id,pkey:String(p.key)}},
+      {id:"pdismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss the promise: ${p.what||""}`,data:{alertdo:"promisedismiss",id:a.id,pkey:String(p.key)}}]})); }
+/** BL-342 Part 5: the card's kept promise, when it may be shown: not private and the promise still open (the server marks
+    open: false once it isn't) @param {any} a */
+export function cardKept(a){ const k=a.kept; return k&&k.id&&a.marker!=="private"&&k.open!==false?k:null; }
 /** BL-342 Part 3 B: the card's close suggestion, when it may be shown: not private, matched (not New) to that same action, and the
     action still open in the page data @param {any} a @param {any} mt */
 export function cardClose(a,mt){ const c=a.closes;

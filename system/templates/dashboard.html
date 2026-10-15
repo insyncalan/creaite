@@ -2832,6 +2832,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-top:1px solid var(--line)}
 .tdcand .ct{flex:1;min-width:0;font-size:var(--fs-sm);line-height:20px;overflow-wrap:anywhere}
 .tdcand .cs{color:var(--day-muted,var(--muted))}
+/* BL-342 Part 5: a staged promise says so in place of its buttons, with Undo */
+.tdcand .tdstaged{flex:none;margin-left:auto;font-size:var(--fs-sm);line-height:20px;color:var(--day-ink,var(--ink))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
 .tdmark{vertical-align:2px;height:18px}
 /* BL-342: a thread card's ask, owners and due date (an overdue one in the warning colour, and said in words) */
@@ -3799,6 +3801,7 @@ button.nchip{font:inherit;font-size:12px}
     alertLog: () => alertLog,
     alertMake: () => alertMake,
     alertPeekDraw: () => alertPeekDraw,
+    alertPromise: () => alertPromise,
     alertStage: () => alertStage,
     alertStaged: () => alertStaged,
     alertTypeOf: () => alertTypeOf,
@@ -4035,6 +4038,8 @@ button.nchip{font:inherit;font-size:12px}
     captureDone: () => captureDone,
     cardClose: () => cardClose,
     cardHtml: () => cardHtml,
+    cardKept: () => cardKept,
+    cardPromises: () => cardPromises,
     cardProps: () => cardProps,
     catName: () => catName,
     catOf: () => catOf,
@@ -26763,6 +26768,22 @@ ${s5}`;
             }
           )
         ] }) : null,
+        r4.keptWhy ? /* @__PURE__ */ u2("p", { class: "tdwhy tddone", children: r4.keptWhy }) : null,
+        r4.keptStaged ? /* @__PURE__ */ u2("p", { class: "tdstaged", children: [
+          `${r4.keptStaged} kept: Staged for Review`,
+          " · ",
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "qa",
+              "data-alertdo": "keptundo",
+              "data-id": r4.keptCard,
+              "aria-label": `Undo ${r4.keptStaged} kept`,
+              children: "Undo"
+            }
+          )
+        ] }) : null,
         r4.ask ? /* @__PURE__ */ u2("p", { class: "tdask", children: [
           /* @__PURE__ */ u2("span", { class: "tdlab", children: "Ask" }),
           " ",
@@ -26787,6 +26808,28 @@ ${s5}`;
             c5.sub ? /* @__PURE__ */ u2("span", { class: "cs", children: ` · ${c5.sub}` }) : null
           ] }),
           /* @__PURE__ */ u2("span", { class: "tacts", children: acts2(c5.acts) })
+        ] }, c5.key)) }) : null,
+        r4.proms && r4.proms.length ? /* @__PURE__ */ u2("ul", { class: "tdcands tdproms", "aria-label": "Your promises", children: r4.proms.map((c5) => /* @__PURE__ */ u2("li", { class: "tdcand", "data-tdc": c5.key, children: [
+          /* @__PURE__ */ u2("span", { class: "tag tdctag", children: c5.tag }),
+          /* @__PURE__ */ u2("span", { class: "ct", children: [
+            c5.t,
+            c5.sub ? /* @__PURE__ */ u2("span", { class: "cs", children: ` · ${c5.sub}` }) : null
+          ] }),
+          c5.staged ? /* @__PURE__ */ u2("span", { class: "tdstaged", children: [
+            "Staged for Review · ",
+            /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "qa",
+                "data-alertdo": "promiseundo",
+                "data-id": c5.card,
+                "data-pkey": c5.pkey,
+                "aria-label": `Undo the promise: ${c5.t}`,
+                children: "Undo"
+              }
+            )
+          ] }) : /* @__PURE__ */ u2("span", { class: "tacts", children: acts2(c5.acts) })
         ] }, c5.key)) }) : null
       ] }),
       r4.acts.length ? /* @__PURE__ */ u2("span", { class: "tacts", children: acts2(r4.acts) }) : null
@@ -27860,6 +27903,8 @@ ${s5}`;
     if (mt2 && mt2.relation === "chase" && mt2.id) acts2.push({ id: "chase", icon: "chasemail", label: "Chase", name: `Chase the owner of ${mt2.id}: ${t47}`, data: { alertdo: "chase", id: a5.id } });
     const cl2 = cardClose(a5, mt2);
     if (cl2 && !cl2.staged) acts2.push({ id: "close", icon: "checks", label: `Looks done: close ${cl2.id}`, name: `Stage a close of ${cl2.id} for Review`, data: { alertdo: "close", id: a5.id } });
+    const kp2 = cardKept(a5);
+    if (kp2 && !kp2.staged) acts2.push({ id: "kept", icon: "checks", label: "Looks kept: mark kept", name: `Stage ${kp2.id} as kept for Review`, data: { alertdo: "kept", id: a5.id } });
     const files = a5.type === "fyi" && (a5.attachments || []).length ? `Files: ${(a5.attachments || []).slice(0, 4).join(", ")}${a5.attachments.length > 4 ? ` and ${a5.attachments.length - 4} more` : ""}` : "";
     return {
       key: "al" + a5.id,
@@ -27888,8 +27933,38 @@ ${s5}`;
       files,
       closeWhy: cl2 ? `Looks done: ${confMark(a5) ? "the thread shows it finished" : String(cl2.evidence || "").replace(/\.$/, "")}` : "",
       closeStaged: cl2 && cl2.staged ? String(cl2.id) : "",
-      closeCard: cl2 ? a5.id : ""
+      closeCard: cl2 ? a5.id : "",
+      proms: cardPromises(a5),
+      keptWhy: kp2 ? `Looks kept: ${kp2.id}, ${confMark(a5) ? "the thread shows it done" : String(kp2.evidence || "").replace(/\.$/, "")}` : "",
+      keptStaged: kp2 && kp2.staged ? String(kp2.id) : "",
+      keptCard: kp2 ? a5.id : ""
     };
+  }
+  function cardPromises(a5) {
+    if (a5.marker === "private") return [];
+    return (a5.promises || []).filter(
+      /** @param {any} p */
+      (p6) => p6 && p6.key && (p6.state === "offered" || p6.state === "staged")
+    ).map(
+      /** @param {any} p */
+      (p6) => ({
+        key: `p${p6.key}`,
+        pkey: String(p6.key),
+        card: String(a5.id),
+        tag: "Promise",
+        t: `You promised ${p6.to || "someone"}: ${p6.what || ""}`,
+        sub: p6.due ? `by ${fd(p6.due)}` : "no date given",
+        staged: p6.state === "staged",
+        acts: p6.state === "staged" ? [] : [
+          { id: "padd", icon: "plus", label: "Add a promise", name: `Add a promise: ${p6.what || ""}`, data: { alertdo: "promise", id: a5.id, pkey: String(p6.key) } },
+          { id: "pdismiss", icon: "dismiss", label: "Dismiss", name: `Dismiss the promise: ${p6.what || ""}`, data: { alertdo: "promisedismiss", id: a5.id, pkey: String(p6.key) } }
+        ]
+      })
+    );
+  }
+  function cardKept(a5) {
+    const k5 = a5.kept;
+    return k5 && k5.id && a5.marker !== "private" && k5.open !== false ? k5 : null;
   }
   function cardClose(a5, mt2) {
     const c5 = a5.closes;
@@ -30221,10 +30296,20 @@ ${s5}`;
     if (msg) snack(msg);
     return true;
   }
-  var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && !a5.quiet && a5.state !== "replied");
-  var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && a5.state !== "replied" && String(a5.updated || "").slice(0, 10) === TODAY);
-  var VIPR = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.state === "replied" && String(a5.replied_at || "").slice(0, 10) === TODAY);
-  var vipSig = () => (VIPD().alerts || []).map((a5) => `${a5.id}@${a5.updated || ""}@${a5.seen ? 1 : 0}@${a5.state || ""}@${a5.match && a5.match.count || 0}`).join();
+  var vipOffers = (
+    /** @param {any} a */
+    (a5) => a5.marker !== "private" && ((a5.promises || []).some(
+      /** @param {any} p */
+      (p6) => p6 && (p6.state === "offered" || p6.state === "staged")
+    ) || !!(a5.kept && a5.kept.id && a5.kept.open !== false))
+  );
+  var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && (vipOffers(a5) || !a5.quiet && a5.state !== "replied"));
+  var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && a5.state !== "replied" && !vipOffers(a5) && String(a5.updated || "").slice(0, 10) === TODAY);
+  var VIPR = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.state === "replied" && !vipOffers(a5) && String(a5.replied_at || "").slice(0, 10) === TODAY);
+  var vipSig = () => (VIPD().alerts || []).map((a5) => `${a5.id}@${a5.updated || ""}@${a5.seen ? 1 : 0}@${a5.state || ""}@${a5.match && a5.match.count || 0}@${(a5.promises || []).map(
+    /** @param {any} p */
+    (p6) => `${p6.key}:${p6.state}`
+  ).join("+")}@${a5.kept ? `${a5.kept.id}:${a5.kept.staged ? 1 : 0}:${a5.kept.open === false ? 0 : 1}` : ""}`).join();
   var vipKind = (n4) => {
     const ppl = VIPD().people || {};
     return ppl[n4] || ppl[personOf(n4)] || "";
@@ -30382,6 +30467,29 @@ ${s5}`;
     await reloadData();
     renderToday();
     snack(r4.message || (undo ? "Taken back" : "Staged for Review"), undo ? void 0 : () => alertClose(id2, true));
+  }
+  var PROMISEDO = (
+    /** @type {Record<string,[string,boolean]>} */
+    { promise: ["add", false], promiseundo: ["add", true], promisedismiss: ["dismiss", false], kept: ["kept", false], keptundo: ["kept", true] }
+  );
+  async function alertPromise(id2, what, key, undo) {
+    if (!viaServer()) {
+      snack("Promises need the live server");
+      return;
+    }
+    const r4 = await api("/api/alerts/promise", { id: id2, what, key: key || "", ...undo ? { undo: true } : {} });
+    if (!r4.ok) {
+      snack(r4.message || r4.error || "Not staged");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2);
+    if (a5) {
+      a5.promises = r4.promises;
+      a5.kept = r4.kept;
+    }
+    await reloadData();
+    renderToday();
+    snack(r4.message || (undo ? "Taken back" : "Staged for Review"), undo ? void 0 : () => alertPromise(id2, what, key, true));
   }
   var ALERTTYPES = [["action", "Action"], ["risk", "Risk"], ["issue", "Issue"], ["decision", "Decision"]];
   var alertTypeOf = (k5, x5) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(x5 && x5.type || "risk").toLowerCase();
@@ -30681,7 +30789,10 @@ ${s5}`;
       else if (b5.dataset.alertdo === "chase") alertChase(b5.dataset.id);
       else if (b5.dataset.alertdo === "close") alertClose(b5.dataset.id, false);
       else if (b5.dataset.alertdo === "closeundo") alertClose(b5.dataset.id, true);
-      else if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
+      else if (PROMISEDO[b5.dataset.alertdo || ""]) {
+        const [w6, u5] = PROMISEDO[b5.dataset.alertdo || ""];
+        alertPromise(b5.dataset.id, w6, b5.dataset.pkey || "", u5);
+      } else if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
       else if (b5.dataset.alertdo === "make") alertMake(b5.dataset.id, b5.dataset.ctype || "", void 0, cand);
       else if (b5.dataset.alerttype && shared.CUR && shared.CUR.alert) {
         if (b5.getAttribute("aria-pressed") === "true") return;
@@ -31417,6 +31528,7 @@ ${s5}`;
       draftStat(it2.drafted, v5 === "rejected" ? "rejected" : drSame((it2.changes || {})[f5], it2.drafted_text) ? "used" : "edited");
     }
     if (it2 && it2.suggested && it2.suggested.feature === "done" && (v5 === "approved" || v5 === "rejected")) draftStat("done", v5 === "rejected" ? "rejected" : it2.as_proposed ? "edited" : "used");
+    if (it2 && it2.suggested && it2.suggested.feature === "promise" && (v5 === "approved" || v5 === "rejected")) draftStat("promise", v5 === "rejected" ? "rejected" : it2.as_proposed ? "edited" : "used");
     if (it2 && it2.looks_like && v5 === "rejected" && it2.duplicate_of === it2.looks_like.id) draftStat("repeat", "used");
   }
   var decide = async function(n4, v5, written) {
