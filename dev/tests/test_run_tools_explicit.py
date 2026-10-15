@@ -141,7 +141,6 @@ class Table(unittest.TestCase):
                 self.assertIn(t, denied, kind)
 
     def test_each_run_denies_every_built_in_it_doesnt_name(self):
-        import live_server as L
         import permissions as P
         for kind, tools, *_ in TABLE:
             denied = set(flag(self.calls[kind], "--disallowedTools").split(","))
