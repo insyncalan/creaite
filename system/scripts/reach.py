@@ -1037,7 +1037,7 @@ def prep_decision(tool, inp):
     if tool == "Bash":
         command = str((inp or {}).get("command") or "")
         why = (bash_refusal(command, "prep") or held_form_reason(command) or held_never_reason(command)
-               or held_kind_reason(command))
+               or held_kind_reason(command) or held_validate_reason(command))
         if why:
             return False, why
     return True, ""
@@ -1144,6 +1144,12 @@ def held_never_reason(command):
     return None
 
 
+# Read commands a held run still may not run: reach.py wrap and hook hand over to another command; drafts.py result stages a bulk
+# draft (system/staging/proposed-*-drafts.json and draft-stats.json for update-bulk and client-bulk). The server runs drafts.py
+# result itself when a draft run ends (live_server); no held prompt asks the model to. SCRIPT_COMMANDS is unchanged (ask mode).
+HELD_NOT_READ = ("reach.py wrap", "reach.py hook", "drafts.py result")
+
+
 def held_kind_reason(command):
     """Why a held run may not run this creaite script command, or None: only the read kind (SCRIPT_COMMANDS) runs, never
     derived, stage, guarded, record or unknown, and never reach.py wrap or hook (they hand over to another command)."""
@@ -1152,11 +1158,33 @@ def held_kind_reason(command):
     if not m:
         return "a run creaite starts itself runs only creaite's read commands"
     kind, name = command_kind(m.group(1), bash_args(command))
-    if kind == READ and name not in ("reach.py wrap", "reach.py hook"):
+    if kind == READ and name not in HELD_NOT_READ:
         return None
     _debug("warn", f"held run refused: {name} ({kind})")
     return (f"{name} isn't a read command, and a run creaite starts itself runs only read commands: reply with what you found, "
             f"and creaite saves it")
+def held_validate_reason(command):
+    """Why a held run may not run `tracker.py validate X`, or None: validate writes its findings back into the file it is given,
+    found as tracker.resolve_proposal finds it (the path as given, the vault root and the path, system/staging/ and the file
+    name; the first that exists), so it runs only when that file's real path is in system/staging/. Nothing found, or anything
+    that can't be checked, is refused (a path the shell would expand, such as an unquoted ~, isn't found here)."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )tracker\.py(?=\s|$)", vault_relative(command))
+    words = bash_args(command)
+    if not m or command_kind("tracker.py", words)[1] != "tracker.py validate":
+        return None
+    why = "tracker.py validate writes its findings back into the file, so a held run runs it only on a proposal in system/staging/"
+    try:
+        given = [w for w in words if w != "validate"]
+        if len(given) != 1:
+            return why
+        found = next((c for c in (Path(given[0]), paths.ROOT / given[0], paths.STAGING / Path(given[0]).name) if c.exists()), None)
+        if found is None or parts_under(Path(os.path.realpath(found)), Path(os.path.realpath(paths.STAGING))) is None:
+            _debug("warn", "held run refused: tracker.py validate outside system/staging")
+            return f"{given[0]}: {why}"
+    except (OSError, ValueError, RuntimeError) as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
 # ===== end held runs read only =====
 
 

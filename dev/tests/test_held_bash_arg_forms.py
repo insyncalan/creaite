@@ -27,7 +27,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from test_tracker import ABC, Vault  # noqa: E402
 
-NEVER, SHELL, KIND, FORM = "never list", "shell form", "not a read command", "held form"
+NEVER, SHELL, KIND, FORM, VALIDATE = "never list", "shell form", "not a read command", "held form", "validate outside staging"
 T = "system/scripts/run minutes.py transcript"
 P = "python3 system/scripts/minutes.py transcript"
 
@@ -118,6 +118,18 @@ def forms(root, home):
         ("quoted ?", f"{T} '~/.ss?/id_rsa'", NEVER),
         ("quoted [ ]", f'{T} "~/.ssh/id_[r]sa"', NEVER),
         ("quoted *, absolute", f"{T} '{home}/.*/id_rsa'", NEVER),
+        # tracker.py validate writes its findings back into the file it is given (reach.held_validate_reason)
+        ("validate a permission file", "system/scripts/run tracker.py validate .claude/settings.json", VALIDATE),
+        ("validate settings.json", "python3 system/scripts/tracker.py validate system/config/settings.json", VALIDATE),
+        ("validate, absolute", f"system/scripts/run tracker.py validate {root}/.claude/settings.json", VALIDATE),
+        ("validate ~ (the shell's)", "system/scripts/run tracker.py validate ~/.claude/settings.json", VALIDATE),
+        ("validate a symlink in staging", "system/scripts/run tracker.py validate system/staging/link.json", VALIDATE),
+        ("validate by name, a symlink", "system/scripts/run tracker.py validate link.json", VALIDATE),
+        ("validate a missing file", "system/scripts/run tracker.py validate nothing-here.json", VALIDATE),
+        ("validate two files", "system/scripts/run tracker.py validate proposed-held.json .claude/settings.json", VALIDATE),
+        # drafts.py result stages a bulk draft; the server runs it, never a held run (reach.HELD_NOT_READ)
+        ("drafts.py result", "system/scripts/run drafts.py result", KIND),
+        ("drafts.py result, python3 form", "python3 system/scripts/drafts.py result --x", KIND),
     ]
 
 
@@ -134,6 +146,8 @@ class HeldArgForms(unittest.TestCase):
         drafts.mkdir(parents=True, exist_ok=True)
         os.symlink(cls.home / ".ssh/id_rsa", drafts / "key.vtt")
         os.symlink(cls.home / ".ssh", drafts / "keys")
+        os.symlink(cls.root / ".claude/settings.json", cls.root / "system/staging/link.json")
+        (cls.root / "system/staging/proposed-held.json").write_text('{"items": []}\n')
         (cls.root / ABC / "transcripts").mkdir(parents=True, exist_ok=True)
         (cls.root / ABC / "transcripts/2026-10-02 Weekly.vtt").write_text("WEBVTT\n\n00:00:01.000 --> 00:00:02.000\n<v Sara>Hello\n")
         cls.env = {**os.environ, "HOME": str(cls.home)}
@@ -155,6 +169,8 @@ class HeldArgForms(unittest.TestCase):
     def by(why):
         if "holds secrets" in why or "outside the vault, the projects folder and your home folder" in why:
             return NEVER
+        if "tracker.py validate writes its findings back" in why:
+            return VALIDATE
         if "isn't a read command" in why:
             return KIND
         if "which the shell reads as a comment" in why or "$PWD or $OLDPWD" in why or "~-, ~+" in why \
@@ -207,7 +223,9 @@ class HeldArgForms(unittest.TestCase):
         for mode in ("held", "prep"):
             for cmd in (f"{T} '{ABC}/transcripts/2026-10-02 Weekly.vtt'", f"{T} '{ABC}/transcripts/2026-10-0? Weekly.vtt'",
                         f"system/scripts/run docx_tools.py text '{ABC}/documents/SOW [signed].docx'",
-                        "system/scripts/run tracker.py read actions", "system/scripts/run search.py query 'see https://x.example/a'"):
+                        "system/scripts/run tracker.py read actions", "system/scripts/run tracker.py validate proposed-held.json",
+                        "system/scripts/run tracker.py validate system/staging/proposed-held.json",
+                        "system/scripts/run drafts.py context", "system/scripts/run search.py query 'see https://x.example/a'"):
                 with self.subTest(cmd=cmd, mode=mode):
                     code, why = self.hook(mode, cmd)
                     self.assertEqual(code, 0, why)
