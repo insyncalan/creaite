@@ -25,9 +25,30 @@ def assistant(msg_id, model="claude-opus-5-5", inp=0, cw=0, cr=0, out=0, sidecha
                                   "cache_read_input_tokens": cr, "output_tokens": out}}}
 
 
+def with_split(rec, one_hour):
+    """Add the 5-minute/1-hour cache write split to an assistant record."""
+    u = rec["message"]["usage"]
+    u["cache_creation"] = {"ephemeral_1h_input_tokens": one_hour,
+                           "ephemeral_5m_input_tokens": u["cache_creation_input_tokens"] - one_hour}
+    return rec
+
+
 def prompt(text):
     """One typed user prompt record."""
     return {"type": "user", "timestamp": TS, "message": {"role": "user", "content": text}}
+
+
+class PriceCase(unittest.TestCase):
+    def test_one_hour_cache_writes_cost_twice_input(self):
+        self.assertAlmostEqual(usage.cost("claude-opus-5-5", {"cache_write": 1_000_000}), 5.0)
+        self.assertAlmostEqual(usage.cost("claude-opus-5-5", {"cache_write_1h": 1_000_000}), 8.0)
+        self.assertAlmostEqual(usage.cost("claude-haiku-5-5", {"cache_read": 1_000_000}), 0.01)
+
+    def test_split_is_read_from_the_log(self):
+        entry = usage._message_entry(with_split(assistant("m1", cw=1000), 400), "s", False)
+        self.assertEqual((entry["tokens"]["cache_write"], entry["tokens"]["cache_write_1h"]), (600, 400))
+        entry = usage._message_entry(assistant("m2", cw=1000), "s", False)
+        self.assertEqual((entry["tokens"]["cache_write"], entry["tokens"]["cache_write_1h"]), (1000, 0))
 
 
 class UsageCase(unittest.TestCase):

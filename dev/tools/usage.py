@@ -35,21 +35,24 @@ from collections import defaultdict
 from pathlib import Path
 
 # Prices in US dollars per million tokens (MTok). One table; edit here only.
-#   cache_write: 1.25 x input  -- to confirm (1-hour cache writes may be billed at a higher rate)
-#   Haiku cache_read: 0.1 x input -- to confirm
+# Confirmed against Anthropic's published caching rates (15-10-2026): a 5-minute cache write is 1.25 x input, a
+# 1-hour cache write is 2 x input, a cache read is 0.1 x input (Opus 5.5 and Sonnet 5.5 are quoted at $0.20, set below).
+# The logs split cache writes into 5-minute and 1-hour tokens (usage.cache_creation); "cache_write" here is the
+# 5-minute part (or all of it when a log has no split) and "cache_write_1h" the 1-hour part.
 PRICES = {
-    "opus": {"input": 4.00, "cache_write": 4.00 * 1.25, "cache_read": 0.20, "output": 20.00},
-    "sonnet": {"input": 2.00, "cache_write": 2.00 * 1.25, "cache_read": 0.20, "output": 10.00},
-    "haiku": {"input": 0.10, "cache_write": 0.10 * 1.25, "cache_read": 0.10 * 0.1, "output": 0.50},
+    "opus": {"input": 4.00, "cache_write": 4.00 * 1.25, "cache_write_1h": 4.00 * 2, "cache_read": 0.20, "output": 20.00},
+    "sonnet": {"input": 2.00, "cache_write": 2.00 * 1.25, "cache_write_1h": 2.00 * 2, "cache_read": 0.20, "output": 10.00},
+    "haiku": {"input": 0.10, "cache_write": 0.10 * 1.25, "cache_write_1h": 0.10 * 2, "cache_read": 0.10 * 0.1, "output": 0.50},
 }
-KINDS = ("input", "cache_write", "cache_read", "output")
+KINDS = ("input", "cache_write", "cache_write_1h", "cache_read", "output")
 USAGE_FIELDS = {
     "input": "input_tokens",
     "cache_write": "cache_creation_input_tokens",
     "cache_read": "cache_read_input_tokens",
     "output": "output_tokens",
 }
-KIND_LABELS = {"input": "input", "cache_write": "cache writes", "cache_read": "cache reads", "output": "output"}
+KIND_LABELS = {"input": "input", "cache_write": "cache writes", "cache_write_1h": "1-hour cache writes",
+               "cache_read": "cache reads", "output": "output"}
 ROLES = ("Jarvis", "lead", "agent")
 DEFAULT_ROOT = "~/.claude/projects"
 DEFAULT_GLOB = "*creaite*"
@@ -164,6 +167,13 @@ def _message_entry(rec, session, subagent):
     if not isinstance(usage, dict) or model == "<synthetic>":
         return None
     tokens = {k: int(usage.get(f) or 0) for k, f in USAGE_FIELDS.items()}
+    split = usage.get("cache_creation")
+    if isinstance(split, dict):
+        long_ = min(int(split.get("ephemeral_1h_input_tokens") or 0), tokens["cache_write"])
+        tokens["cache_write_1h"] = long_
+        tokens["cache_write"] -= long_
+    else:
+        tokens["cache_write_1h"] = 0
     return {
         "id": msg.get("id") or rec.get("requestId") or rec.get("uuid"),
         "day": local_day(rec.get("timestamp")),
@@ -262,6 +272,7 @@ def summary_lines(rows, top, laptop, first, last):
     lines.append("By role: " + ", ".join("{} {}".format(k, _money(v)) for k, v in _totals(rows, "role")) + ".")
     lines.append("By model: " + ", ".join("{} {}".format(k, _money(v)) for k, v in _totals(rows, "model")) + ".")
     kinds = kind_costs(rows)
+    kinds["cache_write"] += kinds.pop("cache_write_1h")  # one "cache writes" driver, 5-minute and 1-hour together
     kind = max(kinds, key=kinds.get)
     share = 100 * kinds[kind] / total if total else 0
     driver = "Top driver: {} ({:.0f}% of cost)".format(KIND_LABELS[kind], share)
@@ -278,7 +289,7 @@ def table_lines(rows, top):
     lines = [head, "-" * len(head)]
     for r in rows:
         lines.append("{:<10} {:<14} {:<6} {:<18} {:>11,} {:>11,} {:>13,} {:>10,} {:>10}".format(
-            r["day"], r["laptop"][:14], r["role"], r["model"][:18], r["input"], r["cache_write"], r["cache_read"],
+            r["day"], r["laptop"][:14], r["role"], r["model"][:18], r["input"], r["cache_write"] + r["cache_write_1h"], r["cache_read"],
             r["output"], _money(r["cost"]) + ("" if r["priced"] else "*")))
     lines.append("{:<{w}}{:>10}".format("total", _money(sum(r["cost"] for r in rows)), w=len(head) - 10))
     if any(not r["priced"] for r in rows):
