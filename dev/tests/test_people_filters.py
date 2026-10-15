@@ -251,7 +251,7 @@ class PeopleFilters(LiveBrowserCase):
         b.resize(390, 800)
         # the rail turns to icons on the media query's change event, which Chrome sends at the next frame, not on the resize;
         # under load the check ran first, with the 212px rail still pushing the People card (and its menu) to the right
-        b.wait("innerWidth===390 && document.documentElement.classList.contains('railicons')")
+        b.wait("document.documentElement.classList.contains('railicons')")
         b.eval("pfOpen('org')")
         b.wait("document.getElementById('pmFMenu').classList.contains('on')")
         r = b.eval("(()=>{ const m=document.getElementById('pmFMenu').getBoundingClientRect(); return [m.left,m.right,innerWidth,document.documentElement.scrollWidth]; })()")

@@ -44,7 +44,6 @@ class FilesNarrow(LiveBrowserCase):
     def archived(self, width):
         b = self.b
         b.resize(width, 700)
-        b.wait(f"innerWidth==={width}")
         b.eval("go('files')")
         b.wait("document.querySelector('#fquick [data-q=\"archived\"]')")
         b.eval("document.querySelector('#fquick [data-q=\"archived\"]').click()")
