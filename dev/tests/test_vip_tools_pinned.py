@@ -4,6 +4,8 @@ The check reads outside content (mail, Teams) with no guard hook, so the vault's
 review.py, propose.py, Edit projects/**) must never apply in it: it is started with no `--tools` flag (#116: `--tools ""` reached
 no Microsoft 365 tool on laptop 1) and every built-in tool but ToolSearch denied by name (a deny beats an allow rule). ToolSearch
 stays: it only loads the deferred Microsoft 365 tools' schemas. No --strict-mcp-config (it would drop the Microsoft 365 tools).
+The other connectors (permissions.run_deny_extras(): Todoist, Docs, Slides, Linear, vscode, whole server) are denied by name too
+(#116 review M1), on the real command line.
 
 Run: python3 dev/tests/test_vip_tools_pinned.py
 A throwaway vault with fictional people and a stand-in `claude` (CREAITE_CLAUDE) that records its argv. No real Claude call.
@@ -26,7 +28,7 @@ TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_M
          "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
 BUILTIN = ["Bash", "Read", "Grep", "Glob", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent"]
 # The built-in tools of Claude Code 2.1.300 with no --tools (`claude -p --output-format stream-json --verbose "hi"`: the init
-# event's "tools", the mcp__ ones left out). REFRESH this copy, and live_server.KNOWN_BUILTINS, when Claude Code adds one: a new
+# event's "tools", the mcp__ ones left out). REFRESH this copy, and permissions.KNOWN_BUILTINS, when Claude Code adds one: a new
 # built-in must be denied in the VIP check or named in ALLOWED_BUILTINS with a reason.
 CLI_DEFAULT_BUILTINS_2_1_300 = [
     "Task", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList", "DesignSync", "Edit",
@@ -64,6 +66,16 @@ class Pinned(unittest.TestCase):
         for t in live_server.DENY_TOOLS:
             self.assertIn(t, deny)
         self.assertNotIn("ToolSearch", deny)
+        self.assertEqual(len(deny), len(set(deny)))                       # once each
+
+    def test_run_deny_extras_are_in_vip_deny(self):
+        import live_server
+        import permissions
+        deny = live_server.vip_deny()
+        for t in permissions.run_deny_extras():                           # #116 review M1: other connectors, acting built-ins
+            self.assertIn(t, deny)
+        for server in permissions.NON_M365_MCP_DENY:
+            self.assertFalse(server.startswith("mcp__claude_ai_Microsoft_365"), server)
 
     def test_every_cli_built_in_is_denied_or_explicitly_allowed(self):
         import live_server
@@ -132,6 +144,15 @@ class ServerCommand(unittest.TestCase):
             self.assertTrue(t in denied or t in ALLOWED_BUILTINS, t)
         self.assertNotIn("ToolSearch", denied)
         self.assertFalse(set(TOOLS) & set(denied))
+
+    def test_run_deny_extras_reach_the_real_command_line(self):
+        import permissions
+        denied = flag(self.args, "--disallowedTools").split(",")
+        for t in permissions.run_deny_extras():                           # #116 review M1: Todoist, Docs, Slides, Linear, vscode
+            self.assertIn(t, denied)
+        for t in ("mcp__claude_ai_Todoist", "mcp__claude_ai_Claude_Docs", "mcp__claude_ai_Slides_AI", "mcp__claude_ai_Linear",
+                  "mcp__claude-vscode", "Task", "Agent"):
+            self.assertIn(t, denied)
 
     def test_no_extra_dirs_or_permission_skips(self):
         self.assertNotIn("--add-dir", self.args)

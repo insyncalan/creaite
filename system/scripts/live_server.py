@@ -1963,7 +1963,76 @@ SEARCH_TOOLS = ["Read", "Grep", "Glob"]
 KIND_TOOLS["search"] = list(SEARCH_TOOLS)
 KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
                          *vault_permissions.m365_read_tools()]
-KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS)]
+KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS), "--strict-mcp-config"]    # F4 (#116 review): it uses no MCP at all
+# ===== F2 (#116 review, 15-10-2026): every run kind names its built-in tools =====
+# A run started with no --tools gets EVERY built-in tool in the installed Claude Code, including ones that run headless without
+# a permission prompt and that neither the guard hook nor a deny list looks at (EnterWorktree writes into .git and
+# .claude/worktrees/; RemoteTrigger, CronCreate, Monitor, SendMessage, Workflow…). So each kind has an explicit allow list of
+# built-ins (`--tools`), never a deny list of newer ones: a built-in a later CLI adds never appears in a run by itself. `--tools`
+# covers the built-in set only: the Microsoft 365 tools (MCP) stay loaded and are governed by --allowedTools and
+# --disallowedTools, as before. But with many MCP tools connected they are deferred behind the built-in ToolSearch, and
+# `--tools ""` removes it: Alan's live check on laptop 1 reached 0 Microsoft 365 tools that way (#116). So every kind that calls
+# an MCP tool lists ToolSearch, and only the kinds that need no MCP at all keep `--tools ""`. Kinds: a chat and a confirmed
+# request ("ask"), a sweep ("sweep": Close the day's, and a typed sweep), the held kinds creaite starts itself (Prep page, Current state, AI drafts, Shape, a transcript check or load), Search's answer,
+# the tool-less ones (AI on selected text, a closed meeting's Shape, Find updates in a note) and a narrowed run (`only`).
+# ToolSearch only loads deferred tools' schemas (the Microsoft 365 tools are deferred when it is there); it reads nothing.
+# A probe (Claude Code 2.1.300, 15-10-2026, `--tools ToolSearch --disallowedTools mcp__claude_ai_Todoist`): the Todoist server
+# connected but none of its tools was listed or reachable, and all 50 Microsoft 365 tools were: a whole-server deny entry works.
+# No Task (Agent) in a chat (#116 review, Jarvis): no skill, prompt or code uses a subagent, and its worktree and remote modes
+# write into .git and .claude/worktrees/ or start a cloud agent, out of the guard hook's sight.
+CHAT_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]
+SWEEP_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]           # cx-sweep, its drafts' files
+HELD_BUILTINS = ["Read", "Grep", "Glob", "Bash", "ToolSearch"]       # read files and creaite's read scripts; the server writes
+NO_BUILTINS = ["--tools", ""]                                         # none at all: only for a kind that uses no MCP tool
+NARROW_BUILTINS = ["--tools", "ToolSearch"]     # a narrowed run (`only`: Microsoft 365 reading only) needs ToolSearch to reach them
+KIND_ARGS["ask"] = ["--tools", ",".join(CHAT_BUILTINS)]
+KIND_ARGS["sweep"] = ["--tools", ",".join(SWEEP_BUILTINS)]
+for _k in ("prep", "generate", "check", "load"):
+    KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
+for _k in ("shape-closed", "notes-find"):
+    KIND_ARGS[_k] = list(NO_BUILTINS)
+# Belt and braces, in every run's --disallowedTools: F3's permissions.run_deny_extras() (the other connectors, whole server, and
+# the acting and writing built-ins no allow rule may grant) and every known built-in the run's own --tools doesn't name
+# (permissions.KNOWN_BUILTINS minus the kind's set), so a --tools list that drifts, or a CLI that ignores it, still can't reach
+# them. No list of names is kept here: KNOWN_BUILTINS is the one list (Jarvis, 15-10-2026). The VIP check's vip_deny() takes
+# run_deny_extras() too (#116 review M1), so every claude -p launch denies the other connectors by name.
+# Task and Agent (#116 review L1): no kind's --tools names them, so they are in NEVER_BUILTINS and denied by name in every run
+# (a chat, a sweep, the held kinds, Search, the tool-less kinds, a narrowed run) and in the VIP check: no subagent, local or remote.
+# Maintenance (#116 review L4): when Claude Code adds a built-in, run `claude -p --output-format stream-json --verbose "hi"` with
+# no --tools, take the init event's "tools" (the non-mcp__ names), add any new name to permissions.KNOWN_BUILTINS and to the
+# 2.1.300 copy in dev/tests/test_vip_tools_pinned.py (it is then denied here unless a kind's --tools names it); when a new
+# connector appears in the same init event (an mcp__<server>__ prefix other than Microsoft 365), add its server name to
+# permissions.NON_M365_MCP_DENY. Neither list updates itself: no test can see a built-in or a connector the CLI adds later.
+
+
+def run_args(policy, confirmed=None, only=None):
+    """A run's built-in tools (`--tools`, and `--strict-mcp-config` where it has no MCP): its kind's own entry in KIND_ARGS; only
+    ToolSearch for a narrowed run (`only`: Microsoft 365 reading only); none for a kind with no entry (fail closed)."""
+    if only is not None and policy not in GUARDED_KINDS and not confirmed:
+        return list(NARROW_BUILTINS)
+    return list(KIND_ARGS.get(policy, NO_BUILTINS))
+
+
+def run_builtins(policy, confirmed=None, only=None):
+    """The built-in tools a run's --tools names."""
+    return [t for t in run_args(policy, confirmed, only)[1].split(",") if t]
+
+
+def builtin_denies(policy, confirmed=None, only=None):
+    """F2: what every run denies by name besides its kind's own list: run_deny_extras() and each known built-in its --tools
+    doesn't name, once each."""
+    allowed = run_builtins(policy, confirmed, only)
+    out = []
+    for t in vault_permissions.run_deny_extras() + [b for b in vault_permissions.KNOWN_BUILTINS if b not in allowed]:
+        if t not in out:
+            out.append(t)
+    return out
+
+
+# The built-ins no kind names at all (derived, never written out): denied in every run.
+NEVER_BUILTINS = [b for b in vault_permissions.KNOWN_BUILTINS
+                  if not any(b in a[1].split(",") for a in [*KIND_ARGS.values(), NARROW_BUILTINS])]
+# ===== end F2 =====
 
 
 def run_prompt(kind, confirmed):
@@ -1996,6 +2065,7 @@ def run_policy(kind, confirmed, only=None):
     deny = deny_tools() + KIND_DENIES.get(kind, []) + (never_denies() if guarded else [])   # BL-286: a closed run
     if only is not None and not guarded and not confirmed:
         tools, deny = list(only), deny + [t for t in ONLY_DENIES if t not in deny]
+    deny = deny + [t for t in builtin_denies(kind, confirmed, only) if t not in deny]   # F2: other connectors, unneeded built-ins
     return tools, deny, guarded
 
 
@@ -2047,7 +2117,7 @@ class Run:
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
         cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
-               "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
+               "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
@@ -3195,7 +3265,8 @@ def mark_interrupted():
 # subprocess, so it never queues behind ask creaite. Routes: /api/vip (the unseen alerts), /api/vip/seen.
 # The run reads outside content (mail, Teams) with no guard hook, so it has no vault tools at all. It is started with no
 # `--tools` flag (#116, 15-10-2026: under `--tools ""` the check reached no Microsoft 365 tool on laptop 1, so the flag is
-# gone) and every built-in tool but ToolSearch denied by name in --disallowedTools (vip_deny()). A deny beats the vault's
+# gone) and every built-in tool but ToolSearch, and the other connectors (whole server, run_deny_extras(): #116 review M1),
+# denied by name in --disallowedTools (vip_deny()). A deny beats the vault's
 # .claude/settings.json allow rules (tracker.py, review.py, propose.py, Edit projects/**), so none of them can apply, and a
 # denied tool is removed from the run altogether. ToolSearch stays: with many MCP tools connected, Claude Code defers them
 # behind it (probed on 2.1.300: with ToolSearch the Microsoft 365 tools are listed as deferred), and it does one thing only:
@@ -3205,14 +3276,9 @@ def mark_interrupted():
 
 VIP_TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
              "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
-# Every built-in tool name Claude Code is known to have: the default set of 2.1.300 (`claude -p --output-format stream-json
-# --verbose`, the init event's tools, no --tools) and the names other versions use (Grep, Glob, LS, MultiEdit, Agent).
-# dev/tests/test_vip_tools_pinned.py keeps a copy of the 2.1.300 list; refresh both when Claude Code adds a built-in.
-KNOWN_BUILTINS = ["Task", "Agent", "Artifact", "ArtifactComments", "ArtifactData", "Bash", "CronCreate", "CronDelete", "CronList",
-                  "DesignSync", "Edit", "MultiEdit", "EnterWorktree", "ExitWorktree", "Glob", "Grep", "LS", "ListAgents",
-                  "ListMcpResourcesTool", "Monitor", "NotebookEdit", "PushNotification", "Read", "ReadMcpResourceDirTool",
-                  "ReadMcpResourceTool", "RemoteTrigger", "ReportFindings", "ScheduleWakeup", "SendMessage", "Skill",
-                  "TaskStop", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write"]
+# Every built-in tool name Claude Code is known to have: permissions.KNOWN_BUILTINS, the one list (Jarvis, 15-10-2026), kept
+# under this name for the VIP check and its tests.
+KNOWN_BUILTINS = list(vault_permissions.KNOWN_BUILTINS)
 VIP_BUILTIN_ALLOWED = ["ToolSearch"]       # loads deferred tools' schemas only; reads, runs and writes nothing
 VIP_BUILTIN_DENIES = [t for t in KNOWN_BUILTINS if t not in VIP_BUILTIN_ALLOWED]
 # BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
@@ -3243,8 +3309,15 @@ VIP_STATUS = {"running": False, "last_error": None}
 
 
 def vip_deny():
-    """The VIP check's deny list: DENY_TOOLS (Microsoft 365 actions included) and every built-in tool but ToolSearch, by name."""
-    return DENY_TOOLS + [t for t in VIP_BUILTIN_DENIES if t not in DENY_TOOLS]
+    """The VIP check's deny list: DENY_TOOLS (Microsoft 365 actions included), F3's permissions.run_deny_extras() (the other
+    connectors, whole server, and the acting and writing built-ins; #116 review M1: the check reads outside content with no guard
+    hook, so an allow rule a settings file gained for Todoist or the like can't apply in it) and every built-in tool but
+    ToolSearch, by name; once each."""
+    out = list(DENY_TOOLS)
+    for t in vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES:
+        if t not in out:
+            out.append(t)
+    return out
 
 
 def vip_check(how="check"):
