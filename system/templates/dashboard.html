@@ -3019,6 +3019,12 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
+/* #122 C: a chip in an editor carries the whole 'ID · Designation: title', so it flows and wraps with the text (Notes and Current state) */
+.rted .nchip{display:inline;white-space:normal;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone;line-height:1.5}
+.rted .nchip::before{display:inline-block;vertical-align:middle;margin:-2px 5px 0 0}
+.rted a .nchip,.rted .nchip a{color:var(--ink);text-decoration:none}
+.itemref{white-space:normal}
+.ntpick.items{width:440px} .ntpick.items .r .l{flex:1;min-width:0}
 .ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
@@ -4230,6 +4236,7 @@ button.nchip{font:inherit;font-size:12px}
     curGuard: () => curGuard,
     curLoad: () => curLoad,
     curObj: () => curObj,
+    curOpenItem: () => curOpenItem,
     curPane: () => curPane,
     curPanes: () => curPanes,
     curReadHtml: () => curReadHtml,
@@ -4616,7 +4623,7 @@ button.nchip{font:inherit;font-size:12px}
     itemDatePicker: () => itemDatePicker,
     itemLate: () => itemLate,
     itemTable: () => itemTable,
-    itemText: () => itemText,
+    itemText: () => itemText2,
     items: () => items,
     itemsMove: () => itemsMove,
     itemsWord: () => itemsWord,
@@ -24687,7 +24694,7 @@ ${s5}`;
       "tpl:lessons-learned",
       "tpl:working-session"
     ],
-    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
+    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"],
     plain: [],
     none: []
   };
@@ -24754,7 +24761,7 @@ ${s5}`;
     },
     current: {
       tip: "Current state",
-      tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"]
+      tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"]
     },
     plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
     none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
@@ -25387,6 +25394,250 @@ ${s5}`;
       editor.off("selectionUpdate", look);
       editor.off("update", look);
       el2.removeEventListener("beforeinput", before, true);
+      el2.removeEventListener("keydown", keys, true);
+      el2.removeEventListener("focusout", blur);
+      el2.removeEventListener("compositionend", comp);
+      st2 = null;
+      R(null, root);
+      root.remove();
+      if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
+    };
+    editor.on("destroy", off);
+    return off;
+  }
+
+  // core/itemLink.js
+  var ITEM_HREF = /^creaite:item\/(.+)$/;
+  function itemOf(id2) {
+    const a5 = A4.find((x5) => x5.id === id2);
+    if (a5) return { k: "actions", x: a5 };
+    const r4 = R3.find((x5) => x5.id === id2);
+    if (r4) return { k: "raid", x: r4 };
+    const d5 = DEC.find((x5) => x5.id === id2);
+    if (d5) return { k: "decisions", x: d5 };
+    return null;
+  }
+  function designation(id2) {
+    const hit2 = itemOf(id2);
+    if (!hit2) return "";
+    const x5 = (
+      /** @type {any} */
+      hit2.x
+    );
+    return hit2.k === "actions" ? "Action" : hit2.k === "raid" ? String(x5.type || "Risk") : "Decision";
+  }
+  function itemText(id2) {
+    const hit2 = itemOf(id2), t47 = hit2 ? String(
+      /** @type {any} */
+      hit2.x.t || ""
+    ).replace(/\s+/g, " ").replace(/[[\]]/g, (m5) => m5 === "[" ? "(" : ")").trim() : "";
+    const d5 = designation(id2);
+    return d5 ? `${id2} · ${d5}${t47 ? `: ${t47}` : ""}` : id2;
+  }
+  function itemContent(id2) {
+    return [{ type: "text", text: itemText(id2), marks: [{ type: "link", attrs: { href: `creaite:item/${id2}` } }] }, { type: "text", text: " " }];
+  }
+  function itemState(id2) {
+    const hit2 = itemOf(id2);
+    if (!hit2) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
+    const x5 = (
+      /** @type {any} */
+      hit2.x
+    ), st2 = String(x5.st || ""), open2 = /^(Open|Delayed|Pending|Proposed)$/i.test(st2);
+    let tone = open2 ? "warn" : "ok", words = st2;
+    if (hit2.k === "actions") {
+      if (open2 && x5.due && x5.due < TODAY) {
+        tone = "bad";
+        words = `${st2}, overdue ${fd(x5.due)}`;
+      } else if (open2 && x5.due) words = `${st2}, due ${fd(x5.due)}`;
+      if (x5.o) words += ` · ${x5.o}`;
+    } else if (hit2.k === "raid") {
+      if (open2 && x5.pr === "Urgent") tone = "bad";
+      words = `${x5.type || "Risk"} · ${st2}${x5.pr ? ` · ${x5.pr}` : ""}`;
+    } else words = `Decision · ${st2}`;
+    return { tone, words, title: `${id2} · ${x5.t || ""} · ${words}` };
+  }
+  function itemOptions(code, q5) {
+    const ql2 = q5.toLowerCase(), L3 = [];
+    for (
+      const [rows2, icon] of
+      /** @type {[any[], string][]} */
+      [[A4, "check"], [R3, "alert"], [DEC, "flag"]]
+    )
+      for (const x5 of rows2) {
+        if (code !== "_portfolio" && x5.p !== code) continue;
+        if (ql2 && !(x5.id.toLowerCase().includes(ql2) || String(x5.t || "").toLowerCase().includes(ql2) || designation(x5.id).toLowerCase().includes(ql2))) continue;
+        L3.push({ id: x5.id, label: itemText(x5.id), icon, open: /^(Open|Delayed|Pending)$/i.test(x5.st || "") });
+      }
+    return L3.sort((a5, b5) => Number(!!b5.open) - Number(!!a5.open)).slice(0, 8);
+  }
+  function itemChip(node, pos) {
+    const link = node.marks.find((m5) => m5.type.name === "link"), im2 = link ? ITEM_HREF.exec(String(link.attrs.href || "")) : null;
+    if (!im2) return null;
+    const s5 = itemState(im2[1]);
+    return Z.inline(pos, pos + node.nodeSize, { class: `nchip ${s5.tone}`, "data-item": im2[1], title: `${s5.title} (click to open)` });
+  }
+  function itemChips() {
+    return j3.create({ name: "cxItemChips", addProseMirrorPlugins: () => [new L2({
+      key: new _3("cxItemChips"),
+      props: { decorations: (state) => {
+        const out = [];
+        state.doc.descendants((node, pos) => {
+          if (node.isText) {
+            const d5 = itemChip(node, pos);
+            if (d5) out.push(d5);
+          }
+        });
+        return B3.create(state.doc, out);
+      } }
+    })] });
+  }
+  function chipClicked(e4) {
+    if (e4.altKey) return "";
+    const t47 = (
+      /** @type {Element} */
+      e4.target
+    ), c5 = t47 && t47.closest ? t47.closest("[data-item]") : null;
+    return c5 ? c5.getAttribute("data-item") || "" : "";
+  }
+
+  // components/ItemPicker.jsx
+  function hashAt(editor) {
+    const s5 = editor.state.selection;
+    if (!s5.empty) return null;
+    const $f2 = s5.$from;
+    if ($f2.parent.type.name === "codeBlock") return null;
+    if ($f2.marks().some(
+      /** @param {any} m */
+      (m6) => m6.type.name === "code" || m6.type.name === "link"
+    )) return null;
+    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before);
+    if (!m5 || /\[\[[^\]]*$/.test(before)) return null;
+    return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
+  }
+  function insertHash(h5) {
+    const e4 = h5.editor, s5 = e4.state.selection, before = s5.empty ? s5.$from.parent.textBetween(0, s5.$from.parentOffset, void 0, "￼") : "";
+    e4.chain().focus().insertContent(before && !/\s$/.test(before) ? " #" : "#").run();
+  }
+  function ItemList({ state, view, pick, hover }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    _2(() => {
+      const el2 = box.current;
+      return el2 ? placeAtCaret(view, state.from, el2) : void 0;
+    }, [state.opts.length, state.from, state.q]);
+    h2(() => {
+      const on2 = box.current && box.current.querySelector(".r.on");
+      if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest" });
+    }, [state.i]);
+    return /* @__PURE__ */ u2("div", { ref: box, class: "ntpick items", id: "ntpick", role: "listbox", "aria-label": "Link a work item", onMouseDown: (e4) => e4.preventDefault(), children: [
+      /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: "Work items" }),
+      state.opts.map((o5, i5) => /* @__PURE__ */ u2(
+        "div",
+        {
+          id: `ntpick-${i5}`,
+          role: "option",
+          "data-item-opt": o5.id,
+          "aria-selected": i5 === state.i ? "true" : "false",
+          class: `r${i5 === state.i ? " on" : ""}`,
+          onMouseMove: () => {
+            if (i5 !== state.i) hover(i5);
+          },
+          onClick: () => pick(o5),
+          children: [
+            o5.icon ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
+            /* @__PURE__ */ u2("span", { class: "l", children: o5.label })
+          ]
+        },
+        o5.id
+      ))
+    ] });
+  }
+  function attachItemPick(h5, { code }) {
+    const editor = h5.editor, view = editor.view, el2 = h5.el;
+    const root = document.createElement("div");
+    root.className = "itemrootpick";
+    (el2.closest("dialog[open]") || document.body).appendChild(root);
+    let st2 = null;
+    let dismissed = -1;
+    const draw2 = () => {
+      R(st2 ? /* @__PURE__ */ u2(ItemList, { state: st2, view, pick: choose, hover: (i5) => {
+        if (st2) {
+          st2 = { ...st2, i: i5 };
+          draw2();
+        }
+      } }) : null, root);
+      const dom = (
+        /** @type {HTMLElement} */
+        view.dom
+      );
+      if (st2) {
+        dom.setAttribute("aria-haspopup", "listbox");
+        dom.setAttribute("aria-expanded", "true");
+        dom.setAttribute("aria-controls", "ntpick");
+        dom.setAttribute("aria-activedescendant", `ntpick-${st2.i}`);
+      } else for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a5);
+    };
+    const close = () => {
+      if (!st2) return;
+      st2 = null;
+      draw2();
+    };
+    const look = () => {
+      if (editor.isDestroyed || view.composing) return;
+      const a5 = hashAt(editor);
+      if (!a5 || a5.from === dismissed) {
+        if (!a5) dismissed = -1;
+        return close();
+      }
+      const opts = itemOptions(code(), a5.q);
+      if (!opts.length) return close();
+      st2 = { ...a5, opts, i: st2 && st2.from === a5.from ? Math.min(st2.i, opts.length - 1) : 0 };
+      draw2();
+    };
+    const choose = (o5) => {
+      const s5 = st2;
+      if (!s5) return;
+      close();
+      editor.chain().focus().deleteRange({ from: s5.from, to: s5.to }).insertContent(itemContent(o5.id)).run();
+    };
+    const keys = (e4) => {
+      if (!st2 || e4.defaultPrevented || e4.isComposing || view.composing) return;
+      const n4 = st2.opts.length;
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
+        draw2();
+      } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        choose(st2.opts[st2.i]);
+      } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
+        e4.preventDefault();
+        e4.stopPropagation();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        dismissed = st2.from;
+        close();
+      }
+    };
+    const blur = () => setTimeout(() => {
+      if (!el2.contains(document.activeElement)) close();
+    }, 150);
+    const comp = () => look();
+    editor.on("selectionUpdate", look);
+    editor.on("update", look);
+    el2.addEventListener("keydown", keys, true);
+    el2.addEventListener("focusout", blur);
+    el2.addEventListener("compositionend", comp);
+    const off = () => {
+      editor.off("destroy", off);
+      editor.off("selectionUpdate", look);
+      editor.off("update", look);
       el2.removeEventListener("keydown", keys, true);
       el2.removeEventListener("focusout", blur);
       el2.removeEventListener("compositionend", comp);
@@ -42767,6 +43018,13 @@ ${s5}`;
       })();
       return true;
     },
+    handleClick: (view, pos, e4) => {
+      const id2 = chipClicked(e4), hit2 = id2 && itemOf(id2);
+      if (!hit2) return false;
+      curOpenItem(hit2.k, id2);
+      return true;
+    },
+    /* #122 C: an item link is a chip; a click opens it, Alt-click edits inside it */
     handleDrop: (view, e4) => {
       const files = [...e4.dataTransfer && e4.dataTransfer.files || []];
       if (!files.length) return false;
@@ -42778,6 +43036,15 @@ ${s5}`;
       return true;
     }
   };
+  function curOpenItem(k5, id2) {
+    const c5 = shared.CURED;
+    shared.CURED = null;
+    try {
+      openRecord(k5, id2);
+    } finally {
+      shared.CURED = c5;
+    }
+  }
   function curAttach(n4) {
     const c5 = shared.CURED, slot = $(n4 === 2 ? "#curEd2" : "#curEd"), k5 = n4 === 2 ? "ed2" : "ed1";
     if (!c5 || !slot) return;
@@ -42790,12 +43057,14 @@ ${s5}`;
     c5[k5] = creaiteEditor(slot, {
       features: "current",
       headShift: HEAD_SHIFT,
+      extensions: [itemChips()],
       markdown: (n4 === 2 ? c5.src2 : c5.src1) || "",
       imageSrc: (ref) => imgSrc(imgs, ref),
       editorProps: CUR_PROPS,
       ai: { place: "current", project: () => shared.CURED && shared.CURED.code || "" }
     });
-    attachSlash(c5[k5], { profile: "current", host: { image: pickImage } });
+    attachSlash(c5[k5], { profile: "current", host: { image: pickImage, item: () => insertHash(c5[k5]) } });
+    attachItemPick(c5[k5], { code: () => shared.CURED && shared.CURED.code || "" });
   }
   function curLoad(n4, md2) {
     const c5 = shared.CURED;
@@ -43018,7 +43287,10 @@ ${s5}`;
   function curBar() {
     const el2 = $("#curBar");
     if (!el2) return;
-    mountEditorBar(el2, { profile: "current", legacyRc: true, handle: () => edOf(curPane()), host: { image: pickImage } });
+    mountEditorBar(el2, { profile: "current", legacyRc: true, handle: () => edOf(curPane()), host: { image: pickImage, item: () => {
+      const h5 = edOf(curPane());
+      if (h5) insertHash(h5);
+    } } });
   }
   function curBarOff() {
     const el2 = $("#curBar");
@@ -46274,7 +46546,7 @@ ${d5.text}`);
     return r4 ? (l6 ? l6 + "\n\n" : "") + PANE + "\n\n" + r4 : l6;
   }
   function mdInline(t47) {
-    return esc(t47).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g, (m5, a5, u5) => `<a href="${u5}" target="_blank" rel="noopener">${a5}</a>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
+    return esc(t47).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g, (m5, a5, id2) => `<a href="#" class="itemref" data-oi="${id2}">${a5}</a>`).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g, (m5, a5, u5) => `<a href="${u5}" target="_blank" rel="noopener">${a5}</a>`).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/~~(.+?)~~/g, "<s>$1</s>").replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g, "$1<i>$2</i>");
   }
   function mdBlocks(text) {
     const B4 = [];
@@ -48554,6 +48826,12 @@ ${d5.text}`);
     });
   }
   function bootPanel0181() {
+    document.addEventListener("click", (e4) => {
+      const b5 = e4.target.closest && e4.target.closest("a.itemref[data-oi]");
+      if (!b5 || b5.closest(".ProseMirror")) return;
+      e4.preventDefault();
+      openRecord("all", b5.dataset.oi);
+    });
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-msjump]");
       if (!b5) return;
@@ -53331,48 +53609,8 @@ ${d5.text}`);
   }
 
   // components/notes/NoteEditor.jsx
-  var ITEM_HREF = /^creaite:item\/(.+)$/, PERSON_HREF = /^creaite:person\//;
+  var PERSON_HREF = /^creaite:person\//;
   var WIKI = /\[\[([^[\]\n|]{1,160})(?:\|[^[\]\n]*)?\]\]/g;
-  function itemOf(id2) {
-    const a5 = A4.find((x5) => x5.id === id2);
-    if (a5) return { k: "actions", x: a5 };
-    const r4 = R3.find((x5) => x5.id === id2);
-    if (r4) return { k: "raid", x: r4 };
-    const d5 = DEC.find((x5) => x5.id === id2);
-    if (d5) return { k: "decisions", x: d5 };
-    return null;
-  }
-  function itemState(id2) {
-    const hit2 = itemOf(id2);
-    if (!hit2) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
-    const x5 = (
-      /** @type {any} */
-      hit2.x
-    ), st2 = String(x5.st || ""), open2 = /^(Open|Delayed|Pending|Proposed)$/i.test(st2);
-    let tone = open2 ? "warn" : "ok", words = st2;
-    if (hit2.k === "actions") {
-      if (open2 && x5.due && x5.due < TODAY) {
-        tone = "bad";
-        words = `${st2}, overdue ${fd(x5.due)}`;
-      } else if (open2 && x5.due) words = `${st2}, due ${fd(x5.due)}`;
-      if (x5.o) words += ` · ${x5.o}`;
-    } else if (hit2.k === "raid") {
-      if (open2 && x5.pr === "Urgent") tone = "bad";
-      words = `${x5.type || "Risk"} · ${st2}${x5.pr ? ` · ${x5.pr}` : ""}`;
-    } else words = `Decision · ${st2}`;
-    return { tone, words, title: `${id2} · ${x5.t || ""} · ${words}` };
-  }
-  function itemOptions(code, q5) {
-    const ql2 = q5.toLowerCase(), L3 = [];
-    for (
-      const [rows2, icon] of
-      /** @type {[any[], string][]} */
-      [[A4, "check"], [R3, "alert"], [DEC, "flag"]]
-    )
-      for (const x5 of rows2) if ((code === "_portfolio" || x5.p === code) && (!ql2 || x5.id.toLowerCase().includes(ql2) || String(x5.t || "").toLowerCase().includes(ql2)))
-        L3.push({ id: x5.id, label: x5.id, sub: x5.t || "", icon, open: /^(Open|Delayed|Pending)$/i.test(x5.st || "") });
-    return L3.sort((a5, b5) => Number(b5.open) - Number(a5.open)).slice(0, 8);
-  }
   function personOptions(q5) {
     const ql2 = q5.toLowerCase(), seen = /* @__PURE__ */ new Set(), L3 = [];
     for (
@@ -53395,10 +53633,9 @@ ${d5.text}`);
     doc.descendants((node, pos) => {
       if (!node.isText) return;
       const link = node.marks.find((m5) => m5.type.name === "link"), href = link ? String(link.attrs.href || "") : "";
-      const im2 = ITEM_HREF.exec(href);
-      if (im2) {
-        const s5 = itemState(im2[1]);
-        out.push(Z.inline(pos, pos + node.nodeSize, { class: `nchip ${s5.tone}`, "data-item": im2[1], title: `${s5.title} (click to open)` }));
+      const chip = ITEM_HREF.test(href) ? itemChip(node, pos) : null;
+      if (chip) {
+        out.push(chip);
         return;
       }
       if (PERSON_HREF.test(href)) {
@@ -53521,7 +53758,7 @@ ${d5.text}`);
         /** @type {PickState["kind"]|null} */
         null
       ), q5 = "", at2 = 0;
-      const mn2 = /\[\[([^[\]\n]{0,60})$/.exec(before), mp2 = /(^|\s)@([\w .'’-]{0,40})$/.exec(before), mi2 = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before);
+      const mn2 = /\[\[([^[\]\n]{0,60})$/.exec(before), mp2 = /(^|\s)@([\w .'’-]{0,40})$/.exec(before);
       if (mn2) {
         kind = "note";
         q5 = mn2[1];
@@ -53530,10 +53767,6 @@ ${d5.text}`);
         kind = "person";
         q5 = mp2[2];
         at2 = mp2.index + mp2[1].length;
-      } else if (mi2) {
-        kind = "item";
-        q5 = mi2[2];
-        at2 = mi2.index + mi2[1].length;
       }
       if (!kind) return setPick(null);
       const opts = optionsFor(kind, q5);
@@ -53548,8 +53781,7 @@ ${d5.text}`);
         if (q5.trim() && !L3.some((o5) => o5.label.toLowerCase() === ql2.trim())) L3.push({ id: "\0" + q5.trim(), label: `Link to “${q5.trim()}”`, sub: "a new note, made when you click it", icon: "plus" });
         return L3;
       }
-      if (kind === "person") return personOptions(q5);
-      return itemOptions(props.current.code, q5);
+      return personOptions(q5);
     };
     const hostRows = () => {
       const m5 = { note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() };
@@ -53574,17 +53806,14 @@ ${d5.text}`);
         c5.insertContent([{ type: "text", text: "@" }, { type: "text", text: o5.id, marks: [{ type: "link", attrs: { href: `creaite:person/${encodeURIComponent(o5.id)}` } }] }, { type: "text", text: " " }]).run();
         return;
       }
-      if (p6.kind === "item") {
-        c5.insertContent([{ type: "text", text: o5.id, marks: [{ type: "link", attrs: { href: `creaite:item/${o5.id}` } }] }, { type: "text", text: " " }]).run();
-        return;
-      }
     };
     const insert = (what) => {
       const h5 = ed3.current;
       if (!h5) return;
       const c5 = h5.editor.chain().focus();
       if (what === "table") c5.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
-      else if (what === "item" || what === "person" || what === "note") c5.insertContent(what === "item" ? "#" : what === "person" ? "@" : "[[").run();
+      else if (what === "item") insertHash(h5);
+      else if (what === "person" || what === "note") c5.insertContent(what === "person" ? "@" : "[[").run();
       else if (what.startsWith("tpl:")) {
         const t47 = (
           /** @type {any} */
@@ -53658,9 +53887,9 @@ ${d5.text}`);
           const t47 = (
             /** @type {Element} */
             e4.target
-          ), item = t47.closest && t47.closest("[data-item]"), wl2 = t47.closest && t47.closest("[data-wl]");
+          ), item = chipClicked(e4), wl2 = t47.closest && t47.closest("[data-wl]");
           if (item) {
-            props.current.onOpenItem(item.getAttribute("data-item") || "");
+            props.current.onOpenItem(item);
             return true;
           }
           if (wl2) {
@@ -53672,6 +53901,7 @@ ${d5.text}`);
       } });
       ed3.current = h5;
       const slashOff = attachSlash(h5, { profile: "notes", host: hostRows() });
+      const itemOff = attachItemPick(h5, { code: () => props.current.code });
       const input = () => {
         props.current.onInput();
       };
@@ -53705,6 +53935,7 @@ ${d5.text}`);
         el2.removeEventListener("mouseleave", out);
         onBody(null);
         slashOff();
+        itemOff();
         h5.destroy();
         ed3.current = null;
         lineState.current.doc = null;
@@ -53801,10 +54032,10 @@ ${d5.text}`);
           class: "ntpick",
           id: "ntpick",
           role: "listbox",
-          "aria-label": { note: "Link to a note", person: "Mention a person", item: "Link a work item" }[pick.kind],
+          "aria-label": { note: "Link to a note", person: "Mention a person" }[pick.kind],
           onMouseDown: (e4) => e4.preventDefault(),
           children: [
-            /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: { note: "Link to a note", person: "People", item: "Work items" }[pick.kind] }),
+            /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: { note: "Link to a note", person: "People" }[pick.kind] }),
             pick.opts.length ? pick.opts.map((o5, i5) => /* @__PURE__ */ u2("div", { id: optId(i5), role: "option", "aria-selected": i5 === pick.i ? "true" : "false", class: `r${i5 === pick.i ? " on" : ""}`, onClick: () => choose(o5), children: [
               o5.icon ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
               /* @__PURE__ */ u2("span", { class: "l", children: o5.label }),
@@ -58700,7 +58931,7 @@ ${d5.text}`);
 
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
-  function itemText(id2) {
+  function itemText2(id2) {
     const x5 = A4.find((a5) => a5.id === id2) || R3.find((r4) => r4.id === id2) || DEC.find((d5) => d5.id === id2);
     if (x5) return x5.t;
     const m5 = (D.milestone_names || {})[id2];
@@ -58722,7 +58953,7 @@ ${d5.text}`);
       const m5 = String(a5.what).match(ID_RE);
       if (!m5) return html`${String(a5.what ?? "")}`;
       id2 = m5[1];
-      text = itemText(id2);
+      text = itemText2(id2);
       change = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
     }
     if (!text) return html`${String(a5.what ?? "")}`;
@@ -58731,7 +58962,7 @@ ${d5.text}`);
     if (kind === "proj") return html`<a href="#" class="hlink" data-proj="${id2}">${pName(id2)}</a> — ${ch2}`;
     const upd = id2.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/);
     if (upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch2}`;
-    const link = kind === "ms" ? html`<a href="${actHref(kind, id2)}" class="hlink" data-ms="${id2}">${id2}</a>` : kind && itemText(id2) ? html`<a href="${actHref(kind, id2)}" class="hlink" data-open="${kind}:${id2}">${id2}</a>` : String(id2 ?? "");
+    const link = kind === "ms" ? html`<a href="${actHref(kind, id2)}" class="hlink" data-ms="${id2}">${id2}</a>` : kind && itemText2(id2) ? html`<a href="${actHref(kind, id2)}" class="hlink" data-open="${kind}:${id2}">${id2}</a>` : String(id2 ?? "");
     return html`${link} · <span title="${text}">${short}</span> — ${ch2}`;
   }
   var ACTKINDS = [
@@ -58927,7 +59158,7 @@ ${d5.text}`);
     if (d5.why) return `<li class="skip"><b>${esc(d5.id || "#" + d5.rowid)}</b> · ${esc(f5)} · skipped: ${esc(d5.why)}</li>`;
     if (d5.change === "removed") return `<li><b>${esc(d5.id)}</b> · removed (that change created it)</li>`;
     if (d5.change === "put back") return `<li><b>${esc(d5.id)}</b> · put back</li>`;
-    const t47 = itemText(d5.id);
+    const t47 = itemText2(d5.id);
     return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val2(d5.from))} → ${esc(val2(d5.to))}</li>`;
   }
   function actConfirm(ids, plan) {

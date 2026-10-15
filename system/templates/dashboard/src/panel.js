@@ -108,7 +108,9 @@ export function splitPanes(t){ t=String(t||""); const ms=paneMarkers(t); if(!ms.
   const cuts=ms.concat([t.length]); let right=""; for(let k=0;k<ms.length;k++) right+=t.slice(cuts[k]+PANE.length,cuts[k+1]);
   return [t.slice(0,ms[0]).trim(),right.replace(/\n{3,}/g,"\n\n").trim()]; }
 export function joinPanes(l,r){ l=String(l||"").trim(); r=String(r||"").trim(); return r?(l?l+"\n\n":"")+PANE+"\n\n"+r:l; }
-export function mdInline(t){ return esc(t).replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`)
+/* #122 C: a work-item link, `[ABC-A-012 · Action: title](creaite:item/ABC-A-012)`, reads as its words and opens the item; a click is handled by the delegate below */
+export function mdInline(t){ return esc(t).replace(/\[([^\]\n]+)\]\(creaite:item\/([A-Za-z0-9-]{3,30})\)/g,(m,a,id)=>`<a href="#" class="itemref" data-oi="${id}">${a}</a>`)
+  .replace(/\[([^\]\n]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)/g,(m,a,u)=>`<a href="${u}" target="_blank" rel="noopener">${a}</a>`)
   .replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/~~(.+?)~~/g,"<s>$1</s>")
   .replace(/(^|[^\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g,"$1<i>$2</i>").replace(/(^|[^\w])_(?!\s)(.+?)(?<!\s)_(?!\w)/g,"$1<i>$2</i>"); }
 export function mdBlocks(text){ const /** @type {any[]} */ B=[]; let para=[], quote=[];
@@ -1042,6 +1044,7 @@ export function bl185Row(){ const row=$("#v-cockpit .evrow"); if(!row) return;
 /* ===== end BL-185 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanel0181(){
+document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("a.itemref[data-oi]"); if(!b||b.closest(".ProseMirror")) return; e.preventDefault(); openRecord("all",b.dataset.oi); });   /* #122 C: a work-item link in a read view opens the item */
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-msjump]"); if(!b) return; e.preventDefault(); const h=[...document.querySelectorAll("#v-cockpit .card h2")].find(x=>x.textContent.trim().startsWith("Milestones")); if(h) mScroll(h.closest(".card"),{block:"start"}); });
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&e.target.matches&&e.target.matches("[data-msjump]")) e.target.click(); });
 }

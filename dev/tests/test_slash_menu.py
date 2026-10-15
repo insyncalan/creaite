@@ -26,7 +26,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 META = 4
 MENU = "document.querySelector('.slashmenu, #ntpick')"
 NOTES_ROWS = ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note"]
-CURRENT_ROWS = ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"]
+CURRENT_ROWS = ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image", "item"]
 STATE = "### Top\n\nFirst paragraph.\n\n#### Middle\n\nSecond paragraph."
 LONG = "\n\n".join(f"Paragraph {i} of a long note so that the editor scrolls." for i in range(1, 40))
 
