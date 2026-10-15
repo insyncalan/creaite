@@ -4,6 +4,9 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | Polish on a report section (v2.1.0): spelling and grammar corrected, plus a suggested light rewrite he accepts or dismisses, never applied on its own | Asked directly (#63, contract 4.10) |
+| 15-10-2026 | Jarvis | Team Cap's #66 points: partner-only is a label (no schema change); Undo leaves the proposal in Review. #63's contract: ✦ an `/api/draft` kind per section; Find the source a lookup with no Claude call; one inline-check route; P5 adds the `dataVersion` signal. #6 (page inputs) into v1.9.5. Team Cap given #65, #6, #84, #83, #85 and #58 | Technical and order-of-work points are the Head's |
+| 15-10-2026 | Jarvis | How sessions talk to each other written into `dev/HOW-WE-WORK.md` | Alan asked for a clarity note; Team Cap had been messaging a laptop 1 session that wasn't Jarvis |
 | 15-10-2026 | Jarvis | Lite digest (12:00). #76's default is moot (Alan decided "keep" directly). Team Cap's #39 fix (non-atomic settings writes) is Team Cap's, and Team Stark's duplicate was stopped; #65 back to Team Cap. #59 closed (v20-rules-notes, non-negotiables checked unchanged). #60's last guard diff (9d893d9: Search's answer like ask creaite) reviewed and pushed | One owner per fix; guard diffs checked against Alan's decisions |
 | 15-10-2026 | Alan | Search's answer is treated like ask creaite: it may draw on confidential notes (not a held run) | It's his own question, shown only on his screen |
 | 15-10-2026 | Jarvis | In held runs, search drops its "n confidential notes also matched" line | A count gives a match away; Alan's "hide entirely" |
