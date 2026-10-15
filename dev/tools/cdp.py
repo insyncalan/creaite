@@ -314,8 +314,12 @@ class Browser:
         self.pump(0.2)
 
     def resize(self, width, height=900):
-        """Make the page this size (a small window)."""
+        """Make the page this size (a small window), and return once it has drawn at that size: innerWidth and innerHeight are
+        the target, then two animation frames have run (media-query change events fire at the next frame, so a measurement taken
+        straight after saw the old layout under load)."""
         self.call("Emulation.setDeviceMetricsOverride", width=width, height=height, deviceScaleFactor=1, mobile=False)
+        self.wait(f"innerWidth==={width} && innerHeight==={height}")
+        self.eval("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))")
 
     def screenshot(self, path):
         with open(path, "wb") as f:
