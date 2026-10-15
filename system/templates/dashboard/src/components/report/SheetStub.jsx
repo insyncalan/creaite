@@ -33,6 +33,7 @@ import { openRecord } from "../../panel.js";
     row?: Record<string, (c: RowCtx) => any>}} SheetRenderers */
 /** @typedef {{text?: string, panes?: {title: string, text: string}[], sources: {ref: string, label: string}[], lines?: string[]}} Redraft */
 /** @typedef {{doc: SheetDoc, label: string, baseVersion?: number, scrollKey?: string, renderers?: SheetRenderers, readOnly?: boolean,
+    match?: (id: string|null) => SheetDoc,
     onChange: (doc: SheetDoc, why: string) => void, onSave?: (r: {doc: SheetDoc, base_version: number|undefined}) => Promise<SaveAnswer>}} SheetPartner */
 /** @typedef {{doc: SheetDoc, baseVersion?: number, scrollKey?: string, zoom?: number, onZoom?: (z: number) => void,
     exported?: boolean, onExported?: (on: boolean) => void, readOnly?: boolean, renderers?: SheetRenderers, extras?: SheetExtra[],
@@ -84,9 +85,9 @@ function StubTag({ tag }) {
 const NoSpark = () => null;
 
 /** One page: its sections in order, through the renderers. @param {{doc: SheetDoc, renderers?: SheetRenderers, extras?: SheetExtra[],
-    exported: boolean, readOnly: boolean, peerDoc: SheetDoc|null, onChange: (d: SheetDoc, why: string) => void,
+    exported: boolean, readOnly: boolean, peerDoc: SheetDoc|null, match?: (id: string|null) => SheetDoc, onChange: (d: SheetDoc, why: string) => void,
     onOpenItem?: (ref: string) => boolean, onEvent: (e: SheetEvent) => void}} props */
-function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, onChange, onOpenItem, onEvent }) {
+function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, match, onChange, onOpenItem, onEvent }) {
   const editing = !exported && !readOnly;
   const setSection = (/** @type {number} */ i, /** @type {Partial<SheetSection>} */ patch, /** @type {string} */ why) => {
     const sections = doc.sections.slice(); sections[i] = { ...sections[i], ...patch }; onChange({ ...doc, sections }, why);
@@ -108,6 +109,7 @@ function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, o
       const own = (renderers.byId || {})[s.id] || (renderers.byType || {})[s.type];
       out.push(<HERE.Provider key={s.id} value={{ ...here0, s, update }}><section data-id={s.id}>
         <h2>{s.heading}</h2>
+        {match && editing ? <div class="sheet-match"><button type="button" class="btn sm" data-sheetmatch={s.id} onClick={() => onChange(match(s.id), "Matched internal")}>Match internal</button></div> : null}
         {own ? own(ctx) : <Default ctx={ctx} rowFn={(renderers.row || {})[s.id]} />}
       </section></HERE.Provider>);
     }
@@ -158,12 +160,13 @@ export function SheetStub(props) {
   };
   const width = `${Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom)) * 100)}%`;
   const page = (/** @type {SheetDoc} */ d, /** @type {SheetPartner|null} */ p) => <Page doc={d} renderers={p ? p.renderers || props.renderers : props.renderers}
-    extras={p ? [] : props.extras} exported={exported} readOnly={readOnly || !!(p && p.readOnly)} peerDoc={p ? doc : partner ? partner.doc : null}
+    extras={p ? [] : props.extras} exported={exported} readOnly={readOnly || !!(p && p.readOnly)} peerDoc={p ? doc : partner ? partner.doc : null} match={p ? p.match : undefined}
     onChange={p ? p.onChange : props.onChange} onOpenItem={props.onOpenItem} onEvent={onEvent} />;
   return (
     <div class="sheet-stub" onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); save(); } }}>
       <div class="sheet-bar" role="toolbar" aria-label="Report">
         <button type="button" class="btn" aria-pressed={exported ? "true" : "false"} onClick={() => { props.onExported?.(!exported); onEvent({ type: "exported", on: !exported }); }}>Show as exported</button>
+        {partner && partner.match && !readOnly && !partner.readOnly ? <button type="button" class="btn" data-sheetmatchall onClick={() => partner.onChange(/** @type {(id: string|null) => SheetDoc} */ (partner.match)(null), "Matched internal")}>Match internal for every section</button> : null}
         {onSave && !readOnly ? <button type="button" class="btn" onClick={save}>Save</button> : null}
         <span class="sub" role="status">{line}</span>
         {props.toolbar || null}

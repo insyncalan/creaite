@@ -1,0 +1,340 @@
+"""v2.1.0 P8 (BL-336): the client view of the week's report, and the check of what is left out before every export.
+
+Two parts, both on test_reports' fictional fixture and its fixed clock (Friday 09-10-2026):
+- ClientCheckRoutes: /api/report/check on a live server (read only: it writes nothing). It lists what the report leaves out and
+  why (not client-visible, Sensitive), offers rows that became client-visible, finds internal wording, and says whether the
+  internal week is approved. The export route runs the same check before every client export and answers with it; an export is
+  refused when the check finds a leak, and the internal health reason never reaches the exported page.
+- ClientView: the view in a real browser (LiveBrowserCase; no Claude runs). The client health popover needs a reason, Match
+  internal copies a section (and says so), the eyes show and hide rows, "Not in this report" lists what the report leaves out,
+  Side by side shows the internal page read only, and Check and export opens the left-out check before any export.
+
+Run: python3 dev/tests/test_client_view.py      (the browser part is skipped without Chrome)
+Screenshots: CREAITE_SHOTS=<folder> python3 dev/tests/test_client_view.py ClientBrowser.test_zz_screenshots
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import unittest
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import test_reports as R  # noqa: E402  (its fixture: populate, ReportVault, NOW)
+from live_browser import LiveBrowserCase  # noqa: E402
+
+VISIBLE_MSG = ("What it is: The vendor may leave the market.\nWhat it means for you: Testing could slip.\n"
+               "What is being done: A second vendor is being lined up.")
+
+
+def post(base, token, path, body):
+    import urllib.request
+    req = urllib.request.Request(base + path, data=json.dumps(body).encode(), method="POST",
+                                 headers={"Content-Type": "application/json", "X-Creaite-Token": token})
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return json.loads(r.read().decode())
+
+
+def section(doc, sid):
+    return next(s for s in doc["sections"] if s["id"] == sid)
+
+
+class ClientCheckRoutes(unittest.TestCase):
+    """/api/report/check and the export's check, on a live server in a throwaway vault."""
+
+    @classmethod
+    def setUpClass(cls):
+        import socket
+        import time
+        import urllib.request
+        cls.v = v = R.ReportVault()
+        R.populate(v)
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            cls.port = sock.getsockname()[1]
+        cls.base = f"http://127.0.0.1:{cls.port}"
+        env = {**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_NOW": R.NOW, "CREAITE_NO_LAUNCH": "1"}
+        cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            try:
+                urllib.request.urlopen(cls.base + "/health", timeout=1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        html = urllib.request.urlopen(cls.base + "/").read().decode()
+        cls.token = json.loads(re.search(r'id="data">(.*?)</script>', html, re.S).group(1).replace("<\\/", "</"))["token"]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.terminate()
+        cls.proc.wait(timeout=10)
+        cls.v.cleanup()
+
+    def post(self, path, body):
+        return post(self.base, self.token, path, body)
+
+    def client(self):
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(r["ok"], r)
+        return r["doc"]
+
+    def change(self, name, items):
+        self.v.propose(name, items)
+        self.v.run("apply")
+
+    def drafts(self):
+        return sorted(p.name for p in (self.v.root / "system/staging/drafts").glob("*"))
+
+    def test_1_check_lists_what_is_left_out_and_writes_nothing(self):
+        doc = self.client()
+        before = self.drafts()
+        c = self.post("/api/report/check", {"doc": doc})
+        self.assertTrue(c["ok"], c)
+        lo = c["left_out"]
+        why = {x["ref"]: (x["group"], x["kind"], x["why"]) for x in lo["items"]}
+        self.assertEqual(why["ABC-005"], ("risks", "blocked", "not client-visible"))
+        self.assertEqual(why["ABC-D-008"], ("decisions", "blocked", "not client-visible"))
+        self.assertNotIn("ABC-006", why)                                    # shown, so not left out
+        self.assertFalse(lo["ready"])                                       # the internal week is not approved yet
+        self.assertIn("Approve the internal weekly report", lo["not_ready"])
+        self.assertEqual(lo["findings"], [])
+        self.assertEqual(self.drafts(), before, "the check wrote nothing")
+
+    def test_2_a_row_that_became_client_visible_is_offered_and_a_sensitive_one_never(self):
+        doc = self.client()
+        self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
+        self.change("visible", [{"n": 1, "op": "update", "table": "raid", "id": "ABC-005",
+                                 "changes": {"client_visible": 1, "client_message": VISIBLE_MSG}, "decision": "approved"}])
+        c = self.post("/api/report/check", {"doc": self.client()})
+        add = [a for a in c["addable"] if a["row"]["ref"] == "ABC-005"]
+        self.assertEqual([a["section"] for a in add], ["risks"])
+        self.assertIn("The vendor may leave the market.", json.dumps(add[0]["item"]))
+        self.assertNotIn("Vendor exits the market", json.dumps(c["addable"]))        # the client wording, never the internal
+        self.change("sensitive", [{"n": 1, "op": "new", "table": "item_labels", "match": "strong", "flags": [], "decision": "approved",
+                                   "values": {"item_id": "ABC-005", "label": "Sensitive", "reason": "kept from the client"}}])
+        c = self.post("/api/report/check", {"doc": self.client()})
+        self.assertEqual([a for a in c["addable"] if a["row"]["ref"] == "ABC-005"], [])
+        item = next(x for x in c["left_out"]["items"] if x["ref"] == "ABC-005")
+        self.assertEqual((item["kind"], item["why"]), ("sensitive", "Sensitive: never in a client report"))
+
+    def test_3_internal_wording_is_a_finding_that_blocks(self):
+        doc = self.client()
+        section(doc, "summary")["text"] = "We will absorb the phase one overrun internally."
+        c = self.post("/api/report/check", {"doc": doc})
+        self.assertTrue(any("ABC-D-008" in f for f in c["left_out"]["findings"]), c["left_out"]["findings"])
+
+    def test_4_the_export_runs_the_check_and_the_health_reason_stays_internal(self):
+        doc = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+        section(doc, "health")["text"] = "UAT start slipped two weeks."
+        self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
+        a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        doc = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fresh": True})["doc"]
+        self.assertTrue(doc["based_on"], "a draft rebuilt after the internal week is approved locks to it")
+        doc["meta"]["health_diff"] = {"internal": "At risk", "client": "On track", "reason": "INTERNAL-REASON-ZED"}
+        section(doc, "health")["data"]["flag"] = "On track"
+        section(doc, "health")["text"] = "Testing starts on plan."
+        saved = self.post("/api/report/save", {"doc": doc})
+        self.assertTrue(saved["ok"], saved)
+        c = self.post("/api/report/check", {"doc": doc})
+        self.assertTrue(c["left_out"]["ready"], c["left_out"])
+        self.assertEqual(c["left_out"]["health"], {"internal": "At risk", "client": "On track", "reason": "INTERNAL-REASON-ZED"})
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
+        self.assertTrue(e["ok"], e)
+        self.assertIn("left_out", e)                                        # the check ran before the export, and says what it found
+        self.assertEqual(e["left_out"]["findings"], [])
+        exported = Path(e["path"] if os.path.isabs(e["path"]) else self.v.root / e["path"]).read_text(encoding="utf-8")
+        self.assertNotIn("INTERNAL-REASON-ZED", exported)
+        self.assertNotIn("creaite-data", exported)
+        section(doc, "summary")["text"] = "Restricted: the overrun is absorbed internally."
+        self.assertTrue(self.post("/api/report/save", {"doc": doc})["ok"])
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
+        self.assertFalse(e["ok"])
+        self.assertIn("contains “restricted”", e["left_out"]["findings"])
+
+    def test_5_the_health_difference_and_its_reason_are_in_the_draft_and_never_in_the_filed_file(self):
+        """Alan, 15-10-2026: kept only in the draft, never in the filed client file, its data block included (the whole key goes: it
+        names the internal flag too). The internal report reads the difference from the draft; after filing, from the client page's
+        own flag."""
+        for n, reason in enumerate(("DISTINCTIVE-REASON-ONE", "DISTINCTIVE-REASON-TWO")):
+            doc = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fresh": n == 0})["doc"]
+            doc["meta"]["health_diff"] = {"internal": "At risk", "client": "On track", "reason": reason}
+            section(doc, "health")["data"]["flag"] = "On track"
+            saved = self.post("/api/report/save", {"doc": doc, "base_version": doc.get("version") or None})
+            self.assertTrue(saved["ok"], saved)
+            back = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+            self.assertEqual(back["meta"]["health_diff"]["reason"], reason, "the draft keeps it (the internal report shows it from here)")
+            a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "force": True})
+            self.assertTrue(a["ok"], a)
+            filed = next((self.v.root / "projects").glob("*/reports/2026-10-09 Client report*.html")).read_text(encoding="utf-8")
+            self.assertIn('"state": "approved"', filed)
+            for gone in ("health_diff", reason, "DISTINCTIVE-REASON", '"internal": "At risk"'):
+                self.assertNotIn(gone, filed)
+            after = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+            self.assertNotIn("health_diff", after["meta"])
+            self.assertEqual(section(after, "health")["data"]["flag"], "On track")      # the flag difference is still readable
+
+
+class ClientBrowser(LiveBrowserCase):
+    """The view in a real browser, over the same fixture."""
+
+    @classmethod
+    def load(cls, v):
+        R.populate(v)
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_NOW": R.NOW, "CREAITE_NO_LAUNCH": "1"}
+
+    def api(self, path, body):
+        return post(self.base, self.token(), path, body)
+
+    def words(self, selector, without=".crnot"):
+        """What a part of the page says: its text and the words in its text boxes (a textarea's value isn't innerText), leaving out
+        `without` (the "Not in this report" lists: creaite's own notes to Alan, which name internal items on purpose and are never
+        part of the report or an export)."""
+        return self.b.eval(f"""(e=>{{ e=e.cloneNode(true); if({json.dumps(without)}) e.querySelectorAll({json.dumps(without)}).forEach(x=>x.remove());
+          const live=[...document.querySelector({json.dumps(selector)}).querySelectorAll('textarea')].map(t=>t.value);
+          return e.innerText+' '+live.join(' '); }})(document.querySelector({json.dumps(selector)}))""")
+
+    def token(self):
+        return self.b.eval("D.token")
+
+    def open_view(self, week="2026-10-09"):
+        self.b.eval(f"go('clientreport',{{code:'ABC',week:'{week}'}})")
+        self.b.wait("document.querySelector('#v-clientreport .crhealth')", 20)
+
+    def approve_internal(self, summary="The internal summary, not for the client."):
+        doc = self.api("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+        section(doc, "health")["text"] = "UAT start slipped two weeks."
+        section(doc, "summary")["text"] = summary
+        self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
+        return doc
+
+    def test_opens_with_the_clients_own_words_and_none_of_the_internal_ones(self):
+        self.open_view()
+        page = self.words("#v-clientreport .page")
+        self.assertIn("Test licences are not yet ordered.", page)
+        for internal in ("ABC-005", "Vendor exits the market", "Absorb the phase one overrun", "Confirm tester names"):
+            self.assertNotIn(internal, page)
+        self.assertEqual(self.b.eval("document.title.startsWith('creaite')"), True)
+        self.assertEqual(self.b.eval("location.hash.startsWith('#client-report=ABC/2026-10-09/')"), True)
+
+    def test_client_health_needs_a_reason_and_match_internal_health_takes_the_internal_flag(self):
+        self.open_view()
+        flag = "document.querySelector('[data-crflag]')"
+        self.b.click("[data-crflag]")
+        self.b.wait("document.querySelector('.crpop')")
+        self.assertTrue(self.b.eval("document.activeElement && document.activeElement.closest('.crpop')!==null"))
+        self.b.click("[data-crpick='On track']")
+        self.assertTrue(self.b.eval("document.querySelector('[data-crhsave]').disabled"), "a differing flag needs a reason")
+        self.b.eval("(()=>{ const t=document.getElementById('crWhy'); t.value='Testing is on plan for the client.'; t.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        self.b.click("[data-crhsave]")
+        self.assertEqual(self.b.eval(f"{flag}.textContent"), "ON TRACK")
+        self.assertTrue(self.b.eval("!!document.querySelector('[data-crdif]')"), "the page says it differs from the internal health")
+        self.b.click("[data-crflag]")
+        self.b.wait("document.querySelector('.crpop')")
+        self.b.key("Escape")                                                           # Esc closes it, focus back on the flag
+        self.b.wait("!document.querySelector('.crpop')")
+        self.assertTrue(self.b.eval(f"document.activeElement === {flag}"))
+        self.b.click("[data-crflag]")
+        self.b.click("[data-crmatchhealth]")
+        internal = self.b.eval("(()=>{ const m=document.querySelector('[data-crdif]'); return m?m.textContent:'' })()")
+        self.assertEqual(internal, "", "matching internal health clears the difference")
+
+    def test_an_eye_hides_a_row_and_match_internal_copies_a_section(self):
+        self.approve_internal()
+        self.open_view()
+        self.b.click("[data-crtable='risks'] [data-creye]")
+        self.assertTrue(self.b.eval("!!document.querySelector('[data-crtable=\"risks\"] tr.crhid')"))
+        self.assertIn("Showing 0 of 1", self.b.eval("document.querySelector('.crcount').textContent"))
+        self.b.click("[data-crtable='risks'] [data-creye]")                           # back: cells rebuilt from the client item
+        self.assertIn("Test licences are not yet ordered.", self.words("[data-crtable='risks']"))
+        self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
+        self.b.click("[data-matchone='summary']")
+        self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Matching internal")
+        self.assertEqual(self.b.eval("document.querySelector('section[data-id=\"summary\"] textarea').value"),
+                         "The internal summary, not for the client.")
+
+    def test_not_in_this_report_names_what_is_left_out_with_a_way_to_change_it(self):
+        self.open_view()
+        self.b.wait("document.querySelector('[data-crnot=\"risks\"]')", 15)
+        self.assertEqual(self.b.eval("document.querySelector('[data-crleft=\"ABC-005\"] [data-crvisible]')!==null"), True)
+        self.assertIn("not client-visible", self.b.eval("document.querySelector('[data-crleft=\"ABC-005\"]').innerText").lower())
+        self.api("/api/report/check", {"doc": self.api("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]})
+
+    def test_side_by_side_shows_the_internal_page_read_only(self):
+        self.approve_internal()
+        self.open_view()
+        self.b.click("[data-crmode='side']")
+        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .page').length===2")
+        left = "document.querySelector('#v-clientreport .sheet-pair > .page')"
+        self.assertIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page"))                    # the internal page has its own
+        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page + .page"))
+        self.assertTrue(self.b.eval(f"[...{left}.querySelectorAll('textarea')].every(t=>t.readOnly)"))
+        # the sheet's Match internal (partner.match) is the client-safe match: the summary comes over, never an internal row
+        self.b.click("[data-sheetmatch='summary']")
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .page')[1].querySelector('section[data-id=\"summary\"] textarea').value"),
+                         "The internal summary, not for the client.")
+        self.b.click("[data-sheetmatchall]")
+        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page + .page"))
+
+    def test_export_waits_for_the_internal_week_and_the_check_runs_before_every_export(self):
+        self.approve_internal()
+        self.open_view()
+        self.assertTrue(self.b.eval("document.querySelector('[data-crcheck]').disabled"))
+        self.assertTrue(self.b.eval("document.querySelector('[data-crapprove]').disabled"))
+        a = self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.open_view()
+        self.b.wait("document.querySelector('[data-crcheck]:not([disabled])')", 15)     # the reload after the approval has landed
+        self.b.eval("(()=>{ window.__calls=[]; const f=window.fetch; window.fetch=(u,o)=>{ window.__calls.push(String(u)); return f(u,o); }; })()")
+        self.b.click("[data-crcheck]")
+        self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
+        text = self.b.eval("document.querySelector('#crLeftDlg').innerText")
+        self.assertIn("ABC-005 (not client-visible)", text)
+        self.assertIn("Internal notes and sources", text)
+        self.assertEqual(self.b.eval("window.__calls.filter(u=>u.endsWith('/api/report/check')).length>0"), True)
+        self.b.click("[data-crexport='html']")
+        self.b.wait("!document.querySelector('#crLeftDlg').open", 30)
+        calls = self.b.eval("window.__calls")
+        self.assertLess([i for i, u in enumerate(calls) if u.endswith('/api/report/check')][0],
+                        [i for i, u in enumerate(calls) if u.endswith('/api/report/export')][0], "the check came first")
+
+    @unittest.skipUnless(os.environ.get("CREAITE_SHOTS"), "set CREAITE_SHOTS=<folder> for screenshots")
+    def test_zz_screenshots(self):
+        out = Path(os.environ["CREAITE_SHOTS"])
+        out.mkdir(parents=True, exist_ok=True)
+        self.approve_internal("Testing is on plan; one risk is being watched.")
+        self.api("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.open_view()
+        self.b.wait("document.querySelector('[data-crnot]')", 15)
+        for w, h in ((1400, 1000), (900, 900)):
+            self.b.resize(w, h)
+            for theme in ("light", "dark"):
+                self.b.eval(f"document.documentElement.setAttribute('data-theme','{theme}')")
+                self.b.pump(0.4)
+                self.b.screenshot(str(out / f"client-{w}-{theme}.png"))
+                self.b.eval("document.querySelector('#v-clientreport .sheet-scroll').scrollTop=0")
+                if w == 1400:   # the other views once, at the desktop width
+                    self.b.click("[data-crmode='side']")
+                    self.b.pump(0.5)
+                    self.b.screenshot(str(out / f"side-{w}-{theme}.png"))
+                    self.b.click("[data-crmode='client']")
+                    self.b.click("[data-crcheck]")
+                    self.b.wait("document.querySelector('#crLeftDlg[open] [data-crleft-list]')", 15)
+                    self.b.pump(0.3)
+                    self.b.screenshot(str(out / f"leftout-{w}-{theme}.png"))
+                    self.b.key("Escape")
+                    self.b.pump(0.2)
+                    self.b.click("[data-crflag]")
+                    self.b.pump(0.3)
+                    self.b.screenshot(str(out / f"health-{w}-{theme}.png"))
+                    self.b.key("Escape")
+        self.assertTrue(any(out.glob("client-*.png")))
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
