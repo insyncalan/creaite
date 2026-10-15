@@ -2177,31 +2177,46 @@ def client_report_facts(con, code, fri):
     with contextlib.redirect_stdout(sys.stderr):
         c = report_doc._Client(code, fri, None, None)
     blocking = client_leak.blocking_labels(con)
-    lines = []
-    for m in c.of("milestones"):
-        lines.append(("Milestones", f"Milestone {m['title']}: {m['state']}" + (f", {m['shown_date']}" if m.get("shown_date") else ""), m["id"]))
-    for a in c.of("actions"):
-        if a["status"] == "Complete":
-            if c.start <= (a.get("closed") or "")[:10] <= c.end:
-                lines.append(("Progress", f"Completed: {a['title']}", a["id"]))
-        elif a["status"] != "Cancelled":
-            due = f", due {tracker.shown(a['due_date'])}" if a.get("due_date") else ""
-            lines.append(("Asks" if a["client_owned"] else "Actions",
-                          f"{'Asked of you' if a['client_owned'] else 'Action'}: {a['title']} ({a['owner']}){due}, {a['status'].lower()}", a["id"]))
-    for d in c.of("decisions"):
-        if d["status"] == "Made" and (d.get("date") or "") >= c.start:
-            lines.append(("Decisions", f"Decision made {tracker.shown(d['date'])}: {d['title']}", d["id"]))
-        elif d["status"] == "Pending":
-            lines.append(("Decisions", f"Decision needed{' by ' + tracker.shown(d['needed_by']) if d.get('needed_by') else ''}: {d['title']}",
-                          d["id"]))
-    for r in c.of("raid"):
-        lines.append(("Points to watch", f"{r['type']}: {r['title']}", r["id"]))
+    lines = client_lines(c)
     src = [{"id": ref, "kind": kind, "text": text} for kind, text, ref in lines
            if text.strip() and client_line_ok(con, code, {"text": text, "src": [ref]}, blocking)]
     note = (f"The facts are the client report's own, locked to the approved internal weekly report for week ending "
             f"{tracker.shown(c.base['date'])}." if c.locked else
             "The facts are the client report's own, as they stand today: no internal weekly report is approved for it yet.")
     return src, c.start, c.end, note
+
+
+def _client_action_line(c, a):
+    """(kind, line, id) for a client-facts action, or None: completed in the period, or open (an ask when the client owns it)."""
+    if a["status"] == "Complete":
+        return ("Progress", f"Completed: {a['title']}", a["id"]) if c.start <= (a.get("closed") or "")[:10] <= c.end else None
+    if a["status"] == "Cancelled":
+        return None
+    due = f", due {tracker.shown(a['due_date'])}" if a.get("due_date") else ""
+    who = "Asked of you" if a["client_owned"] else "Action"
+    return ("Asks" if a["client_owned"] else "Actions", f"{who}: {a['title']} ({a['owner']}){due}, {a['status'].lower()}", a["id"])
+
+
+def _client_decision_line(c, d):
+    """(kind, line, id) for a client-facts decision: made in the period, or still needed; else None."""
+    if d["status"] == "Made" and (d.get("date") or "") >= c.start:
+        return ("Decisions", f"Decision made {tracker.shown(d['date'])}: {d['title']}", d["id"])
+    if d["status"] == "Pending":
+        by = f" by {tracker.shown(d['needed_by'])}" if d.get("needed_by") else ""
+        return ("Decisions", f"Decision needed{by}: {d['title']}", d["id"])
+    return None
+
+
+def client_lines(c):
+    """[(kind, line, id)] of a report_doc._Client's facts, in the client report's own order and wording."""
+    out = []
+    for m in c.of("milestones"):
+        when = f", {m['shown_date']}" if m.get("shown_date") else ""
+        out.append(("Milestones", f"Milestone {m['title']}: {m['state']}{when}", m["id"]))
+    out += [x for x in (_client_action_line(c, a) for a in c.of("actions")) if x]
+    out += [x for x in (_client_decision_line(c, d) for d in c.of("decisions")) if x]
+    out += [("Points to watch", f"{r['type']}: {r['title']}", r["id"]) for r in c.of("raid")]
+    return out
 
 
 def section_shape(panes):
@@ -2278,6 +2293,12 @@ def minutes_current(req, sec, dist):
     return section_current(req)
 
 
+def marked_lines(doc, sid):
+    """The lines of section `sid` that the record marks Internal only (layout.internal_only)."""
+    return [m["text"] for m in (doc.get("layout") or {}).get("internal_only") or []
+            if isinstance(m, dict) and m.get("section") == sid and m.get("text")]
+
+
 def minutes_version(req):
     """(the distributed version, is the draft for it, the section) for a minutes section, or the refusal. The distributed version is
     minutes_record.distributed_of: nothing marked Internal only or withheld is in it. Its facts are always drawn from it, whichever
@@ -2298,9 +2319,7 @@ def minutes_version(req):
     sec = next((s for s in (shared if dist else doc).get("sections") or [] if s.get("id") == sid), None)
     if not sec or sec.get("type") in ("header", "table"):
         raise Refused("That section can't be redrafted" + (" in this version." if dist else "."))
-    marks = [m for m in (doc.get("layout") or {}).get("internal_only") or [] if isinstance(m, dict) and m.get("section") == sid
-             and m.get("text")]
-    if not dist and marks:
+    if not dist and marked_lines(doc, sid):
         raise Refused("This section has lines marked Internal only, and a redraft would lose their mark. Redraft it in the "
                       "distributed version, or take the mark off first.")
     return shared, dist, sec

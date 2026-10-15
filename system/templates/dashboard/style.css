@@ -3130,6 +3130,7 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-rdh{display:flex;gap:6px;align-items:center;font-weight:600;margin-bottom:4px}
 .sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 .sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
+.sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:13px} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
 .sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}

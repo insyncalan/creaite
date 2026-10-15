@@ -181,5 +181,84 @@ class StaleTests(SheetCase):
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
 
 
+class ReviewTests(SheetCase):
+    """#90 review (Team Cap): K3 a second ✦ while one is writing, K2 a mode switch or another minutes of the same day mid-write,
+    K5 the "edited" wiring, F5 the reply's checks on the page."""
+    ready, settle, assert_stale_and_unapplied = StaleTests.ready, StaleTests.settle, StaleTests.assert_stale_and_unapplied
+
+    def stale_after(self, js):
+        b = self.b
+        self.ready()
+        b.eval(js + "; SH.draw();")
+        self.settle()
+        self.assert_stale_and_unapplied("summary", self.b.eval("SH.doc.sections[0].text"))
+
+    def test_a_second_spark_while_one_is_writing_is_ignored(self):
+        b = self.b
+        self.ready()
+        b.click("#shFix section[data-id='summary'] .sheet-spark")
+        b.pump(0.2)
+        self.assertEqual(self.sh("asked"), ["summary"])
+        self.assertIn("Drafting", b.eval("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft').textContent"))
+        self.settle()
+        b.wait("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft button.primary')")
+        self.assertIn("Fresh draft for summary", b.eval("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft').textContent"))
+
+    def test_a_switch_to_the_distributed_version_mid_write_makes_it_stale(self):
+        self.stale_after("SH.doc = {...SH.doc, audience: 'distributed'}")
+
+    def test_another_minutes_of_the_same_project_and_day_mid_write_makes_it_stale(self):
+        self.stale_after("SH.doc = {...SH.doc, title: 'Budget review'}")
+
+    def test_an_id_or_path_that_differs_makes_it_stale(self):
+        self.stale_after("SH.doc = {...SH.doc, path: 'projects/ABC/minutes/2026-10-16 Budget review.html'}")
+
+    def test_a_used_draft_then_changed_counts_edited_once(self):
+        b = self.b
+        self.ready()
+        self.settle()
+        b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
+        b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
+        b.pump(0.2)
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').map(e=>e.choice)"), ["use"])   # used, not yet edited
+        b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Changed after use.'} : s)}; SH.draw();")
+        b.wait("SH.events.some(e=>e.type==='redraft'&&e.choice==='edited')")
+        b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Changed again.'} : s)}; SH.draw();")
+        b.pump(0.2)
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').map(e=>e.choice)"), ["use", "edited"])
+
+    def test_a_used_draft_on_another_document_is_never_counted_edited(self):
+        b = self.b
+        self.ready()
+        self.settle()
+        b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
+        b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
+        b.eval("SH.doc = {...SH.doc, project: 'DEF', sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Another report.'} : s)}; SH.draw();")
+        b.pump(0.3)
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').map(e=>e.choice)"), ["use"])
+
+    def test_the_replys_checks_and_no_source_marks_reach_the_page(self):
+        b = self.b
+        answer = {"ok": True, "section": "summary", "text": "UAT slipped by 20 days. Omar Ali is escalating it.",
+                  "sources": [{"ref": "S1", "text": "Week facts"}],
+                  "notes": [{"id": "figures-added", "note": "It adds 20, which your text didn't have: check it."},
+                            {"id": "names-added", "note": "It adds Omar Ali, which your text didn't have: check it."}],
+                  "sentences": [{"text": "UAT slipped by 20 days.", "refs": ["S1"], "unsourced": False},
+                                {"text": "Omar Ali is escalating it.", "refs": [], "unsourced": True}]}
+        b.eval(f"SH.redraft = s => Promise.resolve(redraftAnswer({json.dumps(answer)}, s)); SH.draw(); true")
+        b.wait("document.querySelectorAll('#shFix .sheet-spark').length===4")
+        b.click("#shFix section[data-id='summary'] .sheet-spark")
+        b.wait("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-rdnotes')")
+        notes = b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-rdnotes li')].map(li=>li.textContent)")
+        self.assertEqual(b.eval("document.querySelector('#shFix section[data-id=\"summary\"] .sheet-rdnotes').getAttribute('aria-label')"), "Check it")
+        self.assertTrue(any("20" in n for n in notes), notes)
+        self.assertTrue(any("Omar Ali" in n and "adds" in n for n in notes), notes)
+        self.assertIn("No source: “Omar Ali is escalating it.”", notes)
+        self.assertFalse(any("UAT slipped" in n for n in notes), notes)            # a sentence with a source has no mark
+        # an answer for another section is refused by redraftAnswer itself
+        msg = b.eval(f"(() => {{ try {{ redraftAnswer({json.dumps({**answer, 'section': 'this_week'})}, {{id: 'summary'}}); return ''; }} catch (e) {{ return e.message; }} }})()")
+        self.assertIn("another section", msg)
+
+
 if __name__ == "__main__":
     unittest.main()

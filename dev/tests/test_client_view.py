@@ -213,6 +213,36 @@ class ClientBrowser(LiveBrowserCase):
         self.assertTrue(self.api("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
         return doc
 
+    def test_the_client_sheet_has_no_ai_bar_and_sends_nothing_to_edit_ai(self):
+        """#90 review F2: the AI bar on selected text (/api/edit/ai, whose facts are every open item whatever its client flag) is
+        off on the client sheet until it has a client place (#123). Control: the same selection on the internal weekly sheet opens
+        it, so the method is real. Nothing is sent to /api/edit/ai from the client sheet."""
+        b = self.b
+        b.eval("""window.__aiCalls = []; if (!window.__aiSpy) { window.__aiSpy = 1; const f = window.fetch;
+          window.fetch = (u, o) => { if (String(u).includes('/api/edit/ai')) window.__aiCalls.push(String(u)); return f(u, o); }; } true""")
+        def select_in(view):
+            """Open the Summary's editor in `view`, give it words, and select them all, as a person would."""
+            sec = f"#{view} section[data-id='summary']"
+            b.wait(f"document.querySelector({json.dumps(sec)})", 20)
+            if not b.eval(f"!!document.querySelector({json.dumps(sec + ' .ProseMirror')})"):
+                b.click(sec + " .wr-rich")
+            b.wait(f"document.querySelector({json.dumps(sec + ' .ProseMirror')})")
+            b.click(sec + " .ProseMirror")
+            b.type(" Testing could start late.")
+            b.key("a", 4)
+        b.eval("go('weekly',{code:'ABC'})")
+        select_in("v-weekly")
+        b.wait("document.querySelector('#aiLayer .aibar')")                                  # control: the internal sheet has it
+        b.eval("aiBar.value = null; aiSug.value = null; true")
+        self.open_view()
+        select_in("v-clientreport")
+        b.key("/", 1)                                                                       # Alt+/ opens the bar's menu where there is one
+        b.pump(0.5)
+        self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar') || !!document.querySelector('#aiLayer .aisug')"))
+        self.assertEqual(b.eval("window.__aiCalls"), [])
+        self.assertTrue(b.eval("!!document.querySelector(\"#v-clientreport section[data-id='summary'] .sheet-spark\")"),
+                        "the client-safe ✦ stays")
+
     def test_opens_with_the_clients_own_words_and_none_of_the_internal_ones(self):
         self.open_view()
         page = self.words("#v-clientreport .page")

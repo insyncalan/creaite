@@ -55,6 +55,7 @@ export * from "./components/Chip.jsx";
 export * from "./components/TextEditor.jsx";   /* BL-301 A: the one editor as a block */
 export * from "./components/report/Sheet.jsx";   /* v2.1.0 P5: the A4 sheet */
 export * from "./components/report/sheetLib.js";
+export { REDRAFT_KIND, countRedraft, redraftAnswer, redraftRequest, redrafter } from "./components/report/redraft.js";   /* #90: the ✦ (redraftAnswer is what the tests drive) */
 
 export * from "./components/peek/ChasePane.jsx";   /* BL-298: Draft chase in the peek */
 export * from "./components/Tabs.jsx";

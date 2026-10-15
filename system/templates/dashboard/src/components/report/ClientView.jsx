@@ -98,7 +98,8 @@ export function ClientView() {
           partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed, match: id => setClientDoc(matchFor(id)),
             onChange: setClientDoc, onSave: saveClientPage } : null}
           onChange={side ? () => {} : setClientDoc} onSave={side ? undefined : saveClientPage}
-          ai={{ place: "report", project: () => doc.project, confidential: () => false }}
+          /* no `ai` here (#90 review F2): the AI bar's /api/edit/ai sends the project's open items whatever their client flag, so
+             it stays off the client sheet until it has a client place (#123). The ✦ (onRedraft) is client-safe on its own. */
           onRedraft={side ? undefined : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report")}
           onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); else countRedraft(ev, "report"); }}
           toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
