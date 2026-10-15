@@ -31,16 +31,24 @@ concurrency:
 
 jobs:
   tests:
-    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    name: ${{ matrix.os }} · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/3
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.optional }}
+    continue-on-error: ${{ matrix.os == 'macos-latest' }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      # #89: each Python version runs the suite in 3 shards (dev/tools/run_tests.py --shard I/3), side by side, so the wait
+      # is about a third. Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
+      # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
+      # The "Tests passed" job below is green only if every shard is.
       # The macOS job runs only on pushes to main (Alan, 12-10-2026): it needs about 2 hours and GitHub runs only five macOS
       # jobs at once, so on every branch run it held the run open and queued the others. Branch and pull-request runs use Linux.
       matrix:
-        include: ${{ fromJSON(github.event_name == 'push' && github.ref == 'refs/heads/main' && '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4},{"os":"macos-latest","python":"3.14","optional":true,"jobs":3}]' || '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4}]') }}
+        os: ${{ fromJSON(github.event_name == 'push' && github.ref == 'refs/heads/main' && '["ubuntu-latest","macos-latest"]' || '["ubuntu-latest"]') }}
+        python: ["3.9", "3.14"]
+        shard: [1, 2, 3]
+        exclude:
+          - {os: macos-latest, python: "3.9"}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -64,12 +72,25 @@ jobs:
       - name: Tests
         env:
           FILES: ${{ github.event.inputs.files }}
-          JOBS: ${{ matrix.jobs }}
+          JOBS: ${{ matrix.os == 'macos-latest' && 3 || 4 }}
+          SHARD: ${{ matrix.shard }}
         run: |
           if [ -n "$FILES" ]; then
+            # named files: shard 1 runs them, the others have nothing to do
+            [ "$SHARD" = "1" ] || { echo "Named files run in shard 1."; exit 0; }
             fail=0
             for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
             exit $fail
           else
-            python3 dev/tools/run_tests.py -j "$JOBS" --max-fail 25
+            python3 dev/tools/run_tests.py -j "$JOBS" --shard "$SHARD/3" --max-fail 25
           fi
+
+  passed:
+    # The one result to wait for (and to require): green only if every shard of every job passed. A skipped or cancelled
+    # shard counts as a failure here; the macOS shards are optional and don't count.
+    name: Tests passed
+    needs: tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.tests.result }}" = "success"
