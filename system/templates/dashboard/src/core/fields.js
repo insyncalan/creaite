@@ -92,7 +92,7 @@ export function parseWhen(text,today=TODAY,due=false){ let s=String(text||"").tr
   return null; }
 export const dateSaid=iso=>`${new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(iso)}`;
 /* which fields: every typed date field (item forms, inline cells, the project page's No due date card, filters' From and To,
-   Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick Capture); read-only ones are picker only */
+   Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick capture); read-only ones are picker only */
 export const isDateField=el=>!!(el&&el.tagName==="INPUT"&&!el.readOnly&&el.matches('[data-date],[placeholder="DD-MM-YYYY"],#qcDate,#bdDate,[data-und]'));
 export const dueField=el=>/(^|_)due$/.test(el.name||el.id||"")||el.dataset.cf==="due"||el.dataset.bf==="due"||["rvDate","bdDate","bkDate","deReply"].includes(el.id)||el.dataset.und!=null||el.name==="fc";
 export function dateRead(el){ const v=el.value.trim(); if(!v) return {empty:true}; const iso=parseWhen(v,TODAY,dueField(el)); if(!iso) return {bad:true};
@@ -244,7 +244,7 @@ export function chCaret(el){ const lh=parseFloat(getComputedStyle(el).lineHeight
    cell (BL-123), the bulk bar (BL-124), the Board's date prompt and an undated card's date; every calendar marks weekend days.
    Review notes a proposal's weekend date with the two buttons, which edit the proposal; the "weekend due date" early warning lists
    open items with one (built by build_dashboard.py), and the peek offers the same buttons beside it. Dates that record what
-   happened (raised, closed, made, a Quick Capture note's date) and milestones are never alerted. */
+   happened (raised, closed, made, a Quick capture note's date) and milestones are never alerted. */
 export const WKNAME=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 export const wkDays=()=>new Set(Array.isArray(S.weekendDays)?S.weekendDays:[5,6]);
 export const wkDow=iso=>(new Date(iso+"T00:00:00Z").getUTCDay()+6)%7;

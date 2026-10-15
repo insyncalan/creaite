@@ -45,7 +45,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          never overwriting (BL-42)
 - POST /api/inbox/preview {path}: an inbox file's text (Word text extracted; PDFs open in their app); /api/inbox/remove
                          {path} moves it to system/backups/inbox-removed/; /api/inbox/restore {kept} undoes that
-- POST /api/intake/clear {op: clear|restore|restore_day, items|keys|day}: Clear day in Calendar Import (BL-104); saves
+- POST /api/intake/clear {op: clear|restore|restore_day, items|keys|day}: Clear day in Calendar import (BL-104); saves
                          system/staging/intake-cleared.json. Cleared is not processed
 - POST /api/current/generate {code, from, to, sources, note, audience, length}: draft a project's Current state from the vault
                          (report.py current-context, then Claude with read-only tools), streamed like /api/ask (BL-46). BL-106:
@@ -155,7 +155,7 @@ import subprocess
 import sys
 import threading
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -1527,7 +1527,7 @@ class Handler(BaseHTTPRequestHandler):
 
     # ===== Sprint 4a: Clear day (BL-104) =====
     def intake_clear(self, req):
-        """Set meetings aside in Intake's Calendar Import, or bring them back. {op: "clear", items: [{key, day, start,
+        """Set meetings aside in Intake's Calendar import, or bring them back. {op: "clear", items: [{key, day, start,
         title}]} sets aside exactly those; {op: "restore", keys: [...]} and {op: "restore_day", day} bring them
         back. Saved in system/staging/intake-cleared.json. Not processed: processed.txt and the tracker are never touched."""
         op = req.get("op")
@@ -3095,14 +3095,27 @@ def mark_interrupted():
 
 VIP_TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
              "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
+# BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
+# what these people sent since the last check, then reads each whole conversation it belongs to (everyone's messages and a
+# few earlier ones for context, the title, the people and the attachment names) and reports the outcome in its own words.
 VIP_PROMPT = ("creaite VIP check. Read-only: search Alan's Microsoft 365 for messages SENT BY these addresses since {since} "
               "(local time): Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates. Addresses: "
-              "{addresses}. Search only for those senders; read nothing else, change nothing, write nothing. Reply with ONLY a "
-              "JSON array, one object per message: {{\"kind\": \"mail\"|\"teams\"|\"calendar\", \"from\": \"Name <address>\", "
-              "\"subject\": \"…\", \"sent\": \"YYYY-MM-DD HH:MM\", \"link\": \"the Microsoft 365 web link\", "
-              "\"sensitivity\": \"normal|personal|private|confidential\", \"gist\": \"what it is about or asks for, in your own "
-              "words, at most 140 characters, never quoted text\"}}. For a private or confidential message give only a neutral gist "
-              "(\"private message\"). Never use the word VIP in a gist (BL-288). Reply [] if there are none.")
+              "{addresses}. Then read each CONVERSATION one of those messages belongs to (the Teams chat, or the mail thread by "
+              "its conversation ID): everyone's messages since {since}, not only theirs, plus a few earlier ones for context; "
+              "its title, its participants and any attachment names. Read nothing else, change nothing, write nothing. Reply "
+              "with ONLY a JSON array, one object per conversation (never one per message): {{\"kind\": \"teams\"|\"mail\"|"
+              "\"calendar\", \"conversation\": \"the Teams chat ID or the mail conversation ID\", \"title\": \"the chat's "
+              "or thread's own title, or null when it has none (never a generic 'Group chat')\", \"from\": \"Name <address> of "
+              "the person above who wrote\", \"people\": [\"Name <address>\", …], \"last\": \"YYYY-MM-DD HH:MM of its last "
+              "message\", \"link\": \"the Microsoft 365 web link\", \"sensitivity\": \"normal|personal|private|"
+              "confidential\", \"attachments\": [\"file names only\"], \"summary\": \"what the conversation came to, in one "
+              "or two lines of your own words, at most 300 characters, never quoted text\", \"items\": [{{\"type\": "
+              "\"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own words\", "
+              "\"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else null\"}}]}}. Report "
+              "the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a conversation with "
+              "nothing actionable has \"items\": []. For a private or confidential conversation give only \"summary\": "
+              "\"private\" and no items. Never use the word VIP in a gist, a summary, an item or anywhere in the reply "
+              "(BL-288). Reply [] if there are none.")
 VIP_LOCK = threading.Lock()       # one check at a time
 VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never write at once
 VIP_STATUS = {"running": False, "last_error": None}
@@ -3144,12 +3157,20 @@ def vip_check(how="check"):
         with VIP_WRITE:
             new = sweep.vip_record(found, how)
         VIP_STATUS["last_error"] = None
-        note = f"VIP check: {len(new)} new alert{'s' if len(new) != 1 else ''}"
+        note = vip_note(new)
         print(f"{datetime.now():%H:%M:%S} {note}", flush=True)
         return note
     finally:
         VIP_STATUS["running"] = False
         VIP_LOCK.release()
+
+
+def vip_note(new):
+    """The check's one line for the server's output: how many alerts are new or updated, and any still being waited for."""
+    import sweep
+    held = len(sweep.vip_state().get("held") or {})
+    return (f"VIP check: {len(new)} new or updated alert{'s' if len(new) != 1 else ''}"
+            + (f", {held} waiting to go quiet" if held else ""))
 
 
 def vip_timer():
@@ -3162,7 +3183,22 @@ def vip_timer():
         except Exception as e:  # noqa: BLE001  never stops the server
             print(f"Note: the VIP check failed: {e}", flush=True)
         how = "check"
-        time.sleep(max(1.0, 60 * float(sweep.vip_settings().get("check_minutes") or 30)))
+        time.sleep(max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds())))
+
+
+def vip_wait_seconds():
+    """BL-334 point 5: when a conversation is being waited for, check again as soon as it may be quiet (its 15 minutes are
+    up), at least 30 seconds on; else no limit."""
+    import sweep
+    held = sweep.vip_state().get("held") or {}
+    if not held:
+        return float("inf")
+    try:
+        first = min(datetime.strptime(t, "%Y-%m-%d %H:%M") for t in held.values())
+    except ValueError:
+        return 60.0
+    due = first + timedelta(minutes=sweep.QUIET_WAIT)
+    return max(30.0, (due - sweep.now()).total_seconds() + 5)
 
 
 def vip_alerts_route(handler, req):
@@ -3315,6 +3351,12 @@ def alert_ids(req):
     return {str(i) for i in req.get("ids") or ([req["id"]] if isinstance(req.get("id"), str) else []) if isinstance(i, str)}
 
 
+def alert_cand(req):
+    """BL-334: the candidate item a request names on a conversation's card (its number), else None (the whole alert)."""
+    c = req.get("cand")
+    return c if isinstance(c, int) and not isinstance(c, bool) and 0 < c < 100 else None
+
+
 def alert_dismiss_route(handler, req):
     """POST /api/alerts/dismiss {ids | id | all}: take messages out of Needs attention (kept in the alert history)."""
     import sweep
@@ -3322,10 +3364,11 @@ def alert_dismiss_route(handler, req):
     if ids is not None and not ids:
         return handler.send(400, {"ok": False, "message": "Which message?"})
     with VIP_WRITE:
-        done = sweep.vip_dismiss(ids)
+        done = sweep.vip_dismiss(ids, alert_cand(req))
     n = len(done)
     return handler.send(200, {"ok": True, "dismissed": n, "ids": done, "at": sweep.now().strftime("%Y-%m-%d %H:%M"),
-                              "message": f"Dismissed {n} message{'s' if n != 1 else ''}." if n else "Nothing to dismiss."})
+                              "message": ("Dismissed the item. Nothing was staged." if alert_cand(req) else
+                                          f"Dismissed {n} message{'s' if n != 1 else ''}.") if n else "Nothing to dismiss."})
 
 
 def alert_undo_route(handler, req):
@@ -3335,7 +3378,7 @@ def alert_undo_route(handler, req):
     if not ids:
         return handler.send(400, {"ok": False, "message": "Which message?"})
     with VIP_WRITE:
-        done = sweep.vip_undismiss(ids)
+        done = sweep.vip_undismiss(ids, alert_cand(req))
     n = len(done)
     return handler.send(200, {"ok": True, "restored": n, "ids": done,
                               "message": f"Back in Needs attention: {n} message{'s' if n != 1 else ''}." if n
@@ -3347,7 +3390,7 @@ def alert_prefill_route(handler, req):
     import sweep
     try:
         with VIP_WRITE:
-            pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "action"))
+            pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "") or None, alert_cand(req))
     except (LookupError, ValueError) as e:
         return handler.send(200, {"ok": False, "message": str(e)})
     return handler.send(200, {"ok": True, "prefill": pre})
@@ -3404,7 +3447,7 @@ def alert_draft_check(req):
     if not drafts.enabled("sharpen"):
         return None, 200, {"ok": False, "off": True, "message": "AI drafts are off in Settings."}
     try:
-        pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "action"))
+        pre = sweep.vip_prefill(str(req.get("id") or ""), str(req.get("type") or "") or None, alert_cand(req))
     except (LookupError, ValueError) as e:
         return None, 200, {"ok": False, "message": str(e)}
     if pre.get("marker"):
@@ -3447,7 +3490,7 @@ def alert_make_route(handler, req):
     values = req.get("values") if isinstance(req.get("values"), dict) else {}
     try:
         with LOCK, VIP_WRITE:
-            got = sweep.vip_make(str(req.get("id") or ""), str(req.get("type") or "action"), values)
+            got = sweep.vip_make(str(req.get("id") or ""), str(req.get("type") or "") or None, values, alert_cand(req))
     except (LookupError, ValueError) as e:
         return handler.send(200, {"ok": False, "message": str(e)})
     word = {"actions": "action", "decisions": "decision"}.get(got["table"]) or str(got["values"].get("type") or "item").lower()

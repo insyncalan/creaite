@@ -27,7 +27,8 @@ LIGHT = ("--hp-ground:#F3F6F7;--hp-paper:#FFFFFF;--hp-ink:#14212A;--hp-soft:#4D5
 DARK = ("--hp-ground:#0F1518;--hp-paper:#171E22;--hp-ink:#E4EAED;--hp-soft:#A2AEB5;--hp-hair:#2A343A;--hp-teal:#5FC4D6;"
         "--hp-teal-soft:#16363C;--hp-amber:#F0C66B;--hp-amber-soft:#3A2C10;--hp-green:#9FD6A5;--hp-green-soft:#1D3322;")
 FONTS = ('--hp-display:"Schibsted Grotesk","Helvetica Neue",Arial,sans-serif;--hp-body:"Source Sans 3","Segoe UI",system-ui,sans-serif;'
-         '--hp-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;')
+         '--hp-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;'
+         '--d2:200ms;')   # v1.9.5 (UI audit P1-8): the dashboard's --d2, read by the copied Help components (.hp-stage)
 
 
 def components_css():
@@ -35,6 +36,17 @@ def components_css():
     text = (paths.TEMPLATES / "dashboard.html").read_text(encoding="utf-8")
     a, b = text.index(BEGIN), text.index(END)
     return text[a:b + len(END)]
+
+
+SCALE_BEGIN, SCALE_END = "/* ===== BL-325 scale", "/* ===== end BL-325 scale ===== */"
+
+
+def scale_css():
+    """BL-325: the dashboard's one design scale (type, spacing, radius, shadow, z-index, controls), which the copied Help
+    components read; copied from the dashboard template so the guides and Help stay on the same scale."""
+    text = (paths.TEMPLATES / "dashboard.html").read_text(encoding="utf-8")
+    a, b = text.index(SCALE_BEGIN), text.index(SCALE_END)
+    return text[text.index(":root{", a):b].strip()
 
 
 def page(part_id, text=None):
@@ -51,11 +63,12 @@ def page(part_id, text=None):
      Self-contained: no network (the fonts are embedded). Open it in any browser. -->
 <style>
 {faces}
+{scale_css()}
 :root{{{LIGHT}{FONTS}}}
 @media (prefers-color-scheme:dark){{:root:not([data-theme="light"]){{{DARK}color-scheme:dark}}}}
 :root[data-theme="dark"]{{{DARK}color-scheme:dark}}
 *{{box-sizing:border-box}}
-body{{background:var(--hp-ground);color:var(--hp-ink);font:400 16px/1.55 var(--hp-body);margin:0}}
+body{{background:var(--hp-ground);color:var(--hp-ink);font:400 var(--fs-lg)/1.5 var(--hp-body);margin:0}}
 {components_css()}
 </style>
 </head>

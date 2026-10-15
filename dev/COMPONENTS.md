@@ -77,6 +77,10 @@ tooltip). **Q2, answered (Alan, 13-10-2026):** the icons become element data (ea
 
 - The existing design tokens only (`var(--accent)`, `var(--line)` …): no new colours, no colour literals; a test fails
   one in `src/components/**/*.css`. Every theme then works with no extra work.
+- **The one design scale (BL-325)** for every size: type `var(--fs-*)`, radius `var(--r-*)`, shadow `var(--shadow-sm|md|lg|side)`,
+  layers `var(--z-*)`, and a control's height, radius and text size `var(--ctl-h)`, `var(--ctl-r)`, `var(--ctl-fs)`; spacing in px
+  on the 4px scale (2px steps to 16, then 20, 24, 28, 32, 40, 48 …). The scale is the marked block at the top of `style.css`;
+  `dev/tools/token_audit.py` (check 5) reports anything off it.
 - One stylesheet per component area (`src/components/blocks.css`, `src/components/prep/prep.css`), added after `style.css` by
   the build. The blocks reuse today's classes (`.bmenu`, `.pkpop`, `.tabs`, `#snack`) rather than restyling them.
 - Motion through `core/motion.js` (it honours reduced motion); no new animation library.

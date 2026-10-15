@@ -627,10 +627,12 @@ class CreaiteTheme(unittest.TestCase):
     def test_today_follows_the_theme(self):
         days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
         for name, t in (("light", self.light), ("system dark", self.sysdark), ("dark", self.dark)):
+            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
             self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
         self.assertEqual((self.light["day-page"], self.light["day-sun"], self.dark["day-sun"]), ("#F3F6F7", "#0B6E7F", "#5FC4D6"))
         self.assertEqual(self.sysdark, self.dark)                                    # the two dark blocks agree
         for name, t in (("light", self.light), ("dark", self.dark)):
+            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"]}                  # BL-325: aliases, set once in the base
             for fg in ("day-ink", "day-muted", "day-sun"):
                 for g in ("day-page", "day-band"):
                     self.assertGreaterEqual(BrightwaterTheme.ratio(t[fg], t[g]), 4.5, f"{name}: --{fg} on --{g}")
@@ -666,6 +668,7 @@ class NotionTheme(unittest.TestCase):
     def test_today_follows_the_theme(self):
         days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
         for name, t in (("light", self.light), ("dark", self.dark)):
+            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
             self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
             for fg in ("day-ink", "day-muted", "day-sun"):
                 for g in ("day-page", "day-band"):
@@ -708,6 +711,7 @@ class LinearTheme(unittest.TestCase):
     def test_today_follows_the_theme(self):
         days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
         for name, t in (("light", self.light), ("dark", self.dark)):
+            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
             self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
             for fg in ("day-ink", "day-muted", "day-sun"):
                 for g in ("day-page", "day-band"):
@@ -754,6 +758,7 @@ class CursorTheme(unittest.TestCase):
     def test_today_follows_the_theme(self):
         days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
         for name, t in (("light", self.light), ("dark", self.dark)):
+            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
             self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
             for fg in ("day-ink", "day-muted", "day-sun"):
                 for g in ("day-page", "day-band"):
@@ -806,6 +811,7 @@ class NewTheme:
     def test_today_follows_the_theme(self):
         days = ("day-page", "day-band", "day-ink", "day-muted", "day-rule", "day-sun", "day-past")
         for name, t in (("light", self.light), ("dark", self.dark)):
+            t = {**t, "day-ink": t["ink"], "day-muted": t["muted"], "day-rule": t["line"]}   # BL-325: aliases of --ink, --muted and --line, set once in the base
             self.assertTrue(all(k in t for k in days), f"{name}: Today's tokens not all set")
             for fg in ("day-ink", "day-muted", "day-sun"):
                 for g in ("day-page", "day-band"):
@@ -858,7 +864,7 @@ class AppleTheme(NewTheme, unittest.TestCase):
                 ("dark", "surface"): "#1C1C1E", ("dark", "accent"): "#2997FF", ("dark", "ink"): "#F5F5F7"}
 
     def test_one_blue_and_a_pill_primary(self):
-        self.assertIn(':root[data-palette="Apple"] .btn.primary{background:var(--btn);border-color:var(--btn);color:var(--btn-ink);border-radius:9999px', self.css)
+        self.assertIn(':root[data-palette="Apple"] .btn.primary{background:var(--btn);border-color:var(--btn);color:var(--btn-ink);border-radius:var(--r-pill)', self.css)
         self.assertLess(BrightwaterTheme.ratio("#7A7A7A", "#FFFFFF"), 4.5)           # why the design's muted grey is darkened
         self.assertNotRegex(self.css, r"@font-face[^}]*SF Pro")                       # never embedded: a system font
 

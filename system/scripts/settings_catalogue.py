@@ -316,7 +316,7 @@ CATALOGUE = {
                                 "40,000 characters: enough sources for a grounded answer, quick to run."),
     "search.include_documents": ("Search", "Search documents", "Include project documents in search.",
                                  "On: documents are often where the answer is."),
-    "inbox.meetings_from": ("Meeting prep and Intake", "Calendar Import goes back to", "Monday of this week, or a number of days.",
+    "inbox.meetings_from": ("Meeting prep and Intake", "Calendar import goes back to", "Monday of this week, or a number of days.",
                             "Monday: the working week so far."),
     # ── Folders and OneDrive (set at set-up)
     "locations.projects_root": ("Folders and OneDrive", "Projects folder", "Where the engagement folders live; empty is the vault's own.",
