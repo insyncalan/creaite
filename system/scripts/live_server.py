@@ -269,7 +269,8 @@ OPEN_TOOLS = ["Bash(python3 system/scripts/filechange.py *)", "Write(system/stag
 # stream, and the hook reads this same table from system/guard/run.json and marks it before the tool runs.
 OUTSIDE_CONTENT = {"tools": [*vault_permissions.m365_read_tools(), "WebFetch", "WebSearch"],
                    "folders": ["inbox", "transcripts", "documents"],
-                   "outside_vault": True}                    # and any file read outside the vault and the projects folder
+                   "outside_vault": True,                    # and any file read outside the vault and the projects folder
+                   "notes_exempt": True}                     # BL-301 (Alan, 15-10-2026): except one of Alan's notes (reach.is_note)
 
 
 
