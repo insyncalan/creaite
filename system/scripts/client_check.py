@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402,F401
 import creaite_doc  # noqa: E402
 import report_doc  # noqa: E402
 

@@ -352,5 +352,14 @@ class Sidebar(LiveBrowserCase):
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='212px'")
 
 
+class DefaultRailOrder(unittest.TestCase):
+    """Hand check 61: a new vault's saved dashboard.rail.order has Reports between Projects and People (#72)."""
+
+    def test_defaults_put_reports_between_projects_and_people(self):
+        d = json.loads((Path(__file__).resolve().parents[2] / "system/templates/settings-defaults.json").read_text(encoding="utf-8"))
+        order = d["dashboard"]["rail"]["order"]
+        self.assertEqual(order[order.index("projects"):order.index("people") + 1], ["projects", "reports", "people"])
+
+
 if __name__ == "__main__":
     unittest.main()

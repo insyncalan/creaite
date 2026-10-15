@@ -187,7 +187,7 @@ function SectionBlock({ s, i, p, peer }) {
     change(moveBy(doc, s.id, d), "Section moved", { type: "section-moved", id: s.id, to });
   };
   /** @type {SectionCtx} */
-  const ctx = { section: s, doc, editing, exported, readOnly, update, setMeta: (patch, why) => onChange({ ...doc, meta: { ...(doc.meta || {}), ...patch } }, why),
+  const ctx = { section: s, doc, editing, exported, readOnly, update, setDoc: (nd, why) => onChange(nd, why), setMeta: (patch, why) => onChange({ ...doc, meta: { ...(doc.meta || {}), ...patch } }, why),
     Text, ItemRef, Tag, Spark, level: key => ({ "data-level": key }), peer };
   const here = { s, doc, editing, exported, readOnly, ai: p.aiFor(s, readOnly), checks: p.checks, update, onOpenItem: p.onOpenItem, onEvent,
     spark, sparkInHeading: sparkOn };

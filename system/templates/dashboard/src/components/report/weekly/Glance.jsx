@@ -3,7 +3,6 @@
    dragged (or moved with Alt+← and Alt+→) and hidden with its eye; a hidden figure is drawn faded and is left out of the report and
    the exports. The order and what shows go to the layout (`layout.glance`) with the section, as the sheet's contract asks. */
 import { useState } from "preact/hooks";
-import { editDoc } from "../../../stores/weekly.js";
 import { withSection } from "./weeklyDoc.js";
 
 /** @typedef {import("../Sheet.jsx").SectionCtx} SectionCtx */
@@ -13,7 +12,7 @@ export function Glance({ ctx }) {
   const { doc, section: s } = ctx, figs = s.figures || [];
   const [drag, setDrag] = useState(/** @type {number|null} */ (null));
   const put = (/** @type {any[]} */ next, /** @type {string} */ why) =>
-    editDoc(withSection(doc, s.id, { figures: next }, { glance: next.filter(f => f.shown !== false).map(f => f.key) }), why);
+    ctx.setDoc(withSection(doc, s.id, { figures: next }, { glance: next.filter(f => f.shown !== false).map(f => f.key) }), why);
   const move = (/** @type {number} */ from, /** @type {number} */ to) => {
     if (from === to || to < 0 || to >= figs.length) return;
     const next = figs.slice(); const [f] = next.splice(from, 1); next.splice(to, 0, f); put(next, "Figure moved");
