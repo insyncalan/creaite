@@ -8,9 +8,11 @@
   POST /api/report/approve {kind, code, week_ending, client?, force?, doc?, base_version?}: one proposal (report_doc.stage_weekly
                            or stage_client), applied at once with tracker.py apply, the one writer, so Undo works as always
                            A weekly approval re-locks the project's client drafts to that week (relock_client_drafts; `relocked`)
+  POST /api/report/logo    {code, paths}: the project's logo files as data (read only; v2.1.0 P6): only files report_doc.logos names
   POST /api/report/export  {kind, code, week_ending, client?, fmt, file_beside?}: P2's export (the contract's call), from the draft
                            or the filed report; a client report only once its internal week is approved and nothing would leak
 """
+import base64
 import os
 import subprocess
 import sys
@@ -240,6 +242,28 @@ def export_route(handler, req):
     return answer(handler, out)
 
 
+LOGO_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml"}
+LOGO_MAX = 400_000
+
+
+def logo_route(handler, req):
+    """POST /api/report/logo {code, paths}: each asked-for logo of the project as a data address ({path: "data:…"}), for the report
+    view to draw. Read only; only the files report_doc.logos names for that project (its firm, client and partner logos), each
+    up to 400 kB; anything else asked for is left out."""
+    code = str(req.get("code") or "")
+    if not report_doc.CODE.match(code):
+        return refuse(handler, "Say which project's logos.")
+    known = {x["path"]: x for x in report_doc.logos(code)}
+    out = {}
+    for stored in req.get("paths") or []:
+        if stored not in known:
+            continue
+        f = paths.resolve(stored)
+        if f.suffix.lower() in LOGO_TYPES and f.is_file() and f.stat().st_size <= LOGO_MAX:
+            out[stored] = f"data:{LOGO_TYPES[f.suffix.lower()]};base64,{base64.b64encode(f.read_bytes()).decode()}"
+    return answer(handler, {"ok": True, "logos": out})
+
+
 HOST = {}       # the live server's own lock, run and latest_apply (live_server registers them; never a second copy of the module)
 
 
@@ -247,4 +271,5 @@ def routes(lock, run, latest_apply):
     """The report routes for live_server's route table, given its lock, its script runner and its latest_apply."""
     HOST.update(lock=lock, run=run, latest_apply=latest_apply)
     return {"/api/report/draft": guarded(draft_route), "/api/report/save": guarded(save_route),
-            "/api/report/approve": guarded(approve_route), "/api/report/export": guarded(export_route)}
+            "/api/report/approve": guarded(approve_route), "/api/report/export": guarded(export_route),
+            "/api/report/logo": guarded(logo_route)}
