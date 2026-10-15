@@ -76,7 +76,7 @@ export * from "./sneak.js";
 import { bootActivity0071, bootActivity0072, bootActivity0205 } from "./activity.js";
 import { bootAsk0080, bootAsk0089, bootAsk0090, bootAsk0094, bootAsk0095, bootAsk0096, bootAsk0098, bootAsk0101, bootAsk0102, bootAsk0105, bootAsk0107, bootAsk0109, bootAsk0113, bootAsk0117, bootAsk0118, bootAsk0119, bootAsk0120, bootAsk0207, bootAsk0208, reattach } from "./ask.js";
 import { bootData } from "./core/data.js";
-import { bootTooltips } from "./core/dom.js";
+import { bootLostClick, bootTooltips } from "./core/dom.js";
 import { bootCalendar, bootCmdEnter, bootDateWords, bootOwnerCombo, bootSources, bootTickBoxes, bootWeekendNote } from "./core/fields.js";
 import { publish } from "./core/globals.js";
 import { bootCopyCommand, bootKeyboard } from "./core/keys.js";
@@ -105,6 +105,7 @@ publish(page);
 
 /* ======================= the load-time steps and the start-up, in today's order ======================= */
 bootTooltips();
+bootLostClick();
 bootDevTag();
 bootRail0007();
 bootTheme();
