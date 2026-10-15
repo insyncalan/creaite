@@ -270,7 +270,7 @@ class PromptPartsTests(Base):
         st = vip_file(self.v)
         next(a for a in st["alerts"] if a["conv"] == MAIL_ID + "1")["seen"] = "2026-10-08 09:20"   # a seen card isn't asked about
         (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
-        parts = py(self.v, "p = sweep.vip_prompt_parts(); p['offered'] = sorted(p['offered']); print(json.dumps(p))")
+        parts = py(self.v, "p = sweep.vip_prompt_parts(); p['offered'] = sorted(p['offered']); p['offered_promises'] = sorted(p['offered_promises']); print(json.dumps(p))")
         asked = json.loads(parts["open"])
         self.assertEqual([a["conversation"] for a in asked], [MAIL_ID + "2", "19:chat-3@thread.v2"])  # newest first
         self.assertEqual(asked[0], {"conversation": MAIL_ID + "2", "kind": "mail", "subject": "Project Falcon revised plan 2",
@@ -293,7 +293,7 @@ class PromptPartsTests(Base):
                                 "(?, ?, ?, 'Ben Ito', '2026-10-01', ?, 'Email · test')",
                                 (f"{code}AB-A-{i:03d}", code + "AB", f"Task {i} " + "word " * 30, f"2026-11-{i:02d}"))
             con.commit()
-        parts = py(self.v, "p = sweep.vip_prompt_parts(); p['offered'] = sorted(p['offered']); print(json.dumps(p))")
+        parts = py(self.v, "p = sweep.vip_prompt_parts(); p['offered'] = sorted(p['offered']); p['offered_promises'] = sorted(p['offered_promises']); print(json.dumps(p))")
         work = json.loads(parts["open_work"])
         self.assertTrue(all(len(v) <= 15 for v in work.values()))
         self.assertEqual(sum(len(v) for v in work.values()), 60)
@@ -887,6 +887,19 @@ class MergePinTests(unittest.TestCase):
         for ph in ("{open}", "{open_work}", "{since}", "{zone}", "{offset}", "{sources}", "{kinds}", "{addresses}"):
             self.assertIn(ph, self.ls.VIP_PROMPT)
 
+    def test_part_5_adds_one_placeholder_and_its_limits_only(self):
+        # BL-342 Part 5: the prompt gains {open_promises} (filled by plain code, at most 10 a project and 30 in all) and
+        # nothing else; the placeholders are exactly these nine, so a new one can't slip in unpinned.
+        self.assertEqual((self.sw.VIP_PROMISES_PER_PROJECT, self.sw.VIP_PROMISES_MAX), (10, 30))
+        self.assertEqual(self.ls.VIP_PROMPT.count("{open_promises}"), 1)
+        names = set(re.findall(r"(?<!\{)\{([a-z_]+)\}(?!\})", self.ls.VIP_PROMPT))
+        self.assertEqual(names, {"open", "open_work", "open_promises", "since", "zone", "offset", "sources", "kinds", "addresses"})
+        src = Path(self.ls.__file__).read_text(encoding="utf-8")
+        body = src[src.index("def vip_prompt("):src.index("\ndef ", src.index("def vip_prompt(") + 1)]
+        self.assertIn('open_promises=parts["open_promises"]', body)
+        self.assertEqual(src.count("prompt_last([claude_path(), \"-p\", \"--output-format\", \"json\", \"--allowedTools\", "
+                                   "\",\".join(VIP_TOOLS),"), 1)                              # the check's one command line
+
 
 class SingleCallServerTests(unittest.TestCase):
     @classmethod
@@ -1152,7 +1165,7 @@ class InvitesFlipTests(unittest.TestCase):
         sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system/scripts"))
         import live_server
         zone = {"tz": None, "offset": OFF, "zone": "Alan's local time, UTC+04:00"}
-        parts = {"open": "[]", "open_work": "{}"}
+        parts = {"open": "[]", "open_work": "{}", "open_promises": "{}"}
         off = live_server.vip_prompt("2026-10-08 07:00", {"mia@client.example": "Mia Hale"}, zone, parts)
         try:
             live_server.VIP_INVITES = True

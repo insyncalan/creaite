@@ -669,5 +669,124 @@ class ThreadCardClose(LiveBrowserCase):
                           for i in json.loads(f.read_text())["items"] if i.get("id") == item], [])
 
 
+
+def promise_vault(v):
+    """The thread vault with, on the Board pack card, a promise of Alan's from his own message and an open promise of the
+    project that looks kept (the check kept both: BL-342 Part 5)."""
+    thread_vault(v)
+    import sqlite3
+    from contextlib import closing
+    item = next(r["id"] for r in v.rows("actions") if r["description"] == "Send the data access letter")
+    code = item.split("-")[0]
+    pid = f"{code}-P-090"
+    with closing(sqlite3.connect(v.root / "system/tracker.db")) as con:
+        con.execute("INSERT INTO promises (id, project, promised_by, promised_to, description, raised, source) VALUES "
+                    "(?, ?, 'Sara Example', 'Alan Carter', 'Send the signed data letter', '2026-01-01', 'Email · test')", (pid, code))
+        con.commit()
+    vf = v.root / "system/staging/vip.json"
+    st = json.loads(vf.read_text())
+    card = next(a for a in st["alerts"] if a.get("title") == "Board pack")
+    card["p"] = code
+    card["promises"] = [{"key": "a1b2c3d4e5f6", "what": "Send the revised go-live plan", "to": "Sara Example", "due": LATER,
+                         "at": f"{TODAY} 08:30", "state": "offered"}]
+    card["kept"] = {"id": pid, "evidence": "Sara sent the signed letter", "who": "Sara Example", "at": f"{TODAY} 08:05"}
+    vf.write_text(json.dumps(st))
+    run(v, "build_dashboard.py")
+    return pid
+
+
+class ThreadCardPromise(LiveBrowserCase):
+    """BL-342 Part 5: "You promised Sara Example: ..." with Add a promise and Dismiss, and "Looks kept: <ID>" with Looks kept:
+    mark kept, at 1400 and 900px, light and dark; each click stages one pending proposal for Review, shown as "Staged for
+    Review" with Undo; Undo takes it back; Dismiss stages nothing. Nothing says VIP."""
+
+    @classmethod
+    def load(cls, v):
+        cls.pid = promise_vault(v)
+
+    def show(self, width, mode):
+        b = self.b
+        b.resize(width, 900)
+        b.wait(f"innerWidth==={width}")
+        b.eval(f"S.theme={mode!r}; applyTheme(); go('today'); EXPAND.add('td'); renderToday()")
+        b.wait("[...document.querySelectorAll('#tdList li.td-message')].some(l=>l.textContent.includes('Board pack'))")
+        b.pump(0.4)
+
+    def card(self):
+        return self.b.eval("""(()=>{ %s
+          const li=[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Board pack'));
+          const pr=li.querySelector('.tdproms .tdcand'), kept=[...li.querySelectorAll('.tddone')].map(x=>x.textContent),
+            st=[...li.querySelectorAll('.tdstaged')];
+          return {id:li.dataset.td.slice(2), prom:pr&&pr.querySelector('.ct').textContent,
+            pbuttons:pr?[...pr.querySelectorAll('.tacts button')].map(x=>x.getAttribute('aria-label')):[],
+            buttons:[...li.querySelectorAll(':scope>.tacts button')].map(x=>x.getAttribute('aria-label')),
+            tips:[...li.querySelectorAll(':scope>.tacts button')].map(x=>x.dataset.tip), kept,
+            staged:st.map(x=>x.textContent.replace(/\\s+/g,' ').trim()),
+            contrast:[pr&&pr.querySelector('.ct'),...li.querySelectorAll('.tddone'),...st].filter(Boolean).map(ratio),
+            scroll:[document.documentElement.scrollWidth, innerWidth], right:li.getBoundingClientRect().right<=innerWidth+1}; })()""" % CONTRAST)
+
+    def staged(self):
+        return [i for f in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json")
+                for i in json.loads(f.read_text())["items"]]
+
+    def test_the_promise_and_kept_lines_then_staged_for_review_and_undo(self):
+        b, pid = self.b, self.pid
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        later = f"{LATER[8:10]}-{LATER[5:7]}-{LATER[:4]}"
+        for width in (1400, 900):
+            for mode in ("Light", "Dark"):
+                with self.subTest(width=width, mode=mode):
+                    self.show(width, mode)
+                    o = self.card()
+                    self.assertEqual(o["prom"], f"You promised Sara Example: Send the revised go-live plan · by {later}")
+                    self.assertEqual(o["pbuttons"], ["Add a promise: Send the revised go-live plan",
+                                                     "Dismiss the promise: Send the revised go-live plan"])
+                    self.assertIn(f"Looks kept: {pid}, Sara sent the signed letter", o["kept"])
+                    self.assertIn(f"Stage {pid} as kept for Review", o["buttons"])
+                    self.assertEqual(o["tips"][o["buttons"].index(f"Stage {pid} as kept for Review")], "Looks kept: mark kept")
+                    self.assertTrue(o["right"])
+                    self.assertLessEqual(o["scroll"][0], o["scroll"][1])
+                    for r in o["contrast"]:
+                        self.assertGreaterEqual(r, 4.5)
+                    b.eval("[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Board pack'))"
+                           ".scrollIntoView({block:'center'})")
+                    b.pump(0.3)
+                    b.screenshot(str(SHOTS / f"promise-{width}-{mode.lower()}.png"))
+        self.show(1400, "Light")
+        aid = self.card()["id"]
+        b.click(f'#tdList [data-alertdo="promise"][data-id="{aid}"]')
+        b.wait(f"(document.querySelector('#tdList li[data-td=\"al{aid}\"] .tdproms .tdstaged')||{{}}).textContent", 20)
+        b.click(f'#tdList [data-alertdo="kept"][data-id="{aid}"]')
+        b.wait(f"(document.querySelector('#tdList li[data-td=\"al{aid}\"] p.tdstaged')||{{}}).textContent", 20)
+        o = self.card()
+        self.assertIn("Staged for Review · Undo", o["staged"])
+        self.assertIn(f"{pid} kept: Staged for Review · Undo", o["staged"])
+        self.assertEqual(o["pbuttons"], [])
+        self.assertNotIn(f"Stage {pid} as kept for Review", o["buttons"])
+        got = sorted((i["op"], i["table"], i.get("id") or i["values"]["description"], i["decision"]) for i in self.staged())
+        self.assertEqual(got, [("new", "promises", "Send the revised go-live plan", "pending"),
+                               ("update", "promises", pid, "pending")])
+        for width, mode in ((1400, "Dark"), (900, "Light")):
+            self.show(width, mode)
+            for r in self.card()["contrast"]:
+                self.assertGreaterEqual(r, 4.5)
+            b.eval("[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Board pack'))"
+                   ".scrollIntoView({block:'center'})")
+            b.pump(0.3)
+            b.screenshot(str(SHOTS / f"promise-staged-{width}-{mode.lower()}.png"))
+        self.show(1400, "Light")
+        self.assertIsNone(says_vip(b.eval("document.getElementById('tdList').outerHTML")))
+        b.click(f'#tdList li[data-td="al{aid}"] [data-alertdo="keptundo"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"] p.tdstaged')", 20)
+        b.click(f'#tdList li[data-td="al{aid}"] [data-alertdo="promiseundo"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"] .tdproms .tdstaged')", 20)
+        self.assertEqual(self.staged(), [])
+        b.click(f'#tdList [data-alertdo="promisedismiss"][data-id="{aid}"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"] .tdproms')", 20)
+        self.assertEqual(self.staged(), [])
+        self.assertEqual([p["state"] for a in json.loads((self.v.root / "system/staging/vip.json").read_text())["alerts"]
+                          for p in a.get("promises") or []], ["dismissed"])
+
+
 if __name__ == "__main__":
     unittest.main()
