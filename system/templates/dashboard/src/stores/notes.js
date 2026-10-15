@@ -35,7 +35,7 @@ export const notesMsg = signal("");
 /** Focus mode: the open note lifted over the page (the same live element, not a copy). */
 export const noteFocus = signal(false);
 /** The "couldn't save" dialog while leaving focus mode: null when closed; `copyFailed` after a copy that didn't work. */
-export const noteLeave = signal(/** @type {{copyFailed?: boolean} | null} */ (null));
+export const noteLeave = signal(/** @type {{copyFailed?: boolean, confirm?: boolean, back?: boolean} | null} */ (null));
 
 /** Whether the notes list is shown (remembered per browser; the note widens when it is hidden). */
 export const notesListOpen = signal((() => { try { return localStorage.getItem(LIST_KEY) !== "0"; } catch (e) { return true; } })());
@@ -82,8 +82,9 @@ export async function loadNotes(code) {
     (sent with every save, so the server keeps one backup per session); `renameOld` is the title the file was named for before
     the title was changed (the file is renamed when the title field is left, not at every autosave).
     @type {{getBody: (() => string|null) | null, changes: Record<string, any>, dirty: boolean, rev: number, saveT: any, busy: Promise<any> | null,
-    sid: string, sidAt: number, renameOld: string | null, closing: Promise<boolean> | null}} */
-const ses = { getBody: null, changes: {}, dirty: false, rev: 0, saveT: null, busy: null, sid: "", sidAt: 0, renameOld: null, closing: null };
+    sid: string, sidAt: number, renameOld: string | null, closing: Promise<boolean> | null, released: boolean}} */
+const ses = { getBody: null, changes: {}, dirty: false, rev: 0, saveT: null, busy: null, sid: "", sidAt: 0, renameOld: null, closing: null, released: false };
+/* `released`: the typing that could not be saved was copied out or its loss confirmed, so another note may be opened over it */
 
 /** The open editor gives the store its body (null while nothing was typed). @param {(() => string|null) | null} f */
 export function noteBodyFrom(f) { ses.getBody = f; }
@@ -106,17 +107,33 @@ function sessionId() {
   return ses.sid;
 }
 
-/** Open a note (the current one is saved first). @param {string} path */
+/** Whether the open note may be left for another (or closed): it is saved, or nothing was typed, or its text was copied out or
+    its loss confirmed (`released`). Otherwise the reason is said and it stays: nothing is dropped silently. */
+async function mayLeave() {
+  if (await noteFlush() || ses.released || !noteCur.value) return true;
+  notesMsg.value = notSavedMsg();
+  return false;
+}
+
+/** Open a note (the current one is saved first). Opening the open note again is "open the file's version": what was typed in it goes.
+    @param {string} path */
 export async function openNote(path) {
-  if (!await noteFlush() && noteCur.value && noteCur.value.path !== path) { notesMsg.value = notSavedMsg(); return false; }   // nothing is dropped silently
+  const same = !!noteCur.value && noteCur.value.path === path;
+  if (!same && !await mayLeave()) return false;
+  if (same) await noteFlush().catch(() => false);
   if (!noteCur.value || noteCur.value.path !== path) { noteFind.value = false; noteFindP.value = 0; noteMarks.value = { markers: {}, hover: 0 }; }   /* BL-301 E: Find updates is per note */
   if (!viaServer()) { notesMsg.value = "Opening a note needs the live server."; return false; }
+  const rev = ses.rev;
   noteLoading.value = true;
   const r = await api("/api/notes/get", { path });
   noteLoading.value = false;
   if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || "That note couldn't be opened."); return false; }
+  if (!same && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {   // typed in this note while the other was on its way
+    notesMsg.value = "You typed in this note while the other one was opening, so it stays open. Try again once it has saved.";
+    return false;
+  }
   notesMsg.value = "";
-  ses.changes = {}; ses.dirty = false; ses.rev++; newSession();
+  resetTyping(); newSession();
   /** @type {OpenNote} */
   const cur = { path: r.note.path, code: r.code, note: r.note, body: r.body, meta: r.meta || {}, base: r.base, load: ++loads, images: r.images || {},
     sent: Array.isArray(r.sent) ? r.sent : [] };
@@ -125,11 +142,21 @@ export async function openNote(path) {
   return true;
 }
 
-/** Why another note isn't opened while this one couldn't be saved. */
-const notSavedMsg = () => `${noteSave.value.msg || "The note isn't saved."} It stays open so your typing isn't lost: copy it, or open the file's version.`;
+/** What was typed is given up (copied out, or its loss confirmed): nothing is sent for it. */
+function giveUpTyping() { clearTimeout(ses.saveT); ses.dirty = false; ses.changes = {}; ses.released = true; ses.rev++; }
 
-/** Close the open note (after saving it). */
-export async function closeNote() { await noteFlush(); noteFocus.value = false; noteLeave.value = null; noteCur.value = null; noteSave.value = { state: "" }; }
+/** Nothing typed is waiting any more (a note was opened or made, or its typing was given up). */
+function resetTyping() { clearTimeout(ses.saveT); ses.changes = {}; ses.dirty = false; ses.released = false; ses.rev++; }
+
+/** Why another note isn't opened while this one couldn't be saved. */
+const notSavedMsg = () => `${noteSave.value.msg || "The note isn't saved."} It stays open so your typing isn't lost: copy it, open the file's version or discard it.`;
+
+/** Close the open note (after saving it). It stays open, and false is returned, when it couldn't be saved. */
+export async function closeNote() {
+  if (!await mayLeave()) return false;
+  resetTyping(); noteFocus.value = false; noteLeave.value = null; noteCur.value = null; noteSave.value = { state: "" };
+  return true;
+}
 
 /** The save is due AUTOSAVE_MS from now (`ms` to wait longer). Typing again moves it. @param {number} [ms] */
 function saveSoon(ms = AUTOSAVE_MS) { clearTimeout(ses.saveT); ses.saveT = setTimeout(() => { noteFlush(false); }, ms); }
@@ -137,7 +164,7 @@ function saveSoon(ms = AUTOSAVE_MS) { clearTimeout(ses.saveT); ses.saveT = setTi
 /** Alan typed in the note: the file is written AUTOSAVE_MS after the last key. */
 export function noteTyped() {
   if (!noteCur.value) return;
-  ses.dirty = true; ses.rev++;
+  ses.dirty = true; ses.released = false; ses.rev++;
   if (noteSave.value.state === "conflict") return;           // the file changed outside creaite: nothing is written until Alan chooses
   noteSave.value = { state: "typing" };
   saveSoon();
@@ -165,12 +192,13 @@ export async function noteFlush(final = true) {
   while (ses.busy) await ses.busy;                           // one save at a time: the next sends the text as it is by then
   const c = noteCur.value;
   if (!c) return true;
-  if (!ses.dirty) { if (final) await settleRename(); return true; }
+  if (!ses.dirty) return final ? settleAndRecheck() : true;
   if (!viaServer()) { noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." }; return false; }
   const sent = { ...ses.changes }, b = body(), rev = ses.rev, oldTitle = c.note.title;
   noteSave.value = { state: "saving" };
-  ses.busy = api("/api/notes/save", { path: c.path, body: b, changes: sent, base: c.base, session: sessionId() });
-  const r = await ses.busy; ses.busy = null;
+  ses.busy = api("/api/notes/save", { path: c.path, body: b, changes: sent, base: c.base, session: sessionId() }).catch(() => null);
+  let r;
+  try { r = await ses.busy; } finally { ses.busy = null; }
   if (r && r.ok) {
     if (ses.rev === rev) ses.dirty = false;                  // typed again while it was on its way: still to save
     for (const k of Object.keys(sent)) if (ses.changes[k] === sent[k]) delete ses.changes[k];
@@ -181,8 +209,7 @@ export async function noteFlush(final = true) {
     if (ses.dirty) saveSoon();
     if (sent.title !== undefined && !r.unchanged && ses.renameOld === null) ses.renameOld = oldTitle;
     if (final && ses.dirty) return noteFlush(true);          // leaving: what was typed meanwhile goes too
-    if (final) await settleRename();
-    return true;
+    return final ? settleAndRecheck() : true;
   }
   if (r && r.conflict) { noteSave.value = { state: "conflict", msg: oneLine(r.message) }; return false; }
   if (r && r.wait) { noteSave.value = { state: "wait", msg: oneLine(r.message) }; saveSoon(WAIT_RETRY_MS); return false; }
@@ -190,35 +217,59 @@ export async function noteFlush(final = true) {
   return false;
 }
 
+/** After a flush Alan caused: the file is renamed for a new title, and anything typed while that was on its way is saved too. */
+async function settleAndRecheck() {
+  await settleRename();
+  return ses.dirty ? noteFlush(true) : true;
+}
+
 /** A saved title that differs from the file's name: rename the file now (after the title field is left, or the note is). */
 async function settleRename() {
   const c = noteCur.value, old = ses.renameOld;
   if (!c || old === null || ses.dirty) return;
   ses.renameOld = null;
-  ses.busy = renameToTitle(c.code, c.path, c.base, old);
-  await ses.busy; ses.busy = null;
+  ses.busy = renameToTitle(c.code, c.path, c.base, old).catch(() => { notesMsg.value = "The file could not be renamed for the new title."; });
+  try { await ses.busy; } finally { ses.busy = null; }
 }
 
-/** The page is going away: write the note with a request that outlives it (it carries the session id too). */
+/** A request body over this many characters can't ride a keepalive fetch (browsers cap them at about 64 KB). */
+const KEEPALIVE_MAX = 60000;
+
+/** The page is going away: write the note with a request that outlives it (it carries the session id too). It is not counted as
+    saved until the server says so; a body too big for a keepalive request goes as an ordinary one (the window hiding flushes first). */
 export function noteFlushOnExit() {
   const c = noteCur.value;
   if (!c || !ses.dirty || !viaServer()) return;
+  const rev = ses.rev;
   try {
-    fetch("/api/notes/save", { method: "POST", keepalive: true, headers: { "Content-Type": "application/json", "X-Creaite-Token": /** @type {any} */ (D).token || "" },
-      body: JSON.stringify({ path: c.path, body: body(), changes: ses.changes, base: c.base, session: sessionId() }) });
-    ses.dirty = false;
+    const text = JSON.stringify({ path: c.path, body: body(), changes: ses.changes, base: c.base, session: sessionId() });
+    fetch("/api/notes/save", { method: "POST", keepalive: text.length <= KEEPALIVE_MAX, headers: { "Content-Type": "application/json", "X-Creaite-Token": /** @type {any} */ (D).token || "" },
+      body: text }).then(r => r.json()).then(r => {
+      if (!r || !r.ok) return;
+      const now = noteCur.value;
+      if (now && now.path === c.path) noteCur.value = { ...now, base: r.base, note: r.note };
+      if (ses.rev === rev) ses.dirty = false;
+    }).catch(() => { /* the page is going; the text stays dirty here until it has */ });
   } catch (e) { /* the page is going; nothing more to do */ }
 }
+
+/** Whether leaving the page now would lose typing that could not be saved (the file changed outside creaite, an error, a wait). */
+export function noteUnsavedAtExit() { return ses.dirty && ["conflict", "error", "wait"].includes(noteSave.value.state); }
 
 /** Make a note from a template; it opens once made.
     @param {string} code @param {{template: string, title: string, date?: string, with?: string[]}} o */
 export async function createNote(code, o) {
-  if (!await noteFlush() && noteCur.value) { notesMsg.value = notSavedMsg(); return null; }
+  if (!await mayLeave()) return null;
   if (!viaServer()) { notesMsg.value = "Making a note needs the live server."; return null; }
+  const rev = ses.rev;
   const r = await api("/api/notes/new", { code, ...o });
   if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || "The note wasn't made."); return null; }
   keepSummary(code, r.note);
-  ses.changes = {}; ses.dirty = false; ses.rev++; newSession();
+  if (noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {   // typed in the open note while the new one was being made
+    notesMsg.value = `The note ${r.note.title} was made (it is in the list), but you typed in this one meanwhile, so it stays open.`;
+    return null;
+  }
+  resetTyping(); newSession();
   noteCur.value = { path: r.note.path, code, note: r.note, body: r.body, meta: r.meta || {}, base: r.base, load: ++loads, images: {} };
   noteSave.value = { state: "saved", at: clock() };
   return r.note;
@@ -259,7 +310,11 @@ function focusBack() {
   const d = /** @type {HTMLDialogElement | null} */ (document.getElementById("noteLeaveDlg"));
   if (d && d.open) d.addEventListener("close", back, { once: true }); else back();
 }
-function leftFocus() { noteLeave.value = null; noteFocus.value = false; focusBack(); }
+function leftFocus() {
+  noteLeave.value = null;
+  if (!noteFocus.value) return;                              // (a double click on Save again comes here twice: the second finds it left)
+  noteFocus.value = false; focusBack();
+}
 
 /** THE way out of focus mode: the autosave is flushed first; saved (or nothing to save) means it closes with no question; a save that
     failed or was refused (the file changed outside creaite, the server not reachable, a wait) keeps the note open and asks (noteLeave).
@@ -276,22 +331,30 @@ export function noteFocusClose() {
   })();
   return ses.closing;
 }
-/** The dialog's "Keep editing": it closes, the note stays open with the cursor back in it. */
+/** The dialog's "Keep editing": it closes, the note stays open with the cursor back in it. (In the discard question, Esc and Cancel go
+    back to the first question, or close it when it was asked from the banner.) */
 export function noteLeaveKeep() {
+  const q = noteLeave.value;
+  if (q && q.confirm && q.back) { noteLeave.value = {}; return; }
   noteLeave.value = null;
   setTimeout(() => { const ed = /** @type {any} */ (document.querySelector(".ndoc .nbody")); if (ed && ed.cxed) ed.cxed.focus(); }, 0);
 }
-/** Put the note's typed text on the clipboard. Returns whether it worked. */
+/** Put the note's typed text on the clipboard. Returns whether it worked; once it has, the typing is safe, so another note may be
+    opened over a save that cannot work (a deleted file, a server that stays down). */
 export async function noteCopyText() {
   const t = noteText();
-  try { await navigator.clipboard.writeText(t); return true; } catch (e) { /* the old way, below */ }
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = t; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px;top:0";
-    (document.querySelector("dialog[open]") || document.body).appendChild(ta);
-    ta.select(); const ok = document.execCommand("copy"); ta.remove();
-    return ok;
-  } catch (e) { return false; }
+  let ok = false;
+  try { await navigator.clipboard.writeText(t); ok = true; } catch (e) { /* the old way, below */ }
+  if (!ok) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = t; ta.setAttribute("readonly", ""); ta.style.cssText = "position:fixed;left:-9999px;top:0";
+      (document.querySelector("dialog[open]") || document.body).appendChild(ta);
+      ta.select(); ok = document.execCommand("copy"); ta.remove();
+    } catch (e) { ok = false; }
+  }
+  if (ok) ses.released = true;
+  return ok;
 }
 /** The dialog's "Copy my text then close": the typed text goes to the clipboard, then focus mode closes. If it couldn't be
     copied the dialog stays, so nothing is dropped. */
@@ -304,8 +367,29 @@ export async function noteLeaveCopy() {
 export async function noteLeaveRetry() {
   const ok = await noteFlush(true);
   if (ok) { leftFocus(); return true; }
-  noteLeave.value = {};
+  if (noteFocus.value) noteLeave.value = {};
   return false;
+}
+
+/** "Discard my typing": the question (inside the dialog) before it. `back` is true when it was asked from the dialog's first question. @param {boolean} [back] */
+export function noteDiscardAsk(back = false) { noteLeave.value = { confirm: true, back }; }
+/** Discard what was typed and could not be saved: the note shows the file's version again (or closes, when the file is gone). */
+export async function noteDiscardNow() {
+  const c = noteCur.value;
+  if (!c) { noteLeave.value = null; return; }
+  giveUpTyping();
+  const ok = await openNote(c.path);
+  if (!ok) { noteCur.value = null; noteSave.value = { state: "" }; resetTyping(); noteFocus.value = false; notesMsg.value = "That note couldn't be opened again, so it was closed. What you typed was discarded."; }
+  noteLeave.value = null;
+  if (noteFocus.value && !noteCur.value) noteFocus.value = false;
+}
+/** "Open the file's version" from the leave dialog: the same as the banner's button (the note is opened again from its file). */
+export async function noteOpenFileVersion() {
+  const c = noteCur.value;
+  if (!c) return;
+  giveUpTyping();
+  await openNote(c.path);
+  noteLeave.value = null;
 }
 
 /* ── BL-301 E in the Notes tab: Find updates beside the open note, its markers, and opening a note at a line ── */

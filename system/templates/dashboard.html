@@ -3034,7 +3034,7 @@ button.nchip{font:inherit;font-size:12px}
 .ndocgh{min-height:40vh}
 .nscrim{position:fixed;inset:0;z-index:var(--z-popup-scrim);background:var(--scrim)}
 .ndoc.nfocus{position:fixed;z-index:var(--z-popup);top:6vh;left:0;right:0;margin:0 auto;width:min(1040px,82vw);height:88vh;box-sizing:border-box;overflow:auto;
-  padding:52px 0 40px;box-shadow:var(--shadow-lg);border-radius:14px}
+  padding:52px 0 40px;box-shadow:var(--shadow-lg);border-radius:var(--r-lg)}
 .ndoc.nfocus>*{max-width:780px;margin-left:auto;margin-right:auto;width:calc(100% - 64px);box-sizing:border-box}
 .ndoc.nfocus .nexpand{position:absolute;left:14px;top:14px;z-index:var(--z-raised-2)}
 .ndoc.nfocus .nslot,.ndoc.nfocus .nmorewrap{display:none}
@@ -3044,6 +3044,8 @@ button.nchip{font:inherit;font-size:12px}
 #noteLeaveDlg{width:min(480px,calc(100vw - 32px));padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} #noteLeaveDlg::backdrop{background:var(--scrim)}
 .nleave{display:grid;gap:12px} .nleave h2{margin:0;font-size:16px} .nleave p{margin:0;color:var(--muted);font-size:13px}
 .nlfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.nlalt{margin:0;display:flex;gap:16px;justify-content:flex-end;flex-wrap:wrap} .nlalt .linkbtn{font-size:13px}
+.ndoc.nfocus .nmsg{margin-top:0}
 /* ===== end BL-301 B ===== */
 /* ===== BL-301 E (v20-find-updates): Find updates, the panel beside a note (components/notes/FindUpdates.jsx). Tokens only. ===== */
 .fu{background:var(--surface);border:1px solid var(--accent);border-radius:10px;overflow:hidden;min-width:0;font-size:13px}
@@ -4827,6 +4829,8 @@ button.nchip{font:inherit;font-size:12px}
     noteCopyText: () => noteCopyText,
     noteCur: () => noteCur,
     noteDirty: () => noteDirty,
+    noteDiscardAsk: () => noteDiscardAsk,
+    noteDiscardNow: () => noteDiscardNow,
     noteEscLayers: () => noteEscLayers,
     noteEscape: () => noteEscape,
     noteFind: () => noteFind,
@@ -4846,12 +4850,14 @@ button.nchip{font:inherit;font-size:12px}
     noteLoading: () => noteLoading,
     noteMarks: () => noteMarks,
     noteMeta: () => noteMeta,
+    noteOpenFileVersion: () => noteOpenFileVersion,
     noteRemoved: () => noteRemoved,
     noteRenamed: () => noteRenamed,
     noteSave: () => noteSave,
     noteSetSent: () => noteSetSent,
     noteText: () => noteText,
     noteTyped: () => noteTyped,
+    noteUnsavedAtExit: () => noteUnsavedAtExit,
     notesCode: () => notesCode,
     notesCodeOk: () => notesCodeOk,
     notesHtml: () => notesHtml,
@@ -49401,7 +49407,7 @@ ${d5.text}`);
   var notesMsg = y3("");
   var noteFocus = y3(false);
   var noteLeave = y3(
-    /** @type {{copyFailed?: boolean} | null} */
+    /** @type {{copyFailed?: boolean, confirm?: boolean, back?: boolean} | null} */
     null
   );
   var notesListOpen = y3((() => {
@@ -49451,7 +49457,7 @@ ${d5.text}`);
       notesList.value = sortNotes(r4.notes);
     }
   }
-  var ses = { getBody: null, changes: {}, dirty: false, rev: 0, saveT: null, busy: null, sid: "", sidAt: 0, renameOld: null, closing: null };
+  var ses = { getBody: null, changes: {}, dirty: false, rev: 0, saveT: null, busy: null, sid: "", sidAt: 0, renameOld: null, closing: null, released: false };
   function noteBodyFrom(f5) {
     ses.getBody = f5;
   }
@@ -49475,11 +49481,15 @@ ${d5.text}`);
     ses.sidAt = now;
     return ses.sid;
   }
+  async function mayLeave() {
+    if (await noteFlush() || ses.released || !noteCur.value) return true;
+    notesMsg.value = notSavedMsg();
+    return false;
+  }
   async function openNote(path) {
-    if (!await noteFlush() && noteCur.value && noteCur.value.path !== path) {
-      notesMsg.value = notSavedMsg();
-      return false;
-    }
+    const same2 = !!noteCur.value && noteCur.value.path === path;
+    if (!same2 && !await mayLeave()) return false;
+    if (same2) await noteFlush().catch(() => false);
     if (!noteCur.value || noteCur.value.path !== path) {
       noteFind.value = false;
       noteFindP.value = 0;
@@ -49489,6 +49499,7 @@ ${d5.text}`);
       notesMsg.value = "Opening a note needs the live server.";
       return false;
     }
+    const rev = ses.rev;
     noteLoading.value = true;
     const r4 = await api("/api/notes/get", { path });
     noteLoading.value = false;
@@ -49496,10 +49507,12 @@ ${d5.text}`);
       notesMsg.value = oneLine(r4 && r4.message || "That note couldn't be opened.");
       return false;
     }
+    if (!same2 && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {
+      notesMsg.value = "You typed in this note while the other one was opening, so it stays open. Try again once it has saved.";
+      return false;
+    }
     notesMsg.value = "";
-    ses.changes = {};
-    ses.dirty = false;
-    ses.rev++;
+    resetTyping();
     newSession();
     const cur = {
       path: r4.note.path,
@@ -49516,13 +49529,29 @@ ${d5.text}`);
     noteSave.value = { state: "" };
     return true;
   }
-  var notSavedMsg = () => `${noteSave.value.msg || "The note isn't saved."} It stays open so your typing isn't lost: copy it, or open the file's version.`;
+  function giveUpTyping() {
+    clearTimeout(ses.saveT);
+    ses.dirty = false;
+    ses.changes = {};
+    ses.released = true;
+    ses.rev++;
+  }
+  function resetTyping() {
+    clearTimeout(ses.saveT);
+    ses.changes = {};
+    ses.dirty = false;
+    ses.released = false;
+    ses.rev++;
+  }
+  var notSavedMsg = () => `${noteSave.value.msg || "The note isn't saved."} It stays open so your typing isn't lost: copy it, open the file's version or discard it.`;
   async function closeNote() {
-    await noteFlush();
+    if (!await mayLeave()) return false;
+    resetTyping();
     noteFocus.value = false;
     noteLeave.value = null;
     noteCur.value = null;
     noteSave.value = { state: "" };
+    return true;
   }
   function saveSoon(ms2 = AUTOSAVE_MS) {
     clearTimeout(ses.saveT);
@@ -49533,6 +49562,7 @@ ${d5.text}`);
   function noteTyped() {
     if (!noteCur.value) return;
     ses.dirty = true;
+    ses.released = false;
     ses.rev++;
     if (noteSave.value.state === "conflict") return;
     noteSave.value = { state: "typing" };
@@ -49565,19 +49595,20 @@ ${d5.text}`);
     while (ses.busy) await ses.busy;
     const c5 = noteCur.value;
     if (!c5) return true;
-    if (!ses.dirty) {
-      if (final) await settleRename();
-      return true;
-    }
+    if (!ses.dirty) return final ? settleAndRecheck() : true;
     if (!viaServer()) {
       noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." };
       return false;
     }
     const sent = { ...ses.changes }, b5 = body(), rev = ses.rev, oldTitle = c5.note.title;
     noteSave.value = { state: "saving" };
-    ses.busy = api("/api/notes/save", { path: c5.path, body: b5, changes: sent, base: c5.base, session: sessionId() });
-    const r4 = await ses.busy;
-    ses.busy = null;
+    ses.busy = api("/api/notes/save", { path: c5.path, body: b5, changes: sent, base: c5.base, session: sessionId() }).catch(() => null);
+    let r4;
+    try {
+      r4 = await ses.busy;
+    } finally {
+      ses.busy = null;
+    }
     if (r4 && r4.ok) {
       if (ses.rev === rev) ses.dirty = false;
       for (const k5 of Object.keys(sent)) if (ses.changes[k5] === sent[k5]) delete ses.changes[k5];
@@ -49588,8 +49619,7 @@ ${d5.text}`);
       if (ses.dirty) saveSoon();
       if (sent.title !== void 0 && !r4.unchanged && ses.renameOld === null) ses.renameOld = oldTitle;
       if (final && ses.dirty) return noteFlush(true);
-      if (final) await settleRename();
-      return true;
+      return final ? settleAndRecheck() : true;
     }
     if (r4 && r4.conflict) {
       noteSave.value = { state: "conflict", msg: oneLine(r4.message) };
@@ -49603,49 +49633,69 @@ ${d5.text}`);
     noteSave.value = { state: "error", msg: oneLine(r4 && r4.message || "Not saved.") };
     return false;
   }
+  async function settleAndRecheck() {
+    await settleRename();
+    return ses.dirty ? noteFlush(true) : true;
+  }
   async function settleRename() {
     const c5 = noteCur.value, old = ses.renameOld;
     if (!c5 || old === null || ses.dirty) return;
     ses.renameOld = null;
-    ses.busy = renameToTitle(c5.code, c5.path, c5.base, old);
-    await ses.busy;
-    ses.busy = null;
+    ses.busy = renameToTitle(c5.code, c5.path, c5.base, old).catch(() => {
+      notesMsg.value = "The file could not be renamed for the new title.";
+    });
+    try {
+      await ses.busy;
+    } finally {
+      ses.busy = null;
+    }
   }
+  var KEEPALIVE_MAX = 6e4;
   function noteFlushOnExit() {
     const c5 = noteCur.value;
     if (!c5 || !ses.dirty || !viaServer()) return;
+    const rev = ses.rev;
     try {
+      const text = JSON.stringify({ path: c5.path, body: body(), changes: ses.changes, base: c5.base, session: sessionId() });
       fetch("/api/notes/save", {
         method: "POST",
-        keepalive: true,
+        keepalive: text.length <= KEEPALIVE_MAX,
         headers: { "Content-Type": "application/json", "X-Creaite-Token": (
           /** @type {any} */
           D.token || ""
         ) },
-        body: JSON.stringify({ path: c5.path, body: body(), changes: ses.changes, base: c5.base, session: sessionId() })
+        body: text
+      }).then((r4) => r4.json()).then((r4) => {
+        if (!r4 || !r4.ok) return;
+        const now = noteCur.value;
+        if (now && now.path === c5.path) noteCur.value = { ...now, base: r4.base, note: r4.note };
+        if (ses.rev === rev) ses.dirty = false;
+      }).catch(() => {
       });
-      ses.dirty = false;
     } catch (e4) {
     }
   }
+  function noteUnsavedAtExit() {
+    return ses.dirty && ["conflict", "error", "wait"].includes(noteSave.value.state);
+  }
   async function createNote(code, o5) {
-    if (!await noteFlush() && noteCur.value) {
-      notesMsg.value = notSavedMsg();
-      return null;
-    }
+    if (!await mayLeave()) return null;
     if (!viaServer()) {
       notesMsg.value = "Making a note needs the live server.";
       return null;
     }
+    const rev = ses.rev;
     const r4 = await api("/api/notes/new", { code, ...o5 });
     if (!r4 || !r4.ok) {
       notesMsg.value = oneLine(r4 && r4.message || "The note wasn't made.");
       return null;
     }
     keepSummary(code, r4.note);
-    ses.changes = {};
-    ses.dirty = false;
-    ses.rev++;
+    if (noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {
+      notesMsg.value = `The note ${r4.note.title} was made (it is in the list), but you typed in this one meanwhile, so it stays open.`;
+      return null;
+    }
+    resetTyping();
     newSession();
     noteCur.value = { path: r4.note.path, code, note: r4.note, body: r4.body, meta: r4.meta || {}, base: r4.base, load: ++loads, images: {} };
     noteSave.value = { state: "saved", at: clock() };
@@ -49685,6 +49735,7 @@ ${d5.text}`);
   }
   function leftFocus() {
     noteLeave.value = null;
+    if (!noteFocus.value) return;
     noteFocus.value = false;
     focusBack();
   }
@@ -49704,6 +49755,11 @@ ${d5.text}`);
     return ses.closing;
   }
   function noteLeaveKeep() {
+    const q5 = noteLeave.value;
+    if (q5 && q5.confirm && q5.back) {
+      noteLeave.value = {};
+      return;
+    }
     noteLeave.value = null;
     setTimeout(() => {
       const ed3 = (
@@ -49715,24 +49771,28 @@ ${d5.text}`);
   }
   async function noteCopyText() {
     const t47 = noteText();
+    let ok2 = false;
     try {
       await navigator.clipboard.writeText(t47);
-      return true;
+      ok2 = true;
     } catch (e4) {
     }
-    try {
-      const ta2 = document.createElement("textarea");
-      ta2.value = t47;
-      ta2.setAttribute("readonly", "");
-      ta2.style.cssText = "position:fixed;left:-9999px;top:0";
-      (document.querySelector("dialog[open]") || document.body).appendChild(ta2);
-      ta2.select();
-      const ok2 = document.execCommand("copy");
-      ta2.remove();
-      return ok2;
-    } catch (e4) {
-      return false;
+    if (!ok2) {
+      try {
+        const ta2 = document.createElement("textarea");
+        ta2.value = t47;
+        ta2.setAttribute("readonly", "");
+        ta2.style.cssText = "position:fixed;left:-9999px;top:0";
+        (document.querySelector("dialog[open]") || document.body).appendChild(ta2);
+        ta2.select();
+        ok2 = document.execCommand("copy");
+        ta2.remove();
+      } catch (e4) {
+        ok2 = false;
+      }
     }
+    if (ok2) ses.released = true;
+    return ok2;
   }
   async function noteLeaveCopy() {
     if (!await noteCopyText()) {
@@ -49748,8 +49808,36 @@ ${d5.text}`);
       leftFocus();
       return true;
     }
-    noteLeave.value = {};
+    if (noteFocus.value) noteLeave.value = {};
     return false;
+  }
+  function noteDiscardAsk(back2 = false) {
+    noteLeave.value = { confirm: true, back: back2 };
+  }
+  async function noteDiscardNow() {
+    const c5 = noteCur.value;
+    if (!c5) {
+      noteLeave.value = null;
+      return;
+    }
+    giveUpTyping();
+    const ok2 = await openNote(c5.path);
+    if (!ok2) {
+      noteCur.value = null;
+      noteSave.value = { state: "" };
+      resetTyping();
+      noteFocus.value = false;
+      notesMsg.value = "That note couldn't be opened again, so it was closed. What you typed was discarded.";
+    }
+    noteLeave.value = null;
+    if (noteFocus.value && !noteCur.value) noteFocus.value = false;
+  }
+  async function noteOpenFileVersion() {
+    const c5 = noteCur.value;
+    if (!c5) return;
+    giveUpTyping();
+    await openNote(c5.path);
+    noteLeave.value = null;
   }
   var noteFind = y3(false);
   var noteFindP = y3(0);
@@ -53429,6 +53517,22 @@ ${d5.text}`);
     aiDiscard();
     return true;
   }, () => aiBarClose());
+  var composing = (e4) => e4.isComposing || e4.keyCode === 229;
+  function FocusKeys() {
+    h2(() => {
+      const key = (e4) => {
+        if (e4.key !== "Escape" || composing(e4) || !noteFocus.value || document.querySelector("dialog[open]")) return;
+        const t47 = e4.target;
+        if (t47 instanceof Element && t47 !== document.body && t47 !== document.documentElement) return;
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (!noteEscape()) noteFocusClose();
+      };
+      document.addEventListener("keydown", key, true);
+      return () => document.removeEventListener("keydown", key, true);
+    }, []);
+    return null;
+  }
   var NOTE_TABBABLE = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable=true]';
   function trapTab(e4, root) {
     const all = (
@@ -53459,7 +53563,7 @@ ${d5.text}`);
     const created = String(m5.created || n4.created || "");
     const focus = noteFocus.value, st2 = noteSave.value;
     const onKey = (e4) => {
-      if (!noteFocus.value || e4.target instanceof Element && e4.target.closest("dialog")) return;
+      if (!noteFocus.value || composing(e4) || e4.target instanceof Element && e4.target.closest("dialog")) return;
       if (e4.key === "Tab") {
         trapTab(
           e4,
@@ -53557,22 +53661,29 @@ ${d5.text}`);
                 m5.date || n4.kind === "Working session" ? /* @__PURE__ */ u2(WorkingSession, { date: String(m5.date || ""), people: (
                   /** @type {string[]} */
                   m5.with || []
-                ) }, `ws|${cur.path}|${cur.load}`) : null
+                ) }, `ws|${cur.load}`) : null
               ] }),
               /* @__PURE__ */ u2(NoteTags, { tags })
             ] }),
-            focus ? /* @__PURE__ */ u2(FocusEnter, {}) : null,
+            focus ? /* @__PURE__ */ u2(S2, { children: [
+              /* @__PURE__ */ u2(FocusEnter, {}),
+              /* @__PURE__ */ u2(FocusKeys, {})
+            ] }) : null,
+            focus && notesMsg.value ? /* @__PURE__ */ u2("div", { class: "nmsg", role: "status", "data-nfocusmsg": true, children: notesMsg.value }) : null,
             st2.state === "conflict" || st2.state === "error" || st2.state === "wait" ? /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", "data-nbanner": st2.state, children: [
               /* @__PURE__ */ u2("span", { children: st2.msg }),
               /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ncopy": true, onClick: () => {
                 noteCopyText().then((ok2) => snack(ok2 ? "Your text is copied" : "It couldn't be copied: select it in the note instead"));
               }, children: "Copy my text" }),
-              st2.state === "conflict" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => openNote(cur.path), children: "Open the file's version" }) : null
+              st2.state === "conflict" ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-nopenfile": true, onClick: () => {
+                noteOpenFileVersion();
+              }, children: "Open the file's version" }) : null,
+              /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ndiscard": true, onClick: () => noteDiscardAsk(false), children: "Discard my typing" })
             ] }) : null,
             /* @__PURE__ */ u2(
               NoteEditor,
               {
-                loadKey: `${cur.path}|${cur.load}`,
+                loadKey: `n${cur.load}`,
                 markdown: cur.body,
                 code,
                 label: `${n4.title}, the note`,
@@ -53592,7 +53703,7 @@ ${d5.text}`);
                   else onNew(t47);
                 }
               },
-              `${cur.path}|${cur.load}`
+              `n${cur.load}`
             )
           ]
         },
@@ -53612,7 +53723,16 @@ ${d5.text}`);
   }
   function LeaveDialog() {
     const q5 = noteLeave.value, st2 = noteSave.value;
-    return /* @__PURE__ */ u2(Dialog, { open: q5 !== null, onClose: noteLeaveKeep, labelledBy: "noteLeaveH", describedBy: "noteLeaveP", id: "noteLeaveDlg", focus: "[data-nlkeep]", children: /* @__PURE__ */ u2("div", { class: "nleave", children: [
+    return /* @__PURE__ */ u2(Dialog, { open: q5 !== null, onClose: noteLeaveKeep, labelledBy: "noteLeaveH", describedBy: "noteLeaveP", id: "noteLeaveDlg", focus: "[data-nlkeep]", children: q5 && q5.confirm ? /* @__PURE__ */ u2("div", { class: "nleave", "data-nlstage": "discard", children: [
+      /* @__PURE__ */ u2("h2", { id: "noteLeaveH", children: "Discard what you typed?" }),
+      /* @__PURE__ */ u2("p", { id: "noteLeaveP", children: "It isn't saved, and it can't be got back unless you copied it. The note shows the file's version again." }),
+      /* @__PURE__ */ u2("div", { class: "nlfoot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-nlkeep": true, onClick: noteLeaveKeep, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-nldiscard": true, onClick: () => {
+          noteDiscardNow();
+        }, children: "Discard my typing" })
+      ] })
+    ] }) : /* @__PURE__ */ u2("div", { class: "nleave", "data-nlstage": "ask", children: [
       /* @__PURE__ */ u2("h2", { id: "noteLeaveH", children: "This note isn't saved" }),
       /* @__PURE__ */ u2("p", { id: "noteLeaveP", children: [
         st2.msg || "It couldn't be saved.",
@@ -53624,9 +53744,15 @@ ${d5.text}`);
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-nlcopy": true, onClick: () => {
           noteLeaveCopy();
         }, children: "Copy my text then close" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-nlretry": true, "data-cmdenter": true, onClick: () => {
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-nlretry": true, onClick: () => {
           noteLeaveRetry();
         }, children: "Save again" })
+      ] }),
+      /* @__PURE__ */ u2("p", { class: "nlalt", children: [
+        st2.state === "conflict" ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-nlopen": true, onClick: () => {
+          noteOpenFileVersion();
+        }, children: "Open the file's version" }) : null,
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-nlgiveup": true, onClick: () => noteDiscardAsk(true), children: "Discard my typing" })
       ] })
     ] }) });
   }
@@ -53882,6 +54008,14 @@ ${d5.text}`);
       { id: id2 }
     ) : null, host2);
   }
+  function bootUnloadGuard() {
+    window.addEventListener("beforeunload", (e4) => {
+      if (noteUnsavedAtExit()) {
+        e4.preventDefault();
+        e4.returnValue = "";
+      }
+    });
+  }
   function bootNotes() {
     document.addEventListener("keydown", (e4) => {
       if (shared.VIEW === "notes" && (e4.metaKey || e4.ctrlKey) && e4.key === "\\") {
@@ -53915,8 +54049,9 @@ ${d5.text}`);
     };
     window.addEventListener("pagehide", noteFlushOnExit);
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") noteFlush();
+      if (document.visibilityState === "hidden") noteFlush(false);
     });
+    bootUnloadGuard();
   }
 
   // components/sidebar/RailIcon.jsx

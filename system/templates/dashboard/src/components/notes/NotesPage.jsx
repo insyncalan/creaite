@@ -13,7 +13,7 @@ import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { addNoteImage, allNotes, closeNote, createNote, loadNotes, noteBodyFrom, noteCopyText, noteCur, noteFind, noteFindP, noteFlush, noteFocus,
   noteFocusClose, noteFocusOpen, noteImageSrc, noteLeave, noteLeaveCopy, noteLeaveKeep, noteLeaveRetry, noteLoading, noteMarks, noteMeta, noteRenamed,
-  noteEscape, noteEscLayers, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList } from "../../stores/notes.js";
+  noteDiscardAsk, noteDiscardNow, noteEscape, noteEscLayers, noteOpenFileVersion, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList } from "../../stores/notes.js";
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
 import { aiAction, aiBarClose, aiDiscard, aiSug } from "../../stores/aiEdit.js";
 import { FindUpdates } from "./FindUpdates.jsx";
@@ -171,6 +171,27 @@ function SaveLine() {
    stores/notes.js noteEscLayers). The / menu and the pickers, the date pop-up, the tag box and menus take Esc themselves. */
 noteEscLayers.push(() => { if (!aiSug.value) return false; aiDiscard(); return true; }, () => aiBarClose());
 
+/** A key pressed while an input method is composing text (Esc cancels the composition, not the note). @param {KeyboardEvent} e */
+const composing = e => e.isComposing || e.keyCode === 229;
+/** Esc when nothing has focus (the page body: a click on the note's blank space): the same close path. A capture listener on the
+    document, only while focus mode is on; it acts only when no element has focus, so every overlay and field that takes Esc itself
+    still gets it first. */
+function FocusKeys() {
+  useEffect(() => {
+    /** @param {KeyboardEvent} e */
+    const key = e => {
+      if (e.key !== "Escape" || composing(e) || !noteFocus.value || document.querySelector("dialog[open]")) return;
+      const t = e.target;
+      if (t instanceof Element && t !== document.body && t !== document.documentElement) return;
+      e.preventDefault(); e.stopPropagation();
+      if (!noteEscape()) noteFocusClose();
+    };
+    document.addEventListener("keydown", key, true);
+    return () => document.removeEventListener("keydown", key, true);
+  }, []);
+  return null;
+}
+
 const NOTE_TABBABLE = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"]),[contenteditable=true]';
 /** Tab stays inside the lifted note (a modal): from the last control to the first, and back. @param {KeyboardEvent} e @param {HTMLElement} root */
 function trapTab(e, root) {
@@ -199,7 +220,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
   /** Esc and Tab in the lifted note: the topmost overlay closes first; with none open Esc leaves focus mode (the one close path).
       A modal dialog (the "couldn't save" one) takes Esc itself. @param {KeyboardEvent} e */
   const onKey = e => {
-    if (!noteFocus.value || (e.target instanceof Element && e.target.closest("dialog"))) return;
+    if (!noteFocus.value || composing(e) || (e.target instanceof Element && e.target.closest("dialog"))) return;
     if (e.key === "Tab") { trapTab(e, /** @type {HTMLElement} */ (e.currentTarget)); return; }
     if (e.key !== "Escape") return;                  // (the editor marks Esc as handled itself, so defaultPrevented says nothing; an overlay that took Esc stopped it)
     e.preventDefault(); e.stopPropagation();
@@ -230,16 +251,18 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
           </div>
           <div class="meta props">
             {created ? <span>Created {fd(created)}</span> : null}
-            {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.path}|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
+            {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
           </div>
           <NoteTags tags={tags} />
         </div>
-        {focus ? <FocusEnter /> : null}
+        {focus ? <><FocusEnter /><FocusKeys /></> : null}
+        {focus && notesMsg.value ? <div class="nmsg" role="status" data-nfocusmsg>{notesMsg.value}</div> : null}
         {st.state === "conflict" || st.state === "error" || st.state === "wait" ? (
           <div class="nstale" role="alert" data-nbanner={st.state}><span>{st.msg}</span>
             <button type="button" class="btn sm" data-ncopy onClick={() => { noteCopyText().then(ok => snack(ok ? "Your text is copied" : "It couldn't be copied: select it in the note instead")); }}>Copy my text</button>
-            {st.state === "conflict" ? <button type="button" class="btn sm" onClick={() => openNote(cur.path)}>Open the file's version</button> : null}</div>) : null}
-        <NoteEditor key={`${cur.path}|${cur.load}`} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
+            {st.state === "conflict" ? <button type="button" class="btn sm" data-nopenfile onClick={() => { noteOpenFileVersion(); }}>Open the file's version</button> : null}
+            <button type="button" class="btn sm" data-ndiscard onClick={() => noteDiscardAsk(false)}>Discard my typing</button></div>) : null}
+        <NoteEditor key={`n${cur.load}`} loadKey={`n${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
           noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
           onHoverLine={l => { if (noteFind.value && fuHover.value !== l) fuHover.value = l; }}
           onOpenItem={onOpenItem} onOpenNote={t => { const hit = noteByTitle(code, t); if (hit) onOpen(hit.path); else onNew(t); }} />
@@ -262,15 +285,30 @@ function LeaveDialog() {
   const q = noteLeave.value, st = noteSave.value;
   return (
     <Dialog open={q !== null} onClose={noteLeaveKeep} labelledBy="noteLeaveH" describedBy="noteLeaveP" id="noteLeaveDlg" focus="[data-nlkeep]">
-      <div class="nleave">
-        <h2 id="noteLeaveH">This note isn't saved</h2>
-        <p id="noteLeaveP">{st.msg || "It couldn't be saved."} Your typing is still in the note.{q && q.copyFailed ? " It couldn't be copied: select the text and copy it yourself, or keep editing." : ""}</p>
-        <div class="nlfoot">
-          <button type="button" class="btn" data-nlkeep onClick={noteLeaveKeep}>Keep editing</button>
-          <button type="button" class="btn" data-nlcopy onClick={() => { noteLeaveCopy(); }}>Copy my text then close</button>
-          <button type="button" class="btn primary" data-nlretry data-cmdenter onClick={() => { noteLeaveRetry(); }}>Save again</button>
+      {q && q.confirm ? (
+        <div class="nleave" data-nlstage="discard">
+          <h2 id="noteLeaveH">Discard what you typed?</h2>
+          <p id="noteLeaveP">It isn't saved, and it can't be got back unless you copied it. The note shows the file's version again.</p>
+          <div class="nlfoot">
+            <button type="button" class="btn" data-nlkeep onClick={noteLeaveKeep}>Cancel</button>
+            <button type="button" class="btn primary" data-nldiscard onClick={() => { noteDiscardNow(); }}>Discard my typing</button>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div class="nleave" data-nlstage="ask">
+          <h2 id="noteLeaveH">This note isn't saved</h2>
+          <p id="noteLeaveP">{st.msg || "It couldn't be saved."} Your typing is still in the note.{q && q.copyFailed ? " It couldn't be copied: select the text and copy it yourself, or keep editing." : ""}</p>
+          <div class="nlfoot">
+            <button type="button" class="btn" data-nlkeep onClick={noteLeaveKeep}>Keep editing</button>
+            <button type="button" class="btn" data-nlcopy onClick={() => { noteLeaveCopy(); }}>Copy my text then close</button>
+            <button type="button" class="btn primary" data-nlretry onClick={() => { noteLeaveRetry(); }}>Save again</button>
+          </div>
+          <p class="nlalt">
+            {st.state === "conflict" ? <button type="button" class="linkbtn" data-nlopen onClick={() => { noteOpenFileVersion(); }}>Open the file's version</button> : null}
+            <button type="button" class="linkbtn" data-nlgiveup onClick={() => noteDiscardAsk(true)}>Discard my typing</button>
+          </p>
+        </div>
+      )}
     </Dialog>);
 }
 
