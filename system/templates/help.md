@@ -26,8 +26,6 @@ moving (v2.0.0 Notes, 15-10-2026; check each before the release and delete the l
   card in Word documents and permissions) describes it; until it lands, reading a note in OneDrive marks the run.
 - D's one-line rule (v20-ai-select): "Make this an action, a risk, a decision or an update" refusing a selection over two
   lines (Let creaite draft the wording, step 9; Notes).
-- C's "Done and find updates" and a recent note in the drawer: on v20-capture they still land on the project's Overview,
-  not the note (openNoteFull calls go("cockpit")); the text says what they should do.
 - A's real-data gate (step 6, laptop 1): nothing in Help depends on it.
 -->
 

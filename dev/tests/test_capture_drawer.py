@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase, free_port  # noqa: E402
 from test_dashboard import populate  # noqa: E402
 from test_tracker import ABC, Vault  # noqa: E402
+import notes_find_fixture as fx  # noqa: E402
 
 META, SHIFT = 4, 8
 TODAY = date.today().isoformat()
@@ -244,6 +245,11 @@ class Drawer(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         load_vault(v)
+        cls.fake = fx.install(v)           # Done and find updates opens Find updates, which runs "Claude": never the real one
+
+    @classmethod
+    def server_env(cls):
+        return {"CREAITE_CLAUDE": str(cls.fake)}
 
     def open(self):
         b = self.b
@@ -317,24 +323,62 @@ class Drawer(LiveBrowserCase):
         self.assertIn("Remember the budget line", b.eval("document.querySelector('#capDrawer .caprecent').textContent"))
         self.assertIn("Unfiled", b.eval("document.querySelector('#capDrawer .caprecent').textContent"))
 
-    def test_done_and_find_updates_opens_the_note_with_the_flag(self):
+    NOTE_OPEN = ("VIEW==='notes'&&noteCur.value&&noteCur.value.code===%s&&noteCur.value.path===%s"
+                 "&&!!document.querySelector('#v-notes .nbody.ProseMirror')&&!document.getElementById('v-notes').hidden")
+
+    def note_open(self, code, path, find):
+        """The note is open in the Notes tab (B's view), with Find updates beside it or not (E's panel)."""
         b = self.b
+        b.wait(self.NOTE_OPEN % (json.dumps(code), json.dumps(path)), 20)
+        self.assertTrue(b.eval("document.getElementById('v-cockpit').hidden"))      # not left on the project's Overview
+        on = "document.querySelector('.nlist .ni.on')"
+        self.assertEqual(b.eval(f"{on}&&{on}.textContent.includes({json.dumps(path.rsplit('/', 1)[1][:-3])})"), True)   # chosen in the list
+        file = urllib.request.quote(path.rsplit("/", 1)[1], safe="")
+        if find:
+            b.wait("noteFind.value&&!!document.querySelector('#noteSide aside.fu')", 20)
+            self.assertEqual(b.eval("document.getElementById('noteFind').getAttribute('aria-expanded')"), "true")
+            b.wait(f"location.hash==={json.dumps(f'#notes={code}&n={file}&find=1')}")
+        else:
+            b.pump(0.5)
+            self.assertFalse(b.eval("noteFind.value"))
+            self.assertIsNone(b.eval("document.querySelector('#noteSide aside.fu')"))
+            self.assertEqual(b.eval("location.hash"), f"#notes={code}&n={file}")
+
+    def test_done_and_find_updates_opens_the_note_with_find_updates(self):
+        b = self.b
+        b.eval("go('work')")
+        b.wait("VIEW==='work'")
         self.open()
         b.type("[ABC] Sara agreed the sandbox")
         b.wait("document.getElementById('capProj').value==='ABC'", 10)
         b.click("#capFind")
         b.wait("document.getElementById('capDrawer').hidden", 10)
-        b.wait("VIEW==='cockpit'")
-        got = b.eval("[COCK, location.hash, JSON.stringify(noteRequest.value)]")
-        self.assertEqual(got[0], "ABC")
-        self.assertEqual(got[1], "#notes=ABC&n=" + urllib.request.quote("ABC Sara agreed the sandbox.md", safe="") + "&find=1")   # B's note page
-        self.assertEqual(json.loads(got[2]), {"code": "ABC", "path": f"{ABC}/notes/ABC Sara agreed the sandbox.md", "find": True})
+        self.note_open("ABC", f"{ABC}/notes/ABC Sara agreed the sandbox.md", True)
+        b.eval("history.back()")                                                       # Back returns to the page it came from
+        b.wait("VIEW==='work'", 10)
         self.open()                                                                  # Unfiled: the portfolio's notes
         b.type("Lunch idea")
         b.pump(1)
         b.click("#capFind")
         b.wait("document.getElementById('capDrawer').hidden", 10)
-        self.assertEqual(b.eval("location.hash"), "#notes=_portfolio&n=Lunch%20idea.md&find=1")
+        self.note_open("_portfolio", f"{PORTFOLIO_NOTES}/Lunch idea.md", True)
+
+    def test_a_recent_note_opens_in_the_notes_tab(self):
+        b = self.b
+        self.open()
+        b.type("[ABC] Budget line agreed")
+        b.wait("document.getElementById('capProj').value==='ABC'", 10)
+        b.click("#capDone")
+        b.wait("document.getElementById('capDrawer').hidden", 10)
+        b.eval("go('today')")
+        b.wait("VIEW==='today'")
+        self.open()
+        row = "[...document.querySelectorAll('#capDrawer .caprecent .caprow')].find(x=>x.textContent.includes('ABC Budget line agreed'))"
+        b.wait(f"!!{row}", 10)
+        b.eval(f"{row}.click()")
+        b.wait("document.getElementById('capDrawer').hidden", 10)
+        self.note_open("ABC", f"{ABC}/notes/ABC Budget line agreed.md", False)
+        self.assertEqual(b.errors, [])
 
     def test_note_for_this_meeting(self):
         b = self.b

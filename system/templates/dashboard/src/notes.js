@@ -55,13 +55,15 @@ export function renderNotes(code) {
 }
 
 /** Open a note by its stored path, in its project's Notes tab; with `line`, that line in view and highlighted (a source link's
-    "#p4", BL-301 E). @param {string} path @param {number} [line] */
-export function openNoteAt(path, line) {
+    "#p4", BL-301 E). `o.code` names the project when the caller knows it (the capture drawer's note, not yet in the page's
+    data); `o.find` also opens Find updates beside it (part C's "Done and find updates", the address's &find=1).
+    @param {string} path @param {number} [line] @param {{code?: string, find?: boolean}} [o] */
+export function openNoteAt(path, line, o = {}) {
   if (line) noteFlash.value = { path, line };
-  const code = noteCodeOf(path) || (() => { const m = /^projects\/([^/]+)\//.exec(path); const f = m && m[1]; if (f === "_portfolio") return "_portfolio";
+  const code = (o.code && notesCodeOk(o.code) ? o.code : null) || noteCodeOf(path) || (() => { const m = /^projects\/([^/]+)\//.exec(path); const f = m && m[1]; if (f === "_portfolio") return "_portfolio";
     const pair = Object.entries(/** @type {any} */ (D).folders || {}).find(([, name]) => name === f); return pair ? pair[0] : null; })();
   if (!code) return false;
-  shared.NOTEFILE = path;
+  shared.NOTEFILE = path; shared.NOTEFIND = !!o.find;
   if (shared.VIEW === "notes" && notesCode.value === code) { renderNotes(code); return true; }
   return go("notes", code);
 }
