@@ -1958,7 +1958,7 @@ KIND_PROMPTS["edit-ai"] = ("You are creaite's editor assistant (BL-301 D). You h
 # What it can do: Read, Grep and Glob in the vault and the projects root, nothing else. No Bash (a deny beats an allow, so a
 # narrow `tracker.py read` allow can't sit beside a Bash deny; the tracker rows come in the material). No Microsoft 365 either
 # (least privilege, Jarvis, 15-10-2026: its prompt already says never call it): the reading tools are neither allowed nor
-# available, denied by name like the rest. "Continue in Ask creaite" carries on as a chat, with a chat's tools.
+# available, denied by name like the rest. "Continue in ask creaite" carries on as a chat, with a chat's tools.
 SEARCH_TOOLS = ["Read", "Grep", "Glob"]
 KIND_TOOLS["search"] = list(SEARCH_TOOLS)
 KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
