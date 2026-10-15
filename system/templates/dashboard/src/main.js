@@ -44,6 +44,9 @@ export * from "./drafts.js";
 
 export * from "./components/StatusDot.jsx";   /* BL-256: the components (dev/COMPONENTS.md) */
 export * from "./components/Menu.jsx";
+export * from "./components/Picker.jsx";   /* BL-316: choose a value, a calendar, a small popover */
+export * from "./components/Combobox.jsx";   /* BL-316 */
+export * from "./components/Peek.jsx";   /* BL-316: a side peek's frame */
 export * from "./components/mount.js";
 export * from "./components/Icon.jsx";
 export * from "./components/Dialog.jsx";

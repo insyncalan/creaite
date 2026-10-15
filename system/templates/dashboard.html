@@ -3101,6 +3101,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     ChasePane: () => ChasePane,
     Chip: () => Chip,
     CloseDay: () => CloseDay,
+    Combobox: () => Combobox,
     D: () => D,
     DATE: () => DATE,
     DATE_HELP: () => DATE_HELP,
@@ -3315,6 +3316,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     PSORTT: () => PSORTT,
     PULSE: () => PULSE,
     PageDialogs: () => PageDialogs,
+    Peek: () => Peek,
+    PeekBar: () => PeekBar,
     PrepPage: () => PrepPage,
     QCK: () => QCK,
     QUEUE: () => QUEUE,
@@ -3832,11 +3835,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     clockOf: () => clockOf,
     closeCal: () => closeCal,
     closeChat: () => closeChat,
+    closeCombobox: () => closeCombobox,
     closeDialog: () => closeDialog,
     closeDisp: () => closeDisp,
     closeFilterBar: () => closeFilterBar,
     closeMenu: () => closeMenu,
     closePanel: () => closePanel,
+    closePicker: () => closePicker,
     clrConfirm: () => clrConfirm,
     clrKeys: () => clrKeys,
     clrList: () => clrList,
@@ -3850,9 +3855,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     cmdOK: () => cmdOK,
     colPatch: () => colPatch,
     colResizer: () => colResizer,
-    comboClose: () => comboClose,
-    comboDraw: () => comboDraw,
-    comboPick: () => comboPick,
+    comboboxOpen: () => comboboxOpen,
     commitRecord: () => commitRecord,
     confirmCard: () => confirmCard,
     conflictChoice: () => conflictChoice,
@@ -4055,6 +4058,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     drawHistory: () => drawHistory,
     drawIconButton: () => drawIconButton,
     drawPanel: () => drawPanel,
+    drawPeekBar: () => drawPeekBar,
     drawPrep: () => drawPrep,
     drawReviewFilters: () => drawReviewFilters,
     drawStatusDot: () => drawStatusDot,
@@ -4195,6 +4199,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     hlToggle: () => hlToggle,
     html: () => html,
     htmlPart: () => htmlPart,
+    htmlPopover: () => htmlPopover,
     htmlToMd: () => htmlToMd,
     hubFor: () => hubFor,
     hubLink: () => hubLink,
@@ -4337,11 +4342,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     moreViewsMenu: () => moreViewsMenu,
     mount: () => mount,
     mountChase: () => mountChase,
+    mountCombobox: () => mountCombobox,
     mountCurEdit: () => mountCurEdit,
     mountFeedTabs: () => mountFeedTabs,
     mountFirstThing: () => mountFirstThing,
     mountMenu: () => mountMenu,
     mountMenuPanel: () => mountMenuPanel,
+    mountOwnerFields: () => mountOwnerFields,
     mountRejectMenu: () => mountRejectMenu,
     mountRejectsList: () => mountRejectsList,
     mountSneak: () => mountSneak,
@@ -4484,6 +4491,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     openCk: () => openCk,
     openClose: () => openClose,
     openCloseDay: () => openCloseDay,
+    openDatePicker: () => openDatePicker,
     openDialog: () => openDialog,
     openDisp: () => openDisp,
     openDraftEmail: () => openDraftEmail,
@@ -4498,6 +4506,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     openNewMilestone: () => openNewMilestone,
     openOnly: () => openOnly,
     openPath: () => openPath,
+    openPicker: () => openPicker,
+    openPopover: () => openPopover,
     openPrep: () => openPrep,
     openProject: () => openProject,
     openProposal: () => openProposal,
@@ -4514,6 +4524,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     ownerMatches: () => ownerMatches,
     ownerNames: () => ownerNames,
     ownerOf: () => ownerOf,
+    ownerOptions: () => ownerOptions,
     ownerOpts: () => ownerOpts,
     ownersOf: () => ownersOf,
     pBlank: () => pBlank,
@@ -4546,6 +4557,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pdStamp: () => pdStamp,
     pdWhen: () => pdWhen,
     pdWrite: () => pdWrite,
+    peekFrame: () => peekFrame,
     peekPropNodes: () => peekPropNodes,
     pencil: () => pencil,
     pendingCard: () => pendingCard,
@@ -4599,6 +4611,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pfScope: () => pfScope,
     pfWord: () => pfWord,
     pickImage: () => pickImage,
+    pickerOpenFor: () => pickerOpenFor,
     pkAdd: () => pkAdd,
     pkApply: () => pkApply,
     pkArr: () => pkArr,
@@ -4712,6 +4725,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkWsPre: () => pkWsPre,
     pkWsPreSync: () => pkWsPreSync,
     pkX: () => pkX,
+    placePicker: () => placePicker,
     plur: () => plur,
     polishAsk: () => polishAsk,
     portfolioTable: () => portfolioTable,
@@ -6701,6 +6715,152 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ] })
       ] })
     );
+  }
+
+  // components/Combobox.jsx
+  var OPEN = null;
+  function Combobox({ id, name, value = "", label, placeholder, empty = "Type a name to add it.", options, onPick, onInput }) {
+    const [open2, setOpen2] = d2(false), [typed, setTyped] = d2(false), [act, setAct] = d2(0), [, redraw] = d2(0);
+    const field = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    ), box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const listId = `${id}-list`, q4 = typed && field.current ? field.current.value.trim() : "";
+    const L2 = open2 ? options(q4, typed) : [];
+    const ai = Math.min(act, Math.max(0, L2.length - 1));
+    const close = () => {
+      setOpen2(false);
+      if (OPEN && OPEN.close === close) OPEN = null;
+    };
+    const show = () => {
+      if (OPEN && OPEN.close !== close) OPEN.close();
+      OPEN = { close };
+      setOpen2(true);
+    };
+    h2(() => {
+      if (field.current && field.current.value !== value) field.current.value = value;
+    }, [value]);
+    h2(() => {
+      if (!open2) return;
+      const away = (e4) => {
+        if (!box.current?.contains(
+          /** @type {Node} */
+          e4.target
+        )) close();
+      };
+      document.addEventListener("mousedown", away, true);
+      return () => document.removeEventListener("mousedown", away, true);
+    }, [open2]);
+    const pick = async (o5) => {
+      close();
+      const r4 = await onPick(o5);
+      if (r4 !== false && field.current) field.current.value = o5.fill ?? o5.label;
+    };
+    const keys = (e4) => {
+      if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        if (!open2) show();
+        else setAct(Math.min(ai + 1, L2.length - 1));
+      } else if (e4.key === "ArrowUp") {
+        e4.preventDefault();
+        setAct(Math.max(ai - 1, 0));
+      } else if (e4.key === "Enter" && open2 && L2[ai] && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        e4.stopPropagation();
+        pick(L2[ai]);
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (open2) close();
+        else if (field.current) {
+          field.current.value = "";
+          onInput && onInput("");
+        }
+      } else if (e4.key === "Tab") close();
+    };
+    return /* @__PURE__ */ u2("div", { class: `combo${open2 ? " open" : ""}`, ref: box, children: [
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          type: "text",
+          id,
+          name,
+          ref: field,
+          role: "combobox",
+          "aria-label": label,
+          "aria-autocomplete": "list",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-controls": listId,
+          "aria-activedescendant": open2 && L2[ai] ? `${id}-o${ai}` : void 0,
+          placeholder,
+          autocomplete: "off",
+          onKeyDown: keys,
+          onFocus: () => {
+            setTyped(false);
+            setAct(0);
+            show();
+          },
+          onInput: (e4) => {
+            setTyped(true);
+            setAct(0);
+            if (!open2) show();
+            else redraw((n4) => n4 + 1);
+            onInput && onInput(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            );
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "combo-list", id: listId, role: "listbox", "aria-label": label, children: open2 ? L2.length ? L2.map((o5, i5) => /* @__PURE__ */ u2(S2, { children: [
+        o5.head ? /* @__PURE__ */ u2("div", { class: "cgrp", role: "presentation", children: o5.head }) : null,
+        /* @__PURE__ */ u2(
+          "div",
+          {
+            id: `${id}-o${i5}`,
+            role: "option",
+            "aria-selected": i5 === ai ? "true" : "false",
+            class: `copt${o5.cls ? " " + o5.cls : ""}${i5 === ai ? " act" : ""}`,
+            "data-n": o5.v,
+            onMouseDown: (e4) => {
+              e4.preventDefault();
+              pick(o5);
+            },
+            children: [
+              /* @__PURE__ */ u2("span", { children: o5.label }),
+              o5.sub ? /* @__PURE__ */ u2("small", { children: o5.sub }) : null,
+              o5.remove ? /* @__PURE__ */ u2(
+                "button",
+                {
+                  type: "button",
+                  class: "cdel",
+                  "aria-label": o5.removeLabel || `Remove ${o5.label}`,
+                  tabIndex: -1,
+                  onMouseDown: (e4) => {
+                    e4.preventDefault();
+                    e4.stopPropagation();
+                    Promise.resolve(o5.remove && o5.remove()).then(() => redraw((n4) => n4 + 1));
+                  },
+                  children: /* @__PURE__ */ u2(Icon, { name: "x" })
+                }
+              ) : null
+            ]
+          }
+        )
+      ] }, `${i5}:${o5.v}`)) : /* @__PURE__ */ u2("div", { class: "copt", role: "presentation", children: empty }) : null })
+    ] });
+  }
+  function mountCombobox(host2, props) {
+    R(/* @__PURE__ */ u2(Combobox, { ...props }), host2);
+  }
+  function closeCombobox() {
+    if (OPEN) OPEN.close();
+  }
+  function comboboxOpen() {
+    return !!OPEN;
   }
 
   // components/Chip.jsx
@@ -9462,7 +9622,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     ] });
   }
   function DayMeetings(props) {
-    const { day, dow, isToday, past, now, mode, live, calendar, lastRead, meetings, allDay, acts: acts2, onWheel } = props;
+    const { day, dow: dow2, isToday, past, now, mode, live, calendar, lastRead, meetings, allDay, acts: acts2, onWheel } = props;
     const ref = wheelRef(onWheel);
     if (mode === "none") return /* @__PURE__ */ u2("div", { class: "daynone", ref, children: [
       /* @__PURE__ */ u2("span", { children: calendar ? "No calendar for today yet" : "No calendar yet" }),
@@ -9510,7 +9670,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       ] }) : null,
       isToday ? null : /* @__PURE__ */ u2("p", { class: "dayaway", ref, children: [
         "Showing ",
-        dow,
+        dow2,
         ". Everything below is as of today."
       ] })
     ] }, day);
@@ -9546,7 +9706,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
 
   // components/IconButton.jsx
-  function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm = true, cls, data, haspopup, keyHint }) {
+  function IconButton({ icon, label, name, onClick, why, onBlocked, primary, sm = true, cls, data, haspopup, keyHint, id, hidden }) {
     const c5 = ["ib", sm ? "sm" : "", primary ? "pri" : "", cls].filter(Boolean).join(" ");
     const extra = {};
     for (const k5 of Object.keys(data || {})) extra[`data-${k5}`] = String((data || {})[k5]);
@@ -9563,6 +9723,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       {
         type: "button",
         class: c5,
+        id,
+        hidden,
         "aria-label": name || label,
         "data-tip": why || label,
         "data-key": keyHint,
@@ -9985,8 +10147,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   var WDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   function synthDay(iso) {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00"), dow = WDAYS[d5.getDay()];
-    return { date: iso, dow, short: `${dow.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso), today: iso === TODAY, past: iso < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
+    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00"), dow2 = WDAYS[d5.getDay()];
+    return { date: iso, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso), today: iso === TODAY, past: iso < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
   }
   function dayList() {
     if (!D.calendar) return [];
@@ -24526,7 +24688,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     shared.CUR = null;
     shared.EDITING = false;
     closeCal();
-    comboClose();
+    closeCombobox();
     if (shared.SEL) {
       shared.SEL = null;
       markSel();
@@ -27755,7 +27917,7 @@ ${d5.text}`);
     if (t5 === "cm") return `<textarea name="${n4}" id="${id}" rows="4">${esc(v4 || CMT)}</textarea>`;
     if (t5 === "cmd") return `<textarea name="${n4}" id="${id}" rows="3" placeholder="Plain wording for the client — no fixed headings">${esc(v4 || "")}</textarea>`;
     if (t5 === "date") return `<span class="dwrap"><input type="text" name="${n4}" id="${id}" value="${esc(v4 ? fd(v4) : "")}" placeholder="DD-MM-YYYY" autocomplete="off" data-date="1"><button type="button" class="dbtn" data-cal="${id}" aria-label="Choose date">${CALI}</button></span>`;
-    if (t5 === "owner") return `<div class="combo"><input type="text" name="${n4}" id="${id}" value="${esc(v4 && v4 !== "TBC" ? v4 : "")}" placeholder="Choose or type a name" autocomplete="off"><div class="combo-list"></div></div>`;
+    if (t5 === "owner") return `<div class="combohost" data-combo="${n4}" data-v="${esc(v4 && v4 !== "TBC" ? v4 : "")}" data-label="${n4 === "by" ? "Decision maker" : "Owner"}"></div>`;
     if (t5 === "ws") return `<input type="text" name="${n4}" id="${id}" list="wslist" value="${esc(v4 || "")}" placeholder="${formProject() ? `A ${formProject()} workstream` : "e.g. Data, Testing"}"><datalist id="wslist">${wsFor(formProject()).map((w5) => `<option value="${esc(w5)}">`).join("")}</datalist>`;
     if (t5 === "check") return `<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" name="${n4}" id="${id}" ${v4 ? "checked" : ""}> Include in client reports</label>`;
     if (t5 === "calc") return `<span id="f_prcalc">${esc(v4)}</span>`;
@@ -27902,6 +28064,7 @@ ${d5.text}`);
         if (shared.CUR.mode === "health") h5 += `<div class="evidence" id="hEvidence" aria-live="polite"></div>`;
         if (shared.CUR.k === "project") h5 += `<dd class="full">${feedBlock("proj", projFeedItems(shared.CUR.code))}</dd>`;
         putHTML($("#pFields"), raw(h5));
+        mountOwnerFields($("#pFields"));
         mountFeedTabs($("#pFields"));
         learnLabel();
         if (shared.CUR.mode === "health") {
@@ -28348,7 +28511,7 @@ ${d5.text}`);
     window.addEventListener("keydown", (e4) => {
       if (e4.key !== "Escape" || !pkOn() || shared.EDITING) return;
       const a5 = document.activeElement;
-      if (document.querySelector("dialog:modal") || shared.CAL || shared.COMBO || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box")) return;
+      if (document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box")) return;
       if (a5 && a5.closest && a5.closest("#chat")) {
         if (shared.RUN) return;
         e4.preventDefault();
@@ -32993,7 +33156,7 @@ ${d5.text}`);
     const r4 = btn.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
-    const pad = (n4) => String(n4).padStart(2, "0"), isoOf = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+    const pad = (n4) => String(n4).padStart(2, "0"), isoOf2 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
     const draw = (focus) => {
       const f5 = new Date(y5, m5, 1), st = (f5.getDay() + 6) % 7, dn = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st);
@@ -33062,7 +33225,7 @@ ${d5.text}`);
         d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
       } else return;
       e4.preventDefault();
-      goTo(isoOf(d5));
+      goTo(isoOf2(d5));
     });
     if (shared.CAL && wkField(inp)) {
       wkMark(shared.CAL);
@@ -33241,8 +33404,6 @@ ${d5.text}`);
       if (isDateField(a5) && !$("#dateHint")?.hidden) dateHint(a5);
     }, true);
   }
-  shared.COMBO = null;
-  shared.CI = 0;
   var formProject = () => $("#f_p")?.value || shared.CUR && (shared.CUR.draft && shared.CUR.draft.p || shared.CUR.mode === "record" && (REC(shared.CUR.k, shared.CUR.id) || {}).p || shared.CUR.code) || "";
   var projPeople = (code) => {
     if (!code) return [];
@@ -33265,93 +33426,45 @@ ${d5.text}`);
     if (q4 && rs && (rs.status === "likely" || rs.status === "unknown")) items2.push({ n: q4, t: "new" });
     return { L: L2, items: items2 };
   }
-  function comboDraw(box) {
-    const inp = box.querySelector("input"), q4 = box.dataset.typed === "1" ? inp.value.trim() : "", ql = q4.toLowerCase(), code = formProject();
-    const mine = projPeople(code), pool = projFirst(peopleAll(), mine), split2 = new Set(mine), { L: L2, items: items2 } = ownerMatches(q4, pool);
-    const nMine = L2.filter((n4) => split2.has(n4)).length, head = (i5) => !code || !nMine || nMine === L2.length ? "" : i5 === 0 ? `<div class="cgrp">${esc(code)}</div>` : i5 === nMine ? '<div class="cgrp">Everyone else</div>' : "";
-    if (box.dataset.typed !== "1") {
-      const i5 = items2.findIndex((it) => it.n === inp.value.trim());
-      if (i5 >= 0 && shared.CI === 0) shared.CI = i5;
-    }
-    shared.CI = Math.min(shared.CI, Math.max(0, items2.length - 1));
-    putHTML(box.querySelector(".combo-list"), raw(items2.map((it, i5) => head(i5) + (it.t === "new" ? `<div class="copt new ${i5 === shared.CI ? "act" : ""}" data-n="${esc(it.n)}" data-t="new">＋ New person “${esc(it.n)}”…</div>` : it.t === "alias" ? `<div class="copt ${i5 === shared.CI ? "act" : ""}" data-n="${esc(it.n)}" data-t="alias" data-typed="${esc(it.typed)}"><span>Is “${esc(it.typed)}” ${esc(it.n)}?</span><small>Yes, and remember it</small></div>` : `<div class="copt ${i5 === shared.CI ? "act" : ""}" data-n="${esc(it.n)}" data-t="pick"><span>${esc(it.n)}${isMe(it.n) ? " <small>(you)</small>" : ""}</span><small>${useCount(it.n)}</small><button type="button" class="cdel" data-del="${esc(it.n)}" aria-label="Remove ${esc(it.n)} from the list">${ic("x")}</button></div>`)).join("") || '<div class="copt">Type a name to add it.</div>'));
-    box.classList.add("open");
-    shared.COMBO = box;
+  function ownerOptions(q4, typed) {
+    const code = formProject(), mine = projPeople(code), pool = projFirst(peopleAll(), mine), split2 = new Set(mine), { L: L2, items: items2 } = ownerMatches(typed ? q4 : "", pool);
+    const nMine = L2.filter((n4) => split2.has(n4)).length, head = (i5) => !code || !nMine || nMine === L2.length ? "" : i5 === 0 ? code : i5 === nMine ? "Everyone else" : "";
+    return items2.map((it, i5) => it.t === "new" ? { v: it.n, t: "new", label: `＋ New person “${it.n}”…`, cls: "new", head: head(i5) } : it.t === "alias" ? { v: it.n, t: "alias", typed: it.typed, label: `Is “${it.typed}” ${it.n}?`, sub: "Yes, and remember it", head: head(i5) } : { v: it.n, t: "pick", label: `${it.n}${isMe(it.n) ? " (you)" : ""}`, fill: it.n, sub: String(useCount(it.n)), head: head(i5), removeLabel: `Remove ${it.n} from the list`, remove: () => regSetHidden(it.n, true) });
   }
-  function comboClose() {
-    if (shared.COMBO) {
-      shared.COMBO.classList.remove("open");
-      shared.COMBO = null;
-    }
-  }
-  async function comboPick(box, o5) {
-    const inp = box.querySelector("input"), n4 = o5.dataset.n, t5 = o5.dataset.t;
-    comboClose();
-    if (t5 === "new") {
-      const name = await ownerFinal(n4, { skipMatch: true });
-      if (name !== null) inp.value = name;
-      return;
-    }
-    if (t5 === "alias") {
-      if (await regAddAlias(n4, o5.dataset.typed)) inp.value = n4;
-      return;
-    }
-    inp.value = n4;
+  function mountOwnerFields(root) {
+    root.querySelectorAll(".combohost[data-combo]").forEach((host2) => {
+      const h5 = (
+        /** @type {HTMLElement} */
+        host2
+      ), n4 = h5.dataset.combo || "o", id = "f_" + n4;
+      mountCombobox(h5, {
+        id,
+        name: n4,
+        value: h5.dataset.v || "",
+        label: h5.dataset.label || "Owner",
+        placeholder: "Choose or type a name",
+        options: ownerOptions,
+        onPick: async (o5) => {
+          const inp = (
+            /** @type {HTMLInputElement|null} */
+            document.getElementById(id)
+          );
+          if (!inp) return false;
+          if (o5.t === "new") {
+            const name = await ownerFinal(o5.v, { skipMatch: true });
+            if (name !== null) inp.value = name;
+            return false;
+          }
+          if (o5.t === "alias") {
+            if (await regAddAlias(o5.v, o5.typed)) inp.value = o5.v;
+            return false;
+          }
+          return true;
+        }
+      });
+    });
   }
   function bootOwnerCombo() {
-    document.addEventListener("focusin", (e4) => {
-      const box = e4.target.closest && e4.target.closest(".combo");
-      if (box && e4.target.tagName === "INPUT") {
-        box.dataset.typed = "0";
-        shared.CI = 0;
-        comboDraw(box);
-      }
-    });
-    document.addEventListener("input", (e4) => {
-      const box = e4.target.closest && e4.target.closest(".combo");
-      if (box) {
-        box.dataset.typed = "1";
-        shared.CI = 0;
-        comboDraw(box);
-      }
-    });
-    document.addEventListener("mousedown", (e4) => {
-      const d5 = e4.target.closest(".cdel");
-      if (d5) {
-        e4.preventDefault();
-        const n4 = d5.dataset.del;
-        regSetHidden(n4, true).then(() => comboDraw(d5.closest(".combo")));
-        return;
-      }
-      const o5 = e4.target.closest(".copt[data-n]");
-      if (o5) {
-        e4.preventDefault();
-        comboPick(o5.closest(".combo"), o5);
-        return;
-      }
-      if (shared.COMBO && !e4.target.closest(".combo")) comboClose();
-    });
-    document.addEventListener("keydown", (e4) => {
-      if (!shared.COMBO || !shared.COMBO.contains(document.activeElement)) return;
-      const opts = [...shared.COMBO.querySelectorAll(".copt[data-n]")];
-      if (e4.key === "ArrowDown") {
-        e4.preventDefault();
-        shared.CI = Math.min(shared.CI + 1, opts.length - 1);
-        comboDraw(shared.COMBO);
-      } else if (e4.key === "ArrowUp") {
-        e4.preventDefault();
-        shared.CI = Math.max(shared.CI - 1, 0);
-        comboDraw(shared.COMBO);
-      } else if (e4.key === "Enter" && opts[shared.CI] && !e4.metaKey && !e4.ctrlKey) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        comboPick(shared.COMBO, opts[shared.CI]);
-      } else if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        comboClose();
-      }
-    }, true);
   }
   var CMDENTER = [];
   function onCmdEnter(name, when, save2) {
@@ -39351,6 +39464,427 @@ ${d5.text}`);
     })();
   }
 
+  // components/Picker.jsx
+  var PICK = null;
+  function placePicker(el, anchor) {
+    const r4 = anchor.getBoundingClientRect(), w5 = el.offsetWidth, h5 = el.offsetHeight;
+    let x5 = r4.left, y5 = r4.bottom + 4;
+    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
+    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
+    el.style.left = `${x5}px`;
+    el.style.top = `${y5}px`;
+  }
+  var focusables = (el) => (
+    /** @type {HTMLElement[]} */
+    [...el.querySelectorAll("button:not([disabled]),input:not([disabled]),select,textarea,[tabindex='0']")].filter((x5) => x5.offsetParent !== null || x5 === document.activeElement)
+  );
+  function tabOut(e4, el) {
+    if (e4.key !== "Tab" || !el) return;
+    const L2 = focusables(el), first = L2[0], last = L2[L2.length - 1];
+    if (e4.shiftKey && document.activeElement === first || !e4.shiftKey && document.activeElement === last || !L2.length) closePicker("tab");
+  }
+  function Frame({ cls, role, label, id, anchor, onKey, boxRef, children }) {
+    _2(() => {
+      if (boxRef.current && anchor.isConnected) placePicker(boxRef.current, anchor);
+    });
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.key !== "Escape") e4.stopPropagation();
+    };
+    return /* @__PURE__ */ u2("div", { class: `pkpop${cls ? " " + cls : ""}`, role: (
+      /** @type {any} */
+      role || void 0
+    ), "aria-label": role ? label : void 0, id, ref: boxRef, onKeyDown: keys, children });
+  }
+  var optionsIn = (el) => el ? (
+    /** @type {HTMLElement[]} */
+    [...el.querySelectorAll(".pkopt")].filter((b5) => b5.tagName === "BUTTON" && b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function PickerList({ anchor, props }) {
+    const { options, value, onPick, search, label = "", allowNew, role = "listbox", filter, cls } = props;
+    const [q4, setQ] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), field = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    const item = role === "menu" ? "menuitem" : "option", t5 = q4.trim().toLowerCase();
+    const cur = filter ? filter(q4.trim()) : options;
+    const shown = cur.map((o5, i5) => (
+      /** @type {[PickerOption, number]} */
+      [o5, i5]
+    )).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5));
+    const useNew = !!(allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5));
+    _2(() => {
+      const el = box.current;
+      if (!el) return;
+      if (field.current) {
+        field.current.focus();
+        return;
+      }
+      /** @type {HTMLElement | null} */
+      (el.querySelector('.pkopt[aria-selected="true"]:not([aria-disabled="true"])') || optionsIn(el)[0])?.focus();
+    }, []);
+    const pick = (o5) => {
+      if (o5.disabled) return;
+      closePicker("pick");
+      onPick(o5.v, false, o5);
+    };
+    const pickNew = () => {
+      const typed = q4.trim();
+      closePicker("pick");
+      onPick(typed, true);
+    };
+    const keys = (e4) => {
+      const L2 = optionsIn(box.current), i5 = L2.indexOf(
+        /** @type {HTMLElement} */
+        document.activeElement
+      );
+      if (e4.key === "ArrowDown") {
+        e4.preventDefault();
+        (L2[i5 + 1] || L2[0])?.focus();
+      } else if (e4.key === "ArrowUp") {
+        e4.preventDefault();
+        (i5 <= 0 && field.current ? field.current : L2[i5 - 1] || L2[L2.length - 1])?.focus();
+      } else if (e4.key === "Home" && i5 >= 0) {
+        e4.preventDefault();
+        L2[0]?.focus();
+      } else if (e4.key === "End" && i5 >= 0) {
+        e4.preventDefault();
+        L2[L2.length - 1]?.focus();
+      } else if (e4.key === "Enter" && e4.target === field.current && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        L2[0]?.click();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+      } else if (e4.key === "Tab") closePicker("tab");
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, anchor, boxRef: box, onKey: keys, children: [
+      search ? /* @__PURE__ */ u2(
+        "input",
+        {
+          class: "pkq",
+          type: "search",
+          placeholder: "Search",
+          "aria-label": `Search: ${label}`,
+          autocomplete: "off",
+          ref: field,
+          value: q4,
+          onInput: (e4) => setQ(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          )
+        }
+      ) : null,
+      /* @__PURE__ */ u2("div", { role, "aria-label": label, children: shown.length || useNew ? /* @__PURE__ */ u2(S2, { children: [
+        shown.map(([o5, i5]) => /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: "pkopt",
+            role: item,
+            "data-i": String(i5),
+            id: o5.id,
+            "aria-selected": role === "listbox" ? o5.v === value ? "true" : "false" : void 0,
+            "aria-disabled": o5.disabled ? "true" : void 0,
+            onClick: () => pick(o5),
+            children: [
+              o5.mark ? o5.mark : o5.icon && !o5.icon.includes("<") ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
+              /* @__PURE__ */ u2("span", { children: [
+                o5.label,
+                o5.hint ? /* @__PURE__ */ u2("span", { class: "h", children: o5.hint }) : null
+              ] }),
+              role === "listbox" && o5.v === value ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : null
+            ]
+          },
+          `${i5}:${o5.v}`
+        )),
+        useNew ? /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", role: item, "data-new": "1", onClick: pickNew, children: [
+          /* @__PURE__ */ u2(Icon, { name: "plus" }),
+          /* @__PURE__ */ u2("span", { children: [
+            "Use “",
+            q4.trim(),
+            "”"
+          ] })
+        ] }) : null
+      ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
+    ] });
+  }
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var calAdd = (iso, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
+    d5.setUTCDate(d5.getUTCDate() + n4);
+    return d5.toISOString().slice(0, 10);
+  };
+  var dow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
+  function DateCalendar({ anchor, props }) {
+    const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
+    const base = value || TODAY;
+    const [ym, setYm] = d2(
+      /** @type {[number, number]} */
+      [+base.slice(0, 4), +base.slice(5, 7) - 1]
+    );
+    const [focusIso, setFocusIso] = d2(
+      /** @type {string | null} */
+      value || TODAY
+    );
+    const [bad, setBad] = d2(false), [note, setNote] = d2("");
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), typed = A2(
+      /** @type {HTMLInputElement | null} */
+      null
+    );
+    _2(() => {
+      if (typed.current) typed.current.value = fd(value || "");
+    }, []);
+    const [y5, m5] = ym, lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
+    const days2 = Array.from({ length: n4 }, (_5, i5) => isoOf(y5, m5, i5 + 1));
+    const tabDay = days2.find((d5) => d5 === focusIso) || days2.find((d5) => d5 === value) || days2.find((d5) => d5 === TODAY) || days2[0];
+    _2(() => {
+      if (focusIso === null || !box.current) return;
+      box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
+    }, [focusIso, ym]);
+    const pick = (iso) => {
+      closePicker("pick");
+      onPick(iso);
+    };
+    const month = (by) => {
+      let mm = m5 + by, yy = y5;
+      if (mm < 0) {
+        mm = 11;
+        yy--;
+      }
+      if (mm > 11) {
+        mm = 0;
+        yy++;
+      }
+      setFocusIso(null);
+      setYm([yy, mm]);
+    };
+    const keys = (e4) => {
+      const tg = (
+        /** @type {HTMLElement} */
+        e4.target
+      );
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      if (tg.matches(".pkday") && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e4.key)) {
+        e4.preventDefault();
+        const to = calAdd(
+          tg.dataset.d || TODAY,
+          /** @type {Record<string, number>} */
+          { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e4.key]
+        );
+        setYm([+to.slice(0, 4), +to.slice(5, 7) - 1]);
+        setFocusIso(to);
+        return;
+      }
+      if (e4.key === "Enter" && tg.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
+        e4.preventDefault();
+        const t5 = (
+          /** @type {HTMLInputElement} */
+          tg.value.trim()
+        );
+        if (!t5) {
+          pick("");
+          return;
+        }
+        const iso = parse(t5);
+        if (iso) pick(iso);
+        else setBad(true);
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    const nextMonday = calAdd(TODAY, 7 - dow(TODAY));
+    const quick = (
+      /** @type {[string, string][]} */
+      [["Today", TODAY], ["Tomorrow", calAdd(TODAY, 1)], ["Next Monday", nextMonday], ["In a week", calAdd(TODAY, 7)], ["Clear", ""]]
+    );
+    return /* @__PURE__ */ u2(Frame, { cls: "pkcal", role: "dialog", label, anchor, boxRef: box, onKey: keys, children: [
+      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
+        /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
+        /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
+          MONTHS[m5],
+          " ",
+          y5
+        ] }),
+        /* @__PURE__ */ u2(IconButton, { icon: "chevright", label: "Next month", sm: false, data: { m: "1" }, onClick: () => month(1) })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
+        DOW.map((w5) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w5 }, w5)),
+        Array.from({ length: lead }, (_5, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
+        days2.map((iso) => {
+          const we = !!(weekend && weekend(iso));
+          return /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: `pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}${we ? " wkend" : ""}`,
+              "data-d": iso,
+              "aria-label": `${fd(iso)}${we ? ", weekend" : ""}`,
+              "aria-pressed": iso === value ? "true" : void 0,
+              tabIndex: iso === tabDay ? 0 : -1,
+              onClick: () => pick(iso),
+              children: +iso.slice(8)
+            },
+            iso
+          );
+        })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkquick", children: quick.map(([w5, d5]) => /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-d": d5, onClick: () => pick(d5), children: w5 }, w5)) }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          class: `pkdt${bad ? " bad" : ""}`,
+          type: "text",
+          ref: typed,
+          placeholder: placeholder || "DD-MM-YYYY, or words like fri or +3d",
+          "aria-label": `${label}, typed`,
+          "aria-invalid": bad ? "true" : void 0,
+          autocomplete: "off",
+          onInput: (e4) => {
+            setBad(false);
+            if (typedNote) setNote(typedNote(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value.trim()
+            ));
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { class: "pkerr", role: "alert", children: bad ? error || "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d." : "" }),
+      note ? /* @__PURE__ */ u2("div", { class: "wkline", role: "status", "aria-live": "polite", children: note }) : null
+    ] });
+  }
+  function Popover({ anchor, props }) {
+    const { label, content, cls, id, role = "dialog", focus } = props;
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el = box.current;
+      if (!el || !content) return;
+      const f5 = (
+        /** @type {HTMLElement | null} */
+        focus ? el.querySelector(focus) : focusables(el)[0] || null
+      );
+      if (f5) {
+        f5.focus();
+        if (f5 instanceof HTMLInputElement) f5.select();
+      }
+    }, []);
+    const keys = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        closePicker("esc");
+        return;
+      }
+      tabOut(e4, box.current);
+    };
+    return /* @__PURE__ */ u2(Frame, { cls, role, label, id, anchor, boxRef: box, onKey: keys, children: content });
+  }
+  function popupMount(anchor, vnode, onClose) {
+    closePicker("owner", false);
+    bootPicker();
+    const host2 = document.createElement("div");
+    host2.className = "pophost";
+    (anchor.closest("dialog[open]") || document.body).appendChild(host2);
+    PICK = { host: host2, el: null, anchor, onClose };
+    if (anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    R(vnode, host2);
+    PICK.el = /** @type {HTMLElement} */
+    host2.firstElementChild;
+    shared.PKPOP = { el: PICK.el, anchor };
+    return PICK.el;
+  }
+  function openPicker(anchor, props) {
+    return popupMount(anchor, /* @__PURE__ */ u2(PickerList, { anchor, props }), props.onClose);
+  }
+  function openDatePicker(anchor, props) {
+    return popupMount(anchor, /* @__PURE__ */ u2(DateCalendar, { anchor, props }), props.onClose);
+  }
+  function openPopover(anchor, props) {
+    return popupMount(anchor, /* @__PURE__ */ u2(Popover, { anchor, props }), props.onClose);
+  }
+  function closePicker(how = "owner", focus = true) {
+    const p6 = PICK;
+    if (!p6) return;
+    PICK = null;
+    shared.PKPOP = null;
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    const done = p6.onClose ? p6.onClose(how) : false;
+    if (!done && focus && how !== "away" && a5.isConnected) a5.focus({ preventScroll: true });
+  }
+  function pickerOpenFor(anchor) {
+    return !!PICK && (anchor === void 0 || PICK.anchor === anchor);
+  }
+  var BOOTED = false;
+  function bootPicker() {
+    if (BOOTED) return;
+    BOOTED = true;
+    document.addEventListener("mousedown", (e4) => {
+      const t5 = (
+        /** @type {Node} */
+        e4.target
+      );
+      if (PICK && !(PICK.el && PICK.el.contains(t5)) && !PICK.anchor.contains(t5)) closePicker("away");
+    }, true);
+    addEventListener("resize", () => closePicker("away"));
+  }
+  function htmlPopover(anchor, cls, htmlText) {
+    const el = openPopover(anchor, { label: "", cls, role: "" });
+    putHTML(el, raw(htmlText));
+    placePicker(el, anchor);
+    return el;
+  }
+
+  // components/Peek.jsx
+  function Peek({ id, label, cls, open: open2 = true, children }) {
+    return /* @__PURE__ */ u2("aside", { class: cls, id, role: "dialog", "aria-label": label, hidden: !open2, children });
+  }
+  function PeekBar({ onClose, closeKey = "Esc", onExpand, expandLabel = "Expand to full width", onPrev, onNext, prevOff, nextOff, ids = {}, children }) {
+    return /* @__PURE__ */ u2("div", { class: "pk-bar", children: [
+      /* @__PURE__ */ u2(IconButton, { icon: "arrowright", label: "Close", sm: false, id: ids.close, keyHint: closeKey, onClick: onClose }),
+      onExpand ? /* @__PURE__ */ u2(IconButton, { icon: "expand", label: expandLabel, sm: false, id: ids.expand, onClick: onExpand }) : null,
+      onPrev || onNext ? /* @__PURE__ */ u2("span", { class: "pk-sep", "aria-hidden": "true" }) : null,
+      onPrev ? /* @__PURE__ */ u2(IconButton, { icon: "chevup", label: "Previous item", sm: false, id: ids.prev, why: prevOff ? "This is the first item" : void 0, onClick: onPrev }) : null,
+      onNext ? /* @__PURE__ */ u2(IconButton, { icon: "chevdown", label: "Next item", sm: false, id: ids.next, why: nextOff ? "This is the last item" : void 0, onClick: onNext }) : null,
+      children
+    ] });
+  }
+  function peekFrame(id, { label, cls }) {
+    const was = document.getElementById(id);
+    if (was) return was;
+    const host2 = document.createElement("div");
+    R(/* @__PURE__ */ u2(Peek, { id, label, cls, open: false }), host2);
+    const el = (
+      /** @type {HTMLElement} */
+      host2.firstElementChild
+    );
+    document.body.appendChild(el);
+    return el;
+  }
+  function drawPeekBar(host2, props) {
+    R(/* @__PURE__ */ u2(PeekBar, { ...props }), host2);
+  }
+
   // components/mount.js
   function mount(Component, props, el) {
     R(k(Component, props), el);
@@ -39378,6 +39912,7 @@ ${d5.text}`);
         "COLS",
         "Chip",
         "CloseDay",
+        "Combobox",
         "D",
         "DDATE",
         "DEC",
@@ -39428,6 +39963,7 @@ ${d5.text}`);
         "PRIOS",
         "PROJF",
         "PULSE",
+        "Peek",
         "PrepPage",
         "PrepPopup",
         "QUIPS",
@@ -39515,11 +40051,13 @@ ${d5.text}`);
         "claimsNote",
         "clearAllFilters",
         "closeChat",
+        "closeCombobox",
         "closeDialog",
         "closeDisp",
         "closeMenu",
         "closePanel",
-        "comboDraw",
+        "closePicker",
+        "comboboxOpen",
         "confirmCard",
         "copied",
         "countFor",
@@ -39558,6 +40096,7 @@ ${d5.text}`);
         "drawHistory",
         "drawIconButton",
         "drawPanel",
+        "drawPeekBar",
         "drawPrep",
         "drawStatusDot",
         "drawTabs",
@@ -39596,6 +40135,7 @@ ${d5.text}`);
         "hlPaint",
         "hlToggle",
         "html",
+        "htmlPopover",
         "htmlToMd",
         "ibtn",
         "ic",
@@ -39628,6 +40168,7 @@ ${d5.text}`);
         "menuOpenFor",
         "mins",
         "mount",
+        "mountCombobox",
         "mountMenu",
         "mountMenuPanel",
         "mountStatusDots",
@@ -39666,6 +40207,7 @@ ${d5.text}`);
         "openCapture",
         "openChat",
         "openCk",
+        "openDatePicker",
         "openDialog",
         "openDisp",
         "openDraftEmail",
@@ -39676,6 +40218,8 @@ ${d5.text}`);
         "openNew",
         "openNewMilestone",
         "openPath",
+        "openPicker",
+        "openPopover",
         "openPrep",
         "openProject",
         "openProposal",
@@ -39684,12 +40228,14 @@ ${d5.text}`);
         "overdue",
         "ownerFinal",
         "ownerMatches",
+        "ownerOptions",
         "ownerOpts",
         "pName",
         "paneMarkers",
         "parseHash",
         "parseWhen",
         "passes",
+        "peekFrame",
         "peekPropNodes",
         "pencil",
         "peopleAll",
@@ -39698,6 +40244,7 @@ ${d5.text}`);
         "pfDraw",
         "pfOpen",
         "pfResize",
+        "pickerOpenFor",
         "pkAdd",
         "pkApply",
         "pkCid",
