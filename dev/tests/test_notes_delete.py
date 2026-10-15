@@ -17,6 +17,7 @@ What is covered, on a live server over a throwaway vault (and, for the shapes, a
 Everything is fictional and temporary.
 """
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -28,6 +29,8 @@ sys.path.insert(0, str(HERE))
 import test_notes_tab  # noqa: E402
 from test_onedrive_projects import OneDriveCase  # noqa: E402
 from test_tracker import ABC  # noqa: E402
+
+os.environ.setdefault("CREAITE_NO_LAUNCH", "1")          # /api/open answers the path, never starts an app
 
 
 class NotesDelete(test_notes_tab.NotesServer):
@@ -100,6 +103,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertEqual(self.post("/api/notes/get", {"path": stored})["status"], 404)                 # not a note any more
         u = self.post("/api/undo", {"apply_id": done["apply_id"]})                                    # the toast's Undo
         self.assertTrue(u["ok"], u)
+        self.assertEqual(u["moves"], [])                                                               # L3: back as it was
         self.assertTrue(f.is_file())
         self.assertFalse((self.archive() / "Working session.md").exists())
         self.assertIn("Working session", self.titles())
@@ -121,9 +125,19 @@ class NotesDelete(test_notes_tab.NotesServer):
         again = self.post("/api/notes/get", {"path": stored})                                       # deleted again
         self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(again)["card"]["card"]})["ok"])
         self.new("Lessons")                                                                           # a new note takes the name
-        got = self.post("/api/files/move-back", {"path": stored})
-        self.assertFalse(got["ok"])
-        self.assertIn("already in its place", got["message"])                                         # never overwritten
+        new = (self.folder() / "Lessons.md").read_text()
+        at = next(a["at"] for a in self.files()["archived"] if a["path"] == stored)
+        got = self.post("/api/files/move-back", {"path": at})                     # Jarvis 16-10: back as Lessons-2, never over it
+        self.assertTrue(got["ok"], got)
+        card = self.post("/api/edit/pending", {})["card"]
+        self.assertEqual(card["title"], "Move back Lessons.md as Lessons-2.md (a note has its name)")
+        self.assertEqual(card["lines"], [f"Move file {ABC}/_Archive/notes/Lessons.md → {ABC}/notes/Lessons-2.md"])
+        self.assertFalse(card["stage"])                                                               # L2: Approve or Reject only
+        done = self.post("/api/edit/approve", {"card": card["card"]})
+        self.assertTrue(done["ok"], done)
+        self.assertEqual(done["message"], "Moved “Lessons” back to its notes folder as “Lessons-2” (a note has its old name).")
+        self.assertEqual((self.folder() / "Lessons.md").read_text(), new)                             # the new note untouched
+        self.assertTrue((self.folder() / "Lessons-2.md").is_file())
 
     def test_c_a_name_taken_in_the_archive_gets_a_number(self):
         for _ in range(2):
@@ -205,6 +219,160 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertEqual(set(kinds), {"never"})
         self.assertTrue((self.folder() / "Not from a chat.md").is_file())
 
+    # ── M1: the card moves only the version Alan confirmed ──
+    def test_h_typing_while_the_card_waits_refuses_approve_and_keeps_the_card(self):
+        r = self.new("Still typing")
+        f, path = self.folder() / "Still typing.md", r["note"]["path"]
+        d = self.delete(r)
+        self.assertTrue(d["ok"], d)
+        s = self.post("/api/notes/save", {"path": path, "body": "Typed after the confirm box.\n", "base": r["base"]})   # an autosave
+        self.assertTrue(s["ok"], s)
+        got = self.post("/api/edit/approve", {"card": d["card"]["card"]})
+        self.assertFalse(got["ok"])
+        self.assertTrue(got["stale"])
+        self.assertEqual(got["message"], "Not deleted: the note changed after you confirmed. Delete it again to confirm the new version.")
+        self.assertIn("Typed after the confirm box.", f.read_text())                                  # kept, unmoved
+        self.assertFalse((self.archive() / "Still typing.md").exists())
+        self.assertEqual(self.post("/api/edit/pending", {})["card"]["card"], d["card"]["card"])      # the card stays
+        again = self.post("/api/notes/delete", {"path": path, "base": s["base"]})                     # confirm the new version
+        done = self.post("/api/edit/approve", {"card": again["card"]["card"]})
+        self.assertTrue(done["ok"], done)
+        self.assertIn("Typed after the confirm box.", (self.archive() / "Still typing.md").read_text())   # the version confirmed
+
+    def test_i_unsaved_typing_in_another_window_refuses_approve(self):
+        r = self.new("Two windows")
+        f, path = self.folder() / "Two windows.md", r["note"]["path"]
+        d = self.delete(r)
+        other = self.post("/api/notes/get", {"path": path})                                           # window 2 has it open
+        self.post("/api/notes/draft", {"path": path, "body": "Window two's typing.\n", "base": other["base"]})
+        got = self.post("/api/edit/approve", {"card": d["card"]["card"]})
+        self.assertFalse(got["ok"])
+        self.assertIn("changed after you confirmed", got["message"])
+        self.assertTrue(f.is_file())
+        self.assertEqual(self.post("/api/notes/get", {"path": path})["draft"]["body"], "Window two's typing.\n")   # nothing lost
+        s = self.post("/api/notes/save", {"path": path, "body": "Window two's typing.\n", "base": other["base"]})
+        self.assertTrue(s["ok"], s)
+        done = self.post("/api/edit/approve", {"card": self.post("/api/notes/delete", {"path": path, "base": s["base"]})["card"]["card"]})
+        self.assertTrue(done["ok"], done)
+        drafts = self.v.root / "system/staging/drafts/notes"
+        self.assertEqual([x for x in drafts.glob("*.json") if path in x.read_text()], [])          # no draft orphaned
+        late = self.post("/api/notes/draft", {"path": path, "body": "too late", "base": s["base"]})   # a window that missed it
+        self.assertEqual(late["status"], 404)
+        self.assertEqual([x for x in drafts.glob("*.json") if path in x.read_text()], [])
+        self.assertEqual(self.post("/api/notes/save", {"path": path, "body": "x", "base": s["base"]})["status"], 404)
+
+    def test_j_apply_waits_for_notes_lock_and_lock_order(self):
+        r = self.new("Raced")
+        rel = r["note"]["path"]
+        got = self.py_json(
+            "import threading, time, live_server as ls, notes\n"
+            f"c = {{'valid': True, '_note': {{'path': {rel!r}, 'sha': '0' * 16}}, 'state': 'pending', 'id': 'e-x'}}\n"
+            "out = {}\n"
+            "ls.NOTES_LOCK.acquire()\n"
+            "t = threading.Thread(target=lambda: out.update(ls.note_card_apply(c))); t.start(); time.sleep(0.4)\n"
+            "waited = t.is_alive() and not out\n"
+            "ls.NOTES_LOCK.release(); t.join(10)\n"
+            "print(json.dumps([waited, out, c['state']]))")
+        self.assertTrue(got[0])                                                          # held off while a save holds the lock
+        self.assertTrue(got[1]["stale"])
+        self.assertEqual(got[2], "pending")
+        lines = (HERE.parents[1] / "system/scripts/live_server.py").read_text().splitlines()
+        held = 0
+        for i, ln in enumerate(lines):                                                  # LOCK, then NOTES_LOCK: never the reverse
+            if ln.strip() != "with NOTES_LOCK:":
+                continue
+            held += 1
+            ind = len(ln) - len(ln.lstrip())
+            for x in lines[i + 1:]:
+                if x.strip() and len(x) - len(x.lstrip()) <= ind:
+                    break
+                self.assertFalse("with LOCK" in x or "LOCK.acquire" in x or "VIP_WRITE" in x, x)
+        self.assertGreaterEqual(held, 6)
+
+    # ── M2: two deleted notes of one name ──
+    def test_k_two_deletes_of_one_name_move_back_and_open_the_right_one(self):
+        for word in ("first", "second"):
+            r = self.new("Twice")
+            s = self.post("/api/notes/save", {"path": r["note"]["path"], "body": f"The {word} one.\n", "base": r["base"]})
+            self.assertTrue(self.post("/api/edit/approve", {"card": self.post("/api/notes/delete", {"path": s["note"]["path"],
+                                                            "base": s["base"]})["card"]["card"]})["ok"])
+        rows = [a for a in self.files()["archived"] if a["path"] == f"{ABC}/notes/Twice.md"]
+        self.assertEqual(sorted(a["at"] for a in rows), [f"{ABC}/_Archive/notes/Twice-2.md", f"{ABC}/_Archive/notes/Twice.md"])
+        second = next(a["at"] for a in rows if a["at"].endswith("Twice-2.md"))
+        opened = self.post("/api/open", {"path": second})                                          # Open: that file, read in place
+        self.assertTrue(opened["ok"], opened)
+        self.assertIn("The second one.", Path(opened["path"]).read_text())
+        self.assertTrue(self.post("/api/files/move-back", {"path": second})["ok"])
+        card = self.post("/api/edit/pending", {})["card"]
+        self.assertEqual(card["lines"], [f"Move file {ABC}/_Archive/notes/Twice-2.md → {ABC}/notes/Twice.md"])
+        self.assertTrue(self.post("/api/edit/approve", {"card": card["card"]})["ok"])
+        self.assertIn("The second one.", (self.folder() / "Twice.md").read_text())                 # the row's own note
+        self.assertIn("The first one.", (self.archive() / "Twice.md").read_text())                 # the other stays archived
+        first = [a for a in self.files()["archived"] if a["path"] == f"{ABC}/notes/Twice.md"]
+        self.assertEqual([a["at"] for a in first], [f"{ABC}/_Archive/notes/Twice.md"])
+
+    # ── L2: no Stage for review on a note's card ──
+    def test_l_a_notes_card_cant_be_staged_for_review(self):
+        r = self.new("No staging")
+        d = self.delete(r)
+        self.assertFalse(d["card"]["stage"])
+        got = self.post("/api/edit/stage", {"card": d["card"]["card"]})
+        self.assertFalse(got["ok"])
+        self.assertIn("can't be staged for review", got["message"])
+        self.assertEqual(list(self.v.root.joinpath("system/staging").glob("proposed-*-edit.json")), [])
+        self.assertTrue((self.folder() / "No staging.md").is_file())
+        self.assertTrue(self.post("/api/edit/approve", {"card": d["card"]["card"]})["ok"])         # still answerable once
+        other = self.py_json("import live_server as ls; print(json.dumps(ls.edit_public({'id': 'e', 'run': None, 'chat': None, "
+                             "'title': 't', 'state': 'pending', 'valid': True, 'clash': [], 'lines': [], 'problems': [], "
+                             "'expires': 0, 'kind': 'reports_back'})['stage']))")
+        self.assertTrue(other)                                                                      # other kinds unchanged
+
+    # ── L3: Undo says what it did ──
+    def test_m_undo_after_a_note_took_the_name(self):
+        r = self.new("Taken back")
+        done = self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})
+        self.new("Taken back")
+        u = self.post("/api/undo", {"apply_id": done["apply_id"]})
+        self.assertTrue(u["ok"], u)
+        self.assertEqual(u["moves"], [f"restored {ABC}/notes/Taken back.md as Taken back-2.md: a note took its name"])
+        self.assertTrue((self.folder() / "Taken back-2.md").is_file())
+        self.assertFalse((self.archive() / "Taken back.md").exists())
+        report = self.py_json("import reach, tracker\nreach.NOTES_BACK_RENAMES = False\n"
+                              f"import pathlib; d = pathlib.Path({str(self.archive())!r}); d.mkdir(parents=True, exist_ok=True)\n"
+                              "(d / 'Taken back.md').write_text('x')\nout = []\n"
+                              f"tracker._reverse_move({{'from': '{ABC}/notes/Taken back.md', 'to': '{ABC}/_Archive/notes/Taken back.md', "
+                              "'kind': 'notes'}, out)\nprint(json.dumps(out))")
+        self.assertEqual(report, [f"skipped moving {ABC}/_Archive/notes/Taken back.md back: {ABC}/notes/Taken back.md is there again"])
+
+    def test_n_move_back_renames_switch_off_refuses(self):
+        r = self.new("Switch")
+        self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])
+        self.new("Switch")
+        got = self.py_json(
+            "import reach, archive, tracker\nreach.NOTES_BACK_RENAMES = False\n"
+            f"spec, why = archive.back_spec('{ABC}/_Archive/notes/Switch.md')\n"
+            f"shape = reach.archive_move_problem('{ABC}/_Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
+            "try:\n"
+            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-2.md'}}, {{'archive': 'notes_back'}}); chk = None\n"
+            "except tracker.Invalid as e:\n    chk = str(e)\n"
+            "reach.NOTES_BACK_RENAMES = True\n"
+            f"on = reach.archive_move_problem('{ABC}/_Archive/notes/Switch.md', '{ABC}/notes/Switch-2.md', 'notes_back')\n"
+            "try:\n"
+            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Switch-3.md'}}, {{'archive': 'notes_back'}}); ok = None\n"
+            "except tracker.Invalid as e:\n    ok = str(e)\n"
+            "try:\n"
+            f"    tracker.check_move({{'from': '{ABC}/_Archive/notes/Switch.md', 'to': '{ABC}/notes/Other.md'}}, {{'archive': 'notes_back'}}); other = None\n"
+            "except tracker.Invalid as e:\n    other = str(e)\n"
+            "print(json.dumps([spec, why, shape, chk, on, ok, other]))")
+        spec, why, shape, chk, on, ok, other = got
+        self.assertIsNone(spec)
+        self.assertIn("already in its place", why)                                      # False: refused, as before
+        self.assertTrue(shape)
+        self.assertTrue(chk)
+        self.assertIsNone(on)                                                            # True: the -2 shape passes
+        self.assertIsNone(ok)                                                            # only the free-name suffix differs
+        self.assertTrue(other)                                                           # never another name
+
     def py_json(self, code):
         src = f"import sys, json; sys.path.insert(0, 'system/scripts')\n{code}"
         r = subprocess.run([sys.executable, "-c", src], capture_output=True, text=True, cwd=self.v.root)
@@ -254,9 +422,21 @@ class NoteShapes(OneDriveCase):
         back = {"back": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone.md")}
         self.assertEqual(self.problems(back, "notes_back"), {"back": None})
         wrong = {"elsewhere": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/02 Meetings/Minutes/Gone.md"),
-                 "the other way": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note.md")}
+                 "the other way": (f"{e}/08 Notes/Note.md", f"{e}/_Archive/08 Notes/Note.md"),
+                 "another name": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Other.md"),
+                 "a zero number": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-02.md"),
+                 "unicode digits": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-\u0662.md"),
+                 "not Markdown": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-2.txt")}
         for k, why in self.problems(wrong, "notes_back").items():
             self.assertTrue(why, k)
+        renamed = {"a free name": (f"{e}/_Archive/08 Notes/Gone.md", f"{e}/08 Notes/Gone-2.md")}
+        self.assertEqual(self.problems(renamed, "notes_back"), {"a free name": None})       # NOTES_BACK_RENAMES
+
+    def test_note_number_is_ascii_digits_only(self):
+        got = self.py("import reach; print(json.dumps([reach._note_name('Note.md', n) for n in "
+                      "('Note-2.md', 'Note-9999.md', 'Note-\u0662.md', 'Note-\u00b2.md', 'Note-\uff12.md', 'Note-02.md', "
+                      "'Note-10000.md', 'Note-.md')]))")
+        self.assertEqual(got, [True, True, False, False, False, False, False, False])
 
     def test_the_spec_in_onedrive(self):
         notes = self.root / "Example Programme" / "08 Notes"

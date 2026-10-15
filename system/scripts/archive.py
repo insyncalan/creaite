@@ -375,27 +375,41 @@ def archived_files():
         code, kind, sub = place
         out.append({"p": code, "f": kind, "sub": sub, "n": f.name, "type": f.suffix.lstrip(".").lower(),
                     "date": paths.name_date(f.name)[0] or "", "kb": max(1, round(f.stat().st_size / 1024)),
-                    "path": original, "archived": True})
+                    "path": original, "at": at, "archived": True})                # #124: `at` is unique, `path` may not be
     return sorted(out, key=lambda x: (x["date"], x["n"]), reverse=True)
 
 
-def back_spec(original):
-    """(spec, None) that moves the archived file whose stored path is `original` back to it, or (None, why not)."""
-    original = str(original or "")
-    if not original.startswith("projects/") or ".." in Path(original).parts:
+def back_spec(path):
+    """(spec, None) that moves an archived file back, or (None, why not). `path` is the archived file's own stored path (Files'
+    `at`, #124: unique, where two deleted notes may share one first name), or, as before, the stored path it came from."""
+    import reach
+    path = str(path or "")
+    if not path.startswith("projects/") or ".." in Path(path).parts:
         return None, "that isn't a stored project path"
-    kind = next((k for k in ("reports", NOTE) if original in archived_moves(kind=k).values()), None)
-    at = next((a for a, o in archived_moves(kind=kind).items() if o == original), None) if kind else None
+    kind, at, original = None, None, None
+    for k in ("reports", NOTE):
+        moved = archived_moves(kind=k)
+        if path in moved:
+            kind, at, original = k, path, moved[path]
+            break
+        hit = next((a for a, o in moved.items() if o == path), None)
+        if hit and kind is None:
+            kind, at, original = k, hit, path
     if not at:
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
     if src.is_symlink() or not src.is_file():
         return None, f"{src.name} isn't in {paths.ARCHIVE} any more"
+    name = dst.name
     if os.path.lexists(dst):
-        return None, f"{dst.name} is already in its place: nothing is overwritten (rename or move that file first)"
+        if kind != NOTE or not reach.NOTES_BACK_RENAMES:
+            return None, f"{dst.name} is already in its place: nothing is overwritten (rename or move that file first)"
+        dst = paths.free_path(dst.parent, dst.stem, dst.suffix)     # #124: a new note took the name: back as <name>-2.md
+        original = paths.rel(dst)
     place = _place(original)
+    title = f"Move back {name}" + (f" as {dst.name} (a note has its name)" if dst.name != name else "")
     return {"source_run": "archive", "items": [], "file_changes": {
-        "title": f"Move back {dst.name}", "project": place[0] if place and place[0] != "_portfolio" else None,
+        "title": title, "project": place[0] if place and place[0] != "_portfolio" else None,
         "archive": BACK if kind == "reports" else NOTE_BACK, "file_ops": [{"op": "move", "from": at, "to": original}]}}, None
 # ===== end BL-331 =====
 

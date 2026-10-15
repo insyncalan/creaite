@@ -1853,8 +1853,16 @@ def check_move(fop, blk):
         raise Invalid(f"move: {problem}")
     if kind in ("reports_back", "notes_back"):   # BL-331, #124: only a file an archive (or Delete note) moved there, back
         import archive                            # to where it came from
-        if archive.archived_moves(kind=kind[:-len("_back")]).get(src) != dst:
+        was = archive.archived_moves(kind=kind[:-len("_back")]).get(src)
+        if was != dst and not (kind == "notes_back" and was and reach.NOTES_BACK_RENAMES and _renamed_back(was, dst)):
             raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
+
+
+def _renamed_back(was, dst):
+    """#124: dst is the deleted note's old stored path `was` with only the -2, -3… a taken name gets (reach.NOTES_BACK_RENAMES)."""
+    import reach
+    a, b = Path(str(was)), Path(str(dst))
+    return a.parent == b.parent and reach._note_name(a.name, b.name)
 
 
 def _op_move(apply_id, fop, blk, done):
@@ -1873,6 +1881,9 @@ def _reverse_move(rec, report):
     import reach
     a, b = paths.resolve(rec["from"], archived=False), paths.resolve(rec["to"], archived=False)
     want = b.is_file() if rec.get("kind") in reach.FILE_MOVES else b.is_dir()   # BL-03, BL-331 move one file; BL-09 a folder
+    if a.exists() and want and rec.get("kind") == "notes" and reach.NOTES_BACK_RENAMES:
+        a = paths.free_path(a.parent, a.stem, a.suffix)      # #124: a new note took the name: back as <name>-2.md, never over it
+        report.append(f"restored {rec['from']} as {a.name}: a note took its name")
     if not want:
         report.append(f"skipped moving {rec['to']} back: it isn't there")
     elif a.exists():

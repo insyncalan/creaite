@@ -19,6 +19,7 @@ Commands (read only):
 import fnmatch
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -278,7 +279,8 @@ def _whose_file(p):
 #                                                     name is taken there (#124 Delete note, Alan 15-10-2026; one .md file, only from
 #                                                     the live server's own card: propose.py stages it only from system/guard/)
 #   notes_back  exactly the reverse of a "notes" move (one file, back to the same notes folder; tracker.check_move also requires
-#               that a Delete note moved it there)
+#               that a Delete note moved it there). With NOTES_BACK_RENAMES on, a note that has taken the old name is never
+#               overwritten: the note comes back as <name>-2.md (-3…, paths.free_path), the only difference allowed from its old name
 ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
 FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
 
@@ -323,27 +325,55 @@ def _portfolio_folder(name):
     return pf.name == name and pf.parent == Path(os.path.realpath(paths.projects_root()))
 
 
-def _note_archive(pa, pb):
-    """#124: pa is <engagement or portfolio>/<its notes folder>/<note>.md and pb the same note in that folder's own _Archive, keeping
-    its place below it (<…>/_Archive/<notes folder>/<note>.md), or with -2, -3… when that name is taken there. Nothing else: no
-    picture, no other file, no deeper folder, no other folder, no other engagement."""
+# #124 (Jarvis, 16-10-2026): Move back of a deleted note whose name a new note has taken. True: the note comes back under the free
+# name paths.free_path gives (<name>-2.md, -3…), so nothing is overwritten and nobody is stuck. False: refused, as before.
+NOTES_BACK_RENAMES = True
+
+
+def _note_folders(pa, pb):
+    """#124: pa is <engagement or portfolio>/<its notes folder>/<file> and pb a file in that folder's own _Archive, keeping its place
+    below it (<…>/_Archive/<notes folder>/<file>). No deeper folder, no other folder, no other engagement."""
     portfolio = _portfolio_folder(pa[0]) if pa else False
     if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
         return False
-    if pb[2:-1] != pa[1:-1] or "/".join(pa[1:-1]) != paths.folder_name("notes").strip("/"):
+    return pb[2:-1] == pa[1:-1] and "/".join(pa[1:-1]) == paths.folder_name("notes").strip("/")
+
+
+def _note_archive(pa, pb):
+    """#124: pa is a note (<…>/<notes folder>/<note>.md) and pb the same note in that folder's own _Archive, or with -2, -3… when
+    that name is taken there. Nothing else: no picture, no other file."""
+    return _note_folders(pa, pb) and _note_name(pa[-1], pb[-1])
+
+
+def _note_back(pa, pb):
+    """#124: pa is a deleted note in <…>/_Archive/<notes folder>/ and pb its place back in that notes folder: the reverse of a
+    "notes" move, or (NOTES_BACK_RENAMES) the same note's name with a -2, -3… a taken name gets (both names from one first name)."""
+    if not _note_folders(pb, pa):
         return False
-    return _note_name(pa[-1], pb[-1])
+    if not NOTES_BACK_RENAMES:
+        return _note_name(pb[-1], pa[-1])
+    a, b = pa[-1], pb[-1]
+    return any(_note_name(first, a) and _note_name(first, b) for first in {b, _note_first(b)})
+
+
+NOTE_NUMBER = re.compile(r"[1-9][0-9]{0,3}")
+
+
+def _note_first(name):
+    """A note file name without the -2 … -9999 a taken name gets (Plan-2.md -> Plan.md); the name itself when it has none."""
+    m = re.fullmatch(r"(.+)-([1-9][0-9]{0,3})(\.md)", name, re.I)
+    return m.group(1) + m.group(3) if m else name
 
 
 def _note_name(a, b):
-    """b is the note file name a (a visible .md name), or it with the -2, -3… a taken name gets (paths.free_path)."""
+    """b is the note file name a (a visible .md name), or it with the -2, -3… a taken name gets (paths.free_path). The number is
+    ASCII digits only, 1 to 9999, never a leading zero."""
     if a.startswith((".", "~$")) or len(a) <= 3 or a[-3:].lower() != ".md":
         return False
     if b == a:
         return True
     stem, ext = a[:-3], a[-3:]
-    number = b[len(stem) + 1:-3]
-    return b.startswith(stem + "-") and b.endswith(ext) and number.isdigit() and number[0] != "0" and len(number) <= 4
+    return b.startswith(stem + "-") and b.endswith(ext) and NOTE_NUMBER.fullmatch(b[len(stem) + 1:-3]) is not None
 
 
 def _move_shape(kind, pa, pb):
@@ -355,7 +385,7 @@ def _move_shape(kind, pa, pb):
     if kind == "notes":
         return _note_archive(pa, pb)                  # #124: one note into its own folder's _Archive
     if kind == "notes_back":
-        return _note_archive(pb, pa)                  # #124: the reverse, nothing wider
+        return _note_back(pa, pb)                     # #124: the reverse, or the same note under a free -2 name
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":

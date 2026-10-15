@@ -1246,7 +1246,8 @@ class Handler(BaseHTTPRequestHandler):
             if latest is None:
                 return self.send(200, {"ok": False, "message": "Nothing to undo."})
             code, out = run("tracker.py", "undo")
-            return self.send(200, {"ok": code == 0, "message": out})
+            notes = [ln.strip() for ln in out.splitlines() if re.match(r"\s+(skipped moving|restored) ", ln)]     # #124 L3
+            return self.send(200, {"ok": code == 0, "message": out, "moves": notes})
 
     def review(self, req):
         """A decision on one proposal entry, through review.py so its checks run (drafts, conflicts)."""
@@ -4442,7 +4443,13 @@ def move_back_route(handler, req):
     spec, why = archive.back_spec(path)
     if not spec:
         return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
-    card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    fc, done = spec["file_changes"], None
+    if fc["archive"] == "notes_back":                  # #124 L4: the answer names the note, and the name it comes back under
+        op = fc["file_ops"][0]
+        a, b = Path(archive.archived_moves(kind="notes").get(op["from"]) or op["to"]).stem, Path(op["to"]).stem
+        done = f"Moved \u201c{b}\u201d back to its notes folder." if a == b else \
+            f"Moved \u201c{a}\u201d back to its notes folder as \u201c{b}\u201d (a note has its old name)."
+    card, why = server_edit_card(fc["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"), done=done)
     if not card:
         return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
     return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
