@@ -1,0 +1,199 @@
+"""The client leak check (v2.1.0 P3; BL-336), on the data. Standard library only. A library: no command line.
+
+Nothing that isn't client-visible, is Sensitive or is partner-only can reach a client report (or the minutes' distributed version,
+BL-338). The check reads a creaite document's data (creaite_doc.py), never a Word file:
+  - item_problem: why one item may not appear for a client, or None (the tracker as it is now, and the item's labels);
+  - make_safe: a copy of a client document with every row, tag, milestone and item that fails dropped, and what was dropped;
+  - findings: what is still wrong with a client document (items, and internal wording found in its text), for approve and export;
+  - text_findings: the wording check on any text, moved here from review.client_findings (which still reads the Word flow's drafts
+    through it until the Word drafts are retired).
+"""
+import json
+import re
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths  # noqa: E402
+
+SENSITIVE = "sensitive"
+PARTNER_ONLY = {"partner only", "partner-only", "partner"}      # a label with one of these names keeps an item from every client
+CLIENT_TABLES = ("actions", "raid", "decisions", "milestones")   # promises and workstreams never reach a client report
+TEXT_OF = {"actions": "description", "raid": "description", "decisions": "decision", "milestones": "name"}
+INTERNAL_WORDS = ("confidential", "restricted", "documents/")
+
+
+def squash(t):
+    """Text with its whitespace squeezed to single spaces."""
+    return re.sub(r"\s+", " ", t or "").strip()
+
+
+def connect():
+    """The tracker database."""
+    import tracker
+    return tracker.connect()
+
+
+def blocking_labels(con):
+    """{label name in lower case: why} for every label that keeps an item out of a client report: Sensitive (never shown, whatever
+    a warning card chose), any label that excludes (behaviour or default choice) and a partner-only label."""
+    out = {SENSITIVE: "Sensitive"}
+    try:
+        for name, behaviour, choice in con.execute("SELECT name, behaviour, default_choice FROM labels"):
+            low = (name or "").strip().lower()
+            if low in PARTNER_ONLY:
+                out[low] = "partner-only"
+            elif low != SENSITIVE and (behaviour == "exclude" or choice == "exclude"):
+                out[low] = f"labelled {name}"
+    except Exception as e:  # noqa: BLE001  no labels table (an older vault): Sensitive still blocks, by name
+        if "no such table" not in str(e):
+            raise
+    return out
+
+
+def labels_of(con, item_id):
+    """An item's label names."""
+    try:
+        return [r[0] for r in con.execute("SELECT label FROM item_labels WHERE item_id = ?", (item_id,))]
+    except Exception as e:  # noqa: BLE001  no item_labels table (an older vault): no labels
+        if "no such table" not in str(e):
+            raise
+        return []
+
+
+def item_problem(con, ref, blocking=None):
+    """Why the item `ref` may not appear in a client report, as a sentence, or None when it may."""
+    import tracker
+    table = tracker.item_table(ref)
+    if table not in CLIENT_TABLES:
+        return f"{ref} isn't an item a client report can show"
+    row = con.execute(f"SELECT * FROM {table} WHERE id = ?", (ref,)).fetchone()
+    if row is None:
+        return f"{ref} isn't in the tracker"
+    row = dict(row)
+    if not int(row.get("client_visible") or 0):
+        return f"{ref} isn't client-visible"
+    if table == "milestones" and not tracker.client_milestones([row]):
+        return f"{ref} has no client wording, or is cancelled"
+    blocking = blocking_labels(con) if blocking is None else blocking
+    for name in labels_of(con, ref):
+        why = blocking.get(name.strip().lower())
+        if why:
+            return f"{ref} is {why}: never in a client report" if why != "Sensitive" else f"{ref} is Sensitive: never in a client report"
+    return None
+
+
+def refs(doc):
+    """Every item reference a document holds: its items, table rows, source tags and milestone lists."""
+    out = set((doc.get("items") or {}).keys())
+    for s in doc.get("sections") or []:
+        out |= {r.get("ref") for r in s.get("rows") or []}
+        out |= {t.get("ref") for t in s.get("tags") or []}
+        data = s.get("data") or {}
+        out |= set(data.get("milestones") or []) | set(data.get("timeline") or [])
+    return {r for r in out if r}
+
+
+def _drop_section_refs(s, bad):
+    """A section without its rows, tags and milestone references to the items in `bad`."""
+    s = dict(s)
+    if s.get("rows"):
+        s["rows"] = [r for r in s["rows"] if r.get("ref") not in bad]
+    if s.get("tags"):
+        s["tags"] = [t for t in s["tags"] if t.get("ref") not in bad]
+    if isinstance(s.get("data"), dict):
+        s["data"] = {k: ([x for x in v if x not in bad] if k in ("milestones", "timeline") and isinstance(v, list) else v)
+                     for k, v in s["data"].items()}
+    return s
+
+
+def make_safe(doc, con=None):
+    """(a copy of the document with every reference to an item a client may not see dropped, [why each was dropped]). An internal
+    document is returned as it is."""
+    if (doc.get("audience") or "internal") == "internal":
+        return doc, []
+    con = con or connect()
+    blocking = blocking_labels(con)
+    problems = {r: item_problem(con, r, blocking) for r in sorted(refs(doc))}
+    bad = {r for r, why in problems.items() if why}
+    if not bad:
+        return doc, []
+    out = dict(doc)
+    out["sections"] = [_drop_section_refs(s, bad) for s in doc.get("sections") or []]
+    out["items"] = {k: v for k, v in (doc.get("items") or {}).items() if k not in bad}
+    return out, [problems[r] for r in sorted(bad)]
+
+
+def _memory_findings(code, low):
+    """Lines of the project's memory marked Client-safe: no that appear in the text."""
+    found = []
+    memory = paths.project_dir(code) / "CLAUDE.md"
+    for line in (memory.read_text(encoding="utf-8").splitlines() if memory.exists() else []):
+        if "Client-safe: no" in line:
+            core = squash(re.sub(r"^\s*[-*]\s+", "", re.sub(r"[-*]?\s*\(?Client-safe: no\)?\.?", "", line))).lower()[:40]
+            if len(core) >= 10 and core in squash(low):
+                found.append(f"memory line marked Client-safe: no appears: “{line.strip()[:80]}”")
+    return found
+
+
+def _label_findings(con, code, text, low):
+    """BL-94's floor: an item whose label excludes it from client output, found by its ID or its wording."""
+    import tracker as t
+    found = []
+    for item_id, label in con.execute("SELECT il.item_id, il.label FROM item_labels il JOIN labels l ON l.name = il.label "
+                                      "WHERE (l.behaviour = 'exclude' OR l.default_choice = 'exclude') AND il.item_id LIKE ?",
+                                      (f"{code}-%",)):
+        table = t.item_table(item_id)
+        col = {"actions": "description", "raid": "description", "decisions": "decision"}.get(table)
+        row = con.execute(f"SELECT {col}, client_message FROM {table} WHERE id = ?", (item_id,)).fetchone() if col else None
+        wordings = [row[0]] + [ln.split(":", 1)[1] for ln in (row[1] or "").splitlines() if ":" in ln and table != "decisions"] \
+            + ([row[1]] if row and table == "decisions" else []) if row else []      # its own words, and its client wording
+        if re.search(rf"\b{re.escape(item_id)}\b", text):
+            found.append(f"{item_id} is labelled {label} but its ID appears")
+        else:
+            hit = next((w for w in wordings if len((w or "").strip()) >= 15 and squash(w).lower() in squash(low)), None)
+            if hit:
+                found.append(f"{item_id} is labelled {label} but its wording appears: “{hit.strip()[:80]}”")
+    return found
+
+
+def text_findings(con, code, text):
+    """Internal-only content in a client text: an item that isn't client-visible by its ID or wording, a memory line marked
+    Client-safe: no, an item a label excludes, and the words confidential, restricted or documents/ (moved from
+    review.client_findings; its messages unchanged)."""
+    low = text.lower()
+    found = []
+    for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
+        for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
+            if re.search(rf"\b{re.escape(row[0])}\b", text):
+                found.append(f"{row[0]} isn't client-visible but its ID appears")
+            elif len(row[1] or "") >= 15 and squash(row[1]).lower() in squash(low):
+                found.append(f"{row[0]} isn't client-visible but its wording appears: “{row[1][:80]}”")
+    found += _memory_findings(code, low)
+    try:                                                       # BL-94's floor
+        found += _label_findings(con, code, text, low)
+    except Exception as e:  # noqa: BLE001  BL-228: fails closed; skipped only when the tables aren't there
+        import review
+        found.extend(review.label_check_failure(con, e, code))
+    for word in INTERNAL_WORDS:
+        if word in low:
+            found.append(f"contains “{word}”")
+    return found
+
+
+def doc_text(doc):
+    """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values."""
+    import creaite_doc
+    clean = creaite_doc.clean(doc)
+    return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False)
+
+
+def findings(doc, con=None):
+    """What would leak if this client document were approved or exported: [sentence]; [] when it is safe. An internal document has
+    none."""
+    if (doc.get("audience") or "internal") == "internal":
+        return []
+    con = con or connect()
+    blocking = blocking_labels(con)
+    found = [why for why in (item_problem(con, r, blocking) for r in sorted(refs(doc))) if why]
+    return found + text_findings(con, doc.get("project") or "", doc_text(doc))

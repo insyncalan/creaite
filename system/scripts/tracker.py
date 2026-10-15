@@ -1488,12 +1488,19 @@ def _stamp_approved(apply_id, blk, field, done, data=None):
         if draft.exists():
             kept = stash(apply_id, draft)
             on = (os.environ.get("CREAITE_NOW") or today())[:10]          # creaite's clock: CREAITE_NOW fixes it in tests
-            if draft.suffix.lower() == ".html":                           # v2.1.0 P4: a minutes record (creaite_doc)
+            if _is_minutes_record(draft):                                 # v2.1.0 P4: a minutes record (creaite_doc)
                 _stamp_record(draft, f"Approved by {approved_by} on {long_date(on)}", on, apply_id, data, blk)
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
-            elif set_status_line(draft, f"Approved by {approved_by} on {long_date(on)}"):
+            elif stamp_draft(draft, f"Approved by {approved_by} on {long_date(on)}", on):   # a Word draft, or (P3) a report
                 done.append({"op": "status", "path": blk["draft"], "previous": kept, "hash": file_hash(draft)})
 
+
+def _is_minutes_record(draft):
+    """v2.1.0 P4: whether an approved draft is a minutes record (a creaite document of kind "minutes")."""
+    if draft.suffix.lower() != ".html":
+        return False
+    import creaite_doc
+    return creaite_doc.is_doc(draft) and creaite_doc.read(draft).get("kind") == "minutes"
 
 def _stamp_record(draft, status, on, apply_id, data, blk=None):
     """v2.1.0 P4 (BL-338): an approved minutes record is marked approved (state, approved_at, the status line) and each row of an
@@ -1522,6 +1529,20 @@ def _stamp_section(s, was, status, ids):
     for r in s.get("rows") or []:
         if r.get("ref") in ids:
             r["ref"] = ids[r["ref"]]
+
+
+def stamp_draft(draft, text, on):
+    """Mark an approved draft before it is filed: a Word draft's status line, or (v2.1.0 P3) a creaite document's state, approved
+    on `on`, its page rendered again from the data (creaite_doc.py). Returns whether it changed."""
+    if draft.suffix.lower() != ".html":
+        return set_status_line(draft, text)
+    import creaite_doc
+    if not creaite_doc.is_doc(draft):
+        return False
+    doc = creaite_doc.read(draft)
+    doc.update(state="approved", approved_at=on)
+    draft.write_text(creaite_doc.dumps(doc), encoding="utf-8")
+    return True
 
 
 def _op_copy(apply_id, fop, blk, done):
