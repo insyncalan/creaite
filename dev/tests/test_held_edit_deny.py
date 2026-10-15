@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import ABC, Vault  # noqa: E402
 
 WRITERS = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
-CHAT_WRITERS = ["Edit", "Write", "MultiEdit"]     # F2: NotebookEdit is denied in every run (NEVER_BUILTINS); no kind uses it
+CHAT_WRITERS = ["Edit", "Write", "MultiEdit"]     # F2: NotebookEdit is denied in every run (EVERY_RUN_DENIES); no kind uses it
 HELD = ["prep", "generate", "check", "load"]
 TARGETS = [f"{ABC}/notes.md", f"{ABC}/minutes/2026-10-01 Steering.docx", "system/config/settings.json",
            "system/staging/proposed-x.json", "system/staging/drafts/x.json", "inbox/forward.txt"]

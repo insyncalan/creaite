@@ -3,7 +3,9 @@
 A run started with no `--tools` gets every built-in tool in the installed Claude Code, including ones that run headless with no
 permission prompt and that neither the guard hook nor a deny list looks at (EnterWorktree, RemoteTrigger, CronCreate, Monitor,
 SendMessage, Workflow…). So each kind's `--tools` is pinned here, a new kind without an entry fails the test, and the built-ins no
-kind needs are denied by name in every run as well (NEVER_BUILTINS). F4: Search's answer also has `--strict-mcp-config`.
+kind needs are denied by name in every run as well (EVERY_RUN_DENIES: F3's permissions.run_deny_extras() plus F2_ONLY_DENIES).
+A kind that calls an MCP tool lists ToolSearch (`--tools ""` hides deferred MCP tools; #116, Alan's live check). F4: Search's
+answer also has `--strict-mcp-config`. The VIP check keeps main's command line (its own branch changes it).
 
 Each kind is started through the run engine with a stand-in `claude` (CREAITE_CLAUDE) that records its argv; nothing calls Claude.
 
@@ -35,7 +37,7 @@ TABLE = [
     ("generate", HELD, False, "held: Current state, AI drafts, Shape"),
     ("check", HELD, False, "held: a transcript check"),
     ("load", HELD, False, "held: a transcript load"),
-    ("narrow", "", False, "the draft-from-a-message run (`only`): Microsoft 365 reading only, no built-ins"),
+    ("narrow", "ToolSearch", False, "the draft-from-a-message run (`only`): Microsoft 365 reading only; ToolSearch reaches them"),
     ("search", "Read,Grep,Glob", True, "F4: no MCP at all"),
     ("edit-ai", "", True, "BL-301 D: no tools, no MCP"),
     ("shape-closed", "", False, "BL-286: no tools (every reading MCP tool denied by name)"),
@@ -44,6 +46,12 @@ TABLE = [
 DANGEROUS = ["EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
              "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments", "ArtifactData",
              "NotebookEdit"]
+
+# F2's own list before it imported F3's (2cb7c795): the union must stay these plus F3's other-connector entries.
+PREVIOUS_NEVER_BUILTINS = ["EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification",
+                           "SendMessage", "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact",
+                           "ArtifactComments", "ArtifactData", "NotebookEdit", "TaskStop", "ListAgents", "ReportFindings",
+                           "ListMcpResourcesTool", "ReadMcpResourceTool", "ReadMcpResourceDirTool"]
 
 FAKE = r'''#!/usr/bin/env python3
 import json, sys
@@ -151,18 +159,35 @@ class Constants(unittest.TestCase):
     def test_an_unknown_kind_fails_closed(self):
         import live_server as L
         self.assertEqual(L.run_args("some-new-kind"), ["--tools", ""])
-        self.assertEqual(L.run_args("generate", None, L.ALERT_DRAFT_TOOLS), ["--tools", ""])
+        self.assertEqual(L.run_args("generate", None, L.ALERT_DRAFT_TOOLS), ["--tools", "ToolSearch"])
         self.assertEqual(L.run_args("ask", None, L.ALERT_DRAFT_TOOLS), L.KIND_ARGS["ask"])   # a chat is never narrowed
 
-    def test_never_builtins_cover_the_dangerous_names(self):
+    def test_every_run_denies_cover_the_dangerous_names(self):
         import live_server as L
         for t in DANGEROUS:
-            self.assertIn(t, L.NEVER_BUILTINS)
+            self.assertIn(t, L.EVERY_RUN_DENIES)
         for k in L.KIND_ARGS:                                             # no kind's list names one
-            self.assertFalse(set(L.KIND_ARGS[k][1].split(",")) & set(L.NEVER_BUILTINS), k)
-        for t in DANGEROUS:                                               # the VIP check too
-            self.assertIn(t, L.vip_deny())
-        self.assertEqual(L.VIP_ARGS, ["--tools", ""])
+            self.assertFalse(set(L.KIND_ARGS[k][1].split(",")) & set(L.EVERY_RUN_DENIES), k)
+        self.assertEqual(L.vip_deny(), L.DENY_TOOLS + [t for t in L.VIP_BUILTIN_DENIES if t not in L.DENY_TOOLS])   # main's, unchanged
+
+    def test_the_deny_list_is_f3s_shared_list_plus_f2s_own(self):
+        import live_server as L
+        import permissions as P
+        self.assertEqual(len(L.EVERY_RUN_DENIES), len(set(L.EVERY_RUN_DENIES)), "a name appears twice")
+        self.assertEqual(L.EVERY_RUN_DENIES[:len(P.run_deny_extras())], P.run_deny_extras())      # imported, not copied
+        self.assertFalse(set(L.F2_ONLY_DENIES) & set(P.run_deny_extras()), "an F2-only name is in F3's list already")
+        self.assertEqual(set(L.EVERY_RUN_DENIES), set(PREVIOUS_NEVER_BUILTINS) | set(P.NON_M365_MCP_DENY))
+
+    def test_a_kind_that_calls_mcp_tools_lists_toolsearch(self):
+        import live_server as L
+        for kind, tools, strict, note in TABLE:
+            if kind in ("edit-ai", "shape-closed", "notes-find") or strict:   # no MCP tool at all
+                continue
+            self.assertIn("ToolSearch", tools.split(","), f"{kind}: {note}")
+        for k, args in L.KIND_ARGS.items():
+            if args[1] == "":
+                self.assertTrue(k in L.TOOLLESS_KINDS or "--strict-mcp-config" in args
+                                or not any(t.startswith("mcp__") for t in L.run_policy(k, None)[0]), k)
 
 
 if __name__ == "__main__":
