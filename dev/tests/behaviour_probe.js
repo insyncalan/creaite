@@ -32,8 +32,8 @@ window.SB = (() => {
   const sig = el => { const id = el.id ? "#" + el.id : ""; const c = (el.className && typeof el.className === "string") ? "." + el.className.trim().split(/\s+/).slice(0, 2).join(".") : "";
     return el.tagName.toLowerCase() + id + c; };
   /** every visible opener in the region, in document order (a disabled one says why and opens nothing: left out) */
-  const openers = region => { const root = document.querySelector(region) || document;
-    L = [...root.querySelectorAll("[aria-haspopup]:not([aria-haspopup=false])")].filter(el => vis(el) && !el.disabled
+  const openers = region => { const roots = [...document.querySelectorAll(region)];      /* every match: the shell is ".rail,header.bar" */
+    L = (roots.length ? roots : [document]).flatMap(root => [...root.querySelectorAll("[aria-haspopup]:not([aria-haspopup=false])")]).filter(el => vis(el) && !el.disabled
       && el.getAttribute("aria-disabled") !== "true" && !el.closest(".ddmenu.on,[role=menu],[role=listbox]"));
     return L.map((el, i) => ({ i, sig: sig(el), name: name(el), kind: el.getAttribute("aria-haspopup"), role: el.getAttribute("role") || el.tagName.toLowerCase() })); };
   /** what is open: visible popups, ignoring the page's permanent regions and what was already showing when the opener

@@ -6,6 +6,7 @@ import { openDialog } from "./components/Dialog.jsx";
 import { makeUndoDialog } from "./components/dialogs/PageDialogs.jsx";
 import { renderAskChanges } from "./ask.js";
 import { drawTabs } from "./components/Tabs.jsx";
+import { drawFilterBar, filterBarOpen } from "./components/FilterBar.jsx";
 import { A, DEC, P, pName, R } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ibtn, ic, ICONS, putHTML, raw } from "./core/dom.js";
 import { parseWhen } from "./core/fields.js";
@@ -59,19 +60,33 @@ shared.ACTF={};                                      /* {q, types:[], from, to}:
 export const actOn=()=>!!((shared.ACTF.q||"").trim()||(shared.ACTF.types||[]).length||shared.ACTF.from||shared.ACTF.to);
 export const actProj=a=>{ const c=(actId(a).match(/^(?:\d{4}-\d{2}-\d{2}\|)?([A-Z][A-Z0-9]{2,6})/)||[])[1]; return c&&P.some(p=>p.code===c)?pName(c):""; };
 export const actHay=a=>[actId(a),a.item,a.what,a.change,a.by,actProj(a),fd(a.at),a.at,(actKindOf(actKind(a))||[])[1]].join(" ").toLowerCase();
-export function actMatch(a){ const q=(shared.ACTF.q||"").trim().toLowerCase(); if(q&&!q.split(/\s+/).every(w=>actHay(a).includes(w))) return false;
-  if((shared.ACTF.types||[]).length&&!shared.ACTF.types.includes(actKind(a))) return false;
+export function actMatch(a,skip){ const q=(shared.ACTF.q||"").trim().toLowerCase(); if(q&&!q.split(/\s+/).every(w=>actHay(a).includes(w))) return false;
+  if(skip!=="types"&&(shared.ACTF.types||[]).length&&!shared.ACTF.types.includes(actKind(a))) return false;
   const d=String(a.at||"").slice(0,10); if(shared.ACTF.from&&d<shared.ACTF.from) return false; if(shared.ACTF.to&&d>shared.ACTF.to) return false; return true; }
+/* BL-316: the Type filter and the date range are the FilterBar building block (dev/COMPONENTS.md §3), as Work's and Review's:
+   Type is a button of its own with its list (each type with its count), the funnel's picker holds Type and When (two date
+   boxes). The search box stays beside them. The state is shared.ACTF ({q, types, from, to}), in the address as before. */
+export let ACTPK="type";
+export function actSetFilters(ch){ Object.assign(shared.ACTF,ch); renderActivity(); try{ navWrite(false); }catch(e){} }
+export const actFCount=()=>((shared.ACTF.types||[]).length?1:0)+(shared.ACTF.from||shared.ACTF.to?1:0);
+export function actBarProps(){ const types=shared.ACTF.types||[], have=new Set(shared.ACT.map(actKind)), name=t=>(actKindOf(t)||["",t])[1];
+  const others=shared.ACT.filter(a=>actMatch(a,"types")), n=actFCount(), from=shared.ACTF.from, to=shared.ACTF.to, dOn=!!(from||to);
+  return {fields:[
+      {id:"type",label:"Kind",main:true,btnId:"actTypeBtn",menuId:"actTypeMenu",on:!!types.length,selected:types,mark:types.length?"set":"",
+        button:types.length?`Kind: ${types.length<=2?types.map(name).join(", "):types.length+" chosen"}`:"Kind",
+        options:()=>ACTKINDS.filter(k=>have.has(k[0])||types.includes(k[0])).map(k=>({value:k[0],label:k[1],count:others.filter(a=>actKind(a)===k[0]).length}))},
+      {id:"when",label:"When",on:dOn,mark:dOn?"set":"",note:"The day each change was made",range:{from:from?fd(from):"",to:to?fd(to):"",name:"Changed"}}],
+    onSelect:(k,vals)=>actSetFilters({types:vals}),
+    onRange:(k,end,text)=>{ const v=text.trim(), iso=v?parseWhen(v):""; if(v&&!iso){ snack("Not a date creaite knows. Use DD-MM-YYYY"); return; } actSetFilters({[end]:iso||""}); },
+    more:{id:"actFunnel",menuId:"actPick",label:n?`Add a filter: ${n} on`:"Add a filter",menuLabel:"Filter Activity",count:n,on:dOn,
+      field:ACTPK,onField:k=>{ ACTPK=k; actTools(); },onOpen:()=>{ ACTPK=dOn&&!types.length?"when":"type"; },
+      result:`Result: ${shared.ACT.filter(a=>actMatch(a)).length} of ${shared.ACT.length} shown`,resultId:"actResult",doneId:"actPickDone",
+      clearAll:n?{id:"actPickClear",run:()=>actSetFilters({types:[],from:"",to:""})}:null}}; }
 export function actTools(){ let box=$("#actTools"); if(!box) return; box.hidden=!shared.ACT.length;
   if(!$("#actQ")) putHTML(box,html`<div class="acttools"><label class="actsearch">${raw(ic("search"))}<input type="search" id="actQ" placeholder="Search Activity: ID, words, project, person, date" aria-label="Search Activity" autocomplete="off"><kbd aria-hidden="true">/</kbd></label>
-      <span id="actCount" aria-live="polite"></span><button type="button" class="linkbtn" id="actClear" data-actclear hidden>Clear</button>
-      <span class="actdates"><label for="actFrom">From</label><input type="text" id="actFrom" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off"><label for="actTo">to</label><input type="text" id="actTo" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off"></span>
-      <div id="actTypes" role="group" aria-label="Show only these types"></div></div>`);
+      <span class="wfilters" id="actFbar"></span><span id="actCount" aria-live="polite"></span><button type="button" class="linkbtn" id="actClear" data-actclear hidden>Clear</button></div>`);
   const q=$("#actQ"); if(document.activeElement!==q&&q.value!==(shared.ACTF.q||"")) q.value=shared.ACTF.q||"";
-  [["actFrom","from"],["actTo","to"]].forEach(([id,k])=>{ const el=$("#"+id); if(document.activeElement!==el) el.value=shared.ACTF[k]?fd(shared.ACTF[k]):""; });
-  const have=new Set(shared.ACT.map(actKind)), types=shared.ACTF.types||[], foc=document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.acttype;
-  putHTML($("#actTypes"),html`${ACTKINDS.filter(k=>have.has(k[0])||types.includes(k[0])).map(k=>html`<button type="button" class="vchip" data-acttype="${k[0]}" aria-pressed="${String(types.includes(k[0]))}">${raw(ic(k[2]))}${k[1]}</button>`)}`);
-  if(foc) $(`#actTypes [data-acttype="${foc}"]`)?.focus(); }
+  const bar=$("#actFbar"); drawFilterBar(bar,actBarProps()); }
 export function actRow(a,i){ const rid=a.rowid&&!a.reverted&&!a.undone?`r${a.rowid}`:"";
   const end=a.reverted?html`<span class="x actundone" title="Put back by a later undo">undone</span>`:a.undo?raw(ibtn("undo","Undo this change",html`data-undoact="${i}"`,"sm"))
     :viaServer()&&a.apply_id&&a.apply_id===D.latest_apply&&!a.undone?raw(ibtn("undo","Undo this apply",html`data-undoapply="${a.apply_id}"`,"sm")):html`<span class="x" title="Only the latest apply can be undone here; tick older changes to undo them">Applied</span>`;
@@ -89,8 +104,7 @@ export function renderActivity(){ actTools(); [...HL].forEach(([id,k])=>{ if(k!=
 export const actSel=()=>[...HL].filter(([,k])=>k==="act").map(([id])=>+id.slice(1));
 export function actPaint(){ $$("#actTbl tr[data-row]").forEach(tr=>{ const on=HL.has(tr.dataset.row); tr.classList.toggle("hl",on); tr.classList.toggle("cur",tr.dataset.row===shared.HLC); const cb=tr.querySelector("input[type=checkbox]"); if(cb) cb.checked=on; });
   const n=actSel().length, bar=$("#actBar"); if(!bar) return; bar.hidden=!n;
-  putHTML(bar,html`${n>0&&html`<span class="bkn" aria-live="polite">${n} selected:</span><button type="button" class="btn" id="actUndoSel" ${!viaServer()&&html`disabled title="Undoing needs the live server"`}>${raw(ic("undo"))}Undo ${n}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`); }
-export function actFilter(ch){ Object.assign(shared.ACTF,ch); renderActivity(); try{ navWrite(false); }catch(e){} }
+  putHTML(bar,html`${n>0&&html`<span class="bkn" aria-live="polite">${n} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer()&&html`disabled title="Undoing needs the live server"`}>${raw(ic("undo"))}Undo ${n}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`); }
    /* Shift-click picks a range, not text */
 /* "/" searches Activity while it is open (elsewhere it is still ask creaite); Esc clears the selection before anything else */
 export const actTyping=()=>typing()&&!document.activeElement.matches("input[type=checkbox]");   /* a tick box has the focus after a click: not typing */
@@ -123,11 +137,8 @@ export function actConfirm(ids,plan){ const dlg=$("#actDlg")||makeUndoDialog();
 export function bootActivity0071(){
 Object.assign(ICONS,{action:KI.action,risk:KI.Risk,issue:KI.Issue,assumption:KI.Assumption,dependency:KI.Dependency,decision:KI.decision,milestone:KI.milestone,
   label:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/>'});
-document.addEventListener("input",e=>{ if(e.target.id==="actQ") actFilter({q:e.target.value}); });
-document.addEventListener("change",e=>{ const t=e.target; if(t.id!=="actFrom"&&t.id!=="actTo") return; const v=t.value.trim(), iso=v?parseWhen(v):"";
-  if(v&&!iso) return; actFilter({[t.id==="actFrom"?"from":"to"]:iso||""}); });
+document.addEventListener("input",e=>{ if(e.target.id==="actQ") actSetFilters({q:e.target.value}); });
 document.addEventListener("click",e=>{ const t=e.target;
-  const ty=t.closest&&t.closest("#actTypes [data-acttype]"); if(ty){ const k=ty.dataset.acttype, L=[...(shared.ACTF.types||[])]; actFilter({types:L.includes(k)?L.filter(x=>x!==k):[...L,k]}); return; }
   if(t.closest&&t.closest("[data-actclear]")){ e.preventDefault(); shared.ACTF={}; renderActivity(); try{ navWrite(false); }catch(x){} $("#actQ")?.focus(); return; }
   if(t.closest&&t.closest("[data-actselclear]")){ hlClear(); actPaint(); return; }
   if(t.closest&&t.closest("#actUndoSel")){ actUndoSelected(); return; } });
@@ -138,7 +149,7 @@ $("#actTbl").addEventListener("click",e=>{ const tr=e.target.closest("tr[data-ro
 $("#actTbl").addEventListener("mousedown",e=>{ if(e.shiftKey&&e.target.closest("tr[data-row]")) e.preventDefault(); });
 document.addEventListener("keydown",e=>{ if(shared.VIEW!=="activity") return;
   if(e.key==="/"&&!e.metaKey&&!e.ctrlKey&&!e.altKey&&!actTyping()&&!document.querySelector("dialog[open]")&&!$("#chat").classList.contains("on")){ e.preventDefault(); e.stopImmediatePropagation(); $("#actQ")?.focus(); $("#actQ")?.select(); return; }
-  if(e.key==="Escape"&&actSel().length&&!document.querySelector("dialog[open]")&&!$("#panel").classList.contains("on")&&!actTyping()){ e.preventDefault(); e.stopImmediatePropagation(); hlClear(); actPaint(); } },true);
+  if(e.key==="Escape"&&actSel().length&&!filterBarOpen($("#actFbar"))&&!document.querySelector("dialog[open]")&&!$("#panel").classList.contains("on")&&!actTyping()){ e.preventDefault(); e.stopImmediatePropagation(); hlClear(); actPaint(); } },true);
 }
 
 /* BL-231: what this block did at load, run in today's order by src/main.js */

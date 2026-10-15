@@ -39,6 +39,9 @@ SCREENS["work-board"] = ("go('work'); setLayout(WT,'board')",
                          "#v-work")
 SCREENS["work-panel"] = (lambda b: (b.eval("go('work'); setLayout(WT,'list')"), ts.open_first_item(b)),
                          ts.SCREENS["work-panel"][1], ts.SCREENS["work-panel"][2])
+# BL-316: Activity with a change ticked, so its selection bar's Undo (which opens the Undo changes dialog) shows
+SCREENS["activity-selected"] = ("go('activity'); setTimeout(()=>document.querySelector('#actTbl tr[data-row] input[type=checkbox]').click(),30)",
+                                "!!document.getElementById('actUndoSel')", "#v-activity")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 # BL-316: the popups the sample's screens don't show (test_shared_behaviour's "unreached"): Work's New tile on Decisions (a

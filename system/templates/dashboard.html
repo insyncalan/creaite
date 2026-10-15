@@ -2866,7 +2866,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   </nav>
   <div class="main">
     <header class="bar">
-      <div class="search" id="searchBtn" role="button" tabindex="0" aria-label="Search or jump to"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
+      <div class="search" id="searchBtn" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Search or jump to"><svg data-ic="search" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>Search or jump to…<kbd id="kK">⌘K</kbd></div>
       <div class="status" id="status"></div>
       <button class="newchip" id="newChip" type="button" aria-live="polite">New items arrived: refresh</button>
       <button class="btn" id="askBtn"><svg data-ic="chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>ask creaite <span class="kbd">/</span></button>
@@ -2926,7 +2926,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       <section class="view" id="v-review" hidden><div class="wrapmax">
         <h1>Review</h1><p class="sub" style="margin:4px 0 0" id="rvSub">Claude's proposals.</p>
         <!-- BL-133 (sprint-work-views): search, filters, Display and Approve all routine; the bar when anything is selected; the result line -->
-        <div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off"><span class="wfilters" id="rvfilters"></span><span class="sp"></span><span class="dd rvdisp"><button class="ib bd" id="rvDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="rvDispMenu" aria-label="Display: grouping and order" data-tip="Display: grouping and order"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="rvDispMenu" role="dialog" aria-label="Review display" hidden></div></span><button class="btn" id="routineBtn"><svg data-ic="checks" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve routine</button><!-- BL-160 (sprint-icons) --></div>
+        <div class="toolbar rvtools"><input id="rvQ" type="search" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off"><span class="wfilters" id="rvfilters"></span><span class="sp"></span><span class="dd rvdisp"><button class="ib bd" id="rvDispBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="rvDispMenu" aria-label="Display: grouping and order" data-tip="Display: grouping and order"><svg data-ic="sliders" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button><div class="ddmenu dispmenu" id="rvDispMenu" role="dialog" aria-label="Review display" hidden></div></span><button class="btn" id="routineBtn" aria-haspopup="dialog"><svg data-ic="checks" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve routine</button><!-- BL-160 (sprint-icons) --></div>
         <div class="wapplied" id="rvapplied"></div>
         <div class="wbulk rvbar" id="rvbar" role="region" aria-label="Decide the selected proposals" hidden><span class="bkn" id="rvCount" aria-live="polite"></span><span class="rvsplit" id="rvSplit"></span><button type="button" class="linkbtn" id="rvAll"></button><span class="sp"></span><button type="button" class="btn primary" id="bulkApprove" disabled><svg data-ic="check" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Approve</button><button type="button" class="btn" id="bulkReject" aria-haspopup="menu" aria-expanded="false" disabled><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>Reject with a reason <span class="kbd" aria-hidden="true">R</span></button><span class="rvset" id="rvSet"></span><button type="button" class="ib sm" id="rvClear" aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc"><svg data-ic="x" class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg></button></div>
         <div class="rvresult" id="rvresult" role="status" aria-live="polite"></div>
@@ -2975,7 +2975,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
-        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><label class="setchg"><input type="checkbox" id="setChanged"> Show changed only</label><nav class="setcats" id="setcats" aria-label="Settings categories"></nav><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
+        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><label class="setchg"><input type="checkbox" id="setChanged"> Show changed only</label><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
@@ -3031,6 +3031,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     ACHGFIRST: () => ACHGFIRST,
     ACHG_OP: () => ACHG_OP,
     ACTKINDS: () => ACTKINDS,
+    ACTPK: () => ACTPK,
     ACTSHOW: () => ACTSHOW,
     ACT_ASK_AGAIN: () => ACT_ASK_AGAIN,
     AGD: () => AGD,
@@ -3469,8 +3470,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     acPick: () => acPick,
     acUpdate: () => acUpdate,
     achgTier: () => achgTier,
+    actBarProps: () => actBarProps,
     actConfirm: () => actConfirm,
-    actFilter: () => actFilter,
+    actFCount: () => actFCount,
     actHay: () => actHay,
     actHref: () => actHref,
     actIcon: () => actIcon,
@@ -3485,6 +3487,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     actProj: () => actProj,
     actRow: () => actRow,
     actSel: () => actSel,
+    actSetFilters: () => actSetFilters,
     actShowQuality: () => actShowQuality,
     actTabsDraw: () => actTabsDraw,
     actTools: () => actTools,
@@ -8457,7 +8460,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   // components/Tabs.jsx
   var tabId = (idBase, id) => `${idBase}-tab-${id}`;
   var panelId = (idBase, id) => `${idBase}-panel-${id}`;
-  function Tabs({ items: items2, tabs, selected, onSelect, label, className, cls, tabClass, controls, idBase, wrap, id }) {
+  function Tabs({ items: items2, tabs, selected, onSelect, label, className, cls, tabClass, controls, idBase, wrap, id, vertical }) {
     const list = items2 || tabs || [], round = wrap ?? !items2;
     const box = A2(
       /** @type {HTMLDivElement | null} */
@@ -8472,7 +8475,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     });
     const onKey = (e4) => {
       const i5 = list.findIndex((t5) => t5.id === selected), last = list.length - 1;
-      let j4 = e4.key === "ArrowRight" ? i5 + 1 : e4.key === "ArrowLeft" ? i5 - 1 : e4.key === "Home" ? 0 : e4.key === "End" ? last : null;
+      const next = vertical ? "ArrowDown" : "ArrowRight", prev = vertical ? "ArrowUp" : "ArrowLeft";
+      let j4 = e4.key === next ? i5 + 1 : e4.key === prev ? i5 - 1 : e4.key === "Home" ? 0 : e4.key === "End" ? last : null;
       if (j4 === null || e4.metaKey || e4.ctrlKey || e4.altKey) return;
       e4.preventDefault();
       j4 = round ? (j4 + list.length) % list.length : Math.max(0, Math.min(last, j4));
@@ -8482,8 +8486,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       onSelect(to.id);
     };
     const listCls = items2 ? className : ["tabs", cls, className].filter(Boolean).join(" ");
-    return /* @__PURE__ */ u2("div", { class: listCls, id, role: "tablist", "aria-label": label, ref: box, onKeyDown: onKey, children: list.map((t5) => {
-      const on = t5.id === selected;
+    return /* @__PURE__ */ u2("div", { class: listCls, id, role: "tablist", "aria-label": label, "aria-orientation": vertical ? "vertical" : void 0, ref: box, onKeyDown: onKey, children: list.map((t5, n4) => {
+      const on = t5.id === selected, inTab = on || n4 === 0 && !list.some((x5) => x5.id === selected);
       return /* @__PURE__ */ u2(S2, { children: [
         t5.before,
         /* @__PURE__ */ u2(
@@ -8497,7 +8501,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
             "aria-current": t5.current ? "date" : void 0,
             "aria-controls": t5.controls || (idBase ? panelId(idBase, t5.id) : controls),
             "aria-label": t5.name,
-            tabIndex: on ? 0 : -1,
+            tabIndex: inTab ? 0 : -1,
             "data-tab": t5.id,
             ...dataAttrs(t5.data),
             onClick: () => onSelect(t5.id),
@@ -11828,7 +11832,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     );
     if (chg) chg.checked = CHANGED;
     if (SERVED && !catalogue.value) loadCatalogue();
-    putHTML($("#setcats"), raw(SETCATS.map(([id, t5]) => `<button data-scat="${id}" aria-selected="${!searching && id === shared.SCAT}">${esc(t5)}</button>`).join("")));
+    drawTabs($("#setcatsHost"), {
+      id: "setcats",
+      className: "setcats",
+      label: "Settings categories",
+      vertical: true,
+      controls: "settingsBody",
+      items: SETCATS.map(([id, t5]) => ({ id, label: t5, data: { scat: id } })),
+      selected: searching ? "" : shared.SCAT,
+      onSelect: setOpen
+    });
     putHTML($("#setcatsel"), raw((searching ? `<option value="">${CHANGED && !shared.SQ.trim() ? "Changed settings" : "Search results"}</option>` : "") + SETCATS.map(([id, t5]) => `<option value="${id}" ${!searching && id === shared.SCAT ? "selected" : ""}>${esc(t5)}</option>`).join("")));
     const secs = searching ? setSearchSections() : SETSECTIONS.filter((s5) => catOf(s5) === shared.SCAT);
     const head = (s5) => searching ? s5.mount && s5.id !== "more" ? "" : `<div class="setcrumb">${esc(catName(catOf(s5)))} › ${esc(s5.id === "more" ? OLDCATS.advanced : s5.title)}</div>` : shared.SCAT === "advanced" && OLDCATS[s5.cat === "advanced" ? "advanced" : s5.cat] && s5 === secs.find((x5) => x5.cat === s5.cat) ? `<h2 class="setgroup">${esc(OLDCATS[s5.cat])}</h2>` : "";
@@ -12097,10 +12110,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }, `Also rename in ${others.join(", ")}`);
   }
   function bootSettings0078() {
-    $("#setcats").onclick = (e4) => {
-      const t5 = e4.target.closest("[data-scat]");
-      if (t5) setOpen(t5.dataset.scat);
-    };
     $("#setcatsel").onchange = (e4) => {
       if (e4.target.value) setOpen(e4.target.value);
     };
@@ -12549,7 +12558,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   function renderPeopleMgr() {
     pfLoad();
-    putHTML($("#peopleMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd">Add a person</button></div>
+    putHTML($("#peopleMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">People</h2><button class="btn" id="pmAdd" aria-haspopup="dialog">Add a person</button></div>
    <p class="sub" style="margin:4px 0 8px">Everyone who owns an item, with one full name each. Aliases and email addresses map to that name when minutes and mail are read; a name creaite doesn’t know is flagged in Review, never guessed. Rename or merge fixes spellings across every item (a merge keeps the old name as an alias). Removing hides a name from the owner picker; items keep it. Every change is saved as a proposal, with Undo.</p>
    ${PEOPLE.added.length || PEOPLE.hidden.length ? html`<p class="sub" id="pmLegacy"><span class="tag warn">${PEOPLE.added.length + PEOPLE.hidden.length} name${PEOPLE.added.length + PEOPLE.hidden.length === 1 ? "" : "s"} still in settings.json</span> ${viaServer() ? html`<button class="mini" data-ask="${PEOPLE_MOVE}">Move them into the register</button> <span class="sub">(ask creaite does it, asking first)</span>` : "Say “setup” in Claude Code to move them into the register."}</p>` : ""}
    <div class="toolbar pmtools" role="search"><input id="pmQ" type="search" placeholder="Search name, alias, email or role" aria-label="Search people" autocomplete="off" value="${PF.q}"><span class="dd" id="pmFdd"></span></div>
@@ -12672,7 +12681,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return html`<tr class="${off ? "off" : ""}" data-pn="${n4}"><td>${pfHl(n4)}${me ? raw(' <span class="tag">(you)</span>') : ""}${p6 || me ? "" : raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p6 && !p6.email ? raw(' <span class="tag warn" title="Add email">no email</span>') : ""}${off ? raw(' <span class="tag warn">removed from list</span>') : ""}${via ? html`<span class="sub pmvia">named in the project’s stakeholders</span>` : ""}</td>
      <td>${p6 && p6.email ? pfHl(p6.email) : raw('<span class="sub">—</span>')}</td><td>${p6 && (p6.org || p6.role) ? html`${p6.org || ""}${p6.org && p6.role ? " · " : ""}${pfHl(p6.role)}` : raw('<span class="sub">—</span>')}</td><td class="sub">${p6 && p6.aliases.length ? p6.aliases.map((s5, i5) => html`${i5 ? ", " : ""}${pfHl(s5)}`) : "—"}</td>
      <td class="num">${raw(pfLink(n4, "actions", a5, sc))}</td><td class="num">${raw(pfLink(n4, "raid", r4, sc))}</td>
-     <td class="mgract">${me ? raw('<span class="x">Change in Settings › Essentials › You</span>') : html`${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", `data-pm="edit" data-n="${esc(n4)}"`, "sm"))}${raw(ibtn("type", "Rename", `data-pm="ren" data-n="${esc(n4)}"`, "sm"))}<select class="mgsel pmsel" data-n="${n4}" aria-label="Merge ${n4} into"><option value="">Merge into…</option>${mergeTo.map((y5) => html`<option value="${y5}">${y5}</option>`)}</select>${raw(off ? ibtn("undo", "Restore", `data-pm="restore" data-n="${esc(n4)}"`, "sm") : ibtn("trash", "Remove from list", `data-pm="hide" data-n="${esc(n4)}"`, "sm no"))}`}</td></tr>`;
+     <td class="mgract">${me ? raw('<span class="x">Change in Settings › Essentials › You</span>') : html`${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", `data-pm="edit" data-n="${esc(n4)}" aria-haspopup="dialog"`, "sm"))}${raw(ibtn("type", "Rename", `data-pm="ren" data-n="${esc(n4)}"`, "sm"))}<select class="mgsel pmsel" data-n="${n4}" aria-label="Merge ${n4} into"><option value="">Merge into…</option>${mergeTo.map((y5) => html`<option value="${y5}">${y5}</option>`)}</select>${raw(off ? ibtn("undo", "Restore", `data-pm="restore" data-n="${esc(n4)}"`, "sm") : ibtn("trash", "Remove from list", `data-pm="hide" data-n="${esc(n4)}"`, "sm no"))}`}</td></tr>`;
   }
   function pfEmpty(L2, F4) {
     const act = F4.filter((f5) => f5[0] === "rem" ? PF.rem === "only" : pfOn(f5[0])).map((f5) => ({ k: f5[0], label: pfChip(f5) }));
@@ -12958,7 +12967,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
    <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><h1>${name}${p6 || isMe(name) ? "" : html` <span class="tag warn" title="Owns items but isn’t in the people register">not in register</span>`}</h1>
      <p class="sub" style="margin:2px 0">${p6 && (p6.org || p6.role) ? [p6.org, p6.role].filter(Boolean).join(" · ") : "Organisation and role not recorded"}${p6 && p6.email ? html` · <a href="mailto:${p6.email}">${p6.email}</a>` : ""}</p>
      ${p6 && p6.aliases.length ? html`<p class="sub" style="margin:2px 0">Also written as ${p6.aliases.join(", ")}</p>` : ""}</div>
-     ${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", 'id="ppEdit"', "bd"))}</div>
+     ${raw(ibtn("pencil", p6 ? "Edit details" : "Add details", 'id="ppEdit" aria-haspopup="dialog"', "bd"))}</div>
    <div class="ppcounts" role="group" aria-label="Counts"><span>${raw(countLink(`${plur(x5.oo.length, "open action")} owned by ${name}`, x5.oo.length, "actions:open:", { o: ownersOf(x5.oo) }, `<b>${x5.oo.length}</b> open action${x5.oo.length === 1 ? "" : "s"}`))}</span><span>${raw(countLink(`${plur(x5.or.length, "open RAID item")} owned by ${name}`, x5.or.length, "raid:open:", { o: ownersOf(x5.or) }, `<b>${x5.or.length}</b> open risk${x5.or.length === 1 ? "" : "s"} and issue${x5.or.length === 1 ? "" : "s"}`))}</span><span class="${x5.late ? "late" : ""}">${raw(countLink(`${plur(x5.late, "overdue item")} owned by ${name}`, x5.late, "all:open:", { st: ["Open"], due: ["overdue"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], o: ownersOf(latesOf(x5)) }, `<b>${x5.late}</b> overdue`))}</span><span>Projects ${raw(codes.map(pLink).join(" ") || "—")}</span></div>
    <div class="card ppcard"><h2>Open work${items2.length ? html` <span class="sub">· ${items2.length}</span>` : ""}</h2>${items2.length ? raw(personLinks(x5) + personWork(x5, codes)) : html`<p class="sub">Nothing open.</p>`}</div>
    <div class="card ppcard"><h2>Decisions made${recent.length ? html` <span class="sub">· last ${raw(RECENT_DEC_DAYS)} days</span>` : ""}</h2>${recent.length ? raw(personTbl("decisions", recent)) : html`<p class="sub">None in the last ${raw(RECENT_DEC_DAYS)} days.</p>`}</div>
@@ -12979,7 +12988,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         cut.setDate(cut.getDate() - P1_DAYS);
         const since = cut.toISOString().slice(0, 10);
         const closed = [...x5.A.map((a5) => ["actions", a5]), ...x5.R.map((r4) => ["raid", r4])].filter(([, i5]) => i5.st === "Closed" && i5.closed && i5.closed >= since).sort((a5, b5) => b5[1].closed.localeCompare(a5[1].closed));
-        addHTML(el.querySelector("#ppEdit"), "beforebegin", html`<button class="btn" id="ppEmail" data-tip="Draft an email with their open items" ${open2.length ? "" : html`disabled aria-describedby="ppEmailNote"`}>${raw(ic("mail"))}Draft email</button>${open2.length ? html`<button class="btn" id="ppHand" data-tip="Hand their open items to someone else" ${shared.HAND ? "disabled" : ""}>${raw(ic("handover"))}Hand over…</button>` : html`<span class="sub" id="ppEmailNote">Nothing open for ${name}, so no email is needed.</span>`}${raw(chaseNote(x5))}`);
+        addHTML(el.querySelector("#ppEdit"), "beforebegin", html`<button class="btn" id="ppEmail" aria-haspopup="dialog" data-tip="Draft an email with their open items" ${open2.length ? "" : html`disabled aria-describedby="ppEmailNote"`}>${raw(ic("mail"))}Draft email</button>${open2.length ? html`<button class="btn" id="ppHand" data-tip="Hand their open items to someone else" ${shared.HAND ? "disabled" : ""}>${raw(ic("handover"))}Hand over…</button>` : html`<span class="sub" id="ppEmailNote">Nothing open for ${name}, so no email is needed.</span>`}${raw(chaseNote(x5))}`);
         const kp = WARNS().filter((w5) => w5.sig === "key_person" && w5.who === name);
         if (kp.length) addHTML(el.querySelector(".ppcounts"), "afterend", html`<div class="wnote">${kp.map((w5) => html`<div>${raw(WICO.replace("<svg", '<svg width="14" height="14" style="flex:none;margin-top:1px"'))}<span>${w5.k === "projects" ? pName(w5.id) : w5.id}: ${w5.text}</span></div>`)}</div>`);
         const work = el.querySelector(".ppcard");
@@ -22504,7 +22513,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     });
     putHTML($("#inboxTbl"), html`<thead><tr><th style="width:32px"></th><th>File</th><th>Type</th><th>Size</th><th>Added</th><th>Likely project</th><th>State</th><th></th></tr></thead><tbody>${L2.length ? L2.map((f5) => {
       const st = INRUN.includes(f5.path) ? "processing" : f5.state;
-      return html`<tr data-inf="${f5.path}"><td><input type="checkbox" aria-label="Select ${f5.name}" ${raw(INSEL.has(f5.path) ? "checked" : "")} ${raw(st === "new" ? "" : "disabled")}></td><td class="title">${f5.name}</td><td>${f5.ext}</td><td>${kb(f5.size)}</td><td style="white-space:nowrap">${fd(f5.date)}</td><td>${f5.p ? raw(pLink(f5.p)) : html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st === "new" ? "" : "sub"}">${INSTATE[st]}</span>${st === "draft" && html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye", "Preview", "data-inprev", "sm"))}${raw(ibtn("trash", "Remove from Intake", `data-inrm ${st === "processing" ? "disabled" : ""}`, "sm no"))}</td></tr>`;
+      return html`<tr data-inf="${f5.path}"><td><input type="checkbox" aria-label="Select ${f5.name}" ${raw(INSEL.has(f5.path) ? "checked" : "")} ${raw(st === "new" ? "" : "disabled")}></td><td class="title">${f5.name}</td><td>${f5.ext}</td><td>${kb(f5.size)}</td><td style="white-space:nowrap">${fd(f5.date)}</td><td>${f5.p ? raw(pLink(f5.p)) : html`<span class="sub">Not sure</span>`}</td><td><span class="tag ${st === "new" ? "" : "sub"}">${INSTATE[st]}</span>${st === "draft" && html` <a href="#" data-go="review" class="sub">Open Review</a>`}</td><td style="white-space:nowrap;text-align:right">${raw(ibtn("eye", "Preview", 'data-inprev aria-haspopup="dialog"', "sm"))}${raw(ibtn("trash", "Remove from Intake", `data-inrm ${st === "processing" ? "disabled" : ""}`, "sm no"))}</td></tr>`;
     }) : html`<tr><td colspan="8"><div class="empty minbox">No uploaded files waiting.</div></td></tr>`}</tbody>`);
     $("#inboxGo").disabled = !INSEL.size || !!shared.RUN;
     $("#inboxGo").title = shared.RUN ? "ask creaite is busy; try again when it's finished" : "";
@@ -24466,7 +24475,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       putHTML($("#v-cockpit"), html`<div class="wrapmax"><nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a><span aria-hidden="true">›</span><span aria-current="page">${p6.name}</span></nav>
    <div class="hhead"><div style="flex:1"><h1>${p6.name}</h1><div class="sub">${p6.client || "Client not set"} · client reports ${(p6.rhythm || "weekly").toLowerCase()}</div></div>
      <div class="pswitch"><button class="iconbtn" data-psw="-1" aria-label="Previous project" title="Previous project ( [ )" ${P3.length < 2 ? "disabled" : ""}>‹</button><select id="projSw" aria-label="Switch project">${P3.map((x5) => html`<option value="${x5.code}" ${x5.code === code ? "selected" : ""}>${x5.name}</option>`)}</select><button class="iconbtn" data-psw="1" aria-label="Next project" title="Next project ( ] )" ${P3.length < 2 ? "disabled" : ""}>›</button></div></div>
-   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}"${!viaServer() || shared.RUN || shared.GEN.run ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
+   <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
        <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R2.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v4, b5, nav, ex]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v4 && v4 !== "None" ? "bad" : ""}">${v4}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
@@ -38576,32 +38585,85 @@ ${d5.text}`);
     return c5 && P3.some((p6) => p6.code === c5) ? pName(c5) : "";
   };
   var actHay = (a5) => [actId(a5), a5.item, a5.what, a5.change, a5.by, actProj(a5), fd(a5.at), a5.at, (actKindOf(actKind(a5)) || [])[1]].join(" ").toLowerCase();
-  function actMatch(a5) {
+  function actMatch(a5, skip) {
     const q4 = (shared.ACTF.q || "").trim().toLowerCase();
     if (q4 && !q4.split(/\s+/).every((w5) => actHay(a5).includes(w5))) return false;
-    if ((shared.ACTF.types || []).length && !shared.ACTF.types.includes(actKind(a5))) return false;
+    if (skip !== "types" && (shared.ACTF.types || []).length && !shared.ACTF.types.includes(actKind(a5))) return false;
     const d5 = String(a5.at || "").slice(0, 10);
     if (shared.ACTF.from && d5 < shared.ACTF.from) return false;
     if (shared.ACTF.to && d5 > shared.ACTF.to) return false;
     return true;
+  }
+  var ACTPK = "type";
+  function actSetFilters(ch) {
+    Object.assign(shared.ACTF, ch);
+    renderActivity();
+    try {
+      navWrite(false);
+    } catch (e4) {
+    }
+  }
+  var actFCount = () => ((shared.ACTF.types || []).length ? 1 : 0) + (shared.ACTF.from || shared.ACTF.to ? 1 : 0);
+  function actBarProps() {
+    const types = shared.ACTF.types || [], have = new Set(shared.ACT.map(actKind)), name = (t5) => (actKindOf(t5) || ["", t5])[1];
+    const others = shared.ACT.filter((a5) => actMatch(a5, "types")), n4 = actFCount(), from = shared.ACTF.from, to = shared.ACTF.to, dOn = !!(from || to);
+    return {
+      fields: [
+        {
+          id: "type",
+          label: "Kind",
+          main: true,
+          btnId: "actTypeBtn",
+          menuId: "actTypeMenu",
+          on: !!types.length,
+          selected: types,
+          mark: types.length ? "set" : "",
+          button: types.length ? `Kind: ${types.length <= 2 ? types.map(name).join(", ") : types.length + " chosen"}` : "Kind",
+          options: () => ACTKINDS.filter((k5) => have.has(k5[0]) || types.includes(k5[0])).map((k5) => ({ value: k5[0], label: k5[1], count: others.filter((a5) => actKind(a5) === k5[0]).length }))
+        },
+        { id: "when", label: "When", on: dOn, mark: dOn ? "set" : "", note: "The day each change was made", range: { from: from ? fd(from) : "", to: to ? fd(to) : "", name: "Changed" } }
+      ],
+      onSelect: (k5, vals) => actSetFilters({ types: vals }),
+      onRange: (k5, end, text) => {
+        const v4 = text.trim(), iso = v4 ? parseWhen(v4) : "";
+        if (v4 && !iso) {
+          snack("Not a date creaite knows. Use DD-MM-YYYY");
+          return;
+        }
+        actSetFilters({ [end]: iso || "" });
+      },
+      more: {
+        id: "actFunnel",
+        menuId: "actPick",
+        label: n4 ? `Add a filter: ${n4} on` : "Add a filter",
+        menuLabel: "Filter Activity",
+        count: n4,
+        on: dOn,
+        field: ACTPK,
+        onField: (k5) => {
+          ACTPK = k5;
+          actTools();
+        },
+        onOpen: () => {
+          ACTPK = dOn && !types.length ? "when" : "type";
+        },
+        result: `Result: ${shared.ACT.filter((a5) => actMatch(a5)).length} of ${shared.ACT.length} shown`,
+        resultId: "actResult",
+        doneId: "actPickDone",
+        clearAll: n4 ? { id: "actPickClear", run: () => actSetFilters({ types: [], from: "", to: "" }) } : null
+      }
+    };
   }
   function actTools() {
     let box = $("#actTools");
     if (!box) return;
     box.hidden = !shared.ACT.length;
     if (!$("#actQ")) putHTML(box, html`<div class="acttools"><label class="actsearch">${raw(ic("search"))}<input type="search" id="actQ" placeholder="Search Activity: ID, words, project, person, date" aria-label="Search Activity" autocomplete="off"><kbd aria-hidden="true">/</kbd></label>
-      <span id="actCount" aria-live="polite"></span><button type="button" class="linkbtn" id="actClear" data-actclear hidden>Clear</button>
-      <span class="actdates"><label for="actFrom">From</label><input type="text" id="actFrom" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off"><label for="actTo">to</label><input type="text" id="actTo" data-date="1" placeholder="DD-MM-YYYY" autocomplete="off"></span>
-      <div id="actTypes" role="group" aria-label="Show only these types"></div></div>`);
+      <span class="wfilters" id="actFbar"></span><span id="actCount" aria-live="polite"></span><button type="button" class="linkbtn" id="actClear" data-actclear hidden>Clear</button></div>`);
     const q4 = $("#actQ");
     if (document.activeElement !== q4 && q4.value !== (shared.ACTF.q || "")) q4.value = shared.ACTF.q || "";
-    [["actFrom", "from"], ["actTo", "to"]].forEach(([id, k5]) => {
-      const el = $("#" + id);
-      if (document.activeElement !== el) el.value = shared.ACTF[k5] ? fd(shared.ACTF[k5]) : "";
-    });
-    const have = new Set(shared.ACT.map(actKind)), types = shared.ACTF.types || [], foc = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.acttype;
-    putHTML($("#actTypes"), html`${ACTKINDS.filter((k5) => have.has(k5[0]) || types.includes(k5[0])).map((k5) => html`<button type="button" class="vchip" data-acttype="${k5[0]}" aria-pressed="${String(types.includes(k5[0]))}">${raw(ic(k5[2]))}${k5[1]}</button>`)}`);
-    if (foc) $(`#actTypes [data-acttype="${foc}"]`)?.focus();
+    const bar = $("#actFbar");
+    drawFilterBar(bar, actBarProps());
   }
   function actRow(a5, i5) {
     const rid = a5.rowid && !a5.reverted && !a5.undone ? `r${a5.rowid}` : "";
@@ -38641,15 +38703,7 @@ ${d5.text}`);
     const n4 = actSel().length, bar = $("#actBar");
     if (!bar) return;
     bar.hidden = !n4;
-    putHTML(bar, html`${n4 > 0 && html`<span class="bkn" aria-live="polite">${n4} selected:</span><button type="button" class="btn" id="actUndoSel" ${!viaServer() && html`disabled title="Undoing needs the live server"`}>${raw(ic("undo"))}Undo ${n4}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`);
-  }
-  function actFilter(ch) {
-    Object.assign(shared.ACTF, ch);
-    renderActivity();
-    try {
-      navWrite(false);
-    } catch (e4) {
-    }
+    putHTML(bar, html`${n4 > 0 && html`<span class="bkn" aria-live="polite">${n4} selected:</span><button type="button" class="btn" id="actUndoSel" aria-haspopup="dialog" ${!viaServer() && html`disabled title="Undoing needs the live server"`}>${raw(ic("undo"))}Undo ${n4}</button><span class="sp"></span><button type="button" class="ib" data-actselclear aria-label="Clear the selection" data-tip="Clear the selection" data-key="Esc">${raw(ic("x"))}</button>`}`);
   }
   var actTyping = () => typing() && !document.activeElement.matches("input[type=checkbox]");
   var ACT_ASK_AGAIN = 25;
@@ -38722,23 +38776,10 @@ ${d5.text}`);
       label: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/>'
     });
     document.addEventListener("input", (e4) => {
-      if (e4.target.id === "actQ") actFilter({ q: e4.target.value });
-    });
-    document.addEventListener("change", (e4) => {
-      const t5 = e4.target;
-      if (t5.id !== "actFrom" && t5.id !== "actTo") return;
-      const v4 = t5.value.trim(), iso = v4 ? parseWhen(v4) : "";
-      if (v4 && !iso) return;
-      actFilter({ [t5.id === "actFrom" ? "from" : "to"]: iso || "" });
+      if (e4.target.id === "actQ") actSetFilters({ q: e4.target.value });
     });
     document.addEventListener("click", (e4) => {
       const t5 = e4.target;
-      const ty = t5.closest && t5.closest("#actTypes [data-acttype]");
-      if (ty) {
-        const k5 = ty.dataset.acttype, L2 = [...shared.ACTF.types || []];
-        actFilter({ types: L2.includes(k5) ? L2.filter((x5) => x5 !== k5) : [...L2, k5] });
-        return;
-      }
       if (t5.closest && t5.closest("[data-actclear]")) {
         e4.preventDefault();
         shared.ACTF = {};
@@ -38784,7 +38825,7 @@ ${d5.text}`);
         $("#actQ")?.select();
         return;
       }
-      if (e4.key === "Escape" && actSel().length && !document.querySelector("dialog[open]") && !$("#panel").classList.contains("on") && !actTyping()) {
+      if (e4.key === "Escape" && actSel().length && !filterBarOpen($("#actFbar")) && !document.querySelector("dialog[open]") && !$("#panel").classList.contains("on") && !actTyping()) {
         e4.preventDefault();
         e4.stopImmediatePropagation();
         hlClear();
