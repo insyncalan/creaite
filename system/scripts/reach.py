@@ -708,7 +708,7 @@ def wrap_main(argv):
 
 def bash_problem(command):
     """None if this is one creaite script run on its own, else why it is refused (BL-141: the panel has no open Bash). Parsing is
-    strict: outside quotes no ; & | < > ( ) { } or new line; outside single quotes no $ or back-quote. BL-265: the script, then
+    strict: outside quotes no ; & | < > ( ) { } or new line; outside single quotes no $, back-quote or backslash. BL-265: the script, then
     the scripts never run, then the shell characters, then the settings rule, as before."""
     cmd = (command or "").strip()
     m = __import__("re").match(r"python3? system/scripts/([a-z0-9_]+\.py)(?=\s|$)", cmd)
@@ -733,14 +733,19 @@ def _script_refused(script):
 
 
 def _shell_refused(cmd):
-    """Why the command has shell characters the shell would act on, or None."""
+    """Why the command has shell characters the shell would act on, or None. #116 H1 (16-10-2026): a backslash inside double
+    quotes is refused, so a quote is closed by the next double quote and nothing else (`"a\\\\" ; rm x` was read as one quoted
+    word, hiding the `;`); inside single quotes a backslash is literal to the shell and stays allowed; outside quotes it is refused."""
     quote = None
-    for i, ch in enumerate(cmd):
+    for ch in cmd:
         if quote:
-            if ch == quote and not (quote == '"' and cmd[i - 1] == "\\"):
+            if ch == quote:
                 quote = None
             elif quote == '"' and ch in "$`":
                 return "the command has $ or a back-quote, which the shell would expand: run the script on its own"
+            elif quote == '"' and ch == "\\":
+                return ("the command has a backslash inside double quotes, which the shell would read as an escape: "
+                        "use single quotes, or leave the backslash out")
             continue
         if ch in "'\"":
             quote = ch
