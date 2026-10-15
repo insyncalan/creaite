@@ -58,10 +58,10 @@ def forms(root, home):
         ("inside a longer argument (,)", f"{T} a.vtt,~/.ssh/id_rsa", NEVER),
         ("symlink to the file", f"{T} system/staging/drafts/key.vtt", NEVER),
         ("symlink to the folder", f"{T} system/staging/drafts/keys/id_rsa", NEVER),
-        ("wildcard ?", f"{T} ~/.ss?/id_rsa", NEVER),
-        ("wildcard *", f"{T} ~/.s*/id_r*", NEVER),
-        ("wildcard [ ]", f"{T} ~/.ssh/id_[r]sa", NEVER),
-        ("wildcard, absolute", f"{T} {home}/.*/id_rsa", NEVER),
+        ("wildcard ?", f"{T} ~/.ss?/id_rsa", FORM),
+        ("wildcard *", f"{T} ~/.s*/id_r*", FORM),
+        ("wildcard [ ]", f"{T} ~/.ssh/id_[r]sa", FORM),
+        ("wildcard, absolute", f"{T} {home}/.*/id_rsa", FORM),
         ("reach.py wrap", "system/scripts/run reach.py wrap minutes.py transcript ~/.ssh/id_rsa", NEVER),
         ("reach.py wrap, no path", "system/scripts/run reach.py wrap report.py adhoc x.json", KIND),
         ("bare $HOME", f"{T} $HOME/.ssh/id_rsa", SHELL),
@@ -109,6 +109,15 @@ def forms(root, home):
         ("// path after =", f"{T} file=/{home}/.ssh/id_rsa", NEVER),
         ("// path after ,", f"{T} a.vtt,/{home}/.ssh/id_rsa", NEVER),
         ("file:// URL", f"{T} file://{home}/.ssh/id_rsa", NEVER),
+        # review N3: zsh's recursive ** and the other wildcards (reach.held_form_reason; a quoted one by what it matches)
+        ("** unquoted", f"{T} ~/**/id_rsa", FORM),
+        ("** quoted", f"{T} '~/**/id_rsa'", FORM),
+        ("** after =", f"{T} --from=~/**/id_rsa", FORM),
+        ("? after :", f"{T} a:~/.ss?/id_rsa", FORM),
+        ("[ ] after ,", f"{T} a.vtt,~/.ssh/id_[r]sa", FORM),
+        ("quoted ?", f"{T} '~/.ss?/id_rsa'", NEVER),
+        ("quoted [ ]", f'{T} "~/.ssh/id_[r]sa"', NEVER),
+        ("quoted *, absolute", f"{T} '{home}/.*/id_rsa'", NEVER),
     ]
 
 
@@ -148,7 +157,8 @@ class HeldArgForms(unittest.TestCase):
             return NEVER
         if "isn't a read command" in why:
             return KIND
-        if "which the shell reads as a comment" in why or "$PWD or $OLDPWD" in why or "~-, ~+" in why:
+        if "which the shell reads as a comment" in why or "$PWD or $OLDPWD" in why or "~-, ~+" in why \
+                or "has a wildcard" in why:
             return FORM
         if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
             return SHELL
@@ -196,6 +206,7 @@ class HeldArgForms(unittest.TestCase):
     def test_an_ordinary_read_still_passes(self):
         for mode in ("held", "prep"):
             for cmd in (f"{T} '{ABC}/transcripts/2026-10-02 Weekly.vtt'", f"{T} '{ABC}/transcripts/2026-10-0? Weekly.vtt'",
+                        f"system/scripts/run docx_tools.py text '{ABC}/documents/SOW [signed].docx'",
                         "system/scripts/run tracker.py read actions", "system/scripts/run search.py query 'see https://x.example/a'"):
                 with self.subTest(cmd=cmd, mode=mode):
                     code, why = self.hook(mode, cmd)

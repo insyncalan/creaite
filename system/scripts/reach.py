@@ -1073,7 +1073,11 @@ def held_arg_paths(command):
         if WILDCARDS & set(p):
             pattern = os.path.expanduser(p)
             pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
-            out += [m for m in glob.glob(pattern, recursive=False) if m not in out]
+            try:                                           # a quoted one: what a script globbing it would find, hidden folders too
+                found = glob.glob(pattern, recursive=True, include_hidden=True)
+            except TypeError:                              # Python before 3.11
+                found = glob.glob(pattern, recursive=True)
+            out += [m for m in found if m not in out]
     return out
 
 
@@ -1093,7 +1097,10 @@ def held_form_reason(command):
     """Why a held run's Bash call has a form only the shell reads, or None (review N1, 15-10-2026). A `#` starts a shell comment
     that bash_args' split doesn't drop, so `review.py assign … # --dry-run` would be classed by a flag the shell never passes.
     No held prompt's command needs one (docx_tools.py text, minutes.py transcript), so any `#` at all is refused. Review N2:
-    ~- ~+ and ~ with a number at the start of any piece, and $PWD or $OLDPWD in any form, name folders the hook can't resolve."""
+    ~- ~+ and ~ with a number at the start of any piece, and $PWD or $OLDPWD in any form, name folders the hook can't resolve.
+    Review N3: a wildcard outside quotes, and `**` anywhere, is refused (zsh's `**` reaches every folder below); one in quotes
+    reaches a script as it is, and held_arg_paths still checks what it would match, so a quoted file name such as
+    `SOW [signed].docx` (Prep reads Alan's documents by name) still reads."""
     import re
     if "#" in command:
         return "the command has a #, which the shell reads as a comment: run the script on its own, without it"
@@ -1102,7 +1109,24 @@ def held_form_reason(command):
     for piece, _ in held_pieces(command):
         if re.match(r"~[-+0-9]", piece):              # review N2: ~- ~+ ~1 are the shell's folders (cd's last, this one, the stack)
             return "the command has ~-, ~+ or ~ and a number, which the shell turns into a folder: name the file by its path"
+    if WILDCARDS & _held_unquoted(command) or "**" in command:      # review N3: the shell expands these; zsh's ** goes every level
+        return "the command has a wildcard (* ? or [ outside quotes, or **), which the shell would expand: name the file, in quotes"
     return None
+
+
+def _held_unquoted(command):
+    """The characters of a held run's command outside quotes (bash_refusal has already refused a back-slash outside quotes and
+    an unclosed quote)."""
+    out, quote = set(), None
+    for i, ch in enumerate(command):
+        if quote:
+            if ch == quote and not (quote == '"' and command[i - 1] == "\\"):
+                quote = None
+        elif ch in "'\"":
+            quote = ch
+        else:
+            out.add(ch)
+    return out
 
 
 def held_never_reason(command):
