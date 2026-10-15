@@ -1330,7 +1330,7 @@ def _ask_glob_dots(pattern):
             if ASK_WILDCARDS & set(part):
                 try:
                     names = os.listdir(base or ".")
-                except OSError:
+                except OSError:          # not a folder, or unreadable: the shell's glob finds nothing there either
                     continue
                 seen += len(names)
                 if seen > ASK_GLOB_LIMIT:
