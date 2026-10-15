@@ -1165,7 +1165,7 @@ class Bl333And10(HandcheckCase):
             b.pump(0.5)
             row = b.eval(f"(document.querySelector('#workTbl tr[data-row={json.dumps(self.ACTION)}]')||{{}}).innerText||''")
             self.assertIn("Complete security review", row, "FAL-A-004 is back in Work (with Closed shown)")
-            marked = {i: bool(x.get("archived")) for i, x in zip((self.ACTION, self.RAID), back)}
+            marked = {i: bool(x.get("ar") or x.get("archived")) for i, x in zip((self.ACTION, self.RAID), back)}   # the page's flag is "ar"
             if "Archived" not in row:
                 problems.append(f"FAL-A-004's Work row isn't marked Archived (\"{' '.join(row.split())[:90]}\")")
             if not all(marked.values()):
