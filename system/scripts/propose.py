@@ -1389,7 +1389,7 @@ def cmd_setting(key, raw):
     node[parts[-1]] = value
     paths.BACKUPS.mkdir(parents=True, exist_ok=True)
     shutil.copy2(paths.SETTINGS, paths.free_path(paths.BACKUPS, f"settings-{datetime.now():%Y-%m-%d-%H%M%S}", ".json"))   # BL-266
-    paths.SETTINGS.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    paths.write_text_atomic(paths.SETTINGS, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     with open(paths.SETTINGS_LOG, "a", encoding="utf-8") as f:
         f.write(json.dumps({"at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "key": key, "old": old, "new": value})
                 + "\n")
