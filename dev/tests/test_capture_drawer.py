@@ -476,7 +476,7 @@ class Drawer(LiveBrowserCase):
             self.assertGreaterEqual(g["left"], 0)
             self.assertLessEqual(g["right"], g["vw"], "inside the window")
             self.assertGreater(g["z"], g["drawerZ"], "above the drawer")
-            self.assertEqual(b.eval(f"document.querySelectorAll('.slashmenu').length"), 1)
+            self.assertEqual(b.eval("document.querySelectorAll('.slashmenu').length"), 1)
             b.key("Escape")
             b.key("Escape")
             b.wait("document.getElementById('capDrawer').hidden", 5)

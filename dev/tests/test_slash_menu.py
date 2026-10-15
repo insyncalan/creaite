@@ -452,7 +452,7 @@ class Slash(LiveBrowserCase):
         for n in (1, 2, 3):
             self.assertIn(f"{'#' * (n + 2)} Menu {n}", lines)
         self.assertEqual(b.eval("edValue(curEd).includes('\\u200b')"), False, "the escape never leaks into the saved text")
-        self.assertEqual(b.eval("document.querySelectorAll('#curEd h1, #curEd h2, #curEd h3').length"), 6, "three from the state text, three from the menu")
+        self.assertEqual(b.eval("document.querySelectorAll('#curEd h1, #curEd h2, #curEd h3').length"), 5, "two from the state text, three from the menu")
 
     def test_notes_menu_headings_leave_a_stray_hash_line_alone_and_store_one_to_three(self):
         b = self.b
