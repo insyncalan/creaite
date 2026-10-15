@@ -3211,6 +3211,21 @@ def cmd_read(args):
     return 0
 
 
+# ===== #95 (first-page-speed): the index gives the page its turn =====
+# The live server builds the index in a thread of its own process. Reading a PDF is pure Python and holds the interpreter lock,
+# so the first page's /api/data (many small file reads, each of which must win the lock back) took about ten times as long
+# while a full build ran (measured: 2.6 to 3.1 s against 0.2 s). A short sleep after each file and each PDF page hands the
+# lock over; the build itself takes about a fifth longer. The command line (the main thread) is never slowed.
+INDEX_PACE = 0.002     # seconds
+
+
+def index_pace():
+    """Sleep INDEX_PACE seconds when called from a thread other than the main one (the live server's), so a page being built
+    at the same time keeps up."""
+    if INDEX_PACE and threading.current_thread() is not threading.main_thread():
+        time.sleep(INDEX_PACE)
+
+
 # ===== BL-275: PDF text for the search index (the bundled pypdf) =====
 def mostly_letters(text, limit):
     """`text` cut to `limit` if at least half of it (spaces aside) is letters, else "" (a scan or binary noise)."""
@@ -3244,6 +3259,7 @@ def pdf_text(p, limit=400_000):
             out, size = [], 0
             for page in reader.pages:
                 out.append(page.extract_text() or "")
+                index_pace()
                 size += len(out[-1])
                 if size >= limit:
                     break
@@ -3512,6 +3528,7 @@ def _index_entries(scan, keys):
         rel = paths.rel(f)
         entry = found.get(meta["k"])
         if entry is None:
+            index_pace()
             content, when = index_entry_text(f, folder)          # BL-301: a note is read by notes.py, with its own date
             entry = found[meta["k"]] = {"path": rel, "projects": [], "kind": STORED_KIND.get(folder, folder),
                                         "date": when, "text": content, "stem": f.stem, "note": None}
