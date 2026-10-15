@@ -545,7 +545,11 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
     group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i,first)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
-export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return;
+const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
+let weekFoldWired=false;
+function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; weekFoldWired=true;
+  f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
+export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
   $("#weekTo").textContent=W?`to ${longDay(W.to)}`:"";
   drawWeekAhead(host,{groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }

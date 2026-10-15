@@ -165,6 +165,28 @@ class Sections(Home):
         b.click("#resFold>summary")
         b.wait("document.getElementById('resFold').open")
 
+    def test_the_week_ahead_folds_like_resolved_and_is_remembered(self):
+        """#105: the Week ahead hides and shows like Resolved, the choice survives a reload, Resolved is as before."""
+        b = self.b
+        self.today()
+        b.eval("localStorage.removeItem('creaite-week-ahead-hidden')")
+        self.today()
+        self.assertTrue(b.eval("document.getElementById('weekFold').open"))        # shown until hidden
+        b.click("#weekFold>summary")
+        b.wait("!document.getElementById('weekFold').open")
+        self.assertEqual(b.eval("localStorage.getItem('creaite-week-ahead-hidden')"), "true")
+        b.eval("document.querySelector('#weekFold>summary').focus()")
+        self.assertTrue(b.eval("document.activeElement.tagName==='SUMMARY'"))      # reachable by keyboard like Resolved's
+        b.reload("typeof go==='function' && LIVE")
+        self.today()
+        self.assertFalse(b.eval("document.getElementById('weekFold').open"))       # still hidden after a reload
+        self.assertFalse(b.eval("document.getElementById('resFold').open"))        # Resolved untouched: folded
+        b.click("#resFold>summary")
+        b.wait("document.getElementById('resFold').open")
+        b.click("#weekFold>summary")
+        b.wait("document.getElementById('weekFold').open")
+        self.assertEqual(b.eval("localStorage.getItem('creaite-week-ahead-hidden')"), "false")
+
     def test_the_week_ahead_says_why_and_follows_the_setting(self):
         b = self.b
         self.today()
