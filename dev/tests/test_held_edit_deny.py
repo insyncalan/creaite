@@ -130,7 +130,7 @@ class HeldRuns(unittest.TestCase):
     def test_ask_creaite_and_the_rest_unchanged(self):
         self.assertIn("Write(system/staging/drafts/**)", self.allow("ask"))
         self.assertIn("Write(system/staging/**)", self.allow("confirmed"))
-        for name in ("ask", "confirmed", "typed sweep", "search"):
+        for name in ("ask", "confirmed", "typed sweep"):                # search denies its writers itself (run-search-tools-fix)
             self.assertFalse(set(WRITERS) & set(self.deny(name)), name)
         self.assertNotIn("MultiEdit", self.deny("narrow"))           # its own ONLY_DENIES, as before
         self.assertIsNone(self.mode("narrow"))
