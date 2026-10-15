@@ -4,6 +4,7 @@
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0042-sources.js, 0043-calendar-picker.js, 0044-bl-147-sprint-ux.js, 0045-owner-combobox.js, 0057-bl-274-sprint-ui-sweep.js, 0062-bl-216-sprint-ui-sweep.js, 0099-after-bl-120.js, 0115-bl-146-sprint-ux.js, 0116-after-bl-146.js, 0180-bl-181-sprint-peek-new.js */
 import { chatScroll, nowIso, stampMsg, step } from "../ask.js";
 import { A, DEC, peopleAll, R, REV, useCount } from "./data.js";
+import { parseWords } from "./datewords.js";
 import { $, addHTML, esc, html, ic, putHTML, raw } from "./dom.js";
 import { mountCombobox } from "../components/Combobox.jsx";
 import { openDatePicker } from "../components/Picker.jsx";
@@ -74,28 +75,9 @@ document.addEventListener("keydown",e=>{ const f=e.target.closest&&e.target.clos
    Enter or a change puts DD-MM-YYYY in the field before anything else reads it, so every existing check and save works on
    DD-MM-YYYY as before. Stored dates stay YYYY-MM-DD and shown dates DD-MM-YYYY (creaite-rules). */
 export const DATE_HELP="Try “fri”, “+3d”, “15-10” or 16-10-2026.";
-export const DAYS=["sun","mon","tue","wed","thu","fri","sat"];
-export function parseWhen(text,today=TODAY,due=false){ let s=String(text||"").trim().toLowerCase().replace(/\s+/g," ").replace(/[.,]$/,""); if(!s) return null;
-  const pad=n=>String(n).padStart(2,"0"), iso=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`, t0=new Date(today+"T12:00:00");
-  const add=(n,unit)=>{ const d=new Date(t0); if(unit==="m"){ const day=d.getDate(); d.setDate(1); d.setMonth(d.getMonth()+n); d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate())); } else d.setDate(d.getDate()+n*(unit==="w"?7:1)); return iso(d); };
-  const real=(y,m,d)=>{ if(y<100) y+=2000; const x=new Date(y,m-1,d,12); return x.getFullYear()===y&&x.getMonth()===m-1&&x.getDate()===d?iso(x):null; };
-  const dm=(d,m,y)=>{ if(y!=null) return real(+y,+m,+d); const yr=t0.getFullYear(); let r=real(yr,+m,+d); if(r&&due&&r<today) r=real(yr+1,+m,+d); return r; };
-  const MON=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"], mon=w=>{ const i=MON.indexOf(w.slice(0,3)); return i>=0&&("january february march april may june july august september sept october november december".split(" ").some(n=>n.startsWith(w))||w.length===3)?i+1:0; };
-  if(s==="today"||s==="now") return today; if(s==="tomorrow"||s==="tmrw"||s==="tmr") return add(1,"d"); if(s==="yesterday") return add(-1,"d");
-  let m=s.match(/^(next |this )?([a-z]{3,9})$/);
-  if(m){ const w=DAYS.findIndex(d=>m[2].startsWith(d)&&("sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ").some(n=>n.startsWith(m[2]))));
-    if(w>=0){ const ahead=((w-t0.getDay()+7)%7)||7; return add(ahead+(m[1]==="next "?7:0),"d"); } }
-  if(s==="next week") return add(((1-t0.getDay()+7)%7)||7,"d");                                         /* Monday */
-  if(s==="end of week"||s==="eow") return add((5-t0.getDay()+7)%7,"d");                                 /* Friday: today on a Friday */
-  if(s==="end of month"||s==="eom") return iso(new Date(t0.getFullYear(),t0.getMonth()+1,0,12));
-  if(s==="end of next week") return add(((5-t0.getDay()+7)%7)+7,"d");
-  m=s.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/); if(m) return add(+m[1],m[2][0]);
-  m=s.match(/^\+(\d{1,3})$/); if(m) return add(+m[1],"d");
-  m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/); if(m) return real(+m[1],+m[2],+m[3]);
-  m=s.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/); if(m) return dm(m[1],m[2],m[3]);
-  m=s.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/); if(m&&mon(m[2])) return dm(m[1],mon(m[2]),m[3]);
-  m=s.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/); if(m&&mon(m[1])) return dm(m[2],mon(m[1]),m[3]);
-  return null; }
+/* BL-338 (v2.1.0 P4): the parser itself is core/datewords.js, shared word for word with the scripts (date_words.py); mode
+   "deadline" works a minutes deadline out from the meeting's date. */
+export function parseWhen(text,today=TODAY,due=false,mode=""){ return parseWords(text,today,due,mode); }
 export const dateSaid=iso=>`${new Date(iso+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(iso)}`;
 /* which fields: every typed date field (item forms, inline cells, the project page's No due date card, filters' From and To,
    Generate's range, Review's and the change-several bar's due date, the move-date dialog, Quick capture); read-only ones are picker only */

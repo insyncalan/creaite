@@ -46,7 +46,7 @@ Every piece of work follows the same five steps. Only step 3 needs you, and noth
    - Transcripts and minutes you drop in (Upload files)
    - Notes from a call or your own thinking (a note, [[⌘⇧N]]), turned into items with Find updates
    - The daily mail and Teams sweep
-2. **Claude drafts** (Propose): Draft Word minutes, plus proposed new items and updates to open ones, each citing its source. It matches every item to a project and owner.
+2. **Claude drafts** (Propose): Draft minutes, plus proposed new items and updates to open ones, each citing its source. It matches every item to a project and owner.
 3. **Review** (You) {you: The only gate}: In Review, approve, edit or reject each proposal. Routine items can be approved in bulk; minutes, new decisions and new risks are approved one at a time.
 4. **Apply** (Record): Apply writes what you approved to the tracker and files the minutes in the project folder. Every apply can be undone.
 5. **See and report** (Out): The dashboard updates at once. Weekly and client reports are drafted in Word from the tracker, and you approve them before they're filed.
@@ -102,7 +102,7 @@ Plain English works. These are the phrases each skill listens for.
 
 | Say | What happens |
 |---|---|
-| `process new minutes` | Transcripts become draft Word minutes and proposed items in Review. |
+| `process new minutes` | Transcripts become draft minutes and proposed items in Review. |
 | `sweep` | Outlook and Teams since the last sweep become proposals. It also runs by itself each morning. |
 | `review` · `apply` | Go through what's pending, then write the approved items to the tracker. `undo last apply` reverses it. |
 | `mark ABC-A-003 done` | Any change in plain words, shown before → after, then applied. |
@@ -170,7 +170,7 @@ Where: Review
 3. Open an item to check or edit it: it opens over the page like a work item, and your edits stay in it until you choose **Save**, **Save and approve**, **Reject** or **Cancel** at its foot ([[⌘↵]] saves). Or **Approve** or **Reject** from the list, or use [[J]]/[[K]], [[A]], [[R]]. The cursor moves to the next undecided item (Settings › Health and warnings turns that off). [[R]], a row's ✕ or ▾, or **Reject with a reason** on the bar opens the reasons menu (below).
 4. **Select several** (click, ⌘-click, Shift-click, the tick on a group, or **Select all**): a bar says how many can be approved together and why the rest can't, with **Approve**, **Reject with a reason** ([[R]]) and **Set** project, owner, due date, workstream or milestone. Setting a project on items that need one makes them routine. The result names what was left out, with **Show them** and **Undo**.
 5. **Approve routine** (the double tick) shows a preview of what the filters show first. Minutes, new decisions, new risks and items that close something are approved one by one.
-6. Draft minutes are approved with **Approve** on their row, which checks and cleans the Word file first (it needs the live server). **Open draft** opens it in Word to edit first.
+6. Draft minutes are approved with **Approve** on their row (it needs the live server). Minutes are drafted as a page in creaite's own format: **Open draft** opens the page in your browser, and its decisions, risks, issues and actions are drawn from the items under it in Review. Minutes drafted in Word open in Word to edit first, and **Approve** checks and cleans the Word file. Once filed, minutes are never saved over.
 7. **Wrong project?** Press **Project** on the item's row (it shows on the highlighted row, beside Edit), or its Project value at the top of the open item, and choose another. Its old project's milestone and workstream are cleared, and it waits for your decision. On the minutes' row, **Project** moves every item from those minutes, and the minutes themselves, to another project: if they cover several projects it asks whose items first, then says what will happen ("Move 9 items from Example Programme to Delta Rollout") before you press **Move**. Items you already moved on their own are offered (move all, or leave those); updates to items already in the tracker stay where they are. The files go to the new project's Minutes and Transcripts folders only when the minutes are approved. **Undo** moves them back, with the milestone and workstream the move cleared; so does moving an item back to its first project by hand.
 8. **Right-click** a proposal (or [[Shift]]+[[F10]]) for **Approve**, **Reject with a reason…**, **Open**, **Project**, **Owner**, **Due**, **Priority**, **Workstream**, **Milestone** and **Status**. With several highlighted it acts on them all; Approve still takes only what may be approved together.
 9. **One at a time:** press **One at a time** in Review's toolbar to decide proposals one by one, with the source beside each. The fields creaite guessed are underlined with a dashed line and say why ("Guessed: …"); they come first. [[A]] approves, [[R]] rejects (with a reason), [[E]] edits, [[J]] skips, [[K]] goes back and [[Esc]] returns to the list. About one routine item in ten is shown as a spot-check; the rest are approved together at the end, by the same rule as **Approve routine**. creaite remembers where you stopped.
@@ -213,7 +213,7 @@ Where: Intake › Calendar import or Upload files
 
 1. **From the calendar:** in **Calendar import**, meetings with a Teams transcript are highlighted (**Transcript**). Press **Select with transcripts** (or tick meetings), then **Process n selected** to load each transcript and its meeting chat and go straight on to draft minutes, or **Load into inbox** to bring them in without processing.
 2. **From a file:** drop the transcript or minutes on **Upload files** (.vtt, .docx, .txt, .md or .pdf). Tick it and press **Process selected**.
-3. Wait for **Draft ready in Review**. You get draft Word minutes, new items, and updates to open items the meeting discussed.
+3. Wait for **Draft ready in Review**. You get draft minutes (a page in creaite's own format, filed as `YYYY-MM-DD <Meeting title>.html` when you approve them), new items, and updates to open items the meeting discussed.
 4. Approve in [Review](#review-and-approve-proposals). Nothing is filed until you do.
 
 5. **Was the agenda discussed?** If the meeting had an agenda in the project's Agendas folder, or a prep page, the minutes record each point as **Covered**, **Touched on** or **Not discussed**. Review shows it on the minutes' row, and the [meeting's page](#follow-a-meeting-from-invite-to-follow-up) has **Carry to the next agenda**, which puts a missed point on the next prep page of the same meeting, under "Not covered last time".

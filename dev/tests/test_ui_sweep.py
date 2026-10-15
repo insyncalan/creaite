@@ -29,6 +29,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import test_snapshots as ts  # noqa: E402
+import test_minutes_editor as me  # noqa: E402
 
 PROBE = (Path(__file__).resolve().parent / "ui_probe.js").read_text(encoding="utf-8")
 
@@ -78,6 +79,15 @@ SCREENS["milestone-editor"] = ("MVAUD='int'; mvOpenPage('ABC','plan'); setTimeou
 SCREENS["milestones-move"] = ("MVAUD='int'; mvOpenPage('ABC','move'); MV.sel='ABC-M-001'; "
                               "MV.rb={id:'ABC-M-001',date:TODAY,why:'',with:[]}; renderMilestones()",
                               "document.getElementById('mvRbAdd')", "#v-milestones")
+# v2.1.0 P7: the minutes view, its approve popup and the deadline popover, answered by test_minutes_editor's sample record (the
+# snapshot vault itself stays as it is).
+SCREENS["minutes"] = (me.open_sample, "document.querySelector('#v-minutes .mnrow')", "#v-minutes")
+SCREENS["minutes-approve"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#mnApproveBtn:not([disabled])')", 15),
+                                         b.eval("document.getElementById('mnApproveBtn').click()")),
+                              "document.getElementById('mnApprove') && document.getElementById('mnApprove').open", "#v-minutes")
+SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.querySelector('#v-minutes .mnrow .mndue')", 15),
+                                          b.eval("document.querySelector('#v-minutes .mnrow .mndue').click()")),
+                               "document.querySelector('#v-minutes .mnpop')", "#v-minutes")
 
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
@@ -95,7 +105,7 @@ class UiSweepCase(ts.Snapshots):
         b.eval("closePanel(); typeof closeChat==='function' && closeChat(); "
                "document.getElementById('cmdk').open && document.getElementById('cmdk').close(); "
                "document.getElementById('prepDlg')?.open && document.getElementById('prepDlg').close(); "
-               "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; go('today')")
+               "!document.getElementById('mvPeek')?.hidden && mvEdClose(true); MV.rb=null; document.getElementById('mnApprove') && document.getElementById('mnApprove').open && document.getElementById('mnApprove').close(); go('today')")
         go(b) if callable(go) else b.eval(go)
         b.wait(ready, 15)
         last = None

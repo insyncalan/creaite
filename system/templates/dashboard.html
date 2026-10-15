@@ -3154,6 +3154,107 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
 .sheet-exported .sheet-handle{display:none}
+/* ===== v2.1.0 P7 (BL-338): the minutes view (#minutes=<path>, components/minutes/), on the stub sheet (components/report/
+   SheetStub.jsx) until P5's Sheet.jsx. Tokens only. The sheet and the transcript pane side by side, each scrolling on its own;
+   the pane goes under the sheet below 900 px; nothing scrolls sideways at 320 px (BL-217). ===== */
+#v-minutes{padding:0}
+#v-minutes:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.mnview{display:flex;flex-direction:column;min-height:0;flex:1}
+.mnhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.mnhead .crumb{font-size:12px;color:var(--muted)} .mnhead .crumb a{color:var(--muted)} .mnhead .crumb a:hover{color:var(--accent)}
+.mnhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600;overflow-wrap:anywhere}
+.mnmeta{margin:0;font-size:13px}
+.mnerr{color:var(--bad);margin:16px 24px}
+.mnwrap{display:flex;flex:1;min-height:0}
+.mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
+.mnsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
+.mnsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.mnsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+.mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.mnckcount{background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:2px 8px;font-size:12px}
+.mnsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:20px 16px 48px;background:var(--sunk)}
+.mnsheet .sheet-one,.mnsheet .sheet-pair{max-width:100%}
+.mnsheet .sheet-pair{gap:16px;align-items:flex-start}
+.mnsheet .sheet-pair>.page{flex:1 1 0;min-width:0}
+.mnsheet .page{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow-card);padding:clamp(16px,5%,56px);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.mnsheet .page section{margin:0 0 18px}
+.mnsheet .page h2{font-size:15px;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.mnsheet .page table{width:100%;border-collapse:collapse;font-size:12.5px}
+.mnsheet .page th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding:4px 6px}
+.mnsheet .page td{vertical-align:top;border-bottom:1px solid var(--line);padding:6px}
+.mnsheet .sheet-text{width:100%;min-height:120px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+.mnsheet .sheet-hidden{color:var(--muted);font-size:12px;margin:0 0 12px}
+.mnlines p,.mnlines li{margin:0 0 4px}
+.mnlines ul{margin:0 0 6px;padding-left:20px}
+.mntopic{font-size:14px;margin:8px 0 2px}
+.mnflag{font-size:11px;letter-spacing:.03em;color:var(--accent)}
+.mntext{cursor:text}
+.mnedbtn{font-size:12px;min-height:24px;min-width:24px}
+.mnedit{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.mntagw{display:inline-flex;align-items:center;margin-left:6px;vertical-align:baseline}
+.mntag{border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:999px;font:11px/16px var(--mono,monospace);padding:2px 7px;min-height:24px;cursor:pointer}
+.mntag:hover,.mntag:focus-visible{color:var(--accent);border-color:var(--accent)}
+.mntagx{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;opacity:0;font-size:11px}
+.mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
+.mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
+.btn.mncheck{text-decoration:underline wavy var(--warn)}
+.mnbar .mncheck,.mndoes .mnid{min-height:24px}
+.mnio{border:1px dashed var(--line);background:none;color:var(--muted);border-radius:999px;font-size:11px;padding:2px 8px;min-height:24px;margin-left:6px;cursor:pointer}
+.mnio.on{border-style:solid;border-color:var(--ink);color:var(--ink)}
+.mnheld{margin-left:6px;font-size:11px}
+.mnline.internal,.mnrow.internal td{background:var(--sunk)}
+.mnpopw{position:relative;display:inline-block}
+.pkpop.mnpop{position:absolute;top:calc(100% + 4px);left:0;min-width:240px}
+.pkpop.mnpop.flip{left:auto;right:0}
+.pkpop.mnpop.wide{width:min(340px,calc(100vw - 32px));max-width:min(340px,calc(100vw - 32px));padding:10px 12px}
+.pkpop.mnpop.mndl{width:min(290px,calc(100vw - 32px))}
+.mndl-l{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+.mndl-said{min-height:28px;font-size:13px;display:flex;align-items:center} .mndl-said.bad{color:var(--bad);font-size:12px}
+.mndl-said .btn{margin-left:8px}
+.pkday.wk{color:var(--muted)}
+.mnck-note{margin:0 0 4px;font-weight:500} .mnck-last{margin:0 0 8px;font-size:12.5px}
+.mnck-acts{display:flex;flex-wrap:wrap;gap:6px}
+.mnchanges{margin:4px 0 0;padding-left:18px;font-size:13px}
+.mnremember{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:6px}
+.mncell{width:100%;font:inherit;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 4px;resize:vertical;field-sizing:content;min-height:24px}
+.mncell:hover,.mncell:focus{border-color:var(--line);background:var(--bg)}
+.mnbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;font-size:12px}
+.mndoes{display:inline-flex;gap:6px;align-items:center;color:var(--muted)} .mndoes.new .mndoes-t{color:var(--accent)}
+.mnlooks{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--warn)}
+.mnrow.kept td{color:var(--muted)}
+.mntype{font:inherit;font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;min-height:24px}
+.mndue{white-space:nowrap}
+.sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
+.mncov-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline} .mncov-h h2{border:0!important;margin:0!important}
+.mncov-l,.mncov-ms{list-style:none;margin:6px 0 0;padding:0}
+.mncov-l li,.mncov-ms li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:4px 0}
+.mnverdict{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--sunk);color:var(--muted)}
+.mnverdict.ok{background:var(--ok-soft);color:var(--ok)} .mnverdict.warn{background:var(--warn-soft);color:var(--warn)} .mnverdict.bad{background:var(--bad-soft);color:var(--bad)}
+.mncov-p{flex:1;min-width:120px} .mncov-done{color:var(--muted);font-size:12px}
+.mncov-line{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:4px}
+.mnpane{width:340px;flex:none;border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.mnpane-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line)} .mnpane-h h2{font-size:14px;margin:0}
+.mnpane-q{padding:8px 12px;display:flex;gap:8px;align-items:center} .mnpane-q input{margin:0;flex:1;min-width:0;height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:var(--bg);color:var(--ink);font:inherit}
+.mnturns{list-style:none;margin:0;padding:0 12px 24px;overflow:auto;flex:1;min-height:0;position:relative}
+.mnturns li{padding:6px 8px;border-radius:6px;margin:0 0 2px;font-size:13px;line-height:1.45}
+.mnturns li.on{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mnturns li.dim{opacity:.5}
+.mnwho{display:block;font-weight:600;font-size:12px} .mntime{font-weight:400;color:var(--muted);font-family:var(--mono,monospace)}
+.mnturns mark{background:var(--warn-soft);color:inherit}
+.mnpane-none{padding:12px}
+dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px);border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
+.mnap{padding:18px 22px;max-height:calc(100vh - 64px);overflow:auto}
+.mnap h2{margin:0 0 6px;font-size:18px}
+.mnap fieldset{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:8px 12px} .mnap legend{font-weight:600;padding:0 4px}
+.mnap ul{margin:6px 0 0;padding-left:20px;font-size:13px}
+.mnap-all,.mnap-one{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}
+.mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
+.mnap-err{color:var(--bad)}
+.mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-scroll{overflow:visible}
+  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} .mnsheet .sheet-pair{flex-direction:column} .mnsheet .sheet-pair>.page{width:100%} }
+@media (max-width:480px){ .mnhead{padding:12px 16px 8px} .mnsheet .sheet-bar{padding:8px} .mnsheet .sheet-scroll{padding:12px 8px 32px} .mnbarr{margin-left:0} }
+/* ===== end v2.1.0 P7 ===== */
 </style>
 </head>
 <body>
@@ -3207,6 +3308,7 @@ button.nchip{font:inherit;font-size:12px}
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-meeting" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
+      <section class="view" id="v-minutes" hidden aria-labelledby="mnTitle"></section><!-- v2.1.0 P7: a meeting's minutes (components/minutes/MinutesView.jsx), under Review -->
       <section class="view" id="v-work" hidden><div class="wrapmax">
         <nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden></nav>
         <h1>Work</h1>
@@ -3423,7 +3525,6 @@ button.nchip{font:inherit;font-size:12px}
     DATE_HELP: () => DATE_HELP,
     DAYACTS: () => DAYACTS,
     DAYRUN: () => DAYRUN,
-    DAYS: () => DAYS,
     DC: () => DC,
     DDATE: () => DDATE,
     DEC: () => DEC,
@@ -3435,6 +3536,7 @@ button.nchip{font:inherit;font-size:12px}
     DE_COLOURS: () => DE_COLOURS,
     DE_DECIDE: () => DE_DECIDE,
     DE_FONT: () => DE_FONT,
+    DE_INTERNAL: () => DE_INTERNAL,
     DE_OPEN: () => DE_OPEN,
     DE_THANKS: () => DE_THANKS,
     DGROUPS: () => DGROUPS,
@@ -4939,6 +5041,7 @@ button.nchip{font:inherit;font-size:12px}
     openItemsAsk: () => openItemsAsk,
     openMenu: () => openMenu,
     openMilestone: () => openMilestone,
+    openMinutesFollowup: () => openMinutesFollowup,
     openNew: () => openNew,
     openNewMilestone: () => openNewMilestone,
     openNote: () => openNote,
@@ -5897,8 +6000,8 @@ button.nchip{font:inherit;font-size:12px}
   function swapHTML(el2, h5) {
     el2.outerHTML = htmlPart(h5);
   }
-  function addHTML(el2, where2, h5) {
-    el2.insertAdjacentHTML(where2, htmlPart(h5));
+  function addHTML(el2, where3, h5) {
+    el2.insertAdjacentHTML(where3, htmlPart(h5));
   }
   function writeDoc(w6, h5) {
     w6.document.write(htmlPart(h5));
@@ -6104,7 +6207,7 @@ button.nchip{font:inherit;font-size:12px}
     const d5 = /* @__PURE__ */ new Date(), z4 = (n4) => String(n4).padStart(2, "0");
     return `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`;
   })(), DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
-  var fd = (iso) => iso && DATE.test(iso.slice(0, 10)) ? `${iso.slice(8, 10)}-${iso.slice(5, 7)}-${iso.slice(0, 4)}${iso.length > 10 ? iso.slice(10) : ""}` : iso || "";
+  var fd = (iso2) => iso2 && DATE.test(iso2.slice(0, 10)) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}${iso2.length > 10 ? iso2.slice(10) : ""}` : iso2 || "";
   var toIso = (dd2) => DDATE.test(dd2) ? `${dd2.slice(6, 10)}-${dd2.slice(3, 5)}-${dd2.slice(0, 2)}` : dd2;
   var fdText = (s5) => String(s5 ?? "").replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, "$3-$2-$1");
   var fdMd = (s5) => String(s5 ?? "").replace(/(\]\([^)\s]*\))|(\bhttps?:\/\/[^\s)<>]+)|\b(\d{4})-(\d{2})-(\d{2})\b/g, (m5, t47, u5, y5, mo2, d5) => y5 ? `${d5}-${mo2}-${y5}` : m5);
@@ -6884,7 +6987,7 @@ button.nchip{font:inherit;font-size:12px}
     const d5 = dialogEl(target);
     if (d5 && d5.open) d5.close(value);
   }
-  function Dialog({ open: open2, onClose, labelledBy, ariaLabel, describedBy, id: id2, class: cls, focus, dirty, children }) {
+  function Dialog({ open: open2, onClose, labelledBy, ariaLabel, describedBy, id: id2, class: cls, focus, dirty: dirty2, children }) {
     const ref = A2(
       /** @type {HTMLDialogElement | null} */
       null
@@ -6919,7 +7022,7 @@ button.nchip{font:inherit;font-size:12px}
     const scrim = (e4) => {
       const d5 = ref.current;
       if (!d5 || e4.target !== d5) return;
-      const busy = typeof dirty === "function" ? dirty() : dirty === void 0 ? !owned && !!TYPED.get(d5) : dirty;
+      const busy = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
       if (busy) return;
       const r4 = d5.getBoundingClientRect();
       if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) {
@@ -7191,6 +7294,110 @@ button.nchip{font:inherit;font-size:12px}
         ] })
       ] })
     );
+  }
+
+  // core/datewords.js
+  var DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+  var MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  var MONTHS = "january february march april may june july august september sept october november december".split(" ");
+  var DAYNAMES = "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ");
+  var pad = (n4) => String(n4).padStart(2, "0");
+  var iso = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+  function shift(today, n4, unit) {
+    const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
+    if (unit === "m") {
+      const day = d5.getDate();
+      d5.setDate(1);
+      d5.setMonth(d5.getMonth() + n4);
+      d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
+    } else d5.setDate(d5.getDate() + n4 * (unit === "w" ? 7 : 1));
+    return iso(d5);
+  }
+  function real(y5, m5, d5) {
+    if (y5 < 100) y5 += 2e3;
+    const x5 = new Date(y5, m5 - 1, d5, 12);
+    return x5.getFullYear() === y5 && x5.getMonth() === m5 - 1 && x5.getDate() === d5 ? iso(x5) : null;
+  }
+  function monthOf(w6) {
+    const i5 = MON.indexOf(w6.slice(0, 3));
+    return i5 >= 0 && (MONTHS.some((n4) => n4.startsWith(w6)) || w6.length === 3) ? i5 + 1 : 0;
+  }
+  function weekdayOf(w6) {
+    return DAYS.findIndex((d5) => w6.startsWith(d5) && DAYNAMES.some((n4) => n4.startsWith(w6)));
+  }
+  function workingDay(day, weekend = [0, 6]) {
+    const off = (s5) => weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay());
+    if (!off(day)) return day;
+    for (let n4 = 1; n4 < 7; n4++) {
+      const back2 = shift(day, -n4, "d"), on2 = shift(day, n4, "d");
+      if (!off(back2)) return back2;
+      if (!off(on2)) return on2;
+    }
+    return day;
+  }
+  function lastWorkingDay(day, weekend) {
+    const d5 = /* @__PURE__ */ new Date(day + "T12:00:00");
+    let s5 = iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
+    for (let n4 = 0; n4 < 7 && weekend.includes((/* @__PURE__ */ new Date(s5 + "T12:00:00")).getDay()); n4++) s5 = shift(s5, -1, "d");
+    return s5;
+  }
+  function deadlineOnly(s5, today, weekend) {
+    const dow2 = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), monday = (1 - dow2 + 7) % 7 || 7;
+    if (s5 === "next week") return shift(today, monday + 4, "d");
+    if (s5 === "end of month" || s5 === "eom") return lastWorkingDay(today, weekend);
+    const m5 = s5.match(/^next ([a-z]{3,9})$/), w6 = m5 ? weekdayOf(m5[1]) : -1;
+    if (w6 >= 0) return shift(today, monday + (w6 + 6) % 7, "d");
+    return null;
+  }
+  function dayMonth(s5, today, due) {
+    const dm2 = (d5, m6, y5) => {
+      if (y5 != null) return real(+y5, +m6, +d5);
+      const yr2 = +today.slice(0, 4);
+      let r4 = real(yr2, +m6, +d5);
+      if (r4 && due && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
+      return r4;
+    };
+    let m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (m5) return real(+m5[1], +m5[2], +m5[3]);
+    m5 = s5.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/);
+    if (m5) return dm2(m5[1], m5[2], m5[3]);
+    m5 = s5.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/);
+    if (m5 && monthOf(m5[2])) return dm2(m5[1], monthOf(m5[2]), m5[3]);
+    m5 = s5.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/);
+    if (m5 && monthOf(m5[1])) return dm2(m5[2], monthOf(m5[1]), m5[3]);
+    return null;
+  }
+  function parseWords(text, today, due = false, mode = "", weekend = [0, 6]) {
+    let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
+    if (!s5) return null;
+    const deadline = mode === "deadline";
+    if (deadline) {
+      due = true;
+      s5 = s5.replace(/^(?:by|on) /, "");
+      const d5 = deadlineOnly(s5, today, weekend);
+      if (d5) return d5;
+    }
+    const dow2 = (/* @__PURE__ */ new Date(today + "T12:00:00")).getDay(), period = (r4) => deadline && r4 ? workingDay(r4, weekend) : r4;
+    if (s5 === "today" || s5 === "now") return today;
+    if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return shift(today, 1, "d");
+    if (s5 === "yesterday") return shift(today, -1, "d");
+    let m5 = s5.match(/^(next |this )?([a-z]{3,9})$/);
+    if (m5) {
+      const w6 = weekdayOf(m5[2]);
+      if (w6 >= 0) return shift(today, ((w6 - dow2 + 7) % 7 || 7) + (m5[1] === "next " ? 7 : 0), "d");
+    }
+    if (s5 === "next week") return shift(today, (1 - dow2 + 7) % 7 || 7, "d");
+    if (s5 === "end of week" || s5 === "eow") return shift(today, (5 - dow2 + 7) % 7, "d");
+    if (s5 === "end of month" || s5 === "eom") {
+      const d5 = /* @__PURE__ */ new Date(today + "T12:00:00");
+      return iso(new Date(d5.getFullYear(), d5.getMonth() + 1, 0, 12));
+    }
+    if (s5 === "end of next week") return shift(today, (5 - dow2 + 7) % 7 + 7, "d");
+    m5 = s5.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/);
+    if (m5) return period(shift(today, +m5[1], m5[2][0]));
+    m5 = s5.match(/^\+(\d{1,3})$/);
+    if (m5) return period(shift(today, +m5[1], "d"));
+    return dayMonth(s5, today, due);
   }
 
   // components/Combobox.jsx
@@ -7533,14 +7740,14 @@ button.nchip{font:inherit;font-size:12px}
       ] }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" }) })
     ] });
   }
-  var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var MONTHS2 = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   var DOW = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
-  var calAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
+  var calAdd = (iso2, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00Z");
     d5.setUTCDate(d5.getUTCDate() + n4);
     return d5.toISOString().slice(0, 10);
   };
-  var dow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var dow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
   var isoOf = (y5, m5, d5) => `${y5}-${String(m5 + 1).padStart(2, "0")}-${String(d5).padStart(2, "0")}`;
   function DateCalendar({ anchor, props }) {
     const { value = "", label, onPick, parse, error, weekend, typedNote, placeholder } = props;
@@ -7571,9 +7778,9 @@ button.nchip{font:inherit;font-size:12px}
       if (focusIso === null || !box.current) return;
       box.current.querySelector(`.pkday[data-d="${tabDay}"]`)?.focus();
     }, [focusIso, ym2]);
-    const pick = (iso) => {
+    const pick = (iso2) => {
       closePicker("pick");
-      onPick(iso);
+      onPick(iso2);
     };
     const month = (by2) => {
       let mm2 = m5 + by2, yy2 = y5;
@@ -7622,8 +7829,8 @@ button.nchip{font:inherit;font-size:12px}
           pick("");
           return;
         }
-        const iso = parse(t47);
-        if (iso) pick(iso);
+        const iso2 = parse(t47);
+        if (iso2) pick(iso2);
         else {
           setBad(true);
           flushPicker();
@@ -7641,7 +7848,7 @@ button.nchip{font:inherit;font-size:12px}
       /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
         /* @__PURE__ */ u2(IconButton, { icon: "chevleft", label: "Previous month", sm: false, data: { m: "-1" }, onClick: () => month(-1) }),
         /* @__PURE__ */ u2("b", { "aria-live": "polite", children: [
-          MONTHS[m5],
+          MONTHS2[m5],
           " ",
           y5
         ] }),
@@ -7650,21 +7857,21 @@ button.nchip{font:inherit;font-size:12px}
       /* @__PURE__ */ u2("div", { class: "pkgrid", role: "group", "aria-label": label, children: [
         DOW.map((w6) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w6 }, w6)),
         Array.from({ length: lead }, (_6, i5) => /* @__PURE__ */ u2("span", {}, `l${i5}`)),
-        days2.map((iso) => {
-          const we2 = !!(weekend && weekend(iso));
+        days2.map((iso2) => {
+          const we2 = !!(weekend && weekend(iso2));
           return /* @__PURE__ */ u2(
             "button",
             {
               type: "button",
-              class: `pkday${iso === TODAY ? " today" : ""}${iso === value ? " on" : ""}${we2 ? " wkend" : ""}`,
-              "data-d": iso,
-              "aria-label": `${fd(iso)}${we2 ? ", weekend" : ""}`,
-              "aria-pressed": iso === value ? "true" : void 0,
-              tabIndex: iso === tabDay ? 0 : -1,
-              onClick: () => pick(iso),
-              children: +iso.slice(8)
+              class: `pkday${iso2 === TODAY ? " today" : ""}${iso2 === value ? " on" : ""}${we2 ? " wkend" : ""}`,
+              "data-d": iso2,
+              "aria-label": `${fd(iso2)}${we2 ? ", weekend" : ""}`,
+              "aria-pressed": iso2 === value ? "true" : void 0,
+              tabIndex: iso2 === tabDay ? 0 : -1,
+              onClick: () => pick(iso2),
+              children: +iso2.slice(8)
             },
-            iso
+            iso2
           );
         })
       ] }),
@@ -23401,8 +23608,8 @@ ${s5}`;
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
-      const blocks = ed3.schema.nodeFromJSON(ed3.markdown.parse(String(text))).toJSON().content || [];
-      content = r4.inline && blocks.length === 1 && blocks[0].type === "paragraph" ? blocks[0].content || [] : blocks;
+      const blocks2 = ed3.schema.nodeFromJSON(ed3.markdown.parse(String(text))).toJSON().content || [];
+      content = r4.inline && blocks2.length === 1 && blocks2[0].type === "paragraph" ? blocks2[0].content || [] : blocks2;
     }
     const chain = ed3.chain().focus();
     return (content.length ? chain.insertContentAt({ from: r4.from, to: r4.to }, content, { updateSelection: true }) : chain.deleteRange({ from: r4.from, to: r4.to })).run();
@@ -24248,7 +24455,7 @@ ${s5}`;
       return;
     }
     if (!AI_OPTIONS[option]) return;
-    const where2 = aiPlace(b5.h, range.from, range.to, 480);
+    const where3 = aiPlace(b5.h, range.from, range.to, 480);
     aiHome(b5.h);
     aiBar.value = null;
     const s5 = {
@@ -24259,7 +24466,7 @@ ${s5}`;
       instruction,
       label: option === "custom" ? instruction : AI_OPTIONS[option][0],
       status: "running",
-      ...where2
+      ...where3
     };
     const key = b5.ai.key ? b5.ai.key() : b5.ai.place;
     if (b5.ai.confidential && b5.ai.confidential() && !AI_ASKED.has(key)) {
@@ -27065,14 +27272,14 @@ ${s5}`;
     const live = viaServer();
     return String(html`<button type="button" class="ib prepgo" data-prepgo="${pg2.key}" data-prepgoday="${day}" aria-label="Open the prep page for ${e4.title ?? ""}" data-tip="${live ? `Prep page saved ${pg2.when}` : "Needs the live server"}"${raw(live ? "" : ' aria-disabled="true"')}>${raw(ic("external"))}</button><span class="tag ok prepmade">Prep page made</span>`);
   }
-  var longDay = (iso) => {
-    if (!iso || !DATE.test(iso.slice(0, 10))) return iso || "";
-    const d5 = /* @__PURE__ */ new Date(iso.slice(0, 10) + "T12:00:00");
-    return `${d5.toLocaleDateString("en-GB", { weekday: "long" })} ${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })}${iso.slice(0, 4) !== TODAY.slice(0, 4) ? " " + iso.slice(0, 4) : ""}`;
+  var longDay = (iso2) => {
+    if (!iso2 || !DATE.test(iso2.slice(0, 10))) return iso2 || "";
+    const d5 = /* @__PURE__ */ new Date(iso2.slice(0, 10) + "T12:00:00");
+    return `${d5.toLocaleDateString("en-GB", { weekday: "long" })} ${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })}${iso2.slice(0, 4) !== TODAY.slice(0, 4) ? " " + iso2.slice(0, 4) : ""}`;
   };
-  var longDate = (iso) => {
-    const d5 = /* @__PURE__ */ new Date(iso.slice(0, 10) + "T12:00:00");
-    return `${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })} ${iso.slice(0, 4)}`;
+  var longDate = (iso2) => {
+    const d5 = /* @__PURE__ */ new Date(iso2.slice(0, 10) + "T12:00:00");
+    return `${ordinal(d5.getDate())} ${d5.toLocaleDateString("en-GB", { month: "long" })} ${iso2.slice(0, 4)}`;
   };
   var longText = (t47) => String(t47 ?? "").replace(/\b(\d{2})-(\d{2})-(\d{4})\b/g, (m5, dd2, mm2, yy2) => longDay(`${yy2}-${mm2}-${dd2}`));
   var TVIPSEEN = null;
@@ -27080,8 +27287,8 @@ ${s5}`;
   var swept = () => !!(D.last_sweep && D.last_sweep !== "never");
   var SU_M365 = "setup: check Microsoft 365", SU_LAUNCH = () => `cd ${VAULT_PATH} && python3 system/scripts/launch.py make-launcher`, SU_SETUP = "setup";
   var DC = () => D.day || { moved: {}, promised: [], tomorrow: { meetings: [] } };
-  var pkAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T00:00:00Z");
+  var pkAdd = (iso2, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00Z");
     d5.setUTCDate(d5.getUTCDate() + n4);
     return d5.toISOString().slice(0, 10);
   };
@@ -27169,10 +27376,10 @@ ${s5}`;
     return `${cnt}, with ${part} ${part === "lunchtime" ? "free" : "wide open"}.`;
   }
   function renderDay() {
-    const cal = D.calendar, first = (S.me || "").split(" ")[0], on2 = S.srcCalendar !== false, L3 = on2 ? dayList() : [], iso = dayShown(), isToday = iso === TODAY;
+    const cal = D.calendar, first = (S.me || "").split(" ")[0], on2 = S.srcCalendar !== false, L3 = on2 ? dayList() : [], iso2 = dayShown(), isToday = iso2 === TODAY;
     if (isToday) selDay.value = "";
-    const rec = L3.find((d5) => d5.date === iso) || synthDay(iso), tabs = L3.length > 1;
-    drawDayTabs($("#todayDate"), tabs ? { days: L3, selected: iso, onSelect: (d5) => {
+    const rec = L3.find((d5) => d5.date === iso2) || synthDay(iso2), tabs = L3.length > 1;
+    drawDayTabs($("#todayDate"), tabs ? { days: L3, selected: iso2, onSelect: (d5) => {
       goDay(d5);
     }, onStep: (n5) => {
       stepDay(n5);
@@ -27187,15 +27394,15 @@ ${s5}`;
       meets.removeAttribute("role");
       meets.removeAttribute("aria-label");
     }
-    const v5 = on2 ? dayView(iso) : { known: false, meetings: [], allDay: [] };
-    $("#dayHead").textContent = v5.known ? dayShape(v5.meetings, first, iso) : `Good ${nowMins() < 12 * 60 ? "morning" : nowMins() < 18 * 60 ? "afternoon" : "evening"}${first ? ", " + first : ""}.`;
+    const v5 = on2 ? dayView(iso2) : { known: false, meetings: [], allDay: [] };
+    $("#dayHead").textContent = v5.known ? dayShape(v5.meetings, first, iso2) : `Good ${nowMins() < 12 * 60 ? "morning" : nowMins() < 18 * 60 ? "afternoon" : "evening"}${first ? ", " + first : ""}.`;
     if (!on2) {
       drawDayCurve(line, null);
       drawDayMeetings(meets, null);
       calFoot(null);
       return;
     }
-    const common = { day: iso, dow: rec.dow || synthDay(iso).dow, isToday, past: iso < TODAY, now: nowMins(), live: viaServer(), calendar: !!cal, acts: DAYACTS, onWheel: onDayWheel, meetings: v5.meetings, allDay: v5.allDay };
+    const common = { day: iso2, dow: rec.dow || synthDay(iso2).dow, isToday, past: iso2 < TODAY, now: nowMins(), live: viaServer(), calendar: !!cal, acts: DAYACTS, onWheel: onDayWheel, meetings: v5.meetings, allDay: v5.allDay };
     if (!v5.known) {
       line.hidden = true;
       drawDayCurve(line, null);
@@ -27204,14 +27411,14 @@ ${s5}`;
       return;
     }
     const n4 = v5.meetings.length;
-    drawDayCurve(line, { day: iso, timed: v5.meetings, now: isToday ? nowMins() : null, past: iso < TODAY, label: isToday ? `Today's meetings: ${n4}` : `${rec.long}: ${plur(n4, "meeting")}`, width: line.clientWidth, onWheel: onDayWheel });
+    drawDayCurve(line, { day: iso2, timed: v5.meetings, now: isToday ? nowMins() : null, past: iso2 < TODAY, label: isToday ? `Today's meetings: ${n4}` : `${rec.long}: ${plur(n4, "meeting")}`, width: line.clientWidth, onWheel: onDayWheel });
     drawDayMeetings(meets, { ...common, mode: "meetings" });
     calFoot(cal);
   }
   var WDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  function synthDay(iso) {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00"), dow2 = WDAYS[d5.getDay()];
-    return { date: iso, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso), today: iso === TODAY, past: iso < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
+  function synthDay(iso2) {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00"), dow2 = WDAYS[d5.getDay()];
+    return { date: iso2, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso2), today: iso2 === TODAY, past: iso2 < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
   }
   function dayList() {
     if (!D.calendar) return [];
@@ -27227,13 +27434,13 @@ ${s5}`;
     return s5 && s5 !== TODAY && dayList().some((d5) => d5.date === s5) ? s5 : TODAY;
   };
   var isConf = (e4) => String(e4 && e4.sensitivity || "").toLowerCase() === "confidential";
-  function dayView(iso) {
-    const raw2 = ((D.calendar || {}).days || {})[iso], rec = dayList().find((d5) => d5.date === iso), srv = rec && rec.meetings || [];
+  function dayView(iso2) {
+    const raw2 = ((D.calendar || {}).days || {})[iso2], rec = dayList().find((d5) => d5.date === iso2), srv = rec && rec.meetings || [];
     const extra = (m5) => ({
       ...m5,
       page: m5.prep ? (SA().prep_pages || {})[m5.prep.key] || m5.prep.page || null : null,
-      pageWhen: m5.prep ? (prepPageOf(m5, iso) || {}).when || m5.prep.page_at_shown || "" : "",
-      hub: m5.private || m5.confidential || shared.LOADING ? null : hubFor({ eid: m5.id, day: iso, start: m5.start, title: m5.title }) || null,
+      pageWhen: m5.prep ? (prepPageOf(m5, iso2) || {}).when || m5.prep.page_at_shown || "" : "",
+      hub: m5.private || m5.confidential || shared.LOADING ? null : hubFor({ eid: m5.id, day: iso2, start: m5.start, title: m5.title }) || null,
       running: m5.id ? DAYRUN.get(m5.id) : void 0
     });
     if (raw2) {
@@ -27243,7 +27450,7 @@ ${s5}`;
         allDay: raw2.filter((e4) => e4.all_day).map((e4) => ({ title: e4.private ? "Busy" : e4.title ?? "", p: e4.private || isConf(e4) ? null : e4.p || null })),
         meetings: timed.map((e4, i5) => {
           const priv = !!e4.private, s5 = srv.find((m5) => m5.start === e4.start && (priv ? m5.private : m5.title === e4.title)), conf = !!(s5 && s5.confidential) || isConf(e4);
-          const prep = priv ? null : s5 && s5.prep || (iso >= TODAY && prepOf(e4, iso) ? { key: prepKey(e4, iso) } : null);
+          const prep = priv ? null : s5 && s5.prep || (iso2 >= TODAY && prepOf(e4, iso2) ? { key: prepKey(e4, iso2) } : null);
           return extra({
             start: e4.start,
             end: e4.end,
@@ -27262,16 +27469,16 @@ ${s5}`;
         })
       };
     }
-    if (rec && iso !== TODAY) return { known: true, meetings: srv.map((m5) => extra({ ...m5, ix: null })), allDay: (rec.all_day || []).map((t47) => ({ title: t47, p: null })) };
+    if (rec && iso2 !== TODAY) return { known: true, meetings: srv.map((m5) => extra({ ...m5, ix: null })), allDay: (rec.all_day || []).map((t47) => ({ title: t47, p: null })) };
     return { known: false, meetings: [], allDay: [] };
   }
-  function goDay(iso) {
+  function goDay(iso2) {
     const L3 = dayList();
     if (L3.length < 2 || S.srcCalendar === false) return false;
-    const i5 = L3.findIndex((d5) => d5.date === dayShown()), j5 = L3.findIndex((d5) => d5.date === iso);
+    const i5 = L3.findIndex((d5) => d5.date === dayShown()), j5 = L3.findIndex((d5) => d5.date === iso2);
     if (j5 < 0) return false;
     if (j5 === i5) return true;
-    selDay.value = iso === TODAY ? "" : iso;
+    selDay.value = iso2 === TODAY ? "" : iso2;
     renderDay();
     daySlide(j5 > i5 ? 1 : -1);
     return true;
@@ -27337,14 +27544,14 @@ ${s5}`;
   var DAYRUN = /* @__PURE__ */ new Map();
   var seriesOf = (t47) => String(t47 || "").toLowerCase().replace(/\[[^\]]*\]/g, " ").replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w6) => w6 && !/^\d+$/.test(w6)).join(" ");
   function dayPrep(m5) {
-    const iso = dayShown(), raw2 = (((D.calendar || {}).days || {})[iso] || []).find((x5) => !x5.all_day && x5.start === m5.start && x5.title === m5.title);
-    const e4 = raw2 || { start: m5.start, end: m5.end, title: m5.title, where: m5.confidential ? "" : m5.where || "", p: m5.p }, key = prepKey(e4, iso);
+    const iso2 = dayShown(), raw2 = (((D.calendar || {}).days || {})[iso2] || []).find((x5) => !x5.all_day && x5.start === m5.start && x5.title === m5.title);
+    const e4 = raw2 || { start: m5.start, end: m5.end, title: m5.title, where: m5.confidential ? "" : m5.where || "", p: m5.p }, key = prepKey(e4, iso2);
     if (!D.prep) D.prep = /** @type {any} */
     {};
     if (!D.prep.meetings) D.prep.meetings = {};
     const pm2 = D.prep.meetings;
-    if (!pm2[key]) pm2[key] = { series: seriesOf(m5.title), p: m5.confidential ? null : m5.p || null, how: m5.p ? "matched" : "unsure", last: null, day: iso, since: pkAdd(iso, -7) };
-    openPrep(e4, iso);
+    if (!pm2[key]) pm2[key] = { series: seriesOf(m5.title), p: m5.confidential ? null : m5.p || null, how: m5.p ? "matched" : "unsure", last: null, day: iso2, since: pkAdd(iso2, -7) };
+    openPrep(e4, iso2);
   }
   async function dayProcess(m5) {
     const row2 = MTG().find((x5) => x5.id === m5.id);
@@ -28036,7 +28243,7 @@ ${s5}`;
         value: x5.due || "",
         label: `Due date of ${id2}`,
         parse: (t47) => parseWhen(t47, TODAY, true),
-        weekend: (iso) => !!weekendNote(iso),
+        weekend: (iso2) => !!weekendNote(iso2),
         error: "Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d.",
         typedNote: (t47) => {
           const n4 = weekendNote(t47 ? parseWhen(t47, TODAY, true) : null);
@@ -28720,8 +28927,8 @@ ${s5}`;
     }
     const src = r4.releases && (!r4.downloads || vnum(r4.releases.version) >= vnum(r4.downloads.version)) ? "releases" : r4.downloads ? "downloads" : null;
     const z4 = src && r4[src], newer = !!z4 && vnum(z4.version) > vnum(r4.installed);
-    const where2 = src === "releases" ? "system/releases" : "Downloads";
-    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z4.name)} in ${where2}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
+    const where3 = src === "releases" ? "system/releases" : "Downloads";
+    putHTML(c5, html`<h2>creaite version</h2>${raw(row("Installed", esc(r4.installed === "0.0.0" ? "Not set" : r4.installed)))}${r4.dev ? html`<p class="sub" style="margin:6px 0 0">Development repository: updates are made with git here, not installed.</p>` : html`${raw(row("Update", newer ? `<button class="btn primary" id="updReview">Review ${esc(z4.version)}</button>` : '<span class="sub">Up to date</span>', newer ? `${esc(z4.name)} in ${where3}` : "Save a creaite-X.Y.Z.zip from GitHub in system/releases"))}${raw(row("Install from a file", `<button class="btn" id="updFile">Choose zip…</button><input type="file" id="updPick" accept=".zip" hidden>`, "The creaite-X.Y.Z.zip attached to the release, not “Source code (zip)”"))}${r4.last ? raw(row(`Last update: ${esc(r4.last.from)} → ${esc(r4.last.to)}`, '<button class="btn" id="updUndo">Undo update</button>', fdt(r4.last.at))) : ""}`}<div id="updPlan"></div>`);
     const b5 = (id2) => document.getElementById(id2);
     if (b5("updReview")) b5("updReview").onclick = () => updReview(src, false);
     if (b5("updFile")) b5("updFile").onclick = () => b5("updPick").click();
@@ -30435,8 +30642,8 @@ ${s5}`;
         return;
       }
       if (k5 === "save") {
-        const name = $("#igName").value.trim(), text = $("#igText").value.trim(), where2 = $$("#igForm [data-igw]").filter((c5) => c5.checked).map((c5) => c5.dataset.igw);
-        if (!name || !text || !where2.length) {
+        const name = $("#igName").value.trim(), text = $("#igText").value.trim(), where3 = $$("#igForm [data-igw]").filter((c5) => c5.checked).map((c5) => c5.dataset.igw);
+        if (!name || !text || !where3.length) {
           snack(!name ? "Give the rule a name" : !text ? "Say what text to match" : "Choose where it applies");
           return;
         }
@@ -30444,7 +30651,7 @@ ${s5}`;
           snack("Another rule has that name");
           return;
         }
-        const rule = { name, where: where2, field: $("#igField").value, how: $("#igHow").value, text, on: IGEDIT >= 0 ? L3[IGEDIT].on !== false : true };
+        const rule = { name, where: where3, field: $("#igField").value, how: $("#igHow").value, text, on: IGEDIT >= 0 ? L3[IGEDIT].on !== false : true };
         if (IGEDIT >= 0) L3[IGEDIT] = rule;
         else L3.push(rule);
         if (await saveIgnore(L3, `Rule “${name}” saved`)) {
@@ -31607,34 +31814,34 @@ ${s5}`;
     }
     if (RVG === "source") {
       [...new Set(REV.map((r4) => r4.file))].forEach((file) => {
-        const L3 = REV.filter((r4) => r4.file === file), used = /* @__PURE__ */ new Set(), blocks = [];
+        const L3 = REV.filter((r4) => r4.file === file), used = /* @__PURE__ */ new Set(), blocks2 = [];
         L3.forEach((r4) => {
           if (isMin(r4)) {
             kidsOf(r4, "*").forEach((k5) => used.add(k5));
             const b5 = minBlock(r4, "*");
-            if (b5) blocks.push(b5);
+            if (b5) blocks2.push(b5);
             return;
           }
-          if (!used.has(r4) && ok2(r4)) blocks.push([{ r: r4, g: "*" }]);
+          if (!used.has(r4) && ok2(r4)) blocks2.push([{ r: r4, g: "*" }]);
         });
-        if (blocks.length) out.push({ key: file, title: revGroupTitle(file, L3), label: revGroupTitle(file, L3).replace(/<[^>]+>/g, ""), blocks });
+        if (blocks2.length) out.push({ key: file, title: revGroupTitle(file, L3), label: revGroupTitle(file, L3).replace(/<[^>]+>/g, ""), blocks: blocks2 });
       });
       return out;
     }
     const gs2 = [...new Set(REV.flatMap((r4) => isMin(r4) ? (r4.projects || [r4.p]).map((p6) => p6 || "?") : [r4.p || "?"]))].sort((a5, b5) => a5 === "?" ? -1 : b5 === "?" ? 1 : 0);
     gs2.forEach((g5) => {
-      const used = /* @__PURE__ */ new Set(), blocks = [];
+      const used = /* @__PURE__ */ new Set(), blocks2 = [];
       REV.forEach((r4) => {
         if (isMin(r4)) {
           if (!(r4.projects || [r4.p]).map((p6) => p6 || "?").includes(g5)) return;
           kidsOf(r4, g5).forEach((k5) => used.add(k5));
           const b5 = minBlock(r4, g5);
-          if (b5) blocks.push(b5);
+          if (b5) blocks2.push(b5);
           return;
         }
-        if ((r4.p || "?") === g5 && !used.has(r4) && ok2(r4)) blocks.push([{ r: r4, g: g5 }]);
+        if ((r4.p || "?") === g5 && !used.has(r4) && ok2(r4)) blocks2.push([{ r: r4, g: g5 }]);
       });
-      if (blocks.length) out.push({ key: g5, title: g5 === "?" ? "Needs a project" : `<a href="#" class="hlink" data-proj="${g5}">${esc(pName(g5))}</a>`, label: g5 === "?" ? "Needs a project" : pName(g5), blocks });
+      if (blocks2.length) out.push({ key: g5, title: g5 === "?" ? "Needs a project" : `<a href="#" class="hlink" data-proj="${g5}">${esc(pName(g5))}</a>`, label: g5 === "?" ? "Needs a project" : pName(g5), blocks: blocks2 });
     });
     return out;
   }
@@ -32691,11 +32898,11 @@ ${s5}`;
   };
   var cxLink = (id2) => location.origin + location.pathname + actHref(kOfId(id2), id2);
   function cxDates(cur, set, { clear = true, label = "Due date", hint } = {}) {
-    const nm3 = pkAdd(TODAY, 7 - pkDow(TODAY)), wk2 = (iso) => {
-      const w6 = weekendNote(iso);
+    const nm3 = pkAdd(TODAY, 7 - pkDow(TODAY)), wk2 = (iso2) => {
+      const w6 = weekendNote(iso2);
       return w6 ? w6.text : "";
     };
-    const at2 = (lab, iso) => ({ label: lab, icon: "calendar", hint: [fd(iso), wk2(iso)].filter(Boolean).join(" · "), checked: cur === iso, run: () => set(iso) });
+    const at2 = (lab, iso2) => ({ label: lab, icon: "calendar", hint: [fd(iso2), wk2(iso2)].filter(Boolean).join(" · "), checked: cur === iso2, run: () => set(iso2) });
     return [
       at2("Today", TODAY),
       at2("Tomorrow", pkAdd(TODAY, 1)),
@@ -34305,9 +34512,9 @@ ${s5}`;
       ] })
     ] });
   }
-  function dmyShown(iso) {
-    const m5 = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso));
-    return m5 ? `${m5[3]}-${m5[2]}-${m5[1]}` : String(iso);
+  function dmyShown(iso2) {
+    const m5 = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso2));
+    return m5 ? `${m5[3]}-${m5[2]}-${m5[1]}` : String(iso2);
   }
   function mountSneak(host2, id2, onClose, acts2) {
     R(null, host2);
@@ -35011,7 +35218,7 @@ ${s5}`;
   var MVCWORD = { achieved: "Achieved", ontrack: "On track", atrisk: "At risk", slipped: "Expected later", overdue: "Late" };
   var MVRANK = { achieved: 0, ontrack: 1, atrisk: 2, slipped: 3, overdue: 4 };
   var MVKEY = { "Achieved": "achieved", "On track": "ontrack", "At risk": "atrisk", "Slipped": "slipped", "Overdue": "overdue" };
-  var mvT = (iso) => iso ? Date.parse(iso.slice(0, 10) + "T00:00:00Z") : NaN, mvDays = (a5, b5) => Math.round((mvT(a5) - mvT(b5)) / 864e5);
+  var mvT = (iso2) => iso2 ? Date.parse(iso2.slice(0, 10) + "T00:00:00Z") : NaN, mvDays = (a5, b5) => Math.round((mvT(a5) - mvT(b5)) / 864e5);
   function mvPref(k5, d5) {
     try {
       const v5 = localStorage.getItem(k5);
@@ -35109,10 +35316,10 @@ ${s5}`;
     return `<div class="mv-hint">Revised from ${fd(m5.orig)}${rb2.date ? `, agreed ${fd(rb2.date)}` : ""}${rb2.decision ? ` (decision ${esc(rb2.decision)})` : ""}</div>`;
   }
   var MVPXD = 8;
-  function mvAxis(list, pad) {
+  function mvAxis(list, pad3) {
     const ds2 = [TODAY];
     list.forEach((m5) => {
-      [mvWhen(m5), m5.state !== "achieved" && m5.fc > m5.agr ? m5.fc : "", m5.orig && pad ? m5.orig : ""].forEach((d5) => {
+      [mvWhen(m5), m5.state !== "achieved" && m5.fc > m5.agr ? m5.fc : "", m5.orig && pad3 ? m5.orig : ""].forEach((d5) => {
         if (d5 && DATE.test(d5)) ds2.push(d5);
       });
     });
@@ -35362,8 +35569,8 @@ ${s5}`;
   function mvCalPick(t47) {
     const cb2 = MVCAL.cb, btn = MVCAL.btn;
     mvCalClose(false);
-    const d5 = /* @__PURE__ */ new Date(+t47), iso = `${d5.getUTCFullYear()}-${String(d5.getUTCMonth() + 1).padStart(2, "0")}-${String(d5.getUTCDate()).padStart(2, "0")}`;
-    cb2 && cb2(iso);
+    const d5 = /* @__PURE__ */ new Date(+t47), iso2 = `${d5.getUTCFullYear()}-${String(d5.getUTCMonth() + 1).padStart(2, "0")}-${String(d5.getUTCDate()).padStart(2, "0")}`;
+    cb2 && cb2(iso2);
     setTimeout(() => {
       const b5 = btn.id && document.getElementById(btn.id);
       b5 && b5.focus();
@@ -37230,12 +37437,12 @@ ${s5}`;
     const ok2 = (g5) => groupsOf(t47).some((x5) => x5[0] === g5), set = { actions: S.bgActions, raid: S.bgRaid, decisions: S.bgDecisions }[t47];
     return ok2(WGRP[t47]) ? WGRP[t47] : ok2(set) ? set : BDEFG[t47];
   };
-  var isoAdd = (iso, n4) => {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00");
+  var isoAdd = (iso2, n4) => {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00");
     d5.setDate(d5.getDate() + n4);
     return `${d5.getFullYear()}-${z22(d5.getMonth() + 1)}-${z22(d5.getDate())}`;
   };
-  var isoDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T12:00:00")).getDay() + 6) % 7, weekSun = (iso) => isoAdd(iso, 6 - isoDow(iso));
+  var isoDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay() + 6) % 7, weekSun = (iso2) => isoAdd(iso2, 6 - isoDow(iso2));
   var thisFriday = () => {
     const f5 = isoAdd(TODAY, 4 - isoDow(TODAY));
     return f5 < TODAY ? TODAY : f5;
@@ -37499,16 +37706,16 @@ ${s5}`;
           $("#bdErr").textContent = "Not a date creaite knows. " + DATE_HELP;
           return;
         }
-        const iso = toIso(v5);
-        if (isNaN(new Date(iso)) || fd(iso) !== v5) {
+        const iso2 = toIso(v5);
+        if (isNaN(new Date(iso2)) || fd(iso2) !== v5) {
           $("#bdErr").textContent = "That isn't a real date.";
           return;
         }
-        if (iso < TODAY) {
+        if (iso2 < TODAY) {
           $("#bdErr").textContent = "Choose today or a later day: a past date would make it overdue.";
           return;
         }
-        fin(iso);
+        fin(iso2);
       };
       $("#bdOk").onclick = ok2;
       $("#bdCancel").onclick = () => fin(null);
@@ -37530,8 +37737,8 @@ ${s5}`;
     if (!o5.clear) {
       const gated = () => {
         wkClear();
-        const v5 = inp.value.trim(), iso = DDATE.test(v5) ? toIso(v5) : "";
-        if (iso && iso >= TODAY && !WK.ok && wkAsk(iso, $("#bdDateRow"), (d5) => {
+        const v5 = inp.value.trim(), iso2 = DDATE.test(v5) ? toIso(v5) : "";
+        if (iso2 && iso2 >= TODAY && !WK.ok && wkAsk(iso2, $("#bdDateRow"), (d5) => {
           inp.value = fd(d5);
           ok0();
         }, { inline: true, after: $("#bdDateRow") })) return;
@@ -38219,7 +38426,7 @@ ${s5}`;
     const ps2 = PROJF.size === 1 ? P4.filter((p6) => PROJF.has(p6.code)) : P4;
     return ps2.flatMap((p6) => (p6.ms || []).filter((m5) => m5[3]).map((m5) => [m5[3], m5[0] + (ps2.length > 1 ? ` (${p6.name})` : "")]));
   };
-  var lastDays = [["7", "Last 7 days"], ["14", "Last 14 days"], ["30", "Last 30 days"]], within = (iso, set) => !!iso && [...set].some((n4) => -days(iso.slice(0, 10)) <= +n4 && -days(iso.slice(0, 10)) >= 0);
+  var lastDays = [["7", "Last 7 days"], ["14", "Last 14 days"], ["30", "Last 30 days"]], within = (iso2, set) => !!iso2 && [...set].some((n4) => -days(iso2.slice(0, 10)) <= +n4 && -days(iso2.slice(0, 10)) >= 0);
   shared.FPK = null;
   shared.FPQ = "";
   var FPRANGES = () => shared.WT === "decisions" ? [] : [["dr", "Due between"], ["rr", "Raised between"], ["cr", "Closed between"]];
@@ -38345,9 +38552,9 @@ ${s5}`;
     }, items: VMORE.views.map((v5) => ({ id: v5.id, name: v5.label, cls: "vmitem", data: { wv: v5.id } })) });
   }
   function renderViewBar() {
-    const el2 = $("#wviews"), V3 = allViews(shared.WT), dirty = !shared.WVIEW && !!WB[shared.WT], act = shared.WVIEW || WB[shared.WT];
+    const el2 = $("#wviews"), V3 = allViews(shared.WT), dirty2 = !shared.WVIEW && !!WB[shared.WT], act = shared.WVIEW || WB[shared.WT];
     const chip = (v5) => {
-      const on2 = v5.id === act, dot = dirty && on2;
+      const on2 = v5.id === act, dot = dirty2 && on2;
       if (VRENAME && v5.id === "saved:" + VRENAME) return `<span class="vwrap vren"><input id="vrename" value="${esc(v5.label)}" aria-label="New name for the ${esc(v5.label)} view"><button class="mini ok" type="button" data-vren="save">Save</button><button class="mini" type="button" data-vren="cancel">Cancel</button></span>`;
       return `<span class="vwrap"><button class="vchip${dot ? " dirty" : ""}" data-wv="${esc(v5.id)}" aria-pressed="${on2}"${dot ? ' title="Changed since it was opened: Update view or Save as new view"' : ""}>${esc(v5.label)}${dot ? '<span class="vdot" aria-hidden="true">●</span><span class="vh"> (changed, not saved)</span>' : ""}</button>${v5.builtin ? "" : `<button class="vmenu" type="button" data-vmenu="${esc(v5.label)}" aria-haspopup="menu" aria-expanded="false" aria-label="Options for the ${esc(v5.label)} view" title="Rename, move or delete">▾</button>`}</span>`;
     };
@@ -43071,8 +43278,8 @@ ${pre}**Current state title:** ${title}`);
     depSugDraw(ms2.closest("dd"), L3, "depms");
   }
   var FL = { W: 360, H: 150, L: 30, R: 8, T: 22, B: 30 };
-  var flDay = (iso) => {
-    const x5 = /* @__PURE__ */ new Date(iso + "T00:00:00"), p6 = (n4) => String(n4).padStart(2, "0");
+  var flDay = (iso2) => {
+    const x5 = /* @__PURE__ */ new Date(iso2 + "T00:00:00"), p6 = (n4) => String(n4).padStart(2, "0");
     x5.setDate(x5.getDate() + 4 - (x5.getDay() + 6) % 7);
     return `${x5.getFullYear()}-${p6(x5.getMonth() + 1)}-${p6(x5.getDate())}`;
   };
@@ -43602,19 +43809,19 @@ ${pre}**Current state title:** ${title}`);
     const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${e4(String(i5.resp || "").trim() || "none recorded yet")}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
     const upd = o5.includeUpdate && String(i5.upd || "").trim() ? `<br><span style="color:${C5.muted};">Latest update: ${e4(i5.upd)}</span>` : "";
     const ch2 = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C5.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
-    return `<tr style="vertical-align:top;">${deTd(e4(i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
+    return `<tr style="vertical-align:top;">${deTd(e4(i5.noid ? "" : i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
   function deTableHtml(list, o5) {
     return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID", "9%")}${deTh("Item")}${deTh("Due", "18%")}${deTh("Priority", "10%")}</tr>${list.map((i5) => deRowHtml(i5, o5)).join("")}</table>`;
   }
   function deTextRows(list, o5) {
-    const w6 = Math.max(...list.map((i5) => i5.id.length)), out = [], pad = "".padEnd(w6);
+    const w6 = Math.max(...list.map((i5) => (i5.noid ? "" : i5.id).length)), out = [], pad3 = "".padEnd(w6);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
-      out.push(`  ${i5.id.padEnd(w6)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
-      if (i5.k === "raid") out.push(`  ${pad}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
-      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad}  Latest update: ${i5.upd}`);
-      if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad}  ${deChasedWords(o5.chased[i5.id])}`);
+      out.push(`  ${(i5.noid ? "" : i5.id).padEnd(w6)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
+      if (i5.k === "raid") out.push(`  ${pad3}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
+      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad3}  Latest update: ${i5.upd}`);
+      if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad3}  ${deChasedWords(o5.chased[i5.id])}`);
     });
     return out;
   }
@@ -43626,8 +43833,8 @@ ${pre}**Current state title:** ${title}`);
     if (o5.mode === "chase") return deChase(o5);
     const e4 = esc, today = o5.today, first = o5.first || String(o5.name || "").split(/\s+/)[0] || "";
     const items2 = dePicked(o5), codes = [...new Set(items2.map((i5) => i5.p))].sort(), reply = deReplyBy(o5.replyBy), open2 = o5.cover || DE_OPEN, ask2 = `${DE_ASK}${items2.some((i5) => i5.k === "decisions") ? " " + DE_DECIDE : ""}${reply} ${DE_THANKS}`;
-    const blocks = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join(""), [endH, endT] = deClose(o5);
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks}${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
+    const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join(""), [endH, endT] = deClose(o5);
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
     const lines = [deGreeting(o5.now, first), "", open2, ""];
     codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
     lines.push(ask2, ...endT);
@@ -43646,8 +43853,8 @@ ${pre}**Current state title:** ${title}`);
     const e4 = esc, today = o5.today, first = o5.first || String(o5.name || "").split(/\s+/)[0] || "", items2 = dePicked(o5), codes = [...new Set(items2.map((i5) => i5.p))].sort();
     const lv2 = deChaseLevel(items2, o5.chased), t47 = DE_CHASE[lv2.level], open2 = o5.cover || t47.open.replace("{last}", lv2.last ? ` of ${fd(lv2.last)}` : "").replace("{n}", deTimes(lv2.n)).replace("{since}", lv2.last ? `, most recently on ${fd(lv2.last)}` : "");
     const ask2 = `${t47.ask}${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5);
-    const blocks = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join("");
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks}${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
+    const blocks2 = codes.map((c5) => deHead((o5.names || {})[c5] || c5) + deTableHtml(deByProject(items2, c5, today), o5)).join("");
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}${blocks2}${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
     const lines = [deGreeting(o5.now, first), "", open2, ""];
     codes.forEach((c5) => lines.push(((o5.names || {})[c5] || c5).trim(), ...deTextRows(deByProject(items2, c5, today), o5), ""));
     lines.push(ask2, ...endT);
@@ -43658,14 +43865,15 @@ ${pre}**Current state title:** ${title}`);
     const names = [o5.lead, ...(o5.attendees || []).map((a5) => a5.name)].filter(Boolean), all = [...new Set(acts2.map((i5) => i5.o || "No owner"))];
     return [...names.filter((n4) => all.includes(n4)).filter((n4, i5, a5) => a5.indexOf(n4) === i5), ...all.filter((n4) => !names.includes(n4)).sort()];
   }
+  var DE_INTERNAL = "Internal: not for distribution.";
   function deFollowup(o5) {
     const e4 = esc, today = o5.today, items2 = dePicked(o5), acts2 = items2.filter((i5) => i5.k === "actions"), decs = items2.filter((i5) => i5.k === "decisions"), codes = [...new Set(items2.map((i5) => i5.p).concat(o5.codes || []))].sort();
     const att = o5.attendees || [], first = att.length === 1 ? String(att[0].name).split(/\s+/)[0] : "all";
     const when2 = o5.day ? ` on ${(/* @__PURE__ */ new Date(o5.day + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(o5.day)}` : "";
     const open2 = o5.cover || `Thank you for your time at the ${o5.title || "meeting"}${when2}. Here is a short summary, the decisions we made and the actions we agreed.`;
     const ask2 = `Please let me know if I have missed or misrecorded anything.${deReplyBy(o5.replyBy)} ${DE_THANKS}`, [endH, endT] = deClose(o5), owners = deOwners(acts2, o5), mine = (n4) => acts2.filter((i5) => (i5.o || "No owner") === n4).sort((a5, b5) => deSort(a5, b5, today));
-    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
-    const lines = [deGreeting(o5.now, first), "", open2, ""];
+    const html2 = `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o5.internal ? deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`) : ""}${deP(e4(deGreeting(o5.now, first)))}${deP(e4(open2))}` + (o5.summary ? deHead("Summary") + deP(e4(o5.summary)) : "") + (decs.length ? deHead("Decisions") + decs.map((d5) => deP(`• ${e4(d5.t)}${d5.by ? ` <span style="color:${DE_COLOURS.muted};">(${e4(d5.by)})</span>` : ""}`, "margin:0 0 4px 0;")).join("") : "") + (acts2.length ? deHead("Actions") + owners.map((n4) => deP(`<b style="font-weight:bold;">${e4(n4)}</b>`, "margin:10px 0 4px 0;") + deTableHtml(mine(n4), o5)).join("") : "") + `${deP(e4(ask2), "margin-top:16px;")}${endH}</div>`;
+    const lines = [...o5.internal ? [DE_INTERNAL, ""] : [], deGreeting(o5.now, first), "", open2, ""];
     if (o5.summary) lines.push("Summary", o5.summary, "");
     if (decs.length) lines.push("Decisions", ...decs.map((d5) => `  • ${d5.t}${d5.by ? ` (${d5.by})` : ""}`), "");
     if (acts2.length) {
@@ -43673,7 +43881,7 @@ ${pre}**Current state title:** ${title}`);
       owners.forEach((n4) => lines.push(n4, ...deTextRows(mine(n4), o5), ""));
     }
     lines.push(ask2, ...endT);
-    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
+    return { to: att.map((a5) => a5.email).filter(Boolean).join("; "), subject: `${o5.internal ? "[Internal] " : ""}${codes.join(" / ")}${codes.length ? " · " : ""}${o5.title || "Meeting"}: follow-up and actions`, html: html2, text: lines.join("\n"), items: items2 };
   }
   shared.DE = null;
   var deHost = (addr) => String(addr || "").split("@")[1]?.trim().toLowerCase() || "";
@@ -43769,6 +43977,47 @@ ${pre}**Current state title:** ${title}`);
     deShow(`Follow-up: ${m5.title}`);
     if (viaServer()) deFollowFacts(shared.DE, m5);
   }
+  async function openMinutesFollowup(path, version) {
+    const r4 = await api("/api/minutes/followup", { path, version });
+    if (!r4 || !r4.ok) {
+      snack(oneLine(r4 && r4.message || "") || "Couldn't read the minutes for the email");
+      return;
+    }
+    const all = (r4.items || []).map((x5) => ({ ...x5, p: (r4.codes || [])[0] || "", due: x5.due || null, pr: "", client: version === "distributed", noid: /^@/.test(x5.id), by: x5.by || "", o: x5.o || x5.by || "" })), ok2 = all.filter((i5) => !deBarred(i5));
+    if (!ok2.length) {
+      snack(version === "distributed" ? "The distributed version has no actions or decisions to put in an email" : "The minutes have no actions or decisions to put in an email");
+      return;
+    }
+    const outside = version === "distributed" ? deOutsideAll(r4.attendees || []) : false;
+    const de2 = {
+      mode: "followup",
+      token: "",
+      title: r4.title,
+      day: r4.day,
+      codes: r4.codes || [],
+      items: ok2,
+      left: all.length - ok2.length,
+      attendees: r4.attendees || [],
+      lead: "",
+      summary: r4.summary || "",
+      note: version === "distributed" ? `From the Distributed version${r4.left_out ? `: ${r4.left_out} withheld item${r4.left_out === 1 ? "" : "s"} and every Internal only line left out` : ": Internal only lines are left out"}.` : "From the Internal version: the email is marked Internal.",
+      picked: /* @__PURE__ */ new Set(),
+      includeUpdate: false,
+      replyBy: "",
+      edited: false,
+      subjEdited: false,
+      outside: false,
+      cover: "",
+      polish: null,
+      internal: version !== "distributed",
+      version
+    };
+    shared.DE = de2;
+    const owners = new Set(ok2.map((i5) => i5.o));
+    de2.lead = (de2.attendees.find((a5) => owners.has(a5.name)) || {}).name || "";
+    de2.picked = new Set(ok2.map((i5) => i5.k + ":" + i5.id));
+    deShow(`${version === "distributed" ? "Distributed" : "Internal"} follow-up: ${r4.title}`);
+  }
   async function deFollowFacts(de2, m5) {
     const r4 = await api("/api/email/followup", { key: m5.key, eid: m5.eid || "", day: m5.day, start: m5.start, title: m5.title, files: [...m5.files || [], ...m5.draft ? [m5.draft] : []] });
     if (shared.DE !== de2) return;
@@ -43807,7 +44056,8 @@ ${pre}**Current state title:** ${title}`);
       codes: shared.DE.codes,
       attendees: shared.DE.attendees,
       lead: shared.DE.lead,
-      summary: shared.DE.summary
+      summary: shared.DE.summary,
+      internal: !!shared.DE.internal
     });
   }
   function deModesHtml() {
@@ -43844,7 +44094,7 @@ ${pre}**Current state title:** ${title}`);
     if (first) {
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
-        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${esc(i5.id)} · ${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
+        return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${i5.noid ? "" : esc(i5.id) + " · "}${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
       };
       const outsideNote = shared.DE.mode === "followup" ? shared.DE.attendees.length ? "An attendee's address is outside your own domains" : "There are no attendee addresses on record" : shared.DE.email ? "This address is outside your own domains" : "There's no email address on record";
       putHtml($("#deBody"), `${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
@@ -44378,8 +44628,8 @@ ${pre}**Current state title:** ${title}`);
     if (!m5) return null;
     const w6 = m5[1].split(/\s+/);
     for (let n4 = w6.length; n4 > 0; n4--) {
-      const iso = parseWhen(w6.slice(0, n4).join(" "), TODAY, true);
-      if (iso) return iso;
+      const iso2 = parseWhen(w6.slice(0, n4).join(" "), TODAY, true);
+      if (iso2) return iso2;
     }
     return null;
   }
@@ -45403,10 +45653,10 @@ ${d5.text}`);
   }
   function paneLines(t47) {
     t47 = String(t47 || "");
-    const real = new Set(paneMarkers(t47)), out = /* @__PURE__ */ new Set();
+    const real2 = new Set(paneMarkers(t47)), out = /* @__PURE__ */ new Set();
     let at2 = 0;
     t47.split("\n").forEach((line, n4) => {
-      if (line.trim() === PANE && real.has(at2 + line.indexOf(PANE))) out.add(n4);
+      if (line.trim() === PANE && real2.has(at2 + line.indexOf(PANE))) out.add(n4);
       at2 += line.length + 1;
     });
     return out;
@@ -45498,7 +45748,7 @@ ${d5.text}`);
     return mdBlocks(text).map(([k5, b5]) => k5 === "img" ? figHtml(b5[0], b5[1], imgSrc(imgs, b5[1])) : k5 === "p" ? `<p>${mdInline(b5)}</p>` : k5 === "h" ? `<h3>${mdInline(b5)}</h3>` : k5 === "q" ? `<blockquote>${mdInline(b5)}</blockquote>` : listHtml(b5)).join("");
   }
   function htmlToMd(root) {
-    const blocks = [];
+    const blocks2 = [];
     let cur = "";
     const inl = (n4) => {
       if (n4.nodeType === 3) return n4.nodeValue.replace(/ /g, " ").replace(/\s+/g, " ");
@@ -45541,7 +45791,7 @@ ${d5.text}`);
     };
     const flush = () => {
       const t47 = flat2(cur);
-      if (t47) blocks.push(t47);
+      if (t47) blocks2.push(t47);
       cur = "";
     };
     const walk = (el2) => {
@@ -45550,19 +45800,19 @@ ${d5.text}`);
         if (tag === "UL" || tag === "OL") {
           flush();
           const lines = listMd(n4, 0, []);
-          if (lines.length) blocks.push(lines.join("\n"));
+          if (lines.length) blocks2.push(lines.join("\n"));
         } else if (/^H[1-6]$/.test(tag)) {
           flush();
           const t47 = flat2(inl(n4));
-          if (t47) blocks.push("### " + t47);
+          if (t47) blocks2.push("### " + t47);
         } else if (tag === "BLOCKQUOTE") {
           flush();
           const t47 = flat2(inl(n4));
-          if (t47) blocks.push("> " + t47);
+          if (t47) blocks2.push("> " + t47);
         } else if (tag === "FIGURE" && n4.dataset.ref) {
           flush();
           const c5 = flat2((n4.querySelector("figcaption") || {}).textContent || "").replace(/[\[\]]/g, "");
-          blocks.push(`![${c5}](${n4.dataset.ref})`);
+          blocks2.push(`![${c5}](${n4.dataset.ref})`);
         } else if (/^(P|DIV|LI|SECTION|ARTICLE)$/.test(tag)) {
           flush();
           walk(n4);
@@ -45572,7 +45822,7 @@ ${d5.text}`);
     };
     walk(root);
     flush();
-    return blocks.join("\n\n");
+    return blocks2.join("\n\n");
   }
   function viewVal(n4, t47, v5, x5) {
     if (t47 === "dref") return v5 ? `<a href="#" data-open="decisions:${esc(v5)}">${esc(v5)}</a>` : '<span class="sub">—</span>';
@@ -45666,6 +45916,15 @@ ${d5.text}`);
     if (!r4) return;
     if (r4.kind === "draft" && r4.nodraft) {
       snack(NODRAFT_MSG);
+      return;
+    }
+    if (r4.kind === "draft" && /\.html$/i.test(r4.src || "")) {
+      if (viaServer()) {
+        go2("minutes", { file: r4.file });
+        return;
+      }
+      openPath(r4.src);
+      snack("Check the minutes, then approve them in Claude Code (the live server isn't running)");
       return;
     }
     if (r4.kind === "draft") {
@@ -46332,7 +46591,7 @@ ${d5.text}`);
     };
   }
   var PKMON = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  var pkDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var pkDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
   var pkSame = (a5, b5) => typeof b5 === "boolean" ? !!a5 === b5 : String(a5 ?? "").trim() === String(b5 ?? "").trim();
   shared.PKQ = Promise.resolve();
   function pkCommit(k5, id2, patch, label, from, to2, o5 = {}) {
@@ -46543,8 +46802,8 @@ ${d5.text}`);
   }
   function pkTextRule(k5, id2, f5, val2, el2, x5) {
     if (f5 === "revisit" && !WK.ok) {
-      const iso = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
-      if (iso && wkAsk(iso, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val2) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v5) : v5))) {
+      const iso2 = DDATE.test(val2) ? toIso(val2) : DATE.test(val2) ? val2 : "";
+      if (iso2 && wkAsk(iso2, el2, (v5) => pkCommit(k5, id2, { revisit: DDATE.test(val2) ? fd(v5) : v5 }, "Revisit", x5.revisit || "", DDATE.test(val2) ? fd(v5) : v5))) {
         el2.textContent = x5.revisit || "";
         return false;
       }
@@ -47071,7 +47330,7 @@ ${d5.text}`);
   function pkHistory(id2) {
     const own = (a5) => actId(a5) === id2 || !!(a5.sides && Object.prototype.hasOwnProperty.call(a5.sides, id2));
     const O4 = D.activity_older || {}, by2 = O4.by || [];
-    return shared.ACT.filter(own).map((a5) => a5.sides ? { ...a5, change: a5.sides[id2] } : a5).concat(((O4.items || {})[id2] || []).map(([at2, change, b5, apply_id, un2]) => ({ at: at2, change, by: by2[b5] || "", apply_id, undone: !!un2 })));
+    return shared.ACT.filter(own).map((a5) => a5.sides ? { ...a5, change: a5.sides[id2] } : a5).concat(((O4.items || {})[id2] || []).map(([at2, change2, b5, apply_id, un2]) => ({ at: at2, change: change2, by: by2[b5] || "", apply_id, undone: !!un2 })));
   }
   function pkFeedItems(x5, k5) {
     const id2 = pkCid(), out = [], ul2 = pkUpdLabel(k5);
@@ -48016,8 +48275,8 @@ ${d5.text}`);
         snack(draftWhyNot("update-bulk"));
         return;
       }
-      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where2 = b5.parentElement.querySelector(".drbst");
-      draftBulk(ids, where2);
+      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where3 = b5.parentElement.querySelector(".drbst");
+      draftBulk(ids, where3);
     });
     if (shared.VIEW === "today") renderToday();
   }
@@ -49677,6 +49936,1716 @@ ${d5.text}`);
     }
   }
 
+  // components/report/SheetStub.jsx
+  var ZOOM_MIN = 0.4, ZOOM_MAX = 0.8;
+  var SCROLL = /* @__PURE__ */ new Map();
+  function openRef(ref, own) {
+    if (own && own(ref)) return;
+    if (/-M-\d+$/.test(ref)) openMilestone(ref);
+    else openRecord("all", ref);
+  }
+  var HERE = X(
+    /** @type {Here|null} */
+    null
+  );
+  function StubText({ field = "text", row: row2, col, label }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    ), s5 = h5.s;
+    const v5 = row2 != null && col ? ((s5.rows || [])[row2]?.cells || {})[col] || "" : (
+      /** @type {any} */
+      s5[field] || ""
+    );
+    if (!h5.editing) return /* @__PURE__ */ u2("span", { class: "sheet-text", children: v5 });
+    return /* @__PURE__ */ u2("textarea", { class: "sheet-text", "aria-label": label || s5.heading, value: v5, onInput: (e4) => {
+      const t47 = (
+        /** @type {HTMLTextAreaElement} */
+        e4.currentTarget.value
+      );
+      if (row2 != null && col) {
+        const rows2 = (s5.rows || []).slice();
+        rows2[row2] = { ...rows2[row2], cells: { ...rows2[row2].cells || {}, [col]: t47 } };
+        h5.update({ rows: rows2 }, "Row edited");
+      } else h5.update({ [field]: t47 }, "Text edited");
+    } });
+  }
+  function StubItemRef({ id: id2 }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return /* @__PURE__ */ u2("span", { children: id2 });
+    return /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => {
+      openRef(id2, h5.onOpenItem);
+      h5.onEvent({ type: "item", ref: id2 });
+    }, children: id2 });
+  }
+  function StubTag({ tag }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return null;
+    return /* @__PURE__ */ u2("button", { type: "button", class: "chip", onClick: () => {
+      if (tag.ref === "transcript" || tag.ref.startsWith("t:")) h5.onEvent({ type: "tag", tag });
+      else openRef(tag.ref, h5.onOpenItem);
+    }, children: tag.text || tag.ref });
+  }
+  var NoSpark = () => null;
+  function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, onChange, onOpenItem, onEvent }) {
+    const editing = !exported && !readOnly;
+    const setSection = (i5, patch, why) => {
+      const sections = doc.sections.slice();
+      sections[i5] = { ...sections[i5], ...patch };
+      onChange({ ...doc, sections }, why);
+    };
+    const setMeta = (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why);
+    const here0 = { editing, exported, readOnly, onOpenItem, onEvent };
+    const extra = (x5) => /* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: (
+      /** @type {SheetSection} */
+      { id: "", type: "", heading: "" }
+    ), update: () => {
+    } }, children: /* @__PURE__ */ u2("div", { class: "sheet-extra", children: x5.render({ doc, editing, readOnly, setMeta, ItemRef: StubItemRef }) }) }, `x-${x5.key}`);
+    const out = [];
+    doc.sections.forEach((s5, i5) => {
+      if (s5.hidden) {
+        if (editing) out.push(/* @__PURE__ */ u2("div", { class: "sheet-hidden", children: [
+          "Hidden: ",
+          s5.heading,
+          " ",
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "linkbtn",
+              onClick: () => {
+                setSection(i5, { hidden: false }, "Section shown");
+                onEvent({ type: "section-shown", id: s5.id });
+              },
+              children: "Show"
+            }
+          )
+        ] }, s5.id));
+      } else {
+        const update = (p6, why) => setSection(i5, p6, why);
+        const ctx = {
+          section: s5,
+          doc,
+          editing,
+          exported,
+          readOnly,
+          update,
+          setMeta,
+          Text: StubText,
+          ItemRef: StubItemRef,
+          Tag: StubTag,
+          Spark: NoSpark,
+          level: (key) => ({ "data-level": key }),
+          peer: peerDoc ? peerDoc.sections.find((x5) => x5.id === s5.id) || null : null
+        };
+        const own = (renderers.byId || {})[s5.id] || (renderers.byType || {})[s5.type];
+        out.push(/* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: s5, update }, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, children: [
+          /* @__PURE__ */ u2("h2", { children: s5.heading }),
+          own ? own(ctx) : /* @__PURE__ */ u2(Default, { ctx, rowFn: (renderers.row || {})[s5.id] })
+        ] }) }, s5.id));
+      }
+      if (!exported) for (const x5 of extras.filter((e4) => e4.after === s5.id)) out.push(extra(x5));
+    });
+    if (!exported) for (const x5 of extras.filter((e4) => e4.after == null)) out.push(extra(x5));
+    return /* @__PURE__ */ u2("div", { class: "page", children: out });
+  }
+  function Default({ ctx, rowFn }) {
+    const s5 = ctx.section, { Text: Text2, ItemRef: ItemRef2, Tag: Tag2 } = ctx;
+    if (s5.type === "table") {
+      const rows2 = s5.rows || [];
+      return /* @__PURE__ */ u2("table", { children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key)) }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, index) => {
+          if (row2.shown === false && !ctx.editing) return null;
+          const setRow = (p6, why) => {
+            const r4 = rows2.slice();
+            r4[index] = { ...row2, ...p6 };
+            ctx.update({ rows: r4 }, why);
+          };
+          const removeRow = (why) => ctx.update({ rows: rows2.filter((_6, j5) => j5 !== index) }, why);
+          const rc2 = {
+            row: row2,
+            index,
+            section: s5,
+            item: (ctx.doc.items || {})[row2.ref || ""] || null,
+            editing: ctx.editing,
+            exported: ctx.exported,
+            readOnly: ctx.readOnly,
+            setRow,
+            removeRow,
+            Text: Text2,
+            ItemRef: ItemRef2,
+            Tag: Tag2
+          };
+          return rowFn ? rowFn(rc2) : /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(Text2, { row: index, col: c5.key, label: c5.label }) }, c5.key)) }, row2.ref || index);
+        }) })
+      ] });
+    }
+    if (s5.type === "figures") return /* @__PURE__ */ u2("div", { class: "figures", children: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => /* @__PURE__ */ u2("div", { class: "figure", children: [
+      /* @__PURE__ */ u2("b", { children: f5.value }),
+      f5.label
+    ] }, f5.key)) });
+    if (s5.type === "panes") return /* @__PURE__ */ u2("div", { class: "panes", children: (s5.panes || []).map((p6, i5) => /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("h3", { children: p6.title }),
+      /* @__PURE__ */ u2("p", { children: p6.text })
+    ] }, i5)) });
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2(Text2, { rich: true }),
+      (s5.tags || []).map((t47) => /* @__PURE__ */ u2(Tag2, { tag: t47 }, t47.ref))
+    ] });
+  }
+  function SheetStub(props) {
+    const { doc, baseVersion, scrollKey = "", zoom = ZOOM_MAX, exported = false, readOnly = false, partner = null, onSave, onEvent = () => {
+    } } = props;
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [base, setBase] = d2(baseVersion);
+    const [line, setLine] = d2("");
+    _2(() => {
+      const el2 = box.current;
+      if (el2 && SCROLL.has(scrollKey)) el2.scrollTop = SCROLL.get(scrollKey) || 0;
+    });
+    const save2 = async () => {
+      if (!onSave || readOnly) return;
+      const answer = await onSave({ doc, base_version: base });
+      if (answer.ok) {
+        setBase(answer.version ?? void 0);
+        setLine(`Saved · version ${answer.version}`);
+        onEvent({ type: "saved", version: answer.version, answer });
+      } else {
+        setLine(answer.message || "Not saved.");
+        onEvent({ type: "save-failed", answer });
+      }
+    };
+    const width = `${Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom)) * 100)}%`;
+    const page = (d5, p6) => /* @__PURE__ */ u2(
+      Page,
+      {
+        doc: d5,
+        renderers: p6 ? p6.renderers || props.renderers : props.renderers,
+        extras: p6 ? [] : props.extras,
+        exported,
+        readOnly: readOnly || !!(p6 && p6.readOnly),
+        peerDoc: p6 ? doc : partner ? partner.doc : null,
+        onChange: p6 ? p6.onChange : props.onChange,
+        onOpenItem: props.onOpenItem,
+        onEvent
+      }
+    );
+    return /* @__PURE__ */ u2("div", { class: "sheet-stub", onKeyDown: (e4) => {
+      if ((e4.metaKey || e4.ctrlKey) && e4.key === "s") {
+        e4.preventDefault();
+        save2();
+      }
+    }, children: [
+      /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": exported ? "true" : "false", onClick: () => {
+          props.onExported?.(!exported);
+          onEvent({ type: "exported", on: !exported });
+        }, children: "Show as exported" }),
+        onSave && !readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: save2, children: "Save" }) : null,
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: line }),
+        props.toolbar || null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: box, onScroll: (e4) => SCROLL.set(
+        scrollKey,
+        /** @type {HTMLDivElement} */
+        e4.currentTarget.scrollTop
+      ), children: /* @__PURE__ */ u2("div", { class: partner ? "sheet-pair" : "sheet-one", style: { width: partner ? "100%" : width, margin: "0 auto", display: partner ? "flex" : "block" }, children: [
+        page(doc, null),
+        partner ? page(partner.doc, partner) : null
+      ] }) })
+    ] });
+  }
+
+  // stores/minutes.js
+  var minutesArg = y3(
+    /** @type {{file?: string, path?: string}|null} */
+    null
+  );
+  var minutesView = y3(
+    /** @type {MinutesView|null} */
+    null
+  );
+  var minutesDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var minutesBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var minutesBusy = y3("");
+  var paneOpen = y3(true);
+  var paneTurn = y3(
+    /** @type {number|null} */
+    null
+  );
+  var paneQuery = y3("");
+  var keptChecks = y3(
+    /** @type {string[]} */
+    []
+  );
+  var minutesMode = y3(
+    /** @type {"internal"|"distributed"|"side"} */
+    "internal"
+  );
+  var approveOpen = y3(false);
+  var mnAsked = 0;
+  async function loadMinutes(arg) {
+    const mine = ++mnAsked;
+    minutesArg.value = arg;
+    if (!viaServer()) {
+      minutesView.value = { ok: false, message: "The minutes view needs the live server." };
+      return;
+    }
+    minutesBusy.value = "Opening the minutes…";
+    const r4 = await api("/api/minutes/draft", arg);
+    if (mine !== mnAsked) return;
+    minutesBusy.value = "";
+    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the minutes" });
+  }
+  function take(r4) {
+    minutesView.value = r4;
+    minutesDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    minutesBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function reloadMinutes() {
+    const v5 = minutesView.value;
+    if (v5 && v5.ok && v5.path) return loadMinutes({ path: v5.path });
+    if (minutesArg.value) return loadMinutes(minutesArg.value);
+  }
+  async function changeMinutes(op2) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, op: op2, base_version: minutesBase.value });
+    if (r4 && r4.ok && r4.doc) {
+      minutesDoc.value = r4.doc;
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      minutesView.value = { ...v5, doc: r4.doc };
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), message: oneLine(r4 && r4.message || ""), needs_approval: !!(r4 && r4.needs_approval) };
+  }
+  async function refreshPlan() {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return;
+    const r4 = await api("/api/minutes/draft", { path: v5.path });
+    if (r4 && r4.ok && minutesView.value && minutesView.value.path === r4.path) minutesView.value = { ...minutesView.value, plan: r4.plan, versions: r4.versions, labels: r4.labels, withheld: r4.withheld };
+  }
+  async function saveMinutesPage(req) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    const r4 = await api("/api/minutes/save", { path: v5.path, doc: req.doc, base_version: req.base_version });
+    if (r4 && r4.ok) {
+      minutesBase.value = Number(r4.version) || minutesBase.value;
+      refreshPlan();
+    }
+    return { ok: !!(r4 && r4.ok), version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || "") };
+  }
+  async function approveMinutes(group, own) {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.proposal) return { ok: false, message: "These minutes have nothing pending." };
+    const r4 = await api("/api/minutes/approve", { file: v5.proposal, group, own });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportMinutes(format, version = "internal") {
+    const v5 = minutesView.value;
+    if (!v5 || !v5.ok || !v5.path) return { ok: false, message: "The minutes aren't open." };
+    return await api("/api/minutes/export", { path: v5.path, format, file_beside: true, version }) || { ok: false, message: "Not exported." };
+  }
+
+  // components/minutes/ApprovePopup.jsx
+  var where2 = (p6) => {
+    const parts = p6.split("/");
+    return { name: parts.pop() || p6, folder: parts.slice(-2).join(" › ") };
+  };
+  function ApprovePopup({ checks }) {
+    const v5 = minutesView.value, plan = v5 && v5.plan;
+    const [group, setGroup] = d2(true), [own, setOwn] = d2(
+      /** @type {number[]} */
+      []
+    ), [err, setErr] = d2(""), [busy, setBusy] = d2(false);
+    const close = () => {
+      approveOpen.value = false;
+      setErr("");
+    };
+    if (!plan) return /* @__PURE__ */ u2(Dialog, { open: false, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", children: /* @__PURE__ */ u2("span", {}) });
+    const items2 = plan.items, grp = items2.filter((i5) => i5.group === "group"), ones = items2.filter((i5) => i5.group === "own");
+    const waits = items2.filter((i5) => i5.group === "waits" || i5.group === "milestone"), removed = items2.filter((i5) => i5.group === "removed");
+    const tick = (n4, on2) => setOwn(on2 ? [...own, n4] : own.filter((x5) => x5 !== n4));
+    const go3 = async () => {
+      setBusy(true);
+      setErr("");
+      const r4 = await approveMinutes(group, own);
+      setBusy(false);
+      if (!r4.ok) {
+        setErr(String(r4.message || "The apply didn't run; nothing was changed.").split("\n")[0]);
+        return;
+      }
+      approveOpen.value = false;
+      const n4 = r4.approved || 0, left = (r4.waiting || []).length;
+      snack(`Minutes approved with ${n4} item${n4 === 1 ? "" : "s"}${left ? `; ${left} wait in Review` : ""}`, r4.apply_id ? () => undoApply(r4.apply_id) : null);
+      await reloadData();
+      if (plan.files[0]) loadMinutes({ path: plan.files[0] });
+    };
+    const filed = plan.files.map(where2);
+    return /* @__PURE__ */ u2(Dialog, { open: approveOpen.value, onClose: close, labelledBy: "mnApproveH", id: "mnApprove", class: "mnapprove", focus: "#mnApproveGo", children: /* @__PURE__ */ u2("div", { class: "mnap", children: [
+      /* @__PURE__ */ u2("h2", { id: "mnApproveH", children: "Approve the minutes" }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: [
+        filed.length ? /* @__PURE__ */ u2("span", { children: [
+          "Files the minutes as ",
+          /* @__PURE__ */ u2("b", { children: filed[0].name }),
+          " in ",
+          filed[0].folder,
+          plan.transcripts.length ? ", with the transcript in Transcripts" : "",
+          ". "
+        ] }) : null,
+        "The minutes and what you tick are applied together, in one apply you can undo. Nothing is sent."
+      ] }),
+      checks.length ? /* @__PURE__ */ u2("div", { class: "mnap-ck", role: "note", children: [
+        /* @__PURE__ */ u2("b", { children: [
+          checks.length,
+          " check",
+          checks.length === 1 ? "" : "s",
+          " still open"
+        ] }),
+        /* @__PURE__ */ u2("ul", { children: checks.map((c5) => /* @__PURE__ */ u2("li", { children: c5.note }, c5.id)) })
+      ] }) : null,
+      grp.length ? /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
+        /* @__PURE__ */ u2("legend", { children: "Actions and updates" }),
+        /* @__PURE__ */ u2("label", { class: "mnap-all", children: [
+          /* @__PURE__ */ u2("input", { type: "checkbox", id: "mnApAll", checked: group, onChange: (e4) => setGroup(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked
+          ) }),
+          "Approve all ",
+          grp.length,
+          " as reviewed in the minutes"
+        ] }),
+        /* @__PURE__ */ u2("ul", { children: grp.map((i5) => /* @__PURE__ */ u2("li", { children: i5.label }, i5.n)) })
+      ] }) : null,
+      ones.length ? /* @__PURE__ */ u2("fieldset", { class: "mnap-g", children: [
+        /* @__PURE__ */ u2("legend", { children: "One tick each" }),
+        /* @__PURE__ */ u2("p", { class: "sub", children: "A new decision, a decision recorded or withdrawn, a new risk and a closure are each approved on their own." }),
+        ones.map((i5) => /* @__PURE__ */ u2("label", { class: "mnap-one", children: [
+          /* @__PURE__ */ u2(
+            "input",
+            {
+              type: "checkbox",
+              "data-own": i5.n,
+              checked: own.includes(i5.n),
+              onChange: (e4) => tick(
+                i5.n,
+                /** @type {HTMLInputElement} */
+                e4.currentTarget.checked
+              )
+            }
+          ),
+          " ",
+          /* @__PURE__ */ u2("span", { children: [
+            i5.label,
+            /* @__PURE__ */ u2("span", { class: "sub", children: [
+              " · ",
+              i5.why
+            ] })
+          ] })
+        ] }, i5.n))
+      ] }) : null,
+      waits.length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Waiting in Review whatever you tick: ",
+        waits.map((i5) => i5.label).join("; "),
+        "."
+      ] }) : null,
+      removed.length ? /* @__PURE__ */ u2("p", { class: "sub", children: [
+        "Removed in the minutes: ",
+        removed.length,
+        " item",
+        removed.length === 1 ? "" : "s",
+        ", recorded as rejected."
+      ] }) : null,
+      /* @__PURE__ */ u2("p", { class: "sub", children: "Anything you leave unticked waits in Review." }),
+      err ? /* @__PURE__ */ u2("p", { class: "mnap-err", role: "alert", children: err }) : null,
+      /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: close, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy, onClick: go3, children: busy ? "Approving…" : "Approve the minutes" })
+      ] })
+    ] }) });
+  }
+
+  // components/minutes/context.js
+  var MinutesCtx = X(
+    /** @type {MinutesCtxValue|null} */
+    null
+  );
+
+  // components/minutes/Coverage.jsx
+  var HOW = [
+    { id: "carry", name: "Carry it to the next meeting", line: "On the series' next agenda and Prep, marked carried" },
+    { id: "session", name: "Set up a separate session", line: "Adds an action for you, due Friday; creaite never makes the invite" },
+    { id: "drop", name: "No longer needed", line: "Nothing more is done about it" },
+    { id: "enough", name: "Covered enough", line: "It was covered well enough in this meeting" }
+  ];
+  var DONE = { carry: "Carried to the next meeting", session: "A separate session is to be set up", drop: "No longer needed", enough: "Covered enough" };
+  var CLS = { "Covered": "ok", "Touched on": "warn", "Not discussed": "bad" };
+  function Coverage({ c: c5 }) {
+    const m5 = x2(MinutesCtx);
+    const [line, setLine] = d2(true);
+    const meta = c5.doc.meta || {}, points = (
+      /** @type {Point[]} */
+      meta.coverage || []
+    ), notes = (
+      /** @type {{id: string, note: string}[]} */
+      meta.milestones || []
+    );
+    if (!points.length && !notes.length) return null;
+    const live = c5.editing && !!m5;
+    return /* @__PURE__ */ u2("div", { class: "mncov", "aria-labelledby": "mnCovH", children: [
+      /* @__PURE__ */ u2("div", { class: "mncov-h", children: [
+        /* @__PURE__ */ u2("h2", { id: "mnCovH", children: "Agenda coverage" }),
+        /* @__PURE__ */ u2("span", { class: "sub", children: "In creaite only, never in the minutes sent" })
+      ] }),
+      points.length ? /* @__PURE__ */ u2("ul", { class: "mncov-l", children: points.map((p6) => /* @__PURE__ */ u2("li", { "data-point": p6.point, children: [
+        /* @__PURE__ */ u2("span", { class: `mnverdict ${CLS[
+          /** @type {keyof CLS} */
+          p6.verdict
+        ] || ""}`, children: p6.verdict }),
+        /* @__PURE__ */ u2("span", { class: "mncov-p", children: p6.point }),
+        p6.action ? /* @__PURE__ */ u2("span", { class: "mncov-done", children: [
+          DONE[
+            /** @type {keyof DONE} */
+            p6.action.how
+          ] || p6.action.how,
+          live && m5 ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => m5.change({ op: "uncover", point: p6.point }), children: "Undo" }) : null
+        ] }) : live && m5 && p6.verdict !== "Covered" ? /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "Deal with it…",
+            btnCls: "btn sm",
+            menuLabel: `Deal with ${p6.point}`,
+            items: HOW,
+            data: { mncover: p6.point },
+            onPick: (how) => m5.change({ op: "cover", point: p6.point, how, line }, { op: "uncover", point: p6.point })
+          }
+        ) : null
+      ] }, p6.point)) }) : null,
+      live && points.some((p6) => p6.verdict !== "Covered" && !p6.action) ? /* @__PURE__ */ u2("label", { class: "mncov-line", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "checkbox",
+            checked: line,
+            onChange: (e4) => setLine(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.checked
+            )
+          }
+        ),
+        " Add a line to the minutes"
+      ] }) : null,
+      notes.length ? /* @__PURE__ */ u2("ul", { class: "mncov-ms", children: notes.map((x5) => /* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2("span", { children: x5.note }),
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => openMilestone(x5.id), children: [
+          "Review the ",
+          x5.id,
+          " milestone"
+        ] })
+      ] }, x5.id)) }) : null
+    ] });
+  }
+
+  // components/minutes/Pop.jsx
+  var POP_FOCUSABLE = 'input:not([disabled]),button:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+  function Pop({ open: open2, onClose, label, anchor, focus, cls, wide, children }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const back2 = A2(true);
+    h2(() => {
+      if (!open2) return;
+      back2.current = true;
+      const b5 = box.current;
+      if (b5) {
+        const lim = Math.min(window.innerWidth, (b5.closest(".sheet-scroll") || document.documentElement).getBoundingClientRect().right);
+        b5.classList.toggle("flip", b5.getBoundingClientRect().right > lim - 8);
+      }
+      const f5 = (
+        /** @type {HTMLElement|null} */
+        b5 && (focus && b5.querySelector(focus) || b5.querySelector(POP_FOCUSABLE))
+      );
+      if (f5) f5.focus();
+      const away = (e4) => {
+        const t47 = (
+          /** @type {Node} */
+          e4.target
+        );
+        if (box.current && !box.current.contains(t47) && !(anchor.current && anchor.current.contains(t47))) {
+          back2.current = false;
+          onClose();
+        }
+      };
+      document.addEventListener("pointerdown", away, true);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        const a5 = anchor.current;
+        if (back2.current && a5 && a5.isConnected) a5.focus();
+      };
+    }, [open2]);
+    if (!open2) return null;
+    const key = (e4) => {
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        onClose();
+      }
+    };
+    return /* @__PURE__ */ u2("div", { ref: box, class: `pkpop on mnpop${wide ? " wide" : ""}${cls ? " " + cls : ""}`, role: "dialog", "aria-label": label, onKeyDown: key, children });
+  }
+
+  // components/minutes/Checks.jsx
+  function CheckMark({ check, children }) {
+    const m5 = x2(MinutesCtx);
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          class: "mncheck",
+          "data-check": check.id,
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": `Check: ${check.note}`,
+          onClick: () => setOpen2(!open2),
+          children: children || check.quote
+        }
+      ),
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: "Check against the transcript", anchor: btn, cls: "mnck", wide: true, children: [
+        /* @__PURE__ */ u2("p", { class: "mnck-note", children: check.note }),
+        check.last ? /* @__PURE__ */ u2("p", { class: "sub mnck-last", children: check.last }) : null,
+        /* @__PURE__ */ u2("div", { class: "mnck-acts", children: check.actions.map((a5) => /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: `btn sm${a5.id === "use" ? " primary" : ""}`,
+            "data-ckact": a5.id,
+            onClick: () => {
+              setOpen2(false);
+              if (m5) m5.onCheck(check, a5.id);
+            },
+            children: a5.label
+          },
+          a5.id
+        )) })
+      ] })
+    ] });
+  }
+  function Checked({ text, checks }) {
+    const marks = checks.map((c5) => ({ c: c5, at: c5.quote ? text.indexOf(c5.quote) : -1 })).filter((x5) => x5.at >= 0).sort((a5, b5) => a5.at - b5.at);
+    if (!marks.length) return /* @__PURE__ */ u2("span", { children: text });
+    const out = [];
+    let i5 = 0;
+    for (const { c: c5, at: at2 } of marks) {
+      if (at2 < i5) continue;
+      out.push(text.slice(i5, at2));
+      out.push(/* @__PURE__ */ u2(CheckMark, { check: c5, children: c5.quote }, c5.id));
+      i5 = at2 + c5.quote.length;
+    }
+    out.push(text.slice(i5));
+    return /* @__PURE__ */ u2("span", { children: out });
+  }
+
+  // components/minutes/DeadlinePopover.jsx
+  var WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  var LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var DP_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var QUICK = [["Friday", "Friday"], ["Next week", "next week"], ["Next Wednesday", "next wednesday"], ["End of month", "end of month"]];
+  var offDays = () => [...wkDays()].map((d5) => (d5 + 1) % 7);
+  var deadlineOf = (words, day) => parseWords(words, day, true, "deadline", offDays());
+  var deadlineDay = (iso2) => `${LONG[(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay()]} ${fd(iso2)}`;
+  var pad2 = (n4) => String(n4).padStart(2, "0");
+  function DeadlinePopover({ due, day, label, readOnly, onSet }) {
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    if (readOnly) return /* @__PURE__ */ u2("span", { class: "mndue", children: due ? fd(due) : "Not set" });
+    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          class: "mndue btn sm",
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": `Deadline: ${due ? deadlineDay(due) : "not set"}. Change the deadline of ${label}`,
+          onClick: () => setOpen2(!open2),
+          children: due ? fd(due) : "Not set"
+        }
+      ),
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Deadline for ${label}`, anchor: btn, focus: "input", cls: "pkcal mndl", children: open2 ? /* @__PURE__ */ u2(DeadlineBody, { due, day, onPick: async (w6) => {
+        if (await onSet(w6)) setOpen2(false);
+      } }) : null })
+    ] });
+  }
+  function DeadlineBody({ due, day, onPick }) {
+    const [words, setWords] = d2("");
+    const start = due || day;
+    const [month, setMonth] = d2(start.slice(0, 7));
+    const got = words.trim() ? deadlineOf(words, day) : null;
+    const set = () => {
+      if (got) onPick(words.trim());
+    };
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("label", { class: "mndl-l", for: "mnDlWords", children: [
+        "Type a deadline, worked out from the meeting on ",
+        fd(day)
+      ] }),
+      /* @__PURE__ */ u2(
+        "input",
+        {
+          id: "mnDlWords",
+          class: "pkdt",
+          type: "text",
+          autocomplete: "off",
+          placeholder: "Friday, next week, 30-10…",
+          value: words,
+          "aria-describedby": "mnDlSaid",
+          onInput: (e4) => setWords(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.value
+          ),
+          onKeyDown: (e4) => {
+            if (e4.key === "Enter") {
+              e4.preventDefault();
+              set();
+            }
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("div", { id: "mnDlSaid", class: `mndl-said${words.trim() && !got ? " bad" : ""}`, role: "status", children: !words.trim() ? "" : got ? /* @__PURE__ */ u2("span", { children: [
+        deadlineDay(got),
+        " ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", onClick: set, children: "Set" })
+      ] }) : "Not a date creaite can read. Try “Friday”, “next week” or 30-10." }),
+      /* @__PURE__ */ u2("div", { class: "pkquick", role: "group", "aria-label": "Quick picks", children: QUICK.map(([name, w6]) => {
+        const d5 = deadlineOf(w6, day);
+        return d5 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-quick": w6, "aria-label": `${name}: ${deadlineDay(d5)}`, onClick: () => onPick(w6), children: [
+          name,
+          " ",
+          /* @__PURE__ */ u2("span", { class: "sub", children: fd(d5).slice(0, 5) })
+        ] }, w6) : null;
+      }) }),
+      /* @__PURE__ */ u2(Calendar, { month, setMonth, due, day, onPick: (iso2) => onPick(fd(iso2)) }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "pkopt", "data-quick": "not set", onClick: () => onPick("not set"), children: "Not set" })
+    ] });
+  }
+  function Calendar({ month, setMonth, due, day, onPick }) {
+    const y5 = +month.slice(0, 4), m5 = +month.slice(5, 7);
+    const first = new Date(y5, m5 - 1, 1, 12), lead = (first.getDay() + 6) % 7, count = new Date(y5, m5, 0, 12).getDate();
+    const step2 = (k5) => {
+      const d5 = new Date(y5, m5 - 1 + k5, 1, 12);
+      setMonth(`${d5.getFullYear()}-${pad2(d5.getMonth() + 1)}`);
+    };
+    const off = new Set(offDays());
+    const cells = [];
+    for (let i5 = 0; i5 < lead; i5++) cells.push(/* @__PURE__ */ u2("span", {}, `b${i5}`));
+    for (let d5 = 1; d5 <= count; d5++) {
+      const iso2 = `${month}-${pad2(d5)}`, dow2 = (/* @__PURE__ */ new Date(iso2 + "T12:00:00")).getDay();
+      cells.push(/* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `pkday${iso2 === due ? " on" : ""}${iso2 === day ? " today" : ""}${off.has(dow2) ? " wk" : ""}`,
+          "data-day": iso2,
+          "aria-label": deadlineDay(iso2),
+          "aria-pressed": iso2 === due ? "true" : "false",
+          onClick: () => onPick(iso2),
+          children: d5
+        },
+        iso2
+      ));
+    }
+    return /* @__PURE__ */ u2("div", { class: "mncal", children: [
+      /* @__PURE__ */ u2("div", { class: "pkcalh", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Previous month", onClick: () => step2(-1), children: "‹" }),
+        /* @__PURE__ */ u2("b", { children: [
+          DP_MONTHS[m5 - 1],
+          " ",
+          y5
+        ] }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-label": "Next month", onClick: () => step2(1), children: "›" })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "pkgrid", children: [
+        WEEK.map((w6) => /* @__PURE__ */ u2("span", { class: "wd", "aria-hidden": "true", children: w6.slice(0, 2) }, w6)),
+        cells
+      ] })
+    ] });
+  }
+
+  // components/minutes/minutesDoc.js
+  var FLAGS = ["PRIORITY", "ACTION", "FLAG", "BLOCKED", "SUPPORT NEEDED", "NEW SCOPE", "NEW", "ON TRACK", "HIGH RISK", "DONE"];
+  var unbold = (s5) => s5.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
+  function mdLines(text) {
+    const out = [];
+    for (const rawLine of String(text || "").split("\n")) {
+      const s5 = rawLine.trim();
+      if (!s5) continue;
+      const topic = /^\*\*([^*]+)\*\*$/.exec(s5);
+      if (topic) {
+        out.push({ kind: "topic", text: topic[1], flag: "" });
+        continue;
+      }
+      const b5 = /^[-*] (.*)$/.exec(s5), body2 = b5 ? b5[1] : s5;
+      const f5 = /^\*\*([A-Z ]+)\*\* (.*)$/.exec(body2);
+      const flag = f5 && FLAGS.includes(f5[1]) ? f5[1] : "";
+      out.push({ kind: b5 ? "bullet" : "para", text: unbold(flag && f5 ? f5[2] : body2), flag });
+    }
+    return out;
+  }
+  function mdUnlines(ls2) {
+    const out = [];
+    ls2.forEach((l6, i5) => {
+      if (l6.kind === "topic") {
+        if (i5) out.push("");
+        out.push(`**${l6.text}**`);
+      } else if (l6.kind === "bullet") out.push(`- ${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
+      else {
+        if (i5) out.push("");
+        out.push(`${l6.flag ? `**${l6.flag}** ` : ""}${l6.text}`);
+      }
+    });
+    return out.join("\n");
+  }
+  var squash = (s5) => String(s5 || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function lineTag(line, tags) {
+    const l6 = squash(line.text);
+    return (tags || []).find((t47) => t47.ref === "transcript" && t47.time && (squash(t47.text) === l6 || l6 && squash(t47.text).startsWith(l6) || l6 && l6.startsWith(squash(t47.text)))) || null;
+  }
+  var sensitive = (item) => !!item && ((item.flags || []).some((f5) => /sensitive/i.test(f5)) || ((item.values || {}).labels || []).some((l6) => /sensitive/i.test(l6)) || !!(item.values || {}).sensitive);
+  var internalOnly = (doc) => Array.isArray((doc.layout || {}).internal_only) ? doc.layout.internal_only : [];
+  var isInternal = (doc, section, what) => internalOnly(doc).some((x5) => x5.section === section && (what.ref ? x5.ref === what.ref || what.n != null && x5.ref === `@${what.n}` : x5.text === what.text));
+  function toggleInternal(doc, section, what) {
+    const was = internalOnly(doc), on2 = isInternal(doc, section, what);
+    const next = on2 ? was.filter((x5) => !(x5.section === section && (what.ref ? x5.ref === what.ref : x5.text === what.text))) : [...was, { section, ...what }];
+    return { ...doc, layout: { ...doc.layout || {}, internal_only: next } };
+  }
+  var heldBack = (doc, ref, held) => held && held[ref] || (sensitive((doc.items || {})[ref]) ? "Sensitive" : "");
+  function distributedOf(doc, held) {
+    const sections = doc.sections.map((s5) => {
+      if (s5.type === "table") {
+        const keptRows = (s5.rows || []).filter((r4) => !(r4.ref && (heldBack(doc, r4.ref, held) || isInternal(doc, s5.id, { ref: r4.ref, n: (
+          /** @type {any} */
+          r4.n
+        ) }))));
+        return { ...s5, rows: keptRows, text: keptRows.length ? "" : "None recorded." };
+      }
+      if (s5.type === "header" || !s5.text) return s5;
+      const kept = mdLines(s5.text).filter((l6) => !isInternal(doc, s5.id, { text: l6.text }));
+      return { ...s5, text: mdUnlines(kept) || "None recorded." };
+    });
+    return { ...doc, audience: "distributed", sections };
+  }
+  function leftOut(doc, held) {
+    const out = [];
+    for (const s5 of doc.sections) {
+      for (const r4 of s5.rows || []) {
+        const why = r4.ref ? heldBack(doc, r4.ref, held) : "";
+        if (why) out.push(`${s5.heading}: ${/^[a-z]/.test(why) ? `an item ${why}` : `a ${why} item`}`);
+        else if (r4.ref && isInternal(doc, s5.id, { ref: r4.ref, n: (
+          /** @type {any} */
+          r4.n
+        ) })) out.push(`${s5.heading}: ${Object.values(r4.cells || {}).filter(Boolean).join(" · ").slice(0, 80)}`);
+      }
+      if (s5.type !== "table" && s5.type !== "header") {
+        for (const l6 of mdLines(s5.text || "")) if (isInternal(doc, s5.id, { text: l6.text })) out.push(`${s5.heading}: ${l6.text.slice(0, 80)}`);
+      }
+    }
+    return out;
+  }
+  var DEADLINE = /\b(?:by |on )?(next week|end of (?:the )?month|next (?:mon|tues|wednes|thurs|fri)day|(?:mon|tues|wednes|thurs|fri)day|in \d+ weeks?|tomorrow)\b/i;
+  var FIGURE = /\b\d+(?:[.,]\d+)?%?/g;
+  function rowChecks(doc, s5, r4, i5, turns, unknown) {
+    const out = [], it2 = (doc.items || {})[r4.ref], v5 = it2 && it2.values || {};
+    if (!it2 || it2.op !== "new") return out;
+    const n4 = it2.n, label = v5.description || v5.decision || "";
+    const owner = s5.id === "decisions" ? "" : String(v5.owner || "").trim();
+    if (s5.id !== "decisions" && owner && owner !== "TBC" && unknown(owner))
+      out.push({
+        id: `owner:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "owner",
+        quote: owner,
+        kind: "owner",
+        n: n4,
+        note: `${owner} isn't in the people register.`,
+        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
+      });
+    else if (s5.id === "actions" && (!owner || owner === "TBC"))
+      out.push({
+        id: `owner:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "owner",
+        quote: owner || "TBC",
+        kind: "owner",
+        n: n4,
+        note: "No owner yet.",
+        actions: [{ id: "pick", label: "Pick from the register" }, { id: "keep", label: "Keep mine" }]
+      });
+    const turn = r4.at && r4.at.turn ? turns.find((t47) => t47.n === r4.at.turn) : null;
+    const said2 = turn && s5.id === "actions" ? DEADLINE.exec(turn.text) : null;
+    const meant = said2 ? deadlineOf(said2[0], doc.date) : null;
+    if (said2 && meant && meant !== (v5.due_date || null))
+      out.push({
+        id: `due:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        field: "due",
+        quote: v5.due_date ? fd(v5.due_date) : "Not set",
+        kind: "due",
+        n: n4,
+        turn: turn.n,
+        words: said2[0],
+        note: `${turn.who || "Someone"} said “${said2[0]}”: ${deadlineDay(meant)}.`,
+        last: v5.due_date ? `The row says ${deadlineDay(v5.due_date)}.` : "The row has no deadline.",
+        actions: [{ id: "use", label: "Use that" }, { id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+      });
+    if (turn) {
+      for (const f5 of new Set(label.match(FIGURE) || [])) if (!turn.text.includes(f5))
+        out.push({
+          id: `fig:${r4.ref}:${f5}`,
+          section: s5.id,
+          row: i5,
+          quote: f5,
+          kind: "figure",
+          n: n4,
+          turn: turn.n,
+          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+        });
+    }
+    if ((it2.flags || []).some((f5) => f5 === "invalid" || f5 === "conflict"))
+      out.push({
+        id: `item:${r4.ref}`,
+        section: s5.id,
+        row: i5,
+        quote: "",
+        kind: "item",
+        n: n4,
+        note: "The tracker's checks refused this item as it stands: change it in Review.",
+        actions: [{ id: "keep", label: "Keep mine" }]
+      });
+    return out;
+  }
+  function lineChecks(s5, turns) {
+    const out = [];
+    mdLines(s5.text || "").forEach((l6, i5) => {
+      const t47 = lineTag(
+        l6,
+        /** @type {TimeTag[]} */
+        s5.tags || []
+      ), turn = t47 ? turns.find((x5) => x5.n === t47.turn) : null;
+      if (!turn) return;
+      for (const f5 of new Set(l6.text.match(FIGURE) || [])) if (!turn.text.includes(f5))
+        out.push({
+          id: `fig:${s5.id}:${i5}:${f5}`,
+          section: s5.id,
+          line: i5,
+          field: "text",
+          quote: f5,
+          kind: "figure",
+          turn: turn.n,
+          note: `The transcript at ${turn.start || `turn ${turn.n}`} doesn't say ${f5}.`,
+          last: `${turn.who || "Someone"} said: “${turn.text.slice(0, 160)}”`,
+          actions: [{ id: "keep", label: "Keep mine" }, { id: "show", label: "Show in the transcript" }]
+        });
+    });
+    return out;
+  }
+  function checksOf(doc, turns, unknown, kept) {
+    if (!doc || doc.state !== "draft") return [];
+    const out = [];
+    for (const s5 of doc.sections) {
+      if (s5.hidden) continue;
+      if (s5.type === "table") (s5.rows || []).forEach((r4, i5) => {
+        if (r4.ref) out.push(...rowChecks(doc, s5, r4, i5, turns || [], unknown));
+      });
+      else if (s5.type === "text") out.push(...lineChecks(s5, turns || []));
+    }
+    return out.filter((c5) => !kept.includes(c5.id));
+  }
+
+  // components/minutes/TranscriptPane.jsx
+  function jumpTo(turn) {
+    paneOpen.value = true;
+    paneTurn.value = null;
+    queueMicrotask(() => {
+      paneTurn.value = turn;
+    });
+  }
+  function Marked({ text, q: q5 }) {
+    if (!q5) return /* @__PURE__ */ u2("span", { children: text });
+    const out = [], low = text.toLowerCase(), k5 = q5.toLowerCase();
+    let i5 = 0, j5 = low.indexOf(k5);
+    while (j5 >= 0) {
+      out.push(text.slice(i5, j5));
+      out.push(/* @__PURE__ */ u2("mark", { children: text.slice(j5, j5 + k5.length) }, j5));
+      i5 = j5 + k5.length;
+      j5 = low.indexOf(k5, i5);
+    }
+    out.push(text.slice(i5));
+    return /* @__PURE__ */ u2("span", { children: out });
+  }
+  function TranscriptPane() {
+    const list = A2(
+      /** @type {HTMLOListElement|null} */
+      null
+    );
+    const v5 = minutesView.value, tr2 = v5 && v5.turns || { timed: false, turns: [] };
+    const q5 = paneQuery.value.trim(), on2 = paneTurn.value;
+    const hits = q5 ? tr2.turns.filter((t47) => t47.text.toLowerCase().includes(q5.toLowerCase()) || String(t47.who || "").toLowerCase().includes(q5.toLowerCase())) : [];
+    h2(() => {
+      const ol2 = list.current, li2 = ol2 && on2 != null ? (
+        /** @type {HTMLElement|null} */
+        ol2.querySelector(`[data-turn="${on2}"]`)
+      ) : null;
+      if (ol2 && li2) ol2.scrollTop = li2.offsetTop - ol2.offsetTop - ol2.clientHeight / 3;
+    }, [on2, paneOpen.value]);
+    if (!paneOpen.value) return null;
+    const next = () => {
+      if (!hits.length) return;
+      const after = hits.find((t47) => on2 == null || t47.n > on2) || hits[0];
+      paneTurn.value = after.n;
+    };
+    return /* @__PURE__ */ u2("aside", { class: "mnpane", "aria-labelledby": "mnPaneH", children: [
+      /* @__PURE__ */ u2("div", { class: "mnpane-h", children: [
+        /* @__PURE__ */ u2("h2", { id: "mnPaneH", children: "Transcript" }),
+        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close the transcript", onClick: () => {
+          paneOpen.value = false;
+        }, data: { mnpane: "close" } })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "mnpane-q", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            type: "search",
+            class: "pkdt",
+            id: "mnPaneQ",
+            "aria-label": "Search the transcript",
+            placeholder: "Search the transcript",
+            value: paneQuery.value,
+            onInput: (e4) => {
+              paneQuery.value = /** @type {HTMLInputElement} */
+              e4.currentTarget.value;
+            },
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter") {
+                e4.preventDefault();
+                next();
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: q5 ? `${hits.length} turn${hits.length === 1 ? "" : "s"}` : tr2.turns.length ? `${tr2.turns.length} turns` : "" })
+      ] }),
+      tr2.turns.length ? /* @__PURE__ */ u2("ol", { class: "mnturns", ref: list, tabIndex: 0, "aria-label": "Speaker turns", children: tr2.turns.map((t47) => /* @__PURE__ */ u2("li", { "data-turn": t47.n, class: `${t47.n === on2 ? "on" : ""}${q5 && !hits.includes(t47) ? " dim" : ""}`, "aria-current": t47.n === on2 ? "true" : void 0, children: [
+        /* @__PURE__ */ u2("span", { class: "mnwho", children: [
+          t47.who || "Someone",
+          t47.start ? /* @__PURE__ */ u2("span", { class: "mntime", children: [
+            " · ",
+            t47.start
+          ] }) : null
+        ] }),
+        /* @__PURE__ */ u2(Marked, { text: t47.text, q: q5 })
+      ] }, t47.n)) }) : /* @__PURE__ */ u2("p", { class: "sub mnpane-none", children: "No transcript was kept with these minutes." })
+    ] });
+  }
+
+  // components/minutes/TextLines.jsx
+  var shortTime = (t47) => String(t47 || "").replace(/^00:/, "");
+  function TimeTag({ tag, onRemove }) {
+    return /* @__PURE__ */ u2("span", { class: "mntagw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "mntag",
+          "data-turn": tag.turn,
+          "aria-label": `Show in the transcript: ${tag.time}`,
+          onClick: () => {
+            if (tag.turn) jumpTo(tag.turn);
+          },
+          children: shortTime(tag.time || "")
+        }
+      ),
+      onRemove ? /* @__PURE__ */ u2("button", { type: "button", class: "mntagx", "aria-label": `Remove the time tag ${tag.time}`, onClick: onRemove, children: "✕" }) : null
+    ] });
+  }
+  function TextLine({ ctx, line, i: i5, li: li2, onEdit }) {
+    const m5 = x2(MinutesCtx), s5 = ctx.section, live = ctx.editing && !ctx.exported;
+    const tags = (
+      /** @type {TimeTag[]} */
+      s5.tags || []
+    ), tag = live ? lineTag(line, tags) : null;
+    const checks = live && m5 ? m5.checks.filter((c5) => c5.section === s5.id && c5.line === i5) : [];
+    const internal = m5 ? isInternal(m5.doc, s5.id, { text: line.text }) : false;
+    const Tag2 = li2 ? "li" : "p";
+    return /* @__PURE__ */ u2(Tag2, { class: `mnline${internal ? " internal" : ""}`, "data-line": i5, children: [
+      line.flag ? /* @__PURE__ */ u2("b", { class: "mnflag", children: line.flag }) : null,
+      line.flag ? " " : null,
+      live ? /* @__PURE__ */ u2("span", { class: "mntext", onClick: (e4) => {
+        if (!/** @type {HTMLElement} */
+        e4.target.closest("button")) onEdit();
+      }, children: /* @__PURE__ */ u2(Checked, { text: line.text, checks }) }) : /* @__PURE__ */ u2("span", { children: line.text }),
+      tag ? /* @__PURE__ */ u2(TimeTag, { tag, onRemove: () => ctx.update({ tags: tags.filter((t47) => t47 !== tag) }, "Time tag removed") }) : null,
+      live && m5 && m5.distributed && s5.type !== "header" ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: `mnio${internal ? " on" : ""}`,
+          "aria-pressed": internal ? "true" : "false",
+          "aria-label": `Internal only: ${line.text.slice(0, 60)}`,
+          onClick: () => m5.setDoc(toggleInternal(m5.doc, s5.id, { text: line.text }), internal ? "Shown to attendees" : "Internal only"),
+          children: "Internal only"
+        }
+      ) : null
+    ] });
+  }
+  function blocks(ls2) {
+    const out = [];
+    ls2.forEach((line, i5) => {
+      if (line.kind === "topic" || !out.length) out.push({ topic: line.kind === "topic" ? line : null, items: [] });
+      if (line.kind !== "topic") out[out.length - 1].items.push({ line, i: i5 });
+    });
+    return out;
+  }
+  function TextLines({ ctx }) {
+    const [ed3, setEd] = d2(false);
+    const s5 = ctx.section, { Text: Text2 } = ctx;
+    if (ctx.editing && ed3) {
+      return /* @__PURE__ */ u2("div", { class: "mnedit", children: [
+        /* @__PURE__ */ u2(Text2, { field: "text", rich: true, label: s5.heading }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => setEd(false), children: "Done" })
+      ] });
+    }
+    const ls2 = mdLines(s5.text || "");
+    return /* @__PURE__ */ u2("div", { class: "mnlines", children: [
+      blocks(ls2).map((b5, k5) => {
+        const bullets = b5.items.some((x5) => x5.line.kind === "bullet");
+        const body2 = b5.items.map(({ line, i: i5 }) => /* @__PURE__ */ u2(TextLine, { ctx, line, i: i5, li: bullets, onEdit: () => setEd(true) }, i5));
+        return /* @__PURE__ */ u2("div", { class: "mnblock", ...b5.topic ? ctx.level(`topic:${b5.topic.text}`) : {}, children: [
+          b5.topic ? /* @__PURE__ */ u2("h3", { class: "mntopic", children: b5.topic.text }) : null,
+          bullets ? /* @__PURE__ */ u2("ul", { children: body2 }) : body2
+        ] }, k5);
+      }),
+      ctx.editing ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnedbtn", "aria-label": `Edit ${s5.heading}`, onClick: () => setEd(true), children: "Edit" }) : null
+    ] });
+  }
+
+  // components/minutes/ItemRow.jsx
+  var MAIN = { actions: "action", decisions: "decision", raid: "description" };
+  var ROW_FIELD = { actions: "description", decisions: "decision", raid: "description" };
+  var TYPES = ["Risk", "Issue", "Assumption", "Dependency"];
+  var ITEM_ID = /\b[A-Z][A-Z0-9]{2,6}-(?:[ADRM]-)?\d{3,}\b/g;
+  var recOf = (id2) => A4.find((x5) => x5.id === id2) || R3.find((x5) => x5.id === id2) || DEC.find((x5) => x5.id === id2) || null;
+  function Does({ does, row: row2, onOpen }) {
+    const parts = [], s5 = String(does || "");
+    let i5 = 0;
+    for (const m5 of s5.matchAll(ITEM_ID)) {
+      parts.push(s5.slice(i5, m5.index));
+      parts.push(/* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openRef(m5[0], () => false), children: m5[0] }, m5.index));
+      i5 = (m5.index || 0) + m5[0].length;
+    }
+    parts.push(s5.slice(i5));
+    const done = /^Closes /.test(s5);
+    return /* @__PURE__ */ u2("span", { class: `mndoes${/^New /.test(s5) ? " new" : ""}`, children: [
+      /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnopen", "aria-label": `Open the staged item: ${s5}`, onClick: () => onOpen(row2.ref), children: "Open" }),
+      /* @__PURE__ */ u2("span", { class: "mndoes-t", children: [
+        parts,
+        done ? " · Looks done" : ""
+      ] })
+    ] });
+  }
+  function OwnerPicker({ owner, label, n: n4, field, check, onPick }) {
+    const [open2, setOpen2] = d2(false), [q5, setQ] = d2(""), [remember, setRemember] = d2(true);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const people = shared.REG.filter((p6) => !p6.hidden).map((p6) => p6.name).sort();
+    const shown2 = people.filter((p6) => !q5 || p6.toLowerCase().includes(q5.toLowerCase())).slice(0, 30);
+    const unknown = !!owner && owner !== "TBC" && unknownOwner(owner);
+    const pick = async (name) => {
+      if (!await onPick(name)) return;
+      setOpen2(false);
+      if (unknown && remember && name !== owner) regAddAlias(name, owner);
+    };
+    return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          ref: btn,
+          class: `btn sm mnowner${check ? " mncheck" : ""}`,
+          "data-owner": n4,
+          "aria-haspopup": "dialog",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": `${field === "made_by" ? "Made by" : "Owner"}: ${owner || "not set"}. Change it for ${label}`,
+          "data-tip": check ? check.note : void 0,
+          onClick: () => setOpen2(!open2),
+          children: owner || "TBC"
+        }
+      ),
+      /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `Owner for ${label}`, anchor: btn, focus: "input", children: [
+        /* @__PURE__ */ u2(
+          "input",
+          {
+            class: "pkq",
+            type: "search",
+            "aria-label": "Find a person in the register",
+            placeholder: "Find a person",
+            value: q5,
+            onInput: (e4) => setQ(
+              /** @type {HTMLInputElement} */
+              e4.currentTarget.value
+            ),
+            onKeyDown: (e4) => {
+              if (e4.key === "Enter" && shown2.length) {
+                e4.preventDefault();
+                pick(shown2[0]);
+              }
+            }
+          }
+        ),
+        /* @__PURE__ */ u2("div", { role: "listbox", "aria-label": "People in the register", children: shown2.length ? shown2.map((p6) => /* @__PURE__ */ u2("button", { type: "button", role: "option", class: "pkopt", "aria-selected": p6 === owner ? "true" : "false", onClick: () => pick(p6), children: p6 }, p6)) : /* @__PURE__ */ u2("p", { class: "sub", children: "No match in the people register." }) }),
+        unknown ? /* @__PURE__ */ u2("label", { class: "mnremember", children: [
+          /* @__PURE__ */ u2("input", { type: "checkbox", checked: remember, onChange: (e4) => setRemember(
+            /** @type {HTMLInputElement} */
+            e4.currentTarget.checked
+          ) }),
+          "Remember “",
+          owner,
+          "” as their alias"
+        ] }) : null
+      ] })
+    ] });
+  }
+  function LooksLike({ item, n: n4 }) {
+    const m5 = x2(MinutesCtx);
+    const [open2, setOpen2] = d2(false);
+    const btn = A2(
+      /** @type {HTMLButtonElement|null} */
+      null
+    );
+    const ll2 = item.looks_like || {}, rec = recOf(ll2.id), v5 = item.values || {};
+    if (!ll2.id || ll2.kept || ll2.merged || !m5) return null;
+    const changes = [
+      `Latest update: “${(v5.description || v5.decision || "").slice(0, 120)}”`,
+      ...v5.due_date && rec && rec.due !== v5.due_date ? [`Due date: ${rec.due ? fd(rec.due) : "not set"} → ${fd(v5.due_date)}`] : [],
+      "Title, owner, priority and response stay as they are",
+      "The earlier update is kept in the history",
+      "These minutes are added as a source"
+    ];
+    return /* @__PURE__ */ u2("span", { class: "mnlooks", children: [
+      /* @__PURE__ */ u2("span", { children: [
+        "Looks like ",
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn mnid", onClick: () => openRef(ll2.id, () => false), children: ll2.id }),
+        ll2.why ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+          " · ",
+          ll2.why
+        ] }) : null
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-mnact": "update", onClick: () => m5.change({ op: "update", n: n4, id: ll2.id }, { op: "keep_new", n: n4 }), children: "Update that one" }),
+      /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
+        /* @__PURE__ */ u2("button", { type: "button", ref: btn, class: "linkbtn", "aria-haspopup": "dialog", "aria-expanded": open2 ? "true" : "false", onClick: () => setOpen2(!open2), children: "What changes" }),
+        /* @__PURE__ */ u2(Pop, { open: open2, onClose: () => setOpen2(false), label: `What changes on ${ll2.id}`, anchor: btn, wide: true, children: [
+          /* @__PURE__ */ u2("p", { class: "mnck-note", children: [
+            "Updating ",
+            ll2.id,
+            rec ? ` (${rec.t})` : "",
+            ":"
+          ] }),
+          /* @__PURE__ */ u2("ul", { class: "mnchanges", children: changes.map((c5) => /* @__PURE__ */ u2("li", { children: c5 }, c5)) })
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-mnact": "keepnew", onClick: () => m5.change({ op: "keep_new", n: n4 }), children: "Keep as new" })
+    ] });
+  }
+  function CellText({ value, label, onSave }) {
+    const [t47, setT] = d2(
+      /** @type {string|null} */
+      null
+    );
+    const shown2 = t47 == null ? value : t47;
+    const commit = async () => {
+      if (t47 != null && t47.trim() && t47 !== value) {
+        if (!await onSave(t47.trim())) return;
+      }
+      setT(null);
+    };
+    return /* @__PURE__ */ u2(
+      "textarea",
+      {
+        class: "mncell",
+        rows: 1,
+        "aria-label": label,
+        value: shown2,
+        onInput: (e4) => setT(
+          /** @type {HTMLTextAreaElement} */
+          e4.currentTarget.value
+        ),
+        onBlur: commit,
+        onKeyDown: (e4) => {
+          if (e4.key === "Enter" && !e4.shiftKey) {
+            e4.preventDefault();
+            e4.currentTarget.blur();
+          }
+          if (e4.key === "Escape" && t47 != null) {
+            e4.preventDefault();
+            e4.stopPropagation();
+            setT(null);
+          }
+        }
+      }
+    );
+  }
+  function KeptLine({ rc: rc2 }) {
+    const m5 = x2(MinutesCtx), cols = rc2.section.columns || [], main = MAIN[
+      /** @type {keyof MAIN} */
+      rc2.section.id
+    ];
+    const n4 = Number(String(
+      /** @type {any} */
+      rc2.row.was || ""
+    ).replace("@", ""));
+    return /* @__PURE__ */ u2("tr", { class: "mnrow kept", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: [
+      (rc2.row.cells || {})[c5.key] || "",
+      c5.key === main && rc2.editing && m5 ? /* @__PURE__ */ u2("div", { class: "mnbar", children: [
+        /* @__PURE__ */ u2("span", { class: "sub", children: "The line only: no item is made." }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => m5.change({ op: "restore", n: n4 }), children: "Make it an item again" })
+      ] }) : null
+    ] }, c5.key)) });
+  }
+  function ItemRow({ rc: rc2 }) {
+    const m5 = x2(MinutesCtx);
+    const row2 = (
+      /** @type {any} */
+      rc2.row
+    ), s5 = rc2.section, cols = s5.columns || [], sid = (
+      /** @type {keyof MAIN} */
+      s5.id
+    );
+    if (row2.kept_line) return /* @__PURE__ */ u2(KeptLine, { rc: rc2 });
+    if (row2.shown === false && !rc2.editing) return null;
+    const item = rc2.item || {}, n4 = row2.n, cells = row2.cells || {}, isNew = item.op === "new";
+    const live = rc2.editing && !rc2.exported && !!m5 && !!item.op;
+    if (!live || !m5) return /* @__PURE__ */ u2("tr", { class: "mnrow", "data-n": n4, children: cols.map((c5) => /* @__PURE__ */ u2("td", { children: cells[c5.key] || "" }, c5.key)) });
+    const label = (cells[MAIN[sid]] || "").slice(0, 80), checks = m5.checks.filter((c5) => c5.section === s5.id && c5.n === n4);
+    const own = checks.find((c5) => c5.field === "owner") || null, internal = isInternal(m5.doc, s5.id, { ref: row2.ref, n: row2.n });
+    const edit = (values) => m5.change({ op: "edit", n: n4, values });
+    const remove = (how) => m5.change({ op: "remove", n: n4, keep_line: how === "keep" }, { op: "restore", n: n4 });
+    const cell2 = (c5) => {
+      if (!isNew) return cells[c5.key] || "";
+      if (c5.key === "owner" || c5.key === "by") return /* @__PURE__ */ u2(
+        OwnerPicker,
+        {
+          owner: (item.values || {})[c5.key === "by" ? "made_by" : "owner"] || "",
+          label,
+          n: n4,
+          field: c5.key === "by" ? "made_by" : "owner",
+          check: own,
+          onPick: (name) => edit({ [c5.key === "by" ? "made_by" : "owner"]: name })
+        }
+      );
+      if (c5.key === "due") return /* @__PURE__ */ u2(DeadlinePopover, { due: (item.values || {}).due_date || null, day: m5.day, label, onSet: (words) => m5.change({ op: "deadline", n: n4, words }) });
+      if (c5.key === "type") return /* @__PURE__ */ u2(
+        "select",
+        {
+          class: "mntype",
+          "aria-label": `Type of ${label}`,
+          value: (item.values || {}).type || "Risk",
+          onChange: (e4) => edit({ type: (
+            /** @type {HTMLSelectElement} */
+            e4.currentTarget.value
+          ) }),
+          children: TYPES.map((t47) => /* @__PURE__ */ u2("option", { children: t47 }, t47))
+        }
+      );
+      if (c5.key === MAIN[sid]) return /* @__PURE__ */ u2(CellText, { value: (item.values || {})[ROW_FIELD[sid]] || "", label: `${s5.heading}: ${label}`, onSave: (t47) => edit({ [ROW_FIELD[sid]]: t47 }) });
+      return cells[c5.key] || "";
+    };
+    return /* @__PURE__ */ u2("tr", { class: `mnrow${internal ? " internal" : ""}`, "data-n": n4, "data-ref": row2.ref, children: cols.map((c5) => /* @__PURE__ */ u2("td", { class: `mncol-${c5.key}`, children: [
+      cell2(c5),
+      c5.key === MAIN[sid] ? /* @__PURE__ */ u2("div", { class: "mnbar", children: [
+        /* @__PURE__ */ u2(Does, { does: row2.does || "", row: row2, onOpen: m5.openItem }),
+        row2.at && row2.at.time ? /* @__PURE__ */ u2(TimeTag, { tag: { ref: "transcript", turn: row2.at.turn, time: row2.at.time, text: "" } }) : null,
+        isNew ? /* @__PURE__ */ u2(LooksLike, { item, n: n4 }) : null,
+        checks.filter((c6) => c6.field !== "owner" || !own).map((c6) => /* @__PURE__ */ u2(CheckMark, { check: c6, children: c6.kind === "due" ? "Deadline?" : c6.kind === "figure" ? `${c6.quote}?` : "Check" }, c6.id)),
+        own ? /* @__PURE__ */ u2(CheckMark, { check: own, children: own.note }) : null,
+        m5.distributed && heldBack(m5.doc, row2.ref, m5.held) ? /* @__PURE__ */ u2("span", { class: "tag mnheld", "data-tip": "Never in the distributed version", children: [
+          "Internal only · ",
+          heldBack(m5.doc, row2.ref, m5.held)
+        ] }) : m5.distributed ? /* @__PURE__ */ u2(
+          "button",
+          {
+            type: "button",
+            class: `mnio${internal ? " on" : ""}`,
+            "aria-pressed": internal ? "true" : "false",
+            "aria-label": `Internal only: ${label}`,
+            onClick: () => m5.setDoc(toggleInternal(m5.doc, s5.id, { ref: row2.ref }), internal ? "Shown to attendees" : "Internal only"),
+            children: "Internal only"
+          }
+        ) : null,
+        /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "Remove",
+            icon: "x",
+            btnCls: "btn sm mnrm",
+            menuLabel: `Remove ${label}`,
+            data: { mnremove: String(n4) },
+            items: [
+              { id: "remove", name: "Remove the item and its line", line: "Nothing is made; the line leaves the minutes", icon: "x" },
+              { id: "keep", name: "Keep the line only", line: "The words stay in the minutes; no item is made", icon: "list" }
+            ],
+            onPick: remove
+          }
+        )
+      ] }) : null
+    ] }, c5.key)) });
+  }
+
+  // components/minutes/MinutesView.jsx
+  var dirty = false;
+  function levelPair(box) {
+    const pages = box ? (
+      /** @type {HTMLElement[]} */
+      [...box.querySelectorAll(".sheet-pair > .page")]
+    ) : [];
+    if (pages.length !== 2) return;
+    const [l6, r4] = pages;
+    const pairs = (sel, attr2, a5, b5) => (
+      /** @type {HTMLElement[]} */
+      [...a5.querySelectorAll(sel)].map((x5) => [
+        x5,
+        /** @type {HTMLElement|null} */
+        b5.querySelector(`${sel.split("[")[0]}[${attr2}="${CSS.escape(x5.getAttribute(attr2) || "")}"]`)
+      ])
+    );
+    const even = (ps2) => {
+      for (const [a5, b5] of ps2) {
+        a5.style.minHeight = "";
+        if (b5) b5.style.minHeight = "";
+      }
+      for (const [a5, b5] of ps2) {
+        if (!b5) continue;
+        const h5 = Math.max(a5.getBoundingClientRect().height, b5.getBoundingClientRect().height);
+        a5.style.minHeight = b5.style.minHeight = `${h5}px`;
+      }
+    };
+    const nextSec = (x5) => {
+      let n4 = x5.nextElementSibling;
+      while (n4 && !n4.matches("section[data-id]")) n4 = n4.nextElementSibling;
+      return (
+        /** @type {HTMLElement|null} */
+        n4
+      );
+    };
+    const close = (ps2) => {
+      for (const [a5, b5] of ps2) {
+        const an2 = b5 && nextSec(a5), bn2 = b5 && nextSec(b5);
+        if (!b5 || !an2 || !bn2) continue;
+        const d5 = an2.getBoundingClientRect().top - bn2.getBoundingClientRect().top;
+        if (d5 > 0.5) b5.style.minHeight = `${b5.getBoundingClientRect().height + d5}px`;
+        else if (d5 < -0.5) a5.style.minHeight = `${a5.getBoundingClientRect().height - d5}px`;
+      }
+    };
+    const secs = (
+      /** @type {[HTMLElement, HTMLElement|null][]} */
+      pairs("section[data-id]", "data-id", l6, r4)
+    );
+    for (const [a5, b5] of secs) if (b5) even(
+      /** @type {[HTMLElement, HTMLElement|null][]} */
+      pairs("[data-level]", "data-level", a5, b5)
+    );
+    even(secs);
+    close(secs);
+  }
+  function openStaged(ref) {
+    const v5 = minutesView.value, n4 = Number(String(ref).replace(/^@/, ""));
+    const r4 = v5 && REV.find((x5) => x5.file === v5.proposal && x5.ref === n4);
+    if (r4) openProposal(r4.n);
+    else snack("That item is no longer pending in Review.");
+    return true;
+  }
+  function Bar({ doc, checks }) {
+    const v5 = minutesView.value, versions = v5 && v5.versions || [], draft = doc.state === "draft";
+    const dist = !!(doc.layout || {}).distributed, mode = minutesMode.value;
+    const setDist = (on2) => {
+      onDoc({ ...doc, layout: { ...doc.layout || {}, distributed: on2 } }, on2 ? "Distributed version on" : "One version");
+      if (!on2) minutesMode.value = "internal";
+    };
+    const exp = async (id2) => {
+      if (id2.startsWith("followup")) {
+        const d5 = minutesDoc.value;
+        if (dirty && d5) {
+          const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
+          if (!s5.ok) {
+            snack(s5.message || "The minutes weren't saved");
+            return;
+          }
+          dirty = false;
+        }
+        openMinutesFollowup(v5 && v5.path, id2.endsWith(":distributed") ? "distributed" : "internal");
+        return;
+      }
+      const [fmt, which] = id2.split(":"), version = which === "distributed" ? "distributed" : "internal";
+      const out = version === "distributed" ? leftOut(doc, v5 && v5.withheld) : [];
+      const r4 = await exportMinutes(fmt, version);
+      const left = out.length ? ` · leaves out ${out.length}: ${out.slice(0, 2).join("; ")}${out.length > 2 ? "…" : ""}` : "";
+      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}${left}` : String(r4.message || "Not exported").split("\n")[0]);
+    };
+    const formats = [
+      { id: "html", name: "HTML", line: "A read-only page, filed beside the minutes" },
+      { id: "docx", name: "Word", line: "The minutes template" },
+      { id: "pdf", name: "PDF", line: "Printed from the page" }
+    ];
+    const exports = dist ? [
+      ...formats.map((f5) => ({ ...f5, id: `${f5.id}:internal`, name: `Internal: ${f5.name}` })),
+      ...formats.map((f5) => ({
+        ...f5,
+        id: `${f5.id}:distributed`,
+        name: `Distributed: ${f5.name}`,
+        line: draft ? "Once the internal minutes are approved" : `${f5.line}, under a new name`
+      }))
+    ] : formats;
+    const follow = { id: "followup", name: "Draft the follow-up email", line: "From this version; copied, never sent" };
+    const shown2 = mode === "distributed" ? ["distributed"] : mode === "side" ? ["internal", "distributed"] : ["internal"];
+    const mails = !dist ? [follow] : shown2.map((w6) => ({
+      ...follow,
+      id: `followup:${w6}`,
+      name: `${w6 === "distributed" ? "Distributed" : "Internal"}: Draft the follow-up email`,
+      line: w6 === "distributed" ? "Without Internal only lines or withheld items" : "Marked Internal"
+    }));
+    return /* @__PURE__ */ u2("span", { class: "mnbarr", children: [
+      /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: `Version ${doc.version || 1}`,
+          icon: "history",
+          btnCls: "btn sm",
+          menuLabel: "Versions of these minutes",
+          data: { mnversions: "" },
+          items: versions.map((x5) => ({
+            id: String(x5.version),
+            name: `Version ${x5.version}${x5.current ? " · on screen" : ""}`,
+            line: `${x5.at ? fd(x5.at) : ""}${x5.why ? ` · ${x5.why}` : ""}${!x5.current && x5.backup ? " · opens the kept copy" : ""}`
+          })),
+          onPick: (id2) => {
+            const x5 = versions.find((y5) => String(y5.version) === id2);
+            if (x5 && !x5.current && x5.backup) openPath(x5.backup);
+          }
+        }
+      ),
+      /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Versions to keep", children: [
+        /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "false" : "true", disabled: !draft, onClick: () => setDist(false), children: "One version" }),
+        /* @__PURE__ */ u2("button", { type: "button", "aria-pressed": dist ? "true" : "false", disabled: !draft, onClick: () => setDist(true), children: "Internal + distributed" })
+      ] }),
+      dist ? /* @__PURE__ */ u2("span", { class: "seg", role: "group", "aria-label": "Show", children: [["internal", "Internal"], ["distributed", "Distributed"], ["side", "Side by side"]].map(([k5, l6]) => /* @__PURE__ */ u2("button", { type: "button", "data-mnmode": k5, "aria-pressed": mode === k5 ? "true" : "false", onClick: () => {
+        minutesMode.value = /** @type {any} */
+        k5;
+      }, children: l6 }, k5)) }) : null,
+      /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "aria-pressed": paneOpen.value ? "true" : "false", onClick: () => {
+        paneOpen.value = !paneOpen.value;
+      }, children: "Transcript" }),
+      draft && checks.length ? /* @__PURE__ */ u2("span", { class: "tag mnckcount", role: "status", children: [
+        checks.length,
+        " check",
+        checks.length === 1 ? "" : "s",
+        " open"
+      ] }) : null,
+      /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: "Export",
+          icon: "filetext",
+          btnCls: "btn sm",
+          menuLabel: "Export the minutes",
+          data: { mnexport: "" },
+          items: [...exports, ...mails],
+          onPick: exp
+        }
+      ),
+      draft ? /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: "btn sm primary",
+          id: "mnApproveBtn",
+          disabled: !(v5 && v5.plan),
+          "data-tip": v5 && v5.plan ? void 0 : "Nothing pending to approve",
+          onClick: () => {
+            approveOpen.value = true;
+          },
+          children: "Approve minutes"
+        }
+      ) : null
+    ] });
+  }
+  function onDoc(d5, _why) {
+    minutesDoc.value = d5;
+    dirty = true;
+  }
+  async function change(op2, undo) {
+    const d5 = minutesDoc.value;
+    if (dirty && d5) {
+      const s5 = await saveMinutesPage({ doc: d5, base_version: minutesBase.value });
+      if (!s5.ok) {
+        snack(s5.message || "The minutes weren't saved");
+        return false;
+      }
+      dirty = false;
+    }
+    const r4 = await changeMinutes(op2);
+    if (!r4.ok) {
+      snack(r4.message || "That didn't change");
+      return false;
+    }
+    snack(r4.message || "Changed", undo ? () => {
+      change(undo);
+    } : null);
+    return true;
+  }
+  function onCheck(c5, action) {
+    if (action === "keep") keptChecks.value = [...keptChecks.value, c5.id];
+    else if (action === "show" && c5.turn) jumpTo(c5.turn);
+    else if (action === "use" && c5.kind === "due" && c5.n && c5.words) change({ op: "deadline", n: c5.n, words: c5.words });
+    else if (action === "pick") document.querySelector(`[data-owner="${c5.n}"]`)?.click();
+  }
+  var RENDER = {
+    byType: { text: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }), header: (ctx) => /* @__PURE__ */ u2(TextLines, { ctx }) },
+    row: { actions: (rc2) => /* @__PURE__ */ u2(ItemRow, { rc: rc2 }), decisions: (rc2) => /* @__PURE__ */ u2(ItemRow, { rc: rc2 }), raid: (rc2) => /* @__PURE__ */ u2(ItemRow, { rc: rc2 }) }
+  };
+  var EXTRAS = [{ key: "coverage", after: "open_questions", render: (c5) => /* @__PURE__ */ u2(Coverage, { c: c5 }) }];
+  function MinutesView() {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const v5 = minutesView.value, doc = minutesDoc.value, mode = minutesMode.value;
+    const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
+    _2(() => {
+      const el2 = box.current;
+      if (el2 && !side) el2.querySelectorAll(".page section[data-id], .page [data-level]").forEach((x5) => {
+        x5.style.minHeight = "";
+      });
+      if (!side || !el2) return;
+      levelPair(el2);
+      const ro2 = new ResizeObserver(() => levelPair(el2));
+      el2.querySelectorAll(".sheet-pair > .page").forEach((p6) => ro2.observe(p6));
+      return () => ro2.disconnect();
+    });
+    if (!v5) return /* @__PURE__ */ u2("div", { class: "mnview", children: /* @__PURE__ */ u2("p", { class: "sub", children: minutesBusy.value || "Opening the minutes…" }) });
+    if (!v5.ok || !doc) return /* @__PURE__ */ u2("div", { class: "mnview", children: [
+      /* @__PURE__ */ u2("h1", { id: "mnTitle", children: "Minutes" }),
+      /* @__PURE__ */ u2("p", { class: "mnerr", role: "alert", children: v5.message || "Couldn't open the minutes" })
+    ] });
+    const draft = doc.state === "draft", turns = (v5.turns || { turns: [] }).turns;
+    const checks = checksOf(doc, turns, unknownOwner, keptChecks.value);
+    const held = v5.withheld || {}, shown2 = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
+    const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
+    return /* @__PURE__ */ u2("div", { class: "mnview", ref: box, children: [
+      /* @__PURE__ */ u2("header", { class: "mnhead", children: [
+        /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
+          /* @__PURE__ */ u2("a", { href: "#", "data-go": "review", children: "Review" }),
+          " › ",
+          /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Minutes" })
+        ] }),
+        /* @__PURE__ */ u2("h1", { id: "mnTitle", children: doc.title }),
+        /* @__PURE__ */ u2("p", { class: "sub mnmeta", children: [
+          doc.project_name || "",
+          " · ",
+          fd(doc.date),
+          " · ",
+          draft ? "Draft, not yet approved" : "Approved and filed",
+          !draft ? " · Filed minutes are never saved over" : ""
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: `mnwrap${paneOpen.value ? " withpane" : ""}`, children: [
+        /* @__PURE__ */ u2("div", { class: "mnsheet", children: /* @__PURE__ */ u2(MinutesCtx.Provider, { value: ctx, children: /* @__PURE__ */ u2(
+          SheetStub,
+          {
+            doc: shown2,
+            baseVersion: minutesBase.value,
+            scrollKey: `minutes:${v5.path}:${mode}`,
+            readOnly: !draft || dist && mode === "distributed",
+            renderers: RENDER,
+            extras: EXTRAS,
+            checks,
+            onOpenItem: (ref) => ref.startsWith("@") ? openStaged(ref) : false,
+            partner: side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {
+            } } : null,
+            onChange: onDoc,
+            onSave: async (req) => {
+              const r4 = await saveMinutesPage(req);
+              if (r4.ok) dirty = false;
+              return r4;
+            },
+            onEvent: (ev) => {
+              if (ev.type === "reload") loadMinutes({ path: v5.path });
+            },
+            toolbar: /* @__PURE__ */ u2(Bar, { doc, checks })
+          }
+        ) }) }),
+        /* @__PURE__ */ u2(TranscriptPane, {})
+      ] }),
+      /* @__PURE__ */ u2(ApprovePopup, { checks })
+    ] });
+  }
+  var mnMounted = false;
+  function renderMinutes(arg) {
+    const el2 = $("#v-minutes");
+    if (!el2) return;
+    if (!mnMounted) {
+      R(/* @__PURE__ */ u2(MinutesView, {}), el2);
+      mnMounted = true;
+    }
+    const a5 = typeof arg === "string" ? { path: arg } : arg;
+    if (a5 && (a5.file || a5.path)) {
+      dirty = false;
+      keptChecks.value = [];
+      minutesMode.value = "internal";
+      loadMinutes(a5).then(() => {
+        navWrite(false);
+        tabTitle();
+      });
+    }
+  }
+  var minutesPath = () => {
+    const v5 = minutesView.value;
+    return v5 && v5.ok && v5.path ? v5.path : null;
+  };
+
   // core/nav.js
   shared.VIEW = "today";
   shared.COCK = null;
@@ -49718,12 +51687,14 @@ ${d5.text}`);
       st2.note = c5 && c5.code === shared.NOTECODE ? c5.note.file : null;
       st2.find = !!(st2.note && noteFind.value);
     }
+    if (shared.VIEW === "minutes") st2.arg = minutesPath();
     return st2;
   }
   function hashOf(st2) {
     if (st2 && st2.v === "meeting") return `#meeting=${st2.arg || ""}`;
     if (st2 && st2.v === "notes") return `#notes=${st2.arg || ""}${st2.note ? `&n=${encodeURIComponent(st2.note)}` : ""}${st2.note && st2.find ? "&find=1" : ""}`;
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
+    if (st2 && st2.v === "minutes") return `#minutes=${encodeURIComponent(typeof st2.arg === "string" ? st2.arg : "")}`;
     if (st2 && st2.v === "milestones") return `#milestones=${st2.arg}&v=${st2.mv === "move" ? "movement" : "plan"}${st2.ms ? `&ms=${st2.ms}` : ""}`;
     if (st2 && st2.v === "people") return "#people" + (st2.arg === "none" ? "/none" : "");
     let h5 = st2.v === "help" ? `help-${st2.arg || "start"}` : st2.v === "settings" ? `settings/${st2.arg || "general"}` : st2.v === "cockpit" ? `cockpit=${st2.arg}` : st2.v === "person" ? `person=${encodeURIComponent(st2.arg)}` : st2.v === "work" ? `work=${st2.wt}${st2.wv ? `&v=${encodeURIComponent(st2.wv)}` : ""}${st2.p && st2.p.length ? `&p=${st2.p.join(",")}` : ""}${!st2.wv && st2.fx ? Object.keys(st2.fx).length ? Object.entries(st2.fx).map(([k5, v5]) => `&${k5}=${v5.map(encodeURIComponent).join(",")}`).join("") : "&f=none" : ""}${st2.lay === "board" ? `&lay=board&g=${st2.g}` : st2.lg && st2.lg !== "none" ? `&lg=${st2.lg}` : ""}${st2.sg && st2.sg !== "none" ? `&sg=${st2.sg}` : ""}${st2.sort ? `&s=${st2.sort.col}.${st2.sort.dir}` : ""}${st2.q && st2.q.trim() ? `&q=${encodeURIComponent(st2.q.trim().replace(/[&=#]/g, " "))}` : ""}${st2.from ? `&from=${st2.from}` : ""}${!st2.wv && st2.vb ? `&vb=${encodeURIComponent(st2.vb)}` : ""}` : st2.v === "inbox" ? "intake" : st2.v;
@@ -49761,6 +51732,18 @@ ${d5.text}`);
         }
         if (!notesCodeOk(code)) return null;
         return { v: "notes", arg: code, note: n4, find: /[&]find=1(&|$)/.test(String(h5 || "")), wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+      }
+    }
+    {
+      const mm2 = /^#?minutes=(.+)$/.exec(String(h5 || ""));
+      if (mm2) {
+        let a5 = "";
+        try {
+          a5 = decodeURIComponent(mm2[1]);
+        } catch (e4) {
+          return null;
+        }
+        return /\.html$/i.test(a5) ? { v: "minutes", arg: a5, wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 } : null;
       }
     }
     {
@@ -49974,7 +51957,7 @@ ${d5.text}`);
       const id2 = { cockpit: "v-cockpit", mine: "v-work" }[v6] || "v-" + v6;
       $("#" + id2).hidden = false;
       $("#" + id2).scrollTop = 0;
-      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects" }[v6] || v6;
+      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", minutes: "review" }[v6] || v6;
       setRailView(railKey);
       if (v6 === "mine") {
         shared.WT = "actions";
@@ -49986,7 +51969,7 @@ ${d5.text}`);
       if (v6 === "person") shared.PERSON = arg2;
       if (v6 === "notes") shared.NOTECODE = arg2;
       if (v6 === "settings" && arg2) STAB = arg2;
-      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2) }[v6] || (() => {
+      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2), minutes: () => renderMinutes(arg2) }[v6] || (() => {
       }))();
       if (!opt2.restore) navWrite(true);
       return true;
@@ -50166,9 +52149,10 @@ ${d5.text}`);
       const v5 = prepView.value, t48 = v5 && v5.ok && v5.model ? v5.model.meeting.title : "";
       TABNAME.prep = t48 ? `Prep · ${t48}` : "Prep";
     }
+    if (shared.VIEW === "minutes") TABNAME.minutes = "Minutes";
     const n4 = REV.filter((r4) => !r4.done).length, vips = VIPS().length;
-    const where2 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
-    const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where2 ? ` · ${where2}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
+    const where3 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
+    const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where3 ? ` · ${where3}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
     if (document.title !== t47) document.title = t47;
     if (shared.VIEW === "milestones" && shared.MSCODE) {
       const t48 = document.title.replace(/ · [^·]*$/, "").replace(/ \(\d+\)$/, "") + ` · ${pName(shared.MSCODE)} milestones`;
@@ -50517,7 +52501,7 @@ ${d5.text}`);
       return m5 ? `the ${esc(m5[0])} milestone${m5[2] ? ` (${dnDt(m5[2])})` : ""}` : esc(id2);
     });
   }
-  var dnDt = (iso) => `<span class="dt">${fd(iso)}</span>`;
+  var dnDt = (iso2) => `<span class="dt">${fd(iso2)}</span>`;
   function dnWait(d5) {
     if (!d5.since) return "";
     const n4 = -days(d5.since);
@@ -50936,12 +52920,12 @@ ${d5.text}`);
     const r4 = btn.getBoundingClientRect();
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
-    const pad = (n4) => String(n4).padStart(2, "0"), isoOf2 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
+    const pad3 = (n4) => String(n4).padStart(2, "0"), isoOf2 = (d5) => `${d5.getFullYear()}-${pad3(d5.getMonth() + 1)}-${pad3(d5.getDate())}`;
     const draw2 = (focus) => {
       const f5 = new Date(y5, m5, 1), st2 = (f5.getDay() + 6) % 7, dn2 = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st2);
       for (let d5 = 1; d5 <= dn2; d5++) {
-        const v5 = `${y5}-${pad(m5 + 1)}-${pad(d5)}`, off = max && v5 > max || min && v5 < min;
+        const v5 = `${y5}-${pad3(m5 + 1)}-${pad3(d5)}`, off = max && v5 > max || min && v5 < min;
         g5 += `<button type="button" data-v="${fd(v5)}" tabindex="${v5 === cur ? 0 : -1}" ${off ? 'disabled aria-disabled="true"' : ""} aria-label="${fd(v5)}" class="${v5 === TODAY ? "today" : ""} ${v5 === toIso(inp.value) ? "sel" : ""} ${off ? "off" : ""}">${d5}</button>`;
       }
       putHTML(box, html`<div class="ch"><button type="button" data-n="-1" aria-label="Previous month">‹</button><span>${raw(f5.toLocaleString("en-GB", { month: "long" }))} ${raw(y5)}</span><button type="button" data-n="1" aria-label="Next month">›</button></div><div class="cg">${raw(g5)}</div><div class="cf"><button type="button" data-v="${fd(min && TODAY < min ? min : max && TODAY > max ? max : TODAY)}">Today</button>${noclear ? "" : html`<button type="button" data-v="">Clear</button>`}</div>`);
@@ -50950,12 +52934,12 @@ ${d5.text}`);
         if (c5) c5.focus();
       }
     };
-    const goTo = (iso) => {
-      if (max && iso > max) iso = max;
-      if (min && iso < min) iso = min;
-      cur = iso;
-      y5 = +iso.slice(0, 4);
-      m5 = +iso.slice(5, 7) - 1;
+    const goTo = (iso2) => {
+      if (max && iso2 > max) iso2 = max;
+      if (min && iso2 < min) iso2 = min;
+      cur = iso2;
+      y5 = +iso2.slice(0, 4);
+      m5 = +iso2.slice(5, 7) - 1;
       draw2(true);
     };
     draw2(true);
@@ -50973,7 +52957,7 @@ ${d5.text}`);
           m5 = 0;
           y5++;
         }
-        cur = `${y5}-${pad(m5 + 1)}-${pad(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
+        cur = `${y5}-${pad3(m5 + 1)}-${pad3(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
         if (max && cur > max) cur = max;
         if (min && cur < min) cur = min;
         draw2(false);
@@ -51037,76 +53021,19 @@ ${d5.text}`);
     });
   }
   var DATE_HELP = "Try “fri”, “+3d”, “15-10” or 16-10-2026.";
-  var DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
-  function parseWhen(text, today = TODAY, due = false) {
-    let s5 = String(text || "").trim().toLowerCase().replace(/\s+/g, " ").replace(/[.,]$/, "");
-    if (!s5) return null;
-    const pad = (n4) => String(n4).padStart(2, "0"), iso = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`, t02 = /* @__PURE__ */ new Date(today + "T12:00:00");
-    const add = (n4, unit) => {
-      const d5 = new Date(t02);
-      if (unit === "m") {
-        const day = d5.getDate();
-        d5.setDate(1);
-        d5.setMonth(d5.getMonth() + n4);
-        d5.setDate(Math.min(day, new Date(d5.getFullYear(), d5.getMonth() + 1, 0).getDate()));
-      } else d5.setDate(d5.getDate() + n4 * (unit === "w" ? 7 : 1));
-      return iso(d5);
-    };
-    const real = (y5, m6, d5) => {
-      if (y5 < 100) y5 += 2e3;
-      const x5 = new Date(y5, m6 - 1, d5, 12);
-      return x5.getFullYear() === y5 && x5.getMonth() === m6 - 1 && x5.getDate() === d5 ? iso(x5) : null;
-    };
-    const dm2 = (d5, m6, y5) => {
-      if (y5 != null) return real(+y5, +m6, +d5);
-      const yr2 = t02.getFullYear();
-      let r4 = real(yr2, +m6, +d5);
-      if (r4 && due && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
-      return r4;
-    };
-    const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], mon = (w6) => {
-      const i5 = MON.indexOf(w6.slice(0, 3));
-      return i5 >= 0 && ("january february march april may june july august september sept october november december".split(" ").some((n4) => n4.startsWith(w6)) || w6.length === 3) ? i5 + 1 : 0;
-    };
-    if (s5 === "today" || s5 === "now") return today;
-    if (s5 === "tomorrow" || s5 === "tmrw" || s5 === "tmr") return add(1, "d");
-    if (s5 === "yesterday") return add(-1, "d");
-    let m5 = s5.match(/^(next |this )?([a-z]{3,9})$/);
-    if (m5) {
-      const w6 = DAYS.findIndex((d5) => m5[2].startsWith(d5) && "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ").some((n4) => n4.startsWith(m5[2])));
-      if (w6 >= 0) {
-        const ahead = (w6 - t02.getDay() + 7) % 7 || 7;
-        return add(ahead + (m5[1] === "next " ? 7 : 0), "d");
-      }
-    }
-    if (s5 === "next week") return add((1 - t02.getDay() + 7) % 7 || 7, "d");
-    if (s5 === "end of week" || s5 === "eow") return add((5 - t02.getDay() + 7) % 7, "d");
-    if (s5 === "end of month" || s5 === "eom") return iso(new Date(t02.getFullYear(), t02.getMonth() + 1, 0, 12));
-    if (s5 === "end of next week") return add((5 - t02.getDay() + 7) % 7 + 7, "d");
-    m5 = s5.match(/^(?:\+|in )?\s*(\d{1,3}) ?(d|days?|w|wks?|weeks?|m|mos?|months?)$/);
-    if (m5) return add(+m5[1], m5[2][0]);
-    m5 = s5.match(/^\+(\d{1,3})$/);
-    if (m5) return add(+m5[1], "d");
-    m5 = s5.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (m5) return real(+m5[1], +m5[2], +m5[3]);
-    m5 = s5.match(/^(\d{1,2})[\/\-. ](\d{1,2})(?:[\/\-. ](\d{2}|\d{4}))?$/);
-    if (m5) return dm2(m5[1], m5[2], m5[3]);
-    m5 = s5.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})(?: (\d{4}))?$/);
-    if (m5 && mon(m5[2])) return dm2(m5[1], mon(m5[2]), m5[3]);
-    m5 = s5.match(/^([a-z]{3,9}) (\d{1,2})(?:st|nd|rd|th)?(?: (\d{4}))?$/);
-    if (m5 && mon(m5[1])) return dm2(m5[2], mon(m5[1]), m5[3]);
-    return null;
+  function parseWhen(text, today = TODAY, due = false, mode = "") {
+    return parseWords(text, today, due, mode);
   }
-  var dateSaid = (iso) => `${(/* @__PURE__ */ new Date(iso + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso)}`;
+  var dateSaid = (iso2) => `${(/* @__PURE__ */ new Date(iso2 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(iso2)}`;
   var isDateField = (el2) => !!(el2 && el2.tagName === "INPUT" && !el2.readOnly && el2.matches('[data-date],[placeholder="DD-MM-YYYY"],#bdDate,[data-und]'));
   var dueField = (el2) => /(^|_)due$/.test(el2.name || el2.id || "") || el2.dataset.cf === "due" || el2.dataset.bf === "due" || ["rvDate", "bdDate", "bkDate", "deReply"].includes(el2.id) || el2.dataset.und != null || el2.name === "fc";
   function dateRead(el2) {
     const v5 = el2.value.trim();
     if (!v5) return { empty: true };
-    const iso = parseWhen(v5, TODAY, dueField(el2));
-    if (!iso) return { bad: true };
+    const iso2 = parseWhen(v5, TODAY, dueField(el2));
+    if (!iso2) return { bad: true };
     const max = el2.dataset.max === "today" ? TODAY : el2.dataset.max, min = el2.dataset.min === "today" ? TODAY : el2.dataset.min;
-    return { iso, late: !!(max && iso > max), early: !!(min && iso < min) };
+    return { iso: iso2, late: !!(max && iso2 > max), early: !!(min && iso2 < min) };
   }
   function dateHint(el2) {
     let h5 = $("#dateHint");
@@ -51398,20 +53325,20 @@ ${d5.text}`);
   })();
   var WKNAME = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   var wkDays = () => new Set(Array.isArray(S.weekendDays) ? S.weekendDays : [5, 6]);
-  var wkDow = (iso) => ((/* @__PURE__ */ new Date(iso + "T00:00:00Z")).getUTCDay() + 6) % 7;
-  var wkLong = (iso) => `${WKNAME[wkDow(iso)]} ${fd(iso)}`;
-  function weekendNote(iso) {
-    if (!iso || !DATE.test(String(iso))) return null;
+  var wkDow = (iso2) => ((/* @__PURE__ */ new Date(iso2 + "T00:00:00Z")).getUTCDay() + 6) % 7;
+  var wkLong = (iso2) => `${WKNAME[wkDow(iso2)]} ${fd(iso2)}`;
+  function weekendNote(iso2) {
+    if (!iso2 || !DATE.test(String(iso2))) return null;
     const W3 = wkDays();
-    if (W3.size >= 7 || !W3.has(wkDow(iso))) return null;
-    let p6 = iso, n4 = iso;
+    if (W3.size >= 7 || !W3.has(wkDow(iso2))) return null;
+    let p6 = iso2, n4 = iso2;
     do
       p6 = pkAdd(p6, -1);
     while (W3.has(wkDow(p6)));
     do
       n4 = pkAdd(n4, 1);
     while (W3.has(wkDow(n4)));
-    return { iso, day: WKNAME[wkDow(iso)], prev: p6, next: n4, text: `${wkLong(iso)} is a weekend.` };
+    return { iso: iso2, day: WKNAME[wkDow(iso2)], prev: p6, next: n4, text: `${wkLong(iso2)} is a weekend.` };
   }
   function weekendHtml(n4, extra = "") {
     return `<div class="wknote" role="status" aria-live="polite"${extra}>${ic("calendar")}<span>${esc(n4.text)}</span><span class="wkb"><button type="button" class="mini" data-wkd="${n4.prev}">${esc(wkLong(n4.prev))}</button><button type="button" class="mini" data-wkd="${n4.next}">${esc(wkLong(n4.next))}</button><button type="button" class="mini" data-wkd="keep">Keep this date</button></span></div>`;
@@ -51424,8 +53351,8 @@ ${d5.text}`);
       WK.ask = null;
     }
   }
-  function wkAsk(iso, anchor, apply2, o5 = {}) {
-    const n4 = weekendNote(iso);
+  function wkAsk(iso2, anchor, apply2, o5 = {}) {
+    const n4 = weekendNote(iso2);
     if (!n4) return false;
     wkClear();
     const t47 = document.createElement("div");
@@ -51439,7 +53366,7 @@ ${d5.text}`);
       box.style.left = Math.max(8, Math.min(r4.left, innerWidth - box.offsetWidth - 8)) + "px";
       box.style.top = (r4.bottom + box.offsetHeight + 8 > innerHeight ? Math.max(8, r4.top - box.offsetHeight - 4) : r4.bottom + 4) + "px";
     }
-    WK.ask = { box, apply: apply2, iso, anchor };
+    WK.ask = { box, apply: apply2, iso: iso2, anchor };
     if (o5.focus !== false) box.querySelector("[data-wkd]").focus();
     return true;
   }
@@ -51465,9 +53392,9 @@ ${d5.text}`);
         if (v5 && !WK.ok && wkAsk(v5, anchor, op2)) return;
         op2(v5);
       } : op2,
-      weekend: gate ? (iso) => wkDays().has(wkDow(iso)) : void 0,
+      weekend: gate ? (iso2) => wkDays().has(wkDow(iso2)) : void 0,
       typedNote: gate ? (t47) => {
-        const iso = t47 ? parseWhen(t47, TODAY, true) : null, n4 = weekendNote(iso);
+        const iso2 = t47 ? parseWhen(t47, TODAY, true) : null, n4 = weekendNote(iso2);
         return n4 ? `${n4.text} You'll be offered the nearest working days.` : "";
       } : void 0
     });
@@ -51478,7 +53405,7 @@ ${d5.text}`);
       if (!b5 || !WK.ask || !WK.ask.box.contains(b5)) return;
       e4.preventDefault();
       e4.stopPropagation();
-      const { apply: apply2, iso, anchor } = WK.ask, v5 = b5.dataset.wkd === "keep" ? iso : b5.dataset.wkd;
+      const { apply: apply2, iso: iso2, anchor } = WK.ask, v5 = b5.dataset.wkd === "keep" ? iso2 : b5.dataset.wkd;
       wkClear();
       WK.ok = true;
       try {
@@ -51775,13 +53702,13 @@ ${d5.text}`);
               const t47 = (
                 /** @type {HTMLInputElement} */
                 e4.currentTarget.value
-              ), iso = t47.trim() ? fuIsoOf(t47) : "";
-              if (iso === null) {
+              ), iso2 = t47.trim() ? fuIsoOf(t47) : "";
+              if (iso2 === null) {
                 setBad("Write the date as DD-MM-YYYY");
                 return;
               }
               setBad("");
-              fuEdit(row2.key, f5, iso);
+              fuEdit(row2.key, f5, iso2);
             }
           }
         ),
@@ -52180,7 +54107,7 @@ ${d5.text}`);
   function blockLines(doc, md2) {
     const lines = noteLines(md2).map(flat), out = [];
     let i5 = 0;
-    const take = (node, pos) => {
+    const take2 = (node, pos) => {
       const t47 = flat(node.textContent);
       if (!t47) return;
       for (let j5 = i5; j5 < lines.length; j5++) if (lines[j5].includes(t47) || t47.includes(lines[j5]) && lines[j5]) {
@@ -52190,8 +54117,8 @@ ${d5.text}`);
       }
     };
     doc.forEach((node, pos) => {
-      if (LISTS.has(node.type.name)) node.forEach((item, off) => take(item, pos + 1 + off));
-      else take(node, pos);
+      if (LISTS.has(node.type.name)) node.forEach((item, off) => take2(item, pos + 1 + off));
+      else take2(node, pos);
     });
     return out;
   }
@@ -54090,8 +56017,8 @@ ${d5.text}`);
       ] })
     ] });
   }
-  function addDays(iso, n4) {
-    const d5 = /* @__PURE__ */ new Date(iso + "T12:00:00");
+  function addDays(iso2, n4) {
+    const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00");
     d5.setDate(d5.getDate() + n4);
     return d5.toISOString().slice(0, 10);
   }
@@ -57184,10 +59111,10 @@ ${d5.text}`);
     const t47 = String(text || "").trim().replace(/^(to|on|by|for|until)\s+/i, "");
     if (/^[+-]\s*\d/.test(t47) && base) {
       const n4 = t47.replace(/\s+/g, "").replace(/^-/, "-"), neg = n4.startsWith("-");
-      const iso = parseWhen(neg ? n4.slice(1).replace(/^/, "+") : n4, base);
-      if (!iso) return null;
-      if (!neg) return iso;
-      const d5 = (/* @__PURE__ */ new Date(iso + "T12:00:00") - /* @__PURE__ */ new Date(base + "T12:00:00")) / 864e5;
+      const iso2 = parseWhen(neg ? n4.slice(1).replace(/^/, "+") : n4, base);
+      if (!iso2) return null;
+      if (!neg) return iso2;
+      const d5 = (/* @__PURE__ */ new Date(iso2 + "T12:00:00") - /* @__PURE__ */ new Date(base + "T12:00:00")) / 864e5;
       return pkAdd(base, -d5);
     }
     return parseWhen(t47, TODAY, true);
@@ -57269,11 +59196,11 @@ ${d5.text}`);
       const what = m5[1].replace(/\s+(?:due|due date)$/i, ""), when2 = m5[2];
       return one(what, (t47) => {
         const cur = t47.k === "milestones" ? ckMs(t47.id).due : REC(t47.k, t47.id).due;
-        const iso = ckDate(when2, cur || TODAY);
-        if (!iso) return { ask: `“${when2}” isn't a date creaite knows. ${DATE_HELP}` };
-        if (t47.k === "milestones") return { verb: "date", ...t47, patch: { fc: iso }, label: "Forecast" };
+        const iso2 = ckDate(when2, cur || TODAY);
+        if (!iso2) return { ask: `“${when2}” isn't a date creaite knows. ${DATE_HELP}` };
+        if (t47.k === "milestones") return { verb: "date", ...t47, patch: { fc: iso2 }, label: "Forecast" };
         if (t47.k === "decisions" && REC(t47.k, t47.id).st !== "Pending") return { ask: "Only a pending decision has a needed-by date" };
-        return { verb: "date", ...t47, patch: { due: iso }, label: t47.k === "decisions" ? "Needed by" : "Due date" };
+        return { verb: "date", ...t47, patch: { due: iso2 }, label: t47.k === "decisions" ? "Needed by" : "Due date" };
       });
     }
     return { ask: "creaite couldn't read that as a change" };
@@ -57558,17 +59485,17 @@ ${d5.text}`);
     return x5 ? `#work=${kind}${x5.p ? `&p=${x5.p}` : ""}&item=${id2}` : "#";
   }
   function actLine(a5) {
-    let id2 = a5.id, text = a5.item, change = a5.change;
+    let id2 = a5.id, text = a5.item, change2 = a5.change;
     if (!id2) {
       const m5 = String(a5.what).match(ID_RE);
       if (!m5) return html`${String(a5.what ?? "")}`;
       id2 = m5[1];
       text = itemText(id2);
-      change = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
+      change2 = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
     }
     if (!text) return html`${String(a5.what ?? "")}`;
     const short = text.length > 80 ? text.slice(0, 79) + "…" : text, kind = /-A-/.test(id2) ? "actions" : /-D-/.test(id2) ? "decisions" : /-M-/.test(id2) ? "ms" : /-\d{3}$/.test(id2) ? "raid" : /^[A-Z][A-Z0-9]{2,6}$/.test(id2) ? "proj" : "";
-    const ch2 = String(change ?? "");
+    const ch2 = String(change2 ?? "");
     if (kind === "proj") return html`<a href="#" class="hlink" data-proj="${id2}">${pName(id2)}</a> — ${ch2}`;
     const upd = id2.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/);
     if (upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch2}`;
@@ -57660,12 +59587,12 @@ ${d5.text}`);
       ],
       onSelect: (k5, vals) => actSetFilters({ types: vals }),
       onRange: (k5, end, text) => {
-        const v5 = text.trim(), iso = v5 ? parseWhen(v5) : "";
-        if (v5 && !iso) {
+        const v5 = text.trim(), iso2 = v5 ? parseWhen(v5) : "";
+        if (v5 && !iso2) {
           snack("Not a date creaite knows. Use DD-MM-YYYY");
           return;
         }
-        actSetFilters({ [end]: iso || "" });
+        actSetFilters({ [end]: iso2 || "" });
       },
       more: {
         id: "actFunnel",
@@ -59882,7 +61809,7 @@ ${d5.text}`);
       /** @type {any} */
       s5
     );
-    const change = (nd2, why, ev) => {
+    const change2 = (nd2, why, ev) => {
       onChange(nd2, why);
       if (ev) onEvent(ev);
     };
@@ -59911,7 +61838,7 @@ ${d5.text}`);
       const d5 = e4.key === "ArrowUp" ? -1 : 1, to2 = Math.max(0, Math.min(doc.sections.length - 1, i5 + d5));
       if (to2 === i5) return;
       p6.refocus.current = s5.id;
-      change(moveBy(doc, s5.id, d5), "Section moved", { type: "section-moved", id: s5.id, to: to2 });
+      change2(moveBy(doc, s5.id, d5), "Section moved", { type: "section-moved", id: s5.id, to: to2 });
     };
     const ctx = {
       section: s5,
@@ -59945,7 +61872,7 @@ ${d5.text}`);
     const differs = p6.side === "left" && peer ? sectionDiffers(s5, peer) : false;
     const tags = tagsOf(s5);
     const nowName = (v5) => {
-      if (v5.trim() && v5.trim() !== s5.heading) change(renameHeading(doc, s5.id, v5), "Heading renamed", null);
+      if (v5.trim() && v5.trim() !== s5.heading) change2(renameHeading(doc, s5.id, v5), "Heading renamed", null);
       else setName(s5.heading);
     };
     const menu = [
@@ -59955,12 +61882,12 @@ ${d5.text}`);
       ...s5.heading !== defaultHeading(s5) ? [{ id: "reset", name: "Reset the heading", line: defaultHeading(s5) }] : []
     ];
     const onPick = (id2) => {
-      if (id2 === "hide") change(hideSection(doc, s5.id), "Section hidden", { type: "section-hidden", id: s5.id });
-      else if (id2 === "reset") change(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id });
+      if (id2 === "hide") change2(hideSection(doc, s5.id), "Section hidden", { type: "section-hidden", id: s5.id });
+      else if (id2 === "reset") change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id });
       else {
         const d5 = id2 === "up" ? -1 : 1;
         p6.refocus.current = s5.id;
-        change(moveBy(doc, s5.id, d5), "Section moved", { type: "section-moved", id: s5.id, to: i5 + d5 });
+        change2(moveBy(doc, s5.id, d5), "Section moved", { type: "section-moved", id: s5.id, to: i5 + d5 });
       }
     };
     const drop = (e4) => {
@@ -59976,7 +61903,7 @@ ${d5.text}`);
       const fi2 = doc.sections.findIndex((x5) => x5.id === from);
       let to2 = i5 + (below ? 1 : 0);
       if (fi2 < to2) to2 -= 1;
-      change(moveSection(doc, from, to2), "Section moved", { type: "section-moved", id: from, to: to2 });
+      change2(moveSection(doc, from, to2), "Section moved", { type: "section-moved", id: from, to: to2 });
     };
     if (s5.type === "header" && ownRender) return /* @__PURE__ */ u2(SHEET_HERE.Provider, { value: here, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, ref: box, children: ownRender(ctx) }) });
     return /* @__PURE__ */ u2(SHEET_HERE.Provider, { value: here, children: /* @__PURE__ */ u2(
@@ -60047,7 +61974,7 @@ ${d5.text}`);
                 }
               }
             ) : s5.heading,
-            editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
+            editing && s5.heading !== defaultHeading(s5) ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-reset", onClick: () => change2(resetHeading(doc, s5.id), "Heading reset", { type: "heading-reset", id: s5.id }), children: "Reset" }) : null,
             sparkOn && spark2 ? /* @__PURE__ */ u2(SparkButton, { on: spark2, heading: s5.heading }) : null,
             editing && tags.length ? /* @__PURE__ */ u2("button", { type: "button", class: "sheet-untag", onClick: () => {
               update({ tags: [] }, "Tags removed");
@@ -60256,7 +62183,7 @@ ${d5.text}`);
         if (s5.dirty) flush();
       }
     };
-    const change = (doc) => {
+    const change2 = (doc) => {
       const s5 = st2.current;
       if (s5.a.readOnly || !s5.a.onSave) return;
       s5.latest = doc;
@@ -60279,7 +62206,7 @@ ${d5.text}`);
       const s5 = st2.current;
       if (s5.dirty) flush();
     }, []);
-    return { line, conflict, removed, change, flush, reload };
+    return { line, conflict, removed, change: change2, flush, reload };
   }
   function removedLine(r4) {
     if (!r4 || Array.isArray(r4) && !r4.length) return "";
@@ -60769,9 +62696,11 @@ ${d5.text}`);
         "CHK",
         "CMDENTER",
         "COLS",
+        "Checked",
         "Chip",
         "CloseDay",
         "Combobox",
+        "Coverage",
         "D",
         "DDATE",
         "DEC",
@@ -61125,6 +63054,7 @@ ${d5.text}`);
         "paneMarkers",
         "parseHash",
         "parseWhen",
+        "parseWords",
         "passes",
         "peekFrame",
         "peekPropNodes",
@@ -61240,6 +63170,7 @@ ${d5.text}`);
         "sayMd",
         "seeAll",
         "send",
+        "sensitive",
         "setChatWidth",
         "setLayout",
         "setLive",

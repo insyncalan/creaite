@@ -79,7 +79,7 @@ function StubItemRef({ id }) {
 function StubTag({ tag }) {
   const h = /** @type {Here} */ (useContext(HERE));
   if (h.exported) return null;
-  return <button type="button" class="chip" onClick={() => { if (tag.ref.startsWith("t:")) h.onEvent({ type: "tag", tag }); else openRef(tag.ref, h.onOpenItem); }}>{tag.text || tag.ref}</button>;
+  return <button type="button" class="chip" onClick={() => { if (tag.ref === "transcript" || tag.ref.startsWith("t:")) h.onEvent({ type: "tag", tag }); else openRef(tag.ref, h.onOpenItem); }}>{tag.text || tag.ref}</button>;
 }
 const NoSpark = () => null;
 

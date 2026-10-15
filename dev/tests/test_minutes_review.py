@@ -299,6 +299,73 @@ class MeetingFlowTests(unittest.TestCase):
         self.assertIn("skipped (rejected before)", out)
 
 
+class RecordFlowTests(unittest.TestCase):
+    """v2.1.0 P4 (BL-338): the same meeting staged as a minutes record (no Word draft), approved in Review as before."""
+
+    def setUp(self):
+        self.v = Vault()
+        self.v.run("init")
+        self.transcript = "inbox/Recording 2026-10-01.vtt"
+        (self.v.root / self.transcript).write_text(TRANSCRIPT)
+        spec = meeting_spec(None, self.transcript)
+        spec.pop("draft")
+        spec["minutes"] = {"start": "10:00", "end": "11:00", "summary": ["The steering committee reviewed the SOW."]}
+        f = self.v.root / "system/staging/meeting.json"
+        f.write_text(json.dumps(spec))
+        self.stage_out = self.v.run("stage", str(f), script="minutes.py").stdout
+
+    def tearDown(self):
+        self.v.cleanup()
+
+    def review(self, *args, ok=True):
+        return self.v.run(*args, script="review.py", ok=ok)
+
+    def test_review_approves_a_record_with_no_word_checks_and_apply_files_it(self):
+        self.assertIn("Draft minutes: system/staging/drafts/2026-10-01 Steering committee.html", self.stage_out)
+        listing = self.review("list").stdout
+        self.assertIn("### Draft documents", listing)
+        self.assertIn("Example Programme: 1 drafts, 2 individual, 3 routine", self.review("pending").stdout)   # the bulk rule as before
+        out = self.review("approve", "1").stdout
+        self.assertIn("Minutes approved", out)
+        self.assertNotIn("differs", out)
+        self.review("bulk")
+        self.assertIn("written 3, filed 1", self.v.run("apply").stdout)
+        filed = self.v.root / ABC / "minutes/2026-10-01 Steering committee.html"
+        text = filed.read_text(encoding="utf-8")
+        self.assertIn("Approved by Alan on", text)
+        self.assertIn('"state": "approved"', text)
+        self.assertIn("ABC-A-001", text)
+        self.assertEqual(self.v.rows("actions")[0]["source"], f"{ABC}/minutes/2026-10-01 Steering committee.html — Action Items")
+        self.assertTrue((self.v.root / ABC / "transcripts/2026-10-01 Steering committee.vtt").exists())
+        self.assertFalse((self.v.root / ABC / "minutes/2026-10-01 Steering committee.docx").exists())
+
+    def test_rejected_minutes_still_file_the_transcript_and_cite_it(self):
+        self.review("list")
+        self.review("reject", "1")
+        self.review("bulk")
+        self.v.run("apply")
+        self.assertFalse((self.v.root / ABC / "minutes/2026-10-01 Steering committee.html").exists())
+        self.assertEqual(self.v.rows("actions")[0]["source"],
+                         f"{ABC}/transcripts/2026-10-01 Steering committee.vtt — Action Items")
+
+    def test_re_extract_is_retired_for_a_record(self):
+        prop = next((self.v.root / "system/staging").glob("proposed-*.json")).name
+        r = self.v.run("refresh", prop, script="minutes.py", ok=False)
+        self.assertIn("nothing to refresh", r.stdout)
+
+
+    def test_open_draft_on_a_record_never_says_word(self):
+        """Review's Open draft on a minutes record (an .html draft) opens the minutes view (v2.1.0 P7), never Word; without the
+        live server it opens the record and says to approve the minutes in Claude Code."""
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+        from split_dashboard import readable_page
+        page = readable_page()
+        rule = re.search(r'if\(r\.kind==="draft"&&/\\\.html\$/i\.test\(r\.src\|\|""\)\)\{.*?running\)"\); return; \}', page)
+        self.assertIsNotNone(rule)
+        self.assertIn('go("minutes",{file:r.file})', rule.group(0))
+        self.assertIn("Check the minutes, then approve them", rule.group(0))
+        self.assertNotIn("Word", rule.group(0))
+
 class ReviewDetailTests(unittest.TestCase):
     """BL-25: the details needed to decide, shown with each proposed item."""
 

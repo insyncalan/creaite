@@ -354,8 +354,9 @@ exported or an export. Coverage is an extra over `doc.meta.coverage`, not a sect
   mine, Show in the transcript). A click is `onEvent({type: "check", id, action})`; the view changes the text or drops the
   check. Open checks are counted in the bar ("2 checks open"), for the approve popup to list.
 - **Source tags** are `section.tags` (§1) and a row's `source`: drawn after their line as a small chip (an item ID, or a time
-  for the minutes, `{ref: "t:00:14:32", text}`); a click opens the item (§4.7) or emits `{type: "tag", tag}` for a time tag (P7
-  scrolls the transcript); hover shows ✕ to remove one; **Remove all tags** beside the heading. **Never exported** (render
+  for the minutes, P4's shape `{ref: "transcript", turn, time, text}`: `turn` the transcript turn's number, `time` its HH:MM:SS or
+  null when the transcript has no times; Jarvis, 15-10-2026 on plan #70); a click opens the item (§4.7) or emits
+  `{type: "tag", tag}` for a time tag (P7 scrolls the transcript); hover shows ✕ to remove one; **Remove all tags** beside the heading. **Never exported** (render
   ignores `tags`), never in Show as exported.
 
 ### 4.6 Side by side
