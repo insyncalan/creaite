@@ -25,6 +25,9 @@ def make_client_visible(v, *ids):
         con.commit()
     finally:
         con.close()
+    # BL-327: the server's first page is the last built dashboard.html while the records' version (change_log, applies) is
+    # unchanged, and a direct edit doesn't move it; build the page again so it shows the client-visible items
+    v.run(script="build_dashboard.py")
 
 
 class Client(DraftCase):

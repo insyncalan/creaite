@@ -628,15 +628,15 @@ PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json",   #
 
 def page_inputs():
     """The files the page's data is built from, other than the database: every file directly in staging (proposals, the
-    sweep, calendar, transcripts and the rest) and its drafts, system/config, the registers, the portfolio and each project's
-    memory, the page template and help. Files the build and the server write themselves (PAGE_IGNORE) are left out."""
+    sweep, calendar, transcripts and the rest), its drafts and its evidence (BL-207: a saved Current state's links),
+    system/config, the registers, the portfolio and each project's memory, the page template and help. Files the build and the server write themselves (PAGE_IGNORE) are left out."""
     def listed(d):
         """The files directly in `d` that count."""
         try:
             return sorted(f for f in d.iterdir() if f.is_file() and not f.name.startswith(".") and f.name not in PAGE_IGNORE)
         except OSError:                                  # the folder isn't there (yet): nothing to stamp
             return []
-    out = [f for d in (paths.STAGING, paths.DRAFTS, paths.SETTINGS.parent) for f in listed(d)]
+    out = [f for d in (paths.STAGING, paths.DRAFTS, paths.EVIDENCE, paths.SETTINGS.parent) for f in listed(d)]
     out += [build_dashboard.TEMPLATE, paths.TEMPLATES / "help.md", paths.REGISTER, paths.PEOPLE_REGISTER, paths.PORTFOLIO_MEMORY]
     try:
         out += [d / "CLAUDE.md" for _c, d in paths.project_folders()]
