@@ -1912,6 +1912,8 @@ body.pkstaged .snack{bottom:68px}
 /* ===== BL-177 (sprint-peek) ===== Review's proposals in the peek layout, with an explicit footer */
 .pk-foot{display:none;align-items:center;gap:8px;padding:12px calc(16px + var(--pkover)) 12px 16px;border-top:1px solid var(--line);flex:none;background:var(--surface)}
 #panel.peek.pkprop .pk-foot{display:flex} .pk-foot .sp{flex:1}
+/* plan #80: a phone-width peek has no room for all four actions in one row: Save and approve takes a row of its own */
+@media (max-width:480px){.pk-foot{flex-wrap:wrap} .pk-foot .btn.primary{flex:1 1 100%;justify-content:center}}
 .pk-propline{font-size:var(--fs-xs);color:var(--ink);font-weight:500;margin:6px 0 0}
 .pk-propnotes .cmnote{margin:8px 0 0} .pk-learn{display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-sm);margin:14px 0 4px}
 .pk-learn input{margin-top:4px}

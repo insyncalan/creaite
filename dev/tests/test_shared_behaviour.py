@@ -46,11 +46,6 @@ SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
-# BL-316: a pending new item's proposal in the peek, so its "Update an existing item instead" list (Review) is reached. Here
-# only: test_ui_sweep's reflow check finds the proposal peek's Save button 50px over at 320px wide (left for its own fix).
-SCREENS["review-peek"] = ("go('review'); openProposal(REV.find(r=>rtOK(r)).n)",
-                          "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#panel [data-rvrt]')", "#panel")
-us.SCREENS["review-peek"] = SCREENS["review-peek"]
 ONLY = {"shell": ".rail,header.bar"}   # the shell's own controls, not the page inside it
 # Still on the screen (settle goes back when not): its ready test, except where that test is a popup being open.
 ON_SCREEN = {"work-display": "VIEW==='work'"}
