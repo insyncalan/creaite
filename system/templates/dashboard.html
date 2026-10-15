@@ -11650,7 +11650,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var PSTATE = { active: "Active", closed: "Closed", archived: "Archived" };
   function projArchiveHtml() {
     const L2 = (D.project_states || []).filter((p6) => p6.state !== "archived" || S.showArchived);
-    return row("Show archived projects", sw("showArchived"), "Their items in Work, Today and the Excel export. Search finds them either way, marked Archived") + `<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L2.map((p6) => {
+    return row("Show archived projects", sw("showArchived"), "Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived") + `<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L2.map((p6) => {
       const back2 = p6.state === "archived";
       return `<tr><td>${esc(p6.name)}</td><td>${PSTATE[p6.state] || esc(p6.state)}</td><td class="mgract"><button class="mini" data-parch="${back2 ? "restore" : "archive"}" data-pcode="${esc(p6.code)}" aria-label="${back2 ? "Restore" : "Archive"} ${esc(p6.name)}">${back2 ? "Restore" : "Archive"}</button></td></tr>`;
     }).join("") || '<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`;
@@ -20250,7 +20250,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const h5 = (() => {
       if (k5 === "t") {
         const sub = t5 === "actions" ? `${x5.ws ? esc(x5.ws) : ""}${x5.upd ? ` · ${esc(x5.upd)}` : ""}` : t5 === "raid" ? `${x5.type}${x5.ws ? " · " + esc(x5.ws) : ""}${x5.type === "Dependency" && x5.st === "Open" && !x5.ms ? " · not attached" : ""}` : "";
-        return `<td class="title" data-f="t">${ico(kindOf(t5, x5))}${esc(x5.t)}${cmTag(x5)}<div class="x"><a href="#" class="rowid" data-rid="${x5.id}" title="Open ${x5.id}">${x5.id}</a> · ${pLink(x5.p)}${sub}</div></td>`;
+        return `<td class="title" data-f="t">${ico(kindOf(t5, x5))}${esc(x5.t)}${cmTag(x5)}${x5.ar ? ' <span class="tag">Archived</span>' : ""}<div class="x"><a href="#" class="rowid" data-rid="${x5.id}" title="Open ${x5.id}">${x5.id}</a> · ${pLink(x5.p)}${sub}</div></td>`;
       }
       if (k5 === "o") return `<td data-f="o">${personLink(x5.o)}</td>`;
       if (k5 === "due") return `<td data-f="due" class="${(t5 === "actions" ? overdue(x5) : x5.st === "Open" && x5.due && x5.due < TODAY) ? "late" : ""}" style="white-space:nowrap">${x5.due ? fd(x5.due) : "—"}<div class="x">${x5.due && OPENST(x5.st) ? rel(x5.due) : ""}</div></td>`;
@@ -28673,7 +28673,7 @@ ${d5.text}`);
     try {
       const hold = o5.hold ? o5.hold() : null;
       try {
-        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
+        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o5.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
         if (r4.ok) n4 = await r4.json();
       } catch (e4) {
         n4 = null;
@@ -35918,11 +35918,19 @@ ${d5.text}`);
     const [g5, i5] = key.split(":"), r4 = SRCH.res && SRCH.res.groups[g5] && SRCH.res.groups[g5][+i5];
     if (r4) openFound(r4);
   }
-  function openFound(r4) {
+  var SHOWARCH = "Show archived projects (Settings › People and projects › Projects and register)";
+  async function openFound(r4) {
     const o5 = r4.opens;
     if (o5.type === "item" && o5.archived && !S.showArchived) {
-      snack("Its project is archived: Settings › Advanced › Show archived projects opens it");
-      return;
+      if (o5.project_archived || !["actions", "raid"].includes(o5.table)) {
+        snack(`Its project is archived: ${SHOWARCH} brings it back`);
+        return;
+      }
+      if (!REC(o5.table, o5.id)) await recordsRefresh([o5.id], { aged: true });
+      if (!REC(o5.table, o5.id)) {
+        snack(`Archived for its age: ${SHOWARCH} shows it`);
+        return;
+      }
     }
     if (o5.type === "item") {
       if (o5.table === "milestones") {
@@ -40956,6 +40964,7 @@ ${d5.text}`);
         "openDisp",
         "openDraftEmail",
         "openFollowup",
+        "openFound",
         "openGen",
         "openMenu",
         "openMilestone",
@@ -41091,6 +41100,7 @@ ${d5.text}`);
         "savesSettled",
         "say",
         "sayMd",
+        "searchFetch",
         "seeAll",
         "send",
         "setChatWidth",

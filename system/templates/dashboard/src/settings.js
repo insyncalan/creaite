@@ -84,7 +84,7 @@ export function srName(c,id,h,l){ const tags=String(c).match(/<(input|select|tex
    lists them first: Cancel them all and archive, or Stop. */
 const PSTATE={active:"Active",closed:"Closed",archived:"Archived"};
 export function projArchiveHtml(){ const L=(D.project_states||[]).filter(p=>p.state!=="archived"||S.showArchived);
-  return row("Show archived projects",sw("showArchived"),"Their items in Work, Today and the Excel export. Search finds them either way, marked Archived")
+  return row("Show archived projects",sw("showArchived"),"Archived projects' items, and items archived for their age, in Work (tagged Archived), Today and the Excel export. Search finds them either way, marked Archived")
     +`<div class="tbl"><table class="mgr" id="projArch" aria-label="Projects: archive and restore"><tbody>${L.map(p=>{ const back=p.state==="archived";
       return `<tr><td>${esc(p.name)}</td><td>${PSTATE[p.state]||esc(p.state)}</td><td class="mgract"><button class="mini" data-parch="${back?"restore":"archive"}" data-pcode="${esc(p.code)}" aria-label="${back?"Restore":"Archive"} ${esc(p.name)}">${back?"Restore":"Archive"}</button></td></tr>`; }).join("")||'<tr><td class="sub">No projects yet.</td></tr>'}</tbody></table></div>`; }
 /* BL-316: the Dialog block (made the first time it opens, components/dialogs/PageDialogs.jsx); Esc or the scrim is Stop */
