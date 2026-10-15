@@ -241,6 +241,7 @@ def notes_folder_own():
     folder (Delete note moves the notes folder's files into _Archive)."""
     from pathlib import PurePosixPath
     def norm(kind):
+        """The kind's folder inside the engagement, lower case, without empty or "." parts."""
         return PurePosixPath(*[x for x in paths.folder_name(kind).lower().split("/") if x not in ("", ".")])
     n = norm("notes")
     bad = [f"{k} ({paths.folder_name(k)})" for k in NOT_NOTES
