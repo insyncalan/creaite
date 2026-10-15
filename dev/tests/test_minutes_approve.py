@@ -314,6 +314,51 @@ class Rows(Base):
         self.assertIn("is an update", self.change({"op": "edit", "n": 3, "values": {"owner": "Omar Ali"}})["message"])
 
 
+class ReviewEditFollows(Base):
+    """An item edited in Review moves its row on the draft record too, and a row edited on the record moves the item: both ways
+    stay in step (minutes_record.follow after review.py edit and the dashboard's proposal save; minutes_record.change)."""
+
+    def follow(self):
+        return self.js(f"import minutes_record\nprint(json.dumps(minutes_record.follow({self.name!r})))")
+
+    def review_n(self, item_n):
+        return self.js(f"import review\nprint(json.dumps(review.numbers()[1][({self.name!r}, {item_n})]))")
+
+    def test_nothing_changed_makes_no_new_version(self):
+        self.assertIsNone(self.follow())
+        self.assertEqual(self.doc()["version"], 1)
+
+    def test_a_review_edit_moves_the_row_and_a_row_edit_moves_the_item(self):
+        self.v.run("list", script="review.py")
+        self.v.run("edit", str(self.review_n(1)), "owner=Omar Ali", "due_date=23-10-2026", script="review.py")
+        doc = self.doc()
+        self.assertEqual(doc["version"], 2)
+        row = self.rows(doc, "actions")[0]
+        self.assertEqual((row["cells"]["owner"], row["cells"]["due"], row["ref"]), ("Omar Ali", "23-10-2026", "@1"))
+        self.assertEqual(doc["items"]["@1"]["values"]["owner"], "Omar Ali")
+        r = self.change({"op": "edit", "n": 1, "values": {"description": "Book the UAT environment today"}})   # the other way
+        self.assertTrue(r["ok"], r)
+        item = self.data()["items"][0]
+        self.assertEqual((item["values"]["owner"], item["values"]["description"]), ("Omar Ali", "Book the UAT environment today"))
+        data = self.data()                                                  # the dashboard's Review save: the proposal file itself
+        data["items"][1]["values"]["description"] = "Test data must be anonymised first"
+        data["items"][1]["edited_in"] = "dashboard"
+        self.proposal_path().write_text(json.dumps(data), encoding="utf-8")
+        self.assertEqual(self.follow(), 4)
+        row = self.rows(self.doc(), "raid")[0]
+        self.assertEqual((row["ref"], row["cells"]["description"]), ("@2", "Test data must be anonymised first"))
+        self.assertEqual(self.rows(self.doc(), "actions")[0]["cells"]["action"], "Book the UAT environment today")
+        self.assertIsNone(self.follow())                                    # in step: nothing more to do
+
+    def test_a_removed_row_stays_removed(self):
+        self.assertTrue(self.change({"op": "remove", "n": 2})["ok"])
+        data = self.data()
+        data["items"][1]["values"]["description"] = "Edited after it was removed"
+        self.proposal_path().write_text(json.dumps(data), encoding="utf-8")
+        self.assertIsNone(self.follow())
+        self.assertEqual(self.rows(self.doc(), "raid")[0]["ref"], "@5")
+
+
 class ThroughTheServer(unittest.TestCase):
     """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
     the filed minutes reopened and a save over them refused (Alan, 15-10-2026), leaving no draft behind."""
@@ -426,6 +471,24 @@ class ThroughTheServer(unittest.TestCase):
         self.assertIn("approved", refused["message"])
         for bad in ("../etc/passwd.html", "system/config/settings.json", f"{ABC}/CLAUDE.md"):
             self.assertFalse(self.post("/api/minutes/draft", {"path": bad})["ok"], bad)
+
+
+
+class ReviewEditThroughTheServer(unittest.TestCase):
+    """The dashboard's Review edit (POST /api/fs write of the proposal) moves the record's row too."""
+    setUpClass = classmethod(ThroughTheServer.setUpClass.__func__)
+    tearDownClass = classmethod(ThroughTheServer.tearDownClass.__func__)
+    post = ThroughTheServer.post
+
+    def test_the_proposal_save_moves_the_row(self):
+        rel = f"system/staging/{self.name}"
+        data = json.loads(self.post("/api/fs", {"op": "read", "path": rel})["text"])
+        data["items"][0]["values"]["owner"] = "Jane Doe"
+        data["items"][0]["edited_in"] = "dashboard"
+        self.assertTrue(self.post("/api/fs", {"op": "write", "path": rel, "text": json.dumps(data)})["ok"])
+        view = self.post("/api/minutes/draft", {"file": self.name})
+        row = next(s for s in view["doc"]["sections"] if s["id"] == "actions")["rows"][0]
+        self.assertEqual((view["doc"]["version"], row["cells"]["owner"]), (2, "Jane Doe"))
 
 
 if __name__ == "__main__":

@@ -1136,6 +1136,8 @@ def cmd_edit(n, pairs):
         target[field.strip()] = to_stored(field.strip(), value.strip())
     save(p, data)
     tracker.cmd_validate(str(p))
+    import minutes_record                                   # v2.1.0 P4: a minutes record's row follows its edited item
+    minutes_record.follow(p, via="cli")
     data = json.loads(p.read_text(encoding="utf-8"))
     item = next(i for i in data["items"] if i.get("n") == ref)
     fields = ", ".join(x.partition("=")[0].strip() for x in pairs)

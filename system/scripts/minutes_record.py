@@ -763,6 +763,43 @@ def change(path, op, base_version=None, via="dashboard"):
     return {"ok": True, "message": message, "version": r["version"], "doc": creaite_doc.read(path)}
 
 
+
+def follow(proposal, via="dashboard"):
+    """Review's edits reach the record: after a staged item is edited in Review (the dashboard's proposal save, review.py edit),
+    each row the record shows follows its item (sync_item, as a change from the minutes view does), saved as a new version of the
+    draft record. Only a draft record whose items are staged in this proposal, only rows whose words changed; returns the new
+    version, or None when nothing needed to change. Never raises: Review's own save has already been made."""
+    try:
+        p = Path(proposal)
+        p = p if p.is_absolute() else paths.STAGING / p.name
+        data = json.loads(p.read_text(encoding="utf-8"))
+        draft = (data.get("meeting") or {}).get("draft")
+        if not (draft and str(draft).startswith("system/staging/drafts/") and is_record(draft)):
+            return None
+        doc = creaite_doc.read(draft)
+        if doc.get("state") == "approved" or (doc.get("meta") or {}).get("proposal") != p.name:
+            return None
+        changed = []
+        for item in data.get("items") or []:
+            ref = f"@{item.get('n')}"
+            if item.get("applied") or ref not in doc["items"]:
+                continue
+            s, i = find_row(doc, item["n"])
+            sid, row = item_row(item)
+            had = s["rows"][i] if s is not None else {}
+            old = doc["items"][ref]
+            if (s is None and sid) or (s is not None and sid != s["id"]) or had.get("cells") != (row or {}).get("cells") \
+                    or had.get("does") != (row or {}).get("does") \
+                    or (old.get("values"), old.get("changes")) != (item.get("values"), item.get("changes")):
+                sync_item(doc, item)
+                changed.append(item["n"])
+        if not changed:
+            return None
+        r = save_record(draft, doc, "Minutes: edited in Review", via=via)
+        return r.get("version") if r.get("ok") else None
+    except (OSError, ValueError, KeyError, TypeError, RecordError, creaite_doc.DocError):
+        return None
+
 # ── The minutes view's routes (live_server.py /api/minutes/draft, save, export) ──
 
 RECORD_PATH = re.compile(r"(?:system/staging/drafts|projects)/[^\x00]+\.html")

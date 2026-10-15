@@ -957,6 +957,10 @@ class Handler(BaseHTTPRequestHandler):
         p.parent.mkdir(parents=True, exist_ok=True)
         with open(p, "a" if op == "append" else "w", encoding="utf-8") as f:
             f.write(req.get("text", ""))
+        if op == "write" and re.fullmatch(r"system/staging/proposed-[^/]+\.json", rel):     # v2.1.0 P4: an item edited in Review
+            import minutes_record                                                            # moves its minutes record's row too
+            with LOCK:
+                minutes_record.follow(p)
         return self.send(200, {"ok": True})
 
     def apply(self, req):
