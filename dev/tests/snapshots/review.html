@@ -6,11 +6,23 @@
 <div class="toolbar rvtools">
 <input id="rvQ" type="search" placeholder="Search proposals" aria-label="Search proposals" autocomplete="off">
 <span class="wfilters" id="rvfilters">
-<button type="button" class="btn fbtn " data-rvf="k" aria-haspopup="dialog">Kind</button>
-<button type="button" class="btn fbtn " data-rvf="nd" aria-haspopup="dialog">Needs</button>
-<button type="button" class="btn fbtn " data-rvf="src" aria-haspopup="dialog">Source</button>
 <span class="dd">
-<button type="button" class="ib bd fbtn " id="rvMore" aria-haspopup="dialog" aria-label="Add a filter" data-tip="Add a filter">
+<button type="button" class="btn fbtn" data-rvf="k" aria-haspopup="listbox" aria-expanded="false" aria-controls="rvf-k">Kind</button>
+<div class="ddmenu left" id="rvf-k">
+</div>
+</span>
+<span class="dd">
+<button type="button" class="btn fbtn" data-rvf="nd" aria-haspopup="listbox" aria-expanded="false" aria-controls="rvf-nd">Needs</button>
+<div class="ddmenu left" id="rvf-nd">
+</div>
+</span>
+<span class="dd">
+<button type="button" class="btn fbtn" data-rvf="src" aria-haspopup="listbox" aria-expanded="false" aria-controls="rvf-src">Source</button>
+<div class="ddmenu left" id="rvf-src">
+</div>
+</span>
+<span class="dd">
+<button type="button" class="ib bd fbtn" id="rvMore" aria-haspopup="dialog" aria-expanded="false" aria-controls="rvPick" aria-label="Add a filter" data-tip="Add a filter">
 <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" data-icn="funnel">
 <path d="M3 4h18l-7 8.5V19l-4 2v-8.5z">
 </path>
