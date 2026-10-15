@@ -52604,6 +52604,10 @@ ${d5.text}`);
       return 0;
     }
   }
+  function selectedLine(h5, range) {
+    const a5 = lineAt(h5, range.from), b5 = lineAt(h5, Math.max(range.from, range.to - 1));
+    return a5 && a5 === b5 ? a5 : 0;
+  }
   aiAction({
     id: "fu-line",
     name: "Make this an action, a risk, a decision or an update",
@@ -52611,7 +52615,12 @@ ${d5.text}`);
     icon: "check",
     places: ["notes"],
     run: (range, h5) => {
-      toggleFind(true, lineAt(h5, range.from));
+      const p6 = selectedLine(h5, range);
+      if (!p6) {
+        snack("Select text on one line of the note: Find updates looks at that line only");
+        return;
+      }
+      toggleFind(true, p6);
     }
   });
   function FindButton() {
@@ -59449,7 +59458,9 @@ ${d5.text}`);
         "norm",
         "noteCur",
         "noteFind",
+        "noteFindP",
         "noteFlush",
+        "noteMeta",
         "noteRequest",
         "noteSave",
         "nowHM",
