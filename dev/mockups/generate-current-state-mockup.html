@@ -153,7 +153,7 @@ function after(a){$("#cock0").hidden=true;$("#stage").hidden=false;const A=$("#a
  if(!a)return;
  if(a==="cur"){$("#curtxt").innerHTML="Falcon Data Platform is off track. Go-live has moved three weeks after the data-sharing delay, and the revised agreement needs a decision this week. Two client actions are more than seven days overdue. UAT starts on 13-11-2026 if production access is granted by Friday.";return}
  if(a==="run"){$("#t").textContent="Write an email paragraph";$("#sumtxt").innerHTML=sum("Email paragraph");A.innerHTML='<div class="drstatus" role="status"><span class="spin"></span>Writing it from the facts…</div>';return}
- const r=R[a];$("#t").textContent="Write a "+r.name.toLowerCase();$("#sumtxt").innerHTML=sum(r.name);
+ const r=R[a];$("#t").textContent="Write "+(/^[aeiou]/i.test(r.name)?"an ":"a ")+r.name.toLowerCase();$("#sumtxt").innerHTML=sum(r.name);
  const btns=r.foot.map(f=>'<button type="button" class="btn'+(f==="Copy"?" primary":"")+'">'+f+'</button>').join("");
  A.innerHTML='<div class="card2" role="region" aria-label="'+r.name+'"><div class="drhead">'+SPARK+'<b>'+r.name+'</b><span class="sub">'+$("#aud").selectedOptions[0].text+' · not saved: copy it where you need it</span></div><div class="drtext '+r.cls+'">'+r.text+'</div><div class="drnote'+(r.warn?" w":"")+'">'+r.note+'</div>'+SRC+'<div class="drfoot"><span class="sp"></span>'+btns+'</div></div>';}
 on($("#chg"),"click",()=>{after(null);document.querySelectorAll(".st").forEach(x=>x.setAttribute("aria-pressed","false"));document.querySelector('.st[data-s="def"]').setAttribute("aria-pressed","true")});
