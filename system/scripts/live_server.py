@@ -640,15 +640,18 @@ def staged_note_move():
 
 
 def undo_note_move():
-    """Whether undoing the latest apply would move a note back (its file records hold a move of kind notes or notes_back)."""
+    """Whether undoing the latest apply would move a note back (its file records hold a move of kind notes or notes_back); the
+    applies unreadable (a failed read, a bad record) count, to be safe."""
     code, out = run("tracker.py", "read", "applies")
+    if code != 0:
+        return True
     try:
-        live = [a for a in json.loads(out) if not a["undone_at"]] if code == 0 else []
+        live = [a for a in json.loads(out) if not a["undone_at"]]
         last = max(live, key=lambda a: a["apply_id"], default=None)
         recs = json.loads(last["file_ops"] or "[]") if last else []
-    except (ValueError, KeyError, TypeError):
+        return any(r.get("op") == "move" and r.get("kind") in NOTE_MOVES for r in recs)
+    except (ValueError, KeyError, TypeError, AttributeError):
         return True
-    return any(r.get("op") == "move" and r.get("kind") in NOTE_MOVES for r in recs)
 # ===== end #124 =====
 
 

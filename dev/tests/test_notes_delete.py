@@ -15,7 +15,9 @@ What is covered, on a live server over a throwaway vault (and, for the shapes, a
   snapshot, a CHANGE card with one is refused;
 - reach.archive_move_problem's "notes" and "notes_back" are exactly the one-note shape, in both layouts.
 - a name taken between the check and the move is never overwritten (os.link, never os.rename over a file), and Undo or an
-  apply that moves a note waits for NOTES_LOCK (LOCK first), as a note's card does.
+  apply that moves a note waits for NOTES_LOCK (LOCK first), as a note's card does: tracker.py never starts while it is held;
+- a one-file move never follows a symlink (a note, an archived note or one swapped in at the last moment), a failed unlink
+  leaves one name, and an unreadable proposal or apply record counts as a note move (the lock is taken).
 Everything is fictional and temporary.
 """
 import json
@@ -428,38 +430,171 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertEqual(fall_files, ["there", "archived"])
         self.assertEqual(moved, "archived")
 
+    # ── Team Cap's review F2: the wait is proven, never timing: tracker.py undo or apply never starts while a save holds the lock ──
     def test_p_undo_and_apply_wait_for_notes_lock(self):
         r = self.new("Undo raced")
         self.assertTrue(self.post("/api/edit/approve", {"card": self.delete(r)["card"]["card"]})["ok"])
         staged = self.v.root / "system/staging/proposed-2026-10-16-hand.json"
         got = self.py_json(
-            "import threading, time, live_server as ls\n"
+            "import pathlib, threading, time, live_server as ls\n"
+            f"note, arc = pathlib.Path({str(self.folder() / 'Undo raced.md')!r}), pathlib.Path({str(self.archive() / 'Undo raced.md')!r})\n"
+            "calls, held, real_run = [], [False], ls.run\n"
+            "def run(script, *args):\n"
+            "    calls.append([script, args[0] if args else '', held[0]])     # recorded as it starts, before the subprocess\n"
+            "    return real_run(script, *args)\n"
+            "ls.run = run\n"
             "class F:\n"
             "    def __init__(self): self.out = {}\n"
             "    def send(self, code, body): self.out.update(body)\n"
-            "def raced(route, req):\n"
-            "    f = F(); ls.NOTES_LOCK.acquire()\n"
-            "    t = threading.Thread(target=lambda: route(f, req)); t.start(); time.sleep(0.5)\n"
-            "    waited = t.is_alive() and not f.out\n"
-            "    ls.NOTES_LOCK.release(); t.join(60)\n"
-            "    return waited, f.out\n"
+            "def raced(route, work, ready):\n"
+            "    f = F(); held[0] = True; ls.NOTES_LOCK.acquire()\n"
+            "    t = threading.Thread(target=lambda: route(f, {}), daemon=True); t.start()\n"
+            "    end = time.time() + 20\n"
+            "    while not ready() and time.time() < end: time.sleep(0.02)\n"
+            "    time.sleep(1.5)                               # long past the moment an unlocked route would have started its work\n"
+            "    during = {'ready': ready(), 'started': [c for c in calls if c[0] == 'tracker.py' and c[1] == work and c[2]],\n"
+            "              'out': dict(f.out), 'note': note.exists(), 'arc': arc.exists(), 'alive': t.is_alive()}\n"
+            "    held[0] = False; ls.NOTES_LOCK.release(); t.join(60)\n"
+            "    return during, f.out\n"
             "before = ls.undo_note_move()\n"
-            "waited, out = raced(ls.Handler.undo, {})\n"
+            "u_during, u_out = raced(ls.Handler.undo, 'undo', lambda: any(c[1] == 'read' and c[2] for c in calls))\n"
+            "after = [note.exists(), arc.exists()]\n"
             "quiet = ls.staged_note_move()\n"
-            f"p = __import__('pathlib').Path({str(staged)!r})\n"
+            f"p = pathlib.Path({str(staged)!r})\n"
             "p.write_text(json.dumps({'items': [], 'files': [{'archive': 'notes_back', 'file_ops': []}]}))\n"
             "hand = ls.staged_note_move()\n"
-            "a_waited, _ = raced(ls.Handler.apply, {})\n"
+            "a_during, a_out = raced(ls.Handler.apply, 'apply', lambda: True)\n"
+            "a_ran = any(c[1] == 'apply' and not c[2] for c in calls)\n"
             "p.unlink(missing_ok=True)\n"
-            "print(json.dumps([before, waited, out.get('ok'), quiet, hand, a_waited]))")
-        before, waited, ok, quiet, hand, a_waited = got
+            "print(json.dumps([before, u_during, u_out.get('ok'), after, quiet, hand, a_during, a_ran]))")
+        before, u_during, ok, after, quiet, hand, a_during, a_ran = got
         self.assertTrue(before)                                    # the latest apply moved a note: Undo takes NOTES_LOCK
-        self.assertTrue(waited)                                    # held off while a save holds the lock
-        self.assertTrue(ok)
-        self.assertTrue((self.folder() / "Undo raced.md").is_file())
+        self.assertTrue(u_during["ready"])                         # Undo got as far as its own check (LOCK held, the applies read)
+        self.assertEqual(u_during["started"], [])                  # but tracker.py undo never started while the lock was held
+        self.assertEqual(u_during["out"], {})
+        self.assertTrue(u_during["alive"])
+        self.assertEqual([u_during["note"], u_during["arc"]], [False, True])     # the note still archived, nothing restored
+        self.assertTrue(ok)                                        # released: Undo completes
+        self.assertEqual(after, [True, False])                     # and the note is back
         self.assertFalse(quiet)                                    # nothing staged moves a note: no NOTES_LOCK
         self.assertTrue(hand)                                      # a hand-staged notes_back move: the apply takes it
-        self.assertTrue(a_waited)
+        self.assertEqual(a_during["started"], [])                  # tracker.py apply never started while the lock was held
+        self.assertEqual(a_during["out"], {})
+        self.assertTrue(a_during["alive"])
+        self.assertTrue(a_ran)                                     # released: the apply ran
+
+    # ── Team Cap's review F1: a one-file move never follows a symlink, in the apply or in Undo ──
+    def test_q_a_symlinked_note_is_never_followed(self):
+        other = self.new("Other note")
+        got = self.py_json(
+            "import os, pathlib, tracker\n"
+            f"note, arc, root = pathlib.Path({str(self.folder())!r}), pathlib.Path({str(self.archive())!r}), pathlib.Path({str(self.v.root)!r})\n"
+            "arc.mkdir(parents=True, exist_ok=True)\n"
+            "outside = root / 'outside.txt'; outside.write_text('not a note')\n"
+            "inner = note / 'Other note.md'\n"
+            "def st(): return [os.stat(outside).st_nlink, os.stat(inner).st_nlink, outside.read_text()]\n"
+            f"def fop(name, back=False):\n"
+            f"    n, a = '{ABC}/notes/' + name, '{ABC}/_Archive/notes/' + name\n"
+            "    return ({'from': a, 'to': n}, {'archive': 'notes_back'}) if back else ({'from': n, 'to': a}, {'archive': 'notes'})\n"
+            "def refused(call):\n"
+            "    try:\n"
+            "        call(); return None\n"
+            "    except tracker.Invalid as e:\n"
+            "        return str(e)\n"
+            "out = {}\n"
+            "for name, target in (('Link out.md', outside), ('Link note.md', inner)):\n"
+            "    os.symlink(target, note / name)\n"
+            "    out[name] = [refused(lambda: tracker.check_move(*fop(name))),               # the apply's check\n"
+            "                 refused(lambda: tracker._op_move(1, *fop(name), [])),           # and the mover, past the check\n"
+            "                 os.path.islink(note / name), os.path.lexists(arc / name)]\n"
+            "real_link = os.link\n"
+            "def swap(src, dst, **kw):                     # a symlink swapped in between the check and the link\n"
+            "    os.unlink(src); os.symlink(outside, src)\n"
+            "    return real_link(src, dst, **kw)\n"
+            "(note / 'Swap.md').write_text('mine'); os.link = swap\n"
+            "out['swap'] = [refused(lambda: tracker._op_move(1, *fop('Swap.md'), [])), os.path.islink(note / 'Swap.md'),\n"
+            "               os.path.lexists(arc / 'Swap.md')]\n"
+            "os.supports_follow_symlinks = set()\n"
+            "if os.path.lexists(note / 'Swap.md'): os.unlink(note / 'Swap.md')\n"
+            "(note / 'Swap.md').write_text('mine')\n"
+            "out['swap_no_flag'] = [refused(lambda: tracker._op_move(1, *fop('Swap.md'), [])), os.path.islink(note / 'Swap.md'),\n"
+            "                       os.path.lexists(arc / 'Swap.md')]\n"
+            "os.link = real_link\n"
+            "os.symlink(note / 'Nowhere.md', arc / 'Dangling.md'); (note / 'Dangling.md').write_text('to delete')\n"
+            "out['dest'] = [refused(lambda: tracker._op_move(1, *fop('Dangling.md'), [])), (note / 'Dangling.md').read_text(),\n"
+            "               os.path.lexists(note / 'Nowhere.md')]\n"
+            "for name, target in (('Back out.md', outside), ('Back note.md', inner)):\n"
+            "    os.symlink(target, arc / name); rep = []\n"
+            f"    tracker._reverse_move({{'from': '{ABC}/notes/' + name, 'to': '{ABC}/_Archive/notes/' + name, 'kind': 'notes'}}, rep)\n"
+            "    out[name] = [rep, os.path.islink(arc / name), os.path.lexists(note / name)]\n"
+            "(arc / 'Back swap.md').write_text('archived'); os.link = swap; rep = []\n"
+            f"tracker._reverse_move({{'from': '{ABC}/notes/Back swap.md', 'to': '{ABC}/_Archive/notes/Back swap.md', 'kind': 'notes'}}, rep)\n"
+            "os.link = real_link\n"
+            "out['back_swap'] = [rep, os.path.islink(arc / 'Back swap.md'), os.path.lexists(note / 'Back swap.md')]\n"
+            "out['st'] = st()\n"
+            "print(json.dumps(out))")
+        for name in ("Link out.md", "Link note.md"):
+            chk, mover, still, archived = got[name]
+            self.assertIn("never follows a symlink", chk)
+            self.assertIn("is a symlink", mover)
+            self.assertEqual([still, archived], [True, False])                     # the symlink stays; nothing in _Archive
+        for case in ("swap", "swap_no_flag"):                                      # with and without follow_symlinks=False
+            self.assertIn("is a symlink", got[case][0])
+            self.assertEqual(got[case][1:], [True, False])
+        self.assertIn("already exists", got["dest"][0])                            # a symlink at the destination is a taken name
+        self.assertEqual(got["dest"][1:], ["to delete", False])                    # never followed to make its target
+        for name in ("Back out.md", "Back note.md", "back_swap"):
+            rep, still, back = got[name]
+            self.assertEqual(len(rep), 1)
+            self.assertIn("it is a symlink now", rep[0])
+            self.assertEqual([still, back], [True, False])
+        self.assertEqual(got["st"], [1, 1, "not a note"])                          # nothing outside, or the other note, linked
+        self.assertTrue((self.folder() / "Other note.md").is_file(), other)
+
+    # ── Team Cap's review M7: the unlink fails after the link: the new name is removed and the error raised ──
+    def test_r_a_failed_unlink_leaves_one_name(self):
+        got = self.py_json(
+            "import errno, os, pathlib, tracker\n"
+            f"note, arc = pathlib.Path({str(self.folder())!r}), pathlib.Path({str(self.archive())!r})\n"
+            "arc.mkdir(parents=True, exist_ok=True); a, b = note / 'Unlink.md', arc / 'Unlink.md'; a.write_text('kept')\n"
+            "real_unlink, seen = os.unlink, []\n"
+            "def once(p, *args, **kw):\n"
+            "    seen.append(str(p)); os.unlink = real_unlink\n"
+            "    raise PermissionError(errno.EPERM, 'not now', str(p))\n"
+            "os.unlink = once\n"
+            "try:\n"
+            "    tracker._move(a, b, 'notes'); err = None\n"
+            "except PermissionError as e:\n"
+            "    err = e.strerror\n"
+            "os.unlink = real_unlink\n"
+            "print(json.dumps([err, seen, a.read_text(), os.path.lexists(b), os.stat(a).st_nlink]))")
+        err, seen, text, second, links = got
+        self.assertEqual(err, "not now")                                           # re-raised
+        self.assertEqual(seen, [str(self.folder() / "Unlink.md")])                 # the source's unlink failed
+        self.assertEqual([text, second, links], ["kept", False, 1])                # the new link removed: one name, as it was
+
+    # ── Team Cap's review M8 (and F4): unreadable counts as a move, so the lock is taken ──
+    def test_s_unreadable_counts_as_a_note_move(self):
+        got = self.py_json(
+            "import pathlib, live_server as ls, paths\n"
+            "bad = paths.STAGING / 'proposed-2026-10-16-bad.json'; bad.write_text('{not json')\n"
+            "staged_bad = ls.staged_note_move(); bad.unlink()\n"
+            "staged_clean = ls.staged_note_move()\n"
+            "def rec(ops): return json.dumps([{'apply_id': 1, 'undone_at': None, 'file_ops': ops}])\n"
+            "answers = {'failed': (1, ''), 'not json': (0, 'not json'), 'bad ops': (0, rec('garbage')),\n"
+            "           'not records': (0, rec('[1]')), 'no id': (0, json.dumps([{'undone_at': None}])),\n"
+            "           'no move': (0, rec(json.dumps([{'op': 'copy', 'to': 'x'}]))),\n"
+            "           'a note move': (0, rec(json.dumps([{'op': 'move', 'kind': 'notes'}])))}\n"
+            "out = {}\n"
+            "for k, v in answers.items():\n"
+            "    ls.run = lambda *a, v=v: v\n"
+            "    out[k] = ls.undo_note_move()\n"
+            "print(json.dumps([staged_bad, staged_clean, out]))")
+        staged_bad, staged_clean, undo = got
+        self.assertTrue(staged_bad)
+        self.assertFalse(staged_clean)
+        self.assertEqual(undo, {"failed": True, "not json": True, "bad ops": True, "not records": True, "no id": True,
+                                "no move": False, "a note move": True})
 
     def py_json(self, code):
         src = f"import sys, json; sys.path.insert(0, 'system/scripts')\n{code}"

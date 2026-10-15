@@ -1876,28 +1876,50 @@ def _op_move(apply_id, fop, blk, done):
         _move(a, b, blk.get("archive"))
     except FileExistsError:                       # #124: taken between the check and the move: the apply rolls back
         raise Invalid(f"move: {fop['to']} already exists; a folder move never overwrites") from None
+    except SymlinkMove:                           # #124 F1: a symlink put there after the check: never followed, never moved
+        raise Invalid(f"move: {fop['from']} is a symlink; a file move never follows one") from None
     done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(made) if made else None,
                  "kind": blk.get("archive")})
+
+
+class SymlinkMove(OSError):
+    """#124 F1: a one-file move (reach.FILE_MOVES) found a symlink where the file was: it is never followed and never moved."""
 
 
 def _move(a, b, kind):
     """#124: move a to b, never over a file at b (FileExistsError). os.rename replaces a file on macOS and Linux, so one file
     (reach.FILE_MOVES) moves by os.link, which refuses a name that is taken, then os.unlink; where hard links aren't supported
     it falls back to a check and os.rename. A folder (BL-09) moves by os.rename as before (it never replaces a folder that
-    isn't empty)."""
+    isn't empty). F1: a one-file move never follows a symlink: `a` is a symlink (SymlinkMove) is refused before the link, the
+    link itself never follows one (follow_symlinks=False where the platform has it), and a link that isn't `a` itself (a
+    symlink swapped in at the last moment, where it hasn't) is removed and refused. A symlink at `b` is a taken name."""
     import reach
-    if kind not in reach.FILE_MOVES or a.is_symlink():
+    if kind not in reach.FILE_MOVES:
         os.rename(a, b)
         return
+    if os.path.islink(a):
+        raise SymlinkMove(str(a))
     try:
-        os.link(a, b)
+        if os.link in os.supports_follow_symlinks:
+            os.link(a, b, follow_symlinks=False)
+        else:
+            os.link(a, b)
     except FileExistsError:
         raise
     except OSError:                               # a file system without hard links: the check, then the move
         if os.path.lexists(b):
             raise FileExistsError(str(b)) from None
+        if os.path.islink(a):
+            raise SymlinkMove(str(a)) from None
         os.rename(a, b)
         return
+    try:
+        same = not os.path.islink(a) and os.path.samestat(os.lstat(a), os.lstat(b))
+    except OSError:
+        same = False
+    if not same:                                  # what was linked isn't the file at a: never kept
+        os.unlink(b)
+        raise SymlinkMove(str(a))
     try:
         os.unlink(a)
     except OSError:
@@ -1935,7 +1957,11 @@ def _reverse_move(rec, report):
         report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
         return
     old = a
-    a = _move_back(b, a, kind, renames)
+    try:
+        a = _move_back(b, a, kind, renames)
+    except SymlinkMove:                           # #124 F1: an archived symlink (_move refuses it): never followed, never moved
+        report.append(f"skipped moving {rec['to']} back: it is a symlink now")
+        return
     if a is None:                                 # whatever took the name is left as it is
         report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
         return
