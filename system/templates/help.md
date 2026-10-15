@@ -234,6 +234,7 @@ Where: Projects › a project › Notes · Projects › Portfolio notes
 3. Link as you type: two square brackets link another note, `@` a person, `#` a work item (a chip with its live state), and `/` on an empty line inserts a sub-heading, a checklist, a table or a template's headings. Click a link or chip to open it; ⌥-click to put the cursor in it.
 4. Change the title and the file is renamed to match when the note saves; links to it in your other notes follow. **Activity › What ask creaite changed**, which lists your note saves too, can undo a save or a rename.
 5. Select some text and press **AI** (or Alt + /) to rewrite it, shorten it, turn it into a checklist and more ([Let creaite draft the wording](#let-creaite-draft-the-wording)). The ⋯ menu pins the note, marks it **Confidential** or shows the file.
+6. **Delete note…**, last in the ⋯ menu, moves the note to the project's archive (`_Archive` in its folder), never away for good. First a box asks you to confirm; then the move waits on the approval card in ask creaite, and only **Approve** moves it (**Reject** leaves it where it is). The note closes, leaves the list and search, and the toast's **Undo** brings it back. Later, **Files › Archived** lists it with **Move back**, which never replaces a note that has taken its name. Links to it in other notes show as missing until it is back; its pictures stay where they are. It can't be done while ask creaite is working on mail, Teams or a document.
 
 Or say: `what do my ABC notes say about the sandbox?`
 

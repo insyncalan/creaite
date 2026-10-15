@@ -15,6 +15,7 @@ import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNote
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { FindUpdates } from "./FindUpdates.jsx";
+import { askDeleteNote, DeleteNoteDialog } from "./DeleteNote.jsx";
 import { Dialog } from "../Dialog.jsx";
 import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
@@ -194,8 +195,9 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
           <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
             items={[{ id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
               { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-              { id: "file", name: "Show the file", line: n.path, icon: "folder" }]}
-            onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else onOpenFile(n.path); }} />
+              { id: "file", name: "Show the file", line: n.path, icon: "folder" },
+              { id: "sep", sep: true }, { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }]}
+            onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else if (id === "del") askDeleteNote(); else onOpenFile(n.path); }} />
         </div>
       </div>
       {cur.stale ? (
@@ -299,6 +301,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
         <NoteDoc code={code} onOpen={openPath} onOpenItem={onOpenItem} onNew={t => setDlg(t)} onOpenFile={onOpenFile} />
         <NoteSide code={code} onOpen={openPath} onOpenItem={onOpenItem} />
       </div>
+      <DeleteNoteDialog />
       <NewNote code={code} open={dlg !== null} title={dlg || ""} onClose={() => setDlg(null)} onMade={() => { setDlg(null); onAddressChange(); }} />
     </div>);
 }

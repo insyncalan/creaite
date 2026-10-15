@@ -284,9 +284,10 @@ def reports_line(st):
 BACK = "reports_back"
 
 
-def archived_moves(con=None):
-    """{the archived file's stored path: its original stored path} for each file an apply (not undone) archived (kind "reports")
-    and no later apply (not undone) moved back, oldest first. Read from the applies table only."""
+def archived_moves(con=None, kind="reports"):
+    """{the archived file's stored path: its original stored path} for each file an apply (not undone) archived (kind "reports";
+    #124: "notes", a deleted note) and no later apply (not undone) moved back, oldest first. Read from the applies table only."""
+    back = BACK if kind == "reports" else f"{kind}_back"
     own = con is None
     if own:
         if not paths.DB.exists():
@@ -308,9 +309,9 @@ def archived_moves(con=None):
         for r in recs if isinstance(recs, list) else []:
             if not isinstance(r, dict) or r.get("op") != "move":
                 continue
-            if r.get("kind") == "reports":
+            if r.get("kind") == kind:
                 out[r.get("to")] = r.get("from")
-            elif r.get("kind") == BACK:
+            elif r.get("kind") == back:
                 out.pop(r.get("from"), None)
     return out
 
@@ -350,6 +351,8 @@ def _place(original):
         except ValueError:  # not this project's folder: the next one
             continue
         sub = "/".join(rest[:-1])
+        if sub == paths.folder_name("notes").strip("/") and original.lower().endswith(".md"):
+            return code, "notes", ""                                     # #124: a deleted note
         if sub == paths.folder_name("minutes").strip("/"):
             return code, "minutes", ""
         if code != "_portfolio" and sub in paths.archivable_folders():
@@ -361,7 +364,8 @@ def archived_files():
     """Files' archived list (BL-331): [{p, f, sub, n, type, date, kb, path, archived}] for each file BL-03 moved that is still in
     its _Archive. path is the stored path (it opens, through paths.resolve). Names, sizes and dates only; nothing is read."""
     out = []
-    for at, original in archived_moves().items():
+    moved = {**archived_moves(), **archived_moves(kind=NOTE)}
+    for at, original in moved.items():
         if not at or not original:
             continue
         f = paths.resolve(at, archived=False)
@@ -380,7 +384,8 @@ def back_spec(original):
     original = str(original or "")
     if not original.startswith("projects/") or ".." in Path(original).parts:
         return None, "that isn't a stored project path"
-    at = next((a for a, o in archived_moves().items() if o == original), None)
+    kind = next((k for k in ("reports", NOTE) if original in archived_moves(kind=k).values()), None)
+    at = next((a for a, o in archived_moves(kind=kind).items() if o == original), None) if kind else None
     if not at:
         return None, "that file isn't one the archive moved, so it can't be moved back"
     src, dst = paths.resolve(at, archived=False), paths.resolve(original, archived=False)
@@ -391,8 +396,35 @@ def back_spec(original):
     place = _place(original)
     return {"source_run": "archive", "items": [], "file_changes": {
         "title": f"Move back {dst.name}", "project": place[0] if place and place[0] != "_portfolio" else None,
-        "archive": BACK, "file_ops": [{"op": "move", "from": at, "to": original}]}}, None
+        "archive": BACK if kind == "reports" else NOTE_BACK, "file_ops": [{"op": "move", "from": at, "to": original}]}}, None
 # ===== end BL-331 =====
+
+
+# ===== #124: Delete note (Alan, 15-10-2026) =====
+# A note is never deleted for good: Delete note moves its file into its own engagement's (or the portfolio's) _Archive, keeping
+# its place below it (<…>/_Archive/<notes folder>/<note>.md; a name taken there gets -2, -3…). It is a `move` of kind "notes",
+# the BL-09 guard exception: reach.archive_move_problem checks the shape, and only tracker.py apply moves it, from the live
+# server's own approval card (propose.py stages it only from the server's snapshot in system/guard/), after Alan's confirm box in
+# the Notes tab. Files › Archived lists it with Move back (the exact reverse, "notes_back", back_spec above); undo puts it back.
+# Its pictures stay in _images (the note's links to them work again once it is back). Nothing is read from the note but its
+# front-matter title, for the card; its text goes nowhere.
+NOTE, NOTE_BACK = "notes", "notes_back"
+
+
+def note_delete_spec(rel):
+    """(spec, None) that moves the note at stored path `rel` into its own folder's _Archive, or (None, why not)."""
+    import notes
+    hit = notes.note_of(rel)
+    if not hit or hit[1].is_symlink() or not hit[1].is_file():
+        return None, "that isn't a note that is there"
+    code, p = hit
+    base = paths.portfolio_dir() if code == "_portfolio" else paths.project_dir(code)
+    dest = paths.free_path(base / paths.ARCHIVE / paths.folder_name("notes").strip("/"), p.stem, p.suffix)
+    title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
+    return {"source_run": "notes", "items": [], "file_changes": {
+        "title": f"Delete note \u201c{title}\u201d (move it to the archive)", "project": None if code == "_portfolio" else code,
+        "archive": NOTE, "file_ops": [{"op": "move", "from": paths.rel(p), "to": paths.rel(dest)}]}}, None
+# ===== end #124 =====
 
 
 def main(argv):

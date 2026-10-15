@@ -1832,7 +1832,8 @@ def hide_archived(con, settings=None):
 
 # ===== BL-09: the `move` file operation (archive, restore, and renaming an old zz Archive folder) =====
 # {"op": "move", "from": "projects/<folder>", "to": "projects/_Archive/<folder>"} in a file block whose "archive" says which kind
-# of move it is ("archive", "restore" or "rename"; one file: "reports", BL-03, and its reverse "reports_back", BL-331).
+# of move it is ("archive", "restore" or "rename"; one file: "reports", BL-03, and its reverse "reports_back", BL-331; one note:
+# "notes", #124's Delete note, and its reverse "notes_back").
 # reach.archive_move_problem is the one exception to _Archive's never rule: only this apply calls it. The paths are stored paths,
 # never mapped into _Archive (paths.resolve(…, archived=False)). Undo moves the
 # folder back, and removes the _Archive folder this move made if it is empty again.
@@ -1850,9 +1851,9 @@ def check_move(fop, blk):
     problem = reach.archive_move_problem(src, dst, kind)
     if problem:
         raise Invalid(f"move: {problem}")
-    if kind == "reports_back":                    # BL-331: only a file an archive moved there, back to where it came from
-        import archive
-        if archive.archived_moves().get(src) != dst:
+    if kind in ("reports_back", "notes_back"):   # BL-331, #124: only a file an archive (or Delete note) moved there, back
+        import archive                            # to where it came from
+        if archive.archived_moves(kind=kind[:-len("_back")]).get(src) != dst:
             raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
 
 

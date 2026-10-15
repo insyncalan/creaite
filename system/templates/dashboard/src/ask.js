@@ -261,6 +261,11 @@ export async function editFlow(c){
 export async function pendingEdit(){ if(!viaServer()) return; const r=await api("/api/edit/pending",{}); if(!r.ok||!r.card) return;
   if(r.card.chat&&r.card.chat!==shared.ASKCHAT){ setChat(r.card.chat,r.card.chat); await loadChat(r.card.chat,true); }
   openChat(); editFlow(r.card); }
+/* #124 Delete note: a card the server made for the page's own action (a note's move into _Archive), shown in ask creaite and
+   answered there like any change card. Resolves to {apply} (the apply's number, for Undo) once Approve has applied it, else
+   null (rejected, failed, or only staged for Review when another job was writing). */
+export async function serverCardFlow(card){ openChat(); const m=await editFlow(card);
+  const b=m&&m.querySelector?m.querySelector("[data-edundo]"):null; return b?{apply:+b.dataset.edundo||null}:null; }
 /* ===== BL-314 (v191-ask-routing) ===== a field change asked in the chat runs through the dashboard's own action. The server checked
    each EDIT line against the tracker and sent the preview's before → after lines and, per item, the patch in the dashboard's own field
    names. Go ahead saves them exactly as the Work bulk bar does (itemsMove, batchMove's own save: each owner resolved against the

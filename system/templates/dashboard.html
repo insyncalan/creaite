@@ -2996,6 +2996,9 @@ button.nchip{font:inherit;font-size:12px}
 .nntopt.on{border-color:var(--accent);background:var(--accent-soft)} .nntopt span{display:grid} .nntopt small{color:var(--muted);font-size:11px}
 .nnws{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .nnfoot{display:flex;gap:8px;justify-content:flex-end}
+/* #124 Delete note: the … menu's last item in red, and its confirm box */
+.nmorewrap [role=menuitem].bad b,.nmorewrap [role=menuitem].bad .i{color:var(--bad)}
+#noteDelDlg{width:min(480px,calc(100vw - 32px))} .ndelbox{display:grid;gap:10px} .ndelbox h2{margin:0;font-size:16px;overflow-wrap:anywhere} .ndelbox p{margin:0}
 @media (max-width:1100px){.nsplit,.nsplit.finding{grid-template-columns:220px minmax(0,1fr)}.nsplit.collapsed,.nsplit.finding.collapsed{grid-template-columns:40px minmax(0,1fr)}.nside{position:static}.nctx,.nside{grid-column:1/-1}}
 @media (max-width:700px){.nsplit,.nsplit.collapsed,.nsplit.finding,.nsplit.finding.collapsed{grid-template-columns:minmax(0,1fr)}.nlist{position:static}.ndoc{padding:14px}.nntpl,.nnws{grid-template-columns:1fr}}
 /* ===== end BL-301 B ===== */
@@ -5384,6 +5387,7 @@ button.nchip{font:inherit;font-size:12px}
     selDay: () => selDay,
     send: () => send,
     sendQueued: () => sendQueued,
+    serverCardFlow: () => serverCardFlow,
     serverSeams: () => serverSeams,
     setAgendaInvited: () => setAgendaInvited,
     setAgendaStyle: () => setAgendaStyle,
@@ -6806,8 +6810,8 @@ button.nchip{font:inherit;font-size:12px}
     const scrim = (e4) => {
       const d5 = ref.current;
       if (!d5 || e4.target !== d5) return;
-      const busy = typeof dirty === "function" ? dirty() : dirty === void 0 ? !owned && !!TYPED.get(d5) : dirty;
-      if (busy) return;
+      const busy2 = typeof dirty === "function" ? dirty() : dirty === void 0 ? !owned && !!TYPED.get(d5) : dirty;
+      if (busy2) return;
       const r4 = d5.getBoundingClientRect();
       if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) {
         if (owned) {
@@ -25596,7 +25600,7 @@ ${s5}`;
   var N2 = 0;
   var rowId = () => "ss" + ++N2;
   function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const reset = async () => {
       setBusy(true);
       const r4 = await resetSettings(keys);
@@ -25627,7 +25631,7 @@ ${s5}`;
           {
             type: "button",
             class: "mini setreset",
-            disabled: busy,
+            disabled: busy2,
             "aria-label": `Reset ${label} to its default`,
             title: "Back to the default",
             onClick: reset,
@@ -25953,20 +25957,20 @@ ${s5}`;
     return !!r4.ok;
   }
   function FixButton({ f: f5, label }) {
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     return /* @__PURE__ */ u2(
       "button",
       {
         type: "button",
         class: "btn primary",
-        disabled: busy || !viaServer(),
+        disabled: busy2 || !viaServer(),
         "aria-label": `${f5.button}: ${label}`,
         onClick: async () => {
           setBusy(true);
           await runHealthFix(f5);
           setBusy(false);
         },
-        children: busy ? "Working…" : f5.button
+        children: busy2 ? "Working…" : f5.button
       }
     );
   }
@@ -25980,7 +25984,7 @@ ${s5}`;
       /** @type {{zip:string, day:string, lines:PlanLine[]}|null} */
       null
     );
-    const [busy, setBusy] = d2(false), [done, setDone] = d2(
+    const [busy2, setBusy] = d2(false), [done, setDone] = d2(
       /** @type {string[]} */
       []
     );
@@ -26015,7 +26019,7 @@ ${s5}`;
     return /* @__PURE__ */ u2("div", { class: "hrestore", id: "backupRestore", children: [
       /* @__PURE__ */ u2("h3", { class: "hsub", children: "Restore from a backup" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched." }),
-      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy || !viaServer(), onClick: list, children: "Choose a backup…" }),
+      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy2 || !viaServer(), onClick: list, children: "Choose a backup…" }),
       zips && !plan && (zips.length ? /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Backups", children: zips.map((z4) => /* @__PURE__ */ u2("li", { class: "hrow", "data-zip": z4.name, children: [
         /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
         /* @__PURE__ */ u2("div", { class: "hbody", children: [
@@ -26026,7 +26030,7 @@ ${s5}`;
             mbOf(z4.size)
           ] })
         ] }),
-        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
+        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
       ] })) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "There are no backups yet: one is made each day." })),
       plan && /* @__PURE__ */ u2("div", { class: "card hconfirm", role: "group", "aria-label": "Confirm the restore", id: "backupConfirm", children: [
         /* @__PURE__ */ u2("div", { class: "t", children: [
@@ -26041,8 +26045,8 @@ ${s5}`;
           l6.what
         ] })) }),
         /* @__PURE__ */ u2("div", { class: "hact", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy, onClick: restore, children: busy ? "Restoring…" : "Restore" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy, onClick: () => setPlan(null), children: "Cancel" })
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy2, onClick: restore, children: busy2 ? "Restoring…" : "Restore" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: () => setPlan(null), children: "Cancel" })
         ] })
       ] }),
       done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
@@ -26080,16 +26084,16 @@ ${s5}`;
     ] });
   }
   function Health() {
-    const res = healthResult.value, busy = healthBusy.value, err = healthError.value;
+    const res = healthResult.value, busy2 = healthBusy.value, err = healthError.value;
     h2(() => {
-      if (!res && !busy && viaServer()) checkHealth();
+      if (!res && !busy2 && viaServer()) checkHealth();
     }, []);
     const n4 = res ? res.problems.length : 0, alone = res && res.standalone ? res.standalone : [];
     return /* @__PURE__ */ u2("div", { class: "card wide", id: "healthCard", children: [
       /* @__PURE__ */ u2("div", { class: "hhead", children: [
         /* @__PURE__ */ u2("h2", { children: "Health" }),
-        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy2 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy2 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
       ] }),
       !viaServer() && !res && /* @__PURE__ */ u2("p", { class: "sub", children: "The health check needs the live server." }),
       err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
@@ -27033,9 +27037,9 @@ ${s5}`;
   function dayShape(ev, first, day) {
     const timed = ev.filter((e4) => !e4.all_day), n4 = timed.length, name = first ? `, ${first}` : "", today = !day || day === TODAY;
     if (!n4) return today ? `No meetings today${name}. The day is yours.` : `No meetings on ${longDay(day).split(" ")[0]}${name}.${day > TODAY ? " The day is yours." : ""}`;
-    const busy = timed.map((e4) => [mins(e4.start), mins(e4.end)]).sort((a6, b6) => a6[0] - b6[0]), gaps = [];
+    const busy2 = timed.map((e4) => [mins(e4.start), mins(e4.end)]).sort((a6, b6) => a6[0] - b6[0]), gaps = [];
     let t47 = 8 * 60;
-    busy.forEach(([a6, b6]) => {
+    busy2.forEach(([a6, b6]) => {
       if (a6 > t47) gaps.push([t47, Math.min(a6, 18 * 60)]);
       t47 = Math.max(t47, b6);
     });
@@ -27043,7 +27047,7 @@ ${s5}`;
     const nw2 = today ? nowMins() : 0;
     gaps.forEach((g5) => g5[0] = Math.max(g5[0], nw2));
     const big = gaps.filter((g5) => g5[1] - g5[0] >= 60).sort((a6, b6) => b6[1] - b6[0] - (a6[1] - a6[0]))[0], cnt = `${n4 <= 10 ? NUMW[n4] : n4} meeting${n4 === 1 ? "" : "s"}${name}`;
-    if (today && n4 > 1 && nowMins() >= busy[busy.length - 1][1]) return `${cnt}, and they're all behind you.`;
+    if (today && n4 > 1 && nowMins() >= busy2[busy2.length - 1][1]) return `${cnt}, and they're all behind you.`;
     if (!big) return gaps.some((g5) => g5[1] - g5[0] >= 30) ? `${cnt}, with only short gaps between them.` : `${cnt}, back to back.`;
     const [a5, b5] = big, c5 = (a5 + b5) / 2;
     const part = b5 - a5 >= 240 ? c5 < 13 * 60 ? "the morning" : "the afternoon" : a5 >= 17 * 60 - 1 ? "the evening" : c5 < 10 * 60 ? "the early morning" : c5 < 12 * 60 ? "the late morning" : c5 < 13.5 * 60 ? "lunchtime" : c5 < 15.5 * 60 ? "the early afternoon" : "the late afternoon";
@@ -33588,7 +33592,7 @@ ${s5}`;
       /** @type {{text: string, ok: boolean, applyId?: any}|null} */
       null
     );
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const [closing, setClosing] = d2("");
     const [draft, setDraft] = d2(
       /** @type {SneakDraft|null} */
@@ -33682,7 +33686,7 @@ ${s5}`;
       input.current?.focus();
     }
     async function make(r5, note) {
-      if (busy) return;
+      if (busy2) return;
       let rr2 = r5;
       if (note && note.trim()) {
         const t210 = `${text.trim().replace(/[.,;]+$/, "")}, add an update: ${note.trim()}`;
@@ -33746,7 +33750,7 @@ ${s5}`;
     }
     async function useDraft() {
       const d5 = draftRef.current;
-      if (!d5 || !d5.d || busy) return;
+      if (!d5 || !d5.d || busy2) return;
       const it2 = d5.item, text2 = String(d5.d.text || "").trim();
       const stage = {
         label: `${it2.id} ${DRAFTS[d5.kind] ? DRAFTS[d5.kind](d5.kind === "thinking" ? { field: d5.field } : {}).word.toLowerCase() : d5.field} drafted (Sneak peek)`,
@@ -33889,7 +33893,7 @@ ${s5}`;
     };
     const r4 = reply;
     const out = [];
-    if (draft) out.push(/* @__PURE__ */ u2(DraftCard, { d: draft, busy, onUse: useDraft, onKeep: keepMine }, "draft"));
+    if (draft) out.push(/* @__PURE__ */ u2(DraftCard, { d: draft, busy: busy2, onUse: useDraft, onKeep: keepMine }, "draft"));
     else if (r4 && text.trim()) {
       if (r4.understood && r4.understood.length && r4.ok) out.push(/* @__PURE__ */ u2(
         Understood,
@@ -33909,7 +33913,7 @@ ${s5}`;
           r: r4,
           id: id2,
           shown: shown2,
-          busy,
+          busy: busy2,
           flash,
           closing,
           setClosing,
@@ -33934,7 +33938,7 @@ ${s5}`;
       done.text,
       done.ok && done.applyId != null ? /* @__PURE__ */ u2(S2, { children: [
         " ",
-        /* @__PURE__ */ u2("button", { type: "button", id: "spUndo", disabled: busy, onClick: undo, children: "Undo" })
+        /* @__PURE__ */ u2("button", { type: "button", id: "spUndo", disabled: busy2, onClick: undo, children: "Undo" })
       ] }) : null
     ] }, "done"));
     return /* @__PURE__ */ u2("div", { class: "sp-box", id: "spBox", role: "dialog", "aria-label": "Sneak peek: change this item in words", onKeyDown: onKey, children: [
@@ -34010,7 +34014,7 @@ ${s5}`;
     const uniq2 = [...new Set(L3)];
     return uniq2.length ? `Changed ${uniq2.length > 1 ? uniq2.slice(0, -1).join(", ") + " and " + uniq2[uniq2.length - 1] : uniq2[0]}.` : r4.stage ? r4.stage.label + "." : "Changed.";
   }
-  function DraftCard({ d: d5, busy, onUse, onKeep }) {
+  function DraftCard({ d: d5, busy: busy2, onUse, onKeep }) {
     const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
     if (!d5.d) return /* @__PURE__ */ u2("div", { class: "sp-card", role: "status", children: /* @__PURE__ */ u2("div", { class: "sp-head", children: [
       /* @__PURE__ */ u2(SneakIcon, { shapes: SNEAK_ICON, size: 15 }),
@@ -34039,14 +34043,14 @@ ${s5}`;
       /* @__PURE__ */ u2("div", { class: "sp-acts", children: [
         /* @__PURE__ */ u2("span", { class: "sub", children: "Nothing changes until you choose." }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "spKeep", onClick: onKeep, children: "Keep mine" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spUse", disabled: busy, onClick: onUse, children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spUse", disabled: busy2, onClick: onUse, children: [
           "Use this ",
           /* @__PURE__ */ u2("kbd", { children: "⏎" })
         ] })
       ] })
     ] });
   }
-  function Card({ r: r4, id: id2, text, shown: shown2, busy, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
+  function Card({ r: r4, id: id2, text, shown: shown2, busy: busy2, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
     if (!r4.ok) return /* @__PURE__ */ u2("div", { class: "sp-card warn", role: "alert", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: r4.message || "That couldn't be read." }) });
     if (r4.refused) {
       const btn = POINT[r4.refused.point_to], to2 = r4.refused.point_to;
@@ -34234,7 +34238,7 @@ ${s5}`;
           " or click"
         ] }) : /* @__PURE__ */ u2("span", { class: "sub", children: "You can undo it." }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: onNot, children: "Not now" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spMake", disabled: busy, onClick: onMake, children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spMake", disabled: busy2, onClick: onMake, children: [
           okWord,
           " ",
           /* @__PURE__ */ u2("kbd", { children: conf ? `${MOD}⏎` : "⏎" })
@@ -39472,16 +39476,16 @@ ${s5}`;
       if (!m5 || !mtgCanPick(m5)) MSEL.delete(id2);
     });
     $("#mtgRead").textContent = mt2.fetched ? `Calendar read ${fdText(mt2.fetched)}` : "";
-    const busy = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
-    $("#mtgGo").disabled = !MSEL.size || busy || !viaServer();
+    const busy2 = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
+    $("#mtgGo").disabled = !MSEL.size || busy2 || !viaServer();
     $("#mtgGo").textContent = MSEL.size ? `Process ${MSEL.size} selected` : "Process selected";
-    $("#mtgGo").title = !viaServer() ? "Needs the live server" : busy ? "ask creaite is busy; try again when it's finished" : "";
-    const ld2 = L3.filter((m5) => MSEL.has(m5.id) && mtgLoadable(m5)).length, offTx = !ld2 || busy || !viaServer(), why = !viaServer() ? "Needs the live server" : busy ? "ask creaite is busy; try again when it's finished" : ld2 ? "" : "Tick meetings that have a transcript";
+    $("#mtgGo").title = !viaServer() ? "Needs the live server" : busy2 ? "ask creaite is busy; try again when it's finished" : "";
+    const ld2 = L3.filter((m5) => MSEL.has(m5.id) && mtgLoadable(m5)).length, offTx = !ld2 || busy2 || !viaServer(), why = !viaServer() ? "Needs the live server" : busy2 ? "ask creaite is busy; try again when it's finished" : ld2 ? "" : "Tick meetings that have a transcript";
     $("#mtgLoad").disabled = offTx;
     $("#mtgLoad").title = why;
     $("#mtgLoad").textContent = ld2 ? `Load ${ld2} into inbox` : "Load into inbox";
     $("#mtgTx").disabled = !L3.some((m5) => mtgHasTx(m5) && mtgCanPick(m5));
-    $("#mtgRefresh").disabled = busy || !viaServer();
+    $("#mtgRefresh").disabled = busy2 || !viaServer();
     $("#mtgRefresh").title = !viaServer() ? "Needs the live server" : "";
     if (!mt2.fetched) {
       putHTML($("#mtgBody"), html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now.</div>`);
@@ -41015,7 +41019,7 @@ ${s5}`;
     ] });
   }
   function Notes() {
-    const drafted = shapeDrafted.value, busy = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
+    const drafted = shapeDrafted.value, busy2 = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
     if (!drafted && !SHAPE_SECTIONS.some(([k5]) => (texts[k5] || "").trim())) return null;
     const now = notesNow(), edited = new Set(editedSections()), why = draftWhyNot("shape");
     const ai2 = {
@@ -41038,10 +41042,10 @@ ${s5}`;
             type: "button",
             class: "btn shsm",
             "data-shregen": "1",
-            "aria-disabled": why || busy ? "true" : void 0,
+            "aria-disabled": why || busy2 ? "true" : void 0,
             "data-tip": why || "Draft again; the sections you edited are kept",
             onClick: () => {
-              if (!why && !busy) runShape();
+              if (!why && !busy2) runShape();
             },
             children: [
               /* @__PURE__ */ u2(Icon, { name: "refresh" }),
@@ -41049,8 +41053,8 @@ ${s5}`;
             ]
           }
         ),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-shdiscard": "1", disabled: !!busy, onClick: discardShape, children: "Discard" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shaccept": "1", disabled: !!busy || !shapeReading.value, onClick: () => {
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-shdiscard": "1", disabled: !!busy2, onClick: discardShape, children: "Discard" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shaccept": "1", disabled: !!busy2 || !shapeReading.value, onClick: () => {
           acceptShape();
         }, children: "Accept" })
       ] }),
@@ -41174,7 +41178,7 @@ ${s5}`;
       if (on2 && shapeFilter.value) previewFilter();
     }, [popupRev.value]);
     if (!on2) return null;
-    const busy = shapeBusy.value, why = draftWhyNot("shape"), conf = shapeConfidential.value;
+    const busy2 = shapeBusy.value, why = draftWhyNot("shape"), conf = shapeConfidential.value;
     const chips = shapeChips.value.filter((c5) => !shapeUsed.value.includes(c5.label));
     const hasDraft = !!shapeDrafted.value;
     return /* @__PURE__ */ u2("section", { class: "shape", "aria-labelledby": "shapeH", children: [
@@ -41217,10 +41221,10 @@ ${s5}`;
               type: "button",
               class: "btn primary",
               "data-shrun": "1",
-              "aria-disabled": why || busy ? "true" : void 0,
+              "aria-disabled": why || busy2 ? "true" : void 0,
               "data-tip": why || (hasDraft ? "Draft the notes again from the text; the sections you edited are kept" : "creaite reads the text and drafts the notes, each line cited"),
               onClick: () => {
-                if (!why && !busy) runShape();
+                if (!why && !busy2) runShape();
               },
               children: [
                 /* @__PURE__ */ u2(Icon, { name: "spark" }),
@@ -41229,7 +41233,7 @@ ${s5}`;
             }
           )
         ] }),
-        busy === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
+        busy2 === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
           /* @__PURE__ */ u2("span", { class: "spin", "aria-hidden": "true" }),
           /* @__PURE__ */ u2("span", { children: [
             "Shaping the meeting",
@@ -41238,7 +41242,7 @@ ${s5}`;
           ] }),
           /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-drstop": true, children: "Stop" })
         ] }) : null,
-        shapeMsg.value && !busy ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
+        shapeMsg.value && !busy2 ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
         !viaServer() ? /* @__PURE__ */ u2("p", { class: "wnote", children: "Shaping needs the live server." }) : null,
         /* @__PURE__ */ u2(ReadAs, {})
       ] }),
@@ -44542,7 +44546,7 @@ ${pre}**Current state title:** ${title}`);
       { ...start || {} }
     );
     const [said2, setSaid] = d2({ text: "", ok: true });
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const [polishing, setPolishing] = d2(false);
     const [card, setCard2] = d2(
       /** @type {PolishCard | null} */
@@ -44884,7 +44888,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "ch-acts", children: [
         /* @__PURE__ */ u2("span", { class: `ch-said${said2.ok ? "" : " fail"}`, role: "status", "aria-live": "polite", children: said2.text }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chCopyText", onClick: copyText, children: "Copy as text" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy2, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "chCopyHtml", onClick: copyOutlook, children: "Copy for Outlook" })
       ] })
     ] });
@@ -51992,6 +51996,84 @@ ${d5.text}`);
     return { close: done };
   }
 
+  // components/notes/DeleteNote.jsx
+  var noteDeleting = y3(
+    /** @type {{path: string, title: string, code: string} | null} */
+    null
+  );
+  var busy = y3(false);
+  function askDeleteNote() {
+    const c5 = noteCur.value;
+    if (!c5) return;
+    if (!viaServer()) {
+      snack("Deleting a note needs the live server");
+      return;
+    }
+    noteDeleting.value = { path: c5.path, title: c5.note.title, code: c5.code };
+  }
+  async function deleteNote(n4) {
+    busy.value = true;
+    try {
+      if (!await noteFlush()) {
+        noteDeleting.value = null;
+        notesMsg.value = "Not deleted: the note isn't saved yet (the line in its header says why).";
+        return false;
+      }
+      const cur = noteCur.value;
+      const r4 = await api("/api/notes/delete", { path: n4.path, base: cur && cur.path === n4.path ? cur.base : "" });
+      noteDeleting.value = null;
+      if (!r4 || !r4.ok || !r4.card) {
+        snack(oneLine(r4 && r4.message || "Not deleted."));
+        return false;
+      }
+      snack(oneLine(r4.message));
+      const done = await serverCardFlow(r4.card);
+      if (!done) return false;
+      if (noteCur.value && noteCur.value.path === n4.path) {
+        await closeNote();
+        navWrite(false);
+      }
+      await loadNotes(notesCode.value || n4.code);
+      const id2 = done.apply;
+      snack(`Moved “${n4.title}” to the archive`, id2 ? async () => {
+        const u5 = await api("/api/undo", { apply_id: id2 });
+        snack(u5 && u5.ok ? `“${n4.title}” is back in its notes folder` : oneLine(u5 && u5.message || "Not undone"));
+        if (u5 && u5.ok) {
+          await reloadData();
+          await loadNotes(notesCode.value || n4.code);
+        }
+      } : null);
+      return true;
+    } finally {
+      busy.value = false;
+    }
+  }
+  function DeleteNoteDialog() {
+    const n4 = noteDeleting.value;
+    const where2 = n4 && n4.code === "_portfolio" ? "the portfolio's archive" : "this project's archive";
+    return /* @__PURE__ */ u2(Dialog, { open: !!n4, onClose: () => {
+      if (!busy.value) noteDeleting.value = null;
+    }, labelledBy: "ndelH", describedBy: "ndelP", id: "noteDelDlg", focus: "#ndelCancel", class: "ndel", children: n4 ? /* @__PURE__ */ u2("div", { class: "ndelbox", children: [
+      /* @__PURE__ */ u2("h2", { id: "ndelH", children: [
+        "Delete “",
+        n4.title,
+        "”?"
+      ] }),
+      /* @__PURE__ */ u2("p", { id: "ndelP", children: [
+        "It moves to ",
+        where2,
+        ", not away for good. Restore it any time from Files › Archived. Anything that links to it shows the link as missing until it is restored."
+      ] }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "The move then waits on the approval card in ask creaite: nothing moves until you approve it there." }),
+      /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "ndelCancel", onClick: () => {
+          noteDeleting.value = null;
+        }, disabled: busy.value, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "ndelGo", disabled: busy.value, onClick: () => deleteNote(n4), children: busy.value ? "Working…" : "Delete note" })
+      ] })
+    ] }) : null });
+  }
+
   // components/project/ProjectTabs.jsx
   function ProjectTabs({ code, selected, count, onGo }) {
     const items2 = [
@@ -52852,11 +52934,14 @@ ${d5.text}`);
               items: [
                 { id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
                 { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-                { id: "file", name: "Show the file", line: n4.path, icon: "folder" }
+                { id: "file", name: "Show the file", line: n4.path, icon: "folder" },
+                { id: "sep", sep: true },
+                { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }
               ],
               onPick: (id2) => {
                 if (id2 === "pin") noteMeta({ pinned: !pinned }, true);
                 else if (id2 === "conf") noteMeta({ confidential: !conf }, true);
+                else if (id2 === "del") askDeleteNote();
                 else onOpenFile(n4.path);
               }
             }
@@ -52967,7 +53052,7 @@ ${d5.text}`);
     ] });
   }
   function NewNote({ code, open: open2, title, onClose, onMade }) {
-    const [tpl, setTpl] = d2("blank"), [t47, setT] = d2(title), [day, setDay] = d2(fd(TODAY)), [who2, setWho] = d2(""), [busy, setBusy] = d2(false);
+    const [tpl, setTpl] = d2("blank"), [t47, setT] = d2(title), [day, setDay] = d2(fd(TODAY)), [who2, setWho] = d2(""), [busy2, setBusy] = d2(false);
     h2(() => {
       if (open2) {
         setT(title);
@@ -52978,7 +53063,7 @@ ${d5.text}`);
     }, [open2, title]);
     const bad = tpl === "working-session" && day && !DDATE.test(day);
     const make = async () => {
-      if (busy || bad) return;
+      if (busy2 || bad) return;
       setBusy(true);
       const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: toIso(day), with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
       setBusy(false);
@@ -53028,7 +53113,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("p", { class: "sub", children: "Saved in the project's notes folder, named by its title. Internal: never in a client report." }),
       /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: onClose, children: "Cancel" }),
-        /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", id: "nnMake", disabled: busy || !!bad || !viaServer(), children: busy ? "Making…" : "Make the note" })
+        /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", id: "nnMake", disabled: busy2 || !!bad || !viaServer(), children: busy2 ? "Making…" : "Make the note" })
       ] })
     ] }) });
   }
@@ -53082,6 +53167,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2(NoteDoc, { code, onOpen: openPath2, onOpenItem, onNew: (t47) => setDlg(t47), onOpenFile }),
         /* @__PURE__ */ u2(NoteSide, { code, onOpen: openPath2, onOpenItem })
       ] }),
+      /* @__PURE__ */ u2(DeleteNoteDialog, {}),
       /* @__PURE__ */ u2(NewNote, { code, open: dlg !== null, title: dlg || "", onClose: () => setDlg(null), onMade: () => {
         setDlg(null);
         onAddressChange();
@@ -53094,7 +53180,8 @@ ${d5.text}`);
     for (const [code, L3] of Object.entries(allNotes())) if ((L3 || []).some((n4) => n4.path === path)) return code;
     return null;
   }
-  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path));
+  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/** @type {any} */
+  (D.files_archived || []).some((f5) => f5.path === path));
   var notesCodeOk = (code) => code === "_portfolio" || P4.some((p6) => p6.code === code);
   function renderNotes(code) {
     const el2 = $("#v-notes");
@@ -54096,7 +54183,7 @@ ${d5.text}`);
       null
     );
     const [pending, setPending] = d2(false);
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const [said2, setSaid] = d2("");
     const attached = A2(""), ctl = A2(
       /** @type {AbortController | null} */
@@ -54283,7 +54370,7 @@ ${d5.text}`);
       };
     };
     const close = async () => {
-      if (busy) return;
+      if (busy2) return;
       if (!viaServer()) {
         snack("Closing the day needs the live server");
         return;
@@ -54421,7 +54508,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("footer", { class: "cdfoot", children: [
           /* @__PURE__ */ u2("span", { class: "left", children: sweeping ? "The sweep only proposes; closing now closes when it finishes." : `${step2 + 1} of 4` }),
           step2 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-cdback": "1", onClick: () => move(-1), children: "Back" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-dcnot": "1", onClick: notYet, children: "Not yet" }),
-          step2 < 3 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
+          step2 < 3 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
         ] })
       ] })
     ] }) });
@@ -55023,6 +55110,12 @@ ${d5.text}`);
     }
     openChat();
     editFlow(r4.card);
+  }
+  async function serverCardFlow(card) {
+    openChat();
+    const m5 = await editFlow(card);
+    const b5 = m5 && m5.querySelector ? m5.querySelector("[data-edundo]") : null;
+    return b5 ? { apply: +b5.dataset.edundo || null } : null;
   }
   function fieldCardHtml(c5) {
     const n4 = (c5.items || []).length;

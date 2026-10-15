@@ -255,11 +255,13 @@ def archived_path(p: Path) -> Path:
 
 def archived_file(base: Path, rest, p: Path) -> Path:
     """BL-03: p (base/rest, in a project folder that is in place), or, when p isn't there but base/_Archive/rest is, that: a
-    report, minutes or Steerco one-pager archived into the engagement's own _Archive keeps its stored path (Alan, 14-10-2026)."""
+    report, minutes or Steerco one-pager archived into the engagement's own _Archive keeps its stored path (Alan, 14-10-2026).
+    #124: only those folders' files. A deleted note in <…>/_Archive/<notes folder>/ is not mapped, so a new note may take its old
+    name (its stored path is the notes folder's again), and the deleted one is reached only by Move back."""
     if not rest or rest[0] in (ARCHIVE, OLD_ARCHIVE) or os.path.lexists(p):
         return p
     moved = base / ARCHIVE / Path(*rest)
-    return moved if moved.is_file() else p
+    return moved if moved.is_file() and "/".join(rest[:-1]) in archivable_folders() else p
 
 
 ARCHIVED_FILE_KINDS = ("minutes", "weekly_reports", "client_reports", "steerco")    # BL-03: what moves into an engagement's _Archive

@@ -4186,6 +4186,11 @@ def edit_spec(data):
     return spec, None
 
 
+PAGE_ONLY = {"reports_back": "an archived file is moved back from Files (Move back), never from ask creaite",       # BL-331
+             "notes": "a note is deleted from the Notes tab (Delete note), never from ask creaite",              # #124
+             "notes_back": "a deleted note is moved back from Files (Move back), never from ask creaite"}
+
+
 def build_edit_card(run, final):
     """Gather a CHANGE line's spec into one card and emit it ("editcard"); the card's ID, or None."""
     m = re.search(EDIT_LINE, final, re.M)
@@ -4195,8 +4200,8 @@ def build_edit_card(run, final):
     src = edit_spec_file(m.group(1))
     data = src.read_bytes() if src else None
     spec, why = edit_spec(data) if data is not None else (None, "the change file isn't a .json file in system/staging/drafts/")
-    if spec and (spec.get("file_changes") or {}).get("archive") == "reports_back":      # BL-331: Files' Move back only
-        spec, why = None, "an archived file is moved back from Files (Move back), never from ask creaite"
+    if spec and (spec.get("file_changes") or {}).get("archive") in PAGE_ONLY:      # BL-331, #124: the page's own actions only
+        spec, why = None, PAGE_ONLY[spec["file_changes"]["archive"]]
     if not spec:
         run.emit("editcard", card=None, title=title, refused=why)
         return None
@@ -6701,6 +6706,50 @@ def notes_rename_route(handler, req):
 DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
                      "/api/notes/rename": notes_rename_route})
 # ===== end BL-301 B gaps =====
+
+# ===== #124: Delete note (Alan, 15-10-2026: the confirm box AND the one approval card) =====
+# POST /api/notes/delete {path, base}   after Alan's confirm box in the Notes tab: the note's move into its own engagement's (or
+#                                        the portfolio's) _Archive goes on the approval card in ask creaite; nothing moves here.
+# archive.note_delete_spec builds the move (never the page): a `move` of kind "notes", the BL-09 guard exception, so only
+# tracker.py apply makes it, on Approve (server_edit_card: bound to this snapshot, used once, 30 minutes); Reject moves nothing.
+# Undo (tracker.py undo) and Files › Archived's Move back ("notes_back") bring it back, never onto a file that is there. As with
+# the rename, never while ask creaite has read outside content, or for a note that isn't only Alan's: the note must be ordinary
+# as a change, as filechange.py judges it now. The note must be saved (`base`, the text's fingerprint) with no typing waiting.
+# A confidential note is deleted the same way: only its title is read, for the card, and nothing is sent anywhere.
+def notes_delete_route(handler, req):
+    """Put a note's move into the archive on the approval card, after the confirm box."""
+    import archive
+    import filechange
+    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str):
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, _code, p, rel = t
+    with NOTES_LOCK:
+        if str(req.get("base") or "") != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
+            return handler.send(200, {"ok": False, "message": "Not deleted: the note changed since it was saved. Open it again "
+                                      "and try once more."})
+        if notes.read_draft(rel):
+            return handler.send(200, {"ok": False, "message": "Not deleted: the note has typing not yet saved. Save it first."})
+        if filechange.verdict("edit", rel)[0] != "ordinary":
+            return handler.send(200, {"ok": False, "wait": True, "message": "Not deleted: moving this note needs more than the "
+                                      "card now (ask creaite has read outside content, or the file isn't only yours). Try again "
+                                      "when the chat has finished."})
+        spec, why = archive.note_delete_spec(rel)
+        if not spec:
+            return handler.send(200, {"ok": False, "message": f"Not deleted: {why}."})
+        card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    if not card:
+        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+    if debuglog:
+        debuglog.info("notes", f"delete note on card {card['card']}: {len(card['lines'])} line(s), valid {card['valid']}")
+    return handler.send(200, {"ok": True, "card": card, "message": "On the approval card in ask creaite: the note moves only when "
+                              "you approve it there."})
+
+
+DRAFT_ROUTES.update({"/api/notes/delete": notes_delete_route})
+# ===== end #124 =====
 
 # ===== Debug log (BL-102 part 2, stage A) =====
 # What the live server does is recorded through log.py. It is installed by wrapping the code above, so that code is left

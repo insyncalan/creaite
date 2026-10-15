@@ -273,8 +273,14 @@ def _whose_file(p):
 #                                                  -> <projects root>/<portfolio folder>/_Archive/<minutes folder>/<file> (BL-03)
 #   reports_back  exactly the reverse of a "reports" move: <…>/_Archive/<folder>/<file> -> <…>/<folder>/<file> (BL-331; one file,
 #                 the same folders, the same engagement or portfolio; tracker.check_move also requires that an archive moved it)
-ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back")
-FILE_MOVES = ("reports", "reports_back")             # one file, never a folder
+#   notes  <projects root>/<engagement or portfolio folder>/<its notes folder>/<note>.md
+#                                                  -> <same folder>/_Archive/<notes folder>/<note>.md, or <note>-2.md, -3… when that
+#                                                     name is taken there (#124 Delete note, Alan 15-10-2026; one .md file, only from
+#                                                     the live server's own card: propose.py stages it only from system/guard/)
+#   notes_back  exactly the reverse of a "notes" move (one file, back to the same notes folder; tracker.check_move also requires
+#               that a Delete note moved it there)
+ARCHIVE_MOVES = ("archive", "restore", "rename", "reports", "reports_back", "notes", "notes_back")
+FILE_MOVES = ("reports", "reports_back", "notes", "notes_back")      # one file, never a folder
 
 
 def _top_folder(name):
@@ -317,12 +323,39 @@ def _portfolio_folder(name):
     return pf.name == name and pf.parent == Path(os.path.realpath(paths.projects_root()))
 
 
+def _note_archive(pa, pb):
+    """#124: pa is <engagement or portfolio>/<its notes folder>/<note>.md and pb the same note in that folder's own _Archive, keeping
+    its place below it (<…>/_Archive/<notes folder>/<note>.md), or with -2, -3… when that name is taken there. Nothing else: no
+    picture, no other file, no deeper folder, no other folder, no other engagement."""
+    portfolio = _portfolio_folder(pa[0]) if pa else False
+    if len(pa) < 3 or len(pb) != len(pa) + 1 or not (_top_folder(pa[0]) or portfolio) or pb[0] != pa[0] or pb[1] != paths.ARCHIVE:
+        return False
+    if pb[2:-1] != pa[1:-1] or "/".join(pa[1:-1]) != paths.folder_name("notes").strip("/"):
+        return False
+    return _note_name(pa[-1], pb[-1])
+
+
+def _note_name(a, b):
+    """b is the note file name a (a visible .md name), or it with the -2, -3… a taken name gets (paths.free_path)."""
+    if a.startswith((".", "~$")) or len(a) <= 3 or a[-3:].lower() != ".md":
+        return False
+    if b == a:
+        return True
+    stem, ext = a[:-3], a[-3:]
+    number = b[len(stem) + 1:-3]
+    return b.startswith(stem + "-") and b.endswith(ext) and number.isdigit() and number[0] != "0" and len(number) <= 4
+
+
 def _move_shape(kind, pa, pb):
     """Whether the parts below the projects root (pa from, pb to) are the move `kind`: a whole folder, or (BL-03) one report file."""
     if kind == "reports":
         return _report_archive(pa, pb)
     if kind == "reports_back":
         return _report_archive(pb, pa)                # BL-331: the reverse of the approved shape, nothing wider
+    if kind == "notes":
+        return _note_archive(pa, pb)                  # #124: one note into its own folder's _Archive
+    if kind == "notes_back":
+        return _note_archive(pb, pa)                  # #124: the reverse, nothing wider
     if kind == "archive":
         return _project_folder(pa) and _in_archive(pb)
     if kind == "restore":
@@ -338,6 +371,10 @@ def _not_the_shape(kind):
     if kind == "reports_back":
         return (f"that isn't a report or minutes file moved back from its own engagement's {paths.ARCHIVE} to the same "
                 "folder (minutes, weekly and client reports and Steerco one-pagers only)")
+    if kind == "notes":
+        return f"that isn't a note (a .md file in a notes folder) moved into its own engagement's {paths.ARCHIVE}"
+    if kind == "notes_back":
+        return f"that isn't a note moved back from its own engagement's {paths.ARCHIVE} to the same notes folder"
     return f"that isn't a whole-folder {kind} (projects folder and {paths.ARCHIVE} only)"
 
 
