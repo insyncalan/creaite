@@ -6,15 +6,12 @@
 <input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off">
 <label class="setchg">
 <input type="checkbox" id="setChanged"> Show changed only</label>
-<div class="tabhost" id="setcatsHost">
-<div class="setcats" id="setcats" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="essentials" data-scat="essentials">Essentials</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="people" data-scat="people">People and projects</button>
-<button type="button" role="tab" aria-selected="true" aria-controls="settingsBody" tabindex="0" data-tab="advanced" data-scat="advanced">Advanced</button>
-<button type="button" role="tab" aria-selected="false" aria-controls="settingsBody" tabindex="-1" data-tab="health" data-scat="health">Health</button>
-</div>
-</div>
-<!-- BL-316: the categories (#setcats), the Tabs building block -->
+<nav class="setcats" id="setcats" aria-label="Settings categories">
+<button data-scat="essentials" aria-selected="false">Essentials</button>
+<button data-scat="people" aria-selected="false">People and projects</button>
+<button data-scat="advanced" aria-selected="true">Advanced</button>
+<button data-scat="health" aria-selected="false">Health</button>
+</nav>
 <select id="setcatsel" class="setcatsel" aria-label="Settings category">
 <option value="essentials">Essentials</option>
 <option value="people">People and projects</option>
@@ -987,14 +984,37 @@
 </div>
 </div>
 </div>
+<div class="card" data-more="Reports and minutes">
+<h2>Reports and minutes</h2>
+<div class="srow" data-keys="reports.file_exports_beside">
+<div>
+<span id="ss#25">File report exports beside it</span>
+<small id="ss#25h">An HTML, Word or PDF export of a weekly or client report is also filed beside the report, never overwriting.<span class="setnote"> Default: off. Off: an export stays in drafts unless you tick it, so the reports folder holds only what you chose to file (BL-335; Alan, 15-10-2026).</span>
+</small>
+</div>
+<div class="setctl">
+<input type="checkbox" class="switch" aria-labelledby="ss#25" aria-describedby="ss#25h">
+</div>
+</div>
+<div class="srow" data-keys="reports.file_minutes_exports_beside">
+<div>
+<span id="ss#26">File minutes exports beside them</span>
+<small id="ss#26h">An HTML, Word or PDF export of minutes is also filed beside the minutes, never overwriting.<span class="setnote"> Default: on. On: the copy you send sits with the minutes it came from (BL-338; Alan, 15-10-2026).</span>
+</small>
+</div>
+<div class="setctl">
+<input type="checkbox" class="switch" aria-labelledby="ss#26" aria-describedby="ss#26h">
+</div>
+</div>
+</div>
 <div class="card" data-more="Meeting prep and Intake">
 <h2>Meeting prep and Intake</h2>
 <div class="srow" data-keys="prep.series">
 <div>
-<span id="ss#25">Meeting series projects</span>
+<span id="ss#27">Meeting series projects</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#25h">The project chosen for each meeting series creaite was unsure of.<span class="setnote"> Default: none. Empty: filled in as you choose from a meeting's prep.</span>
+<small id="ss#27h">The project chosen for each meeting series creaite was unsure of.<span class="setnote"> Default: none. Empty: filled in as you choose from a meeting's prep.</span>
 </small>
 </div>
 <div class="setctl">
@@ -1004,12 +1024,12 @@
 </div>
 <div class="srow" data-keys="inbox.meetings_from">
 <div>
-<span id="ss#26">Calendar import goes back to</span>
-<small id="ss#26h">Monday of this week, or a number of days.<span class="setnote"> Default: monday. Monday: the working week so far.</span>
+<span id="ss#28">Calendar Import goes back to</span>
+<small id="ss#28h">Monday of this week, or a number of days.<span class="setnote"> Default: monday. Monday: the working week so far.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#26" aria-describedby="ss#26h" size="8">
+<input type="text" aria-labelledby="ss#28" aria-describedby="ss#28h" size="8">
 </div>
 </div>
 </div>
@@ -1017,75 +1037,32 @@
 <h2>Search</h2>
 <div class="srow" data-keys="search.debounce_ms">
 <div>
-<span id="ss#27">Search delay (ms)</span>
-<small id="ss#27h">How long search waits after typing before it runs.<span class="setnote"> Default: 150. 150 ms: feels instant without searching on every key.</span>
+<span id="ss#29">Search delay (ms)</span>
+<small id="ss#29h">How long search waits after typing before it runs.<span class="setnote"> Default: 150. 150 ms: feels instant without searching on every key.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#27" aria-describedby="ss#27h" min="0" max="2000" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#29" aria-describedby="ss#29h" min="0" max="2000" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="search.ask_budget_chars">
 <div>
-<span id="ss#28">ask creaite reads up to (characters)</span>
-<small id="ss#28h">How much vault text a search answer may read.<span class="setnote"> Default: 40000. 40,000 characters: enough sources for a grounded answer, quick to run.</span>
+<span id="ss#30">ask creaite reads up to (characters)</span>
+<small id="ss#30h">How much vault text a search answer may read.<span class="setnote"> Default: 40000. 40,000 characters: enough sources for a grounded answer, quick to run.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#28" aria-describedby="ss#28h" min="1000" max="200000" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#30" aria-describedby="ss#30h" min="1000" max="200000" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="search.include_documents">
 <div>
-<span id="ss#29">Search documents</span>
-<small id="ss#29h">Include project documents in search.<span class="setnote"> Default: on. On: documents are often where the answer is.</span>
+<span id="ss#31">Search documents</span>
+<small id="ss#31h">Include project documents in search.<span class="setnote"> Default: on. On: documents are often where the answer is.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#29" aria-describedby="ss#29h">
-</div>
-</div>
-</div>
-<div class="card" data-more="Archiving">
-<h2>Archiving</h2>
-<div class="srow" data-keys="archive.after_months.actions">
-<div>
-<span id="ss#30">Archive closed actions after (months)</span>
-<small id="ss#30h">Closed or cancelled actions are archived this long after closing, once a day; 0 never.<span class="setnote"> Default: 6. Six months: long enough to be past any report that mentions them (Alan, 14-10-2026).</span>
-</small>
-</div>
-<div class="setctl">
-<input type="number" aria-labelledby="ss#30" aria-describedby="ss#30h" min="0" step="1" style="width: #px;">
-</div>
-</div>
-<div class="srow" data-keys="archive.after_months.raid">
-<div>
-<span id="ss#31">Archive closed RAID items after (months)</span>
-<small id="ss#31h">Closed or cancelled risks, issues, assumptions and dependencies; 0 never.<span class="setnote"> Default: 6. Six months, as for actions (Alan, 14-10-2026).</span>
-</small>
-</div>
-<div class="setctl">
-<input type="number" aria-labelledby="ss#31" aria-describedby="ss#31h" min="0" step="1" style="width: #px;">
-</div>
-</div>
-<div class="srow" data-keys="archive.after_months.promises">
-<div>
-<span id="ss#32">Archive done promises after (months)</span>
-<small id="ss#32h">Done or dropped promises; 0 never.<span class="setnote"> Default: 6. Six months, as for actions (Alan, 14-10-2026).</span>
-</small>
-</div>
-<div class="setctl">
-<input type="number" aria-labelledby="ss#32" aria-describedby="ss#32h" min="0" step="1" style="width: #px;">
-</div>
-</div>
-<div class="srow" data-keys="archive.reports_after_months">
-<div>
-<span id="ss#33">Offer to archive reports and minutes after (months)</span>
-<small id="ss#33h">Reports, minutes and one-pagers older than this are offered monthly in Health; 0 never.<span class="setnote"> Default: 12. Twelve months: a year of reporting stays at hand (Alan, 14-10-2026).</span>
-</small>
-</div>
-<div class="setctl">
-<input type="number" aria-labelledby="ss#33" aria-describedby="ss#33h" min="0" step="1" style="width: #px;">
+<input type="checkbox" class="switch" aria-labelledby="ss#31" aria-describedby="ss#31h">
 </div>
 </div>
 </div>
@@ -1093,8 +1070,8 @@
 <h2>Folders and OneDrive</h2>
 <div class="srow" data-keys="locations.projects_root">
 <div>
-<span id="ss#34">Projects folder</span>
-<small id="ss#34h">Where the engagement folders live; empty is the vault's own.<span class="setnote"> Default: none. Empty: works out of the box; set-up points it at OneDrive.</span>
+<span id="ss#32">Projects folder</span>
+<small id="ss#32h">Where the engagement folders live; empty is the vault's own.<span class="setnote"> Default: none. Empty: works out of the box; set-up points it at OneDrive.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1104,8 +1081,8 @@
 </div>
 <div class="srow" data-keys="locations.portfolio">
 <div>
-<span id="ss#35">Portfolio folder</span>
-<small id="ss#35h">The portfolio's folder inside the projects folder.<span class="setnote"> Default: _Portfolio. _Portfolio, as in your template.</span>
+<span id="ss#33">Portfolio folder</span>
+<small id="ss#33h">The portfolio's folder inside the projects folder.<span class="setnote"> Default: _Portfolio. _Portfolio, as in your template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1115,8 +1092,8 @@
 </div>
 <div class="srow" data-keys="locations.skeleton">
 <div>
-<span id="ss#36">New project skeleton</span>
-<small id="ss#36h">The folder copied for a new project.<span class="setnote"> Default: _Templates/_Skeleton. _Templates/_Skeleton, as in your template.</span>
+<span id="ss#34">New project skeleton</span>
+<small id="ss#34h">The folder copied for a new project.<span class="setnote"> Default: _Templates/_Skeleton. _Templates/_Skeleton, as in your template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1126,8 +1103,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.transcripts">
 <div>
-<span id="ss#37">Transcripts folder</span>
-<small id="ss#37h">Inside each engagement.<span class="setnote"> Default: 02 Meetings/Transcripts. As in your engagement template.</span>
+<span id="ss#35">Transcripts folder</span>
+<small id="ss#35h">Inside each engagement.<span class="setnote"> Default: 02 Meetings/Transcripts. As in your engagement template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1137,8 +1114,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.minutes">
 <div>
-<span id="ss#38">Minutes folder</span>
-<small id="ss#38h">Inside each engagement.<span class="setnote"> Default: 02 Meetings/Minutes. As in your engagement template.</span>
+<span id="ss#36">Minutes folder</span>
+<small id="ss#36h">Inside each engagement.<span class="setnote"> Default: 02 Meetings/Minutes. As in your engagement template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1148,8 +1125,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.weekly_reports">
 <div>
-<span id="ss#39">Weekly reports folder</span>
-<small id="ss#39h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Weekly. As in your engagement template.</span>
+<span id="ss#37">Weekly reports folder</span>
+<small id="ss#37h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Weekly. As in your engagement template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1159,8 +1136,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.client_reports">
 <div>
-<span id="ss#40">Client reports folder</span>
-<small id="ss#40h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Weekly. Beside the weekly reports, as in your template.</span>
+<span id="ss#38">Client reports folder</span>
+<small id="ss#38h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Weekly. Beside the weekly reports, as in your template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1170,8 +1147,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.adhoc_documents">
 <div>
-<span id="ss#41">One-off documents folder</span>
-<small id="ss#41h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Adhoc. As in your engagement template.</span>
+<span id="ss#39">One-off documents folder</span>
+<small id="ss#39h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Adhoc. As in your engagement template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1181,8 +1158,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.images">
 <div>
-<span id="ss#42">Images folder</span>
-<small id="ss#42h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Content. As in your engagement template.</span>
+<span id="ss#40">Images folder</span>
+<small id="ss#40h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Content. As in your engagement template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1192,8 +1169,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.steerco">
 <div>
-<span id="ss#43">Steerco folder</span>
-<small id="ss#43h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Steerco. As in your engagement template.</span>
+<span id="ss#41">Steerco folder</span>
+<small id="ss#41h">Inside each engagement.<span class="setnote"> Default: 04 Reporting/Steerco. As in your engagement template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1203,8 +1180,8 @@
 </div>
 <div class="srow" data-keys="locations.folders.agendas">
 <div>
-<span id="ss#44">Agendas folder</span>
-<small id="ss#44h">Where prep pages and agendas are saved.<span class="setnote"> Default: 02 Meetings/Agendas. Beside the meetings, as in your template.</span>
+<span id="ss#42">Agendas folder</span>
+<small id="ss#42h">Where prep pages and agendas are saved.<span class="setnote"> Default: 02 Meetings/Agendas. Beside the meetings, as in your template.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1212,32 +1189,21 @@
 <code class="setval">02 Meetings/Agendas</code>
 </div>
 </div>
-<div class="srow" data-keys="locations.folders.notes">
-<div>
-<span id="ss#45">Notes folder</span>
-<small id="ss#45h">Where each engagement's notes are saved (BL-301).<span class="setnote"> Default: 08 Notes. Its own folder, as in your template; made on the first note.</span>
-</small>
-<small class="setfixed">Set at set-up: changed at set-up</small>
-</div>
-<div class="setctl">
-<code class="setval">08 Notes</code>
-</div>
-</div>
 <div class="srow" data-keys="locations.never_index">
 <div>
-<span id="ss#46">Never read</span>
-<small id="ss#46h">Folders creaite never reads or indexes.<span class="setnote"> Default: _Archive, _Templates, 99 System. Archive, templates and creaite's own files are never project content.</span>
+<span id="ss#43">Never read</span>
+<small id="ss#43h">Folders creaite never reads or indexes.<span class="setnote"> Default: zz Archive, _Templates, 99 System. Archive, templates and creaite's own files are never project content.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
 <div class="setctl">
-<code class="setval">_Archive, _Templates, 99 System</code>
+<code class="setval">zz Archive, _Templates, 99 System</code>
 </div>
 </div>
 <div class="srow" data-keys="locations.offsite_backup">
 <div>
-<span id="ss#47">OneDrive backup copy folder</span>
-<small id="ss#47h">Where the daily backup's closed copy goes.<span class="setnote"> Default: _Portfolio/99 System/creaite backups. Inside _Portfolio's 99 System, which creaite keeps for its own files.</span>
+<span id="ss#44">OneDrive backup copy folder</span>
+<small id="ss#44h">Where the daily backup's closed copy goes.<span class="setnote"> Default: _Portfolio/99 System/creaite backups. Inside _Portfolio's 99 System, which creaite keeps for its own files.</span>
 </small>
 <small class="setfixed">Set at set-up: changed at set-up</small>
 </div>
@@ -1250,8 +1216,8 @@
 <h2>Live server and ask creaite</h2>
 <div class="srow" data-keys="live_mode.required">
 <div>
-<span id="ss#48">Live server required</span>
-<small id="ss#48h">The dashboard works through the live server.<span class="setnote"> Default: on. Required: IT approved live mode; it is what makes Apply and ask creaite work.</span>
+<span id="ss#45">Live server required</span>
+<small id="ss#45h">The dashboard works through the live server.<span class="setnote"> Default: on. Required: IT approved live mode; it is what makes Apply and ask creaite work.</span>
 </small>
 <small class="setfixed">Set at set-up: the dashboard needs the live server (IT-approved); not a choice</small>
 </div>
@@ -1261,28 +1227,28 @@
 </div>
 <div class="srow" data-keys="live_mode.health_check_seconds">
 <div>
-<span id="ss#49">Check the server every (seconds)</span>
-<small id="ss#49h">How often the open page checks the server and refreshes itself.<span class="setnote"> Default: 30. Thirty seconds: quick to notice, no load to speak of.</span>
+<span id="ss#46">Check the server every (seconds)</span>
+<small id="ss#46h">How often the open page checks the server and refreshes itself.<span class="setnote"> Default: 30. Thirty seconds: quick to notice, no load to speak of.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#49" aria-describedby="ss#49h" min="5" max="3600" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#46" aria-describedby="ss#46h" min="5" max="3600" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="live_mode.script_policy">
 <div>
-<span id="ss#50">Script policy</span>
-<small id="ss#50h">The page's script policy: report-only, or off.<span class="setnote"> Default: report-only. Report-only: violations are counted before the policy is ever enforced.</span>
+<span id="ss#47">Script policy</span>
+<small id="ss#47h">The page's script policy: report-only, or off.<span class="setnote"> Default: report-only. Report-only: violations are counted before the policy is ever enforced.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#50" aria-describedby="ss#50h" size="14">
+<input type="text" aria-labelledby="ss#47" aria-describedby="ss#47h" size="14">
 </div>
 </div>
 <div class="srow" data-keys="assistant.enabled">
 <div>
-<span id="ss#51">ask creaite</span>
-<small id="ss#51h">The assistant panel.<span class="setnote"> Default: on. On: it is how you ask creaite.</span>
+<span id="ss#48">ask creaite</span>
+<small id="ss#48h">The assistant panel.<span class="setnote"> Default: on. On: it is how you ask creaite.</span>
 </small>
 <small class="setfixed">Set at set-up: ask creaite's switch is kept out of the screens on purpose</small>
 </div>
@@ -1292,32 +1258,32 @@
 </div>
 <div class="srow" data-keys="assistant.shortcut">
 <div>
-<span id="ss#52">Shortcut</span>
-<small id="ss#52h">The key that opens ask creaite.<span class="setnote"> Default: Cmd/Ctrl+J. Cmd/Ctrl+J: free in Chrome and easy to reach.</span>
+<span id="ss#49">Shortcut</span>
+<small id="ss#49h">The key that opens ask creaite.<span class="setnote"> Default: Cmd/Ctrl+J. Cmd/Ctrl+J: free in Chrome and easy to reach.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="text" aria-labelledby="ss#52" aria-describedby="ss#52h" size="14">
+<input type="text" aria-labelledby="ss#49" aria-describedby="ss#49h" size="14">
 </div>
 </div>
 <div class="srow" data-keys="assistant.confirm_writes">
 <div>
-<span id="ss#53">Confirm changes</span>
-<small id="ss#53h">ask creaite asks before changing the record.<span class="setnote"> Default: on. On: nothing reaches the record without your yes.</span>
+<span id="ss#50">Confirm changes</span>
+<small id="ss#50h">ask creaite asks before changing the record.<span class="setnote"> Default: on. On: nothing reaches the record without your yes.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#53" aria-describedby="ss#53h">
+<input type="checkbox" class="switch" aria-labelledby="ss#50" aria-describedby="ss#50h">
 </div>
 </div>
 <div class="srow" data-keys="assistant.run_timeout_minutes">
 <div>
-<span id="ss#54">Unwatched run stops after (minutes)</span>
-<small id="ss#54h">A request nobody is watching ends after this long.<span class="setnote"> Default: 30. Half an hour fits the longest real job (a sweep or minutes).</span>
+<span id="ss#51">Unwatched run stops after (minutes)</span>
+<small id="ss#51h">A request nobody is watching ends after this long.<span class="setnote"> Default: 30. Half an hour fits the longest real job (a sweep or minutes).</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#54" aria-describedby="ss#54h" min="1" max="240" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#51" aria-describedby="ss#51h" min="1" max="240" step="1" style="width: #px;">
 </div>
 </div>
 </div>
@@ -1325,32 +1291,32 @@
 <h2>Logging</h2>
 <div class="srow" data-keys="logging.max_mb">
 <div>
-<span id="ss#55">Log file limit (MB)</span>
-<small id="ss#55h">The largest a day's log may grow.<span class="setnote"> Default: 5. 5 MB: a busy day fits; a loop can't fill the disk.</span>
+<span id="ss#52">Log file limit (MB)</span>
+<small id="ss#52h">The largest a day's log may grow.<span class="setnote"> Default: 5. 5 MB: a busy day fits; a loop can't fill the disk.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#55" aria-describedby="ss#55h" min="1" max="500" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#52" aria-describedby="ss#52h" min="1" max="500" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="logging.keep_days">
 <div>
-<span id="ss#56">Keep logs for (days)</span>
-<small id="ss#56h">How many days of log are kept.<span class="setnote"> Default: 7. A week covers the last report cycle.</span>
+<span id="ss#53">Keep logs for (days)</span>
+<small id="ss#53h">How many days of log are kept.<span class="setnote"> Default: 7. A week covers the last report cycle.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#56" aria-describedby="ss#56h" min="1" max="90" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#53" aria-describedby="ss#53h" min="1" max="90" step="1" style="width: #px;">
 </div>
 </div>
 <div class="srow" data-keys="logging.repeat_window_hours">
 <div>
-<span id="ss#57">Repeating error window (hours)</span>
-<small id="ss#57h">An error seen again within this time still counts as live.<span class="setnote"> Default: 24. A day: anything older has stopped.</span>
+<span id="ss#54">Repeating error window (hours)</span>
+<small id="ss#54h">An error seen again within this time still counts as live.<span class="setnote"> Default: 24. A day: anything older has stopped.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="number" aria-labelledby="ss#57" aria-describedby="ss#57h" min="1" max="168" step="1" style="width: #px;">
+<input type="number" aria-labelledby="ss#54" aria-describedby="ss#54h" min="1" max="168" step="1" style="width: #px;">
 </div>
 </div>
 </div>
@@ -1358,14 +1324,14 @@
 <h2>Help</h2>
 <div class="srow" data-keys="help.start_seen">
 <div>
-<span id="ss#58">Start here seen</span>
+<span id="ss#55">Start here seen</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#58h">Whether Help › Start here has been shown once.<span class="setnote"> Default: off. Not yet: a new user sees it on the first visit; Reset shows it again.</span>
+<small id="ss#55h">Whether Help › Start here has been shown once.<span class="setnote"> Default: off. Not yet: a new user sees it on the first visit; Reset shows it again.</span>
 </small>
 </div>
 <div class="setctl">
-<input type="checkbox" class="switch" aria-labelledby="ss#58" aria-describedby="ss#58h">
+<input type="checkbox" class="switch" aria-labelledby="ss#55" aria-describedby="ss#55h">
 <button type="button" class="mini setreset" aria-label="Reset Start here seen to its default" title="Back to the default">Reset</button>
 </div>
 </div>
@@ -1374,10 +1340,10 @@
 <h2>Legacy</h2>
 <div class="srow" data-keys="people.added">
 <div>
-<span id="ss#59">People (old list)</span>
+<span id="ss#56">People (old list)</span>
 <span class="setdot" role="img" aria-label="Changed from the default" title="Changed from the default">
 </span>
-<small id="ss#59h">Names added before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
+<small id="ss#56h">Names added before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the people register</small>
 </div>
@@ -1387,8 +1353,8 @@
 </div>
 <div class="srow" data-keys="people.hidden">
 <div>
-<span id="ss#60">Hidden people (old list)</span>
-<small id="ss#60h">Names hidden before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
+<span id="ss#57">Hidden people (old list)</span>
+<small id="ss#57h">Names hidden before the people register.<span class="setnote"> Default: none. Empty: the register holds people now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the people register</small>
 </div>
@@ -1398,8 +1364,8 @@
 </div>
 <div class="srow" data-keys="workstreams.added">
 <div>
-<span id="ss#61">Workstreams (old list)</span>
-<small id="ss#61h">Workstreams added before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
+<span id="ss#58">Workstreams (old list)</span>
+<small id="ss#58h">Workstreams added before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the workstreams table</small>
 </div>
@@ -1409,8 +1375,8 @@
 </div>
 <div class="srow" data-keys="workstreams.hidden">
 <div>
-<span id="ss#62">Hidden workstreams (old list)</span>
-<small id="ss#62h">Workstreams hidden before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
+<span id="ss#59">Hidden workstreams (old list)</span>
+<small id="ss#59h">Workstreams hidden before the workstreams table.<span class="setnote"> Default: none. Empty: the table holds workstreams now.</span>
 </small>
 <small class="setfixed">Set at set-up: an old list; set-up moves it into the workstreams table</small>
 </div>

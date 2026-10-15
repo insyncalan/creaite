@@ -1,6 +1,6 @@
 # Backlog
 
-Agreed features not yet built. Built items leave this list and become requirements in `dev/BRD.md` (v0.24 maps BL-08 and BL-11 to BL-39 to their FRs); their full write-ups are in git history. The next new item is **BL-338** (BL-193, BL-194 and BL-196 to BL-337 are in use, apart from BL-332, which no item holds and stays unused; BL-319 is in use (Today as one home, v1.9.2); BL-275 and BL-276 are PDF and .eml search, from laptop 2) (BL-75, one-off documents and permission requests, was built in `sprint-adhoc-docs`, FR-78).
+Agreed features not yet built. Built items leave this list and become requirements in `dev/BRD.md` (v0.24 maps BL-08 and BL-11 to BL-39 to their FRs); their full write-ups are in git history. The next new item is **BL-341** (BL-193, BL-194 and BL-196 to BL-340 are in use, apart from BL-332, which no item holds and stays unused; BL-319 is in use (Today as one home, v1.9.2); BL-275 and BL-276 are PDF and .eml search, from laptop 2) (BL-75, one-off documents and permission requests, was built in `sprint-adhoc-docs`, FR-78).
 
 **Rules**
 - Nothing here is built until Alan moves it into a build step in `dev/BUILD.md`.
@@ -44,6 +44,7 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | BL-328 | **Defect.** A sweep that ends abnormally (stopped, timed out, or cut off when the server stops) leaves its lock, so the next sweep waits until the lock is 30 minutes old | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
 | BL-329 | **Defect.** Two servers start at once: the launcher starts a second while the first is still starting, which fails with "exit 1" (three times on 13-10) | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
 | BL-330 | **Defect.** The page asks for a remembered ask creaite chat that no longer exists (only 10 are kept): a 404 logged as a warning, six times on 13-10 | Alan, 14-10-2026 (live debug log, 13-10) | XS | **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** |
+| BL-326 | **Defect. ask creaite shows a run's machine text:** pressing Prep page shows the run in ask creaite with its whole prompt ("creaite prep page. Research one meeting … reply with ONLY a JSON object"), the meeting's context as JSON and the reply's JSON and HTML. Show only the ask, the activity and the outcome | Alan, 14-10-2026 | S | **Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330: both built on `v195-run-chat-bl330`. **In v1.9.5 (Alan, 14-10-2026)**; moved from v2.1.0 the same day |
 
 ### v1.9.5 (Alan, 14-10-2026)
 
@@ -54,9 +55,9 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | BL-10 | Age-based archiving of older items | Alan | M | **In v1.9.5 (Alan, 14-10-2026)**, after BL-09 (v1.9.4), with the rest of BL-03. **Ready for a sprint** (decisions below) |
 | BL-03 | Archiving old reports, snapshots and applied proposals (the backup half split out as BL-323) | BRD | S–M | **In v1.9.5 (Alan, 14-10-2026)**, with BL-10, after BL-09 (v1.9.4). Archived reports and minutes move into the engagement's `_Archive/`; **ready for a sprint** (decisions below) |
 | BL-316 | **Consistency audit after the move to components:** every screen on BL-256's building blocks; one shared behaviour test (keys, focus, Esc, Undo) on every menu, picker and dialog; check.py counts the old helpers down to 0 | Alan, 13-10-2026 | M | **In v1.9.5 (Alan, 14-10-2026)**, after BL-325, so every screen is checked once the shared scale is in |
-| BL-326 | **Defect. ask creaite shows a run's machine text:** pressing Prep page shows the run in ask creaite with its whole prompt ("creaite prep page. Research one meeting … reply with ONLY a JSON object"), the meeting's context as JSON and the reply's JSON and HTML. Show only the ask, the activity and the outcome | Alan, 14-10-2026 | S | **In v1.9.5 (Alan, 14-10-2026)**; moved from v2.1.0 the same day |
 | BL-333 | **Defect.** The page scrolls past its own bottom: on Today and the Prep page the whole window scrolls down into empty space, and the rail and content scroll away with it | Alan, 14-10-2026 (screenshot, Prep page) | XS | **Defect. In v1.9.5 (Alan, 14-10-2026).** |
 | BL-334 | **Alerts from people Alan follows read the conversation, not the message:** one card per Teams chat or mail thread since the last check, saying what came out of it (a short summary plus proposed actions, decisions and risks), never one card per line of to and fro | Alan, 14-10-2026 (live Today: 3 cards from one chat, 3 from one group chat) | M | **In v1.9.5 (Alan, 14-10-2026).** |
+| BL-331 | **Move back one archived report:** in Files, a report or minutes shown as archived gets **Move back**, which returns it to its place through the approval card | Alan, 14-10-2026, directly to Team 1 | S | **In v1.9.5 (Alan, 15-10-2026)**, after BL-10 and BL-03; built on `v196-move-back`. After v1.9.5 (follows BL-03) |
 
 ### v2.1.0 (Alan, 13-10-2026)
 
@@ -65,12 +66,14 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | BL-335 | **The weekly report, redesigned and built in creaite:** drafted, edited and approved on the project's Reports tab as a true A4 page; filed as a creaite report (`.html` with the report's data inside, reopened to edit, versioned); exported to Word (the firm's template), PDF and HTML to share. New layout that leads with health and the asks; sections you move and hide, rows you choose, a layout remembered per project, up to two client and partner logos, inline AI checks and suggestions, the standard peek on every item | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category, with BL-336 and BL-337.** Needs v2.0.0's one editor |
 | BL-336 | **The client report, as a Client view of the week's report:** one per client, with its own layout and renamable headings remembered per client; client health may differ, with a required reason; client-visible items only, in their client wording; Match internal per section or for all; a check of what's left out before export; a baseline (approved or exported only after the internal week is approved, its facts locked to it); HTML, Word or PDF | Alan, 14-10-2026 (mockup published as a private artifact) | L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category.** With BL-335; replaces cx-client-report's Word draft |
 | BL-337 | **Reporting space and journey:** a Reporting card on the project cockpit; one reporting space per project (weeks down the left, the week's internal and client reports as cards, the files filed); the editor with Internal, Client and Side by side views (≠ Client indicators, the difference on hover); a top-level **Reports** page listing every project's week, for Fridays; creaite drafts the client reports with the internal one | Alan, 14-10-2026 (mockup published as a private artifact) | M–L | **In v2.1.0 (Alan, 14-10-2026). Priority High: the Reporting category.** With BL-335 and BL-336 |
+| BL-338 | **The minutes editor, replacing today's minutes experience:** draft minutes from the transcript on a true A4 page, edited in place, with the transcript beside them (time tags on every line), checks against the transcript, the proposed items as rows in the page (approved unless removed), deadlines picked or typed in words, agenda coverage you act on, one version or an internal and a distributed version, saved in creaite's own format and exported to HTML, Word or PDF | Alan, 15-10-2026 (mockup published as a private artifact) | XL | **In v2.1.0 (Alan, 15-10-2026). Priority High: the Reporting category.** Replaces BL-59 and BL-60; on BL-335's editor |
+| BL-339 | **Retire the meeting hub** (BL-209's page for each meeting, FR-167): its links go to the Prep popup before a meeting and to the minutes after it; Coverage and Carry move into the minutes editor (BL-338) | Alan, 15-10-2026 | S | **In v2.1.0 (Alan, 15-10-2026). Priority High (Alan, 15-10-2026), like its siblings**, with BL-338. Ready (Alan, 15-10-2026: "this release is ready") |
 
 ### Not scheduled
 
 | ID | Item | Source | Size | Plan |
 |----|------|--------|------|------|
-| BL-331 | **Move back one archived report:** in Files, a report or minutes shown as archived gets **Move back**, which returns it to its place through the approval card | Alan, 14-10-2026, directly to Team 1 | S | After v1.9.5 (follows BL-03) |
+| BL-340 | **Notes transcripts in the minutes editor:** how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes | Alan, 15-10-2026 | M | **Not scheduled. Priority Low (Alan, 15-10-2026):** to look at after BL-338 |
 
 ### On hold
 
@@ -81,8 +84,6 @@ Every item built and in the BRD (BL-322 → FR-256, BL-323 → FR-257 and NFR-02
 | BL-183 | Health evidence and calibration: a banner when the declared health is better than the evidence, and your own health calls scored afterwards | Alan, from the 11-10-2026 research | S | **On hold again (Alan, 14-10-2026)**, out of v1.9.4: not buildable as written (where calibration shows is undecided; no Done-when). Eight recommendations recorded in its write-up for when it resumes |
 | BL-317 | **Reports you live in:** one living Status page per project (health, Current state, milestones, top risks, help needed), edited in place with evidence; each week a snapshot; Client view; Export to Word from it | Alan, 13-10-2026 | L | **On hold (Alan, 14-10-2026): design paused, to revisit later; in no release.** Mockup so far: the project page as six tabs, with Milestones worked through (`dev/mockups/project-page-mockup.html`; published https://claude.ai/artifact/Xk2SGW7fz6AJGCr45bPjfL) |
 | BL-125 | Promises, links and labels: the features on the tables Sprint 5 built | Alan | XL | **B (links) and C (labels) on hold (Alan, 13-10-2026).** Stage A built in v1.9.0 (FR-229) |
-| BL-59 | Minutes edited in review, Word produced on approval | Alan | L | **On hold (Alan, 13-10-2026).** **Low priority, not scheduled (Alan, 12-10-2026).** Mockup and brief on main (dev-designs). |
-| BL-60 | Transcript side pane in minutes review | Alan | M | **On hold (Alan, 13-10-2026).** **Low priority, not scheduled (Alan, 12-10-2026).** After BL-59; mockup on main. |
 | BL-204 | People with contact rhythm, and a one-click 1:1 prep page | Alan, 11-10-2026 | M | **On hold (Alan, 13-10-2026).** Low priority |
 | BL-203 | A project as it stood on any day: an "as of" date on the project page, and what changed between two dates | Alan, 11-10-2026 | M | **On hold (Alan, 13-10-2026).** Low priority |
 | BL-182 | Extraction quality, the rest: learn patterns from reject reasons (step C) and spot-check what was missed (step D). Steps A and B were built as BL-233 (FR-191, v1.7.0) and BL-232 (FR-182, v1.6.1) | Alan, from the 11-10-2026 research | M–L | **C and D stay on hold (Alan, 13-10-2026).** On hold (Alan, 11-10-2026): revisit step C after about a month of BL-233's data |
@@ -205,27 +206,6 @@ Raised 2026-10-05. Alan names further dashboard themes; each is added as a token
 - **Rules kept:** health colours stay icon plus text with sufficient contrast in every theme and mode; no external resources.
 - **Touches:** `system/templates/dashboard.html` (a token set per theme under `[data-palette=…]`), the Settings choice and swatches, the theme tests.
 
-### BL-59 — Minutes edited in review, Word produced on approval
-Raised 2026-10-06, after weighing Word against HTML as the master format. Today the draft Word file is the master: Alan edits it in Word, closes it, and `review.py approve` reconciles the draft with the staged items (sync, as staged or re-extract). The master becomes **structured data**: the meeting record plus its proposed items. Alan edits it in the dashboard, and the Word copy is produced from it on approval. **On hold (Alan, 13-10-2026).**
-- **The record:** title, date, projects, attendees, summary, updates by topic, open questions (rich text, the BL-47 Markdown subset), plus the proposed actions, decisions and risks, linked by ID. It extends today's `meeting.json` in `system/staging/`.
-- **Review page (Alan chose document-style editing, 2026-10-06):** the minutes show as a page in the same order as the Word file, with no frame around them. Text sections are edited in place with the BL-47 toolbar (fixed at the top while editing; faint outline on hover). Action, decision and risk rows are editable cells, like the Work list: owner from the people picker (BL-55), date picker, priority and workstream menus (BL-58), Tab between cells, and approve or reject on each row. "+ Add action / decision / risk". Changing a row changes the proposal directly, so nothing needs reconciling.
-- **Saving:** changes save to staging as Alan goes, with Undo. **Approve minutes** fills `minutes-template.docx` from the record (`docx_tools.py`), files it to each project's `minutes/` folder as now, and records the meeting in `processed.txt`. The bulk rule is unchanged: minutes are always approved on their own.
-- **No sensitivity label step (Alan, 2026-10-06: labelling is unnecessary).** This flow doesn't require one, and `documents.require_sensitivity_label` (now `true`) should be switched off or removed when this is built.
-- **Kept on approval:** the approved record is kept beside the Word copy (format and place decided at build; readable, searchable and excluded from extraction), so the dashboard can show filed minutes and search by field (BL-07).
-- **Word stays available:** "Open in Word" for an edit the dashboard can't do, or to send a draft to a colleague with tracked changes. That meeting's Word draft then becomes the master again, and today's consistency check applies.
-- **Re-extract** stays: it re-reads the transcript and proposes again, keeping items Alan has already decided.
-- **Removed for this flow:** waiting for Word's lock file, and the draft-versus-staged check with sync.
-- **Phase 2, reports:** weekly and client reports follow the same pattern. `report.py` already fills Word from a spec, so the spec fields (summary, progress, focus, help needed, health, current state) are edited on a report page in the dashboard and the Word copy is produced on approval. The client-safety scan runs on the data before the Word copy is made.
-- **Depends on:** BL-47 (editor), BL-55 (people picker); BL-58 (workstreams) helps.
-- **Touches:** `minutes.py` (record format, stage, refresh), cx-minutes, cx-review, `review.py`, `docx_tools.py` (fill from the record), `report.py` and cx-weekly-report and cx-client-report (phase 2), `system/templates/dashboard.html` (minutes and report pages in Review), `live_server.py` (save the record), `build_dashboard.py`, `dev/staging-format.md`, `system/config/settings.json`, Help, tests.
-
-### BL-60 — Transcript side pane in minutes review
-Raised 2026-10-06, set aside from BL-59. While reviewing minutes (BL-59), the meeting's transcript opens in a pane beside them, so Alan can check what was actually said without leaving review. **On hold (Alan, 13-10-2026).**
-- **Linking:** clicking a line in the minutes, or an action, decision or risk row, scrolls the pane to the passage it came from and highlights it. cx-minutes records, for each section and item, the transcript position it drew on (speaker turns, and timestamps for `.vtt`).
-- **The pane:** speaker turns with times, searchable, and can be closed. Read-only.
-- **No transcript** (a quick capture, BL-54, or minutes only): the pane shows the source note, or says there is none.
-- **Touches:** cx-minutes and `minutes.py` (source positions in the record), `system/templates/dashboard.html` (pane, links, highlight), `live_server.py` (read the transcript), tests.
-
 ### BL-182 — Extraction quality, the rest (steps C and D)
 Raised 2026-10-11 (Alan), from research into modern dashboards and project tools; **on hold**. **Steps A and B were taken out and are now BL-233 and BL-232.** What stays here waits for about a month of BL-233's data. **Steps C and D both stay on hold (Alan, 13-10-2026);** note that the live vault had 36 rejections and none with a reason on that day, so C has nothing to learn from until reasons are given (Shift+R in Review).
 - **C. Learned patterns (M).** A "Suggest patterns" button runs headless Claude read-only over the reject reasons (as Prep page runs) and proposes short patterns ("vague intentions with no object", "scheduling chatter"). Accepted ones are written to `system/config/extraction-guidance.md`, which cx-minutes and cx-sweep read, each switchable. BL-233 shows whether there is enough to learn from.
@@ -346,6 +326,16 @@ Raised 2026-10-13 (Alan): "a light wiki in the project structure, to capture ad 
 
 **Real-data gate (13-10-2026, run by Alan, read-only, `--private --exact`):** 3 of 4 Current state panes round-trip exactly; the fourth is a pane holding only an HTML comment, which the writer still drops. The comment node (Alan's decision) closes it.
 
+**Decided (Alan, 15-10-2026), the integration note's open questions** (`dev/V20-INTEGRATION-NOTE.md` on `v20-base`):
+1. **Tabs:** not in v2.0.0. The project page keeps Overview and Notes; Work, Milestones, Meetings and Files as tabs wait for BL-317 (on hold).
+2. **Clicks in a note:** a click on a `[[note]]` link or an item chip opens it; ⌥-click edits inside it. Kept as built.
+3. **Note drafts** (`system/staging/drafts/notes/`) stay in the daily backup zip (BL-323).
+4. **Notes are exempt from outside content.** Reading Alan's own note, a `.md` directly inside a project's or the portfolio's notes folder as `notes.note_of` accepts, no longer marks an ask creaite run (`live_server.py` `OUTSIDE_CONTENT`, the hook in `reach.py`). Everything else in OneDrive still marks: a note's pictures, other files, transcripts and documents. **This is a guard change**, made on its own branch with its own tests, and `creaite-rules.md`'s BL-141 lines say so.
+
+**Recommended by the Product Manager, 15-10-2026 (Alan may change them):** E's calls stay as built (each list item is a line; a hedged milestone or health row can't be ticked; only a "Very likely" repeat starts unticked; the memory line starts unticked; "Linked to …" is a note, not a staged link; rows open in the peek's layout inside the panel). The Draft email preview stays a plain contenteditable in v2.0.0 (option a); it moves to the one editor later.
+
+The release plan is `dev/sprints/v200-notes-release.md`.
+
 ### BL-255 — A hash-based script policy
 Raised 2026-10-11 (Alan) as BL-231 step 3; **split out 12-10-2026.** **Report-only built in v1.9.0 (FR-230); enforcing follows after a week of reports, when Alan decides.** No schema change.
 
@@ -360,6 +350,8 @@ After BL-212's headers, add `Content-Security-Policy` for the page. It is within
 
 ### BL-304 — Changes appear at once, and only what changed is redrawn
 **In v1.9.4 (Alan, 14-10-2026)**, beside BL-09.
+
+**Decided (Alan, 15-10-2026): Retry keeps Alan's value.** After "changed elsewhere", Retry applies his edit on top of the item as it now is (as built); the other change stays in the history, and Undo works.
 
 **Decided (Alan, 14-10-2026): Retry after "changed elsewhere" overwrites.** When an instant save is refused because the item changed elsewhere, **Retry** re-applies Alan's value on top of the item as it now is, so his value wins; it doesn't go to Review as a conflict. The other change stays in Activity and can be undone.
 
@@ -405,7 +397,7 @@ Raised 2026-10-13 (Alan), from research into how Linear, Asana and Plane are bui
 - BL-01 interactive dashboard → FR-33 to FR-35 (dashboard editing, Step 4b).
 - BL-05 cx-setup → FR-32 (Step 6).
 - BL-08 and BL-11 to BL-39 → built in Steps 2b and 4 to 4i; see the BRD's Backlog section for each item's FR.
-- BL-43 to BL-84 → built, apart from BL-59 and BL-60 and the promises feature (now BL-125), which are still listed above; the BRD's Backlog section maps each built item to its FR (FR-60 to FR-83).
+- BL-43 to BL-84 → built, apart from BL-59 and BL-60 (replaced by BL-338 on 15-10-2026; their write-ups are in git history) and the promises feature (now BL-125), which is still listed above; the BRD's Backlog section maps each built item to its FR (FR-60 to FR-83).
 - BL-97, BL-98 and BL-99 → built in `sprint-sweep-alerts` as FR-87 (sweep ignore list), FR-70 extended (meeting prep ranked by the invite, and the Prep page) and FR-88 (VIPs).
 - BL-107 → built in `sprint-timezone` as FR-91 (meeting times converted to the laptop's time zone by `sweep.py calendar`).
 - v1.6.1 (12-10-2026): BL-200 → FR-157; BL-198 → FR-158; BL-197 → FR-159; BL-199 → FR-160; BL-201 → FR-161; BL-196 → FR-162; BL-205 → FR-163; BL-206 → FR-164; BL-207 → FR-165; BL-208 → FR-166; BL-209 → FR-167; BL-212 → FR-168; BL-213 → FR-57; BL-214 → FR-169; BL-215 → FR-170; BL-211 → FR-171; BL-228 parts A and C → FR-172, part B → NFR-19; BL-237 → FR-173; BL-238 → FR-32, NFR-17; BL-239 → FR-174; BL-240, BL-241 → NFR-12, NFR-15; BL-242 → NFR-20; BL-248 → FR-175; BL-219 to BL-226 (the drafts scaffold) → FR-176; BL-219 → FR-177; BL-225 → FR-178; BL-222 → FR-179; BL-226 → FR-180; BL-250 → FR-181; BL-232 → FR-182; BL-243 → FR-183; BL-249 → FR-184; BL-244, BL-245 → FR-151; BL-251 → FR-113; BL-235's setting → FR-81; BL-246, BL-247 → NFR-18; BL-229's first part → NFR-19. BL-228 part D, the rest of BL-229 and BL-235's Settings control stay above.
@@ -671,6 +663,8 @@ Raised 2026-10-14 (Alan), from the UI/UX audit's wider findings (`dev/reviews/ui
 ### BL-326 — ask creaite shows the ask, the activity and the outcome, never a run's machine text
 Raised 2026-10-14 (Alan), a defect. **In v1.9.5 (Alan, 14-10-2026)**; placed in v2.1.0 earlier the same day, then moved. v1.9.1 was already cut. No schema change.
 
+**Moved to v1.9.4 (Alan, 15-10-2026)**, with BL-330, because both are built and approved on `v195-run-chat-bl330`. The release plan is `dev/sprints/v194-release.md`.
+
 **What happens now.** Pressing **Prep page** for a meeting in the dashboard starts a run through the run engine (`/api/prep/page`, `kind="prep"`), and ask creaite shows it as a chat. That chat shows the whole working copy: the prompt (`prep_page.PROMPT`: "creaite prep page. Research one meeting for Alan and reply with ONLY a JSON object, nothing else. Read-only: …"), the meeting's context as JSON, and Claude's reply, the JSON with the finished page's HTML in it.
 
 **What Alan sees instead (Alan, 14-10-2026): the ask, the activity and the closure.**
@@ -687,6 +681,8 @@ Raised 2026-10-14 (Alan), a defect. **In v1.9.5 (Alan, 14-10-2026)**; placed in 
 
 ### BL-331 — Move back one archived report
 Raised 2026-10-14 (Alan, directly to Team 1), a follow-up to BL-03. **After v1.9.5.** No schema change.
+
+**In v1.9.5 (Alan, 15-10-2026)**, on BL-10 and BL-03's archiving; built on `v196-move-back`. The release plan is `dev/sprints/v195-release.md`.
 - In Files, a report, minutes or Steerco one-pager shown as archived (in the engagement's or the portfolio's `_Archive/`) gets a **Move back** action.
 - It returns that one file to its place (the same folder below `_Archive/`), never overwriting: a name already taken gets a number.
 - It goes on the approval card, with the move shown, and is applied by `tracker.py apply` through BL-09's agreed `move` exception; ask creaite can't do it. Logged and undoable.
@@ -769,6 +765,43 @@ Raised 2026-10-14 (Alan). **In v2.1.0, Priority High (Alan, 14-10-2026): the Rep
 **Done when:** every way in reaches the same reporting space; the space shows each week's reports and their files; the three views switch without losing place; the Reports page lists every active project's week and what needs Alan.
 
 **Touches:** the cockpit (a Reporting card), a reporting space view, the left menu (Reports), the Today reminder, ⌘K, Help, tests.
+
+### BL-338 — The minutes editor, replacing today's minutes experience
+Raised 2026-10-15 (Alan). **In v2.1.0, Priority High (Alan, 15-10-2026): the Reporting category, with BL-335 to BL-337.** Mockup: a private artifact (Alan's claude.ai, "Minutes editor"), not committed because it uses the firm's real brand. **Replaces today's minutes experience** (cx-minutes' Word draft, edited in Word and reconciled at approval) and **BL-59 and BL-60**, which leave the backlog (their write-ups are in git history). Built on BL-335's report editor, so it reuses the A4 page, zoom, the one editor, the inline AI, the standard peek and the exports rather than building them twice. No schema change expected: the minutes are a filed creaite file and their items are the staged proposal.
+
+**Decided (Alan, 14 and 15-10-2026):**
+1. **After the transcript is processed,** cx-minutes drafts the minutes into the editor instead of a Word draft (the sections of `minutes-style.md`: header, executive summary, updates by topic with flags, decisions, risks, issues, assumptions and dependencies, action items, open questions and escalations, source). The source line names the meeting exactly: "Teams transcript and meeting chat, <meeting title>, <long date>, HH:MM–HH:MM (UAE time)".
+2. **The page:** a true A4 page shown at 80% of the window's width, zoomable from 40% to 80% of the width (− +, trackpad pinch, ⌘+ ⌘− ⌘0), as on the reports; Show as exported; scrolling or clicking never moves the page back to the top.
+3. **Everything is edited in place,** with the one editor. ✦ beside a heading redrafts that section from the transcript (Keep mine or Use this); selected words offer Shorten, Make it executive, Polish and Find the source; flags are chosen from a click on a line (the ten flags of `minutes-style.md`, used sparingly).
+4. **The transcript beside the minutes:** a pane of speaker turns with times, searchable and closable. Every line drawn from the transcript has a **time tag**; clicking it scrolls the pane to what was said and highlights it; hover for ✕ to remove a tag. Tags are shown in creaite only, never exported.
+5. **Checks against the transcript:** a claim, date, figure or owner the transcript doesn't support is underlined, with what was said and who said it, and Use that, Keep mine or Show in the transcript. A check left open is listed when approving.
+6. **The proposed items are rows in the page,** not a second list: decisions, risks, issues, assumptions and dependencies, and actions are the staged items themselves, so editing a row edits the item and nothing needs reconciling. Each row shows what it does: New action, New risk, Records FAL-D-004 as made, Closes FAL-A-003 · Looks done (with the evidence), Looks like FAL-R-006 (BL-221), Sensitive. An owner the people register doesn't know is picked from the register in the row (BL-55), and the alias is remembered. Every ID opens the **full standard peek**, with **Sneak peek** (BL-322) to change the item in words.
+7. **Looks like an existing item:** **Update that one** turns the new item into an update of the existing one and shows exactly what changes (latest update, due date; title, owner, priority and response unchanged; the earlier update kept in the history; the minutes added as a source). **Keep as new** leaves it a new item. Both are also in the full peek, with the meeting's quote and the changes shown before and after.
+8. **Items are approved unless removed:** Alan doesn't tick each one. **✕ Remove** on a row removes the item and its line from the minutes (Keep the line in the minutes keeps the line only), with Undo.
+9. **Deadlines:** clicking a deadline opens a calendar and quick picks (Friday, Next week, Next Wednesday, End of month, each with its date shown), and Alan can type words instead ("Friday", "next week", "next Wednesday", "end of month", "in 2 weeks", "30-10"). Words are worked out from the meeting's date (`minutes-style.md`), and the date is shown before it is set; "next week" is that week's Friday; "end of month" the last working day. Not set stays possible.
+10. **Approve minutes** opens one popup (wider than today's, about 784px; Esc or a click outside closes it) that says what will be filed and lists the items in two groups: **Actions and updates**, approved together with one tick ("Approve all n as reviewed in the minutes", ticked by default); and **one tick each** for a new decision, a decision recorded or withdrawn, a new risk and an update that closes an item, as the bulk rule requires. Whatever is ticked is applied **with the minutes, in one apply with Undo, and doesn't go to Review again**; anything left unticked waits in Review. The minutes are always approved on their own, as now. Approved minutes reopen with **Edit again**, which makes a new version and keeps the earlier one.
+11. **Agenda coverage** (BL-209's Coverage, moved here): where the meeting had an agenda or a prep page, a section shown in creaite only lists each point as Covered, Touched on or Not discussed. **Deal with it…** on a point that wasn't covered offers: **Carry it to the next meeting of the series** (on its draft agenda and Prep, marked "carried from <date>"); **Set up a separate session** (adds an action for Alan, due Friday by default, to set it up; creaite never creates the invite, since Microsoft 365 actions stay off); or **No longer needed** / **Covered enough**. With "Add a line to the minutes" (on by default) it writes a line under **Not covered in this meeting** ("Training plan was not discussed; it is carried to the next steering committee on 27 October 2026"). Undo on each.
+12. **Milestones are never changed from minutes** (BL-186): a milestone the meeting moved gets a note in creaite only, and **Review the Go-live milestone** opens it in the peek with the change filled in (expected date, state, the reason from the transcript, an optional rebaseline), proposed on its own to Review.
+13. **One version, or internal and distributed (Alan, 15-10-2026: minimise the work when one is enough).** One version by default. **Internal + distributed** turns on a distributed version for attendees or the client, remembered for the meeting series. It works like BL-336's Client view: Internal, Distributed and Side by side views; a line can be marked **Internal only**; a Sensitive item never reaches it; ≠ Distributed markers on the internal page with both versions on hover; Match internal per section; a check of what's left out before export; its facts lock to the approved internal minutes. Side by side keeps matching sections and topics the same height, so their headings stay level as both pages scroll together.
+14. **Saved in creaite's own format** as Alan goes (a version shown in the bar), filed on approval in the project's minutes folder as `YYYY-MM-DD <Meeting title>` in creaite's format (the page and its data in one file, as BL-335's reports), with the transcript in Transcripts. Reopening it brings back every option: versions, the transcript pane, time tags, checks, coverage and the item rows. Search reads it.
+15. **Export for distribution:** HTML, Word (the firm's minutes template, `minutes-template.docx`) or PDF, all ticked by default; **File the exports beside the minutes** is on by default; each export opens in the default viewer as soon as it's made. Nothing is ever sent.
+16. **Feeds the weekly report:** the approved minutes' decisions and updates feed BL-335's "Decisions made this week" and "This week".
+
+**Done when:** a processed transcript opens as draft minutes in the editor with the transcript pane and time tags; edits to a row change its staged item; Remove, Update that one and the owner picker work with Undo; a deadline typed in words sets the right date from the meeting's date; Approve applies the minutes and the ticked items in one apply and sends nothing else to Review; agenda coverage can carry a point, add the action or note it; the distributed version never contains an Internal only line or a Sensitive item (a test); the minutes reopen from creaite's format with every option; HTML, Word and PDF exports match the page and open in the default viewer; scrolling side by side keeps headings level; the page never jumps to the top.
+
+**Touches:** a minutes view on BL-335's editor; `minutes.py` (the minutes record, stage, the source positions for time tags, coverage carry and actions); cx-minutes (draft into the editor, no Word draft); cx-review and `review.py` (approving minutes and their items in one apply); `docx_tools.py` (Word from the record); `report.py` (the shared creaite file, HTML and PDF); `live_server.py` (save, the transcript, opening an export); `paths.py`; `minutes-style.md`; `creaite-rules.md` (the cx-minutes row, the Word draft); Help; tests.
+
+### BL-339 — Retire the meeting hub
+Raised 2026-10-15 (Alan). **In v2.1.0 (Alan, 15-10-2026)**, with BL-338. Alan: the page is too complex and not needed now. No schema change.
+
+- **Remove** BL-209's page for each meeting (`#meeting=<token>`, its strip of steps and its next-step button, FR-167) and its "Meeting page" links from Today, the Week ahead, Intake, the Prep brief, Files, an item's source and Review.
+- **Where the links go instead:** before a meeting, its Prep popup; after it, its minutes in BL-338's editor (the draft or the filed minutes). An old `#meeting=` link opens the same place.
+- **Coverage and Carry to the next agenda** move into BL-338's Agenda coverage; carried points still appear on the series' next prep page under "Not covered last time".
+- **Done when:** no screen links to a meeting page; old links land on Prep or the minutes; coverage and carry work from the minutes; the BRD retires FR-167 and moves its coverage part to BL-338's requirement.
+- **Touches:** `meetings.js` (`hubLink` and the page), Today, the Week ahead, Intake, Prep, Files, Review, `build_dashboard.py`, cx-minutes (the coverage step's wording), Help, tests.
+
+### BL-340 — Notes transcripts in the minutes editor
+Raised 2026-10-15 (Alan). **Not scheduled, Priority Low (Alan, 15-10-2026).** To look at after BL-338: how a transcript of Alan's own notes (a dictated or recorded note, beside v2.0.0's Notes and BL-54's quick notes) is drafted, edited and approved with BL-338's editor, and what differs from a meeting's minutes (no attendees or agenda, one speaker, perhaps no Word export). Design first; nothing decided yet.
 
 ### BL-327 — Defect: slow saves and a slow first load
 Raised 2026-10-14 (Alan), from the live debug log (1.8.0, 13-10-2026, logging at debug). **Defect. In v1.9.4 (Alan placed it in v1.9.2 on 14-10-2026; v1.9.2 and v1.9.3 were already cut, so it moved to the next open release).** No schema change.
