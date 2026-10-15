@@ -18,6 +18,23 @@ import { shared } from "./state.js";
 import { REC } from "../panel.js";
 import { PULSE, pulseGet, refreshAll } from "./server.js";
 
+/* Plan #85: a click is never lost to a redraw. Fresh data (the boot refresh, a live update, a reload) is swapped in and drawn
+   only once the pointer is up and its click has landed: a press on a row that the redraw replaced before the release sent the
+   click to the table, not the row. pointerIdle() resolves at once when no button is down; otherwise just after the pointerup's
+   click (a task later), or after HOLD_MAX ms when the button stays down (a drag, or a pointerup that never came). */
+const PTR = { down: false, since: 0, /** @type {Array<() => void>} */ waiters: [] };
+export const HOLD_MAX = 4000;
+function ptrFree() { PTR.down = false; const w = PTR.waiters.splice(0); if (w.length) setTimeout(() => w.forEach(f => f()), 0); }
+document.addEventListener("pointerdown", e => { if (e.isPrimary) { PTR.down = true; PTR.since = Date.now(); } }, true);
+document.addEventListener("pointerup", e => { if (e.isPrimary) ptrFree(); }, true);
+document.addEventListener("pointercancel", e => { if (e.isPrimary) ptrFree(); }, true);
+window.addEventListener("blur", ptrFree);
+/** @returns {Promise<void>} */
+export function pointerIdle() {
+  if (!PTR.down || Date.now() - PTR.since >= HOLD_MAX) return Promise.resolve();
+  return new Promise(res => { let done = false; const fin = () => { if (!done) { done = true; res(); } };
+    PTR.waiters.push(fin); setTimeout(fin, PTR.since + HOLD_MAX - Date.now()); }); }
+
 /** @typedef {{k:string, id:string, f:Record<string, any>}} Overlay */
 /** @type {Map<string, Overlay[]>} "k|id" → the changes to that item still saving, oldest first */
 export const INFLIGHT = new Map();
@@ -76,10 +93,11 @@ export async function recordsRefresh(ids, o = {}) {
   if (list.length > 200) return false;
   PULSE.reloads++; let n = null;
   try {
-    const hold = o.hold ? o.hold() : null;
     try { const r = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
       if (r.ok) n = await r.json(); } catch (e) { n = null; }
     if (!n || !n.ok) return false;
+    await pointerIdle();                                   /* Plan #85: a click in progress lands first */
+    const hold = o.hold ? o.hold() : null;                 /* after it, so a selection the click made is kept */
     RECSTAT.records++; recMerge(n); refreshAll(); if (o.restore) o.restore(hold);
     if (PULSE.v != null && !PULSE.busy) { const r = await pulseGet(); if (r && !PULSE.stale) { PULSE.v = r.v; PULSE.pending = r.pending; } }   /* BL-110: his own change doesn't cause a second reload */
   } finally { PULSE.reloads--; }

@@ -4,6 +4,7 @@
    boot…() functions that src/main.js calls in today's order. */
 import { FILES, fpName, P, pName, WEEKSTART } from "./core/data.js";
 import { $, $$, addHTML, html, ibtn, ic, putHTML, raw } from "./core/dom.js";
+import { pointerIdle } from "./core/instant.js";
 import { D, DDATE, fd, S, store, toIso } from "./core/page.js";
 import { api, oneLine, SERVED, snack, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
@@ -60,6 +61,7 @@ export async function refreshFiles(force){ if(!SERVED||!shared.LIVE||shared.FBUS
     [...FNEW].forEach(p=>{ if(!FSEEN.has(p)) FNEW.delete(p); }); }
   catch(e){ FERR=`Couldn't refresh the file list (${e.message}); showing the list from ${clockOf(FAT||D.built_at)||"the last build"}.`; }
   finally{ clearTimeout(slow); shared.FBUSY=false; }
+  await pointerIdle();   /* Plan #85: a click in progress lands before the list is redrawn */
   inboxBadge(); if(shared.VIEW==="files") renderFiles(); else if(shared.VIEW==="inbox") renderInbox(); return true; }
 /* looking at Files again clears what was new last time */
 export function filesOpened(){ if(FSEEN){ FNEW.clear(); FSEEN=new Set(FILES.map(f=>f.path)); } else FSEEN=new Set(FILES.map(f=>f.path)); refreshFiles(true); }

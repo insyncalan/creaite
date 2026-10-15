@@ -3045,7 +3045,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   __export(main_exports, {
     $: () => $,
     $$: () => $$,
-    A: () => A4,
+    A: () => A3,
     ACHGFIRST: () => ACHGFIRST,
     ACHG_OP: () => ACHG_OP,
     ACTKINDS: () => ACTKINDS,
@@ -3197,6 +3197,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     HL: () => HL,
     HLNOTE: () => HLNOTE,
     HLTICK: () => HLTICK,
+    HOLD_MAX: () => HOLD_MAX,
     HRANK: () => HRANK,
     HTABS: () => HTABS,
     HUB: () => HUB,
@@ -4758,6 +4759,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     pkX: () => pkX,
     placePicker: () => placePicker,
     plur: () => plur,
+    pointerIdle: () => pointerIdle,
     polishAsk: () => polishAsk,
     portfolioTable: () => portfolioTable,
     prepDated: () => prepDated,
@@ -7376,6 +7378,176 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }) }), host2);
   }
 
+  // core/instant.js
+  var PTR = {
+    down: false,
+    since: 0,
+    /** @type {Array<() => void>} */
+    waiters: []
+  };
+  var HOLD_MAX = 4e3;
+  function ptrFree() {
+    PTR.down = false;
+    const w5 = PTR.waiters.splice(0);
+    if (w5.length) setTimeout(() => w5.forEach((f5) => f5()), 0);
+  }
+  document.addEventListener("pointerdown", (e4) => {
+    if (e4.isPrimary) {
+      PTR.down = true;
+      PTR.since = Date.now();
+    }
+  }, true);
+  document.addEventListener("pointerup", (e4) => {
+    if (e4.isPrimary) ptrFree();
+  }, true);
+  document.addEventListener("pointercancel", (e4) => {
+    if (e4.isPrimary) ptrFree();
+  }, true);
+  window.addEventListener("blur", ptrFree);
+  function pointerIdle() {
+    if (!PTR.down || Date.now() - PTR.since >= HOLD_MAX) return Promise.resolve();
+    return new Promise((res) => {
+      let done = false;
+      const fin = () => {
+        if (!done) {
+          done = true;
+          res();
+        }
+      };
+      PTR.waiters.push(fin);
+      setTimeout(fin, PTR.since + HOLD_MAX - Date.now());
+    });
+  }
+  var INFLIGHT = /* @__PURE__ */ new Map();
+  var RECORD_KINDS = ["actions", "raid", "decisions"];
+  var ovKey = (k5, id) => k5 + "|" + id;
+  function ovAdd(recs) {
+    for (const r4 of recs || []) {
+      const key = ovKey(r4.k, r4.id);
+      if (!INFLIGHT.has(key)) INFLIGHT.set(key, []);
+      INFLIGHT.get(key)?.push(r4);
+    }
+  }
+  function ovDrop(recs) {
+    for (const r4 of recs || []) {
+      const key = ovKey(r4.k, r4.id), L2 = INFLIGHT.get(key);
+      if (!L2) continue;
+      const i5 = L2.indexOf(r4);
+      if (i5 >= 0) L2.splice(i5, 1);
+      if (!L2.length) INFLIGHT.delete(key);
+    }
+  }
+  var ovBusy = (recs) => (recs || []).some((r4) => INFLIGHT.has(ovKey(r4.k, r4.id)));
+  var savingIds = () => new Set([...INFLIGHT.values()].flat().map((o5) => o5.id));
+  function ovReapply() {
+    for (const s5 of shared.PKS || []) {
+      if (!RECORD_KINDS.includes(s5.k) || !s5.patch) continue;
+      const x5 = REC(s5.k, s5.id);
+      if (x5) {
+        Object.assign(x5, s5.patch);
+        if (s5.k === "raid") x5.pr = prio(x5.imp, x5.lik);
+      }
+    }
+    for (const L2 of INFLIGHT.values()) for (const o5 of L2) {
+      const x5 = REC(o5.k, o5.id);
+      if (!x5) continue;
+      Object.assign(x5, o5.f);
+      if (o5.k === "raid") x5.pr = prio(x5.imp, x5.lik);
+    }
+  }
+  var SAVEQ = Promise.resolve();
+  function saveQueue(fn) {
+    const run = SAVEQ.then(fn, fn);
+    SAVEQ = run.catch(() => {
+    });
+    return run;
+  }
+  async function savesSettled() {
+    let q4;
+    do {
+      q4 = SAVEQ;
+      await q4;
+    } while (q4 !== SAVEQ);
+  }
+  var TEXT = ["t", "upd", "resp", "cm", "cmd", "reason"];
+  function recNorm(t5, o5) {
+    TEXT.forEach((k5) => {
+      if (typeof o5[k5] === "string") o5[k5] = fdText(o5[k5]);
+    });
+    if (t5 === "raid") o5.pr = prio(o5.imp, o5.lik);
+    return o5;
+  }
+  function recMerge(n4) {
+    const T5 = { actions: A3, raid: R2, decisions: DEC };
+    for (const t5 of RECORD_KINDS) for (const got of n4.records && n4.records[t5] || []) {
+      const arr = T5[t5], x5 = arr.find((o5) => o5.id === got.id);
+      recNorm(t5, got);
+      if (x5) {
+        Object.keys(x5).forEach((c5) => {
+          if (!(c5 in got)) delete x5[c5];
+        });
+        Object.assign(x5, got);
+      } else arr.push(got);
+    }
+    for (const id of n4.missing || []) for (const t5 of RECORD_KINDS) {
+      const arr = T5[t5], i5 = arr.findIndex((o5) => o5.id === id);
+      if (i5 >= 0) arr.splice(i5, 1);
+    }
+    for (const k5 of ["review_focus", "peek_staged", "activity_capped", "activity_older", "milestone_names", "latest_apply"]) if (k5 in n4) D[k5] = n4[k5];
+    if (Array.isArray(n4.review)) {
+      REV.splice(0, REV.length, ...n4.review);
+      D.review = REV;
+    }
+    if (Array.isArray(n4.activity)) {
+      shared.ACT = n4.activity;
+      shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
+    }
+    if (n4.data_at) shared.DATA_AT = n4.data_at;
+    ovReapply();
+    undatedRecount();
+  }
+  function undatedRecount() {
+    for (const p6 of P3) {
+      if (!p6 || !p6.undated) continue;
+      const a5 = A3.filter((x5) => x5.p === p6.code && open(x5) && !x5.due).length;
+      const r4 = R2.filter((x5) => x5.p === p6.code && x5.st === "Open" && !x5.due && (x5.type === "Risk" || x5.type === "Issue" || x5.resp)).length;
+      p6.undated = { actions: a5, raid: r4, total: a5 + r4 };
+    }
+  }
+  var RECSTAT = { records: 0, full: 0 };
+  async function recordsRefresh(ids, o5 = {}) {
+    const list = [...new Set(ids || [])].filter(Boolean);
+    if (list.length > 200) return false;
+    PULSE.reloads++;
+    let n4 = null;
+    try {
+      try {
+        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o5.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
+        if (r4.ok) n4 = await r4.json();
+      } catch (e4) {
+        n4 = null;
+      }
+      if (!n4 || !n4.ok) return false;
+      await pointerIdle();
+      const hold = o5.hold ? o5.hold() : null;
+      RECSTAT.records++;
+      recMerge(n4);
+      refreshAll();
+      if (o5.restore) o5.restore(hold);
+      if (PULSE.v != null && !PULSE.busy) {
+        const r4 = await pulseGet();
+        if (r4 && !PULSE.stale) {
+          PULSE.v = r4.v;
+          PULSE.pending = r4.pending;
+        }
+      }
+    } finally {
+      PULSE.reloads--;
+    }
+    if (o5.after) await o5.after();
+    return true;
+  }
+
   // ../../vendor/preact/signals-core/dist/signals-core.module.js
   var i4 = /* @__PURE__ */ Symbol.for("preact-signals");
   function t4() {
@@ -8029,14 +8201,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       queueMicrotask(i5);
     });
   };
-  function A3() {
+  function A4() {
     n3(function() {
       var i5;
       while (i5 = m4.shift()) l5.call(i5);
     });
   }
   function T4() {
-    if (1 === m4.push(this)) (l.requestAnimationFrame || k4)(A3);
+    if (1 === m4.push(this)) (l.requestAnimationFrame || k4)(A4);
   }
   function x4() {
     n3(function() {
@@ -10432,7 +10604,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       ) }));
     }
     const gap = {};
-    [...A4.filter((x5) => x5.st === "Open" || x5.st === "Delayed").map((x5) => ["actions", x5]), ...R2.filter((r4) => r4.st === "Open").map((r4) => ["raid", r4])].forEach(([k5, x5]) => {
+    [...A3.filter((x5) => x5.st === "Open" || x5.st === "Delayed").map((x5) => ["actions", x5]), ...R2.filter((r4) => r4.st === "Open").map((r4) => ["raid", r4])].forEach(([k5, x5]) => {
       const g5 = gap[x5.p || ""] || (gap[x5.p || ""] = { actions: 0, raid: 0, due: 0 });
       if (!x5.o || x5.o === "TBC") g5[k5]++;
       if (k5 === "actions" && !x5.due) g5.due++;
@@ -10494,7 +10666,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   };
   function renderToday() {
     renderDay();
-    const pend = REV.filter((r4) => !r4.done), mineOver = A4.filter((x5) => isMe(x5.o) && overdue(x5)), mineSoon = A4.filter((x5) => isMe(x5.o) && soon(x5)), off = P3.filter((p6) => p6.health === "Off track");
+    const pend = REV.filter((r4) => !r4.done), mineOver = A3.filter((x5) => isMe(x5.o) && overdue(x5)), mineSoon = A3.filter((x5) => isMe(x5.o) && soon(x5)), off = P3.filter((p6) => p6.health === "Off track");
     putHTML($("#briefText"), html`<b>${pend.length} proposal${pend.length === 1 ? "" : "s"}</b> need${pend.length === 1 ? "s" : ""} your decision, ${raw(countLink(`${plur(mineOver.length, "overdue action")} of yours`, mineOver.length, "actions:overdue:", { o: ["@me"] }, `<b>${mineOver.length} of your actions</b>`))} ${mineOver.length === 1 ? "is" : "are"} overdue${off.length ? html`, and <b>${andList(off.map((p6) => p6.name))}</b> ${off.length === 1 ? "is" : "are"} off track` : ""}.`);
     renderToDecide();
     renderDn();
@@ -10514,7 +10686,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     renderPromises();
     const seen = /* @__PURE__ */ new Set(), done = shared.ACT.filter((a5) => a5.at > LASTVISIT && !a5.undone && (a5.tbl === "actions" || a5.tbl === "raid") && /^status: .*→ Closed$/i.test(a5.change) && !seen.has(a5.id) && seen.add(a5.id));
     const rc = capped(done.map((a5, i5) => {
-      const x5 = (a5.tbl === "actions" ? A4 : R2).find((y5) => y5.id === a5.id), when = a5.at.slice(0, 10) === TODAY ? `at ${a5.at.slice(11)} today` : `on ${longDay(a5.at.slice(0, 10))}`;
+      const x5 = (a5.tbl === "actions" ? A3 : R2).find((y5) => y5.id === a5.id), when = a5.at.slice(0, 10) === TODAY ? `at ${a5.at.slice(11)} today` : `on ${longDay(a5.at.slice(0, 10))}`;
       return tl(i5 + 1, tLink(html`data-open="${a5.tbl}:${a5.id}"`, html`${a5.item || a5.id}`), html`${x5 && x5.p ? html`${plur(1, a5.tbl === "actions" ? "action" : (x5.type || "risk").toLowerCase())} on ${raw(projLink(x5.p))}, ` : ""}closed ${when} — ${a5.by.replace(/^You, /, "you, ")}.`);
     }), 5, "res");
     $("#chgTitle").textContent = `${done.length} since ${longDate(LASTVISIT.slice(0, 10))}`;
@@ -10538,7 +10710,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         $("#drStale")?.remove();
         const host2 = $("#mineMore");
         if (host2 && draftOn("update")) {
-          const st = A4.filter((x5) => isStale("actions", x5));
+          const st = A3.filter((x5) => isStale("actions", x5));
           if (st.length) {
             addHTML(host2, "afterend", html`<div class="drstale" id="drStale"><span>${raw(plur(st.length, "open action"))} ${st.length === 1 ? "has" : "have"} had no update for ${raw(+S.staleDays || 7)} days.</span>${raw(draftBtn("update-bulk", "Draft updates", "Draft an update for each from what has happened since, as proposals in Review", 'data-drstale="1"'))}<span class="drbst" role="status"></span></div>`);
           }
@@ -10901,7 +11073,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   var kindLabel = (r4) => ({ actions: "Action", raid: r4.rec.type || "Risk", decisions: "Decision", update: "Update", draft: "Draft", files: "File change" })[r4.kind];
   function evidence(p6) {
-    const nw = WARNS().filter((w5) => w5.p === p6.code).length, ov = A4.filter((x5) => x5.p === p6.code && overdue(x5)).length, urg = R2.filter((r4) => r4.p === p6.code && r4.st === "Open" && r4.pr === "Urgent").length;
+    const nw = WARNS().filter((w5) => w5.p === p6.code).length, ov = A3.filter((x5) => x5.p === p6.code && overdue(x5)).length, urg = R2.filter((r4) => r4.p === p6.code && r4.st === "Open" && r4.pr === "Urgent").length;
     const nd = undatedWork(p6.code).length, c5 = p6.code, nm2 = pName(c5);
     return `<span class="ev">${countLink(`${plur(ov, "overdue action")} in ${nm2}`, ov, `actions:overdue:${c5}`, null, `Overdue <b class="${ov ? "bad" : ""}">${ov}</b>`)} · ${jumpLink(`${plur(nd, "open item")} with no due date in ${nm2}`, nd, c5, "undated", `No date <b>${nd}</b>`)} · ${countLink(`${plur(urg, "urgent open RAID item")} in ${nm2}`, urg, `raid:urgentonly:${c5}`, null, `Urgent risks <b class="${urg ? "bad" : ""}">${urg}</b>`)} · ${jumpLink(`Milestone slip of ${p6.slip} day${p6.slip === 1 ? "" : "s"} in ${nm2}`, p6.slip, c5, "ms", `Slip <b class="${p6.slip ? "bad" : ""}">${p6.slip ? p6.slip + " days" : "none"}</b>`)} · Warnings <b class="${nw ? "bad" : ""}">${nw}</b></span>`;
   }
@@ -12217,18 +12389,18 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (r4.ok) snack("Update undone; restart the live server");
   }
   function renderMgr(kind) {
-    if (kind === "ws" && D.ws_table && (wsTable() || ![...A4, ...R2].some((x5) => x5.ws))) {
+    if (kind === "ws" && D.ws_table && (wsTable() || ![...A3, ...R2].some((x5) => x5.ws))) {
       drawWsMgr();
       return;
     }
     const isP = kind === "people", L2 = isP ? PEOPLE : WSL;
-    const names = isP ? [.../* @__PURE__ */ new Set([...A4.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...L2.added, ...L2.hidden])].filter((n4) => n4 && n4 !== "TBC") : [.../* @__PURE__ */ new Set([...wsUsed(), ...L2.added.filter((k5) => k5.includes("|")), ...L2.hidden.filter((k5) => k5.includes("|"))])];
+    const names = isP ? [.../* @__PURE__ */ new Set([...A3.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...L2.added, ...L2.hidden])].filter((n4) => n4 && n4 !== "TBC") : [.../* @__PURE__ */ new Set([...wsUsed(), ...L2.added.filter((k5) => k5.includes("|")), ...L2.hidden.filter((k5) => k5.includes("|"))])];
     const on = (x5, k5) => {
       const [pc, nm2] = wsParts(k5);
       return x5.p === pc && x5.ws === nm2;
     };
     const active = isP ? peopleAll() : null;
-    const cA = (n4) => isP ? A4.filter((a5) => a5.o === n4).length : A4.filter((a5) => on(a5, n4)).length, cR = (n4) => isP ? R2.filter((r4) => r4.o === n4).length : R2.filter((r4) => on(r4, n4)).length;
+    const cA = (n4) => isP ? A3.filter((a5) => a5.o === n4).length : A3.filter((a5) => on(a5, n4)).length, cR = (n4) => isP ? R2.filter((r4) => r4.o === n4).length : R2.filter((r4) => on(r4, n4)).length;
     const label = (n4) => isP ? esc(n4) : (([pc, nm2]) => `<span class="pcode">${esc(pc)}</span> ${esc(nm2)}`)(wsParts(n4)), off = (n4) => isP ? L2.hidden.includes(n4) : wsHidden(...wsParts(n4));
     const mergeTo = (n4) => isP ? active.filter((x5) => x5 !== n4) : ((pc, nm2) => wsFor(pc).filter((x5) => x5 !== nm2).map((x5) => wsKey(pc, x5)))(...wsParts(n4));
     putHTML($(isP ? "#peopleMgr" : "#wsMgr"), html`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="flex:1">${isP ? "People (owners)" : "Workstreams"}</h2>${isP ? "" : html`<select id="wsAddP" aria-label="Project">${P3.map((p6) => html`<option value="${p6.code}">${p6.name}</option>`)}</select>`}<input id="${raw(kind)}Add" type="text" placeholder="${isP ? "Add a person" : "Add a workstream"}" style="height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px"><button class="btn" data-mg="add" data-kind="${raw(kind)}">Add</button></div>
@@ -12258,7 +12430,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const [pc, nm2] = wsParts(key);
     if (!to || to === nm2) return;
     const touched = [], merge = wsFor(pc).includes(to);
-    const items2 = [...A4.map((x5) => ["actions", x5]), ...R2.map((x5) => ["raid", x5])].filter(([, x5]) => x5.p === pc && x5.ws === nm2).map(([t5, x5]) => ({ op: "update", table: t5, id: x5.id, changes: { workstream: to }, based_on: x5.updated_at }));
+    const items2 = [...A3.map((x5) => ["actions", x5]), ...R2.map((x5) => ["raid", x5])].filter(([, x5]) => x5.p === pc && x5.ws === nm2).map(([t5, x5]) => ({ op: "update", table: t5, id: x5.id, changes: { workstream: to }, based_on: x5.updated_at }));
     const keep = () => {
       if (!WSL.added.includes(wsKey(pc, to))) WSL.added.push(wsKey(pc, to));
       WSL.added = WSL.added.filter((k5) => k5 !== key);
@@ -12273,7 +12445,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       items2,
       null,
       () => {
-        [...A4, ...R2].forEach((x5) => {
+        [...A3, ...R2].forEach((x5) => {
           if (x5.p === pc && x5.ws === nm2) {
             x5.ws = to;
             touched.push(x5);
@@ -12289,7 +12461,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       }
     );
     renderSettings();
-    const others = also === false ? [] : [...new Set([...A4, ...R2].filter((x5) => x5.p !== pc && x5.ws === nm2).map((x5) => x5.p))];
+    const others = also === false ? [] : [...new Set([...A3, ...R2].filter((x5) => x5.p !== pc && x5.ws === nm2).map((x5) => x5.p))];
     if (others.length) snack(`${pc} done. ${others.join(", ")} also ${others.length === 1 ? "has" : "have"} “${nm2}”.`, async () => {
       for (const o5 of others) await renameWs(wsKey(o5, nm2), to, false);
     }, `Also rename in ${others.join(", ")}`);
@@ -12486,7 +12658,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function personPool() {
     const me = { name: S.me, email: "", aliases: S.short.split(",").map((x5) => x5.trim()).filter(Boolean), hidden: false, me: true }, mine = shared.REG.find((p6) => pKey(p6.name) === pKey(me.name));
     const pool = mine ? shared.REG.map((p6) => p6 === mine ? { ...p6, aliases: [.../* @__PURE__ */ new Set([...p6.aliases, ...me.aliases])] } : p6) : [...shared.REG, me], reg = new Set(pool.map((p6) => pKey(p6.name)));
-    const others = [...new Set([...A4.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...PEOPLE.added].filter((n4) => n4 && n4 !== "TBC"))].filter((n4) => !reg.has(pKey(n4))).sort();
+    const others = [...new Set([...A3.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...PEOPLE.added].filter((n4) => n4 && n4 !== "TBC"))].filter((n4) => !reg.has(pKey(n4))).sort();
     return { pool, others };
   }
   function resolver() {
@@ -12612,7 +12784,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const upd = [], tou = [];
     const merge = !!pFind(shared.REG, to) && pKey(to) !== pKey(from);
     const dest = merge ? pFind(shared.REG, to).name : to;
-    [["actions", A4, "owner", "o"], ["raid", R2, "owner", "o"], ["decisions", DEC, "made_by", "by"]].forEach(([t5, arr, col, k5]) => arr.filter((x5) => x5[k5] === from).forEach((x5) => {
+    [["actions", A3, "owner", "o"], ["raid", R2, "owner", "o"], ["decisions", DEC, "made_by", "by"]].forEach(([t5, arr, col, k5]) => arr.filter((x5) => x5[k5] === from).forEach((x5) => {
       upd.push({ op: "update", table: t5, id: x5.id, changes: { [col]: dest }, based_on: x5.updated_at });
       tou.push([x5, k5]);
     }));
@@ -12779,13 +12951,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   function pfPeople() {
     const rs = resolver(), canon = (n4) => rs(n4).name || n4, st = D.stakeholders || {};
-    const names = [.../* @__PURE__ */ new Set([...shared.REG.map((p6) => p6.name), ...A4.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...PEOPLE.added, ...PEOPLE.hidden])].filter((n4) => n4 && n4 !== "TBC");
+    const names = [.../* @__PURE__ */ new Set([...shared.REG.map((p6) => p6.name), ...A3.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...PEOPLE.added, ...PEOPLE.hidden])].filter((n4) => n4 && n4 !== "TBC");
     return names.sort((a5, b5) => a5.localeCompare(b5)).map((n4) => {
       const p6 = shared.REG.find((x5) => x5.name === n4) || null, me = isMe(n4), it = {}, add = (c5, i5) => {
         if (!it[c5]) it[c5] = [0, 0, 0];
         it[c5][i5]++;
       };
-      A4.forEach((a5) => {
+      A3.forEach((a5) => {
         if (a5.o === n4) add(a5.p, 0);
       });
       R2.forEach((r4) => {
@@ -12862,7 +13034,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return countLink(`${plur(c5, w5)} owned by ${n4} in ${sc.map(pName).join(", ")}, any status`, c5, `${t5}:open:${sc.length === 1 ? sc[0] : ""}`, sc.length === 1 ? { st: [], o: [n4] } : { st: [], o: [n4], p: sc });
   }
   function pfRow(x5, sc, active) {
-    const { n: n4, p: p6, me, off } = x5, a5 = sc ? sc.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[0] || 0), 0) : A4.filter((i5) => i5.o === n4).length, r4 = sc ? sc.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[1] || 0), 0) : R2.filter((i5) => i5.o === n4).length;
+    const { n: n4, p: p6, me, off } = x5, a5 = sc ? sc.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[0] || 0), 0) : A3.filter((i5) => i5.o === n4).length, r4 = sc ? sc.reduce((s5, c5) => s5 + ((x5.it[c5] || [])[1] || 0), 0) : R2.filter((i5) => i5.o === n4).length;
     const via = sc && !sc.some((c5) => x5.it[c5]) && sc.some((c5) => x5.st.includes(c5)), mergeTo = active.filter((y5) => y5 !== n4);
     return html`<tr class="${off ? "off" : ""}" data-pn="${n4}"><td>${pfHl(n4)}${me ? raw(' <span class="tag">(you)</span>') : ""}${p6 || me ? "" : raw(' <span class="tag warn" title="On items but not in the register yet">not in register</span>')}${p6 && !p6.email ? raw(' <span class="tag warn" title="Add email">no email</span>') : ""}${off ? raw(' <span class="tag warn">removed from list</span>') : ""}${via ? html`<span class="sub pmvia">named in the project’s stakeholders</span>` : ""}</td>
      <td>${p6 && p6.email ? pfHl(p6.email) : raw('<span class="sub">—</span>')}</td><td>${p6 && (p6.org || p6.role) ? html`${p6.org || ""}${p6.org && p6.role ? " · " : ""}${pfHl(p6.role)}` : raw('<span class="sub">—</span>')}</td><td class="sub">${p6 && p6.aliases.length ? p6.aliases.map((s5, i5) => html`${i5 ? ", " : ""}${pfHl(s5)}`) : "—"}</td>
@@ -13110,7 +13282,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return map.get(n4);
     }, key = (o5) => rs(o5).name || o5;
     shared.REG.forEach((p6) => get(p6.name));
-    A4.forEach((a5) => {
+    A3.forEach((a5) => {
       if (a5.o && a5.o !== "TBC") get(key(a5.o)).A.push(a5);
     });
     R2.forEach((r4) => {
@@ -13130,7 +13302,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const la = a5.due && a5.due < TODAY, lb = b5.due && b5.due < TODAY;
     return la !== lb ? la ? -1 : 1 : (a5.due || "9999").localeCompare(b5.due || "9999") || a5.id.localeCompare(b5.id);
   };
-  var mKind = (id) => A4.some((x5) => x5.id === id) ? "actions" : R2.some((x5) => x5.id === id) ? "raid" : "decisions";
+  var mKind = (id) => A3.some((x5) => x5.id === id) ? "actions" : R2.some((x5) => x5.id === id) ? "raid" : "decisions";
   shared.MCREATED = null;
   shared.MCREATEDOF = null;
   shared.PKS = [];
@@ -13304,7 +13476,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var WS_STOP = new Set("a an and the of to for in on at by with from is are be was were this that it its as or not no we our their they them will would should can could has have had do does did into about after before over under next new more any all per via vs".split(" "));
   function wsSuggest(code, name) {
     const low = String(name).trim().toLowerCase(), skip = /* @__PURE__ */ new Set([...WS_STOP, ...low.match(/[a-z0-9]+/g) || [], code.toLowerCase()]);
-    const items2 = [...A4, ...R2].filter((x5) => x5.p === code && ((x5.ws || "").toLowerCase() === low || String(x5.t || "").toLowerCase().includes(low)));
+    const items2 = [...A3, ...R2].filter((x5) => x5.p === code && ((x5.ws || "").toLowerCase() === low || String(x5.t || "").toLowerCase().includes(low)));
     const words = {}, acr = {}, owners = {}, chans = {}, bump = (o5, k5) => o5[k5] = (o5[k5] || 0) + 1;
     items2.forEach((x5) => {
       const t5 = String(x5.t || "");
@@ -13398,7 +13570,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       drawWsMgr();
       return;
     }
-    const before = { ...w5 }, old = w5.name, moved = [...A4, ...R2].filter((x5) => x5.p === w5.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
+    const before = { ...w5 }, old = w5.name, moved = [...A3, ...R2].filter((x5) => x5.p === w5.p && (x5.ws || "").toLowerCase() === old.toLowerCase());
     await save(
       `${pName(w5.p)} workstream ${old} ${changes.name ? `renamed ${changes.name}` : "updated"}`,
       [{ op: "update", table: "workstreams", id, changes, based_on: w5.updated_at }],
@@ -14656,8 +14828,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function applyProposal(r4) {
     if (r4.kind === "actions") {
       const rec = Object.assign({ id: nextId("actions", r4.p), p: r4.p, raised: TODAY, closed: null, src: r4.src, upd_at: nowStamp() }, r4.rec);
-      A4.push(rec);
-      return () => A4.splice(A4.indexOf(rec), 1);
+      A3.push(rec);
+      return () => A3.splice(A3.indexOf(rec), 1);
     }
     if (r4.kind === "raid") {
       const rec = Object.assign({ id: nextId("raid", r4.p), p: r4.p, raised: TODAY, closed: null, src: r4.src, upd_at: nowStamp() }, r4.rec);
@@ -18183,7 +18355,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }
     return {};
   }
-  var msLinked = (id) => [...A4.filter((a5) => a5.ms === id).map((a5) => ["actions", a5]), ...R2.filter((r4) => r4.ms === id).map((r4) => ["raid", r4])];
+  var msLinked = (id) => [...A3.filter((a5) => a5.ms === id).map((a5) => ["actions", a5]), ...R2.filter((r4) => r4.ms === id).map((r4) => ["raid", r4])];
   function openMilestone(id) {
     const { p: p6 } = msFind(id);
     if (!p6) return;
@@ -19941,7 +20113,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const hay = [...Object.values(x5).filter((v4) => typeof v4 === "string"), ...["due", "raised", "closed", "date"].map((k5) => x5[k5] ? fd(x5[k5]) : ""), who(x5.o || x5.by), (P3.find((p6) => p6.code === x5.p) || {}).name || ""].join(" ").toLowerCase();
     return w5.every((t5) => hay.includes(t5));
   };
-  var items = () => shared.WT === "all" ? allRows() : shared.WT === "actions" ? A4 : shared.WT === "raid" ? R2 : DEC;
+  var items = () => shared.WT === "all" ? allRows() : shared.WT === "actions" ? A3 : shared.WT === "raid" ? R2 : DEC;
   var dueKey = (x5) => {
     const op = shared.WT === "actions" ? open(x5) : x5.st === "Open" || x5.st === "Pending";
     if (!op) return "closed";
@@ -22633,14 +22805,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return r4;
     };
     ALLC = [
-      ...A4.map((x5) => row2("actions", x5, { type: "Action" })),
+      ...A3.map((x5) => row2("actions", x5, { type: "Action" })),
       ...R2.map((x5) => row2("raid", x5, { type: x5.type || "Risk" })),
       ...DEC.map((x5) => row2("decisions", x5, { type: "Decision", o: x5.by || "", due: x5.st === "Made" ? x5.date || null : x5.due || null, raised: x5.date || "", pr: "" }))
     ];
     return ALLC;
   }
   var allLate = (x5) => x5.st === "Open" && !!x5.due && x5.due < TODAY;
-  var kOfId = (id) => A4.some((x5) => x5.id === id) ? "actions" : R2.some((x5) => x5.id === id) ? "raid" : DEC.some((x5) => x5.id === id) ? "decisions" : null;
+  var kOfId = (id) => A3.some((x5) => x5.id === id) ? "actions" : R2.some((x5) => x5.id === id) ? "raid" : DEC.some((x5) => x5.id === id) ? "decisions" : null;
   var ALLTAB = { actions: "Actions", raid: "RAID", decisions: "Decisions" };
   function allCell(k5, x5) {
     let h5;
@@ -23481,6 +23653,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       clearTimeout(slow);
       shared.FBUSY = false;
     }
+    await pointerIdle();
     inboxBadge();
     if (shared.VIEW === "files") renderFiles();
     else if (shared.VIEW === "inbox") renderInbox();
@@ -23897,7 +24070,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       decisions: DEC.filter((x5) => inP(x5) && x5.st === "Made" && x5.date >= since && x5.date <= day).length,
       risks: R2.filter((x5) => inP(x5) && x5.type === "Risk" && (x5.raised || "") >= since).length,
       issues: R2.filter((x5) => inP(x5) && x5.type === "Issue" && (x5.raised || "") >= since).length,
-      overdue: A4.filter((x5) => inP(x5) && (x5.st === "Open" || x5.st === "Delayed") && x5.due && x5.due >= since && x5.due < day).length,
+      overdue: A3.filter((x5) => inP(x5) && (x5.st === "Open" || x5.st === "Delayed") && x5.due && x5.due >= since && x5.due < day).length,
       since,
       has_last: !!m5.last,
       invite_first: m5.invite && m5.invite.confidential ? 0 : Object.values(m5.rank || {}).reduce((n4, o5) => n4 + Object.keys(o5 || {}).length, 0)
@@ -24739,7 +24912,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const p6 = P3.find((x5) => x5.code === code);
       if (!p6) return;
       queueMicrotask(mountCurEdit);
-      const acts2 = A4.filter((x5) => x5.p === code && open(x5) && (overdue(x5) || soon(x5))).sort((a5, b5) => (a5.due || "9").localeCompare(b5.due || "9"));
+      const acts2 = A3.filter((x5) => x5.p === code && open(x5) && (overdue(x5) || soon(x5))).sort((a5, b5) => (a5.due || "9").localeCompare(b5.due || "9"));
       const order = ["Urgent", "High", "Medium", "Low"];
       const risks = R2.filter((r4) => r4.p === code && r4.st === "Open" && (r4.type === "Risk" || r4.type === "Issue")).sort((a5, b5) => order.indexOf(a5.pr) - order.indexOf(b5.pr)).slice(0, 5);
       const dec = DEC.filter((d5) => d5.p === code && d5.st !== "Pending").sort((a5, b5) => b5.date.localeCompare(a5.date)).slice(0, 3);
@@ -24747,10 +24920,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const all = dated.map((m5) => m5[1]).concat(TODAY).sort();
       const t0 = new Date(all[0]).getTime() - 12 * 864e5, t1 = new Date(all[all.length - 1]).getTime() + 12 * 864e5;
       const pos = (d5) => ((new Date(d5).getTime() - t0) / (t1 - t0) * 100).toFixed(1) + "%";
-      const cv = R2.filter((r4) => r4.p === code && r4.client && !cmOK(r4.cm)).length + A4.filter((a5) => a5.p === code && a5.client && !cmOK(a5.cm)).length + DEC.filter((d5) => d5.p === code && d5.client && !cmdOK(d5.cmd)).length;
+      const cv = R2.filter((r4) => r4.p === code && r4.client && !cmOK(r4.cm)).length + A3.filter((a5) => a5.p === code && a5.client && !cmOK(a5.cm)).length + DEC.filter((d5) => d5.p === code && d5.client && !cmdOK(d5.cmd)).length;
       const msList = p6.ms.map((m5) => `<div class="msrow${m5[3] ? " click" : ""}" ${m5[3] ? `data-ms="${m5[3]}" tabindex="0" title="Edit milestone"` : ""}>${ico("milestone")}<span class="msn">${esc(m5[0])}${m5[2] === "done" ? ' <span class="tag">Done</span>' : ""}</span><span class="${m5[2] === "slip" ? "late" : ""}">${m5[1] ? fd(m5[1]) : "No date"}</span>${m5[4] && m5[1] && m5[4] !== m5[1] ? `<span class="sub">baseline ${fd(m5[4])}</span>` : ""}${m5[5] != null ? `<span class="prog" title="${esc(m5[12] || m5[5] + "%")}"><i style="width:${m5[5]}%"></i></span><span class="sub">${m5[5]}%</span>` : ""}</div>`).join("");
       const paras = curReadHtml(p6);
-      const pi = P3.findIndex((x5) => x5.code === code), nOpenA = A4.filter((x5) => x5.p === code && openOnly(x5)).length, nOpenR = R2.filter((r4) => r4.p === code && r4.st === "Open").length, nDec = DEC.filter((d5) => d5.p === code).length;
+      const pi = P3.findIndex((x5) => x5.code === code), nOpenA = A3.filter((x5) => x5.p === code && openOnly(x5)).length, nOpenR = R2.filter((r4) => r4.p === code && r4.st === "Open").length, nDec = DEC.filter((d5) => d5.p === code).length;
       if (shared.CURED && shared.CURED.code === code) {
         const h5 = curEdHtml();
         if (h5) shared.CURED.html = h5;
@@ -24761,7 +24934,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
    <div class="card curcard edt" style="margin-bottom:16px"><h2>Current state</h2><div class="genstatus" id="genStatus" hidden></div>${raw(pencil(`data-gen="${p6.code}" aria-haspopup="dialog"${!viaServer() || shared.RUN || shared.GEN.run ? ' aria-disabled="true"' : ""}`, !viaServer() ? "Generate needs the live server" : shared.RUN || shared.GEN.run ? "ask creaite is busy" : "Generate current state", SPARKI, "second"))}${raw(pencil(`data-edcur="${p6.code}"`, "Edit current state"))}<div id="curText" class="curtext">${raw(paras)}</div></div>
    <div class="cock"><div style="display:grid;gap:16px">
      <div class="card edt"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><span style="font-size:18px">${raw(health(p6.health))}</span>${raw(spark(p6))}<span class="sub">${p6.reason}</span></div>${raw(pencil(`data-edproj="${p6.code}"`, "Edit health and project details"))}
-       <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A4.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R2.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A4.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v4, b5, nav, ex]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v4 && v4 !== "None" ? "bad" : ""}">${v4}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
+       <div class="evrow" style="margin-top:12px">${raw([["Overdue actions", A3.filter((x5) => x5.p === code && overdue(x5)).length, 1, "actions:overdue"], ["No due date", undatedWork(code).length, 0, ""], ["Urgent risks", R2.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent").length, 1, "raid:urgentonly"], ["Milestone slip", p6.slip ? p6.slip + " days" : "None", p6.slip, ""], ["Due in " + S.dueSoon + " days", A3.filter((x5) => x5.p === code && soon(x5)).length, 0, "actions:soon", { st: ["Open", "Delayed"] }]].map(([l6, v4, b5, nav, ex]) => `<div class="evbox${nav ? " click" : ""}" ${nav ? `data-nav="${esc(navOf(`${nav}:${code}`, ex))}" role="link" tabindex="0" title="Open in Work"` : ""}><div class="v ${b5 && v4 && v4 !== "None" ? "bad" : ""}">${v4}</div><div class="l">${l6}</div></div>`).join(""))}</div></div>
      ${raw(mvCardHtml(p6))}
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
@@ -24818,7 +24991,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     {
       const h5 = document.querySelector(`#v-cockpit h2 a[data-nav="actions:dueor:${code}"]`), card = h5 && h5.closest(".card");
       if (card && !card.querySelector("[data-allitems]")) {
-        const n4 = [...A4, ...R2, ...DEC].filter((x5) => x5.p === code && allBucket(x5.st) === "Open").length;
+        const n4 = [...A3, ...R2, ...DEC].filter((x5) => x5.p === code && allBucket(x5.st) === "Open").length;
         addHTML(card, "beforeend", html` <a href="#" class="seeall" data-allitems="1" data-nav="all:open:${raw(code)}" title="Actions, RAID items and decisions together">All items${n4 ? html` (${raw(n4)} open)` : ""} ›</a>`);
       }
     }
@@ -26537,15 +26710,15 @@ ${pre}**Current state title:** ${title}`);
     const nm2 = pName(code), RI = ["Risk", "Issue"], wk = (w5) => `in the week of ${fd(w5.start)}`;
     const guard = (n4, v4, ln) => n4 === v4 ? { ...ln, n: v4 } : null;
     return {
-      aOpen: (w5, v4) => guard(A4.filter((x5) => x5.p === code && inSpan(x5.raised, w5.start, w5.end)).length, v4, { nav: navOf(`actions:open:${code}`, { st: [], rr: [w5.start, w5.end] }), label: `${plur(v4, "action")} opened in ${nm2} ${wk(w5)}` }),
-      aClose: (w5, v4) => guard(A4.filter((x5) => x5.p === code && x5.st === "Closed" && inSpan(x5.closed, w5.start, w5.end)).length, v4, { nav: navOf(`actions:closed:${code}`, { st: ["Closed"], cr: [w5.start, w5.end] }), label: `${plur(v4, "action")} closed in ${nm2} ${wk(w5)}` }),
+      aOpen: (w5, v4) => guard(A3.filter((x5) => x5.p === code && inSpan(x5.raised, w5.start, w5.end)).length, v4, { nav: navOf(`actions:open:${code}`, { st: [], rr: [w5.start, w5.end] }), label: `${plur(v4, "action")} opened in ${nm2} ${wk(w5)}` }),
+      aClose: (w5, v4) => guard(A3.filter((x5) => x5.p === code && x5.st === "Closed" && inSpan(x5.closed, w5.start, w5.end)).length, v4, { nav: navOf(`actions:closed:${code}`, { st: ["Closed"], cr: [w5.start, w5.end] }), label: `${plur(v4, "action")} closed in ${nm2} ${wk(w5)}` }),
       rOpen: (w5, v4) => guard(R2.filter((x5) => x5.p === code && RI.includes(x5.type) && inSpan(x5.raised, w5.start, w5.end)).length, v4, { nav: navOf(`raid:open:${code}`, { st: [], ty: RI, rr: [w5.start, w5.end] }), label: `${v4} risk${v4 === 1 ? " or issue" : "s and issues"} opened in ${nm2} ${wk(w5)}` }),
       rClose: (w5, v4) => guard(R2.filter((x5) => x5.p === code && RI.includes(x5.type) && x5.st === "Closed" && inSpan(x5.closed, w5.start, w5.end)).length, v4, { nav: navOf(`raid:closed:${code}`, { st: ["Closed"], ty: RI, cr: [w5.start, w5.end] }), label: `${v4} risk${v4 === 1 ? " or issue" : "s and issues"} closed in ${nm2} ${wk(w5)}` }),
       age: (lab, v4) => {
         const m5 = /^(\d+) to (\d+) days$/.exec(lab), o5 = /^Over (\d+) days$/.exec(lab);
         if (!m5 && !o5) return null;
         const from = m5 ? isoAdd(TODAY, -m5[2]) : "", to = isoAdd(TODAY, -(m5 ? +m5[1] : +o5[1] + 1));
-        return guard([...A4, ...R2].filter((x5) => x5.p === code && open(x5) && x5.raised && inSpan(x5.raised, from, to)).length, v4, { nav: navOf(`all:open:${code}`, { st: ["Open"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], rr: [from, to] }), label: `${plur(v4, "open item")} in ${nm2} open ${lab.toLowerCase()}` });
+        return guard([...A3, ...R2].filter((x5) => x5.p === code && open(x5) && x5.raised && inSpan(x5.raised, from, to)).length, v4, { nav: navOf(`all:open:${code}`, { st: ["Open"], ty: ["Action", "Risk", "Issue", "Assumption", "Dependency"], rr: [from, to] }), label: `${plur(v4, "open item")} in ${nm2} open ${lab.toLowerCase()}` });
       },
       mix: (p6, v4) => guard(R2.filter((x5) => x5.p === code && x5.st === "Open" && RI.includes(x5.type) && x5.pr === p6).length, v4, { nav: navOf(`raid:open:${code}`, { st: ["Open"], ty: RI, pr: [p6] }), label: `${v4} open ${p6} risk${v4 === 1 ? " or issue" : "s and issues"} in ${nm2}` })
     };
@@ -26564,7 +26737,7 @@ ${pre}**Current state title:** ${title}`);
    <div class="flfoot"><div><b>Oldest open</b>${a5.oldest.length ? a5.oldest.map((o5) => `<div class="mini-list"><div data-open="${o5.k}:${o5.id}" style="cursor:pointer">${ico(o5.k === "actions" ? "action" : "Risk")}<span class="sub">${esc(o5.id)}</span> ${esc(o5.t)} <span class="sub">— ${o5.days} day${o5.days === 1 ? "" : "s"}</span></div></div>`).join("") : '<div class="sub">Nothing open.</div>'}</div>
     <div><b>Risks and issues</b><div class="sub">${rk.opened} opened, ${rk.closed} closed${rk.cancelled ? `, ${rk.cancelled} cancelled` : ""} in ${f5.period} weeks</div><b style="margin-top:8px;display:block">Milestone movement</b>${ms.moves ? `<div class="sub">${ms.moves} forecast move${ms.moves === 1 ? "" : "s"} in ${f5.period} weeks, ${Math.abs(ms.days)} day${Math.abs(ms.days) === 1 ? "" : "s"} ${ms.days >= 0 ? "later" : "earlier"} in all</div>` + ms.by.map((m5) => `<div class="sub">${esc(m5.name)}: ${m5.moves} move${m5.moves === 1 ? "" : "s"}, ${Math.abs(m5.days)} day${Math.abs(m5.days) === 1 ? "" : "s"} ${m5.days >= 0 ? "later" : "earlier"}</div>`).join("") : '<div class="sub">No forecast has moved.</div>'}</div></div></div>`;
   }
-  var undatedWork = (code) => [...A4.filter((x5) => x5.p === code && open(x5) && !x5.due).map((x5) => ["actions", x5]), ...R2.filter((r4) => r4.p === code && r4.st === "Open" && !r4.due && (r4.type === "Risk" || r4.type === "Issue" || r4.resp)).map((r4) => ["raid", r4])];
+  var undatedWork = (code) => [...A3.filter((x5) => x5.p === code && open(x5) && !x5.due).map((x5) => ["actions", x5]), ...R2.filter((r4) => r4.p === code && r4.st === "Open" && !r4.due && (r4.type === "Risk" || r4.type === "Issue" || r4.resp)).map((r4) => ["raid", r4])];
   var isNewUndated = (x5) => !!x5.raised && -days(x5.raised) <= (S.undatedGrace ?? 3);
   function undatedCard(code) {
     const L2 = undatedWork(code);
@@ -26712,7 +26885,7 @@ ${pre}**Current state title:** ${title}`);
   var wOpen = (w5) => w5.k === "milestones" ? `data-ms="${w5.id}"` : w5.k === "projects" ? `data-person="${esc(w5.who || "")}"` : `data-open="${w5.k}:${w5.id}"`;
   var wItem = (w5) => {
     if (w5.k === "projects") return `${pName(w5.id)}: key person`;
-    const x5 = w5.k === "actions" ? A4.find((a5) => a5.id === w5.id) : w5.k === "raid" ? R2.find((r4) => r4.id === w5.id) : w5.k === "decisions" ? DEC.find((d5) => d5.id === w5.id) : null;
+    const x5 = w5.k === "actions" ? A3.find((a5) => a5.id === w5.id) : w5.k === "raid" ? R2.find((r4) => r4.id === w5.id) : w5.k === "decisions" ? DEC.find((d5) => d5.id === w5.id) : null;
     return x5 ? x5.t : ((D.milestone_names || {})[w5.id] || [w5.id])[0];
   };
   function decorateWarnings(root) {
@@ -26861,7 +27034,7 @@ ${pre}**Current state title:** ${title}`);
         return;
       }
       const inP = (x5) => all || x5.p === code, pc = (x5) => all ? pLink(x5.p) + " " : "";
-      const acts2 = A4.filter((x5) => inP(x5) && (all ? overdue(x5) || soon(x5) : openOnly(x5))).sort((a5, b5) => overdue(b5) - overdue(a5) || (a5.due || "9").localeCompare(b5.due || "9"));
+      const acts2 = A3.filter((x5) => inP(x5) && (all ? overdue(x5) || soon(x5) : openOnly(x5))).sort((a5, b5) => overdue(b5) - overdue(a5) || (a5.due || "9").localeCompare(b5.due || "9"));
       const risks = R2.filter((r4) => inP(r4) && r4.st === "Open" && (r4.type === "Risk" || r4.type === "Issue") && !String(r4.resp || "").trim()).sort((a5, b5) => PRIOS.indexOf(a5.pr) - PRIOS.indexOf(b5.pr));
       const decs = DEC.filter((x5) => inP(x5) && x5.date >= m5.since && x5.date <= TODAY).sort((a5, b5) => b5.date.localeCompare(a5.date)), ws = WARNS().filter((w5) => inP(w5));
       const rk = (k5, id) => ((m5.rank || {})[k5] || {})[id], up = (k5, list, id = (x5) => x5.id) => [...list.filter((x5) => rk(k5, id(x5))).sort((a5, b5) => rk(k5, id(b5))[0] - rk(k5, id(a5))[0]), ...list.filter((x5) => !rk(k5, id(x5)))];
@@ -27749,7 +27922,7 @@ ${pre}**Current state title:** ${title}`);
   function chSimilar(t5, code) {
     const mine = chWords(t5);
     let best = null;
-    A4.filter((a5) => a5.p === code && (a5.ws || a5.ms)).forEach((a5) => {
+    A3.filter((a5) => a5.p === code && (a5.ws || a5.ms)).forEach((a5) => {
       const th = chWords(a5.t), n4 = [...mine].filter((w5) => th.has(w5)).length, sc = n4 / Math.max(mine.size, th.size || 1);
       if (n4 >= 2 && sc >= 0.4 && (!best || sc > best.sc)) best = { a: a5, sc };
     });
@@ -28577,140 +28750,10 @@ ${d5.text}`);
     return [...box.childNodes];
   }
 
-  // core/instant.js
-  var INFLIGHT = /* @__PURE__ */ new Map();
-  var RECORD_KINDS = ["actions", "raid", "decisions"];
-  var ovKey = (k5, id) => k5 + "|" + id;
-  function ovAdd(recs) {
-    for (const r4 of recs || []) {
-      const key = ovKey(r4.k, r4.id);
-      if (!INFLIGHT.has(key)) INFLIGHT.set(key, []);
-      INFLIGHT.get(key)?.push(r4);
-    }
-  }
-  function ovDrop(recs) {
-    for (const r4 of recs || []) {
-      const key = ovKey(r4.k, r4.id), L2 = INFLIGHT.get(key);
-      if (!L2) continue;
-      const i5 = L2.indexOf(r4);
-      if (i5 >= 0) L2.splice(i5, 1);
-      if (!L2.length) INFLIGHT.delete(key);
-    }
-  }
-  var ovBusy = (recs) => (recs || []).some((r4) => INFLIGHT.has(ovKey(r4.k, r4.id)));
-  var savingIds = () => new Set([...INFLIGHT.values()].flat().map((o5) => o5.id));
-  function ovReapply() {
-    for (const s5 of shared.PKS || []) {
-      if (!RECORD_KINDS.includes(s5.k) || !s5.patch) continue;
-      const x5 = REC(s5.k, s5.id);
-      if (x5) {
-        Object.assign(x5, s5.patch);
-        if (s5.k === "raid") x5.pr = prio(x5.imp, x5.lik);
-      }
-    }
-    for (const L2 of INFLIGHT.values()) for (const o5 of L2) {
-      const x5 = REC(o5.k, o5.id);
-      if (!x5) continue;
-      Object.assign(x5, o5.f);
-      if (o5.k === "raid") x5.pr = prio(x5.imp, x5.lik);
-    }
-  }
-  var SAVEQ = Promise.resolve();
-  function saveQueue(fn) {
-    const run = SAVEQ.then(fn, fn);
-    SAVEQ = run.catch(() => {
-    });
-    return run;
-  }
-  async function savesSettled() {
-    let q4;
-    do {
-      q4 = SAVEQ;
-      await q4;
-    } while (q4 !== SAVEQ);
-  }
-  var TEXT = ["t", "upd", "resp", "cm", "cmd", "reason"];
-  function recNorm(t5, o5) {
-    TEXT.forEach((k5) => {
-      if (typeof o5[k5] === "string") o5[k5] = fdText(o5[k5]);
-    });
-    if (t5 === "raid") o5.pr = prio(o5.imp, o5.lik);
-    return o5;
-  }
-  function recMerge(n4) {
-    const T5 = { actions: A4, raid: R2, decisions: DEC };
-    for (const t5 of RECORD_KINDS) for (const got of n4.records && n4.records[t5] || []) {
-      const arr = T5[t5], x5 = arr.find((o5) => o5.id === got.id);
-      recNorm(t5, got);
-      if (x5) {
-        Object.keys(x5).forEach((c5) => {
-          if (!(c5 in got)) delete x5[c5];
-        });
-        Object.assign(x5, got);
-      } else arr.push(got);
-    }
-    for (const id of n4.missing || []) for (const t5 of RECORD_KINDS) {
-      const arr = T5[t5], i5 = arr.findIndex((o5) => o5.id === id);
-      if (i5 >= 0) arr.splice(i5, 1);
-    }
-    for (const k5 of ["review_focus", "peek_staged", "activity_capped", "activity_older", "milestone_names", "latest_apply"]) if (k5 in n4) D[k5] = n4[k5];
-    if (Array.isArray(n4.review)) {
-      REV.splice(0, REV.length, ...n4.review);
-      D.review = REV;
-    }
-    if (Array.isArray(n4.activity)) {
-      shared.ACT = n4.activity;
-      shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
-    }
-    if (n4.data_at) shared.DATA_AT = n4.data_at;
-    ovReapply();
-    undatedRecount();
-  }
-  function undatedRecount() {
-    for (const p6 of P3) {
-      if (!p6 || !p6.undated) continue;
-      const a5 = A4.filter((x5) => x5.p === p6.code && open(x5) && !x5.due).length;
-      const r4 = R2.filter((x5) => x5.p === p6.code && x5.st === "Open" && !x5.due && (x5.type === "Risk" || x5.type === "Issue" || x5.resp)).length;
-      p6.undated = { actions: a5, raid: r4, total: a5 + r4 };
-    }
-  }
-  var RECSTAT = { records: 0, full: 0 };
-  async function recordsRefresh(ids, o5 = {}) {
-    const list = [...new Set(ids || [])].filter(Boolean);
-    if (list.length > 200) return false;
-    PULSE.reloads++;
-    let n4 = null;
-    try {
-      const hold = o5.hold ? o5.hold() : null;
-      try {
-        const r4 = await fetch("/api/records?ids=" + encodeURIComponent(list.join(",")) + (o5.aged ? "&aged=1" : ""), { headers: { "X-Creaite-Token": D.token || "" }, cache: "no-store" });
-        if (r4.ok) n4 = await r4.json();
-      } catch (e4) {
-        n4 = null;
-      }
-      if (!n4 || !n4.ok) return false;
-      RECSTAT.records++;
-      recMerge(n4);
-      refreshAll();
-      if (o5.restore) o5.restore(hold);
-      if (PULSE.v != null && !PULSE.busy) {
-        const r4 = await pulseGet();
-        if (r4 && !PULSE.stale) {
-          PULSE.v = r4.v;
-          PULSE.pending = r4.pending;
-        }
-      }
-    } finally {
-      PULSE.reloads--;
-    }
-    if (o5.after) await o5.after();
-    return true;
-  }
-
   // panel.js
   shared.CUR = null;
   shared.EDITING = false;
-  var REC = (k5, id) => (k5 === "actions" ? A4 : k5 === "raid" ? R2 : DEC).find((x5) => x5.id === id);
+  var REC = (k5, id) => (k5 === "actions" ? A3 : k5 === "raid" ? R2 : DEC).find((x5) => x5.id === id);
   var RESPL = (t5) => t5 === "Issue" ? "Resolution action" : t5 === "Assumption" ? "Validation action" : t5 === "Dependency" ? "Management action" : "Mitigation action";
   function fieldsFor(k5, x5) {
     const F4 = (() => {
@@ -29285,7 +29328,7 @@ ${d5.text}`);
   var HRANK = { "On track": 0, "At risk": 1, "Off track": 2 };
   function healthEvidence(code) {
     const p6 = P3.find((x5) => x5.code === code) || {}, off = [], risk = [];
-    const overN = A4.filter((a5) => a5.p === code && open(a5) && a5.due && days(a5.due) < -S.overdueDays), urgent = R2.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent"), slip = p6.slip || 0;
+    const overN = A3.filter((a5) => a5.p === code && open(a5) && a5.due && days(a5.due) < -S.overdueDays), urgent = R2.filter((r4) => r4.p === code && r4.st === "Open" && r4.pr === "Urgent"), slip = p6.slip || 0;
     const nm2 = ((p6.ms || []).find((m5) => m5[6] === "Planned" && m5[4] && m5[8] && m5[8] > m5[4]) || [])[0] || "The next milestone";
     if (slip > S.slipOff * 7) off.push(`${nm2} moved ${slip} days`);
     if (urgent.length >= S.urgentOff) off.push(`${urgent.length} open Urgent risks or issues`);
@@ -29370,7 +29413,7 @@ ${d5.text}`);
   }
   function nextId(k5, p6) {
     const pre = k5 === "actions" ? `${p6}-A-` : k5 === "raid" ? `${p6}-` : `${p6}-D-`;
-    const pr = P3.find((x5) => x5.code === p6), n4 = Math.max(0, +(pr && pr.seq) || 0, ...[[A4, `${p6}-A-`], [R2, `${p6}-`], [DEC, `${p6}-D-`]].flatMap(([arr, q4]) => arr.filter((x5) => x5.id.startsWith(q4) && x5.id.length === q4.length + 3 && /^\d{3}$/.test(x5.id.slice(-3))).map((x5) => +x5.id.slice(-3)))) + 1;
+    const pr = P3.find((x5) => x5.code === p6), n4 = Math.max(0, +(pr && pr.seq) || 0, ...[[A3, `${p6}-A-`], [R2, `${p6}-`], [DEC, `${p6}-D-`]].flatMap(([arr, q4]) => arr.filter((x5) => x5.id.startsWith(q4) && x5.id.length === q4.length + 3 && /^\d{3}$/.test(x5.id.slice(-3))).map((x5) => +x5.id.slice(-3)))) + 1;
     return pre + String(n4).padStart(3, "0");
   }
   async function commitRecord(k5, id, f5, label) {
@@ -30692,7 +30735,7 @@ ${d5.text}`);
     pkNewMarkDraw();
     return norm(k5, f5);
   }
-  var pkArr = (k5) => k5 === "actions" ? A4 : k5 === "raid" ? R2 : DEC;
+  var pkArr = (k5) => k5 === "actions" ? A3 : k5 === "raid" ? R2 : DEC;
   async function pkNewSync(k5, id, commit) {
     if (!shared.CUR || shared.CUR.mode !== "new" || shared.CUR.nid !== id) return "ok";
     const x5 = shared.CUR.draft;
@@ -31403,7 +31446,7 @@ ${d5.text}`);
         snack(draftWhyNot("update-bulk"));
         return;
       }
-      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A4.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where = b5.parentElement.querySelector(".drbst");
+      const ids = b5.dataset.drbulk ? bkItems().map((o5) => o5.id) : A3.filter((x5) => isStale("actions", x5)).map((x5) => x5.id), where = b5.parentElement.querySelector(".drbst");
       draftBulk(ids, where);
     });
     if (shared.VIEW === "today") renderToday();
@@ -32845,14 +32888,14 @@ ${d5.text}`);
         if (!PERS().some((x6) => x6.name === arg)) return null;
         st2.arg = arg;
       } else if (v4 === "item") {
-        const id2 = arg, k5 = A4.some((x6) => x6.id === id2) ? "actions" : R2.some((x6) => x6.id === id2) ? "raid" : DEC.some((x6) => x6.id === id2) ? "decisions" : null;
+        const id2 = arg, k5 = A3.some((x6) => x6.id === id2) ? "actions" : R2.some((x6) => x6.id === id2) ? "raid" : DEC.some((x6) => x6.id === id2) ? "decisions" : null;
         if (!k5) return null;
         return { v: "work", arg: null, wt: k5, wv: null, p: [], from: null, item: { k: k5, id: id2 }, scroll: 0 };
       } else if (!["today", "projects", "people", "review", "inbox", "intake", "files", "activity", "settings", "help", "mine"].includes(v4)) return null;
       if (v4 === "intake") st2.v = "inbox";
       const id = kv.item;
       if (id) {
-        const k5 = A4.some((x6) => x6.id === id) ? "actions" : R2.some((x6) => x6.id === id) ? "raid" : DEC.some((x6) => x6.id === id) ? "decisions" : null;
+        const k5 = A3.some((x6) => x6.id === id) ? "actions" : R2.some((x6) => x6.id === id) ? "raid" : DEC.some((x6) => x6.id === id) ? "decisions" : null;
         if (k5) st2.item = { k: k5, id };
       }
       return st2;
@@ -34285,7 +34328,7 @@ ${d5.text}`);
   var formProject = () => $("#f_p")?.value || shared.CUR && (shared.CUR.draft && shared.CUR.draft.p || shared.CUR.mode === "record" && (REC(shared.CUR.k, shared.CUR.id) || {}).p || shared.CUR.code) || "";
   var projPeople = (code) => {
     if (!code) return [];
-    const s5 = /* @__PURE__ */ new Set([...A4.filter((a5) => a5.p === code).map((a5) => a5.o), ...R2.filter((r4) => r4.p === code).map((r4) => r4.o), ...DEC.filter((d5) => d5.p === code).map((d5) => d5.by), ...(D.stakeholders || {})[code] || []]);
+    const s5 = /* @__PURE__ */ new Set([...A3.filter((a5) => a5.p === code).map((a5) => a5.o), ...R2.filter((r4) => r4.p === code).map((r4) => r4.o), ...DEC.filter((d5) => d5.p === code).map((d5) => d5.by), ...(D.stakeholders || {})[code] || []]);
     s5.delete("TBC");
     s5.delete("");
     return [...new Set([...s5].map(personOf))].filter((n4) => n4 && !isHiddenPerson(n4)).sort((a5, b5) => isMe(a5) ? -1 : isMe(b5) ? 1 : a5.localeCompare(b5));
@@ -35467,11 +35510,11 @@ ${d5.text}`);
     if (wk.length) {
       const kindOf2 = (
         /** @param {string} id */
-        (id) => A4.some((x5) => x5.id === id) ? "actions" : R2.some((x5) => x5.id === id) ? "raid" : DEC.some((x5) => x5.id === id) ? "decisions" : ""
+        (id) => A3.some((x5) => x5.id === id) ? "actions" : R2.some((x5) => x5.id === id) ? "raid" : DEC.some((x5) => x5.id === id) ? "decisions" : ""
       );
       const k5 = kindOf2(wk[0]) || "actions", mine = wk.filter((id) => kindOf2(id) === k5);
       const codes = [...new Set(mine.map((id) => {
-        const x5 = [...A4, ...R2, ...DEC].find((y5) => y5.id === id);
+        const x5 = [...A3, ...R2, ...DEC].find((y5) => y5.id === id);
         return x5 && x5.p;
       }).filter(Boolean))];
       openWork(codes.length === 1 ? codes[0] : "", k5, "open", codes.length > 1 ? { p: codes } : null);
@@ -36022,7 +36065,7 @@ ${d5.text}`);
     return t5.value;
   };
   var ITEMID = /^[A-Z][A-Z0-9]{2,6}-(?:[ADM]-)?\d{3}$/;
-  var itemTable = (id) => A4.some((a5) => a5.id === id) ? "actions" : R2.some((r4) => r4.id === id) ? "raid" : DEC.some((d5) => d5.id === id) ? "decisions" : P3.some((p6) => (p6.ms || []).some((m5) => m5[3] === id)) ? "milestones" : null;
+  var itemTable = (id) => A3.some((a5) => a5.id === id) ? "actions" : R2.some((r4) => r4.id === id) ? "raid" : DEC.some((d5) => d5.id === id) ? "decisions" : P3.some((p6) => (p6.ms || []).some((m5) => m5[3] === id)) ? "milestones" : null;
   function citeFind(name) {
     const n4 = name.trim().toLowerCase(), stem = (x5) => x5.replace(/\.[^.]+$/, "").toLowerCase();
     const s5 = (shared.ASKQ.sources || []).find((x5) => x5.kind !== "item" && (x5.name.toLowerCase() === n4 || (x5.stem || "").toLowerCase() === n4));
@@ -38007,7 +38050,7 @@ ${d5.text}`);
     const t5 = v4.replace(/^\s+/, ""), C4 = D.commands || [];
     let m5;
     if (m5 = t5.match(/^(client report|weekly report|review|sweep mail for|close project)\s+(\S*)$/i)) return P3.filter((p6) => p6.code.startsWith(m5[2].toUpperCase())).map((p6) => ({ t: `${m5[1]} ${p6.code}`, s: p6.name }));
-    if (m5 = t5.match(/^mark\s+(\S*)$/i)) return [...A4.filter(open).map((x5) => [x5, "done"]), ...R2.filter((r4) => r4.st === "Open").map((x5) => [x5, "closed"])].filter(([x5]) => x5.id.startsWith(m5[1].toUpperCase())).slice(0, 30).map(([x5, w5]) => ({ t: `mark ${x5.id} ${w5}`, s: x5.t }));
+    if (m5 = t5.match(/^mark\s+(\S*)$/i)) return [...A3.filter(open).map((x5) => [x5, "done"]), ...R2.filter((r4) => r4.st === "Open").map((x5) => [x5, "closed"])].filter(([x5]) => x5.id.startsWith(m5[1].toUpperCase())).slice(0, 30).map(([x5, w5]) => ({ t: `mark ${x5.id} ${w5}`, s: x5.t }));
     if (m5 = t5.match(/^(approve|reject)\s+(\d*)$/i)) return REV.filter((r4) => !r4.done && String(r4.n).startsWith(m5[2])).map((r4) => ({ t: `${m5[1].toLowerCase()} ${r4.n}`, s: r4.rec.t }));
     if (t5 === "/") return C4.map((c5) => ({ t: c5.t, s: c5.s, g: c5.s }));
     if (t5.length < 2) return [];
@@ -38338,7 +38381,7 @@ ${d5.text}`);
         FILES.filter((f5) => f5.p !== "inbox").forEach((f5) => add("Files", f5.n, [fpName(f5.p), f5.f, f5.sub].filter(Boolean).join(" › "), () => openPath(f5.path), f5.p));
       }
       if (q5.length > 1) {
-        A4.forEach((a5) => add("Items", `${a5.id} · ${a5.t}`, who(a5.o), () => {
+        A3.forEach((a5) => add("Items", `${a5.id} · ${a5.t}`, who(a5.o), () => {
           shared.WT = "actions";
           go("work");
           openRecord("actions", a5.id);
@@ -38634,9 +38677,9 @@ ${d5.text}`);
   function ckTouches(c5) {
     const out = [], x5 = c5.k === "milestones" ? ckMs(c5.id) : c5.new ? null : REC(c5.k, c5.id), p6 = c5.new ? c5.new.p : x5 && x5.p;
     if (c5.k === "milestones" && x5) {
-      const tied = [...A4.filter((a5) => a5.ms === c5.id && OPENST(a5.st)).map((a5) => a5.id), ...R2.filter((r4) => r4.ms === c5.id && r4.st === "Open").map((r4) => r4.id)];
+      const tied = [...A3.filter((a5) => a5.ms === c5.id && OPENST(a5.st)).map((a5) => a5.id), ...R2.filter((r4) => r4.ms === c5.id && r4.st === "Open").map((r4) => r4.id)];
       if (tied.length) out.push(`${plur(tied.length, "open item")} tied to it: ${tied.slice(0, 5).join(", ")}${tied.length > 5 ? "…" : ""}`);
-      const late = [...A4, ...R2].filter((i5) => i5.ms === c5.id && OPENST(i5.st) && i5.due && c5.patch.fc && i5.due > c5.patch.fc);
+      const late = [...A3, ...R2].filter((i5) => i5.ms === c5.id && OPENST(i5.st) && i5.due && c5.patch.fc && i5.due > c5.patch.fc);
       if (late.length) out.push(`${plur(late.length, "item")} would then be due after it: ${late.map((i5) => i5.id).join(", ")}`);
       if (x5.base) {
         const was = Math.round((/* @__PURE__ */ new Date(x5.due + "T12:00:00") - /* @__PURE__ */ new Date(x5.base + "T12:00:00")) / 864e5), now = Math.round((/* @__PURE__ */ new Date(c5.patch.fc + "T12:00:00") - /* @__PURE__ */ new Date(x5.base + "T12:00:00")) / 864e5);
@@ -38893,7 +38936,7 @@ ${d5.text}`);
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
   function itemText(id) {
-    const x5 = A4.find((a5) => a5.id === id) || R2.find((r4) => r4.id === id) || DEC.find((d5) => d5.id === id);
+    const x5 = A3.find((a5) => a5.id === id) || R2.find((r4) => r4.id === id) || DEC.find((d5) => d5.id === id);
     if (x5) return x5.t;
     const m5 = (D.milestone_names || {})[id];
     if (m5) return m5[0];
@@ -39722,20 +39765,26 @@ ${d5.text}`);
   async function reloadData() {
     PULSE.reloads++;
     try {
-      const hold = rvHold();
-      await (async () => {
-        if (!SERVED) return;
+      let n4 = null;
+      if (SERVED) {
         try {
           const r4 = await fetch("/api/data", { headers: { "X-Creaite-Token": D.token } });
-          if (!r4.ok) return;
-          const n4 = await r4.json();
+          if (r4.ok) n4 = await r4.json();
+        } catch (e4) {
+        }
+      }
+      await pointerIdle();
+      const hold = rvHold();
+      await (async () => {
+        if (!n4) return;
+        try {
           RECSTAT.full++;
           Object.assign(D, n4);
-          [[P3, n4.projects], [A4, n4.actions], [R2, n4.raid], [DEC, n4.decisions], [REV, n4.review], [FILES, n4.files], [REMINDERS, n4.reminders]].forEach(([a5, b5]) => a5.splice(0, a5.length, ...b5));
+          [[P3, n4.projects], [A3, n4.actions], [R2, n4.raid], [DEC, n4.decisions], [REV, n4.review], [FILES, n4.files], [REMINDERS, n4.reminders]].forEach(([a5, b5]) => a5.splice(0, a5.length, ...b5));
           shared.ACT = n4.activity;
           R2.forEach((x5) => x5.pr = prio(x5.imp, x5.lik));
           shared.DATA_AT = n4.data_at || shared.DATA_AT;
-          [...A4, ...R2, ...DEC, ...P3].forEach((o5) => ["t", "upd", "resp", "cm", "cmd", "reason", "current"].forEach((k5) => {
+          [...A3, ...R2, ...DEC, ...P3].forEach((o5) => ["t", "upd", "resp", "cm", "cmd", "reason", "current"].forEach((k5) => {
             if (typeof o5[k5] === "string") o5[k5] = (k5 === "current" ? fdMd : fdText)(o5[k5]);
           }));
           shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
@@ -40591,7 +40640,7 @@ ${d5.text}`);
   } };
 
   // core/data.js
-  var P3 = D.projects, A4 = D.actions, R2 = D.raid, DEC = D.decisions, REV = D.review, FILES = D.files, REMINDERS = D.reminders;
+  var P3 = D.projects, A3 = D.actions, R2 = D.raid, DEC = D.decisions, REV = D.review, FILES = D.files, REMINDERS = D.reminders;
   shared.ACT = D.activity;
   var pName = (c5) => (P3.find((p6) => p6.code === c5) || {}).name || c5;
   var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
@@ -40610,22 +40659,22 @@ ${d5.text}`);
   };
   var peopleAll = () => {
     const rs = resolver(), s5 = /* @__PURE__ */ new Set();
-    [...A4.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...shared.REG.map((p6) => p6.name), ...PEOPLE.added].forEach((n4) => {
+    [...A3.map((a5) => a5.o), ...R2.map((r4) => r4.o), ...DEC.map((d5) => d5.by), ...shared.REG.map((p6) => p6.name), ...PEOPLE.added].forEach((n4) => {
       if (n4 && n4 !== "TBC") s5.add(rs(n4).name || n4);
     });
     return [...s5].filter((n4) => !isHiddenPerson(n4)).sort((a5, b5) => isMe(a5) ? -1 : isMe(b5) ? 1 : a5.localeCompare(b5));
   };
   var useCount = (n4) => {
     const rs = resolver(), is = (o5) => (rs(o5).name || o5) === n4;
-    return A4.filter((a5) => is(a5.o)).length + R2.filter((r4) => is(r4.o)).length;
+    return A3.filter((a5) => is(a5.o)).length + R2.filter((r4) => is(r4.o)).length;
   };
   var wsKey = (p6, n4) => `${p6}|${n4}`, wsParts = (k5) => {
     const i5 = k5.indexOf("|");
     return i5 < 0 ? [null, k5] : [k5.slice(0, i5), k5.slice(i5 + 1)];
   };
   var wsHidden = (p6, n4) => WSL.hidden.includes(wsKey(p6, n4)) || WSL.hidden.includes(n4);
-  var wsUsed = () => [...new Set([...A4, ...R2].filter((x5) => x5.ws).map((x5) => wsKey(x5.p, x5.ws)))];
-  var wsFor = (code) => !code ? [] : wsTable() ? WSD().filter((w5) => w5.p === code && w5.st === "Active").map((w5) => w5.name).sort((a5, b5) => a5.localeCompare(b5)) : [.../* @__PURE__ */ new Set([...[...A4, ...R2].filter((x5) => x5.p === code && x5.ws).map((x5) => x5.ws), ...WSL.added.filter((k5) => k5.startsWith(code + "|")).map((k5) => wsParts(k5)[1])])].filter((n4) => !wsHidden(code, n4)).sort();
+  var wsUsed = () => [...new Set([...A3, ...R2].filter((x5) => x5.ws).map((x5) => wsKey(x5.p, x5.ws)))];
+  var wsFor = (code) => !code ? [] : wsTable() ? WSD().filter((w5) => w5.p === code && w5.st === "Active").map((w5) => w5.name).sort((a5, b5) => a5.localeCompare(b5)) : [.../* @__PURE__ */ new Set([...[...A3, ...R2].filter((x5) => x5.p === code && x5.ws).map((x5) => x5.ws), ...WSL.added.filter((k5) => k5.startsWith(code + "|")).map((k5) => wsParts(k5)[1])])].filter((n4) => !wsHidden(code, n4)).sort();
   var open = (x5) => OPENST(x5.st), overdue = (x5) => open(x5) && x5.due && x5.due < TODAY, soon = (x5) => open(x5) && x5.due && x5.due >= TODAY && days(x5.due) <= S.dueSoon;
   var openOnly = (x5) => x5.st === "Open";
   function bootData() {
@@ -40635,7 +40684,7 @@ ${d5.text}`);
       const conv = (o5) => ["t", "upd", "resp", "cm", "cmd", "reason", "current"].forEach((k5) => {
         if (typeof o5[k5] === "string") o5[k5] = (k5 === "current" ? fdMd : fdText)(o5[k5]);
       });
-      [...A4, ...R2, ...DEC, ...P3].forEach(conv);
+      [...A3, ...R2, ...DEC, ...P3].forEach(conv);
       REV.forEach((r4) => {
         conv(r4.rec);
       });
