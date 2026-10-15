@@ -388,7 +388,7 @@ def _questions(reply, focus=None):
 def assemble(ctx, reply, focus=None, d=None, m=None):
     """The page's model: the meeting, the accepted focus and its filter, the work items, Claude's notes and questions, dated
     reporting, the series and every source as a typed link. The in-app view and the Agendas file are both made from it."""
-    reply, m = reply or {}, m or {}
+    reply, m = prep_page.hold_confidential(reply or {})[0], m or {}      # BL-301: never a confidential note's finding or words
     show = ((focus or {}).get("reading") or {}).get("show") or "focus-first"
     model = {"id": prep_shape.canonical(ctx["key"], ctx["day"]), "key": ctx["key"], "internal": True, "meeting": _meeting(ctx),
              "port": ctx.get("port", 8765), "focus": focus, "work": _work(ctx, reply, _filter(ctx, focus), show),
