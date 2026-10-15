@@ -199,6 +199,7 @@ class InThePage(DraftCase):
         self.assertIn("Draft updates", b.eval("document.querySelector('#wbulk [data-drbulk]').textContent"))
         b.click("#wbulk [data-drbulk]")
         b.wait("REV.some(r=>r.drafted)", 30)
+        b.wait("document.getElementById('snackT').textContent.includes('in Review')", 30)
         self.assertIn("in Review", b.eval("document.getElementById('snackT').textContent"))
         b.eval("HL.clear(); hlPaint(); hlBar(); A.forEach(x=>x.upd_at='2026-01-01'); go('today'); renderToday()")
         b.wait("document.querySelector('#drStale [data-drstale]')")
