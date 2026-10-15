@@ -98,6 +98,9 @@ class RefineDialog(DraftCase):
         b.click("#genRefineGo")
         b.wait(f"window.__bodies.length>{n}")
 
+    def visible(self, sel):
+        return self.b.eval(f"(()=>{{ const e=document.querySelector({sel!r}); return !!e&&e.getClientRects().length>0&&getComputedStyle(e).visibility!=='hidden'; }})()")
+
     def shown(self):
         return self.b.eval("document.querySelector('#genOut .drtext').innerText.replace(/\\s*S\\d+/g,'').trim()")
 
@@ -196,7 +199,7 @@ class RefineDialog(DraftCase):
         self.assertEqual(self.shown(), V2)
         self.assertEqual(self.vers(), "Version 2 of 2 · Back to version 1")
         self.assertEqual(b.eval("document.getElementById('genRefineNote').value"), "")                                        # ready for the next change
-        self.assertEqual(b.eval("document.activeElement.classList.contains('drcard')"), True)
+        self.assertEqual(b.eval("document.activeElement.id"), "genRefineNote")                                                # focus stays in the box
         self.assertEqual(self.memory(), memory)                                                                                # nothing saved
         self.assertEqual(b.eval("window.__bodies.length"), 2)
         self.assertEqual(self.stat("edited", 1), 1)                                                                           # counts only: an edit of the same draft
@@ -338,6 +341,105 @@ class RefineDialog(DraftCase):
         over = b.eval("[...document.querySelectorAll('#genDlg .genbody, #genDlg .genref, #genDlg .genrow, #genDlg .drhead')].filter(e=>e.scrollWidth>e.clientWidth+1).map(e=>e.className)")
         self.assertEqual(over, [])
 
+    def test_cmd_enter_from_the_result_card_after_a_refine_does_not_regenerate_or_drop_versions(self):
+        b = self.b
+        self.first(draft(V1))
+        self.reply(draft(V2))
+        self.refine("Shorter")
+        b.wait("document.querySelector('#genOut .vers')")
+        n = b.eval("window.__bodies.length")
+        b.eval("document.querySelector('#genOut .drcard').focus()")
+        b.key("Enter", modifiers=4)
+        b.wait("document.querySelector('#snack.on')")
+        self.assertIn("Press Generate again to start over", b.eval("document.getElementById('snackT').textContent"))
+        self.assertEqual(b.eval("window.__bodies.length"), n)                                                                   # nothing sent
+        self.assertEqual(self.vers(), "Version 2 of 2 · Back to version 1")                                                      # nothing dropped
+
+    def test_generate_again_takes_the_refine_box_away_while_the_new_draft_is_written(self):
+        b = self.b
+        self.first(draft(V1))
+        b.eval("document.getElementById('genRefineNote').value='half typed'")
+        b.eval("window.__hold=true")
+        b.click("#genGo")                                                                                                       # Generate again
+        b.wait("window.__bodies.length===2")
+        self.assertTrue(b.eval("document.getElementById('genRefineHost').hidden"))
+        self.assertEqual(b.eval("document.getElementById('genRefineHost').innerHTML"), "")
+        b.eval("window.__hold=false; window.__rel()")
+        b.wait("document.querySelector('#genOut .drcard')", 30)
+        self.assertEqual(b.eval("document.getElementById('genRefineNote').value"), "")                                          # a fresh box for the new draft
+        self.assertEqual(self.vers(), "")
+
+    def test_a_change_over_300_characters_is_refused_with_a_message_and_300_is_sent(self):
+        b = self.b
+        self.first(draft(V1))
+        n = b.eval("window.__bodies.length")
+        b.eval(f"document.getElementById('genRefineNote').value={'x' * 301!r}")
+        b.click("#genRefineGo")
+        b.wait("document.querySelector('#snack.on')")
+        self.assertEqual(b.eval("document.getElementById('snackT').textContent.replace(/Undo$/,'').trim()"), "A change can be 300 characters at most; yours is 301. Shorten it.")
+        self.assertEqual(b.eval("window.__bodies.length"), n)
+        self.assertEqual(len(b.eval("document.getElementById('genRefineNote').value")), 301)                                      # what was typed is kept
+        self.reply(draft(V2))
+        b.eval(f"document.getElementById('genRefineNote').value={'x' * 300!r}")
+        b.click("#genRefineGo")
+        b.wait(f"window.__bodies.length>{n}")
+        self.assertEqual(b.eval("window.__bodies[%d].note" % n), "x" * 300)                                                      # exactly 300 goes through whole
+
+    def test_exactly_1500_characters_is_refined_and_1501_is_refused_with_the_reason(self):
+        b = self.b
+        self.first(draft("x" * 1500, form="email"), "Email paragraph")
+        self.reply(draft("y" * 1501, form="email"))
+        self.refine("Shorter")
+        b.wait("document.querySelector('#genOut .vers')")
+        self.assertEqual(len(b.eval("window.__bodies[1].text")), 1500)                                                           # the limit itself is allowed
+        n = b.eval("window.__bodies.length")
+        self.refine_text("Plainer words")
+        b.wait("document.querySelector('#snack.on')")
+        self.assertIn("This draft is over 1500 characters, more than a refine can take. Shorten it first.", b.eval("document.getElementById('snackT').textContent"))
+        self.assertEqual(b.eval("window.__bodies.length"), n)
+
+    def test_a_fuller_steering_note_over_the_limit_is_refused_honestly(self):
+        b = self.b
+        self.pick("#genLen", "Fuller")
+        self.first(draft(("A fuller steering note sentence. " * 50).strip(), form="steering"), "Steering note")        # about 1,650 characters
+        n = b.eval("window.__bodies.length")
+        b.eval("document.getElementById('genRefineNote').value='Shorter'")
+        b.click("#genRefineGo")
+        b.wait("document.querySelector('#snack.on')")
+        self.assertIn("more than a refine can take", b.eval("document.getElementById('snackT').textContent"))
+        self.assertEqual(b.eval("window.__bodies.length"), n)
+        self.assertEqual(self.vers(), "")
+
+    def refine_text(self, text):
+        self.b.eval(f"(()=>{{ const t=document.getElementById('genRefineNote'); t.value={text!r}; }})()")
+        self.b.click("#genRefineGo")
+
+    def test_a_refine_that_lands_after_change_settings_never_shows(self):
+        b = self.b
+        self.first(draft(V1))
+        self.reply(draft(V2))
+        b.eval("window.__hold=true")
+        self.refine("Shorter")
+        b.click("#genChange")                                                                                                   # Change settings, mid-refine: the draft and its versions go
+        b.eval("window.__hold=false; window.__rel()")
+        b.pump(0.6)
+        self.assertEqual(b.eval("document.getElementById('genOut').innerHTML"), "")                                              # the late version is not drawn
+        self.assertTrue(self.visible("#genSetup"))
+        self.assertEqual(b.eval("document.getElementById('genRefineHost').innerHTML"), "")
+        self.assertEqual(self.stats().get("edited") or 0, 0)                                                                    # and it was not an edit of anything
+
+    def test_a_reply_with_nothing_left_says_how_many_sentences_were_left_out(self):
+        b = self.b
+        self.first(draft(V1, audience="client"))
+        self.reply({"text": "", "sentences": [], "sources": SOURCES, "unsourced": 0, "words": 0, "lines": 0, "form": "teams", "audience": "client",
+                    "length_notes": ["2 sentences have no source, so they were left out of this version."]})
+        self.refine("Add the internal risks")
+        b.wait("document.querySelector('#snack.on')")
+        self.assertEqual(b.eval("document.getElementById('snackT').textContent.replace(/Undo$/,'').trim()"),
+                         "2 sentences have no source, so they were left out of this version. No new version was made.")
+        self.assertEqual(self.shown(), V1)
+        self.assertEqual(self.vers(), "")
+
     def test_text_is_readable_in_light_and_dark(self):
         b = self.b
         self.first(draft(V1))
@@ -470,7 +572,7 @@ class RefineEditor(DraftCase):
         self.assertEqual(b.eval("Object.values(CURED.claims).map(c=>c.ids.length>0)"), [True, False])
         self.assertEqual(b.errors, [])
 
-    def test_back_restores_the_earlier_version_with_its_marks_and_keeps_hand_edits(self):
+    def test_back_restores_the_first_draft_with_its_fact_marks(self):
         b = self.b
         self.generate()
         b.eval("(()=>{ const e=document.getElementById('curEd'); e.focus(); })()")
@@ -484,6 +586,81 @@ class RefineEditor(DraftCase):
         b.click("[data-cver=next]")
         self.assertEqual(self.editor_says("Falcon is off track."), "Falcon is off track.")
         self.assertEqual(b.eval("CURED.vers.length"), 2)
+
+    def type_at_end(self, text):
+        """A hand edit in the editor, as typing at the end of the text is."""
+        self.b.eval(f"CURED.ed1.editor.chain().focus('end').insertContent({text!r}).run()")
+        self.b.pump(1.0)                                                                                                       # the editor re-reads its sentences a moment after a change
+
+    def states(self):
+        return self.b.eval("Object.values(CURED.claims).map(c=>claimState(c))")
+
+    def test_back_after_a_hand_edit_keeps_the_edit_and_the_sources_of_the_untouched_sentences(self):
+        b = self.b
+        self.generate()
+        self.type_at_end(" Plus one new sentence of my own.")                                                                 # a hand edit before the refine
+        self.reply(draft("Falcon is off track.", form="current"))
+        self.refine("Shorter")
+        b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
+        b.click("[data-cver=back]")
+        self.editor_says("Falcon is off track. Data access is late. UAT starts in November. Plus one new sentence of my own.")
+        self.assertEqual(self.states(), ["ok", "ok", "ok", "none"])                                                            # the untouched sentences keep their sources
+        b.eval("document.querySelector('[data-cure=save]').click()")                                                           # Save waits on the one new sentence only
+        b.wait("/One sentence has no source/.test(document.getElementById('snackT').textContent)")
+        self.assertTrue(b.eval("!!document.getElementById('curEd')"))
+
+    def test_a_hand_edit_typed_while_a_refine_is_written_stays_in_its_version(self):
+        b = self.b
+        self.generate()
+        self.reply(draft("Falcon is off track.", form="current"))
+        b.eval("window.__hold=true")
+        self.refine("Shorter")
+        self.type_at_end(" MY LATE EDIT.")                                                                                    # typed while it is written
+        b.eval("window.__hold=false; window.__rel()")
+        b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
+        self.editor_says("Falcon is off track.")
+        b.click("[data-cver=back]")
+        self.editor_says("Falcon is off track. Data access is late. UAT starts in November. MY LATE EDIT.")                   # not lost
+
+    def test_a_redraw_of_the_editor_during_a_refine_keeps_the_progress_stop_and_busy_button(self):
+        b = self.b
+        self.generate()
+        self.reply(draft("Falcon is off track.", form="current"))
+        b.eval("window.__hold=true")
+        self.refine("Shorter")
+        self.assertTrue(b.eval("!!document.querySelector('#curRefineWork [data-drstop]')"))
+        b.eval("mountCurEdit()")                                                                                              # the editor is drawn again mid-write
+        self.assertEqual(b.eval("document.querySelector('#curRefineWork .drstatus').textContent.replace(/Stop$/,'').trim()"), "Refining version 1 into version 2…")
+        self.assertTrue(b.eval("!!document.querySelector('#curRefineWork [data-drstop]')"))
+        self.assertEqual(b.eval("document.getElementById('curRefineGo').getAttribute('aria-disabled')"), "true")
+        b.eval("window.__hold=false; window.__rel()")
+        b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
+        self.assertEqual(b.eval("document.getElementById('curRefineWork').innerHTML"), "")
+        self.assertIsNone(b.eval("document.getElementById('curRefineGo').getAttribute('aria-disabled')"))
+
+    def test_what_the_server_left_out_is_shown_with_its_version_in_the_editor(self):
+        b = self.b
+        self.generate()
+        self.reply(draft("Falcon is off track.", form="current", notes=["1 sentence has no source, so it was left out of this version."]))
+        self.refine("Shorter")
+        b.wait("/Version 2 of 2/.test(document.getElementById('curVers').textContent)", 20)
+        self.assertEqual(b.eval("document.querySelector('#curRefineMsg .drnote').textContent"), "1 sentence has no source, so it was left out of this version.")
+        b.click("[data-cver=back]")
+        self.editor_says("Falcon is off track. Data access is late. UAT starts in November.")
+        self.assertEqual(b.eval("document.getElementById('curRefineMsg').innerHTML"), "")                                       # version 1 has no such note
+        b.click("[data-cver=next]")
+        self.assertIn("left out of this version", b.eval("document.getElementById('curRefineMsg').textContent"))
+
+    def test_an_all_unsourced_reply_says_how_many_were_left_out_and_changes_nothing(self):
+        b = self.b
+        self.generate()
+        before = self.editor()
+        self.reply({"text": "", "sentences": [], "sources": SOURCES, "unsourced": 0, "words": 0, "lines": 0, "form": "current", "audience": "internal",
+                    "length_notes": ["3 sentences have no source, so they were left out of this version."]})
+        self.refine("Add the internal risks")
+        b.wait("document.querySelector('#snack.on')")
+        self.assertIn("3 sentences have no source, so they were left out of this version. No new version was made.", b.eval("document.getElementById('snackT').textContent"))
+        self.assertEqual((self.editor(), self.vers()), (before, ""))
 
     def test_the_typed_change_survives_the_editor_being_drawn_again(self):
         b = self.b
