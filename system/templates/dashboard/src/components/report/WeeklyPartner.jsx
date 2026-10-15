@@ -5,7 +5,7 @@
    exported by components/report/WeeklyView.jsx as `WEEKLY_RENDERERS`, taking the same SectionCtx). */
 import { FLAGS } from "./clientDoc.js";
 
-/** @typedef {import("./SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
 
 /** @param {{ctx: SectionCtx}} props */
 function InternalHealth({ ctx }) {

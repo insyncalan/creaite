@@ -255,7 +255,7 @@ class ClientBrowser(LiveBrowserCase):
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Edited for the client")
         self.b.click("[data-matchone='summary']")
         self.assertEqual(self.b.eval("document.querySelector('[data-match=\"summary\"] .crmstate').textContent"), "Matching internal")
-        self.assertEqual(self.b.eval("document.querySelector('section[data-id=\"summary\"] textarea').value"),
+        self.assertEqual(self.b.eval("document.querySelector('section[data-id=\"summary\"] .sheet-rich').innerText.trim()"),
                          "The internal summary, not for the client.")
 
     def test_not_in_this_report_names_what_is_left_out_with_a_way_to_change_it(self):
@@ -269,17 +269,18 @@ class ClientBrowser(LiveBrowserCase):
         self.approve_internal()
         self.open_view()
         self.b.click("[data-crmode='side']")
-        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .page').length===2")
-        left = "document.querySelector('#v-clientreport .sheet-pair > .page')"
-        self.assertIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page"))                    # the internal page has its own
-        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page + .page"))
-        self.assertTrue(self.b.eval(f"[...{left}.querySelectorAll('textarea')].every(t=>t.readOnly)"))
+        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit').length===2")
+        left = "document.querySelector('#v-clientreport .sheet-pair > .sheet-fit')"
+        self.assertIn("ABC-005", self.words("#v-clientreport .sheet-pair > .sheet-fit"))                    # the internal page has its own
+        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit"))
+        self.assertTrue(self.b.eval(f"[...{left}.querySelectorAll('.sheet-rich')].length>0 && [...{left}.querySelectorAll('.sheet-rich')].every(e=>e.getAttribute('contenteditable')==='false')"))
         # the sheet's Match internal (partner.match) is the client-safe match: the summary comes over, never an internal row
-        self.b.click("[data-sheetmatch='summary']")
-        self.assertEqual(self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .page')[1].querySelector('section[data-id=\"summary\"] textarea').value"),
+        self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-match .linkbtn').click()")
+        self.b.wait("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-rich')?.innerText.includes('The internal summary')", 10)
+        self.assertEqual(self.b.eval("document.querySelectorAll('#v-clientreport .sheet-pair > .sheet-fit')[1].querySelector('section[data-id=\"summary\"] .sheet-rich').innerText.trim()"),
                          "The internal summary, not for the client.")
-        self.b.click("[data-sheetmatchall]")
-        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .page + .page"))
+        self.b.eval("[...document.querySelectorAll('#v-clientreport .sheet-bar .btn')].find(x=>/Match internal for every section/.test(x.textContent)).click()")
+        self.assertNotIn("ABC-005", self.words("#v-clientreport .sheet-pair > .sheet-fit + .sheet-fit"))
 
     def test_export_waits_for_the_internal_week_and_the_check_runs_before_every_export(self):
         self.approve_internal()

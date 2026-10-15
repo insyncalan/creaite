@@ -374,7 +374,7 @@ draws `doc` (always the internal one) on the left and `partner.doc` on the right
   **`partner.match(id | null) => SheetDoc`** (optional; P5 added it, P8 settled the shape, 15-10-2026): when the view gives it, a section's
   Match internal calls it instead of copying (`id` the section), and the bar's Match internal for every section calls it with `null`; Sheet
   passes the returned document to `partner.onChange(doc, "Matched internal")`. A Client view must give it: a verbatim copy would put
-  internal rows and wording on the client's page (P8's `clientDoc.matchSection` copies only what a client may see). Without it, Sheet makes
+  internal rows and wording on the client's page (P8's `clientDoc.matchClientSection` copies only what a client may see). Without it, Sheet makes
   the generic copy above (distributed minutes). SheetStub draws both buttons only when `match` is given.
   The label "Matching internal" or "Edited for the client" is worked out by comparing, not stored.
 

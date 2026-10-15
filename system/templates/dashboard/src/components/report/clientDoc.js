@@ -1,11 +1,11 @@
 // @ts-check
 /* clientDoc.js (v2.1.0 P8, BL-336): the client report's pure helpers, no screen and no server. Everything that can put the
-   internal report's words on the client's page goes through matchSection, and it only ever copies what the client may see:
+   internal report's words on the client's page goes through matchClientSection, and it only ever copies what the client may see:
    text and the choice of which client-visible rows show, never an internal row, never a tag. The server checks again at save,
    approve and export (client_leak.py), so a slip here is caught there, and the left-out check says so. */
 
-/** @typedef {import("./SheetStub.jsx").SheetDoc} SheetDoc */
-/** @typedef {import("./SheetStub.jsx").SheetSection} SheetSection */
+/** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("./Sheet.jsx").SheetSection} SheetSection */
 
 /** The health flags creaite knows, with the class the page paints them in. */
 export const FLAGS = /** @type {const} */ ([["On track", "g"], ["At risk", "a"], ["Off track", "r"]]);
@@ -55,7 +55,7 @@ export function matchState(client, internal, id) {
     shows the ones the internal report shows; the milestone list takes the internal list. What is client-only stays: hidden
     sections, logos, the row eyes of rows the internal report doesn't list are closed, and the heading.
     @param {SheetDoc} client @param {SheetDoc} internal @param {string} id @returns {SheetDoc} */
-export function matchSection(client, internal, id) {
+export function matchClientSection(client, internal, id) {
   const c = secOf(client, id), i = secOf(internal, id);
   if (!c || !i || c.hidden || c.type === "header" || c.type === "figures") return client;
   if (c.type === "health") {
@@ -76,7 +76,7 @@ export function matchSection(client, internal, id) {
 }
 
 /** Match internal for every section (client-only choices stay). @param {SheetDoc} client @param {SheetDoc} internal */
-export const matchAll = (client, internal) => client.sections.reduce((d, s) => matchSection(d, internal, s.id), client);
+export const matchClientAll = (client, internal) => client.sections.reduce((d, s) => matchClientSection(d, internal, s.id), client);
 
 /** The health difference kept on the document (contract §1 `meta`): the internal flag, the client's and the reason; null when they agree.
     @param {SheetDoc} client @param {string} internalFlag @param {string} clientFlag @param {string} reason */

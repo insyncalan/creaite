@@ -1,20 +1,20 @@
 // @ts-check
 /* ClientParts (v2.1.0 P8, BL-336): the client report's own section renderers, on the sheet's slots (dev/sprints/v210-contract.md
-   §4.3; SheetStub.jsx until P5's Sheet.jsx). Each is a component (hooks need that), handed the sheet's SectionCtx.
+   §4.3; Sheet.jsx). Each is a component (hooks need that), handed the sheet's SectionCtx.
    - Health: the client's flag (click it to change it, with the reason the internal report keeps) and its headline; Match
      internal health takes the internal flag and headline.
    - Tables (risks, overdue, asks, decisions): an eye on each row; rows the client may see show by default; "Not in this report"
      lists what the tracker holds that the report leaves out, with Make client-visible… (the standard peek) and, for a Sensitive
      or partner-only item, the plain reason it can never be shown; Add for a row that became client-visible since.
-   - Every section: Matching internal or Edited for the client, and Match internal (clientDoc.matchSection: client-safe).
+   - Every section: Matching internal or Edited for the client, and Match internal (clientDoc.matchClientSection: client-safe).
    Everything drawn here is the client document's own content; the internal report is read only. */
 import { useEffect, useRef, useState } from "preact/hooks";
-import { cellsFor, FLAGS, flagOf, healthDiff, matchSection, matchState, secOf } from "./clientDoc.js";
-import { openRef } from "./SheetStub.jsx";
+import { cellsFor, FLAGS, flagOf, healthDiff, matchClientSection, matchState, secOf } from "./clientDoc.js";
+import { openRef } from "./Sheet.jsx";
 import { crCheck, crDirty, crDoc, crInternal, runCheck } from "../../stores/clientReport.js";
 
-/** @typedef {import("./SheetStub.jsx").SectionCtx} SectionCtx */
-/** @typedef {import("./SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("./Sheet.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
 
 /** Take a new client document onto the page. @param {SheetDoc} next */
 export function setClientDoc(next) { crDoc.value = next; crDirty.value = true; }
@@ -22,7 +22,7 @@ export function setClientDoc(next) { crDoc.value = next; crDirty.value = true; }
 /** Match one section to the internal report. @param {string} id */
 export function matchOne(id) {
   const d = crDoc.value, i = crInternal.value;
-  if (d && i) setClientDoc(matchSection(d, i, id));
+  if (d && i) setClientDoc(matchClientSection(d, i, id));
 }
 
 /** The line above a section's body: Matching internal or Edited for the client, and Match internal. Only while editing.

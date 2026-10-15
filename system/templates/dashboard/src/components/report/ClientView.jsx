@@ -2,17 +2,16 @@
 /* ClientView (v2.1.0 P8, BL-336): the client's report as a Client view of the week's report (#client-report=<CODE>/<week>/<client>).
    The same A4 sheet with the client's own layout; the client health and its reason; Match internal (one section or all); the check
    of what is left out before every export; and Side by side with the internal report. Built on the sheet's contract
-   (dev/sprints/v210-contract.md §4) with the stub sheet (components/report/SheetStub.jsx) until P5's Sheet.jsx: moving over is
-   changing the import. The view keeps the document (stores/clientReport.js) and makes its own server calls (/api/report/*).
+   (dev/sprints/v210-contract.md §4) on P5's Sheet (components/report/Sheet.jsx); Side by side has the internal page read only (leftReadOnly). The view keeps the document (stores/clientReport.js) and makes its own server calls (/api/report/*).
    Client safety: the page only ever holds what the server built from client-visible items (report_doc.client_doc, through
-   client_leak.make_safe) and what Alan typed; Match internal copies only what clientDoc.matchSection allows; the server checks
+   client_leak.make_safe) and what Alan typed; Match internal copies only what clientDoc.matchClientSection allows; the server checks
    again at save, approve and export. Nothing here sends anything. */
 import { render } from "preact";
-import { useLayoutEffect, useRef, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import { CLIENT_RENDERERS, setClientDoc } from "./ClientParts.jsx";
-import { matchAll, matchSection } from "./clientDoc.js";
+import { matchClientAll, matchClientSection } from "./clientDoc.js";
 import { LeftOutDialog } from "./LeftOutDialog.jsx";
-import { SheetStub } from "./SheetStub.jsx";
+import { Sheet } from "./Sheet.jsx";
 import { INTERNAL_RENDERERS } from "./WeeklyPartner.jsx";
 import { $ } from "../../core/dom.js";
 import { navWrite, tabTitle } from "../../core/nav.js";
@@ -21,7 +20,7 @@ import { snack } from "../../core/server.js";
 import { approveClientReport, crArg, crBase, crBusy, crDialog, crDirty, crDoc, crInfo, crInternal, crMode, crOpen, exportClientReport,
   loadClientReport, runCheck, saveClientPage } from "../../stores/clientReport.js";
 
-/** @typedef {import("./SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("./Sheet.jsx").SheetDoc} SheetDoc */
 
 /** Save any page edits, run the left-out check and open it. */
 async function openCheck() {
@@ -55,7 +54,7 @@ function Bar({ doc, note, setNote }) {
         <button type="button" data-crmode="client" aria-pressed={mode === "client" ? "true" : "false"} onClick={() => { crMode.value = "client"; }}>Client report</button>
         <button type="button" data-crmode="side" aria-pressed={mode === "side" ? "true" : "false"} disabled={!crInternal.value} onClick={() => { crMode.value = "side"; }}>Side by side</button>
       </span>
-      {draft && mode !== "side" ? <button type="button" class="btn sm" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchAll(d, i)); }}>Match internal for every section</button> : null}
+      {draft && mode !== "side" ? <button type="button" class="btn sm" data-crmatchall disabled={!crInternal.value} onClick={() => { const d = crDoc.value, i = crInternal.value; if (d && i) setClientDoc(matchClientAll(d, i)); }}>Match internal for every section</button> : null}
       {draft && ready && info && info.baseline && !(doc.based_on && doc.based_on.version === info.baseline.version) ? <button type="button" class="btn sm" data-crrefresh
         title="This draft was made before the internal report was approved. Refreshing rebuilds it from the approved week's locked facts and replaces your edits when you save."
         onClick={() => { const a = crArg.value; if (a) loadClientReport(a, true); }}>Refresh from the approved week</button> : null}
@@ -71,26 +70,21 @@ function Bar({ doc, note, setNote }) {
 function matchFor(id) {
   const d = /** @type {SheetDoc} */ (crDoc.value), i = crInternal.value;
   if (!i) return d;
-  return id == null ? matchAll(d, i) : matchSection(d, i, id);
+  return id == null ? matchClientAll(d, i) : matchClientSection(d, i, id);
 }
 
 /** The view. */
 export function ClientView() {
-  const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const [exported, setExported] = useState(false);
   const [note, setNote] = useState("");
   const open = crOpen.value, doc = crDoc.value, internal = crInternal.value, mode = crMode.value, info = crInfo.value;
   const side = mode === "side" && !!internal;
-  useLayoutEffect(() => {          /* the internal page is read only here (P6 edits it): its text boxes refuse typing */
-    const left = box.current && box.current.querySelector(".sheet-pair > .page");
-    if (left) left.querySelectorAll("textarea").forEach(t => { t.setAttribute("readonly", ""); });
-  });
   if (!open) return <div class="crview"><p class="sub">{crBusy.value || "Opening the client report…"}</p></div>;
   if (!open.ok || !doc) return <div class="crview"><h1 id="crTitle">Client report</h1><p class="mnerr" role="alert">{open.message || "Couldn't open the client report"}</p></div>;
   const a = crArg.value, filed = doc.state === "approved";
   const key = `client:${doc.project}:${doc.date}:${doc.client || ""}:${mode}`;
   return (
-    <div class="crview" ref={box}>
+    <div class="crview">
       <header class="crhead">
         <nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="projects">Projects</a> › <span aria-current="page">Client report</span></nav>
         <h1 id="crTitle">Client report{doc.client ? `: ${doc.client}` : ""}</h1>
@@ -98,9 +92,9 @@ export function ClientView() {
           {filed ? " · Edits start a new draft" : ""}</p>
       </header>
       <div class="crsheet">
-        <SheetStub doc={side && internal ? internal : doc} baseVersion={crBase.value} scrollKey={key} exported={exported} onExported={setExported}
-          readOnly={filed && !side} renderers={side ? INTERNAL_RENDERERS : CLIENT_RENDERERS}
-          partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed, match: matchFor,
+        <Sheet doc={side && internal ? internal : doc} baseVersion={crBase.value} scrollKey={key} exported={exported} onExported={setExported}
+          readOnly={filed && !side} leftReadOnly renderers={side ? INTERNAL_RENDERERS : CLIENT_RENDERERS}
+          partner={side ? { doc, label: "Client", baseVersion: crBase.value, scrollKey: key, renderers: CLIENT_RENDERERS, readOnly: filed, match: id => setClientDoc(matchFor(id)),
             onChange: setClientDoc, onSave: saveClientPage } : null}
           onChange={side ? () => {} : setClientDoc} onSave={side ? undefined : saveClientPage}
           onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); }}
