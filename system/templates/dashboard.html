@@ -43834,7 +43834,7 @@ ${pre}**Current state title:** ${title}`);
         snack(`Nothing open for ${name}, so no email is needed`);
         return;
       }
-      if (mode === "chase" && (!chase.length || deMe(name))) mode = "update";
+      if (mode === "chase" && (!chase.length || deMe(name) || only && !chase.some((i5) => i5.id === only))) mode = "update";
       const items2 = mode === "chase" ? chase : ok2, outside = deOutside(email), picked = deDefaults(items2, outside);
       if (only && !items2.some((i5) => i5.id === only)) {
         snack(ok2.some((i5) => i5.id === only) ? `${only} isn't past its date yet, so it isn't in a chase` : `${only} is marked confidential or restricted, so it can't go in an email`);

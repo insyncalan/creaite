@@ -419,6 +419,24 @@ class ThreadCardScreens(LiveBrowserCase):
         self.assertTrue(b.eval("[...shared.DE.picked].every(k=>k==='actions:'+shared.DE.only)"))   # at most it is ticked (the outside-address rule)
         b.eval("document.querySelector('dialog[open]').close()")
 
+    def chase_click(self):
+        b = self.b
+        b.eval("""(()=>{ const r=[...document.querySelectorAll('#tdList>li.td-message')].find(r=>r.textContent.includes('Licence numbers'));
+          r.querySelector('[data-alertdo="chase"]').click(); })()""")
+
+    def test_chase_on_an_item_not_past_its_date_opens_the_update_email(self):
+        """N3: no dead end. The matched item is made not overdue; Chase falls back to the update email with that one item."""
+        b = self.b
+        self.show(1400, "Light")
+        mid = b.eval("(SA().vip.alerts.find(a=>a.title==='Licence numbers')).match.id")
+        b.eval(f"REC('actions','{mid}').due='{LATER}'")
+        self.chase_click()
+        b.wait("shared.DE&&document.getElementById('deTitle')&&document.getElementById('deTitle').textContent.includes('Sara Example')")
+        self.assertEqual(b.eval("shared.DE.mode"), "update")
+        self.assertEqual(b.eval("shared.DE.only"), mid)
+        self.assertEqual(b.eval("[...shared.DE.picked].every(k=>k==='actions:'+shared.DE.only)"), True)
+        b.eval("document.querySelector('dialog[open]').close()")
+
 
 class ThreadCardActions(LiveBrowserCase):
     """BL-342 Part 1: Handled (with Undo) and Log on the matched item, from the page."""
