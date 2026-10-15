@@ -335,28 +335,257 @@ class Measured2(HandcheckCase):
 
 
 class Judgement2(HandcheckCase):
-    """Phase 2: the other judgement checks (screenshots on the sheet)."""
+    """Phase 2: the other judgement checks (screenshots on the sheet; what can be measured is measured and noted). Own vault:
+    check 11 writes a prep page, 18 stops and restarts the server, 51 archives the old reports and records two conversations."""
+    own_vault = True
+    TOKENS = ("bg", "surface", "ink", "muted", "line", "accent")
+    STATUS = ("ok", "warn", "bad")
 
-    @phase2()
+    # ── helpers (this class's own) ──
+
+    def _vars(self, names):
+        """The page's root custom properties, lower case: {name: value}."""
+        return self.b.eval("(n=>{ const s=getComputedStyle(document.documentElement); return Object.fromEntries(n.map(k=>[k, s.getPropertyValue('--'+k).trim().toLowerCase()])); })(%s)" % json.dumps(list(names)))
+
+    def _dashboard_vars(self, names):
+        """The dashboard's creaite theme tokens, light and dark: {mode: {name: value}}."""
+        out = {}
+        try:
+            for m in ("light", "dark"):
+                measure.theme(self.b, "creaite", m)
+                out[m] = self._vars(names)
+        finally:
+            self.b.eval("applyTheme()")
+        return out
+
+    def _record(self, n, screen, palette, mode, w, note=""):
+        """One screenshot of what is on screen now, on the sheet."""
+        import sheet as sheetmod
+        if not sheetmod.enabled():
+            return 0
+        path = sheetmod.shot_path(n, screen, palette, mode, w)
+        measure.shot(self.b, path)
+        sheetmod.record(n, screen, palette, mode, w, path, note)
+        return 1
+
+    def _file_page_shots(self, n, screen, measure_fn=None):
+        """Screenshots of the page now loaded (not the dashboard), light and dark × 1400 and 320 px, by the system's colour
+        scheme (DevTools › Rendering). measure_fn(mode, width) runs before each shot; returns {(mode, width): its value}."""
+        b, k, seen = self.b, 0, {}
+        try:
+            for w in (1400, 320):
+                measure.width(b, w, 1000 if w > 600 else 800)
+                for m in ("light", "dark"):
+                    measure.media(b, dark=(m == "dark"))
+                    b.pump(0.2)
+                    if measure_fn:
+                        seen[(m, w)] = measure_fn(m, w)
+                    k += self._record(n, screen, "creaite", m, w)
+        finally:
+            measure.media(b)
+            measure.width(b, self.width, self.height)
+        return k, seen
+
+    # ── the checks ──
+
     def test_c11_prep_page_fonts(self):
         """11. Build a prep page (Today › the FAL Steering committee › Prep page), then open it from the Agendas folder → the
         dashboard's fonts (where installed) and status colours, light and dark; still one file."""
+        b = self.b
+        dash = self._dashboard_vars(self.STATUS)
+        # Today › the meeting › Prepare › Open prep page › Refresh research: the stand-in Claude researches, the server writes it
+        self.screen("today")
+        b.click("#dayMeets [data-prep]")
+        b.wait("document.querySelector('#prepDlg [data-prepview]')", 10)
+        b.eval("document.querySelector('#prepDlg [data-prepview]').click()")
+        b.wait("[...document.querySelectorAll('.pph button')].some(e=>e.innerText.includes('Refresh research'))", 15)
+        b.eval("[...document.querySelectorAll('.pph button')].find(e=>e.innerText.includes('Refresh research')).click()")
+        b.wait("/Prep page saved: /.test(document.body.innerText)", 60)
+        rel = b.eval("document.body.innerText.match(/Prep page saved: (projects\\/[^\\n]*?\\.html)/)[1]")
+        f = self.vault / rel
+        self.assertTrue(f.is_file(), f"the page is in the Agendas folder: {rel}")
+        self.assertEqual(f.parent.name, "agendas")
+        text = f.read_text(encoding="utf-8")
+        outside = re.findall(r"<link\b[^>]*>|<script\b[^>]*\bsrc=|<img\b[^>]*\bsrc=\"(?!data:)|url\(\s*['\"]?(?!data:)|@import", text, re.I)
+        self.assertEqual(outside, [], "still one file: nothing loaded from outside it")
+        # Open it from the Agendas folder: the file itself, as Finder would open it in Chrome
+        b.goto(f.as_uri())
+        b.wait("document.querySelector('h1')", 10)
 
-    @phase2()
+        def look(mode, w):
+            return {"vars": self._vars(self.STATUS),
+                    "body": b.eval("getComputedStyle(document.body).fontFamily.split(',')[0].replace(/\"/g,'')"),
+                    "h1": b.eval("getComputedStyle(document.querySelector('h1')).fontFamily.split(',')[0].replace(/\"/g,'')"),
+                    "installed": b.eval("['Source Sans 3','Schibsted Grotesk'].filter(f=>document.fonts.check('16px \"'+f+'\"'))"),
+                    "overflow": measure.overflow_x(b)["ok"]}
+        shots, seen = self._file_page_shots(11, "prep page (opened from the Agendas folder)", look)
+        for (m, w), x in seen.items():
+            self.assertEqual(x["vars"], dash[m], f"{m} at {w}px: the status colours are the dashboard's (creaite)")
+            self.assertEqual((x["body"], x["h1"]), ("Source Sans 3", "Schibsted Grotesk"), "the dashboard's type stacks")
+        sideways = [f"{m} {w}px" for (m, w), x in seen.items() if not x["overflow"]]
+        first = seen[("light", 1400)]
+        self.note(11, f"{shots} shots; {rel.rsplit('/', 1)[-1]}, {len(text) // 1024} KB, one file (no link, script src, url() "
+                      f"or @import); status colours = the dashboard's in light and dark ({', '.join(f'{k} {v}' for k, v in dash['light'].items())} "
+                      f"/ {', '.join(dash['dark'].values())}); fonts Source Sans 3 / Schibsted Grotesk, installed here: "
+                      f"{', '.join(first['installed']) or 'neither (system font shown)'}"
+                      + (f"; scrolls sideways at {', '.join(sideways)}" if sideways else "; no sideways scroll at 320 px"))
+
     def test_c18_offline_page(self):
         """18. Stop the server and reload → the offline page uses creaite's fonts and colours, light and dark, with a 32 px
         button. (Needs own_vault: it stops the server.)"""
+        import time
+        b, cls = self.b, type(self)
+        dash = self._dashboard_vars(self.TOKENS)
+        # the service worker (BL-86) must hold the offline page before the server stops
+        deadline = time.time() + 20
+        while not b.eval("navigator.serviceWorker.getRegistration().then(r=>!!(r&&r.active)).then(a=>a&&caches.match('/offline').then(x=>!!x))"):
+            self.assertLess(time.time(), deadline, "the service worker never held the offline page")
+            b.pump(0.3)
+        cls._hc.stop_server(cls.proc)
 
-    @phase2()
+        def restart():
+            cls.proc, cls.base = cls._hc.start_server(cls.vault)
+        self.addCleanup(restart)                       # the next checks need it
+        b.eval("location.reload()", wait=False)       # ⌘R (Page.reload's ignoreCache would bypass the service worker)
+        b.pump(0.5)
+        b.wait("document.readyState==='complete' && !!document.querySelector('h1')", 20)
+        self.assertEqual(b.eval("document.querySelector('h1').innerText"), "The live server isn't running")
+
+        def look(mode, w):
+            return {"vars": self._vars(self.TOKENS),
+                    "body": b.eval("getComputedStyle(document.body).fontFamily.split(',')[0].replace(/\"/g,'')"),
+                    "h1": b.eval("getComputedStyle(document.querySelector('h1')).fontFamily.split(',')[0].replace(/\"/g,'')"),
+                    "button": measure.boxes(b, "button"), "overflow": measure.overflow_x(b)["ok"],
+                    "contrast": min(r["ratio"] for r in measure.contrast(b, "h1, p, button, code"))}
+        shots, seen = self._file_page_shots(18, "offline page (server stopped)", look)
+        diffs = []
+        for (m, w), x in seen.items():
+            self.assertEqual([bx["h"] for bx in x["button"]], [32.0], f"{m} {w}px: one 32 px button")
+            self.assertEqual((x["body"], x["h1"]), ("Source Sans 3", "Schibsted Grotesk"), "creaite's type stacks")
+            self.assertTrue(x["overflow"], f"{m} {w}px: no sideways scroll")
+            for k in ("bg", "ink", "accent"):
+                self.assertEqual(x["vars"][k], dash[m][k], f"{m}: --{k} is creaite's")
+            diffs += [f"{m} --{k} {x['vars'][k]} (dashboard {dash[m][k]})" for k in self.TOKENS if x["vars"][k] != dash[m][k] and w == 1400]
+        worst = min(x["contrast"] for x in seen.values())
+        self.note(18, f"{shots} shots (served by the service worker with the server stopped); button 32px; Source Sans 3 / "
+                      f"Schibsted Grotesk; bg, ink and accent = the creaite theme's, light and dark"
+                      + (f"; differs: {', '.join(diffs)}" if diffs else "; surface, muted and line too")
+                      + f"; lowest text contrast {worst}:1; no sideways scroll at 320 px")
+
     def test_c20_audits_snapshots(self):
         """20. `python3 dev/tools/token_audit.py` and `dev/tools/ui_audit.py` from the repository → no P1 in shipped files; one
-        variant of each control. Look through `dev/reviews/bl325-before-after/index.html` → you agree the re-recorded
-        snapshots."""
+        variant of each control. Look through the screenshot sheet's check 20 (every screen, creaite, light and dark, 1400 and
+        320 px) → you agree how each screen looks."""
+        import os
+        import subprocess
+        repo = Path(__file__).resolve().parents[3]
+        r = subprocess.run([sys.executable, "dev/tools/token_audit.py", "--json"], cwd=repo, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr[-500:])
+        found = json.loads(r.stdout)["findings"]
+        p1 = [f for f in found if f["sev"] == "P1"]
+        shipped = [f"{f['file']}:{f['line']} {f['msg'][:80]}" for f in p1 if not str(f["file"]).startswith("dev/")]
+        out = Path(os.environ.get("CREAITE_HC_DIR") or ".") / "ui-audit"
+        u = subprocess.run([sys.executable, "dev/tools/ui_audit.py", "--out", str(out), "--themes", "creaite", "--modes", "light",
+                            "--widths", "1400x1000"], cwd=repo, capture_output=True, text=True, timeout=600)
+        self.assertEqual(u.returncode, 0, u.stderr[-500:])
+        (out / "summary.md").write_text(u.stdout, encoding="utf-8")
+        kinds = re.findall(r"^- \*\*(\w+)\*\*: (\d+) classes, \d+ rendered styles; (\d+) classes drawn more than one way", u.stdout, re.M)
+        self.assertTrue(kinds, "ui_audit's control summary")
+        more = [f"{k} {n}" for k, _, n in kinds if int(n)]
+        shots = sum(self.sheet(20, s, palettes=["creaite"]) for s in measure_screens())
+        self.note(20, f"{shots} shots of every screen on the sheet, in place of dev/reviews/bl325-before-after/; "
+                      f"token audit: {len(p1)} P1, {len(shipped)} in shipped files"
+                      + (f" ({'; '.join(shipped[:3])})" if shipped else f" (all in dev/: {', '.join(sorted({f['file'] for f in p1}))})")
+                      + f"; ui_audit (creaite, light, 1400 px): classes drawn more than one way: {', '.join(more) or 'none'}"
+                      + f" (state or drift: judge from {out / 'summary.md'})")
+        self.assertEqual(shipped, [], "P1 findings in shipped files")
 
-    @phase2()
     def test_c51_dark_forced_320_help(self):
         """51. Dark mode, forced colours and 320 px: the Archived chip and Move back, Health's Archiving section, the alert card
         and quiet line, → readable, with no sideways scroll. Help says what Archiving and Move back are."""
+        b, day = self.b, (self.now or "")[:10]
+        # The state: the old reports archived (Health's Archive them, then Approve on the card, as their buttons do) and two
+        # conversations recorded (check 42's and 43's, through sweep.py vip record)
+        r = b.eval("api('/api/health/fix/archive_reports',{}).then(r=>r)")
+        self.assertTrue(r and r.get("card"), f"Archive them: {r}")
+        r = b.eval("api('/api/edit/pending',{}).then(p=>api('/api/edit/approve',{card:p.card.card}))")
+        self.assertTrue(r and r.get("ok"), f"Approve: {r}")
+        found = self.vault / "system/staging/hc-found.json"
+        conv = {"kind": "teams", "from": "Rashid Al Suwaidi <rashid@northgate.example>", "sensitivity": "normal", "attachments": [],
+                "people": ["Rashid Al Suwaidi <rashid@northgate.example>", "Lena Fischer"]}
+        found.write_text(json.dumps([
+            dict(conv, conversation="19:hc-falcon@thread.v2", title="Falcon go-live", last=f"{day} 08:40", link="https://teams.microsoft.com/l/chat/hc",
+                 summary="Northgate will take the platform from production to live; go-live work falls under the existing contract.",
+                 items=[{"type": "action", "text": "Take the platform from production to live", "owner": "Rashid Al Suwaidi"},
+                        {"type": "decision", "text": "Go-live work falls under the existing contract"}]),
+            dict(conv, conversation="19:hc-chat@thread.v2", title="Group chat", last=f"{day} 08:50", link="https://teams.microsoft.com/l/chat/hc2",
+                 summary="Greetings only.", items=[])]), encoding="utf-8")
+        try:
+            code, out = self.run_in_vault("sweep.py", "vip", "record", "system/staging/hc-found.json", "--found", "sweep")
+        finally:
+            found.unlink()
+        self.assertEqual(code, 0, out)
+        b.reload("typeof go==='function' && LIVE")
+
+        def archived(bb):
+            bb.eval("document.querySelector('#fquick [data-q=archived]').click()")
+            bb.wait("document.querySelector('#filesTbl [data-moveback]')", 10)
+            bb.eval("document.querySelector('#filesTbl').scrollIntoView({block:'start'})")
+
+        def health(bb):
+            bb.wait("document.querySelector('#healthArchiving')", 20)
+            bb.eval("document.querySelector('#healthArchiving').scrollIntoView({block:'center'})")
+
+        def alerts(bb):
+            bb.wait("document.querySelector('#tdList .td-message') && document.querySelector('#tdList .td-quiet')", 10)
+            bb.eval("""(()=>{ const ys=[...document.querySelectorAll('#tdList .td-message, #tdList .td-quiet')].map(e=>e.getBoundingClientRect().top);
+              scrollBy(0, Math.min(...ys) - 70); return true; })()""")      # the first of the two at the top, under the bar
+
+        archiving_li = "[...document.querySelectorAll('#v-help li')].find(e=>e.offsetParent&&/^Archiving \\(Settings/.test(e.innerText))"
+
+        def help_(bb):
+            bb.eval("go('help','reference')")             # Help › Reference › Settings
+            bb.wait(archiving_li, 10)
+            bb.eval(archiving_li + ".scrollIntoView({block:'start'})")
+
+        surfaces = [("files", "Files › Archived", archived, "#filesTbl .tag, #filesTbl [data-moveback], #fquick [data-q=archived]"),
+                    ("settings-health", "Settings › Health › Archiving", health, "#healthArchiving li"),
+                    ("today", "Today › the alert card and quiet line", alerts, "#tdList .td-message, #tdList .td-message *, #tdList .td-quiet, #tdList .td-quiet *"),
+                    ("help", "Help › Archiving and Move back", help_, None)]
+        variants = [("dark", False, 1400), ("dark", False, 320), ("forced dark", True, 320), ("forced light", True, 320)]
+        sideways, low, shots = [], [], 0
+        try:
+            for w_mode, forced, w in variants:
+                measure.width(b, w, 1000 if w > 600 else 800)
+                measure.media(b, dark="dark" in w_mode, forced=forced)
+                measure.theme(b, "creaite", "system" if forced else "dark")
+                for screen, label, prep, sel in surfaces:
+                    self.screen(screen, settle=0.3)
+                    prep(b)
+                    b.pump(0.2)
+                    if not measure.overflow_x(b)["ok"]:
+                        sideways.append(f"{label} {w_mode} {w}px")
+                    if sel and not forced:
+                        for x in measure.contrast(b, sel):
+                            if x["text"] and x["ratio"] < (3 if measure.large(x) else 4.5):
+                                low.append(f"{label} {w}px {x['sig']} '{x['text'][:20]}' {x['ratio']}:1")
+                    shots += self._record(51, label, "creaite", w_mode, w)
+        finally:
+            measure.media(b)
+            measure.width(b, self.width, self.height)
+            b.eval("applyTheme()")
+        self.screen("help")
+        b.eval("go('help','reference')")
+        para = b.wait(archiving_li + ".innerText", 10)
+        self.assertIn("Move back", para, "Help says what Move back is")
+        self.assertIn("_Archive", para, "Help says what archiving does")
+        self.note(51, f"{shots} shots (Files › Archived, Health › Archiving, Today's alert card and quiet line, Help; dark at 1400 "
+                      f"and 320 px, forced colours at 320 px); "
+                      + (f"sideways scroll: {'; '.join(sideways)}" if sideways else "no sideways scroll in any")
+                      + (f"; below AA in dark: {'; '.join(sorted(set(low))[:4])}" if low else "; text contrast AA in dark")
+                      + "; Help's Archiving paragraph explains Archive them and Move back")
+        self.assertEqual(sideways, [], "no sideways scroll")
+        self.assertEqual(low, [], "readable in dark mode")
 
 
 class Bl333And10(HandcheckCase):
