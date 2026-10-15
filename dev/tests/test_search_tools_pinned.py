@@ -59,7 +59,7 @@ class Policy(unittest.TestCase):
         self.assertFalse(any(t.startswith("mcp__") for t in tools))
         for t in L.DENY_TOOLS:                                         # Microsoft 365 actions and the rest, as before
             self.assertIn(t, deny)
-        self.assertEqual(L.KIND_ARGS["search"], ["--tools", "Read,Grep,Glob"])
+        self.assertEqual(L.KIND_ARGS["search"], ["--tools", "Read,Grep,Glob", "--strict-mcp-config"])   # F4
         self.assertFalse(any(t.startswith(("Bash", "Write", "Edit")) for t in tools))
         self.assertFalse(L.held_run("search", None, None, False, tools))   # #60: like ask creaite, confidential notes unchanged
 
@@ -69,7 +69,7 @@ class Policy(unittest.TestCase):
         self.assertTrue(set(permissions.m365_read_tools()) <= set(L.run_policy("ask", None)[0]))   # a chat keeps them
         self.assertEqual(L.run_policy("ask", None)[0][:4], ["Read", "Grep", "Glob", "Skill"])
         self.assertNotIn("Bash", L.run_policy("prep", None)[1])
-        self.assertNotIn("prep", L.KIND_ARGS)
+        self.assertEqual(L.KIND_ARGS["prep"], ["--tools", "Read,Grep,Glob,Bash,ToolSearch"])     # F2: every kind names its built-ins
 
 
 class ServerCommand(unittest.TestCase):
@@ -108,7 +108,7 @@ class ServerCommand(unittest.TestCase):
 
     def test_only_the_reading_built_ins(self):
         self.assertEqual(flag(self.args, "--tools"), "Read,Grep,Glob")
-        self.assertNotIn("--strict-mcp-config", self.args)           # denied by name instead (below)
+        self.assertIn("--strict-mcp-config", self.args)              # F4: it uses no MCP at all (and each is denied by name, below)
 
     def test_allowed_has_no_command_or_writer(self):
         allowed = flag(self.args, "--allowedTools").split(",")

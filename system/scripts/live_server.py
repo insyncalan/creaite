@@ -1963,7 +1963,43 @@ SEARCH_TOOLS = ["Read", "Grep", "Glob"]
 KIND_TOOLS["search"] = list(SEARCH_TOOLS)
 KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
                          *vault_permissions.m365_read_tools()]
-KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS)]
+KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS), "--strict-mcp-config"]    # F4 (#116 review): it uses no MCP at all
+# ===== F2 (#116 review, 15-10-2026): every run kind names its built-in tools =====
+# A run started with no --tools gets EVERY built-in tool in the installed Claude Code, including ones that run headless without
+# a permission prompt and that neither the guard hook nor a deny list looks at (EnterWorktree writes into .git and
+# .claude/worktrees/; RemoteTrigger, CronCreate, Monitor, SendMessage, Workflow…). So each kind has an explicit allow list of
+# built-ins (`--tools`), never a deny list of newer ones: a built-in a later CLI adds never appears in a run by itself. `--tools`
+# covers the built-in set only: the Microsoft 365 tools (MCP) stay loaded and are governed by --allowedTools and
+# --disallowedTools, as before (probed on Claude Code 2.1.300: an MCP tool is callable under `--tools ""` and under a list
+# without ToolSearch). Kinds: a chat and a confirmed request ("ask"), a sweep ("sweep": Close the day's, and a typed sweep),
+# the held kinds creaite starts itself (Prep page, Current state, AI drafts, Shape, a transcript check or load), Search's answer,
+# the tool-less ones (AI on selected text, a closed meeting's Shape, Find updates in a note) and a narrowed run (`only`).
+# ToolSearch only loads deferred tools' schemas (the Microsoft 365 tools are deferred when it is there); it reads nothing.
+CHAT_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "Task", "ToolSearch"]   # Task: a chat may delegate
+SWEEP_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]           # cx-sweep, its drafts' files
+HELD_BUILTINS = ["Read", "Grep", "Glob", "Bash", "ToolSearch"]       # read files and creaite's read scripts; the server writes
+NO_BUILTINS = ["--tools", ""]                                         # none at all (the MCP tools are separate)
+KIND_ARGS["ask"] = ["--tools", ",".join(CHAT_BUILTINS)]
+KIND_ARGS["sweep"] = ["--tools", ",".join(SWEEP_BUILTINS)]
+for _k in ("prep", "generate", "check", "load"):
+    KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
+for _k in ("shape-closed", "notes-find"):
+    KIND_ARGS[_k] = list(NO_BUILTINS)
+# Belt and braces, in every run's --disallowedTools: the built-ins no kind needs, by their names in Claude Code 2.1.300, so a
+# --tools list that drifts still can't reach them.
+NEVER_BUILTINS = ["EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
+                  "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments",
+                  "ArtifactData", "NotebookEdit", "TaskStop", "ListAgents", "ReportFindings", "ListMcpResourcesTool",
+                  "ReadMcpResourceTool", "ReadMcpResourceDirTool"]
+
+
+def run_args(policy, confirmed=None, only=None):
+    """A run's built-in tools (`--tools`, and `--strict-mcp-config` where it has no MCP): its kind's own entry in KIND_ARGS; none
+    for a narrowed run (`only`: Microsoft 365 reading only) or for a kind with no entry (fail closed)."""
+    if only is not None and policy not in GUARDED_KINDS and not confirmed:
+        return list(NO_BUILTINS)
+    return list(KIND_ARGS.get(policy, NO_BUILTINS))
+# ===== end F2 =====
 
 
 def run_prompt(kind, confirmed):
@@ -1996,6 +2032,7 @@ def run_policy(kind, confirmed, only=None):
     deny = deny_tools() + KIND_DENIES.get(kind, []) + (never_denies() if guarded else [])   # BL-286: a closed run
     if only is not None and not guarded and not confirmed:
         tools, deny = list(only), deny + [t for t in ONLY_DENIES if t not in deny]
+    deny = deny + [t for t in NEVER_BUILTINS if t not in deny]   # F2: the built-ins no kind needs, denied by name in every run
     return tools, deny, guarded
 
 
@@ -2047,7 +2084,7 @@ class Run:
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
         cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
-               "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
+               "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
