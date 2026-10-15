@@ -4,6 +4,9 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 15-10-2026 | Alan | P10 (#73): Draft the follow-up email moves to P7's minutes view, in the Export menu, drawing on the active version (internal or distributed), as he drafts for both. The item-source Meeting link is kept, routed through meetingRoute; the Intake and Files links are dropped. | Alan's answers to the two P10 points. A distributed draft must never carry Internal-only or withheld lines. |
+| 15-10-2026 | Alan | #66 point 2: yes. Partner-only as a label can only withhold an item from a client report, never add one. | The confidentiality rule stands: only client-visible items reach a client report. |
+| 15-10-2026 | Alan | Testing widths: 900px checks stay; only 320 and 640 are dropped (this refines the earlier desktop-only decision). | Alan's correction, 15-10-2026. |
 | 15-10-2026 | Alan | P10 (#73) visible change 3 accepted: old Word minutes are reached through Files › Minutes. Changes 1 (Draft the follow-up email's new place) and 2 (the Meeting links removed from Intake, Files and an item's source) are for discussion; P10 stays as pushed until decided. | Alan's answers. |
 | 15-10-2026 | Alan | v1.9.5 check 49 (BL-316): the three dialogs the shared behaviour test can't reach (#boardDlg, #llDlg, #searchPrev) are accepted as known failures for v1.9.5, with a small follow-up issue to cover them. #58's round-trip run on his live Current states waits until Team Cap are back. | Alan's answers to the 15:05 digest items. |
 | 15-10-2026 | Alan | Desktop only: stop testing mobile and tablet widths (no new narrow-width checks, fixes or goldens; the existing narrow cases are removed on a branch from main after release-195's result). | Alan's instruction; the 320px failures cost a release-195 round and the product is used on a desktop. |
