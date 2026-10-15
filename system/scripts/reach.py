@@ -831,7 +831,12 @@ def direct_write_area(mode):
 # Fail closed: a note that can't be read counts as confidential, and so does anything this check can't finish. Prep keeps its own
 # allow list otherwise; a Bash call must still be one creaite script on its own (bash_refusal), so its environment, where the server
 # tells search.py it is a Prep run, can't be changed. ask creaite and every other run are unchanged: this mode is the Prep run's only.
-CONFIDENTIAL = "a Prep page never reads a confidential note"
+# #60 follow-ups (Alan, 15-10-2026): every run creaite starts itself that may read files (Prep, Shape the meeting, Current state's
+# draft and rewrite, the AI drafts, Search's answer, a transcript check or load) is started in mode "held", the same rules as
+# "prep"; Close the day's sweep keeps its mode "sweep" and adds `--held 1`, the confidential check first. ask creaite (a chat, a
+# typed sweep, a confirmed request) never gets either: its decisions are hook_decision's, unchanged.
+HELD_MODES = ("prep", "held")
+CONFIDENTIAL = "a run creaite starts itself never reads a confidential note"
 
 
 def confidential_places():
@@ -903,10 +908,14 @@ def prep_decision(tool, inp):
     return True, ""
 
 
-def decide(tool, inp, mode, run):
-    """(allow, reason) for one tool call, as the hook decides it: mode "prep" (the Prep page run, #60 option (a)) by
-    prep_decision, every other mode by hook_decision, unchanged."""
-    return prep_decision(tool, inp) if mode == "prep" else hook_decision(tool, inp, mode, run)
+def decide(tool, inp, mode, run, held=False):
+    """(allow, reason) for one tool call, as the hook decides it: mode "prep" or "held" (a run creaite starts itself, #60) by
+    prep_decision; a guarded mode with `held` (Close the day's sweep) refused first if it would read a confidential note; every
+    other call by hook_decision, unchanged."""
+    if mode in HELD_MODES:
+        return prep_decision(tool, inp)
+    why = confidential_reason(tool, inp) if held else None
+    return (False, why) if why else hook_decision(tool, inp, mode, run)
 # ===== end #60 option (a) =====
 
 
@@ -985,15 +994,15 @@ def vault_relative(command):
 
 
 def hook_main(argv):
-    """`reach.py hook --run <id> --mode ask|confirmed|sweep|prep`: Claude Code's PreToolUse hook for an ask creaite run (prep: the
-    Prep page run, #60 option (a)). Reads the call as JSON
+    """`reach.py hook --run <id> --mode ask|confirmed|sweep|prep|held [--held 1]`: Claude Code's PreToolUse hook for an ask creaite
+    run (prep, held and --held: a run creaite starts itself, #60). Reads the call as JSON
     on standard input; exit 0 lets it through to the permission rules, exit 2 refuses it (the reason goes back to Claude). Any
     error refuses: the guard fails closed."""
     try:
         opts = dict(zip(argv[0::2], argv[1::2]))
         call = json.loads(sys.stdin.read() or "{}")
         tool, inp = str(call.get("tool_name") or ""), call.get("tool_input") or {}
-        ok, why = decide(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""))     # #60 option (a): "prep" too
+        ok, why = decide(tool, inp, opts.get("--mode", "ask"), opts.get("--run", ""), opts.get("--held") == "1")   # #60
     except Exception as e:  # noqa: BLE001  fail closed
         ok, why = False, f"the guard couldn't check this call ({type(e).__name__})"
         tool = "?"
