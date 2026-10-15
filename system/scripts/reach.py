@@ -1049,7 +1049,9 @@ def prep_decision(tool, inp):
 # already refused every shell form but one creaite script on its own (no ; & | $ back-quotes brackets or new lines, no env or cd),
 # so what is left is the script's own arguments as the shell would hand them over: `~` and `~user`, a relative path, a symlink
 # (classify takes the real path), `--opt=PATH`, a path after a separator inside a longer argument, and a wildcard the shell would
-# expand. ask creaite, the sweep and a confirmed request are unchanged: this is prep_decision's only.
+# expand. ask creaite, the sweep and a confirmed request are unchanged: this is prep_decision's only. The second lock (marking a
+# held run so filechange applies its outside-content rule) is not here: it is A7 on #116 (run.json is one file for the whole
+# server and runs overlap, so it needs per-run keying); with this fix a held run reaches no stage or guarded command anyway.
 HELD_SPLIT = r"[=:,]"
 WILDCARDS = set("*?[")
 
@@ -1071,15 +1073,29 @@ def held_arg_paths(command):
     return out + [m for m in _held_globbed(out) if m not in out]
 
 
+HELD_GLOB_LIMIT, HELD_GLOB_SECONDS = 500, 5.0
+
+
+class HeldGlobTooBig(Exception):
+    """A quoted wildcard matched more than the guard checks in time (#116 A5 F4): refused, never let through."""
+
+
 def _held_globbed(found):
-    """For each path with a wildcard (a quoted one: held_form_reason refuses the others), what a script globbing it would find."""
+    """For each path with a wildcard (a quoted one: held_form_reason refuses the others), what a script globbing it would find.
+    #116 A5 F4: at most HELD_GLOB_LIMIT matches in HELD_GLOB_SECONDS, well inside the hook's own 30 s; more raises HeldGlobTooBig,
+    which held_never_reason refuses, so a slow disk can't run the hook past its timeout."""
     import glob
-    out = []
+    import time
+    out, deadline = [], time.monotonic() + HELD_GLOB_SECONDS
     for p in found:
         if WILDCARDS & set(p):
             pattern = os.path.expanduser(p)
             pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
-            out += [m for m in glob.glob(pattern, recursive=True) if m not in out]
+            for m in glob.iglob(pattern, recursive=True):
+                if m not in out:
+                    out.append(m)
+                if len(out) > HELD_GLOB_LIMIT or time.monotonic() > deadline:
+                    raise HeldGlobTooBig()
     return out
 
 
@@ -1102,15 +1118,26 @@ def held_form_reason(command):
     ~- ~+ and ~ with a number at the start of any piece, and $PWD or $OLDPWD in any form, name folders the hook can't resolve.
     Review N3: a wildcard outside quotes, and `**` anywhere, is refused (zsh's `**` reaches every folder below); one in quotes
     reaches a script as it is, and held_arg_paths still checks what it would match, so a quoted file name such as
-    `SOW [signed].docx` (Prep reads Alan's documents by name) still reads."""
+    `SOW [signed].docx` (Prep reads Alan's documents by name) still reads. #116 A5 review: F1, any piece starting with ~ and
+    anything but / (zsh's ~NAME, ~user, ~+, ~-, ~1); F2, a word starting with = (zsh's =cmd); F5, a bare --; F3, --out."""
     import re
     if "#" in command:
         return "the command has a #, which the shell reads as a comment: run the script on its own, without it"
     if re.search(r"\$\{?(OLD)?PWD\b", command):    # review N2: these name a folder the hook can't see the run's value of
         return "the command names $PWD or $OLDPWD: name the file by its path in the vault"
     for piece, _ in held_pieces(command):
-        if re.match(r"~[-+0-9]", piece):              # review N2: ~- ~+ ~1 are the shell's folders (cd's last, this one, the stack)
-            return "the command has ~-, ~+ or ~ and a number, which the shell turns into a folder: name the file by its path"
+        if piece.startswith("~") and piece[1:2] not in ("", "/"):
+            # review N2 and #116 A5 F1: ~- ~+ ~1 are the shell's folders (cd's last, this one, the stack), ~user a login's home and,
+            # in zsh, ~NAME any variable holding a folder (~HOME, ~TMPDIR, ~PWD): only ~ and ~/ are read as the hook reads them
+            return ("the command has ~ followed by a name, -, + or a number, which the shell turns into a folder: name the file by "
+                    "its path, or with ~/")
+    if any(a.startswith("=") for a in bash_args(command)):     # #116 A5 F2: zsh turns =name into the program's path (=ls is /bin/ls)
+        return "the command has a word starting with =, which the shell turns into a program's path: name the file by its path"
+    if "--" in bash_args(command):                 # #116 A5 F5: after a bare -- a flag such as --dry-run is a plain word
+        return "the command has a bare --, which makes the options after it plain words: run the script without it"
+    if any(a == "--out" or a.startswith("--out=") for a in bash_args(command)):
+        return ("the command has --out, which saves a file in system/staging/drafts/, and a run creaite starts itself only reads: "
+                "print the result instead")               # #116 A5 F3: propose.py and archive.py save a spec with --out
     if WILDCARDS & _held_unquoted(command) or "**" in command:      # review N3: the shell expands these; zsh's ** goes every level
         return "the command has a wildcard (* ? or [ outside quotes, or **), which the shell would expand: name the file, in quotes"
     return None
@@ -1139,6 +1166,8 @@ def held_never_reason(command):
             kind, why = classify(p, "read")
             if kind == "never":
                 return f"{p}: {why}"
+    except HeldGlobTooBig:
+        return "the wildcard matches too many files for the guard to check: name the file"
     except Exception as e:  # noqa: BLE001  fail closed
         return f"the guard couldn't check this call's arguments ({type(e).__name__})"
     return None
@@ -1146,8 +1175,10 @@ def held_never_reason(command):
 
 # Read commands a held run still may not run: reach.py wrap and hook hand over to another command; drafts.py result stages a bulk
 # draft (system/staging/proposed-*-drafts.json and draft-stats.json for update-bulk and client-bulk). The server runs drafts.py
-# result itself when a draft run ends (live_server); no held prompt asks the model to. SCRIPT_COMMANDS is unchanged (ask mode).
-HELD_NOT_READ = ("reach.py wrap", "reach.py hook", "drafts.py result")
+# result itself when a draft run ends (live_server); no held prompt asks the model to. #116 A5 F3: sweep.py ignore and
+# done-candidates delete their input .json from system/staging/drafts/ (paths.consume_draft) and ignore writes sweep-ignored.json;
+# the sweep runs them, never a held run. SCRIPT_COMMANDS is unchanged (ask mode).
+HELD_NOT_READ = ("reach.py wrap", "reach.py hook", "drafts.py result", "sweep.py ignore", "sweep.py done-candidates")
 
 
 def held_kind_reason(command):

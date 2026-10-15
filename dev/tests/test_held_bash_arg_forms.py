@@ -43,7 +43,7 @@ def forms(root, home):
         ("absolute path", f"{T} {home}/.ssh/id_rsa", NEVER),
         ("full vault path to the script", f"python3 {root}/system/scripts/minutes.py transcript ~/.ssh/id_rsa", NEVER),
         ("full vault path to the wrapper", f"{root}/system/scripts/run minutes.py transcript ~/.ssh/id_rsa", NEVER),
-        ("~user", f"{T} ~{getpass.getuser()}/.ssh/id_rsa", NEVER),
+        ("~user", f"{T} ~{getpass.getuser()}/.ssh/id_rsa", FORM),        # #116 A5 F1: only ~ and ~/ pass
         ("relative ../..", f"{T} {rel}", NEVER),
         ("./ then relative", f"{T} ./{rel}", NEVER),
         ("double-quoted ~", f'{T} "~/.ssh/id_rsa"', NEVER),
@@ -130,7 +130,43 @@ def forms(root, home):
         # drafts.py result stages a bulk draft; the server runs it, never a held run (reach.HELD_NOT_READ)
         ("drafts.py result", "system/scripts/run drafts.py result", KIND),
         ("drafts.py result, python3 form", "python3 system/scripts/drafts.py result --x", KIND),
+    ] + TILDE_FORMS + [
+        # #116 A5 F2: zsh's =cmd turns into a program's path
+        ("=cmd", "python3 system/scripts/docx_tools.py text =security", FORM),
+        ("=cmd, wrapper form", f"{T} =ls", FORM),
+        # #116 A5 F3: read commands that still write (reach.HELD_NOT_READ, and --out saves a spec in drafts/)
+        ("sweep.py ignore", "system/scripts/run sweep.py ignore system/staging/drafts/x.json", KIND),
+        ("sweep.py done-candidates", "python3 system/scripts/sweep.py done-candidates system/staging/drafts/x.json", KIND),
+        ("propose.py new-project --out", "system/scripts/run propose.py new-project --code DEF --name D --out x.json", FORM),
+        ("propose.py close-project --out", "system/scripts/run propose.py close-project ABC --out x.json", FORM),
+        ("archive.py reports --out", "system/scripts/run archive.py reports --out x.json", FORM),
+        ("--out=NAME", "system/scripts/run propose.py old-archives --out=x.json", FORM),
+        # #116 A5 F5: after a bare -- the read flag is a plain word
+        ("bare -- before --dry-run", "system/scripts/run minutes.py baseline --all -- --dry-run", FORM),
+        ("bare --, python3 form", f"{P} -- x.vtt", FORM),
     ]
+
+
+# #116 A5 F1 (Jarvis): a piece starting with ~ and anything but / is refused, so only ~ and ~/ pass. zsh expands ~NAME to any
+# variable holding a folder (~HOME, ~TMPDIR, ~PWD, ~OLDPWD), ~user to a login's home, ~+ ~- ~N to the shell's own folders. Shared
+# with test_ask_bash_arg_forms (the same table goes through ask mode's own copy, so the two can't drift).
+TILDE_FORMS = [
+    ("~HOME", f"{P} ~HOME/.ssh/id_rsa", FORM),
+    ("~HOME, wrapper form", f"{T} ~HOME/.ssh/id_rsa", FORM),
+    ("~HOME, key backup", f"{P} ~HOME/.ssh/key-backup.txt", FORM),
+    ("~TMPDIR", f"{P} ~TMPDIR/x.vtt", FORM),
+    ("~PWD", f"{P} ~PWD/../.ssh/id_rsa", FORM),
+    ("~OLDPWD", f"{P} ~OLDPWD/.ssh/id_rsa", FORM),
+    ("~root", f"{P} ~root/.ssh/id_rsa", FORM),
+    ("~+ (bare)", f"{P} ~+", FORM),
+    ("~-", f"{P} ~-/.ssh/id_rsa", FORM),
+    ("~1", f"{P} ~1/.ssh/id_rsa", FORM),
+    ("~user (any name)", f"{P} ~someone/.ssh/id_rsa", FORM),
+    ("--from=~HOME", f"{P} --from=~HOME/.ssh/id_rsa", FORM),
+    ("a:~TMPDIR", f"{P} a:~TMPDIR/x", FORM),
+    ("a,~HOME", f"{P} a.vtt,~HOME/.ssh/id_rsa", FORM),
+    ("quoted ~HOME", f"{P} '~HOME/.ssh/id_rsa'", FORM),
+]
 
 
 class HeldArgForms(unittest.TestCase):
@@ -173,8 +209,8 @@ class HeldArgForms(unittest.TestCase):
             return VALIDATE
         if "isn't a read command" in why:
             return KIND
-        if "which the shell reads as a comment" in why or "$PWD or $OLDPWD" in why or "~-, ~+" in why \
-                or "has a wildcard" in why:
+        if "which the shell reads as a comment" in why or "$PWD or $OLDPWD" in why or "~ followed by a name" in why \
+                or "has a wildcard" in why or "word starting with =" in why or "bare --" in why or "has --out" in why:
             return FORM
         if "ask creaite runs only creaite's own scripts" in why or "shell characters" in why or "$ or a back-quote" in why:
             return SHELL
@@ -218,6 +254,32 @@ class HeldArgForms(unittest.TestCase):
         self.assertIn("//Users/x", reach.held_arg_paths(f"{T} https=//Users/x"))   # not a web address: = isn't a scheme's :
         for url in ("https://example.com/a", "see http://example.com/a", "HTTPS://example.com/a"):
             self.assertNotIn("//example.com/a", reach.held_arg_paths(f"{T} '{url}'"), url)
+
+    def test_a_glob_too_big_is_refused(self):
+        """#116 A5 F4, as a pure function: a quoted wildcard that matches more than the guard checks in time is refused."""
+        sys.path.insert(0, str(self.root / "system/scripts"))
+        import reach
+        many = self.root / "system/staging/drafts/many"
+        many.mkdir(exist_ok=True)
+        for i in range(reach.HELD_GLOB_LIMIT + 2):
+            (many / f"{i}.vtt").write_text("")
+        old = reach.paths.ROOT
+        reach.paths.ROOT = self.root
+        try:
+            self.assertIn("too many files", reach.held_never_reason(f"{T} 'system/staging/drafts/many/*.vtt'") or "")
+            self.assertIsNone(reach.held_never_reason(f"{T} 'system/staging/drafts/many/1?.vtt'"))
+        finally:
+            reach.paths.ROOT = old
+            shutil.rmtree(many)
+
+    def test_only_plain_tilde_passes_the_form_check(self):
+        """#116 A5 F1, as a pure function: ~ and ~/ pass held_form_reason; ~ and anything else is refused."""
+        sys.path.insert(0, str(self.root / "system/scripts"))
+        import reach
+        for ok in (f"{T} ~", f"{T} ~/x.vtt", f"{T} a~b.vtt", f"{T} x/~HOME"):
+            self.assertIsNone(reach.held_form_reason(ok), ok)
+        for name, cmd, _ in TILDE_FORMS:
+            self.assertIn("~ followed by a name", reach.held_form_reason(cmd) or "", name)
 
     def test_an_ordinary_read_still_passes(self):
         for mode in ("held", "prep"):
