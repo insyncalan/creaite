@@ -8,7 +8,7 @@
      (system/staging/drafts/notes/) as Alan types; Done writes the note file through filechange.py (backed up, logged,
      undoable). Closing keeps the draft: it is listed at the foot, and ⌘⇧N carries on with it.
    - Two endings: Done keeps the note; Done and find updates also opens it in full on its project's Notes tab with Find updates
-     (parts B and E: noteRequest in stores/capture.js, and the address's find=1).
+     (parts B and E: openNoteAt in notes.js, B's own way to a note, with E's find flag).
    - "Note for this meeting" starts the Working session template with the meeting's title, date and attendees (from the saved
      calendar) and the project Prep matched.
    - Recent notes are listed at the foot. It replaces FR-71's Quick capture form (old quick notes stay in minutes/).
@@ -20,8 +20,8 @@ import { P, pName } from "../../core/data.js";
 import { creaiteEditor } from "../../core/editor.js";
 import { fd, TODAY } from "../../core/page.js";
 import { api, oneLine, snack, viaServer } from "../../core/server.js";
-import { go } from "../../core/nav.js";
-import { capOpen, noteHref, noteRequest } from "../../stores/capture.js";
+import { openNoteAt } from "../../notes.js";
+import { capOpen } from "../../stores/capture.js";
 import { IconButton } from "../IconButton.jsx";
 
 /** @typedef {{id: string, code: string, chosen: boolean, how: string, reason: string, title: string, body: string,
@@ -140,12 +140,10 @@ export function closeCapture() {
   if (back && back instanceof HTMLElement && back.isConnected) back.focus();
 }
 
-/** Open a note in full on its project's Notes tab (parts B and E read noteRequest and the address).
-    @param {{code: string, path: string, find: boolean}} r */
+/** Open a note in full on its project's Notes tab (Unfiled: the portfolio's notes), through B's own way to a note; with `find`,
+    Find updates opens beside it (#notes=ABC&n=<file>&find=1). @param {{code: string, path: string, find: boolean}} r */
 export function openNoteFull(r) {
-  noteRequest.value = r;
-  if (r.code && r.code !== "_portfolio" && P.some(p => p.code === r.code)) go("cockpit", r.code); else go("projects");
-  try { history.replaceState(history.state, "", noteHref(r)); } catch (e) { /* a page opened as a file */ }
+  return openNoteAt(r.path, 0, { code: r.code && P.some(p => p.code === r.code) ? r.code : "_portfolio", find: r.find });
 }
 
 /** Done: write the note through the server (filechange.py); with `find`, open it with Find updates. @param {boolean} find */
