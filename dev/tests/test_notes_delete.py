@@ -478,7 +478,7 @@ class NotesDelete(test_notes_tab.NotesServer):
         self.assertTrue(ok)                                        # released: Undo completes
         self.assertEqual(after, [True, False])                     # and the note is back
         self.assertFalse(quiet)                                    # nothing staged moves a note: no NOTES_LOCK
-        self.assertTrue(hand)                                      # a hand-staged notes_back move: the apply takes it
+        self.assertTrue(hand)                                      # a hand-staged notes_back move: the apply takes NOTES_LOCK (tracker.py then refuses the move: no card marker, #124 F3)
         self.assertEqual(a_during["started"], [])                  # tracker.py apply never started while the lock was held
         self.assertEqual(a_during["out"], {})
         self.assertTrue(a_during["alive"])
