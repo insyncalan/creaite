@@ -90,6 +90,7 @@ class Probe(unittest.TestCase):
             self.assertEqual(c[-2], "--")                                    # nothing in the prompt is read as an option
             self.assertEqual(c[c.index("--allowedTools") + 1].split(","), vip_tools)   # the follow check's own read list
             self.assertEqual(sum(1 for x in c if x == "--allowedTools"), 1)
+            self.assertEqual(c[c.index("--tools") + 1], "")                  # no built-in tools: the M365 reads are what loads
             deny = c[c.index("--disallowedTools") + 1].split(",")
             for w in ("Bash", "Write", "Edit", "WebFetch", M365 + "outlook_send_mail", M365 + "outlook_delete_event",
                       M365 + "teams_send_chat_message"):
