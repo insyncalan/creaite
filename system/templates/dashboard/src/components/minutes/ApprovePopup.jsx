@@ -14,7 +14,7 @@ import { approveMinutes, approveOpen, loadMinutes, minutesView } from "../../sto
 /** @typedef {import("./minutesDoc.js").Check} Check */
 /** @typedef {import("../../stores/minutes.js").PlanItem} PlanItem */
 
-const where = (/** @type {string} */ p) => { const parts = p.split("/"); return { name: parts.pop() || p, folder: parts.slice(-2).join(" › ") }; };
+const filedAt = (/** @type {string} */ p) => { const parts = p.split("/"); return { name: parts.pop() || p, folder: parts.slice(-2).join(" › ") }; };
 
 /** The popup. @param {{checks: Check[]}} props */
 export function ApprovePopup({ checks }) {
@@ -36,7 +36,7 @@ export function ApprovePopup({ checks }) {
     await reloadData();
     if (plan.files[0]) loadMinutes({ path: plan.files[0] });
   };
-  const filed = plan.files.map(where);
+  const filed = plan.files.map(filedAt);
   return (
     <Dialog open={approveOpen.value} onClose={close} labelledBy="mnApproveH" id="mnApprove" class="mnapprove" focus="#mnApproveGo">
       <div class="mnap">

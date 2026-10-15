@@ -13,8 +13,8 @@
 import { deadlineOf, deadlineDay } from "./DeadlinePopover.jsx";
 import { fd } from "../../core/page.js";
 
-/** @typedef {import("../report/SheetStub.jsx").SheetDoc} SheetDoc */
-/** @typedef {import("../report/SheetStub.jsx").SheetSection} SheetSection */
+/** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../report/Sheet.jsx").SheetSection} SheetSection */
 /** @typedef {{kind: "topic"|"bullet"|"para", text: string, flag: string}} Line */
 /** @typedef {{ref: string, turn?: number, time?: string, text: string}} TimeTag */
 /** @typedef {{id: string, section: string, row?: number, line?: number, field?: string, quote: string, note: string,

@@ -58,3 +58,5 @@ o_real_names.
 - **Question 4:** Sensitive on a staged item is read from its flags or values; tracker labels aren't in the page data.
 - **Question 5:** reading an earlier version in the view needs a route (`creaite_doc.read_version`); for now an earlier version opens its kept copy in the browser.
 - The stub saves only on ⌘S or Save (P5 adds the 1.5 s autosave); a row change saves unsaved page edits first.
+
+**Moved onto P5's Sheet.jsx (#70 point 2).** `MinutesView` mounts `Sheet` (`leftReadOnly` false: Internal is editable, Distributed read only); the types and `openRef` come from `Sheet.jsx`; `levelPair`, the stub CSS, P7's own checks count and `SheetStub.jsx` are gone (nothing else on this branch used it; P6 and P8 keep their own copy until they merge).

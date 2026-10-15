@@ -3144,8 +3144,8 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
 .sheet-exported .sheet-handle{display:none}
-/* ===== v2.1.0 P7 (BL-338): the minutes view (#minutes=<path>, components/minutes/), on the stub sheet (components/report/
-   SheetStub.jsx) until P5's Sheet.jsx. Tokens only. The sheet and the transcript pane side by side, each scrolling on its own;
+/* ===== v2.1.0 P7 (BL-338): the minutes view (#minutes=<path>, components/minutes/), on P5's Sheet (components/report/Sheet.jsx).
+   Tokens only. The sheet and the transcript pane side by side, each scrolling on its own;
    the pane goes under the sheet below 900 px; nothing scrolls sideways at 320 px (BL-217). ===== */
 #v-minutes{padding:0}
 #v-minutes:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
@@ -3157,23 +3157,9 @@ button.nchip{font:inherit;font-size:12px}
 .mnerr{color:var(--bad);margin:16px 24px}
 .mnwrap{display:flex;flex:1;min-height:0}
 .mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
-.mnsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
-.mnsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
-.mnsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+/* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
+#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
 .mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
-.mnckcount{background:var(--warn-soft);color:var(--warn);border-radius:999px;padding:2px 8px;font-size:12px}
-.mnsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:20px 16px 48px;background:var(--sunk)}
-.mnsheet .sheet-one,.mnsheet .sheet-pair{max-width:100%}
-.mnsheet .sheet-pair{gap:16px;align-items:flex-start}
-.mnsheet .sheet-pair>.page{flex:1 1 0;min-width:0}
-.mnsheet .page{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;box-shadow:var(--shadow-card);padding:clamp(16px,5%,56px);font-size:14px;line-height:1.5;overflow-wrap:anywhere}
-.mnsheet .page section{margin:0 0 18px}
-.mnsheet .page h2{font-size:15px;margin:0 0 6px;padding-bottom:4px;border-bottom:1px solid var(--line)}
-.mnsheet .page table{width:100%;border-collapse:collapse;font-size:12.5px}
-.mnsheet .page th{text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line);padding:4px 6px}
-.mnsheet .page td{vertical-align:top;border-bottom:1px solid var(--line);padding:6px}
-.mnsheet .sheet-text{width:100%;min-height:120px;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
-.mnsheet .sheet-hidden{color:var(--muted);font-size:12px;margin:0 0 12px}
 .mnlines p,.mnlines li{margin:0 0 4px}
 .mnlines ul{margin:0 0 6px;padding-left:20px}
 .mntopic{font-size:14px;margin:8px 0 2px}
@@ -3241,7 +3227,7 @@ dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px
 .mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
 .mnap-err{color:var(--bad)}
 .mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
-@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-scroll{overflow:visible}
-  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} .mnsheet .sheet-pair{flex-direction:column} .mnsheet .sheet-pair>.page{width:100%} }
-@media (max-width:480px){ .mnhead{padding:12px 16px 8px} .mnsheet .sheet-bar{padding:8px} .mnsheet .sheet-scroll{padding:12px 8px 32px} .mnbarr{margin-left:0} }
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
+  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
+@media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
 /* ===== end v2.1.0 P7 ===== */

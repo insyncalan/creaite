@@ -204,6 +204,17 @@ function relayout(root) {
       const h = Math.max(x.offsetHeight, y.offsetHeight);
       x.style.minHeight = y.style.minHeight = `${h}px`;
     }
+    /* An extra that only one page has (the minutes' coverage) pushes the sections after it down: whichever page's next section starts
+       lower, the other page's section grows by the difference, top to bottom, so the pairs stay level. */
+    const next = (/** @type {Element} */ e) => { let n = e.nextElementSibling; while (n && !n.matches("section[data-id]")) n = n.nextElementSibling; return /** @type {HTMLElement|null} */ (n); };
+    for (const x of /** @type {NodeListOf<HTMLElement>} */ (a.querySelectorAll(":scope > section[data-id]"))) {
+      const y = /** @type {HTMLElement|null} */ (b.querySelector(`:scope > section[data-id="${CSS.escape(x.dataset.id || "")}"]`));
+      const xn = y && next(x), yn = y && next(y);
+      if (!y || !xn || !yn) continue;
+      const d = xn.offsetTop - yn.offsetTop;                  // unscaled: the page is zoomed by a transform
+      if (d > 0.5) y.style.minHeight = `${y.offsetHeight + d}px`;
+      else if (d < -0.5) x.style.minHeight = `${x.offsetHeight - d}px`;
+    }
   }
   const y0 = PAD_MM * MM, per = CONTENT_MM * MM;
   return pages.map(pg => {

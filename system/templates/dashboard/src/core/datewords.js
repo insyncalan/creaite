@@ -14,7 +14,7 @@
    - weekend: the weekend's days as getDay() numbers (Sunday 0), from settings work.weekend_days; Saturday and Sunday by default. */
 export const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
-const MONTHS = "january february march april may june july august september sept october november december".split(" ");
+const MONTH_WORDS = "january february march april may june july august september sept october november december".split(" ");
 const DAYNAMES = "sunday monday tuesday wednesday thursday friday saturday tues weds thur thurs".split(" ");
 const pad = n => String(n).padStart(2, "0");
 const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -29,7 +29,7 @@ function shift(today, n, unit) {
 /** @param {number} y @param {number} m @param {number} d */
 function real(y, m, d) { if (y < 100) y += 2000; const x = new Date(y, m - 1, d, 12); return x.getFullYear() === y && x.getMonth() === m - 1 && x.getDate() === d ? iso(x) : null; }
 /** @param {string} w */
-function monthOf(w) { const i = MON.indexOf(w.slice(0, 3)); return i >= 0 && (MONTHS.some(n => n.startsWith(w)) || w.length === 3) ? i + 1 : 0; }
+function monthOf(w) { const i = MON.indexOf(w.slice(0, 3)); return i >= 0 && (MONTH_WORDS.some(n => n.startsWith(w)) || w.length === 3) ? i + 1 : 0; }
 /** @param {string} w */
 function weekdayOf(w) { return DAYS.findIndex(d => w.startsWith(d) && DAYNAMES.some(n => n.startsWith(w))); }
 /** The nearest working day to `day` (the earlier on a tie). @param {string} day @param {number[]} weekend */

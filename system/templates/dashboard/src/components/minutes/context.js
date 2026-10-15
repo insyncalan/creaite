@@ -6,7 +6,7 @@
 import { createContext } from "preact";
 
 /** @typedef {import("./minutesDoc.js").Check} Check */
-/** @typedef {import("../report/SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{checks: Check[], onCheck: (c: Check, action: string) => void,
     change: (op: Record<string, any>, undo?: Record<string, any>|null) => Promise<boolean>,
     setDoc: (doc: SheetDoc, why: string) => void, doc: SheetDoc, day: string, distributed: boolean, partner: boolean,

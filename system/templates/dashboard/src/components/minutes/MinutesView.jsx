@@ -1,17 +1,15 @@
 // @ts-check
 /* MinutesView (v2.1.0 P7, BL-338): a meeting's minutes in creaite (#minutes=<the record's stored path>), opened from Review's
    Open draft on a minutes record, and later from the meeting's links (P10). It sits under Review in the sidebar: no new
-   top-level page. Built on the sheet's contract (dev/sprints/v210-contract.md §4) with the stub sheet for now
-   (components/report/SheetStub.jsx); moving to P5's Sheet.jsx is changing the import.
+   top-level page. Built on the sheet's contract (dev/sprints/v210-contract.md §4), on P5's Sheet.jsx (the A4 page, zoom, levelled Side by side).
    The view supplies its own renderers (TextLines for text sections, ItemRow for the item tables), the coverage extra and the
    checks, keeps the document (stores/minutes.js) and makes its own server calls (P4's /api/minutes/*). Beside the sheet, the
    transcript pane. The bar: versions, One version or Internal + distributed (with Internal, Distributed and Side by side), the
    transcript, the open checks, Export and Approve minutes. A change to an item row saves any page edits first, then makes the
    change, so the record and its proposal never part. Nothing here sends anything. */
 import { render } from "preact";
-import { useLayoutEffect, useRef } from "preact/hooks";
 import { Menu } from "../Menu.jsx";
-import { SheetStub } from "../report/SheetStub.jsx";
+import { Sheet } from "../report/Sheet.jsx";
 import { ApprovePopup } from "./ApprovePopup.jsx";
 import { MinutesCtx } from "./context.js";
 import { Coverage } from "./Coverage.jsx";
@@ -31,41 +29,10 @@ import { unknownOwner } from "../../settings.js";
 import { approveOpen, changeMinutes, exportMinutes, keptChecks, loadMinutes, minutesBase, minutesBusy, minutesDoc, minutesMode,
   minutesView, paneOpen, saveMinutesPage } from "../../stores/minutes.js";
 
-/** @typedef {import("../report/SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {import("./minutesDoc.js").Check} Check */
 
 let dirty = false;
-
-/** Give matching sections, and the blocks marked with ctx.level inside them, the same height on both pages of Side by side, so
-    their headings stay level (contract §4.6; P5's sheet does this itself, and then this finds nothing to change).
-    @param {HTMLElement|null} box */
-export function levelPair(box) {
-  const pages = box ? /** @type {HTMLElement[]} */ ([...box.querySelectorAll(".sheet-pair > .page")]) : [];
-  if (pages.length !== 2) return;
-  const [l, r] = pages;
-  const pairs = (/** @type {string} */ sel, /** @type {string} */ attr, /** @type {HTMLElement} */ a, /** @type {HTMLElement} */ b) =>
-    /** @type {HTMLElement[]} */ ([...a.querySelectorAll(sel)]).map(x => [x, /** @type {HTMLElement|null} */ (b.querySelector(`${sel.split("[")[0]}[${attr}="${CSS.escape(x.getAttribute(attr) || "")}"]`))]);
-  const even = (/** @type {[HTMLElement, HTMLElement|null][]} */ ps) => {
-    for (const [a, b] of ps) { a.style.minHeight = ""; if (b) b.style.minHeight = ""; }
-    for (const [a, b] of ps) { if (!b) continue; const h = Math.max(a.getBoundingClientRect().height, b.getBoundingClientRect().height); a.style.minHeight = b.style.minHeight = `${h}px`; }
-  };
-  /* A creaite-only extra between sections (coverage) has no peer on the right: whichever page's next section starts lower, the
-     other page's section grows by the difference, top to bottom (margins and all). */
-  const nextSec = (/** @type {Element} */ x) => { let n = x.nextElementSibling; while (n && !(n.matches("section[data-id]"))) n = n.nextElementSibling; return /** @type {HTMLElement|null} */ (n); };
-  const close = (/** @type {[HTMLElement, HTMLElement|null][]} */ ps) => {
-    for (const [a, b] of ps) {
-      const an = b && nextSec(a), bn = b && nextSec(b);
-      if (!b || !an || !bn) continue;
-      const d = an.getBoundingClientRect().top - bn.getBoundingClientRect().top;
-      if (d > 0.5) b.style.minHeight = `${b.getBoundingClientRect().height + d}px`;
-      else if (d < -0.5) a.style.minHeight = `${a.getBoundingClientRect().height - d}px`;
-    }
-  };
-  const secs = /** @type {[HTMLElement, HTMLElement|null][]} */ (pairs("section[data-id]", "data-id", l, r));
-  for (const [a, b] of secs) if (b) even(/** @type {[HTMLElement, HTMLElement|null][]} */ (pairs("[data-level]", "data-level", a, b)));
-  even(secs);
-  close(secs);
-}
 
 /** The staged item of a row ("@3") in the peek: its Review proposal. @param {string} ref */
 function openStaged(ref) {
@@ -117,7 +84,6 @@ function Bar({ doc, checks }) {
           <button key={k} type="button" data-mnmode={k} aria-pressed={mode === k ? "true" : "false"} onClick={() => { minutesMode.value = /** @type {any} */ (k); }}>{l}</button>)}
       </span> : null}
       <button type="button" class="btn sm" aria-pressed={paneOpen.value ? "true" : "false"} onClick={() => { paneOpen.value = !paneOpen.value; }}>Transcript</button>
-      {draft && checks.length ? <span class="tag mnckcount" role="status">{checks.length} check{checks.length === 1 ? "" : "s"} open</span> : null}
       <Menu label="Export" icon="filetext" btnCls="btn sm" menuLabel="Export the minutes" data={{ mnexport: "" }}
         items={[...exports, ...mails]} onPick={exp} />
       {draft ? <button type="button" class="btn sm primary" id="mnApproveBtn" disabled={!(v && v.plan)} data-tip={v && v.plan ? undefined : "Nothing pending to approve"}
@@ -155,18 +121,8 @@ const EXTRAS = [{ key: "coverage", after: "open_questions", render: (/** @type {
 
 /** The view. */
 export function MinutesView() {
-  const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const v = minutesView.value, doc = minutesDoc.value, mode = minutesMode.value;
   const dist = !!(doc && (doc.layout || {}).distributed), side = dist && mode === "side";
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (el && !side) /** @type {NodeListOf<HTMLElement>} */ (el.querySelectorAll(".page section[data-id], .page [data-level]")).forEach(x => { x.style.minHeight = ""; });
-    if (!side || !el) return;
-    levelPair(el);
-    const ro = new ResizeObserver(() => levelPair(el));
-    el.querySelectorAll(".sheet-pair > .page").forEach(p => ro.observe(p));
-    return () => ro.disconnect();
-  });
   if (!v) return <div class="mnview"><p class="sub">{minutesBusy.value || "Opening the minutes…"}</p></div>;
   if (!v.ok || !doc) return <div class="mnview"><h1 id="mnTitle">Minutes</h1><p class="mnerr" role="alert">{v.message || "Couldn't open the minutes"}</p></div>;
   const draft = doc.state === "draft", turns = (v.turns || { turns: [] }).turns;
@@ -174,7 +130,7 @@ export function MinutesView() {
   const held = v.withheld || {}, shown = dist && mode === "distributed" ? distributedOf(doc, held) : doc;
   const ctx = { checks, onCheck, change, setDoc: onDoc, doc, day: doc.date, distributed: dist && mode !== "distributed", partner: false, openItem: openStaged, held };
   return (
-    <div class="mnview" ref={box}>
+    <div class="mnview">
       <header class="mnhead">
         <nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="review">Review</a> › <span aria-current="page">Minutes</span></nav>
         <h1 id="mnTitle">{doc.title}</h1>
@@ -184,9 +140,9 @@ export function MinutesView() {
       <div class={`mnwrap${paneOpen.value ? " withpane" : ""}`}>
         <div class="mnsheet">
           <MinutesCtx.Provider value={ctx}>
-            <SheetStub doc={shown} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}:${mode}`} readOnly={!draft || (dist && mode === "distributed")}
+            <Sheet doc={shown} baseVersion={minutesBase.value} scrollKey={`minutes:${v.path}:${mode}`} readOnly={!draft || (dist && mode === "distributed")}
               renderers={RENDER} extras={EXTRAS} checks={checks} onOpenItem={ref => ref.startsWith("@") ? openStaged(ref) : false}
-              partner={side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {} } : null}
+              partner={side ? { doc: distributedOf(doc, held), label: "Distributed", readOnly: true, renderers: RENDER, onChange: () => {} } : null} leftReadOnly={false}
               onChange={onDoc} onSave={async req => { const r = await saveMinutesPage(req); if (r.ok) dirty = false; return r; }}
               onEvent={ev => { if (ev.type === "reload") loadMinutes({ path: v.path }); }}
               toolbar={<Bar doc={doc} checks={checks} />} />

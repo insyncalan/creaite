@@ -7,7 +7,7 @@
 import { signal } from "@preact/signals";
 import { api, oneLine, viaServer } from "../core/server.js";
 
-/** @typedef {import("../components/report/SheetStub.jsx").SheetDoc} SheetDoc */
+/** @typedef {import("../components/report/Sheet.jsx").SheetDoc} SheetDoc */
 /** @typedef {{n: number, who: string|null, start: string|null, end: string|null, text: string}} Turn */
 /** @typedef {{version: number, current: boolean, at?: string, change?: number, why?: string, backup?: string}} Version */
 /** @typedef {{n: number, group: string, why: string|null, label: string}} PlanItem */

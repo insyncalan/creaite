@@ -166,9 +166,9 @@ class MinutesEditor(LiveBrowserCase):
         b.wait("document.querySelector('[data-mnmode=side]')")
         b.eval("document.querySelector('.mnlines .mnio').click()")       # one summary line Internal only: the pages differ
         b.click("[data-mnmode=side]")
-        b.wait("document.querySelectorAll('.sheet-pair > .page').length===2")
+        b.wait("document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page').length===2")
         b.pump(0.5)
-        tops = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .page'), out=[];
+        tops = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page'), out=[];
           for(const h of l.querySelectorAll('section[data-id] > h2, .mnblock[data-level] > h3')){
             const sec=h.closest('section[data-id]').dataset.id, lv=h.parentElement.dataset.level;
             const o=lv?r.querySelector(`section[data-id="${sec}"] [data-level="${CSS.escape(lv)}"] > h3`):r.querySelector(`section[data-id="${sec}"] > h2`);
@@ -179,11 +179,11 @@ class MinutesEditor(LiveBrowserCase):
             self.assertLessEqual(abs(left - right), 1, f"{name}: {left} and {right}")
         b.eval("document.querySelector('.sheet-scroll').scrollTop=400")
         b.pump(0.3)
-        sec = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .page');
+        sec = self.ev("""(()=>{ const [l,r]=document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page');
           return [l.querySelector('section[data-id=actions] > h2').getBoundingClientRect().top, r.querySelector('section[data-id=actions] > h2').getBoundingClientRect().top]; })()""")
         self.assertLessEqual(abs(sec[0] - sec[1]), 1, "still level once scrolled")
-        marked = self.ev("document.querySelector('.sheet-pair > .page .mnline.internal').textContent")
-        self.assertNotIn("The committee reviewed", self.ev("document.querySelectorAll('.sheet-pair > .page')[1].textContent"))
+        marked = self.ev("document.querySelector('.sheet-pair > .sheet-fit > .sheet-a4 > .page .mnline.internal').textContent")
+        self.assertNotIn("The committee reviewed", self.ev("document.querySelectorAll('.sheet-pair > .sheet-fit > .sheet-a4 > .page')[1].textContent"))
         self.assertIn("The committee reviewed", marked)
         b.click("[data-mnmode=distributed]")                     # the Distributed page alone: the marked line isn't there
         b.wait("!document.querySelector('.sheet-pair')")

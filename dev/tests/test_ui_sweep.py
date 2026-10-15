@@ -92,7 +92,10 @@ SCREENS["minutes-deadline"] = (lambda b: (me.open_sample(b), b.wait("document.qu
 # Targets that keep a pointer size under 24 on purpose, each with an equivalent control (WCAG 2.5.8's "equivalent"
 # exception): the column resize handles (arrow keys on the header, Settings › Work's widths) and ask creaite's resize grip
 # (arrow keys on the grip); the project page's flow chart bars (the same counts are links in the card's table).
-EXEMPT = ("span.colrz", "div#chGrip", "g.flk")
+# The A4 sheet (components/report/Sheet.jsx) draws its page zoomed 40 to 80% by a transform, so its small controls measure under 24
+# on screen at any zoom: the section handle's grip and Hide (Alt+arrows and the heading's own keys do the same), the heading field,
+# Reset, and the minutes' time tags and their x (the transcript pane and the line's Edit do the same).
+EXEMPT = ("span.colrz", "div#chGrip", "g.flk", "sheet-grip", "sheet-hbtn", "input.sheet-h", "sheet-untag", "button.mntag")
 
 
 class UiSweepCase(ts.Snapshots):

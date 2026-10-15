@@ -12,7 +12,7 @@
    Exported or read only: the cells alone. */
 import { useContext, useRef, useState } from "preact/hooks";
 import { Menu } from "../Menu.jsx";
-import { openRef } from "../report/SheetStub.jsx";
+import { openRef } from "../report/Sheet.jsx";
 import { CheckMark } from "./Checks.jsx";
 import { MinutesCtx } from "./context.js";
 import { DeadlinePopover } from "./DeadlinePopover.jsx";
@@ -24,7 +24,7 @@ import { fd } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { regAddAlias, unknownOwner } from "../../settings.js";
 
-/** @typedef {import("../report/SheetStub.jsx").RowCtx} RowCtx */
+/** @typedef {import("../report/Sheet.jsx").RowCtx} RowCtx */
 /** @typedef {import("./minutesDoc.js").Check} Check */
 
 const MAIN = { actions: "action", decisions: "decision", raid: "description" };

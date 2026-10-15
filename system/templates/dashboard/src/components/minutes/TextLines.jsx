@@ -3,7 +3,7 @@
    open questions, what wasn't covered, the source) drawn line by line, each line drawn from the transcript with its time tag
    (P4's section `tags`: {ref: "transcript", turn, time}). A tag's click scrolls the transcript pane to what was said; ✕ on it
    (shown on hover or focus) takes the tag off. A check's words are underlined in the line. Edit, or a click on a line, opens
-   the section in the sheet's Text (the stub's textarea now, the one editor on P5's sheet); Done goes back to the lines.
+   the section in the sheet's Text (the one editor); Done goes back to the lines.
    With the distributed version on, each line can be marked Internal only (kept in the record's layout, so it is saved with
    the page). Each topic of Updates is a block with ctx.level, so Side by side keeps its heading level with its partner's.
    Exported or read only: the lines alone, no tags, checks or controls. */
@@ -13,7 +13,7 @@ import { MinutesCtx } from "./context.js";
 import { isInternal, mdLines, lineTag, toggleInternal } from "./minutesDoc.js";
 import { jumpTo } from "./TranscriptPane.jsx";
 
-/** @typedef {import("../report/SheetStub.jsx").SectionCtx} SectionCtx */
+/** @typedef {import("../report/Sheet.jsx").SectionCtx} SectionCtx */
 /** @typedef {import("./minutesDoc.js").Line} Line */
 /** @typedef {import("./minutesDoc.js").TimeTag} TimeTag */
 
