@@ -1796,14 +1796,8 @@ def build_lock():
 
 
 def write_atomic(path, text):
-    """Write to a temporary name, then rename, so a reader never sees half a page."""
-    tmp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(text, encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        if tmp.exists():
-            tmp.unlink()
+    """Write to a temporary name, then rename, so a reader never sees half a page (paths.write_text_atomic)."""
+    paths.write_text_atomic(path, text)
 
 
 def build(now=None):

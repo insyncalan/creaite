@@ -11960,7 +11960,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     j3(() => {
       const c5 = catalogue.value;
       if (!c5 || shared.VIEW !== "settings") return;
-      if (CHANGED && !$("#settingsBody").contains(document.activeElement)) renderSettings();
+      if ((CHANGED || shared.SQ.trim()) && !$("#settingsBody").contains(document.activeElement)) renderSettings();
       else setMark($("#settingsBody"));
     });
     if (SERVED && Date.now() - lastCheckAt() > 24 * 3600 * 1e3) window.setTimeout(() => {

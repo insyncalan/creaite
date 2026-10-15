@@ -600,14 +600,17 @@ class MarkdownChat(FakeClaudeCase):
         reply = (f"# Summary\n\nTwo things on **{known}**:\n\n- first, with `code`\n- second, see [docs](https://example.com)\n\n"
                  "| Who | What |\n|---|---|\n| Omar | SOW |\n\n```\nplain code\n```\n\n> a quote\n")
         self.b.eval(f"openChat(); send({json.dumps('ECHO:' + reply)}); 1")
-        self.b.wait("!BUSY && document.querySelectorAll('#chLog .msg.a.md').length>=1", timeout=30)
+        # BL-148: each reply's Copy button is added a frame after it is drawn (a MutationObserver, then requestAnimationFrame),
+        # live and from history alike; read each reply once it has its button, or a slower runner reads it a frame early
+        last = "[...document.querySelectorAll('#chLog .msg.a.md')].pop()"
+        self.b.wait(f"!BUSY && document.querySelectorAll('#chLog .msg.a.md').length>=1 && !!{last}.querySelector(':scope>.msgcopy')", timeout=30)
         live = self.b.eval("[...document.querySelectorAll('#chLog .msg.a.md')].pop().innerHTML")
         mine = self.b.eval("[...document.querySelectorAll('#chLog .msg.u')].pop().textContent")
         self.assertTrue(mine.startswith("ECHO:"))
         self.assertIn("<strong>", live)
         self.assertIn("<table>", live)
-        self.b.eval("loadChat(ASKCHAT); 1")
-        self.b.wait("document.querySelectorAll('#chLog .msg.a.md').length>=1", timeout=15)
+        self.b.eval("loadChat(ASKCHAT).then(()=>1)")                     # waits for the history to be drawn, so the live reply is gone
+        self.b.wait(f"document.querySelectorAll('#chLog .msg.a.md').length>=1 && !!{last}.querySelector(':scope>.msgcopy')", timeout=15)
         history = self.b.eval("[...document.querySelectorAll('#chLog .msg.a.md')].pop().innerHTML")
         self.assertEqual(history, live)
         # Alan's own bubble is plain text: escaped, no markdown, line breaks kept by pre-wrap

@@ -631,7 +631,11 @@ PAGE_IGNORE = ("review-index.json", "export-state.json", "live-server.json",   #
 def page_inputs():
     """The files the page's data is built from, other than the database: every file directly in staging (proposals, the
     sweep, calendar, transcripts and the rest), its drafts and its evidence (BL-207: a saved Current state's links),
-    system/config, the registers, the portfolio and each project's memory, the page template and help. Files the build and the server write themselves (PAGE_IGNORE) are left out."""
+    system/config, the registers, the portfolio and each project's memory, the page template and help, processed.txt, inbox/
+    (its files and the folder itself: a file moved in keeps its older time) and each project's listed folders (page_folders).
+    Files the build and the server write themselves (PAGE_IGNORE) are left out, and so are system/staging/applied/ (a
+    proposal moves there only in an apply, which changes the records' version) and system/history/ (written by the build
+    itself, just after dashboard.html, so it would always look newer)."""
     def listed(d):
         """The files directly in `d` that count."""
         try:
@@ -640,10 +644,54 @@ def page_inputs():
             return []
     out = [f for d in (paths.STAGING, paths.DRAFTS, paths.EVIDENCE, paths.SETTINGS.parent) for f in listed(d)]
     out += [build_dashboard.TEMPLATE, paths.TEMPLATES / "help.md", paths.REGISTER, paths.PEOPLE_REGISTER, paths.PORTFOLIO_MEMORY]
+    out += [paths.PROCESSED] + listed(paths.INBOX) + [paths.INBOX]      # processed.txt (minutes.py baseline); inbox/, folder too
     try:
-        out += [d / "CLAUDE.md" for _c, d in paths.project_folders()]
+        documents = bool((paths.load_settings().get("dashboard") or {}).get("files_show_documents"))
+    except (OSError, ValueError, AttributeError):        # no settings yet: Files leaves documents out
+        documents = False
+    try:
+        for code, d in paths.project_folders():
+            out.append(d / "CLAUDE.md")
+            out += page_folders(code, d, documents)
     except Exception as e:  # noqa: BLE001  no projects folder yet: the key still works
         swallowed("page inputs", e)
+    return out
+
+
+PAGE_FOLDER_KINDS = ("minutes", "transcripts", "agendas", "weekly_reports", "client_reports", "adhoc_documents", "steerco")
+PAGE_FOLDER_DEPTH = 3    # levels of subfolders stamped below each listed folder
+PAGE_FOLDER_CAP = 200    # folders stamped per project at most
+
+
+def page_folders(code, base, documents=False):
+    """The folders whose listings the page shows for one project (Files, the Inbox's filed transcripts, Latest reports, Prep):
+    its meeting, agenda and report folders and, when Files shows documents, its document folders, each with its subfolders
+    PAGE_FOLDER_DEPTH deep, at most PAGE_FOLDER_CAP in all. Folders only: a file added, removed or renamed (OneDrive sync
+    included) changes its folder's time; no file is listed or read. never_index folders and hidden ones are skipped."""
+    kinds = ("minutes", "transcripts") if code == "_portfolio" else PAGE_FOLDER_KINDS
+    roots = [base / paths.folder_name(k) for k in kinds]
+    if documents and code != "_portfolio":
+        roots.append(base if paths.external() else base / "documents")
+    skip, out, seen = set(paths.skipped_names()), [], set()
+
+    def walk(d, depth):
+        """d and its subfolders, depth levels down, within the cap."""
+        if d in seen or len(out) >= PAGE_FOLDER_CAP:
+            return
+        seen.add(d)
+        out.append(d)
+        if depth <= 0:
+            return
+        try:
+            with os.scandir(d) as it:
+                subs = sorted(e.path for e in it if e.is_dir(follow_symlinks=False) and not e.name.startswith(".")
+                              and e.name not in skip)
+        except OSError:                                  # not there (yet): its stamp is a dash
+            return
+        for s in subs:
+            walk(Path(s), depth - 1)
+    for r in roots:
+        walk(r, PAGE_FOLDER_DEPTH)
     return out
 
 
@@ -1143,8 +1191,11 @@ class Handler(BaseHTTPRequestHandler):
             p.write_bytes(raw)
             return self.send(200, {"ok": True})
         p.parent.mkdir(parents=True, exist_ok=True)
-        with open(p, "a" if op == "append" else "w", encoding="utf-8") as f:
-            f.write(req.get("text", ""))
+        if op == "append":
+            with open(p, "a", encoding="utf-8") as f:
+                f.write(req.get("text", ""))
+        else:                                      # a reader (the page, a script) never sees a half-written file
+            paths.write_text_atomic(p, req.get("text", ""))
         return self.send(200, {"ok": True})
 
     def apply(self, req):
