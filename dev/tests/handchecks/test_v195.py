@@ -862,58 +862,480 @@ class Judgement2(HandcheckCase):
 
 
 class Bl333And10(HandcheckCase):
-    """Phase 2: BL-333 (21, 22) and BL-10 archiving old items (23 to 29), with check 30's Health line. Own vault."""
-    own_vault = True
+    """BL-333 (21, 22) and BL-10 archiving old items (23 to 29), with check 30's Health line. Own vault: archiving changes data.
 
-    @phase2()
+    The checks run in order and build on each other (23 closes the two items, 24 archives them, 27 edits one, 28 undoes the
+    archive); each makes what it needs itself when it runs alone (--only). The demo's RAID IDs are CODE-NNN, so the check's
+    "ORX-R-001" is ORX-005 here (Orbit's first risk, "Late UAT data slips sign-off")."""
+    own_vault = True
+    ACTION, RAID = "FAL-A-004", "ORX-005"
+    WORDS = "security review ingestion"                 # FAL-A-004's words: "Complete security review of ingestion pipeline"
+
+    # ── helpers (this class's own) ──
+
+    @staticmethod
+    def hc():
+        import hcbase
+        return hcbase
+
+    def later(self):
+        """Today plus 7 months, 09:00: the check's CREAITE_NOW for archive.py."""
+        return self.hc().months_on(self.now, 7)[:10] + " 09:00"
+
+    def row(self, table, item):
+        return (self.hc().db_rows(self.vault, f"SELECT * FROM {table} WHERE id = ?", item) or [{}])[0]
+
+    def until(self, test, what, timeout=20):
+        """Poll `test()` (Python) while the page keeps running; fail with `what` if it never holds."""
+        import time
+        end = time.time() + timeout
+        while time.time() < end:
+            if test():
+                return
+            self.b.pump(0.2)
+        self.fail(f"timed out waiting for {what}")
+
+    def reopen(self):
+        """The page loaded again (after a change made outside it), the clock still pinned."""
+        self.b.reload("typeof go==='function' && LIVE")
+        self.b.pump(0.5)
+
+    def daily_slot_taken(self):
+        """The live server's daily job runs archive.py daily a minute after start-up, once a day. Wait for it (up to 100 s), so it
+        can't run after the checks' own archive.py run (whose day is seven months on) and overwrite Health's line."""
+        import time
+        state = self.vault / "system/staging/archive-state.json"
+        end = time.time() + 100
+        while time.time() < end:
+            try:
+                if (json.loads(state.read_text()).get("items") or {}).get("day"):
+                    return "the server's daily run had taken today's slot"
+            except (OSError, ValueError):
+                pass
+            time.sleep(1)
+        self.run_in_vault("archive.py", "daily")
+        return "today's slot taken with archive.py daily (the server's hadn't run in 100 s)"
+
+    def set_status(self, k, item, status):
+        """Work › the item › its status, then Apply: the dashboard's own peek (pkSetStatus, as the status menu does) and the
+        peek's Apply button. Waits until the record has it."""
+        b = self.b
+        self.screen("work")
+        b.eval(f"openRecord({json.dumps(k)},{json.dumps(item)})")
+        b.wait("document.getElementById('panel').classList.contains('on')")
+        b.eval(f"pkSetStatus({json.dumps(k)},{json.dumps(item)},{json.dumps(status)}).then(()=>true)")
+        b.wait("!document.getElementById('pkStage').hidden")
+        b.click("#pkApply")
+        self.until(lambda: self.row(k, item).get("status") == status, f"{item} {status} in the record")
+        b.pump(0.5)
+
+    def close_both(self):
+        """Close FAL-A-004 and cancel ORX-005 in Work (once)."""
+        if self.row("actions", self.ACTION).get("status") != "Closed":
+            self.set_status("actions", self.ACTION, "Closed")
+        if self.row("raid", self.RAID).get("status") != "Cancelled":
+            self.set_status("raid", self.RAID, "Cancelled")
+
+    def dry_run(self):
+        code, out = self.run_in_vault("archive.py", "items", "--dry-run", env={"CREAITE_NOW": self.later()})
+        self.assertEqual(code, 0, out[-400:])
+        return re.findall(r"^(\S+) \((\w+)\)$", out, re.M), out
+
+    def archive_apply(self):
+        """The apply archive.py made (its proposal ends -archive.json), or None."""
+        for a in self.hc().db_rows(self.vault, "SELECT apply_id, proposals, undone_at FROM applies ORDER BY apply_id DESC"):
+            if "-archive.json" in (a["proposals"] or ""):
+                return a
+        return None
+
+    def ensure_archived(self):
+        """Checks 23 and 24's state (closed, then archived seven months on), made here when this check runs on its own."""
+        if self.archive_apply():
+            return
+        self.daily_slot_taken()
+        self.close_both()
+        code, out = self.run_in_vault("archive.py", "items", env={"CREAITE_NOW": self.later()})
+        self.assertEqual(code, 0, out[-400:])
+
+    def search(self, words):
+        """Files' search bar: type the words; returns the results' text, or "" when nothing came back."""
+        b = self.b
+        self.screen("files")
+        b.click("#vsInput")
+        b.type(words)
+        b.wait("document.querySelector('#vsResults .vsr')||/Nothing found/.test(document.getElementById('vsResults').innerText)", 15)
+        return b.eval("document.getElementById('vsResults').innerText")
+
+    def show_archived(self, on):
+        """Settings: the show-archived switch (data-k showArchived), clicked as Alan would; waits until the page has reloaded
+        its data. Returns the switch row's label and its section."""
+        b = self.b
+        self.screen("settings-people")
+        sel = "input.switch[data-k=showArchived]"
+        b.wait(f"document.querySelector('{sel}')")
+        where = b.eval(f"""(()=>{{ const e=document.querySelector('{sel}'), r=e.closest('.srow'), s=e.closest('[data-sec]');
+          return {{label:(r.querySelector('span[id]')||r).innerText.split('\\n')[0].trim(), help:(r.querySelector('small')||{{}}).innerText||'',
+                  sec:s&&s.dataset.sec, heading:s&&(s.querySelector('h2,h3')||{{}}).innerText, on:e.checked}}; }})()""")
+        if where["on"] != on:
+            b.click(sel)
+            b.wait(f"S.showArchived==={json.dumps(on)}")
+            self.until(lambda: json.loads((self.vault / "system/config/settings.json").read_text())["dashboard"].get("show_archived") == on,
+                       "show_archived saved")
+            b.pump(1.5)                                        # reloadData()
+        return where
+
+    def bottom(self, label, box, wheel=True):
+        """BL-333 on the screen in view: the wheel turned to the end over `box`; the window never scrolls (Console:
+        scrollHeight === innerHeight), the box stops at its last content, and the rail stays put. Returns problems."""
+        b, problems = self.b, []
+        rail0 = measure.rect(b, ".rail")
+        w = measure.wheel_to_bottom(b, box) if wheel else None
+        end = measure.scroll_end(b, box)
+        page = measure.overflow_y(b)
+        rail1 = measure.rect(b, ".rail")
+        if end is None:
+            return [f"{label}: no {box}"]
+        if not page["ok"]:
+            problems.append(f"{label}: scrollHeight {page['sh']} !== innerHeight {page['ih']}")
+        if w and w["window_top"]:
+            problems.append(f"{label}: the window scrolled {w['window_top']} px")
+        if end["sh"] > end["ch"] + 1:
+            if w and end["top"] < end["sh"] - end["ch"] - 1:
+                problems.append(f"{label}: the wheel stopped at {end['top']} of {end['sh'] - end['ch']}")
+            if end["sh"] > end["end"] + 1:
+                problems.append(f"{label}: {box} scrolls {end['sh'] - end['end']} px past its last content ({end['last']})")
+        if rail0 != rail1:
+            problems.append(f"{label}: the rail moved ({rail0} → {rail1})")
+        self.seen.append(f"{label} {page['sh']}={page['ih']}"
+                         + (f", {box} {end['top']}/{end['sh'] - end['ch']} px ends at {end['last']}" if end["sh"] > end["ch"] + 1 else ""))
+        return problems
+
+    # ── BL-333 ──
+
     def test_c21_today_stops_at_bottom(self):
         """21. Today at 1400 px, scroll to the bottom with the wheel → it stops at the last content; the rail doesn't scroll
         away. In the Console, `document.scrollingElement.scrollHeight === innerHeight` → `true`."""
+        self.seen = []
+        measure.width(self.b, 1400, 1000)
+        self.screen("today", settle=1)
+        long_enough = measure.scroll_end(self.b, "#v-today")
+        problems = self.bottom("Today 1400", "#v-today")
+        self.note(21, "; ".join(self.seen) + f" (wheel, real events; Today {long_enough['sh']} px tall in a {long_enough['ch']} px box)")
+        self.assertGreater(long_enough["sh"], long_enough["ch"], "Today is long enough to scroll")
+        self.assertEqual(problems, [], "; ".join(problems))
 
-    @phase2()
     def test_c22_intake_prep(self):
         """22. The same on Intake (at 1400 and 320 px), the Prep popup over Today, and Meetings › Prep → `true` on each, and
         the rail stays put."""
+        b, problems = self.b, []
+        self.seen = []
+        try:
+            for w in (1400, 320):
+                measure.width(b, w, 1000 if w > 600 else 800)
+                self.screen("intake", settle=1)
+                problems += self.bottom(f"Intake {w}", "#v-inbox")
+            measure.width(b, 1400, 1000)
+            self.screen("today", settle=1)
+            b.click("[data-prep]")
+            b.wait("document.getElementById('prepDlg')&&document.getElementById('prepDlg').open&&document.getElementById('prepBody').children.length", 15)
+            b.pump(1)
+            problems += self.bottom("Prep popup", "#prepBody")
+            for box in ("#prepDlg", "#v-today"):
+                problems += self.bottom(f"Prep popup ({box})", box, wheel=False)
+            b.eval("document.getElementById('prepDlg').close()")
+            title = b.eval("Object.entries(D.hub||{}).find(([t,m])=>m.key==='calendar:hc-1')?.[0]||''")
+            self.assertTrue(title, "the FAL Steering committee has a meeting page")
+            b.eval(f"go('meeting',{json.dumps(title)})")
+            b.wait("/FAL Steering committee/.test((document.querySelector('#v-meeting h1')||{}).textContent||'')", 15)
+            b.pump(1)
+            problems += self.bottom("Meetings › Prep", "#v-meeting")
+        finally:
+            measure.width(b, self.width, self.height)
+        self.note(22, "; ".join(self.seen))
+        self.assertEqual(problems, [], "; ".join(problems))
 
-    @phase2()
+    # ── BL-10 ──
+
     def test_c23_due_items_listed(self):
         """23. Make an old closed item: close FAL-A-004 and cancel ORX-R-001; `archive.py items --dry-run` 7 months on → both
         listed. An open action, any decision and any milestone are not."""
+        slot = self.daily_slot_taken()
+        self.close_both()
+        listed, out = self.dry_run()
+        ids = {i for i, _ in listed}
+        self.assertIn(self.ACTION, ids, out)
+        self.assertIn(self.RAID, ids, out)
+        self.assertFalse({t for _, t in listed} & {"decisions", "milestones"}, out)
+        open_ids = {r["id"] for r in self.hc().db_rows(self.vault, "SELECT id FROM actions WHERE status IN ('Open', 'Delayed')")}
+        self.assertTrue(open_ids)
+        self.assertFalse(ids & open_ids, "an open action is listed")
+        others = sorted(ids - {self.ACTION, self.RAID})
+        self.note(23, f"closed and cancelled in Work (status, then Apply); CREAITE_NOW {self.later()}: {len(ids)} listed "
+                      f"({', '.join(sorted(ids))})" + (f" — {', '.join(others)} is the demo's own item closed today" if others else "")
+                      + f"; no open action ({len(open_ids)}), decision or milestone; ORX-R-001 is ORX-005 in the demo; {slot}")
 
-    @phase2()
     def test_c24_archived_through_apply(self):
         """24. Run it again without `--dry-run` → "Archived 2 items". Activity shows one apply (source archive); Review gets
         nothing."""
+        b = self.b
+        self.daily_slot_taken()
+        self.close_both()
+        listed, _ = self.dry_run()
+        self.assertIsNone(self.archive_apply(), "not archived yet")
+        self.assertIn("FAL-A-004", self.hc().xlsx_text(self.vault / "tracker-view.xlsx"), "in the Excel export before")
+        self.screen("review")
+        rev0, pend0 = b.eval("REV.length"), self.hc().pending_proposals(self.vault)
+        code, out = self.run_in_vault("archive.py", "items", env={"CREAITE_NOW": self.later()})
+        self.assertEqual(code, 0, out[-400:])
+        m = re.search(r"^Archived (\d+) items?\b.*$", out, re.M)
+        self.assertTrue(m, out[-300:])
+        n = int(m.group(1))
+        self.assertEqual(n, len(listed), "as many as the dry run listed")
+        for t, i in (("actions", self.ACTION), ("raid", self.RAID)):
+            self.assertEqual(self.row(t, i).get("archived"), 1, i)
+        a = self.archive_apply()
+        logged = self.hc().db_rows(self.vault, "SELECT tbl, item_id, field FROM change_log WHERE apply_id = ?", a["apply_id"])
+        self.assertEqual({r["field"] for r in logged}, {"archived"})
+        self.assertEqual(len(logged), n, "one apply holds them all")
+        self.assertEqual(self.hc().pending_proposals(self.vault), pend0, "nothing new waiting for Review")
+        self.reopen()
+        self.screen("review")
+        rev1 = b.eval("REV.length")
+        self.assertEqual(rev1, rev0, "Review gets nothing")
+        self.screen("activity", settle=1)
+        rows = b.eval("""[...document.querySelectorAll('#actTbl tr')].filter(r=>/archived: 0 → 1/.test(r.innerText)).map(r=>{
+          const c=r.querySelectorAll('td'); return {what:c[2].innerText.trim(), by:c[3].innerText.trim()}; })""")
+        self.assertEqual(len(rows), n, f"Activity lists the {n} archived")
+        bys = sorted({r["by"] for r in rows})
+        prop = json.loads(a["proposals"])[0].split("/")[-1]
+        self.note(24, f"\"{m.group(0)}\" ({n}: FAL-A-004, ORX-005 and the demo's MER-A-003, closed today too, so not the check's 2); "
+                      f"one apply ({a['apply_id']}, {prop}), {len(logged)} archived "
+                      f"flags; Review {rev0} → {rev1}, no new proposal; Activity's By column: {', '.join(bys)}")
+        self.assertTrue(all("archiv" in x.lower() for x in bys),
+                        f"Activity names the source as \"{', '.join(bys)}\", not archive: build_dashboard's BY has no entry for "
+                        f"archive.py's proposal (change_log.via is its file name), so it falls back to \"Approved in review\"")
 
-    @phase2()
     def test_c25_gone_search_health(self):
         """25. Work, Today and the Excel export → those two items are gone. Search for FAL-A-004's words → found, marked
         Archived. Settings › Health › Archiving → "Archived 2 items on DD-MM-YYYY"."""
+        b = self.b
+        self.ensure_archived()
+        self.reopen()
+        self.screen("work")
+        work = b.eval(f"[A.some(a=>a.id==={json.dumps(self.ACTION)}), R.some(a=>a.id==={json.dumps(self.RAID)}), "
+                      f"document.getElementById('v-work').innerText.includes({json.dumps(self.ACTION)})]")
+        self.assertEqual(work, [False, False, False], "gone from Work")
+        self.screen("today", settle=1)
+        today = b.eval("document.getElementById('v-today').innerText")
+        for x in (self.ACTION, self.RAID, "Complete security review of ingestion pipeline", "Late UAT data slips sign-off"):
+            self.assertNotIn(x, today, "gone from Today")
+        xl = self.hc().xlsx_text(self.vault / "tracker-view.xlsx")
+        self.assertNotIn(self.ACTION, xl, "gone from the Excel export")
+        self.assertNotIn(self.RAID, xl, "gone from the Excel export")
+        self.assertIn("FAL-A-001", xl, "the export itself is there")
+        found = self.search(self.WORDS)
+        self.assertIn(self.ACTION, found)
+        hit = [ln for ln in found.splitlines() if self.ACTION in ln]
+        self.assertTrue(hit and "Archived" in hit[0], f"marked Archived: {hit}")
+        self.screen("settings-health", settle=1)
+        health = b.eval("document.getElementById('v-settings').innerText")
+        line = re.search(r"Archived (\d+) items? on (\d\d-\d\d-\d{4})[^\n]*", health)
+        st = json.loads((self.vault / "system/staging/archive-state.json").read_text())["items"]
+        self.assertTrue(line, "Health's archiving line")
+        self.assertEqual((int(line.group(1)), line.group(2)), (st["archived"], self.hc().shown(self.later())))
+        self.note(25, f"not in Work, Today or tracker-view.xlsx; search \"{self.WORDS}\": {hit[0].strip()}; Health: \"{line.group(0).strip()}\" "
+                      f"({st['archived']}, not 2: the demo's MER-A-003 too; the date is the run's, seven months on)")
 
-    @phase2()
     def test_c26_show_archived(self):
         """26. Turn on "Show archived projects and items" (Settings › Work and views) → both are back, marked. Turn it off."""
+        b, problems = self.b, []
+        self.ensure_archived()
+        self.reopen()
+        try:
+            where = self.show_archived(True)
+            back = b.eval(f"[A.find(a=>a.id==={json.dumps(self.ACTION)})||null, R.find(a=>a.id==={json.dumps(self.RAID)})||null]")
+            self.assertTrue(all(back), "both back in the page's data")
+            self.screen("work")
+            b.click("#stBtn")
+            b.eval("""(()=>{ for(const v of ['Closed','Cancelled']){ const i=[...document.querySelectorAll('#stMenu input[type=checkbox]')].find(x=>x.value===v);
+              if(i&&!i.checked){ i.checked=true; i.dispatchEvent(new Event('change',{bubbles:true})); } } return true; })()""")
+            b.key("Escape")
+            b.pump(0.5)
+            row = b.eval(f"(document.querySelector('#workTbl tr[data-row={json.dumps(self.ACTION)}]')||{{}}).innerText||''")
+            self.assertIn("Complete security review", row, "FAL-A-004 is back in Work (with Closed shown)")
+            marked = {i: bool(x.get("archived")) for i, x in zip((self.ACTION, self.RAID), back)}
+            if "Archived" not in row:
+                problems.append(f"FAL-A-004's Work row isn't marked Archived (\"{' '.join(row.split())[:90]}\")")
+            if not all(marked.values()):
+                problems.append(f"the page's records carry no archived flag ({', '.join(k for k, v in marked.items() if not v)}), "
+                                "so nothing can mark them")
+            catalogue = "Show archived projects and items"
+            if where["label"] != catalogue or "views" not in (where["heading"] or "").lower():
+                problems.append(f"the switch is \"{where['label']}\" in Settings › {where['heading']}, not \"{catalogue}\" in Work and "
+                                f"views (the catalogue's label; the Advanced list leaves it out as covered); its help: "
+                                f"\"{where['help'][:80]}\"")
+        finally:
+            self.show_archived(False)
+        gone = b.eval(f"A.some(a=>a.id==={json.dumps(self.ACTION)})||R.some(a=>a.id==={json.dumps(self.RAID)})")
+        self.assertFalse(gone, "gone again once it is off")
+        self.note(26, "on: both back in Work (FAL-A-004's row with Closed shown); off: gone again" + (f"; {'; '.join(problems)}" if problems else ""))
+        self.assertEqual(problems, [], "; ".join(problems))
 
-    @phase2()
     def test_c27_edit_unarchives(self):
         """27. Search for FAL-A-004, open it and change its priority → it is live again (back in Work). Activity shows the
         un-archive in its change log."""
+        b, problems = self.b, []
+        self.ensure_archived()
+        self.reopen()
+        if self.row("actions", self.ACTION).get("archived") != 1:
+            self.skipTest("FAL-A-004 isn't archived (already edited)")
+        self.assertIn(self.ACTION, self.search(self.WORDS))
+        b.click("#vsResults .vsr")
+        b.pump(1)
+        opened = b.eval("document.getElementById('panel').classList.contains('on')")
+        if not opened:
+            said = b.eval("(document.getElementById('snackT')||{}).textContent||''")
+            problems.append(f"opening it from search is refused: \"{said}\" (Falcon's project isn't archived: the item was archived "
+                            "for its age, ask.js openFound treats every archived item as an archived project's); opened with "
+                            "Show archived on instead")
+            self.show_archived(True)
+            self.search(self.WORDS)
+            b.click("#vsResults .vsr")
+            b.wait("document.getElementById('panel').classList.contains('on')")
+        pr = self.row("actions", self.ACTION).get("priority")
+        new = "High" if pr != "High" else "Low"
+        b.eval(f"pkCommit('actions',{json.dumps(self.ACTION)},{{pr:{json.dumps(new)}}},'Priority',{json.dumps(pr)},{json.dumps(new)}).then(()=>true)")
+        b.wait("!document.getElementById('pkStage').hidden")
+        b.click("#pkApply")
+        self.until(lambda: self.row("actions", self.ACTION).get("priority") == new, "the priority in the record")
+        if not opened:
+            self.show_archived(False)
+        x = self.row("actions", self.ACTION)
+        self.assertEqual(x.get("archived"), 0, "live again")
+        self.reopen()
+        self.assertTrue(b.eval(f"A.some(a=>a.id==={json.dumps(self.ACTION)})"), "back in Work")
+        self.screen("activity", settle=1)
+        un = b.eval(f"""[...document.querySelectorAll('#actTbl tr')].map(r=>r.innerText.replace(/\\s+/g,' ').trim())
+          .filter(t=>t.includes({json.dumps(self.ACTION)})&&/archived: 1 → 0/.test(t))""")
+        self.assertTrue(un, "Activity shows the un-archive")
+        self.note(27, f"priority {pr} → {new} in the peek, Apply: archived 1 → 0, back in Work; Activity: \"{un[0][:90]}\""
+                      + (f"; {problems[0]}" if problems else ""))
+        self.assertEqual(problems, [], "; ".join(problems))
 
-    @phase2()
     def test_c28_undo_nothing_in_review(self):
         """28. Undo the archive apply (Activity › Undo, or `tracker.py undo`) → ORX-R-001 is back, and nothing appears in
         Review."""
+        b = self.b
+        self.ensure_archived()
+        a = self.archive_apply()
+        if a["undone_at"] or self.row("raid", self.RAID).get("archived") != 1:
+            self.skipTest("the archive apply is already undone")
+        latest = lambda: self.hc().db_rows(self.vault, "SELECT max(apply_id) AS n FROM applies WHERE undone_at IS NULL")[0]["n"]
+        self.reopen()
+        self.screen("review")
+        rev0, pend0 = b.eval("REV.length"), self.hc().pending_proposals(self.vault)
+        steps, refused = [], ""
+        if latest() != a["apply_id"]:
+            # Activity's Undo is on the latest apply only; older changes are ticked and undone as one new apply (BL-164)
+            self.screen("activity", settle=1)
+            b.eval("""(()=>{ [...document.querySelectorAll('#actTbl tr')].filter(r=>/archived: 0 → 1/.test(r.innerText)&&!/since undone/.test(r.innerText))
+              .forEach(r=>r.querySelector('input[type=checkbox]').click()); return true; })()""")
+            b.click("#actUndoSel")
+            b.wait("document.getElementById('actDlg')&&document.getElementById('actDlg').open", 15)
+            refused = b.eval("document.getElementById('actDlgBody').innerText.replace(/\\s+/g,' ').trim()")
+            if b.eval("!!document.getElementById('actDlgGo')"):
+                b.click("#actDlgGo")
+                b.pump(2)
+            else:
+                b.click("#actDlgCancel")
+            steps.append(f"ticking the archive's rows in Activity: \"{refused[:160]}\"")
+        for _ in range(4):                                     # then Activity › Undo on the latest apply, until the archive's is undone
+            if self.row("raid", self.RAID).get("archived") == 0:
+                break
+            n = latest()
+            self.reopen()
+            if n == a["apply_id"]:                             # Review as it is just before the archive's own undo (undoing
+                self.screen("review")                          # check 27's edit first returns that edit to Review, as any undo)
+                rev0, pend0 = b.eval("REV.length"), self.hc().pending_proposals(self.vault)
+            self.screen("activity", settle=1)
+            b.click(f"#actTbl [data-undoapply='{n}']")
+            self.until(lambda n=n: n not in [r["apply_id"] for r in self.hc().db_rows(self.vault, "SELECT apply_id FROM applies WHERE undone_at IS NULL")],
+                       f"apply {n} undone")
+            steps.append(f"Activity › Undo on apply {n}" + (" (the archive's)" if n == a["apply_id"] else
+                                                            " (check 27's edit, the latest: it goes back to Review, as an undone edit does)"))
+        self.assertEqual(self.row("raid", self.RAID).get("archived"), 0, "ORX-005 back")
+        b.pump(1)
+        self.assertEqual(self.hc().pending_proposals(self.vault), pend0, "nothing new waiting for Review")
+        self.reopen()
+        self.assertTrue(b.eval(f"R.some(a=>a.id==={json.dumps(self.RAID)})"), "ORX-005 back in the page's data")
+        self.screen("review")
+        rev1 = b.eval("REV.length")
+        self.assertEqual(rev1, rev0, "nothing appears in Review")
+        self.note(28, "; then ".join(steps) + f"; ORX-005 archived 1 → 0, back in Work; Review {rev0} → {rev1}, no new proposal")
 
-    @phase2()
     def test_c29_settings_zero_turns_off(self):
         """29. Settings › Advanced › Archiving → `archive.after_months` for actions, RAID and promises (6) and
         `archive.reports_after_months` (12). Set RAID to 0 and repeat the dry run with a cancelled RAID item → not listed."""
+        b = self.b
+        self.close_both()
+        self.assertEqual(self.row("raid", self.RAID).get("archived"), 0, "ORX-005: cancelled and not archived")
+        labels = ["Archive closed actions after (months)", "Archive closed RAID items after (months)",
+                  "Archive done promises after (months)", "Offer to archive reports and minutes after (months)"]
+        find = "[...document.querySelectorAll('#v-settings .srow')].find(r=>r.innerText.startsWith(%s))"
+        self.screen("settings-advanced", settle=1)
+        heading = b.eval(f"""(()=>{{ const r={find % json.dumps(labels[0])}; if(!r) return '';
+          const hs=[...document.querySelectorAll('#v-settings h2,#v-settings h3')].filter(h=>h.compareDocumentPosition(r)&Node.DOCUMENT_POSITION_FOLLOWING);
+          return hs.length?hs[hs.length-1].innerText.trim():''; }})()""")
+        values = [b.eval(f"(({find % json.dumps(x)})||{{querySelector:()=>null}}).querySelector('input')?.value??null") for x in labels]
+        self.assertEqual(values, ["6", "6", "6", "12"])
+        listed, _ = self.dry_run()
+        self.assertIn(self.RAID, {i for i, _ in listed}, "listed at 6 months")
 
-    @phase2()
+        def set_raid(v):
+            b.eval(f"""(()=>{{ const i=({find % json.dumps(labels[1])}).querySelector('input'); i.focus(); i.value={json.dumps(str(v))};
+              i.dispatchEvent(new Event('input',{{bubbles:true}})); i.dispatchEvent(new Event('change',{{bubbles:true}})); i.blur(); return true; }})()""")
+            self.until(lambda: json.loads((self.vault / "system/config/settings.json").read_text())["archive"]["after_months"]["raid"] == v,
+                       f"archive.after_months.raid = {v} saved")
+        try:
+            set_raid(0)
+            again, out = self.dry_run()
+            self.assertNotIn(self.RAID, {i for i, _ in again}, out)
+            self.assertFalse([i for i, t in again if t == "raid"], out)
+        finally:
+            self.screen("settings-advanced", settle=0.5)
+            set_raid(6)
+        self.note(29, f"Settings › Advanced{(' › ' + heading) if heading else ''}: actions, RAID, promises 6, reports 12; "
+                      f"RAID set to 0 in the page (saved to settings.json): the cancelled ORX-005 not listed "
+                      f"({len(again)} listed: {', '.join(i for i, _ in again) or 'none'}); set back to 6")
+
     def test_c30_health_line_card(self):
         """30. Settings › Health → "Archive 4 reports and minutes older than 12 months", with **Archive them**. Press it → the
         change card lists "Move file … → …/_Archive/…" for the FAL weekly report, client report and steering minutes, and the
         portfolio's minutes. Not the transcript, the ad hoc notes or ORX's recent report."""
+        b = self.b
+        self.screen("settings-health", settle=1)
+        health = b.eval("document.getElementById('v-settings').innerText")
+        self.assertIn("Archive 4 reports and minutes older than 12 months", health)
+        b.wait("[...document.querySelectorAll('#v-settings button')].some(x=>x.innerText.trim()==='Archive them')")
+        b.eval("[...document.querySelectorAll('#v-settings button')].find(x=>x.innerText.trim()==='Archive them').setAttribute('data-hc','arch')")
+        b.click("button[data-hc=arch]")
+        b.wait("document.querySelector('#chat .confirm.edcard .edlines li')", 20)
+        lines = b.eval("[...document.querySelectorAll('#chat .confirm.edcard .edlines li')].map(l=>l.innerText.trim())")
+        fal, port = "projects/FAL Falcon Data Platform/", "projects/_portfolio/"
+        want = [f"Move file {fal}minutes/2025-09-02 FAL steering minutes.docx → {fal}_Archive/minutes/2025-09-02 FAL steering minutes.docx",
+                f"Move file {fal}reports/2025-08-29 Falcon Data Platform weekly report.docx → {fal}_Archive/reports/2025-08-29 Falcon Data Platform weekly report.docx",
+                f"Move file {fal}reports/2025-09-05 Falcon Data Platform client report.docx → {fal}_Archive/reports/2025-09-05 Falcon Data Platform client report.docx",
+                f"Move file {port}minutes/2025-09-10 Portfolio review minutes.docx → {port}_Archive/minutes/2025-09-10 Portfolio review minutes.docx"]
+        self.assertEqual(sorted(lines), sorted(want))
+        text = " ".join(lines)
+        for never in ("transcript", "data notes", "Orbit Customer App weekly report"):
+            self.assertNotIn(never, text)
+        b.click("#chat .confirm.edcard [data-ed=reject]")     # check 31 approves it in its own vault; this one leaves it as it was
+        b.pump(1)
+        self.assertFalse(list((self.vault / fal / "_Archive").glob("*/*")), "nothing moved")
+        self.note(30, "Health: \"Archive 4 reports and minutes older than 12 months\" with Archive them; the card: the FAL weekly "
+                      "report, client report and steering minutes and the portfolio's minutes, each Move file … → …/_Archive/…; "
+                      "not the transcript, the notes or ORX's report; Rejected afterwards (31 approves in its own vault)")
 
 
 class Bl03And331(HandcheckCase):
