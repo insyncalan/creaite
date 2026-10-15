@@ -480,5 +480,56 @@ class ReportRoutes(unittest.TestCase):
 # ===== end v2.1.0 P3 =====
 
 
+# ===== v2.1.0 P3 re-lock (plan #71 point 1): a client draft saved before the internal week is approved can be exported after it =====
+class RelockRoutes(unittest.TestCase):
+    """Approving the internal week re-locks the project's client drafts to its approved facts, withholding what those facts don't hold."""
+    setUpClass = classmethod(ReportRoutes.setUpClass.__func__)
+    tearDownClass = classmethod(ReportRoutes.tearDownClass.__func__)
+    post = ReportRoutes.post
+    section = ReportRoutes.section
+
+    def test_a_draft_saved_before_the_approval_is_locked_withheld_and_exportable(self):
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        doc = r["doc"]
+        self.assertIn("ABC-006", doc["items"])
+        self.assertIsNone(doc["based_on"])
+        self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
+        # after the draft: ABC-006 stops being client-visible, ABC-005 becomes client-visible
+        self.v.propose("shift", [
+            {"n": 1, "op": "update", "table": "raid", "id": "ABC-006", "changes": {"client_visible": 0}, "decision": "approved"},
+            {"n": 2, "op": "update", "table": "raid", "id": "ABC-005", "decision": "approved",
+             "changes": {"client_visible": 1, "client_message": "What it is: The vendor may leave.\nWhat it means for you: Testing could slip.\n"
+                                                              "What is being done: A second vendor is lined up."}}])
+        self.v.run("apply")
+        w = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+        self.section(w, "health")["text"] = "UAT start slipped two weeks."
+        self.assertTrue(self.post("/api/report/save", {"doc": w, "base_version": 0})["ok"])
+        a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.assertEqual(len(a["relocked"]), 1, a)
+        c = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        locked = c["doc"]
+        self.assertEqual(locked["based_on"]["path"], WEEKLY_FILE)
+        self.assertEqual((locked["meta"]["locked"], locked["meta"]["facts_week"]), (True, "2026-10-09"))
+        self.assertNotIn("ABC-006", json.dumps(locked))                       # no longer in the approved facts: withheld
+        self.assertNotIn("ABC-005", json.dumps(locked))                       # became visible after: never added
+        self.assertIn("ABC-A-002", locked["items"])                           # still there
+        self.assertTrue(c["ready"], c)
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "html"})
+        self.assertTrue(e["ok"], e)
+        # a new approved version of the week re-locks it to that version, adding nothing
+        w = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.section(w["doc"], "summary")["text"] = "A second version."
+        self.assertTrue(self.post("/api/report/save", {"doc": w["doc"], "base_version": w["version"]})["ok"])
+        a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        again = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+        filed_version = json.loads(re.search(r'id="creaite-data"[^>]*>(.*?)</script>', (self.v.root / WEEKLY_FILE).read_text(encoding="utf-8"), re.S).group(1))["version"]
+        self.assertGreater(filed_version, locked["based_on"]["version"])
+        self.assertEqual(again["based_on"]["version"], filed_version)
+        self.assertNotIn("ABC-005", json.dumps(again))
+# ===== end v2.1.0 P3 re-lock =====
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
