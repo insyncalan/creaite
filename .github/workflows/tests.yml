@@ -15,10 +15,19 @@
 # BL-234 is parked (Alan): this runs only by hand. To run it on pull requests and pushes to main as well, swap the active
 # `on:` line below for the commented one under it. That one line is the whole change.
 # on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}}
-on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}, macos: {description: "Add the macOS job (#83)", type: boolean, required: false, default: false}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
-# ===== end BL-242 =====
+on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty: all)", required: false, default: ""}}}, pull_request: {paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}, push: {branches: [main], paths-ignore: ["README.md", "dev/*.md", "dev/release-notes/**", "dev/sprints/**", "dev/mockups/**"]}}
+#
+# ===== #89: who runs what =====
+# Python 3.14 runs every test file (the browser tests included); Python 3.9, the floor, runs the files that never start Chrome
+# (`--quick`: the quick tier, read from the files by dev/tools/run_support.py). Each is split in 3 shards (`--shard I/3`).
+# So a browser test runs once per commit, not twice, and the floor is still tested on all the rest. macOS (3.14, all files, 3
+# shards) runs on release branches only. `--max-fail 8` stops a shard that has plainly gone wrong after 8 failed files.
+# Files that failed last time start first (dev/tests/.last-failed), which helps a local run; a fresh runner has none.
+# ===== end #89 =====
 
 name: Tests
+# #89: a hand-started run of named files is named "Tests (files)", so release.yml can tell it from a full run.
+run-name: ${{ github.event.inputs.files && format('Tests ({0})', github.event.inputs.files) || 'Tests' }}
 
 permissions:
   contents: read
@@ -31,17 +40,19 @@ concurrency:
 
 jobs:
   tests:
-    name: ${{ matrix.os }} · Python ${{ matrix.python }}
+    name: ${{ matrix.os }} · Python ${{ matrix.python }} · shard ${{ matrix.shard }}/3
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.optional }}
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      # The macOS job runs only on pushes to main (Alan, 12-10-2026): it needs about 2 hours and GitHub runs only five macOS
-      # jobs at once, so on every branch run it held the run open and queued the others. Branch and pull-request runs use Linux.
-      # A hand-started run can add it with the macos input (#83): gh workflow run tests.yml --ref <branch> -f macos=true
+      # #89: each Python version runs the suite in 3 shards (dev/tools/run_tests.py --shard I/3), side by side, so the wait
+      # is about a third. Every test file is in exactly one shard (dev/tests/test_run_tests_shard.py proves it), and the
+      # split is the same on every job because it depends only on the file names and dev/tools/shard_times.txt.
+      # The "Tests passed" job below is green only if every shard is.
       matrix:
-        include: ${{ fromJSON(((github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.macos == 'true')) && '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4},{"os":"macos-latest","python":"3.14","optional":true,"jobs":3}]' || '[{"os":"ubuntu-latest","python":"3.9","optional":false,"jobs":4},{"os":"ubuntu-latest","python":"3.14","optional":false,"jobs":4}]') }}
+        os: [ubuntu-latest]
+        python: ["3.9", "3.14"]
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -65,12 +76,78 @@ jobs:
       - name: Tests
         env:
           FILES: ${{ github.event.inputs.files }}
-          JOBS: ${{ matrix.jobs }}
+          JOBS: 4
+          SHARD: ${{ matrix.shard }}
+          SCOPE: ${{ matrix.python == '3.9' && '--quick' || '' }}
         run: |
           if [ -n "$FILES" ]; then
+            # named files: shard 1 runs them, the others have nothing to do
+            [ "$SHARD" = "1" ] || { echo "Named files run in shard 1."; exit 0; }
             fail=0
             for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
             exit $fail
           else
-            python3 dev/tools/run_tests.py -j "$JOBS" --max-fail 25
+            python3 dev/tools/run_tests.py -j "$JOBS" $SCOPE --shard "$SHARD/3" --max-fail 8
           fi
+
+
+  macos:
+    # macOS (3.14, every file, 3 shards) runs on release branches only (release-*; Alan, 15-10-2026, #89). It needs about 2
+    # hours and GitHub runs only five macOS jobs at once, so on a push to main or a pull request it held the run open for
+    # nothing; Linux decides those. It is a job of its own, continue-on-error, and "Tests passed" does not wait for it, so
+    # a release run is green with Linux while macOS is still running. A macOS runner that fails never blocks a cut.
+    if: startsWith(github.head_ref || github.ref_name, 'release-')
+    name: macos-latest · Python 3.14 · shard ${{ matrix.shard }}/3
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Find Chrome
+        # The browser tests find Chrome through dev/tools/cdp.py chrome_path(): CREAITE_CHROME, then the PATH, then macOS.
+        run: |
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          MAC="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+          if [ -z "$CHROME" ] && [ -x "$MAC" ]; then CHROME="$MAC"; fi
+          test -n "$CHROME" || { echo "No Chrome on this runner"; exit 1; }
+          echo "CREAITE_CHROME=$CHROME" >> "$GITHUB_ENV"
+          "$CHROME" --version
+          python3 --version
+
+      - name: Tests
+        env:
+          FILES: ${{ github.event.inputs.files }}
+          JOBS: 3
+          SHARD: ${{ matrix.shard }}
+          SCOPE: ''
+        run: |
+          if [ -n "$FILES" ]; then
+            # named files: shard 1 runs them, the others have nothing to do
+            [ "$SHARD" = "1" ] || { echo "Named files run in shard 1."; exit 0; }
+            fail=0
+            for f in $FILES; do echo "== $f"; python3 "dev/tests/$f" || fail=1; done
+            exit $fail
+          else
+            python3 dev/tools/run_tests.py -j "$JOBS" $SCOPE --shard "$SHARD/3" --max-fail 8
+          fi
+
+  passed:
+    # The one result to wait for (and to require): green only if every Linux shard passed. A skipped or cancelled
+    # shard counts as a failure here. The optional macOS job is not in needs, so this never waits for it.
+    name: Tests passed
+    needs: tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.tests.result }}" = "success"
