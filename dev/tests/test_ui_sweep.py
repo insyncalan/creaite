@@ -50,6 +50,8 @@ SCREENS["work-panel-raid"] = (f"go('work'); openRecord('raid',(R.find(r=>r.st===
 SCREENS["work-panel-decision"] = (f"go('work'); openRecord('decisions',(DEC.find(d=>d.st==='Made')||DEC[0]).id); {DETAILS}", PEEK_ON, "#panel")
 SCREENS["work-panel-new"] = ("go('work'); openNew('actions')",
                              "document.getElementById('panel').classList.contains('on') && !!document.querySelector('#pkId [data-pkp=\"p\"]')", "#panel")
+# BL-316: the meeting page (Meetings), the sample's one meeting
+SCREENS["meeting"] = ("go('meeting',Object.keys(D.hub||{})[0])", "!document.getElementById('v-meeting').hidden", "#v-meeting")
 SCREENS["work-display"] = ("go('work'); setLayout(WT,'list'); setTimeout(()=>document.getElementById('dispBtn').click(),30)",
                            "document.getElementById('dispMenu').classList.contains('on')", "#v-work")
 

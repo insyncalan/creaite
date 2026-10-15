@@ -2358,7 +2358,7 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .mhstrip .mhdot{font-size:var(--fs-sm);line-height:1;color:var(--muted)}
 .mhstrip .mh-done .mhdot{color:var(--ok)} .mhstrip .mh-current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
 .mhstrip .mh-current .mhdot{color:var(--accent)} .mhstrip .mh-skip{opacity:.7;border-style:dashed}
-.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
 .mhgrid .card{margin:0} .mhnext .btn{margin-top:4px}
 .mhitems,.mhcov,.mhfiles{list-style:none;margin:8px 0 0;padding:0} .mhitems li,.mhcov li,.mhfiles li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
 .mhitem.you{font-weight:500} .tag.ok{color:var(--ok);font-weight:500}

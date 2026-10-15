@@ -55,7 +55,7 @@ VIEW_ONLY = (".fbtn", "#vmore", "#moreBtn", "#rvMore", "#pmFBtn")
 
 # The screen area each screen belongs to (check.py's OLD_AREAS names), for the expected-failures list.
 SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-display": "Work", "work-panel": "Peek", "work-panel-details": "Peek", "work-panel-raid": "Peek",
-                "work-panel-decision": "Peek", "work-panel-new": "Peek",
+                "work-panel-decision": "Peek", "work-panel-new": "Peek", "meeting": "Meetings",
                 "review": "Review", "intake": "Intake", "files": "Files", "activity": "Activity", "projects": "Projects",
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell"}
