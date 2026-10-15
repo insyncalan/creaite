@@ -323,11 +323,11 @@ sweep.vip_save(st)""")
         self.assertEqual((item["op"], item["table"], item["id"], item["decision"]), ("update", "actions", self.item, "pending"))
         self.assertEqual(item["based_on"], self.row()["updated_at"])
         self.assertEqual(list(item["changes"]), ["latest_update"])
-        self.assertTrue(item["changes"]["latest_update"].startswith("09-10-2026: Mia's team will take the solution"))
+        self.assertRegex(item["changes"]["latest_update"], r"^\d\d-10-2026: Mia's team will take the solution.* \(from a Teams chat\)$")
         self.assertEqual(item["suggested"]["feature"], "thread")
         self.assertIn("Teams · Chat: Project Falcon go-live", item["source"])
         a = card(self.v, "Project Falcon go-live")
-        self.assertEqual((a["logged"]["id"], a["logged"]["proposal"]), (self.item, got["proposal"]))
+        self.assertEqual((a["match"]["id"], a["match"]["logged"]["proposal"]), (self.item, got["proposal"]))
         self.assertIsNone(a["seen"])                                                            # the card stays until Alan acts
         self.assertEqual(self.row()["latest_update"], None)                                     # nothing reached the tracker
 
@@ -375,7 +375,7 @@ sweep.vip_save(st)""")
         aid = self.match("Budget talk")
         self.log(aid)
         (item,) = self.staged()[0]["items"]
-        self.assertEqual(item["changes"]["latest_update"], "09-10-2026: Discussed in a confidential thread, 09-10-2026.")
+        self.assertRegex(item["changes"]["latest_update"], r"^Discussed in a confidential thread, \d\d-10-2026$")
         self.assertNotIn("SECRET", json.dumps(self.staged()))
 
     def test_no_label_and_no_message_text_in_the_proposal(self):

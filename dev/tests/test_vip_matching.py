@@ -222,6 +222,49 @@ class MatchTests(unittest.TestCase):
                            cwd=self.v.root, capture_output=True, text=True)
         self.assertIn("no matched item", r.stderr)
 
+    def test_end_to_end_log_handled_undo_and_confidential(self):
+        """A matched thread: Log stages one update keeping the old text; again adds nothing; a second thread adds a line; Handled and
+        Undo work; a confidential thread's proposal has no subject. One logged shape: card["match"]["logged"] = {proposal, at}."""
+        import sqlite3
+        from contextlib import closing
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("UPDATE actions SET latest_update = 'Waiting on legal.' WHERE id = 'ABC-A-001'")
+            con.commit()
+        m = {"id": "ABC-A-001", "relation": "update", "why": "Both ask."}
+        record(self.v, [conv(1, summary="Mia wants the SOW by Friday.", match=m), conv(2, summary="Ben also asks for it.", match=m),
+                        conv(3, title="Salary review", sensitivity="confidential", summary="Pay talks.", match=m)], "check")
+        cards = vip_file(self.v)["alerts"]
+        by = {c["conv"]: c["id"] for c in cards}
+        a1, a2, a3 = (by[f"19:chat-{n}@thread.v2"] for n in (1, 2, 3))
+        self.assertTrue(all(c["match"]["count"] == 3 and c["state"] == "open" for c in cards))
+        log = lambda i: py(self.v, f"print(json.dumps(sweep.vip_log('{i}')))")
+        one = log(a1)
+        self.assertEqual((one["added"], one["already"], one["state"]), (True, False, "staged"))
+        self.assertEqual(set(one["logged"]), {"proposal", "at", "state"})
+        spec = json.loads((self.v.root / "system/staging" / one["proposal"]).read_text())
+        text = spec["items"][0]["changes"]["latest_update"]
+        self.assertTrue(text.startswith("Waiting on legal.\n"))
+        self.assertIn("Mia wants the SOW by Friday", text)
+        again = log(a1)
+        self.assertTrue(again["already"] and not again["added"])
+        self.assertEqual(again["proposal"], one["proposal"])
+        two = log(a2)
+        self.assertEqual((two["proposal"], two["added"]), (one["proposal"], True))
+        spec = json.loads((self.v.root / "system/staging" / one["proposal"]).read_text())
+        self.assertEqual(len(spec["items"]), 1)
+        self.assertEqual(len(spec["items"][0]["changes"]["latest_update"].split("\n")), 3)
+        log(a3)
+        spec = json.loads((self.v.root / "system/staging" / one["proposal"]).read_text())
+        self.assertNotIn("Salary", json.dumps(spec))
+        self.assertEqual(spec["items"][0]["suggested"]["threads"], [a1, a2, a3])
+        card = {c["id"]: c for c in vip_file(self.v)["alerts"]}
+        self.assertTrue(all(card[i]["match"]["logged"]["proposal"] == one["proposal"] for i in (a1, a2, a3)))
+        self.assertNotIn("logged", card[a1])                                                  # one place only
+        self.assertEqual(py(self.v, f"print(json.dumps(sweep.vip_handled(['{a1}'])))"), [a1])
+        self.assertEqual({c["id"]: c for c in vip_file(self.v)["alerts"]}[a1]["state"], "handled")
+        self.assertEqual(py(self.v, f"print(json.dumps(sweep.vip_undismiss(['{a1}'])))"), [a1])
+        self.assertEqual({c["id"]: c for c in vip_file(self.v)["alerts"]}[a1]["state"], "open")
+
     def test_the_tracker_is_only_read(self):
         before = (self.v.root / "system/tracker.db").read_bytes()
         record(self.v, [conv(1, match={"id": "ABC-A-001", "relation": "update", "why": "x"})], "check")

@@ -290,7 +290,7 @@ class AlertActionTests(unittest.TestCase):
         self.assertEqual((again["ok"], again["already"], again["proposal"]), (True, True, log["proposal"]))
         self.assertIn("Already logged", again["message"])
         self.assertEqual(len([p for p in self.proposals() if p not in before]), 1)          # nothing new the second time
-        self.assertEqual(self.alert("Go-live window")["logged"]["id"], item)
+        self.assertEqual(self.alert("Go-live window")["match"]["id"], item)
 
     def test_7_no_vip_in_any_response(self):
         self.assertTrue(self.said)
