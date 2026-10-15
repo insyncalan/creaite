@@ -939,7 +939,7 @@ body.resizing{cursor:col-resize;user-select:none}
 .cmdbox{display:flex;align-items:center;gap:8px;margin:6px 0;background:var(--sunk);border:1px solid var(--line);border-radius:var(--r-md);padding:6px 6px 6px 10px} .cmdbox code{flex:1;font:500 var(--fs-sm)/18px ui-monospace,SFMono-Regular,Menlo,monospace;overflow-x:auto;white-space:nowrap}
 .livealert code{font-family:ui-monospace,Menlo,monospace}
 .sample{font-size:var(--fs-xs);color:var(--muted);margin-bottom:8px}
-@media (max-width:1100px){.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.panel.on.pwide,.panel.pwide .pin{width:max(360px,50vw)}.files{grid-template-columns:1fr}}
+@media (max-width:1100px){.cock{grid-template-columns:1fr}.panel.on,.pin{width:360px}.panel.on.pwide,.panel.pwide .pin{width:max(360px,50vw)}.files{grid-template-columns:1fr}.tree{position:static}}   /* v1.9.5 hand checks (plan #81): stacked, a sticky folder list drew over the table as the page scrolled */
 /* ===== Search (BL-07) ===== */
 .vsearch{margin:10px 0 14px} .vsearch input[type=search]{width:100%;height:var(--ctl-h-lg);border:1px solid var(--line);border-radius:var(--ctl-r-lg);padding:0 14px;background:var(--surface);color:var(--ink);font-size:var(--fs-md)}   /* BL-325: the large search, a deliberate variant (the page's centred bar, beside the 40px ask creaite button; test_pages SearchBarTests) */
 .vschips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 0;min-height:0} .vschip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--accent-soft);border-radius:var(--r-pill);padding:2px 4px 2px 10px;font-size:var(--fs-xs)}
@@ -4174,6 +4174,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     flowCard: () => flowCard,
     flushPicker: () => flushPicker,
     formProject: () => formProject,
+    fpName: () => fpName,
     freeBackup: () => freeBackup,
     funnelTip: () => funnelTip,
     genDraft: () => genDraft,
@@ -23368,7 +23369,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function renderFiles() {
     const cnt = (f5) => FILES.filter(f5).length;
     const pr = (b5) => b5 ? "true" : "false";
-    const h5 = [html`<button data-p="All" data-f="All" aria-pressed="${pr(shared.FSEL.p === "All")}">All files<span class="n">${FILES.length}</span></button><button class="l1" data-p="inbox" data-f="All" aria-pressed="${pr(shared.FSEL.p === "inbox")}">Intake<span class="n">${cnt((x5) => x5.p === "inbox")}</span></button><button class="l1" data-p="_portfolio" data-f="All" aria-pressed="${pr(shared.FSEL.p === "_portfolio")}">projects/_portfolio<span class="n">${cnt((x5) => x5.p === "_portfolio")}</span></button>`];
+    const h5 = [html`<button data-p="All" data-f="All" aria-pressed="${pr(shared.FSEL.p === "All")}">All files<span class="n">${FILES.length}</span></button><button class="l1" data-p="inbox" data-f="All" aria-pressed="${pr(shared.FSEL.p === "inbox")}">Intake<span class="n">${cnt((x5) => x5.p === "inbox")}</span></button><button class="l1" data-p="_portfolio" data-f="All" aria-pressed="${pr(shared.FSEL.p === "_portfolio")}"><span title="${FNAME._portfolio}">Portfolio</span><span class="n">${cnt((x5) => x5.p === "_portfolio")}</span></button>`];
     P3.forEach((p6) => {
       const c5 = p6.code, op = FOPEN.has(c5);
       h5.push(html`<button class="l1" data-p="${c5}" data-f="All" data-toggle="${c5}" aria-expanded="${pr(op)}" aria-pressed="${pr(shared.FSEL.p === c5 && shared.FSEL.f === "All")}"><span class="chev">${raw(ic("chevdown", "chev turn"))}</span><span title="${FNAME[c5]}">${pName(c5)}</span><span class="n">${cnt((x5) => x5.p === c5)}</span></button>`);
@@ -23393,7 +23394,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (shared.FSEL.quick === "inbox") L2 = FILES.filter((f5) => f5.p === "inbox");
     if (shared.FSEL.quick === "archived") L2 = farch().slice();
     L2 = L2.filter((f5) => (!q4 || f5.n.toLowerCase().includes(q4)) && (t5 === "All" || f5.type === t5) && (!fr || f5.date >= fr) && (!to || f5.date <= to)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L2.length ? L2.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${pName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L2.length ? L2.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
     filesStatus(L2.length);
     if (!shared.LOADING) $$("#filesTbl tr[data-fp]").forEach((tr) => {
       const t6 = hubFor({ path: tr.dataset.fp }), td = tr.querySelector("td");
@@ -38325,7 +38326,7 @@ ${d5.text}`);
           go("inbox");
           previewInbox(f5.path);
         }));
-        FILES.filter((f5) => f5.p !== "inbox").forEach((f5) => add("Files", f5.n, [f5.p, f5.f, f5.sub].filter(Boolean).join(" › "), () => openPath(f5.path)));
+        FILES.filter((f5) => f5.p !== "inbox").forEach((f5) => add("Files", f5.n, [fpName(f5.p), f5.f, f5.sub].filter(Boolean).join(" › "), () => openPath(f5.path), f5.p));
       }
       if (q5.length > 1) {
         A4.forEach((a5) => add("Items", `${a5.id} · ${a5.t}`, who(a5.o), () => {
@@ -40584,6 +40585,7 @@ ${d5.text}`);
   var P3 = D.projects, A4 = D.actions, R2 = D.raid, DEC = D.decisions, REV = D.review, FILES = D.files, REMINDERS = D.reminders;
   shared.ACT = D.activity;
   var pName = (c5) => (P3.find((p6) => p6.code === c5) || {}).name || c5;
+  var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   var LASTVISIT = store.get("creaite-lastvisit", D.data_at);
   var SWEPT = D.last_sweep || "never";
   var WEEKSTART = (() => {

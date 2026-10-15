@@ -3,7 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
-import { A, DEC, FILES, open, P, pName, R, REV } from "./core/data.js";
+import { A, DEC, FILES, fpName, open, P, pName, R, REV } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, putHTML, raw, TIP, tipShow } from "./core/dom.js";
 import { addEl, DATE_HELP, openPath, parseWhen, weekendNote } from "./core/fields.js";
 import { recordsRefresh } from "./core/instant.js";
@@ -939,7 +939,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   add("Actions","Customise the rail","right-click the rail",()=>railPopOpen());   /* BL-191: the rail's control has no button of its own now */
   if(q.length>1){ P.forEach(p=>(p.ms||[]).filter(m=>m[3]).forEach(m=>add("Milestones",`${m[3]} · ${m[0]}`,m[1]?fd(m[1]):"",()=>openMilestone(m[3]))));
     (D.inbox||[]).forEach(f=>add("Intake",f.name,"preview",()=>{ go("inbox"); previewInbox(f.path); }));
-    FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[f.p,f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path))); }
+    FILES.filter(f=>f.p!=="inbox").forEach(f=>add("Files",f.n,[fpName(f.p),f.f,f.sub].filter(Boolean).join(" › "),()=>openPath(f.path),f.p)); }   /* BL-101: the name shown, the code still finds it */
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
   return [...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...searchCkItems()]; })(q);
