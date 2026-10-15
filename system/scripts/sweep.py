@@ -960,7 +960,31 @@ VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240        # BL-342 Part 3 B: each check 
 def vip_settings():
     """The VIP alert settings (BL-99), with defaults: enabled, check_minutes, notify. check_minutes is held between
     VIP_MIN_MINUTES and VIP_MAX_MINUTES (a value under 10 is read as 10, over 240 as 240; not a number, 30)."""
-    vs = {"enabled": True, "check_minutes": 30, "notify": True, **extraction.section("vip")}   # "off", null, []: the defaults
+    vs = {"enabled": True, "check_minutes": 30, "notify": True, **extraction.section("vip")}
+    if vip_block_off(paths.load_settings().get("vip")):
+        vs["enabled"] = False
+    return _vip_minutes(vs)
+
+
+VIP_OFF_WORDS = ("off", "false", "no", "0")
+
+
+def vip_block_off(raw):
+    """Whether a hand-edited `vip` that isn't a block says off (BL-342 Part 3 B review, b; for Alan to confirm): False, 0 or
+    the words "off", "false", "no" or "0" (any case, outer spaces ignored) turn VIP alerts off, the safe reading of a hand edit
+    meant to stop them. Any other non-block (null, [], "on", 5, a stray word) reads as the defaults, alerts on, as before;
+    a block is read as it is (its own `enabled`)."""
+    if isinstance(raw, dict):
+        return False
+    if isinstance(raw, bool):
+        return raw is False
+    if isinstance(raw, (int, float)):
+        return raw == 0
+    return isinstance(raw, str) and raw.strip().lower() in VIP_OFF_WORDS
+
+
+def _vip_minutes(vs):
+    """vip_settings' check_minutes held between VIP_MIN_MINUTES and VIP_MAX_MINUTES."""
     try:
         mins = float(vs.get("check_minutes") or 30)
     except (TypeError, ValueError):

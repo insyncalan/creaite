@@ -967,14 +967,24 @@ class HandEditedSettingsTests(Base):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         return json.loads(r.stdout.split("RESULT ", 1)[1]), len(list(self.v.root.glob("vip-call-*.json")))
 
-    def test_vip_or_drafting_off_null_or_a_list_runs_the_check_with_the_defaults(self):
-        for name, blocks in (("vip off", {"vip": "off"}), ("drafting off", {"drafting": "off"}), ("vip null", {"vip": None}),
-                             ("vip list", {"vip": []}), ("both off", {"vip": "off", "drafting": "off"})):
+    def test_vip_null_a_list_or_a_stray_value_or_drafting_off_runs_the_check_with_the_defaults(self):
+        for name, blocks in (("drafting off", {"drafting": "off"}), ("vip null", {"vip": None}), ("vip list", {"vip": []}),
+                             ("vip on", {"vip": "on"}), ("vip 5", {"vip": 5}), ("vip True", {"vip": True})):
             with self.subTest(name):
                 got, calls = self.loop(**blocks)
                 self.assertEqual(calls, 2)                                                   # it survived a loop
                 self.assertEqual(got, {"sleeps": [1800.0, 1800.0], "error": None})           # check_minutes 30
                 self.assertEqual(self.cards()[0]["closes"]["id"], "ABC-A-007")               # drafting.done on
+
+    def test_vip_off_false_no_0_or_false_turns_the_check_off_and_the_timer_lives(self):
+        # Review (b), for Alan to confirm: a hand edit that says off means off, never the defaults' on.
+        for value in ("off", " OFF ", "False", "no", "0", False, 0, 0.0):
+            with self.subTest(repr(value)):
+                got, calls = self.loop(vip=value, drafting="off")
+                self.assertEqual(calls, 0)                                                   # no check at all
+                self.assertEqual(got, {"sleeps": [1800.0, 1800.0], "error": None})           # the timer still loops
+                said = py(self.v, "print(json.dumps(sweep.vip_settings()))")
+                self.assertEqual(said, {"enabled": False, "check_minutes": 30, "notify": True})
 
     def test_the_readers_take_a_non_block_as_empty(self):
         cfg = self.v.root / "system/config/settings.json"
@@ -983,7 +993,7 @@ class HandEditedSettingsTests(Base):
         cfg.write_text(json.dumps(d))
         got = py(self.v, "import extraction\nprint(json.dumps([sweep.vip_settings(), extraction.switched_on('done'), "
                          "sweep.my_name(), extraction.is_alan('Alan Carter')]))")
-        self.assertEqual(got, [{"enabled": True, "check_minutes": 30, "notify": True}, True, "", False])
+        self.assertEqual(got, [{"enabled": False, "check_minutes": 30, "notify": True}, True, "", False])   # "off" is off (b)
 
 
 class HandEditedIdentityTests(Base):
