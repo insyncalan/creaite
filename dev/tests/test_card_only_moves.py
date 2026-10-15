@@ -12,6 +12,7 @@ reach.CARD_MOVE_SECONDS old). What is covered:
 - the card's preview and stage (propose.py check) need no marker;
 - Approve on the card still moves the file (Delete note, Move back for a note and for a report), and no marker is left
   afterwards, when the apply succeeds, fails or raises;
+- the card's own proposal rewritten under the same name with other bytes before its apply (end to end) never moves;
 - a marker for another move, a stale one, one in the future, a symlink, a folder, one naming another proposal or another
   version of it, and no proposal at all never unlock the move;
 - Undo still brings a note back (no marker needed); "reports" (BL-03), "archive", "restore" and "rename" (BL-09) are not card
@@ -235,6 +236,43 @@ class CardOnly(CardOnlyMoves):
         d = self.delete(self.post("/api/notes/get", {"path": f"{ABC}/notes/Previewed.md"}))
         self.assertTrue(d["ok"], d)
         self.assertEqual(self.markers(), [])
+
+    def test_i_the_same_name_with_other_bytes_never_moves(self):
+        """End to end through edit_apply: the card's staged proposal rewritten under the same name just before tracker.py apply
+        runs (the markers already written) is refused when its bytes differ, even saying the same move; identical bytes move."""
+        def approve(name, rewrite):
+            self.new(name)
+            return self.py_json(
+                "import archive, live_server as ls, paths\n"
+                f"rel = {f'{ABC}/notes/{name}.md'!r}\n"
+                "spec, why = archive.note_delete_spec(rel)\n"
+                "card, why = ls.server_edit_card('t', json.dumps(spec).encode('utf-8'))\n"
+                "seen, real = [], ls.run\n"
+                "def run(script, *args):\n"
+                "    if script == 'tracker.py' and args and args[0] == 'apply':\n"
+                "        f = paths.STAGING / args[1]; raw = f.read_bytes()\n"
+                "        seen.append(sorted(m.name for m in paths.GUARD.glob('move-*')))\n"
+                f"        f.write_bytes({'json.dumps(json.loads(raw), indent=4).encode()' if rewrite == 'other' else 'raw'})\n"
+                "        seen.append(f.read_bytes() == raw)\n"
+                "    return real(script, *args)\n"
+                "ls.run = run\n"
+                "out = ls.edit_apply(ls.EDITS[card['card']])\n"
+                "print(json.dumps([seen, out.get('ok'), out.get('message'), sorted(m.name for m in paths.GUARD.glob('move-*'))]))")
+        seen, ok, message, after = approve("Other bytes", "other")
+        self.assertEqual(len(seen[0]), 1)                                              # the marker was there for the apply
+        self.assertFalse(seen[1])                                                      # and the bytes under the name changed
+        self.assertFalse(ok, message)
+        self.assertIn(REFUSED, message)
+        self.assertTrue((self.folder() / "Other bytes.md").is_file())                 # the note stays
+        self.assertFalse((self.archive() / "Other bytes.md").exists())
+        self.assertEqual(after, [])
+        seen, ok, message, after = approve("Same bytes", "same")
+        self.assertEqual(len(seen[0]), 1)
+        self.assertTrue(seen[1])
+        self.assertTrue(ok, message)                                                   # identical bytes: it moves
+        self.assertFalse((self.folder() / "Same bytes.md").exists())
+        self.assertTrue((self.archive() / "Same bytes.md").is_file())
+        self.assertEqual(after, [])
 
     def test_f_the_lists_agree_and_nobody_else_writes_the_marker(self):
         got = self.py_json(
