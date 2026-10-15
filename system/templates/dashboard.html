@@ -3063,6 +3063,99 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+/* ===== v2.1.0 P6 (BL-335): the weekly report view (#weekly=<code>&week=<Friday>, components/report/weekly/), on the stub sheet
+   (components/report/SheetStub.jsx) until P5's Sheet.jsx. The page is a fixed light sheet in the firm's brand, the same in both
+   themes, as it exports (the mockup "Weekly report redesign"); everything around it follows the theme. ===== */
+:root{--rp-paper:#F8F8FF; --rp-ink:#1E1F1E; --rp-grey:#5E6270; --rp-rule:#D9DCE6; --rp-soft:#ECEDF4; --rp-green:#91FF01; --rp-red:#C0392B;
+  --rp-amber:#D68910; --rp-ok:#2E7D32; --rp-blue:#2C6FAA; --rp-white:#FFFFFF}
+#v-weekly{padding:0}
+#v-weekly:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.wrview{display:flex;flex-direction:column;min-height:0;flex:1}
+.wrhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.wrhead .crumb{font-size:12px;color:var(--muted)} .wrhead .crumb a{color:var(--muted)} .wrhead .crumb a:hover{color:var(--accent)}
+.wrhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600}
+.wrmeta{margin:0;font-size:13px}
+.wr-err{color:var(--bad);margin:16px 24px}
+.wrsheet{flex:1;min-height:0;display:flex;flex-direction:column}
+.wrsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
+.wrsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.wrsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+.wr-barr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.wr-zoom{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);border-radius:8px;height:32px;padding:0 4px}
+.wr-zoom button{border:0;background:none;color:var(--ink);width:26px;height:26px;cursor:pointer;border-radius:6px;font-size:15px}
+.wr-zoom button:hover:not(:disabled){background:var(--sunk)} .wr-zoom button:disabled{color:var(--faint);cursor:default}
+.wr-zoom span{min-width:44px;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums}
+.wrsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:24px 16px 64px;background:var(--sunk)}
+.wrsheet .sheet-one{max-width:100%}
+.wrsheet .page{position:relative;background:var(--rp-paper);color:var(--rp-ink);font:14px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;box-shadow:var(--shadow-card);padding:30px 48px 26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;row-gap:22px;overflow-wrap:anywhere}
+.wrsheet .page>*{grid-column:1/-1;min-width:0;margin:0}
+.wrsheet .page>section[data-id=this_week]{grid-column:1}
+.wrsheet .page>section[data-id=this_week]+section[data-id=next_week]{grid-column:2}
+.wrsheet .page>section[data-id=this_week]:has(+ section[data-id=next_week]){grid-column:1}
+.wrsheet .page h2{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px;color:var(--rp-grey);font-weight:600;display:flex;gap:8px;align-items:center;border:0;padding:0}
+.wrsheet .page h2::before{content:"";width:7px;height:7px;background:var(--rp-green);flex:none}
+.wrsheet .page section[data-id=header]>h2,.wrsheet .page section[data-id=health]>h2{display:none}
+.wrsheet .page p{margin:0 0 8px} .wrsheet .page ul{margin:0;padding-left:16px} .wrsheet .page li{margin:0 0 4px}
+.wrsheet .sheet-hidden{color:var(--rp-grey);font-size:12px;border:1px dashed var(--rp-rule);padding:6px 10px}
+.wrsheet .linkbtn,.wr-link{border:0;background:none;color:var(--rp-blue);cursor:pointer;padding:0;font:inherit;font-size:12px;min-height:24px}
+.wrsheet .linkbtn{text-decoration:underline dotted;text-underline-offset:3px;color:inherit;font-size:inherit}
+.wrsheet .chip{border:1px solid var(--rp-blue);background:none;color:var(--rp-blue);font-size:9.5px;font-weight:600;padding:0 4px;margin-left:3px;cursor:pointer;height:auto;border-radius:0}
+.wr-hd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end;border-bottom:1px solid var(--rp-rule);padding-bottom:12px}
+.wr-eb{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--rp-grey)}
+.wr-pn{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:2px 0 1px}
+.wr-wk{font-size:13px;color:var(--rp-grey)}
+.wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
+.wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+.wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
+.wr-hcol{display:grid;gap:3px;width:120px}
+.wr-flag{font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}
+.wr-flag.a{background:var(--rp-amber)} .wr-flag.g{background:var(--rp-ok)} .wr-flag.r{background:var(--rp-red)}
+.wr-trend{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;height:9px}
+.wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
+.wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
+.wr-chg{margin-top:6px}
+.wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:16px;line-height:1.35;margin-bottom:6px}
+.wr-last{font-size:12px;color:var(--rp-grey);margin-top:4px}
+.wr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-top:1px solid var(--rp-rule);border-bottom:1px solid var(--rp-rule)}
+.wr-stat{padding:12px 12px 12px 14px;display:grid;gap:2px;position:relative;align-content:start}
+.wr-stat:first-child{padding-left:0} .wr-stat+.wr-stat{border-left:1px solid var(--rp-rule)}
+.wr-stat[draggable=true]{cursor:grab} .wr-stat.dragging{opacity:.4} .wr-stat.off{opacity:.4}
+.wr-stat .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere} .wr-stat .n.r{color:var(--rp-red)}
+.wr-stat .c{font-size:12px;color:var(--rp-grey)}
+.wr-seye{position:absolute;top:2px;right:2px}
+.wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:13px;padding:0;min-width:24px;min-height:24px}
+.wr-eye:hover{color:var(--rp-ink)}
+.wr-count{font-size:11px;color:var(--rp-grey);margin-top:6px}
+.wr-rich{min-width:0} .wr-rich.wr-edit{cursor:text;border-radius:2px;min-height:20px} .wr-rich.wr-edit:hover{background:rgba(44,111,170,.07)}
+.wr-rich.wr-edit:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
+.wr-inl{display:inline-block;vertical-align:baseline} .wr-inl p{display:inline;margin:0}
+.wrsheet .page .sheet-text{width:100%;min-height:48px;field-sizing:content;font:inherit;color:var(--rp-ink);background:var(--rp-white);border:1px solid var(--rp-blue);border-radius:2px;padding:4px 6px;resize:vertical}
+.wr-tlwrap{border:1px solid var(--rp-rule);background:var(--rp-white);overflow-x:auto;overflow-y:hidden;height:104px;min-height:80px;max-height:320px;resize:vertical;position:relative}
+.wr-tl{display:block;max-width:none}
+.wr-tlline{stroke:var(--rp-rule);stroke-width:2} .wr-tltx,.wr-tlnow{font-size:10px;fill:var(--rp-grey)} .wr-tlnow{fill:var(--rp-ink)}
+.wr-tltoday{stroke:var(--rp-ink);stroke-dasharray:3 3} .wr-tllab{font-size:10.5px;fill:var(--rp-ink)}
+.wr-ms circle{stroke-width:2} .wr-ms.g circle{stroke:var(--rp-ok)} .wr-ms.a circle{stroke:var(--rp-amber)} .wr-ms.r circle{stroke:var(--rp-red)} .wr-ms.n circle{stroke:var(--rp-grey)}
+.wr-ms circle.fill{fill:var(--rp-ok)} .wr-ms.a circle.fill{fill:var(--rp-amber)} .wr-ms.r circle.fill{fill:var(--rp-red)} .wr-ms circle.hollow{fill:var(--rp-paper)}
+.wr-ms .wr-slip{stroke:var(--rp-red);stroke-width:2} .wr-ms circle.wr-slipc{fill:none;stroke:var(--rp-red);stroke-dasharray:3 2}
+.wr-tlgrab{font-size:10.5px;color:var(--rp-grey);text-align:right;margin-top:2px}
+.wr-tbl{min-width:0;margin-top:8px}
+table.wr-r{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+table.wr-r th{background:none;font-family:inherit;position:static;text-align:left;font-weight:600;color:var(--rp-grey);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px 6px 0;border-bottom:1px solid var(--rp-ink)}
+table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
+table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
+table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-st{font-weight:700;font-size:10px;letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
+.wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
+.late{color:var(--rp-red);font-weight:600}
+.wr-src{font-size:11px;color:var(--rp-grey);margin-top:2px}
+.wr-decs{list-style:none;padding:0!important;display:grid;gap:8px} .wr-decs li{margin:0;padding-left:12px;border-left:2px solid var(--rp-rule)}
+.wr-meta{color:var(--rp-grey);font-size:12.5px}
+.wr-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px} .wr-two.single{grid-template-columns:minmax(0,1fr)}
+.wr-panet{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rp-grey);font-weight:600;margin-bottom:4px}
+.wrsheet .page .sub{color:var(--rp-grey)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ===== end v2.1.0 P6 ===== */
 </style>
 </head>
 <body>
@@ -3116,6 +3209,7 @@ button.nchip{font:inherit;font-size:12px}
       <section class="view" id="v-person" hidden></section>
       <section class="view" id="v-meeting" hidden></section>
       <section class="view" id="v-prep" hidden aria-labelledby="ppTitle"></section><!-- BL-286 D: Meetings › Prep, a Preact screen (components/prep/PrepPage.jsx) -->
+      <section class="view" id="v-weekly" hidden aria-labelledby="wrTitle"></section><!-- v2.1.0 P6: a weekly report (components/report/weekly/WeeklyView.jsx) -->
       <section class="view" id="v-work" hidden><div class="wrapmax">
         <nav class="crumb" id="workCrumb" aria-label="Breadcrumb" hidden></nav>
         <h1>Work</h1>
@@ -6325,7 +6419,7 @@ button.nchip{font:inherit;font-size:12px}
     };
   }
   function q(n4, u5, t47, i5, r4, o5, e4, f5, c5, a5) {
-    var s5, h5, p6, v5, y5, d5, _6, k5, x5, M4, I2, P5, A5, H3, T6, j5, F5 = u5.type;
+    var s5, h5, p6, v5, y5, d5, _6, k5, x5, M4, I2, P5, A5, H4, T6, j5, F5 = u5.type;
     if (void 0 !== u5.constructor) return null;
     128 & t47.__u && (c5 = !!(32 & t47.__u), o5 = [f5 = u5.__e = t47.__e]), (s5 = l.__b) && s5(u5);
     n: if ("function" == typeof F5) {
@@ -6343,10 +6437,10 @@ button.nchip{font:inherit;font-size:12px}
             p6.componentDidUpdate(y5, d5, _6);
           });
         }
-        if (p6.context = P5, p6.props = x5, p6.__P = n4, p6.__e = false, A5 = l.__r, H3 = 0, M4) p6.state = p6.__s, p6.__d = false, A5 && A5(u5), s5 = p6.render(p6.props, p6.state, p6.context), w.push.apply(p6.__h, p6._sb), p6._sb = [];
+        if (p6.context = P5, p6.props = x5, p6.__P = n4, p6.__e = false, A5 = l.__r, H4 = 0, M4) p6.state = p6.__s, p6.__d = false, A5 && A5(u5), s5 = p6.render(p6.props, p6.state, p6.context), w.push.apply(p6.__h, p6._sb), p6._sb = [];
         else do {
           p6.__d = false, A5 && A5(u5), s5 = p6.render(p6.props, p6.state, p6.context), p6.state = p6.__s;
-        } while (p6.__d && ++H3 < 25);
+        } while (p6.__d && ++H4 < 25);
         p6.state = p6.__s, null != p6.getChildContext && (i5 = m(m({}, i5), p6.getChildContext())), M4 && !v5 && null != p6.getSnapshotBeforeUpdate && (_6 = p6.getSnapshotBeforeUpdate(y5, d5)), T6 = null != s5 && s5.type === S2 && null == s5.key ? E(s5.props.children) : s5, f5 = L(n4, g(T6) ? T6 : [T6], u5, t47, i5, r4, o5, e4, f5, c5, a5), p6.base = u5.__e, u5.__u &= -161, p6.__h.length && e4.push(p6), k5 && (p6.__E = p6.__ = null);
       } catch (n5) {
         if (e4.length = h5, u5.__v = null, c5 || null != o5) {
@@ -24042,12 +24136,12 @@ ${s5}`;
       const r4 = h5.el.getBoundingClientRect();
       a5 = b5 = { left: r4.left, bottom: r4.top + 24, top: r4.top };
     }
-    const width = Math.min(w6, window.innerWidth - 32), H3 = window.innerHeight;
+    const width = Math.min(w6, window.innerWidth - 32), H4 = window.innerHeight;
     const left = Math.max(16, Math.min(Math.min(a5.left, b5.left), window.innerWidth - width - 16));
     const below = Math.max(b5.bottom, a5.bottom) + 6;
-    const need = w6 > 200 ? Math.min(520, H3 * 0.6) : 340;
-    const top = H3 - below >= need ? below : w6 > 200 ? H3 - need - 8 : a5.top - 40 >= 8 ? a5.top - 40 : H3 - need - 8;
-    return { top: Math.max(8, Math.min(top, H3 - 48)), left };
+    const need = w6 > 200 ? Math.min(520, H4 * 0.6) : 340;
+    const top = H4 - below >= need ? below : w6 > 200 ? H4 - need - 8 : a5.top - 40 >= 8 ? a5.top - 40 : H4 - need - 8;
+    return { top: Math.max(8, Math.min(top, H4 - 48)), left };
   }
   function barFor(h5, ai2) {
     const s5 = h5.editor.state.selection;
@@ -35118,12 +35212,12 @@ ${s5}`;
     return h5 + mvDetail(code);
   }
   function mvTrend(m5) {
-    const H3 = m5.hist.filter((r4) => r4[1] || r4[2]);
-    if (H3.length < 2) return '<p class="mv-hint">No movement recorded yet for this milestone: the chart starts once it has two reporting weeks.</p>';
+    const H4 = m5.hist.filter((r4) => r4[1] || r4[2]);
+    if (H4.length < 2) return '<p class="mv-hint">No movement recorded yet for this milestone: the chart starts once it has two reporting weeks.</p>';
     const W3 = 520, Hh2 = 210, L3 = 56, R4 = 26, T6 = 14, B4 = 30, vals = [];
-    H3.forEach((r4) => vals.push(mvT(r4[1]), mvT(r4[2])));
+    H4.forEach((r4) => vals.push(mvT(r4[1]), mvT(r4[2])));
     if (m5.orig) vals.push(mvT(m5.orig));
-    const lo2 = Math.min(...vals) - 4 * 864e5, hi2 = Math.max(...vals) + 4 * 864e5, n4 = H3.length, X3 = (i5) => L3 + i5 * (W3 - L3 - R4) / (n4 - 1), Y2 = (t47) => T6 + (hi2 - t47) / (hi2 - lo2) * (Hh2 - T6 - B4), d5 = (t47) => {
+    const lo2 = Math.min(...vals) - 4 * 864e5, hi2 = Math.max(...vals) + 4 * 864e5, n4 = H4.length, X3 = (i5) => L3 + i5 * (W3 - L3 - R4) / (n4 - 1), Y2 = (t47) => T6 + (hi2 - t47) / (hi2 - lo2) * (Hh2 - T6 - B4), d5 = (t47) => {
       const x5 = new Date(t47);
       return `${String(x5.getUTCDate()).padStart(2, "0")}-${String(x5.getUTCMonth() + 1).padStart(2, "0")}`;
     };
@@ -35133,17 +35227,17 @@ ${s5}`;
       s5 += `<line x1="${L3}" x2="${W3 - R4}" y1="${y5}" y2="${y5}" stroke="var(--line)"/><text x="${L3 - 6}" y="${y5 + 4}" text-anchor="end">${d5(Math.round(t47 / 864e5) * 864e5)}</text>`;
     }
     const every = Math.max(1, Math.ceil(n4 / 9));
-    H3.forEach((r4, i5) => {
+    H4.forEach((r4, i5) => {
       if (i5 % every === 0 || i5 === n4 - 1) s5 += `<text x="${X3(i5)}" y="${Hh2 - 10}" text-anchor="middle">${fd(r4[0]).slice(0, 5)}</text>`;
     });
     if (m5.orig) s5 += `<line x1="${L3}" x2="${W3 - R4}" y1="${Y2(mvT(m5.orig))}" y2="${Y2(mvT(m5.orig))}" stroke="var(--faint)" stroke-dasharray="2 4"/><text x="${W3 - R4}" y="${Y2(mvT(m5.orig)) - 4}" text-anchor="end">original ${fd(m5.orig).slice(0, 5)}</text>`;
     let ap2 = "";
-    H3.forEach((r4, i5) => {
+    H4.forEach((r4, i5) => {
       ap2 += i5 ? `H${X3(i5)}V${Y2(mvT(r4[2]))}` : `M${X3(i5)} ${Y2(mvT(r4[2]))}`;
     });
-    s5 += `<path d="${ap2}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="5 3"/><polyline fill="none" stroke="var(--bad)" stroke-width="2.5" points="${H3.map((r4, i5) => X3(i5) + "," + Y2(mvT(r4[1]))).join(" ")}"/>`;
-    H3.forEach((r4, i5) => {
-      const ch2 = i5 && r4[1] !== H3[i5 - 1][1];
+    s5 += `<path d="${ap2}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-dasharray="5 3"/><polyline fill="none" stroke="var(--bad)" stroke-width="2.5" points="${H4.map((r4, i5) => X3(i5) + "," + Y2(mvT(r4[1]))).join(" ")}"/>`;
+    H4.forEach((r4, i5) => {
+      const ch2 = i5 && r4[1] !== H4[i5 - 1][1];
       s5 += `<circle cx="${X3(i5)}" cy="${Y2(mvT(r4[1]))}" r="${ch2 ? 5 : 3}" fill="${ch2 ? "var(--bad)" : "var(--surface)"}" stroke="var(--bad)" stroke-width="2"><title>Week ending ${fd(r4[0])}: forecast ${fd(r4[1])}, agreed ${fd(r4[2])}</title></circle>`;
     });
     return s5 + `</svg><div class="mv-legend" style="margin:2px 0 0"><span><svg width="22" height="4" aria-hidden="true"><rect width="22" height="3" fill="var(--bad)"/></svg>Forecast</span><span><svg width="22" height="4" aria-hidden="true"><rect width="22" height="2" fill="var(--ink)"/></svg>Agreed (steps on a rebaseline)</span><span>Across: reporting week ending</span></div>`;
@@ -42945,7 +43039,7 @@ ${pre}**Current state title:** ${title}`);
   var FLN = 0;
   function flBars(weeks, series, title, aria) {
     let LINKED = false;
-    const pid = "flh" + FLN++, { W: W3, H: H3, L: L3, R: R4, T: T6, B: B4 } = FL, pw2 = W3 - L3 - R4, ph2 = H3 - T6 - B4, n4 = weeks.length, gw2 = pw2 / n4, bw2 = Math.min(18, gw2 * 0.38), max = Math.max(1, ...weeks.flatMap((w6) => series.map((s5) => w6[s5[0]]))), k5 = ph2 / max;
+    const pid = "flh" + FLN++, { W: W3, H: H4, L: L3, R: R4, T: T6, B: B4 } = FL, pw2 = W3 - L3 - R4, ph2 = H4 - T6 - B4, n4 = weeks.length, gw2 = pw2 / n4, bw2 = Math.min(18, gw2 * 0.38), max = Math.max(1, ...weeks.flatMap((w6) => series.map((s5) => w6[s5[0]]))), k5 = ph2 / max;
     let g5 = `<defs><pattern id="${pid}" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect class="fl-hp" width="1.6" height="4"/></pattern></defs><line class="fl-ax" x1="${L3}" y1="${T6 + ph2}" x2="${W3 - R4}" y2="${T6 + ph2}"/><text class="fl-m" x="${L3 - 4}" y="${T6 + 4}" text-anchor="end">${max}</text><text class="fl-m" x="${L3 - 4}" y="${T6 + ph2}" text-anchor="end">0</text>`;
     weeks.forEach((w6, i5) => {
       const cx2 = L3 + gw2 * i5 + gw2 / 2, x02 = cx2 - bw2 * series.length / 2;
@@ -42962,16 +43056,16 @@ ${pre}**Current state title:** ${title}`);
       g5 += `<text class="fl-m" x="${cx2.toFixed(1)}" y="${T6 + ph2 + 12}" text-anchor="middle">${fd(flDay(w6.start)).slice(0, 5)}</text>`;
     });
     const key = series.map((s5, j5) => `<rect class="${s5[1]}" x="${L3 + j5 * 118}" y="3" width="9" height="9"/>${s5[3] ? `<rect class="fl-hatch" x="${L3 + j5 * 118}" y="3" width="9" height="9" fill="url(#${pid})"/>` : ""}<text class="fl-t" x="${L3 + j5 * 118 + 13}" y="11">${s5[2]}</text>`).join("");
-    return `<figure class="flc"><figcaption>${title}</figcaption><svg viewBox="0 0 ${W3} ${H3}" role="${LINKED ? "group" : "img"}" aria-label="${esc(aria)}">${key}${g5}</svg></figure>`;
+    return `<figure class="flc"><figcaption>${title}</figcaption><svg viewBox="0 0 ${W3} ${H4}" role="${LINKED ? "group" : "img"}" aria-label="${esc(aria)}">${key}${g5}</svg></figure>`;
   }
   function flHBars(rows2, title, aria, cls) {
-    const W3 = FL.W, lw2 = 96, rh2 = 26, H3 = rows2.length * rh2 + 8, max = Math.max(1, ...rows2.map((r4) => r4[1])), k5 = (W3 - lw2 - 40) / max;
+    const W3 = FL.W, lw2 = 96, rh2 = 26, H4 = rows2.length * rh2 + 8, max = Math.max(1, ...rows2.map((r4) => r4[1])), k5 = (W3 - lw2 - 40) / max;
     const ln2 = rows2.map((r4) => r4[1] && r4[2] ? r4[2] : null);
     const g5 = rows2.map((r4, i5) => {
       const y5 = 4 + i5 * rh2, w6 = r4[1] * k5;
       return `${ln2[i5] ? flkOpen(ln2[i5]) : ""}<text class="fl-t" x="0" y="${y5 + 14}">${esc(r4[0])}</text><rect class="${cls[i5]}" data-v="${r4[1]}" x="${lw2}" y="${y5 + 3}" width="${w6.toFixed(2)}" height="16"><title>${esc(r4[0])}: ${r4[1]}</title></rect><text class="fl-t" x="${(lw2 + w6 + 5).toFixed(1)}" y="${y5 + 15}">${r4[1]}</text>${ln2[i5] ? "</g>" : ""}`;
     }).join("");
-    return `<figure class="flc"><figcaption>${title}</figcaption><svg viewBox="0 0 ${W3} ${H3}" role="${ln2.some(Boolean) ? "group" : "img"}" aria-label="${esc(aria)}">${g5}</svg></figure>`;
+    return `<figure class="flc"><figcaption>${title}</figcaption><svg viewBox="0 0 ${W3} ${H4}" role="${ln2.some(Boolean) ? "group" : "img"}" aria-label="${esc(aria)}">${g5}</svg></figure>`;
   }
   function flMix(mix, title, link) {
     const W3 = FL.W, tot = Object.values(mix).reduce((a5, b5) => a5 + b5, 0), cls = { Urgent: "fl-pU", High: "fl-pH", Medium: "fl-pM", Low: "fl-pL" }, bw2 = W3 - 8;
@@ -48178,16 +48272,16 @@ ${d5.text}`);
     const old = [...c5.querySelectorAll(":scope>button")].find((x5) => x5 !== b5 && mSelKey(x5) === was);
     if (!old) return;
     const cs2 = getComputedStyle(b5), bg2 = cs2.backgroundColor, rad = cs2.borderRadius, col = edge === "bottom" ? cs2.borderBottomColor : cs2.borderLeftColor;
-    const L3 = b5.offsetLeft, T6 = b5.offsetTop, W3 = b5.offsetWidth || 1, H3 = b5.offsetHeight || 1;
+    const L3 = b5.offsetLeft, T6 = b5.offsetTop, W3 = b5.offsetWidth || 1, H4 = b5.offsetHeight || 1;
     c5.querySelectorAll(":scope>.mind").forEach((x5) => x5.remove());
     clearTimeout(c5._mt);
     const m5 = document.createElement("span");
     m5.className = "mind";
     m5.setAttribute("aria-hidden", "true");
-    Object.assign(m5.style, edge === "bottom" ? { left: L3 + "px", top: T6 + H3 - 2 + "px", width: W3 + "px", height: "2px", background: col } : { left: L3 + "px", top: T6 + "px", width: W3 + "px", height: H3 + "px", background: bg2, borderRadius: rad, boxShadow: edge === "left" ? `inset 2px 0 0 ${col}` : "none" });
+    Object.assign(m5.style, edge === "bottom" ? { left: L3 + "px", top: T6 + H4 - 2 + "px", width: W3 + "px", height: "2px", background: col } : { left: L3 + "px", top: T6 + "px", width: W3 + "px", height: H4 + "px", background: bg2, borderRadius: rad, boxShadow: edge === "left" ? `inset 2px 0 0 ${col}` : "none" });
     c5.classList.add("mmove");
     c5.appendChild(m5);
-    anim(m5, [{ transform: `translate(${old.offsetLeft - L3}px,${old.offsetTop - T6}px) scale(${old.offsetWidth / W3},${edge === "bottom" ? 1 : old.offsetHeight / H3})` }, { transform: "none" }], { duration: 320 });
+    anim(m5, [{ transform: `translate(${old.offsetLeft - L3}px,${old.offsetTop - T6}px) scale(${old.offsetWidth / W3},${edge === "bottom" ? 1 : old.offsetHeight / H4})` }, { transform: "none" }], { duration: 320 });
     c5._mt = setTimeout(() => {
       m5.remove();
       c5.classList.remove("mmove");
@@ -49184,6 +49278,1089 @@ ${d5.text}`);
     if (key) loadPrep(key).then(() => tabTitle());
   }
 
+  // components/report/SheetStub.jsx
+  var ZOOM_MIN = 0.4, ZOOM_MAX = 0.8;
+  var SCROLL = /* @__PURE__ */ new Map();
+  function openRef(ref, own) {
+    if (own && own(ref)) return;
+    if (/-M-\d+$/.test(ref)) openMilestone(ref);
+    else openRecord("all", ref);
+  }
+  var HERE = X(
+    /** @type {Here|null} */
+    null
+  );
+  function StubText({ field = "text", row: row2, col, label }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    ), s5 = h5.s;
+    const v5 = row2 != null && col ? ((s5.rows || [])[row2]?.cells || {})[col] || "" : (
+      /** @type {any} */
+      s5[field] || ""
+    );
+    if (!h5.editing) return /* @__PURE__ */ u2("span", { class: "sheet-text", children: v5 });
+    return /* @__PURE__ */ u2("textarea", { class: "sheet-text", "aria-label": label || s5.heading, value: v5, onInput: (e4) => {
+      const t47 = (
+        /** @type {HTMLTextAreaElement} */
+        e4.currentTarget.value
+      );
+      if (row2 != null && col) {
+        const rows2 = (s5.rows || []).slice();
+        rows2[row2] = { ...rows2[row2], cells: { ...rows2[row2].cells || {}, [col]: t47 } };
+        h5.update({ rows: rows2 }, "Row edited");
+      } else h5.update({ [field]: t47 }, "Text edited");
+    } });
+  }
+  function StubItemRef({ id: id2 }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return /* @__PURE__ */ u2("span", { children: id2 });
+    return /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => {
+      openRef(id2, h5.onOpenItem);
+      h5.onEvent({ type: "item", ref: id2 });
+    }, children: id2 });
+  }
+  function StubTag({ tag }) {
+    const h5 = (
+      /** @type {Here} */
+      x2(HERE)
+    );
+    if (h5.exported) return null;
+    return /* @__PURE__ */ u2("button", { type: "button", class: "chip", onClick: () => {
+      if (tag.ref.startsWith("t:")) h5.onEvent({ type: "tag", tag });
+      else openRef(tag.ref, h5.onOpenItem);
+    }, children: tag.text || tag.ref });
+  }
+  var NoSpark = () => null;
+  function Page({ doc, renderers = {}, extras = [], exported, readOnly, peerDoc, onChange, onOpenItem, onEvent }) {
+    const editing = !exported && !readOnly;
+    const setSection = (i5, patch, why) => {
+      const sections = doc.sections.slice();
+      sections[i5] = { ...sections[i5], ...patch };
+      onChange({ ...doc, sections }, why);
+    };
+    const setMeta = (patch, why) => onChange({ ...doc, meta: { ...doc.meta || {}, ...patch } }, why);
+    const here0 = { editing, exported, readOnly, onOpenItem, onEvent };
+    const extra = (x5) => /* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: (
+      /** @type {SheetSection} */
+      { id: "", type: "", heading: "" }
+    ), update: () => {
+    } }, children: /* @__PURE__ */ u2("div", { class: "sheet-extra", children: x5.render({ doc, editing, readOnly, setMeta, ItemRef: StubItemRef }) }) }, `x-${x5.key}`);
+    const out = [];
+    doc.sections.forEach((s5, i5) => {
+      if (s5.hidden) {
+        if (editing) out.push(/* @__PURE__ */ u2("div", { class: "sheet-hidden", children: [
+          "Hidden: ",
+          s5.heading,
+          " ",
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "linkbtn",
+              onClick: () => {
+                setSection(i5, { hidden: false }, "Section shown");
+                onEvent({ type: "section-shown", id: s5.id });
+              },
+              children: "Show"
+            }
+          )
+        ] }, s5.id));
+      } else {
+        const update = (p6, why) => setSection(i5, p6, why);
+        const ctx = {
+          section: s5,
+          doc,
+          editing,
+          exported,
+          readOnly,
+          update,
+          setMeta,
+          Text: StubText,
+          ItemRef: StubItemRef,
+          Tag: StubTag,
+          Spark: NoSpark,
+          level: (key) => ({ "data-level": key }),
+          peer: peerDoc ? peerDoc.sections.find((x5) => x5.id === s5.id) || null : null
+        };
+        const own = (renderers.byId || {})[s5.id] || (renderers.byType || {})[s5.type];
+        out.push(/* @__PURE__ */ u2(HERE.Provider, { value: { ...here0, s: s5, update }, children: /* @__PURE__ */ u2("section", { "data-id": s5.id, children: [
+          /* @__PURE__ */ u2("h2", { children: s5.heading }),
+          own ? own(ctx) : /* @__PURE__ */ u2(Default, { ctx, rowFn: (renderers.row || {})[s5.id] })
+        ] }) }, s5.id));
+      }
+      if (!exported) for (const x5 of extras.filter((e4) => e4.after === s5.id)) out.push(extra(x5));
+    });
+    if (!exported) for (const x5 of extras.filter((e4) => e4.after == null)) out.push(extra(x5));
+    return /* @__PURE__ */ u2("div", { class: "page", children: out });
+  }
+  function Default({ ctx, rowFn }) {
+    const s5 = ctx.section, { Text, ItemRef, Tag } = ctx;
+    if (s5.type === "table") {
+      const rows2 = s5.rows || [];
+      return /* @__PURE__ */ u2("table", { children: [
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key)) }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, index) => {
+          if (row2.shown === false && !ctx.editing) return null;
+          const setRow = (p6, why) => {
+            const r4 = rows2.slice();
+            r4[index] = { ...row2, ...p6 };
+            ctx.update({ rows: r4 }, why);
+          };
+          const removeRow = (why) => ctx.update({ rows: rows2.filter((_6, j5) => j5 !== index) }, why);
+          const rc2 = {
+            row: row2,
+            index,
+            section: s5,
+            item: (ctx.doc.items || {})[row2.ref || ""] || null,
+            editing: ctx.editing,
+            exported: ctx.exported,
+            readOnly: ctx.readOnly,
+            setRow,
+            removeRow,
+            Text,
+            ItemRef,
+            Tag
+          };
+          return rowFn ? rowFn(rc2) : /* @__PURE__ */ u2("tr", { children: (s5.columns || []).map((c5) => /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2(Text, { row: index, col: c5.key, label: c5.label }) }, c5.key)) }, row2.ref || index);
+        }) })
+      ] });
+    }
+    if (s5.type === "figures") return /* @__PURE__ */ u2("div", { class: "figures", children: (s5.figures || []).filter((f5) => f5.shown !== false).map((f5) => /* @__PURE__ */ u2("div", { class: "figure", children: [
+      /* @__PURE__ */ u2("b", { children: f5.value }),
+      f5.label
+    ] }, f5.key)) });
+    if (s5.type === "panes") return /* @__PURE__ */ u2("div", { class: "panes", children: (s5.panes || []).map((p6, i5) => /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("h3", { children: p6.title }),
+      /* @__PURE__ */ u2("p", { children: p6.text })
+    ] }, i5)) });
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2(Text, { rich: true }),
+      (s5.tags || []).map((t47) => /* @__PURE__ */ u2(Tag, { tag: t47 }, t47.ref))
+    ] });
+  }
+  function SheetStub(props) {
+    const { doc, baseVersion, scrollKey = "", zoom = ZOOM_MAX, exported = false, readOnly = false, partner = null, onSave, onEvent = () => {
+    } } = props;
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const [base, setBase] = d2(baseVersion);
+    const [line, setLine] = d2("");
+    _2(() => {
+      const el2 = box.current;
+      if (el2 && SCROLL.has(scrollKey)) el2.scrollTop = SCROLL.get(scrollKey) || 0;
+    });
+    const save2 = async () => {
+      if (!onSave || readOnly) return;
+      const answer = await onSave({ doc, base_version: base });
+      if (answer.ok) {
+        setBase(answer.version ?? void 0);
+        setLine(`Saved · version ${answer.version}`);
+        onEvent({ type: "saved", version: answer.version, answer });
+      } else {
+        setLine(answer.message || "Not saved.");
+        onEvent({ type: "save-failed", answer });
+      }
+    };
+    const width = `${Math.round(Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom)) * 100)}%`;
+    const page = (d5, p6) => /* @__PURE__ */ u2(
+      Page,
+      {
+        doc: d5,
+        renderers: p6 ? p6.renderers || props.renderers : props.renderers,
+        extras: p6 ? [] : props.extras,
+        exported,
+        readOnly: readOnly || !!(p6 && p6.readOnly),
+        peerDoc: p6 ? doc : partner ? partner.doc : null,
+        onChange: p6 ? p6.onChange : props.onChange,
+        onOpenItem: props.onOpenItem,
+        onEvent
+      }
+    );
+    return /* @__PURE__ */ u2("div", { class: "sheet-stub", onKeyDown: (e4) => {
+      if ((e4.metaKey || e4.ctrlKey) && e4.key === "s") {
+        e4.preventDefault();
+        save2();
+      }
+    }, children: [
+      /* @__PURE__ */ u2("div", { class: "sheet-bar", role: "toolbar", "aria-label": "Report", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", "aria-pressed": exported ? "true" : "false", onClick: () => {
+          props.onExported?.(!exported);
+          onEvent({ type: "exported", on: !exported });
+        }, children: "Show as exported" }),
+        onSave && !readOnly ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: save2, children: "Save" }) : null,
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: line }),
+        props.toolbar || null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "sheet-scroll", ref: box, onScroll: (e4) => SCROLL.set(
+        scrollKey,
+        /** @type {HTMLDivElement} */
+        e4.currentTarget.scrollTop
+      ), children: /* @__PURE__ */ u2("div", { class: partner ? "sheet-pair" : "sheet-one", style: { width: partner ? "100%" : width, margin: "0 auto", display: partner ? "flex" : "block" }, children: [
+        page(doc, null),
+        partner ? page(partner.doc, partner) : null
+      ] }) })
+    ] });
+  }
+
+  // stores/weekly.js
+  var weeklyArg = y3(
+    /** @type {{code: string, week?: string}|null} */
+    null
+  );
+  var weeklyView = y3(
+    /** @type {WeeklyView|null} */
+    null
+  );
+  var weeklyDoc = y3(
+    /** @type {SheetDoc|null} */
+    null
+  );
+  var weeklyBase = y3(
+    /** @type {number|undefined} */
+    void 0
+  );
+  var weeklyBusy = y3("");
+  var weeklyZoom = y3(0.8);
+  var weeklyExported = y3(false);
+  var weeklyEditing = y3(false);
+  var weeklyLogos = y3(
+    /** @type {Record<string, string>} */
+    {}
+  );
+  var wkAsked = 0;
+  async function loadWeekly(arg, fresh = false) {
+    const mine = ++wkAsked;
+    weeklyArg.value = arg;
+    weeklyEditing.value = false;
+    if (!viaServer()) {
+      weeklyView.value = { ok: false, message: "The weekly report view needs the live server." };
+      return;
+    }
+    weeklyBusy.value = "Opening the weekly report…";
+    const r4 = await api("/api/report/draft", { kind: "weekly", code: arg.code, week_ending: arg.week || void 0, fresh: fresh || void 0 });
+    if (mine !== wkAsked) return;
+    weeklyBusy.value = "";
+    take(r4 && r4.ok ? r4 : { ok: false, message: oneLine(r4 && r4.message || "") || "Couldn't open the weekly report" });
+    if (r4 && r4.ok) readLogos(arg.code, r4.logos || []);
+  }
+  function take(r4) {
+    weeklyView.value = r4;
+    weeklyDoc.value = r4.ok && r4.doc ? r4.doc : null;
+    weeklyBase.value = r4.ok && r4.doc ? Number(r4.doc.version) || void 0 : void 0;
+  }
+  async function readLogos(code, logos) {
+    const have = weeklyLogos.value, want = logos.filter((l6) => !(l6.path in have));
+    if (!want.length) return;
+    const r4 = await api("/api/report/logo", { code, paths: want.map((l6) => l6.path) });
+    if (r4 && r4.ok && r4.logos) weeklyLogos.value = { ...weeklyLogos.peek(), ...r4.logos };
+  }
+  async function saveWeekly(req) {
+    const r4 = await api("/api/report/save", { doc: req.doc, base_version: req.base_version });
+    const ok2 = !!(r4 && r4.ok);
+    if (ok2) {
+      weeklyBase.value = Number(r4.version) || weeklyBase.value;
+      const v5 = weeklyView.value;
+      if (v5) weeklyView.value = { ...v5, where: "draft", filed: !!r4.filed };
+    }
+    return { ok: ok2, version: r4 && r4.version, conflict: !!(r4 && r4.conflict), message: oneLine(r4 && r4.message || ""), removed: r4 && r4.removed };
+  }
+  async function approveWeekly(doc, force) {
+    const a5 = weeklyArg.value;
+    const r4 = await api("/api/report/approve", {
+      kind: "weekly",
+      code: doc.project || a5 && a5.code,
+      week_ending: doc.date,
+      doc,
+      base_version: weeklyBase.value,
+      force: force || void 0
+    });
+    return r4 || { ok: false, message: "The apply didn't run; nothing was changed." };
+  }
+  async function exportWeekly(doc, fmt) {
+    const r4 = await api("/api/report/export", { kind: "weekly", code: doc.project, week_ending: doc.date, fmt });
+    return r4 || { ok: false, message: "Not exported." };
+  }
+  var weeklyDirty = false;
+  var setWeeklyDirty = (on2) => {
+    weeklyDirty = on2;
+  };
+  function editDoc(d5, _why) {
+    weeklyDoc.value = d5;
+    weeklyDirty = true;
+  }
+
+  // components/report/weekly/weeklyDoc.js
+  var WK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var WK_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  var DAY = /^(\d{4})-(\d{2})-(\d{2})/;
+  var dayNo = (iso) => {
+    const m5 = DAY.exec(iso || "");
+    return m5 ? Date.UTC(+m5[1], +m5[2] - 1, +m5[3]) / 864e5 : NaN;
+  };
+  var wkDmy = (iso) => {
+    const m5 = DAY.exec(iso || "");
+    return m5 ? `${m5[3]}-${m5[2]}-${m5[1]}` : String(iso || "");
+  };
+  var wkDm = (iso) => {
+    const m5 = DAY.exec(iso || "");
+    return m5 ? `${m5[3]}-${m5[2]}` : "";
+  };
+  function wkLongDate(iso) {
+    const m5 = DAY.exec(iso || "");
+    if (!m5) return String(iso || "");
+    const d5 = new Date(Date.UTC(+m5[1], +m5[2] - 1, +m5[3]));
+    return `${WK_DAYS[d5.getUTCDay()]} ${+m5[3]} ${WK_MONTHS[+m5[2] - 1]} ${m5[1]}`;
+  }
+  var todayIso = () => {
+    const d5 = /* @__PURE__ */ new Date();
+    return `${d5.getFullYear()}-${String(d5.getMonth() + 1).padStart(2, "0")}-${String(d5.getDate()).padStart(2, "0")}`;
+  };
+  var wkTone = (flag) => /off/i.test(flag || "") ? "r" : /risk/i.test(flag || "") ? "a" : /on track|achieved/i.test(flag || "") ? "g" : "n";
+  function wkMdBlocks(text) {
+    const out = [];
+    for (const src of String(text || "").split(/\n/)) {
+      const line = src.trimEnd();
+      if (!line.trim()) {
+        out.push({ t: "p", lines: [] });
+        continue;
+      }
+      const b5 = /^\s*[-*]\s+(.*)$/.exec(line);
+      const last = out[out.length - 1];
+      if (b5) {
+        if (last && last.t === "ul") last.lines.push(b5[1]);
+        else out.push({ t: "ul", lines: [b5[1]] });
+      } else if (last && last.t === "p") last.lines.push(line.trim());
+      else out.push({ t: "p", lines: [line.trim()] });
+    }
+    return out.filter((b5) => b5.lines.length);
+  }
+  function inline(line) {
+    const parts = [];
+    let at2 = 0;
+    for (const m5 of line.matchAll(/\*\*([^*]+)\*\*|\*([^*]+)\*/g)) {
+      if (m5.index > at2) parts.push({ s: line.slice(at2, m5.index) });
+      parts.push(m5[1] ? { s: m5[1], b: true } : { s: m5[2], i: true });
+      at2 = m5.index + m5[0].length;
+    }
+    if (at2 < line.length) parts.push({ s: line.slice(at2) });
+    return parts;
+  }
+  function wkMsState(m5) {
+    const st2 = m5.state, fc2 = m5.forecast_date || m5.baseline_date, base = m5.baseline_date;
+    if (m5.status === "Done" || st2 === "Achieved") return { word: "ACHIEVED", tone: "g" };
+    if (m5.status === "Cancelled") return { word: "CANCELLED", tone: "n" };
+    if (st2 === "Overdue") return { word: "OVERDUE", tone: "r" };
+    if (st2 === "Slipped" || fc2 && base && dayNo(fc2) > dayNo(base)) return { word: "SLIPPED", tone: "a" };
+    if (st2 === "At risk") return { word: "AT RISK", tone: "a" };
+    return { word: "ON TRACK", tone: "g" };
+  }
+  var daysLate = (due, on2) => Math.max(0, Math.round(dayNo(on2) - dayNo(due)));
+  function withSection(doc, id2, patch, layout) {
+    const sections = doc.sections.map((s5) => s5.id === id2 ? { ...s5, ...typeof patch === "function" ? patch(s5) : patch } : s5);
+    return { ...doc, sections, layout: layout ? { ...doc.layout || {}, ...layout } : doc.layout };
+  }
+  function cellsFromItem(sid, item, on2) {
+    if (!item) return {};
+    const t47 = item.title || item.description || "";
+    if (sid === "risks") return { id: item.id, risk: `${item.type || "Risk"}: ${t47}`, priority: item.priority || "", owner: item.owner || "" };
+    if (sid === "overdue") return { id: item.id, action: t47, owner: item.owner || "", due: wkDmy(item.due_date) };
+    if (sid === "decisions") return { decision: t47, by: item.made_by || "", date: wkDmy(item.date), source: "" };
+    return { id: item.id, title: t47, on: on2 };
+  }
+
+  // components/report/weekly/Glance.jsx
+  function Glance({ ctx }) {
+    const { doc, section: s5 } = ctx, figs = s5.figures || [];
+    const [drag, setDrag] = d2(
+      /** @type {number|null} */
+      null
+    );
+    const put2 = (next, why) => editDoc(withSection(doc, s5.id, { figures: next }, { glance: next.filter((f5) => f5.shown !== false).map((f5) => f5.key) }), why);
+    const move = (from, to2) => {
+      if (from === to2 || to2 < 0 || to2 >= figs.length) return;
+      const next = figs.slice();
+      const [f5] = next.splice(from, 1);
+      next.splice(to2, 0, f5);
+      put2(next, "Figure moved");
+    };
+    const hide = (i5) => put2(figs.map((f5, j5) => j5 === i5 ? { ...f5, shown: f5.shown === false } : f5), figs[i5].shown === false ? "Figure shown" : "Figure hidden");
+    const list = ctx.editing ? figs : figs.filter((f5) => f5.shown !== false);
+    return /* @__PURE__ */ u2("div", { children: [
+      /* @__PURE__ */ u2("div", { class: "wr-stats", role: "list", "aria-label": s5.heading, children: list.map((f5, i5) => {
+        const off = f5.shown === false, red = f5.key === "overdue" && f5.value !== "0";
+        return /* @__PURE__ */ u2(
+          "div",
+          {
+            role: "listitem",
+            class: `wr-stat${off ? " off" : ""}${drag === i5 ? " dragging" : ""}`,
+            draggable: ctx.editing,
+            onDragStart: () => setDrag(i5),
+            onDragEnd: () => setDrag(null),
+            onDragOver: (e4) => {
+              if (drag != null) e4.preventDefault();
+            },
+            onDrop: (e4) => {
+              e4.preventDefault();
+              if (drag != null) move(drag, i5);
+              setDrag(null);
+            },
+            onKeyDown: (e4) => {
+              if (ctx.editing && e4.altKey && (e4.key === "ArrowLeft" || e4.key === "ArrowRight")) {
+                e4.preventDefault();
+                move(i5, i5 + (e4.key === "ArrowLeft" ? -1 : 1));
+              }
+            },
+            children: [
+              ctx.editing ? /* @__PURE__ */ u2(
+                "button",
+                {
+                  type: "button",
+                  class: "wr-eye wr-seye",
+                  "aria-pressed": off ? "false" : "true",
+                  onClick: () => hide(i5),
+                  "aria-label": `${off ? "Show" : "Hide"} ${f5.label}`,
+                  "data-tip": off ? "Left out of the report: click to show it" : "In the report: click to leave it out",
+                  children: off ? "○" : "◉"
+                }
+              ) : null,
+              /* @__PURE__ */ u2("span", { class: `n${red ? " r" : ""}`, children: f5.value }),
+              /* @__PURE__ */ u2("span", { class: "c", children: [
+                f5.label,
+                f5.note ? `, ${f5.note}` : ""
+              ] })
+            ]
+          },
+          f5.key
+        );
+      }) }),
+      ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-count", children: "Drag a figure to reorder it (or Alt with the arrow keys); the eye hides it. Hidden figures are left out of the report and the exports." }) : null
+    ] });
+  }
+
+  // components/report/weekly/Rich.jsx
+  function RpLine({ line }) {
+    return /* @__PURE__ */ u2(S2, { children: inline(line).map((p6, i5) => p6.b ? /* @__PURE__ */ u2("b", { children: p6.s }, i5) : p6.i ? /* @__PURE__ */ u2("i", { children: p6.s }, i5) : p6.s) });
+  }
+  function Md2({ text, after }) {
+    return /* @__PURE__ */ u2(S2, { children: wkMdBlocks(text).map((b5, i5) => b5.t === "ul" ? /* @__PURE__ */ u2("ul", { children: b5.lines.map((l6, j5) => /* @__PURE__ */ u2("li", { children: [
+      /* @__PURE__ */ u2(RpLine, { line: l6 }),
+      after ? after(l6) : null
+    ] }, j5)) }, i5) : /* @__PURE__ */ u2("p", { children: b5.lines.map((l6, j5) => /* @__PURE__ */ u2("span", { children: [
+      /* @__PURE__ */ u2(RpLine, { line: l6 }),
+      after ? after(l6) : null,
+      j5 < b5.lines.length - 1 ? " " : ""
+    ] }, j5)) }, i5)) });
+  }
+  function Rich({ ctx, text, field, row: row2, col, label, cls = "", empty = "Click to write", after }) {
+    const [on2, setOn] = d2(false), box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    h2(() => {
+      if (on2) box.current?.querySelector("textarea,[contenteditable]")?.focus();
+    }, [on2]);
+    const { Text } = ctx;
+    if (!ctx.editing) return /* @__PURE__ */ u2("div", { class: `wr-rich ${cls}`, children: /* @__PURE__ */ u2(Md2, { text, after }) });
+    if (on2) return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: `wr-rich wr-open ${cls}`,
+        ref: box,
+        onFocusOut: (e4) => {
+          const to2 = (
+            /** @type {Node|null} */
+            e4.relatedTarget
+          );
+          if (!to2 || !box.current?.contains(to2)) setOn(false);
+        },
+        onKeyDown: (e4) => {
+          if (e4.key === "Escape") {
+            e4.stopPropagation();
+            setOn(false);
+          }
+        },
+        children: /* @__PURE__ */ u2(Text, { field, row: row2, col, label, rich: true })
+      }
+    );
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: `wr-rich wr-edit ${cls}`,
+        role: "button",
+        tabindex: 0,
+        "aria-label": `${label || ctx.section.heading}: edit`,
+        onClick: (e4) => {
+          if (!/** @type {HTMLElement} */
+          e4.target.closest("button,a")) setOn(true);
+        },
+        onKeyDown: (e4) => {
+          if ((e4.key === "Enter" || e4.key === " ") && e4.target === e4.currentTarget) {
+            e4.preventDefault();
+            setOn(true);
+          }
+        },
+        children: String(text || "").trim() ? /* @__PURE__ */ u2(Md2, { text, after }) : /* @__PURE__ */ u2("span", { class: "sub", children: empty })
+      }
+    );
+  }
+
+  // components/report/weekly/Notes.jsx
+  var TITLES = ["Where we are", "What happens next"];
+  function Words({ ctx, label, empty }) {
+    const s5 = ctx.section, tags = s5.tags || [], Tag = ctx.Tag;
+    const after = (line) => tags.filter((t47) => t47.text && line.includes(t47.text)).map((t47) => /* @__PURE__ */ u2(Tag, { tag: { ref: t47.ref, text: t47.ref } }, t47.ref));
+    return /* @__PURE__ */ u2(Rich, { ctx, text: s5.text, label, empty, after });
+  }
+  function Pane({ ctx, i: i5 }) {
+    const panes = ctx.section.panes || [], p6 = panes[i5] || { title: "", text: "" };
+    const set = (text) => ctx.update({ panes: Object.assign([], panes.length ? panes : [{ title: "", text: "" }], { [i5]: { ...p6, text } }) }, "Text edited");
+    return /* @__PURE__ */ u2("div", { class: "wr-pane", children: [
+      /* @__PURE__ */ u2("div", { class: "wr-panet", children: p6.title || TITLES[i5] || "" }),
+      ctx.editing ? /* @__PURE__ */ u2("textarea", { class: "sheet-text wr-pta", "aria-label": p6.title || TITLES[i5], value: p6.text, placeholder: "Say where things stand", onInput: (e4) => set(
+        /** @type {HTMLTextAreaElement} */
+        e4.currentTarget.value
+      ) }) : /* @__PURE__ */ u2("div", { class: "wr-rich", children: String(p6.text || "").split(/\n{2,}/).map((t47, j5) => t47.trim() ? /* @__PURE__ */ u2("p", { children: t47.trim() }, j5) : null) })
+    ] });
+  }
+  function CurrentState({ ctx }) {
+    const panes = ctx.section.panes || [], second = !!(panes[1] && String(panes[1].text || "").trim());
+    const addSecond = () => ctx.update({ panes: [panes[0] || { title: "", text: "" }, { title: "", text: "" }] }, "Second pane added");
+    const dropSecond = () => ctx.update({ panes: panes.slice(0, 1) }, "Second pane removed");
+    const two = second || ctx.editing && panes.length > 1;
+    return /* @__PURE__ */ u2("div", { class: `wr-two${two ? "" : " single"}`, children: [
+      /* @__PURE__ */ u2(Pane, { ctx, i: 0 }),
+      two ? /* @__PURE__ */ u2("div", { children: [
+        /* @__PURE__ */ u2(Pane, { ctx, i: 1 }),
+        ctx.editing && !second ? /* @__PURE__ */ u2("button", { type: "button", class: "wr-link", onClick: dropSecond, children: "Remove the second pane" }) : null
+      ] }) : ctx.editing ? /* @__PURE__ */ u2("div", { children: /* @__PURE__ */ u2("button", { type: "button", class: "wr-link", onClick: addSecond, children: "+ Add a second pane" }) }) : null
+    ] });
+  }
+
+  // components/report/weekly/Tables.jsx
+  var PRIORITY = { Urgent: "r", High: "r", Medium: "a", Low: "g" };
+  function EyeTable({ ctx, cols, noun, extra, empty }) {
+    const s5 = ctx.section, rows2 = s5.rows || [];
+    const flip2 = (i5) => {
+      const r4 = rows2[i5], on2 = r4.shown === false;
+      ctx.update({ rows: rows2.map((x5, j5) => j5 !== i5 ? x5 : { ...x5, shown: on2, cells: x5.cells || cellsFromItem(s5.id, (ctx.doc.items || {})[x5.ref || ""], ctx.doc.date) }) }, on2 ? "Row shown" : "Row hidden");
+    };
+    const shown2 = rows2.filter((r4) => r4.shown !== false).length;
+    if (!rows2.length) return /* @__PURE__ */ u2("p", { class: "sub", children: empty });
+    return /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
+      /* @__PURE__ */ u2("table", { class: "wr-r", children: [
+        /* @__PURE__ */ u2("colgroup", { children: [
+          ctx.editing ? /* @__PURE__ */ u2("col", { class: "eyec" }) : null,
+          cols.map((c5) => /* @__PURE__ */ u2("col", { style: c5.w ? { width: c5.w } : void 0 }, c5.key))
+        ] }),
+        /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+          ctx.editing ? /* @__PURE__ */ u2("th", { class: "eyec", children: /* @__PURE__ */ u2("span", { class: "sr", children: "In the report" }) }) : null,
+          cols.map((c5) => /* @__PURE__ */ u2("th", { children: c5.label }, c5.key))
+        ] }) }),
+        /* @__PURE__ */ u2("tbody", { children: rows2.map((row2, i5) => {
+          const off = row2.shown === false;
+          if (off && !ctx.editing) return null;
+          const item = (ctx.doc.items || {})[row2.ref || ""] || null, cells = row2.cells || cellsFromItem(s5.id, item, ctx.doc.date);
+          return /* @__PURE__ */ u2("tr", { class: off ? "hidrow" : "", children: [
+            ctx.editing ? /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "wr-eye",
+                "aria-pressed": off ? "false" : "true",
+                onClick: () => flip2(i5),
+                "aria-label": `${off ? "Put in the report" : "Leave out of the report"}: ${row2.ref || cells[cols[0].key] || "row"}`,
+                "data-tip": off ? "Left out of the report: click to show it" : "In the report: click to leave it out",
+                children: off ? "○" : "◉"
+              }
+            ) }) : null,
+            cols.map((c5) => /* @__PURE__ */ u2("td", { class: c5.num ? "num" : "", children: c5.cell({ ctx, row: row2, i: i5, cells, item }) }, c5.key))
+          ] }, row2.ref || i5);
+        }) })
+      ] }),
+      ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-count", children: [
+        "Showing ",
+        shown2,
+        " of ",
+        rows2.length,
+        " ",
+        noun,
+        ". Hidden rows are left out of the filed report and the exports."
+      ] }) : null,
+      extra
+    ] });
+  }
+  var idCell = (r4) => r4.row.ref ? /* @__PURE__ */ u2(r4.ctx.ItemRef, { id: r4.row.ref }) : null;
+  var cellWords = (key, label) => (r4) => /* @__PURE__ */ u2(Rich, { ctx: r4.ctx, text: r4.cells[key], row: r4.i, col: key, label, empty: "Click to write" });
+  function Asks({ ctx }) {
+    const s5 = ctx.section, rows2 = s5.rows || [];
+    const add = () => ctx.update({ rows: [...rows2, { ref: "", shown: true, source: "added", cells: { ask: "", from: "", by: "", why: "" } }] }, "Ask added");
+    const cols = [
+      { key: "ask", label: "Ask", w: "40%", cell: (r4) => /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2(Rich, { ctx: r4.ctx, text: r4.cells.ask, row: r4.i, col: "ask", label: "Ask", empty: "Say what is needed" }),
+        r4.row.ref ? /* @__PURE__ */ u2("div", { class: "wr-src", children: [
+          r4.row.source === "promise" ? "Waiting on a promise to you, " : r4.row.source === "decision needed" ? "Decision needed, " : "From ",
+          /* @__PURE__ */ u2(r4.ctx.ItemRef, { id: r4.row.ref })
+        ] }) : null
+      ] }) },
+      { key: "from", label: "From", w: "24%", cell: cellWords("from", "From") },
+      { key: "by", label: "By", w: "13%", num: true, cell: cellWords("by", "By") },
+      { key: "why", label: "Why it matters", cell: cellWords("why", "Why it matters") }
+    ];
+    return /* @__PURE__ */ u2(
+      EyeTable,
+      {
+        ctx,
+        cols,
+        noun: "asks",
+        empty: "Nothing is needed from anyone this week.",
+        extra: ctx.editing ? /* @__PURE__ */ u2("button", { type: "button", class: "wr-link", onClick: add, children: "+ Add an ask" }) : null
+      }
+    );
+  }
+  function Risks({ ctx }) {
+    const cols = [
+      { key: "id", label: "ID", w: "13%", num: true, cell: idCell },
+      { key: "risk", label: "Risk or issue", w: "33%", cell: cellWords("risk", "Risk or issue") },
+      { key: "priority", label: "Priority", w: "11%", cell: (r4) => r4.cells.priority ? /* @__PURE__ */ u2("span", { class: `wr-st ${/** @type {Record<string,string>} */
+      PRIORITY[r4.cells.priority] || "n"}`, children: r4.cells.priority.toUpperCase() }) : null },
+      { key: "owner", label: "Owner", w: "15%", cell: cellWords("owner", "Owner") },
+      { key: "response", label: "Response", cell: (r4) => /* @__PURE__ */ u2("span", { children: r4.item && r4.item.response_action || "" }) }
+    ];
+    return /* @__PURE__ */ u2(EyeTable, { ctx, cols, noun: "risks and issues", empty: "No open risks or issues." });
+  }
+  function Overdue({ ctx }) {
+    const cols = [
+      { key: "id", label: "ID", w: "15%", num: true, cell: idCell },
+      { key: "action", label: "Action", w: "40%", cell: cellWords("action", "Action") },
+      { key: "owner", label: "Owner", w: "17%", cell: cellWords("owner", "Owner") },
+      { key: "due", label: "Due", w: "15%", num: true, cell: cellWords("due", "Due") },
+      { key: "late", label: "Late", num: true, cell: (r4) => {
+        const n4 = r4.item && r4.item.due_date ? daysLate(r4.item.due_date, r4.ctx.doc.date) : 0;
+        return n4 ? /* @__PURE__ */ u2("span", { class: "late", children: [
+          n4,
+          " day",
+          n4 === 1 ? "" : "s"
+        ] }) : null;
+      } }
+    ];
+    return /* @__PURE__ */ u2(EyeTable, { ctx, cols, noun: "overdue actions", empty: "Nothing is overdue." });
+  }
+  function Decisions({ ctx }) {
+    const rows2 = (ctx.section.rows || []).map((row2, i5) => ({ row: row2, i: i5 })).filter((x5) => x5.row.shown !== false || ctx.editing);
+    if (!rows2.length) return /* @__PURE__ */ u2("p", { class: "sub", children: "No decisions were made this week." });
+    return /* @__PURE__ */ u2("ul", { class: "wr-decs", children: rows2.map(({ row: row2, i: i5 }) => {
+      const c5 = row2.cells || cellsFromItem("decisions", (ctx.doc.items || {})[row2.ref || ""], ctx.doc.date);
+      const bit = (key, label) => ctx.editing ? /* @__PURE__ */ u2(Rich, { ctx, text: c5[key], row: i5, col: key, label, cls: "wr-inl", empty: label }) : /* @__PURE__ */ u2("span", { children: c5[key] });
+      return /* @__PURE__ */ u2("li", { children: [
+        /* @__PURE__ */ u2(Rich, { ctx, text: c5.decision, row: i5, col: "decision", label: "Decision", empty: "Say what was decided" }),
+        /* @__PURE__ */ u2("div", { class: "wr-meta", children: [
+          "Made by ",
+          bit("by", "Made by"),
+          " on ",
+          bit("date", "Date"),
+          " · Source: ",
+          bit("source", "Source"),
+          row2.ref ? /* @__PURE__ */ u2(S2, { children: [
+            " · ",
+            /* @__PURE__ */ u2(ctx.ItemRef, { id: row2.ref })
+          ] }) : null
+        ] })
+      ] }, row2.ref || i5);
+    }) });
+  }
+
+  // components/report/weekly/Timeline.jsx
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var PX = 6, H3 = 92;
+  function milestones(ctx) {
+    const items2 = ctx.doc.items || {}, refs = (ctx.section.data || {}).timeline || [];
+    return refs.map((r4) => items2[r4]).filter((m5) => m5 && m5.table === "milestones").sort((a5, b5) => dayNo(a5.baseline_date || a5.forecast_date) - dayNo(b5.baseline_date || b5.forecast_date));
+  }
+  function Drawing({ ms: ms2, today, k: k5, h: h5 }) {
+    const dates = ms2.flatMap((m5) => [m5.baseline_date, m5.forecast_date, m5.actual_date].filter(Boolean)).map(dayNo).concat([dayNo(today)]);
+    const lo2 = Math.min(...dates) - 14, hi2 = Math.max(...dates) + 21, X3 = (iso) => 20 + (dayNo(iso) - lo2) * PX, W3 = 40 + (hi2 - lo2) * PX;
+    const ticks = [];
+    for (let t47 = Math.ceil(lo2); t47 <= hi2; t47++) {
+      const d5 = new Date(t47 * 864e5);
+      if (d5.getUTCDate() === 1) ticks.push({ x: 20 + (t47 - lo2) * PX, name: MON[d5.getUTCMonth()] + (d5.getUTCMonth() === 0 ? ` ${d5.getUTCFullYear()}` : "") });
+    }
+    const tx3 = X3(today), first = MON[new Date(lo2 * 864e5).getUTCMonth()], last = MON[new Date(hi2 * 864e5).getUTCMonth()];
+    return /* @__PURE__ */ u2(
+      "svg",
+      {
+        class: "wr-tl",
+        viewBox: `0 0 ${W3} ${H3}`,
+        style: { height: `${h5}px`, width: `${W3 * k5}px` },
+        role: "img",
+        "aria-label": `Milestones from ${first} to ${last}: ${ms2.map((m5) => `${m5.title || m5.name} ${wkDmy(m5.forecast_date || m5.baseline_date)}`).join("; ")}`,
+        children: [
+          /* @__PURE__ */ u2("line", { x1: "10", y1: "44", x2: W3 - 10, y2: "44", class: "wr-tlline" }),
+          ticks.map((t47) => /* @__PURE__ */ u2("g", { children: [
+            /* @__PURE__ */ u2("line", { x1: t47.x, y1: "38", x2: t47.x, y2: "50", class: "wr-tlline" }),
+            /* @__PURE__ */ u2("text", { x: t47.x + 3, y: "86", class: "wr-tltx", children: t47.name })
+          ] }, t47.x)),
+          /* @__PURE__ */ u2("line", { x1: tx3, y1: "10", x2: tx3, y2: "56", class: "wr-tltoday" }),
+          /* @__PURE__ */ u2("text", { x: tx3 + 4, y: "14", class: "wr-tlnow", children: "Today" }),
+          ms2.map((m5, i5) => {
+            const st2 = wkMsState(m5), base = m5.baseline_date || m5.forecast_date, fc2 = m5.forecast_date, done = st2.tone === "g" && m5.status === "Done" || dayNo(base) < dayNo(today), x5 = X3(base), slip = fc2 && fc2 !== base && dayNo(fc2) > dayNo(base), ly2 = i5 % 2 ? 28 : 68, fx2 = slip ? X3(fc2) : x5;
+            return /* @__PURE__ */ u2("g", { class: `wr-ms ${st2.tone}`, children: [
+              /* @__PURE__ */ u2("circle", { cx: x5, cy: "44", r: "6", class: done ? "fill" : "hollow" }),
+              slip ? /* @__PURE__ */ u2(S2, { children: [
+                /* @__PURE__ */ u2("line", { x1: x5 + 7, y1: "44", x2: fx2 - 8, y2: "44", class: "wr-slip" }),
+                /* @__PURE__ */ u2("circle", { cx: fx2, cy: "44", r: "7", class: "wr-slipc" })
+              ] }) : null,
+              /* @__PURE__ */ u2("text", { x: fx2, y: ly2, class: "wr-tllab", "text-anchor": "middle", children: `${m5.title || m5.name} · ${wkDm(slip ? fc2 : base)}` })
+            ] }, m5.id);
+          })
+        ]
+      }
+    );
+  }
+  function Timeline({ ctx }) {
+    const { doc, section: s5 } = ctx, ms2 = milestones(ctx), listed = new Set((s5.data || {}).milestones || []);
+    const wrap = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    ), [k5, setK] = d2(1), [h5, setH] = d2(98), [open2, setOpen2] = d2(false);
+    const today = doc.state === "approved" ? doc.date : todayIso();
+    _2(() => {
+      const el2 = wrap.current;
+      if (!el2) return;
+      const fit = () => {
+        const hh2 = Math.max(60, el2.clientHeight - 6);
+        setH(hh2);
+        setK(hh2 / H3);
+      };
+      fit();
+      const ro2 = new ResizeObserver(fit);
+      ro2.observe(el2);
+      return () => ro2.disconnect();
+    }, []);
+    _2(() => {
+      const el2 = wrap.current, dates = ms2.map((m5) => dayNo(m5.baseline_date || m5.forecast_date)).concat([dayNo(today)]);
+      if (el2) el2.scrollLeft = Math.max(0, (20 + (dayNo(today) - (Math.min(...dates) - 14)) * PX - 60) * k5);
+    }, [k5, ms2.length, today]);
+    const toggle = (id2) => {
+      const next = ms2.map((m5) => m5.id).filter((r4) => r4 === id2 ? !listed.has(r4) : listed.has(r4));
+      editDoc(withSection(doc, s5.id, { data: { ...s5.data || {}, milestones: next } }, { milestones: next }), listed.has(id2) ? "Milestone left out of the list" : "Milestone in the list");
+    };
+    const rows2 = ctx.exported ? ms2.filter((m5) => listed.has(m5.id)) : ms2;
+    if (!ms2.length) return /* @__PURE__ */ u2("p", { class: "sub", children: "No milestones are set for this project." });
+    const showList = ctx.exported ? rows2.length > 0 : open2;
+    return /* @__PURE__ */ u2("div", { class: "wr-timeline", children: [
+      /* @__PURE__ */ u2("div", { class: "wr-tlwrap", ref: wrap, tabindex: 0, "aria-label": "Milestone timeline; scroll sideways", children: /* @__PURE__ */ u2(Drawing, { ms: ms2, today, k: k5, h: h5 }) }),
+      ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-tlgrab", children: "Drag the bottom edge to change the height" }) : null,
+      !ctx.exported ? /* @__PURE__ */ u2("button", { type: "button", class: "wr-link", "aria-expanded": open2 ? "true" : "false", onClick: () => setOpen2(!open2), children: open2 ? "Hide the milestone list ▴" : "Show the milestone list ▾" }) : null,
+      showList ? /* @__PURE__ */ u2("div", { class: "wr-tbl", children: [
+        /* @__PURE__ */ u2("table", { class: "wr-r", children: [
+          /* @__PURE__ */ u2("thead", { children: /* @__PURE__ */ u2("tr", { children: [
+            ctx.editing ? /* @__PURE__ */ u2("th", { class: "eyec", children: /* @__PURE__ */ u2("span", { class: "sr", children: "In the list" }) }) : null,
+            /* @__PURE__ */ u2("th", { children: "Milestone" }),
+            /* @__PURE__ */ u2("th", { children: "Agreed" }),
+            /* @__PURE__ */ u2("th", { children: "Expected" }),
+            /* @__PURE__ */ u2("th", { children: "Progress" }),
+            /* @__PURE__ */ u2("th", { children: "State" })
+          ] }) }),
+          /* @__PURE__ */ u2("tbody", { children: rows2.map((m5) => {
+            const st2 = wkMsState(m5), on2 = listed.has(m5.id), late = m5.forecast_date && m5.baseline_date && dayNo(m5.forecast_date) > dayNo(m5.baseline_date);
+            return /* @__PURE__ */ u2("tr", { class: on2 ? "" : "hidrow", children: [
+              ctx.editing ? /* @__PURE__ */ u2("td", { class: "eyec", children: /* @__PURE__ */ u2(
+                "button",
+                {
+                  type: "button",
+                  class: "wr-eye",
+                  "aria-pressed": on2 ? "true" : "false",
+                  onClick: () => toggle(m5.id),
+                  "aria-label": `${on2 ? "Leave out of" : "Put in"} the list: ${m5.title || m5.name}`,
+                  "data-tip": on2 ? "In the list: click to leave it out (the timeline is unchanged)" : "Left out of the list: click to show it",
+                  children: on2 ? "◉" : "○"
+                }
+              ) }) : null,
+              /* @__PURE__ */ u2("td", { children: [
+                /* @__PURE__ */ u2(ctx.ItemRef, { id: m5.id }),
+                " ",
+                m5.title || m5.name
+              ] }),
+              /* @__PURE__ */ u2("td", { class: "num", children: wkDmy(m5.baseline_date) }),
+              /* @__PURE__ */ u2("td", { class: `num${late ? " late" : ""}`, children: m5.actual_date ? `achieved ${wkDm(m5.actual_date)}` : `${wkDmy(m5.forecast_date || m5.baseline_date)}${late ? ` (+${Math.round(dayNo(m5.forecast_date) - dayNo(m5.baseline_date))})` : ""}` }),
+              /* @__PURE__ */ u2("td", { class: "num", children: m5.percent_complete != null ? `${m5.percent_complete}%` : "" }),
+              /* @__PURE__ */ u2("td", { children: /* @__PURE__ */ u2("span", { class: `wr-st ${st2.tone}`, children: st2.word }) })
+            ] }, m5.id);
+          }) })
+        ] }),
+        ctx.editing ? /* @__PURE__ */ u2("div", { class: "wr-count", children: [
+          "Showing ",
+          ms2.filter((m5) => listed.has(m5.id)).length,
+          " of ",
+          ms2.length,
+          " milestones in the list. Leaving one out tidies the list only; the timeline always shows every milestone."
+        ] }) : null
+      ] }) : null
+    ] });
+  }
+
+  // components/report/weekly/Top.jsx
+  var KIND = { firm: "Firm", client: "Client", partner: "Partner" };
+  function WkHeader({ ctx }) {
+    const { doc, section: s5 } = ctx, d5 = s5.data || {}, v5 = weeklyView.value;
+    const all = v5 && v5.logos || [], chosen = Array.isArray(doc.layout?.logos) ? doc.layout.logos : ["firm", "client", "partner"];
+    const shown2 = all.filter((l6) => l6.kind === "firm" || chosen.includes(l6.kind));
+    const pick = (kind) => {
+      const next = chosen.includes(kind) ? chosen.filter((k5) => k5 !== kind) : [...chosen, kind];
+      editDoc(withSection(doc, "header", {}, { logos: next }), "Logos changed");
+    };
+    return /* @__PURE__ */ u2("header", { class: "wr-hd", children: [
+      /* @__PURE__ */ u2("div", { class: "wr-title", children: [
+        /* @__PURE__ */ u2("div", { class: "wr-eb", children: d5.label || "Weekly report · Internal" }),
+        /* @__PURE__ */ u2("div", { class: "wr-pn", children: doc.project_name }),
+        /* @__PURE__ */ u2("div", { class: "wr-wk", children: [
+          "Week ending ",
+          wkLongDate(doc.date),
+          d5.client ? ` · for ${d5.client}` : ""
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "wr-logos", children: [
+        shown2.map((l6, i5) => /* @__PURE__ */ u2("span", { class: "wr-logo", children: [
+          i5 ? /* @__PURE__ */ u2("span", { class: "wr-lsep", "aria-hidden": "true" }) : null,
+          weeklyLogos.value[l6.path] ? /* @__PURE__ */ u2("img", { src: weeklyLogos.value[l6.path], alt: `${KIND[
+            /** @type {"firm"} */
+            l6.kind
+          ] || l6.kind} logo` }) : /* @__PURE__ */ u2("span", { class: "sub", children: KIND[
+            /** @type {"firm"} */
+            l6.kind
+          ] || l6.kind })
+        ] }, l6.kind)),
+        ctx.editing && all.length > 1 ? /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "Logos",
+            btnCls: "btn sm",
+            menuLabel: "Logos on this report",
+            data: { wrlogos: "" },
+            items: [
+              { head: "Logos on this report", id: "h" },
+              ...all.map((l6) => ({
+                id: l6.kind,
+                name: KIND[
+                  /** @type {"firm"} */
+                  l6.kind
+                ] || l6.kind,
+                checked: l6.kind === "firm" || chosen.includes(l6.kind),
+                disabled: l6.kind === "firm",
+                line: l6.kind === "firm" ? "always first" : ""
+              })),
+              { note: "Which logos show by default is set per project in Settings.", id: "n" }
+            ],
+            onPick: pick
+          }
+        ) : null
+      ] })
+    ] });
+  }
+  var FLAGS = ["On track", "At risk", "Off track"];
+  function WkHealth({ ctx }) {
+    const { doc, section: s5 } = ctx, d5 = s5.data || {}, flag = d5.flag || "", t47 = wkTone(flag);
+    const past = (d5.trend || []).filter((x5) => x5.date !== doc.date), weeks = [...past.slice(-5), { date: doc.date, flag }];
+    const set = (f5) => ctx.update({ data: { ...d5, flag: f5 } }, "Health changed");
+    const aria = `WkHealth over ${weeks.length} weeks: ${weeks.map((w6) => `${w6.flag || "not set"}`).join(", ")}`;
+    return /* @__PURE__ */ u2("div", { class: "wr-health", "data-wkTone": t47, children: [
+      /* @__PURE__ */ u2("div", { class: "wr-hcol", children: [
+        /* @__PURE__ */ u2("div", { class: `wr-flag ${t47}`, children: (flag || "Not set").toUpperCase() }),
+        /* @__PURE__ */ u2("div", { class: "wr-trend", role: "img", "aria-label": aria, children: weeks.map((w6, i5) => /* @__PURE__ */ u2("i", { class: wkTone(w6.flag) }, i5)) }),
+        /* @__PURE__ */ u2("div", { class: "wr-tlbl", children: [
+          /* @__PURE__ */ u2("span", { children: wkDm(weeks[0].date) }),
+          /* @__PURE__ */ u2("span", { children: wkDm(doc.date) })
+        ] }),
+        ctx.editing ? /* @__PURE__ */ u2(
+          Menu,
+          {
+            label: "Change",
+            btnCls: "btn sm wr-chg",
+            menuLabel: "Health for this week",
+            items: FLAGS.map((f5) => ({ id: f5, name: f5, checked: f5 === flag })),
+            onPick: set
+          }
+        ) : null
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "wr-why", children: [
+        /* @__PURE__ */ u2(Rich, { ctx, text: s5.text, label: "Why this health", empty: "Say why health is what it is" }),
+        d5.last_week && d5.last_week.flag ? /* @__PURE__ */ u2("div", { class: "wr-last", children: [
+          "Last week: ",
+          d5.last_week.flag,
+          d5.last_week.date ? ` (${wkDm(d5.last_week.date)})` : ""
+        ] }) : null
+      ] })
+    ] });
+  }
+
+  // components/report/weekly/WeeklyView.jsx
+  var sectionWords = (label, empty) => (ctx) => /* @__PURE__ */ u2(Words, { ctx, label, empty });
+  var RENDER = { byId: {
+    header: (c5) => /* @__PURE__ */ u2(WkHeader, { ctx: c5 }),
+    health: (c5) => /* @__PURE__ */ u2(WkHealth, { ctx: c5 }),
+    glance: (c5) => /* @__PURE__ */ u2(Glance, { ctx: c5 }),
+    summary: sectionWords("Summary", "Say what matters this week"),
+    milestones: (c5) => /* @__PURE__ */ u2(Timeline, { ctx: c5 }),
+    asks: (c5) => /* @__PURE__ */ u2(Asks, { ctx: c5 }),
+    this_week: sectionWords("This week", "Nothing recorded"),
+    next_week: sectionWords("Next week", "Nothing recorded"),
+    decisions: (c5) => /* @__PURE__ */ u2(Decisions, { ctx: c5 }),
+    risks: (c5) => /* @__PURE__ */ u2(Risks, { ctx: c5 }),
+    overdue: (c5) => /* @__PURE__ */ u2(Overdue, { ctx: c5 }),
+    current_state: (c5) => /* @__PURE__ */ u2(CurrentState, { ctx: c5 })
+  } };
+  async function saveFirst() {
+    const d5 = weeklyDoc.value;
+    if (!d5 || !weeklyDirty) return true;
+    const r4 = await saveWeekly({ doc: d5, base_version: weeklyBase.value });
+    if (!r4.ok) {
+      snack(r4.message || "The report wasn't saved");
+      return false;
+    }
+    setWeeklyDirty(false);
+    return true;
+  }
+  function Bar({ doc, readOnly }) {
+    const z4 = weeklyZoom.value, approved = doc.state === "approved";
+    const zoom = (d5) => {
+      weeklyZoom.value = Math.min(0.8, Math.max(0.4, Math.round((z4 + d5) * 100) / 100));
+    };
+    const exp = async (fmt) => {
+      if (!await saveFirst()) return;
+      const r4 = await exportWeekly(doc, fmt);
+      snack(r4.ok ? `Exported${r4.path ? `: ${String(r4.path).split("/").pop()}` : ""}` : String(r4.message || "Not exported").split("\n")[0]);
+    };
+    const approve = async () => {
+      if (!await saveFirst()) return;
+      const r4 = await approveWeekly(doc);
+      snack(r4.ok ? "Approved and filed" : String(r4.message || "Not approved").split("\n").filter(Boolean).pop());
+      if (r4.ok) loadWeekly(
+        /** @type {any} */
+        weeklyArg.value
+      );
+    };
+    return /* @__PURE__ */ u2("span", { class: "wr-barr", children: [
+      /* @__PURE__ */ u2("span", { class: "wr-zoom", role: "group", "aria-label": "Zoom", children: [
+        /* @__PURE__ */ u2("button", { type: "button", "aria-label": "Zoom out", disabled: z4 <= 0.4, onClick: () => zoom(-0.05), children: "−" }),
+        /* @__PURE__ */ u2("span", { children: [
+          Math.round(z4 * 100),
+          "%"
+        ] }),
+        /* @__PURE__ */ u2("button", { type: "button", "aria-label": "Zoom in", disabled: z4 >= 0.8, onClick: () => zoom(0.05), children: "+" })
+      ] }),
+      /* @__PURE__ */ u2(
+        Menu,
+        {
+          label: "Export",
+          btnCls: "btn sm",
+          menuLabel: "Export the report",
+          data: { wrexport: "" },
+          onPick: exp,
+          items: [
+            { id: "docx", name: "Word (.docx)", line: "The firm's template, to send" },
+            { id: "pdf", name: "PDF", line: "Printed from the page" },
+            { id: "html", name: "HTML (to share)", line: "One page that opens in any browser; read only" }
+          ]
+        }
+      ),
+      approved && !weeklyEditing.value ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "wrEdit", onClick: () => {
+        weeklyEditing.value = true;
+      }, children: "Edit again" }) : null,
+      !approved || weeklyEditing.value ? /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "wrApprove", disabled: readOnly && approved, onClick: approve, children: "Approve and file" }) : null
+    ] });
+  }
+  function WeeklyView() {
+    const v5 = weeklyView.value, doc = weeklyDoc.value;
+    if (!v5) return /* @__PURE__ */ u2("div", { class: "wrview", children: /* @__PURE__ */ u2("p", { class: "sub", children: weeklyBusy.value || "Opening the weekly report…" }) });
+    if (!v5.ok || !doc) return /* @__PURE__ */ u2("div", { class: "wrview", children: [
+      /* @__PURE__ */ u2("h1", { id: "wrTitle", children: "Weekly report" }),
+      /* @__PURE__ */ u2("p", { class: "wr-err", role: "alert", children: v5.message || "Couldn't open the weekly report" })
+    ] });
+    const approved = doc.state === "approved", readOnly = approved && !weeklyEditing.value;
+    const state = approved ? "Approved and filed" : v5.where === "new" ? "New, not saved yet" : "Draft";
+    return /* @__PURE__ */ u2("div", { class: "wrview", children: [
+      /* @__PURE__ */ u2("header", { class: "wrhead", children: [
+        /* @__PURE__ */ u2("nav", { class: "crumb", "aria-label": "Breadcrumb", children: [
+          /* @__PURE__ */ u2("a", { href: "#", "data-go": "projects", children: "Projects" }),
+          " › ",
+          /* @__PURE__ */ u2("span", { "aria-current": "page", children: "Weekly report" })
+        ] }),
+        /* @__PURE__ */ u2("h1", { id: "wrTitle", children: "Weekly report" }),
+        /* @__PURE__ */ u2("p", { class: "sub wrmeta", children: [
+          doc.project_name,
+          " · week ending ",
+          fd(doc.date),
+          " · ",
+          state,
+          doc.version ? ` · version ${doc.version}` : ""
+        ] })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "wrsheet", children: /* @__PURE__ */ u2(
+        SheetStub,
+        {
+          doc,
+          baseVersion: weeklyBase.value,
+          scrollKey: `weekly:${doc.project}:${doc.date}`,
+          zoom: weeklyZoom.value,
+          onZoom: (z4) => {
+            weeklyZoom.value = z4;
+          },
+          exported: weeklyExported.value,
+          onExported: (b5) => {
+            weeklyExported.value = b5;
+          },
+          readOnly,
+          renderers: RENDER,
+          onChange: editDoc,
+          onSave: async (req) => {
+            const r4 = await saveWeekly(req);
+            if (r4.ok) setWeeklyDirty(false);
+            return r4;
+          },
+          onEvent: (ev) => {
+            if (ev.type === "reload") loadWeekly(
+              /** @type {any} */
+              weeklyArg.value
+            );
+          },
+          toolbar: /* @__PURE__ */ u2(Bar, { doc, readOnly })
+        }
+      ) })
+    ] });
+  }
+  var wkMounted = false;
+  function renderWeekly(arg) {
+    const el2 = $("#v-weekly");
+    if (!el2) return;
+    if (!wkMounted) {
+      R(/* @__PURE__ */ u2(WeeklyView, {}), el2);
+      wkMounted = true;
+    }
+    const a5 = typeof arg === "string" ? parseWeekly(arg) : arg;
+    if (a5 && a5.code) {
+      setWeeklyDirty(false);
+      weeklyExported.value = false;
+      loadWeekly(a5).then(() => {
+        navWrite(false);
+        tabTitle();
+      });
+    }
+  }
+  function parseWeekly(s5) {
+    const m5 = /^([A-Z][A-Z0-9]{2,6})(?:&week=(\d{4}-\d{2}-\d{2}))?$/.exec(String(s5 || ""));
+    return m5 ? { code: m5[1], week: m5[2] } : null;
+  }
+  var weeklyKey = () => {
+    const a5 = weeklyArg.value, d5 = weeklyDoc.value;
+    return a5 ? `${a5.code}${d5 ? `&week=${d5.date}` : a5.week ? `&week=${a5.week}` : ""}` : null;
+  };
+
   // stores/notes.js
   var IDLE_MS = 3e4;
   var DRAFT_MS = 1e3;
@@ -49584,9 +50761,11 @@ ${d5.text}`);
       st2.note = c5 && c5.code === shared.NOTECODE ? c5.note.file : null;
       st2.find = !!(st2.note && noteFind.value);
     }
+    if (shared.VIEW === "weekly") st2.arg = weeklyKey();
     return st2;
   }
   function hashOf(st2) {
+    if (st2 && st2.v === "weekly") return `#weekly=${st2.arg || ""}`;
     if (st2 && st2.v === "meeting") return `#meeting=${st2.arg || ""}`;
     if (st2 && st2.v === "notes") return `#notes=${st2.arg || ""}${st2.note ? `&n=${encodeURIComponent(st2.note)}` : ""}${st2.note && st2.find ? "&find=1" : ""}`;
     if (st2 && st2.v === "prep") return prepHref(st2.arg || "");
@@ -49606,6 +50785,10 @@ ${d5.text}`);
     return h5;
   }
   function parseHash(h5) {
+    {
+      const mm2 = /^#?weekly=(.+)$/.exec(String(h5 || ""));
+      if (mm2 && parseWeekly(mm2[1])) return { v: "weekly", arg: mm2[1], wt: shared.WT, wv: null, p: [], from: null, item: null, scroll: 0 };
+    }
     {
       const q5 = (h5 || "").replace(/^#/, "");
       const mm2 = /^meeting=([0-9a-f]{6,20})/.exec(q5);
@@ -49840,7 +51023,7 @@ ${d5.text}`);
       const id2 = { cockpit: "v-cockpit", mine: "v-work" }[v6] || "v-" + v6;
       $("#" + id2).hidden = false;
       $("#" + id2).scrollTop = 0;
-      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects" }[v6] || v6;
+      const railKey = { cockpit: "projects", mine: "work", help: "settings", person: "people", prep: "today", notes: "projects", weekly: "projects" }[v6] || v6;
       setRailView(railKey);
       if (v6 === "mine") {
         shared.WT = "actions";
@@ -49852,7 +51035,7 @@ ${d5.text}`);
       if (v6 === "person") shared.PERSON = arg2;
       if (v6 === "notes") shared.NOTECODE = arg2;
       if (v6 === "settings" && arg2) STAB = arg2;
-      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), notes: () => renderNotes(arg2) }[v6] || (() => {
+      ({ today: renderToday, projects: renderProjects, people: renderPeople, person: () => renderPerson(arg2), cockpit: () => renderCockpit(arg2), work: renderWork, mine: renderWork, review: renderReview, inbox: renderInbox, files: renderFiles, activity: renderActivity, settings: renderSettings, help: () => renderHelp(arg2), prep: () => renderPrep(arg2), weekly: () => renderWeekly(arg2), notes: () => renderNotes(arg2) }[v6] || (() => {
       }))();
       if (!opt2.restore) navWrite(true);
       return true;
@@ -50032,6 +51215,7 @@ ${d5.text}`);
       const v5 = prepView.value, t48 = v5 && v5.ok && v5.model ? v5.model.meeting.title : "";
       TABNAME.prep = t48 ? `Prep · ${t48}` : "Prep";
     }
+    if (shared.VIEW === "weekly") TABNAME.weekly = "Weekly report";
     const n4 = REV.filter((r4) => !r4.done).length, vips = VIPS().length;
     const where2 = shared.VIEW === "notes" && shared.NOTECODE ? shared.NOTECODE === "_portfolio" ? "Portfolio notes" : `${pName(shared.NOTECODE)} notes` : shared.VIEW === "cockpit" && shared.COCK ? pName(shared.COCK) : shared.VIEW === "person" && shared.PERSON ? shared.PERSON : TABNAME[shared.VIEW] || "";
     const t47 = (shared.RBMARKED ? RBMARK : "") + (vips ? `(${vips}) ` : "") + BASETITLE + (where2 ? ` · ${where2}` : "") + (shared.VIEW === "review" && n4 ? ` (${n4})` : "");
@@ -50930,8 +52114,8 @@ ${d5.text}`);
       if (r4 && due && r4 < today) r4 = real(yr2 + 1, +m6, +d5);
       return r4;
     };
-    const MON = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], mon = (w6) => {
-      const i5 = MON.indexOf(w6.slice(0, 3));
+    const MON2 = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], mon = (w6) => {
+      const i5 = MON2.indexOf(w6.slice(0, 3));
       return i5 >= 0 && ("january february march april may june july august september sept october november december".split(" ").some((n4) => n4.startsWith(w6)) || w6.length === 3) ? i5 + 1 : 0;
     };
     if (s5 === "today" || s5 === "now") return today;
@@ -52046,7 +53230,7 @@ ${d5.text}`);
   function blockLines(doc, md2) {
     const lines = noteLines(md2).map(flat), out = [];
     let i5 = 0;
-    const take = (node, pos) => {
+    const take2 = (node, pos) => {
       const t47 = flat(node.textContent);
       if (!t47) return;
       for (let j5 = i5; j5 < lines.length; j5++) if (lines[j5].includes(t47) || t47.includes(lines[j5]) && lines[j5]) {
@@ -52056,8 +53240,8 @@ ${d5.text}`);
       }
     };
     doc.forEach((node, pos) => {
-      if (LISTS.has(node.type.name)) node.forEach((item, off) => take(item, pos + 1 + off));
-      else take(node, pos);
+      if (LISTS.has(node.type.name)) node.forEach((item, off) => take2(item, pos + 1 + off));
+      else take2(node, pos);
     });
     return out;
   }
@@ -59173,6 +60357,7 @@ ${d5.text}`);
         "AI_PLACES",
         "AiBar",
         "AiSuggestion",
+        "Asks",
         "BASETITLE",
         "BCLALL",
         "BHIDE",
@@ -59182,6 +60367,7 @@ ${d5.text}`);
         "Chip",
         "CloseDay",
         "Combobox",
+        "CurrentState",
         "D",
         "DDATE",
         "DEC",
@@ -59191,6 +60377,7 @@ ${d5.text}`);
         "DE_THANKS",
         "DIAG",
         "DRAFTKIND",
+        "Decisions",
         "Dialog",
         "EVS",
         "EXPAND",
@@ -59226,6 +60413,7 @@ ${d5.text}`);
         "OLDSERVER",
         "OPENST",
         "OWN",
+        "Overdue",
         "P",
         "PEOPLE",
         "PF",
@@ -59250,6 +60438,7 @@ ${d5.text}`);
         "RHL",
         "RUNNING",
         "RVF",
+        "Risks",
         "S",
         "SA",
         "SAVED",
@@ -59280,6 +60469,7 @@ ${d5.text}`);
         "WLGRP",
         "WSD",
         "WSIG",
+        "Words",
         "acClose",
         "acDraw",
         "acItems",
@@ -59433,6 +60623,7 @@ ${d5.text}`);
         "iconShapes",
         "igText",
         "inboxBadge",
+        "inline",
         "insertImage",
         "invitees",
         "isMe",
@@ -59681,7 +60872,9 @@ ${d5.text}`);
         "tabId",
         "tabTitle",
         "tdApprovable",
+        "tl",
         "toIso",
+        "tone",
         "tx",
         "typing",
         "undatedCard",
