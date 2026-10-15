@@ -45,8 +45,9 @@ The target is half the cost per shipped item. Most of the cost is long contexts 
 - **Lead sessions run on Sonnet 5.5** (Alan, 15-10-2026): both team leads and Jarvis. Switch with `/model sonnet` at the next `/compact` or restart (a switch mid-context rewrites the whole cache once). A lead that has to judge a guard, security or permission diff, or a hard design call, hands it to an Opus agent with a tight brief.
 - **Every agent names its model** (the Agent tool's `model`); an agent with no model is a mistake. Pick the cheapest that fits:
   - **Haiku 5.5:** running suites and checks, rebuilds (`dashboard.html`), board scans and ticks, finding files, counting.
-  - **Sonnet 5.5:** docs, release notes, hand-check text, tests only (no product code), dashboard copy and CSS, merges with conflicts in docs, fixing a check.py finding.
-  - **Opus 5.5:** product code in `system/scripts/` and the dashboard's logic, the guard, security, permissions and the writer, until BL-343's replay test says otherwise.
+  - **Sonnet 5.5, the default for everything else, code included** (Alan, 15-10-2026): product code, the dashboard, reports, settings, the sweep, tests, docs, release notes, hand-check text, merges, check.py fixes.
+  - **Opus 5.5, only for the files where a subtle mistake is costly:** the guard (`reach.py` and its hook), `permissions.py`, `filechange.py`; the writer and the data (`tracker.py` apply, `schema.sql` and migrations, `backup.py`, `update.py`); the live server's runs, approvals and locking (`live_server.py`); and any item that has failed its tests or review twice on Sonnet. An item touching one of these files goes to Opus whole.
+  - **Measured on #87:** test failures and review rounds per item. Alan's limit is one extra review round per item; a kind of work that needs more goes back to Opus.
 - **Cache reads cost the same on Sonnet as on Opus**, so a short context still saves the most; the model switch halves what's written and generated.
 - **Tight briefs** (the issue, the files, the tests), and no local full suites when Actions runs the same suite.
 
