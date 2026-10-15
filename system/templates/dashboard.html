@@ -2880,7 +2880,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         <div class="dayband"><div class="bandin">
           <div class="brief"><div class="dd" id="todayDate"></div><h1 id="dayHead"></h1><p id="briefText"></p></div>
           <div class="dayline" id="dayLine"></div><div id="dayMeets"></div>
-        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270 -->
+        </div><button type="button" class="dcbtn" id="dayClose" data-dclose="1" aria-haspopup="dialog" aria-label="Close the day" data-tip="Close the day"></button></div><!-- BL-270 -->
         <div class="thome tbrief" id="tBrief"><!-- BL-319: one home, a 980px reading width, sections unboxed on an 8px rhythm -->
           <section class="tsec tdsec" id="tdSec" aria-labelledby="hTd" hidden><h2 class="th" id="hTd">To decide <span class="cnt" id="nTd"></span></h2><div id="tdBody"></div></section><!-- BL-319: first after the band -->
           <section class="tsec" id="ftSec" aria-labelledby="hFt" hidden><h2 class="th" id="hFt">First thing <span class="cnt" id="nFt"></span></h2><ol class="bl" id="ftList"></ol></section><!-- BL-295: from the last Close the day -->
@@ -3093,10 +3093,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     CPYI: () => CPYI,
     CST_DEF: () => CST_DEF,
     CST_MAX: () => CST_MAX,
-    CXAT: () => CXAT,
-    CXFROM: () => CXFROM,
     CXKEYAT: () => CXKEYAT,
-    CXM: () => CXM,
     ChaseEmail: () => ChaseEmail,
     ChasePane: () => ChasePane,
     Chip: () => Chip,
@@ -3832,6 +3829,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     clockOf: () => clockOf,
     closeCal: () => closeCal,
     closeChat: () => closeChat,
+    closeContextMenu: () => closeContextMenu,
     closeDialog: () => closeDialog,
     closeDisp: () => closeDisp,
     closeFilterBar: () => closeFilterBar,
@@ -3857,6 +3855,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     confirmCard: () => confirmCard,
     conflictChoice: () => conflictChoice,
     conflictHtml: () => conflictHtml,
+    contextMenuOpen: () => contextMenuOpen,
     copied: () => copied,
     countFor: () => countFor,
     countLink: () => countLink,
@@ -3879,24 +3878,17 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     curPane: () => curPane,
     curPanes: () => curPanes,
     curReadHtml: () => curReadHtml,
-    cxCloseAll: () => cxCloseAll,
-    cxCloseFrom: () => cxCloseFrom,
     cxCopy: () => cxCopy,
     cxCursor: () => cxCursor,
     cxDates: () => cxDates,
-    cxDraw: () => cxDraw,
     cxGone: () => cxGone,
     cxLink: () => cxLink,
     cxList: () => cxList,
-    cxOpen: () => cxOpen,
-    cxOpts: () => cxOpts,
     cxPeople: () => cxPeople,
     cxPk: () => cxPk,
-    cxPlace: () => cxPlace,
     cxReview: () => cxReview,
     cxReviewFields: () => cxReviewFields,
     cxReviewMany: () => cxReviewMany,
-    cxRun: () => cxRun,
     cxShow: () => cxShow,
     cxTarget: () => cxTarget,
     cxWork: () => cxWork,
@@ -4242,10 +4234,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     jumpLink: () => jumpLink,
     kOfId: () => kOfId,
     kb: () => kb,
-    keysChip: () => keysChip,
-    keysClose: () => keysClose,
-    keysHtml: () => keysHtml,
-    keysMark: () => keysMark,
     keysSeen: () => keysSeen,
     kidsOf: () => kidsOf,
     kindLabel: () => kindLabel,
@@ -4484,6 +4472,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     openCk: () => openCk,
     openClose: () => openClose,
     openCloseDay: () => openCloseDay,
+    openContextMenu: () => openContextMenu,
+    openContextMenuAt: () => openContextMenuAt,
     openDialog: () => openDialog,
     openDisp: () => openDisp,
     openDraftEmail: () => openDraftEmail,
@@ -7620,14 +7610,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       /** @type {HTMLButtonElement | null} */
       null
     );
-    const back = A2(false);
+    const back2 = A2(false);
     const close = (how) => {
-      back.current = how === "esc";
+      back2.current = how === "esc";
       setOpen2(false);
     };
     h2(() => {
-      if (!open2 && back.current) {
-        back.current = false;
+      if (!open2 && back2.current) {
+        back2.current = false;
         btn.current?.focus();
       }
     }, [open2]);
@@ -7788,9 +7778,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (!s5) return;
     fbOpen(s5, which === "more" ? FB_MORE : which);
   }
-  function closeFilterBar(host2, back) {
+  function closeFilterBar(host2, back2) {
     const s5 = host2 && FB_BARS.get(host2);
-    if (s5) fbClose(s5, !!back);
+    if (s5) fbClose(s5, !!back2);
   }
   function fitFilterBar(host2) {
     const s5 = host2 && FB_BARS.get(host2);
@@ -7829,14 +7819,14 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const to = id === FB_MORE ? m5.querySelector(".fpl input[type=search]") || fbFirstIn(m5.querySelector(".fpr")) || m5.querySelector('.fpf[aria-selected="true"]') : m5.querySelector("input.mq") || m5.querySelector('[role="option"]') || m5;
     to?.focus({ preventScroll: true });
   }
-  function fbClose(s5, back) {
+  function fbClose(s5, back2) {
     const was = s5.ui.open;
     if (!was) return;
     s5.ui.open = null;
     s5.ui.keep = was;
     FB_OPEN.delete(s5);
     fbPaint(s5);
-    if (back) fbBtn(s5, was)?.focus({ preventScroll: true });
+    if (back2) fbBtn(s5, was)?.focus({ preventScroll: true });
   }
   var fbFirstIn = (box) => box ? (
     /** @type {HTMLElement | null} */
@@ -8038,9 +8028,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const a5 = document.activeElement;
     if (had && a5 && a5.matches('[role="option"] input')) a5.closest('[role="option"]')?.focus({ preventScroll: true });
   }
-  function fbAct(s5, f5, what, shown) {
+  function fbAct(s5, f5, what, shown2) {
     const sel = [...f5.selected || []];
-    s5.props.onSelect(f5.id, what === "me" ? [...f5.onlyMe || []] : what === "all" ? [.../* @__PURE__ */ new Set([...sel, ...shown.map((o5) => o5.value)])] : []);
+    s5.props.onSelect(f5.id, what === "me" ? [...f5.onlyMe || []] : what === "all" ? [.../* @__PURE__ */ new Set([...sel, ...shown2.map((o5) => o5.value)])] : []);
     if (s5.ui.q[f5.id]) (fbMenu(s5, f5.id)?.querySelector("input.mq") || null)?.focus();
   }
   function fbSetNot(s5, f5, not, box) {
@@ -8103,8 +8093,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }) });
   }
   function FbFieldMenu({ f: f5, s: s5, folded }) {
-    const isOpen = s5.ui.open === f5.id, shown = isOpen || s5.ui.keep === f5.id, mid = fbMenuId(f5);
-    const all = shown && f5.options ? f5.options() : [], q4 = (s5.ui.q[f5.id] || "").toLowerCase();
+    const isOpen = s5.ui.open === f5.id, shown2 = isOpen || s5.ui.keep === f5.id, mid = fbMenuId(f5);
+    const all = shown2 && f5.options ? f5.options() : [], q4 = (s5.ui.q[f5.id] || "").toLowerCase();
     const opts = q4 ? all.filter((o5) => o5.label.toLowerCase().includes(q4)) : all;
     const box = () => document.getElementById(mid);
     return /* @__PURE__ */ u2("span", { class: `dd${folded ? " wfold" : ""}`, children: [
@@ -8132,7 +8122,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           children: f5.button ?? f5.label
         }
       ),
-      /* @__PURE__ */ u2("div", { class: `ddmenu left${isOpen ? " on" : ""}`, id: mid, tabIndex: shown ? -1 : void 0, onKeyDown: (e4) => fbListKeys(s5, f5, e4), children: shown ? /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { class: `ddmenu left${isOpen ? " on" : ""}`, id: mid, tabIndex: shown2 ? -1 : void 0, onKeyDown: (e4) => fbListKeys(s5, f5, e4), children: shown2 ? /* @__PURE__ */ u2(S2, { children: [
         f5.not === void 0 ? null : /* @__PURE__ */ u2(FbIsNot, { f: f5, s: s5, box }),
         all.length > 6 ? /* @__PURE__ */ u2(
           "input",
@@ -8262,7 +8252,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     ] });
   }
   function FbFunnel({ s: s5, more }) {
-    const isOpen = s5.ui.open === FB_MORE, shown = isOpen || s5.ui.keep === FB_MORE, n4 = s5.ui.fold.length;
+    const isOpen = s5.ui.open === FB_MORE, shown2 = isOpen || s5.ui.keep === FB_MORE, n4 = s5.ui.fold.length;
     const tip = more.label + (n4 ? `. ${n4} more filter${n4 === 1 ? " is" : "s are"} here` : "");
     const inner = /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2(
@@ -8288,7 +8278,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           ]
         }
       ),
-      /* @__PURE__ */ u2("div", { class: `ddmenu left fpmenu${isOpen ? " on" : ""}`, id: more.menuId, role: "dialog", "aria-label": more.menuLabel, onKeyDown: (e4) => fbPickKeys(s5, e4), children: shown ? /* @__PURE__ */ u2(FbPicker, { s: s5, more }) : null })
+      /* @__PURE__ */ u2("div", { class: `ddmenu left fpmenu${isOpen ? " on" : ""}`, id: more.menuId, role: "dialog", "aria-label": more.menuLabel, onKeyDown: (e4) => fbPickKeys(s5, e4), children: shown2 ? /* @__PURE__ */ u2(FbPicker, { s: s5, more }) : null })
     ] });
     return s5.props.bare ? inner : /* @__PURE__ */ u2("span", { class: "dd", children: inner });
   }
@@ -9724,11 +9714,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function rjOpenMenu(m5) {
     rjMenu.value = m5;
   }
-  function rjCloseMenu(back) {
+  function rjCloseMenu(back2) {
     const m5 = rjMenu.value;
     rjMenu.value = null;
     if (m5 && m5.onClose) m5.onClose();
-    if (back && m5 && m5.anchor && m5.anchor.isConnected) m5.anchor.focus({ preventScroll: true });
+    if (back2 && m5 && m5.anchor && m5.anchor.isConnected) m5.anchor.focus({ preventScroll: true });
   }
   var rjGone = y3([]);
   function rjAddGone(L2) {
@@ -10887,7 +10877,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return tl(n4, title, waiting ? String(html`From ${raw(promWho(x5.by))} on ${raw(projLink(x5.p))}: ${raw(promDue(x5))}${promQuiet(x5)}.`) : String(html`To ${raw(promWho(x5.to))} on ${raw(projLink(x5.p))}: ${raw(promDue(x5))}.`));
   }
   function renderPromises() {
-    const draw = (sec, key, L2, waiting) => {
+    const draw2 = (sec, key, L2, waiting) => {
       const el = $("#" + sec);
       if (!el) return;
       el.hidden = !L2.length;
@@ -10897,8 +10887,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       putHTML($(`#${key}List`), raw(c5.html));
       putHTML($(`#${key}More`), raw(c5.more));
     };
-    draw("tOwe", "owe", promOwe(), false);
-    draw("tWait", "wait", promWaiting(), true);
+    draw2("tOwe", "owe", promOwe(), false);
+    draw2("tWait", "wait", promWaiting(), true);
   }
   function personPromises(name, same2) {
     const L2 = PROMS(), theirs = L2.filter((x5) => same2(x5.by) === name && isMe(x5.to)).sort((a5, b5) => b5.od - a5.od || (a5.due || "9999").localeCompare(b5.due || "9999")), yours = L2.filter((x5) => isMe(x5.by) && same2(x5.to) === name).sort((a5, b5) => (a5.due || "9999").localeCompare(b5.due || "9999"));
@@ -12126,7 +12116,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const h5 = $("#pmFdd");
     if (!h5) return;
     if (F4.length && !F4.some((f5) => f5[0] === PF.pk)) PF.pk = F4[0][0];
-    const shown = L2.filter((x5) => pfPass(x5, F4)).length;
+    const shown2 = L2.filter((x5) => pfPass(x5, F4)).length;
     drawFilterBar(h5, {
       bare: true,
       fields: F4.map((f5) => {
@@ -12179,7 +12169,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           PF.pk = k5;
           pfDraw();
         },
-        result: `Showing ${shown} of ${L2.length}`,
+        result: `Showing ${shown2} of ${L2.length}`,
         resultId: "pmFpResult",
         doneId: "pmFpDone",
         clearAll: pfAny(F4) ? { id: "pmFpClear", run: () => {
@@ -12212,16 +12202,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       if (pfOn(k5)) chips.push(fchipHtml(pfChip(f5), k5, `Remove the ${f5[1].toLowerCase()} filter`, { neg: PF.neg.has(k5), edit: "pfedit", attr: "data-pfclr" }));
     });
     if (PF.q.trim()) chips.push(fchipHtml(`Search: “${PF.q.trim()}”`, "q", "Clear the search", { edit: "pfedit", attr: "data-pfclr" }));
-    const shown = L2.filter((x5) => pfPass(x5, F4)).length, remF = F4.some((f5) => f5[0] === "rem"), hid = remF && PF.rem === "hide" ? L2.filter((x5) => pfPass(x5, F4, "rem") && x5.off).length : 0;
+    const shown2 = L2.filter((x5) => pfPass(x5, F4)).length, remF = F4.some((f5) => f5[0] === "rem"), hid = remF && PF.rem === "hide" ? L2.filter((x5) => pfPass(x5, F4, "rem") && x5.off).length : 0;
     const att = F4.find((f5) => f5[0] === "att"), need = att && !PF.f.att.size ? L2.filter((x5) => pfPass(x5, F4) && att[3].some(([v4]) => att[4](x5, v4))).length : 0;
-    const bits = [html`Showing ${shown} of ${pfWord(L2.length)}`];
+    const bits = [html`Showing ${shown2} of ${pfWord(L2.length)}`];
     if (hid) bits.push(html`${hid} removed hidden <button type="button" class="linkbtn" data-pfquick="showrem">Show</button>`);
     if (remF && PF.rem === "show") bits.push(html`removed shown <button type="button" class="linkbtn" data-pfquick="hiderem">Hide</button>`);
     if (need) bits.push(html`${need} need${need === 1 ? "s" : ""} attention <button type="button" class="linkbtn" data-pfquick="att">Show</button>`);
     const extra = !!PF.q.trim() || F4.some((f5) => f5[0] !== "rem" && pfOn(f5[0])) || remF && PF.rem !== "hide";
     putHTML(el, html`${raw(chips.join(""))}${extra ? html`<button type="button" class="linkbtn" id="pmClearF">Clear all</button>` : ""}<span class="sp"></span><span class="sub" id="pmCount">${bits.map((b5, i5) => html`${i5 ? " · " : ""}${b5}`)}</span>`);
     const live = $("#pmLive");
-    if (live && live.textContent !== `Showing ${shown} of ${pfWord(L2.length)}`) live.textContent = `Showing ${shown} of ${pfWord(L2.length)}`;
+    if (live && live.textContent !== `Showing ${shown2} of ${pfWord(L2.length)}`) live.textContent = `Showing ${shown2} of ${pfWord(L2.length)}`;
   }
   function pfDraw(focus) {
     if (!$("#peopleMgr") || !$("#pmRows")) return;
@@ -12247,8 +12237,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     PFASK = k5 || null;
     openFilterBar($("#pmFdd"), "more");
   }
-  function pfClose(back) {
-    closeFilterBar($("#pmFdd"), back);
+  function pfClose(back2) {
+    closeFilterBar($("#pmFdd"), back2);
   }
   function pfClear(k5) {
     if (k5 === "q") {
@@ -12885,11 +12875,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       snack(r4.message || "Not dismissed");
       return;
     }
-    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id), back = alertFocus(id, "dismiss");
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id), back2 = alertFocus(id, "dismiss");
     if (a5) a5.seen = r4.at || nowStamp();
     vipBadge();
     renderToday();
-    back();
+    back2();
     snack("Message dismissed", async () => {
       const u5 = await api("/api/alerts/undo", { ids: [id] });
       if (!u5.ok) {
@@ -13517,6 +13507,304 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     R(/* @__PURE__ */ u2(RejectMenu, {}), host2);
   }
 
+  // components/review/ContextMenu.jsx
+  var LV = (
+    /** @type {CxLevel[]} */
+    []
+  );
+  var FROM = (
+    /** @type {Element | null} */
+    null
+  );
+  var OWNER = (
+    /** @type {HTMLElement | null} */
+    null
+  );
+  var HOST = (
+    /** @type {HTMLDivElement | null} */
+    null
+  );
+  var SEQ = 0;
+  var draw = () => {
+    if (HOST) R(/* @__PURE__ */ u2(ContextMenus, {}), HOST);
+  };
+  var shown = (items2, q4) => {
+    const t5 = q4.trim().toLowerCase();
+    return items2.filter((it) => !t5 || it.head || it.sep || (it.label || "").toLowerCase().includes(t5));
+  };
+  function closeFrom(i5) {
+    if (LV.length > i5) {
+      LV = LV.slice(0, i5);
+      draw();
+    }
+  }
+  function closeContextMenu(ret = false) {
+    if (!LV.length) return;
+    LV = [];
+    draw();
+    const f5 = FROM, o5 = OWNER;
+    FROM = null;
+    OWNER = null;
+    if (o5 && o5.hasAttribute("aria-haspopup")) o5.setAttribute("aria-expanded", "false");
+    if (ret && f5 && f5.isConnected) f5.focus({ preventScroll: true });
+  }
+  function contextMenuOpen(anchor) {
+    return !!LV.length && (anchor === void 0 || OWNER === anchor);
+  }
+  var LISTENING = false;
+  function listen() {
+    if (LISTENING) return;
+    LISTENING = true;
+    addEventListener("resize", () => closeContextMenu(false));
+    addEventListener("blur", () => closeContextMenu(false));
+    document.addEventListener("wheel", (e4) => {
+      const t5 = (
+        /** @type {Element} */
+        e4.target
+      );
+      if (LV.length && !(t5.closest && t5.closest(".cxmenu"))) closeContextMenu(false);
+    }, { capture: true, passive: true });
+  }
+  function open0(items2, x5, y5, anchor, { label, search, from }) {
+    closeContextMenu(false);
+    if (!HOST || !HOST.isConnected) {
+      HOST = document.createElement("div");
+      HOST.className = "pophost";
+      document.body.appendChild(HOST);
+    }
+    listen();
+    const a5 = from === void 0 ? document.activeElement : from;
+    FROM = a5 && a5 !== document.body ? a5 : null;
+    OWNER = anchor;
+    if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    LV = [{ items: items2, label: label || "Actions", search: !!search, q: "", key: ++SEQ, x: x5, y: y5, anchor, pi: -1 }];
+    draw();
+  }
+  function openContextMenu(items2, x5, y5, o5 = {}) {
+    open0(items2, x5, y5, null, o5);
+  }
+  function openContextMenuAt(anchor, items2, o5 = {}) {
+    open0(items2, 0, 0, anchor, { ...o5, from: anchor });
+  }
+  function runItem(i5, ci, btn) {
+    const lv = LV[i5], it = lv && lv.items[ci];
+    if (!it || it.disabled) return;
+    if (it.sub) {
+      const sub = typeof it.sub === "function" ? it.sub() : it.sub;
+      LV = [...LV.slice(0, i5 + 1), { items: sub, label: it.label || "", search: !!it.search, q: "", key: ++SEQ, x: 0, y: 0, anchor: null, pi: ci }];
+      draw();
+      btn?.focus({ preventScroll: true });
+      focusLevel(i5 + 1);
+      return;
+    }
+    closeContextMenu(true);
+    Promise.resolve().then(() => it.run && it.run()).catch((e4) => snack("Not saved: " + (e4 && e4.message || e4)));
+  }
+  function focusLevel(i5) {
+    const el = HOST && HOST.querySelectorAll(".cxmenu")[i5];
+    if (!el) return;
+    const q4 = (
+      /** @type {HTMLElement | null} */
+      el.querySelector(".pkq")
+    );
+    (q4 || menuItemsIn(el)[0] || /** @type {HTMLElement | null} */
+    el.querySelector("[role=menu]"))?.focus({ preventScroll: true });
+  }
+  function back(i5) {
+    if (i5 === 0) {
+      closeContextMenu(true);
+      return;
+    }
+    const el = HOST && HOST.querySelectorAll(".cxmenu")[i5 - 1], pi = LV[i5].pi;
+    closeFrom(i5);
+    (el && el.querySelector(`[data-ci="${pi}"]`))?.focus({ preventScroll: true });
+  }
+  function place(el, i5) {
+    const lv = LV[i5], w5 = el.offsetWidth, h5 = el.offsetHeight;
+    let x5 = lv.x, y5 = lv.y;
+    if (i5 > 0) {
+      const pm = HOST && /** @type {HTMLElement | undefined} */
+      HOST.querySelectorAll(".cxmenu")[i5 - 1];
+      const pb = pm && pm.querySelector(`[data-ci="${lv.pi}"]`);
+      if (pm && pb) {
+        const pr = pb.getBoundingClientRect(), m5 = pm.getBoundingClientRect();
+        x5 = m5.right - 2;
+        if (x5 + w5 > innerWidth - 8) x5 = Math.max(8, m5.left - w5 + 2);
+        y5 = pr.top - 6;
+      }
+    } else if (lv.anchor) {
+      const r4 = lv.anchor.isConnected ? lv.anchor.getBoundingClientRect() : { left: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
+      x5 = r4.left;
+      y5 = r4.bottom + 4;
+      if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, r4.top - h5 - 4);
+    }
+    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
+    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, innerHeight - h5 - 8);
+    el.style.left = `${x5}px`;
+    el.style.top = `${y5}px`;
+  }
+  function Level({ lv, i: i5 }) {
+    const wrap = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    const box = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      if (wrap.current) place(wrap.current, i5);
+    }, [lv.key, lv.q]);
+    _2(() => {
+      if (i5 === 0) focusLevel(0);
+    }, [lv.key]);
+    const next = LV[i5 + 1];
+    const L2 = shown(lv.items, lv.q);
+    const keys = (e4) => {
+      const t5 = (
+        /** @type {HTMLElement} */
+        e4.target
+      ), items2 = menuItemsIn(box.current), at = items2.indexOf(t5);
+      const stop = () => {
+        e4.preventDefault();
+        e4.stopPropagation();
+      };
+      const q4 = (
+        /** @type {HTMLElement | null} */
+        wrap.current && wrap.current.querySelector(".pkq")
+      );
+      if (e4.key === "ArrowUp" && at <= 0 && q4) {
+        stop();
+        q4.focus();
+      } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e4.key)) return;
+      else if (e4.key === "ArrowRight") {
+        stop();
+        if (t5.getAttribute("aria-haspopup") === "menu") runItem(i5, +(t5.dataset.ci || -1), t5);
+      } else if (e4.key === "ArrowLeft") {
+        stop();
+        if (i5 > 0) back(i5);
+      } else if (e4.key === "Escape") {
+        stop();
+        back(i5);
+      } else if (e4.key === "Enter" || e4.key === " ") {
+        stop();
+        if (at >= 0) runItem(i5, +(t5.dataset.ci || -1), t5);
+      } else if (e4.key === "Tab") {
+        stop();
+        closeContextMenu(true);
+      } else e4.stopPropagation();
+    };
+    const fieldKeys = (e4) => {
+      const items2 = menuItemsIn(box.current), stop = () => {
+        e4.preventDefault();
+        e4.stopPropagation();
+      };
+      if (e4.key === "ArrowDown") {
+        stop();
+        items2[0]?.focus({ preventScroll: true });
+      } else if (e4.key === "ArrowUp") stop();
+      else if (e4.key === "Enter") {
+        stop();
+        const f5 = items2[0];
+        if (f5) runItem(i5, +(f5.dataset.ci || -1), f5);
+      } else if (e4.key === "Escape") {
+        stop();
+        back(i5);
+      } else if (e4.key === "Tab") {
+        stop();
+        closeContextMenu(true);
+      }
+    };
+    const over = (e4) => {
+      const b5 = (
+        /** @type {HTMLElement | null} */
+        /** @type {Element} */
+        e4.target.closest("[role=menuitem]")
+      );
+      if (!b5) return;
+      const ci = +(b5.dataset.ci || -1), it = lv.items[ci];
+      if (document.activeElement !== b5 && !(wrap.current && wrap.current.querySelector(".pkq:focus"))) b5.focus({ preventScroll: true });
+      if (it && it.sub && !it.disabled) {
+        if (!(LV[i5 + 1] && LV[i5 + 1].pi === ci)) runItem(i5, ci, b5);
+        b5.focus({ preventScroll: true });
+      } else closeFrom(i5 + 1);
+    };
+    return /* @__PURE__ */ u2("div", { class: "pkpop cxmenu", ref: wrap, onMouseOver: over, children: [
+      lv.search ? /* @__PURE__ */ u2(
+        "input",
+        {
+          class: "pkq",
+          type: "search",
+          placeholder: "Search",
+          "aria-label": `Search: ${lv.label}`,
+          autocomplete: "off",
+          value: lv.q,
+          onInput: (e4) => {
+            lv.q = /** @type {HTMLInputElement} */
+            e4.target.value;
+            closeFrom(i5 + 1);
+            draw();
+          },
+          onKeyDown: fieldKeys
+        }
+      ) : null,
+      /* @__PURE__ */ u2(
+        MenuPanel,
+        {
+          bare: true,
+          label: lv.label,
+          boxRef: box,
+          anchor: HOST,
+          autoFocus: false,
+          onKey: keys,
+          onClose: (how) => {
+            if (how === "away") closeContextMenu(false);
+          },
+          children: L2.length ? L2.map((it, n4) => {
+            if (it.sep) return /* @__PURE__ */ u2("div", { class: "cxsep", role: "separator" }, `s${n4}`);
+            if (it.head) return /* @__PURE__ */ u2("div", { class: "cxhead", role: "presentation", children: it.head }, `h${n4}`);
+            const ci = lv.items.indexOf(it);
+            return /* @__PURE__ */ u2(
+              "button",
+              {
+                type: "button",
+                class: "pkopt",
+                role: "menuitem",
+                tabIndex: -1,
+                "data-ci": String(ci),
+                "aria-haspopup": it.sub ? "menu" : void 0,
+                "aria-expanded": it.sub ? next && next.pi === ci ? "true" : "false" : void 0,
+                "aria-disabled": it.disabled ? "true" : void 0,
+                "aria-current": it.checked ? "true" : void 0,
+                onClick: (e4) => {
+                  e4.preventDefault();
+                  runItem(
+                    i5,
+                    ci,
+                    /** @type {HTMLElement} */
+                    e4.currentTarget
+                  );
+                },
+                children: [
+                  it.icon ? /* @__PURE__ */ u2(Icon, { name: it.icon }) : /* @__PURE__ */ u2("svg", { width: "18", height: "18", "aria-hidden": "true" }),
+                  /* @__PURE__ */ u2("span", { children: [
+                    it.label,
+                    it.hint ? /* @__PURE__ */ u2("span", { class: "h", children: it.hint }) : null
+                  ] }),
+                  it.checked ? /* @__PURE__ */ u2(Icon, { name: "check", cls: "ck" }) : it.sub ? /* @__PURE__ */ u2(Icon, { name: "chevright", cls: "ck cxsub" }) : null
+                ]
+              },
+              ci
+            );
+          }) : /* @__PURE__ */ u2("div", { class: "pkopt", "aria-disabled": "true", children: "No match" })
+        }
+      )
+    ] });
+  }
+  function ContextMenus() {
+    return /* @__PURE__ */ u2(S2, { children: LV.map((lv, i5) => /* @__PURE__ */ u2(Level, { lv, i: i5 }, lv.key)) });
+  }
+
   // review.js
   shared.RSEL = 0;
   var CHK = /* @__PURE__ */ new Set(), RHL = /* @__PURE__ */ new Set();
@@ -14065,13 +14353,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const h5 = $("#rvfilters");
     if (h5) drawFilterBar(h5, rvBarProps());
   }
-  function rvApplied(shown, total) {
+  function rvApplied(shown2, total) {
     const chips = RVFIELDS.filter((f5) => RVF[f5[0]].size).map((f5) => {
       const neg = RVNEG.has(f5[0]), lab = (v4) => (f5[2]().find((o5) => o5[0] === v4) || [v4, v4])[1];
       return html`<span class="fchip${neg ? " neg" : ""}">${f5[1]}: ${neg ? "not " : ""}${[...RVF[f5[0]]].map(lab).join(", ")}<button data-rvclr="${f5[0]}" aria-label="Remove the ${f5[1].toLowerCase()} filter">${raw(ic("x"))}</button></span>`;
     });
     if (RVQ.trim()) chips.push(html`<span class="fchip">Search: “${RVQ.trim()}”<button data-rvclr="q" aria-label="Clear the search">${raw(ic("x"))}</button></span>`);
-    putHTML($("#rvapplied"), html`${chips.length ? html`${chips}<button class="linkbtn" id="rvClearF">Clear all</button><span class="sp"></span><span class="sub" id="rvcount">Showing ${shown} of ${total}</span>` : ""}`);
+    putHTML($("#rvapplied"), html`${chips.length ? html`${chips}<button class="linkbtn" id="rvClearF">Clear all</button><span class="sp"></span><span class="sub" id="rvcount">Showing ${shown2} of ${total}</span>` : ""}`);
   }
   function rvRoutineBtn() {
     const n4 = rvMatching().filter(rvBulkOK).length, b5 = $("#routineBtn");
@@ -14365,9 +14653,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       });
       renderReview();
     };
-    const lab = { p: "Project", o: "Owner", due: "Due date", ws: "Workstream", ms: "Milestone", pr: "Priority", st: "Status", imp: "Impact", lik: "Likelihood" }[f5], shown = f5 === "p" ? pName(v4) : f5 === "due" ? v4 ? fd(v4) : "none" : f5 === "ms" ? v4 ? msLabel(v4) : "none" : v4 || "none";
+    const lab = { p: "Project", o: "Owner", due: "Due date", ws: "Workstream", ms: "Milestone", pr: "Priority", st: "Status", imp: "Impact", lik: "Likelihood" }[f5], shown2 = f5 === "p" ? pName(v4) : f5 === "due" ? v4 ? fd(v4) : "none" : f5 === "ms" ? v4 ? msLabel(v4) : "none" : v4 || "none";
     renderReview();
-    snack(`${lab} set to ${shown} on ${ok.length} proposal${ok.length === 1 ? "" : "s"}${left.length ? `. Left out: ${left.join("; ")}` : ""}`, undo);
+    snack(`${lab} set to ${shown2} on ${ok.length} proposal${ok.length === 1 ? "" : "s"}${left.length ? `. Left out: ${left.join("; ")}` : ""}`, undo);
     if (f5 === "p") rvLearnCard(ok.map((o5) => o5.r), v4);
   }
   function rvLearnCard(L2, code) {
@@ -14729,9 +15017,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     await reloadData();
     const dup = /duplicate/i.test(res.message || "");
     snack(dup ? `Rejected as a duplicate of ${id}: it carried nothing new` : `Now an update to ${id}`, async () => {
-      const back = await api("/api/review/retarget", { ...at, undo: true });
-      snack(back && back.ok ? "Back to a new item, as it was proposed" : oneLine(back && back.message) || "Not undone");
-      if (back && back.ok) await reloadData();
+      const back2 = await api("/api/review/retarget", { ...at, undo: true });
+      snack(back2 && back2.ok ? "Back to a new item, as it was proposed" : oneLine(back2 && back2.message) || "Not undone");
+      if (back2 && back2.ok) await reloadData();
     });
   }
   function bootReview0065() {
@@ -14816,7 +15104,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       r4.p = code;
       r4.edited = true;
       refreshAll();
-      if (!quiet) snack(`Moved to ${pName(code)} — still waiting for review`);
+      if (!quiet) snack(`Moved to ${pName(code)} — still waiting for review`, was && was !== code ? async () => {
+        if (await rvMoveItem(r4, was, true)) snack(`Moved back to ${pName(was)}`);
+      } : null);
       return true;
     }
     const res = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code });
@@ -14829,8 +15119,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const sig = learnable(r4);
     if (sig) snack(`Moved to ${pName(code)} — still waiting for review`, () => learnSignal(code, sig.kind, sig.value), `Remember ${sig.value}`);
     else snack(`Moved to ${pName(code)} — still waiting for review`, was ? async () => {
-      const back = REV.find((x5) => x5.file === r4.file && x5.ref === r4.ref && !x5.done);
-      if (back) await rvMoveItem(back, was, true);
+      const back2 = REV.find((x5) => x5.file === r4.file && x5.ref === r4.ref && !x5.done);
+      if (back2) await rvMoveItem(back2, was, true);
       snack(`Moved back to ${pName(was)}`);
     } : null);
     return true;
@@ -14853,35 +15143,26 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       snack(oneLine(res.message) || "Can't move these minutes");
       return;
     }
-    const pv = res.preview;
-    if (!b5.isConnected) b5 = $(`#reviewBody tr[data-n="${r4.n}"] [data-act="pj"]`) || $(`#reviewBody tr[data-n="${r4.n}"]`);
-    if (!b5) return;
-    const el = pkMk(b5, "rvmv", `<div class="rvmv-h" role="heading" aria-level="2">${esc(pv.headline)}</div>
-    <p class="sub">The minutes and transcript will be filed in ${esc(pName(code))}'s folders when the minutes are approved. Nothing changes in the tracker until then.</p>
-    ${pv.alone ? `<fieldset class="rvmv-ch"><legend>${pv.alone} item${pv.alone === 1 ? " was" : "s were"} moved on ${pv.alone === 1 ? "its" : "their"} own before</legend><label><input type="radio" name="rvmvA" value="leave"${moved !== "all" ? " checked" : ""}> Leave ${pv.alone === 1 ? "it" : "those"} where ${pv.alone === 1 ? "it is" : "they are"}</label><label><input type="radio" name="rvmvA" value="all"${moved === "all" ? " checked" : ""}> Move all</label></fieldset>` : ""}
-    ${(pv.updates || []).length ? `<p class="sub">${pv.updates.map(esc).join(", ")} ${pv.updates.length === 1 ? "is an update" : "are updates"} to ${pv.updates.length === 1 ? "an item" : "items"} already in the tracker, so ${pv.updates.length === 1 ? "it stays" : "they stay"} with ${esc(pName(frm))}.</p>` : ""}
-    <div class="rvmv-b"><button type="button" class="btn" data-mv="no">Cancel</button><button type="button" class="btn primary" data-mv="go">${ic("projects")}Move</button></div>`);
-    el.setAttribute("role", "dialog");
-    el.setAttribute("aria-label", pv.headline);
-    el.addEventListener("change", (e4) => {
+    const pv = res.preview, dlg = $("#rvDlg");
+    putHTML($("#rvDlgBody"), html`<h2 id="rvDlgTitle" class="rvmv-h">${pv.headline}</h2>
+    <p class="sub">The minutes and transcript will be filed in ${pName(code)}'s folders when the minutes are approved. Nothing changes in the tracker until then.</p>
+    ${pv.alone ? html`<fieldset class="rvmv-ch"><legend>${pv.alone} item${pv.alone === 1 ? " was" : "s were"} moved on ${pv.alone === 1 ? "its" : "their"} own before</legend><label><input type="radio" name="rvmvA" value="leave" ${raw(moved !== "all" ? "checked" : "")}> Leave ${pv.alone === 1 ? "it" : "those"} where ${pv.alone === 1 ? "it is" : "they are"}</label><label><input type="radio" name="rvmvA" value="all" ${raw(moved === "all" ? "checked" : "")}> Move all</label></fieldset>` : ""}
+    ${(pv.updates || []).length ? html`<p class="sub">${pv.updates.join(", ")} ${pv.updates.length === 1 ? "is an update" : "are updates"} to ${pv.updates.length === 1 ? "an item" : "items"} already in the tracker, so ${pv.updates.length === 1 ? "it stays" : "they stay"} with ${pName(frm)}.</p>` : ""}`);
+    dlg.classList.add("rvmvdlg");
+    $("#rvDlgOk").textContent = "Move";
+    $("#rvDlgBody").onchange = (e4) => {
       if (e4.target.name === "rvmvA") rvMovePreview(b5, r4, frm, code, e4.target.value);
-    });
-    el.addEventListener("keydown", (e4) => {
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        pkPopClose();
-      }
-    });
-    el.addEventListener("click", async (e4) => {
-      const k5 = e4.target.closest("[data-mv]");
-      if (!k5) return;
-      if (k5.dataset.mv === "no") {
-        pkPopClose();
-        return;
-      }
-      k5.disabled = true;
-      pkPopClose(false);
+    };
+    dlg.addEventListener("close", () => {
+      dlg.classList.remove("rvmvdlg");
+      $("#rvDlgBody").onchange = null;
+    }, { once: true });
+    let fired = false;
+    $("#rvDlgCancel").onclick = () => dlg.close();
+    $("#rvDlgOk").onclick = async () => {
+      if (fired) return;
+      fired = true;
+      dlg.close();
       const out = await api("/api/review/assign", { file: r4.file, ref: r4.ref, code, from: frm, moved });
       if (!out.ok) {
         snack(oneLine(out.message) || "Not moved");
@@ -14891,13 +15172,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const undo = pv.projects.includes(code) ? null : async () => {
         const m5 = REV.find((x5) => x5.file === r4.file && x5.ref === "meeting" && !x5.done);
         if (!m5) return;
-        const back = await api("/api/review/assign", { file: r4.file, ref: "meeting", code: frm, from: code, moved: "all" });
-        snack(back.ok ? `Moved back to ${pName(frm)}` : oneLine(back.message) || "Not moved back");
+        const back2 = await api("/api/review/assign", { file: r4.file, ref: "meeting", code: frm, from: code, moved: "all" });
+        snack(back2.ok ? `Moved back to ${pName(frm)}` : oneLine(back2.message) || "Not moved back");
         await reloadData();
       };
       snack(`${pv.headline.replace(/^Move/, "Moved")} — the minutes go with them`, undo);
-    });
-    el.querySelector("[data-mv=go]").focus();
+    };
+    openDialog(dlg, { focus: "#rvDlgOk" });
   }
   function bootReview0193() {
     document.addEventListener("click", (e4) => {
@@ -14908,10 +15189,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       const tr = b5.closest("tr[data-n]"), r4 = REV.find((x5) => x5.n === +tr.dataset.n);
       if (!rvMovable(r4)) return;
       shared.RSEL = +tr.dataset.ri;
-      if (shared.PKPOP && shared.PKPOP.anchor === b5) {
-        pkPopClose();
-        return;
-      }
       if (menuOpenFor(b5)) {
         closeMenu();
         return;
@@ -14920,68 +15197,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     }, true);
     if (shared.CUR && pkOn()) drawPanel();
   }
-  var CXM = [], CXFROM = null, CXKEYAT = -1e9, CXAT = 0;
-  function cxCloseAll(ret) {
-    CXM.forEach((m5) => m5.el.remove());
-    CXM = [];
-    const f5 = CXFROM;
-    CXFROM = null;
-    if (ret && f5 && f5.isConnected) f5.focus({ preventScroll: true });
-  }
-  function cxCloseFrom(i5) {
-    CXM.splice(i5).forEach((m5) => m5.el.remove());
-  }
-  var cxOpts = (el) => [...el.querySelectorAll('[role=menuitem]:not([aria-disabled="true"])')];
-  function cxPlace(el, x5, y5, parent) {
-    const w5 = el.offsetWidth, h5 = el.offsetHeight;
-    if (parent) {
-      const pr = parent.getBoundingClientRect(), m5 = parent.closest(".cxmenu").getBoundingClientRect();
-      x5 = m5.right - 2;
-      if (x5 + w5 > innerWidth - 8) x5 = Math.max(8, m5.left - w5 + 2);
-      y5 = pr.top - 6;
-    }
-    x5 = Math.max(8, Math.min(x5, innerWidth - w5 - 8));
-    if (y5 + h5 > innerHeight - 8) y5 = Math.max(8, innerHeight - h5 - 8);
-    el.style.left = x5 + "px";
-    el.style.top = y5 + "px";
-  }
-  function cxDraw(m5, q4) {
-    const t5 = String(q4 || "").trim().toLowerCase(), L2 = m5.items.filter((it) => !t5 || it.head || it.sep || (it.label || "").toLowerCase().includes(t5));
-    putHTML(m5.box, raw(L2.map((it) => it.sep ? '<div class="cxsep" role="separator"></div>' : it.head ? `<div class="cxhead">${esc(it.head)}</div>` : `<button type="button" class="pkopt" role="menuitem" data-ci="${m5.items.indexOf(it)}"${it.sub ? ' aria-haspopup="menu" aria-expanded="false"' : ""}${it.disabled ? ' aria-disabled="true"' : ""}${it.checked ? ' aria-current="true"' : ""}>${it.icon ? ic(it.icon) : '<svg width="18" height="18" aria-hidden="true"></svg>'}<span>${esc(it.label)}${it.hint ? `<span class="h">${esc(it.hint)}</span>` : ""}</span>${it.checked ? ic("check", { cls: "ck" }) : it.sub ? ic("chevright", { cls: "ck cxsub" }) : ""}</button>`).join("") || '<div class="pkopt" aria-disabled="true">No match</div>'));
-  }
-  function cxOpen(items2, x5, y5, { label, parent, search } = {}) {
-    const level = parent ? CXM.findIndex((m6) => m6.el.contains(parent)) + 1 : 0;
-    cxCloseFrom(level);
-    const el = document.createElement("div");
-    el.className = "pkpop cxmenu";
-    putHTML(el, html`${search ? html`<input class="pkq" type="search" placeholder="Search" aria-label="Search: ${label}" autocomplete="off">` : ""}<div role="menu" aria-label="${label || "Actions"}"></div>`);
-    document.body.appendChild(el);
-    CXAT = performance.now();
-    const m5 = { el, items: items2, box: el.querySelector("[role=menu]"), parent };
-    CXM.push(m5);
-    cxDraw(m5, "");
-    cxPlace(el, x5, y5, parent);
-    if (parent) parent.setAttribute("aria-expanded", "true");
-    const q4 = el.querySelector(".pkq");
-    if (q4) {
-      q4.addEventListener("input", () => {
-        cxDraw(m5, q4.value);
-      });
-      q4.focus();
-    } else (cxOpts(el)[0] || el).focus();
-    return m5;
-  }
-  function cxRun(btn) {
-    const mi = CXM.findIndex((m6) => m6.el.contains(btn)), m5 = CXM[mi], it = m5 && m5.items[+btn.dataset.ci];
-    if (!it || it.disabled) return;
-    if (it.sub) {
-      const sub = typeof it.sub === "function" ? it.sub() : it.sub;
-      cxOpen(sub, 0, 0, { label: it.label, parent: btn, search: it.search });
-      return;
-    }
-    cxCloseAll(true);
-    Promise.resolve().then(() => it.run && it.run()).catch((e4) => snack("Not saved: " + (e4 && e4.message || e4)));
-  }
+  var CXKEYAT = -1e9;
   function cxTarget(t5) {
     if (!t5 || !t5.closest) return null;
     if (t5.closest("input,textarea,select,[contenteditable=true],[contenteditable=plaintext-only],.rail,#panel,#chat,dialog,.cxmenu,.pkpop,td.editing")) return null;
@@ -15010,9 +15226,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     return null;
   }
   function cxShow(c5, x5, y5) {
-    CXFROM = document.activeElement && document.activeElement !== document.body ? document.activeElement : c5.el;
+    const from = document.activeElement && document.activeElement !== document.body ? document.activeElement : c5.el;
     if (c5.gone) {
-      cxOpen(cxGone(c5.gone, c5.el), x5, y5, { label: "Rejected proposal" });
+      openContextMenu(cxGone(c5.gone, c5.el), x5, y5, { label: "Rejected proposal", from });
       return;
     }
     if (c5.rev) {
@@ -15026,7 +15242,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         rvPaint();
       }
       const L2 = RHL.size >= 2 ? rvSel() : [c5.rev];
-      cxOpen(L2.length > 1 ? cxReviewMany(L2) : cxReview(c5.rev, c5.el), x5, y5, { label: L2.length > 1 ? `${L2.length} proposals` : "Proposal" });
+      openContextMenu(L2.length > 1 ? cxReviewMany(L2) : cxReview(c5.rev, c5.el), x5, y5, { label: L2.length > 1 ? `${L2.length} proposals` : "Proposal", from });
       return;
     }
     let ids = [[c5.k, c5.id]];
@@ -15036,7 +15252,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         hlOnly(c5.k, c5.id);
       }
     }
-    cxOpen(ids.length > 1 ? cxWorkMany(ids) : cxWork(c5.k, c5.id), x5, y5, { label: ids.length > 1 ? `${ids.length} items` : c5.id });
+    openContextMenu(ids.length > 1 ? cxWorkMany(ids) : cxWork(c5.k, c5.id), x5, y5, { label: ids.length > 1 ? `${ids.length} items` : c5.id, from });
   }
   function cxCursor() {
     const a5 = document.activeElement;
@@ -15182,71 +15398,6 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   }
   function bootReview0195() {
     Object.assign(ICONS, { cxopen: '<path d="M14 4h6v6M10 14L20 4M19 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h6"/>' });
-    document.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest && e4.target.closest(".cxmenu [role=menuitem]");
-      if (!b5) return;
-      e4.preventDefault();
-      cxRun(b5);
-    });
-    document.addEventListener("mousedown", (e4) => {
-      if (CXM.length && !(e4.target.closest && e4.target.closest(".cxmenu"))) cxCloseAll(false);
-    }, true);
-    document.addEventListener("mouseover", (e4) => {
-      const b5 = e4.target.closest && e4.target.closest(".cxmenu [role=menuitem]");
-      if (!b5) return;
-      const mi = CXM.findIndex((m5) => m5.el.contains(b5)), it = CXM[mi].items[+b5.dataset.ci];
-      if (document.activeElement !== b5 && !CXM[mi].el.querySelector(".pkq:focus")) b5.focus({ preventScroll: true });
-      if (it && it.sub && !it.disabled) {
-        if (!(CXM[mi + 1] && CXM[mi + 1].parent === b5)) cxRun(b5), b5.focus({ preventScroll: true });
-      } else cxCloseFrom(mi + 1);
-    });
-    addEventListener("resize", () => cxCloseAll(false));
-    addEventListener("blur", () => cxCloseAll(false));
-    document.addEventListener("wheel", (e4) => {
-      if (CXM.length && !(e4.target.closest && e4.target.closest(".cxmenu"))) cxCloseAll(false);
-    }, { capture: true, passive: true });
-    window.addEventListener("keydown", (e4) => {
-      const el = e4.target.closest && e4.target.closest(".cxmenu");
-      if (!el || !CXM.length) return;
-      const mi = CXM.findIndex((m6) => m6.el === el), m5 = CXM[mi], L2 = cxOpts(el), i5 = L2.indexOf(document.activeElement), inQ = e4.target.matches(".pkq");
-      const stop = () => {
-        e4.preventDefault();
-        e4.stopPropagation();
-      };
-      if (e4.key === "ArrowUp" && i5 <= 0 && el.querySelector(".pkq")) {
-        stop();
-        el.querySelector(".pkq").focus();
-      } else if (e4.key === "ArrowDown" || e4.key === "ArrowUp" || !inQ && (e4.key === "Home" || e4.key === "End")) menuMove(e4, L2);
-      else if (e4.key === "ArrowRight" && !inQ) {
-        stop();
-        const b5 = document.activeElement;
-        if (b5 && b5.getAttribute("aria-haspopup") === "menu") cxRun(b5);
-      } else if (e4.key === "ArrowLeft" && !inQ) {
-        stop();
-        if (mi > 0) {
-          const p6 = m5.parent;
-          cxCloseFrom(mi);
-          p6 && p6.setAttribute("aria-expanded", "false");
-          p6 && p6.focus();
-        }
-      } else if (e4.key === "Escape") {
-        stop();
-        if (mi > 0) {
-          const p6 = m5.parent;
-          cxCloseFrom(mi);
-          p6 && p6.setAttribute("aria-expanded", "false");
-          p6 && p6.focus();
-        } else cxCloseAll(true);
-      } else if (e4.key === "Enter" || e4.key === " " && !inQ) {
-        stop();
-        if (inQ) {
-          L2[0] && cxRun(L2[0]);
-        } else if (i5 >= 0) cxRun(L2[i5]);
-      } else if (e4.key === "Tab") {
-        stop();
-        cxCloseAll(true);
-      } else if (!inQ) e4.stopPropagation();
-    }, true);
     document.addEventListener("contextmenu", (e4) => {
       if (performance.now() - CXKEYAT < 400) {
         e4.preventDefault();
@@ -15261,7 +15412,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       cxShow(c5, kb2 ? r4.left + Math.min(48, r4.width / 3) : e4.clientX, kb2 ? r4.top + Math.min(r4.height, 28) : e4.clientY);
     });
     window.addEventListener("keydown", (e4) => {
-      if (!(e4.key === "ContextMenu" || e4.key === "F10" && e4.shiftKey) || CXM.length) return;
+      if (!(e4.key === "ContextMenu" || e4.key === "F10" && e4.shiftKey) || contextMenuOpen()) return;
       const c5 = cxCursor();
       if (!c5) return;
       e4.preventDefault();
@@ -15405,11 +15556,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return;
     }
     if (a5 === "proj") {
-      const b5 = btn || $('#rvFocus [data-rf="proj"]'), rc = b5.getBoundingClientRect();
-      cxOpen(rvActive().map((p6) => ({ label: p6.name, icon: "projects", checked: r4.p === p6.code, run: async () => {
+      const b5 = btn || $('#rvFocus [data-rf="proj"]');
+      openContextMenuAt(b5, rvActive().map((p6) => ({ label: p6.name, icon: "projects", checked: r4.p === p6.code, run: async () => {
         await rvMoveItem(r4, p6.code);
         rfDraw();
-      } })), rc.left, rc.bottom + 4, { label: "Project" });
+      } })), { label: "Project" });
     }
   }
   function bootReview0209() {
@@ -15651,9 +15802,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (shared.VIEW === "activity") rjLoadRecent();
     if (quiet) return;
     const to = c5.guess ? "their guesses" : c5.reason ? c5.reason + (c5.reason === "Duplicate" && (c5.dup || rows2.length === 1 && rows2[0].dup) ? ` of ${c5.dup || rows2[0].dup}` : "") : "no reason";
-    const back = done.map((d5) => ({ ...rjRef(d5.key), key: d5.key, was: d5.was || {} }));
+    const back2 = done.map((d5) => ({ ...rjRef(d5.key), key: d5.key, was: d5.was || {} }));
     rjSay(`Reason changed to ${to}` + (msgs.length ? ` · not changed: ${msgs[0]}` : ""), async () => {
-      for (const { body: b5, L: L2 } of rjBy(back, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) await rjRereason(L2.map((x5) => ({ ...x5, dup: b5.duplicate_of || null })), { reason: b5.reason || null, dup: b5.duplicate_of || null }, true);
+      for (const { body: b5, L: L2 } of rjBy(back2, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) await rjRereason(L2.map((x5) => ({ ...x5, dup: b5.duplicate_of || null })), { reason: b5.reason || null, dup: b5.duplicate_of || null }, true);
       snack("Reason put back");
     });
   }
@@ -15673,7 +15824,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (shared.VIEW === "activity") rjLoadRecent();
     const n4 = was.length, text = [n4 ? `Approved instead: ${n4}` : "", open2.length ? `${open2.length} need${open2.length === 1 ? "s" : ""} approving on ${open2.length === 1 ? "its" : "their"} own` : "", ap && !ap.ok ? `not applied: ${oneLine(ap.message)}` : ""].filter(Boolean).join(" · ");
     const undo = n4 ? async () => {
-      const back = was.map((d5) => ({ ...rjRef(d5.key), key: d5.key, was: d5.was || {} }));
+      const back2 = was.map((d5) => ({ ...rjRef(d5.key), key: d5.key, was: d5.was || {} }));
       if (ap && ap.ok && ap.apply_id) {
         const u5 = await api("/api/undo", { apply_id: ap.apply_id });
         if (!u5.ok) {
@@ -15681,9 +15832,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           return;
         }
         await reloadData();
-        for (const { body: b5, L: L2 } of rjBy(back, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) await api("/api/review/reject", { rows: L2.map((x5) => ({ file: x5.file, ref: x5.ref })), ...b5 });
+        for (const { body: b5, L: L2 } of rjBy(back2, (x5) => ({ reason: x5.was.reason || "", duplicate_of: x5.was.duplicate_of || "" }))) await api("/api/review/reject", { rows: L2.map((x5) => ({ file: x5.file, ref: x5.ref })), ...b5 });
       } else {
-        for (const x5 of back) {
+        for (const x5 of back2) {
           try {
             await editProposal(x5.file, (data) => {
               const it = (data.items || []).find((i5) => i5.n === x5.ref);
@@ -15700,11 +15851,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           }
         }
       }
-      rjAddGone(ghosts.filter((g5) => back.some((x5) => x5.key === g5.key)));
+      rjAddGone(ghosts.filter((g5) => back2.some((x5) => x5.key === g5.key)));
       if (S.autoApply) await applyNow();
       else await reloadData();
       if (shared.VIEW === "activity") rjLoadRecent();
-      snack(`Rejected again: ${back.length}`);
+      snack(`Rejected again: ${back2.length}`);
     } : null;
     rjSay(text || "Nothing changed", undo);
     if (open2.length) {
@@ -16039,7 +16190,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       /** @type {Record<string, string>} */
       {}
     );
-    const [shown, setShown] = d2(false);
+    const [shown2, setShown] = d2(false);
     const [done, setDone] = d2(
       /** @type {{text: string, ok: boolean, applyId?: any}|null} */
       null
@@ -16364,7 +16515,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         {
           r: r4,
           id,
-          shown,
+          shown: shown2,
           busy,
           flash,
           closing,
@@ -16502,7 +16653,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       ] })
     ] });
   }
-  function Card({ r: r4, id, text, shown, busy, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
+  function Card({ r: r4, id, text, shown: shown2, busy, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
     if (!r4.ok) return /* @__PURE__ */ u2("div", { class: "sp-card warn", role: "alert", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: r4.message || "That couldn't be read." }) });
     if (r4.refused) {
       const btn = POINT[r4.refused.point_to], to = r4.refused.point_to;
@@ -16599,7 +16750,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ] })
       ] });
       if (r4.problems.length) return /* @__PURE__ */ u2("div", { class: "sp-card warn", id: "spProblems", role: "alert", children: r4.problems.map((p6, i5) => /* @__PURE__ */ u2("div", { class: "sp-msg", children: p6 }, i5)) });
-      if (!shown) return null;
+      if (!shown2) return null;
       return /* @__PURE__ */ u2("div", { class: "sp-card", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: [
         "I couldn't match that to ",
         id,
@@ -16795,7 +16946,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     const hint = hintOf(at.where);
     if (hint) hint.hidden = true;
     for (const b5 of [$("#pkSneakBtn"), $("#mvSneakBtn")]) if (b5) b5.setAttribute("aria-pressed", String(at.where === (b5.id === "mvSneakBtn" ? "ms" : "peek")));
-    mountSneak(host2, at.id, (back) => sneakClose(back), acts(at));
+    mountSneak(host2, at.id, (back2) => sneakClose(back2), acts(at));
     const box = host2.firstElementChild, sc = scrollOf(at.where);
     if (box && sc && typeof ResizeObserver !== "undefined") {
       SNK.ro = new ResizeObserver(() => {
@@ -16808,7 +16959,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       SNK.ro.observe(box);
     }
   }
-  function sneakClose(back) {
+  function sneakClose(back2) {
     const at = SNK.at;
     if (!at) return;
     SNK.at = null;
@@ -16826,7 +16977,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     frameOf(at.where)?.classList.remove("sp-open");
     scrollOf(at.where)?.style.removeProperty("--sp-h");
     for (const b5 of [$("#pkSneakBtn"), $("#mvSneakBtn")]) if (b5) b5.setAttribute("aria-pressed", "false");
-    if (back) {
+    if (back2) {
       const o5 = (
         /** @type {HTMLElement|null} */
         SNK.opener
@@ -19073,7 +19224,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function workBarProps() {
     const R3 = FPRANGES(), main = defs().filter((d5) => !d5[4]), more = defs().filter((d5) => d5[4]);
     if (![...defs().map((d5) => d5[0]), ...R3.map((r4) => r4[0])].includes(shared.FPK)) shared.FPK = (more.find((d5) => setOf(d5[0]).size) || more[0] || main[0])[0];
-    const rng = (k5) => k5 === "dr" ? shared.DR : k5 === "rr" ? RR : shared.CR, rOn = (k5) => !!(rng(k5).from || rng(k5).to), total = items().length, shown = items().filter((x5) => passes(x5)).length;
+    const rng = (k5) => k5 === "dr" ? shared.DR : k5 === "rr" ? RR : shared.CR, rOn = (k5) => !!(rng(k5).from || rng(k5).to), total = items().length, shown2 = items().filter((x5) => passes(x5)).length;
     const fields = [
       ...defs().map((d5) => {
         const k5 = d5[0], on = !!setOf(k5).size, id = BTNID[k5] || k5;
@@ -19137,7 +19288,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
           if (vis.length && !vis.some((f5) => f5[0] === shared.FPK)) shared.FPK = vis[0][0];
           drawWorkFilters();
         },
-        result: `Result: ${shown} of ${total} shown`,
+        result: `Result: ${shown2} of ${total} shown`,
         resultId: "fpResult",
         doneId: "fpDone"
       },
@@ -19176,7 +19327,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function fchipHtml(label, k5, clr, { neg = false, def = false, edit = "", attr: attr2 = "data-clr" } = {}) {
     return `<span class="fchip${neg ? " neg" : ""}${def ? " def" : ""}">${edit ? `<button type="button" class="cl" data-${edit}="${esc(k5)}" aria-label="Change: ${esc(label)}">${esc(label)}</button>` : esc(label)}<button ${attr2}="${esc(k5)}" aria-label="${esc(clr)}">${ic("x")}</button></span>`;
   }
-  function renderApplied(total, shown) {
+  function renderApplied(total, shown2) {
     const chips = [];
     defs().forEach((d5) => {
       const v4 = [...setOf(d5[0])];
@@ -19189,7 +19340,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (shared.WT !== "decisions" && (RR.from || RR.to)) chips.push(`<span class="fchip">Raised: ${RR.from ? fd(RR.from) : "…"} to ${RR.to ? fd(RR.to) : "…"}<button data-clr="rr" aria-label="Remove the raised date range">${ic("x")}</button></span>`);
     if (shared.WT !== "decisions" && (shared.CR.from || shared.CR.to)) chips.push(`<span class="fchip">Closed: ${shared.CR.from ? fd(shared.CR.from) : "…"} to ${shared.CR.to ? fd(shared.CR.to) : "…"}<button data-clr="cr" aria-label="Remove the closed date range">${ic("x")}</button></span>`);
     if (shared.WQ.trim()) chips.push(fchipHtml(`Search: “${shared.WQ.trim()}”`, "q", "Clear the search"));
-    putHTML($("#wapplied"), html`${raw(chips.join(""))}${chips.length ? html`<button class="linkbtn" id="clearF">Clear all</button>` : ""}${!shared.WVIEW && chips.length || !shared.WVIEW && WB[shared.WT] ? raw(viewSaveBtns()) : ""}<span class="sp"></span><span class="sub"><span id="wcount">Showing ${raw(shown)} of ${raw(total)}</span><span id="whidden"></span></span>`);
+    putHTML($("#wapplied"), html`${raw(chips.join(""))}${chips.length ? html`<button class="linkbtn" id="clearF">Clear all</button>` : ""}${!shared.WVIEW && chips.length || !shared.WVIEW && WB[shared.WT] ? raw(viewSaveBtns()) : ""}<span class="sp"></span><span class="sub"><span id="wcount">Showing ${raw(shown2)} of ${raw(total)}</span><span id="whidden"></span></span>`);
   }
   var COLS = {
     actions: [["id", "ID"], ["t", "Action"], ["o", "Owner"], ["due", "Due"], ["pr", "Priority"], ["st", "Status"], ["ws", "Workstream"], ["ms", "Milestone"], ["src", "Source"], ["upd", "Last updated"]],
@@ -19263,15 +19414,15 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       sizeList();
     })();
     {
-      const total = items().length, shown = items().filter((x5) => passes(x5)).length, h5 = hiddenCount();
+      const total = items().length, shown2 = items().filter((x5) => passes(x5)).length, h5 = hiddenCount();
       const ht = h5.n ? ` · ${h5.n} ${h5.closed ? "closed " : ""}hidden${h5.closed ? "" : " by the status filter"}` : "", hs = $("#whidden");
       if (hs) hs.textContent = ht;
       const e4 = $(layoutOf(shared.WT) === "board" ? "#workBoard .empty" : "#workTbl .empty");
-      if (!shown && e4) {
+      if (!shown2 && e4) {
         putHTML(e4, raw(emptyHtml()));
         const F4 = activeFilters();
         workAnnounce(F4.length ? e4.querySelector("h2").textContent + ". " + [...e4.querySelectorAll(".relax > div")].map((d5) => d5.querySelector("span").textContent + ": " + d5.querySelector(".sub").textContent).join("; ") : "Nothing here yet");
-      } else workAnnounce(`Showing ${shown} of ${total}${ht}`);
+      } else workAnnounce(`Showing ${shown2} of ${total}${ht}`);
     }
     $$("#v-work tr[data-row], #v-mine tr[data-row]").forEach((tr) => {
       const td = tr.querySelector("td.title");
@@ -19384,8 +19535,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   function dispProps() {
     const ord = orderedCols().map((c5) => c5[0]), rest = COLS[shared.WT].filter((c5) => !ord.includes(c5[0]));
     return [...orderedCols(), ...rest].map((c5) => {
-      const shown = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]);
-      return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
+      const shown2 = ord.includes(c5[0]), i5 = ord.indexOf(c5[0]);
+      return `<label><input type="checkbox" data-prop id="dprop-${c5[0]}" value="${c5[0]}" ${shown2 ? "checked" : ""} ${c5[0] === "t" ? "disabled" : ""}>${c5[1]}${shown2 ? `<span class="colmv"><button type="button" data-mv="${c5[0]}" data-d="-1" aria-label="Move ${c5[1]} earlier" ${i5 === 0 ? "disabled" : ""}>↑</button><button type="button" data-mv="${c5[0]}" data-d="1" aria-label="Move ${c5[1]} later" ${i5 === ord.length - 1 ? "disabled" : ""}>↓</button></span>` : ""}</label>`;
     }).join("");
   }
   shared.RZ = store.get("creaite-colwidths", {});
@@ -20737,16 +20888,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     };
     let row2 = V2.filter((v4) => !v4.more || v4.id === act), more = V2.filter((v4) => v4.more && v4.id !== act);
     VMORE.views = more;
-    const draw = () => {
+    const draw2 = () => {
       putHTML(el, raw(row2.map(chip).join("") + (!shared.WVIEW && !WB[shared.WT] ? '<span class="vchip custom" aria-pressed="true">Custom</span>' : "") + (more.length ? `<span class="dd vmorewrap"><button class="vchip" type="button" id="vmore" aria-haspopup="menu" aria-expanded="false">More views (${more.length}) ▾</button></span>` : "")));
     };
-    draw();
+    draw2();
     if (!el.offsetParent) return;
     for (let n4 = 0; n4 < 40 && el.scrollWidth > el.clientWidth + 1; n4++) {
       const i5 = row2.map((v4) => v4.id !== act && !(VRENAME && v4.id === "saved:" + VRENAME)).lastIndexOf(true);
       if (i5 < 0) break;
       more.unshift(row2.splice(i5, 1)[0]);
-      draw();
+      draw2();
     }
   }
   async function updateView() {
@@ -21483,7 +21634,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       {
         const bar = $("#wbulk");
         if (bar && !bar.hidden && shared.VIEW === "work") {
-          const all = rows(), shown = new Set(hlOrder().map((o5) => o5.id)), hid = [...HL.keys()].filter((id) => !shown.has(id)).length;
+          const all = rows(), shown2 = new Set(hlOrder().map((o5) => o5.id)), hid = [...HL.keys()].filter((id) => !shown2.has(id)).length;
           const n4 = bar.querySelector(".bkn");
           if (n4) n4.textContent = `${HL.size} selected${hid ? ` (${hid} in collapsed groups)` : ""}${HLNOTE ? ` · ${HLNOTE}` : ""}`;
           if (HL.size < all.length) n4 && addHTML(n4, "afterend", html`<button type="button" class="linkbtn" data-bq="all" title="Highlights every item the filters show, in collapsed groups too">Select all ${all.length} matching</button>`);
@@ -21941,13 +22092,13 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return;
     }
     $("#mtgNew").disabled = !L2.some((m5) => mtgCanPick(m5) && !m5.private);
-    const shown = mtgShown, nTx = L2.filter(mtgHasTx).length;
+    const shown2 = mtgShown, nTx = L2.filter(mtgHasTx).length;
     putHTML($("#mtgChips"), html`<button type="button" class="vchip" data-show="all" aria-pressed="${String(MTGSHOW !== "tx")}">All</button><button type="button" class="vchip" data-show="tx" aria-pressed="${String(MTGSHOW === "tx")}">With transcripts · ${nTx}</button>`);
-    const days2 = [...new Set(L2.filter(shown).map((m5) => m5.day))], org = (m5) => m5.organiser === true ? "You" : m5.organiser ? m5.organiser : html`<span class="sub">—</span>`;
+    const days2 = [...new Set(L2.filter(shown2).map((m5) => m5.day))], org = (m5) => m5.organiser === true ? "You" : m5.organiser ? m5.organiser : html`<span class="sub">—</span>`;
     const sel = (on) => raw(on ? "selected" : ""), off = (on) => raw(on ? "disabled" : "");
     const projSel = (m5, i5) => html`<select class="mtgp" data-mi="${i5}" aria-label="Project for ${m5.title}"><option value="" ${sel(!m5.p)}>Not sure</option>${P3.map((p6) => html`<option value="${p6.code}" ${sel(m5.p === p6.code)}>${p6.name}</option>`)}<option value="_portfolio" ${sel(m5.p === "_portfolio")}>Portfolio</option></select>`;
     const noIds = L2.some((m5) => !m5.id);
-    putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L2.filter((m5) => m5.day === d5 && shown(m5)).length}</button></div></td></tr>${L2.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
+    putHTML($("#mtgBody"), html`${clrConfirm()}<div class="tbl"><table class="mtgtbl"><thead><tr><th style="width:32px"></th><th>Time</th><th>Meeting</th><th>Where</th><th>Organiser</th><th>Project</th><th>State</th><th>Transcript</th><th style="width:30px"></th></tr></thead><tbody>${days2.map((d5) => html`<tr class="mtgday"><td colspan="9"><div class="mtgdayh"><span>${new Date(d5).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(d5)}</span><span class="sp"></span><button class="btn mtgclr" data-clr="day" data-day="${d5}" ${off(clrOff())} title="${clrOff() ? "Needs the live server" : "Set this day's meetings aside"}">Clear day · ${L2.filter((m5) => m5.day === d5 && shown2(m5)).length}</button></div></td></tr>${L2.map((m5, i5) => [m5, i5]).filter(([m5]) => m5.day === d5 && shown2(m5)).map(([m5, i5]) => html`<tr data-mid="${m5.id || ""}" class="${m5.private ? "mtgpriv" : ""}${mtgLater(m5) ? " mtglater" : ""}${mtgHasTx(m5) ? " mtgtx" : ""}${m5.transcript && m5.transcript !== "available" && !m5.processed ? " mtgmute" : ""}${m5.processed ? " mtgdone" : ""}" ${mtgLater(m5) && html`title="Not happened yet: no transcript until it has ended"`}><td><input type="checkbox" data-mi="${i5}" aria-label="Select ${m5.title}" ${raw(MSEL.has(m5.id) ? "checked" : "")} ${off(!mtgCanPick(m5))} ${!m5.id && html`title="Refresh the calendar to pick this meeting"`}></td><td style="white-space:nowrap">${m5.start}–${m5.end}</td><td class="title">${mtgHasTx(m5) && html`<span class="txbadge">Transcript</span> `}${m5.title}${m5.private ? html` <span class="sub">private</span>` : ""}</td><td>${m5.teams ? html`<span class="mtgteams" title="Teams meeting">${raw(MTGI)} Teams</span>` : html`<span class="sub">In person</span>`}</td><td>${org(m5)}</td><td>${projSel(m5, i5)}</td><td>${mtgState(m5)}</td><td>${mtgTx(m5, i5)}</td><td><button class="mtgx" data-clr="one" data-mi="${i5}" ${off(clrOff())} aria-label="Clear ${m5.title}" title="Clear this meeting">${raw(ic("x"))}</button></td></tr>`)}`)}</tbody></table></div>${noIds && html`<p class="sub" style="margin:8px 0 0">Some meetings were saved before the calendar kept IDs: Refresh to pick them.</p>`}${clrList()}`);
     if (!shared.LOADING) {
       const L3 = MTG();
       $$("#mtgBody tr[data-mid]").forEach((tr) => {
@@ -22374,9 +22525,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   shared.FLAST = 0;
   shared.FBUSY = false;
   var clockOf = (at) => String(at || "").slice(11, 16);
-  function filesStatus(shown) {
+  function filesStatus(shown2) {
     const n4 = FNEW.size, tot = FILES.length;
-    $("#filesCount").textContent = `${shown === void 0 ? tot : shown} of ${tot} files${n4 ? ` · ${n4} new` : ""}`;
+    $("#filesCount").textContent = `${shown2 === void 0 ? tot : shown2} of ${tot} files${n4 ? ` · ${n4} new` : ""}`;
     $("#filesAt").textContent = FERR ? FERR : shared.FBUSY && shared.FBUSY === "slow" ? "Checking…" : SERVED && (FAT || D.built_at) ? `Updated ${clockOf(FAT || D.built_at)}.` : "File list as of the last build.";
   }
   async function refreshFiles(force) {
@@ -22536,56 +22687,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       return false;
     }
   }
-  function keysMark() {
-    try {
-      localStorage.setItem(KEYSK, "1");
-    } catch (e4) {
-    }
-    document.body.classList.add("keys-seen");
-  }
-  function keysChip(where, after) {
-    const host2 = document.querySelector(after);
-    if (!host2 || $("#" + where + "Keys")) return;
-    addHTML(host2, "afterend", html`<span class="dd keysdd"><button type="button" class="btn keyschip" id="${raw(where)}Keys" aria-haspopup="dialog" aria-expanded="false" aria-controls="${raw(where)}KeysMenu" title="Keyboard keys for this list">Keys</button><div class="ddmenu keysmenu" id="${raw(where)}KeysMenu" role="dialog" aria-label="Keys" hidden></div></span>`);
-  }
-  function keysHtml(where) {
-    const h5 = where === "w" ? (layoutOf(shared.WT) === "board" ? $("#whintBoard") : $("#whintList")).innerHTML || workHint(layoutOf(shared.WT)) : $("#rvHint").innerHTML || String(rvHintHtml());
-    return `<h3>Keys</h3><ul>${h5.split(" · ").map((x5) => `<li>${x5}</li>`).join("")}</ul><p class="sub">Press <span class="kbd">?</span> for every shortcut.</p>`;
-  }
-  function keysClose() {
-    $$(".keysmenu").forEach((m5) => {
-      m5.hidden = true;
-      m5.classList.remove("on");
-      m5.previousElementSibling.setAttribute("aria-expanded", "false");
-    });
-  }
   function bootHelp0158() {
     if (keysSeen()) document.body.classList.add("keys-seen");
-    document.addEventListener("click", (e4) => {
-      const b5 = e4.target.closest(".keyschip");
-      if (b5) {
-        e4.stopPropagation();
-        const where = b5.id.replace(/Keys$/, ""), m5 = $("#" + where + "KeysMenu"), was = !m5.hidden;
-        keysClose();
-        if (was) return;
-        putHTML(m5, raw(keysHtml(where)));
-        m5.hidden = false;
-        m5.classList.add("on");
-        b5.setAttribute("aria-expanded", "true");
-        keysMark();
-        return;
-      }
-      if (!e4.target.closest(".keysmenu")) keysClose();
-    });
-    document.addEventListener("keydown", (e4) => {
-      if (e4.key === "Escape" && $$(".keysmenu").some((m5) => !m5.hidden)) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        const open2 = $$(".keysmenu").find((m5) => !m5.hidden);
-        keysClose();
-        open2?.previousElementSibling?.focus();
-      }
-    }, true);
   }
   function pKeysShow(on) {
     const k5 = $("#pKeys");
@@ -24767,29 +24870,29 @@ ${pre}**Current state title:** ${title}`);
     const old = p6.cstitle || CST_DEF;
     let t5 = csClean(raw2);
     if (!t5 || t5.toLowerCase() === CST_DEF.toLowerCase()) t5 = CST_DEF;
-    const back = () => {
+    const back2 = () => {
       if (shared.VIEW === "cockpit" && shared.COCK === code) {
         csHead(code);
         $("#v-cockpit .cstbtn")?.focus();
       }
     };
     if (t5 === old) {
-      back();
+      back2();
       return;
     }
     if (!await needVault()) {
-      back();
+      back2();
       return;
     }
     try {
       const { before, wrote } = await csWrite(code, t5);
       await shared.VW.append("system/config/settings-log.jsonl", JSON.stringify({ at: stampFull(), key: `current_state_title.${code}`, old, new: t5 }) + "\n");
       p6.cstitle = t5;
-      back();
+      back2();
       snack(t5 === CST_DEF ? "Title back to “Current state”" : `Title: ${t5}`, () => csUndo(code, old, t5, before, wrote));
     } catch (e4) {
       snack("Not saved: " + e4.message);
-      back();
+      back2();
     }
   }
   async function csUndo(code, old, now, before, wrote) {
@@ -25802,8 +25905,8 @@ ${pre}**Current state title:** ${title}`);
     openDialog(d5, { focus: false });
     shared.PREPPEEK = null;
     drawPrep();
-    const back = was.el && $$(`${prepPeekRoot()} [data-open]`).find((x5) => x5.dataset.open === was.el);
-    if (back) back.focus();
+    const back2 = was.el && $$(`${prepPeekRoot()} [data-open]`).find((x5) => x5.dataset.open === was.el);
+    if (back2) back2.focus();
   }
   function drawPrep() {
     popupRev.value++;
@@ -26980,7 +27083,7 @@ ${pre}**Current state title:** ${title}`);
     const seq = A2(0), mail = A2(
       /** @type {HTMLDivElement | null} */
       null
-    ), back = A2(
+    ), back2 = A2(
       /** @type {HTMLButtonElement | null} */
       null
     );
@@ -26995,7 +27098,7 @@ ${pre}**Current state title:** ${title}`);
       if (cardRef.current) draftStat("email", "rejected");
     }, []);
     h2(() => {
-      if (back.current) back.current.focus();
+      if (back2.current) back2.current.focus();
     }, []);
     h2(() => {
       if (!viaServer()) {
@@ -27025,7 +27128,7 @@ ${pre}**Current state title:** ${title}`);
     };
     const say2 = (text, ok = true) => setSaid({ text, ok });
     const head = /* @__PURE__ */ u2("h2", { class: "ch-h", children: [
-      /* @__PURE__ */ u2("button", { type: "button", class: "ib", ref: back, "aria-label": "Back to the item", "data-tip": "Back to the item", onClick: onBack, children: /* @__PURE__ */ u2(ShapesIcon, { shapes: BACK_ICON }) }),
+      /* @__PURE__ */ u2("button", { type: "button", class: "ib", ref: back2, "aria-label": "Back to the item", "data-tip": "Back to the item", onClick: onBack, children: /* @__PURE__ */ u2(ShapesIcon, { shapes: BACK_ICON }) }),
       "Draft chase · ",
       /* @__PURE__ */ u2("span", { class: "sub", children: id })
     ] });
@@ -28507,14 +28610,14 @@ ${d5.text}`);
     let cur = options;
     const item = role === "menu" ? "menuitem" : "option";
     const el = pkMk(anchor, "", `${search ? `<input class="pkq" type="search" placeholder="Search" aria-label="Search: ${esc(label)}" autocomplete="off">` : ""}<div role="${role}" aria-label="${esc(label)}"></div>`), box = el.querySelector(`[role=${role}]`);
-    const draw = (q5) => {
+    const draw2 = (q5) => {
       const t5 = String(q5 || "").trim().toLowerCase();
       cur = filter ? filter(String(q5 || "").trim()) : options;
       let h5 = cur.map((o5, i5) => [o5, i5]).filter(([o5]) => filter || !t5 || o5.label.toLowerCase().includes(t5)).map(([o5, i5]) => `<button type="button" class="pkopt" role="${item}" data-i="${i5}"${role === "listbox" ? ` aria-selected="${o5.v === value}"` : ""}${o5.disabled ? ' aria-disabled="true"' : ""}>${o5.icon || ""}<span>${esc(o5.label)}${o5.hint ? `<span class="h">${esc(o5.hint)}</span>` : ""}</span>${role === "listbox" && o5.v === value ? ic("check", { cls: "ck" }) : ""}</button>`).join("");
       if (allowNew && !filter && t5 && !options.some((o5) => o5.label.toLowerCase() === t5)) h5 += `<button type="button" class="pkopt" role="${item}" data-new="1">${ic("plus")}<span>Use “${esc(String(q5).trim())}”</span></button>`;
       putHTML(box, h5 ? raw(h5) : html`<div class="pkopt" aria-disabled="true">No match</div>`);
     };
-    draw("");
+    draw2("");
     el.addEventListener("click", (e4) => {
       const b5 = e4.target.closest(".pkopt");
       if (!b5 || b5.getAttribute("aria-disabled") === "true") return;
@@ -28556,7 +28659,7 @@ ${d5.text}`);
     const q4 = $(".pkq", el);
     if (q4) {
       q4.addEventListener("input", () => {
-        draw(q4.value);
+        draw2(q4.value);
         pkPlace(el, anchor);
       });
       q4.focus();
@@ -28572,7 +28675,7 @@ ${d5.text}`);
     } } : o5;
     let base = value || TODAY, y5 = +base.slice(0, 4), m5 = +base.slice(5, 7) - 1;
     const el = pkMk(anchor, "pkcal", "");
-    const draw = (focusIso) => {
+    const draw2 = (focusIso) => {
       const lead = (new Date(Date.UTC(y5, m5, 1)).getUTCDay() + 6) % 7, n4 = new Date(Date.UTC(y5, m5 + 1, 0)).getUTCDate();
       let days2 = "";
       for (let i5 = 0; i5 < lead; i5++) days2 += "<span></span>";
@@ -28592,7 +28695,7 @@ ${d5.text}`);
         if (focusIso !== null) f5.focus();
       }
     };
-    draw();
+    draw2();
     el.addEventListener("click", (e4) => {
       const mb = e4.target.closest("[data-m]");
       if (mb) {
@@ -28605,7 +28708,7 @@ ${d5.text}`);
           m5 = 0;
           y5++;
         }
-        draw(null);
+        draw2(null);
         return;
       }
       const d5 = e4.target.closest("[data-d]");
@@ -28632,7 +28735,7 @@ ${d5.text}`);
           y5 = +to.slice(0, 4);
           m5 = +to.slice(5, 7) - 1;
         }
-        draw(to);
+        draw2(to);
         return;
       }
       if (e4.key === "Enter" && e4.target.matches(".pkdt") && !e4.metaKey && !e4.ctrlKey) {
@@ -32973,7 +33076,7 @@ ${d5.text}`);
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
     const pad = (n4) => String(n4).padStart(2, "0"), isoOf = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
-    const draw = (focus) => {
+    const draw2 = (focus) => {
       const f5 = new Date(y5, m5, 1), st = (f5.getDay() + 6) % 7, dn = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st);
       for (let d5 = 1; d5 <= dn; d5++) {
@@ -32992,9 +33095,9 @@ ${d5.text}`);
       cur = iso;
       y5 = +iso.slice(0, 4);
       m5 = +iso.slice(5, 7) - 1;
-      draw(true);
+      draw2(true);
     };
-    draw(true);
+    draw2(true);
     box.addEventListener("click", (e4) => {
       e4.stopPropagation();
       const b5 = e4.target.closest("button");
@@ -33012,7 +33115,7 @@ ${d5.text}`);
         cur = `${y5}-${pad(m5 + 1)}-${pad(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
         if (max && cur > max) cur = max;
         if (min && cur < min) cur = min;
-        draw(false);
+        draw2(false);
         return;
       }
       if ("v" in b5.dataset) {
@@ -34338,7 +34441,7 @@ ${d5.text}`);
   }
   function LooseEnds({ loose, places, all, onPick, onAll, onMore, sweeping }) {
     if (!loose.length) return /* @__PURE__ */ u2("p", { class: "sub", children: sweeping ? "Nothing is open yet; anything the sweep finds is added here." : "Nothing is left open. Everything has a place." });
-    const shown = all ? loose : loose.slice(0, SHOWN), common = loose.every((x5) => places[x5.ref] === places[loose[0].ref]) ? places[loose[0].ref] : "";
+    const shown2 = all ? loose : loose.slice(0, SHOWN), common = loose.every((x5) => places[x5.ref] === places[loose[0].ref]) ? places[loose[0].ref] : "";
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2("section", { children: [
         /* @__PURE__ */ u2("h4", { children: "Give each a place" }),
@@ -34346,13 +34449,13 @@ ${d5.text}`);
           /* @__PURE__ */ u2("span", { class: "sub", children: loose.length > 1 ? `All ${loose.length}:` : "It:" }),
           /* @__PURE__ */ u2(Place, { label: `Place for all ${plur(loose.length, "loose end")}`, value: common, onPick: onAll })
         ] }),
-        /* @__PURE__ */ u2("ul", { class: "dclist cdloose", children: shown.map((x5) => /* @__PURE__ */ u2("li", { "data-ref": x5.ref, children: [
+        /* @__PURE__ */ u2("ul", { class: "dclist cdloose", children: shown2.map((x5) => /* @__PURE__ */ u2("li", { "data-ref": x5.ref, children: [
           /* @__PURE__ */ u2(LooseWords, { x: x5 }),
           /* @__PURE__ */ u2(Place, { label: `Place for ${x5.type}: ${x5.t}`, value: places[x5.ref], onPick: (v4) => onPick(x5.ref, v4) })
         ] })) }),
-        loose.length > shown.length ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-cdmore": "1", onClick: onMore, children: [
+        loose.length > shown2.length ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", "data-cdmore": "1", onClick: onMore, children: [
           "and ",
-          loose.length - shown.length,
+          loose.length - shown2.length,
           " more"
         ] }) : null
       ] }),
@@ -35972,14 +36075,14 @@ ${d5.text}`);
     if (c5 !== shared.ASKCHAT) loadChat(c5);
   } });
   async function drawHistory() {
-    let shown = false;
+    let shown2 = false;
     const t5 = setTimeout(() => {
-      shown = true;
+      shown2 = true;
       histOpen([], true);
     }, 150);
     try {
       const res = await api("/api/chats"), L2 = (res.chats || []).slice(0, 10);
-      if (shown && !menuOpenFor($("#chHist"))) return;
+      if (shown2 && !menuOpenFor($("#chHist"))) return;
       histOpen([{ id: "rc", note: "Recent chats" }, ...L2.length ? L2.map((c5) => ({
         id: c5.chat,
         name: c5.title || "Untitled",
@@ -39508,7 +39611,6 @@ ${d5.text}`);
         "csSave",
         "csTitle",
         "curObj",
-        "cxOpen",
         "cxPeople",
         "cxReview",
         "dateHint",
@@ -39645,6 +39747,7 @@ ${d5.text}`);
         "openCapture",
         "openChat",
         "openCk",
+        "openContextMenu",
         "openDialog",
         "openDisp",
         "openDraftEmail",

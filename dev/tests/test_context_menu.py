@@ -149,7 +149,7 @@ class ContextMenuTests(LiveBrowserCase):
     def test_submenus_open_to_the_side_that_fits(self):
         b = self.b
         self.work()
-        b.eval('cxOpen([{label:"Owner",icon:"user",sub:()=>cxPeople(null,()=>{})}],innerWidth-60,120,{label:"Test"})')
+        b.eval('openContextMenu([{label:"Owner",icon:"user",sub:()=>cxPeople(null,()=>{})}],innerWidth-60,120,{label:"Test"})')
         b.eval(f'document.querySelector("{MENU} [role=menuitem]").click()')
         b.wait(f'document.querySelectorAll("{MENU}").length===2')
         r = b.eval(f'(()=>{{ const m=[...document.querySelectorAll("{MENU}")].map(x=>x.getBoundingClientRect()); return [m[0].left,m[1].right,innerWidth,m[1].left]; }})()')

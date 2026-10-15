@@ -67,6 +67,7 @@ export * from "./components/today/ToDecide.jsx";
 export * from "./components/today/WeekAhead.jsx";
 
 export * from "./components/review/RejectMenu.jsx";   /* BL-315 */
+export * from "./components/review/ContextMenu.jsx";   /* BL-316: the right-click menu */
 
 export * from "./components/review/RejectsList.jsx";
 
