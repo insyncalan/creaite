@@ -69,12 +69,8 @@ class AutosizeFields(LiveBrowserCase):
         b.pump(0.3)
         self.grows_and_stops("#f_reason")
 
-    def test_quick_capture_and_steer_it(self):
-        b = self.b
-        b.eval("openCapture()")
-        b.pump(0.3)
-        self.grows_and_stops("#qcNotes")
-        b.eval("$('#qcNotes').value=''")
+    def test_steer_it(self):
+        b = self.b                                       # BL-301 C: Quick Capture's box is gone (the capture drawer replaced it)
         b.eval("go('projects'); openGen('ABC')")
         b.pump(0.4)
         if not b.eval("$('#genDlg').open"):

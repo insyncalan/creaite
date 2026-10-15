@@ -34,7 +34,7 @@ Every piece of work follows the same five steps. Only step 3 needs you, and noth
 1. **Material arrives** (In):
    - Meetings picked from your calendar (Intake › Calendar import)
    - Transcripts and minutes you drop in (Upload files)
-   - Notes from a call (Quick capture)
+   - Notes from a call or your own thinking (a note, [[⌘⇧N]]), turned into items with Find updates
    - The daily mail and Teams sweep
 2. **Claude drafts** (Propose): Draft Word minutes, plus proposed new items and updates to open ones, each citing its source. It matches every item to a project and owner.
 3. **Review** (You) {you: The only gate}: In Review, approve, edit or reject each proposal. Routine items can be approved in bulk; minutes, new decisions and new risks are approved one at a time.
@@ -72,7 +72,7 @@ About an hour, most of it telling creaite about your projects and the people on 
 Every edit you make on the dashboard is written as a proposal and applied at once, with Undo.
 
 - **Today**: A morning brief: your meetings, what needs attention, your commitments, what was resolved, the week ahead
-- **Intake**: Three ways in: Calendar import, Upload files and Quick capture
+- **Intake**: Two ways in: Calendar import and Upload files (a note is [[⌘⇧N]], from any page)
 - **Projects**: Current state, health checked against evidence, milestones, early warnings
 - **Work**: Every action, risk, issue and decision, with filters and saved views
 - **People**: Each person's open work, Draft email, and handover
@@ -210,15 +210,16 @@ Where: Intake › Calendar import or Upload files
 
 Or say: `process new minutes` `process Tuesday's ABC steering`
 
-## Capture a call with no transcript
+## Capture a note
 
-Where: Intake › Quick capture
+Where: any page · [[⌘⇧N]] · ⌘K "New note" · Today › a meeting's **Note**
 
-1. Type your rough notes in **Quick capture**: what was agreed, who does what by when, any new risk.
-2. Pick the project, or leave **Match from the note**. The date is today; type an earlier day (`yesterday`, `mon`) or pick it from the calendar if needed.
-3. As you write a line that reads as an action, **chips** under the box suggest what creaite read in it: **Owner**, **Due**, **Workstream**, **Milestone** and **Priority**. Nothing is set until you click one; a click adds it to that line in words ("(owner Sara Example)"), which the minutes then read.
-4. Press **Process** ([[⌘↵]]). The proposed items appear in Review, citing your note.
-5. A note you haven't processed stays in this browser, even after a reload, until you press **Process** or **Clear**.
+1. Press [[⌘⇧N]] on any page (or **N** when you aren't typing in a box: in an ordinary Chrome tab ⌘⇧N opens an incognito window). The note opens at the right; the page stays where it was.
+2. Type. creaite guesses the project from the project register (a code, the project's name, an alias, a stakeholder, a client domain or two keywords) and says why ("guessed from “Omar Ali”"). Change it in **Project** and it stays your choice. If nothing names a project, the note is **Unfiled** (the portfolio's notes folder).
+3. It is kept as a draft as you type. Esc or × closes it and keeps the draft: [[⌘⇧N]] carries on, and drafts are listed under **Recent notes**.
+4. Press **Done** ([[⌘↵]]) to save it in the project's `08 Notes` folder, named by its title (or its first line). Or press **Done and find updates** to save it and open it on the project's Notes tab with Find updates, which turns its lines into tracker changes.
+5. **Confidential** (off unless you turn it on) marks the note confidential: it is kept out of prep pages and client reports, and Claude reads its text only if you say yes.
+6. On Today, **Note** under a meeting starts a Working session note with the meeting's title, date and who was invited.
 
 Or say: `note: Sara confirmed the pilot extends to 60 agents`
 
@@ -532,6 +533,8 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 |---|---|
 | Cmd/Ctrl + K | Search or jump to anything: views (including Work views and your saved ones), projects, items, milestones, files, Intake and commands. On a project page it also offers that project's actions (generate or edit current state, add a milestone or image, edit health). Type a change in words ("move ABC-A-002 to fri") to see it before and after; Enter stages it, Cmd/Ctrl + Enter stages it and opens Review |
 | / or Cmd/Ctrl + J | ask creaite |
+| Cmd/Ctrl + Shift + N | A new note, from any page (the note drawer; Esc closes it and keeps the draft, Cmd/Ctrl + Enter is Done) |
+| N | A new note too, when you aren't typing in a box: the same drawer. Use it in an ordinary Chrome tab, where Cmd/Ctrl + Shift + N opens an incognito window |
 | / / | With an item open (outside a text field): **Sneak peek**, change it in words (Esc closes it; ↑ brings back the last instruction) |
 | ? | This help, on the tab you used last (Start here, How do I… or Reference) |
 | Esc | Close the top thing: picker or calendar, an open item, ask creaite, palette. In a text field of an open item, puts the text back. In ask creaite's input, stops a running request (or closes the chat, leaving the item as it was); focus goes back to where you were before you opened it. The message at the foot of the page: hides it when you are on it, or when nothing else is open |
@@ -719,11 +722,14 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 - **Coverage:** when the meeting had an agenda (a file in the project's Agendas folder for that day, or creaite's prep page), cx-minutes marks each point **Covered**, **Touched on** or **Not discussed**; only the agenda's own words are kept, never the transcript. **Carry to the next agenda** (needs the live server) puts a point that wasn't covered on the next prep page of the same meeting, under "Not covered last time". Review shows the count on the minutes' row.
 - It reads what creaite already holds, so it shows without the live server; nothing on it is sent.
 
-## Quick capture
-- For a conversation with no transcript (a call, a chat in the corridor): type rough notes in **Quick capture** on the Intake page (the third section), or open it from ⌘K. Pick the project, or leave **Match from the note** and creaite finds it from a code, name, alias or keyword; if it can't tell, it asks you to pick. The date is picked from a calendar (it is always today when the form opens, and a day after today can't be chosen; arrow keys move around the calendar, Enter chooses and Esc closes). Add who was there and a title (else the first line).
-- **Process** (or ⌘↵) saves the note as `projects/<CODE> <Name>/minutes/YYYY-MM-DD Quick note - <title>.md` (never overwriting) and runs cx-minutes on it: the proposed items appear in Review, each citing the note. No Word minutes are drafted unless you ask. Needs the live server.
-- In ask creaite, start a message with **note:** to do the same ("note: Sara confirmed the pilot extends to 60 agents").
-- **Chips** under the note suggest an owner, due date, workstream, milestone or priority for the line you're writing, read by plain code (no model); a click adds that one field to the line in words.
+## Capture a note
+- **[[⌘⇧N]] from any page** (or ⌘K "New note") opens the note drawer at the right, without leaving the page. It replaces Intake's Quick capture: notes are saved in the project's `08 Notes` folder, not `minutes/`, and become tracker changes through **Find updates** on the note rather than a trip through Review. Quick notes saved before v2.0.0 stay in `minutes/`, and cx-minutes still processes them.
+- **The project** is guessed from the project register with the rules the minutes use: a code (`ABC`, `[ABC]`) or a Teams channel; the project's name, an alias or client name, a stakeholder listed under that project only, a sender or a client domain, or two keywords. One keyword isn't enough, a Shared name never counts, a word in a project's Exclude column rules it out, and signals for two projects ask you to choose. The reason is shown beside the project; changing the project makes it yours. No guess is **Unfiled** (the portfolio's notes folder).
+- **Saved as you type:** the text is kept as a draft in `system/staging/drafts/notes/` a moment after each pause ("Draft saved 10:42"). **Done** ([[⌘↵]]) writes the note through filechange.py: backed up, logged in Activity › What changed, and undoable. A taken name gets a number. Closing the drawer keeps the draft; **Discard** drops it.
+- **Done and find updates** saves the note and opens it on its project's Notes tab with the Find updates panel beside it.
+- **Recent notes** at the foot: drafts not yet saved first, then the newest notes; a click carries on with a draft or opens the note.
+- **Note for this meeting** (Today, under any meeting but a private one): the Working session template, with the meeting's title, its date and who was invited (from the saved calendar; a confidential meeting gives only its title and date), and the project Prep matched.
+- In ask creaite, a message starting **note:** saves a note the same way: the project guessed (Unfiled if nothing names one) and the note's title from its first line. It is saved by creaite, not by Claude. Needs the live server.
 
 ## Updates from meetings
 - When cx-minutes processes a meeting matched to a project, that project's **open items are expected** in it, whether or not you opened its prep brief. For the ones the transcript (or a quick note) actually discusses, it proposes an **update** instead of a new item: a status, a new due date, a response to a risk or issue, or a latest update. Items not discussed are left alone.
@@ -769,7 +775,7 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 - Draft minutes and reports are approved with **Approve** on their row, which checks the draft against the items, accepts tracked changes and removes comments first (the same check as **approve minutes for …** in Claude Code). A **conflict** (an edit to something that changed after it was proposed) shows the tracker's current value and this one side by side, with **Keep current** and **Use this one**; both apply at once, with Undo. Both need the live server; without it, say **keep 5** or **override 5** in Claude Code.
 
 ## Intake
-- Intake has three separate sections, each with its own buttons: **Calendar import** (pick meetings from your calendar and process them), **Upload files** (drop transcripts or minutes you already have; the files waiting to be processed are listed here) and **Quick capture** (type rough notes from a call or conversation that has no transcript). On a narrow window they stack in the same order. Only one ask creaite run goes at a time: while one is busy, the Process buttons in all three wait.
+- Intake has two separate sections, each with its own buttons: **Calendar import** (pick meetings from your calendar and process them) and **Upload files** (drop transcripts or minutes you already have; the files waiting to be processed are listed here). Notes from a call with no transcript are a note ([[⌘⇧N]], from any page). On a narrow window they stack in the same order. Only one ask creaite run goes at a time: while one is busy, the Process buttons wait.
 - **Meetings**, at the top, lists your meetings from Monday of this week to now (from the calendar the sweep saves), grouped by day, newest first: time, title, Teams or in person, organiser, likely project and whether it's been processed. Change a project in its menu, and creaite remembers it for that meeting series. A meeting that hasn't ended yet (later today, or in progress) is greyed and can't be ticked, since it has no transcript until it ends; it becomes selectable by itself once it has ended.
 - Tick meetings (or **Select new**: everything not yet processed; private meetings aren't listed, as the sweep's private rule leaves them out) and **Process n selected**: for each in turn creaite loads the transcript and the meeting chat, then ask creaite runs cx-minutes on the saved file, and each row shows its progress, then **Draft ready in Review** or why it couldn't. A meeting with no transcript to load (**No transcript**, **Not transcribed**, **No access**, or not a Teams meeting) is **Skipped**, with the reason on its row, and the others carry on; ask creaite doesn't go looking for one in Teams. **Refresh** reads your calendar again. **Clear day** (on each day's heading) and the **×** on a row set meetings aside so they don't come back, after Refresh or the next sweep; **Undo** is in the message, and **Cleared (n)** under the list shows them with **Restore** (or **Restore day**). Clearing is not processing: nothing is written to the tracker or the processed list, and the calendar, Today and meeting prep still show the meeting. If a day has a transcript you haven't processed, you're asked first. ⌘K offers "Intake: process meeting …" too. Needs the live server, and waits while ask creaite is busy.
 - **Transcripts in Calendar import:** the daily sweep looks up each meeting in the window (new ones, and any still *Not transcribed*, since a transcript can appear hours after the meeting) and saves what it found, so the list shows it at once: **Transcript available** (highlighted, with a **Transcript** badge), **Not transcribed** (an online meeting where transcription wasn't on, or has no transcript yet), **No transcript** (in person, or no Teams link) and **No access** (the transcript can't be read). Muted rows have nothing to load; processed rows are quiet. **With transcripts** shows only the highlighted meetings, **All** brings the rest back. **Check again** on a row looks that one up now. Attending the meeting doesn't matter: if the transcript can be read, it can be loaded.

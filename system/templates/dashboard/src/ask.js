@@ -15,7 +15,8 @@ import { shared } from "./core/state.js";
 import { ckChipsHtml, openDraftEmail } from "./drafts.js";
 import { helpCk } from "./help.js";
 import { MSEL, MTG, mtgCanPick, previewInbox, processMeetings, renderMeetings } from "./intake.js";
-import { captureNote, hubFor, hubLink, openCapture, prepPage } from "./meetings.js";
+import { hubFor, hubLink, prepPage } from "./meetings.js";
+import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { openMilestone, openNewMilestone } from "./milestones.js";
 import { mdHtml, newItemOf, norm, openNew, openProject, openRecord, pkArr, pkCommit, pkPersist, pkStatuses, pkUndoLast, REC, validate } from "./panel.js";
 import { openGen, openPrep, pickImage, prepOf, startCurEdit, vsAskSync } from "./projects.js";
@@ -520,7 +521,10 @@ export async function drawHistory(){ let shown=false; const t=setTimeout(()=>{ s
   finally{ clearTimeout(t); const M=$("#chHistMenu"); if(M) anim(M,[{opacity:.4,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:320}); } }
 
 export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "note: …" in ask creaite */
-  if(m){ if(!viaServer()){ await say("Quick capture needs the live server."); return; } if(!await captureNote({notes:m[1].trim(),date:TODAY})) await say("Pick the project in Quick capture on the Inbox page, then press Process."); return; }
+  if(m){ if(!viaServer()){ await say("Saving a note needs the live server."); return; }   /* BL-301 C: saved as a note, the drawer's way (never the model) */
+    const r=await api("/api/notes/capture/done",{code:"auto",body:m[1].trim(),template:"blank"});
+    if(!r.ok){ await say(oneLine(r.message||"The note wasn't saved.")); return; }
+    const un=r.code==="_portfolio"; await say(`Saved the note “${r.title}” in ${un?"Unfiled":pName(r.code)}${r.reason?(un?`: ${r.reason}`:` (${r.reason})`):""}. Find updates on the note turns it into tracker changes.`); return; }
   if(!viaServer()){ await say(SERVED?"The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
   await askLive(q,null); }
 /* BL-33: a running request can be stopped (the Send button becomes Stop; Esc in the input). Read-only requests stop
@@ -939,7 +943,7 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
   if(q.length>1){ A.forEach(a=>add("Items",`${a.id} · ${a.t}`,who(a.o),()=>{ shared.WT="actions"; go("work"); openRecord("actions",a.id); })); R.forEach(r=>add("Items",`${r.id} · ${r.t}`,r.pr,()=>{ shared.WT="raid"; go("work"); openRecord("raid",r.id); })); DEC.forEach(d=>add("Items",`${d.id} · ${d.t}`,fd(d.date),()=>{ shared.WT="decisions"; go("work"); openRecord("decisions",d.id); })); }
   const hk=helpCk(q), hfirst=/^(help|how)/.test(q.trim());   /* BL-84: "help" and "how do I…" list the tasks first */
   return [...(hfirst?hk:[]),...out.slice(0,60),...(hfirst?[]:hk),...searchCkItems()]; })(q);
-  if(!q||"quick capture note".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"Quick capture",h:"",fn:()=>openCapture()});   /* BL-126 */
+  if(!q||"new note quick capture".includes(q.toLowerCase())) out.splice(out.findIndex(x=>x.g==="Actions")+1||out.length,0,{g:"Actions",l:"New note",h:"⌘⇧N",fn:()=>openCapture()});   /* BL-126; BL-301 C: the capture drawer */
   MTG().filter(m=>mtgCanPick(m)).forEach(m=>{ const l=`Intake: process meeting ${m.title}`;
     if(!q||l.toLowerCase().includes(q.toLowerCase())) out.push({g:"Actions",l,h:fd(m.day),fn:()=>{ go("inbox"); MSEL.clear(); MSEL.add(m.id); renderMeetings(); processMeetings(); }}); });   /* BL-42 phase 3 */
   { const c=ckParse(q); if(c){ const pre=[], ql=String(q||"").trim().toLowerCase();

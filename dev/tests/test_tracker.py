@@ -68,6 +68,7 @@ def make_vault():
               "settings_catalogue.py", "health.py",                # BL-320
               "archive.py",                                        # BL-10, BL-03
               "notes.py",                                          # BL-301: the note format, read by search
+              "capture.py",                                        # BL-301 C: the capture drawer's server side
               "edit_ai.py",                                        # BL-301 D: AI on selected text
               "sneak_peek.py",                                     # BL-322
               "notes_find.py",                                     # BL-301 E: Find updates

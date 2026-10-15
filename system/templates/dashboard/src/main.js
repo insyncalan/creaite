@@ -77,6 +77,8 @@ export * from "./components/review/RejectsList.jsx";
 
 export * from "./stores/rejects.js";
 
+export * from "./components/notes/CaptureDrawer.jsx";   /* BL-301 C: the capture drawer */
+export * from "./stores/capture.js";
 export * from "./components/AiSelect.jsx";   /* BL-301 D: AI on selected text */
 export * from "./stores/aiEdit.js";
 

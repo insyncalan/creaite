@@ -55,9 +55,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          status_checks.py, plain code, never blocking) and the facts sheet it was written from
 - POST /api/current/rewrite {code, text, from, to, audience, length, run}: "Make it executive" (BL-106): Claude rewrites the
                          text in the executive voice, keeping its facts; streamed like generate, nothing written
-- POST /api/capture      {notes, code, date, title, who}: save a quick note (BL-54) as projects/<CODE> <Name>/minutes/
-                         YYYY-MM-DD Quick note - <title>.md, never overwriting; with no code, the project is matched
-                         from the note (409 with the candidates if it's unclear). The page then runs cx-minutes on it
+- POST /api/notes/capture/guess|start|draft|done|recent|discard: the capture drawer (BL-301 C, capture.py): the project guessed
+                         from the register's signals with its reason, the text kept as a draft as Alan types, the note
+                         written through filechange.py on Done (Unfiled when nothing names a project). Replaces BL-54's
+                         /api/capture; old quick notes stay in minutes/
 - POST /api/ask/running  the run in progress (or the last one not yet seen); /api/ask/attach {run, after} sends its events
                          after sequence number `after` (each event carries `seq`; BL-262) and follows it; /api/ask/ack {run}
                          marks a finished run as seen
@@ -196,7 +197,6 @@ ASK_IMAGE_KEEP = 24 * 3600            # an image that never reached a message is
 INBOX_LIMIT = 25 * 1024 * 1024
 PREVIEW_CHARS = 200_000               # an inbox file's preview        # a file added to the Inbox (BL-42)
 INBOX_TYPES = (".vtt", ".docx", ".txt", ".md", ".pdf")
-NOTE_LIMIT = 20000                    # a quick note's text (BL-54)
 BODY_LIMIT = 40 * 1024 * 1024         # any request (base64 makes a 25 MB file about 34 MB)
 CLIENT_LEFT = (BrokenPipeError, ConnectionResetError)   # the page went mid-reply (BL-263, BL-284): logged at info, never a 500
 RELEASE_LIMIT = 60 * 1024 * 1024     # a release zip (BL-36)
@@ -1081,8 +1081,7 @@ class Handler(BaseHTTPRequestHandler):
                  "/api/ask/image/remove": self.ask_image_remove, "/api/here": self.here, "/api/stop": self.stop_server, "/api/inbox/upload": self.inbox_upload, "/api/inbox/preview": self.inbox_preview, "/api/inbox/remove": self.inbox_remove, "/api/inbox/restore": self.inbox_restore, "/api/current/generate": self.generate, "/api/current/check": self.current_check, "/api/current/rewrite": self.current_rewrite, "/api/current/sources": self.current_sources, "/api/current/evidence": self.current_evidence, "/api/meeting/carry": self.meeting_carry, "/api/day/close": self.day_close, "/api/update/status": self.update_status,
                  "/api/update/upload": self.update_upload, "/api/update/inspect": self.update_inspect,
                  "/api/update/install": self.update_install, "/api/update/undo": self.update_undo}.get(self.path)
-        route = route or {"/api/capture": self.capture,                     # Insight (BL-54)
-                          "/api/ask/queue": lambda r: queue_route(self, r)}.get(self.path)   # BL-257
+        route = route or {"/api/ask/queue": lambda r: queue_route(self, r)}.get(self.path)   # BL-257
         route = route or {"/api/search/preview": self.search_preview, "/api/search/ask": self.search_ask,
                           "/api/search/continue": self.search_continue}.get(self.path)   # Search (BL-07)
         route = route or {"/api/permissions/undo": self.permission_undo}.get(self.path)  # BL-75: undo a rule added before BL-141
@@ -1557,56 +1556,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"ok": False, "message": "That day isn't valid."})
         return self.send(200, {"ok": True, "count": n})
 
-    # ===== Insight (BL-51, BL-49, BL-54) =====
-    def capture(self, req):
-        """Quick capture (BL-54): save rough notes as a project's quick note, so items keep a traceable source. The
-        project is Alan's choice, else matched from the title and notes; unclear → 409 with the candidates."""
-        notes = str(req.get("notes") or "").strip()
-        if not notes:
-            return self.send(400, {"ok": False, "message": "Write the note first."})
-        if len(notes) > NOTE_LIMIT:
-            return self.send(413, {"ok": False, "message": "A quick note can be 20,000 characters at most."})
-        day = str(req.get("date") or datetime.now().strftime("%Y-%m-%d"))
-        try:
-            datetime.strptime(day, "%Y-%m-%d")
-        except ValueError:
-            return self.send(400, {"ok": False, "message": "The date must be YYYY-MM-DD."})
-        title = re.sub(r'[\\/:*?"<>|\x00-\x1f\[\]]+', " ", str(req.get("title") or "")).strip(" .")
-        if not title:          # the note's first words
-            title = " ".join(re.sub(r'[\\/:*?"<>|\x00-\x1f\[\]#*_`]+', " ", notes.splitlines()[0]).split()[:8]).strip(" .")
-        title = re.sub(r"\s+", " ", title)[:60].strip(" .") or "Note"
-        who = re.sub(r"\s+", " ", str(req.get("who") or "")).strip()[:300]
-        import sqlite3
-        from contextlib import closing
-        with closing(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)) as con:
-            projects = [{"code": c, "name": n} for c, n in con.execute("SELECT code, name FROM projects WHERE active = 1")]
-        code, matched = str(req.get("code") or ""), False
-        if code and code not in {p["code"] for p in projects}:
-            return self.send(400, {"ok": False, "message": f"{code} isn't an active project."})
-        if not code:
-            hits = sorted(build_dashboard.project_hits(f"{title}\n{notes}", projects))
-            if len(hits) != 1:
-                return self.send(409, {"ok": False, "candidates": hits, "message": (
-                    f"This could be {' or '.join(hits)}: pick the project." if hits else
-                    "creaite couldn't tell which project this is: pick it.")})
-            code, matched = hits[0], True
-        try:
-            folder = paths.folder(code, "minutes")
-        except LookupError:
-            return self.send(400, {"ok": False, "message": f"{code} has no project folder."})
-        folder.mkdir(parents=True, exist_ok=True)
-        target, n = folder / f"{day} Quick note - {title}.md", 2
-        while target.exists():                 # never overwrite
-            target, n = folder / f"{day} Quick note - {title} ({n}).md", n + 1
-        name = next((p["name"] for p in projects if p["code"] == code), "")
-        shown = lambda d: f"{d[8:10]}-{d[5:7]}-{d[:4]}"  # noqa: E731
-        target.write_text(f"# Quick note — {title}\n\n- **Date:** {shown(day)}\n- **Project:** {code} {name}\n"
-                          f"- **Who was there:** {who or 'Not recorded'}\n"
-                          f"- **Captured:** {shown(datetime.now().strftime('%Y-%m-%d'))} "
-                          f"{datetime.now():%H:%M} in the dashboard (quick capture)\n\n{notes}\n", encoding="utf-8")
-        return self.send(200, {"ok": True, "path": paths.rel(target), "name": target.name, "code": code,
-                               "title": title, "matched": matched})
-
+    # ===== Insight (BL-51, BL-49) =====
     def generate(self, req):
         """Draft a project's Current state from the vault (BL-46): the material is gathered here, then Claude writes
         the draft with read-only tools. Nothing is written; the draft goes to the page's editor."""
@@ -5776,6 +5726,131 @@ def chase_pane_route(handler, req):
 
 
 DRAFT_ROUTES["/api/chase/pane"] = chase_pane_route
+
+
+# ===== BL-301 C (v20-capture): the capture drawer (⌘⇧N) =====
+# The drawer's server side (capture.py): the project guessed from the register's signals with its reason, the text kept as a
+# draft in system/staging/drafts/notes/ as Alan types, and the note written through filechange.py on Done (backed up, logged,
+# undoable). Nothing reaches the tracker; Find updates (part E) does that from the note. "note: …" in ask creaite comes here too
+# (the page sends it, not the model).
+def _capture_projects():
+    """The active projects as [{code, name}], from the database (read only)."""
+    import sqlite3
+    from contextlib import closing
+    with closing(sqlite3.connect(f"file:{paths.DB}?mode=ro", uri=True)) as con:
+        return [{"code": c, "name": n} for c, n in con.execute("SELECT code, name FROM projects WHERE active = 1 ORDER BY name")]
+
+
+def capture_guess_route(handler, req):
+    """POST /api/notes/capture/guess {title, body}: {ok, code, reason, candidates}. No guess: code null (Unfiled)."""
+    import capture
+    text = f"{str(req.get('title') or '')}\n{str(req.get('body') or '')}"[:capture.TEXT_LIMIT]
+    g = capture.guess(text, {p["code"] for p in _capture_projects()})
+    return handler.send(200, {"ok": True, "code": g["code"], "reason": g["reason"], "candidates": g["candidates"]})
+
+
+def capture_start_route(handler, req):
+    """POST /api/notes/capture/start {meeting: {day, start, title}} | {}: what the drawer opens with: the template, the title,
+    the date, who was there and the project. A meeting gives the Working session template, its date and attendees (from the saved
+    calendar) and the project Prep matched."""
+    import capture
+    import notes as notes_lib
+    m = req.get("meeting") if isinstance(req.get("meeting"), dict) else None
+    if not m:
+        return handler.send(200, {"ok": True, "template": "blank", "title": "", "date": "", "with": [], "code": None,
+                                  "body": "", "drafts": capture.drafts()[:3]})
+    day, start, title = str(m.get("day") or ""), str(m.get("start") or ""), str(m.get("title") or "")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", day) or not title:
+        return handler.send(400, {"ok": False, "message": "Not a meeting creaite knows."})
+    s = paths.load_settings()
+    me = ((s.get("identity") or {}).get("name") or "")
+    remembered = ((s.get("prep") or {}).get("series") or {})
+    found = capture.meeting(day, start, title, _capture_projects(), remembered, me)
+    if not found:
+        return handler.send(404, {"ok": False, "message": "That meeting isn't in the saved calendar."})
+    body = notes_lib.parse(notes_lib.template("working-session", title))[1]
+    return handler.send(200, {"ok": True, "template": "working-session", "title": found["title"], "date": found["date"],
+                              "with": found["with"], "code": found["code"] if found["code"] != "_portfolio" else None,
+                              "body": body})
+
+
+def capture_draft_route(handler, req):
+    """POST /api/notes/capture/draft {id, code, title, body, template, date, with, confidential}: keep the drawer's text as a draft."""
+    import capture
+    try:
+        fields = capture.clean(req)
+        at = capture.draft(str(req.get("id") or ""), fields)
+    except ValueError as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True, "at": at})
+
+
+def _capture_fields(req, projects):
+    """(fields, reason) of a Done request, or raises ValueError: "auto" guesses the project (no guess is Unfiled)."""
+    import capture
+    auto = req.get("code") == "auto"
+    fields = capture.clean({**req, "code": "" if auto else req.get("code")})
+    if not (fields["body"].strip() or fields["title"]):
+        raise ValueError("Write the note first.")
+    if fields["code"] != capture.UNFILED and fields["code"] not in {p["code"] for p in projects}:
+        raise ValueError(f"{fields['code']} isn't an active project.")
+    if not auto:
+        return fields, ""
+    g = capture.guess(f"{fields['title']}\n{fields['body']}", {p["code"] for p in projects})
+    fields["code"] = g["code"] or capture.UNFILED
+    return fields, g["reason"]
+
+
+def capture_done_route(handler, req):
+    """POST /api/notes/capture/done {id?, code | "auto", title, body, template, date, with, confidential}: write the note through
+    filechange.py (`confidential` true marks it in its front matter, as notes.py records it).
+    "auto" guesses the project (for "note: …" in ask creaite); no guess is Unfiled. The draft goes once the file is written; when
+    the change has to wait (an ask creaite run has read outside content) the draft stays and the page says so."""
+    import capture
+    did = str(req.get("id") or "")
+    if did and not capture.ID_RE.fullmatch(did):
+        return handler.send(400, {"ok": False, "message": "Not a draft id."})
+    try:
+        fields, reason = _capture_fields(req, _capture_projects())
+    except ValueError as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    code, msg, path = capture.save(fields)
+    if code:
+        if did:
+            capture.draft(did, fields)
+        return handler.send(200, {"ok": False, "waiting": code == 3, "message": (
+            "The note is kept as a draft: ask creaite has read outside content, so creaite won't write files until it "
+            "has finished. Press Done again then." if code == 3 else msg)})
+    if did:
+        capture.discard(did)
+    return handler.send(200, {"ok": True, "path": path, "title": capture.title_of(fields), "code": fields["code"],
+                              "reason": reason})
+
+
+def capture_recent_route(handler, req):
+    """POST /api/notes/capture/recent: the newest notes (path, title, project, when) and the drafts not yet saved."""
+    import capture
+    notes_list = capture.recent([p["code"] for p in _capture_projects()])
+    drafts = [{k: d.get(k) for k in ("id", "title", "code", "at", "body", "template", "date", "with", "confidential")}
+              for d in capture.drafts()[:3]]
+    return handler.send(200, {"ok": True, "notes": notes_list, "drafts": drafts})
+
+
+def capture_discard_route(handler, req):
+    """POST /api/notes/capture/discard {id}: drop a draft the drawer kept."""
+    import capture
+    try:
+        capture.discard(str(req.get("id") or ""))
+    except ValueError as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True})
+
+
+NOTE_CAPTURE_ROUTES = {"/api/notes/capture/guess": capture_guess_route, "/api/notes/capture/start": capture_start_route,
+                       "/api/notes/capture/draft": capture_draft_route, "/api/notes/capture/done": capture_done_route,
+                       "/api/notes/capture/recent": capture_recent_route, "/api/notes/capture/discard": capture_discard_route}
+DRAFT_ROUTES.update(NOTE_CAPTURE_ROUTES)          # dispatched with the drafts' routes (do_POST unchanged)
+# ===== end BL-301 C =====
 
 # Polish in the pane (Alan, 13-10-2026, option A): the kind "polish-help" on /api/draft, for Alan's own item, takes the item's ID, the
 # opening, the tone and his two lines (outcome, need); drafts.py reads the item itself. Someone else's item and a decision use "polish".

@@ -1,4 +1,4 @@
-"""Tests for the insight sprint: early warnings (BL-51), meeting prep (BL-49) and quick capture (BL-54).
+"""Tests for the insight sprint: early warnings (BL-51), meeting prep (BL-49) and quick notes (BL-54; the capture drawer, BL-301 C, replaced the form).
 
 Run: python3 dev/tests/test_insight.py
 Each class builds a throwaway vault with fictional data and runs the real scripts there. Early-warning history is
@@ -292,126 +292,25 @@ class MeetingPrepTests(unittest.TestCase):
         self.assertIn("Agree pilot success criteria", out["portfolio"])                       # DEF, due soon
 
 
-CAPTURE_SCRIPT = r"""
-<script>
-(async()=>{ const out={errors:[]}, wait=ms=>new Promise(r=>setTimeout(r,ms)); window.ASKED=[];
-  askLive=async(q,c)=>{ window.ASKED.push([q,c]); };      // the stream itself is tested at the server
-  try{
-    await checkLive(); go("inbox"); await wait(50);
-    out.box=!!document.querySelector("#v-inbox #qcap"); out.notToday=!document.querySelector("#v-today #qcap"); out.ck=ckItems("quick").map(i=>i.l);
-    document.getElementById("qcNotes").focus(); await wait(20); out.more=!document.getElementById("qcMore").hidden;
-    document.getElementById("qcNotes").value="Sara confirmed the pilot extends to 60 agents.\nAlan to update the plan by Friday.";
-    document.getElementById("qcProj").value="ABC"; document.getElementById("qcWho").value="Sara Example";
-    await qcProcess(); out.asked=ASKED.slice(); out.cleared=document.getElementById("qcNotes").value;
-    document.getElementById("qcNotes").value="Lunch with the team"; await qcProcess(); await wait(50);
-    out.unsure=document.getElementById("qcMsg").textContent; out.unsureOpen=!document.getElementById("qcMore").hidden;
-    window.ASKED=[]; await handle("note: DEF portal walkthrough booked for March"); out.note=ASKED.slice(); out.noteMsg=document.getElementById("qcMsg").textContent; out.chat=[...document.querySelectorAll("#chLog .msg")].map(m=>m.textContent).slice(-2);
-  }catch(e){ out.errors.push(String(e&&e.stack||e)); }
-  const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre);
-})();
-</script>
-"""
-
-
 class QuickCaptureTests(unittest.TestCase):
-    """BL-54: the note saved (name, folder, no overwrite) through /api/capture, a run started on it, cx-minutes'
-    note staging, and the Today box, ⌘K and "note:" in headless Chrome."""
+    """BL-54's quick notes: the form and /api/capture are replaced by the capture drawer (BL-301 C, test_capture_drawer), but an
+    old quick note in minutes/ is still processed by cx-minutes' note staging."""
 
     @classmethod
     def setUpClass(cls):
-        import socket
-        import time
-        import urllib.request
         from test_dashboard import populate
-        from test_live_server import FAKE_CLAUDE
         cls.v = v = Vault()
         populate(v)
-        fake = v.root / "fake_claude.py"
-        fake.write_text(FAKE_CLAUDE)
-        fake.chmod(0o755)
-        (v.root / "inject.html").write_text(CAPTURE_SCRIPT)
-        with socket.socket() as s:
-            s.bind(("127.0.0.1", 0))
-            cls.port = s.getsockname()[1]
-        cls.base = f"http://127.0.0.1:{cls.port}"
-        env = {**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_CLAUDE": str(fake),
-               "CREAITE_TEST_INJECT": str(v.root / "inject.html")}
-        cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], env=env,
-                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(50):
-            try:
-                urllib.request.urlopen(cls.base + "/health", timeout=1)
-                break
-            except OSError:
-                time.sleep(0.1)
-        import re
-        page = urllib.request.urlopen(cls.base + "/").read().decode()
-        cls.token = json.loads(re.search(r'id="data">(.*?)</script>', page, re.S).group(1).replace("<\\/", "</"))["token"]
 
     @classmethod
     def tearDownClass(cls):
-        cls.proc.terminate()
-        cls.proc.wait(timeout=10)
         cls.v.cleanup()
-
-    def post(self, path, body):
-        import urllib.error
-        import urllib.request
-        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
-                                     headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
-        try:
-            with urllib.request.urlopen(req, timeout=60) as r:
-                raw = r.read().decode()
-                return r.status, (json.loads(raw) if r.headers.get_content_type() == "application/json" else raw)
-        except urllib.error.HTTPError as e:
-            with e:
-                return e.code, json.loads(e.read() or b"{}")
-
-    def test_note_saved_named_and_never_overwritten(self):
-        minutes = self.v.root / ABC / "minutes"
-        st, r = self.post("/api/capture", {"notes": "Pilot extends to 60 agents.", "code": "ABC", "date": "2026-10-06",
-                                           "title": "Call with Sara", "who": "Sara Example"})
-        self.assertEqual((st, r["path"], r["code"], r["matched"]),
-                         (200, f"{ABC}/minutes/2026-10-06 Quick note - Call with Sara.md", "ABC", False))
-        text = (minutes / "2026-10-06 Quick note - Call with Sara.md").read_text()
-        self.assertIn("- **Date:** 06-10-2026\n- **Project:** ABC Example Programme\n- **Who was there:** Sara Example", text)
-        self.assertTrue(text.rstrip().endswith("Pilot extends to 60 agents."))
-        st, r2 = self.post("/api/capture", {"notes": "Second call.", "code": "ABC", "date": "2026-10-06", "title": "Call with Sara"})
-        self.assertEqual(r2["name"], "2026-10-06 Quick note - Call with Sara (2).md")       # never overwrites
-        st, r3 = self.post("/api/capture", {"notes": "ABC: legal / SOW signed?\nmore", "date": "2026-10-06"})
-        self.assertEqual((r3["name"], r3["matched"]), ("2026-10-06 Quick note - ABC legal SOW signed.md", True))  # title from the first line
-        for name in (r["name"], r2["name"], r3["name"]):
-            (minutes / name).unlink()
-
-    def test_refused_or_unclear(self):
-        self.assertEqual(self.post("/api/capture", {"notes": "  "})[0], 400)
-        self.assertEqual(self.post("/api/capture", {"notes": "x", "code": "ABC", "date": "06-10-2026"})[0], 400)
-        self.assertEqual(self.post("/api/capture", {"notes": "x", "code": "ZZZ"})[0], 400)
-        self.assertEqual(self.post("/api/capture", {"notes": "x" * 20001, "code": "ABC"})[0], 413)
-        st, r = self.post("/api/capture", {"notes": "Lunch with the team"})
-        self.assertEqual((st, r["candidates"]), (409, []))
-        st, r = self.post("/api/capture", {"notes": "ABC and DEF both slipping"})
-        self.assertEqual((st, r["candidates"]), (409, ["ABC", "DEF"]))
-
-    def test_a_run_starts_on_the_note(self):
-        """The page sends "process <note>" as a confirmed request: write tools allowed, streamed like any run."""
-        import urllib.request
-        st, r = self.post("/api/capture", {"notes": "Pilot extends.", "code": "ABC", "date": "2026-10-06", "title": "Run"})
-        req = urllib.request.Request(self.base + "/api/ask", method="POST", headers={
-            "Content-Type": "application/json", "X-Creaite-Token": self.token}, data=json.dumps({
-                "message": f"process {r['path']}", "confirmed": 'Process the quick note "Run" (ABC) into proposed items',
-                "run": "capture-run-1"}).encode())
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            evs = [json.loads(ln[6:]) for ln in resp.read().decode().splitlines() if ln.startswith("data: ")]
-        self.assertIn({"type": "text", "text": "Write tools allowed."}, evs)
-        self.assertEqual(evs[-1]["type"], "done")
-        self.post("/api/ask/ack", {"run": "capture-run-1"})
-        (self.v.root / r["path"]).unlink()
 
     def test_note_staged_and_recorded_as_processed(self):
         """minutes.py stage with "note": nothing copied or moved, the note is each item's source, processed on apply."""
-        st, r = self.post("/api/capture", {"notes": "Alan to update the plan.", "code": "ABC", "date": "2026-10-06",
-                                           "title": "Stage me"})
+        note = self.v.root / ABC / "minutes/2026-10-06 Quick note - Stage me.md"      # an old quick note (BL-54), still in minutes/
+        note.write_text("# Quick note — Stage me\n\nAlan to update the plan.\n", encoding="utf-8")
+        r = {"path": f"{ABC}/minutes/2026-10-06 Quick note - Stage me.md"}
         spec = self.v.root / "system/staging/drafts/note.json"
         spec.write_text(json.dumps({"title": "Quick note - Stage me", "date": "2026-10-06", "projects": ["ABC"],
                                     "note": r["path"], "items": [{"table": "actions", "section": "Actions", "values": {
@@ -435,44 +334,6 @@ class QuickCaptureTests(unittest.TestCase):
         self.assertIn("Already processed", self.v.run("stage", str(spec), script="minutes.py", ok=False).stdout)
         self.v.run("undo")
         (self.v.root / r["path"]).unlink()
-
-    def test_today_box_palette_and_note_in_chrome(self):
-        import re
-        import shutil
-        import tempfile
-        from test_dashboard import CHROME
-        if not CHROME.exists():
-            self.skipTest("Google Chrome not installed")
-        profile = tempfile.mkdtemp(prefix="creaite-chrome-")
-        cmd = [str(CHROME), "--headless", "--disable-gpu", f"--user-data-dir={profile}", "--no-first-run",
-               "--disable-component-update", "--disable-background-networking", "--virtual-time-budget=8000",
-               "--dump-dom", self.base + "/"]
-        try:
-            out = subprocess.run(cmd, capture_output=True, timeout=90).stdout
-        except subprocess.TimeoutExpired as e:
-            out = e.stdout or b""
-        finally:
-            shutil.rmtree(profile, ignore_errors=True)
-        import html as h
-        m = re.search(r'<pre id="result">(.*?)</pre>', out.decode("utf-8", "ignore"), re.S)
-        self.assertTrue(m, "the live page didn't finish the scripted steps")
-        r = json.loads(h.unescape(m.group(1)))
-        self.assertEqual(r["errors"], [])
-        self.assertTrue(r["box"] and r["more"] and r["notToday"])          # BL-66: on the Intake page, not Today
-        self.assertIn("Quick capture", r["ck"])
-        (q, title), = r["asked"]
-        self.assertEqual(q, f"process {ABC}/minutes/{q.split('/minutes/')[1]}")
-        self.assertRegex(q, r"/minutes/\d{4}-\d{2}-\d{2} Quick note - Sara confirmed the pilot extends to 60 agents\.md$")
-        self.assertIn("without Word minutes", title)
-        self.assertEqual(r["cleared"], "")
-        self.assertIn("couldn't tell which project", r["unsure"])
-        self.assertTrue(r["unsureOpen"])
-        self.assertEqual(len(r["note"]), 1, (r.get("noteMsg"), r.get("chat")))               # "note: …" in ask creaite
-        (q2, _), = r["note"]
-        self.assertRegex(q2, r"^process projects/DEF Digital Enablement/minutes/\d{4}-\d{2}-\d{2} Quick note - DEF portal walkthrough booked for March\.md$")
-        for f in list((self.v.root / ABC / "minutes").glob("* Quick note - *")) + \
-                list((self.v.root / "projects/DEF Digital Enablement/minutes").glob("* Quick note - *")):
-            f.unlink()
 
 
 if __name__ == "__main__":
