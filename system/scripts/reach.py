@@ -1035,10 +1035,73 @@ def prep_decision(tool, inp):
     if why:
         return False, why
     if tool == "Bash":
-        why = bash_refusal(str((inp or {}).get("command") or ""), "prep")
+        command = str((inp or {}).get("command") or "")
+        why = bash_refusal(command, "prep") or held_never_reason(command) or held_kind_reason(command)
         if why:
             return False, why
     return True, ""
+
+
+# ===== Held runs read only (security fix, 15-10-2026) =====
+# A run creaite starts itself (mode "prep" or "held") may have read hostile mail, and nothing marks it (no system/guard/run.json),
+# so its Bash may run only a creaite script's read commands, and no argument may name a place on the never list. bash_refusal has
+# already refused every shell form but one creaite script on its own (no ; & | $ back-quotes brackets or new lines, no env or cd),
+# so what is left is the script's own arguments as the shell would hand them over: `~` and `~user`, a relative path, a symlink
+# (classify takes the real path), `--opt=PATH`, a path after a separator inside a longer argument, and a wildcard the shell would
+# expand. ask creaite, the sweep and a confirmed request are unchanged: this is prep_decision's only.
+HELD_SPLIT = r"[=:,]"
+WILDCARDS = set("*?[")
+
+
+def held_arg_paths(command):
+    """Every path a held run's Bash call could hand a script: prep_paths' (each path-like argument, `--x=path` too), every
+    path-like piece of an argument after = : or , a piece with $ as a script could expand it, and, for a piece with a wildcard,
+    what the shell would expand it to."""
+    import glob
+    import re
+    out = list(prep_paths("Bash", {"command": command}))
+    for a in bash_args(command):
+        for piece in [a, *re.split(HELD_SPLIT, a)[1:]]:
+            if ("/" in piece or piece.startswith(("~", "."))) and not piece.startswith("//") and piece not in out:   # not a URL's
+                out.append(piece)
+    for p in list(out):
+        if "$" in p and os.path.expandvars(p) not in out:   # quoted from the shell, but a script could still expand it
+            out.append(os.path.expandvars(p))
+    for p in list(out):
+        if WILDCARDS & set(p):
+            pattern = os.path.expanduser(p)
+            pattern = pattern if os.path.isabs(pattern) else str(Path(paths.ROOT) / pattern)
+            out += [m for m in glob.glob(pattern, recursive=False) if m not in out]
+    return out
+
+
+def held_never_reason(command):
+    """Why a held run's Bash call names a place on the never list (the check hook_decision makes, on every argument form), or
+    None. Anything it can't check is refused."""
+    try:
+        for p in held_arg_paths(command):
+            kind, why = classify(p, "read")
+            if kind == "never":
+                return f"{p}: {why}"
+    except Exception as e:  # noqa: BLE001  fail closed
+        return f"the guard couldn't check this call's arguments ({type(e).__name__})"
+    return None
+
+
+def held_kind_reason(command):
+    """Why a held run may not run this creaite script command, or None: only the read kind (SCRIPT_COMMANDS) runs, never
+    derived, stage, guarded, record or unknown, and never reach.py wrap or hook (they hand over to another command)."""
+    import re
+    m = re.match(r"(?:python3? system/scripts/|system/scripts/run )([a-z0-9_]+\.py)", vault_relative(command))
+    if not m:
+        return "a run creaite starts itself runs only creaite's read commands"
+    kind, name = command_kind(m.group(1), bash_args(command))
+    if kind == READ and name not in ("reach.py wrap", "reach.py hook"):
+        return None
+    _debug("warn", f"held run refused: {name} ({kind})")
+    return (f"{name} isn't a read command, and a run creaite starts itself runs only read commands: reply with what you found, "
+            f"and creaite saves it")
+# ===== end held runs read only =====
 
 
 def decide(tool, inp, mode, run, held=False):
