@@ -19,6 +19,8 @@ on: {workflow_dispatch: {inputs: {files: {description: "Test files to run (empty
 # ===== end BL-242 =====
 
 name: Tests
+# #89: a hand-started run of named files is named "Tests (files)", so release.yml can tell it from a full run.
+run-name: ${{ github.event.inputs.files && format('Tests ({0})', github.event.inputs.files) || 'Tests' }}
 
 permissions:
   contents: read
