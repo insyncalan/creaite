@@ -4072,7 +4072,8 @@ REVIEW_WORK_ROUTES = {"/api/review/assign": review_assign_route}
 # review.py's (approve_minutes: one apply through tracker.py apply, the one writer); every save goes through creaite_doc.save
 # (filechange.py). Saving over filed minutes is refused (Alan, 15-10-2026): filed minutes are the record people were sent, so a
 # save from this page never changes them. It is sensitive under reach.py, this server never passes an approver here and there is
-# no card path, so such a save answers creaite_doc's code 3 (needs approval) and nothing changes. Nothing here sends anything.
+# no card path, so such a save answers creaite_doc's code 3 (needs approval), nothing changes and the unsaved copy creaite_doc
+# left in drafts/ is removed (minutes_record.save_record). Nothing here sends anything.
 def minutes_draft_route(handler, req):
     """POST /api/minutes/draft {file | path}: the minutes view's record, versions, transcript turns and approve plan."""
     import minutes_record

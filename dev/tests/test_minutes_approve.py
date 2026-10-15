@@ -208,6 +208,50 @@ class Approve(Base):
         self.assertIn("already been approved", again["message"])
 
 
+class RefusedSave(Base):
+    """Saving over filed minutes stays refused (Alan, 15-10-2026), and with no card path the unsaved copy creaite_doc.save keeps
+    in drafts/ on its code-3 answer is removed: only that exact file, only directly inside drafts/ (BL-118's rule)."""
+
+    def drafts(self):
+        return sorted(f.name for f in (self.v.root / "system/staging/drafts").iterdir() if f.name.startswith("creaite-doc "))
+
+    def test_a_refused_save_leaves_no_draft_behind(self):
+        self.assertTrue(self.approve()["ok"])
+        drafts = self.v.root / "system/staging/drafts"
+        older = drafts / "creaite-doc 2026-10-01 090000.html"              # not this save's: left alone
+        older.write_text("<html></html>", encoding="utf-8")
+        before = (self.v.root / FILED).read_bytes()
+        for _ in range(2):
+            r = self.js("import creaite_doc, minutes_record\n"
+                        f"d = creaite_doc.read({FILED!r})\nd['sections'][1]['text'] = 'Edited after approval.'\n"
+                        f"r = minutes_record.save_record({FILED!r}, d, 'Minutes saved', base_version=d['version'])\n"
+                        "print(json.dumps({k: r.get(k) for k in ('ok', 'code', 'needs_approval', 'message')}))")
+            self.assertEqual((r["ok"], r["code"], r["needs_approval"]), (False, 3, True))
+            self.assertIn("needs your approval", r["message"])
+            self.assertEqual(self.drafts(), [older.name])
+        self.assertEqual((self.v.root / FILED).read_bytes(), before)
+
+    def test_only_that_exact_file_directly_in_drafts_goes(self):
+        drafts = self.v.root / "system/staging/drafts"
+        outside = self.v.root / "system/staging/creaite-doc 2026-10-14 120000.html"
+        outside.write_text("x", encoding="utf-8")
+        (drafts / "creaite-doc 2026-10-14 120001.html").symlink_to(outside)
+        (drafts / "creaite-doc 2026-10-14 120002.html").write_text("x", encoding="utf-8")
+        asked = drafts / "creaite-doc 2026-10-14 120003.html"
+        asked.write_text("x", encoding="utf-8")
+        changes = self.v.root / "system/staging/changes"
+        changes.mkdir(parents=True, exist_ok=True)
+        (changes / "run-1-001.json").write_text(json.dumps({"from": "system/staging/drafts/" + asked.name}), encoding="utf-8")
+        out = self.js("import minutes_record\nprint(json.dumps([minutes_record._drop_unsaved(n) for n in (\n"
+                      "    'creaite-doc 2026-10-14 120001.html', 'creaite-doc 2026-10-14 120002.html',\n"
+                      "    'creaite-doc 2026-10-14 120003.html', '../creaite-doc 2026-10-14 120000.html')]))")
+        self.assertEqual(out, [False, True, False, False])
+        self.assertTrue(outside.exists())
+        self.assertTrue((drafts / "creaite-doc 2026-10-14 120001.html").is_symlink())
+        self.assertTrue(asked.exists())
+        self.assertFalse((drafts / "creaite-doc 2026-10-14 120002.html").exists())
+
+
 class Rows(Base):
     def test_remove_drops_the_line_and_rejects_the_item_in_the_same_apply(self):
         r = self.change({"op": "remove", "n": 2})
@@ -272,7 +316,7 @@ class Rows(Base):
 
 class ThroughTheServer(unittest.TestCase):
     """The four routes, in order: the view, a row change, a page save (rows stay as staged), a stale save, the export, Approve,
-    the filed minutes reopened and saved again (Edit again, with the server's own approval)."""
+    the filed minutes reopened and a save over them refused (Alan, 15-10-2026), leaving no draft behind."""
 
     @classmethod
     def setUpClass(cls):
@@ -312,7 +356,7 @@ class ThroughTheServer(unittest.TestCase):
             return json.loads(r.read().decode())
 
     def test_the_save_route_never_issues_an_approval(self):
-        """Jarvis, 15-10-2026: a save over filed minutes goes to the BL-141 card like any sensitive change; the route never passes
+        """Saving over filed minutes stays refused (Alan, 15-10-2026): there is no card path, and the route never passes
         reach.APPROVALS.issue (or any approver) to creaite_doc.save."""
         import ast
         from test_tracker import REPO
@@ -370,12 +414,14 @@ class ThroughTheServer(unittest.TestCase):
         logged = log.read_text() if log.exists() else ""
         doc["sections"][1]["text"] = "Edited again after approval."
         again = self.post("/api/minutes/save", {"path": FILED, "doc": doc, "base_version": doc["version"]})
-        self.assertFalse(again["ok"], again)                                    # sensitive: it waits for the card, never approved here
+        self.assertFalse(again["ok"], again)                                    # refused (Alan, 15-10-2026): never approved here
         self.assertEqual((again["code"], again["needs_approval"]), (3, True))
         self.assertIn("needs your approval", again["message"])
         self.assertEqual((self.v.root / FILED).read_bytes(), before)            # the filed minutes are untouched
         self.assertEqual(log.read_text() if log.exists() else "", logged)       # and no change was made or logged
         self.assertEqual(self.post("/api/minutes/draft", {"path": FILED})["doc"]["version"], doc["version"])
+        left = [f.name for f in (self.v.root / "system/staging/drafts").iterdir() if f.name.startswith("creaite-doc ")]
+        self.assertEqual(left, [])                                             # no unsaved copy piles up: there is no card
         refused = self.post("/api/minutes/save", {"path": FILED, "op": {"op": "remove", "n": 5}})
         self.assertIn("approved", refused["message"])
         for bad in ("../etc/passwd.html", "system/config/settings.json", f"{ABC}/CLAUDE.md"):

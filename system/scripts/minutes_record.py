@@ -463,13 +463,50 @@ NEEDS_CARD = ("Saving over filed minutes needs your approval, and creaite's appr
               "yet, so nothing was changed. The filed minutes are as they were.")
 
 
+UNSAVED = re.compile(r"creaite-doc \d{4}-\d{2}-\d{2} \d{6}(-\d+)?\.html")
+
+
+def _save_drafts():
+    """The names of creaite_doc.save's own drafts directly in system/staging/drafts/ (`creaite-doc <date> <time>.html`)."""
+    try:
+        return [f.name for f in paths.DRAFTS.iterdir() if UNSAVED.fullmatch(f.name)]
+    except OSError:
+        return []
+
+
+def _drop_unsaved(name):
+    """A refused save over filed minutes leaves its unsaved copy in drafts/ "for the card"; with no card path it is never used, so
+    it goes (BL-118's rule: only that exact file, only directly inside drafts/ once resolved, never a symlink). A copy a recorded
+    request names (an ask creaite run's card) is kept."""
+    import filechange
+    given = paths.DRAFTS / name
+    try:
+        real = given.resolve()
+        if given.is_symlink() or real.parent != paths.DRAFTS.resolve() or not real.is_file():
+            return False
+        rel = paths.rel(given)
+        for f in filechange.REQUESTS.glob("*.json") if filechange.REQUESTS.is_dir() else []:
+            try:
+                if json.loads(f.read_text(encoding="utf-8")).get("from") == rel:
+                    return False
+            except (OSError, ValueError):
+                continue
+        given.unlink()
+    except OSError:
+        return False
+    return True
+
+
 def save_record(path, doc, why, base_version=None, via="dashboard"):
     """Save the record as a new version (creaite_doc.save, never with an approver). Saving over filed minutes is refused (Alan,
     15-10-2026): they are the record people were sent, a save from the minutes view is never approved and there is no card path,
     so creaite_doc's code-3 answer (needs approval) comes back as it is, with a plain message, and nothing changes. Raises
     RecordError when it is refused for any other reason."""
+    before = set(_save_drafts())
     r = creaite_doc.save(path, doc, why, base_version=base_version, via=via)
     if r.get("needs_approval"):
+        for left in sorted(set(_save_drafts()) - before):
+            _drop_unsaved(left)
         return {**r, "message": NEEDS_CARD}
     if not r.get("ok"):
         raise RecordError(r.get("message") or "The minutes weren't saved.")
