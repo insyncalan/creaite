@@ -3060,3 +3060,10 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+
+/* ===== #109 (ux) ===== the project health form sits over the page like the other peeks, so the cockpit behind it keeps its width.
+   Only the health form (class pover, set by drawPanel); the milestone, rebaseline and new-milestone forms keep their side panel. */
+#panel.pover.on{position:fixed;top:0;bottom:0;right:0;z-index:var(--z-panel);margin:0!important;width:min(max(420px,50vw),calc(100vw - var(--rail-w,72px)));box-shadow:var(--shadow-side)}
+#panel.pover.on .pin{width:100%}
+body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
+@media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}

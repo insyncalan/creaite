@@ -195,7 +195,7 @@ export function openProposal(n){ const r=REV.find(x=>x.n===n); if(!r) return; if
   if(r.kind==="draft"){ openPath(r.src); snack(viaServer()?"Edit in Word if needed, close it, then press Approve here":"Edit in Word if needed, close it, then approve it in Claude Code (the live server isn't running)"); return; }   /* BL-149 */
   if(r.kind==="files"){ snack("Ask Claude to change a file change; approve or reject it here"); return; }
   shared.CUR={mode:"proposal",k:r.kind,n,draft:Object.assign({p:r.p},r.rec)}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
-export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; drawPanel(); $("#panel").classList.add("on"); }
+export function openProject(code,what){ if(curGuard(()=>openProject(code,what))) return; const p=P.find(x=>x.code===code); shared.CUR={mode:what,k:"project",code,draft:{health:p.health,reason:p.reason,current:p.current}}; shared.EDITING=true; shared.HBACK=what==="health"&&document.activeElement&&document.activeElement.closest("[data-edproj]")||null; drawPanel(); $("#panel").classList.add("on"); }   /* #109: Esc or Cancel gives focus back to the pencil */
 export function curObj(){ return shared.CUR.mode==="record"?REC(shared.CUR.k,shared.CUR.id):shared.CUR.draft; }
 export const PKK=["actions","raid","decisions"];   /* declared before drawPanel, which runs at load */
 export const pkNew=()=>!!(shared.CUR&&(shared.CUR.mode==="new"||shared.CUR.mode==="msnew"));   /* declared before drawPanel, which runs at load */
@@ -205,7 +205,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   if(!shared.LOADING&&pkIs()&&$("#pkScroll")){
     const pn=$("#panel"); shared.EDITING=false; pn.classList.remove("pwide"); pn.classList.add("peek"); $("#pFields").textContent=""; $("#pFoot").textContent=""; $("#pKeys").textContent="";
     pkWide(PK.wide); pkNav(); pkDraw(); }   /* BL-176: an action, RAID item, decision or proposal is the peek (once the peek is built: an address can open an item earlier in the load) */
-  else { if(!shared.LOADING) $("#panel").classList.remove("peek","pkwide");   /* BL-166 */
+  else { if(!shared.LOADING) $("#panel").classList.remove("peek","pkwide","pover");   /* BL-166 */
   const was=shared.PDKEY;   /* BL-169 */
   if(shared.CUR&&shared.CUR.pre&&!shared.EDITING) shared.CUR.pre=null;   /* BL-53 */
   PANELF=true; try{ const x=curObj(), k=shared.CUR.k, F=fieldsFor(k,x); $("#pErr").textContent="";
@@ -214,6 +214,7 @@ export function drawPanel(focusField){ const fresh=pkIs()&&shared.CUR.mode==="pr
   putHTML($("#pId"),shared.CUR.mode==="milestone"||shared.CUR.mode==="rebase"?html`${shared.CUR.id} · ${raw(pl(shared.CUR.code))}`:shared.CUR.mode==="msnew"?html`Not yet saved · ${raw(pl(shared.CUR.code))}`:shared.CUR.mode==="record"?html`${shared.CUR.id} · ${raw(pl(x.p))}`:shared.CUR.mode==="proposal"?html`Review #${shared.CUR.n} · ${x.p?raw(pl(x.p)):"needs a project"}`:shared.CUR.mode==="new"?html`Not yet saved`:raw(pl(shared.CUR.code)));
   $("#pTitle").textContent=title||"";
   $("#panel").classList.toggle("pwide",!!shared.EDITING);   /* BL-80 */
+  $("#panel").classList.toggle("pover",shared.CUR.mode==="health");   /* #109: the health form is over the page, not beside it */
   $("#pBody").classList.toggle("editing",shared.EDITING); $("#editBanner").textContent=shared.CUR.mode==="proposal"?"Editing a proposal — nothing reaches the tracker until it's approved":"Editing — changes apply when you save";
   let h=""; for(const [n,l,t,opts] of F){ if(n==="#"){ h+=`<div class="fsec">${l}</div>`; continue; } const v=shared.CUR.pre&&n in shared.CUR.pre?shared.CUR.pre[n]:x[n];   /* CUR.pre: "Record the decision" fills the form first (BL-53) */
     h+=`<dt>${l}</dt><dd>${shared.EDITING&&t!=="ro"?editCtl(n,t,t==="calc"?prio(x.imp,x.lik):v,opts):viewVal(n,t,v,x)}</dd>`; }

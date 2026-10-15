@@ -314,6 +314,7 @@ export function rteLink(add){ const ed=(RTESEL&&RTESEL.el)||curPane(), h=edOf(ed
     else c.extendMarkRange("link").setLink({href:url}).run(); }
   else { c.run(); if(add&&url) snack("Use a web (https) or mail (mailto) link"); } }
 shared.DRH=null;                                          /* the health form's draft: {code, html, d, used} */
+shared.HBACK=null;   /* #109: the pencil that opened the health form, to give focus back */
 shared.PKDRC=null;   /* declared before closePanel, which runs at load */
 export const PK={wide:false,key:null};   /* declared before closePanel, which runs at load */
 export const pkOn=()=>$("#panel").classList.contains("on")&&$("#panel").classList.contains("peek");   /* declared before closePanel, which runs at load */
@@ -326,8 +327,9 @@ export function closePanel(quiet){ if(shared.DRH){ if(shared.DRH.d) draftStat("r
   PK.dirty=false; $("#panel").classList.remove("pkprop");   /* BL-250 A */
   const was=pkOn(), a=document.activeElement; if(a&&a!==document.body&&$("#panel").contains(a)) a.blur();   /* a text field commits as it closes, and no focus is left in a closed panel */   /* BL-166 */
   if(shared.EDITING&&shared.PDKEY) pdDrop(shared.PDKEY); shared.PDKEY=shared.PDBASE=shared.PDOFFER=null;   /* BL-169 */
-  const wasItem=shared.CUR&&shared.CUR.mode==="record"; $("#panel").classList.remove("on","pwide"); shared.CUR=null; shared.EDITING=false; closeCal(); closeCombobox(); if(shared.SEL){ shared.SEL=null; markSel(); } if(wasItem&&!quiet) navWrite(false); 
+  const wasItem=shared.CUR&&shared.CUR.mode==="record"; $("#panel").classList.remove("on","pwide","pover"); const back=shared.CUR&&shared.CUR.mode==="health"?shared.HBACK:null; shared.HBACK=null; shared.CUR=null; shared.EDITING=false; closeCal(); closeCombobox(); if(shared.SEL){ shared.SEL=null; markSel(); } if(wasItem&&!quiet) navWrite(false); 
   $("#panel").classList.remove("peek"); if(was){ PK.wide=false; PK.key=null; }
+  if(back&&back.isConnected) back.focus({preventScroll:true});   /* #109 */
   if(shared.PREPPEEK&&shared.PREPPEEK!=="swap") prepPeekEnd(); }   /* BL-286 E: the Prep popup comes back, modal, with focus on the item */
    /* looked up when clicked, so Close runs every later step (as Cancel and Esc do) */
 /* BL-78: ⌘+Enter (Ctrl+Enter on Windows) runs the open form's own Save and closes the panel. A failed check or a question leaves it open
