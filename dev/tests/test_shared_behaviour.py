@@ -43,10 +43,49 @@ import test_ui_sweep as us  # noqa: E402
 PROBE = (HERE / "behaviour_probe.js").read_text(encoding="utf-8")
 EXPECTED_FILE = HERE / "behaviour_expected_failures.json"
 
+# v2.0.0 (#88): Notes. "notes" is the project's Notes tab (its New note button opens #newNoteDlg); "notes-ai" is a note with its
+# text selected (⌘A), which shows the AI bar and its AI menu (AiSelect). The note is made once through the real controls
+# (New note, a title, Make the note, then typed words); later visits open it by its address. The sample vault is a temporary copy.
+NOTE = {}
+
+
+def _notes_open(b):
+    b.eval("go('notes','ABC')")
+    b.wait("!!document.getElementById('notesNew')", 15)
+
+
+def _notes_ai(b):
+    origin = b.eval("location.origin")
+    if NOTE.get("origin") != origin:                 # each test class has a sample vault (and server) of its own
+        NOTE.clear()
+        NOTE["origin"] = origin
+    if "path" not in NOTE:
+        _notes_open(b)
+        b.click("#notesNew")
+        b.wait("document.getElementById('newNoteDlg').open")
+        b.eval("(()=>{ const i=document.getElementById('nnTitle'); i.value='Keyboard check'; i.dispatchEvent(new Event('input',{bubbles:true})); })()")
+        b.click("#nnMake")
+        b.wait("noteCur.value&&noteCur.value.note.title==='Keyboard check'&&!!document.querySelector('#v-notes .nbody.ProseMirror')", 15)
+        NOTE["path"] = b.eval("noteCur.value.path")
+        b.eval("document.querySelector('#v-notes .nbody').cxed.focus('end')")
+        b.wait("document.activeElement===document.querySelector('#v-notes .nbody')", 5)
+        b.type("Phase 1 go-live probably moves two weeks.")
+        b.pump(0.5)
+    else:
+        b.eval(f"go('notes','ABC'); location.hash='#notes=ABC&n='+encodeURIComponent({json.dumps(NOTE['path'].rsplit('/', 1)[1])})")
+        b.wait(f"noteCur.value&&noteCur.value.path==={json.dumps(NOTE['path'])}&&!!document.querySelector('#v-notes .nbody [data-p]')", 15)
+    b.click("#v-notes .nbody")
+    b.key("a", 4)                                    # ⌘A: all of the text, which shows the AI bar
+    b.pump(0.3)
+
+
 SCREENS = dict(us.SCREENS)
 SCREENS.pop("cmdk", None)              # ⌘K is itself the dialog: opened by its key (CMDK below); its list is test_cmdk's
 SCREENS["shell"] = ("go('today')", "!document.getElementById('v-today').hidden", ".shell")   # the sidebar and the top bar
 us.SCREENS["shell"] = SCREENS["shell"]
+SCREENS["notes"] = (_notes_open, "!!document.getElementById('notesNew')", "#v-notes")
+SCREENS["notes-ai"] = (_notes_ai, "!!document.querySelector('#aiLayer .aibar')", "#aiLayer")
+us.SCREENS["notes"], us.SCREENS["notes-ai"] = SCREENS["notes"], SCREENS["notes-ai"]
 ONLY = {"shell": ".rail,header.bar"}   # the shell's own controls, not the page inside it
 # Still on the screen (settle goes back when not): its ready test, except where that test is a popup being open.
 ON_SCREEN = {"work-display": "VIEW==='work'"}
@@ -61,7 +100,7 @@ SCREEN_AREAS = {"today": "Today", "work": "Work", "work-board": "Work", "work-di
                 "cockpit": "Projects", "milestones": "Milestones", "people": "People", "person": "People", "help": "Help",
                 "ask": "ask creaite", "shell": "Shell", "cmdk": "Shell", "work-decisions": "Work", "work-views": "Work",
                 "prep-popup": "Projects", "milestone-editor": "Milestones", "milestones-move": "Milestones",
-                "archive-ask": "Settings"}
+                "archive-ask": "Settings", "notes": "Core", "notes-ai": "Core"}
 
 
 def screen_area(name):
