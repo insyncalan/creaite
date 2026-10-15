@@ -100,8 +100,8 @@ class Weekly(ReportBase):
         self.assertEqual(got["section"], "summary")
         self.assertEqual([s["unsourced"] for s in got["sentences"]], [False, True])
         self.assertNotIn("[S1]", got["text"])
-        notes = " ".join(n["note"] for n in got["notes"])
-        self.assertTrue(any("20" in n["note"] or "Omar" in n["note"] for n in got["notes"]), got["notes"])   # edit_ai's check: figures and names added
+        # edit_ai's check: the figure and the name it added
+        self.assertTrue(any("20" in n["note"] or "Omar" in n["note"] for n in got["notes"]), got["notes"])
 
     def test_panes_come_back_as_panes_and_a_reply_that_loses_one_is_dropped(self):
         req = {**WEEKLY, "section": "current_state", "heading": "Current state", "text": None,

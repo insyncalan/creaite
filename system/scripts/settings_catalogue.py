@@ -382,7 +382,8 @@ CATALOGUE = {
     "drafting.shape": ("Look and help", "AI drafts: shape the meeting",                     # BL-286 C (joined on release-192)
                        "Read your focus and aim for a meeting and draft its notes, each line cited.", "On: drafts only suggest."),
     "drafting.report-section": ("Look and help", "AI drafts: report sections",                # #90
-                                "The ✦ on a weekly or client report's section: a fresh draft beside your words.", "On: drafts only suggest."),
+                                "The ✦ on a weekly or client report's section: a fresh draft beside your words.",
+                                "On: drafts only suggest."),
     "drafting.minutes-section": ("Look and help", "AI drafts: minutes sections",
                                  "The ✦ on a section of the minutes: a fresh draft beside your words.", "On: drafts only suggest."),
     "logging.level": ("Logging", "Log level", "Info, or debug for more detail.", "Info: enough to diagnose, small files."),

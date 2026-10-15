@@ -7,6 +7,7 @@
 import { render } from "preact";
 import { Menu } from "../../Menu.jsx";
 import { Sheet } from "../Sheet.jsx";
+import { countRedraft, redrafter } from "../redraft.js";
 import { Glance } from "./Glance.jsx";
 import { CurrentState, Words } from "./Notes.jsx";
 import { Asks, Decisions, Overdue, Risks } from "./Tables.jsx";
@@ -78,7 +79,9 @@ export function WeeklyView() {
       <div class="wrsheet">
         <Sheet doc={doc} baseVersion={weeklyBase.value} scrollKey={`weekly:${doc.project}:${doc.date}`} readOnly={readOnly}
           renderers={WEEKLY_RENDER} onChange={editDoc} onSave={async req => { const r = await saveWeekly(req); if (r.ok) setWeeklyDirty(false); return r; }}
-          onEvent={ev => { if (ev.type === "reload") loadWeekly(/** @type {any} */ (weeklyArg.value)); }}
+          ai={{ place: "report", project: () => doc.project, confidential: () => false }}
+          onRedraft={redrafter(() => ({ report: "weekly", code: doc.project, week_ending: doc.date }), "report")}
+          onEvent={ev => { if (ev.type === "reload") loadWeekly(/** @type {any} */ (weeklyArg.value)); else countRedraft(ev, "report"); }}
           toolbar={<WeeklyBar doc={doc} readOnly={readOnly} />} />
       </div>
     </div>);
