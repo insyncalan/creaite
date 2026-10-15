@@ -1521,6 +1521,7 @@ def card_merge(st, keep, drop):
     keep["ids"] = list(dict.fromkeys((keep.get("ids") or []) + [drop["id"]] + (drop.get("ids") or [])))   # a logged thread stays logged
     keep["candidates"] = conv_merge(older.get("candidates") or [], newer.get("candidates") or [])
     merge_marks(keep, drop)
+    merge_closes(keep, drop)
     merge_state(keep, drop, newer)
     st["alerts"].remove(drop)
     st["_dirty"] = True
@@ -1533,6 +1534,21 @@ def merge_marks(keep, drop):
     dm, km = drop.get("match") or {}, keep.get("match") or {}
     if dm.get("logged") and km and not km.get("logged") and dm.get("id") == km.get("id"):
         km["logged"] = dm["logged"]
+
+
+def merge_closes(keep, drop):
+    """Review point 6: the merged card keeps a close and a match. The card merged away gives its match when the kept card has
+    none, and its close when the kept card has none or only an unstaged one while its own is staged (with the match that
+    close was offered for), so a staged close is never orphaned: Undo on the kept card reaches it (staged.card, or the
+    merged card's ID in keep["ids"], names it in the proposal)."""
+    kc = keep.get("closes") if isinstance(keep.get("closes"), dict) else None
+    dc = drop.get("closes") if isinstance(drop.get("closes"), dict) else None
+    if drop.get("match") and not keep.get("match"):
+        keep["match"] = drop["match"]
+    if dc and (not kc or (dc.get("staged") and not kc.get("staged"))):
+        keep["closes"] = dc
+        if dc.get("staged") and (keep.get("match") or {}).get("id") != dc.get("id") and drop.get("match"):
+            keep["match"] = drop["match"]
 
 
 def merge_state(keep, drop, newer):
@@ -3038,7 +3054,7 @@ def vip_close_stage(aid):
     _checked(spec)
     paths.STAGING.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    c["staged"] = {"proposal": out.name, "at": now().strftime("%Y-%m-%d %H:%M"), "line": line}
+    c["staged"] = {"proposal": out.name, "at": now().strftime("%Y-%m-%d %H:%M"), "line": line, "card": aid}
     vip_save(st)
     return {"proposal": out.name, "id": c["id"], "line": line, "state": "staged"}
 
@@ -3066,17 +3082,26 @@ def vip_close_unstage(aid):
         raise ValueError("Already decided in Review.")
     out = paths.STAGING / str(was["proposal"])
     if state == "staged":
-        spec = json.loads(out.read_text(encoding="utf-8"))
-        item = next(i for i in spec["items"] if i.get("op") == "update" and i.get("id") == c["id"])
-        if aid in ((item.get("suggested") or {}).get("closes") or []):
-            _take_close(spec, item, aid, was.get("line") or "")
-            if spec["items"]:
-                out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            else:
-                out.unlink()
+        _unstage_in(out, c["id"], was, [was.get("card"), aid, *(a.get("ids") or [])])
     c.pop("staged", None)
     vip_save(st)
     return {"proposal": out.name, "id": c.get("id"), "state": "undone"}
+
+
+def _unstage_in(out, item_id, was, keys):
+    """Take a staged close out of its pending proposal file: the first of keys (the card that staged it, this card or a card
+    merged into it) named in the item's suggested.closes. An empty proposal file is deleted."""
+    spec = json.loads(out.read_text(encoding="utf-8"))
+    item = next(i for i in spec["items"] if i.get("op") == "update" and i.get("id") == item_id)
+    named = (item.get("suggested") or {}).get("closes") or []
+    key = next((k for k in keys if k and k in named), None)
+    if not key:
+        return
+    _take_close(spec, item, key, was.get("line") or "")
+    if spec["items"]:
+        out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    else:
+        out.unlink()
 
 
 def _take_close(spec, item, aid, line):

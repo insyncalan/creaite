@@ -603,6 +603,78 @@ class StageTests(Base):
         self.assertEqual(self.call("vip_close_stage"), {"refused": "ABC-A-007 isn't open any more."})
 
 
+MERGE = ("st = sweep.vip_state(); keep, drop = [next(a for a in st['alerts'] if a['id'] == x) for x in sys.argv[1:3]]\n"
+         "sweep.card_merge(st, keep, drop); sweep.vip_save(st)\nprint(json.dumps(keep))")
+
+
+class MergeCloseTests(Base):
+    """Review point 6: merging two cards for one thread keeps a staged close and its match; Undo on the kept card reaches it."""
+
+    def setUp(self):
+        super().setUp()
+        self.check([owner_done()])
+        self.a = self.cards()[0]["id"]
+
+    def second(self, close=False):
+        extra = {"conversation": MAIL_ID + "2", "subject": "Project Falcon plan, again", "title": "Project Falcon plan, again",
+                 "link": "https://outlook.example/owa/?ItemID=t2"}
+        self.check([owner_done(**extra) if close else
+                    thread(**extra, match={"id": "ABC-A-007", "relation": "update", "why": "About the plan."})])
+        return next(a["id"] for a in self.cards() if a["id"] != self.a)
+
+    def merge(self, keep, drop):
+        r = subprocess.run([sys.executable, "-c", "import sys, json; sys.path.insert(0, 'system/scripts'); import sweep\n" + MERGE,
+                            keep, drop], cwd=self.v.root, capture_output=True, text=True,
+                           env={**os.environ, "CREAITE_NOW": NOW, "CREAITE_TZ_OFFSET": OFF})
+        if r.returncode:
+            raise AssertionError(r.stdout + r.stderr)
+        return json.loads(r.stdout)
+
+    def stage(self, fn, aid):
+        return StageTests.call(self, fn, aid)
+
+    def proposals(self):
+        return StageTests.staged(self)
+
+    def test_a_staged_close_on_the_card_merged_away_moves_to_the_kept_card_and_undo_reaches_it(self):
+        b = self.second()
+        self.assertIsNone(next(a for a in self.cards() if a["id"] == b).get("closes"))
+        self.assertEqual(self.stage("vip_close_stage", self.a)["state"], "staged")
+        kept = self.merge(b, self.a)
+        self.assertEqual((kept["closes"]["id"], kept["match"]["id"]), ("ABC-A-007", "ABC-A-007"))
+        self.assertIn("staged", kept["closes"])
+        self.assertEqual(self.stage("vip_close_stage", b), {"refused": "Already staged for Review."})
+        self.assertEqual(self.stage("vip_close_unstage", b)["state"], "undone")
+        self.assertEqual(self.proposals(), [])                                              # nothing orphaned
+        self.assertNotIn("staged", next(a for a in self.cards() if a["id"] == b)["closes"])
+
+    def test_a_staged_close_on_the_kept_card_stays_and_wins_over_an_unstaged_one(self):
+        b = self.second(close=True)
+        self.stage("vip_close_stage", self.a)
+        kept = self.merge(self.a, b)
+        self.assertIn("staged", kept["closes"])
+        self.assertEqual(self.stage("vip_close_unstage", self.a)["state"], "undone")
+        self.assertEqual(self.proposals(), [])
+
+    def test_when_both_have_a_close_the_staged_one_is_kept_either_way(self):
+        b = self.second(close=True)
+        self.stage("vip_close_stage", self.a)
+        kept = self.merge(b, self.a)                                                         # the unstaged card kept
+        self.assertIn("staged", kept["closes"])
+        self.assertEqual(self.stage("vip_close_unstage", b)["state"], "undone")
+        self.assertEqual(self.proposals(), [])
+
+    def test_an_older_staged_close_without_its_card_is_found_by_the_merged_id(self):
+        b = self.second()
+        self.stage("vip_close_stage", self.a)
+        st = vip_file(self.v)
+        next(a for a in st["alerts"] if a["id"] == self.a)["closes"]["staged"].pop("card")   # staged before this fix
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
+        self.merge(b, self.a)
+        self.assertEqual(self.stage("vip_close_unstage", b)["state"], "undone")
+        self.assertEqual(self.proposals(), [])
+
+
 class ConfidentialStageTests(Base):
     def test_a_confidential_close_holds_no_thread_words(self):
         subject = "Project Falcon board secrets"
