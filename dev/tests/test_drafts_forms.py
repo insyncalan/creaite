@@ -112,20 +112,29 @@ class FormsCase(DraftCase):
         self.b.eval(f"api('/api/ask/ack',{{run:{json.dumps(run_id)}}})")
         self.assertEqual((self.v.root / ABC / "CLAUDE.md").read_text(), memory)
 
+    def pick(self, trigger, label):
+        """#110: choose from one of the dialog's menus (the Picker block's list), by the option's words."""
+        b = self.b
+        b.click(trigger)
+        b.wait("document.querySelector('.pkpop [role=option]')")
+        b.eval(f"[...document.querySelectorAll('.pkpop [role=option]')].find(o=>o.textContent.trim().startsWith({label!r})).click()")
+
     def test_the_dialog_writes_a_teams_message_with_copy_and_no_save(self):
         b = self.b
         memory = (self.v.root / ABC / "CLAUDE.md").read_text()
         b.eval("openGen('ABC')")
-        b.wait("document.getElementById('genDlg').open&&document.querySelector('#genFormKind [data-gf=teams]')")
-        b.click("#genFormKind [data-gf=teams]")
-        self.assertTrue(b.eval("document.querySelector('#genLen [data-gl]').disabled"))
-        self.assertEqual(b.eval("document.getElementById('genGo').textContent"), "Write it")
+        b.wait("document.getElementById('genDlg').open&&document.querySelector('#genFormKind')")
+        self.pick("#genFormKind", "Teams message")
+        self.assertEqual(b.eval("document.getElementById('genLen').getAttribute('aria-disabled')"), "true")        # Length dims; the reason is on hover
+        self.assertEqual(b.eval("document.getElementById('genLen').title"), "At most 50 words")
+        self.assertEqual(b.eval("document.getElementById('genGoT').textContent"), "Write it")
         b.click("#genGo")
         b.wait("document.querySelector('#genOut .drcard')", 30)
         self.assertTrue(b.eval("document.getElementById('genDlg').open"))
         self.assertIn("Quick update: UAT is at risk", b.eval("document.querySelector('#genOut .drtext').textContent"))
         self.assertIsNone(b.eval("document.querySelector('#genOut [data-gfdo=rich]')"))       # Teams: plain text only
         self.assertEqual(b.eval("[...document.querySelectorAll('#genOut button')].map(x=>x.textContent)"), ["Discard", "Copy as plain text"])
+        self.assertEqual(b.eval("document.getElementById('genDlg').querySelector('h2').textContent"), "Write a teams message")
         b.eval("window.__clip=[]; navigator.clipboard.writeText=async t=>{ window.__clip.push(t); };")
         b.click("#genOut [data-gfdo=plain]")
         b.wait("window.__clip.length===1")
@@ -144,16 +153,18 @@ class FormsCase(DraftCase):
         b = self.b
         try:
             b.eval("S.drafting={...(S.drafting||{}),forms:false}; GEN.form='email'; openGen('ABC')")
-            b.wait("document.getElementById('genDlg').open&&document.querySelector('#genFormKind [data-gf=teams]')")
-            st = b.eval("""[...document.querySelectorAll('#genFormKind [data-gf]')].map(x=>[x.dataset.gf,x.getAttribute('aria-disabled'),x.getAttribute('aria-pressed'),x.dataset.tip||''])""")
-            self.assertEqual([(k, d, p) for k, d, p, _ in st], [("current", None, "true"), ("steering", "true", "false"), ("three", "true", "false"),
-                                                                ("email", "true", "false"), ("teams", "true", "false")])
-            self.assertTrue(all("is off in Settings › Advanced › AI drafts" in t for k, _, _, t in st if k != "current"))
-            self.assertEqual(b.eval("getComputedStyle(document.querySelector('#genFormKind [data-gf=teams]')).opacity"), "0.45")
-            b.click("#genFormKind [data-gf=teams]")
+            b.wait("document.getElementById('genDlg').open&&document.querySelector('#genFormKind')")
+            self.assertEqual(b.eval("document.getElementById('genFormKind').dataset.v"), "current")           # the remembered one fell back
+            b.click("#genFormKind")
+            b.wait("document.querySelector('.pkpop [role=option]')")
+            st = b.eval("""[...document.querySelectorAll('.pkpop [role=option]')].map(x=>[x.firstElementChild.firstChild.textContent,x.getAttribute('aria-disabled'),x.getAttribute('aria-selected'),(x.querySelector('.h')||{}).textContent||''])""")
+            self.assertEqual([(k, d, p) for k, d, p, _ in st], [("Current state", None, "true"), ("Steering note", "true", "false"), ("Three-line update", "true", "false"),
+                                                                ("Email paragraph", "true", "false"), ("Teams message", "true", "false")])
+            self.assertTrue(all("is off in Settings › Advanced › AI drafts" in t for k, d, _, t in st if d))
+            b.eval("[...document.querySelectorAll('.pkpop [role=option]')].find(o=>o.textContent.startsWith('Teams')).click()")        # refused
             self.assertEqual(b.eval("GEN.form"), "current")
             self.assertEqual(b.eval("document.querySelector('#genDlg h2').textContent"), "Generate current state")
-            self.assertEqual(b.eval("document.getElementById('genGo').textContent"), "Generate")
+            self.assertEqual(b.eval("document.getElementById('genGoT').textContent"), "Generate")
         finally:
             b.eval("S.drafting={...(S.drafting||{}),forms:true}; document.getElementById('genDlg').close()")
 
@@ -161,11 +172,27 @@ class FormsCase(DraftCase):
         b = self.b
         b.eval("store.set('creaite-gen-form','steering'); GEN.form='steering'; openGen('ABC')")
         b.wait("document.getElementById('genDlg').open")
-        b.click("#genFormKind [data-gf=current]")
+        self.assertEqual(b.eval("document.querySelector('#genDlg h2').textContent"), "Write a steering note")           # a remembered form keeps its own title
+        self.pick("#genFormKind", "Current state")
         self.assertEqual(b.eval("document.querySelector('#genDlg h2').textContent"), "Generate current state")
-        self.assertFalse(b.eval("document.querySelector('#genLen [data-gl]').disabled"))
-        self.assertEqual(b.eval("[...document.querySelectorAll('#genAud [data-ga]')].map(x=>x.textContent)"),
+        self.assertIsNone(b.eval("document.getElementById('genLen').getAttribute('aria-disabled')"))
+        b.click("#genAud")
+        b.wait("document.querySelector('.pkpop [role=option]')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('.pkpop [role=option]')].map(x=>x.textContent.trim())"),
                          ["Internal", "Client-safe", "Steering committee", "Sponsor"])
+
+    def test_the_title_says_an_before_a_vowel(self):
+        """#110: "Write an email paragraph", not "a email paragraph"."""
+        b = self.b
+        b.eval("GEN.form='current'; openGen('ABC')")
+        b.wait("document.getElementById('genDlg').open")
+        titles = {}
+        for label in ("Email paragraph", "Steering note", "Three-line update", "Teams message"):
+            self.pick("#genFormKind", label)
+            titles[label] = b.eval("document.querySelector('#genDlg h2').textContent")
+        self.assertEqual(titles, {"Email paragraph": "Write an email paragraph", "Steering note": "Write a steering note",
+                                  "Three-line update": "Write a three-line update", "Teams message": "Write a teams message"})
+        b.eval("document.getElementById('genDlg').close()")
 
 
 if __name__ == "__main__":

@@ -39,13 +39,14 @@ class AutosizeFields(LiveBrowserCase):
         b.call("Input.insertText", text="\n".join(f"line {i + 1}" for i in range(n)))
         return self.geo(sel)
 
-    def grows_and_stops(self, sel, allow_drag=True):
+    def grows_and_stops(self, sel, allow_drag=True, from_lines=(3, 6)):
         b = self.b
+        few, many = from_lines
         one = self.fill(sel, 1)
-        g3 = self.fill(sel, 3)
+        g3 = self.fill(sel, few)
         self.assertGreaterEqual(g3["h"], one["h"], sel)
-        self.assertLessEqual(g3["sh"], g3["ch"] + 1, sel)                   # all three lines show
-        g6 = self.fill(sel, 6)
+        self.assertLessEqual(g3["sh"], g3["ch"] + 1, sel)                   # all the lines show
+        g6 = self.fill(sel, many)
         self.assertGreater(g6["h"], g3["h"] + 30, sel)
         self.assertLessEqual(g6["sh"], g6["ch"] + 1, sel)
         self.assertEqual(g6["ov"], "hidden", sel)
@@ -81,7 +82,11 @@ class AutosizeFields(LiveBrowserCase):
         b.pump(0.4)
         if not b.eval("$('#genDlg').open"):
             self.skipTest("Generate did not open in this vault")
-        self.grows_and_stops("#genNote", allow_drag=False)
+        # #110: Steer it is the body of the dialog: about six lines at least (148px), full width, resizable; it grows past that, and stops at 60% of the window
+        g = self.geo("#genNote")
+        self.assertGreaterEqual(g["h"], 148)
+        self.assertEqual(g["resize"], "vertical")
+        self.grows_and_stops("#genNote", from_lines=(3, 12))
         b.eval("$('#genDlg').close()")
 
     def test_a_value_set_by_code_and_a_record_opened_with_long_text(self):
