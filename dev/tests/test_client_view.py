@@ -154,6 +154,28 @@ class ClientCheckRoutes(unittest.TestCase):
         self.assertFalse(e["ok"])
         self.assertIn("contains “restricted”", e["left_out"]["findings"])
 
+    def test_5_the_health_difference_and_its_reason_are_in_the_draft_and_never_in_the_filed_file(self):
+        """Alan, 15-10-2026: kept only in the draft, never in the filed client file, its data block included (the whole key goes: it
+        names the internal flag too). The internal report reads the difference from the draft; after filing, from the client page's
+        own flag."""
+        for n, reason in enumerate(("DISTINCTIVE-REASON-ONE", "DISTINCTIVE-REASON-TWO")):
+            doc = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fresh": n == 0})["doc"]
+            doc["meta"]["health_diff"] = {"internal": "At risk", "client": "On track", "reason": reason}
+            section(doc, "health")["data"]["flag"] = "On track"
+            saved = self.post("/api/report/save", {"doc": doc, "base_version": doc.get("version") or None})
+            self.assertTrue(saved["ok"], saved)
+            back = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+            self.assertEqual(back["meta"]["health_diff"]["reason"], reason, "the draft keeps it (the internal report shows it from here)")
+            a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "force": True})
+            self.assertTrue(a["ok"], a)
+            filed = next((self.v.root / "projects").glob("*/reports/2026-10-09 Client report*.html")).read_text(encoding="utf-8")
+            self.assertIn('"state": "approved"', filed)
+            for gone in ("health_diff", reason, "DISTINCTIVE-REASON", '"internal": "At risk"'):
+                self.assertNotIn(gone, filed)
+            after = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})["doc"]
+            self.assertNotIn("health_diff", after["meta"])
+            self.assertEqual(section(after, "health")["data"]["flag"], "On track")      # the flag difference is still readable
+
 
 class ClientBrowser(LiveBrowserCase):
     """The view in a real browser, over the same fixture."""

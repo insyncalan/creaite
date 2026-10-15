@@ -644,17 +644,24 @@ def _current_ops(doc, folder):
 
 
 def _file_ops(kind, code, fri, client, draft):
-    """How Approve files the draft: a first filing copies it; a filed report is replaced whole by the approved new version (a write
-    whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). The draft is removed either way."""
+    """How Approve files the draft: a first filing of a weekly report copies it; a filed report is replaced whole by the approved new
+    version (a write whose earlier text tracker.py keeps, so Undo puts the filed report back exactly as it was). A client report is
+    always written whole, without meta.health_diff (the health difference and its reason stay in the draft, Alan 15-10-2026). The
+    draft is removed either way."""
     import tracker
     filed = filed_path(kind, code, fri, client)
-    if not paths.resolve(filed).is_file():
+    exists = paths.resolve(filed).is_file()
+    if not exists and kind != "client":
         return [{"op": "copy", "from": "draft", "to": filed}, {"op": "remove", "path": draft}]
-    old = paths.resolve(filed).read_text(encoding="utf-8")
+    old = paths.resolve(filed).read_text(encoding="utf-8") if exists else None
     doc = creaite_doc.clean(creaite_doc.read(draft))
     on = (os.environ.get("CREAITE_NOW") or tracker.today())[:10]       # as tracker stamps an approved draft
-    doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1, saved_at=creaite_doc.now(), state="approved",
-               approved_at=on)
+    doc.update(version=int(creaite_doc.loads(old).get("version") or 0) + 1 if exists else int(doc.get("version") or 1),
+               saved_at=creaite_doc.now(), state="approved", approved_at=on)
+    if kind == "client":
+        # Alan, 15-10-2026: the client health difference and its reason live only in the draft. The filed client file, its data
+        # block included, never holds them (the internal flag would be in them): the whole key goes, not just the reason.
+        doc["meta"] = {k: v for k, v in (doc.get("meta") or {}).items() if k != "health_diff"}
     return [{"op": "write", "path": filed, "content": creaite_doc.dumps(doc), "previous": old}, {"op": "remove", "path": draft}]
 
 
