@@ -784,6 +784,33 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 - Each item's source is the note and its line (`…/08 Notes/<title>.md#p4`): its source link opens the note at that line. What a line became is kept beside the note, never in it (`system/staging/notes-sent.json`: the line's number, a fingerprint and the item IDs, never your words), so running Find updates again looks only at new or changed lines. A line already sent shows a ✓ in the note's left margin; editing the line takes its tick away. Undo makes the lines new again.
 - Claude sees only the note's new lines, the project's open item IDs and titles, its milestones and the people register's names, with no tools: it can't read files or mail and can't change anything. A note marked **Confidential** asks once before its lines go to Claude, and its new items are labelled Sensitive. Find updates only runs when you press it: never on its own, never from the sweep.
 
+## Minutes view
+Where: Review › Open draft on minutes · address `#minutes=`
+
+- **Open draft** on a meeting's minutes in Review opens them as a page under Review (it needs the live server). The decisions, risks, issues and actions in them are the items under them in Review: a change to a row changes the item. Filed minutes are never saved over; a change is saved as a new version.
+- **The bar:** the versions, **Internal**, **Distributed** or **Side by side**, **Transcript**, the checks, **Export** and **Approve minutes**. With the transcript open, a line's time tag jumps to the place it came from. Time tags are for you: they are never exported.
+- **Each item row** has an owner and a deadline. A deadline said in words (Friday, next week, end of month) is worked out from the meeting's date and marked as a guess: click it to see the words and change the date. **Looks like** shows an item it repeats. **Remove** drops the item and its line, and **Keep the line** keeps the line as text; both have Undo.
+- **Coverage:** an agenda point the meeting didn't cover can be carried on, made a separate session or marked no longer needed, with Undo, and optionally a line under "Not covered in this meeting".
+- **Internal-only:** mark a line or row Internal-only and it stays out of the Distributed version, as does any Sensitive, partner-only or excluded item. **Distributed** shows what would be shared; **Side by side** shows both and levels them.
+- **Approve minutes** shows what will be applied before it is: the minutes and the ticked items, in one apply with one Undo. Actions and updates are one tick; a new decision, a decision recorded or withdrawn, a new risk and an update that closes an item each need their own tick; a milestone change never goes with the minutes. Unticked items stay in Review. If the apply fails, nothing is kept.
+- **Export** files the Distributed version as HTML, Word or PDF beside the minutes, under a new name each time; only approved minutes can be exported. **Draft the follow-up email** (also in Export) writes it from the version on screen: the Distributed one holds nothing the Distributed minutes leave out, and the Internal one is marked Internal. Attendees' addresses come from the people register. creaite never sends it; copy it into your mail.
+
+## The report sheet
+- Reports and minutes are edited on an A4 **sheet**. **Zoom** with the buttons, a pinch or [[⌘+]], [[⌘-]] and [[⌘0]] (40 to 80%); page breaks are marked.
+- **Sections:** drag one (or [[Alt+↑]] and [[Alt+↓]]) to move it, **Hide** or show it, rename a heading and **Reset the heading**. A row or a figure has an eye to leave it out of the export, and figures can be reordered. A hidden section or row is never exported.
+- **✦ on a section** finds the source of a line, runs its check, or suggests a fresh draft. Source tags and checks show as you write. Select text and press **AI** for the usual suggestions, plus **Polish** (spelling, grammar and light smoothing; facts and length kept).
+- **Side by side** shows two versions, scrolling together and levelled. **≠** marks a difference, and **Match internal** copies the internal wording across for that section or all of them. **Show as exported** shows the page as it will be filed.
+- It saves as you write (and [[⌘S]]). If the report changed somewhere else, the sheet says **This changed somewhere else** and offers **Reload**; it never overwrites.
+
+## The client view
+Where: Reports › a project › the client report · address `#client-report=`
+
+- The client report is edited beside its internal week: **Client report** or **Side by side**. **Match internal** copies the client-safe wording, Current state and health across; tags are never copied, and a table only shows the rows marked client-visible.
+- **Client health** can differ from the internal health, but you must give a reason. The reason is kept in the draft for you and never goes into the filed client report.
+- Each item can be left out with its eye; **Not in this report** lists what is left out and why (not client-visible, Sensitive, partner-only or confidential).
+- **Before every export** creaite checks what is left out and shows it: what was kept out and what is now client-visible and could be added. Nothing Sensitive or not client-visible reaches the file. The client report's **Approve** and **Export** wait for the internal week to be approved; **Refresh from the approved week** brings an earlier client draft up to date.
+- It is never sent: file it and send it yourself.
+
 ## AI drafts
 - **A draft is a suggestion, never a save.** It lands in a field you then edit, a proposal in Review you approve on its own, or a box with Use and Discard. creaite chooses the facts from the tracker and the vault; Claude only words them, one run at a time, with progress and **Stop**.
 - **Sources on every draft:** each sentence carries the sources it rests on; one with none is marked **no source** before you see it. Confidential or restricted sources are skipped, and client wording is written from the item's own text only.

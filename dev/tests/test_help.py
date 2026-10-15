@@ -26,7 +26,7 @@ from split_dashboard import readable_page  # noqa: E402
 # every ## heading of the old single-page Help, less "Guides" (replaced by a sentence in Reference's lead-in)
 OLD_HEADINGS = [
     "Keyboard shortcuts", "What the icons mean", "Opening the dashboard", "Working with lists", "How saving works", "Updating creaite", "Today",
-    "Project page", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "AI drafts", "Review", "Intake", "Files",
+    "Project page", "Notes", "Milestones: Plan and Movement", "Early warnings", "Meeting prep", "Capture a note", "Updates from meetings", "Find updates in a note", "Minutes view", "The report sheet", "The client view", "AI drafts", "Review", "Intake", "Files",
     "Activity", "People", "Workstreams", "Search", "Settings", "Client messaging", "Dates", "Sources",
     "Word documents and permissions in ask creaite", "Commands for Claude", "Open creaite as an app", "Live server and backups", "Troubleshooting"]
 GROUPS = ["Every day", "Meetings", "Keeping it right", "Reporting", "Admin"]
@@ -271,7 +271,7 @@ class PageTests(unittest.TestCase):
           helpGo("reference-search"); await wait(200); const s=$q("#hr-search").getBoundingClientRect(); out.jump=[location.hash,s.top<innerHeight&&s.bottom>0,$q('.hp-refidx a[aria-current]')&&$q('.hp-refidx a[aria-current]').dataset.help];
           window.OUT=out;""")
         self.assertEqual(o["cmd"], [True, True, False])
-        self.assertEqual(o["filtered"][0], 32)                                 # 28 with What the icons mean (BL-158); 29 with Milestones (BL-186); 30 with AI drafts; 31 with Notes (BL-301 B); 32 Find updates (BL-301 E)
+        self.assertEqual(o["filtered"][0], 35)                                 # 35 with the minutes view, report sheet and client view (v2.1.0 Stark docs); 28 with What the icons mean (BL-158); 29 with Milestones (BL-186); 30 with AI drafts; 31 with Notes (BL-301 B); 32 Find updates (BL-301 E)
         self.assertIn("people", o["filtered"][1])
         self.assertLess(len(o["filtered"][1]), 30)
         self.assertEqual(o["cleared"], 0)
@@ -301,7 +301,7 @@ class PageTests(unittest.TestCase):
         self.assertEqual(o["nt"], len(bd.help_sections()["tasks"]))
         self.assertEqual(o["howdo"], ["Help: How do I…", True, "Help: Start the day", "Help: Fix a stopped server and other problems"])   # the tab, then every task
         self.assertEqual(o["help"][0], ["Help: Start here", "Help: How do I…", "Help: Reference"])
-        self.assertEqual(o["help"][1], 3 + o["nt"] + 32)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates)
+        self.assertEqual(o["help"][1], 3 + o["nt"] + 35)                 # every task and reference section (BL-186: Milestones; AI drafts; BL-301: Notes, Find updates)
         self.assertGreater(o["help"][3], 0)
         self.assertLess(o["help"][3], o["help"][2])                                    # tasks come before reference sections
         self.assertTrue(o["hint"])
