@@ -154,6 +154,22 @@ class ToastBlock(LiveBrowserCase):
         b.eval("hideSnack()")
         self.assertFalse(b.eval("document.getElementById('snack').classList.contains('on')"))
 
+    def test_over_a_modal_dialog_the_message_and_its_undo_can_be_reached(self):
+        """BL-316: a modal dialog makes the page behind it inert; the page's toast is drawn inside the top modal while one is
+        open (its Undo can be clicked and focused), and goes back where it was when the dialog closes."""
+        b = self.b
+        b.eval("""(()=>{ document.getElementById('tfDlg')?.remove(); const d=document.createElement('dialog'); d.id='tfDlg';
+          d.innerHTML='<p>A modal</p><button id="tfIn">In it</button>'; document.body.appendChild(d); d.showModal();
+          window.UNDID=0; snack('Moved',()=>{ UNDID++; }); return true; })()""")
+        self.assertEqual(b.eval("document.getElementById('toastHost').parentElement.id"), "tfDlg")
+        self.assertFalse(b.eval("document.getElementById('snackU').closest('[inert]')!==null"))
+        b.click("#snackU")
+        b.wait("UNDID===1")
+        b.eval("document.getElementById('tfDlg').close()")
+        b.wait("document.getElementById('toastHost').parentElement===document.body")
+        b.eval("snack('Plain'); hideSnack(); document.getElementById('tfDlg').remove()")
+        self.assertEqual(b.eval("document.getElementById('toastHost').parentElement.tagName"), "BODY")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

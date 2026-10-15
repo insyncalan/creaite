@@ -92,8 +92,30 @@ export function Toast({ open, text, action, onAction, onHide, run = 0, id = "sna
   );
 }
 
-/** Draw the toast into `host`, redrawn in place (synchronously) by calling it again with new props.
+/* A modal dialog makes the rest of the page inert, so a message (and its Undo) drawn behind one can't be reached. While a
+   modal is open the toast's host sits inside the top one (it is fixed to the window either way, and an open dialog has no
+   transform); when the last modal closes it goes back where it was. */
+/** @type {Map<Element, {parent: Node, next: Node | null}>} */
+const HOMES = new Map();
+let WATCHING = false;
+/** The top modal dialog, or null. */
+const topModal = () => [...document.querySelectorAll("dialog")].filter(d => d.matches(":modal")).pop() || null;
+/** Put `host` in the top modal dialog, or back home. @param {Element} host */
+export function toastLayer(host) {
+  if (!HOMES.has(host)) HOMES.set(host, { parent: /** @type {Node} */ (host.parentNode), next: host.nextSibling });
+  const top = topModal(), home = /** @type {{parent: Node, next: Node | null}} */ (HOMES.get(host));
+  if (top) { if (host.parentNode !== top) top.appendChild(host); }
+  else if (host.parentNode !== home.parent) home.parent.insertBefore(host, home.next && home.next.parentNode === home.parent ? home.next : null);
+  if (!WATCHING) {
+    WATCHING = true;
+    document.addEventListener("close", () => HOMES.forEach((_, h) => toastLayer(h)), true);   /* a dialog closed: the next one down, or home */
+  }
+}
+
+/** Draw the toast into `host`, redrawn in place (synchronously) by calling it again with new props. An open toast is moved into
+    the top modal dialog, so its action can be reached there.
     @param {Element} host @param {ToastProps} props */
 export function drawToast(host, props) {
+  if (props.open || HOMES.has(host)) toastLayer(host);
   render(<Toast {...props} />, host);
 }
