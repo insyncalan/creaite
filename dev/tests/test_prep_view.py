@@ -182,7 +182,6 @@ class PrepView(LiveBrowserCase):
         b.wait("getComputedStyle(document.querySelector('#v-prep .ppb')).gridTemplateColumns.split(' ').length===1")
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#v-prep .ppoutline')).display"), "none")
         b.resize(320, 800)
-        b.wait("document.documentElement.clientWidth<=320")
         wide = b.eval("[...document.querySelectorAll('#v-prep *')].filter(e=>e.getBoundingClientRect().right>document.documentElement.clientWidth+1&&e.getClientRects().length).map(e=>e.tagName+'.'+e.className).slice(0,5)")
         self.assertEqual(wide, [], "nothing in the prep page reaches past the window")
         self.assertLessEqual(b.eval("document.querySelector('#v-prep').scrollWidth"), b.eval("document.querySelector('#v-prep').clientWidth"))

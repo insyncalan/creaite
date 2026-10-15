@@ -310,9 +310,20 @@ class Browser:
         self.call("DOM.setFileInputFiles", nodeId=node, files=[str(f) for f in files])   # Chrome fires input and change itself
         self.pump(0.2)
 
-    def resize(self, width, height=900):
-        """Make the page this size (a small window)."""
+    def resize(self, width, height=900, settle=0.05):
+        """Make the page this size (a small window), and return only once the page has drawn a frame at it.
+
+        Plan #84: Chrome applies the override, then lays out, fires `resize` and media-query `change` events and runs
+        the page's own requestAnimationFrame work at its next frames, not on this call. Tests that measured straight
+        after it raced those frames under load. So: wait until the page sees the new size, then for two animation
+        frames (the first runs the resize and media-query work, the second sees what it drew), then a short settle for
+        anything that work queued. A timer stands in for a frame if the tab isn't drawing, so this never hangs."""
         self.call("Emulation.setDeviceMetricsOverride", width=width, height=height, deviceScaleFactor=1, mobile=False)
+        self.wait(f"innerWidth==={int(width)} && innerHeight==={int(height)}", 10)
+        self.eval("""new Promise(done=>{ const t=setTimeout(done,500);
+          requestAnimationFrame(()=>requestAnimationFrame(()=>{ clearTimeout(t); done(); })); })""")
+        if settle:
+            self.pump(settle)
 
     def screenshot(self, path):
         with open(path, "wb") as f:

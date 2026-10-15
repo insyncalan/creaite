@@ -160,7 +160,6 @@ class Portfolio(ts.Snapshots):
         b.eval("shared.RZ['portfolio|project']=900; shared.RZ['portfolio|evidence']=900; renderToday()")
         try:
             b.resize(320, 800)
-            b.pump(0.4)
             r = b.eval("""(()=>{ const s=document.scrollingElement, v=document.getElementById('v-today');
               return {page:s.scrollWidth-s.clientWidth, view:v.scrollWidth-v.clientWidth, frame:getComputedStyle(document.getElementById('pfTbl')).overflowX}; })()""")
             self.assertLessEqual(r["page"], 0)

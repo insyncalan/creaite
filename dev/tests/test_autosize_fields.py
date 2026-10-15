@@ -111,7 +111,6 @@ class AutosizeFields(LiveBrowserCase):
         self.assertLessEqual(g["sh"], g["ch"] + 1)
         self.assertGreater(g["h"], 70)
         b.resize(1100, 900)                                                 # a narrower panel wraps more lines
-        b.pump(0.4)
         g2 = self.geo("#mvDesc")
         self.assertLessEqual(g2["sh"], g2["ch"] + 1)
 

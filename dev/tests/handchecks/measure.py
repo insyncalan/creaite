@@ -52,7 +52,6 @@ def themes(b):
 
 def width(b, w, h=900):
     b.resize(w, h)
-    b.pump(0.2)
 
 
 def overflow_x(b):

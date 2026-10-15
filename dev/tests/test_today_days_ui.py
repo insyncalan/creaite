@@ -224,7 +224,6 @@ class DayLine(TodayFixture):
     def test_at_320_px_nothing_scrolls_sideways(self):
         b = self.b
         b.resize(320, 800)
-        b.pump(0.3)
         for day in ("2026-10-13", "2026-10-12", "2026-10-16"):
             b.eval(f"goDay('{day}')")
             sizes = b.eval("""(()=>{ const v=document.getElementById('v-today'), d=document.scrollingElement;
@@ -238,7 +237,6 @@ def arrows_hold_still(case, width=None):
     b = case.b
     if width:
         b.resize(width, 900)
-        b.pump(0.3)
     box = "(s=>{ const r=document.querySelector(s).getBoundingClientRect(); return [r.x,r.y,r.width,r.height]; })"
     first = [b.eval(f"{box}('.dayedge.l')"), b.eval(f"{box}('.dayedge.r')")]
     case.assertGreater(first[1][2], 0)

@@ -330,7 +330,6 @@ class Wordmark(UiSweepCase):
                     b.call("Emulation.setEmulatedMedia", features=[])
         try:
             b.resize(400, 800)
-            b.pump(0.3)
             self.assertLessEqual(b.eval("document.querySelector('.logo .wm').getBoundingClientRect().width"), 40)
         finally:
             b.resize(self.width, self.height)

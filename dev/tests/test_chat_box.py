@@ -128,7 +128,6 @@ class ChatBox(LiveBrowserCase):
         self.assertGreater(narrow["h"], wide["h"])
         self.assertLessEqual(narrow["sh"], narrow["ch"] + 1)
         b.resize(1400, 500)                                                 # a short window: the maximum follows it
-        b.pump(0.3)
         b.eval("$('#chIn').value=Array.from({length:40},(_, i)=>'l'+i).join('\\n')")
         b.pump(0.1)
         g = self.geo()

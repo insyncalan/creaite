@@ -167,7 +167,6 @@ class Views(LiveBrowserCase):
             b.eval(f"applyFilters({{st:['Open'],pr:['Urgent'],due:['{['overdue','soon','none','later'][n % 4]}'],cv:['{['yes','no'][n // 4]}']}}); workChanged()")
             self.save_as(f"A longer saved view name {n}")
         b.resize(900)
-        b.pump(0.3)
         b.eval("renderWork()")
         self.assertLessEqual(b.eval("document.getElementById('wviews').scrollWidth"), b.eval("document.getElementById('wviews').clientWidth") + 1)   # never wraps or spills
         b.click("#vmore")
