@@ -161,6 +161,18 @@ class Filing(Base):
         log = [json.loads(x) for x in (self.v.root / "system/config/files-log.jsonl").read_text().splitlines()]
         self.assertEqual([e["path"] for e in log if e["op"] == "create" and not e["path"].endswith(".html")], [one["path"], two["path"]])
 
+    def test_an_html_export_never_stands_in_for_the_draft(self):
+        """Check 74: a filed report exported as HTML, not filed beside, must not leave a plain page at the draft's own path (where
+        "Edit again" looks first)."""
+        path = self.saved()
+        own = "system/staging/drafts/" + path.rsplit("/", 1)[1]
+        off = self.export(path, "html", file_beside=False)
+        self.assertTrue(off["ok"], off)
+        self.assertNotEqual(off["path"], own)
+        self.assertFalse((self.v.root / own).exists(), "the export took the draft's path")
+        self.assertTrue((self.v.root / off["path"]).is_file())
+        self.assertEqual(self.py(f"print(json.dumps(creaite_doc.read({path!r})['kind']))"), "weekly")
+
     def test_the_setting_is_off_for_reports_and_on_for_minutes_by_default(self):
         got = self.py("print(json.dumps([creaite_doc.file_beside_default(k) for k in ('weekly', 'client', 'minutes')]))")
         self.assertEqual(got, [False, False, True])

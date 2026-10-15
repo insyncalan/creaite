@@ -521,7 +521,8 @@ def _check_baseline(doc):
 def _make_export(doc, fmt, stem):
     """Write the export into system/staging/drafts/ and return its path. Raises DocError."""
     paths.DRAFTS.mkdir(parents=True, exist_ok=True)
-    draft = paths.free_path(paths.DRAFTS, stem, EXPORTS[fmt])
+    # An HTML export never takes the document's own draft path (drafts/<name>.html): a plain page there would stand in for the draft.
+    draft = paths.free_path(paths.DRAFTS, stem + (" (read only)" if fmt == "html" else ""), EXPORTS[fmt])
     if fmt == "html":
         draft.write_text(render(doc, editing=False), encoding="utf-8")
     elif fmt == "docx":
