@@ -51,6 +51,7 @@ get "based_on" from the tracker, so a change made meanwhile becomes a conflict.
 """
 import difflib
 import json
+import os
 import re
 import shutil
 import sys
@@ -145,6 +146,8 @@ def preview_lines(spec):
 
 def file_op_lines(op):
     """The preview lines of one file operation: a folder made or moved (BL-09), a file made or changed (its diff)."""
+    if op["op"] == "move" and paths.resolve(op["from"], archived=False).is_file():     # BL-03: one report or minutes file
+        return [f"Move file {op['from']} → {op['to']}"]
     if op["op"] == "move":                                                      # BL-09: a whole folder
         return [f"Move folder {op['from']}/ → {op['to']}/"]
     if op["op"] == "mkdir":
@@ -238,6 +241,10 @@ def cmd_preview(spec_file, write=False):
         return 1
     if not write:
         return 0
+    if (spec.get("file_changes") or {}).get("archive") == "reports_back" and \
+            Path(os.path.realpath(spec_file)).parent != Path(os.path.realpath(paths.GUARD)):
+        print("Not staged: an archived file is moved back from Files (Move back) on the approval card, never staged here.")
+        return 1                                  # BL-331: only the live server's card (its snapshot in system/guard/) stages one
     stamp, out, n = f"{datetime.now():%Y-%m-%d-%H%M%S}", None, 1
     while out is None or out.exists():    # two proposals in one second must not overwrite each other
         out = paths.STAGING / f"proposed-{stamp}{f'-{n}' if n > 1 else ''}-edit.json"

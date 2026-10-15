@@ -45,6 +45,12 @@ FIXES = {
                     "does": "Show the renames (each zz Archive folder becomes _Archive, in the same place) on the approval card; "
                             "nothing moves until you approve it there, and Undo moves them back.",
                     "command": ("propose.py", "old-archives"), "card": True},
+    # BL-03: a move too, so the same: archive.py reports only prints the moves; Approve on the card applies them through tracker.py
+    "archive_reports": {"title": "Archive old reports and minutes", "button": "Archive them",
+                        "does": "Show the moves on the approval card: each report, minutes and Steerco one-pager older than the "
+                                "period goes into its engagement's own _Archive, in the same place below it. Nothing moves until "
+                                "you approve it there; links keep working, nothing is deleted, and Undo moves them back.",
+                        "command": ("archive.py", "reports"), "card": True},
     # BL-328: the lock file only, and only when no sweep holds it (sweep.py checks again before it removes anything)
     "sweep_lock": {"title": "A sweep lock is held with no sweep running", "button": "Release",
                    "does": "Release the sweep lock left by a sweep that has ended, so the next sweep can start. A sweep that is "
@@ -58,6 +64,7 @@ CHECK_FIXES = {
     "python_version": ("rosetta", ("Rosetta",)),
     "offsite_backup": ("offsite", ("no copy yet", "days ago")),       # not "can't write to …": a copy can't mend that
     "old_archive_folders": ("old_archive", ("zz Archive",)),          # BL-09
+    "archive_reports": ("archive_reports", ("Archive ",)),            # BL-03: the monthly line
     "sweep_lock": ("sweep_lock", ("no sweep running",)),               # BL-328
 }
 STANDALONE = ("icon", "m365")

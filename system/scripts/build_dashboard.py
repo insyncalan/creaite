@@ -312,6 +312,13 @@ def files(folders, documents=False):
     return out
 
 
+def archived_files(folders):
+    """BL-331: the reports and minutes BL-03 archived that are still in their _Archive, for the listed projects and the portfolio
+    (archive.archived_files: names, sizes and dates from the apply records; nothing in _Archive is read or indexed)."""
+    import archive
+    return [f for f in archive.archived_files() if f["p"] in folders or f["p"] == "_portfolio"]
+
+
 INBOX_TYPES = (".vtt", ".docx", ".txt", ".md", ".pdf")
 
 
@@ -1474,6 +1481,7 @@ def collect(now=None, timings=None):
         "peek_staged": peek_staged(), "activity": activity(con, act_flags), "activity_capped": act_flags.get("capped", False),
         "activity_older": act_flags.get("older", {}),          # BL-250 (fix-history-feed): older changes, for the items' own feeds
         "files": file_list,
+        "files_archived": archived_files(folders),            # BL-331: Files' Archived, each with Move back
         "folders": {c: f.name for c, f in folders.items()},
         "image_dirs": {c: paths.rel(paths.folder(c, "images")) for c in folders},     # BL-85: where the editor files new pictures
         "stakeholders": stakeholders(),
@@ -2639,7 +2647,8 @@ def files_view(now=None):
         except LookupError:  # BL-228: a project without a folder simply has no files to list
             pass
     shown = bool(_dig(settings, ("dashboard", "files_show_documents"), False))
-    return {"files": files(folders, shown), "inbox": inbox([{"code": c} for c in codes]), "at": now.strftime("%Y-%m-%d %H:%M")}
+    return {"files": files(folders, shown), "archived": archived_files(folders), "inbox": inbox([{"code": c} for c in codes]),
+            "at": now.strftime("%Y-%m-%d %H:%M")}
 
 
 # BL-91: Trends and flow. What the data shows over time, from dates already held: opened and closed per week, how long open items

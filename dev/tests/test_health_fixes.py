@@ -58,13 +58,14 @@ class Catalogue(unittest.TestCase):
 
     def test_the_fixes_are_the_ones_alan_decided(self):
         self.assertEqual(set(health_fixes.FIXES), {"launcher", "rosetta", "icon", "m365", "offsite", "old_archive",
-                                                 "sweep_lock"})   # BL-09; BL-328 (Alan to confirm)
+                                                      "archive_reports", "sweep_lock"})   # BL-09, BL-03; BL-328 (Alan to confirm)
         commands = {k: f.get("command") for k, f in health_fixes.FIXES.items()}
         self.assertEqual(commands, {"launcher": ("launch.py", "make-launcher", "--replace"),
                                     "rosetta": ("launch.py", "make-launcher", "--if-present"),
                                     "icon": ("launch.py", "refresh-icon"), "m365": None,
                                     "offsite": ("session.py", "backup"),
-                                    "old_archive": ("propose.py", "old-archives"),        # BL-09: prints the change for the card
+                                    "old_archive": ("propose.py", "old-archives"),         # BL-09: prints the change for the card
+                                    "archive_reports": ("archive.py", "reports"),          # BL-03: the same
                                     "sweep_lock": ("sweep.py", "unlock", "--if-idle")})    # BL-328: only a lock no sweep holds
         self.assertEqual(health_fixes.FIXES["m365"]["url"], "https://claude.ai/settings/connectors")
 
@@ -102,6 +103,7 @@ class Catalogue(unittest.TestCase):
         cat = health_fixes.catalogue()
         self.assertEqual(cat["checks"], {"launcher_vault": "launcher", "python_version": "rosetta", "offsite_backup": "offsite",
                                          "old_archive_folders": "old_archive",                  # BL-09
+                                         "archive_reports": "archive_reports",                  # BL-03
                                          "sweep_lock": "sweep_lock"})                           # BL-328
         self.assertEqual(cat["standalone"], ["icon", "m365"])
         for d in cat["fixes"]:

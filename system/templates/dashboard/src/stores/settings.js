@@ -23,7 +23,7 @@ import { api, writeSettings } from "../core/server.js";
      title?:string, does?:string, command?:string, url?:string}} Fix */
 /** @typedef {{id:string, title:string, check:string, severity:string, detail:string, fix:Fix}} Problem */
 /** @typedef {{area:string, count:number, span:string, message:string}} Stopped */
-/** @typedef {{problems:Problem[], fine:number, fine_names:string[], stopped:Stopped[], checked:string, standalone?:Fix[], backups?:string[]}} HealthResult */
+/** @typedef {{problems:Problem[], fine:number, fine_names:string[], stopped:Stopped[], checked:string, standalone?:Fix[], archiving?:string[], backups?:string[]}} HealthResult */
 
 /** @type {import("@preact/signals").Signal<Catalogue|null>} */
 export const catalogue = signal(null);

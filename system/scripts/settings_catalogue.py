@@ -155,9 +155,10 @@ CATALOGUE = {
                                        "On: cross-project meetings matter as much as project ones."),
     "dashboard.files_show_documents": ("Work and views", "Files: show documents", "List each project's documents on Files.",
                                        "Off: documents are many and passive; search still reads them."),
-    "dashboard.show_archived": ("Work and views", "Show archived projects",
-                                "Show archived projects' items in Work, Today and the Excel export (BL-09).",
-                                "Off: an archived project is finished; search still finds its items, marked Archived."),
+    "dashboard.show_archived": ("Work and views", "Show archived projects and items",
+                                "Show archived projects' items, and items archived for their age, in Work, Today and the Excel "
+                                "export (BL-09, BL-10).",
+                                "Off: archived work is finished; search still finds it, marked Archived."),
     "dashboard.week_ahead_priorities": ("Saving and review", "Week ahead shows", "The priorities listed in Today's Week ahead.",
                                         ("Urgent only keeps the week short; add High for a fuller view (Alan, 14-10-2026, "
                                          "keeping it rather than the mockup's Urgent and High).")),
@@ -195,6 +196,18 @@ CATALOGUE = {
                                      "150 words: a paragraph or two."),
     "status.length_words.fuller": ("Current state", "Fuller length (words)", "The target for a fuller Current state.",
                                    "250 words: room for context without becoming a report."),
+    # ── Archiving (BL-10, BL-03; Alan, 14-10-2026)
+    "archive.after_months.actions": ("Archiving", "Archive closed actions after (months)",
+                                     "Closed or cancelled actions are archived this long after closing, once a day; 0 never.",
+                                     "Six months: long enough to be past any report that mentions them (Alan, 14-10-2026)."),
+    "archive.after_months.raid": ("Archiving", "Archive closed RAID items after (months)",
+                                  "Closed or cancelled risks, issues, assumptions and dependencies; 0 never.",
+                                  "Six months, as for actions (Alan, 14-10-2026)."),
+    "archive.after_months.promises": ("Archiving", "Archive done promises after (months)",
+                                      "Done or dropped promises; 0 never.", "Six months, as for actions (Alan, 14-10-2026)."),
+    "archive.reports_after_months": ("Archiving", "Offer to archive reports and minutes after (months)",
+                                     "Reports, minutes and one-pagers older than this are offered monthly in Health; 0 never.",
+                                     "Twelve months: a year of reporting stays at hand (Alan, 14-10-2026)."),
     # ── Safety, live server, ask creaite
     "backups.daily": ("Safety", "Daily backup", "Copy the database each day, then a closed zip of what rebuilds the vault (to OneDrive "
                       "when projects live there).", "On: non-negotiable safety; off only on purpose."),
@@ -381,7 +394,7 @@ CATALOGUE = {
 }
 GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Sweep", "Reminders", "Review", "Health thresholds", "Early warnings", "Current state", "Work and views",
-               "Look and layout", "AI drafts", "Close the day", "Meeting prep and Intake", "Search", "Folders and OneDrive",
+               "Look and layout", "AI drafts", "Close the day", "Meeting prep and Intake", "Search", "Archiving", "Folders and OneDrive",
                "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
 DEVELOPER_KEYS = ()       # development-only settings (library fetches, hand checks, the second laptop) when they exist
 

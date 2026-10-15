@@ -87,7 +87,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/update/upload   save a chosen release zip {name, data (base64)} to system/releases/
 - POST /api/update/inspect  {source: "releases" | "downloads"} what installing it would change (update.py inspect)
 - POST /api/update/install  {source, reinstall} update.py install; POST /api/update/undo {keep_database} update.py undo
-- GET  /api/files        the Files page's lists, rescanned (BL-87)
+- GET  /api/files        the Files page's lists, rescanned (BL-87); with the files BL-03 archived, for Files' Archived (BL-331)
+- POST /api/files/move-back {path}: one archived report or minutes back to its place, on the approval card (BL-331)
 - POST /api/ask/queue    {op: list|add|remove|resume}: messages typed while a run is going, run in order after it (BL-257)
 - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
                          {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
@@ -2987,7 +2988,7 @@ def main():
     threading.Thread(target=startup_index, daemon=True).start()     # BL-07: the search index is current from the start
     threading.Thread(target=after_apply_worker, daemon=True).start()  # BL-327: an apply's index and OneDrive copy, after it answers
     threading.Thread(target=vip_timer, daemon=True).start()         # BL-99: the VIP check, on start-up and every few minutes
-    threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly
+    threading.Thread(target=backup_timer, daemon=True).start()      # BL-323: the daily backup, zip and Tidy up, hourly; then BL-10
     threading.Thread(target=clear_starting_when_up, args=(port,), daemon=True).start()   # BL-329
     delay = os.environ.get("CREAITE_START_DELAY")                   # tests only (BL-329): a slow-starting server
     if delay:
@@ -3199,6 +3200,23 @@ def vip_wait_seconds():
         return 60.0
     due = first + timedelta(minutes=sweep.QUIET_WAIT)
     return max(30.0, (due - sweep.now()).total_seconds() + 5)
+
+
+# ===== BL-10: the daily archiving, in the live server's daily slot =====
+# BL-323 shipped in v1.9.3, so the archiving runs in its daily job (backup_daily_job): after the daily backup, the zip and Tidy
+# up, under the same job lock, never while an ask creaite run is in progress (archive.py also refuses from inside one), never in
+# the development repository. archive.py daily runs at most once a day (archive-state.json). Session start keeps its own call,
+# after the daily backup (session.archive_today).
+def archive_after_backup():
+    """BL-10: archive.py daily in its own process, after the backup steps (the caller holds the job lock). Its line, or None
+    when there is nothing to say (already run today)."""
+    code, out = run("archive.py", "daily")
+    line = out.splitlines()[-1] if out else ""
+    if not line or (code == 0 and line.startswith("Archiving: already")):
+        return None
+    print(f"{datetime.now():%H:%M:%S} {line}", flush=True)
+    return line
+# ===== end BL-10 =====
 
 
 def vip_alerts_route(handler, req):
@@ -4052,6 +4070,8 @@ def build_edit_card(run, final):
     src = edit_spec_file(m.group(1))
     data = src.read_bytes() if src else None
     spec, why = edit_spec(data) if data is not None else (None, "the change file isn't a .json file in system/staging/drafts/")
+    if spec and (spec.get("file_changes") or {}).get("archive") == "reports_back":      # BL-331: Files' Move back only
+        spec, why = None, "an archived file is moved back from Files (Move back), never from ask creaite"
     if not spec:
         run.emit("editcard", card=None, title=title, refused=why)
         return None
@@ -4235,10 +4255,30 @@ def project_archive_card(code, action, cancel):
 # ===== end BL-09 =====
 
 
+# ===== BL-331: Files' Move back, on the same change card =====
+def move_back_route(handler, req):
+    """POST /api/files/move-back {path}: the stored path of a file Files shows as archived. archive.back_spec builds the move
+    (never the page): only a file an archive moved, back to the place it came from, never onto a file that is there. It goes on
+    the approval card (server_edit_card); tracker.py apply moves it on Approve, and undo puts it back in _Archive."""
+    import archive
+    path = req.get("path")
+    if not isinstance(path, str) or set(req) - {"path"}:
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    spec, why = archive.back_spec(path)
+    if not spec:
+        return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
+    card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    if not card:
+        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+    return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
+# ===== end BL-331 =====
+
+
 ADMIN_ROUTES.update({"/api/edit/approve": lambda h, r: edit_answer(h, r, "approve"),
                      "/api/edit/reject": lambda h, r: edit_answer(h, r, "reject"),
                      "/api/edit/stage": lambda h, r: edit_answer(h, r, "stage"), "/api/edit/pending": edit_pending_route,
-                     "/api/project/archive": project_archive_route})          # BL-09
+                     "/api/project/archive": project_archive_route,           # BL-09
+                     "/api/files/move-back": move_back_route})                # BL-331
 # ===== end BL-258 =====
 
 # ===== BL-314 (v191-ask-routing): a change asked in the chat runs through the dashboard's own action =====
@@ -5853,7 +5893,7 @@ BACKUP_EVERY = 3600
 
 
 def backup_daily_job():
-    """One pass of the daily backup steps; returns what it said (or why it didn't run)."""
+    """One pass of the daily backup steps, then (BL-10) the daily archiving; returns what they said (or why they didn't run)."""
     if (paths.ROOT / ".creaite-dev").exists():
         return ["skipped: the development repository"]
     if backup.ask_run():
@@ -5865,13 +5905,14 @@ def backup_daily_job():
         import sweep
         said = []
         made = session.backup_today(sweep.now(), said.append)
-        return ([f"daily backup made: {made}"] if made else []) + said
+        archived = archive_after_backup()                # BL-10: after Tidy up (backup.after_daily_backup), once a day
+        return ([f"daily backup made: {made}"] if made else []) + said + ([archived] if archived else [])
     finally:
         LOCK.release()
 
 
 def backup_timer():
-    """The daily backup job a minute after start-up, then every hour (it does each step only once a day)."""
+    """The daily backup job (and BL-10's archiving after it) a minute after start-up, then every hour (each step once a day)."""
     time.sleep(60)
     while True:
         try:

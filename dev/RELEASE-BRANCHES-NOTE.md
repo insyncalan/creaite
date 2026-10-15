@@ -229,3 +229,62 @@ v1.9.3 is BL-322 and BL-323 (and BL-275); **BL-09 moved to its own v1.9.4** (Ala
 **Tests (local):** `check.py` OK. Passed: test_backups, test_backup_restore_ui, test_sneak_peek_read, test_sneak_peek_ui, test_search, test_search_pdf, test_search_eml, test_search_live, test_search_dashboard, test_onedrive_projects, test_portability, test_check_py39, test_new_vault, test_first_run, test_file_access, test_admin_card, test_snapshots, test_dashboard_split, test_help, test_ui_sweep, test_today_home, test_today_brief, test_today_days_ui, test_close_day_card, test_settings_page, test_settings_calmer, test_settings_catalogue, test_health_fixes, test_meeting_hub, test_work_item_peek, test_rejects_ui, test_rail_customise, test_vip_screens, test_promises, test_prep_popup, test_prep_view, test_ask_claims, test_ask_field_card, test_draft_chase_pane, test_motion, test_sweep_alerts, test_update, test_tracker and the guard tests.
 
 **Open from the branches' notes:** `v193-backups` lists what it didn't do (missed OneDrive days aren't backfilled).
+
+## v195-archiving brought up to date (Team Cap, 15-10-2026; issue #43, step 1 of `dev/sprints/v195-release.md`)
+
+`v195-archiving` (9e810e3: BL-09, BL-10, BL-03) with, in order, `git merge --no-ff`:
+
+| Branch | Head | Items | Merge |
+|---|---|---|---|
+| `release-194` | deba702 | v1.9.4: BL-09, BL-304 instant edits, BL-327 one server, BL-328 sweep lock | 1028b07 |
+| `v196-move-back` | 88c6093 | BL-331: move an archived report back from Files | 9ddfc39 |
+
+All three heads are single squashed commits on a478bbd, and each carries BL-09 again (`v196-move-back` also carries BL-10
+and BL-03). BL-09 is kept once: no doubled function, migration, test or docs line (checked: no new duplicate `def` in the
+merged Python; `schema.sql`, `V194-ARCHIVE-NOTE.md`, `test_archive_projects.py` and the pinned files merged as one).
+
+**Conflicts with `release-194` and how they were resolved**
+
+- `paths.py`, `reach.py`, `tracker.py`, `propose.py`, `health.py`, `settings_catalogue.py`, `creaite-rules.md`,
+  `dashboard-spec.md`: release-194's side was BL-09 alone; archiving's side extends it (BL-03's `archived_file` and
+  `archivable_folders`, the `reports` move shape, `archive_item`/`AGE_OP`, `age_archived_before`, the move record's `kind`
+  and the folders it made, "Move file" on the card, the Archiving checks, "Show archived projects and items"). Archiving's
+  side kept.
+- `doctor.py`: archiving's two checks kept beside release-194's sweep lock: 37 checks (`test_portability`'s count and
+  comment updated).
+- `build_dashboard.py`: release-194's BL-304 row helpers and `records()`, and BL-327's `records_version` and
+  `collect(now, timings)` taken (archiving had none of them).
+- `health_fixes.py`, `test_health_fixes.py`: both new fixes kept (`archive_reports`, `sweep_lock`), in the fix list, the
+  commands and the check map.
+- `help.md`: release-194's Health line (with the sweep lock) and archiving's Archiving bullet.
+- `settings-advanced` golden: archiving's (it already has release-194's one change, "Default: _Archive", from BL-09).
+- Generated files rebuilt (`build_dashboard_js.py globals`, `split_dashboard.py build`, `build_guides.py`); `check.py` OK.
+
+**`v196-move-back`**
+
+Merging it directly conflicted in ten files, all from the doubled BL-09/BL-10/BL-03 (including add/add on `archive.py`).
+`v196-move-back`'s tree is `v195-archiving`'s 9e810e3 plus BL-331 (`git diff 9e810e3 88c6093`: 13 files), so the merge
+commit takes this branch's tree and applies only that diff three-way. Every file applied cleanly except `help.md`:
+release-194's Health line kept, with BL-331's Archiving bullet (Move back from Files). Generated files rebuilt;
+`check.py` OK. Both `origin/release-194` and `origin/v196-move-back` are ancestors of the branch.
+
+**After the merges (own commits)**
+
+- 7d96da8, the BL-323 follow-up (issue #44): the live server's `backup_daily_job` runs `archive.py daily` after the
+  backup, the zip and Tidy up; `archive_timer`, `archive_tick` and `CREAITE_ARCHIVE_FIRST` removed; session start keeps
+  its call after the daily backup. New test `test_the_live_servers_daily_job_runs_it_after_tidy_up`.
+- c490480: `test_archive_reports` asserted the archive line's date as the pinned 14-10-2026, but the apply's date is the
+  wall clock, so it failed from 15-10-2026. Now any date. Pre-existing, not from the merges.
+
+**Tests (local, -j 3), on c490480:** `check.py` OK. 56 files passed, among them test_archive_items, test_archive_reports,
+test_archive_projects, test_archive_move_back, test_backups, test_backup_restore_ui, test_session_sweep, test_live_server,
+test_live_updates, test_one_server, test_fast_save, test_instant_edits, test_sweep_lock, test_ask_gone_chat,
+test_health_fixes, test_portability, test_settings_catalogue, test_settings_calmer, test_snapshots, test_help, test_reach,
+test_record_commands, test_guard_pinned, test_script_policy, test_run_read_pinned, test_tracker, test_writer_pinned,
+test_pages, test_onedrive_projects, test_file_access, test_search, test_update, test_debug_log_wiring,
+test_dashboard_split, test_agendas_files, test_propose, test_excel, test_new_vault, test_project_names, test_admin_card.
+test_sweep_lock's `test_a_finished_sweep_leaves_no_lock` failed under load and passed alone (twice).
+
+**Then pinned:** `test_archive_reports` now pins the apply's date as well (`CREAITE_STAMP_DAY`, a tests-only seam in
+`tracker.now()`: it fixes the date part of the stamps, the time of day stays real), so its exact "on 14-10-2026" check is
+back and the "quiet for the rest of the month" check no longer depends on the real month.
