@@ -66,9 +66,9 @@ class OwnerSuggestions(FixCase):
         self.assertTrue(self.typed("Zed Quill")[-1].startswith("Open "))                            # the person's page stays
         self.assertTrue(self.typed("")[-1].startswith("Open "))
         self.assertTrue(b.eval("ownerMatches('Sara E',peopleAll()).items[0].n==='Sara Example'"))  # the combo's own matcher
-        src = readable_page()      # BL-231: the source; the bundle reprints the code (and comboDraw.toString() with it)
-        start = src.index("function comboDraw(")
-        self.assertIn("ownerMatches(q,pool)", src[start:src.index("\n}", start)])
+        src = readable_page()      # BL-231: the source; BL-316: the form's owner field (a Combobox) uses the same matcher
+        start = src.index("function ownerOptions(")
+        self.assertIn("ownerMatches(typed?q:\"\",pool)", src[start:start + 600])
 
     def test_picking_a_likely_match_remembers_the_alias_and_stages_the_owner(self):
         b = self.b

@@ -1,9 +1,11 @@
 <section class="view" id="v-help">
 <div class="hp-shell">
+<div class="tabhost" id="helpTabsHost">
 <div class="tabs" id="helpTabs" role="tablist" aria-label="Help">
-<button role="tab" data-help="start" id="htab-start" aria-selected="true" tabindex="0">Start here</button>
-<button role="tab" data-help="howto" id="htab-howto" aria-selected="false" tabindex="-1">How do I…</button>
-<button role="tab" data-help="reference" id="htab-reference" aria-selected="false" tabindex="-1">Reference</button>
+<button type="button" role="tab" aria-selected="true" id="htab-start" tabindex="0" data-tab="start" data-help="start">Start here</button>
+<button type="button" role="tab" aria-selected="false" id="htab-howto" tabindex="-1" data-tab="howto" data-help="howto">How do I…</button>
+<button type="button" role="tab" aria-selected="false" id="htab-reference" tabindex="-1" data-tab="reference" data-help="reference">Reference</button>
+</div>
 </div>
 <div id="helpPane" role="tabpanel" data-tab="start" aria-labelledby="htab-start">
 <div class="hp-wrap hp-start">

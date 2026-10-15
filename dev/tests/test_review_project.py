@@ -262,11 +262,12 @@ class ReviewProjectBrowserTests(LiveBrowserCase):
         self.b.click(row + ' [data-act="pj"]')
         self.b.wait('!!document.querySelector("#rvMoveTo[role=menu]")')
         self.b.eval('[...document.querySelectorAll("#rvMoveTo [role=menuitem]")].find(b=>b.textContent.startsWith("Growth Hub")).click()')
-        self.b.wait('!!document.querySelector(".pkpop.rvmv")')
-        self.assertEqual(self.b.eval('document.querySelector(".rvmv-h").textContent'), "Move 2 items from Example Programme to Growth Hub")
-        self.assertIn(self.a_id, self.b.eval('document.querySelector(".pkpop.rvmv").textContent'))
+        self.b.wait('document.getElementById("rvDlg").open')               # BL-316: Review's confirmation dialog
+        self.assertEqual(self.b.eval('document.querySelector("#rvDlg .rvmv-h").textContent'), "Move 2 items from Example Programme to Growth Hub")
+        self.assertIn(self.a_id, self.b.eval('document.getElementById("rvDlgBody").textContent'))
+        self.assertEqual(self.b.eval('document.activeElement.id'), "rvDlgOk")
         self.assertEqual(self.data()["meeting"]["projects"], ["ABC"])     # nothing yet: only the preview
-        self.b.click('.pkpop.rvmv [data-mv="go"]')
+        self.b.click('#rvDlgOk')
         self.b.wait('/Moved 2 items/.test(document.getElementById("snackT").textContent)')
         m = self.data()["meeting"]
         self.assertEqual(m["projects"], ["GHI"])

@@ -4,6 +4,8 @@
    boot…() functions that src/main.js calls in today's order. */
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
+import { openDatePicker } from "./components/Picker.jsx";
+import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
@@ -24,7 +26,7 @@ import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
 import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, hubFor, hubLink, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
-import { chaseCan, chaseOpen, openRecord, pkCommit, pkDate, pkUndoLast, REC } from "./panel.js";
+import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
 import { nm, row, SA, SETSECTIONS, VIPKIND, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
@@ -482,9 +484,13 @@ export function itemActs(k,x){ return `<span class="tacts">${workActs(k,x).map(a
 export async function workAct(k,id,what,btn){ const x=REC(k,id); if(!x&&what!=="open") return;
   if(what==="done"){ const was=x.st; if(!await pkCommit(k,id,{st:"Closed",closed:TODAY},"Status",was,"Closed")) return;
     snack(`${id} marked done. Staged: nothing reaches the tracker until you apply`,()=>pkUndoLast()); return; }
-  if(what==="move"){ pkDate(btn,{value:x.due,due:true,label:`Due date of ${id}`,onPick:async v=>{ if(!v||v===x.due) return; const was=x.due;
+  if(what==="move"){ const commit=async v=>{ if(!v||v===x.due) return; const was=x.due;   /* BL-316: the Picker block's calendar */
       if(!await pkCommit(k,id,{due:v},"Due date",fd(was)||"none",fd(v)||"none")) return;
-      snack(`${id} moved to ${longDay(v)}. Staged until you apply`,()=>pkUndoLast()); }}); return; }
+      snack(`${id} moved to ${longDay(v)}. Staged until you apply`,()=>pkUndoLast()); };
+    openDatePicker(btn,{value:x.due||"",label:`Due date of ${id}`,parse:t=>parseWhen(t,TODAY,true),weekend:iso=>!!weekendNote(iso),
+      error:"Use DD-MM-YYYY, for example 14-10-2026, or words like fri or +3d.",
+      typedNote:t=>{ const n=weekendNote(t?parseWhen(t,TODAY,true):null); return n?`${n.text} You'll be offered the nearest working days.`:""; },
+      onPick:v=>{ if(v&&!WK.ok&&wkAsk(v,btn,commit)) return; commit(v); }}); return; }
   if(what==="chase"){ if(k==="decisions"){ dnChase(id); return; } openRecord(k,id); if(chaseCan()) chaseOpen(); return; }
   if(what==="update"){ openRecord(k,id,k==="raid"?"resp":"upd"); return; }
   if(what==="decide"){ dnDecide(id); return; }
