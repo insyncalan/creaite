@@ -278,7 +278,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
       <div class="hhead nhh">
         <div style={{ flex: 1 }}><h1>{code === "_portfolio" ? "Portfolio notes" : name}</h1>
           {code === "_portfolio" ? <div class="sub">Notes that cover several projects, and anything not yet filed under one.</div> : proj && proj.client ? <div class="sub">{proj.client}</div> : null}</div>
-        <NewTile id="notesNew" word="New note" decisions={false} hidden={false} onNew={() => setDlg("")} onDecision={() => {}} />
+        <NewTile id="notesNew" popup="dialog" word="New note" decisions={false} hidden={false} onNew={() => setDlg("")} onDecision={() => {}} />
       </div>
       {code !== "_portfolio" ? <ProjectTabs code={code} selected="notes" count={notesList.value.length} onGo={id => { if (id === "overview") onGo("cockpit", code); }} /> : null}
       {notesMsg.value ? <div class="nmsg" role="status">{notesMsg.value}</div> : null}

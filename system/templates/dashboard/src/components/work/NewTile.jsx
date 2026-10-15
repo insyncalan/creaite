@@ -6,10 +6,10 @@ import { render } from "preact";
 import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
 
-/** @typedef {{word: string, decisions: boolean, hidden: boolean, onNew: () => void, onDecision: (how: "made" | "needed") => void, id?: string}} NewTileProps */
+/** @typedef {{word: string, decisions: boolean, hidden: boolean, onNew: () => void, onDecision: (how: "made" | "needed") => void, id?: string, popup?: "dialog"}} NewTileProps */
 
 /** @param {NewTileProps} props */
-export function NewTile({ word, decisions, hidden, onNew, onDecision, id = "newBtn" }) {
+export function NewTile({ word, decisions, hidden, onNew, onDecision, id = "newBtn", popup }) {
   if (decisions) {
     return (
       <Menu label={word} ariaLabel={word} tip={word} icon="plus" labelCls="w" id="newBtn" btnCls="newb hasmenu" hidden={hidden}
@@ -22,7 +22,7 @@ export function NewTile({ word, decisions, hidden, onNew, onDecision, id = "newB
   }
   return (
     <span class="dd">
-      <button type="button" class="newb" id={id} aria-label={word} data-tip={word} hidden={hidden} onClick={onNew}>
+      <button type="button" class="newb" id={id} aria-label={word} data-tip={word} hidden={hidden} aria-haspopup={popup} onClick={onNew}>
         <Icon name="plus" /><span class="w">{word}</span><Icon name="chevdown" cls="nch" />
       </button>
     </span>

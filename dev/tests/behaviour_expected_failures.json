@@ -1,6 +1,9 @@
 {
  "_about": "BL-316: the shared behaviour test's known failures (dev/tests/test_shared_behaviour.py), by screen area (check.py's OLD_AREAS). Each line starts with its check: keys (Enter, focus, arrows, Esc, Tab), undo (a change offers Undo) or unreached (a popup the code makes that no control on the sample's screens opens with aria-haspopup). A screen branch that fixes one removes its line; the test fails on a new failure and on a listed one that passes. BL-316 is done when every area is empty.",
  "_unreached": "An unreached line is a popup the code makes that the keyboard script found no way into on the sample's screens: its opener doesn't say aria-haspopup (most dialogs: a plain button or a key opens them), it opens by right-click (cxmenu), it is a form field that doesn't say it opens a list (the owner combobox), or it sits on a screen or state the sample doesn't show (the milestone editor, Prep, Close the day). The fix is the opener saying aria-haspopup (and aria-expanded), or a screen in test_ui_sweep.SCREENS that shows it.",
+ "Core": [
+  "unreached: dialog Opener label:Choose date (src/components/notes/NoteHeader.jsx)"
+ ],
  "Milestones": [],
  "Peek": [],
  "Projects": [],

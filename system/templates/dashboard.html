@@ -25147,7 +25147,7 @@ ${s5}`;
   }
 
   // components/work/NewTile.jsx
-  function NewTile({ word, decisions, hidden, onNew, onDecision, id: id2 = "newBtn" }) {
+  function NewTile({ word, decisions, hidden, onNew, onDecision, id: id2 = "newBtn", popup }) {
     if (decisions) {
       return /* @__PURE__ */ u2(
         Menu,
@@ -25170,7 +25170,7 @@ ${s5}`;
         }
       );
     }
-    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: id2, "aria-label": word, "data-tip": word, hidden, onClick: onNew, children: [
+    return /* @__PURE__ */ u2("span", { class: "dd", children: /* @__PURE__ */ u2("button", { type: "button", class: "newb", id: id2, "aria-label": word, "data-tip": word, hidden, "aria-haspopup": popup, onClick: onNew, children: [
       /* @__PURE__ */ u2(Icon, { name: "plus" }),
       /* @__PURE__ */ u2("span", { class: "w", children: word }),
       /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" })
@@ -53443,7 +53443,7 @@ ${d5.text}`);
           /* @__PURE__ */ u2("h1", { children: code === "_portfolio" ? "Portfolio notes" : name }),
           code === "_portfolio" ? /* @__PURE__ */ u2("div", { class: "sub", children: "Notes that cover several projects, and anything not yet filed under one." }) : proj && proj.client ? /* @__PURE__ */ u2("div", { class: "sub", children: proj.client }) : null
         ] }),
-        /* @__PURE__ */ u2(NewTile, { id: "notesNew", word: "New note", decisions: false, hidden: false, onNew: () => setDlg(""), onDecision: () => {
+        /* @__PURE__ */ u2(NewTile, { id: "notesNew", popup: "dialog", word: "New note", decisions: false, hidden: false, onNew: () => setDlg(""), onDecision: () => {
         } })
       ] }),
       code !== "_portfolio" ? /* @__PURE__ */ u2(ProjectTabs, { code, selected: "notes", count: notesList.value.length, onGo: (id2) => {
