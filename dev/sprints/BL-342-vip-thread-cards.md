@@ -12,7 +12,7 @@
 
 ## Goal
 
-Today shows **one card per mail or Teams thread** from people Alan follows, built around what he must do: a **type** (Action, Decision, FYI/file or Risk), a **due date** and **owners**. The thread is matched to open work first (New, Update or Chase). The card stays until Alan acts: **Handled**, or his reply showing in Sent Items (or his own message in the Teams chat). A card can be **logged on the matched item** in one click, which stages an update for Review. Confidential threads get a real summary in creaite's own words and stay internal. A cheap ID-only check runs on the timer; a thread is summarised only when it has new messages.
+Today shows **one card per mail or Teams thread** from people Alan follows, built around what he must do: a **type** (Action, Decision, FYI/file or Risk), a **due date** and **owners**. The thread is matched to open work first (New, Update or Chase). The card stays until Alan acts: **Handled**, or his reply showing in Sent Items (or his own message in the Teams chat). A card can be **logged on the matched item** in one click, which stages an update for Review. Confidential threads get a real summary in creaite's own words and stay internal. The timer's one check fills the card fields (Part 3 B); the two-stage split was dropped on cost (15-10-2026).
 
 ## What exists (BL-334, v1.9.5)
 
@@ -75,6 +75,8 @@ Stage 2 (summarising a thread with new messages) stays on the default model, ass
 
 **Decided (Jarvis and Alan, 15-10-2026, after the probe): stage 1 runs on Sonnet.** The setting is `vip.check_model`, default **`sonnet`**; `haiku` stays selectable; empty means the default model. Stage 2 stays on the default model. Alan's levers: the model, and `vip.check_minutes` (halving the frequency halves stage 1).
 
+**Superseded (15-10-2026, after the empty-window probe):** stage 1 on Sonnet measured $0.30 to $0.35 a check with nothing to find, so the two-stage design does not pay and there is no second call to choose a model for. Part 3 B keeps the single call on the default model and drops `vip.check_model`; the levers left are in Part 3 B, step 6.
+
 ### Step 0 result (the live probe, 15-10-2026)
 
 Alan ran `dev/tools/vip_probe.py --since-days 3` in his own vault (4 followed addresses; read-only, prints ids, dates, counts and costs only). Team Cap read the output; Jarvis decided on it (issue #86).
@@ -83,7 +85,7 @@ Alan ran `dev/tools/vip_probe.py --since-days 3` in his own vault (4 followed ad
 - **Haiku fails the ID test.** Every long mail conversation ID Haiku returned had a one-character slip against Sonnet's (Sonnet's matched what `read_resource` gave); Teams chat IDs (`19:…`) agreed. A mis-copied ID cannot be a key, so cards would split.
 - **Haiku's times were exactly 4 hours early** on every thread both models found: UTC given as if local (the laptop is UTC+4). Not a model error as such, but the prompt never said which zone.
 - **Haiku reported two last-message dates in the future** (calendar invites read as messages).
-- **Cost of the run:** Haiku $0.023 (22 threads), Sonnet **$0.594** (18 threads) for a three-day window. A real check looks back 30 minutes, so its cost is far smaller; Alan reruns the probe with a short window for the per-check figure (see Part 3, step 5). Part 3 does not wait for it.
+- **Cost of the run:** Haiku $0.023 (22 threads), Sonnet **$0.594** (18 threads) for a three-day window. A real check looks back 30 minutes, so its cost is far smaller; Alan reran the probe with a short window: Sonnet $0.3027 and $0.3453 an empty check, which supersedes Part 3 (see Part 3 B, step 5).
 
 **Three rules the stage 1 prompt must carry, from the probe:** (1) every time in **one named time zone**, stated in the prompt, with its offset in each value; (2) **calendar invites are not messages**: leave them out; (3) **copy IDs exactly** as `read_resource` or the search result gave them, never retyped or shortened.
 
@@ -103,7 +105,7 @@ Alan ran `dev/tools/vip_probe.py --since-days 3` in his own vault (4 followed ad
 - `system/scripts/sweep.py`: card shape (`type`, `ask`, `due`, `owners`, `keys`, `state` of open, handled or replied, `replied_at`), `conv_content` / `conv_finish`, `vip_handled`, `vip_replied`, `vip_log` (decision b), the merge of two cards with one ID, sort order. No reach.py or schema change: `sweep.py vip` is already classed `DERIVED`.
 - `system/scripts/live_server.py`: **routes only** (`/api/alerts/handled`, `/api/alerts/log`, their entries in `SWEEP_ALERT_ROUTES`). **Guarded-area mark: live_server.py (routes, not a run). Jarvis reviews.** Sonnet may write them.
 - `system/templates/dashboard/src/today.js` and the built `system/templates/dashboard.html` (type chip, due, owners, ask, Handled, Replied, Log button); `system/scripts/build_dashboard.py` (the card's fields in the page data).
-- The prompt fields that supply `type`, `ask`, `due`, `owners` are added in Part 3's Opus step.
+- The prompt fields that supply `type`, `ask`, `due`, `owners` are added in Part 3 B's Opus step.
 
 **Done when:**
 - a stand-in claude returns a three-message chat; the page data has one card with a type, a due date, owners and an ask, and a quiet greeting thread has type `fyi`, no buttons;
@@ -129,7 +131,7 @@ Alan ran `dev/tools/vip_probe.py --since-days 3` in his own vault (4 followed ad
 - `system/scripts/sweep.py`: `vip_open_items(project, thread)` (candidate list), `vip_match(alert, found)` (validation, Chase rule), the `match` field on the card; reads the tracker through `tracker.py read`'s existing read path or `paths`' read-only connection, **never writes it**.
 - `system/scripts/extraction.py` only if its matcher needs a small public wrapper (plain code; not guarded).
 - `system/templates/dashboard/src/today.js` / `dashboard.html`: the New / Update / Chase chip, the item link, the count chip, the Chase button into the existing Draft email.
-- The stage 2 prompt gains the item list and the `match` field in Part 3's Opus step.
+- The prompt gains the open-work list and the `match` field in Part 3 B's Opus step (per project, since one call cannot know a thread's project before it finds it).
 
 **Done when:**
 - a thread naming `ABC-A-007` in a mail gives Update with that ID; a thread with no similar open item gives New;
@@ -140,7 +142,10 @@ Alan ran `dev/tools/vip_probe.py --since-days 3` in his own vault (4 followed ad
 
 **Tests.** `test_vip_threads.py` (matching and validation, with a fictional register); `test_alert_actions.py` (Chase opens the pane for that item). Size **M**. Model: **Sonnet** for the code; the prompt text is in Part 3.
 
-## Part 3. Two-stage polling
+## Part 3. Two-stage polling (superseded by cost, 15-10-2026)
+
+> **Superseded by Part 3 B (below). Do not build this part.** Alan's empty-window probe runs (`--since-days 0.05`, issue #86, Team Cap 20:03) measured stage 1 on Sonnet at **$0.3027 and $0.3453 a check with nothing to find**, 3.4 to 3.8 times the $0.09 break-even (step 5). About 80% of it is the 1-hour cache write of the run's fixed context (61,407 and 67,464 tokens), which every call pays whatever it is asked. At 48 checks a day stage 1 alone is **$14.53 to $16.57**, against about **$4.80** for today's single call at the plan's estimate. Haiku is no way out: it mis-copied mail IDs by one character (three-day run) and returned internet message IDs instead of conversation IDs (one-day run); Teams chat IDs were right. The text below is kept as the record; Part 3 B reuses its validation rules, its prompt rules and its review checks where they still apply.
+
 
 > **Planned 15-10-2026 (Team Stark, Opus); built after `bl342-fixes` lands** (Parts 1, 2 and 4 with Team Cap's review fixes), because it changes `sweep.py`'s VIP code and reads the card shape that branch settles. It also needs #91 (`fix-dash-prompt`: `prompt_last`, the prompt after `--`) on its base. Branch `bl342-part3` from the tip of `bl342-fixes` once #91 is merged into it.
 
@@ -310,15 +315,139 @@ New `dev/tests/test_vip_two_stage.py`, with the repository's stand-in claude (th
 
 **Tests.** `test_vip_two_stage.py` (new), `test_vip_conversations.py` (updated), `test_vip_threads.py`, `test_prompt_after_dashdash.py`, `test_live_server.py`, `test_settings_catalogue.py`, `test_vip_probe.py`. Size **M**. Model: **Opus**.
 
+## Part 3 B. One call, with the card fields (replaces Part 3)
+
+> **Planned 15-10-2026 (Team Stark, Opus); plan only, nothing built.** Built after `bl342-fixes` lands (Parts 1, 2 and 4 with Team Cap's review fixes, N1 and N2 included), on a base that also has `prompt_last` (#91; on `main`, not yet on `bl342-fixes`). Branch `bl342-part3b` from that tip.
+
+**Behaviour.** The timer's check stays **one `claude -p` call** (`vip_check` in live_server.py, as on `main`), on the default model. What changes is what the call is asked and what code accepts from it:
+- The reply carries the Part 1 fields (`type`, `ask`, `due`, `owners`), the Part 2 `match` and `last_from`, and Alan's newest reply in each thread (`replied`), so the cards Parts 1, 2 and 4 built are filled by the real check, not only by the stand-in claude.
+- **Calendar invites are left out** (Alan's yes, 15-10-2026, a BL-99 change). Invites from followed people no longer make cards.
+- Times come back in one named zone; IDs are copied exactly; code checks every field before `vip_record` sees it.
+- Nothing else changes: the same tools, the same skips, the same timer, the same `vip_record` → `conv_record` path, no queue, no second call, no new setting.
+
+### Step 1. The prompt
+
+**`VIP_PROMPT` (live_server.py), extended; the BL-334 wording stays where it is not replaced.** New and changed sentences (the build may tighten words, never drop a rule):
+
+1. **Sources.** "Search … for messages SENT BY these addresses since {since} ({zone}): Outlook Inbox mail and Teams chats and channel messages. **Leave out calendar invites, meeting requests, meeting updates and replies to them (accepted, declined, tentative, cancelled): they are not messages.**" `kind` becomes `"teams"|"mail"` only. Built behind a module constant, `VIP_INVITES = False`: when `True`, the BL-334 sentence ("and calendar invites or updates", `kind` `"calendar"`) is used instead and the code drop in step 2 is off. A constant, not a setting, so flipping it is a one-line reviewed change (Alan's decision, not a dial).
+2. **Time zone (probe rule 1).** "Give every time in {zone} as YYYY-MM-DDTHH:MM{offset}, never in any other zone." `{zone}` is the laptop's own, read at each check: `sweep.local_zone()` (`datetime.now().astimezone()`: name and offset, so a clock change is followed), written "Alan's local time, UTC+04:00"; `{offset}` is `+04:00`. Tests fix it with `CREAITE_TZ_OFFSET`, as `CREAITE_NOW` fixes the clock. No `identity.time_zone` setting: every time is compared with the laptop's own clock.
+3. **IDs (probe rule 3).** "For each mail message found, call read_resource on it once to get its **conversation ID**. **Copy every ID exactly as the tool gave it, character for character; never retype, shorten or guess one; give null if you do not have it. For mail, `conversation` is the conversation ID from read_resource, never the message's internet message ID (the one that looks like `<…@…>`).**" The Haiku runs gave both failure kinds (a one-character slip, and internet message IDs); Sonnet, the default model, gave neither, and code still checks (step 2).
+4. **Part 1 fields.** `"type": "action"|"decision"|"fyi"|"risk"` (the one thing Alan must do), `"ask"` (what he must do, own words, at most 140 characters, or ""), `"due"` (`YYYY-MM-DD` where stated or clearly implied, else null), `"owners"` (full names of those named to act; "you" when the ask is of Alan).
+5. **Part 2 fields.** `"last_from"`: the address of whoever sent the conversation's newest message (anyone's, Alan's included). `"match": {"id": one ID from OPEN WORK for this conversation's project, or null, "relation": "update"|"chase"|"new", "why": "own words, at most 140 characters"}`. **OPEN WORK** is given in the prompt as `{open_work}` (below).
+6. **Replies (Part 1, closing on Alan's reply).** "For each conversation you report and each OPEN conversation below, find Alan's newest message in it after its time (mail: search Sent Items for its subject; Teams: his own message in that chat) and give it as `"replied": "YYYY-MM-DDTHH:MM{offset}"` or null. For an OPEN conversation with nothing new from anyone else, give only `{"conversation", "kind", "replied"}`." **OPEN** is `{open}` (below).
+7. **Part 4 rule** (BL-334's, extended): a confidential conversation is summarised like any other in creaite's own words, never quoted, `sensitivity: "confidential"`, **with its type, ask, due, owners and match**; a private one gives only `"summary": "private"` and no items, type, ask, due, owners or match.
+8. Unchanged: read-only, change nothing, write nothing, send nothing; one object per conversation; never the word VIP; `[]` when there is nothing.
+
+**What code puts in the prompt** (`sweep.vip_prompt_parts()`, plain code, returns the strings; the server only formats them):
+- `{open}`: the open and replied cards (`state` open or replied, not seen), at most 20, newest first, each `{conversation, kind, subject (mail only), last}` in the named zone. References vip.json already holds.
+- `{open_work}`: for each active project, its open actions from `vip_open_items`' source (`_open_actions`), cut to `{id, t (at most 80 characters), owner, due}`, overdue first then by due date, **at most 15 a project, 60 in all**. A single call cannot know a new thread's project before it finds the thread, so the list is per project, not per thread; code still decides the project (`vip_project`) and keeps a match only when the ID is an open action of that card's project (`_checked_match`, unchanged). The titles are the vault's own data, sent to the same read-only call that already reads the mail; nothing new leaves the laptop beyond that call. *For Jarvis:* items labelled Sensitive stay in the list (the call is internal; nothing from it is client-facing); say if they should be left out.
+
+### Step 2. The reply's validation (code)
+
+`sweep.vip_clean(found, since, zone, open_cards, invites=False)`, plain code, run before `vip_record`; each drop is counted by reason for the debug log, never logged with text. What still applies from the two-stage plan:
+- **Shape.** A JSON array of objects; anything else is the existing "didn't finish" failure. At most 50 objects (more is a fault: the first 50 by time, counted `over`); one object per conversation (two → the newest `last`).
+- **Kind and invites.** `mail` or `teams` only; `calendar`, `event`, `meeting` or anything else → dropped (`invite`). Backstop: a mail whose subject or title starts `Accepted:`, `Declined:`, `Tentative:`, `Canceled:`, `Cancelled:`, `Invitation:` or `Updated invitation` → dropped (`invite`). With `VIP_INVITES = True` both drops are off.
+- **Well-formed IDs.** Teams: `19:` then `[A-Za-z0-9._:@-]`, at most 300. Mail: an opaque ID, `[A-Za-z0-9+/=_-]`, 16 to 300 characters; **anything with `@`, `<` or `>` is an internet message ID and is not a conversation ID** (`bad_id`). A malformed ID becomes null and the thread is keyed by its link and local key (decision a's fallback), never by the malformed text.
+- **Times.** `last` and `replied` must parse as ISO 8601 **with an offset**; no offset → dropped (`no_zone`), because a bare time is exactly the 4-hour slip of the three-day probe. Another valid offset → converted to local and counted (`other_zone`). After conversion: later than now plus 2 minutes → dropped (`future`; a future `replied` is ignored, not the thread); `last` earlier than `since` minus 10 minutes → kept only if it is an OPEN card's conversation (a reply-only object), else dropped (`old`). Stored as local `YYYY-MM-DD HH:MM`, as vip.json stores every time.
+- **Fields.** `type` outside the four → `fyi`; `ask` and `why` cut to 140 characters; `due` that is not a real date → null (Part 1's rule, unchanged); `owners` a list of strings, at most 6.
+- **A reply for a thread that wasn't asked is dropped.** An object is kept only if its `from` is a followed address (`sweep.vip_addresses()`, a new thread found by search) **or** its conversation matches an OPEN card by any key (`card_lookup`: `id:`, `link:`, `loc:`, the card id and its `ids`). Anything else → dropped (`unasked`). A `replied` time is used only for such a kept object. A reply-only object (no `summary`) never makes a card: it can only close or leave an existing one.
+- **Chase evidence** (Team Cap's F3 note): `last_from` is kept only if it is an address among the thread's people or Alan's own; `_alan_wrote` (F3's address rule) still decides, and a `replied` later than the thread's other newest message counts as "Alan wrote last".
+
+### Step 3. The lock
+
+**No: Part 3 B does not need the new cross-process `sweep.vip_lock`.** The two-stage plan needed it because it added a queue in vip.json written in three places per check (stage 1 record, take, stage 2 record) on top of the existing writers. Part 3 B adds no new writer and no new state: one `vip_record` per check, under `VIP_WRITE`, as today. The writers outside `VIP_WRITE` (Team Cap's review note) are the command line's `sweep.py vip record` (cx-sweep, the session-start check, the panel sweep, a confirmed ask creaite chat) and `sweep.py vip seen`; the race with them is pre-existing, and its window is the milliseconds of a save, not the minutes of the call.
+- **One cheap step inside the guarded `vip_check`:** after the call returns, check `sweep_running()` again; if a sweep began during the call, drop the check's result and leave `last_check` alone (the sweep records the same people itself). That closes the likeliest overlap (the panel or session sweep starting mid-check) without a new lock.
+- **The file lock stays a recommendation, as its own small item** (sweep.py only, not guarded, S, Sonnet): an `fcntl.flock` on `system/staging/vip.lock` around every vip.json read-modify-write, as the superseded step 4 specified. It hardens `vip seen` against a dashboard Seen or Handled at the same moment. Not a blocker for Part 3 B; raise as a backlog item if Jarvis agrees.
+
+### Step 4. The run, guarded hunks and review
+
+**live_server.py hunks that are a run (Opus; Jarvis reviews the diff word for word before push):**
+1. The VIP constants: `VIP_PROMPT` (extended), `VIP_INVITES` (new, `False`), and the two-variant source sentence. Jarvis reads the prompt: read-only, the three probe rules, invites out, the Part 1, 2 and 4 fields, never the word VIP, no instruction to write, send or run anything.
+2. `vip_check`: `prompt_last` (the prompt after `--`), the prompt filled from `sweep.vip_prompt_parts()` and `sweep.local_zone()`; `sweep.vip_clean` before `vip_record`; the second `sweep_running()` check (step 3); one debug log line per check (BL-102), `info("vip", …)` with counts, seconds and dollars only: conversations returned, kept, dropped by reason, new or updated, replied, and the reply's `total_cost_usd`. Never a subject, address, ID or text. That cost line is what measures today's real per-check figure (step 5).
+
+**Not a run, same diff:** the module docstring's VIP line ("invites" removed).
+
+**Unchanged, and the review checks they are:** `VIP_TOOLS` (calendar search stays in it, so flipping `VIP_INVITES` needs no tool change; *for Jarvis:* removing it would be tighter but breaks the flip), `DENY_TOOLS`, `VIP_LOCK`, `VIP_WRITE`, `LOCK`, `claude_path`, `run_env`, `prompt_last`, `vip_timer`, `vip_wait_seconds`, every route, `SAFE_SETTINGS`. **No `--model` flag and no `vip.check_model` setting:** there is no second call, so there is no model to choose for it; the single call reads and summarises, which needs the default model, and the probe showed the cheap model fails mail IDs. One call on one model also keeps `test_prompt_after_dashdash`'s count of `prompt_last(` at three.
+
+**Not touched (confirmed):** `reach.py` (`sweep.py vip` stays `DERIVED`; the new sweep.py functions are library calls from the server, no new script command), the guard hook, `permissions.py`, `.claude/settings.json`, `filechange.py`, `tracker.py`, `schema.sql`, `review.py`, `settings-defaults.json`, `settings_catalogue.py`. If the build finds it needs any of them, it stops and goes back to Jarvis. `system/creaite-rules.md`'s VIP check line loses "invites" (dev repository; an engine file, not a guarded area).
+
+**Model for the build: Opus** for the live_server.py hunks (Alan's rule for runs); the sweep.py code (`local_zone`, `vip_prompt_parts`, `vip_clean`, `card_lookup`) is plain code and may be Sonnet, but one Opus agent doing the whole part is simpler and it is small.
+
+### Step 5. Cost per day
+
+**The formula.** Per day = (H × 60 / M) × C, where H is the hours the live server is open, M is `vip.check_minutes` and C is one check's cost. One call, so no stage 2 term. C is the call's `total_cost_usd`; from the probe's token counts, C = (cache write × $4.00 + cache read × $0.20 + input × $2.00 + output × $10.00) / 1,000,000 on Sonnet (`usage.py` `PRICES`; the probe's writes are 1-hour cache writes at 2 × input, which is what makes the figures add up exactly: 61,407 × 4.00 + 155,768 × 0.20 + 2,590 × 10.00 + 8 × 2.00 = $0.3027).
+
+| Case | C per check | 24 checks (12 h at 30 min) | 48 checks (24 h, the plan's basis) |
+|------|-------------|----------------------------|------------------------------------|
+| Today, the plan's estimate (~$0.10 a check) | $0.10 | $2.40 | **$4.80** |
+| Part 3 B (today plus ~$0.01, below) | $0.11 | $2.64 | **$5.28** |
+| Two-stage on Sonnet, measured empty stage 1 | $0.30 to $0.35 (measured) | $7.26 to $8.29, plus stage 2 | **$14.53 to $16.57**, plus stage 2 (≥ $0.50) |
+
+- **Two-stage arithmetic.** 48 × $0.3027 = $14.53; 48 × $0.3453 = $16.57; that is about $14 to $17 a day before any stage 2 call, against the break-even of $0.09 a check (48 × $0.09 + $0.50 = $4.82). Measured C1 is 3.4 to 3.8 times the threshold, so the split costs about three times today.
+- **Part 3 B's added text.** The new prompt sentences are about 450 words (≈ 600 tokens); `{open}` at most 20 × ~40 = 800 tokens; `{open_work}` at most 60 × ~30 = 1,800 tokens; about **3,200 tokens** more input at most (less on a normal day: 3 to 4 projects, few open cards). The prompt is written to the cache once (3,200 × $4.00 = $0.013) and read back on each later turn (3 turns × 3,200 × $0.20 = $0.002); the output grows by the new fields, about 80 tokens a conversation ($0.0008 each). So about **+$0.01 a check** at the cap, +$0.48 a day on 48 checks (+$0.24 on 24). The cache write of the run's fixed context (61,000 to 67,000 tokens, about 80% of an empty check's cost) dominates; the added text is about 5% of it.
+- **The figure that needs measuring: today's own C.** The empty Sonnet stage 1 ($0.30 to $0.35) carried the same fixed context as today's call (the vault's `CLAUDE.md`, the rules, the tool definitions), and today's call does more (it reads and summarises). So today's real C is very likely **at least $0.30**, not $0.10, which would put today at about **$7.20 a day (12 h) or $14.40 (24 h)**, and Part 3 B at about $0.31 a check. That does not change the decision (two-stage costs at least today's fixed context twice on a busy round, so it never pays while the fixed context dominates); it changes the size of the levers below. The step 4 cost line gives the real figure after one day's use; read it in the review round.
+- **Where the money goes.** Laptop 2's day on 15-10-2026 was **$406** (the BL-343 baseline). The check at the plan's $4.80 is **1.2%** of it; at the likely real figure ($7.20 to $14.40) it is **1.8% to 3.5%**. Either way the VIP check is not where the money goes: the build agents are.
+- **The guard on `vip.check_minutes`** (unchanged from the superseded plan, still worth having): today the Settings field takes **5 or more** (Essentials.jsx), and the server has no floor of its own (the timer sleeps at least 1 second), so a value of 1 in settings.json would run 720 checks in 12 hours (about $72 at $0.10, $216 at $0.30). `sweep.vip_settings()` reads a value under 10 as 10 and over 240 as 240 (`VIP_MIN_MINUTES`, `VIP_MAX_MINUTES`), and the field takes 10 to 240. sweep.py and the settings source only; not guarded; Sonnet.
+
+### Step 6. The cheaper levers, for Alan's choice
+
+Per day at 12 hours, with today's C as the plan's $0.10 and, in brackets, the likely real $0.30.
+
+| Lever | Per day (12 h) | Trade-off |
+|-------|----------------|-----------|
+| **(a) `check_minutes` 60** | $1.32 ($3.72) | Half the cost; a card can be up to an hour late. The start-up check still catches up at once. |
+| **(a) `check_minutes` 120** | $0.66 ($1.86) | A quarter; up to two hours late, which defeats "first thing at the top of Today" for people Alan follows. Bounds proposed: 10 to 240 (step 5). |
+| **(b) The check with less context** | Estimate $0.03 to $0.08 a check, so $0.72 to $1.92 (to measure) | A guarded change of its own in `vip_check`'s launch (Opus; Jarvis reviews): run the call from a neutral working folder (for example `system/staging/vip-run/`, empty, outside git) so it loads no `CLAUDE.md`, no rules and no git status, with `--allowedTools` and `--disallowedTools` passed exactly as now. Two gains: a far smaller fixed context, and a stable prefix, so the 1-hour cache written by one check is **read** by the next one 30 minutes later (cache read is one twentieth of a 1-hour write). Risks to check first, with the probe, not in the build: the Microsoft 365 connector must still load (it is a claude.ai connector, so `--strict-mcp-config` with a local MCP file may drop it: do not use that flag without a probe run); the project `.claude/settings.json` deny rules would no longer apply, so `DENY_TOOLS` alone must cover them (it does today for this call; the review checks it); `--bare` or a slimmer system prompt only if `claude --help` on the installed version offers it. Needs Alan's yes, then a probe run with a `--cwd` variant to measure it. |
+| **(c) Haiku for Teams, Sonnet for mail** | Not possible in one call | One `claude -p` call runs on one model. Splitting by source means two calls, each paying the fixed context (about $0.30 on Sonnet, $0.01 on Haiku), which is the two-stage cost again: about $7.50 a day at 12 h. Not recommended. |
+| **(d) Do nothing** | $2.40 at the estimate, $2.64 with Part 3 B ($7.20 to $7.44) | About 0.6% to 1.8% of laptop 2's day ($406). The simplest; the card fields arrive with it. |
+
+**Recommendation:** build Part 3 B (it is what fills the cards), keep 30 minutes, add the 10 to 240 guard, and let the step 4 cost line measure today's real C for a day. If C is $0.30 or more, take lever (b) as a probe first, then a guarded change; (a) at 60 minutes is the fallback that needs no code.
+
+### Step 7. Tests
+
+New `dev/tests/test_vip_single_call.py`, with the repository's stand-in claude (the `FAKE` pattern of `test_vip_conversations.py`, reading the prompt after `--`), fictional people only:
+- **Prompt:** holds the zone sentence with the fixed offset, the invite exclusion, the exact-ID and no-internet-message-ID rules, the Part 1, 2 and 4 fields, `{open}` and `{open_work}` filled (60 rows at most, 15 a project), never "VIP"; with `VIP_INVITES = True` the BL-334 sentence instead.
+- **Probe failures as fixtures:** no offset → dropped `no_zone`; `Z` with `+04:00` named → converted, `other_zone`; `last` in the future → dropped; a future `replied` → ignored; a mail `conversation` of `<abc@example.outlook.com>` form → null, keyed by link and local key; one character outside the alphabet → null; `kind: "calendar"` and a mail `Accepted: Steering` → dropped (and kept with `VIP_INVITES = True`).
+- **Unasked:** a sender who is not followed and no OPEN match → dropped; a reply-only object for an OPEN card closes it as Replied; a reply-only object for an unknown conversation → dropped, no card.
+- **Run:** one call per check; argv pinned (`claude_path()`, `-p` then an option, `--` then the prompt, `VIP_TOOLS`, `DENY_TOOLS`, no `--model`, `run_env()`'s `CREAITE_HEADLESS_RUN`); a sweep starting during the call → nothing recorded, `last_check` unchanged; the debug log line has numbers only, including the cost.
+- **Identity:** a reply ID matches a card by any of its keys (`id:`, `link:`, `loc:`, the card id, a merged card's `ids`); a thread whose card was merged by a sweep between the call and the record lands on the survivor, one card.
+- Updated: `test_vip_conversations.py` (the prompt pin, kinds without `calendar`), `test_vip_threads.py` (the real fields from the call, `last_from`, `replied`), `test_vip_confidential.py` and `test_vip_private.py` (confidential with fields; private none; no label), `test_prompt_after_dashdash.py` (still three), `test_vip_probe.py` (its tool list still equals `VIP_TOOLS`), `test_settings*` (the 10 to 240 guard).
+
+### Step 8. Build order, size and review-round checks
+
+1. `sweep.local_zone`, `vip_prompt_parts`, `card_lookup`, `vip_clean` (sweep.py) with the fixture tests.
+2. The guarded hunks in live_server.py (`VIP_PROMPT`, `VIP_INVITES`, `vip_check`), then the end-to-end tests with the stand-in claude.
+3. The `check_minutes` guard (sweep.py and the Settings field), the rules line, `check.py`, then Jarvis's review.
+
+**Size S to M:** about half a day of Opus build plus one review round. Model: **Opus**.
+
+**Review-round checks:**
+- **Identity and keying:** a reply object matches a card by **any** of its keys (`id:`, `link:`, `loc:`, the card id, `ids`); `vip_clean` never merges (`card_lookup` is the read-only half of `card_find`); merging happens only in `vip_record`, under `VIP_WRITE`.
+- **A merge between the call and the recording:** the only other merger is a command-line `vip record` (a sweep), and the second `sweep_running()` check drops the result when a sweep ran meanwhile; if one slips through, `card_find` at record time re-reads vip.json and finds the survivor through its `ids` (the review checks `card_find` matches on `ids`, and the build adds it if missing).
+- Two conversation IDs for one link stay two cards (`same_thread`, Part 1's rule); a reply cannot rename a thread's ID.
+- An internet message ID never becomes a key; a reply-only object never makes a card.
+- No invite card while `VIP_INVITES` is `False`; flipping it restores BL-334's behaviour and the tests show both.
+- The debug log and vip.json hold no message text, no subject or address in a log line, and not the word VIP.
+- The diff to live_server.py is the two run hunks and the docstring line only.
+
+**Done when (Part 3 B as a whole):**
+- with a stand-in claude, one check makes **one** call with exactly `VIP_TOOLS` and `DENY_TOOLS`, no `--model`, the prompt after `--`;
+- the prompt names the laptop's zone with its offset, leaves invites out and asks for the Part 1, 2 and 4 fields with `{open}` and `{open_work}`;
+- every probe failure fixture is dropped or converted as in step 2; an unasked thread is dropped;
+- a reply in Sent Items closes the card as Replied; a confidential card has type, ask, due, owners and the neutral match reason; a private one has none;
+- the debug log gets counts, seconds and the dollar cost per check (BL-102);
+- `check_minutes` under 10 is read as 10;
+- `test_no_real_names.py` and `check.py` pass.
+
 ## Part 4. Confidential mail
 
 **Behaviour (as BL-334, extended to the new fields).**
 - A confidential thread gets a real summary in creaite's own words, with its type, due, owners and ask, shown on the card in Today, marked Confidential. Never quoted.
 - It never reaches a client report, a client-safe one-pager or a prep page's client copy: vip.json is not a report source; an item made from the card is internal and labelled Sensitive (`CONFIDENTIAL_MADE`, unchanged); a **logged update** from the card carries only the neutral line (decision b).
 - A **private** thread keeps BL-334's neutral line only: no type, due, owners or match.
-- The match list in stage 2 sends a confidential thread's content to the model in the same call as any other (a read-only call on the laptop, no new destination); the reply is kept as words only.
+- The open-work list in the check (Part 3 B) sends a confidential thread's content to the model in the same call as any other (a read-only call on the laptop, no new destination); the reply is kept as words only.
 
-**Files.** `system/scripts/sweep.py` (`conv_content` gives confidential threads the new fields, private ones none; `vip_log` writes the neutral line); the stage 2 prompt wording is in Part 3's Opus step; `system/templates/dashboard/src/today.js` / `dashboard.html` (the Confidential marker next to the new chips). No guarded area.
+**Files.** `system/scripts/sweep.py` (`conv_content` gives confidential threads the new fields, private ones none; `vip_log` writes the neutral line); the prompt wording is in Part 3 B's Opus step; `system/templates/dashboard/src/today.js` / `dashboard.html` (the Confidential marker next to the new chips). No guarded area.
 
 **Done when:**
 - a confidential thread card shows a summary, type, due and owners; the client report and client-safe one-pager built from the same database contain nothing from it;
@@ -332,7 +461,7 @@ New `dev/tests/test_vip_two_stage.py`, with the repository's stand-in claude (th
 
 | Area | Touched? | Where |
 |------|----------|-------|
-| live_server.py runs (the check and its prompts) | **Yes** | Part 3 only: four hunks (the prompts, `vip_call`, `vip_check`, `vip_wait_seconds`; Part 3 step 7). **Opus.** Jarvis reviews. |
+| live_server.py runs (the check and its prompt) | **Yes** | Part 3 B only: two hunks (`VIP_PROMPT` with `VIP_INVITES`, and `vip_check`; Part 3 B step 4). **Opus.** Jarvis reviews. |
 | live_server.py routes (not runs) | **Yes** | Part 1 (`/api/alerts/handled`, `/api/alerts/log`). Sonnet; Jarvis reviews. |
 | `reach.py`, the guard hook | No | `sweep.py vip` is already `DERIVED`; no new script command. |
 | `permissions.py`, `.claude/settings.json` | No | The check keeps its own allow list. |
@@ -343,11 +472,11 @@ If the build finds it needs any "No" row, it stops and goes back to Jarvis.
 
 ## Order
 
-0. **Live probe and measurement** (Jarvis or Alan, in a live vault; Sonnet cannot do this): confirm the three facts in point a, run stage 1's prompt by hand on Haiku and Sonnet and read the cost from `usage.py` (needs BL-343 phase A on the branch used). **Done 15-10-2026** (Step 0 result, above): the facts hold; stage 1 on Sonnet. The short-window rerun for the per-check cost is still to come and does not hold up Part 3.
+0. **Live probe and measurement** (Jarvis or Alan, in a live vault; Sonnet cannot do this): confirm the three facts in point a, run stage 1's prompt by hand on Haiku and Sonnet and read the cost from `usage.py` (needs BL-343 phase A on the branch used). **Done 15-10-2026** (Step 0 result, above): the facts hold; stage 1 on Sonnet. The short-window rerun gave $0.30 to $0.35 an empty check on Sonnet, which supersedes Part 3 by Part 3 B.
 1. **Part 1 data and card** (Sonnet): shape, Handled, Replied, Log, routes, UI. With a stand-in claude and the existing prompt.
 2. **Part 2 matching** (Sonnet): needs Part 1's card shape in sweep.py, so it follows Part 1.
 3. **Part 4** (Sonnet): small, rides on Part 1's shape; can run beside Part 2.
-4. **Part 3** (Opus): the two prompts and two calls, the setting and the vip.json lock; last, after `bl342-fixes` lands, so the prompts carry every field from Parts 1, 2 and 4 (Part 3, step 8). Jarvis reviews it before push.
+4. **Part 3 B** (Opus): the one prompt extended, the reply's validation, the cost line and the `check_minutes` guard; last, after `bl342-fixes` lands, so the prompt carries every field from Parts 1, 2 and 4 (Part 3 B, step 8). Jarvis reviews it before push. (Part 3, two-stage, is superseded by cost.)
 5. **Integration pass** (Sonnet): the whole run end to end with the stand-in claude, the real-browser screens, the UX baseline, the sample-vault goldens.
 
 Parts 1 and 2 can be split between two Sonnet agents only if they agree the card shape first (both edit sweep.py).
@@ -358,7 +487,7 @@ Parts 1 and 2 can be split between two Sonnet agents only if they agree the card
 |------|------|-------|
 | 1 The card | M | Sonnet |
 | 2 Matching | M | Sonnet |
-| 3 Two-stage polling | M | Opus |
+| 3 B One call with the card fields (Part 3 superseded) | S to M | Opus |
 | 4 Confidential mail | S | Sonnet |
 | Step 0 probe, integration, UX baseline | S | Jarvis / Sonnet |
 | **Total** | **L** | |
@@ -368,7 +497,7 @@ Parts 1 and 2 can be split between two Sonnet agents only if they agree the card
 - Nothing in the sample data, tests or docs uses a real name; fictional people only (as `test_vip_conversations.py`).
 - The check stays read-only on Microsoft 365; nothing is sent, replied to or changed there. Chase only opens the existing draft pane.
 - Nothing reaches the tracker without Alan's approval in Review. The only write the card makes is a pending proposal he clicked for.
-- No schema change; a new key in `settings-defaults.json` only (`update.py merge_new` adds it to a live vault).
+- No schema change and no new setting (Part 3 B drops `vip.check_model`).
 - No message text is kept: vip.json, the card, the debug log and the staged update hold Claude's own words, references and counts.
 
 ## Tests
@@ -377,18 +506,18 @@ Run in the review round: `test_vip_threads.py` (new), `test_vip_conversations.py
 
 ## Review-round checks
 
-1. The diff to live_server.py is Part 3 and the two routes only; `VIP_TOOLS` and `DENY_TOOLS` are unchanged and a test pins them.
+1. The diff to live_server.py is Part 3 B's two hunks and the two routes only; `VIP_TOOLS` and `DENY_TOOLS` are unchanged and a test pins them.
 2. No call from either stage can write (allow list, no Bash).
-3. One call on a quiet interval; two on a busy one; never more than five threads in stage 2.
+3. One call per check, on the default model, with no `--model` flag.
 4. A thread keeps one card across a reply, a late ID and a restart; two cards for one ID are merged.
 5. No "VIP" or message text anywhere shown, stored or logged; `grep -ri vip` on the page data and route results is clean.
 6. A staged update has `based_on`, is pending, is one proposal per item, and a confidential one is the neutral line.
 7. The Chase rule is code, not the model's say-so; an invalid match falls to New.
 8. Handled and Replied are not confused with done: no work item changes status from a card.
 9. The UX baseline's ten checks, with screenshots; the card's due date, type and owners read at 1100px in dark.
-10. `settings-defaults.json` and the catalogue row agree; an old vault keeps its own `vip` values.
+10. An old vault keeps its own `vip` values; `check_minutes` outside 10 to 240 is read at the bound.
 11. `test_no_real_names.py` and `check.py` pass.
 
 ## Report
 
-To be written by the build sprint: what was built per part, the step 0 figures (measured cost per check and per day), which UX checks were made, and anything Jarvis changed in review.
+To be written by the build sprint: what was built per part, the step 0 figures and the measured cost per check and per day from Part 3 B's cost line, which UX checks were made, and anything Jarvis changed in review.
