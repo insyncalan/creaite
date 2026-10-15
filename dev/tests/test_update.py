@@ -149,6 +149,17 @@ class TestBuild(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("doesn't match VERSION", r.stderr)
 
+    def test_stale_guides_are_refused_early(self):
+        sys.path.insert(0, str(REPO / "dev" / "tools"))
+        import build_release
+        d = Path(self.own_tmp())
+        g = d / "guide-first-day.html"
+        g.write_text("<p>creaite 1.0.0 \u00b7 first day</p>", encoding="utf-8")
+        build_release.refuse_stale_guides("1.0.0", g)                      # current: passes
+        with self.assertRaises(update.UpdateError) as c:
+            build_release.refuse_stale_guides("1.0.1", g)                  # behind VERSION: refused, with the fix
+        self.assertIn("build_guides.py", str(c.exception))
+
 
 class TestInstall(unittest.TestCase):
     @classmethod
