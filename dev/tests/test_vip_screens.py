@@ -454,38 +454,83 @@ class ThreadCardCounts(LiveBrowserCase):
         return self.b.eval("""(()=>{ const r=[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes(%r));
           return r?r.dataset.td.slice(2):null; })()""" % title)
 
-    def test_dismiss_handled_and_undo_update_the_other_cards_chip(self):
+    def gone(self, title):
+        return "![...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes(%r))" % title
+
+    def shown(self, title):
+        return "[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes(%r))" % title
+
+    def open_today(self):
         b = self.b
         b.eval("go('today'); EXPAND.add('td'); renderToday()")
         b.wait("document.querySelector('#tdList li.td-message')")
         self.assertIn("also on 1 other thread", self.chip("Licence numbers"))
-        gid = self.aid("Go-live window")
-        b.eval(f"alertDismiss('{gid}')")                                                    # Dismiss one of the two
-        b.wait("!([...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Go-live window')))")
-        b.wait("!document.querySelector('#tdList')||!(%s)" % "[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Licence numbers')).textContent.includes('also on')")
+
+    def dismiss(self, title):
+        i = self.aid(title)
+        self.b.eval(f"""(()=>{{ const x=document.createElement('button'); x.dataset.alertdo='dismiss'; x.dataset.id='{i}';
+          document.body.appendChild(x); x.click(); x.remove(); }})()""")             # through the page's own click handler
+
+    def handled(self, title):
+        self.b.click(f'#tdList [data-alertdo="handled"][data-id="{self.aid(title)}"]')
+
+    def settle(self):
+        """Bring the page level with the server by hand, so a later step is judged on its own handler only."""
+        self.b.eval("vipPoll()")
+        self.b.pump(0.5)
+
+    # In each test the chip is read the moment the card has gone or come back, with no wait for it: the page's own event
+    # stream redraws about 1.5 s later and would hide a handler that did not refresh the counts itself. Each fails on the
+    # code before 83305db7 and passes on the fix.
+    def test_dismiss_updates_the_other_cards_chip(self):
+        self.open_today()
+        self.dismiss("Go-live window")
+        self.b.wait(self.gone("Go-live window"), timeout=5)
         self.assertNotIn("also on", self.chip("Licence numbers") or "")
-        b.click("#snackU")                                                                  # Undo: the chip is back
-        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Go-live window'))")
-        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Licence numbers')).textContent.includes('also on 1 other thread')")
-        lid = self.aid("Licence numbers")                                                   # Handled, then Undo, the same
-        b.click(f'#tdList [data-alertdo="handled"][data-id="{lid}"]')
-        b.wait("![...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
-        b.wait("!([...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Go-live window')).textContent.includes('also on'))")
+
+    def test_undo_of_dismiss_brings_the_chip_back(self):
+        b = self.b
+        self.open_today()
+        self.dismiss("Go-live window")
+        b.wait(self.gone("Go-live window"), timeout=5)
+        self.settle()
+        b.wait("!document.querySelector('#tdList')||!(%s)" % "[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Licence numbers')).textContent.includes('also on')", timeout=5)
         b.click("#snackU")
-        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
-        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Go-live window')).textContent.includes('also on 1 other thread')")
+        b.wait(self.shown("Go-live window"), timeout=0.8)                       # the handler's own redraw, not the event stream's
+        self.assertIn("also on 1 other thread", self.chip("Licence numbers") or "")
+
+    def test_handled_updates_the_other_cards_chip(self):
+        self.open_today()
+        self.handled("Licence numbers")
+        self.b.wait(self.gone("Licence numbers"), timeout=5)
+        self.assertNotIn("also on", self.chip("Go-live window") or "")
+
+    def test_undo_of_handled_brings_the_chip_back(self):
+        b = self.b
+        self.open_today()
+        self.handled("Licence numbers")
+        b.wait(self.gone("Licence numbers"), timeout=5)
+        self.settle()
+        self.assertNotIn("also on", self.chip("Go-live window") or "")
+        b.click("#snackU")
+        b.wait(self.shown("Licence numbers"), timeout=0.8)                      # the handler's own redraw, not the event stream's
+        self.assertIn("also on 1 other thread", self.chip("Go-live window") or "")
 
     def test_a_card_closed_as_replied_leaves_today_at_the_next_check(self):
+        """Does NOT prove 83305db7: this passes unchanged on the code before it (checked three times by reverting the
+        source), so the replied state already reached the old signature through the server's reply. It guards the
+        behaviour that a replied card is gone, and the quiet Replied line shown, the moment the check finishes."""
         b = self.b
         b.eval("go('today'); EXPAND.add('td'); renderToday()")
-        b.wait("[...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
+        b.wait(self.shown("Licence numbers"))
         vf = self.v.root / "system/staging/vip.json"
         st = json.loads(vf.read_text())
         a = next(x for x in st["alerts"] if x.get("title") == "Licence numbers")
         a["state"], a["replied_at"] = "replied", f"{TODAY} 09:00"
         vf.write_text(json.dumps(st))
-        b.eval("vipPoll()")                                                                 # the 30-second check, without waiting
-        b.wait("![...document.querySelectorAll('#tdList>li.td-message')].some(l=>l.textContent.includes('Licence numbers'))")
+        b.eval("window.__polled=false; vipPoll().then(()=>{ window.__polled=true; })")      # the check, without waiting for its timer
+        b.wait("window.__polled", timeout=5)
+        self.assertTrue(b.eval(self.gone("Licence numbers")))                                # redrawn by the check itself, no wait
         self.assertIn("you replied 09:00", b.eval("document.getElementById('tdList').textContent"))   # now the quiet Replied line
 
 
