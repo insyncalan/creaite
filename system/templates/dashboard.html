@@ -49486,10 +49486,8 @@ ${d5.text}`);
     notesMsg.value = notSavedMsg();
     return false;
   }
-  async function openNote(path) {
-    const same2 = !!noteCur.value && noteCur.value.path === path;
-    if (!same2 && !await mayLeave()) return false;
-    if (same2) await noteFlush().catch(() => false);
+  async function openNote(path, discard2 = false) {
+    if (!discard2 && !await mayLeave()) return false;
     if (!noteCur.value || noteCur.value.path !== path) {
       noteFind.value = false;
       noteFindP.value = 0;
@@ -49507,7 +49505,7 @@ ${d5.text}`);
       notesMsg.value = oneLine(r4 && r4.message || "That note couldn't be opened.");
       return false;
     }
-    if (!same2 && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {
+    if (!discard2 && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {
       notesMsg.value = "You typed in this note while the other one was opening, so it stays open. Try again once it has saved.";
       return false;
     }
@@ -49821,7 +49819,7 @@ ${d5.text}`);
       return;
     }
     giveUpTyping();
-    const ok2 = await openNote(c5.path);
+    const ok2 = await openNote(c5.path, true);
     if (!ok2) {
       noteCur.value = null;
       noteSave.value = { state: "" };
@@ -49836,7 +49834,7 @@ ${d5.text}`);
     const c5 = noteCur.value;
     if (!c5) return;
     giveUpTyping();
-    await openNote(c5.path);
+    await openNote(c5.path, true);
     noteLeave.value = null;
   }
   var noteFind = y3(false);
@@ -60078,6 +60076,7 @@ ${d5.text}`);
         "ACTKINDS",
         "AI_ACTIONS",
         "AI_PLACES",
+        "AUTOSAVE_MS",
         "AiBar",
         "AiSuggestion",
         "BASETITLE",

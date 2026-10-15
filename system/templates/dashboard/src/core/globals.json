@@ -12,6 +12,7 @@
    "ACTKINDS",
    "AI_ACTIONS",
    "AI_PLACES",
+   "AUTOSAVE_MS",
    "AiBar",
    "AiSuggestion",
    "BASETITLE",

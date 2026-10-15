@@ -115,12 +115,11 @@ async function mayLeave() {
   return false;
 }
 
-/** Open a note (the current one is saved first). Opening the open note again is "open the file's version": what was typed in it goes.
-    @param {string} path */
-export async function openNote(path) {
-  const same = !!noteCur.value && noteCur.value.path === path;
-  if (!same && !await mayLeave()) return false;
-  if (same) await noteFlush().catch(() => false);
+/** Open a note (the current one is saved first, and is not left over text that could not be saved). Opening the open note again is
+    a switch like any other, unless `discard`: "open the file's version", where what was typed in it goes (after giveUpTyping).
+    @param {string} path @param {boolean} [discard] */
+export async function openNote(path, discard = false) {
+  if (!discard && !await mayLeave()) return false;
   if (!noteCur.value || noteCur.value.path !== path) { noteFind.value = false; noteFindP.value = 0; noteMarks.value = { markers: {}, hover: 0 }; }   /* BL-301 E: Find updates is per note */
   if (!viaServer()) { notesMsg.value = "Opening a note needs the live server."; return false; }
   const rev = ses.rev;
@@ -128,7 +127,7 @@ export async function openNote(path) {
   const r = await api("/api/notes/get", { path });
   noteLoading.value = false;
   if (!r || !r.ok) { notesMsg.value = oneLine((r && r.message) || "That note couldn't be opened."); return false; }
-  if (!same && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {   // typed in this note while the other was on its way
+  if (!discard && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {   // typed in this note while the other (or it again) was on its way
     notesMsg.value = "You typed in this note while the other one was opening, so it stays open. Try again once it has saved.";
     return false;
   }
@@ -378,7 +377,7 @@ export async function noteDiscardNow() {
   const c = noteCur.value;
   if (!c) { noteLeave.value = null; return; }
   giveUpTyping();
-  const ok = await openNote(c.path);
+  const ok = await openNote(c.path, true);
   if (!ok) { noteCur.value = null; noteSave.value = { state: "" }; resetTyping(); noteFocus.value = false; notesMsg.value = "That note couldn't be opened again, so it was closed. What you typed was discarded."; }
   noteLeave.value = null;
   if (noteFocus.value && !noteCur.value) noteFocus.value = false;
@@ -388,7 +387,7 @@ export async function noteOpenFileVersion() {
   const c = noteCur.value;
   if (!c) return;
   giveUpTyping();
-  await openNote(c.path);
+  await openNote(c.path, true);
   noteLeave.value = null;
 }
 

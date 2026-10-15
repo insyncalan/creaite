@@ -49,7 +49,7 @@ NO_GUARD = "(()=>{ noteSave.value={state:'saved'}; return true; })()"
 CLIP = "(()=>{ window.__clip=null; Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async t=>{ window.__clip=t; }}}); return true; })()"
 
 
-# page names these tests use: noteFocusClose noteEscape noteFocusOpen noteFlushOnExit notesList noteLeave noteText
+# page names these tests use: AUTOSAVE_MS noteFocusClose noteEscape noteFocusOpen noteFlushOnExit notesList noteLeave noteText
 class AutosavePage(LiveBrowserCase):
     width, height = 1400, 1000
     log, notes_dir, make, type_end = (notes_tab_browser.NotesTab.log, notes_tab_browser.NotesTab.notes_dir, notes_tab_browser.NotesTab.make,
@@ -111,6 +111,8 @@ class AutosavePage(LiveBrowserCase):
         self.wait_text(f, "first words and more", 15)
         dt = time.monotonic() - t_key
         self.assertGreater(dt, 1.6, "about 2 s after the last key, never sooner (a slow machine only makes it later)")
+        self.assertLess(dt, 8, "and not minutes later (a loose bound: only a stalled timer breaks it)")
+        self.assertEqual(b.eval("AUTOSAVE_MS"), 2000, "the named constant is the 2 s the issue asks for")
         b.wait("noteSave.value.state==='saved'", 15)
         self.assertRegex(self.line(), r"^Saved \d\d:\d\d$")
         self.assertEqual(len(b.eval("window.__saves")), 1, "one save for the whole burst")
@@ -526,6 +528,8 @@ class AutosavePage(LiveBrowserCase):
         self.assertIn("during the rename", new.read_text())
 
     def test_a_rename_that_fails_does_not_hang_later_saves(self):
+        # What this pins is the `.catch` in settleRename: a rename whose handling throws is reported and later saves go on. The
+        # try/finally blocks around `ses.busy` are defensive only: api() swallows network errors (server.js), so nothing reaches them.
         b = self.b
         self.make("Fails to rename")
         f = self.notes_dir() / "Fails to rename.md"
@@ -604,6 +608,34 @@ class AutosavePage(LiveBrowserCase):
         self.assertIn("keep this", b.eval("window.__clip"))
         self.assertEqual(b.eval("closeNote()"), True)
         self.assertEqual(b.eval("noteCur.value"), None)
+
+    def test_opening_the_same_note_while_it_is_fetched_keeps_the_typing(self):
+        b = self.b
+        self.make("Same again")
+        f = self.notes_dir() / "Same again.md"
+        path = b.eval("noteCur.value.path")
+        b.eval(SPY)
+        b.eval("window.__slowGet=1500")
+        b.eval(f"window.__r=undefined; openNote({json.dumps(path)}).then(v=>{{ window.__r=v; }}); true")
+        b.pump(0.3)
+        self.type_end("typed meanwhile")                                              # while the same note is being fetched again
+        b.wait("window.__r!==undefined", 15)
+        self.assertEqual(b.eval("window.__r"), False, "the reopen is given up")
+        self.assertIn("typed meanwhile", b.eval("document.querySelector('.nbody').textContent"))
+        self.assertIn("typed in this note", b.eval("notesMsg.value"))
+        self.wait_text(f, "typed meanwhile", 15)
+
+    def test_an_exit_save_the_server_refuses_leaves_the_text_dirty(self):
+        b = self.b
+        self.make("Exit refused")
+        b.eval(SPY)
+        b.eval(NO_TIMER)
+        b.eval("window.__fail={ok:false,message:'Not saved: nope.'}")
+        self.type_end("not on disk")
+        b.eval("noteFlushOnExit()")
+        b.pump(1.0)
+        self.assertEqual(len(b.eval("window.__saves")), 1, "the exit save was sent")
+        self.assertEqual(b.eval("noteDirty()"), True, "refused: still dirty (nothing says it was saved)")
 
     def test_a_note_that_can_never_save_can_be_left_after_copying_or_discarding(self):
         b = self.b
