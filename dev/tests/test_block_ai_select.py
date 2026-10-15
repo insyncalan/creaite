@@ -104,6 +104,7 @@ class AiBlocks(LiveBrowserCase):
 
     def test_part_e_items_go_before_say_what_you_want_and_get_the_selection(self):
         b = self.b
+        had = b.eval("AI_ACTIONS.length")                       # the Notes tab's own item (fu-line) is registered at load
         b.eval("window.GOT=null; aiAction({id:'mkact', name:'Make this an action…', places:['plain'], run:(r,h,ai)=>{ GOT=[r.text, ai.place, h===AIM]; }})")
         self.addCleanup(lambda: self.b and self.b.eval("(AI_ACTIONS.splice(AI_ACTIONS.findIndex(a=>a.id==='mkact'),1), true)"))
         self.select_all("#aiMany")

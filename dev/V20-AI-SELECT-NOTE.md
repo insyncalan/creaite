@@ -49,6 +49,19 @@ Read BL-301 D in `git show origin/dev-archive-security:dev/BACKLOG.md` and the b
 - **Still open:** Notes (part B) pass `ai: {place: "notes", project, confidential: () => note.confidential, key: () => path}`; the
   Draft email's `email` place waits on Part A's option (b). Programmatic focus-then-select (item 6 of the old list) not looked at.
 
+## Notes wiring checked and finished by Team Stark (15-10-2026, board #54)
+
+- **Already on v20-base** (the squash): the note editor passes `ai: {place: "notes", project, confidential, key}`
+  (`NoteEditor.jsx`), and `NotesPage.jsx` registers `aiAction` `fu-line` ("Make this an action, a risk, a decision or an
+  update", notes only), which flushes the note and shows Find updates in the right-hand column with `p` (the panel E's
+  `mountFindUpdates(path, el, {p})` mounts, hosted as `<FindUpdates p>`).
+- **Fixed:** a selection on no line, or over more than one, used to fall back to Find updates on the whole note; it now says
+  "Select text on one line of the note…" and runs nothing (`selectedLine`).
+- **Tests:** `test_ai_select_notes.py` (5, the real Notes tab); `test_block_ai_select`'s part E test no longer assumes the bar
+  has no registered items. `/api/edit/ai` unchanged: still `--tools ""`, `--strict-mcp-config`, empty allow list, no
+  `--add-dir`; `draft-stats.json` gets counts under `edit` only (a Make this an action hand-over counts nothing).
+- Email's `email` place still waits on Part A's option (b).
+
 ## Alan's decisions (14-10-2026, to Team 2)
 
 - **The security changes are approved as they are:** the `/api/edit/ai` route, the tool-less `edit-ai` run kind and `edit_ai.py`
