@@ -639,47 +639,14 @@ def label_check_failure(con, err, code):
 
 
 def client_findings(block):
-    """Client report: internal-only content in the (possibly edited) draft."""
-    import tracker as t
-    text = "\n".join(draft_lines(paths.resolve(block["draft"])))
-    low = text.lower()
-    con = t.connect()
-    code = block["project"]
-    found = []
-    for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
-        for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
-            if re.search(rf"\b{re.escape(row[0])}\b", text):
-                found.append(f"{row[0]} isn't client-visible but its ID appears")
-            elif len(row[1] or "") >= 15 and squash(row[1]).lower() in squash(low):
-                found.append(f"{row[0]} isn't client-visible but its wording appears: “{row[1][:80]}”")
-    memory = paths.project_dir(code) / "CLAUDE.md"
-    for line in (memory.read_text(encoding="utf-8").splitlines() if memory.exists() else []):
-        if "Client-safe: no" in line:
-            core = squash(re.sub(r"[-*]?\s*\(?Client-safe: no\)?\.?", "", line)).lower()[:40]
-            if len(core) >= 10 and core in squash(low):
-                found.append(f"memory line marked Client-safe: no appears: “{line.strip()[:80]}”")
-    try:                                                       # BL-94's floor: an item whose label excludes it from client output
-        for item_id, label in con.execute("SELECT il.item_id, il.label FROM item_labels il JOIN labels l ON l.name = il.label "
-                                          "WHERE (l.behaviour = 'exclude' OR l.default_choice = 'exclude') AND il.item_id LIKE ?", (f"{code}-%",)):
-            table = t.item_table(item_id)
-            col = {"actions": "description", "raid": "description", "decisions": "decision"}.get(table)
-            row = con.execute(f"SELECT {col}, client_message FROM {table} WHERE id = ?", (item_id,)).fetchone() if col else None
-            wordings = [row[0]] + [ln.split(":", 1)[1] for ln in (row[1] or "").splitlines() if ":" in ln and table != "decisions"] \
-                + ([row[1]] if row and table == "decisions" else []) if row else []      # its own words, and its client wording
-            if re.search(rf"\b{re.escape(item_id)}\b", text):
-                found.append(f"{item_id} is labelled {label} but its ID appears")
-            else:
-                hit = next((w for w in wordings if len((w or "").strip()) >= 15 and squash(w).lower() in squash(low)), None)
-                if hit:
-                    found.append(f"{item_id} is labelled {label} but its wording appears: “{hit.strip()[:80]}”")
-    # ===== BL-228 (sprint-debt-safety) =====  A: the label check fails closed: skipped only when the tables aren't there
-    except Exception as e:  # noqa: BLE001  any failure but a missing table is shown to Alan as a finding
-        found.extend(label_check_failure(con, e, code))
-    # ===== end BL-228 =====
-    for word in ("confidential", "restricted", "documents/"):
-        if word in low:
-            found.append(f"contains “{word}”")
-    return found
+    """Client report: internal-only content in the (possibly edited) draft. v2.1.0 P3: the check itself lives in client_leak.py, on
+    the data; a creaite document is checked there whole (its items too), a Word draft by its text."""
+    import client_leak
+    import creaite_doc
+    draft = paths.resolve(block["draft"])
+    if creaite_doc.is_doc(draft):
+        return client_leak.findings(creaite_doc.read(draft))
+    return client_leak.text_findings(tracker.connect(), block["project"], "\n".join(draft_lines(draft)))
 
 
 # ===== BL-260 point 4 (fix-minutes-approve) =====
@@ -694,6 +661,11 @@ def decide_entry(n, p, data, ref, block, decision, mode=None):
     """decide_draft, after the no-draft check."""
     return no_draft_refusal(n, ref, block, decision) or decide_draft(n, p, data, ref, block, decision, mode)
 # ===== end BL-260 point 4 =====
+
+
+def word_draft(draft):
+    """Whether a block's draft is a Word file (v2.1.0 P3: a creaite document has no Word to compare or clean)."""
+    return bool(draft) and not str(draft).lower().endswith(".html")
 
 
 def decide_draft(n, p, data, ref, block, decision, mode=None):
@@ -721,7 +693,7 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
                     f'"approve {n} --as-staged" to keep them') if any(d.get("item") for d in diffs) else \
                    f'say "re-extract" (minutes.py refresh) to rebuild the staged items from the draft, or "approve {n} --as-staged" to keep them'
             return f"{n}: not approved — the draft differs from the staged items:\n    {listed}\n  ({hint})"
-    if decision == "approved" and draft and ref == "report" and block.get("kind") == "weekly" and mode != "as-staged":
+    if decision == "approved" and word_draft(draft) and ref == "report" and block.get("kind") == "weekly" and mode != "as-staged":
         diffs = weekly_differences(block)
         if diffs and mode == "sync":
             sync_weekly(data, block, diffs)
@@ -739,7 +711,7 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
             listed = "\n    ".join(found)
             return (f"{n}: not approved — possible internal content in the client report:\n    {listed}\n  (edit the "
                     f"draft, or say \"approve {n} --as-staged\" to file it anyway)")
-    if decision == "approved" and draft:
+    if decision == "approved" and word_draft(draft):
         r = subprocess.run([sys.executable, str(DOCX_TOOLS), "clean", str(paths.resolve(draft))],
                            capture_output=True, text=True)
         if r.returncode != 0:

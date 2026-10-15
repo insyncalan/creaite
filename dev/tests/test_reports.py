@@ -352,5 +352,138 @@ class ClientTests(unittest.TestCase):
         self.assertIn("Approved 1.", self.v.run("approve", str(n), "--as-staged", script="review.py").stdout)
 
 
+# ===== v2.1.0 P3 (BL-335, BL-336): the reports in creaite, through the live server's routes =====
+STUB_EXPORT = """
+def export(path, fmt, *, out_dir=None, file_beside=True, open_after=True):
+    return {"ok": True, "format": fmt, "path": str(path), "draft": str(path), "filed": bool(file_beside),
+            "message": "stub export " + fmt}
+"""
+WEEKLY_FILE = f"{ABC}/reports/2026-10-09 Weekly report - Example Programme.html"
+WEEKLY_DRAFT = "system/staging/drafts/2026-10-09 Weekly report - Example Programme.html"
+
+
+class ReportRoutes(unittest.TestCase):
+    """/api/report/draft, save, approve and export on a live server in a throwaway vault (P2's export stubbed as doc_export.py)."""
+
+    @classmethod
+    def setUpClass(cls):
+        import socket
+        import time
+        import urllib.request
+        cls.v = v = ReportVault()
+        populate(v)
+        (v.root / "system/scripts/doc_export.py").write_text(STUB_EXPORT)
+        with socket.socket() as sock:
+            sock.bind(("127.0.0.1", 0))
+            cls.port = sock.getsockname()[1]
+        cls.base = f"http://127.0.0.1:{cls.port}"
+        env = {**os.environ, "CREAITE_PORT": str(cls.port), "CREAITE_NOW": NOW, "CREAITE_NO_LAUNCH": "1"}
+        cls.proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            try:
+                urllib.request.urlopen(cls.base + "/health", timeout=1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        html = urllib.request.urlopen(cls.base + "/").read().decode()
+        cls.token = json.loads(re.search(r'id="data">(.*?)</script>', html, re.S).group(1).replace("<\\/", "</"))["token"]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.terminate()
+        cls.proc.wait(timeout=10)
+        cls.v.cleanup()
+
+    def post(self, path, body):
+        import urllib.request
+        req = urllib.request.Request(self.base + path, data=json.dumps(body).encode(), method="POST",
+                                     headers={"Content-Type": "application/json", "X-Creaite-Token": self.token})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            return json.loads(r.read().decode())
+
+    def section(self, doc, sid):
+        return next(s for s in doc["sections"] if s["id"] == sid)
+
+    def test_1_weekly_draft_save_approve_and_a_new_version(self):
+        r = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(r["ok"], r)
+        self.assertEqual((r["where"], r["version"], r["filed"]), ("new", 0, False))
+        doc = r["doc"]
+        self.assertEqual([s["id"] for s in doc["sections"]][:4], ["header", "health", "glance", "summary"])
+        self.assertEqual(self.section(doc, "risks")["rows"][0]["ref"], "ABC-005")         # Urgent first
+        self.section(doc, "health")["text"] = "UAT start slipped two weeks."
+        self.section(doc, "summary")["text"] = "UAT start has slipped two weeks; escalation is planned."
+        self.section(doc, "asks")["hidden"] = True
+        doc["layout"]["hidden"] = ["asks"]
+        doc["layout"]["headings"] = {"summary": "Executive summary"}
+        s = self.post("/api/report/save", {"doc": doc, "base_version": 0})
+        self.assertTrue(s["ok"], s)
+        self.assertEqual((s["path"], s["version"]), (WEEKLY_DRAFT, 1))
+        settings = json.loads((self.v.root / "system/config/settings.json").read_text())
+        self.assertEqual(settings["report_layouts"]["ABC"]["weekly"]["hidden"], ["asks"])        # remembered for the project
+        a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        filed = (self.v.root / WEEKLY_FILE).read_text(encoding="utf-8")
+        self.assertIn('"state": "approved"', filed)
+        self.assertIn('"client_facts"', filed)
+        self.assertFalse((self.v.root / WEEKLY_DRAFT).exists())
+        up = self.v.rows("updates")
+        self.assertEqual((up[0]["week_ending"], up[0]["health"]), ("2026-10-09", "At risk"))
+        # a filed report is never changed in place: Save makes a new draft; the filed file stays until that is approved
+        r = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertEqual((r["where"], r["filed"]), ("filed", True))
+        doc = r["doc"]
+        self.section(doc, "summary")["text"] = "A second version."
+        s = self.post("/api/report/save", {"doc": doc, "base_version": r["version"]})
+        self.assertEqual((s["ok"], s["path"], s.get("needs_approval")), (True, WEEKLY_DRAFT, None))
+        self.assertEqual((self.v.root / WEEKLY_FILE).read_text(encoding="utf-8"), filed)
+        a = self.post("/api/report/approve", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(a["ok"], a)
+        self.assertIn("A second version.", (self.v.root / WEEKLY_FILE).read_text(encoding="utf-8"))
+        u = self.post("/api/undo", {"apply_id": a["apply_id"]})
+        self.assertTrue(u["ok"], u)
+        self.assertEqual((self.v.root / WEEKLY_FILE).read_text(encoding="utf-8"), filed)        # Undo puts the filed one back
+        self.assertTrue((self.v.root / WEEKLY_DRAFT).exists())
+        nxt = self.post("/api/report/draft", {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-16"})["doc"]
+        self.assertTrue(self.section(nxt, "asks")["hidden"])                                   # next week starts the same way
+        self.assertEqual(self.section(nxt, "summary")["heading"], "Executive summary")
+
+    def test_2_client_view_export_after_the_internal_week_and_never_a_leak(self):
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertTrue(r["ok"], r)
+        self.assertTrue(r["ready"], r)                     # test_1 approved the internal week
+        doc = r["doc"]
+        self.assertEqual(doc["based_on"]["path"], WEEKLY_FILE)
+        self.assertNotIn("ABC-005", json.dumps(doc))
+        self.section(doc, "summary")["text"] = "Restricted: we will absorb the phase one overrun internally."
+        self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 0})["ok"])
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "pdf"})
+        self.assertFalse(e["ok"])
+        self.assertIn("contains “restricted”", e.get("findings", []), e)
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertFalse(a["ok"])
+        self.assertIn("possible internal content", a["message"])
+        self.section(doc, "summary")["text"] = "Testing starts on plan."
+        self.assertTrue(self.post("/api/report/save", {"doc": doc, "base_version": 1})["ok"])
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "fmt": "docx"})
+        self.assertEqual((e["ok"], e["message"], e["filed"], e["launched"]), (True, "stub export docx", False, False))
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09"})
+        self.assertIn("awaiting review", a["message"])           # test_1's Undo left its proposal waiting in Review
+        a = self.post("/api/report/approve", {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "force": True})
+        self.assertTrue(a["ok"], a)
+        self.assertTrue((self.v.root / ABC / "reports/2026-10-09 Client report - Example Programme (Example Client Ltd).html").exists())
+
+    def test_3_client_before_its_internal_week_is_refused(self):
+        r = self.post("/api/report/draft", {"kind": "client", "code": "ABC", "week_ending": "2026-10-23"})
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["baseline"]["date"], "2026-10-09")                 # the latest approved week; the report says which
+        e = self.post("/api/report/export", {"kind": "client", "code": "ABC", "week_ending": "2026-10-23", "fmt": "html"})
+        self.assertEqual(e, {"ok": False, "message": "Save the report before exporting it."})
+        bad = self.post("/api/report/draft", {"kind": "weekly", "code": "ZZZ"})
+        self.assertEqual(bad, {"ok": False, "message": "ZZZ isn't in the tracker."})
+# ===== end v2.1.0 P3 =====
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
