@@ -217,7 +217,7 @@ FAKE = r'''#!/usr/bin/env python3
 import json, sys
 from pathlib import Path
 args = sys.argv[1:]
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 allowed = args[args.index("--allowedTools") + 1].split(",")
 disallowed = args[args.index("--disallowedTools") + 1].split(",")
 system = args[args.index("--append-system-prompt") + 1]

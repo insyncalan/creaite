@@ -26,7 +26,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
 args = sys.argv[1:]
-message = args[args.index("-p") + 1].split("\n")[0]
+message = args[args.index("--") + 1].split("\n")[0]
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-field"})
 if message.startswith("edit "):                 # edit <ID> | <field> | <value> ; <ID> | <field> | <value> ...
