@@ -42,7 +42,12 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 The target is half the cost per shipped item. Most of the cost is long contexts re-read on every turn, and new agents writing a fresh context.
 - **Restart or `/compact` a lead session (and Jarvis)** when its context passes about 150,000 tokens, or after each release cut, whichever comes first; at least twice a day. After more than an hour idle, start fresh with a handover rather than resuming.
 - **Fewer new agents:** one agent per item; a follow-up goes to the agent that did the work.
-- **Models for agents:** Haiku 5.5 for merges, rebuilds, ticking boxes and board scans; Sonnet 5.5 for docs, release notes and hand-check text; Opus for all code, guard, security, permissions and the writer, until BL-343's replay test says otherwise.
+- **Lead sessions run on Sonnet 5.5** (Alan, 15-10-2026): both team leads and Jarvis. Switch with `/model sonnet` at the next `/compact` or restart (a switch mid-context rewrites the whole cache once). A lead that has to judge a guard, security or permission diff, or a hard design call, hands it to an Opus agent with a tight brief.
+- **Every agent names its model** (the Agent tool's `model`); an agent with no model is a mistake. Pick the cheapest that fits:
+  - **Haiku 5.5:** running suites and checks, rebuilds (`dashboard.html`), board scans and ticks, finding files, counting.
+  - **Sonnet 5.5:** docs, release notes, hand-check text, tests only (no product code), dashboard copy and CSS, merges with conflicts in docs, fixing a check.py finding.
+  - **Opus 5.5:** product code in `system/scripts/` and the dashboard's logic, the guard, security, permissions and the writer, until BL-343's replay test says otherwise.
+- **Cache reads cost the same on Sonnet as on Opus**, so a short context still saves the most; the model switch halves what's written and generated.
 - **Tight briefs** (the issue, the files, the tests), and no local full suites when Actions runs the same suite.
 
 ## Rules
