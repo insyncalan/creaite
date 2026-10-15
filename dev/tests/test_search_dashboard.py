@@ -54,6 +54,21 @@ SCRIPT = r"""
     // nothing found
     await type(el("vsInput"),"zzzqqq"); out.empty=document.querySelector("#vsResults .empty")?.textContent||"";
     el("vsInput").value=""; el("vsInput").dispatchEvent(new Event("input",{bubbles:true})); await wait(300);
+    // #95: while the server builds the index its reply carries `indexing: true`: a quiet line says so, it stays while you keep typing, and the next reply without it clears it
+    {   const real=window.fetch, stub={indexing:true}, note=()=>el("vsIndexing");
+        window.fetch=async(u,o)=>{ if(!String(u).startsWith("/api/search?")) return real(u,o); const j=await (await real(u,o)).json(); if(stub.indexing) j.indexing=true; return new Response(JSON.stringify(j),{status:200}); };
+        const shown=()=>!note().hidden&&note().textContent;
+        out.ixBefore=!!note().hidden; inp.focus(); await type(inp,"data access");
+        out.ix=[shown(),rows().length>0,document.activeElement===inp];
+        const seen=[]; for(const t of ["data access p","data access pl","data access plan"]){ inp.value=t; inp.dispatchEvent(new Event("input",{bubbles:true})); for(let i=0;i<8;i++){ await wait(40); seen.push(!!shown()); } }
+        await wait(500); out.ixTyping=[seen.every(Boolean),seen.length,shown(),document.activeElement===inp];
+        stub.indexing=false; await type(inp,"data access"); out.ixCleared=[note().hidden,note().textContent,rows().length>0];
+        stub.indexing=true; await type(inp,"data access"); out.ixAgain=!!shown(); inp.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true})); out.ixEsc=note().hidden;
+        // ⌘K: the line sits under the results while the replies say so, and goes with the first reply that doesn't
+        openCk(); const ckn=()=>document.querySelector("#cmdkList [data-ckindexing]"), ckIn=el("cmdkIn");
+        await type(ckIn,"data access"); out.ixCk=[ckn()?.textContent,document.activeElement===ckIn];
+        stub.indexing=false; await type(ckIn,"data access plan"); out.ixCkCleared=[!!ckn(),document.querySelectorAll("#cmdkList button").length>0];
+        el("cmdk").close(); window.fetch=real; vsClear(); }
     // ⌘K: a search row from three characters, with the top five results beneath the jump list
     openCk(); const ck=el("cmdkIn"); ck.value="da"; ck.dispatchEvent(new Event("input")); out.ckShort=[...document.querySelectorAll("#cmdkList button")].some(b=>b.textContent.startsWith("Search the vault"));
     ck.value="data access"; ck.dispatchEvent(new Event("input")); await wait(700);
@@ -170,6 +185,19 @@ class SearchPageTests(unittest.TestCase):
         self.assertEqual(r["calls"], 1)
         self.assertEqual(r["cleared"], ["", False, True, 0])
         self.assertIn("Nothing found", r["empty"])
+
+    def test_indexing_note_shows_stays_while_typing_and_clears(self):
+        r = self.r
+        note = "Search is still being indexed; results may be incomplete."
+        self.assertTrue(r["ixBefore"])
+        self.assertEqual(r["ix"], [note, True, True])              # shown beside the results, focus kept
+        self.assertEqual(r["ixTyping"][0], True)                   # present at every sample while the typing went on
+        self.assertEqual(r["ixTyping"][2:], [note, True])
+        self.assertEqual(r["ixCleared"], [True, "", True])         # the next reply without `indexing` clears it
+        self.assertTrue(r["ixAgain"])
+        self.assertTrue(r["ixEsc"])                                # clearing the search clears it
+        self.assertEqual(r["ixCk"], [note, True])                  # the same line in the ⌘K results
+        self.assertEqual(r["ixCkCleared"], [False, True])
 
     def test_command_palette_row(self):
         r = self.r

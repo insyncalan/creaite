@@ -3172,7 +3172,7 @@ button.nchip{font:inherit;font-size:12px}
           <div class="vsbar"><input id="vsInput" type="search" placeholder="Search the vault" aria-label="Search the vault" autocomplete="off">
             <span class="askwrap"><button type="button" class="askbtn" id="vsAskBtn" data-state="idle" aria-disabled="true" title="ask creaite: an answer with a link to the source for every point."><svg class="spark" viewBox="320 210 92 92" aria-hidden="true"><path d="M366 214Q366 256 408 256Q366 256 366 298Q366 256 324 256Q366 256 366 214Z" fill="currentColor"/></svg><span class="asklab">ask creaite</span><span class="askret" aria-hidden="true">↵</span></button><button type="button" class="askstop" id="vsAskStop" hidden>Stop</button></span></div>
           <div class="vshint sub" id="vsHint" data-codeok>For example: risks ABC last month, or what did Sara say about UAT?</div>
-          <div class="vschips" id="vsChips" aria-live="polite"></div><div class="sub" id="vsNote" aria-live="polite"></div><div id="vsAnswer" hidden></div><div id="vsResults" hidden></div></div></div>
+          <div class="vschips" id="vsChips" aria-live="polite"></div><div class="sub" id="vsNote" aria-live="polite"></div><div class="vshint sub" id="vsIndexing" role="status" hidden></div><div id="vsAnswer" hidden></div><div id="vsResults" hidden></div></div></div>
         <div class="files" style="margin-top:14px"><div class="tree" id="tree"></div>
           <div><div class="views" id="fquick" style="margin-bottom:10px"></div>
             <div class="toolbar" style="margin-top:0"><!-- BL-214 (sprint-ui-audit): each filter has a name --><input id="fsName" type="search" aria-label="Search file names" placeholder="Search file names" style="height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;min-width:220px;background:var(--surface);font-size:var(--ctl-fs)">
@@ -3428,6 +3428,7 @@ button.nchip{font:inherit;font-size:12px}
     IMG_BYTES: () => IMG_BYTES,
     IMG_MAX: () => IMG_MAX,
     IMG_SIDE: () => IMG_SIDE,
+    INDEXING_NOTE: () => INDEXING_NOTE,
     INFLIGHT: () => INFLIGHT,
     INRUN: () => INRUN,
     INSEL: () => INSEL,
@@ -5551,6 +5552,7 @@ button.nchip{font:inherit;font-size:12px}
     vsClear: () => vsClear,
     vsConsume: () => vsConsume,
     vsContinue: () => vsContinue,
+    vsIndexing: () => vsIndexing,
     vsProjects: () => vsProjects,
     vsRender: () => vsRender,
     vsRow: () => vsRow,
@@ -54433,6 +54435,13 @@ ${d5.text}`);
   var SKIND = { action: "Action", risk: "Risk", issue: "Issue", assumption: "Assumption", dependency: "Dependency", decision: "Decision", milestone: "Milestone", minutes: "Minutes", transcript: "Transcript", report: "Report", document: "Document" };
   var SGROUP = { items: "Items", meetings: "Meetings", reports: "Reports", documents: "Documents", notes: "Notes" };
   var searchIco = (k5) => ico(k5 === "action" ? "action" : k5 === "decision" ? "decision" : k5 === "milestone" ? "milestone" : ["risk", "issue", "assumption", "dependency"].includes(k5) ? k5[0].toUpperCase() + k5.slice(1) : "");
+  var INDEXING_NOTE = "Search is still being indexed; results may be incomplete.";
+  function vsIndexing(on2) {
+    const e4 = $("#vsIndexing");
+    if (!e4 || e4.hidden === !on2) return;
+    e4.textContent = on2 ? INDEXING_NOTE : "";
+    e4.hidden = !on2;
+  }
   async function searchFetch(q5, skip) {
     const p6 = new URLSearchParams({ q: q5 });
     if (skip && skip.length) p6.set("skip", skip.join(","));
@@ -54469,6 +54478,7 @@ ${d5.text}`);
     SRCH.skip = [];
     SRCH.res = null;
     SRCH.q = "";
+    vsIndexing(false);
     $("#vsInput").value = "";
     $("#vsChips").textContent = "";
     $("#vsNote").textContent = "";
@@ -54491,6 +54501,7 @@ ${d5.text}`);
     vsShow(true);
     if (!viaServer()) {
       SRCH.res = null;
+      vsIndexing(false);
       $("#vsResults").textContent = "";
       putHTML($("#vsNote"), html`Live server needed: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`);
       $("#vsChips").textContent = "";
@@ -54502,6 +54513,7 @@ ${d5.text}`);
       const res = await searchFetch(q5, SRCH.skip);
       if (seq2 !== SRCH.seq) return;
       SRCH.res = res;
+      vsIndexing(!!res.indexing);
       vsRender();
     } catch (e4) {
       if (seq2 === SRCH.seq) {
@@ -54574,7 +54586,7 @@ ${d5.text}`);
     runSearch();
     $("#vsInput").focus();
   }
-  var CKS = { q: "", items: [], timer: null };
+  var CKS = { q: "", items: [], timer: null, indexing: false };
   function searchCkItems() {
     const q5 = $("#cmdkIn").value.trim();
     if (q5.length < 3) return [];
@@ -54590,6 +54602,7 @@ ${d5.text}`);
         try {
           const res = await searchFetch(q5);
           CKS.q = q5;
+          CKS.indexing = !!res.indexing;
           CKS.items = Object.keys(SGROUP).flatMap((g5) => res.groups[g5]).slice(0, 5);
           if ($("#cmdk").open && $("#cmdkIn").value.trim() === q5) {
             const was = shared.CKI;
@@ -57002,6 +57015,7 @@ ${d5.text}`);
       }
       h5 += `<button data-i="${i5}" aria-selected="${i5 === shared.CKI}">${esc(it2.l)}<small>${esc(it2.h)}</small></button>`;
     });
+    if (CKS.indexing && $("#cmdkIn").value.trim().length >= 3) h5 += `<div class="grp" data-ckindexing>${INDEXING_NOTE}</div>`;
     putHTML($("#cmdkList"), h5 ? raw(h5) : html`<div class="grp">No matches.</div>`);
     $("#cmdkList [aria-selected=true]")?.scrollIntoView({ block: "nearest" });
     {
@@ -59777,6 +59791,7 @@ ${d5.text}`);
         "vipPoll",
         "vsAnswerDraw",
         "vsClear",
+        "vsIndexing",
         "warnsOf",
         "wflag",
         "who",

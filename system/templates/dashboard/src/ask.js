@@ -38,6 +38,9 @@ export const SEARCHCFG=Object.assign({debounce_ms:150},D.search||{});
 export const SKIND={action:"Action",risk:"Risk",issue:"Issue",assumption:"Assumption",dependency:"Dependency",decision:"Decision",milestone:"Milestone",minutes:"Minutes",transcript:"Transcript",report:"Report",document:"Document"};
 export const SGROUP={items:"Items",meetings:"Meetings",reports:"Reports",documents:"Documents",notes:"Notes"};   /* BL-301 B: notes, their own group */
 export const searchIco=k=>ico(k==="action"?"action":k==="decision"?"decision":k==="milestone"?"milestone":["risk","issue","assumption","dependency"].includes(k)?k[0].toUpperCase()+k.slice(1):"");
+/* #95: while the server builds the search index it answers with `indexing: true` and searches what it has; say so, quietly, until a reply without it */
+export const INDEXING_NOTE="Search is still being indexed; results may be incomplete.";
+export function vsIndexing(on){ const e=$("#vsIndexing"); if(!e||e.hidden===!on) return; e.textContent=on?INDEXING_NOTE:""; e.hidden=!on; }
 export async function searchFetch(q,skip){ const p=new URLSearchParams({q}); if(skip&&skip.length) p.set("skip",skip.join(","));
   const r=await fetch("/api/search?"+p,{headers:{"X-Creaite-Token":D.token||""}}); if(r.status===404) throw new Error(OLDSERVER); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).message||"Search failed"); return await r.json(); }
 export const vsProjects=p=>String(p||"").split(" ").filter(Boolean).map(c=>c==="_portfolio"?'<span class="pcode">Portfolio</span>':pLink(c)).join(" ");
@@ -51,12 +54,12 @@ export function vsRender(){ const res=SRCH.res, box=$("#vsResults"); if(!res){ b
     return html`<h3 class="vsh">${SGROUP[g]} <span class="sub">· ${t>L.length?`${L.length} of ${t}`:t}</span></h3>${L.map((r,i)=>vsRow(r,g+":"+i))}`; });
   putHTML(box,groups.length?html`${groups}`:html`<div class="empty">Nothing found. Try fewer words, or remove a filter above.</div>`);   /* BL-88: the ask creaite button replaces the Ask row */
   $("#vsNote").textContent=n?`${n} result${n===1?"":"s"}${res.chips.length?" · filters understood from what you typed":""}`:""; }
-export function vsClear(){ if(shared.ASKQ.done||!shared.ASKQ.run){ shared.ASKQ={run:null}; vsAnswerDraw(); } SRCH.skip=[]; SRCH.res=null; SRCH.q=""; $("#vsInput").value=""; $("#vsChips").textContent=""; $("#vsNote").textContent=""; $("#vsResults").textContent=""; vsShow(false); vsAskSync(); }
+export function vsClear(){ if(shared.ASKQ.done||!shared.ASKQ.run){ shared.ASKQ={run:null}; vsAnswerDraw(); } SRCH.skip=[]; SRCH.res=null; SRCH.q=""; vsIndexing(false); $("#vsInput").value=""; $("#vsChips").textContent=""; $("#vsNote").textContent=""; $("#vsResults").textContent=""; vsShow(false); vsAskSync(); }
 export function vsShow(on){ const f=$("#v-files .files"); if(f) f.hidden=on; $("#vsResults").hidden=!on; }
 export let runSearch = async function(){ const q=$("#vsInput").value.trim(); SRCH.q=q; if(!q){ vsClear(); return; } vsShow(true);
-  if(!viaServer()){ SRCH.res=null; $("#vsResults").textContent=""; putHTML($("#vsNote"),html`Live server needed: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`); $("#vsChips").textContent=""; return; }
+  if(!viaServer()){ SRCH.res=null; vsIndexing(false); $("#vsResults").textContent=""; putHTML($("#vsNote"),html`Live server needed: search runs through it. <button class="mini" data-copycmd>Copy the start command</button>`); $("#vsChips").textContent=""; return; }
   const seq=++SRCH.seq; $("#vsNote").textContent="Searching…";
-  try{ const res=await searchFetch(q,SRCH.skip); if(seq!==SRCH.seq) return; SRCH.res=res; vsRender(); }catch(e){ if(seq===SRCH.seq){ $("#vsNote").textContent=oneLine(e.message); } } };
+  try{ const res=await searchFetch(q,SRCH.skip); if(seq!==SRCH.seq) return; SRCH.res=res; vsIndexing(!!res.indexing); vsRender(); }catch(e){ if(seq===SRCH.seq){ $("#vsNote").textContent=oneLine(e.message); } } };
 export function openResult(key){ const [g,i]=key.split(":"), r=SRCH.res&&SRCH.res.groups[g]&&SRCH.res.groups[g][+i]; if(r) openFound(r); }
 /* where a result belongs: an item in its panel, a meeting in the preview, a report or document in the system viewer */
 const SHOWARCH="Show archived projects (Settings › People and projects › Projects and register)";
@@ -77,11 +80,11 @@ export async function searchPreview(path,q){ if(!viaServer()){ snack("Previewing
   const m=$("#spText mark"); if(m) m.scrollIntoView({block:"center"}); }
 export function openSearch(q){ go("files"); $("#vsInput").value=q; SRCH.skip=[]; runSearch(); $("#vsInput").focus(); }
 /* ⌘K: a "Search the vault…" row from three characters, with the top five results under the jump list */
-export const CKS={q:"",items:[],timer:null};
+export const CKS={q:"",items:[],timer:null,indexing:false};
 export function searchCkItems(){ const q=$("#cmdkIn").value.trim(); if(q.length<3) return []; const out=[{g:"Search",l:`Search the vault for “${q}”…`,h:"Files",fn:()=>openSearch(q)}];
   if(questionLike(q)) out.unshift({g:"Search",l:`ask creaite: “${q}”`,h:"An answer with sources",fn:()=>{ openSearch(q); askClaude(); }});
   if(CKS.q===q) CKS.items.forEach((r,i)=>out.push({g:"Search results",l:r.title,h:[SKIND[r.kind],r.date_shown].filter(Boolean).join(" · "),fn:()=>openFound(r)}));
-  else if(viaServer()){ clearTimeout(CKS.timer); CKS.timer=setTimeout(async()=>{ try{ const res=await searchFetch(q); CKS.q=q; CKS.items=Object.keys(SGROUP).flatMap(g=>res.groups[g]).slice(0,5);
+  else if(viaServer()){ clearTimeout(CKS.timer); CKS.timer=setTimeout(async()=>{ try{ const res=await searchFetch(q); CKS.q=q; CKS.indexing=!!res.indexing; CKS.items=Object.keys(SGROUP).flatMap(g=>res.groups[g]).slice(0,5);
       if($("#cmdk").open&&$("#cmdkIn").value.trim()===q){ const was=shared.CKI; shared.CK=ckItems($("#cmdkIn").value); shared.CKI=Math.min(was,shared.CK.length-1); drawCk(); } }catch(e){} },SEARCHCFG.debounce_ms); }
   return out; }
 
@@ -960,7 +963,8 @@ export function ckItems(q){ let out=(q=>{ q=q.toLowerCase(); const out=[]; const
     out=[...pre,...out]; } } }   /* BL-209 */
   if(!q||"close the day evening end".includes(q.toLowerCase())||/^close( the)? day/i.test(q)) out.splice(!q?Math.max(0,out.findIndex(x=>x.g==="Actions")):0,0,{g:"Actions",l:"Close the day",h:"Today",fn:()=>{ go("today"); openClose(); }});   /* BL-205 */
   return out; }
-export function drawCk(){ let g="",h=""; shared.CK.forEach((it,i)=>{ if(it.g!==g){ g=it.g; h+=`<div class="grp">${g}</div>`; } h+=`<button data-i="${i}" aria-selected="${i===shared.CKI}">${esc(it.l)}<small>${esc(it.h)}</small></button>`; }); putHTML($("#cmdkList"),h?raw(h):html`<div class="grp">No matches.</div>`); $("#cmdkList [aria-selected=true]")?.scrollIntoView({block:"nearest"});
+export function drawCk(){ let g="",h=""; shared.CK.forEach((it,i)=>{ if(it.g!==g){ g=it.g; h+=`<div class="grp">${g}</div>`; } h+=`<button data-i="${i}" aria-selected="${i===shared.CKI}">${esc(it.l)}<small>${esc(it.h)}</small></button>`; }); if(CKS.indexing&&$("#cmdkIn").value.trim().length>=3) h+=`<div class="grp" data-ckindexing>${INDEXING_NOTE}</div>`;   /* #95: kept until the next reply, so typing doesn't flicker it */
+  putHTML($("#cmdkList"),h?raw(h):html`<div class="grp">No matches.</div>`); $("#cmdkList [aria-selected=true]")?.scrollIntoView({block:"nearest"});
   { const pv=$("#ckPrev");
     const it=shared.CK[shared.CKI]; pv.hidden=!(it&&it.change); putHTML(pv,it&&it.change?raw(ckPreview(it.change)):""); $("#cmdkList").querySelectorAll("button").forEach((b,i)=>{ if(shared.CK[i]&&shared.CK[i].g.startsWith("Change")) b.classList.add("ckchg"); }); } }
 export function openCk(){ shared.CKPICK={}; $("#cmdkIn").value=""; shared.CK=ckItems(""); shared.CKI=0; drawCk(); openDialog("cmdk",{focus:"#cmdkIn"}); }
