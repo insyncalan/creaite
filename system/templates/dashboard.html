@@ -3019,12 +3019,26 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
-.ntpick{position:absolute;z-index:5;width:300px;max-width:calc(100% - 8px);background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px;overflow:hidden}
+.ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
 .ntpick .r.on{background:var(--accent-soft)} .ntpick .r .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ntpick .r small{color:var(--faint);margin-left:auto;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
 .ntpick .r.none{color:var(--muted);cursor:default}
+/* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
+.slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
+.slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
+.slashmenu .r.on{background:var(--accent-soft)}
+.slashmenu .ic{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--surface);display:grid;place-items:center;flex:none;font:600 11px var(--font);color:var(--ink)}
+.slashmenu .r.on .ic{border-color:var(--accent)}
+.slashmenu .tx{display:flex;flex-direction:column;min-width:0}
+.slashmenu .t{font-weight:500;line-height:1.25}
+.slashmenu .d{color:var(--muted);font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slashmenu .k{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.slashmenu .r.none{color:var(--muted);cursor:default;padding:8px}
+.slashmenu .foot{position:sticky;bottom:-4px;background:var(--surface);border-top:1px solid var(--line);margin:4px -4px -4px;padding:6px 12px;font-size:11px;color:var(--faint)}
+@media (forced-colors:active){.slashmenu{border-color:CanvasText}.slashmenu .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}.slashmenu .r.on .d,.slashmenu .r.on .k{color:HighlightText}.slashmenu .ic{border-color:CanvasText}.ntpick .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}}
 .nctx{display:flex;flex-direction:column;gap:12px;min-width:0}
 .nctx .box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
 .nctx .box h2{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
@@ -3408,6 +3422,8 @@ button.nchip{font:inherit;font-size:12px}
     ED_HOOKS: () => ED_HOOKS,
     ED_PROFILES: () => ED_PROFILES,
     ED_QUIET: () => ED_QUIET,
+    ED_SLASH: () => ED_SLASH,
+    ED_SLASH_ROWS: () => ED_SLASH_ROWS,
     ED_TOOLS: () => ED_TOOLS,
     EVS: () => EVS,
     EVWHAT: () => EVWHAT,
@@ -5462,6 +5478,7 @@ button.nchip{font:inherit;font-size:12px}
     shrinkImage: () => shrinkImage,
     sizeList: () => sizeList,
     sl: () => sl2,
+    slashRows: () => slashRows,
     sleep: () => sleep,
     slideDown: () => slideDown,
     snack: () => snack,
@@ -24565,6 +24582,53 @@ ${s5}`;
     undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
     redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
   };
+  var ED_SLASH = {
+    text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", run: (c5) => c5.setParagraph() },
+    h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", run: (c5) => c5.setHeading({ level: 1 }) },
+    h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", run: (c5) => c5.setHeading({ level: 2 }) },
+    h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", run: (c5) => c5.setHeading({ level: 3 }) },
+    ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", run: (c5) => c5.toggleBulletList() },
+    ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", run: (c5) => c5.toggleOrderedList() },
+    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", node: "taskList", run: (c5) => c5.toggleTaskList() },
+    quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", run: (c5) => c5.toggleBlockquote() },
+    codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
+    table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", host: true },
+    image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", host: true },
+    item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", host: true },
+    person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
+    note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
+    "tpl:stakeholder": { id: "tpl:stakeholder", group: "Templates", name: "Stakeholder", desc: "Role, what matters to them, how they work", icon: "◇", host: true },
+    "tpl:lessons-learned": { id: "tpl:lessons-learned", group: "Templates", name: "Lessons learned", desc: "What happened, what to change", icon: "◇", host: true },
+    "tpl:working-session": { id: "tpl:working-session", group: "Templates", name: "Working session", desc: "A conversation: its date and who it was with", icon: "◇", host: true }
+  };
+  var ED_SLASH_ROWS = {
+    notes: [
+      "text",
+      "h1",
+      "h2",
+      "h3",
+      "ul",
+      "ol",
+      "task",
+      "quote",
+      "codeblock",
+      "table",
+      "image",
+      "item",
+      "person",
+      "note",
+      "tpl:stakeholder",
+      "tpl:lessons-learned",
+      "tpl:working-session"
+    ],
+    current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
+    plain: [],
+    none: []
+  };
+  function slashRows(profile, hostRows, schema, q5 = "") {
+    const ql2 = q5.trim().toLowerCase();
+    return (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]) && (!ql2 || r4.name.toLowerCase().includes(ql2) || r4.desc.toLowerCase().includes(ql2) || ql2 === "h" && r4.id[0] === "h" && r4.id.length === 2));
+  }
   function itemType(e4) {
     return e4.isActive("taskItem") ? "taskItem" : "listItem";
   }
@@ -24873,6 +24937,222 @@ ${s5}`;
   }
   function unmountEditorBar(el2) {
     R(null, el2);
+  }
+
+  // core/caretPlace.js
+  function placeAtCaret(view, pos, el2, o5 = {}) {
+    const gap = o5.gap ?? 4, edge = o5.edge ?? 8, max = o5.max ?? 360;
+    const put2 = () => {
+      if (!el2.isConnected || view.isDestroyed) return;
+      let c5;
+      try {
+        c5 = view.coordsAtPos(Math.min(pos, view.state.doc.content.size));
+      } catch (e4) {
+        return;
+      }
+      const vw2 = document.documentElement.clientWidth, vh2 = window.innerHeight;
+      el2.style.position = "fixed";
+      el2.style.maxHeight = "";
+      el2.style.overflowY = "auto";
+      const w6 = el2.offsetWidth, natural = Math.min(el2.scrollHeight, max);
+      const below = vh2 - c5.bottom - gap - edge, above = c5.top - gap - edge;
+      const up2 = natural > below && above > below;
+      const room = Math.max(60, up2 ? above : below), h5 = Math.min(natural, room);
+      el2.style.maxHeight = `${Math.min(max, room)}px`;
+      el2.style.left = `${Math.max(edge, Math.min(c5.left, vw2 - w6 - edge))}px`;
+      el2.style.top = `${up2 ? Math.max(edge, c5.top - gap - h5) : c5.bottom + gap}px`;
+      el2.dataset.side = up2 ? "above" : "below";
+    };
+    put2();
+    const on2 = () => put2();
+    window.addEventListener("scroll", on2, true);
+    window.addEventListener("resize", on2);
+    const vv = window.visualViewport;
+    if (vv) vv.addEventListener("resize", on2);
+    return () => {
+      window.removeEventListener("scroll", on2, true);
+      window.removeEventListener("resize", on2);
+      if (vv) vv.removeEventListener("resize", on2);
+    };
+  }
+
+  // components/SlashMenu.jsx
+  var seq = 0;
+  function slashAt(editor) {
+    const s5 = editor.state.selection;
+    if (!s5.empty) return null;
+    const $f2 = s5.$from;
+    if ($f2.parent.type.name !== "paragraph") return null;
+    if ($f2.marks().some(
+      /** @param {any} m */
+      (m6) => m6.type.name === "code" || m6.type.name === "link"
+    )) return null;
+    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)\/([\w-]{0,20})$/.exec(before);
+    if (!m5) return null;
+    return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
+  }
+  function SlashList({ state, id: id2, view, pick, hover }) {
+    const box = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    _2(() => {
+      const el2 = box.current;
+      if (!el2) return void 0;
+      return placeAtCaret(view, state.from, el2);
+    }, [state.rows.length, state.from, state.q]);
+    h2(() => {
+      const on2 = box.current && box.current.querySelector(".r.on");
+      if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest" });
+    }, [state.i]);
+    const groups = [];
+    state.rows.forEach((r4, i5) => {
+      let g5 = groups[groups.length - 1];
+      if (!g5 || g5.g !== r4.group) {
+        g5 = { g: r4.group, rows: [] };
+        groups.push(g5);
+      }
+      g5.rows.push({ r: r4, i: i5 });
+    });
+    return /* @__PURE__ */ u2("div", { ref: box, class: "slashmenu", id: id2, role: "listbox", "aria-label": "Insert", onMouseDown: (e4) => e4.preventDefault(), children: [
+      state.rows.length ? groups.map((g5) => /* @__PURE__ */ u2("div", { role: "group", "aria-label": g5.g, children: [
+        /* @__PURE__ */ u2("div", { class: "g", "aria-hidden": "true", children: g5.g }),
+        g5.rows.map(({ r: r4, i: i5 }) => /* @__PURE__ */ u2(
+          "div",
+          {
+            id: `${id2}-${i5}`,
+            role: "option",
+            "data-slash": r4.id,
+            "aria-selected": i5 === state.i ? "true" : "false",
+            class: `r${i5 === state.i ? " on" : ""}`,
+            onMouseMove: () => {
+              if (i5 !== state.i) hover(i5);
+            },
+            onClick: () => pick(r4),
+            children: [
+              /* @__PURE__ */ u2("span", { class: "ic", "aria-hidden": "true", children: r4.icon }),
+              /* @__PURE__ */ u2("span", { class: "tx", children: [
+                /* @__PURE__ */ u2("span", { class: "t", children: r4.name }),
+                /* @__PURE__ */ u2("span", { class: "d", children: r4.desc })
+              ] }),
+              r4.key ? /* @__PURE__ */ u2("span", { class: "k", "aria-hidden": "true", children: r4.key }) : null
+            ]
+          },
+          r4.id
+        ))
+      ] }, g5.g)) : /* @__PURE__ */ u2("div", { class: "r none", role: "option", "aria-disabled": "true", "aria-selected": "false", children: "No match" }),
+      /* @__PURE__ */ u2("div", { class: "foot", "aria-hidden": "true", children: "↑↓ to move · Enter to insert · Esc to close" })
+    ] });
+  }
+  function attachSlash(h5, { profile, host: host2 }) {
+    const id2 = `slash-${++seq}`, editor = h5.editor, view = editor.view, el2 = h5.el;
+    const hostRows = Object.keys(host2 || {});
+    if (!slashRows(profile, hostRows, editor.schema).length) return () => {
+    };
+    const root = document.createElement("div");
+    root.className = "slashroot";
+    (el2.closest("dialog[open]") || document.body).appendChild(root);
+    let st2 = null;
+    let dismissed = -1;
+    const draw2 = () => {
+      R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
+        if (st2) {
+          st2 = { ...st2, i: i5 };
+          draw2();
+        }
+      } }) : null, root);
+      const dom = (
+        /** @type {HTMLElement} */
+        view.dom
+      );
+      if (st2) {
+        dom.setAttribute("aria-haspopup", "listbox");
+        dom.setAttribute("aria-expanded", "true");
+        dom.setAttribute("aria-controls", id2);
+        if (st2.rows[st2.i]) dom.setAttribute("aria-activedescendant", `${id2}-${st2.i}`);
+        else dom.removeAttribute("aria-activedescendant");
+      } else {
+        dom.removeAttribute("aria-expanded");
+        dom.removeAttribute("aria-controls");
+        dom.removeAttribute("aria-activedescendant");
+      }
+    };
+    const close = () => {
+      if (!st2) return;
+      st2 = null;
+      draw2();
+    };
+    const look = () => {
+      if (editor.isDestroyed || view.composing) return;
+      const a5 = slashAt(editor);
+      if (!a5 || a5.from === dismissed) {
+        if (!a5) dismissed = -1;
+        return close();
+      }
+      const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
+      if (!rows2.length && !a5.q) return close();
+      st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
+      draw2();
+    };
+    const choose = (r4) => {
+      const s5 = st2;
+      if (!s5) return;
+      close();
+      const c5 = editor.chain().focus().deleteRange({ from: s5.from, to: s5.to });
+      if (r4.host) {
+        c5.run();
+        const f5 = host2 && host2[r4.id];
+        if (f5) f5();
+        return;
+      }
+      if (r4.run) r4.run(c5, editor).run();
+    };
+    const keys = (e4) => {
+      if (!st2 || e4.isComposing || view.composing) return;
+      const n4 = st2.rows.length;
+      if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        if (n4) {
+          st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
+          draw2();
+        }
+      } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
+        if (n4) {
+          e4.preventDefault();
+          e4.stopPropagation();
+          choose(st2.rows[st2.i]);
+        } else close();
+      } else if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        dismissed = st2.from;
+        close();
+      }
+    };
+    const blur = () => setTimeout(() => {
+      if (!el2.contains(document.activeElement)) close();
+    }, 120);
+    const comp = () => look();
+    editor.on("selectionUpdate", look);
+    editor.on("update", look);
+    el2.addEventListener("keydown", keys, true);
+    el2.addEventListener("focusout", blur);
+    el2.addEventListener("compositionend", comp);
+    const off = () => {
+      editor.off("destroy", off);
+      editor.off("selectionUpdate", look);
+      editor.off("update", look);
+      el2.removeEventListener("keydown", keys, true);
+      el2.removeEventListener("focusout", blur);
+      el2.removeEventListener("compositionend", comp);
+      st2 = null;
+      R(null, root);
+      root.remove();
+      if (!editor.isDestroyed) for (const a5 of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a5);
+    };
+    editor.on("destroy", off);
+    return off;
   }
 
   // stores/rail.js
@@ -25601,7 +25881,7 @@ ${s5}`;
   var timer = 0, opener = (
     /** @type {Element|null} */
     null
-  ), seq = 0;
+  ), seq2 = 0;
   var where = (code) => code && code !== "_portfolio" ? pName(code) : "Unfiled";
   var hasText = (n4) => !!(n4.title.trim() || n4.body.trim());
   var typed = (n4) => hasText(n4) && `${n4.title}\0${n4.body}` !== (n4.loaded ?? "\0");
@@ -25626,8 +25906,8 @@ ${s5}`;
   async function guess() {
     const n4 = capNote.value;
     if (!viaServer() || n4.chosen || n4.how === "meeting" || !(n4.title.trim() || n4.body.trim())) return;
-    const mine = ++seq, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
-    if (mine !== seq || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
+    const mine = ++seq2, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
+    if (mine !== seq2 || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
     const code = r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "";
     patchNote({ code, how: "guess", reason: r4.reason || "" });
   }
@@ -34064,7 +34344,7 @@ ${s5}`;
     const input = A2(
       /** @type {HTMLInputElement|null} */
       null
-    ), seq2 = A2(0), timer2 = A2(0);
+    ), seq3 = A2(0), timer2 = A2(0);
     const draftRef = A2(
       /** @type {SneakDraft|null} */
       null
@@ -34080,7 +34360,7 @@ ${s5}`;
       if (d5 && d5.d) draftStat(d5.feature, "rejected");
     }, []);
     async function read(t47, pk2) {
-      const n4 = ++seq2.current;
+      const n4 = ++seq3.current;
       if (!t47.trim()) {
         setReply(null);
         return null;
@@ -34098,12 +34378,12 @@ ${s5}`;
         /** @type {SneakReply} */
         await api("/api/sneak/read", body2)
       );
-      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq2.current; i5++) {
+      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq3.current; i5++) {
         await new Promise((res) => setTimeout(res, 300));
         r5 = /** @type {SneakReply} */
         await api("/api/sneak/read", body2);
       }
-      if (n4 !== seq2.current) return null;
+      if (n4 !== seq3.current) return null;
       setReply(r5);
       return r5;
     }
@@ -34127,7 +34407,7 @@ ${s5}`;
         setDraft(null);
       }
       if (t47.trim().length < 2) {
-        seq2.current++;
+        seq3.current++;
         setReply(null);
         return;
       }
@@ -34164,7 +34444,7 @@ ${s5}`;
         setDone({ text: res.message || "Not changed.", ok: false });
         return;
       }
-      seq2.current++;
+      seq3.current++;
       setText("");
       setReply(null);
       setClosing("");
@@ -34223,7 +34503,7 @@ ${s5}`;
       }
       draftStat(d5.feature, "used");
       setDraft(null);
-      seq2.current++;
+      seq3.current++;
       setText("");
       setReply(null);
       const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
@@ -34377,7 +34657,7 @@ ${s5}`;
           setClosing,
           onMake: () => make(r4, closing),
           onNot: () => {
-            seq2.current++;
+            seq3.current++;
             setReply(null);
             setText("");
             setShown(false);
@@ -42266,6 +42546,7 @@ ${s5}`;
       editorProps: CUR_PROPS,
       ai: { place: "current", project: () => shared.CURED && shared.CURED.code || "" }
     });
+    attachSlash(c5[k5], { profile: "current", host: { image: pickImage } });
   }
   function curLoad(n4, md2) {
     const c5 = shared.CURED;
@@ -42636,6 +42917,7 @@ ${s5}`;
     document.addEventListener("keydown", (e4) => {
       if (!(e4.target.classList && e4.target.classList.contains("rted") && e4.target.closest(".curpanes"))) return;
       const mod = e4.metaKey || e4.ctrlKey;
+      if (e4.target.getAttribute("aria-expanded") === "true" && (e4.key === "Escape" || e4.key === "Tab")) return;
       if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
@@ -43306,6 +43588,7 @@ ${pre}**Current state title:** ${title}`);
       if (!shared.EV || e4.isComposing) return;
       const p6 = $("#evPanel"), root = evRoot(shared.EV.which);
       const inside = p6 && p6.contains(e4.target) || root && root.contains(e4.target) || shared.EV.which === "ed" && e4.target.id === "curEd";
+      if (e4.target.getAttribute && e4.target.getAttribute("aria-expanded") === "true" && (e4.key === "Escape" || e4.key === "Tab")) return;
       if (e4.key === "Escape" && (inside || !document.querySelector("dialog[open]"))) {
         e4.preventDefault();
         e4.stopImmediatePropagation();
@@ -44929,7 +45212,7 @@ ${pre}**Current state title:** ${title}`);
     );
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
-    const seq2 = A2(0), mail = A2(
+    const seq3 = A2(0), mail = A2(
       /** @type {HTMLDivElement | null} */
       null
     ), back2 = A2(
@@ -44954,10 +45237,10 @@ ${pre}**Current state title:** ${title}`);
         setErr("Draft chase needs the live server: start it, then try again.");
         return void 0;
       }
-      const n4 = ++seq2.current;
+      const n4 = ++seq3.current;
       const t47 = setTimeout(async () => {
         const r4 = await api("/api/chase/pane", { id: id2, hour: (/* @__PURE__ */ new Date()).getHours(), ...opts });
-        if (n4 !== seq2.current) return;
+        if (n4 !== seq3.current) return;
         if (!r4 || r4.ok === false) {
           setErr(r4 && r4.message || "The item couldn't be read.");
           return;
@@ -52858,17 +53141,6 @@ ${d5.text}`);
     }
     return L3.slice(0, 8);
   }
-  var INSERTS = [
-    ["heading", "Sub-heading", "H"],
-    ["checklist", "Checklist", "☑"],
-    ["item", "Work item", "#"],
-    ["person", "Person", "@"],
-    ["note", "Link to a note", "[["],
-    ["table", "Table", "▦"],
-    ["tpl:stakeholder", "Template: Stakeholder", "◇"],
-    ["tpl:lessons-learned", "Template: Lessons learned", "◇"],
-    ["tpl:working-session", "Template: Working session", "◇"]
-  ];
   function decorate(doc, titles) {
     const known = new Set(titles().map((t47) => t47.toLowerCase())), out = [];
     doc.descendants((node, pos) => {
@@ -53000,7 +53272,7 @@ ${d5.text}`);
         /** @type {PickState["kind"]|null} */
         null
       ), q5 = "", at2 = 0;
-      const mn2 = /\[\[([^[\]\n]{0,60})$/.exec(before), mp2 = /(^|\s)@([\w .'’-]{0,40})$/.exec(before), mi2 = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before), ms2 = /^\/(\w{0,20})$/.exec(before);
+      const mn2 = /\[\[([^[\]\n]{0,60})$/.exec(before), mp2 = /(^|\s)@([\w .'’-]{0,40})$/.exec(before), mi2 = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before);
       if (mn2) {
         kind = "note";
         q5 = mn2[1];
@@ -53013,26 +53285,12 @@ ${d5.text}`);
         kind = "item";
         q5 = mi2[2];
         at2 = mi2.index + mi2[1].length;
-      } else if (ms2 && $f2.parent.type.name === "paragraph") {
-        kind = "insert";
-        q5 = ms2[1];
-        at2 = 0;
       }
       if (!kind) return setPick(null);
       const opts = optionsFor(kind, q5);
       if (!opts.length && kind !== "note") return setPick(null);
-      const c5 = editor.view.coordsAtPos(s5.from), host2 = box.current ? box.current.closest(".ndoc") : null, hb2 = host2 ? host2.getBoundingClientRect() : { left: 0, top: 0 };
       const prev = pickRef.current;
-      setPick({
-        kind,
-        from: start + at2,
-        to: s5.from,
-        q: q5,
-        opts,
-        i: prev && prev.kind === kind ? Math.min(prev.i, Math.max(0, opts.length - 1)) : 0,
-        x: Math.max(0, c5.left - hb2.left),
-        y: c5.bottom - hb2.top + 4
-      });
+      setPick({ kind, from: start + at2, to: s5.from, q: q5, opts, i: prev && prev.kind === kind ? Math.min(prev.i, Math.max(0, opts.length - 1)) : 0 });
     };
     const optionsFor = (kind, q5) => {
       const ql2 = q5.toLowerCase();
@@ -53042,8 +53300,16 @@ ${d5.text}`);
         return L3;
       }
       if (kind === "person") return personOptions(q5);
-      if (kind === "item") return itemOptions(props.current.code, q5);
-      return INSERTS.filter(([, l6]) => !ql2 || l6.toLowerCase().includes(ql2)).map(([id2, l6, k5]) => ({ id: id2, label: l6, sub: k5 }));
+      return itemOptions(props.current.code, q5);
+    };
+    const hostRows = () => {
+      const m5 = { note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() };
+      const tpl = (
+        /** @type {any} */
+        D.note_templates || {}
+      );
+      for (const t47 of ["stakeholder", "lessons-learned", "working-session"]) if (tpl[t47]) m5[`tpl:${t47}`] = () => insert(`tpl:${t47}`);
+      return m5;
     };
     const choose = (o5) => {
       const h5 = ed3.current, p6 = pickRef.current;
@@ -53063,16 +53329,12 @@ ${d5.text}`);
         c5.insertContent([{ type: "text", text: o5.id, marks: [{ type: "link", attrs: { href: `creaite:item/${o5.id}` } }] }, { type: "text", text: " " }]).run();
         return;
       }
-      c5.run();
-      insert(o5.id);
     };
     const insert = (what) => {
       const h5 = ed3.current;
       if (!h5) return;
       const c5 = h5.editor.chain().focus();
-      if (what === "heading") c5.toggleHeading({ level: 2 }).run();
-      else if (what === "checklist") c5.toggleTaskList().run();
-      else if (what === "table") c5.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+      if (what === "table") c5.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
       else if (what === "item" || what === "person" || what === "note") c5.insertContent(what === "item" ? "#" : what === "person" ? "@" : "[[").run();
       else if (what.startsWith("tpl:")) {
         const t47 = (
@@ -53160,6 +53422,7 @@ ${d5.text}`);
         }
       } });
       ed3.current = h5;
+      const slashOff = attachSlash(h5, { profile: "notes", host: hostRows() });
       const input = () => {
         props.current.onInput();
       };
@@ -53192,6 +53455,7 @@ ${d5.text}`);
         el2.removeEventListener("mouseover", over);
         el2.removeEventListener("mouseleave", out);
         onBody(null);
+        slashOff();
         h5.destroy();
         ed3.current = null;
         lineState.current.doc = null;
@@ -53220,6 +53484,15 @@ ${d5.text}`);
       const h5 = ed3.current;
       if (h5) h5.editor.view.dispatch(h5.editor.state.tr.setMeta("cxNoteDecoRedraw", true).setMeta("addToHistory", false));
     });
+    const list = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    _2(() => {
+      const h5 = ed3.current, el2 = list.current;
+      if (!pick || !h5 || !el2) return void 0;
+      return placeAtCaret(h5.editor.view, pick.from, el2);
+    }, [pick ? pick.from : -1, pick ? pick.opts.length : 0, pick ? pick.kind : ""]);
     const optId = (
       /** @param {number} i */
       (i5) => `ntp-${loadKey.replace(/[^\w-]/g, "")}-${i5}`
@@ -53231,7 +53504,7 @@ ${d5.text}`);
           profile: "notes",
           cls: "nbar",
           handle: () => ed3.current,
-          host: { note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() },
+          host: hostRows(),
           extra: /* @__PURE__ */ u2(S2, { children: [
             toolbarExtra,
             /* @__PURE__ */ u2(
@@ -53275,14 +53548,14 @@ ${d5.text}`);
       pick ? /* @__PURE__ */ u2(
         "div",
         {
+          ref: list,
           class: "ntpick",
           id: "ntpick",
           role: "listbox",
-          "aria-label": { note: "Link to a note", person: "Mention a person", item: "Link a work item", insert: "Insert" }[pick.kind],
-          style: { left: `${pick.x}px`, top: `${pick.y}px` },
+          "aria-label": { note: "Link to a note", person: "Mention a person", item: "Link a work item" }[pick.kind],
           onMouseDown: (e4) => e4.preventDefault(),
           children: [
-            /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: { note: "Link to a note", person: "People", item: "Work items", insert: "Insert" }[pick.kind] }),
+            /* @__PURE__ */ u2("div", { class: "h", "aria-hidden": "true", children: { note: "Link to a note", person: "People", item: "Work items" }[pick.kind] }),
             pick.opts.length ? pick.opts.map((o5, i5) => /* @__PURE__ */ u2("div", { id: optId(i5), role: "option", "aria-selected": i5 === pick.i ? "true" : "false", class: `r${i5 === pick.i ? " on" : ""}`, onClick: () => choose(o5), children: [
               o5.icon ? /* @__PURE__ */ u2(Icon, { name: o5.icon }) : null,
               /* @__PURE__ */ u2("span", { class: "l", children: o5.label }),
@@ -55187,15 +55460,15 @@ ${d5.text}`);
       $("#vsChips").textContent = "";
       return;
     }
-    const seq2 = ++SRCH.seq;
+    const seq3 = ++SRCH.seq;
     $("#vsNote").textContent = "Searching…";
     try {
       const res = await searchFetch(q5, SRCH.skip);
-      if (seq2 !== SRCH.seq) return;
+      if (seq3 !== SRCH.seq) return;
       SRCH.res = res;
       vsRender();
     } catch (e4) {
-      if (seq2 === SRCH.seq) {
+      if (seq3 === SRCH.seq) {
         $("#vsNote").textContent = oneLine(e4.message);
       }
     }
@@ -56186,11 +56459,11 @@ ${d5.text}`);
     log.querySelectorAll(".mday").forEach((x5) => x5.remove());
     const msgs = [...log.children].filter((e4) => e4.classList.contains("msg"));
     if (!msgs.length) return;
-    const seq2 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
-    if (head) seq2.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
-    if (!seq2.length || !head && new Set(seq2.map((x5) => x5.day)).size < 2) return;
+    const seq3 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
+    if (head) seq3.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
+    if (!seq3.length || !head && new Set(seq3.map((x5) => x5.day)).size < 2) return;
     let prev = null;
-    seq2.forEach((x5) => {
+    seq3.forEach((x5) => {
       if (x5.day === prev) return;
       prev = x5.day;
       const m5 = document.createElement("div");
@@ -59965,6 +60238,7 @@ ${d5.text}`);
         "DRAFTKIND",
         "Dialog",
         "ED_PROFILES",
+        "ED_SLASH",
         "EVS",
         "EXPAND",
         "EditorBar",
@@ -60442,6 +60716,7 @@ ${d5.text}`);
         "setSearch",
         "shared",
         "sl",
+        "slashRows",
         "sleep",
         "snack",
         "snapshot",

@@ -3,12 +3,12 @@
    tables, links). It is editable as soon as it opens: no Edit, Save or Cancel. The toolbar shows while the cursor is in the note.
    Each change tells the store (stores/notes.js), which keeps a draft and writes the file once per editing session.
 
-   Pickers, typed in the text: `[[` a note, `@` a person from the people register, `#` a work item, `/` on an empty line an insert
-   menu. A note link is written `[[Title]]`, a person `@[Name](creaite:person/<name>)`, a work item `[ABC-A-003](creaite:item/ABC-A-003)`:
+   Pickers, typed in the text: `[[` a note, `@` a person from the people register, `#` a work item, `/` at the start of a line or after a space the
+   insert menu (components/SlashMenu.jsx, #122 B; the [[ @ # lists are placed at the caret too, core/caretPlace.js). A note link is written `[[Title]]`, a person `@[Name](creaite:person/<name>)`, a work item `[ABC-A-003](creaite:item/ABC-A-003)`:
    plain Markdown, readable in Finder and OneDrive. Item chips show the item's live state; a click opens it (a note link opens that
    note). Decorations draw them; nothing drawn is written. The picker is a listbox the editor drives (focus stays in the text:
    ↑ ↓ move, Enter or Tab picks, Esc closes). */
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { Decoration, DecorationSet, Extension, Plugin, PluginKey, markdownOf } from "tiptap";
 import { creaiteEditor } from "../../core/editor.js";
 import { A, DEC, R } from "../../core/data.js";
@@ -16,11 +16,12 @@ import { D, fd, TODAY } from "../../core/page.js";
 import { shared } from "../../core/state.js";
 import { noteCur, noteFlash, noteLines, noteMarks } from "../../stores/notes.js";
 import { EditorBar } from "../EditorBar.jsx";
+import { attachSlash } from "../SlashMenu.jsx";
+import { placeAtCaret } from "../../core/caretPlace.js";
 import { Icon } from "../Icon.jsx";
 
 /** @typedef {{id: string, label: string, sub?: string, icon?: string}} PickOption */
-/** @typedef {{kind: "note"|"person"|"item"|"insert", from: number, to: number, q: string, opts: PickOption[], i: number,
-    x: number, y: number}} PickState */
+/** @typedef {{kind: "note"|"person"|"item", from: number, to: number, q: string, opts: PickOption[], i: number}} PickState */
 /** @typedef {{markdown: string, code: string, label: string, loadKey: string, noteTitles: () => string[],
     onInput: () => void, onBody: (get: (() => string|null) | null) => void, onOpenNote: (title: string) => void,
     onOpenItem: (id: string) => void, restored?: boolean, toolbarExtra?: import("preact").ComponentChildren,
@@ -71,9 +72,6 @@ function personOptions(q) {
   }
   return L.slice(0, 8);
 }
-const INSERTS = [["heading", "Sub-heading", "H"], ["checklist", "Checklist", "☑"], ["item", "Work item", "#"], ["person", "Person", "@"],
-  ["note", "Link to a note", "[["], ["table", "Table", "▦"], ["tpl:stakeholder", "Template: Stakeholder", "◇"],
-  ["tpl:lessons-learned", "Template: Lessons learned", "◇"], ["tpl:working-session", "Template: Working session", "◇"]];
 
 /** The decorations: note links (missing ones marked), item chips with their state, people. Drawn only; never written.
     @param {any} doc @param {() => string[]} titles */
@@ -166,18 +164,15 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     const $f = s.$from, before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), start = s.from - $f.parentOffset;
     let kind = /** @type {PickState["kind"]|null} */ (null), q = "", at = 0;
     const mn = /\[\[([^[\]\n]{0,60})$/.exec(before), mp = /(^|\s)@([\w .'’-]{0,40})$/.exec(before),
-      mi = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before), ms = /^\/(\w{0,20})$/.exec(before);
+      mi = /(^|\s)#([A-Za-z0-9-]{0,20})$/.exec(before);
     if (mn) { kind = "note"; q = mn[1]; at = mn.index; }
     else if (mp && !/\s{2}$/.test(mp[2])) { kind = "person"; q = mp[2]; at = mp.index + mp[1].length; }
     else if (mi) { kind = "item"; q = mi[2]; at = mi.index + mi[1].length; }
-    else if (ms && $f.parent.type.name === "paragraph") { kind = "insert"; q = ms[1]; at = 0; }
     if (!kind) return setPick(null);
     const opts = optionsFor(kind, q);
     if (!opts.length && kind !== "note") return setPick(null);
-    const c = editor.view.coordsAtPos(s.from), host = box.current ? box.current.closest(".ndoc") : null, hb = host ? host.getBoundingClientRect() : { left: 0, top: 0 };
     const prev = pickRef.current;
-    setPick({ kind, from: start + at, to: s.from, q, opts, i: prev && prev.kind === kind ? Math.min(prev.i, Math.max(0, opts.length - 1)) : 0,
-      x: Math.max(0, c.left - hb.left), y: c.bottom - hb.top + 4 });
+    setPick({ kind, from: start + at, to: s.from, q, opts, i: prev && prev.kind === kind ? Math.min(prev.i, Math.max(0, opts.length - 1)) : 0 });
   };
   /** @param {PickState["kind"]} kind @param {string} q @returns {PickOption[]} */
   const optionsFor = (kind, q) => {
@@ -189,10 +184,17 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
       return L;
     }
     if (kind === "person") return personOptions(q);
-    if (kind === "item") return itemOptions(props.current.code, q);
-    return INSERTS.filter(([, l]) => !ql || l.toLowerCase().includes(ql)).map(([id, l, k]) => ({ id, label: l, sub: k }));
+    return itemOptions(props.current.code, q);
   };
 
+  /** What the host does for the `/` menu's and the toolbar's rows. */
+  const hostRows = () => {
+    /** @type {Record<string, () => void>} */
+    const m = { note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() };
+    const tpl = /** @type {any} */ (D).note_templates || {};
+    for (const t of ["stakeholder", "lessons-learned", "working-session"]) if (tpl[t]) m[`tpl:${t}`] = () => insert(`tpl:${t}`);
+    return m;
+  };
   /** Put the chosen option in the text, in place of what was typed. @param {PickOption} o */
   const choose = o => {
     const h = ed.current, p = pickRef.current;
@@ -202,17 +204,13 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     if (p.kind === "note") { const t = o.id.startsWith("\u0000") ? o.id.slice(1) : o.id; c.insertContent(`[[${t}]] `).run(); return; }
     if (p.kind === "person") { c.insertContent([{ type: "text", text: "@" }, { type: "text", text: o.id, marks: [{ type: "link", attrs: { href: `creaite:person/${encodeURIComponent(o.id)}` } }] }, { type: "text", text: " " }]).run(); return; }
     if (p.kind === "item") { c.insertContent([{ type: "text", text: o.id, marks: [{ type: "link", attrs: { href: `creaite:item/${o.id}` } }] }, { type: "text", text: " " }]).run(); return; }
-    c.run();
-    insert(o.id);
   };
-  /** The `/` menu and the toolbar's inserts. @param {string} what */
+  /** The `/` menu's and the toolbar's inserts. @param {string} what */
   const insert = what => {
     const h = ed.current;
     if (!h) return;
     const c = h.editor.chain().focus();
-    if (what === "heading") c.toggleHeading({ level: 2 }).run();
-    else if (what === "checklist") c.toggleTaskList().run();
-    else if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+    if (what === "table") c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
     else if (what === "item" || what === "person" || what === "note") c.insertContent(what === "item" ? "#" : what === "person" ? "@" : "[[").run();
     else if (what.startsWith("tpl:")) { const t = /** @type {any} */ (D).note_templates?.[what.slice(4)]; if (t) c.insertContent(t, { contentType: "markdown" }).run(); }
   };
@@ -262,6 +260,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
         return false;
       } } });
     ed.current = h;
+    const slashOff = attachSlash(h, { profile: "notes", host: hostRows() });
     const input = () => { props.current.onInput(); };
     el.addEventListener("input", input);
     h.editor.on("selectionUpdate", () => look(h.editor));
@@ -275,7 +274,7 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     el.addEventListener("mouseleave", out);
     onBody(() => (h.touched() || restored ? h.value() : null));
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
-      el.removeEventListener("mouseleave", out); onBody(null); h.destroy(); ed.current = null; lineState.current.doc = null; };
+      el.removeEventListener("mouseleave", out); onBody(null); slashOff(); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
 
   useEffect(() => {          /* BL-301 E: a note opened at a line (a source link): that line in view, highlighted for a few seconds */
@@ -296,20 +295,26 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     if (h) h.editor.view.dispatch(h.editor.state.tr.setMeta("cxNoteDecoRedraw", true).setMeta("addToHistory", false));
   });
 
+  const list = useRef(/** @type {HTMLDivElement|null} */ (null));
+  useLayoutEffect(() => {          /* #122 B: the [[ @ # list at the caret (fixed), flipping above when there is no room below */
+    const h = ed.current, el = list.current;
+    if (!pick || !h || !el) return undefined;
+    return placeAtCaret(h.editor.view, pick.from, el);
+  }, [pick ? pick.from : -1, pick ? pick.opts.length : 0, pick ? pick.kind : ""]);
   const optId = /** @param {number} i */ i => `ntp-${loadKey.replace(/[^\w-]/g, "")}-${i}`;
   return (
     <div class="ned">
       <EditorBar profile="notes" cls="nbar" handle={() => ed.current}
-        host={{ note: () => insert("note"), person: () => insert("person"), item: () => insert("item"), table: () => insert("table"), image: () => fileIn.current?.click() }}
+        host={hostRows()}
         extra={<>{toolbarExtra}
           <input ref={fileIn} type="file" class="nimgfile" accept="image/png,image/jpeg" multiple hidden aria-hidden="true" tabIndex={-1}
             onChange={async e => { const i = /** @type {HTMLInputElement} */ (e.target); await addImages(i.files); i.value = ""; }} /></>} />
       <div ref={box} class="nbody rted" role="textbox" aria-multiline="true" aria-label={label} spellcheck data-ph="Write here… [[ links a note, @ a person, # a work item, / inserts"
         aria-controls={pick ? "ntpick" : undefined} aria-activedescendant={pick && pick.opts[pick.i] ? optId(pick.i) : undefined} />
       {pick ? (
-        <div class="ntpick" id="ntpick" role="listbox" aria-label={{ note: "Link to a note", person: "Mention a person", item: "Link a work item", insert: "Insert" }[pick.kind]}
-          style={{ left: `${pick.x}px`, top: `${pick.y}px` }} onMouseDown={e => e.preventDefault()}>
-          <div class="h" aria-hidden="true">{{ note: "Link to a note", person: "People", item: "Work items", insert: "Insert" }[pick.kind]}</div>
+        <div ref={list} class="ntpick" id="ntpick" role="listbox" aria-label={{ note: "Link to a note", person: "Mention a person", item: "Link a work item" }[pick.kind]}
+          onMouseDown={e => e.preventDefault()}>
+          <div class="h" aria-hidden="true">{{ note: "Link to a note", person: "People", item: "Work items" }[pick.kind]}</div>
           {pick.opts.length ? pick.opts.map((o, i) => (
             <div key={o.id} id={optId(i)} role="option" aria-selected={i === pick.i ? "true" : "false"} class={`r${i === pick.i ? " on" : ""}`} onClick={() => choose(o)}>
               {o.icon ? <Icon name={o.icon} /> : null}<span class="l">{o.label}</span>{o.sub ? <small>{o.sub}</small> : null}

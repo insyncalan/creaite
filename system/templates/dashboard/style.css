@@ -3009,12 +3009,26 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
-.ntpick{position:absolute;z-index:5;width:300px;max-width:calc(100% - 8px);background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px;overflow:hidden}
+.ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
 .ntpick .r.on{background:var(--accent-soft)} .ntpick .r .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ntpick .r small{color:var(--faint);margin-left:auto;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
 .ntpick .r.none{color:var(--muted);cursor:default}
+/* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
+.slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
+.slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
+.slashmenu .r.on{background:var(--accent-soft)}
+.slashmenu .ic{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--surface);display:grid;place-items:center;flex:none;font:600 11px var(--font);color:var(--ink)}
+.slashmenu .r.on .ic{border-color:var(--accent)}
+.slashmenu .tx{display:flex;flex-direction:column;min-width:0}
+.slashmenu .t{font-weight:500;line-height:1.25}
+.slashmenu .d{color:var(--muted);font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slashmenu .k{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.slashmenu .r.none{color:var(--muted);cursor:default;padding:8px}
+.slashmenu .foot{position:sticky;bottom:-4px;background:var(--surface);border-top:1px solid var(--line);margin:4px -4px -4px;padding:6px 12px;font-size:11px;color:var(--faint)}
+@media (forced-colors:active){.slashmenu{border-color:CanvasText}.slashmenu .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}.slashmenu .r.on .d,.slashmenu .r.on .k{color:HighlightText}.slashmenu .ic{border-color:CanvasText}.ntpick .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}}
 .nctx{display:flex;flex-direction:column;gap:12px;min-width:0}
 .nctx .box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
 .nctx .box h2{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}

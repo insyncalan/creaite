@@ -6,6 +6,7 @@ import { openDialog } from "./components/Dialog.jsx";
 import { makePrepDialog } from "./components/dialogs/PageDialogs.jsx";
 import { mountAiMenu } from "./components/AiSelect.jsx";
 import { mountEditorBar, unmountEditorBar } from "./components/EditorBar.jsx";
+import { attachSlash } from "./components/SlashMenu.jsx";
 import { HEAD_SHIFT, runTool } from "./core/editorProfiles.js";
 import { askClaude, openChat, questionLike, rbEnd, rbStart, runSearch, send, SRCH } from "./ask.js";
 import { A, DEC, open, openOnly, overdue, P, pName, R, soon, SWEPT } from "./core/data.js";
@@ -225,7 +226,8 @@ export function curAttach(n){ const c=shared.CURED, slot=$(n===2?"#curEd2":"#cur
   if(c[k]&&!c[k].editor.isDestroyed){ for(const a of ["aria-label","data-ph"]) c[k].el.setAttribute(a,slot.getAttribute(a)); slot.replaceWith(c[k].el); return; }
   const imgs=(P.find(x=>x.code===c.code)||{}).images;
   c[k]=creaiteEditor(slot,{features:"current",headShift:HEAD_SHIFT,markdown:(n===2?c.src2:c.src1)||"",imageSrc:ref=>imgSrc(imgs,ref),editorProps:CUR_PROPS,
-    ai:{place:"current",project:()=>(shared.CURED&&shared.CURED.code)||""}}); }   /* BL-301 D: AI on selected text */
+    ai:{place:"current",project:()=>(shared.CURED&&shared.CURED.code)||""}});   /* BL-301 D: AI on selected text */
+  attachSlash(c[k],{profile:"current",host:{image:pickImage}}); }   /* #122 B: the / menu (taken away with the editor) */
 /** a new text for pane n (a draft, or the executive version): its editor is made again from it when the card is drawn */
 export function curLoad(n,md){ const c=shared.CURED; if(!c) return; const k=n===2?"ed2":"ed1"; if(c[k]){ c[k].destroy(); c[k]=null; } if(n===2) c.src2=md; else c.src1=md; }
 export function startCurEdit(code,pane){ if(shared.CURED||navBlocked()) return; const p=P.find(x=>x.code===code); if(!p) return; const [l,r]=splitPanes(p.current||"");
@@ -343,6 +345,7 @@ document.addEventListener("input",e=>{ if(shared.CURED&&e.target.classList&&e.ta
 document.addEventListener("focusin",e=>{ const ed=e.target.closest&&e.target.closest(".curpanes .rted"); if(ed&&shared.CURED) shared.CURED.last=ed.id==="curEd2"?2:1; });
 document.addEventListener("keydown",e=>{
   if(!(e.target.classList&&e.target.classList.contains("rted")&&e.target.closest(".curpanes"))) return; const mod=e.metaKey||e.ctrlKey;   /* ⌘K stays the palette; ⌘⇧K and ⌘⇧X are the shared bar's (#122) */
+  if(e.target.getAttribute("aria-expanded")==="true"&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open: Esc closes it and Tab inserts the row (components/SlashMenu.jsx), not cancel or indent */
   if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); cancelCurEdit(); }
   else if(mod&&e.key==="Enter"){ e.preventDefault(); saveCurEdit(); }
   else if(e.key==="Tab"&&getSelection().anchorNode&&(getSelection().anchorNode.parentElement||{}).closest&&getSelection().anchorNode.parentElement.closest("li")){ e.preventDefault(); rteCmd(e.shiftKey?"outdent":"indent"); } },true);
@@ -599,6 +602,7 @@ document.addEventListener("mouseover",e=>{ const sp=e.target.closest&&e.target.c
   if(sp&&root) claimSpans(root,sp.dataset.c).forEach(s=>s.classList.add("hov")); });
 document.addEventListener("keydown",e=>{ if(!shared.EV||e.isComposing) return; const p=$("#evPanel"), root=evRoot(shared.EV.which);
   const inside=(p&&p.contains(e.target))||(root&&root.contains(e.target))||(shared.EV.which==="ed"&&e.target.id==="curEd");
+  if(e.target.getAttribute&&e.target.getAttribute("aria-expanded")==="true"&&(e.key==="Escape"||e.key==="Tab")) return;   /* #122 B: the / menu is open */
   if(e.key==="Escape"&&(inside||!document.querySelector("dialog[open]"))){ e.preventDefault(); e.stopImmediatePropagation(); evPanelClose(); return; }
   if(e.key==="Tab"&&inside&&!(e.target.id==="evNote")&&!e.metaKey&&!e.ctrlKey&&!e.altKey){ e.preventDefault(); e.stopImmediatePropagation(); evMove(e.shiftKey?-1:1); } },true);
 document.addEventListener("input",e=>{ if(e.target.closest&&e.target.closest("#curEd")){ claimTrack(); if(shared.CURED&&shared.CURED.claims) claimPaint("ed"); } });   /* BL-301 A: a redrawn sentence is painted again */
