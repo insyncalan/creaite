@@ -256,5 +256,161 @@ class AlertActions(LiveBrowserCase):
         self.assertEqual(d, ["true", "Not for a confidential message"])
 
 
+# ===== BL-342 Part 1: a thread's card in the real browser =====
+SHOTS = Path.home() / "dev.env" / "team-stark-shots" / "bl342-p1"
+YESTERDAY = date.fromordinal(date.today().toordinal() - 1).isoformat()
+LATER = date.fromordinal(date.today().toordinal() + 5).isoformat()
+OMAR = "Omar Ali <omar@company.example>"
+THREADS = [
+    {"kind": "teams", "conversation": "19:go-live@thread.v2", "title": "Go-live window", "from": SARA, "people": [SARA, OMAR],
+     "last": f"{TODAY} 08:50", "link": "https://teams.microsoft.com/l/chat/19:go-live", "sensitivity": "normal",
+     "summary": "Sara asks whether go-live can move a week.", "type": "action", "ask": "Confirm the new go-live date",
+     "due": YESTERDAY, "owners": ["you", "Sara Example"], "items": []},
+    {"kind": "mail", "conversation": "AAQk-licences", "title": "Licence numbers", "subject": "Licence numbers", "from": SARA,
+     "people": [SARA, OMAR], "last": f"{TODAY} 08:15", "link": "https://outlook.example/owa/?ItemID=l1", "sensitivity": "normal",
+     "summary": "Sara needs a count of test licences.", "type": "decision", "ask": "Say how many test licences are needed",
+     "due": LATER, "owners": "you", "items": []},
+    {"kind": "mail", "conversation": "AAQk-pack", "title": "Board pack", "subject": "Board pack", "from": SARA,
+     "people": [SARA, OMAR], "last": f"{TODAY} 08:05", "link": "https://outlook.example/owa/?ItemID=p1", "sensitivity": "normal",
+     "summary": "Sara shared the board pack for reading.", "type": "fyi", "ask": "Read the pack before Thursday",
+     "attachments": ["Board pack.pdf"], "items": []},
+    {"kind": "teams", "conversation": "19:answered@thread.v2", "title": "Answered chat", "from": SARA, "people": [SARA, OMAR],
+     "last": f"{TODAY} 07:30", "link": "https://teams.microsoft.com/l/chat/19:answered", "sensitivity": "normal",
+     "summary": "Sara asked for the plan.", "type": "action", "ask": "Send the plan", "replied": f"{TODAY} 07:45", "items": []},
+]
+
+
+def thread_vault(v):
+    """The followed vault, with four thread cards (one overdue and matched to an open action, one with a later due date, one
+    FYI with a file, one Alan has answered)."""
+    followed_vault(v)
+    f = v.root / "system/staging/drafts/threads.json"
+    f.write_text(json.dumps(THREADS))
+    run(v, "sweep.py", "vip", "record", str(f), "--found", "check", now=f"{TODAY} 12:00")
+    item = next(r["id"] for r in v.rows("actions") if r["description"] == "Send the data access letter")
+    vf = v.root / "system/staging/vip.json"
+    st = json.loads(vf.read_text())
+    next(a for a in st["alerts"] if a.get("title") == "Go-live window")["match"] = {"id": item, "relation": "update", "why": "test"}
+    vf.write_text(json.dumps(st))
+    run(v, "build_dashboard.py")
+
+
+CONTRAST = """const lum=c=>{ const [r,g,b]=c.map(x=>{ x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4); }); return .2126*r+.7152*g+.0722*b; };
+  const rgba=s=>{ const m=s.match(/[\\d.]+/g).map(Number); return [m[0],m[1],m[2],m.length>3?m[3]:1]; };
+  const bgOf=el=>{ for(let e=el;e;e=e.parentElement){ const c=rgba(getComputedStyle(e).backgroundColor); if(c[3]>=.99) return c; } return [255,255,255,1]; };
+  const ratio=el=>{ const f=rgba(getComputedStyle(el).color), g=bgOf(el), a=lum(f)+.05, b=lum(g)+.05; return Math.max(a,b)/Math.min(a,b); };"""
+
+
+class ThreadCardScreens(LiveBrowserCase):
+    """BL-342 Part 1: the card at 1400 and 900px, light and dark: type chip, ask, owners, due (overdue in words), Handled and
+    Log, the FYI card's file, the quiet Replied line; nothing says VIP; no horizontal scroll. Shots go to team-stark-shots."""
+    shared_server = True
+
+    @classmethod
+    def load(cls, v):
+        thread_vault(v)
+
+    def show(self, width, mode):
+        b = self.b
+        b.resize(width, 900)
+        b.wait(f"innerWidth==={width}")
+        b.eval(f"S.theme={mode!r}; applyTheme(); go('today'); EXPAND.add('td'); renderToday()")
+        b.wait("document.querySelector('#tdList li.td-message')")
+        b.pump(0.4)
+
+    def test_the_card_in_both_themes_and_both_widths(self):
+        b = self.b
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        for width in (1400, 900):
+            for mode in ("Light", "Dark"):
+                with self.subTest(width=width, mode=mode):
+                    self.show(width, mode)
+                    o = b.eval("""(()=>{ %s
+                      const rows=[...document.querySelectorAll('#tdList>li.td-message')], first=rows[0], out={};
+                      out.order=rows.map(r=>r.querySelector('.t').textContent);
+                      out.tag=first.querySelector('.tdtag').textContent;
+                      out.text=first.textContent.replace(/\\s+/g,' ');
+                      out.buttons=[...first.querySelectorAll(':scope>.tacts button')].map(x=>x.getAttribute('aria-label'));
+                      out.tags=rows.map(r=>r.querySelector('.tdtag').textContent);
+                      const fyi=rows.find(r=>r.textContent.includes('Board pack')); out.fyi=fyi&&fyi.textContent.replace(/\\s+/g,' ');
+                      const q=[...document.querySelectorAll('#tdList>li.td-quiet')].map(r=>r.textContent.replace(/\\s+/g,' ')); out.quiet=q;
+                      const over=first.querySelector('.tdover'), ask=first.querySelector('.tdask'), lab=first.querySelector('.tdlab');
+                      out.contrast={over:ratio(over), ask:ratio(ask), lab:ratio(lab), meta:ratio(first.querySelector('.tb>p'))};
+                      out.scroll=[document.documentElement.scrollWidth, innerWidth];
+                      out.out=[...document.querySelectorAll('#tdList>li')].filter(li=>li.getBoundingClientRect().right>innerWidth+1).length;
+                      return out; })()""" % CONTRAST)
+                    self.assertEqual(o["order"][0], "Go-live window")                           # overdue first
+                    self.assertEqual(o["tag"], "Action")
+                    self.assertIn("Confirm the new go-live date", o["text"])
+                    self.assertIn("For you, Sara Example", o["text"])
+                    self.assertIn("overdue, due", o["text"])
+                    self.assertEqual(o["buttons"][0].split(":")[0], "Handled")
+                    self.assertTrue(o["buttons"][1].startswith("Log on ABC-"), o["buttons"])
+                    self.assertIn("Decision", o["tags"])
+                    self.assertIn("FYI / file", o["tags"])
+                    self.assertIn("Files: Board pack.pdf", o["fyi"])
+                    self.assertTrue(any("you replied" in q for q in o["quiet"]), o["quiet"])
+                    self.assertEqual(o["out"], 0)
+                    self.assertLessEqual(o["scroll"][0], o["scroll"][1])                       # no horizontal scroll
+                    for k, ratio in o["contrast"].items():
+                        self.assertGreaterEqual(ratio, 4.5, f"{k} contrast {ratio:.2f}")
+                    html = b.eval("document.getElementById('tdList').outerHTML")
+                    self.assertIsNone(says_vip(html))
+                    b.eval("document.getElementById('hTd').scrollIntoView(true)")
+                    b.pump(0.3)
+                    b.screenshot(str(SHOTS / f"today-card-{width}-{mode.lower()}.png"))
+        self.show(1400, "Light")
+
+
+class ThreadCardActions(LiveBrowserCase):
+    """BL-342 Part 1: Handled (with Undo) and Log on the matched item, from the page."""
+
+    @classmethod
+    def load(cls, v):
+        thread_vault(v)
+
+    def card_id(self):
+        return self.b.eval("""(()=>{ if(!EXPAND.has('td')){ EXPAND.add('td'); } renderToday();
+          const li=[...document.querySelectorAll('#tdList>li.td-message')].find(l=>l.textContent.includes('Go-live window'));
+          return li?li.dataset.td.slice(2):null; })()""")
+
+    def test_handled_and_undo(self):
+        b = self.b
+        b.eval("go('today')")
+        aid = self.card_id()
+        self.assertTrue(aid)
+        b.click(f'#tdList [data-alertdo="handled"][data-id="{aid}"]')
+        b.wait(f"!document.querySelector('#tdList li[data-td=\"al{aid}\"]')")
+        self.assertEqual(b.eval("document.getElementById('snackT').textContent"), "Marked handled")
+        self.assertTrue(b.eval("document.activeElement.matches('#tdList [data-tdact]')"))
+        st = json.loads((self.v.root / "system/staging/vip.json").read_text())
+        self.assertEqual(next(a for a in st["alerts"] if a["id"] == aid)["state"], "handled")
+        self.assertEqual(list((self.v.root / "system/staging").glob("proposed-*-dashboard*.json")).__len__(),
+                         len(list((self.v.root / "system/staging").glob("proposed-*-dashboard*.json"))))
+        b.click("#snackU")
+        b.wait(f"document.querySelector('#tdList li[data-td=\"al{aid}\"]')")
+        st = json.loads((self.v.root / "system/staging/vip.json").read_text())
+        self.assertEqual(next(a for a in st["alerts"] if a["id"] == aid)["state"], "open")
+
+    def test_log_stages_one_update_and_the_button_goes(self):
+        b = self.b
+        b.eval("go('today')")
+        aid = self.card_id()
+        before = {p.name for p in (self.v.root / "system/staging").glob("proposed-*.json")}
+        b.click(f'#tdList [data-alertdo="log"][data-id="{aid}"]')
+        b.wait(f"document.querySelector('#tdList li[data-td=\"al{aid}\"]').textContent.includes('Logged on ABC-')", 20)
+        self.assertFalse(b.eval(f"!!document.querySelector('#tdList [data-alertdo=\"log\"][data-id=\"{aid}\"]')"))
+        self.assertIn("for Review", b.eval("document.getElementById('snackT').textContent"))
+        new = [p for p in (self.v.root / "system/staging").glob("proposed-*-dashboard*.json") if p.name not in before]
+        self.assertEqual(len(new), 1)
+        (item,) = json.loads(new[0].read_text())["items"]
+        self.assertEqual((item["op"], item["decision"]), ("update", "pending"))
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        b.eval("document.getElementById('hTd').scrollIntoView(true)")
+        b.pump(0.3)
+        b.screenshot(str(SHOTS / "today-card-logged.png"))
+        self.assertIsNone(says_vip(b.eval("document.getElementById('tdList').outerHTML")))
+
+
 if __name__ == "__main__":
     unittest.main()

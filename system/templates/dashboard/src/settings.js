@@ -810,9 +810,11 @@ export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.igno
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
    is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
-export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet);
+export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet&&a.state!=="replied");
 /* BL-334: a conversation with nothing for Alan is one quiet line on Today (no buttons, no count), shown the day it was updated */
-export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&String(a.updated||"").slice(0,10)===TODAY);
+export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&a.state!=="replied"&&String(a.updated||"").slice(0,10)===TODAY);
+/* BL-342: a thread Alan has answered (his own message after the last one) is one quiet "Replied" line the day he answered; a later message from someone else opens it again */
+export const VIPR=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.state==="replied"&&String(a.replied_at||"").slice(0,10)===TODAY);
 /** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
 const vipSig=()=>(VIPD().alerts||[]).filter(a=>!a.seen).map(a=>`${a.id}@${a.updated||""}`).join();
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
@@ -835,6 +837,17 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   vipBadge(); renderToday(); back();
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
     if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+/* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
+export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
+  const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
+  if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } vipBadge(); renderToday(); back();
+  snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
+    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live server"); return; }
+  const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a) a.logged=r.logged;
+  await reloadData(); renderToday(); snack(r.message||"Staged for Review"); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
    leaves the message as it was. */
@@ -938,7 +951,8 @@ export function vipSectionHtml(){ const v=VIPD();
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
-  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
+  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id);
+  else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
   else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */
 PKDRAW.push(alertPeekDraw);

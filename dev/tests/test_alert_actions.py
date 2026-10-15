@@ -53,13 +53,20 @@ MESSAGES = [
 ]
 
 
+THREAD = {"kind": "teams", "conversation": "19:chat-thread@thread.v2", "title": "Go-live window", "from": MIA,
+          "people": [MIA, "Omar Ali <omar@company.example>"], "last": "2026-10-08 08:30",
+          "link": "https://teams.microsoft.com/l/chat/19:chat-thread", "sensitivity": "normal",
+          "summary": "Mia asks whether go-live can move a week.", "type": "decision", "ask": "Say whether go-live can move",
+          "due": "2026-10-16", "owners": ["you"], "items": []}
+
+
 class AlertActionTests(unittest.TestCase):
     said = []                       # every body these routes returned, for the BL-288 check
 
     @classmethod
     def setUpClass(cls):
         cls.v = v = vip_vault()
-        record(v, MESSAGES)
+        record(v, MESSAGES + [THREAD])
         cls.ids = {a["subject"]: a["id"] for a in cls.vip()["alerts"]}
         fake = v.root / "fake_claude.py"
         fake.write_text(FAKE)
@@ -239,6 +246,51 @@ class AlertActionTests(unittest.TestCase):
         self.post("/api/alerts/undo", {"ids": [aid]})
         self.assertIn("Quick one", self.unseen())
         self.assertNotIn("made", self.alert("Quick one"))
+
+    def test_6b_handled_undo_and_log(self):
+        """BL-342: Handled settles a thread's card and stages nothing, Undo puts it back; Log on the matched item stages one
+        pending update, once; a card with no match can't be logged."""
+        aid = self.ids["Go-live window"]
+        before = self.proposals()
+        got = self.post("/api/alerts/handled", {"ids": [aid]})
+        self.assertEqual((got["ok"], got["handled"], got["ids"]), (True, 1, [aid]))
+        self.assertRegex(got["at"], r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
+        card = self.alert("Go-live window")
+        self.assertEqual((card["state"], bool(card["seen"]), bool(card["handled_at"])), ("handled", True, True))
+        self.assertNotIn("Go-live window", self.unseen())
+        self.assertEqual(self.proposals(), before)                                         # stages nothing
+        self.assertEqual(self.post("/api/alerts/handled", {"ids": [aid]})["handled"], 0)    # already settled
+        self.assertEqual(self.post("/api/alerts/undo", {"ids": [aid]})["restored"], 1)
+        card = self.alert("Go-live window")
+        self.assertEqual((card["state"], card["seen"]), ("open", None))
+        self.assertIn("Go-live window", self.unseen())
+        with self.assertRaises(urllib.error.HTTPError) as e:                                # which one?
+            self.post("/api/alerts/handled", {})
+        self.assertEqual(e.exception.code, 400)
+        e.exception.close()
+        no = self.post("/api/alerts/log", {"id": aid})
+        self.assertEqual((no["ok"], no["message"]), (False, "No matched item to log it on."))
+        self.assertFalse(self.post("/api/alerts/log", {"id": "nope"})["ok"])
+        item = self.alert("[ABC] Go-live date")["made"]["id"]                                # the action test 5 made and applied
+        st = json.loads((self.v.root / "system/staging/vip.json").read_text())
+        next(a for a in st["alerts"] if a["id"] == aid)["match"] = {"id": item, "relation": "update", "why": "test"}
+        (self.v.root / "system/staging/vip.json").write_text(json.dumps(st))
+        before = self.proposals()
+        log = self.post("/api/alerts/log", {"id": aid})
+        self.assertTrue(log["ok"], log)
+        self.assertEqual((log["id"], log["logged"]["state"], log["already"]), (item, "staged", False))
+        self.assertIn(f"Staged an update on {item} for Review", log["message"])
+        (new,) = [p for p in self.proposals() if p not in before]
+        spec = json.loads((self.v.root / "system/staging" / new).read_text())
+        (it,) = spec["items"]
+        self.assertEqual((it["op"], it["table"], it["id"], it["decision"]), ("update", "actions", item, "pending"))
+        self.assertTrue(it["based_on"])
+        self.assertEqual(list(it["changes"]), ["latest_update"])
+        again = self.post("/api/alerts/log", {"id": aid})
+        self.assertEqual((again["ok"], again["already"], again["proposal"]), (True, True, log["proposal"]))
+        self.assertIn("Already logged", again["message"])
+        self.assertEqual(len([p for p in self.proposals() if p not in before]), 1)          # nothing new the second time
+        self.assertEqual(self.alert("Go-live window")["logged"]["id"], item)
 
     def test_7_no_vip_in_any_response(self):
         self.assertTrue(self.said)

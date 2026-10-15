@@ -323,7 +323,7 @@ class ConversationPageTests(unittest.TestCase):
         self.assertIn("Example Programme", o["card"])                                        # the matched project, by name
         self.assertIn("Mia's team will take the solution from production to live", o["card"])
         self.assertEqual(o["cands"], [["Action", [["make", "1"], ["dismiss", "1"]]], ["Decision", [["make", "2"], ["dismiss", "2"]]]])
-        self.assertEqual(o["cardButtons"], 0)                                                # the buttons are per item
+        self.assertEqual(o["cardButtons"], 1)                                                # BL-342: Handled on the card; the work-item buttons are per item
         self.assertIn("Mia Hale with Omar Ali: nothing for you", o["quiet"])
         self.assertIn("updated 08:20", o["quiet"])                                           # its own last message
         self.assertEqual(o["quietButtons"], 0)

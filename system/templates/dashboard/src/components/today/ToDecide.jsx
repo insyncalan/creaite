@@ -19,7 +19,8 @@ import { IconButton } from "../IconButton.jsx";
 /** @typedef {{id: string, icon: string, label: string, name?: string, primary?: boolean, why?: string, data?: Record<string, string>, haspopup?: string}} TdAct */
 /** @typedef {{key: string, tag: string, t: string, sub?: string, acts: TdAct[]}} TdCand */
 /** @typedef {{key: string, kind: "review"|"transcript"|"message"|"quiet", tag: string, tone?: string, t: string, meta: string, link?: string,
-    mark?: string, summary?: string, cands?: TdCand[], acts: TdAct[]}} TdRow */
+    mark?: string, summary?: string, cands?: TdCand[], acts: TdAct[], ask?: string, due?: string, overdue?: boolean, dueText?: string,
+    owners?: string, files?: string}} TdRow */
 /** @typedef {{rows: TdRow[], total: number, cap: number, open: boolean, onAct: (row: TdRow, act: TdAct, btn: HTMLElement) => void,
     onOpen: (row: TdRow) => void, onReview: () => void, blocked: (why: string) => void}} ToDecideProps */
 
@@ -45,6 +46,14 @@ function TdLine({ r, hidden, p }) {
         {r.mark ? <>{" "}<span class="tag tdctag tdmark">{r.mark}</span></> : null}
         <p>{r.meta}</p>
         {r.summary ? <p class="tdsum">{r.summary}</p> : null}
+        {r.ask ? <p class="tdask"><span class="tdlab">Ask</span>{" "}{r.ask}</p> : null}
+        {r.owners || r.dueText ? (
+          <p class="tdwho">
+            {r.owners ? <><span class="tdlab">For</span>{" "}{r.owners}</> : null}
+            {r.dueText ? <>{r.owners ? " · " : ""}<span class={r.overdue ? "tdover" : "tddue"}>{r.overdue ? `overdue, ${r.dueText}` : r.dueText}</span></> : null}
+          </p>
+        ) : null}
+        {r.files ? <p class="tdfiles">{r.files}</p> : null}
         {r.cands && r.cands.length
           ? <ul class="tdcands" aria-label="What it came to">
               {r.cands.map(c => (

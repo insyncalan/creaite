@@ -2813,6 +2813,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand .cs{color:var(--day-muted,var(--muted))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
 .tdmark{vertical-align:2px;height:18px}
+/* BL-342: a thread card's ask, owners and due date (an overdue one in the warning colour, and said in words) */
+#tBrief .tdrow .tb p.tdask,#tBrief .tdrow .tb p.tdwho,#tBrief .tdrow .tb p.tdfiles{margin-top:4px;font-size:var(--fs-sm)}
+.tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tddue{color:var(--day-muted,var(--muted))}
+.tdover{color:var(--bad);font-weight:600}
 #tBrief .tdrow.td-quiet .tb .t{font-weight:400;color:var(--day-muted,var(--muted))}
 #tBrief ol.bl>li{min-height:44px;padding:8px 0;align-items:flex-start}
 #tBrief .tacts{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto;opacity:.55;transition:opacity var(--d1)}

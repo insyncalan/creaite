@@ -109,6 +109,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          repository), streamed, ending in a "draft" event with the filled form; /api/alerts/make {id, type,
                          values} stages the item as a pending proposal for Review, dismisses the message and records the
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
+- POST /api/alerts/handled {ids | id}: a thread's card is handled (Dismiss's effect; /api/alerts/undo puts it back);
+                         /api/alerts/log {id}: log the thread on its matched item, one pending update for Review (BL-342)
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
 - POST /api/prep/brief, /chips, /shape, /filter, /focus, /focus/save, /focus/clear, /view {key, …}: meeting prep, reimagined
@@ -3590,6 +3592,40 @@ SWEEP_ALERT_ROUTES.update({"/api/alerts/dismiss": alert_dismiss_route, "/api/ale
                            "/api/alerts/prefill": alert_prefill_route, "/api/alerts/draft": alert_draft_route,
                            "/api/alerts/make": alert_make_route})
 # ===== end BL-296 =====
+
+# ===== BL-342 (Part 1): Handled and Log on a thread's card (routes only; neither is a run) =====
+# /api/alerts/handled {ids | id}: the card settles as handled (Dismiss's effect, recorded as handled with a time; /api/alerts/undo
+# puts it back). /api/alerts/log {id}: stages one pending `update` for the matched item, as the dashboard's own proposal.
+
+def alert_handled_route(handler, req):
+    """POST /api/alerts/handled {ids | id}: a thread's card is handled: out of Needs attention, kept in the alert history."""
+    import sweep
+    ids = alert_ids(req)
+    if not ids:
+        return handler.send(400, {"ok": False, "message": "Which thread?"})
+    with VIP_WRITE:
+        done = sweep.vip_handled(ids)
+    n = len(done)
+    return handler.send(200, {"ok": True, "handled": n, "ids": done, "at": sweep.now().strftime("%Y-%m-%d %H:%M"),
+                              "message": f"Marked {n} thread{'s' if n != 1 else ''} handled." if n else "Nothing to mark handled."})
+
+
+def alert_log_route(handler, req):
+    """POST /api/alerts/log {id}: log the thread on its matched item: one pending update for Review (nothing is applied)."""
+    import sweep
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_log(str(req.get("id") or ""))
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "logged": {"proposal": got["proposal"], "n": got["n"], "id": got["id"],
+                                                           "state": got["state"]},
+                              "message": f"Already logged on {got['id']}." if got["already"]
+                              else f"Staged an update on {got['id']} for Review."})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/handled": alert_handled_route, "/api/alerts/log": alert_log_route})
+# ===== end BL-342 =====
 
 
 # ===== Chat and sweep (BL-108, BL-109, BL-110; sprint-chat-sweep) =====

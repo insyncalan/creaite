@@ -2823,6 +2823,11 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand .cs{color:var(--day-muted,var(--muted))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
 .tdmark{vertical-align:2px;height:18px}
+/* BL-342: a thread card's ask, owners and due date (an overdue one in the warning colour, and said in words) */
+#tBrief .tdrow .tb p.tdask,#tBrief .tdrow .tb p.tdwho,#tBrief .tdrow .tb p.tdfiles{margin-top:4px;font-size:var(--fs-sm)}
+.tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tddue{color:var(--day-muted,var(--muted))}
+.tdover{color:var(--bad);font-weight:600}
 #tBrief .tdrow.td-quiet .tb .t{font-weight:400;color:var(--day-muted,var(--muted))}
 #tBrief ol.bl>li{min-height:44px;padding:8px 0;align-items:flex-start}
 #tBrief .tacts{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto;opacity:.55;transition:opacity var(--d1)}
@@ -3082,6 +3087,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     BTNID: () => BTNID,
     BULK_MAX: () => BULK_MAX,
     CALI: () => CALI,
+    CARDTYPE: () => CARDTYPE,
     CATOF: () => CATOF,
     CD_STEPS: () => CD_STEPS,
     CE_FIELDS: () => CE_FIELDS,
@@ -3467,6 +3473,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     VIPKIND: () => VIPKIND,
     VIPNOTED: () => VIPNOTED,
     VIPQ: () => VIPQ,
+    VIPR: () => VIPR,
     VIPS: () => VIPS,
     VMORE: () => VMORE,
     VRENAME: () => VRENAME,
@@ -3542,6 +3549,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     alertDraft: () => alertDraft,
     alertDraftWhy: () => alertDraftWhy,
     alertFocus: () => alertFocus,
+    alertHandled: () => alertHandled,
+    alertLog: () => alertLog,
     alertMake: () => alertMake,
     alertPeekDraw: () => alertPeekDraw,
     alertStage: () => alertStage,
@@ -4919,6 +4928,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     renderWeek: () => renderWeek,
     renderWork: () => renderWork,
     replaceCurrent: () => replaceCurrent,
+    repliedRow: () => repliedRow,
     resolvePerson: () => resolvePerson,
     resolver: () => resolver,
     restoreNav: () => restoreNav,
@@ -10235,6 +10245,23 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ] }) : null,
         /* @__PURE__ */ u2("p", { children: r4.meta }),
         r4.summary ? /* @__PURE__ */ u2("p", { class: "tdsum", children: r4.summary }) : null,
+        r4.ask ? /* @__PURE__ */ u2("p", { class: "tdask", children: [
+          /* @__PURE__ */ u2("span", { class: "tdlab", children: "Ask" }),
+          " ",
+          r4.ask
+        ] }) : null,
+        r4.owners || r4.dueText ? /* @__PURE__ */ u2("p", { class: "tdwho", children: [
+          r4.owners ? /* @__PURE__ */ u2(S2, { children: [
+            /* @__PURE__ */ u2("span", { class: "tdlab", children: "For" }),
+            " ",
+            r4.owners
+          ] }) : null,
+          r4.dueText ? /* @__PURE__ */ u2(S2, { children: [
+            r4.owners ? " · " : "",
+            /* @__PURE__ */ u2("span", { class: r4.overdue ? "tdover" : "tddue", children: r4.overdue ? `overdue, ${r4.dueText}` : r4.dueText })
+          ] }) : null
+        ] }) : null,
+        r4.files ? /* @__PURE__ */ u2("p", { class: "tdfiles", children: r4.files }) : null,
         r4.cands && r4.cands.length ? /* @__PURE__ */ u2("ul", { class: "tdcands", "aria-label": "What it came to", children: r4.cands.map((c5) => /* @__PURE__ */ u2("li", { class: "tdcand", "data-tdc": c5.key, children: [
           /* @__PURE__ */ u2("span", { class: "tag tdctag", children: c5.tag }),
           /* @__PURE__ */ u2("span", { class: "ct", children: [
@@ -11263,11 +11290,16 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       });
     });
     VIPQ().forEach((a5) => tdl.push(quietRow(a5)));
-    return tdl.map((x5, i5) => ({ x: x5, i: i5 })).sort((a5, b5) => b5.x.at.localeCompare(a5.x.at) || a5.i - b5.i).map((o5) => o5.x);
+    VIPR().forEach((a5) => tdl.push(repliedRow(a5)));
+    return tdl.map((x5, i5) => ({ x: x5, i: i5 })).sort((a5, b5) => (a5.x.overdue ? 0 : 1) - (b5.x.overdue ? 0 : 1) || (a5.x.overdue && b5.x.overdue ? a5.x.due.localeCompare(b5.x.due) : 0) || b5.x.at.localeCompare(a5.x.at) || a5.i - b5.i).map((o5) => o5.x);
   }
   var CTYPE = (
     /** @type {Record<string,string>} */
     { action: "Action", decision: "Decision", risk: "Risk" }
+  );
+  var CARDTYPE = (
+    /** @type {Record<string,string>} */
+    { action: "Action", decision: "Decision", fyi: "FYI / file", risk: "Risk" }
   );
   var confMark = (a5) => a5.confidential || a5.marker === "confidential" ? "Confidential" : "";
   var convAt = (a5) => String(a5.last || a5.sent || "").replace("T", " ").slice(0, 16);
@@ -11275,8 +11307,10 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
   var convMeta = (a5) => [
     `${VIPKIND[a5.kind] || "Message"}${convWhen(a5) ? " · updated " + whenWords(convWhen(a5)) : ""}`,
     a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project",
-    a5.found === "start-up" ? "found on start-up" : ""
+    a5.found === "start-up" ? "found on start-up" : "",
+    a5.logged ? `Logged on ${a5.logged.id}${a5.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
+  var cardDue = (a5) => a5.due ? { text: `due ${longDay(a5.due)}`, over: a5.due < TODAY } : null;
   function convRow(a5) {
     const t5 = String(a5.title || a5.subject || "Conversation");
     const cands = (a5.candidates || []).filter(
@@ -11295,7 +11329,49 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
         ]
       })
     );
-    return { key: "al" + a5.id, kind: "message", id: a5.id, at: convAt(a5), tag: "Message", tone: "warn", t: t5, link: a5.link || "", mark: confMark(a5), meta: convMeta(a5), summary: String(a5.summary || ""), cands, acts: [] };
+    const due = cardDue(a5), name = `${a5.who ?? ""}, ${t5}`, acts2 = [{ id: "handled", icon: "done", label: "Handled", name: `Handled: ${name}`, data: { alertdo: "handled", id: a5.id } }];
+    const m5 = a5.match && a5.match.id && a5.match.relation !== "new" ? String(a5.match.id) : "";
+    if (m5 && !a5.logged) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t5}`, data: { alertdo: "log", id: a5.id } });
+    const files = a5.type === "fyi" && (a5.attachments || []).length ? `Files: ${(a5.attachments || []).slice(0, 4).join(", ")}${a5.attachments.length > 4 ? ` and ${a5.attachments.length - 4} more` : ""}` : "";
+    return {
+      key: "al" + a5.id,
+      kind: "message",
+      id: a5.id,
+      at: convAt(a5),
+      tag: CARDTYPE[a5.type] || "Message",
+      tone: "warn",
+      t: t5,
+      link: a5.link || "",
+      mark: confMark(a5),
+      meta: convMeta(a5),
+      summary: String(a5.summary || ""),
+      cands,
+      acts: acts2,
+      ask: String(a5.ask || ""),
+      due: a5.due || "",
+      overdue: !!(due && due.over),
+      dueText: due ? due.text : "",
+      owners: (a5.owners || []).join(", "),
+      files
+    };
+  }
+  function repliedRow(a5) {
+    const others = (a5.people || []).filter(
+      /** @param {string} p */
+      (p6) => p6 !== a5.who
+    );
+    return {
+      key: "al" + a5.id,
+      kind: "quiet",
+      id: a5.id,
+      at: String(a5.replied_at || convAt(a5)),
+      tag: "Replied",
+      tone: "",
+      t: `${a5.who || ""}${others.length ? " with " + others.slice(0, 3).join(", ") : ""}: you replied ${whenWords(String(a5.replied_at || ""))}`,
+      link: a5.link || "",
+      meta: convMeta(a5),
+      acts: []
+    };
   }
   function quietRow(a5) {
     const others = (a5.people || []).filter(
@@ -13603,8 +13679,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
     if (msg) snack(msg);
     return true;
   }
-  var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && !a5.quiet);
-  var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && String(a5.updated || "").slice(0, 10) === TODAY);
+  var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && !a5.quiet && a5.state !== "replied");
+  var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && a5.state !== "replied" && String(a5.updated || "").slice(0, 10) === TODAY);
+  var VIPR = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.state === "replied" && String(a5.replied_at || "").slice(0, 10) === TODAY);
   var vipSig = () => (VIPD().alerts || []).filter((a5) => !a5.seen).map((a5) => `${a5.id}@${a5.updated || ""}`).join();
   var vipKind = (n4) => {
     const ppl = VIPD().people || {};
@@ -13680,6 +13757,56 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       renderToday();
       snack("Back in To decide");
     });
+  }
+  async function alertHandled(id) {
+    if (!viaServer()) {
+      snack("Handled needs the live server");
+      return;
+    }
+    const r4 = await api("/api/alerts/handled", { ids: [id] });
+    if (!r4.ok || !r4.handled) {
+      snack(r4.message || "Not marked handled");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id), back2 = alertFocus(id, "handled");
+    if (a5) {
+      a5.seen = r4.at || nowStamp();
+      a5.state = "handled";
+    }
+    vipBadge();
+    renderToday();
+    back2();
+    snack("Marked handled", async () => {
+      const u5 = await api("/api/alerts/undo", { ids: [id] });
+      if (!u5.ok) {
+        snack(u5.message || "Not undone");
+        return;
+      }
+      if (a5) {
+        delete a5.seen;
+        a5.state = "open";
+      }
+      VIPNOTED.add(id);
+      vipBadge();
+      renderToday();
+      snack("Back in To decide");
+    });
+  }
+  async function alertLog(id) {
+    if (!viaServer()) {
+      snack("Log needs the live server");
+      return;
+    }
+    const r4 = await api("/api/alerts/log", { id });
+    if (!r4.ok) {
+      snack(r4.message || "Not logged");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id);
+    if (a5) a5.logged = r4.logged;
+    await reloadData();
+    renderToday();
+    snack(r4.message || "Staged for Review");
   }
   var ALERTTYPES = [["action", "Action"], ["risk", "Risk"], ["issue", "Issue"], ["decision", "Decision"]];
   var alertTypeOf = (k5, x5) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(x5 && x5.type || "risk").toLowerCase();
@@ -13974,7 +14101,9 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
       e4.preventDefault();
       e4.stopPropagation();
       const cand = Number(b5.dataset.cand || 0) || void 0;
-      if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
+      if (b5.dataset.alertdo === "handled") alertHandled(b5.dataset.id);
+      else if (b5.dataset.alertdo === "log") alertLog(b5.dataset.id);
+      else if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
       else if (b5.dataset.alertdo === "make") alertMake(b5.dataset.id, b5.dataset.ctype || "", void 0, cand);
       else if (b5.dataset.alerttype && shared.CUR && shared.CUR.alert) {
         if (b5.getAttribute("aria-pressed") === "true") return;

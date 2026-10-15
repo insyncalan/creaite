@@ -1014,7 +1014,8 @@ def vip_record(found, how="sweep"):
         got = conv_record(st, m, vips, how, held) if is_conv else msg_record(st, m, vips, how, have)
         if got:
             new.append(got)
-    if how in ("check", "start-up") or new:
+    dirty = st.pop("_dirty", False)                                  # BL-342: a key learned or two cards merged
+    if how in ("check", "start-up") or new or dirty:
         if how in ("check", "start-up") and not st.get("held"):
             st["last_check"] = now().strftime("%Y-%m-%d %H:%M")     # BL-334: not past a conversation still being waited for
         if not st.get("held"):
@@ -1161,9 +1162,8 @@ def conv_candidates(items):
         text = _clean(it.get("text") or it.get("title") or it.get("description"), 200)
         if typ not in CAND_TYPES or not text:
             continue
-        due = str(it.get("due") or it.get("due_date") or "")[:10]
         out.append({"type": typ, "text": text, "owner": _clean(it.get("owner"), 80) or None,
-                    "due": due if re.fullmatch(r"\d{4}-\d{2}-\d{2}", due) else None})
+                    "due": real_date(it.get("due") or it.get("due_date"))})
         if len(out) == 8:
             break
     return out
@@ -1176,20 +1176,43 @@ def conv_record(st, m, vips, how, held):
     followed = followed_in(people_raw, vips)
     if not followed:
         return None
-    key, last = conv_key(m), conv_last(m)
+    key, last, keys = conv_key(m), conv_last(m), conv_keys(m)
     if held is not None and still_talking(held, key, last):
         return None
-    a = next((x for x in st["alerts"] if x.get("id") == key), None)
-    if a is not None and (a.get("last") or "") >= last:
-        return None                                                    # nothing newer: the card stays as it is
-    if a is None:
-        a = {"id": key, "conv": str(m.get("conversation") or "")[:300] or None, "kind": m.get("kind") or "teams",
-             "who": vips[followed], "address": followed, "found": how, "at": now().strftime("%Y-%m-%d %H:%M"),
-             "seen": None, "candidates": []}
-        st["alerts"].append(a)
+    a = card_find(st, key, keys)                                       # BL-342: any key the thread has been seen under
+    replied = _when(m.get("replied"))                                  # the stage 1 shape: Alan's newer message in the thread
+    if a is not None:
+        card_learn(st, a, keys)
+        if (a.get("last") or "") >= last:
+            return card_unchanged(st, a, replied)
+    else:
+        a = card_new(st, m, vips, how, key, keys)
     a.pop("confidential", None)                                        # set again below while it is still confidential
     a.update(conv_content(m, conv_people(people_raw, vips), people_raw))
-    return conv_finish(a, last, m.get("link"))
+    conv_finish(a, last, m.get("link"))
+    if replied and replied >= last:
+        replied_set(a, replied)                                        # he answered after the last message
+    return a
+
+
+def card_new(st, m, vips, how, key, keys):
+    """A new card for a thread, added to st (BL-342: open, with the keys it was first seen under)."""
+    followed = followed_in([str(p) for p in ([m.get("from")] + list(m.get("people") or [])) if p], vips)
+    a = {"id": key, "conv": str(m.get("conversation") or "")[:300] or None, "kind": m.get("kind") or "teams",
+         "who": vips[followed], "address": followed, "found": how, "at": now().strftime("%Y-%m-%d %H:%M"),
+         "seen": None, "candidates": [], "state": "open", "keys": []}
+    st["alerts"].append(a)
+    card_learn(st, a, keys)
+    return a
+
+
+def card_unchanged(st, a, replied):
+    """A thread with nothing newer: the card stays as it is, unless Alan answered it since (then it closes as replied;
+    returns the card) """
+    if replied and (a.get("state") or "open") == "open" and replied >= (a.get("last") or ""):
+        st["_dirty"] = True
+        return replied_set(a, replied)
+    return None
 
 
 def conv_last(m):
@@ -1203,14 +1226,20 @@ def followed_in(people_raw, vips):
 
 
 def conv_finish(a, last, link):
-    """Merge the candidates, set the quiet flag and the times; a card seen before comes back when there is something new."""
+    """Merge the candidates, set the quiet flag and the times; a card seen before comes back when there is something new.
+    BL-342: a card Alan answered (replied) is open again, a handled one comes back when the new message asks something of him."""
     a["candidates"] = conv_merge(a.get("candidates") or [], a.pop("_cands"))
     fresh = any(not (c.get("made") or c.get("dismissed")) for c in a["candidates"])
     private = a["marker"] == "private"                                 # a confidential one is a card like any other
-    a.update({"quiet": not private and not fresh, "sent": last, "last": last,
+    asks = bool(a.get("ask")) and a.get("type") in ("action", "decision", "risk")
+    a.update({"quiet": not private and not fresh and not a.get("ask"), "sent": last, "last": last,
               "updated": now().strftime("%Y-%m-%d %H:%M"), "link": str(link or a.get("link") or "")[:1000] or None})
-    if a.get("seen") and (fresh or private):
+    if a.get("seen") and (fresh or private or asks):
         a["seen"] = None                                               # carried on with something new: back on Today
+    if not a.get("seen"):
+        a["state"] = "open"
+        a.pop("replied_at", None)
+        a.pop("handled_at", None)
     return a
 
 
@@ -1253,7 +1282,8 @@ def conv_content(m, people, people_raw):
     if marker == "private":
         title = ", ".join(people[:4]) or "Conversation"
         return {"subject": title, "title": title, "people": people[:12], "attachments": [], "p": None,
-                "summary": f"{marker} conversation", "gist": f"{marker} conversation", "marker": marker, "_cands": []}
+                "summary": f"{marker} conversation", "gist": f"{marker} conversation", "marker": marker, "_cands": [],
+                "type": None, "ask": "", "due": None, "owners": []}
     closed = marker == "confidential"
     if closed:
         attachments = []
@@ -1263,7 +1293,8 @@ def conv_content(m, people, people_raw):
     title = conv_title(m, people)
     return {"subject": title, "title": title, "people": people[:12], "attachments": attachments,
             "p": conv_project(m, title, people_raw, attachments, summary, cands), "summary": summary,
-            "gist": summary[:GIST], "marker": marker, **({"confidential": True} if closed else {}), "_cands": cands}
+            "gist": summary[:GIST], "marker": marker, **({"confidential": True} if closed else {}), "_cands": cands,
+            **card_fields(m, cands)}
 
 
 def conv_merge(old, cands):
@@ -1280,8 +1311,8 @@ def conv_merge(old, cands):
     return merged
 
 def vip_open(a):
-    """Whether an alert still waits for Alan: not seen, and not a quiet line."""
-    return not a.get("seen") and not a.get("quiet")
+    """Whether an alert still waits for Alan: not seen, not a quiet line, and (BL-342) not one he has already answered."""
+    return not a.get("seen") and not a.get("quiet") and a.get("state") != "replied"
 
 
 def cand_settled(a):
@@ -1314,6 +1345,305 @@ def same_conv(a, ref):
     return bool(ref["title"]) and a.get("kind") == ref["kind"] and str(a.get("title") or "").strip().lower() == ref["title"]
 
 # ===== end BL-334 =====
+
+# ===== BL-342 (Part 1): a thread's card =====
+# One card per thread, built around what Alan must do: a type (action, decision, fyi or risk), a due date, owners and one line
+# of what is asked of him (`ask`). The card keeps every key the thread has been seen under (`conv`, `keys`): a thread matches a
+# card on any of them, and two cards later found to share one are merged (newest summary kept, Handled kept if either was
+# handled). `state` is open, handled (Alan pressed Handled; `handled_at`) or replied (his own message after the last one
+# shows in the thread; `replied_at`; a later message from someone else opens it again). Log on the matched item stages one
+# `update` proposal of its own for Review (vip_log). Claude's words and references only, never message text (BL-99), and
+# never the word that labels a followed person (BL-288).
+
+CARD_TYPES = ("action", "decision", "fyi", "risk")
+KEYS_KEPT = 12
+
+
+def real_date(x):
+    """x as a YYYY-MM-DD date when it is a real one, else None (a due date that isn't a date is dropped)."""
+    t = str(x or "").strip()[:10]
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", t):
+        return None
+    try:
+        datetime.strptime(t, "%Y-%m-%d")
+    except ValueError:                                              # 2026-02-30 and the like: not a date
+        return None
+    return t
+
+
+def card_owners(raw):
+    """The people named to act: full names, each once, at most six; "you" when the ask is of Alan."""
+    parts = re.split(r"\s*[;,]\s*|\s+and\s+", raw) if isinstance(raw, str) else raw if isinstance(raw, list) else []
+    me, out = my_name().lower(), []
+    for p in parts:
+        n = _clean(p, 80)
+        if n.lower() in ("you", "me") or (me and n.lower() == me):
+            n = "you"
+        if n and n.lower() not in {x.lower() for x in out}:
+            out.append(n)
+    return out[:6]
+
+
+def card_fields(m, cands):
+    """A thread's type, ask, due date and owners from what Claude returned. Without a type, the first candidate's, else fyi
+    (a quiet thread: nothing for Alan)."""
+    typ = str(m.get("type") or "").strip().lower()
+    typ = "fyi" if typ in ("file", "fyi / file") else typ
+    if typ not in CARD_TYPES:
+        typ = cands[0]["type"] if cands else "fyi"
+    return {"type": typ, "ask": _clean(m.get("ask"), 140), "due": real_date(m.get("due")),
+            "owners": card_owners(m.get("owners"))}
+
+
+def norm_subject(text):
+    """A mail subject without Re:, Fw:, bracketed tags, case or extra spaces."""
+    t = " ".join(str(text or "").split())
+    while True:
+        u = re.sub(r"^((re|fw|fwd|aw)\s*:\s*|\[[^\]]*\]\s*)+", "", t, flags=re.I)
+        if u == t:
+            break
+        t = u
+    return t.strip().lower()
+
+
+def conv_keys(m):
+    """Every key a found thread can be known by: its conversation ID, its link, and (mail) a local key from the normalised
+    subject and the sorted participant addresses."""
+    import hashlib
+    keys = []
+    if m.get("conversation"):
+        keys.append("id:" + str(m["conversation"])[:300])
+    if m.get("link"):
+        keys.append("link:" + str(m["link"])[:1000])
+    subject = norm_subject(m.get("subject") or m.get("title"))
+    if (m.get("kind") or "teams") == "mail" and subject:
+        people = sorted({address_of(p) or str(p).strip().lower() for p in [m.get("from")] + list(m.get("people") or []) if p})
+        keys.append("loc:" + hashlib.sha1((subject + "|" + ",".join(people)).encode("utf-8")).hexdigest()[:16])
+    return keys
+
+
+def card_keys(a):
+    """The keys a card is known by: those it stored, and (an older card) its conversation ID and link."""
+    return set(a.get("keys") or []) | ({"id:" + a["conv"]} if a.get("conv") else set()) | \
+        ({"link:" + a["link"]} if a.get("link") else set())
+
+
+def card_find(st, key, keys):
+    """The card a found thread belongs to: its alert ID or any shared key. Two or more are merged into the first."""
+    hits = [x for x in st["alerts"] if x.get("id") == key or same_thread(card_keys(x), set(keys))]
+    for extra in hits[1:]:
+        card_merge(st, hits[0], extra)
+    return hits[0] if hits else None
+
+
+def same_thread(have, keys):
+    """Whether a card's keys and a found thread's keys name one thread: they share a key, and the two conversation IDs
+    (when both are known) agree (two chats that share a link are still two)."""
+    ids_a, ids_b = {k for k in have if k.startswith("id:")}, {k for k in keys if k.startswith("id:")}
+    if ids_a and ids_b and not ids_a & ids_b:
+        return False
+    return bool(have & keys)
+
+
+def card_learn(st, a, keys):
+    """Add the keys a thread was seen under to its card (and its conversation ID, once known)."""
+    have = list(a.get("keys") or [])
+    new = [k for k in keys if k not in have]
+    if new or "keys" not in a:
+        a["keys"] = (have + new)[-KEYS_KEPT:]
+        st["_dirty"] = True
+    ident = next((k[3:] for k in keys if k.startswith("id:")), "")
+    if ident and not a.get("conv"):
+        a["conv"] = ident
+        st["_dirty"] = True
+
+
+def card_merge(st, keep, drop):
+    """Fold the card `drop` into `keep` (two cards for one thread): the newer one's summary and fields, the keys of both,
+    the candidates of both with their made or dismissed state, and Handled when either was handled. `drop` goes."""
+    newer, older = (drop, keep) if (drop.get("last") or "") > (keep.get("last") or "") else (keep, drop)
+    for f in ("title", "subject", "summary", "gist", "people", "attachments", "p", "marker", "type", "ask", "due", "owners",
+              "link", "sent", "last", "updated", "quiet", "who", "address"):
+        if f in newer:
+            keep[f] = newer[f]
+    keep.pop("confidential", None)
+    if newer.get("confidential"):
+        keep["confidential"] = True
+    keep["keys"] = list(dict.fromkeys((keep.get("keys") or []) + (drop.get("keys") or [])))[-KEYS_KEPT:]
+    keep["conv"] = keep.get("conv") or drop.get("conv")
+    keep["candidates"] = conv_merge(older.get("candidates") or [], newer.get("candidates") or [])
+    for f in ("made", "logged"):
+        if drop.get(f) and not keep.get(f):
+            keep[f] = drop[f]
+    merge_state(keep, drop, newer)
+    st["alerts"].remove(drop)
+    st["_dirty"] = True
+
+
+def merge_state(keep, drop, newer):
+    """The merged card's state: handled when either was; seen when both were; otherwise open (or replied, as the newer was)."""
+    handled = [x for x in (keep, drop) if x.get("state") == "handled"]
+    if handled:
+        keep.update({"state": "handled", "handled_at": handled[0].get("handled_at"), "seen": handled[0].get("seen")})
+    elif keep.get("seen") and drop.get("seen"):
+        keep["seen"] = max(keep["seen"], drop["seen"])
+    else:
+        keep["seen"] = None
+        keep["state"] = newer.get("state") or "open"
+        if keep["state"] == "replied":
+            keep["replied_at"] = newer.get("replied_at")
+
+
+def replied_set(a, when):
+    """Close a card as replied (Alan answered in the thread at `when`). A handled or dismissed card stays as it is."""
+    if a.get("seen") or a.get("state") == "handled":
+        return a
+    a["state"], a["replied_at"] = "replied", when
+    return a
+
+
+def vip_replied(aid, when=None):
+    """Close the card aid as replied at `when` (default now); only when that is not before its last message. Returns True
+    when the card changed."""
+    st = vip_state()
+    a = next((x for x in st["alerts"] if x.get("id") == aid), None)
+    when = _when(when) or now().strftime("%Y-%m-%d %H:%M")
+    if a is None or a.get("state") == "replied" or when < (a.get("last") or "") or replied_set(a, when).get("state") != "replied":
+        return False
+    vip_save(st)
+    return True
+
+
+def vip_handled(ids=None):
+    """Handled (BL-342): the same effect as Dismiss (out of Needs attention, kept in vip.json, Undo puts it back), recorded
+    as `handled` with a time. Returns the IDs settled."""
+    st, done, at = vip_state(), [], now().strftime("%Y-%m-%d %H:%M")
+    for a in st["alerts"]:
+        if not a.get("seen") and (ids is None or a["id"] in ids):
+            a.update({"seen": at, "state": "handled", "handled_at": at})
+            done.append(a["id"])
+    if done:
+        vip_save(st)
+    return done
+
+
+def vip_sort(alerts, today=None):
+    """Overdue cards first (oldest due date first), then by due date, then by last message, newest first."""
+    today = today or now().strftime("%Y-%m-%d")
+    by_last = sorted(alerts, key=lambda a: a.get("last") or a.get("sent") or "", reverse=True)
+    return sorted(by_last, key=lambda a: (0 if a.get("due") and a["due"] < today else 1, a.get("due") or "9999-12-31"))
+
+
+def logged_state(logged):
+    """Where a logged update is: "staged" (pending in Review), "decided" (decided there, not applied yet), "applied" or "gone"."""
+    name = str((logged or {}).get("proposal") or "")
+    if not re.fullmatch(r"proposed-[\w.-]+\.json", name):
+        return "gone"
+    for d, state in ((paths.STAGING, None), (paths.APPLIED, "applied")):
+        try:
+            data = json.loads((d / name).read_text(encoding="utf-8"))
+        except (OSError, ValueError):                              # not in this folder (or unreadable): look in the other
+            continue
+        item = next((i for i in data.get("items") or [] if i.get("n") == logged.get("n")), None)
+        if item is None:
+            return "gone"
+        return state or ("staged" if item.get("decision") == "pending" else "decided")
+    return "gone"
+
+
+def thread_item(item_id):
+    """(file, data, item) of the pending thread update for an item already waiting in Review, else None."""
+    for f in sorted(paths.STAGING.glob("proposed-*-dashboard*.json")):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):                              # a file that went or isn't a proposal: skip it
+            continue
+        for i in data.get("items") or []:
+            if (i.get("op") == "update" and i.get("table") == "actions" and i.get("id") == item_id
+                    and i.get("decision") == "pending" and (i.get("suggested") or {}).get("feature") == "thread"):
+                return f, data, i
+    return None
+
+
+def thread_line(a):
+    """The line a card adds to an item's latest update: the date and Claude's own summary with the source named; a
+    confidential thread only a neutral line (latest_update has no Sensitive label of its own)."""
+    day = tracker.shown(now().strftime("%Y-%m-%d"))
+    if a.get("marker") == "confidential" or a.get("confidential"):
+        return f"{day}: Discussed in a confidential thread, {day}."
+    word = {"mail": "email", "teams": "Teams", "calendar": "invite"}.get(a.get("kind"), "message")
+    summary = _clean(a.get("summary"), SUMMARY) or _clean(a.get("title"), 200)
+    return f"{day}: {summary} (from the {word} thread \u201c{_clean(a.get('title'), 80)}\u201d)"[:2000]
+
+
+def log_target(a):
+    """(the matched action's ID, its row) for a card that may be logged; raises ValueError with a reason to show."""
+    if a.get("marker") == "private":
+        raise ValueError("Nothing to log for a private conversation.")
+    item_id = str((a.get("match") or {}).get("id") or "") if isinstance(a.get("match"), dict) else ""
+    if not item_id:
+        raise ValueError("No matched item to log it on.")
+    if "-A-" not in item_id:
+        raise ValueError("Log is for actions; open the item and add the update there.")
+    row = tracker.fetch(tracker.connect(), "actions", item_id)
+    if row is None or row["status"] not in ("Open", "Delayed"):
+        raise ValueError("That item isn't open any more.")
+    return item_id, row
+
+
+def log_stage(a, item_id, row, line):
+    """Write the card's update as a new pending proposal; returns (file name, item number)."""
+    import propose
+    item = {"n": 1, "op": "update", "table": "actions", "id": item_id, "changes": {"latest_update": line},
+            "based_on": row["updated_at"],
+            "why": f"Logged from the {a.get('kind') or 'mail'} thread \u201c{_clean(a.get('title'), 80)}\u201d",
+            "source": alert_source(a), "suggested": {"feature": "thread", "threads": [a["id"]]}, "match": "strong",
+            "flags": [], "decision": "pending"}
+    spec = {"created": now().strftime("%Y-%m-%dT%H:%M:%S"), "source_run": "dashboard", "files": [], "items": [item]}
+    propose.complete(spec)
+    bad = [why for k, why in propose.check(spec).values() if k == "invalid"]
+    if bad:
+        raise ValueError(f"Not staged: {bad[0]}")
+    stamp, out, k = now().strftime("%Y-%m-%d-%H%M%S"), None, 1
+    while out is None or out.exists() or (paths.APPLIED / out.name).exists():
+        out = paths.STAGING / f"proposed-{stamp}-dashboard{f'-{k}' if k > 1 else ''}.json"
+        k += 1
+    paths.STAGING.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(spec, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return out.name, 1
+
+
+def log_append(held, aid, line):
+    """Add the card's line to the pending thread proposal already holding an update for the item; returns (name, n)."""
+    f, data, item = held
+    item["changes"]["latest_update"] += "\n" + line
+    item.setdefault("suggested", {"feature": "thread"}).setdefault("threads", []).append(aid)
+    f.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return f.name, item["n"]
+
+
+def vip_log(aid):
+    """Log a matched thread on its item (BL-342, decision b): stage one pending `update` of the action (`latest_update`) as the
+    dashboard's own proposal for Review. A second pending thread update for the same item gets the line added to the same
+    proposal. Clicking again stages nothing new. Returns {"proposal", "n", "id", "state", "already"}; raises LookupError
+    (no such card) or ValueError with a reason to show."""
+    a = vip_find(aid)
+    if a is None:
+        raise LookupError("That thread isn't on Today any more.")
+    item_id, row = log_target(a)
+    if isinstance(a.get("logged"), dict) and logged_state(a["logged"]) != "gone":
+        return {**{k: a["logged"].get(k) for k in ("proposal", "n", "id")}, "state": logged_state(a["logged"]), "already": True}
+    line, held = thread_line(a), thread_item(item_id)
+    name, n = log_append(held, aid, line) if held else log_stage(a, item_id, row, line)
+    st = vip_state()
+    for x in st["alerts"]:
+        if x.get("id") == aid:
+            x["logged"] = {"proposal": name, "n": n, "id": item_id, "at": now().strftime("%Y-%m-%d %H:%M")}
+    vip_save(st)
+    return {"proposal": name, "n": n, "id": item_id, "state": "staged", "already": False}
+
+# ===== end BL-342 =====
+
 
 
 def vip_seen(ids=None):
@@ -1404,6 +1734,9 @@ def vip_undismiss(ids, cand=None):
     for a in st["alerts"]:
         if a["id"] in ids and a.get("seen"):
             a["seen"] = None
+            if a.get("state") == "handled":
+                a["state"] = "open"                                    # BL-342: Handled undone
+                a.pop("handled_at", None)
             if isinstance(a.get("made"), dict) and made_state(a["made"]) == "gone":
                 a.pop("made")
             done.append(a["id"])
