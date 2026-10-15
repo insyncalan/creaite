@@ -84,6 +84,53 @@ class AutosizeFields(LiveBrowserCase):
         self.grows_and_stops("#genNote", allow_drag=False)
         b.eval("$('#genDlg').close()")
 
+    def open_peek(self):
+        b = self.b
+        b.eval("WT='actions'; go('work')")
+        b.wait("document.querySelector('#workTbl tbody tr[data-row]')")
+        id_ = b.eval("A.find(x=>x.st==='Open').id")
+        b.eval(f"openRecord('actions',{id_!r})")
+        b.wait(f"CUR&&CUR.id==={id_!r}&&document.getElementById('panel').classList.contains('peek')")
+        b.pump(0.4)
+        return id_
+
+    def test_peek_latest_update_grows_then_scrolls_and_saves_the_full_text(self):
+        """#106: the action peek's Latest update grows with its text up to 60% of the window, then scrolls inside; typing grows
+        it; the saved value is the full text with its line breaks; a hand-dragged height is kept."""
+        b = self.b
+        self.open_peek()
+        sel = "#pkDesc"
+
+        def fill(n):                                                        # contenteditable: select its text, then insert as a paste would
+            b.eval("(()=>{ const el=document.querySelector('#pkDesc'); el.focus(); document.execCommand('selectAll'); })()")
+            b.call("Input.insertText", text="\n".join(f"line {i + 1}" for i in range(n)))
+            b.pump(0.1)
+            return self.geo(sel)
+        g3 = fill(3)
+        g6 = fill(6)
+        self.assertGreater(g6["h"], g3["h"] + 30)                           # more lines, taller
+        self.assertLessEqual(g6["sh"], g6["ch"] + 1)                        # all six show
+        b.call("Input.insertText", text="\nand typed on the end")          # typing more grows it
+        self.assertGreater(self.geo(sel)["h"], g6["h"] + 15)
+        self.assertEqual(g6["resize"], "vertical")                          # the drag handle
+        g30 = fill(30)
+        cap = int(b.eval("window.innerHeight") * 0.6)
+        self.assertLessEqual(g30["h"], cap + 1)                             # 60% of the window, as autoGrow
+        self.assertGreater(g30["h"], cap - 3)
+        self.assertGreater(g30["sh"], g30["ch"])                            # then it scrolls inside
+        self.assertEqual(g30["ov"], "auto")
+        want = "\n".join(f"line {i + 1}" for i in range(30))
+        b.eval("document.querySelector('#pkDesc').blur()")                  # leaving the field saves, as before
+        b.wait("PKS.length===1", 10)
+        staged = [p.read_text() for p in (self.v.root / "system/staging").glob("proposed-*-dashboard.json")]
+        import json as _json
+        vals = [v for t in staged for it in _json.loads(t)["items"] for v in it.get("changes", {}).values()]
+        self.assertIn(want, vals)                                           # the full text, line breaks and all
+        fill(2)
+        b.eval("document.querySelector('#pkDesc').style.height='260px'")    # as the drag handle does
+        b.call("Input.insertText", text="\nmore")
+        self.assertGreaterEqual(self.geo(sel)["h"], 258)                    # a dragged height is kept
+
     def test_a_value_set_by_code_and_a_record_opened_with_long_text(self):
         b = self.b
         b.eval("go('work')")
