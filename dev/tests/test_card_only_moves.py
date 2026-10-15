@@ -318,15 +318,20 @@ class CardOnly(CardOnlyMoves):
             "    card, why = ls.server_edit_card('t', json.dumps(spec).encode('utf-8'))\n"
             "    out = ls.edit_apply(ls.EDITS[card['card']])\n"
             "    left = sorted(f.name for f in elsewhere.iterdir())\n"
-            "    reach.card_move_marker('notes', fop['from'], fop['to']).write_text('{}')\n"
+            "    m = reach.card_move_marker('notes', fop['from'], fop['to'])\n"
+            "    m.write_text(json.dumps({'proposal': prop.name, 'sha256': tracker.file_hash(prop)}))     # right in every other way\n"
             "    t = tracker.card_move_problem(fop, {'archive': 'notes'}, prop)\n"
+            "    m.unlink()\n"
             "finally:\n"
             "    if g.is_symlink(): g.unlink()\n"
             "    shutil.rmtree(elsewhere, ignore_errors=True)\n"
             "    if had: saved.rename(g)\n"
-            "    prop.unlink(missing_ok=True)\n"
-            "print(json.dumps([mode, inside, out.get('ok'), out.get('message'), left, t]))")
-        mode, inside, ok, message, left, t = got
+            "g.mkdir(mode=0o700, exist_ok=True); m.write_text(json.dumps({'proposal': prop.name, 'sha256': tracker.file_hash(prop)}))\n"
+            "control = tracker.card_move_problem(fop, {'archive': 'notes'}, prop)            # the same marker, the real folder\n"
+            "m.unlink(); prop.unlink()\n"
+            "print(json.dumps([mode, inside, out.get('ok'), out.get('message'), left, t, control]))")
+        mode, inside, ok, message, left, t, control = got
+        self.assertIsNone(control)
         self.assertEqual((mode, inside), ("0o700", 1))
         self.assertFalse(ok, message)
         self.assertIn("the approval couldn't be recorded", message)
