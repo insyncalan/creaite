@@ -4,6 +4,7 @@ Run: python3 dev/tests/test_redraft_reorder.py   (needs Google Chrome; skipped o
 test_report_editor's fixture: a weekly report on the Sheet, with a record of every change and event. The draft is held back
 (a promise the test settles later), the sections are moved while it is pending, and then it arrives.
 """
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -141,6 +142,43 @@ class StaleTests(SheetCase):
         b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
         self.assertEqual(self.sh("changes.filter(c => c === 'Redraft used').length"), 1)
         self.assertEqual(self.sh("events.filter(e => e.type === 'redraft').length"), 1)
+
+    def test_a_section_edited_after_the_spark_is_stale_and_use_this_changes_nothing(self):
+        b = self.b
+        self.ready()
+        b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Typed since.'} : s)}; SH.draw();")
+        self.settle()
+        b.wait("/changed this section since/.test(document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft')?.textContent||'')")
+        self.assertEqual(b.eval("document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button').length"), 1)
+        self.assertEqual(b.eval("SH.doc.sections[0].text"), "Typed since.")
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').length"), 0)
+        # edited after the draft was shown: Use this is refused too
+        self.b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Close').click()")
+        self.ready("this_week")
+        self.settle("this_week")
+        b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'this_week' ? {...s, text: 'Typed after.'} : s)}; SH.draw();")
+        b.wait("/changed this section since/.test(document.querySelector('#shFix section[data-id=\"this_week\"] .sheet-redraft')?.textContent||'')")
+        self.assertEqual(b.eval("SH.doc.sections.find(s=>s.id==='this_week').text"), "Typed after.")
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').length"), 0)
+
+    def test_no_edit_and_use_this_applies_as_before(self):
+        b = self.b
+        self.ready()
+        self.settle()
+        b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
+        b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
+        self.assertEqual(self.sh("events.filter(e=>e.type==='redraft').map(e=>e.choice)"), ["use"])
+
+    def test_an_edit_that_puts_the_words_back_is_not_stale(self):
+        b = self.b
+        self.ready()
+        orig = b.eval("SH.doc.sections[0].text")
+        b.eval("SH.doc = {...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {...s, text: 'Typed.'} : s)}; SH.draw();")
+        b.eval(f"SH.doc = {{...SH.doc, sections: SH.doc.sections.map(s => s.id === 'summary' ? {{...s, text: {json.dumps(orig)}}} : s)}}; SH.draw();")
+        self.settle()
+        self.assertFalse(b.eval("/changed this section|earlier version/.test(document.querySelector('#shFix section[data-id=\"summary\"] .sheet-redraft').textContent)"))
+        b.eval("[...document.querySelectorAll('#shFix section[data-id=\"summary\"] .sheet-redraft button')].find(x=>x.textContent==='Use this').click()")
+        b.wait("SH.doc.sections[0].text==='Fresh draft for summary'")
 
 
 if __name__ == "__main__":

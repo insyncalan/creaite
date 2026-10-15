@@ -58424,6 +58424,7 @@ ${d5.text}`);
     }) });
   }
   var docKey = (d5) => [d5.kind, d5.project, d5.date, d5.client || "", d5.version || 0].join("|");
+  var wordsKey = (s5) => JSON.stringify([s5.text ?? null, s5.panes ?? null]);
   var DRAGGING = (
     /** @type {string|null} */
     null
@@ -58435,8 +58436,10 @@ ${d5.text}`);
       /** @type {any} */
       null
     );
-    const docNow = docKey(doc), liveKey = A2(docNow), used = A2(false);
+    const docNow = docKey(doc), wordsNow = wordsKey(s5), liveKey = A2(docNow), liveWords = A2(wordsNow), used = A2(false);
     liveKey.current = docNow;
+    liveWords.current = wordsNow;
+    const staleWhy = (r4) => r4 && r4.from && (r4.from !== liveKey.current ? "doc" : r4.words !== liveWords.current ? "words" : "");
     const [name, setName] = d2(s5.heading);
     const [over, setOver] = d2(
       /** @type {""|"above"|"below"} */
@@ -58466,12 +58469,13 @@ ${d5.text}`);
     const ownRender = (p6.renderers.byId || {})[s5.id] || (p6.renderers.byType || {})[s5.type];
     const sparkOn = !!p6.onRedraft && !exported && (s5.type === "text" || s5.type === "panes");
     const spark2 = p6.onRedraft && !exported ? async () => {
-      const from = docNow;
+      const from = docNow, words = wordsNow;
       used.current = false;
-      setRd({ status: "running", from });
+      setRd({ status: "running", from, words });
       try {
         const a5 = await p6.onRedraft?.(s5);
-        setRd(from === liveKey.current ? { status: "ready", answer: a5, from } : { status: "stale", from });
+        const r4 = { from, words };
+        setRd(staleWhy(r4) ? { status: "stale", ...r4, why: staleWhy(r4) } : { status: "ready", answer: a5, ...r4 });
       } catch (e4) {
         setRd({ status: "failed", message: String(e4 && /** @type {any} */
         e4.message || "No draft came back") });
@@ -58635,9 +58639,9 @@ ${d5.text}`);
               p6.match.differs(s5.id) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn", onClick: () => p6.match?.one(s5.id), children: "Match internal" }) : null
             ] }) : null
           ] }),
-          rd2 ? /* @__PURE__ */ u2(Redraft, { rd: rd2.from && rd2.from !== docNow ? { status: "stale" } : rd2, s: s5, readOnly: !editing, close: () => setRd(null), onUse: (choice, a5) => {
-            if (rd2.from && rd2.from !== liveKey.current) {
-              setRd({ status: "stale", from: rd2.from });
+          rd2 ? /* @__PURE__ */ u2(Redraft, { rd: staleWhy(rd2) ? { status: "stale", why: staleWhy(rd2) } : rd2, s: s5, readOnly: !editing, close: () => setRd(null), onUse: (choice, a5) => {
+            if (staleWhy(rd2)) {
+              setRd({ ...rd2, status: "stale", why: staleWhy(rd2) });
               return;
             }
             if (used.current) return;
@@ -58659,7 +58663,7 @@ ${d5.text}`);
       "…"
     ] });
     if (rd2.status === "stale") return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "alert", children: [
-      "This suggestion was made from an earlier version.",
+      rd2.why === "words" ? "You've changed this section since; the suggestion was made from the earlier words." : "This suggestion was made from an earlier version.",
       /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: close, children: "Close" })
     ] });
     if (rd2.status === "failed") return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "alert", children: [
