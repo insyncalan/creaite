@@ -19,9 +19,7 @@
   "unreached: listbox Picker label:Type (src/panel.js)",
   "unreached: listbox Picker label:Workstream (src/panel.js)"
  ],
- "Projects": [
-  "unreached: menu Menu label:Draft agenda (src/components/prep/PrepToolbar.jsx)"
- ],
+ "Projects": [],
  "Review": [
   "undo: review button.mini.rvpj “Project”: a change is saved with no Undo",
   "unreached: dialog Picker class:rvmv (src/review.js)",

@@ -7,6 +7,7 @@
 import { P, pName } from "../../core/data.js";
 import { ic } from "../../core/dom.js";
 import { fd, TODAY } from "../../core/page.js";
+import { snack } from "../../core/server.js";
 import { choosePrep, hubFor } from "../../meetings.js";
 import { pkList } from "../../panel.js";
 import { popupRev, prepNow } from "../../stores/prepPopup.js";
@@ -57,7 +58,9 @@ export function PrepHead() {
     pkList(btn, { label: "Project", value: code,
       options: [...P.filter(p => p.active !== false || p.code === code).map(p => ({ v: p.code, label: p.name, icon: ic("projects") })),
         { v: "_portfolio", label: "Portfolio (all projects)", icon: ic("projects") }],
-      onPick: v => { choosePrep(v); } });
+      onPick: async v => { if (v === code) return; await choosePrep(v);
+        /* BL-316: a change offers Undo (the series is remembered for the project it had) */
+        if (code) snack(`Remembered for this series: ${v === "_portfolio" ? "Portfolio (all projects)" : pName(v)}`, () => { choosePrep(code); }); } });
   };
 
   return (
