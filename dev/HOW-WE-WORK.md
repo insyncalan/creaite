@@ -37,6 +37,14 @@ How creaite's development is run, from 15-10-2026. It replaces `HANDOVER.md` and
 
 **Decisions:** Jarvis records each one in `dev/HEAD-LOG.md`. A relayed decision isn't a decision until Alan confirms it to Jarvis directly. Guard, security, permission, scope and visible-change decisions are always Alan's.
 
+## Model cost (BL-343, Alan, 15-10-2026)
+
+The target is half the cost per shipped item. Most of the cost is long contexts re-read on every turn, and new agents writing a fresh context.
+- **Restart or `/compact` a lead session (and Jarvis)** when its context passes about 150,000 tokens, or after each release cut, whichever comes first; at least twice a day. After more than an hour idle, start fresh with a handover rather than resuming.
+- **Fewer new agents:** one agent per item; a follow-up goes to the agent that did the work.
+- **Models for agents:** Haiku 5.5 for merges, rebuilds, ticking boxes and board scans; Sonnet 5.5 for docs, release notes and hand-check text; Opus for all code, guard, security, permissions and the writer, until BL-343's replay test says otherwise.
+- **Tight briefs** (the issue, the files, the tests), and no local full suites when Actions runs the same suite.
+
 ## Rules
 
 - **Pull requests close plan items:** put `closes insyncalan/creaite-plan#N` in the description.
