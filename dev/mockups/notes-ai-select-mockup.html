@@ -32,12 +32,12 @@
 .cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}@media (max-width:900px){.cards{grid-template-columns:1fr}}.card{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px}.card h3{font:700 14px var(--display);margin:0 0 6px}.card ul{margin:0;padding-left:18px}.card li{margin:3px 0}
 </style></head><body><div class="page">
 <h1>AI on selected text, redesigned</h1>
-<p class="lede">Today a selection shows an "AI ▾" button that opens one tall list of ten rows with descriptions. It sits over the text it is about, scrolls inside itself and runs off the note. Proposed: a slim horizontal bar above the selection, with the options grouped into three sub-menus and a place to say what you want. Try it: the text is selected; open a group and choose an option.</p>
+<p class="lede">Today a selection shows an "AI ▾" button that opens one tall list of ten rows with descriptions. It sits over the text it is about, scrolls inside itself and runs off the note. Proposed: a slim horizontal bar just under the selection, with the options grouped into three sub-menus and a place to say what you want. Try it: the text is selected; open a group and choose an option.</p>
 <div class="ctl" role="group" aria-label="Where the text is"><span class="sub">Place:</span><button class="st" data-pl="notes" aria-pressed="true">Notes</button><button class="st" data-pl="current" aria-pressed="false">Current state</button><button class="st" data-pl="email" aria-pressed="false">Email draft</button><button class="st" data-pl="line" aria-pressed="false">One line (a field)</button><span class="sub" style="margin-left:8px">The groups follow the place, as the menu does today.</span></div>
-<div class="stage" id="stage"><div class="doc" id="doc"><h2>Purpose</h2><p>Agree the data-sharing approach with the client's legal team before UAT starts.</p><p><span class="sel" id="selt">this is a story of a girl who dont want to go to scool but her mum made her. Further access delay pushes go-live into Q1 so we need a decision on the agreement this week.</span></p><p>Next session: walk through the UAT entry criteria with the sponsor.</p>
+<div class="stage" id="stage"><div class="doc" id="doc"><h2>Purpose</h2><p>Agree the data-sharing approach with the client's legal team before UAT starts.</p><p><span class="sel" id="selt">this is a story of a girl who dont want to go to scool but her mum made her. Further access delay pushes go-live into Q1 so we need a decision on the agreement this week.</span></p><p style="margin-bottom:200px">Next session: walk through the UAT entry criteria with the sponsor.</p>
 <div class="bar" id="bar" role="toolbar" aria-label="AI on the selected text"></div><div class="sub-m" id="sm" role="menu" hidden></div><div class="sug" id="sug" role="dialog" aria-label="Suggestion" hidden></div></div></div>
 <div class="cards"><div class="card"><h3>What changes</h3><ul>
-<li><b>Horizontal bar above the selection</b>, 38px, one row, never over the selected words; flips below when there is no room above. A sparkle, then groups, then Ask.</li>
+<li><b>Horizontal bar just under the selection</b>, 38px, one row, so it never covers the words you selected or the sub-menus; it flips above when there is no room below. The suggestion takes the bar's place. A sparkle, then groups, then Ask.</li>
 <li><b>Three groups instead of ten rows.</b> Improve (Fix spelling and grammar, Rewrite clearly, Shorter, Longer, Make it executive), Format (Format nicely, Turn into a checklist, Summarise at the top), Make into (Action, Risk, Decision, Update). Each sub-menu has at most five short rows and never scrolls.</li>
 <li><b>Ask…</b> opens a one-line box in the bar: type what you want, Enter asks, Esc goes back.</li>
 <li><b>Fix spelling is one click away</b> inside Improve; nothing is pre-selected, nothing runs until chosen.</li>
@@ -76,18 +76,18 @@ function diff(a,b){const x=words(a).filter(s=>s),y=words(b).filter(s=>s),n=x.len
  let i=0,j=0,o="";while(i<n&&j<m){if(x[i]===y[j]){o+=x[i]+" ";i++;j++}else if(L[i+1][j]>=L[i][j+1]){o+="<del>"+x[i]+"</del> ";i++}else{o+="<ins>"+y[j]+"</ins> ";j++}}
  while(i<n)o+="<del>"+x[i++]+"</del> ";while(j<m)o+="<ins>"+y[j++]+"</ins> ";return o}
 function pos(){const s=$("#selt").getBoundingClientRect(),d=$("#doc").getBoundingClientRect();return{left:Math.max(0,s.left-d.left),top:s.top-d.top,bottom:s.bottom-d.top}}
-function drawBar(){const b=$("#bar"),p=pos();b.hidden=false;
+function drawBar(){const b=$("#bar"),p=pos();b.hidden=false;$("#sug").hidden=true;
  if(ask){b.innerHTML='<span class="lead">'+SP+'</span><form class="ask" id="af"><input id="ai" maxlength="400" placeholder="Say what you want done with the text" aria-label="Say what you want done with the selected text"><button type="submit">Ask</button></form>';
   on($("#af"),"submit",e=>{e.preventDefault();const v=$("#ai").value.trim();if(v)run("custom",v)});on($("#ai"),"keydown",e=>{if(e.key==="Escape"){ask=false;drawBar()}});setTimeout(()=>$("#ai")&&$("#ai").focus(),0)}
  else b.innerHTML='<span class="lead" title="AI on the selected text (Alt+/)">'+SP+'</span>'+G[place].map((g,i)=>'<button class="bb" data-g="'+i+'" aria-haspopup="menu" aria-expanded="'+(openG===i)+'">'+g[0]+CH+'</button>').join("")+'<span class="sep"></span><button class="bb q" id="askb">Ask…</button>';
- b.style.left=p.left+"px";b.style.top=(p.top-46)+"px";posMenu()}
+ b.style.left=p.left+"px";b.style.top=(p.bottom+8)+"px";posMenu()}
 function posMenu(){const m=$("#sm");if(openG===null){m.hidden=true;return}
  const g=G[place][openG],p=pos();m.hidden=false;m.innerHTML=g[1].map((id,i)=>'<button class="r'+(i===0?" on":"")+'" role="menuitem" data-o="'+id+'"><span class="t">'+O[id][0]+'</span><span class="d">'+O[id][1]+'</span></button>').join("");
- const btn=document.querySelector('.bb[data-g="'+openG+'"]'),br=btn.getBoundingClientRect(),d=$("#doc").getBoundingClientRect();m.style.left=(br.left-d.left)+"px";m.style.top=(p.top-46+42)+"px"}
+ const btn=document.querySelector('.bb[data-g="'+openG+'"]'),br=btn.getBoundingClientRect(),d=$("#doc").getBoundingClientRect();m.style.left=(br.left-d.left)+"px";m.style.top=(p.bottom+8+42)+"px"}
 $("#bar").addEventListener("click",e=>{const g=e.target.closest("[data-g]");if(g){const i=+g.dataset.g;openG=openG===i?null:i;drawBar();return}if(e.target.closest("#askb")){ask=true;openG=null;drawBar()}});
 $("#sm").addEventListener("click",e=>{const r=e.target.closest("[data-o]");if(r){const id=r.dataset.o;openG=null;drawBar();run(id)}});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("#sug").hidden){$("#sug").hidden=true;return}if(openG!==null){openG=null;drawBar()}}});
-function sugAt(){const p=pos(),s=$("#sug");s.style.left=p.left+"px";s.style.top=(p.bottom+8)+"px";s.hidden=false}
+function sugAt(){$("#bar").hidden=true;const p=pos(),s=$("#sug");s.style.left=p.left+"px";s.style.top=(p.bottom+8)+"px";s.hidden=false}
 function run(id,words){const nm=id==="custom"?words:O[id][0];sugAt();$("#sug").innerHTML='<div class="hd">'+SP+'<span>'+nm+'</span></div><div class="running" role="status"><span class="spin"></span>Asking Claude (it sees only this text)…</div><div class="acts"><button class="btn" id="stop">Stop</button></div>';
  on($("#stop"),"click",()=>{$("#sug").hidden=true});
  setTimeout(()=>{if($("#sug").hidden)return;show(id,nm)},900)}
