@@ -464,9 +464,10 @@ NEEDS_CARD = ("Saving over filed minutes needs your approval, and creaite's appr
 
 
 def save_record(path, doc, why, base_version=None, via="dashboard"):
-    """Save the record as a new version (creaite_doc.save, never with an approver: a save over filed minutes is sensitive and
-    waits for Alan's approval card, BL-141). Returns creaite_doc's answer; its code-3 answer (needs approval) comes back as it is,
-    with a plain message. Raises RecordError when it is refused."""
+    """Save the record as a new version (creaite_doc.save, never with an approver). Saving over filed minutes is refused (Alan,
+    15-10-2026): they are the record people were sent, a save from the minutes view is never approved and there is no card path,
+    so creaite_doc's code-3 answer (needs approval) comes back as it is, with a plain message, and nothing changes. Raises
+    RecordError when it is refused for any other reason."""
     r = creaite_doc.save(path, doc, why, base_version=base_version, via=via)
     if r.get("needs_approval"):
         return {**r, "message": NEEDS_CARD}

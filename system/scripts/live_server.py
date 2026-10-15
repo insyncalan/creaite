@@ -92,7 +92,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/minutes/draft {file | path}: the minutes view (v2.1.0 P4, BL-338): a meeting's minutes record, its versions, the
                          transcript's turns and the approve popup's plan (minutes_record.view); read only
 - POST /api/minutes/save {path, doc, base_version} | {path, op, base_version}: save the page as a new version (over filed
-                         minutes it needs Alan's approval card: never approved here; answers code 3), or one row or coverage change (op:
+                         minutes is refused, Alan 15-10-2026: never approved here, no card; answers code 3), or one row or coverage change (op:
                          remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
 - POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
                          approve_minutes, through tracker.py apply); unticked items wait in Review
@@ -4070,9 +4070,9 @@ REVIEW_WORK_ROUTES = {"/api/review/assign": review_assign_route}
 
 # ===== v2.1.0 P4 (BL-338) ===== the minutes view's four routes. The work is minutes_record.py's (view, change, save_page, export) and
 # review.py's (approve_minutes: one apply through tracker.py apply, the one writer); every save goes through creaite_doc.save
-# (filechange.py). Saving over filed minutes is sensitive and goes to the BL-141 one-approval card like any other sensitive change:
-# this server never passes an approver here (Jarvis, 15-10-2026, until Alan rules). The card is built only for an ask creaite run,
-# so for now such a save answers creaite_doc's code 3 (needs approval) and nothing changes. Nothing here sends anything.
+# (filechange.py). Saving over filed minutes is refused (Alan, 15-10-2026): filed minutes are the record people were sent, so a
+# save from this page never changes them. It is sensitive under reach.py, this server never passes an approver here and there is
+# no card path, so such a save answers creaite_doc's code 3 (needs approval) and nothing changes. Nothing here sends anything.
 def minutes_draft_route(handler, req):
     """POST /api/minutes/draft {file | path}: the minutes view's record, versions, transcript turns and approve plan."""
     import minutes_record
