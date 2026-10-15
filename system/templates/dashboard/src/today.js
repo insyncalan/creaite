@@ -29,7 +29,7 @@ import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase
 import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
-import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPS, vipWhen } from "./settings.js";
+import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
@@ -439,11 +439,15 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
       acts:[{id:"make",icon:"plus",label:"Make a work item",name:`Create work item from: ${name}`,data:{alertdo:"make",id:a.id}},
             {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${name}`,data:{alertdo:"dismiss",id:a.id}}]}); });
   VIPQ().forEach(a=>tdl.push(quietRow(a)));                                     /* BL-334: nothing for Alan: one quiet line */
-  return tdl.map((x,i)=>({x,i})).sort((a,b)=>b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
+  VIPR().forEach(a=>tdl.push(repliedRow(a)));                                   /* BL-342: he answered: one quiet line */
+  /* BL-342: a card past its due date first (oldest due first), then everything newest first as before */
+  return tdl.map((x,i)=>({x,i})).sort((a,b)=>(a.x.overdue?0:1)-(b.x.overdue?0:1)||(a.x.overdue&&b.x.overdue?a.x.due.localeCompare(b.x.due):0)||b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
 /* ----- BL-334: a conversation, not a message. One card per conversation: its own title (or the people in it), where it is,
    "updated HH:MM", Claude's summary, then each candidate item with Create work item and Dismiss (Dismiss stages nothing). A
    conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
 const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
+/** BL-342: the one thing a thread asks of Alan, as its chip says it */
+export const CARDTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",fyi:"FYI / file",risk:"Risk"});
 /** "Confidential" on a confidential conversation's card or message (Alan, 15-10-2026, plan #17): its summary is shown like any
     other, internal only; never the word that says how the sender is followed (BL-288) @param {any} a */
 export const confMark=a=>a.confidential||a.marker==="confidential"?"Confidential":"";
@@ -452,14 +456,32 @@ const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
    without that time falls back to when it was recorded */
 const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
 const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
-  a.found==="start-up"?"found on start-up":""].filter(Boolean).join(" · ");
+  a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
+/** BL-342 Part 2: how a thread relates to open work */
+const RELCHIP=/** @type {Record<string,string>} */({new:"New",update:"Update",chase:"Chase"});
+/** BL-342: a card's due date as the row shows it, and whether it is past @param {any} a */
+const cardDue=a=>a.due?{text:`due ${longDay(a.due)}`,over:a.due<TODAY}:null;
 /** @param {any} a */
 export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
   const cands=(a.candidates||[]).filter(/** @param {any} c */c=>!c.made&&!c.dismissed).map(/** @param {any} c */c=>({key:`c${c.n}`,tag:CTYPE[c.type]||"Item",t:String(c.text||""),
     sub:[c.owner||"",c.due?`due ${fd(c.due)}`:""].filter(Boolean).join(" · "),
     acts:[{id:"make",icon:"plus",label:"Create work item",name:`Create work item: ${c.text}`,data:{alertdo:"make",id:a.id,cand:String(c.n),ctype:c.type}},
           {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${c.text}`,data:{alertdo:"dismiss",id:a.id,cand:String(c.n)}}]}));
-  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts:[]}; }
+  /* BL-342: the type chip, the ask, the due date and the owners; Handled on every card, Log on the matched item when there is one */
+  const due=cardDue(a), name=`${a.who??""}, ${t}`, acts=[{id:"handled",icon:"done",label:"Handled",name:`Handled: ${name}`,data:{alertdo:"handled",id:a.id}}];
+  const m=a.match&&a.match.id&&a.match.relation!=="new"?String(a.match.id):"";
+  if(m&&!(a.match&&a.match.logged)) acts.push({id:"log",icon:"filetext",label:`Log on ${m}`,name:`Log on ${m}: ${t}`,data:{alertdo:"log",id:a.id}});
+  /* BL-342 Part 2: the New / Update / Chase chip with the matched item, the count of other threads on it, and Chase for its owner */
+  const mt=a.match&&a.match.relation?a.match:null, rel=mt?RELCHIP[mt.relation]||"":"", others=mt&&mt.id&&mt.count>1?mt.count-1:0;
+  if(mt&&mt.relation==="chase"&&mt.id) acts.push({id:"chase",icon:"chasemail",label:"Chase",name:`Chase the owner of ${mt.id}: ${t}`,data:{alertdo:"chase",id:a.id}});
+  const files=a.type==="fyi"&&(a.attachments||[]).length?`Files: ${(a.attachments||[]).slice(0,4).join(", ")}${a.attachments.length>4?` and ${a.attachments.length-4} more`:""}`:"";
+  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:CARDTYPE[a.type]||"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts,
+    rel,relId:mt&&mt.id&&mt.relation!=="new"?String(mt.id):"",relT:mt&&mt.id&&mt.relation!=="new"?String(mt.t||""):"",relWhy:mt?String(mt.why||""):"",
+    count:others?`also on ${others} other thread${others===1?"":"s"}`:"",ask:String(a.ask||""),due:a.due||"",overdue:!!(due&&due.over),dueText:due?due.text:"",owners:(a.owners||[]).join(", "),files}; }
+/** "Mia Hale with Omar Ali: you replied 14:02" @param {any} a */
+export function repliedRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
+  return {key:"al"+a.id,kind:"quiet",id:a.id,at:String(a.replied_at||convAt(a)),tag:"Replied",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: you replied ${whenWords(String(a.replied_at||""))}`,
+    link:a.link||"",meta:convMeta(a),acts:[]}; }
 /** "Mia Hale with Omar Ali: nothing for you" @param {any} a */
 export function quietRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:convAt(a),tag:"",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: nothing for you`,

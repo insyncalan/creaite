@@ -133,7 +133,7 @@ export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=titl
 export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
   const all=deItems(x), ok=all.filter(i=>!deBarred(i)), email=(x.p&&x.p.email)||"", chase=ok.filter(deOverdue);
   if(!ok.length){ snack(`Nothing open for ${name}, so no email is needed`); return; }
-  if(mode==="chase"&&(!chase.length||deMe(name))) mode="update";
+  if(mode==="chase"&&(!chase.length||deMe(name)||(only&&!chase.some(i=>i.id===only)))) mode="update";   /* BL-342 N3: a thread's Chase on an item not past its date opens the update email */
   const items=mode==="chase"?chase:ok, outside=deOutside(email), picked=deDefaults(items,outside);
   if(only&&!items.some(i=>i.id===only)){ snack(ok.some(i=>i.id===only)?`${only} isn't past its date yet, so it isn't in a chase`:`${only} is marked confidential or restricted, so it can't go in an email`); return; }
   if(only) [...picked].forEach(k=>{ if(!k.endsWith(":"+only)) picked.delete(k); });

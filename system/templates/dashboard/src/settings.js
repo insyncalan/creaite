@@ -810,11 +810,13 @@ export async function saveIgnore(list,msg){ if(!await writeSettings({"sweep.igno
    each unseen alert opens Today's Needs attention, above everything else, until Alan presses Seen. A count shows on
    Today in the rail and in the window title; a browser notification (asked for once) when one arrives while the page
    is open. VIP-sourced proposals sort first in Review. Nothing leaves the laptop. */
-export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet);
+export const VIPD=()=>SA().vip||(SA().vip={alerts:[],people:{}}), VIPS=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&!a.quiet&&a.state!=="replied");
 /* BL-334: a conversation with nothing for Alan is one quiet line on Today (no buttons, no count), shown the day it was updated */
-export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&String(a.updated||"").slice(0,10)===TODAY);
+export const VIPQ=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.quiet&&a.state!=="replied"&&String(a.updated||"").slice(0,10)===TODAY);
+/* BL-342: a thread Alan has answered (his own message after the last one) is one quiet "Replied" line the day he answered; a later message from someone else opens it again */
+export const VIPR=()=>(VIPD().alerts||[]).filter(a=>!a.seen&&a.state==="replied"&&String(a.replied_at||"").slice(0,10)===TODAY);
 /** what changed in the alerts, for a redraw: an updated conversation keeps its ID */
-const vipSig=()=>(VIPD().alerts||[]).filter(a=>!a.seen).map(a=>`${a.id}@${a.updated||""}`).join();
+const vipSig=()=>(VIPD().alerts||[]).map(a=>`${a.id}@${a.updated||""}@${a.seen?1:0}@${a.state||""}@${(a.match&&a.match.count)||0}`).join();
 export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[personOf(n)]||""; };
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
@@ -832,9 +834,27 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"dismiss"), it=cand&&a?(a.candidates||[]).find(/** @param {any} x */x=>x.n===cand):null;
   if(it){ it.dismissed=r.at||nowStamp(); if((a.candidates||[]).every(/** @param {any} x */x=>x.made||x.dismissed)) a.seen=r.at||nowStamp(); }   /* BL-334: that item only; nothing is staged */
   else if(a) a.seen=r.at||nowStamp();
-  vipBadge(); renderToday(); back();
+  await vipPoll(); vipBadge(); renderToday(); back();   /* BL-342 N1: the server's counts for the other cards on the same item */
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+/* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
+export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
+  const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
+  if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } await vipPoll(); vipBadge(); renderToday(); back();
+  snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
+    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+/* BL-342 Part 2: Chase on a thread matched to an item that is waiting on someone else: BL-224's Draft email in Chase mode for that
+   item's owner, the item ticked. Nothing is sent or written; the builder falls back to an update request when the item isn't past its date. */
+export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), m=a&&a.match, it=m&&m.id&&REC("actions",m.id);
+  if(!it){ snack("That item isn't open any more"); return; }
+  const owner=String(it.o||"");
+  if(!owner||!PERS().some(y=>y.name===owner)){ snack(`${owner||"The owner"} isn't on the People page, so there's no one to draft to`); return; }
+  openDraftEmail(owner,"chase",m.id); }
+export async function alertLog(id){ if(!viaServer()){ snack("Log needs the live server"); return; }
+  const r=await api("/api/alerts/log",{id}); if(!r.ok){ snack(r.message||"Not logged"); return; }
+  const a=(VIPD().alerts||[]).find(x=>x.id===id); if(a&&a.match) a.match.logged=r.logged;
+  await reloadData(); renderToday(); snack(r.message||"Staged for Review"); }
 /* Create work item (BL-296): the new-item peek, filled from the alert's references only (/api/alerts/prefill). Saving (⌘↵ or Save)
    stages it for Review through /api/alerts/make, which dismisses the message (never applied: check 45, BL-334); closing the peek
    leaves the message as it was. */
@@ -938,7 +958,8 @@ export function vipSectionHtml(){ const v=VIPD();
 export function bootSettings0140(){
 document.addEventListener("click",e=>{ const b=e.target.closest("[data-alertdo],[data-alerttype],[data-alertdraft],[data-alertpeek]"); if(!b) return; e.preventDefault(); e.stopPropagation();
   const cand=Number(b.dataset.cand||0)||undefined;                                 /* BL-334: one candidate item of a conversation */
-  if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
+  if(b.dataset.alertdo==="handled") alertHandled(b.dataset.id); else if(b.dataset.alertdo==="log") alertLog(b.dataset.id); else if(b.dataset.alertdo==="chase") alertChase(b.dataset.id);
+  else if(b.dataset.alertdo==="dismiss") alertDismiss(b.dataset.id,cand); else if(b.dataset.alertdo==="make") alertMake(b.dataset.id,b.dataset.ctype||"",undefined,cand);
   else if(b.dataset.alerttype&&shared.CUR&&shared.CUR.alert){ if(b.getAttribute("aria-pressed")==="true") return; const x=shared.CUR.draft, t=String($("#pkTitle")?.textContent||x.t||"").trim(); alertMake(shared.CUR.alert.id,b.dataset.alerttype,{t,due:x.due},shared.CUR.alert.cand||undefined); }
   else if(b.dataset.alertdraft) alertDraft(); else if(b.dataset.alertpeek==="save") pkSaveAndClose(); else if(b.dataset.alertpeek==="cancel") closePanel(); },true);   /* BL-296 */
 PKDRAW.push(alertPeekDraw);

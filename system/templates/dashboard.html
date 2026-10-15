@@ -2834,6 +2834,18 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand .cs{color:var(--day-muted,var(--muted))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
 .tdmark{vertical-align:2px;height:18px}
+/* BL-342: a thread card's ask, owners and due date (an overdue one in the warning colour, and said in words) */
+#tBrief .tdrow .tb p.tdask,#tBrief .tdrow .tb p.tdwho,#tBrief .tdrow .tb p.tdfiles{margin-top:4px;font-size:var(--fs-sm)}
+#tBrief .tdrow .tb p.tdrel{margin-top:4px;font-size:var(--fs-sm);display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.tdrelchip{font-weight:600}
+.tdrel-new{background:var(--sunk);color:var(--ink)}
+.tdrel-update{background:var(--accent-soft);color:var(--ink)}
+.tdrel-chase{background:var(--warn-soft);color:var(--ink)}
+.tdrelitem{color:var(--day-ink,var(--ink))}
+.tdwhy{flex-basis:100%;color:var(--day-muted,var(--muted));font-size:var(--fs-xs)}
+.tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tddue{color:var(--day-muted,var(--muted))}
+.tdover{color:var(--bad);font-weight:600}
 #tBrief .tdrow.td-quiet .tb .t{font-weight:400;color:var(--day-muted,var(--muted))}
 #tBrief ol.bl>li{min-height:44px;padding:8px 0;align-items:flex-start}
 #tBrief .tacts{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto;opacity:.55;transition:opacity var(--d1)}
@@ -3289,6 +3301,7 @@ button.nchip{font:inherit;font-size:12px}
     BTNID: () => BTNID,
     BULK_MAX: () => BULK_MAX,
     CALI: () => CALI,
+    CARDTYPE: () => CARDTYPE,
     CATOF: () => CATOF,
     CD_STEPS: () => CD_STEPS,
     CE_FIELDS: () => CE_FIELDS,
@@ -3684,6 +3697,7 @@ button.nchip{font:inherit;font-size:12px}
     VIPKIND: () => VIPKIND,
     VIPNOTED: () => VIPNOTED,
     VIPQ: () => VIPQ,
+    VIPR: () => VIPR,
     VIPS: () => VIPS,
     VMORE: () => VMORE,
     VRENAME: () => VRENAME,
@@ -3772,10 +3786,13 @@ button.nchip{font:inherit;font-size:12px}
     aiRunAction: () => aiRunAction,
     aiSend: () => aiSend,
     aiSug: () => aiSug,
+    alertChase: () => alertChase,
     alertDismiss: () => alertDismiss,
     alertDraft: () => alertDraft,
     alertDraftWhy: () => alertDraftWhy,
     alertFocus: () => alertFocus,
+    alertHandled: () => alertHandled,
+    alertLog: () => alertLog,
     alertMake: () => alertMake,
     alertPeekDraw: () => alertPeekDraw,
     alertStage: () => alertStage,
@@ -5222,6 +5239,7 @@ button.nchip{font:inherit;font-size:12px}
     renderWeek: () => renderWeek,
     renderWork: () => renderWork,
     replaceCurrent: () => replaceCurrent,
+    repliedRow: () => repliedRow,
     resolvePerson: () => resolvePerson,
     resolver: () => resolver,
     restoreNav: () => restoreNav,
@@ -26708,6 +26726,38 @@ ${s5}`;
         ] }) : null,
         /* @__PURE__ */ u2("p", { children: r4.meta }),
         r4.summary ? /* @__PURE__ */ u2("p", { class: "tdsum", children: r4.summary }) : null,
+        r4.rel ? /* @__PURE__ */ u2("p", { class: "tdrel", children: [
+          /* @__PURE__ */ u2("span", { class: `tag tdctag tdrelchip tdrel-${r4.rel.toLowerCase()}`, children: r4.rel }),
+          r4.relId ? /* @__PURE__ */ u2(S2, { children: [
+            " ",
+            /* @__PURE__ */ u2("span", { class: "tdrelitem", children: [
+              r4.relId,
+              r4.relT ? `: ${r4.relT}` : ""
+            ] })
+          ] }) : null,
+          r4.count ? /* @__PURE__ */ u2(S2, { children: [
+            " ",
+            /* @__PURE__ */ u2("span", { class: "tag tdctag tdcount", children: r4.count })
+          ] }) : null,
+          r4.relWhy ? /* @__PURE__ */ u2("span", { class: "tdwhy", children: r4.relWhy }) : null
+        ] }) : null,
+        r4.ask ? /* @__PURE__ */ u2("p", { class: "tdask", children: [
+          /* @__PURE__ */ u2("span", { class: "tdlab", children: "Ask" }),
+          " ",
+          r4.ask
+        ] }) : null,
+        r4.owners || r4.dueText ? /* @__PURE__ */ u2("p", { class: "tdwho", children: [
+          r4.owners ? /* @__PURE__ */ u2(S2, { children: [
+            /* @__PURE__ */ u2("span", { class: "tdlab", children: "For" }),
+            " ",
+            r4.owners
+          ] }) : null,
+          r4.dueText ? /* @__PURE__ */ u2(S2, { children: [
+            r4.owners ? " · " : "",
+            /* @__PURE__ */ u2("span", { class: r4.overdue ? "tdover" : "tddue", children: r4.overdue ? `overdue, ${r4.dueText}` : r4.dueText })
+          ] }) : null
+        ] }) : null,
+        r4.files ? /* @__PURE__ */ u2("p", { class: "tdfiles", children: r4.files }) : null,
         r4.cands && r4.cands.length ? /* @__PURE__ */ u2("ul", { class: "tdcands", "aria-label": "What it came to", children: r4.cands.map((c5) => /* @__PURE__ */ u2("li", { class: "tdcand", "data-tdc": c5.key, children: [
           /* @__PURE__ */ u2("span", { class: "tag tdctag", children: c5.tag }),
           /* @__PURE__ */ u2("span", { class: "ct", children: [
@@ -27738,11 +27788,16 @@ ${s5}`;
       });
     });
     VIPQ().forEach((a5) => tdl.push(quietRow(a5)));
-    return tdl.map((x5, i5) => ({ x: x5, i: i5 })).sort((a5, b5) => b5.x.at.localeCompare(a5.x.at) || a5.i - b5.i).map((o5) => o5.x);
+    VIPR().forEach((a5) => tdl.push(repliedRow(a5)));
+    return tdl.map((x5, i5) => ({ x: x5, i: i5 })).sort((a5, b5) => (a5.x.overdue ? 0 : 1) - (b5.x.overdue ? 0 : 1) || (a5.x.overdue && b5.x.overdue ? a5.x.due.localeCompare(b5.x.due) : 0) || b5.x.at.localeCompare(a5.x.at) || a5.i - b5.i).map((o5) => o5.x);
   }
   var CTYPE = (
     /** @type {Record<string,string>} */
     { action: "Action", decision: "Decision", risk: "Risk" }
+  );
+  var CARDTYPE = (
+    /** @type {Record<string,string>} */
+    { action: "Action", decision: "Decision", fyi: "FYI / file", risk: "Risk" }
   );
   var confMark = (a5) => a5.confidential || a5.marker === "confidential" ? "Confidential" : "";
   var convAt = (a5) => String(a5.last || a5.sent || "").replace("T", " ").slice(0, 16);
@@ -27750,8 +27805,14 @@ ${s5}`;
   var convMeta = (a5) => [
     `${VIPKIND[a5.kind] || "Message"}${convWhen(a5) ? " · updated " + whenWords(convWhen(a5)) : ""}`,
     a5.p && a5.p !== "_portfolio" ? pName(a5.p) : "no project",
-    a5.found === "start-up" ? "found on start-up" : ""
+    a5.found === "start-up" ? "found on start-up" : "",
+    a5.match && a5.match.logged ? `Logged on ${a5.match.id}${a5.match.logged.state === "applied" ? "" : ", staged for Review"}` : ""
   ].filter(Boolean).join(" · ");
+  var RELCHIP = (
+    /** @type {Record<string,string>} */
+    { new: "New", update: "Update", chase: "Chase" }
+  );
+  var cardDue = (a5) => a5.due ? { text: `due ${longDay(a5.due)}`, over: a5.due < TODAY } : null;
   function convRow(a5) {
     const t47 = String(a5.title || a5.subject || "Conversation");
     const cands = (a5.candidates || []).filter(
@@ -27770,7 +27831,56 @@ ${s5}`;
         ]
       })
     );
-    return { key: "al" + a5.id, kind: "message", id: a5.id, at: convAt(a5), tag: "Message", tone: "warn", t: t47, link: a5.link || "", mark: confMark(a5), meta: convMeta(a5), summary: String(a5.summary || ""), cands, acts: [] };
+    const due = cardDue(a5), name = `${a5.who ?? ""}, ${t47}`, acts2 = [{ id: "handled", icon: "done", label: "Handled", name: `Handled: ${name}`, data: { alertdo: "handled", id: a5.id } }];
+    const m5 = a5.match && a5.match.id && a5.match.relation !== "new" ? String(a5.match.id) : "";
+    if (m5 && !(a5.match && a5.match.logged)) acts2.push({ id: "log", icon: "filetext", label: `Log on ${m5}`, name: `Log on ${m5}: ${t47}`, data: { alertdo: "log", id: a5.id } });
+    const mt2 = a5.match && a5.match.relation ? a5.match : null, rel2 = mt2 ? RELCHIP[mt2.relation] || "" : "", others = mt2 && mt2.id && mt2.count > 1 ? mt2.count - 1 : 0;
+    if (mt2 && mt2.relation === "chase" && mt2.id) acts2.push({ id: "chase", icon: "chasemail", label: "Chase", name: `Chase the owner of ${mt2.id}: ${t47}`, data: { alertdo: "chase", id: a5.id } });
+    const files = a5.type === "fyi" && (a5.attachments || []).length ? `Files: ${(a5.attachments || []).slice(0, 4).join(", ")}${a5.attachments.length > 4 ? ` and ${a5.attachments.length - 4} more` : ""}` : "";
+    return {
+      key: "al" + a5.id,
+      kind: "message",
+      id: a5.id,
+      at: convAt(a5),
+      tag: CARDTYPE[a5.type] || "Message",
+      tone: "warn",
+      t: t47,
+      link: a5.link || "",
+      mark: confMark(a5),
+      meta: convMeta(a5),
+      summary: String(a5.summary || ""),
+      cands,
+      acts: acts2,
+      rel: rel2,
+      relId: mt2 && mt2.id && mt2.relation !== "new" ? String(mt2.id) : "",
+      relT: mt2 && mt2.id && mt2.relation !== "new" ? String(mt2.t || "") : "",
+      relWhy: mt2 ? String(mt2.why || "") : "",
+      count: others ? `also on ${others} other thread${others === 1 ? "" : "s"}` : "",
+      ask: String(a5.ask || ""),
+      due: a5.due || "",
+      overdue: !!(due && due.over),
+      dueText: due ? due.text : "",
+      owners: (a5.owners || []).join(", "),
+      files
+    };
+  }
+  function repliedRow(a5) {
+    const others = (a5.people || []).filter(
+      /** @param {string} p */
+      (p6) => p6 !== a5.who
+    );
+    return {
+      key: "al" + a5.id,
+      kind: "quiet",
+      id: a5.id,
+      at: String(a5.replied_at || convAt(a5)),
+      tag: "Replied",
+      tone: "",
+      t: `${a5.who || ""}${others.length ? " with " + others.slice(0, 3).join(", ") : ""}: you replied ${whenWords(String(a5.replied_at || ""))}`,
+      link: a5.link || "",
+      meta: convMeta(a5),
+      acts: []
+    };
   }
   function quietRow(a5) {
     const others = (a5.people || []).filter(
@@ -30078,9 +30188,10 @@ ${s5}`;
     if (msg) snack(msg);
     return true;
   }
-  var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && !a5.quiet);
-  var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && String(a5.updated || "").slice(0, 10) === TODAY);
-  var vipSig = () => (VIPD().alerts || []).filter((a5) => !a5.seen).map((a5) => `${a5.id}@${a5.updated || ""}`).join();
+  var VIPD = () => SA().vip || (SA().vip = { alerts: [], people: {} }), VIPS = () => (VIPD().alerts || []).filter((a5) => !a5.seen && !a5.quiet && a5.state !== "replied");
+  var VIPQ = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.quiet && a5.state !== "replied" && String(a5.updated || "").slice(0, 10) === TODAY);
+  var VIPR = () => (VIPD().alerts || []).filter((a5) => !a5.seen && a5.state === "replied" && String(a5.replied_at || "").slice(0, 10) === TODAY);
+  var vipSig = () => (VIPD().alerts || []).map((a5) => `${a5.id}@${a5.updated || ""}@${a5.seen ? 1 : 0}@${a5.state || ""}@${a5.match && a5.match.count || 0}`).join();
   var vipKind = (n4) => {
     const ppl = VIPD().people || {};
     return ppl[n4] || ppl[personOf(n4)] || "";
@@ -30134,6 +30245,7 @@ ${s5}`;
         (x5) => x5.made || x5.dismissed
       )) a5.seen = r4.at || nowStamp();
     } else if (a5) a5.seen = r4.at || nowStamp();
+    await vipPoll();
     vipBadge();
     renderToday();
     back2();
@@ -30151,10 +30263,76 @@ ${s5}`;
         delete a5.made;
       }
       VIPNOTED.add(id2);
+      await vipPoll();
       vipBadge();
       renderToday();
       snack("Back in To decide");
     });
+  }
+  async function alertHandled(id2) {
+    if (!viaServer()) {
+      snack("Handled needs the live server");
+      return;
+    }
+    const r4 = await api("/api/alerts/handled", { ids: [id2] });
+    if (!r4.ok || !r4.handled) {
+      snack(r4.message || "Not marked handled");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2), back2 = alertFocus(id2, "handled");
+    if (a5) {
+      a5.seen = r4.at || nowStamp();
+      a5.state = "handled";
+    }
+    await vipPoll();
+    vipBadge();
+    renderToday();
+    back2();
+    snack("Marked handled", async () => {
+      const u5 = await api("/api/alerts/undo", { ids: [id2] });
+      if (!u5.ok) {
+        snack(u5.message || "Not undone");
+        return;
+      }
+      if (a5) {
+        delete a5.seen;
+        a5.state = "open";
+      }
+      VIPNOTED.add(id2);
+      await vipPoll();
+      vipBadge();
+      renderToday();
+      snack("Back in To decide");
+    });
+  }
+  function alertChase(id2) {
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2), m5 = a5 && a5.match, it2 = m5 && m5.id && REC("actions", m5.id);
+    if (!it2) {
+      snack("That item isn't open any more");
+      return;
+    }
+    const owner = String(it2.o || "");
+    if (!owner || !PERS().some((y5) => y5.name === owner)) {
+      snack(`${owner || "The owner"} isn't on the People page, so there's no one to draft to`);
+      return;
+    }
+    openDraftEmail(owner, "chase", m5.id);
+  }
+  async function alertLog(id2) {
+    if (!viaServer()) {
+      snack("Log needs the live server");
+      return;
+    }
+    const r4 = await api("/api/alerts/log", { id: id2 });
+    if (!r4.ok) {
+      snack(r4.message || "Not logged");
+      return;
+    }
+    const a5 = (VIPD().alerts || []).find((x5) => x5.id === id2);
+    if (a5 && a5.match) a5.match.logged = r4.logged;
+    await reloadData();
+    renderToday();
+    snack(r4.message || "Staged for Review");
   }
   var ALERTTYPES = [["action", "Action"], ["risk", "Risk"], ["issue", "Issue"], ["decision", "Decision"]];
   var alertTypeOf = (k5, x5) => k5 === "actions" ? "action" : k5 === "decisions" ? "decision" : String(x5 && x5.type || "risk").toLowerCase();
@@ -30449,7 +30627,10 @@ ${s5}`;
       e4.preventDefault();
       e4.stopPropagation();
       const cand = Number(b5.dataset.cand || 0) || void 0;
-      if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
+      if (b5.dataset.alertdo === "handled") alertHandled(b5.dataset.id);
+      else if (b5.dataset.alertdo === "log") alertLog(b5.dataset.id);
+      else if (b5.dataset.alertdo === "chase") alertChase(b5.dataset.id);
+      else if (b5.dataset.alertdo === "dismiss") alertDismiss(b5.dataset.id, cand);
       else if (b5.dataset.alertdo === "make") alertMake(b5.dataset.id, b5.dataset.ctype || "", void 0, cand);
       else if (b5.dataset.alerttype && shared.CUR && shared.CUR.alert) {
         if (b5.getAttribute("aria-pressed") === "true") return;
@@ -43657,7 +43838,7 @@ ${pre}**Current state title:** ${title}`);
         snack(`Nothing open for ${name}, so no email is needed`);
         return;
       }
-      if (mode === "chase" && (!chase.length || deMe(name))) mode = "update";
+      if (mode === "chase" && (!chase.length || deMe(name) || only && !chase.some((i5) => i5.id === only))) mode = "update";
       const items2 = mode === "chase" ? chase : ok2, outside = deOutside(email), picked = deDefaults(items2, outside);
       if (only && !items2.some((i5) => i5.id === only)) {
         snack(ok2.some((i5) => i5.id === only) ? `${only} isn't past its date yet, so it isn't in a chase` : `${only} is marked confidential or restricted, so it can't go in an email`);
@@ -59370,6 +59551,7 @@ ${d5.text}`);
         "aiBar",
         "aiItems",
         "aiSug",
+        "alertDismiss",
         "allRows",
         "allViews",
         "anim",
