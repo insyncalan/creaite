@@ -27,7 +27,7 @@ FAKE = r'''#!/usr/bin/env python3
 import json, re, sys
 ROWS = json.loads(%r)
 args = sys.argv[1:]
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 m = re.search(r"<<<TEXT\n(.*?)\nTEXT>>>", p, re.S)
 kind = "edit" if m else "find"
 open(__file__ + "." + kind + ".prompt", "w", encoding="utf-8").write(p)

@@ -159,7 +159,7 @@ class InTheVault(unittest.TestCase):
 FAKE = r'''#!/usr/bin/env python3
 import json, sys
 args = sys.argv[1:]
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 open(__file__ + ".calls", "a", encoding="utf-8").write(json.dumps({"prompt": p}) + "\n")
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-p"})
