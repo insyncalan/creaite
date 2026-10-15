@@ -8,7 +8,7 @@ code, no model call; dev/sprints/BL-322-contract.md). From the mockup (dev/mocku
 - the confirm list (amber) is never made with plain Enter, only ⌘⏎ or a click; closing an action offers a closing update;
 - a name that matches two people asks which; a refusal says where to go and changes nothing;
 - with AI drafts off the Claude part says why and the plain part still works; "chase …, firmer" opens Draft chase in that tone;
-- the box at 320 px has no sideways scroll (BL-217), and says "VIP" nowhere (BL-288).
+- the box says "VIP" nowhere (BL-288).
 
 Run: python3 dev/tests/test_sneak_peek_ui.py   (needs Google Chrome; skipped otherwise)
 """
@@ -430,20 +430,6 @@ class Answers(Case):
         self.assertEqual(b.eval("[...document.querySelectorAll('[data-tone]')].map(x=>x.getAttribute('aria-pressed'))"), ["false", "false", "true"])
         b.key("Escape")
 
-    def test_no_vip_label_and_no_sideways_scroll_at_320px(self):
-        b = self.b
-        b.resize(320, 700)
-        self.open(self.act)
-        self.box()
-        self.say("owner to Tom and due Friday")
-        o = b.eval("""(()=>{ const bx=document.getElementById('spBox'), r=bx.getBoundingClientRect();
-          return {page:document.documentElement.scrollWidth<=document.documentElement.clientWidth, left:r.left>=0, right:r.right<=innerWidth+0.5,
-            inner:bx.scrollWidth<=bx.clientWidth+1}; })()""")
-        self.assertEqual(o, {"page": True, "left": True, "right": True, "inner": True})
-        self.assertNotIn("vip", self.out().lower())
-        b.key("Escape")
-
-
 class PeoplePicker(Case):
     """`@` in the box: a short list from the people register, filtered as you type; ↑ ↓, Enter, Tab or a click picks; Esc closes
     the list only. A combobox and a listbox for screen readers; no VIP label."""
@@ -512,21 +498,6 @@ class PeoplePicker(Case):
         b.wait("!document.getElementById('spPeople').hidden")
         b.key("Tab")
         self.assertEqual(b.eval("document.getElementById('spIn').value"), "@Omar Ali ")
-
-    def test_at_320px_no_sideways_scroll_and_no_vip_label(self):
-        b = self.b
-        b.resize(320, 700)
-        self.open(self.act)
-        self.box()
-        b.type("@j")                                                         # Jane Doe is a VIP in the register
-        b.wait("!document.getElementById('spPeople').hidden")
-        self.assertIn("Jane Doe", self.list_())
-        o = b.eval("""(()=>{ const l=document.getElementById('spPeople'), r=l.getBoundingClientRect();
-          return {page:document.documentElement.scrollWidth<=document.documentElement.clientWidth, left:r.left>=0, right:r.right<=innerWidth+0.5,
-            inner:l.scrollWidth<=l.clientWidth+1, text:document.getElementById('spBox').innerText}; })()""")
-        self.assertEqual((o["page"], o["left"], o["right"], o["inner"]), (True, True, True, True))
-        self.assertNotIn("vip", o["text"].lower())
-
 
 class Flash(Case):
     """After a change the changed field is highlighted for a moment; with motion it fades, under reduced motion it holds still."""

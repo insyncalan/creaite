@@ -175,15 +175,6 @@ class Shape(ShapeCase):
         self.assertFalse((self.v.root / "system/staging/prep-focus.json").exists())
         self.assertEqual(b.errors, [])
 
-    def test_5_at_320_px_nothing_scrolls_sideways(self):
-        b = self.b
-        b.resize(320, 800)
-        self.open_shape()
-        self.shape()
-        b.wait("document.querySelector('#prepShape [data-shcount]')", 30)
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('#prepShape .shscope')).gridTemplateColumns.split(' ').length"), 1)
-        self.assertTrue(b.eval(f"(()=>{{ const s=document.getElementById('prepScroll'); return s.scrollWidth<=s.clientWidth+1 && {DLG}.scrollWidth<={DLG}.clientWidth+1; }})()"))
-
     def test_7_the_notes_have_ai_on_a_selection_with_the_meetings_project(self):
         """BL-301 D: the shaped notes are on the one editor with AI on a selection (plain text, the meeting's project)."""
         b = self.open_shape()

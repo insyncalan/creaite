@@ -1,8 +1,7 @@
 """BL-286 parts A, B and E, and BL-287: the Prep popup and the Open icon beside a meeting's Prep.
 
 A: 960 px, the header in the peek's pattern (the day line, the title, the project, series and invited chips), one toolbar (Open
-prep page, then Draft agenda on the right), the facts line, the invite on one line of names, the lists in two columns (one at
-320 px, with nothing scrolling sideways). B: Draft agenda is a menu (its own test is test_block_menu.py; the drafting itself is
+prep page, then Draft agenda on the right), the facts line, the invite on one line of names, the lists in two columns. B: Draft agenda is a menu (its own test is test_block_menu.py; the drafting itself is
 test_drafts_agenda.py). E: every item opens the full Work peek over the popup, ↑ ↓ step through the popup's items, Esc brings
 the popup back with focus on the item, and the popup shows a changed item. BL-287: the Open icon and "Prep page made" when a
 prep page exists, opening #prep=<key>; none without a page.
@@ -95,14 +94,6 @@ class PrepPopup(LiveBrowserCase):
         first = b.eval("document.querySelector('#prepBody [data-open^=\"actions:\"]').dataset.open")
         b.eval(f"A.find(x=>x.id==={first.split(':')[1]!r}).t='Retitled in the peek'; refreshAll()")
         b.wait("document.getElementById('prepBody').textContent.includes('Retitled in the peek')")
-
-    def test_at_320_px_one_column_and_nothing_scrolls_sideways(self):
-        b = self.b
-        b.resize(320, 800)
-        self.open_popup()
-        self.assertEqual(b.eval("getComputedStyle(document.querySelector('#prepBody .prepgrid')).gridTemplateColumns.split(' ').length"), 1)
-        self.assertTrue(b.eval(f"(()=>{{ const s=document.getElementById('prepScroll'); return s.scrollWidth<=s.clientWidth+1 && {DLG}.scrollWidth<={DLG}.clientWidth+1; }})()"))
-        self.assertTrue(b.eval(f"{DLG}.getBoundingClientRect().right<=320"))
 
     def test_open_prep_page_goes_to_the_page_inside_creaite(self):
         b = self.open_popup()

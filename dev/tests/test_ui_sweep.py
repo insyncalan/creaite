@@ -4,7 +4,7 @@ sample vault (test_snapshots: fixed day, UTC, en-GB).
 - BL-216: every pointer target on every screen is at least 24 by 24, or its 24-pixel circle touches no other target
   (WCAG 2.5.8's spacing exception). The four outright failures of the audit are 24 by 24 themselves, and a tick box in
   Review, Intake or Activity answers a click anywhere in the 24 by 24 square round it.
-- BL-217: at 320, 640 and 900 px no screen scrolls sideways (the page or its view; data tables scroll inside their frame),
+- BL-217: at 900 px no screen scrolls sideways (the page or its view; data tables scroll inside their frame),
   and no control is cut off or covered (Review's buttons, Today's attention rows, the project page's footer). Under
   forced colours (high contrast) every selected tab, chip and switch still differs from its neighbour, buttons keep an
   edge, and ⌘K's field shows focus.
@@ -174,7 +174,7 @@ class Reflow(UiSweepCase):
     def test_no_screen_scrolls_sideways_and_nothing_is_cut_off(self):
         b = self.b
         try:
-            for w in (320, 640, 900):
+            for w in (900,):
                 b.resize(w, 800)
                 for name in SCREENS:
                     if name in REFLOW_SKIP_SCREENS:

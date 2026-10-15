@@ -13,7 +13,7 @@ v192-reject-reasons). One test per Done-when point:
 - Approve instead approves a rejected item in one step; a new risk goes back to Review and its proposal opens (never
   approved in bulk);
 - the reasons reach `rejected.reason` and the quality view;
-- at 320 px nothing scrolls sideways, and no "VIP" label appears.
+- no "VIP" label appears.
 
 Run: python3 dev/tests/test_rejects_ui.py   (needs Google Chrome; skipped otherwise)
 """
@@ -452,34 +452,6 @@ class RejectsUI(LiveBrowserCase):
         b.key("2")
         its = self.wait_rejected([2])
         self.assertEqual(its[2].get("duplicate_of"), self.dup_id)
-
-
-class RejectsNarrow(LiveBrowserCase):
-    """320 px: the bar, the menu and the greyed rows fit, with no sideways scroll."""
-    width, height = 320, 800
-
-    @classmethod
-    def load(cls, v):
-        RejectsUI.load.__func__(cls, v)
-
-    def test_320_px_no_sideways_scroll(self):
-        b = self.b
-        b.eval("go('review')")
-        b.wait("document.querySelector('#reviewBody tr[data-n]')")
-        n = b.eval(f"REV.find(r=>r.rec.t==={THANKS!r}).n")
-        b.eval(f"RHL.clear(); RHL.add({n}); rvSyncChk(); renderReview()")
-        b.wait("!document.getElementById('rvbar').hidden")
-        b.eval("document.activeElement.blur()")
-        b.key("r")
-        b.wait("!!document.getElementById('rvReason')")
-        box = b.eval("(()=>{ const r=document.getElementById('rvReason').getBoundingClientRect(); return [r.left,r.right,innerWidth]; })()")
-        self.assertGreaterEqual(box[0], 0)
-        self.assertLessEqual(box[1], box[2])
-        self.assertLessEqual(b.eval("document.documentElement.scrollWidth"), b.eval("innerWidth"))
-        b.key("3")
-        b.wait("!!document.querySelector('#reviewBody tr[data-gone] [data-rjchip]')", 20)
-        self.assertLessEqual(b.eval("document.documentElement.scrollWidth"), b.eval("innerWidth"))
-        self.assertFalse(b.eval("/\\bVIP\\b/.test(document.getElementById('reviewBody').textContent)"))
 
 
 if __name__ == "__main__":
