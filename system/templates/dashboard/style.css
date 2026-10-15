@@ -3031,7 +3031,7 @@ button.nchip{font:inherit;font-size:12px}
 .ndoc.nfocus .ntitle{font-size:26px}
 .ndoc.nfocus .ned .nbody{font-size:16px;line-height:1.65;max-width:none;min-height:50vh}
 @media (max-width:900px){.ndoc.nfocus{width:96vw}.ndoc.nfocus>*{width:calc(100% - 32px)}}
-#noteLeaveDlg{width:min(480px,calc(100vw - 32px))}
+#noteLeaveDlg{width:min(480px,calc(100vw - 32px));padding:16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);color:var(--ink)} #noteLeaveDlg::backdrop{background:var(--scrim)}
 .nleave{display:grid;gap:12px} .nleave h2{margin:0;font-size:16px} .nleave p{margin:0;color:var(--muted);font-size:13px}
 .nlfoot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
 /* ===== end BL-301 B ===== */
