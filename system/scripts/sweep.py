@@ -2232,7 +2232,7 @@ def _checked_match(rel, item_id, why, rows, thread, found):
     if rel == "new" or item_id not in rows:
         return {"id": None, "relation": "new", "why": (why if rel == "new" else "") or "Nothing open matches."}
     row = rows[item_id]
-    if rel == "chase" and not (_owner_in(thread, row["owner"], extraction.people()) and not extraction.is_alan(str(row["owner"]), "")
+    if rel == "chase" and not (_owner_in(thread, row["owner"], extraction.people()) and not _alan_wrote(row["owner"])
                                and _alan_wrote(found.get("last_from"))):
         rel = "update"
     return {"id": item_id, "relation": rel, "why": why or "The thread moves it forward.", "t": _clean(row["description"], 200)}

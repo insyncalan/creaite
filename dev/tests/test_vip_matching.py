@@ -301,6 +301,24 @@ class MatchTests(unittest.TestCase):
                 self.assertEqual(vip_file(self.v)["alerts"][0]["match"]["relation"], want)
                 (self.v.root / "system/staging/vip.json").unlink()
 
+    def test_an_item_owned_by_another_person_with_alans_first_name_can_be_chased(self):
+        """N4: only the full-name rule (as for the last sender) says an owner is Alan."""
+        import sqlite3
+        from contextlib import closing
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("INSERT INTO actions (id, project, description, owner, raised, source) VALUES "
+                        "('ABC-A-009', 'ABC', 'Send the access letter', 'Alan Jones', '2026-10-01', 'Email · test')")
+            con.execute("INSERT INTO actions (id, project, description, owner, raised, source) VALUES "
+                        "('ABC-A-010', 'ABC', 'Own action', 'Alan Carter', '2026-10-01', 'Email · test')")
+            con.commit()
+        jones = "Alan Jones <alan.jones@other.example>"
+        for item, owner, want in (("ABC-A-009", jones, "chase"), ("ABC-A-010", ALAN, "update")):
+            with self.subTest(item):
+                record(self.v, [conv(1, last_from=ALAN, people=[MIA, owner],
+                                     match={"id": item, "relation": "chase", "why": "Waiting."})], "check")
+                self.assertEqual(vip_file(self.v)["alerts"][0]["match"]["relation"], want)
+                (self.v.root / "system/staging/vip.json").unlink()
+
 
 if __name__ == "__main__":
     unittest.main()
