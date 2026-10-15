@@ -682,7 +682,7 @@ $("#settingsBody").addEventListener("click",async e=>{ const b=e.target.closest(
 $("#settingsBody").addEventListener("change",e=>{ const s=e.target.closest("select.pmsel"); if(s&&s.value){ e.stopPropagation(); renamePerson(s.dataset.n,s.value); } },true);
 document.addEventListener("click",e=>{ const a=e.target.closest("[data-person]"); if(!a) return; e.preventDefault(); e.stopPropagation(); const n=a.dataset.person; if(isMe(n)) go("mine"); else go("person",n); },true);
 /* renderPeople: BL-138 (sprint-all-items) draws the People view in two tabs, in its own section near the end */
-document.addEventListener("click",e=>{ const h=e.target.closest("[data-psort]"); if(h&&shared.VIEW==="people"){ const c=h.dataset.psort; shared.PSORT=shared.PSORT.col===c?{col:c,dir:shared.PSORT.dir==="asc"?"desc":"asc"}:{col:c,dir:c==="name"||c==="org"||c==="role"?"asc":"desc"}; renderPeople(); return; }
+document.addEventListener("click",e=>{ const h=e.target.closest("[data-psort]"); if(h&&shared.VIEW==="people"){ const c=h.dataset.psort; shared.PSORT=shared.PSORT.col===c?{col:c,dir:shared.PSORT.dir==="asc"?"desc":"asc"}:{col:c,dir:c==="name"||c==="org"||c==="role"?"asc":"desc"}; const kept=h.contains(document.activeElement); renderPeople(); if(kept){ const b=document.querySelector(`#peopleTbl th[data-psort="${c}"] button.thsort`); if(b) b.focus({preventScroll:true}); } return; }   /* v1.9.5 check 8: the redraw keeps focus on the same heading, so its new aria-sort is read and Enter again reverses */
   const r=e.target.closest("#peopleTbl tr[data-pp]"); if(r&&!e.target.closest("a,button")){ const n=r.dataset.pp; if(isMe(n)) go("mine"); else go("person",n); } });
 }
 /* ===== Workstreams (BL-58, BL-56) ===== */
