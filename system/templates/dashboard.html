@@ -26801,22 +26801,19 @@ ${s5}`;
     ] });
   }
   function WeekAhead(props) {
-    const { note, groups, empty } = props;
+    const { groups, empty } = props;
     if (!groups.length) return /* @__PURE__ */ u2("p", { class: "none", children: empty });
-    return /* @__PURE__ */ u2(S2, { children: [
-      note ? /* @__PURE__ */ u2("p", { class: "wknote", children: note }) : null,
-      groups.map((g5) => {
-        const more = g5.rows.length - g5.cap;
-        return /* @__PURE__ */ u2("div", { class: "wkday", "data-day": g5.key, children: [
-          /* @__PURE__ */ u2("h3", { class: "wkdh", id: `wkd-${g5.key}`, children: [
-            g5.title,
-            g5.note ? /* @__PURE__ */ u2("span", { class: "wkdn", children: g5.note }) : null
-          ] }),
-          /* @__PURE__ */ u2("ol", { class: "bl wklist", "aria-labelledby": `wkd-${g5.key}`, children: g5.rows.map((r4, i5) => /* @__PURE__ */ u2(WkLine, { r: r4, hidden: !g5.open && i5 >= g5.cap, p: props }, r4.key)) }),
-          more > 0 ? /* @__PURE__ */ u2("div", { class: "moreline", children: /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": g5.open ? "true" : "false", "data-more": g5.key, children: g5.open ? "Show fewer" : `+${more} more` }) }) : null
-        ] }, g5.key);
-      })
-    ] });
+    return /* @__PURE__ */ u2(S2, { children: groups.map((g5) => {
+      const more = g5.rows.length - g5.cap;
+      return /* @__PURE__ */ u2("div", { class: "wkday", "data-day": g5.key, children: [
+        /* @__PURE__ */ u2("h3", { class: "wkdh", id: `wkd-${g5.key}`, children: [
+          g5.title,
+          g5.note ? /* @__PURE__ */ u2("span", { class: "wkdn", children: g5.note }) : null
+        ] }),
+        /* @__PURE__ */ u2("ol", { class: "bl wklist", "aria-labelledby": `wkd-${g5.key}`, children: g5.rows.map((r4, i5) => /* @__PURE__ */ u2(WkLine, { r: r4, hidden: !g5.open && i5 >= g5.cap, p: props }, r4.key)) }),
+        more > 0 ? /* @__PURE__ */ u2("div", { class: "moreline", children: /* @__PURE__ */ u2("button", { type: "button", class: "qa", "aria-expanded": g5.open ? "true" : "false", "data-more": g5.key, children: g5.open ? "Show fewer" : `+${more} more` }) }) : null
+      ] }, g5.key);
+    }) });
   }
   function drawWeekAhead(host2, props) {
     R(/* @__PURE__ */ u2(WeekAhead, { ...props }), host2);
@@ -27881,7 +27878,6 @@ ${s5}`;
     drawToDecide(body2, { rows: L3, total, cap: TDCAP, open: EXPAND.has("td"), onAct: tdAct, onOpen: tdOpen, onReview: () => go2("review"), blocked: (why) => snack(why) });
     requestAnimationFrame(tdFocusAfter);
   }
-  var PRWORD = (a5) => !a5.length ? "Work of every priority" : a5.length === 1 ? `${a5[0]} work` : `${a5.slice(0, -1).join(", ")} and ${a5[a5.length - 1]} work`;
   function workActs(k5, x5) {
     const mine = isMe(x5.o), owner = !!(x5.o && x5.o !== "TBC"), t47 = x5.t || x5.id, L3 = [];
     if (k5 === "actions") {
@@ -28021,7 +28017,6 @@ ${s5}`;
     if (!host2) return;
     $("#weekTo").textContent = W3 ? `to ${longDay(W3.to)}` : "";
     drawWeekAhead(host2, {
-      note: W3 ? `${PRWORD(S.weekPrios || [])}, every milestone and decision, and meetings` : "",
       groups: weekGroups(),
       empty: `Nothing is due or booked until ${W3 ? longDay(W3.to) : "next Monday"}.`,
       onAct: (r4, a5, btn) => {

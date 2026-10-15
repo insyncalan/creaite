@@ -172,13 +172,13 @@ class Sections(Home):
             {kind:"decisions",id:"ABC-D-009",p:"ABC",t:"Pick a vendor",o:"Omar Ali"},{kind:"raid",id:"ABC-R-009",p:"ABC",t:"A risk",o:"Omar Ali",type:"Risk",pr:"Urgent",od:3},
             {kind:"milestone",id:"ABC-M-001",p:"ABC",t:"UAT",slip:true}]}],undated:[],further:[]};
           S.weekPrios=["Urgent"]; renderToday(); const out={rows:[...document.querySelectorAll('#weekList li.wkrow')].map(l=>[l.querySelector('.wktag').textContent,l.querySelector('.wkwhy').textContent,[...l.querySelectorAll('.tacts button')].map(x=>x.dataset.tip)]),
-            note:document.querySelector('#weekList .wknote').textContent};
-          S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelector('#weekList .wknote').textContent; S.weekPrios=was; return out; })()""")
+            note:document.querySelectorAll('#weekList .wknote').length};
+          S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelectorAll('#weekList .wknote').length; out.text=document.getElementById('weekList').textContent; S.weekPrios=was; return out; })()""")
         self.assertEqual(o["rows"], [["Decision", "needed by", ["Draft a chase"]],
                                      ["Risk · Urgent", "3 days overdue", ["Write an update", "Draft a chase"]],
                                      ["Milestone", "due · at risk", ["Open the project"]]])
-        self.assertEqual(o["note"], "Urgent work, every milestone and decision, and meetings")     # the setting, never hard-coded
-        self.assertEqual(o["note2"], "Urgent and High work, every milestone and decision, and meetings")
+        self.assertEqual((o["note"], o["note2"]), (0, 0))                # #104: the "Urgent work, every milestone and decision, and meetings" note is gone
+        self.assertNotIn("every milestone and decision", o["text"])
 
 
 class NoFileNames(Home):

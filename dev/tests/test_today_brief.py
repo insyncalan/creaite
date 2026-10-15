@@ -458,7 +458,7 @@ class TodayBriefTests(PageTests):
             {date:"2026-10-13",dow:"Tuesday",weekend:false,meetings:[],items:[]},
             {date:"2026-10-16",dow:"Friday",weekend:false,meetings:[],items:[{kind:"actions",id:"ABC-A-004",p:"ABC",t:"Friday action",o:"Sara Example"}]}]};
           go("today"); renderToday(); const days=[...document.querySelectorAll("#weekList .wkday")];
-          window.OUT={days:days.map(d=>[d.querySelector(".wkdh").textContent,false,[...d.querySelectorAll("li.wkrow")].map(x=>x.querySelector(".tb").textContent+" | "+x.querySelector(".wkwhy").textContent)]),to:document.getElementById("weekTo").textContent,note:document.querySelector("#weekList .wknote").textContent,
+          window.OUT={days:days.map(d=>[d.querySelector(".wkdh").textContent,false,[...d.querySelectorAll("li.wkrow")].map(x=>x.querySelector(".tb").textContent+" | "+x.querySelector(".wkwhy").textContent)]),to:document.getElementById("weekTo").textContent,note:document.querySelectorAll("#weekList .wknote").length,
             acts:[...document.querySelectorAll("#weekList li.wkrow")].map(x=>[...x.querySelectorAll(".tacts button")].map(b=>b.dataset.tip))};
           D.week={from:"2026-10-09",to:"2026-10-09",days:[]}; renderToday(); window.OUT.empty=document.querySelector("#weekList .none").textContent;""")
         names = [d[0] for d in o["days"]]
@@ -472,7 +472,7 @@ class TodayBriefTests(PageTests):
         self.assertEqual(o["days"][2][2][1], "UAT start — Example Programme | due · on track")
         self.assertIn("Friday action", o["days"][3][2][0])
         self.assertEqual(o["to"], "to Friday 16th October")
-        self.assertEqual(o["note"], "Work of every priority, every milestone and decision, and meetings")   # what the setting lists
+        self.assertEqual(o["note"], 0)   # #104: no note under the Week ahead heading
         self.assertEqual(o["acts"][0], ["Draft a chase", "Move the date"])          # someone else's action: chase it, or move it
         self.assertEqual(o["acts"][3], ["Open the project"])                          # a milestone
         self.assertEqual(o["empty"], "Nothing is due or booked until Friday 9th October.")

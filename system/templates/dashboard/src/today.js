@@ -493,7 +493,6 @@ export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!
   drawToDecide(body,{rows:L,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
-const PRWORD=a=>!a.length?"Work of every priority":a.length===1?`${a[0]} work`:`${a.slice(0,-1).join(", ")} and ${a[a.length-1]} work`;   /* what dashboard.week_ahead_priorities lists */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */
 export function workActs(k,x){ const mine=isMe(x.o), owner=!!(x.o&&x.o!=="TBC"), t=x.t||x.id, L=[];
   if(k==="actions"){ if(mine) L.push({id:"done",icon:"done",label:"Mark done",name:`Mark done: ${t}`,primary:true});
@@ -548,7 +547,7 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
   return out; }
 export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return;
   $("#weekTo").textContent=W?`to ${longDay(W.to)}`:"";
-  drawWeekAhead(host,{note:W?`${PRWORD(S.weekPrios||[])}, every milestone and decision, and meetings`:"",groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  drawWeekAhead(host,{groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){
