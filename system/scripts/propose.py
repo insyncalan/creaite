@@ -876,7 +876,8 @@ def people_register_text():
 
 def identity_person():
     """Alan himself as a people-register entry, from settings `identity`, or None if no name is set."""
-    ident = paths.load_settings().get("identity") or {}
+    import extraction                                              # lazily: extraction imports propose
+    ident = extraction.section("identity")                         # a hand-edited "Alan", [] or null: no identity
     if not ident.get("name"):
         return None
     return {"name": ident["name"], "email": "", "aliases": list(ident.get("short_forms") or []), "org": "", "role": "",
@@ -1157,7 +1158,8 @@ def cmd_people_map(proposal):
 
 def people_legacy_names():
     """The names in the old settings people.added and people.hidden lists, before the register (BL-55)."""
-    legacy = paths.load_settings().get("people") or {}
+    import extraction                                              # lazily: extraction imports propose
+    legacy = extraction.section("people")                          # a hand-edited non-block: no legacy lists
     return list(legacy.get("added") or []), list(legacy.get("hidden") or [])
 
 

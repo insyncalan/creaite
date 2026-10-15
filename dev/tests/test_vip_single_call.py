@@ -986,6 +986,25 @@ class HandEditedSettingsTests(Base):
         self.assertEqual(got, [{"enabled": True, "check_minutes": 30, "notify": True}, True, "", False])
 
 
+class HandEditedIdentityTests(Base):
+    """Review F4 (missed reader): a hand-edited "identity" that isn't a block ("Alan", [], null) reads as no identity in
+    every reader on the VIP path (sweep._alan_identity, propose.identity_person), so vip_clean and vip_closes still run."""
+
+    def test_identity_alan_a_list_or_null_still_records_the_card_and_its_close(self):
+        cfg = self.v.root / "system/config/settings.json"
+        orig = cfg.read_text()
+        for name, value in (("a string", "Alan"), ("a list", []), ("null", None)):
+            with self.subTest(name):
+                cfg.write_text(json.dumps({**json.loads(orig), "identity": value}))
+                check_since(self.v)
+                got = self.check([owner_done()])
+                self.assertEqual(len(got["new"]), 1)                                         # the check survived
+                self.assertEqual(self.cards()[0]["closes"]["id"], "ABC-A-007")               # vip_closes ran
+                said = py(self.v, "import propose\nprint(json.dumps([list(sweep._alan_identity()[:1]), "
+                                  "propose.identity_person(), len(propose.people_legacy_names())]))")
+                self.assertEqual(said, [[""], None, 2])
+
+
 DEEP = "[" * 100000 + "]" * 100000
 
 

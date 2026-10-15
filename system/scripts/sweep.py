@@ -2251,7 +2251,7 @@ def vip_open_items(project, thread):
 
 def _alan_identity():
     """(his full name, his own mail domains, his addresses in the people register), all but the name lower case."""
-    ident = paths.load_settings().get("identity") or {}
+    ident = extraction.section("identity")                   # a hand-edited "Alan", [] or null reads as no identity
     name = str(ident.get("name") or "").strip()
     me = next((p for p in extraction.people() if p["name"].lower() == name.lower()), None)
     return name, {str(d).lower() for d in ident.get("own_domains") or []}, {e.lower() for e in (me or {}).get("emails") or []}
