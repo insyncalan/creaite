@@ -320,6 +320,16 @@ def archived_projects(con):
         return set()
 
 
+def item_opens(table, r, gone):
+    """Where a tracker row's result opens: its table and ID, and whether it is archived, and by its project (BL-10)."""
+    out = {"type": "item", "table": table, "id": r["id"]}
+    if r.get("archived"):
+        out["archived"] = True
+        if r["project"] in gone:
+            out["project_archived"] = True
+    return out
+
+
 def item_result(table, r, text, terms, gone=frozenset()):
     """One tracker row as a search result: its ID, kind, text, details and link. `gone`: the archived projects' codes; an
     archived item of one of them opens with project_archived (BL-10), one archived for its age without."""
@@ -335,8 +345,7 @@ def item_result(table, r, text, terms, gone=frozenset()):
         meta = [r["status"], f"forecast {tracker.shown(r['forecast_date'] or r['baseline_date'])}"]
     if r.get("archived"):                      # BL-09: an archived project's items are still found, marked Archived
         meta.append("Archived")
-    opens = {"type": "item", "table": table, "id": r["id"], **({"archived": True} if r.get("archived") else {}),
-             **({"project_archived": True} if r.get("archived") and r["project"] in gone else {})}
+    opens = item_opens(table, r, gone)
     return {"group": "items", "kind": kind, "id": r["id"], "title": r[text], "snippet": mark(r[text], terms, 220),
             "archived": bool(r.get("archived")),
             "project": r["project"], "date": r["_date"] or "", "date_shown": tracker.shown(r["_date"]) if r["_date"] else "",

@@ -2634,8 +2634,13 @@ def why_not(con, r, reverted, done_ids):
         return "history only; nothing to put back"
     if r["op"] == "insert" and r["tbl"] not in REVERT_CREATED:
         return "a new " + r["tbl"].rstrip("s") + " can't be removed here; use “undo last apply”"
+    return None
+
+
+def age_archive_refusal(r):
+    """BL-10: why the daily archiving's change can't be chosen (its own Undo, or an edit, brings the item back), or None."""
     if r["field"] == "archived" and is_age_archive_via(r["via"]):
-        return "archived for its age: use Undo on the archive apply, or edit the item to bring it back"    # BL-10
+        return "archived for its age: use Undo on the archive apply, or edit the item to bring it back"
     return None
 
 
@@ -2656,7 +2661,7 @@ def revert_plan(con, rowids, apply_id, via):
     groups = {}                                        # (apply, table, item) → the chosen rows of that apply on that item
     for rid in sorted(set(rowids), reverse=True):     # newest first, so two changes to one field go back in turn
         r = found.get(rid)
-        why = why_not(con, r, reverted, done_ids)
+        why = why_not(con, r, reverted, done_ids) or age_archive_refusal(r)
         if why:
             skipped.append({"rowid": rid, "id": r["item_id"] if r else "", "field": r["field"] if r else "", "why": why})
             continue
