@@ -304,34 +304,283 @@ class Judgement1(HandcheckCase):
 class Measured2(HandcheckCase):
     """Phase 2: BL-324 and BL-325's other measured checks."""
 
-    @phase2()
+    def setUp(self):
+        super().setUp()
+        # A headless page never has the system's focus, so focus and blur events don't fire and a handle's focus listener
+        # (which sets its value) never runs; Chrome's focus emulation gives the page focus as a window in front has it.
+        self.b.call("Emulation.setFocusEmulationEnabled", enabled=True)
+
     def test_c06_past_time_faint_text(self):
         """6. Today in light and dark → the past hours and the now-line are clearly visible; faint text (dates, hints) is
         readable, not ghostly."""
+        # The page's clock goes to 11:30, so the 10:00 to 11:00 steering is past (its dot and its dimmed words) and the sun
+        # (the now-line) stands at 11:30. In every palette, light and dark, as drawn on the day band (what is really behind
+        # them, every ancestor's opacity multiplied in): the past dot and the sun are marks that must be seen, 3:1 (WCAG
+        # 1.4.11, the audit's bar for --day-past and --day-sun); the past meeting's dimmed words are held to the same 3:1
+        # (dimmed on purpose, but still to be read); all other text on Today (dates, hints, the hour labels) is AA, 4.5:1 (3
+        # when large). The "·" separators are decorative (aria-hidden punctuation) and left out.
+        from live_browser import pin_page_clock
+        b = self.b
+        pin_page_clock(b, self.now[:10] + " 11:30")
+        self.screen("today")
+        self.assertTrue(b.eval("!!document.querySelector('#v-today .dm.past') && !!document.querySelector('#dayLine .dot.past')"),
+                        "at 11:30 the 10:00 meeting is past")
+        self.assertTrue(b.eval("!!document.querySelector('#dayLine .sun')"), "the sun (now) is drawn at 11:30")
+        low, worst, n = [], {}, 0
 
-    @phase2()
+        def keep(kind, p, m, rows, bar):
+            nonlocal n
+            for r in rows:
+                n += 1
+                need = bar(r)
+                if kind not in worst or r["ratio"] < worst[kind][0]:
+                    worst[kind] = (r["ratio"], f"{p} {m}")
+                if r["ratio"] < need:
+                    low.append((kind, f"{kind} {p} {m}: {r['sig']} \"{r['text'][:16]}\" {r['ratio']}:1 < {need}"))
+        text_bar = lambda r: 3 if measure.large(r) else 4.5          # noqa: E731
+        try:
+            for p in measure.themes(b):
+                for m in ("light", "dark"):
+                    measure.theme(b, p, m)
+                    keep("past dot", p, m, measure.paint_contrast(b, "#dayLine .dot.past", "fill"), lambda r: 3)
+                    keep("now-line", p, m, measure.paint_contrast(b, "#dayLine .sun circle, #dayLine .sun path", "stroke"), lambda r: 3)
+                    keep("hour labels", p, m, measure.paint_contrast(b, "#dayLine .hr", "fill"), text_bar)
+                    words = [r for r in measure.paint_contrast(b, ".dm.past > :not(.acts), .dm.past > :not(.acts) *", scope="#v-today") if r["text"]]
+                    keep("past words", p, m, words, lambda r: 3)
+                    # the other text: elements with words of their own (not only their children's), outside the past meeting
+                    own = b.eval("""[...document.querySelectorAll('#v-today *:not(svg):not(svg *)')].filter(e=>{ const r=e.getBoundingClientRect();
+                      return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden'&&!e.closest('[hidden],[inert]'); })
+                      .map(e=>!e.closest('.dm.past')&&!e.matches('.daysep')&&[...e.childNodes].some(c=>c.nodeType===3&&c.textContent.trim()))""")
+                    allrows = measure.paint_contrast(b, "#v-today *:not(svg):not(svg *)")
+                    text = [r for r, mine in zip(allrows, own) if mine]
+                    self.assertEqual(len(allrows), len(own), "one visibility rule for both lists")
+                    self.assertTrue(text, "Today has text to measure")
+                    keep("faint text", p, m, text, text_bar)
+        finally:
+            b.eval("applyTheme()")
+        kinds = "; ".join(f"{k} lowest {v[0]}:1 ({v[1]})" for k, v in worst.items())
+        self.note(6, f"{len(measure.themes(b))} palettes × light, dark at 11:30 (the 10:00 meeting past), {n} measures; {kinds}"
+                     + (f"; {len(low)} under the bar, first: {low[0][1]}" if low else ""))
+        if low:
+            by = {}
+            for kind, _ in low:
+                by[kind] = by.get(kind, 0) + 1
+            self.fail("under the contrast bar (palette × mode × element): " + ", ".join(f"{k} {v}" for k, v in by.items()))
+
     def test_c07_resize_handle_value(self):
         """7. VoiceOver (⌘F5) on a Work column-resize handle → it reads a value (its width) and changes as you resize with ←
         and →. (Automated through the accessibility tree: measure.ax_node; VoiceOver itself stays live only.)"""
+        b = self.b
+        self.screen("work")
+        cols = b.eval("[...document.querySelectorAll('#workTbl thead th')].filter(th=>th.querySelector('.colrz')).map(th=>th.dataset.col)")
+        self.assertTrue(cols, "Work's headings have resize handles")
+        col = cols[1] if len(cols) > 1 else cols[0]           # not the first (title) column: it takes the table's spare width
+        sel = f"#workTbl thead th[data-col=\"{col}\"] .colrz"
+        width = f"Math.round(document.querySelector('#workTbl thead th[data-col=\"{col}\"]').getBoundingClientRect().width)"
+        try:
+            b.eval(f"document.querySelector({json.dumps(sel)}).focus()")
+            b.pump(0.1)
+            start = measure.ax_node(b, sel)
+            self.assertEqual(start["role"], "separator")
+            self.assertTrue((start["name"] or "").startswith("Resize "), f"named: {start['name']}")
+            self.assertTrue(start["props"].get("focused"), "the handle takes focus")
+            self.assertEqual((start["props"].get("valuemin"), start["props"].get("valuemax")), (60, 900))
+            self.assertIsNotNone(start["value"], "the handle has a value (aria-valuenow)")
+            w0 = b.eval(width)
+            self.assertLessEqual(abs(start["value"] - w0), 1, f"the value is the column's width: {start['value']} against {w0} px")
+            steps = [("start", start["value"], w0)]
+            for k in ("ArrowRight", "ArrowRight", "ArrowLeft"):
+                b.key(k)
+                b.pump(0.1)
+                steps.append((k, measure.ax_node(b, sel)["value"], b.eval(width)))
+            for (_, v0, _), (k, v1, w1) in zip(steps, steps[1:]):
+                self.assertEqual(v1 - v0, 16 if k == "ArrowRight" else -16, f"{k} moves the width by 16 px ({v0} → {v1})")
+                self.assertLessEqual(abs(v1 - w1), 1, f"after {k} the value is the width: {v1} against {w1} px")
+        finally:
+            b.eval("(()=>{ localStorage.removeItem('creaite-colwidths'); return true; })()")
+        self.note(7, f"{len(cols)} handles; \"{start['name']}\": separator, valuenow "
+                     + " → ".join(str(v) for _, v, _ in steps) + " px (→ → ←), the column's width each time, range 60 to 900")
 
-    @phase2()
     def test_c08_sortable_headers(self):
         """8. Settings › People, Tab to a column heading → it is a button; Enter sorts, and VoiceOver reads the sort order."""
+        # The sortable headings are the People page's (th[data-psort], reached from Settings › People); Settings › People's
+        # own tables have none. Chrome's accessibility tree gives no sort property over CDP, so the order VoiceOver is given
+        # is read from aria-sort on the heading, whose role must be columnheader (where aria-sort is allowed).
+        b = self.b
+        self.screen("settings-people")
+        in_settings = b.eval("document.querySelectorAll('#v-settings th[data-psort], #v-settings th button').length")
+        self.screen("people")
+        heads = b.eval("[...document.querySelectorAll('#v-people th[data-psort]')].map(th=>th.dataset.psort)")
+        self.assertTrue(heads, "People has sortable headings")
+        names = "[...document.querySelectorAll('#v-people tbody tr')].map(r=>r.cells[0].innerText.trim().split('\\n')[0])"
+        btn = "#v-people th[data-psort=\"name\"] button"
+        b.eval(f"document.querySelector('#v-people th[data-psort=\"{heads[1]}\"] button').focus()")
+        b.key("Tab", 8)                                        # Shift+Tab: back to the first heading, by the keyboard
+        self.assertEqual(b.eval("document.activeElement.closest('th')?.dataset.psort"), "name", "Tab reaches the Name heading")
+        node = measure.ax_node(b, btn)
+        self.assertEqual(node["role"], "button", "the heading is a button")
+        self.assertTrue(node["props"].get("focused"))
+        head = measure.ax_node(b, "#v-people th[data-psort=\"name\"]")
+        self.assertEqual(head["role"], "columnheader")
+        seen, lost = [], []
+        for want in ("ascending", "descending"):
+            b.key("Enter")
+            b.pump(0.3)
+            sort = b.eval("document.querySelector('#v-people th[data-psort=\"name\"]').getAttribute('aria-sort')")
+            order = b.eval(names)
+            self.assertEqual(sort, want, "Enter sorts by name and the heading says which way")
+            self.assertEqual(order, sorted(order, reverse=want == "descending"), f"rows in {want} order")
+            others = b.eval("[...document.querySelectorAll('#v-people th[data-psort]:not([data-psort=\"name\"])')].map(t=>t.getAttribute('aria-sort'))")
+            self.assertEqual(set(others), {"none"}, "the other headings say none")
+            focus = b.eval("(()=>{const a=document.activeElement; return a&&a.closest&&a.closest('th')?a.closest('th').dataset.psort:a.tagName.toLowerCase()})()")
+            seen.append(f"{want} ({measure.ax_node(b, btn)['name']})")
+            if focus != "name":
+                lost.append(f"after Enter ({want}) focus is on {focus}")
+                b.eval(f"document.querySelector({json.dumps(btn)}).focus()")
+        self.note(8, f"{len(heads)} sortable headings on People (Settings › People's tables: {in_settings}); Name: Tab reaches it, "
+                     f"a button in a columnheader; Enter sorts {', then '.join(seen)}, aria-sort follows"
+                     + (f"; {lost[0]}: VoiceOver has nothing to read the new order from" if lost else "; focus stays on the heading"))
+        if lost:
+            self.fail(f"{lost[0]}: focus leaves the heading after Enter, so VoiceOver can't read the new order")
 
-    @phase2()
     def test_c09_one_button_and_field_size(self):
         """9. Today, Work, Review, Intake, Settings, Activity and Files → buttons are one height (32 px) and fields one height
         (32 px), bar Files' large centred search bar (40 px, by design). Section headings look the same on each page."""
+        # Buttons are .btn (the small .mini and the icon .ib are check 12's). Fields are one-line inputs and selects; a
+        # textarea grows with its text and is left out. Settings is all three of its tabs. Section headings are the pages' h2;
+        # Settings › Advanced's group labels (h2.setgroup, above its sections) are a second kind and listed in the note.
+        b = self.b
+        pages = ("today", "work", "review", "intake", "settings-essentials", "settings-advanced", "settings-people", "activity", "files")
+        views = {"today": "#v-today", "work": "#v-work", "review": "#v-review", "intake": "#v-inbox", "activity": "#v-activity",
+                 "files": "#v-files", "settings-essentials": "#v-settings", "settings-advanced": "#v-settings", "settings-people": "#v-settings"}
+        fields = ("input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=color]):not([type=hidden]),"
+                  " select")
+        head_js = """(v)=>[...document.querySelectorAll(v+' h2')].filter(e=>e.offsetParent).map(e=>{ const s=getComputedStyle(e);
+          return {group:e.classList.contains('setgroup'), sig:[s.fontSize,s.fontWeight,s.lineHeight,s.fontFamily.split(',')[0],s.textTransform,s.color].join(' ')}; })"""
+        off_b, off_f, heads, groups, nb, nf = [], [], {}, set(), 0, 0
+        for page in pages:
+            self.screen(page)
+            v = views[page]
+            for x in measure.boxes(b, ".btn", v):
+                nb += 1
+                if x["h"] != 32:
+                    off_b.append(f"{page} {x['sig']} \"{x['text'][:20]}\" {x['h']}px")
+            for x in measure.boxes(b, fields, v):
+                nf += 1
+                want = 40 if page == "files" and x["sig"].startswith("input#vsInput") else 32
+                if x["h"] != want:
+                    off_f.append(f"{page} {x['sig']} {x['h']}px")
+            for h in b.eval(f"({head_js})({json.dumps(v)})"):
+                if h["group"]:
+                    groups.add(h["sig"])
+                else:
+                    heads.setdefault(h["sig"], set()).add(page)
+        self.assertTrue(b.eval("!!document.querySelector('#vsInput')") and 40 in [x["h"] for x in measure.boxes(b, "#vsInput")],
+                        "Files' large search bar is 40 px")
+        self.note(9, f"{nb} buttons and {nf} fields on {len(pages)} screens (Settings' three tabs)"
+                     + (f"; buttons not 32 px: {'; '.join(off_b[:3])}" if off_b else "; every .btn 32 px")
+                     + (f"; fields off size ({len(off_f)}): {'; '.join(sorted(set(off_f))[:6])}" if off_f
+                        else "; every field 32 px, Files' search 40 px")
+                     + (f"; section headings one look ({next(iter(heads))})" if len(heads) == 1 else f"; {len(heads)} heading looks: {heads}")
+                     + (f"; plus Settings › Advanced's group labels ({', '.join(groups)})" if groups else ""))
+        bad = ([f"{len(off_b)} buttons not 32 px"] if off_b else []) + ([f"{len(off_f)} fields not 32 px"] if off_f else []) \
+            + ([f"{len(heads)} section-heading looks"] if len(heads) != 1 else [])
+        if bad:
+            self.fail(", ".join(bad))
 
-    @phase2()
     def test_c16_touch_targets(self):
         """16. Checkboxes on Review, Intake and Activity, the Settings switches and the column-resize handles → each easy to
         hit (at least 24 px; DevTools › Inspect shows the box)."""
+        # Each target's own box (DevTools › Inspect), both sides at least 24 px, and its centre hit-tests to it (nothing on top).
+        b = self.b
+        hit_js = """(sel,scope)=>[...document.querySelector(scope).querySelectorAll(sel)].filter(e=>{ const r=e.getBoundingClientRect();
+          return r.width>0&&r.height>0&&!e.closest('[hidden],[inert]'); }).map(e=>{ e.scrollIntoView({block:'center',inline:'center'});
+          const r=e.getBoundingClientRect(), h=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);
+          return !!h&&(h===e||e.contains(h)||(h.closest('label')&&h.closest('label').contains(e))); })"""
+        groups = [("Review checkboxes", "review", "#v-review", "input[type=checkbox]:not(.switch)"),
+                  ("Intake checkboxes", "intake", "#v-inbox", "input[type=checkbox]:not(.switch)"),
+                  ("Activity checkboxes", "activity", "#v-activity", "input[type=checkbox]:not(.switch)"),
+                  ("Settings switches", "settings-essentials", "#v-settings", "input.switch"),
+                  ("Settings switches", "settings-advanced", "#v-settings", "input.switch"),
+                  ("resize handles", "work", "#v-work", ".colrz"),
+                  ("resize handles", "projects", "#v-projects", ".colrz"),
+                  ("resize handles", "today", "#v-today", ".colrz")]
+        small, missed, sizes = [], [], {}
+        for label, page, scope, sel in groups:
+            self.screen(page)
+            boxes = measure.hit_box(b, sel, scope)
+            self.assertTrue(boxes, f"{label} on {page}")
+            for x in boxes:
+                sizes.setdefault(label, set()).add(f"{x['w']:g}×{x['h']:g}")
+                if min(x["w"], x["h"]) < 24:
+                    small.append(f"{page} {x['sig']} {x['w']}×{x['h']}")
+            hits = b.eval(f"({hit_js})({json.dumps(sel)},{json.dumps(scope)})")
+            missed += [f"{page} {sel} #{i}" for i, ok in enumerate(hits) if not ok]
+        self.note(16, "; ".join(f"{k} {', '.join(sorted(v))} px" for k, v in sizes.items())
+                      + (f"; under 24 px: {small[:3]}" if small else "; all at least 24 px")
+                      + (f"; covered at the centre: {missed[:3]}" if missed else "; each hit at its centre"))
+        if small or missed:
+            self.fail(f"{len(small)} targets under 24 px, {len(missed)} covered at their centre")
 
-    @phase2()
     def test_c19_320_px_layers(self):
         """19. Every screen at 320 px → no sideways scroll. Menus, popovers, the peek, toasts and ask creaite stack in the
         right order (a menu over the peek, a toast over everything)."""
+        # Layers at 320 px, each really open: the peek (a Work action), a popover from it (its Status picker), a menu (Work's
+        # More views), ask creaite and a toast. Where two overlap the middle of the overlap is hit-tested; where they don't,
+        # their stacking order decides (measure.on_top). The order: menu and popover over the peek, ask creaite over the peek,
+        # a toast over all of them.
+        b = self.b
+        from hcbase import SCREENS
+        wide, layers, wrong = [], [], []
+        try:
+            measure.width(b, 320, 800)
+            for name in SCREENS:
+                self.screen(name)
+                o = measure.overflow_x(b)
+                if not o["ok"]:
+                    wide.append(f"{name} {o['sw']}px")
+
+            def need(top, under, what):
+                r = measure.on_top(b, top, under)
+                self.assertIsNotNone(r["ok"], f"{what}: both showing ({top}, {under})")
+                layers.append(f"{what} {'yes' if r['ok'] else 'NO'} ({r['how']}, z {r['top_z']}/{r['under_z']})")
+                if not r["ok"]:
+                    wrong.append(f"{what}: {top} z {r['top_z']} under {under} z {r['under_z']} ({r['how']})")
+
+            def toast():
+                b.eval("snack('Hand check toast')")
+                b.pump(0.3)
+            self.screen("work")
+            b.eval("openRecord('actions',A[0].id)")
+            b.wait("document.querySelector('#panel.peek.on')")
+            b.pump(0.4)
+            b.click('#pkProps [data-pkp="st"]')
+            b.wait("document.querySelector('.pkpop')")
+            need(".pkpop", "#panel.peek.on", "popover over the peek")
+            toast()
+            need(".snack.on", ".pkpop", "toast over the popover")
+            need(".snack.on", "#panel.peek.on", "toast over the peek")
+            b.key("Escape")
+            b.pump(0.2)
+            b.eval("document.getElementById('vmore').click()")
+            b.wait("document.querySelector('#vmoreMenu.on')")
+            need("#vmoreMenu.on", "#panel.peek.on", "menu over the peek")
+            toast()
+            need(".snack.on", "#vmoreMenu.on", "toast over the menu")
+            b.key("Escape")
+            b.pump(0.2)
+            b.eval("openChat()")
+            b.wait("getComputedStyle(document.getElementById('chat')).display!=='none'")
+            b.pump(0.3)
+            need("#chat", "#panel.peek.on", "ask creaite over the peek")
+            toast()
+            need(".snack.on", "#chat", "toast over ask creaite")
+        finally:
+            measure.width(b, self.width, self.height)
+        self.note(19, f"{len(SCREENS)} screens at 320 px: " + (f"sideways scroll on {wide}" if wide else "no sideways scroll")
+                      + "; " + "; ".join(layers))
+        if wide or wrong:
+            self.fail("; ".join(([f"sideways scroll at 320 px on {', '.join(w.split()[0] for w in wide)}"] if wide else []) + wrong))
 
 
 class Judgement2(HandcheckCase):
