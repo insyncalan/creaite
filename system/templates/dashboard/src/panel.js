@@ -618,12 +618,13 @@ export async function pkApply(){ PKNEWIDS=[]; await shared.PKQ; const n=shared.P
     const done=n-shared.PKS.length; if(shared.CUR&&pkOn()) pkDraw();
     snack(done?`Applied ${done} change${done===1?"":"s"}${PKNEWIDS.length?` (${PKNEWIDS.join(", ")} created)`:""}${shared.PKS.length?`; ${shared.PKS.length} still staged (changed elsewhere since)`:""}. A backup was taken first`:"Nothing applied: "+oneLine(r.message),done?()=>undoApply(r.apply_id):null);   /* BL-179: names what it created */
     return done; } finally{ $("#pkApply").disabled=false; } }
-export async function pkUndoLast(){ await shared.PKQ; const s=shared.PKS[shared.PKS.length-1];
+export async function pkUndoLast(only){ await shared.PKQ; const s=only||shared.PKS[shared.PKS.length-1];   /* only: undo exactly this staged entry (#153), not the last one */
+  if(only&&!shared.PKS.includes(only)) return;   /* already undone or applied */
   await (async()=>{ if(!s) return; let ok=false;
   try{ ok=await vq(async()=>{ const path="system/staging/"+s.name; if(!/-dashboard(-\d+)?\.json$/.test(s.name)||!await shared.VW.exists(path)) return false;
       const data=JSON.parse(await shared.VW.read(path)); if(data.source_run!=="dashboard"||(data.items||[]).some(i=>i.applied)) return false;
       await shared.VW.remove(path); return true; }); }catch(e){ ok=false; }
-  shared.PKS.pop();
+  { const i=shared.PKS.indexOf(s); if(i>=0) shared.PKS.splice(i,1); }
   if(!ok){ pkPersist(); refreshAll(); snack("Already applied: undo it in Activity"); return; }
   const x=pkX(s.k,s.id); if(x){ for(const n in s.prev) if(pkSame(x[n],s.patch[n])) x[n]=s.prev[n]; if(s.k==="raid") x.pr=prio(x.imp,x.lik); }
   pkPersist(); refreshAll(); snack(`Undone: ${s.id} ${String(s.label||"").toLowerCase()}`); })();
