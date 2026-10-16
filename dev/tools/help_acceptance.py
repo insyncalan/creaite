@@ -58,7 +58,7 @@ def parse_targets(brief):
 
 
 def slug(title):
-    return re.sub(r"[^\w]+", "-", title.lower()).strip("-")
+    return re.sub(r"[^\w]+", "-", re.sub(r"['’]", "", title.lower())).strip("-")
 
 
 def main():
@@ -138,8 +138,8 @@ def main():
     # 6 page ids unique
     rows = []; seen = {}; bad = 0
     for p in pages:
-        s = slug(p["title"])
-        if s in seen: bad += 1; rows.append(f"- duplicate page id: {s}")
+        s = (p["part"], slug(p["title"]))          # the dashboard prefixes ids with the part, so the same title in two parts is fine
+        if s in seen: bad += 1; rows.append(f"- duplicate page id in {s[0]}: {s[1]}")
         seen[s] = 1
     section("Unique page ids", rows, bad)
 
