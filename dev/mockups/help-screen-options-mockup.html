@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Help on a screen without a button</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Schibsted+Grotesk:wght@700;800&family=Source+Sans+3:wght@400;500;600&display=swap">
+<style>
+/* Help review (v2.2.0): what Help could look like. Option 2 "Words + find it fast": one search over all of Help, a home of top tasks, a What's new tab, short task pages and a Help button on each screen. Fictional data only. */
+:root{--bg:#F3F6F7;--surface:#fff;--sunk:#F6F9FA;--ink:#14212A;--muted:#4D5C66;--faint:#6F7D86;--line:#D7DFE3;--accent:#0B6E7F;--accent-ink:#fff;--accent-soft:#DCEFF2;--warn:#8A5A00;--warn-soft:#FBF0DA;--new:#2E6B3A;--new-soft:#E3F1E6;--hl:#FFF1B8;
+--font:"Source Sans 3","Segoe UI",system-ui,sans-serif;--display:"Schibsted Grotesk",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;--shadow-pop:0 8px 24px rgba(0,0,0,.18)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1518;--surface:#171E22;--sunk:#1B2428;--ink:#E4EAED;--muted:#A2AEB5;--faint:#86939A;--line:#2A343A;--accent:#5FC4D6;--accent-ink:#00323A;--accent-soft:#16363C;--warn:#F0C66B;--warn-soft:#3A2F12;--new:#8FD39B;--new-soft:#173323;--hl:#5A4D12}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 var(--font);padding:14px 16px 60px}
+.top{max-width:1180px;margin:0 auto 8px}h1{font:800 22px var(--display);margin:0 0 4px}.lede,.sub{color:var(--muted)}.lede{max-width:100ch;margin:0 0 8px}.sub{font-size:13px}
+.jr{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}.st{border:1px solid var(--line);background:var(--surface);border-radius:8px;height:28px;padding:0 10px;font:500 12px var(--font);cursor:pointer;color:var(--ink)}.st[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.cap{margin:0 0 10px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);border-radius:10px;color:var(--muted);font-size:13px;min-height:40px}.cap b{color:var(--ink)}
+.scr{display:none;max-width:1180px;margin:0 auto}.scr.on{display:block}
+.frame{border:1px solid var(--line);border-radius:12px;background:var(--bg);position:relative;min-height:560px;overflow:hidden}
+.hd{padding:16px 28px 0;background:var(--surface);border-bottom:1px solid var(--line)}
+.hd .eb{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}.hd h2{font:800 24px/1.15 var(--display);margin:2px 0 10px}
+.tabs{display:flex;gap:2px}.tabs span{padding:8px 14px;font:600 13px var(--font);color:var(--muted);border-bottom:2px solid transparent;display:flex;gap:6px;align-items:center}.tabs span.on{color:var(--ink);border-color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--new)}
+.search{display:flex;align-items:center;gap:8px;height:42px;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:0 12px;max-width:640px;margin:16px 0 4px}.search.f{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}.search .q{flex:1;font-size:15px}.search kbd,.kbd{font:500 11px var(--mono);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--muted);background:var(--sunk)}.ph{color:var(--faint)}
+.body{padding:8px 28px 28px;max-width:1000px}
+h3.g{font:700 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media (max-width:900px){.grid{grid-template-columns:1fr 1fr}}
+.tc{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 14px}.tc b{display:block;font:700 14px var(--display)}.tc span{color:var(--muted);font-size:13px}.tc.s{border-color:var(--accent)}
+.new{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);border-left:3px solid var(--new);background:var(--surface);border-radius:10px;padding:10px 14px}.new .v{font:700 12px var(--mono);color:var(--new);background:var(--new-soft);border-radius:6px;padding:2px 7px;white-space:nowrap}
+.res{border-bottom:1px solid var(--line);padding:10px 0}.res .kind{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}.res .t{font:700 15px var(--display);color:var(--accent)}.res p{margin:2px 0 0;color:var(--muted)}mark{background:var(--hl);color:inherit;border-radius:3px;padding:0 1px}
+.ask{display:flex;gap:10px;align-items:center;border:1px dashed var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 14px;margin-top:16px}.ask b{color:var(--accent)}
+.doc{display:grid;grid-template-columns:200px 1fr 220px;gap:28px;padding:20px 28px}.doc nav{font-size:13px;color:var(--muted)}.doc nav a{display:block;padding:3px 0;color:inherit}.doc nav a.on{color:var(--ink);font-weight:600}
+.doc h1{font:800 26px/1.15 var(--display);margin:0 0 6px}.lead{color:var(--muted);margin:0 0 12px}
+.steps{padding-left:22px}.steps li{margin:0 0 10px}.steps li::marker{font-weight:700;color:var(--accent)}
+.say{background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin:14px 0;font-size:13px}.say code{font:500 12px var(--mono);background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+.side h4{font:700 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px}.side a{display:block;color:var(--accent);padding:3px 0}.side .chk{margin-top:18px;font-size:12px;color:var(--faint)}
+.callout{border:1px solid var(--line);border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
+.app{display:grid;grid-template-columns:150px 1fr;min-height:560px}.rail{background:var(--surface);border-right:1px solid var(--line);padding:14px 12px;color:var(--muted);font-size:13px}.rail div{padding:5px 8px;border-radius:7px}.rail .on{background:var(--accent-soft);color:var(--ink);font-weight:600}.rail .wm{font:800 16px var(--display);color:var(--ink);margin-bottom:10px;padding:0 8px}
+.page{padding:18px 24px;position:relative}.page h2{font:800 22px var(--display);margin:0;display:inline-block}.hb{display:inline-flex;align-items:center;gap:6px;height:28px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:0 10px;font:500 12px var(--font);color:var(--muted);margin-left:10px;vertical-align:middle}.hb.on{border-color:var(--accent);color:var(--ink)}
+.pop{position:absolute;left:150px;top:56px;width:380px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-pop);padding:6px}.pop h6{margin:0;padding:8px 10px 4px;font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}.pop a{display:block;padding:7px 10px;border-radius:8px;color:var(--ink)}.pop a:hover,.pop a.on{background:var(--accent-soft)}.pop a span{display:block;color:var(--muted);font-size:12px}.pop hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.row{display:flex;gap:10px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;margin:8px 0;max-width:720px;color:var(--muted)}.row b{color:var(--ink)}
+.cards{max-width:1180px;margin:16px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:14px}@media (max-width:900px){.cards{grid-template-columns:1fr}}.cardn{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 16px;font-size:13px}.cardn h3{font:800 15px var(--display);margin:0 0 6px}.cardn ul{margin:0;padding-left:18px}.cardn li{margin:0 0 4px}
+
+.kline{position:absolute;left:24px;right:24px;bottom:14px;font-size:12px;color:var(--faint);display:flex;gap:14px;align-items:center}.kline a{color:var(--muted)}.kbd{font:500 11px var(--mono);border:1px solid var(--line);border-radius:5px;padding:1px 6px;background:var(--sunk);color:var(--muted)}
+.tip{position:absolute;right:24px;top:70px;width:300px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:10px;padding:10px 14px;box-shadow:var(--shadow-pop);font-size:13px}.tip b{font:700 13px var(--display)}.tip .x{float:right;color:var(--faint)}
+.empty{max-width:720px;border:1px dashed var(--line);border-radius:10px;padding:26px;text-align:center;color:var(--muted);margin-top:14px}.empty b{display:block;color:var(--ink);font:700 16px var(--display);margin-bottom:4px}.empty a{color:var(--accent)}
+.pane{position:absolute;right:0;top:0;bottom:0;width:360px;background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow-pop);padding:16px 18px;overflow:hidden}.pane h4{font:800 17px var(--display);margin:0 0 4px}.pane a{display:block;padding:7px 0;color:var(--accent);border-bottom:1px solid var(--line)}.pane .sm{color:var(--muted);font-size:12px}
+</style></head><body>
+<div class="top"><h1>Help on a screen, without a button</h1>
+<p class="lede">You didn't like a "? Help" button beside each page title. Three ways to reach the same jobs with no new button on the page. Words are placeholders; fictional data only.</p>
+<div class="jr" id="jr"></div><div class="cap" id="cap"></div></div>
+
+<div class="scr on" id="s0"><div class="frame"><div class="app"><div class="rail"><div class="wm">c_</div><div>Today</div><div>Work</div><div class="on">Review</div><div>Projects</div><div>People</div><div>More</div></div>
+<div class="page"><h2>Review</h2>
+<div class="row"><b>Falcon steering · 14-10-2026</b> minutes · 9 items</div><div class="row"><b>Sweep · mail</b> 4 items</div><div class="row"><b>Sweep · Teams</b> 2 items</div>
+<div class="pane"><h4>Help · Review</h4><p class="sm">Opened by pressing <span class="kbd">?</span>. Esc closes it and you are back where you were.</p><a>Approve what creaite found<br><span class="sm">The short way, about two minutes</span></a><a>Reject, with a reason</a><a>Fix the wrong project</a><a>Keys in Review</a><a>Search all of Help ›</a></div>
+<div class="kline"><span>Press <span class="kbd">?</span> for help with Review</span></div></div></div></div></div>
+
+<div class="scr" id="s1"><div class="frame"><div class="app"><div class="rail"><div class="wm">c_</div><div>Today</div><div>Work</div><div class="on">Review</div><div>Projects</div><div>People</div><div>More</div></div>
+<div class="page"><h2>Review</h2>
+<div class="row"><b>Falcon steering · 14-10-2026</b> minutes · 9 items</div><div class="row"><b>Sweep · mail</b> 4 items</div><div class="row"><b>Sweep · Teams</b> 2 items</div>
+<div class="row" style="border:0;background:none;padding-left:0;font-size:13px">Show: <a style="color:var(--accent)">How approving works</a> · <a style="color:var(--accent)">Why a proposal is rejected</a> · <a style="color:var(--accent)">Keys</a></div>
+<div class="kline"><span>Quiet links under the list, like the key hints Work and Review used to have. Nothing to click until you want it.</span></div></div></div></div></div>
+
+<div class="scr" id="s2"><div class="frame"><div class="app"><div class="rail"><div class="wm">c_</div><div>Today</div><div>Work</div><div class="on">Review</div><div>Projects</div><div>People</div><div>More</div></div>
+<div class="page"><h2>Review</h2>
+<div class="tip"><span class="x">×</span><b>First time in Review?</b><br>Approve routine does the easy ones. Minutes and new decisions you approve one at a time. <a style="color:var(--accent)">How approving works ›</a></div>
+<div class="row"><b>Falcon steering · 14-10-2026</b> minutes · 9 items</div><div class="row"><b>Sweep · mail</b> 4 items</div>
+<p class="sub" style="margin-top:30px">Or when the page is empty:</p>
+<div class="empty"><b>Nothing waiting. You're clear.</b>The next sweep runs at 07:00. <a>How Review works</a> · <a>Run a sweep now</a></div>
+<div class="kline"><span>A one-off tip on your first visit (dismiss once, gone for good) and a link in the empty state. Settings › Essentials can turn tips off.</span></div></div></div></div></div>
+
+<div class="cards"><div class="cardn"><h3>The three ways</h3><ul><li><b>1 · The ? key.</b> Opens a side panel on the jobs for this screen. No new button; "Press ? for help with Review" sits quietly at the foot.</li><li><b>2 · Quiet links under the list.</b> Two or three text links, in the place the old key hints used to be.</li><li><b>3 · At the moment you need it.</b> A one-time tip on first visit, and a link in each empty state.</li></ul></div>
+<div class="cardn"><h3>My recommendation: 1, with 3's empty-state link</h3><ul><li>The ? key already opens Help, so this changes where it lands, not what people learn.</li><li>The page keeps no extra chrome. The foot line says the key.</li><li>The side panel keeps your place; the full Help is one link away.</li><li>The empty-state link costs nothing and appears only when someone is stuck.</li><li>Skip the first-visit tip: it interrupts, and you did not like extra things on the page.</li></ul></div></div>
+<script>
+const $=s=>document.querySelector(s);const S=[["1 · The ? key","Press ? and a panel opens on the jobs for this screen. The foot of the page says so, quietly."],["2 · Quiet links","Two or three text links under the list. Nothing extra beside the title."],["3 · At the moment you need it","A one-time tip on first visit, and a link in the empty state."]];
+S.forEach((s,i)=>{const b=document.createElement("button");b.className="st";b.textContent=s[0];b.onclick=()=>go(i);$("#jr").appendChild(b)});
+function go(i){document.querySelectorAll(".scr").forEach((e,k)=>e.classList.toggle("on",k===i));document.querySelectorAll("#jr .st").forEach((b,k)=>b.setAttribute("aria-pressed",String(k===i)));$("#cap").innerHTML="<b>"+S[i][0]+".</b> "+S[i][1]}go(+(location.hash.slice(1)||0));
+</script></body></html>
