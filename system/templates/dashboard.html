@@ -25127,7 +25127,7 @@ ${s5}`;
     root.className = "slashroot";
     (el2.closest("dialog[open]") || document.body).appendChild(root);
     let st2 = null;
-    let dismissed = -1, opened = false, typedSlash = false, moved = false;
+    let dismissed = -1, typedSlash = false, moved = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -25140,9 +25140,7 @@ ${s5}`;
         view.dom
       );
       if (st2) {
-        opened = true;
         dom.setAttribute("aria-haspopup", "listbox");
-        dom.setAttribute("aria-expanded", "true");
         dom.setAttribute("aria-controls", id2);
         if (st2.rows[st2.i]) dom.setAttribute("aria-activedescendant", `${id2}-${st2.i}`);
         else dom.removeAttribute("aria-activedescendant");
@@ -25150,7 +25148,6 @@ ${s5}`;
         dom.removeAttribute("aria-haspopup");
         dom.removeAttribute("aria-controls");
         dom.removeAttribute("aria-activedescendant");
-        if (opened) dom.setAttribute("aria-expanded", "false");
       }
     };
     const close = () => {

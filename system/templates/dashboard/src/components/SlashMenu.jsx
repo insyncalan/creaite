@@ -93,11 +93,11 @@ export function attachSlash(h, { profile, host }) {
   (el.closest("dialog[open]") || document.body).appendChild(root);
   /** @type {SlashState|null} */
   let st = null;
-  let dismissed = -1, opened = false, typedSlash = false, moved = false;          /* typedSlash: a "/" was just typed (the only thing that opens the menu); moved: an arrow key was pressed in this menu */
+  let dismissed = -1, typedSlash = false, moved = false;          /* typedSlash: a "/" was just typed (the only thing that opens the menu); moved: an arrow key was pressed in this menu */
   const draw = () => {
     render(st ? <SlashList state={st} id={id} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
     const dom = /** @type {HTMLElement} */ (view.dom);
-    if (st) { opened = true; dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-controls", id);
+    if (st) { dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-controls", id);
       if (st.rows[st.i]) dom.setAttribute("aria-activedescendant", `${id}-${st.i}`); else dom.removeAttribute("aria-activedescendant"); }
     else { dom.removeAttribute("aria-haspopup"); dom.removeAttribute("aria-controls"); dom.removeAttribute("aria-activedescendant"); }
   };
