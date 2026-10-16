@@ -56,6 +56,21 @@ Already planned and not repeated: "To decide" is renamed Intake and Review (#168
 
 - Main is 2.0.1. v2.1.0 changes Review's multi-select bar, Today, Notes and the minutes editor, so findings 3 and 4 should be re-checked on the cut.
 - Sample data is sparse; a real vault with 200 items would stress Work and Review more.
-- I saw 6 of the 12 screenshots (Today, Review, Work, Projects, the cockpit, Intake). People, Files, Settings, Activity, Help and Milestones were measured, not looked at.
+- Part 1 covers 6 of the 12 screenshots (Today, Review, Work, Projects, the cockpit, Intake); Part 2 adds People, Files, Settings, Activity and Help. Milestones and the cockpit rendered blank.
 - Only the detector's command line was used. The tool's install step writes hooks into Claude's own configuration, so I did not run it. The tools cached their packages in `~/.npm` (and possibly `~/.impeccable`); nothing is in the repo.
 - Human usability sessions are still the other half; none of this tests whether a person finds the task easy.
+
+## Part 2: the remaining screens (looked at on 17-10-2026)
+
+People, Files, Settings, Activity and Help were looked at; Milestones and the project cockpit rendered blank (see 19). Ranked findings continue from 11:
+
+12. **Activity shows "You, via cx-edit"** in the By column of every row. "cx-edit" is a developer word in reader text, against the plain-words rule. Say "You, by hand" or "You, in the dashboard". S, a clear fix.
+13. **Help's heading reads "CREAITE X.Y.Z · FIRST DAY".** The version placeholder is showing. It may only happen in a development vault, but check it on the built app. S.
+14. **People: zero is written two ways.** "Open RAID 0" shows a number, while "Decisions waiting" and "Overdue" show "—" for none; the counts are left-aligned and look like links (dotted underline) when they are not. Right-align counts and use one style for zero. S.
+15. **Files has three ways to narrow the list at once**: a folder tree on the left, a row of chips (All files, Latest reports, This week's meetings, Intake, Weekly, Adhoc, Steerco) and a type menu with two date pickers; plus two search boxes (the vault search with ask creaite, and file names). "Intake" is both a chip and a tree entry. Recommend one navigation model. M.
+16. **Activity: a Kind button and a filter icon beside it**, and the third row has no tick box where others do (the weekly update row), so the list reads unevenly. Same pattern as Work's filter icon. S.
+17. **Settings is clean and consistent** (rows of label, one line of help, control; Reset where it can differ). Two notes: controls vary in height (time boxes, menus and checkboxes), and "Show changed only" is going in v2.1.0. No action.
+18. **Help's "The loop" panel is the best-structured page** (one idea per column, the single gate highlighted). Its five columns are dense small text; fine for Reference, heavy for a first day. For the Phase A rewrite, not a defect.
+19. **Milestones and the project cockpit rendered as empty pages** in the audit. Both need a project chosen, so this is probably the audit not choosing one. Unverified: open both in the running app before logging anything.
+
+Looked at: 10 of 12 pages. Still to check on a real vault: Milestones and the cockpit. Not yet run: the Vercel interface guidelines pass.
