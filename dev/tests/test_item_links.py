@@ -320,5 +320,95 @@ class ItemLinks(LiveBrowserCase):
         self.assertFalse(b.eval("!!" + PICK))
 
 
+    # ---- step C on the round-2 slash pattern: the `#` trigger and ordinary prose --------------------------------------------
+
+    def hosts(self):
+        """Each host in turn: (name, editor selector, how to read its text, how to open it)."""
+        return (("notes", ".nbody", lambda: self.b.eval("document.querySelector('.nbody').textContent"), lambda: self.make_note("Prose")),
+                ("current", "#curEd", lambda: self.b.eval("curEd.textContent"), lambda: self.open_current()))
+
+    def test_prose_with_slashes_and_hashes_is_never_eaten_by_enter_in_both_hosts(self):
+        b = self.b
+        for name, sel, text, opener in self.hosts():
+            opener()
+            for prose in ("issue #12", "A / B", "1 / 2", "yes / no"):
+                before = text()
+                b.type(" " + prose + " ")
+                b.pump(0.15)
+                self.assertFalse(b.eval("!!document.querySelector('.slashmenu')"), (name, prose))
+                self.assertFalse(b.eval("!!" + PICK), (name, prose, "a # then a space closes the list"))
+                b.key("Enter")
+                b.pump(0.15)
+                self.assertIn(prose, text(), (name, prose))                         # Enter made a new line; the words stay as typed
+                self.assertTrue(text().startswith(before), (name, prose))
+            self.assertNotIn("creaite:item", b.eval(f"document.querySelector({sel!r}).cxed.value()"), name)
+
+    def test_bare_hash_then_space_closes_the_list_and_leaves_text_alone(self):
+        b = self.b
+        for name, sel, text, opener in self.hosts():
+            opener()
+            b.type("see #")
+            b.wait("!!" + PICK, 5)                                                  # the known stray-# behaviour: the list opens when an item matches
+            b.type(" ")
+            b.wait(f"!{PICK}", 5)
+            self.assertIsNone(b.eval(f"document.querySelector({sel!r}).getAttribute('aria-controls')"), name)
+            b.key("Enter")
+            b.pump(0.15)
+            self.assertIn("see # ", text().replace("\u00a0", " "), name)
+            self.assertNotIn("creaite:item", b.eval(f"document.querySelector({sel!r}).cxed.value()"), name)
+
+    def test_hash_after_text_opens_the_list_only_for_a_matching_item_and_escape_keeps_the_text(self):
+        b = self.b
+        item = self.an_item()
+        suffix = item["id"].rsplit("-", 1)[1].lstrip("0") or "0"
+        for name, sel, text, opener in self.hosts():
+            opener()
+            b.type("issue #zzqq9")                                                  # no item matches: no list, text kept
+            b.pump(0.15)
+            self.assertFalse(b.eval("!!" + PICK), name)
+            for _ in "zzqq9":
+                b.key("Backspace")
+            b.type(suffix)                                                          # an item matches (ABC-A-012 for #12): the list opens
+            b.wait("!!" + PICK, 5)
+            self.assertEqual(b.eval(f"document.querySelector({sel!r}).getAttribute('aria-expanded')"), "true", name)
+            b.key("Escape")                                                         # Esc closes the list and leaves the text as typed
+            b.wait(f"!{PICK}", 5)
+            self.assertTrue(text().endswith("issue #" + suffix), (name, text()))
+            self.assertNotIn("creaite:item", b.eval(f"document.querySelector({sel!r}).cxed.value()"), name)
+
+    def test_slash_work_item_ranking_with_multi_word_queries(self):
+        b = self.b
+        self.open_current()
+        for q in ("item", "work item", "workitem", "work"):
+            b.type(" /" + q)
+            b.wait("!!document.querySelector('.slashmenu')", 5)
+            first = b.eval("document.querySelector('.slashmenu [data-slash]').dataset.slash")
+            self.assertEqual(first, "item", (q, first))                            # the Work item row leads the flat ranked list
+            b.key("Escape")
+            for _ in range(len(q) + 2):
+                b.key("Backspace")
+
+    def test_aria_expanded_is_true_during_the_item_list_after_the_slash_row_hands_over(self):
+        b = self.b
+        self.open_current()
+        b.type(" /work")
+        b.wait("!!document.querySelector('.slashmenu')", 5)
+        self.assertEqual(b.eval("curEd.getAttribute('aria-expanded')"), "true")
+        b.key("Enter")
+        b.wait("!!" + PICK, 5)
+        b.pump(0.2)
+        self.assertEqual(b.eval("curEd.getAttribute('aria-expanded')"), "true")      # the picker's state came after the menu's close
+        self.assertEqual(b.eval("curEd.getAttribute('aria-controls')"), "ntpick")
+        self.assertEqual(b.eval("curEd.getAttribute('aria-haspopup')"), "listbox")
+        self.assertFalse(b.eval("!!document.querySelector('.slashmenu')"))
+        b.key("Enter", modifiers=4 if b.is_mac() else 2)                              # slashOn holds ⌘↵ back: no save while the list is open
+        b.pump(0.2)
+        self.assertTrue(b.eval("!!shared.CURED"))
+        b.key("Escape")
+        b.wait(f"!{PICK}", 5)
+        self.assertTrue(b.eval("!!shared.CURED"))
+        self.assertNotEqual(b.eval("curEd.getAttribute('aria-expanded')"), "true")
+
+
 if __name__ == "__main__":
     unittest.main()
