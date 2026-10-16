@@ -47,12 +47,15 @@ if _day:
 '''
 
 
-def dump():
-    """Child process: build the sample vault and print its database as JSON, the time of day masked."""
+def dump(late=False):
+    """Child process: build the sample vault and print its database as JSON, the time of day masked. With `late`, test_dashboard
+    is imported first with CREAITE_NOW unset (so its TODAY is the real day) and CREAITE_NOW is set only before populate() is called."""
     from test_dashboard import populate
     from test_tracker import Vault
     v = Vault()
     try:
+        if late:
+            os.environ["CREAITE_NOW"] = NOW
         populate(v)
         mask = lambda x: re.sub(r"(\d{4}-\d{2}-\d{2}[ T])\d{2}:\d{2}:\d{2}(\.\d+)?", r"\1HH:MM:SS", json.dumps(x, default=str))  # noqa: E731
         tables = {}
@@ -66,13 +69,16 @@ def dump():
         v.cleanup()
 
 
-def build(real_day):
-    """The sample vault built while the real date is `real_day`, as a dict."""
+def build(real_day, late=False):
+    """The sample vault built while the real date is `real_day`, as a dict. With `late`, CREAITE_NOW is set only after the import."""
     with tempfile.TemporaryDirectory() as tmp:
         (Path(tmp) / "sitecustomize.py").write_text(FAKE_CLOCK)
-        env = {**os.environ, "FAKE_REAL_DAY": real_day, "CREAITE_NOW": NOW, "PYTHONPATH": tmp}
+        env = {**os.environ, "FAKE_REAL_DAY": real_day, "PYTHONPATH": tmp}
         env.pop("CREAITE_STAMP_DAY", None)
-        r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "dump"], env=env, capture_output=True, text=True)
+        env.pop("CREAITE_NOW", None)
+        if not late:
+            env["CREAITE_NOW"] = NOW
+        r = subprocess.run([sys.executable, str(Path(__file__).resolve()), "dump-late" if late else "dump"], env=env, capture_output=True, text=True)
         if r.returncode:
             raise AssertionError(f"dump failed:\n{r.stdout}\n{r.stderr}")
         return json.loads(r.stdout.strip().splitlines()[-1])
@@ -93,9 +99,17 @@ class PopulateClockTests(unittest.TestCase):
         self.assertIn("2026-10-10 HH:MM:SS", text)               # populate's STAMP_DAY
         self.assertNotIn(REAL_A + " HH:MM:SS", text)             # never the real day
 
+    def test_a_creaite_now_set_after_the_import_still_moves_the_dates(self):
+        """TODAY is fixed at import; populate() must read CREAITE_NOW again when it is called (a test that sets it for one call)."""
+        late, early = build(REAL_A, late=True), build(REAL_A)
+        self.assertEqual(late["files"], early["files"])
+        self.assertIn("2026-10-07 Steering.docx", " ".join(late["files"]))      # not the real day's d(-5)
+        for t in late["tables"]:
+            self.assertEqual(late["tables"][t], early["tables"][t], f"{t} ignores a CREAITE_NOW set at the call")
+
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["dump"]:
-        dump()
+    if sys.argv[1:] in (["dump"], ["dump-late"]):
+        dump(late=sys.argv[1] == "dump-late")
     else:
         unittest.main()
