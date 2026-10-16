@@ -5,6 +5,7 @@ Builds a throwaway vault with fictional data (ABC, DEF), builds the dashboard an
 If Google Chrome is installed, it also loads the page headless and checks it renders with no script errors.
 """
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -13,6 +14,7 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -20,7 +22,16 @@ from cdp import chrome_path  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
 
 CHROME = Path(chrome_path() or "/nonexistent/chrome")      # CREAITE_CHROME, the PATH, then the macOS app (dev/tools/cdp.py)
-TODAY = date.today()
+
+
+def _today():
+    """Today for the sample data: CREAITE_NOW's day when it is set (as the scripts read it), else the real one."""
+    fixed = os.environ.get("CREAITE_NOW")
+    return date.fromisoformat(fixed[:10]) if fixed else date.today()
+
+
+TODAY = _today()
+STAMP_DAY = "2026-10-10"        # the day populate()'s applies are stamped with: a fixed one, so no test depends on the real date
 
 
 def d(days):
@@ -42,8 +53,24 @@ def png(w, h, rgb):
         chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
 
 
+def stamped_apply(v):
+    """`apply` with its stamps on STAMP_DAY (unless the caller already set CREAITE_STAMP_DAY), not the real day."""
+    with mock.patch.dict(os.environ, {"CREAITE_STAMP_DAY": os.environ.get("CREAITE_STAMP_DAY") or STAMP_DAY}):
+        v.run("apply")
+
+
 def populate(v):
-    """A small fictional portfolio: ABC (slipping) and DEF (on track)."""
+    """A small fictional portfolio: ABC (slipping) and DEF (on track).
+
+    Its dates count from CREAITE_NOW's day when that is set at the call (else TODAY, which also follows CREAITE_NOW at import), and its applies are stamped with STAMP_DAY (unless the
+    caller already set CREAITE_STAMP_DAY), so what it builds does not change with the real date."""
+    with mock.patch.dict(os.environ, {"CREAITE_STAMP_DAY": os.environ.get("CREAITE_STAMP_DAY") or STAMP_DAY}):
+        _populate(v)
+
+
+def _populate(v):
+    anchor = _today() if os.environ.get("CREAITE_NOW") else TODAY      # its "today": CREAITE_NOW's day if set now, else TODAY
+    d = lambda days: (anchor + timedelta(days=days)).isoformat()      # noqa: E731
     reg = v.root / "projects/_portfolio/project-register.md"
     reg.write_text(reg.read_text().replace("|  |  |  |  |  |  |  |  |",
                                            "| DEF | Digital Enablement | DEF Digital Enablement | Enable | Sam (sponsor) | "
@@ -80,7 +107,7 @@ def populate(v):
             likelihood="High", raised=d(-4), source=src),
         new("decisions", 9, project="ABC", decision="Go-live moves two weeks", made_by="Jane Doe", date=d(-5),
             source=src),
-        new("updates", 10, week_ending=(TODAY - timedelta(days=(TODAY.weekday() - 4) % 7 + 7)).isoformat(),
+        new("updates", 10, week_ending=(anchor - timedelta(days=(anchor.weekday() - 4) % 7 + 7)).isoformat(),
             project="ABC", health="At risk", summary="Data access late"),
         {"n": 11, "op": "update", "table": "projects", "id": "ABC",
          "changes": {"health": "Off track", "health_reason": "UAT start slipped 14 days"}, "decision": "approved"},
