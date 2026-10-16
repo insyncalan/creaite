@@ -2818,7 +2818,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
    Row actions are icons (.ib.sm, 28px; BL-216's 24px targets inside), 55% until the row is pointed at or tabbed into, so
    nothing moves; a window without hover shows them at full strength. Colours are the theme's tokens, so dark mode and every
    palette follow. */
-.dayband .bandin{min-width:0}
+.dayband .bandin{min-width:0;width:80%;margin:0 auto}   /* #113 (Alan, 15-10-2026): the header's CONTENT sits in the 80% centred column again (BL-72's .col80; BL-319 had dropped it in 04c87566), the band stays full width */
+@media (max-width:640px){.dayband .bandin{width:100%}}
 .thome{max-width:980px;margin:0 auto}
 #tBrief .th{margin:0 0 8px}   /* BL-325 (Alan, 14-10-2026): the headings are the shared h2, sentence case; BL-319 set the spacing only */
 #tBrief .th3{margin-top:20px;font:600 var(--fs-sm)/20px var(--font)}   /* You owe, Waiting on: the same sub-heading as a person's Promises card (#ppPromises h3) */

@@ -358,7 +358,7 @@ class TodayBriefTests(PageTests):
           const inner=view.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
           const sheetRules=[]; for(const sh of document.styleSheets) for(const r of sh.cssRules) if(r.media&&/max-width:\\s*640px/.test(r.conditionText||r.media.mediaText)) for(const c of r.cssRules) sheetRules.push(c.cssText);
           window.OUT={heads,bandFirst:!!(band.compareDocumentPosition(brief)&Node.DOCUMENT_POSITION_FOLLOWING),
-            ratios:cols.map(c=>+(c.getBoundingClientRect().width/inner).toFixed(4)), lefts:cols.map(c=>c.getBoundingClientRect().left), inner,
+            ratios:cols.map(c=>+(c.getBoundingClientRect().width/inner).toFixed(4)), lefts:cols.map(c=>c.getBoundingClientRect().left), centres:cols.map(c=>c.getBoundingClientRect().left+c.getBoundingClientRect().width/2), inner,
             narrow:sheetRules.some(t=>/\\.thome\\s*\\{[^}]*max-width:\\s*none/.test(t)), cards:document.querySelectorAll("#tBrief .card, #tBrief .col").length,
             portfolioLast:brief.lastElementChild.querySelector("h2").textContent, day:!!document.getElementById("dayLine"), mtgs:!!document.getElementById("dayMeets"),
             headline:document.getElementById("dayHead").tagName,
@@ -369,9 +369,9 @@ class TodayBriefTests(PageTests):
         self.assertEqual(o["heads"], ["To decide", "First thing", "Decisions needed", "Needs attention", "Your commitments", "You owe", "Waiting on",
                                       "Week ahead", "Resolved", "Portfolio"])
         self.assertTrue(o["bandFirst"])
-        self.assertAlmostEqual(o["ratios"][0], 1, delta=0.005)                     # the header at full width
+        self.assertAlmostEqual(o["ratios"][0], 0.8, delta=0.005)                   # #113: the header's content in the 80% column (the band itself is full width: test_today_home)
         self.assertLessEqual(o["ratios"][1]*o["inner"], 980.5)                     # the sections at a 980px reading width, centred
-        self.assertAlmostEqual(o["lefts"][1]-o["lefts"][0], (o["inner"]-o["ratios"][1]*o["inner"])/2, delta=1.5)
+        self.assertAlmostEqual(o["centres"][0], o["centres"][1], delta=1.5)           # both columns centred on the page
         self.assertTrue(o["narrow"])                                               # full width with gutters below 640px
         self.assertEqual(o["cards"], 0)
         self.assertEqual(o["overlap"], 0)                                          # the sections stack; none sits on another
