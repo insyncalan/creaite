@@ -3600,7 +3600,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkrow .tb{flex:1;min-width:0;font-size:var(--fs-md);line-height:20px}
 #tBrief .wkrow .tb .t{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #tBrief .wkrow .wkwho{display:block;font-size:var(--fs-xs);line-height:16px;color:var(--muted)}
-#tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+#tBrief .wkrow .wkwho a.s{color:var(--accent);text-decoration:underline;text-underline-offset:2px;display:inline-block;padding:4px 0;margin:-4px 0}   /* a 24px target */
 .wkdot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--faint,var(--muted));opacity:.45} .wkdot.u{background:var(--bad);opacity:1} .wkdot.h{background:var(--warn);opacity:1}
 .wkic{flex:none;width:20px;display:inline-grid;place-items:center;color:var(--muted)} .wkic .i{width:14px;height:14px}
 .wktm{flex:none;width:44px;font:500 var(--fs-xs)/16px var(--mono,var(--font));color:var(--muted)}
