@@ -11269,7 +11269,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     live.current = flow;
     const [hid] = d2(() => uid("aic"));
     if (!flow) return /* @__PURE__ */ u2(Dialog, { open: false, onClose: () => {
-    }, labelledBy: hid, children: /* @__PURE__ */ u2("h2", { id: hid, children: "Connect" }) });
+    }, id: "aiConnect", class: "rvdlg aidlg", labelledBy: hid, children: /* @__PURE__ */ u2("h2", { id: hid, children: "Connect" }) });
     const p6 = flow.provider, isClaude = p6.id === "claude";
     const set = (ch2) => {
       if (live.current) setFlow({ ...live.current, ...ch2 });

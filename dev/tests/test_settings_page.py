@@ -67,7 +67,7 @@ class SettingsPage(LiveBrowserCase):
 
     def test_each_category_shows_its_sections(self):
         want = {                                                                  # BL-320
-            "essentials": ["essentials"],
+            "essentials": ["essentials", "aimodels"],                    # #132: AI models
             "people": ["people", "workstreams", "projects"],
             "advanced": ADVANCED,
             "health": ["health", "live", "setup", "diag", "version", "danger"],       # BL-166 (sprint-polish-2): Set-up
@@ -77,7 +77,7 @@ class SettingsPage(LiveBrowserCase):
             self.assertEqual(self.sections(), secs, cat)
 
     def test_sections_come_from_one_list_and_the_page_has_no_wrappers(self):
-        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 24)      # BL-320: Essentials, Health, Everything else in; Saving, Today, the old Advanced out; BL-295: Close the day
+        self.assertEqual(self.b.eval("SETSECTIONS.map(s=>s.id).length"), 25)      # #132: AI models; BL-320: Essentials, Health, Everything else in; Saving, Today, the old Advanced out; BL-295: Close the day
         self.assertTrue(self.b.eval("SETSECTIONS.every(s=>s.id && SETCATS.some(c=>c[0]===catOf(s)) && typeof s.kw==='string' && (typeof s.render==='function' || typeof s.mount==='function'))"))
         self.assertEqual(self.b.eval("renderSettings.toString().includes('const rs=')"), False)
 

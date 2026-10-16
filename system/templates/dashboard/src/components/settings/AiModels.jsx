@@ -76,7 +76,7 @@ function ConnectDialog({ flow, setFlow, warning }) {
   const live = useRef(/** @type {Flow|null} */ (null));
   live.current = flow;
   const [hid] = useState(() => uid("aic"));
-  if (!flow) return <Dialog open={false} onClose={() => {}} labelledBy={hid}><h2 id={hid}>Connect</h2></Dialog>;
+  if (!flow) return <Dialog open={false} onClose={() => {}} id="aiConnect" class="rvdlg aidlg" labelledBy={hid}><h2 id={hid}>Connect</h2></Dialog>;
   const p = flow.provider, isClaude = p.id === "claude";
   const set = (/** @type {Partial<Flow>} */ ch) => { if (live.current) setFlow({ ...live.current, ...ch }); };
   const test = async () => {
