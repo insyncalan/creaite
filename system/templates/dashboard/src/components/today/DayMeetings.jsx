@@ -100,8 +100,8 @@ function Title({ m, day, dow, isToday, live, acts }) {
   const shut = () => { clearTimeout(timer.current); setOpen(false); };
   return (
     <span class="dmtw" ref={box} onMouseEnter={() => later(true, CARD_OPEN)} onMouseLeave={() => later(false, CARD_CLOSE)}
-      onFocusIn={() => { clearTimeout(timer.current); setOpen(true); }}
-      onFocusOut={e => { const to = /** @type {Node | null} */ (e.relatedTarget); if (!to || !box.current || !box.current.contains(to)) later(false, 0); }}>
+      onFocusCapture={() => { clearTimeout(timer.current); setOpen(true); }}
+      onBlurCapture={e => { const to = /** @type {Node | null} */ (e.relatedTarget); if (!to || !box.current || !box.current.contains(to)) later(false, 0); }}>
       <span class="dmti" tabIndex={0} aria-haspopup="dialog" aria-expanded={open ? "true" : "false"} aria-controls={open ? id : undefined}
         onKeyDown={e => { if (e.key === "Escape" && open) { e.stopPropagation(); shut(); } }}>{m.title ?? ""}</span>
       {open ? <PrepPopup m={m} day={day} dow={dow} isToday={isToday} live={live} acts={acts} id={id} onEsc={() => { shut(); const t = box.current && box.current.querySelector(".dmti"); if (t) /** @type {HTMLElement} */ (t).focus(); }} /> : null}
