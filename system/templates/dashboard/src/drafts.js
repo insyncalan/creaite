@@ -252,12 +252,12 @@ export const sentVia=()=>shared.SENTVIA==="message"?"message":"email";
 /** The dated line for one item. mode: chase (others' item), update (asking for an update), help (Alan's own item), decision.
     n is the reminder number once recorded; confidential items get the short form (who and how, no detail).
     @param {{today?:string,name:string,via?:string,mode:string,n?:number,replyBy?:string,need?:string,confidential?:boolean}} o */
-export function sentLine(o){ const d=fd(o.today||TODAY), via=o.via==="message"?"message":"email", who=o.name||"them", by=o.replyBy?`; reply asked for by ${fd(o.replyBy)}`:"";
-  if(o.confidential) return `${d}: ${o.mode==="update"?"Emailed":"Chased"} ${who} by ${via}.`;
-  if(o.mode==="update") return `${d}: Emailed ${who} by ${via} asking for an update.`;
-  if(o.mode==="help"){ const need=String(o.need||"").replace(/\s+/g," ").replace(/\s+done\.?$/i,"").replace(/\.$/,"").trim().slice(0,80); return `${d}: Asked ${who} by ${via} for ${need||"help"}.`; }
-  if(o.mode==="decision") return `${d}: Asked ${who} for a decision by ${via}${by}.`;
-  return `${d}: Chased ${who} by ${via}${o.n?` (reminder ${o.n})`:""}${by}.`; }
+export function sentLine(o){ const d=fd(o.today||TODAY), via=o.via==="message"?"message":"email", whom=o.name||"them", by=o.replyBy?`; reply asked for by ${fd(o.replyBy)}`:"";
+  if(o.confidential) return `${d}: ${o.mode==="update"?"Emailed":"Chased"} ${whom} by ${via}.`;
+  if(o.mode==="update") return `${d}: Emailed ${whom} by ${via} asking for an update.`;
+  if(o.mode==="help"){ const need=String(o.need||"").replace(/\s+/g," ").replace(/\s+done\.?$/i,"").replace(/\.$/,"").trim().slice(0,80); return `${d}: Asked ${whom} by ${via} for ${need||"help"}.`; }
+  if(o.mode==="decision") return `${d}: Asked ${whom} for a decision by ${via}${by}.`;
+  return `${d}: Chased ${whom} by ${via}${o.n?` (reminder ${o.n})`:""}${by}.`; }
 /** Stage the line on each item (queued in order, each to its own item by ID, so reordering or unticking changes nothing) and offer
     one Undo for the batch. Returns how many were staged.
     @param {{k:string,id:string,need?:string}[]} entries @param {{name:string,mode:string,replyBy?:string,via?:string,chases?:any}} o */
