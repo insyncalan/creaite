@@ -606,6 +606,9 @@ class TheReviewOf199ac40(Base):
             for text in (f"[s]({address})", address, f'<a href="{address}">s</a>'):
                 for got in self.both(text):
                     self.assertTrue(any(f.startswith(TOO_LONG) for f in got), (tail, text[:30], got))
+        underscores = f"[s](https://x.example.com/{'_' * 2100}{tails[1]})"   # the words drop the underscores; Word shows them
+        for got in self.both(underscores):
+            self.assertTrue(any(f.startswith(TOO_LONG) for f in got), got)
         got = self.py("import docx_tools\nprint(json.dumps(docx_tools.plain(" + repr(f"[s](https://x.example.com/{PAD}{tails[1]})") + ")))")
         self.assertTrue(got.endswith("Quentin%20Marlow)"), got[-40:])               # what Word shows: the whole address
         for got in self.both(f"A long word {PAD} and a short [link](https://x.example.com/page)."):
@@ -650,6 +653,8 @@ class TheReviewOf199ac40(Base):
                 self.assertIn(found, got, repr(text))
             self.assertIn(f"{PERSON} isn't named in the text",
                           self.py(f"print(json.dumps(edit_ai.client_problems('ABC', {text!r})))"), repr(text))
+        got = self.py("print(json.dumps(sorted(client_leak.named('Waiting on Quentin Marlow.', ['Quentin\u00a0 Marlow', 'Ada\u200b Vale']))))")
+        self.assertEqual(got, ["Quentin\u00a0 Marlow"])                          # a name stored oddly spaced is read the same way
         for got in self.both("Waiting on Quentin Marlowe's team."):
             self.assertEqual(got, [])                                                # control: a longer name isn't this one
 
