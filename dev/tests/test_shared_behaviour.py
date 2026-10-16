@@ -76,6 +76,8 @@ def _notes_ai(b):
         b.wait(f"noteCur.value&&noteCur.value.path==={json.dumps(NOTE['path'])}&&!!document.querySelector('#v-notes .nbody [data-p]')", 15)
     b.click("#v-notes .nbody")
     b.key("a", 4)                                    # ⌘A: all of the text, which shows the AI bar
+    b.wait("!!document.querySelector('#aiLayer .aispark')", 5)
+    b.click("#aiLayer .aispark")                     # #117: the bar opens from the margin sparkle
     b.pump(0.3)
 
 
