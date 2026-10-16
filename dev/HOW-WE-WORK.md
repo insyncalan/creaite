@@ -68,6 +68,16 @@ The account hit its monthly limit overnight (Team Cap lost 2h40; Team Stark's ag
 - **A 429 means stop.** Leads and agents do not retry in a loop; they save the work, post that they stopped, and wait. Jarvis tells Alan.
 - **Each lead posts the day's agent count by model** (Opus, Sonnet, Haiku) in its last update, so the spend is visible.
 
+### Context hygiene (Alan, 16-10-2026)
+
+A lead session that runs for a day re-reads, and re-caches, everything it has said and been told on every turn; long reports between sessions make that worse. To keep it small:
+
+- **Reports between sessions are short:** the answer first, at most about 15 lines (what changed, the commit or branch, what needs a decision). The detail goes on the issue and is linked, never pasted into a message. A reviewer's tables and per-test lists belong in the issue comment.
+- **Compact or restart at item boundaries:** when an item lands or a release is cut, a lead runs `/compact` (or restarts from a written handover) rather than carrying the whole day. A session that has been up for a day without a compact is a cost to look at first.
+- **Agents are the unit of work:** one agent per item with its own fresh context, a brief that names the files, the tests and the stopping point; the lead keeps only the result and the commit.
+- **Do not paste what the repo already holds:** point at a file and line instead of quoting it; say "see #n" for a decision already logged in HEAD-LOG.
+- **Each lead says its context size** (the status line's percentage, or "compacted at hh:mm") in its last update of the day, with the agent count by model.
+
 ## Rules
 
 - **Pull requests close plan items:** put `closes insyncalan/creaite-plan#N` in the description.
