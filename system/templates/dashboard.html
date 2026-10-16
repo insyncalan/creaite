@@ -63699,7 +63699,7 @@ ${d5.text}`);
       }
       const f5 = (
         /** @type {HTMLElement|null} */
-        b5 && (focus && b5.querySelector(focus) || b5.querySelector(POP_FOCUSABLE))
+        b5 && (focus && b5.querySelector(focus) || b5.querySelector(POP_FOCUSABLE)) || b5
       );
       if (f5) f5.focus();
       const away = (e4) => {
@@ -63727,7 +63727,7 @@ ${d5.text}`);
         onClose();
       }
     };
-    return /* @__PURE__ */ u2("div", { ref: box, class: `pkpop on mnpop${wide ? " wide" : ""}${cls ? " " + cls : ""}`, role: "dialog", "aria-label": label, onKeyDown: key, children });
+    return /* @__PURE__ */ u2("div", { ref: box, class: `pkpop on mnpop${wide ? " wide" : ""}${cls ? " " + cls : ""}`, role: "dialog", "aria-label": label, tabIndex: -1, onKeyDown: key, children });
   }
 
   // components/minutes/Checks.jsx

@@ -23,7 +23,7 @@ export function Pop({ open, onClose, label, anchor, focus, cls, wide, children }
       const lim = Math.min(window.innerWidth, (b.closest(".sheet-scroll") || document.documentElement).getBoundingClientRect().right);
       b.classList.toggle("flip", b.getBoundingClientRect().right > lim - 8);
     }
-    const f = /** @type {HTMLElement|null} */ (b && ((focus && b.querySelector(focus)) || b.querySelector(POP_FOCUSABLE)));
+    const f = /** @type {HTMLElement|null} */ (b && ((focus && b.querySelector(focus)) || b.querySelector(POP_FOCUSABLE)) || b);   // a popover of words only (What changes) takes focus itself, so Esc is heard
     if (f) f.focus();
     /** @param {Event} e */
     const away = e => {
@@ -41,7 +41,7 @@ export function Pop({ open, onClose, label, anchor, focus, cls, wide, children }
   /** @param {KeyboardEvent} e */
   const key = e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); onClose(); } };
   return (
-    <div ref={box} class={`pkpop on mnpop${wide ? " wide" : ""}${cls ? " " + cls : ""}`} role="dialog" aria-label={label} onKeyDown={key}>
+    <div ref={box} class={`pkpop on mnpop${wide ? " wide" : ""}${cls ? " " + cls : ""}`} role="dialog" aria-label={label} tabIndex={-1} onKeyDown={key}>
       {children}
     </div>
   );
