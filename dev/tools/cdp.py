@@ -148,8 +148,10 @@ class Browser:
             self.call(f"{domain}.enable")
         # BL-136: tests and screenshots run with reduced motion, so nothing they check is caught mid-animation. A test of the
         # motion itself turns it back on: call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", ...}]).
-        if reduced_motion:
-            self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": "reduce"}])
+        # #152: a test of the motion needs the opposite, set outright: with nothing emulated Chrome follows the machine's own
+        # Reduce motion setting; where that is on (a Mac, apparently GitHub's macOS runner) every animation reads 'none'.
+        pref = "reduce" if reduced_motion else "no-preference"
+        self.call("Emulation.setEmulatedMedia", features=[{"name": "prefers-reduced-motion", "value": pref}])
 
     @staticmethod
     def _port_text(path):

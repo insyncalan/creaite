@@ -79,6 +79,7 @@ class LiveCurrentState(LiveBrowserCase):
         b.wait(f"document.querySelectorAll('#curEd figure.cimg').length>{n}", 5)
         if caption:                                           # the new figure's caption has the focus
             b.type(caption)
+            b.wait(f"[...document.querySelectorAll('#curEd figure.cimg figcaption')].some(c=>c.textContent.includes({json.dumps(caption)}))", 5)   # #152: it was typed (a timeout says where the focus was)
 
     def save(self):
         b = self.b
@@ -160,6 +161,7 @@ class LiveCurrentState(LiveBrowserCase):
                 for sel in ('[data-rc="image"]', '[data-rc="bold"]', "#curEd figure.cimg .cimgdel", '[data-cure="cancel"]', '[data-cure="save"]'):
                     b.click(sel) if sel in ('[data-rc="bold"]',) else self.assertTrue(b.box(sel), f"{sel} is not visible in {pal} {mode}")
                 b.click('[data-cure="cancel"]')                                  # a change was made: asks first
+                b.wait("document.getElementById('discardBar').classList.contains('on')", 5)   # #152: a timeout here says the Cancel closed the editor with no question
                 b.click('#discardBar [data-dis="go"]')
                 b.wait("!document.getElementById('curEd')", 3)
         self.assertEqual(b.errors, [])
