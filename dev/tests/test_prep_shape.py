@@ -188,6 +188,7 @@ class Shape(ShapeCase):
         """BL-301 D: the shaped notes are on the one editor with AI on a selection (plain text, the meeting's project)."""
         b = self.open_shape()
         self.shape()
+        b.eval("AI_PLACE_TABLE.plain.ai=true")                                                          # #117: the plain place is built and off in v2.1.0
         b.click("#shN-objective")
         b.key("a", 4)                                                                                   # ⌘A
         b.wait("document.querySelector('#aiLayer .aispark')", 30)
@@ -197,7 +198,7 @@ class Shape(ShapeCase):
         b.click("#aiLayer .aibar button[aria-haspopup]")
         b.wait("document.querySelector('#aiLayer [role=menu]')")
         self.assertEqual(b.eval("[...document.querySelectorAll('#aiLayer [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
-                         ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
+                         ["rewrite", "shorter", "executive"])    # #117: the Improve group; Ask… is the bar's own button
         b.key("Escape")
 
     def test_6_the_switch_in_settings_turns_it_off(self):
@@ -223,6 +224,7 @@ class Confidential(ShapeCase):
         call = json.loads(Path(str(self.fake) + ".calls").read_text().splitlines()[-1])
         self.assertEqual(call["allowed"], "")                                                           # the run had no tools
         self.assertNotIn("Board secret", call["prompt"])
+        b.eval("AI_PLACE_TABLE.plain.ai=true")                                                          # #117: the plain place is built and off in v2.1.0
         b.click("#shN-objective")                                                                       # BL-301 D: AI asks first
         b.key("a", 4)
         b.wait("document.querySelector('#aiLayer .aispark')", 30)
