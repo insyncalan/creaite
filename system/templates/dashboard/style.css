@@ -3610,3 +3610,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
 @media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
+/* #111 piece B: the Prep peek (the title popup's content, and the Week ahead chip's) */
+.prpeek .pkb{margin-top:8px} .prpeek .pkl{font:600 var(--fs-xs)/1.2 var(--font);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 2px}
+.prpeek .pkt{color:var(--ink)} .prpeek .pkul{margin:0;padding-left:18px} .prpeek .pkul li{margin:1px 0}
+.prpeek .agrow{margin-top:10px}
+.wkpk{position:relative;display:inline-flex;flex:none} .wkpk .dmpop{left:auto;right:0}
+.wkpk .dmpop,.wkpk .dmpop *{color:var(--ink)} .wkpk .dmpop .sub,.wkpk .dmpop .pm,.wkpk .dmpop small,.wkpk .dmpop .pkl{color:var(--muted)}
+.wkpk .dmpop .btn.primary{color:var(--accent-ink,#fff)} .wkpk .dmpop .linkbtn{color:var(--accent)}
