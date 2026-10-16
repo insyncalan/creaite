@@ -27,23 +27,27 @@ args = sys.argv[1:]
 message = args[args.index("--") + 1].split("\n")[0]
 session = args[args.index("--resume") + 1] if "--resume" in args else "sess-" + os.urandom(4).hex()
 out = lambda o: print(json.dumps(o), flush=True)
+def big_text(name):      # 700 words in seven paragraphs: well over the 400 words that a live reply fades in up to
+    return "\n\n".join(" ".join("w%d" % i for i in range(k * 100, k * 100 + 100)) for k in range(7)) + "\n\nEND" + name
 out({"type": "system", "subtype": "init", "session_id": session})
 name = message.split()[-1]
 if message.startswith("gated"):
     out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t1", "name": "Read",
                                                        "input": {"file_path": "CLAUDE.md"}}]}})
     out({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t1", "content": "ok"}]}})
-    big = " ".join("word%d" % i for i in range(700)) + " " if " long " in message else ""
-    out({"type": "assistant", "message": {"content": [{"type": "text", "text": big + "Part one of " + name + "."}]}})
+    if " big " in message:      # a large reply, then a tool step: its text event is out at once, and the run waits for the release
+        out({"type": "assistant", "message": {"content": [{"type": "text", "text": big_text(name)}]}})
+        out({"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "t2", "name": "Read", "input": {"file_path": "CLAUDE.md"}}]}})
+        out({"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "t2", "content": "ok"}]}})
+    out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Part one of " + name + "."}]}})
     for _ in range(600):
         if os.path.exists("release-" + name):
             break
         time.sleep(0.1)
     out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Part two of " + name + "."}]}})
     out({"type": "result", "result": "Part two of " + name + ".", "session_id": session})
-elif message.startswith("long"):
-    words = " ".join("word%d" % i for i in range(700))
-    out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Long reply " + name + ": " + words + " END" + name}]}})
+elif message.startswith("big"):
+    out({"type": "assistant", "message": {"content": [{"type": "text", "text": big_text(name)}]}})
     out({"type": "result", "result": "ok", "session_id": session})
 else:
     out({"type": "assistant", "message": {"content": [{"type": "text", "text": "Reply to: " + message}]}})
@@ -233,7 +237,7 @@ class AskReopen(LiveBrowserCase):
         """Send a long message from this page, let it finish, then reload with the frame sampler running."""
         b = self.b
         b.eval("openChat()")
-        b.eval(f"$('#chIn').value='long {name}'; send()", wait=False)
+        b.eval(f"$('#chIn').value='big {name}'; send()", wait=False)
         b.wait(f"[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('END{name}'))", 20)
         b.wait("!RUN", 20)
         b.pump(0.3)
@@ -246,7 +250,7 @@ class AskReopen(LiveBrowserCase):
     def test_a_long_saved_reply_is_there_whole_on_open_and_never_changes(self):
         b = self.b
         full = self.sent_long_reply_then_reload("f")
-        self.assertGreater(full, 4000)
+        self.assertGreater(full, 3000)       # 700 words: over the 400 a live reply fades in up to
         b.eval("FR.opened=FR.frames.length; FR.muts0=FR.mutations; FR.mw0=document.querySelectorAll('#chLog .mw').length; openChat()")
         b.pump(1.0)
         shown = [lens for n, lens, mw in b.eval("FR.frames.slice(FR.opened)") if lens]
@@ -262,7 +266,7 @@ class AskReopen(LiveBrowserCase):
     def test_the_saved_chat_is_drawn_once_even_if_the_panel_is_opened_during_the_load(self):
         b = self.b
         b.eval("openChat()")
-        b.eval("$('#chIn').value='long j'; send()", wait=False)
+        b.eval("$('#chIn').value='big j'; send()", wait=False)
         b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDj'))", 20)
         b.wait("!RUN", 20)
         b.call("Page.addScriptToEvaluateOnNewDocument", source="(()=>{ const t=setInterval(()=>{ if(typeof openChat==='function'&&typeof LIVE!=='undefined'){ clearInterval(t); openChat(); } },1); })();")
@@ -317,6 +321,29 @@ class AskReopen(LiveBrowserCase):
         b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of l'))", 20)
         b.pump(0.8)
         self.assertEqual(b.eval("SEEN.mw"), 0, "the backlog an attach opens with faded in")
+
+
+    def test_a_large_reply_still_arriving_at_reopen_is_not_redrawn_and_the_new_text_streams(self):
+        t, _ = self.ask_in_background("gated big m", "r-test-mmmmmm")
+        self.until_history_has("Part one of m")
+        self.b.call("Page.addScriptToEvaluateOnNewDocument", source=WATCH)
+        self.sample_reload()
+        b = self.b
+        b.wait("document.getElementById('chLog').children.length>0 && RUN", 20)     # drawn behind the closed panel; the run followed
+        b.eval("openChat()")
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDm'))", 20)
+        b.pump(0.6)
+        self.assertEqual(b.eval("SEEN.mw"), 0, "the large reply that had already arrived was animated")
+        self.tag()
+        b.eval("FR.mw0=SEEN.mw")
+        self.release("m")
+        t.join(30)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of m'))", 20)
+        self.assertEqual(self.kept(), 0, "finished text was redrawn while the run went on")
+        self.assertEqual(b.eval("FR.nodes.size"), 1, "the large reply was drawn more than once")
+        self.assertEqual(b.eval("FR.blank"), 0)
+        self.assertGreater(b.eval("SEEN.mw"), 0)                       # the new text streams in, as before
+        self.assertEqual((self.count("ENDm"), self.count("Part two of m")), (1, 1))
 
 
 if __name__ == "__main__":
