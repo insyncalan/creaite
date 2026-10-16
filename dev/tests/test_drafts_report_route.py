@@ -28,6 +28,9 @@ class Route(DraftCase):
         self.assertEqual(d["section"], "this_week")
         self.assertEqual(d["action"], "shorter")
         self.assertTrue(d["text"].startswith("A fresh draft of the section"))
+        # #90 review F5: the reply's checks come back with it, for the page to show
+        self.assertIsInstance(d.get("notes"), list)
+        self.assertTrue(d.get("sentences") and all("unsourced" in x for x in d["sentences"]), d)
         p = drafts_fake.prompt(self.fake)
         self.assertIn("The wave plan holds.", p)
         self.assertIn("shorter, about half", p)

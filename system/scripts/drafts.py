@@ -2148,23 +2148,75 @@ def client_line_ok(con, code, ln, blocking):
 
 
 def report_facts(con, code, fri, client):
-    """The numbered facts for a report section (a Draft's sources): the week's sheet, and for a client report only the lines
-    client_leak passes. [] when there is nothing to draw on."""
+    """The numbered facts for a report section (a Draft's sources), with the period and, for a client report, a note on where the
+    facts come from. [] when there is nothing to draw on.
+    - A weekly report: the week's facts sheet (status_facts, internal).
+    - A client report: the client report's own facts (report_doc._Client: locked to the approved internal week, meta.client_facts,
+      over the client report's own period, _client_period), each line kept only when client_leak passes it. The tracker's health
+      flag, its internal reason and the change since the last internal status are never in them (#90 review F1): the client's
+      health and reason are the client report's own, which this route never reads."""
     import contextlib
     from datetime import timedelta
-    import client_leak
     import status_facts
-    blocking = client_leak.blocking_labels(con) if client else None
+    if client:
+        return client_report_facts(con, code, fri)
     start, end = (date.fromisoformat(fri) - timedelta(days=4)).isoformat(), fri
     with contextlib.redirect_stdout(sys.stderr):
-        f = status_facts.facts(code, start, end, "client" if client else "internal")
-    src = []
-    for part in f["parts"]:
-        for ln in part["lines"]:
-            ok = client_line_ok(con, code, ln, blocking) if client else not (secret(ln["text"]) or VIP_RE.search(ln["text"]))
-            if ok:
-                src.append({"id": ln["fid"], "kind": part["title"], "text": ln["text"]})
-    return src, start, end
+        f = status_facts.facts(code, start, end, "internal")
+    src = [{"id": ln["fid"], "kind": part["title"], "text": ln["text"]} for part in f["parts"] for ln in part["lines"]
+           if not (secret(ln["text"]) or VIP_RE.search(ln["text"]))]
+    return src, start, end, ""
+
+
+def client_report_facts(con, code, fri):
+    """(sources, start, end, note) for a client report's section: the items the client report itself is built from (#90 review F1,
+    F4), in their client wording, each line passed again by client_line_ok. No health: neither the flag nor any reason."""
+    import contextlib
+    import client_leak
+    import report_doc
+    with contextlib.redirect_stdout(sys.stderr):
+        c = report_doc._Client(code, fri, None, None)
+    blocking = client_leak.blocking_labels(con)
+    lines = client_lines(c)
+    src = [{"id": ref, "kind": kind, "text": text} for kind, text, ref in lines
+           if text.strip() and client_line_ok(con, code, {"text": text, "src": [ref]}, blocking)]
+    note = (f"The facts are the client report's own, locked to the approved internal weekly report for week ending "
+            f"{tracker.shown(c.base['date'])}." if c.locked else
+            "The facts are the client report's own, as they stand today: no internal weekly report is approved for it yet.")
+    return src, c.start, c.end, note
+
+
+def _client_action_line(c, a):
+    """(kind, line, id) for a client-facts action, or None: completed in the period, or open (an ask when the client owns it)."""
+    if a["status"] == "Complete":
+        return ("Progress", f"Completed: {a['title']}", a["id"]) if c.start <= (a.get("closed") or "")[:10] <= c.end else None
+    if a["status"] == "Cancelled":
+        return None
+    due = f", due {tracker.shown(a['due_date'])}" if a.get("due_date") else ""
+    who = "Asked of you" if a["client_owned"] else "Action"
+    return ("Asks" if a["client_owned"] else "Actions", f"{who}: {a['title']} ({a['owner']}){due}, {a['status'].lower()}", a["id"])
+
+
+def _client_decision_line(c, d):
+    """(kind, line, id) for a client-facts decision: made in the period, or still needed; else None."""
+    if d["status"] == "Made" and (d.get("date") or "") >= c.start:
+        return ("Decisions", f"Decision made {tracker.shown(d['date'])}: {d['title']}", d["id"])
+    if d["status"] == "Pending":
+        by = f" by {tracker.shown(d['needed_by'])}" if d.get("needed_by") else ""
+        return ("Decisions", f"Decision needed{by}: {d['title']}", d["id"])
+    return None
+
+
+def client_lines(c):
+    """[(kind, line, id)] of a report_doc._Client's facts, in the client report's own order and wording."""
+    out = []
+    for m in c.of("milestones"):
+        when = f", {m['shown_date']}" if m.get("shown_date") else ""
+        out.append(("Milestones", f"Milestone {m['title']}: {m['state']}{when}", m["id"]))
+    out += [x for x in (_client_action_line(c, a) for a in c.of("actions")) if x]
+    out += [x for x in (_client_decision_line(c, d) for d in c.of("decisions")) if x]
+    out += [("Points to watch", f"{r['type']}: {r['title']}", r["id"]) for r in c.of("raid")]
+    return out
 
 
 def section_shape(panes):
@@ -2203,14 +2255,15 @@ def build_report_section(con, req):
     only when client_leak passes them; the section's own words are refused when they already hold something a client mustn't see."""
     import report
     code, client, fri, action, task, current, panes = report_request(con, req)
-    src, start, end = report_facts(con, code, fri, client)
+    src, start, end, note = report_facts(con, code, fri, client)
     if not src:
         raise Nothing("There are no facts for this week to redraft from" + (" that a client may see." if client else "."))
     kept, listed = number(src)
     sid = str(req.get("section") or "")[:60]
     return Draft({"task": task, "name": tracker.project_label(code), "start": tracker.shown(start), "end": tracker.shown(end),
                   "heading": short(req.get("heading"), 80) or "the section",
-                  "audience_note": report.AUDIENCE_NOTES["client" if client else "internal"], "current": current,
+                  "audience_note": report.AUDIENCE_NOTES["client" if client else "internal"] + (f"\n{note}" if note else ""),
+                  "current": current,
                   "shape": section_shape(panes), "sources": listed},
                  kept, item={"code": code, "section": sid},
                  extra={"template": "report-section", "section": sid, "action": action, "original": current,
@@ -2240,9 +2293,18 @@ def minutes_current(req, sec, dist):
     return section_current(req)
 
 
+def marked_lines(doc, sid):
+    """The lines of section `sid` that the record marks Internal only (layout.internal_only)."""
+    return [m["text"] for m in (doc.get("layout") or {}).get("internal_only") or []
+            if isinstance(m, dict) and m.get("section") == sid and m.get("text")]
+
+
 def minutes_version(req):
-    """(the version to draw on, is it the distributed one, the section) for a minutes section, or the refusal. The distributed
-    version is minutes_record.distributed_of: nothing marked Internal only or withheld is in it."""
+    """(the distributed version, is the draft for it, the section) for a minutes section, or the refusal. The distributed version is
+    minutes_record.distributed_of: nothing marked Internal only or withheld is in it. Its facts are always drawn from it, whichever
+    version is shown (#90 review F3), so an internal-version draft can't carry an Internal only line or a withheld item into a
+    section that is distributed. An internal-version section that holds a line marked Internal only is refused: a redraft would
+    reword the line and lose its mark."""
     import minutes_record
     version = req.get("version") or "internal"
     if version not in ("internal", "distributed"):
@@ -2252,30 +2314,36 @@ def minutes_version(req):
     except minutes_record.RecordError as e:
         raise Refused(str(e)) from None
     dist = version == "distributed"
-    use = minutes_record.distributed_of(doc) if dist else doc
-    sec = next((s for s in use.get("sections") or [] if s.get("id") == str(req.get("section") or "")), None)
+    shared = minutes_record.distributed_of(doc)
+    sid = str(req.get("section") or "")
+    sec = next((s for s in (shared if dist else doc).get("sections") or [] if s.get("id") == sid), None)
     if not sec or sec.get("type") in ("header", "table"):
         raise Refused("That section can't be redrafted" + (" in this version." if dist else "."))
-    return use, dist, sec
+    if not dist and marked_lines(doc, sid):
+        raise Refused("This section has lines marked Internal only, and a redraft would lose their mark. Redraft it in the "
+                      "distributed version, or take the mark off first.")
+    return shared, dist, sec
 
 
 @kind("minutes-section", "minutes-section")
 def build_minutes_section(con, req):
-    """The facts for one section of a meeting's minutes. The distributed version is built by minutes_record.distributed_of and the
-    section's words are read from it, so nothing marked Internal only or withheld is in the prompt or the facts."""
+    """The facts for one section of a meeting's minutes: always the distributed version's other sections (minutes_record.
+    distributed_of), so nothing marked Internal only or withheld is in the prompt or the facts. The distributed version's own words
+    are read from it, never from the page; the internal version's are the page's, with no line marked Internal only."""
     action, task = section_task(req)
-    use, dist, sec = minutes_version(req)
+    shared, dist, sec = minutes_version(req)
     sid = sec["id"]
     current, panes = minutes_current(req, sec, dist)
     if not current.strip() or current.strip() == "None recorded.":
         raise Nothing("This section has no words to redraft.")
     if dist and VIP_RE.search(current):
         raise Refused("This section can't be redrafted.")
-    kept, listed = number([{"id": "", "kind": h, "text": f"{h}: {short(ln, 300)}"} for h, ln in _record_lines(use, sid)
+    kept, listed = number([{"id": "", "kind": h, "text": f"{h}: {short(ln, 300)}"} for h, ln in _record_lines(shared, sid)
                            if not (secret(ln) or VIP_RE.search(ln))])
-    return Draft({"task": task, "title": use.get("title") or "the meeting", "day": tracker.shown(use.get("date") or "") or "",
+    return Draft({"task": task, "title": shared.get("title") or "the meeting", "day": tracker.shown(shared.get("date") or "") or "",
                   "version_note": ("This is the distributed version, sent to everyone who was invited: use only what is in the facts "
-                                   "below." if dist else "This is the internal version."),
+                                   "below." if dist else "This is the internal version. The rest of the minutes below is the "
+                                   "distributed version's: nothing marked Internal only or withheld."),
                   "heading": short(sec.get("heading"), 80) or "the section", "current": current,
                   "shape": section_shape(panes), "sources": listed},
                  kept, item={"section": sid, "version": "distributed" if dist else "internal"},
@@ -2291,6 +2359,40 @@ def split_panes(text, titles):
     if not titles or any(t.strip().lower() not in got for t in titles):
         return []
     return [{"title": t, "text": got[t.strip().lower()]} for t in titles]
+
+
+# #90 review F1: the reply check's second line for a client section. The client facts never hold the tracker's health reason, so a
+# client draft that brings it in (whole, or a run of five of its words), or an internal-only marker, is dropped. Words already in
+# the section as Alan wrote it are his, not the draft's, and do not count.
+INTERNAL_MARK = re.compile(r"\binternal[\s-]+only\b|\bnot for (?:the )?client\b|\bfor internal use\b|\bhealth_diff\b", re.I)
+RUN = 5
+
+
+def _wordlist(text):
+    return re.findall(r"[a-z0-9]+", (text or "").lower())
+
+
+def carries(text, phrase, n=RUN):
+    """Whether `text` holds `phrase` whole, or any run of `n` of its words in order (case and punctuation ignored)."""
+    words, hay = _wordlist(phrase), f" {' '.join(_wordlist(text))} "
+    if not words:
+        return False
+    if len(words) <= n:
+        return len("".join(words)) >= 8 and f" {' '.join(words)} " in hay
+    return any(f" {' '.join(words[i:i + n])} " in hay for i in range(len(words) - n + 1))
+
+
+def internal_findings(con, code, text, original=""):
+    """What a client section's draft holds that only the internal record has: the tracker's health reason, or an internal-only
+    marker, when the section's own words did not already hold it."""
+    found = []
+    row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
+    reason = (row[0] if row else "") or ""
+    if reason.strip() and carries(text, reason) and not carries(original, reason):
+        found.append("the internal health reason")
+    if INTERNAL_MARK.search(text or "") and not INTERNAL_MARK.search(original or ""):
+        found.append("an internal-only marker")
+    return found
 
 
 @parser("report-section")
@@ -2309,7 +2411,8 @@ def parse_section(reply, ctx):
         import client_leak
         con = ro()
         try:
-            bad = client_leak.text_findings(con, ex.get("code") or "", text)
+            bad = client_leak.text_findings(con, ex.get("code") or "", text) + internal_findings(con, ex.get("code") or "", text,
+                                                                                                    ex.get("original") or "")
         finally:
             con.close()
         if bad:

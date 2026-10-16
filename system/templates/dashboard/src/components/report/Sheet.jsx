@@ -43,7 +43,8 @@ export { openSheetRef as openRef };
     setMeta: (patch: Record<string, any>, why: string) => void, ItemRef: (p: {id: string}) => any}) => any}} SheetExtra */
 /** @typedef {{byId?: Record<string, any>, byType?: Record<string, (c: SectionCtx) => any>,
     row?: Record<string, (c: RowCtx) => any>}} SheetRenderers */
-/** @typedef {{text?: string, panes?: {title: string, text: string}[], sources: {ref: string, label: string}[], lines?: string[]}} Redraft */
+/** @typedef {{text?: string, panes?: {title: string, text: string}[], sources: {ref: string, label: string}[], lines?: string[],
+    notes?: {id: string, note: string}[], sentences?: {text: string, refs: string[], unsourced: boolean}[]}} Redraft */
 /** @typedef {{id: string, section: string, field?: string, row?: number, pane?: number, quote: string, note?: string, last?: string,
     actions?: {id: string, label: string}[]}} SheetCheck */
 /** @typedef {{doc: SheetDoc, label: string, baseVersion?: number, scrollKey?: string, renderers?: SheetRenderers, readOnly?: boolean,

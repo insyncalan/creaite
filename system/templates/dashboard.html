@@ -3150,6 +3150,7 @@ button.nchip{font:inherit;font-size:12px}
 .sheet-rdh{display:flex;gap:6px;align-items:center;font-weight:600;margin-bottom:4px}
 .sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
 .sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
+.sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:13px} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
 .sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
 .sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
 .sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
@@ -3932,6 +3933,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     RECENT_DEC_DAYS: () => RECENT_DEC_DAYS,
     RECORD_KINDS: () => RECORD_KINDS,
     RECSTAT: () => RECSTAT,
+    REDRAFT_KIND: () => REDRAFT_KIND,
     REGD: () => REGD,
     REGPEND: () => REGPEND,
     REGTEXT: () => REGTEXT,
@@ -4506,6 +4508,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     copied: () => copied,
     countFor: () => countFor,
     countLink: () => countLink,
+    countRedraft: () => countRedraft,
     countUp: () => countUp,
     covered: () => covered,
     creaiteEditor: () => creaiteEditor,
@@ -5545,6 +5548,9 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     recNorm: () => recNorm,
     recordFromBoard: () => recordFromBoard,
     recordsRefresh: () => recordsRefresh,
+    redraftAnswer: () => redraftAnswer,
+    redraftRequest: () => redraftRequest,
+    redrafter: () => redrafter,
     reduced: () => reduced,
     refreshAll: () => refreshAll,
     refreshCalendar: () => refreshCalendar,
@@ -58701,7 +58707,7 @@ ${d5.text}`);
       );
     }) });
   }
-  var docKey = (d5) => [d5.kind, d5.project, d5.date, d5.client || "", d5.version || 0].join("|");
+  var docKey = (d5) => JSON.stringify([d5.kind, d5.project, d5.date, d5.client || "", d5.version || 0, d5.id || d5.path || d5.title || "", d5.audience || ""]);
   var wordsKey = (s5) => JSON.stringify([s5.text ?? null, s5.panes ?? null]);
   var DRAGGING = (
     /** @type {string|null} */
@@ -58717,6 +58723,23 @@ ${d5.text}`);
     const docNow = docKey(doc), wordsNow = wordsKey(s5), liveKey = A2(docNow), liveWords = A2(wordsNow), used = A2(false);
     liveKey.current = docNow;
     liveWords.current = wordsNow;
+    const running = A2(false);
+    const afterUse = A2(
+      /** @type {{doc: string, put: string, before: string}|null} */
+      null
+    );
+    h2(() => {
+      const u5 = afterUse.current;
+      if (!u5) return;
+      if (u5.doc !== docNow) {
+        afterUse.current = null;
+        return;
+      }
+      if (wordsNow !== u5.put && wordsNow !== u5.before) {
+        afterUse.current = null;
+        onEvent({ type: "redraft", id: s5.id, choice: "edited" });
+      }
+    }, [wordsNow, docNow]);
     const staleWhy = (r4) => r4 && r4.from && (r4.from !== liveKey.current ? "doc" : r4.words !== liveWords.current ? "words" : "");
     const [name, setName] = d2(s5.heading);
     const [over, setOver] = d2(
@@ -58747,8 +58770,10 @@ ${d5.text}`);
     const ownRender = (p6.renderers.byId || {})[s5.id] || (p6.renderers.byType || {})[s5.type];
     const sparkOn = !!p6.onRedraft && !exported && (s5.type === "text" || s5.type === "panes");
     const spark2 = p6.onRedraft && !exported ? async () => {
+      if (running.current) return;
       const from = docNow, words = wordsNow;
       used.current = false;
+      running.current = true;
       setRd({ status: "running", from, words });
       try {
         const a5 = await p6.onRedraft?.(s5);
@@ -58757,6 +58782,8 @@ ${d5.text}`);
       } catch (e4) {
         setRd({ status: "failed", message: String(e4 && /** @type {any} */
         e4.message || "No draft came back") });
+      } finally {
+        running.current = false;
       }
     } : null;
     const fixed = s5.type === "header" && ((p6.renderers.byId || {}).header || {}).fixed !== false;
@@ -58925,8 +58952,11 @@ ${d5.text}`);
             }
             if (used.current) return;
             used.current = true;
-            if (choice === "use") update({ ...a5.text != null ? { text: a5.text } : {}, ...a5.panes ? { panes: a5.panes } : {} }, "Redraft used");
-            else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
+            if (choice === "use") {
+              const patch = { ...a5.text != null ? { text: a5.text } : {}, ...a5.panes ? { panes: a5.panes } : {} };
+              afterUse.current = { doc: docNow, put: wordsKey({ ...s5, ...patch }), before: wordsNow };
+              update(patch, "Redraft used");
+            } else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a5.lines || []).map((l6) => `- ${l6}`).join("\n")}` }, "New lines added");
             onEvent({ type: "redraft", id: s5.id, choice });
             setRd(null);
           } }) : null,
@@ -58935,6 +58965,10 @@ ${d5.text}`);
       }
     ) });
   }
+  var checkNotes = (a5) => [
+    ...(a5.notes || []).map((n4) => String(n4.note || "")).filter(Boolean),
+    ...(a5.sentences || []).filter((x5) => x5.unsourced && String(x5.text || "").trim()).map((x5) => `No source: “${String(x5.text).trim()}”`)
+  ];
   function Redraft({ rd: rd2, s: s5, readOnly, close, onUse }) {
     if (rd2.status === "running") return /* @__PURE__ */ u2("div", { class: "sheet-redraft", role: "status", children: [
       "Drafting ",
@@ -58961,6 +58995,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("div", { class: "sheet-md", children: mdNodes(x5.text) })
       ] }, k5)),
       (a5.lines || []).length ? /* @__PURE__ */ u2("ul", { class: "sheet-lines", children: a5.lines.map((l6, k5) => /* @__PURE__ */ u2("li", { children: l6 }, k5)) }) : null,
+      checkNotes(a5).length ? /* @__PURE__ */ u2("ul", { class: "sheet-rdnotes", "aria-label": "Check it", children: checkNotes(a5).map((n4, k5) => /* @__PURE__ */ u2("li", { children: n4 }, k5)) }) : null,
       (a5.sources || []).length ? /* @__PURE__ */ u2("div", { class: "sheet-srcs", children: a5.sources.map((x5) => /* @__PURE__ */ u2("span", { class: "chip", children: x5.label || x5.ref }, x5.ref)) }) : null,
       /* @__PURE__ */ u2("div", { class: "sheet-rdb", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => onUse("keep", a5), children: "Keep mine" }),
@@ -59644,22 +59679,24 @@ ${d5.text}`);
     const panes = s5.type === "panes" ? (s5.panes || []).map((p6) => ({ title: p6.title, text: p6.text })) : null;
     return { kind, ...base, section: s5.id, heading: s5.heading, action, ...instruction ? { instruction } : {}, ...panes ? { panes } : { text: s5.text || "" } };
   }
-  function redrafter(base, place2) {
-    return async (s5) => {
-      const r4 = await draftAsk(redraftRequest(s5, base(), REDRAFT_KIND[place2]), { label: `Redrafting ${s5.heading}` });
-      if (r4.nothing) throw new Error(r4.nothing);
-      if (!r4.ok || !r4.text) throw new Error(r4.message || "No draft came back");
-      if (r4.section !== s5.id) throw new Error("That draft was for another section, so it wasn't used");
-      return {
-        text: r4.text,
-        ...r4.panes && r4.panes.length ? { panes: r4.panes } : {},
-        sources: (r4.sources || []).map((x5) => ({ ref: x5.ref, label: x5.text }))
-      };
+  function redraftAnswer(r4, s5) {
+    if (r4.nothing) throw new Error(r4.nothing);
+    if (!r4.ok || !r4.text) throw new Error(r4.message || "No draft came back");
+    if (r4.section !== s5.id) throw new Error("That draft was for another section, so it wasn't used");
+    return {
+      text: r4.text,
+      ...r4.panes && r4.panes.length ? { panes: r4.panes } : {},
+      sources: (r4.sources || []).map((x5) => ({ ref: x5.ref, label: x5.text })),
+      notes: (r4.notes || []).map((n4) => ({ id: String(n4.id || ""), note: String(n4.note || "") })),
+      sentences: (r4.sentences || []).map((x5) => ({ text: String(x5.text || ""), refs: x5.refs || [], unsourced: !!x5.unsourced }))
     };
+  }
+  function redrafter(base, place2) {
+    return async (s5) => redraftAnswer(await draftAsk(redraftRequest(s5, base(), REDRAFT_KIND[place2]), { label: `Redrafting ${s5.heading}` }), s5);
   }
   function countRedraft(ev, place2) {
     if (ev.type !== "redraft") return;
-    draftStat(REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : "used");
+    draftStat(REDRAFT_KIND[place2], ev.choice === "keep" ? "rejected" : ev.choice === "edited" ? "edited" : "used");
   }
 
   // components/report/weekly/weeklyDoc.js
@@ -61173,7 +61210,6 @@ ${d5.text}`);
           onChange: side ? () => {
           } : setClientDoc,
           onSave: side ? void 0 : saveClientPage,
-          ai: { place: "report", project: () => doc.project, confidential: () => false },
           onRedraft: side ? void 0 : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report"),
           onEvent: (ev) => {
             if (ev.type === "reload" && a5) loadClientReport(a5);
@@ -65221,6 +65257,7 @@ ${d5.text}`);
         "rbUnmark",
         "readForm",
         "reattach",
+        "redraftAnswer",
         "reduced",
         "refreshAll",
         "refreshFiles",

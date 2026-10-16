@@ -153,8 +153,9 @@ function Figures({ ctx }) {
   })}</div>;
 }
 
-/** Which document is shown (#90): a suggestion is only used on the one it was made from. @param {any} d */
-const docKey = d => [d.kind, d.project, d.date, d.client || "", d.version || 0].join("|");
+/** Which document is shown (#90): a suggestion is only used on the one it was made from. Two minutes of a project on the same
+    day differ by their id, path or title, and the internal and distributed versions by their audience (#90 review K2). @param {any} d */
+const docKey = d => JSON.stringify([d.kind, d.project, d.date, d.client || "", d.version || 0, d.id || d.path || d.title || "", d.audience || ""]);
 
 /** The section's own words (its text and panes), as they were when ✦ was pressed: a changed section makes a suggestion stale.
     An edit that puts the words back is not a change. @param {any} s */
@@ -169,6 +170,16 @@ function SectionBlock({ s, i, p, peer }) {
   const [rd, setRd] = useState(/** @type {any} */ (null));
   const docNow = docKey(doc), wordsNow = wordsKey(s), liveKey = useRef(docNow), liveWords = useRef(wordsNow), used = useRef(false);        // #90: which document a suggestion was made from
   liveKey.current = docNow; liveWords.current = wordsNow;
+  const running = useRef(false);                       // #90 review K3: a second ✦ while one is writing is ignored
+  /** #90 review K5: a used suggestion that Alan then changes counts once as "edited" (on top of "used"): the words it put in, and
+      the words before it, so the render before it lands isn't taken for an edit. Another document drops it uncounted. */
+  const afterUse = useRef(/** @type {{doc: string, put: string, before: string}|null} */ (null));
+  useEffect(() => {
+    const u = afterUse.current;
+    if (!u) return;
+    if (u.doc !== docNow) { afterUse.current = null; return; }
+    if (wordsNow !== u.put && wordsNow !== u.before) { afterUse.current = null; onEvent({ type: "redraft", id: s.id, choice: "edited" }); }
+  }, [wordsNow, docNow]);
   /** Why a suggestion can't be used: another document, or this section's words changed since ✦. @param {any} r */
   const staleWhy = r => r && r.from && (r.from !== liveKey.current ? "doc" : r.words !== liveWords.current ? "words" : "");
   const [name, setName] = useState(s.heading);
@@ -185,10 +196,12 @@ function SectionBlock({ s, i, p, peer }) {
   const ownRender = (p.renderers.byId || {})[s.id] || (p.renderers.byType || {})[s.type];
   const sparkOn = !!p.onRedraft && !exported && (s.type === "text" || s.type === "panes");
   const spark = p.onRedraft && !exported ? async () => {
+    if (running.current) return;
     const from = docNow, words = wordsNow;
-    used.current = false;
+    used.current = false; running.current = true;
     setRd({ status: "running", from, words });
     try { const a = await p.onRedraft?.(s); const r = { from, words }; setRd(staleWhy(r) ? { status: "stale", ...r, why: staleWhy(r) } : { status: "ready", answer: a, ...r }); } catch (e) { setRd({ status: "failed", message: String((e && /** @type {any} */ (e).message) || "No draft came back") }); }
+    finally { running.current = false; }
   } : null;
   const fixed = s.type === "header" && ((p.renderers.byId || {}).header || {}).fixed !== false;
   const grip = (/** @type {KeyboardEvent} */ e) => {
@@ -250,12 +263,21 @@ function SectionBlock({ s, i, p, peer }) {
         if (staleWhy(rd)) { setRd({ ...rd, status: "stale", why: staleWhy(rd) }); return; }       // never applied from an earlier version
         if (used.current) return;                                                                          // a double click counts and applies once
         used.current = true;
-        if (choice === "use") update({ ...(a.text != null ? { text: a.text } : {}), ...(a.panes ? { panes: a.panes } : {}) }, "Redraft used");
+        if (choice === "use") {
+          const patch = { ...(a.text != null ? { text: a.text } : {}), ...(a.panes ? { panes: a.panes } : {}) };
+          afterUse.current = { doc: docNow, put: wordsKey({ ...s, ...patch }), before: wordsNow };
+          update(patch, "Redraft used");
+        }
         else if (choice === "add") update({ text: `${sec.text || ""}${sec.text ? "\n" : ""}${(a.lines || []).map((/** @type {string} */ l) => `- ${l}`).join("\n")}` }, "New lines added");
         onEvent({ type: "redraft", id: s.id, choice }); setRd(null); }} /> : null}
       {ownRender ? ownRender(ctx) : <SheetDefault ctx={ctx} rowFn={(p.renderers.row || {})[s.id]} />}
     </section></SHEET_HERE.Provider>;
 }
+
+/** What to check in a suggestion (#90 review F5): the plain-code check's notes (a date, number or name it lost or added) and each
+    sentence that rests on no fact ("No source"). @param {any} a @returns {string[]} */
+const checkNotes = a => [...(a.notes || []).map((/** @type {any} */ n) => String(n.note || "")).filter(Boolean),
+  ...(a.sentences || []).filter((/** @type {any} */ x) => x.unsourced && String(x.text || "").trim()).map((/** @type {any} */ x) => `No source: “${String(x.text).trim()}”`)];
 
 /** A fresh draft beside Alan's words: Keep mine, Use this, Add the new lines. Nothing changes before a choice.
     @param {{rd: any, s: SheetSection, readOnly: boolean, close: () => void, onUse: (choice: "keep"|"use"|"add", a: any) => void}} props */
@@ -269,6 +291,7 @@ function Redraft({ rd, s, readOnly, close, onUse }) {
     {a.text != null ? <div class="sheet-md">{mdNodes(a.text)}</div> : null}
     {(a.panes || []).map((/** @type {any} */ x, /** @type {number} */ k) => <div key={k}><h3>{x.title}</h3><div class="sheet-md">{mdNodes(x.text)}</div></div>)}
     {(a.lines || []).length ? <ul class="sheet-lines">{a.lines.map((/** @type {string} */ l, /** @type {number} */ k) => <li key={k}>{l}</li>)}</ul> : null}
+    {checkNotes(a).length ? <ul class="sheet-rdnotes" aria-label="Check it">{checkNotes(a).map((n, k) => <li key={k}>{n}</li>)}</ul> : null}
     {(a.sources || []).length ? <div class="sheet-srcs">{a.sources.map((/** @type {any} */ x) => <span key={x.ref} class="chip">{x.label || x.ref}</span>)}</div> : null}
     <div class="sheet-rdb"><button type="button" class="btn sm" onClick={() => onUse("keep", a)}>Keep mine</button>
       {readOnly ? null : <button type="button" class="btn sm primary" onClick={() => onUse("use", a)}>Use this</button>}

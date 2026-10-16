@@ -1,6 +1,6 @@
 Redraft one section of a report, for Alan to read beside his own words (v2.1.0). It is a suggestion; nothing is saved or sent. Change nothing; just reply.
 
-Project: $name. Week: $start to $end. Section: $heading.
+Project: $name. Period: $start to $end. Section: $heading.
 $audience_note
 
 WHAT TO DO:
