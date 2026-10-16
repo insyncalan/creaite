@@ -60220,7 +60220,7 @@ ${d5.text}`);
             return r4;
           },
           ai: { place: "report", project: () => doc.project, confidential: () => false },
-          onRedraft: redrafter(() => ({ report: "weekly", code: doc.project, week_ending: doc.date }), "report"),
+          onRedraft: redrafter(() => ({ code: doc.project, document: { kind: "weekly", code: doc.project, week_ending: doc.date } }), "report"),
           onEvent: (ev) => {
             if (ev.type === "reload") loadWeekly(
               /** @type {any} */
@@ -60946,7 +60946,10 @@ ${d5.text}`);
             confidential: () => false,
             document: () => ({ kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" })
           },
-          onRedraft: side ? void 0 : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report"),
+          onRedraft: side ? void 0 : redrafter(() => ({
+            code: doc.project,
+            document: { kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" }
+          }), "report"),
           onEvent: (ev) => {
             if (ev.type === "reload" && a5) loadClientReport(a5);
             else countRedraft(ev, "report");

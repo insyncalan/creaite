@@ -33,6 +33,6 @@ All paths are relative to the vault root. Scripts (standard library; run from th
 ## Rules
 
 - **Only these scripts.** Never `node`, never a library you install, never a file in `/tmp` or anywhere outside the vault. If a document can't be made this way, say what is missing instead of working around it.
-- **Internal by default.** These documents are Alan's own; they are not client reports. Include client-visible or confidential items only as the tracker holds them, and never put anything from `documents/` into one unless Alan says so.
+- **Internal by default.** These documents are Alan's own; they are not client reports. Include client-visible or confidential items only as the tracker holds them, and never put anything from `documents/` into one unless Alan says so. **Never for the client (#127):** nothing checks a one-off document for internal content, so `report.py adhoc` refuses a spec whose `audience` isn't internal; for the client, offer "client report ABC" or "steerco one-pager ABC client-safe", which are checked before filing.
 - **Read-only on the tracker.** No proposals, no apply.
 - **If a command is refused for permission,** don't try another way round it. See the permission request in the panel's prompt: end with one `PERMISSION:` line naming the rule you need and why.

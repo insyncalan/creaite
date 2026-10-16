@@ -640,13 +640,19 @@ def label_check_failure(con, err, code):
 
 def client_findings(block):
     """Client report: internal-only content in the (possibly edited) draft. v2.1.0 P3: the check itself lives in client_leak.py, on
-    the data; a creaite document is checked there whole (its items too), a Word draft by its text."""
+    the data; a creaite document is checked there whole (its items too), a Word draft (a client report or the client-safe steerco
+    one-pager) by its text, with the same checks (#127: client_leak.plain_findings, not the wording check alone)."""
     import client_leak
     import creaite_doc
     draft = paths.resolve(block["draft"])
     if creaite_doc.is_doc(draft):
         return client_leak.findings(creaite_doc.read(draft))
-    return client_leak.text_findings(tracker.connect(), block["project"], "\n".join(draft_lines(draft)))
+    return client_leak.plain_findings(tracker.connect(), block["project"], "\n".join(draft_lines(draft)))
+
+
+def client_block(block):
+    """Whether a report block is checked as a client report: a client report, or the client-safe steerco one-pager (BL-92)."""
+    return block.get("kind") == "client" or (block.get("kind") == "steerco" and block.get("version") == "client")
 
 
 # ===== BL-260 point 4 (fix-minutes-approve) =====
@@ -713,8 +719,7 @@ def decide_draft(n, p, data, ref, block, decision, mode=None):
             listed = "\n    ".join(d["msg"] for d in diffs)
             return (f"{n}: not approved — the draft differs from the staged items:\n    {listed}\n  (say \"approve {n} "
                     f"--sync\" to update the staged items to match the draft, or \"approve {n} --as-staged\" to keep them)")
-    if decision == "approved" and draft and ref == "report" and mode != "as-staged" and \
-            (block.get("kind") == "client" or (block.get("kind") == "steerco" and block.get("version") == "client")):   # BL-92: the client-safe one-pager is checked like a client report
+    if decision == "approved" and draft and ref == "report" and mode != "as-staged" and client_block(block):   # BL-92: the client-safe one-pager is checked like a client report
         found = client_findings(block)
         if found:
             listed = "\n    ".join(found)

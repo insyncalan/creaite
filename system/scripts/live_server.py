@@ -5067,6 +5067,10 @@ def section_request(req):
     if isinstance(req.get("panes"), list):
         keep["panes"] = [{"title": str(x.get("title") or "")[:60], "text": str(x.get("text") or "")[:6000]}
                          for x in req["panes"][:6] if isinstance(x, dict)]
+    if "document" in req:          # #127: the report a section is in, from which drafts.py binds the audience (checked there)
+        d = req["document"]
+        ok = isinstance(d, dict) and len(d) <= 4 and all(isinstance(v, str) and len(v) <= 120 for v in d.values())
+        keep["document"] = dict(d) if ok else "not a report"
     return keep
 
 

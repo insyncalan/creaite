@@ -9,9 +9,9 @@ BL-338). The check reads a creaite document's data (creaite_doc.py), never a Wor
     the gate at the end, whatever route or place the text came through (#123);
   - people: the names (and register aliases) of the owners of the items a client report may show, and of everyone else on the
     project's items: the names check edit_ai.client_problems and findings share (#123);
-  - text_findings: the wording check on any text, moved here from review.client_findings (which still reads the Word flow's drafts
-    through it until the Word drafts are retired).
-"""
+  - text_findings: the wording check on any text, moved here from review.client_findings; IDs found however written (#127);
+  - plain_findings: findings' checks on a text with no sections: review.client_findings reads a Word draft through it (#127).
+The names check fails closed: a people register that is missing or can't be read is a finding of its own (#127)."""
 import json
 import re
 import sys
@@ -140,8 +140,9 @@ def _memory_findings(code, low):
     return found
 
 
-def _label_findings(con, code, text, low):
-    """BL-94's floor: an item whose label excludes it from client output, found by its ID or its wording."""
+def _label_findings(con, code, text, low, ids):
+    """BL-94's floor: an item whose label excludes it from client output, found by its ID (`ids`: the text's, however written) or
+    its wording."""
     import tracker as t
     found = []
     for item_id, label in con.execute("SELECT il.item_id, il.label FROM item_labels il JOIN labels l ON l.name = il.label "
@@ -152,7 +153,7 @@ def _label_findings(con, code, text, low):
         row = con.execute(f"SELECT {col}, client_message FROM {table} WHERE id = ?", (item_id,)).fetchone() if col else None
         wordings = [row[0]] + [ln.split(":", 1)[1] for ln in (row[1] or "").splitlines() if ":" in ln and table != "decisions"] \
             + ([row[1]] if row and table == "decisions" else []) if row else []      # its own words, and its client wording
-        if re.search(rf"\b{re.escape(item_id)}\b", text):
+        if item_id in ids:
             found.append(f"{item_id} is labelled {label} but its ID appears")
         else:
             hit = next((w for w in wordings if len((w or "").strip()) >= 15 and squash(w).lower() in squash(low)), None)
@@ -161,21 +162,33 @@ def _label_findings(con, code, text, low):
     return found
 
 
-def text_findings(con, code, text):
+def text_findings(con, code, text, skip=()):
     """Internal-only content in a client text: an item that isn't client-visible by its ID or wording, a memory line marked
     Client-safe: no, an item a label excludes, and the words confidential, restricted or documents/ (moved from
-    review.client_findings; its messages unchanged)."""
+    review.client_findings; its messages unchanged). #127: an ID is found however it is written (edit_ai.loose_ids: any case,
+    look-alike characters, spaces or dots), and so is any other item the tracker holds that a client report can't show (a
+    milestone or promise, or an item of another project); `skip`: items already found by the caller, not listed twice."""
+    import edit_ai
     low = text.lower()
-    found = []
+    ids = edit_ai.loose_ids(con, text)
+    found, seen = [], set(skip)
     for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
         for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
-            if re.search(rf"\b{re.escape(row[0])}\b", text):
+            if row[0] in ids:
+                seen.add(row[0])
                 found.append(f"{row[0]} isn't client-visible but its ID appears")
             elif len(row[1] or "") >= 15 and squash(row[1]).lower() in squash(low):
                 found.append(f"{row[0]} isn't client-visible but its wording appears: “{row[1][:80]}”")
+    blocking = blocking_labels(con)
+    for ref in sorted(ids - seen):                             # #127: milestones, promises and other projects' items
+        if not edit_ai.in_tracker(con, ref):
+            continue
+        why = f"{ref} belongs to another project" if ref.split("-")[0] != code else item_problem(con, ref, blocking)
+        if why:
+            found.append(f"{why}, but its ID appears")
     found += _memory_findings(code, low)
     try:                                                       # BL-94's floor
-        found += _label_findings(con, code, text, low)
+        found += _label_findings(con, code, text, low, ids)
     except Exception as e:  # noqa: BLE001  BL-228: fails closed; skipped only when the tables aren't there
         import review
         found.extend(review.label_check_failure(con, e, code))
@@ -200,14 +213,25 @@ def named(text, people):
     return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
 
 
+REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it in Settings › People "
+                   "(or say \"setup\"), then try again")
+
+
+class RegisterUnreadable(Exception):
+    """The people register is missing, can't be read or has no People table (#127: the names check fails closed)."""
+
+
 def register_aliases():
-    """{full name in lower case: [aliases]} from the people register (the same columns drafts.people_names reads); {} when it can't
-    be read."""
+    """{full name in lower case: [aliases]} from the people register (the same columns drafts.people_names reads). Raises
+    RegisterUnreadable when the register is missing, can't be read or has no People table (#127: fails closed, never {})."""
+    import propose
     out = {}
     try:
-        text = paths.PEOPLE_REGISTER.read_text(encoding="utf-8") if paths.PEOPLE_REGISTER.exists() else ""
-    except OSError:
-        return out
+        text = paths.PEOPLE_REGISTER.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as e:
+        raise RegisterUnreadable(REGISTER_UNREAD) from e
+    if not propose.people_table(text.splitlines()):
+        raise RegisterUnreadable(REGISTER_UNREAD)
     for line in text.splitlines():
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         if len(cells) >= 3 and cells[0] and not set(cells[0]) <= set("-: ") and cells[0].lower() not in ("name", "full name"):
@@ -278,8 +302,12 @@ def alans_names():
 
 
 def name_findings(con, code, text, blocking=None):
-    """The people a client text names who own only items a client report can't show (people's internal set)."""
-    _, internal = people(con, code, blocking)
+    """The people a client text names who own only items a client report can't show (people's internal set); one finding saying
+    so when the people register can't be read (#127: fails closed)."""
+    try:
+        _, internal = people(con, code, blocking)
+    except RegisterUnreadable:
+        return [REGISTER_UNREAD]
     return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal))]
 
 
@@ -298,10 +326,25 @@ def findings(doc, con=None):
     con = con or connect()
     blocking = blocking_labels(con)
     code, text = doc.get("project") or "", doc_text(doc)
-    found = [why for why in (item_problem(con, r, blocking) for r in sorted(refs(doc))) if why]
-    found += text_findings(con, code, text)
+    bad = {r: why for r, why in ((r, item_problem(con, r, blocking)) for r in sorted(refs(doc))) if why}
+    found = list(bad.values()) + text_findings(con, code, text, skip=bad)
     found += [f"it holds {why}" for why in internal_findings(con, code, doc)]             # #123: the gate at the end, any route
     return found + name_findings(con, code, text, blocking)
+
+
+def plain_findings(con, code, text):
+    """#127: the gate at the end for a client text with no sections (a Word client report or client-safe steerco one-pager, read by
+    review.client_findings): the same checks findings runs on a creaite document (items by ID, internal wording, the internal
+    health reason or an internal-only marker, and the names). As M1 lets the health reason stand in the health section, it may
+    stand in the first line that holds it (the report's own health line); anywhere else it is found. A marker is found anywhere."""
+    import drafts
+    row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
+    reason, lines = ((row[0] if row else "") or "").strip(), text.splitlines()
+    shown = next((i for i, ln in enumerate(lines) if reason and drafts.carries(ln, reason)), None)
+    found = drafts.internal_findings(con, code, "\n".join(ln for i, ln in enumerate(lines) if i != shown))
+    if drafts.INTERNAL_MARK.search(text) and "an internal-only marker" not in found:
+        found.append("an internal-only marker")
+    return text_findings(con, code, text) + [f"it holds {why}" for why in found] + name_findings(con, code, text)
 
 
 def internal_findings(con, code, doc):
