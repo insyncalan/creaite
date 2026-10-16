@@ -261,6 +261,19 @@ class OutsideRoot(Checks, OneDriveCase):
         self.assertEqual(o[0], str(self.eng("DEF", "08 Notes")))
         self.assertNotIn("08 Notes", o[1])
 
+    def test_doctor_flags_a_notes_folder_shared_with_another_kind(self):
+        """#124: Delete note moves the notes folder's files, so it must be a folder of its own."""
+        o = self.py("import paths, doctor\nreal = paths.locations\nout = [doctor.notes_folder_own()[0]]\n"
+                    "for n in ('04 Reporting/Weekly', '04 reporting', '02 Meetings/Minutes/Notes', '.', '08 Notes/'):\n"
+                    "    paths.locations = lambda n=n: {**real(), 'folders': {**real()['folders'], 'notes': n}}\n"
+                    "    out.append(doctor.notes_folder_own())\n"
+                    "print(json.dumps(out))")
+        self.assertTrue(o[0])
+        for (ok, why), n in zip(o[1:5], ("weekly_reports", "client_reports", "minutes", "transcripts")):
+            self.assertFalse(ok, why)
+            self.assertIn(n, why)
+        self.assertTrue(o[5][0], o[5])
+
     def test_a_new_project_gets_08_notes_when_the_skeleton_lacks_it_and_only_once(self):
         ops = json.loads(self.v.run("new-project", "--code", "GHI", "--name", "Green Harbour Pilot", script="propose.py").stdout)["file_changes"]["file_ops"]
         self.assertEqual([o for o in ops if o.get("path") == "projects/Green Harbour Pilot/08 Notes"], [{"op": "mkdir", "path": "projects/Green Harbour Pilot/08 Notes"}])

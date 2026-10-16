@@ -30,6 +30,8 @@ export const noteCur = signal(/** @type {OpenNote | null} */ (null));
 export const noteSave = signal(/** @type {SaveState} */ ({ state: "" }));
 export const noteLoading = signal(false);
 export const notesMsg = signal("");
+/** #124: the stored path of a note whose Delete note waits on the approval card: read only until the card is answered. */
+export const noteHeld = signal(/** @type {string | null} */ (null));
 
 /** Whether the notes list is shown (remembered per browser; the note widens when it is hidden). */
 export const notesListOpen = signal((() => { try { return localStorage.getItem(LIST_KEY) !== "0"; } catch (e) { return true; } })());
@@ -119,6 +121,16 @@ export function dropStaleDraft() { const c = noteCur.value; if (c) noteCur.value
 /** Close the open note (after saving it). */
 export async function closeNote() { await noteFlush(); noteCur.value = null; noteSave.value = { state: "" }; }
 
+/** #124: the note at `path` was moved to the archive: forget it without a save (its file has gone, so a save would only fail).
+    @param {string} path */
+export function noteGone(path) {
+  if (noteHeld.value === path) noteHeld.value = null;
+  if (!noteCur.value || noteCur.value.path !== path) return;
+  clearTimeout(ses.draftT); clearTimeout(ses.idleT);
+  ses.dirty = false; ses.changes = {};
+  noteCur.value = null; noteSave.value = { state: "" };
+}
+
 function idleSoon() { clearTimeout(ses.idleT); ses.idleT = setTimeout(() => { noteFlush(); }, IDLE_MS); }
 
 /** Alan typed in the note: keep a draft soon, and end the session after 30 seconds without typing. */
@@ -135,6 +147,7 @@ export function noteTyped() {
 export function noteMeta(changes, now) {
   const c = noteCur.value;
   if (!c) return;
+  if (noteHeld.value === c.path) { notesMsg.value = "This note waits on the approval card to be deleted: answer the card first."; return; }
   ses.changes = { ...ses.changes, ...changes };
   noteCur.value = { ...c, meta: { ...c.meta, ...changes } };
   if (now) { ses.dirty = true; noteFlush(); } else noteTyped();

@@ -24,7 +24,7 @@ import { Icon } from "../Icon.jsx";
     onInput: () => void, onBody: (get: (() => string|null) | null) => void, onOpenNote: (title: string) => void,
     onOpenItem: (id: string) => void, restored?: boolean, toolbarExtra?: import("preact").ComponentChildren,
     path?: string, onHoverLine?: (line: number) => void,
-    imageSrc?: (ref: string) => (string|null), onImage?: (file: File) => Promise<string|null>}} Props */
+    imageSrc?: (ref: string) => (string|null), onImage?: (file: File) => Promise<string|null>, readOnly?: boolean}} Props */
 
 const ITEM_HREF = /^creaite:item\/(.+)$/, PERSON_HREF = /^creaite:person\//;
 const WIKI = /\[\[([^[\]\n|]{1,160})(?:\|[^[\]\n]*)?\]\]/g;
@@ -147,7 +147,7 @@ const TOOLS = [["h", "H", "Sub-heading"], ["b", "B", "Bold (⌘B)"], ["i", "I", 
   ["table", "▦", "Table"], ["image", "Image", "Add a picture here (PNG or JPEG, up to 2 MB)"], ["|", "", ""], ["undo", "↶", "Undo (⌘Z)"], ["redo", "↷", "Redo (⌘⇧Z)"]];
 
 /** The note's body on the one editor. @param {Props} props */
-export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
+export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const fileIn = useRef(/** @type {HTMLInputElement|null} */ (null));
   const ed = useRef(/** @type {import("../../core/editor.js").EdHandle|null} */ (null));
@@ -293,6 +293,11 @@ export function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput
     return () => { el.removeEventListener("input", input); el.removeEventListener("blur", blur); el.removeEventListener("mouseover", over);
       el.removeEventListener("mouseleave", out); onBody(null); h.destroy(); ed.current = null; lineState.current.doc = null; };
   }, [loadKey]);
+
+  useEffect(() => {          /* #124: read only while its Delete note waits on the approval card */
+    const h = ed.current;
+    if (h && h.editor) h.editor.setEditable(!readOnly);
+  }, [readOnly, loadKey]);
 
   useEffect(() => {          /* BL-301 E: a note opened at a line (a source link): that line in view, highlighted for a few seconds */
     const h = ed.current, el = box.current;

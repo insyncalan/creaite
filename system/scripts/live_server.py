@@ -150,6 +150,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          words with the Fix it each would offer (none built: guard decisions), the rest counted (BL-320)
 Standard library only. Never uses a skip-permissions mode.
 """
+import contextlib
 import hashlib
 import json
 import os
@@ -608,6 +609,51 @@ def latest_apply():
         return None
     live = [a for a in json.loads(out) if not a["undone_at"]]
     return max((a["apply_id"] for a in live), default=None)
+
+
+# ===== #124: Undo of a Delete note (or a Move back), and a hand-staged one applied, never beside a note's save =====
+NOTE_MOVES = ("notes", "notes_back")
+
+
+def notes_lock_if(needed):
+    """NOTES_LOCK when a note is moved, else nothing; always taken after LOCK, never the other way round."""
+    return NOTES_LOCK if needed else contextlib.nullcontext()
+
+
+def _has_note_move(obj):
+    """Whether a proposal holds a file block (not yet applied) that moves a note: its "archive" is notes or notes_back."""
+    if isinstance(obj, dict):
+        if obj.get("archive") in NOTE_MOVES and not obj.get("applied"):
+            return True
+        return any(_has_note_move(v) for v in obj.values())
+    return isinstance(obj, list) and any(_has_note_move(v) for v in obj)
+
+
+def staged_note_move():
+    """Whether the apply would move a note (any staged proposal says so); an unreadable one counts, to be safe."""
+    for p in paths.STAGING.glob("proposed-*.json"):
+        try:
+            if _has_note_move(json.loads(p.read_text(encoding="utf-8"))):
+                return True
+        except (OSError, ValueError):
+            return True
+    return False
+
+
+def undo_note_move():
+    """Whether undoing the latest apply would move a note back (its file records hold a move of kind notes or notes_back); the
+    applies unreadable (a failed read, a bad record) count, to be safe."""
+    code, out = run("tracker.py", "read", "applies")
+    if code != 0:
+        return True
+    try:
+        live = [a for a in json.loads(out) if not a["undone_at"]]
+        last = max(live, key=lambda a: a["apply_id"], default=None)
+        recs = json.loads(last["file_ops"] or "[]") if last else []
+        return any(r.get("op") == "move" and r.get("kind") in NOTE_MOVES for r in recs)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return True
+# ===== end #124 =====
 
 
 def allowed(op, rel):
@@ -1219,7 +1265,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def apply(self, req):
         """POST /api/apply: tracker.py apply, which writes the database; {hold_peek} leaves the peek's staged proposals (BL-189)."""
-        with LOCK:
+        with LOCK, notes_lock_if(staged_note_move()):         # #124: LOCK, then NOTES_LOCK, as a note's card does
             # ===== BL-189 (sprint-milestones) ===== another apply (a cell edit, a bulk change, a Review approval, Settings' Apply)
             # sends hold_peek: the peek's staged proposals (build_dashboard.peek_staged, any window's) are left for the peek's own
             # Apply or ⌘↵, which sends nothing and applies everything decided, as before. tracker.py's rules are unchanged: it is
@@ -1239,7 +1285,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def undo(self, req):
         """POST /api/undo {apply_id}: tracker.py undo, only when that apply is still the latest."""
-        with LOCK:
+        with LOCK, notes_lock_if(undo_note_move()):           # #124: LOCK, then NOTES_LOCK, as a note's card does
             latest = latest_apply()
             if req.get("apply_id") is not None and req["apply_id"] != latest:
                 return self.send(200, {"ok": False, "message": "A later change has been applied since; undo that first "
@@ -1247,7 +1293,8 @@ class Handler(BaseHTTPRequestHandler):
             if latest is None:
                 return self.send(200, {"ok": False, "message": "Nothing to undo."})
             code, out = run("tracker.py", "undo")
-            return self.send(200, {"ok": code == 0, "message": out})
+            notes = [ln.strip() for ln in out.splitlines() if re.match(r"\s+(skipped moving|restored) ", ln)]     # #124 L3
+            return self.send(200, {"ok": code == 0, "message": out, "moves": notes})
 
     def review(self, req):
         """A decision on one proposal entry, through review.py so its checks run (drafts, conflicts)."""
@@ -3183,6 +3230,7 @@ def main():
     mark_interrupted()
     vault_permissions.recover()                          # BL-96: deny entries left lifted by a run that never finished
     reach.RUN_FILE.unlink(missing_ok=True)                # BL-141: no run is in progress at start; old requests make no card
+    clear_card_marks(0)                                  # #124 F3: no Approve is in progress at start
     for f in (paths.STAGING / "changes").glob("*.json") if (paths.STAGING / "changes").is_dir() else []:
         f.unlink(missing_ok=True)
     if LAUNCHED:
@@ -4292,6 +4340,11 @@ def edit_spec(data):
     return spec, None
 
 
+PAGE_ONLY = {"reports_back": "an archived file is moved back from Files (Move back), never from ask creaite",       # BL-331
+             "notes": "a note is deleted from the Notes tab (Delete note), never from ask creaite",              # #124
+             "notes_back": "a deleted note is moved back from Files (Move back), never from ask creaite"}
+
+
 def build_edit_card(run, final):
     """Gather a CHANGE line's spec into one card and emit it ("editcard"); the card's ID, or None."""
     m = re.search(EDIT_LINE, final, re.M)
@@ -4301,8 +4354,8 @@ def build_edit_card(run, final):
     src = edit_spec_file(m.group(1))
     data = src.read_bytes() if src else None
     spec, why = edit_spec(data) if data is not None else (None, "the change file isn't a .json file in system/staging/drafts/")
-    if spec and (spec.get("file_changes") or {}).get("archive") == "reports_back":      # BL-331: Files' Move back only
-        spec, why = None, "an archived file is moved back from Files (Move back), never from ask creaite"
+    if spec and (spec.get("file_changes") or {}).get("archive") in PAGE_ONLY:      # BL-331, #124: the page's own actions only
+        spec, why = None, PAGE_ONLY[spec["file_changes"]["archive"]]
     if not spec:
         run.emit("editcard", card=None, title=title, refused=why)
         return None
@@ -4324,14 +4377,19 @@ def build_edit_card(run, final):
 def edit_public(c):
     """What the page sees of a change card: never the snapshot or its fingerprint."""
     return {"card": c["id"], "run": c["run"], "chat": c["chat"], "title": c["title"], "state": c["state"], "valid": c["valid"],
-            "clash": c["clash"], "lines": c["lines"], "problems": c["problems"],
+            "clash": c["clash"], "lines": c["lines"], "problems": c["problems"], "stage": c.get("kind") not in NO_STAGE,
             "expires": datetime.fromtimestamp(c["expires"]).isoformat(timespec="seconds")}
 
 
+# #124: a note's move has no Stage for review: it is made only by Approve on this card, inside its 30 minutes (Jarvis, 16-10-2026)
+NO_STAGE = ("notes", "notes_back")
+
+
 # ===== BL-09: a change the server itself prepared (Health's rename of zz Archive folders) goes on the same card =====
-def server_edit_card(title, data):
+def server_edit_card(title, data, note=None, done=None):
     """Put a spec this server made itself (never the model's) on a change card, as build_edit_card does for a CHANGE line; the
-    card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending)."""
+    card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending). #124: `note`
+    ({path, sha}) is the note as Alan confirmed it, checked again on Approve; `done` is what Approve answers once it is moved."""
     spec, why = edit_spec(data)
     if not spec:
         return None, why
@@ -4344,7 +4402,8 @@ def server_edit_card(title, data):
                    "expires": time.time() + CARD_LIFE, "state": "pending", "valid": code == 0, "clash": pending_clash(spec),
                    "lines": [ln for ln in lines if not ln.startswith("Problem (")],
                    "problems": [ln for ln in lines if ln.startswith("Problem (")], "_data": data,
-                   "_fingerprint": hashlib.sha256(data).hexdigest()}
+                   "_fingerprint": hashlib.sha256(data).hexdigest(), "kind": (spec.get("file_changes") or {}).get("archive"),
+                   "_note": note, "done": done}
     return edit_public(EDITS[card]), None
 # ===== end BL-09 =====
 
@@ -4378,13 +4437,58 @@ def edit_stage(c, how):
     return (Path(m.group(1)).name, None) if code == 0 and m else (None, out.strip() or "propose.py stage failed")
 
 
+def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
+    """#124 F3: remove the move markers in system/guard/ older than `older` seconds (a crash's leftovers; never used anyway)."""
+    for m in paths.GUARD.glob("move-*") if paths.GUARD.is_dir() and not paths.GUARD.is_symlink() else []:
+        try:
+            if time.time() - m.lstat().st_mtime >= older:
+                m.unlink()
+        except OSError:                                # gone meanwhile, or can't be removed: tracker ignores a stale one
+            pass
+
+
+@contextlib.contextmanager
+def card_moves_allowed(name):
+    """#124 F3: while the card's own proposal `name` (staged by edit_stage) is applied, one marker per move of a card-only kind
+    (reach.CARD_ONLY_MOVES), naming that file and its SHA-256, so tracker._op_move makes exactly these moves; removed
+    afterwards, whatever happens. LOCK is held, and NOTES_LOCK too for a note's card."""
+    clear_card_marks()
+    f = paths.STAGING / name
+    raw = f.read_bytes()
+    fc = json.loads(raw.decode("utf-8")).get("file_changes") or {}
+    kind = fc.get("archive")
+    marks = [reach.card_move_marker(kind, op.get("from"), op.get("to")) for op in fc.get("file_ops") or []
+             if kind in reach.CARD_ONLY_MOVES and isinstance(op, dict) and op.get("op") == "move"]
+    body = json.dumps({"proposal": name, "sha256": hashlib.sha256(raw).hexdigest()}).encode("utf-8")
+    if marks:
+        paths.GUARD.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if paths.GUARD.is_symlink():                   # the markers only ever in the vault's own system/guard
+            raise OSError("system/guard is a symlink")
+    try:
+        for m in marks:
+            m.unlink(missing_ok=True)
+            fd = os.open(m, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            try:
+                os.write(fd, body)
+            finally:
+                os.close(fd)
+        yield
+    finally:
+        for m in marks:
+            m.unlink(missing_ok=True)
+
+
 def edit_apply(c):
     """Approve: stage the snapshot and apply only that proposal (LOCK held). The answer for the page."""
     name, why = edit_stage(c, "approve")
     if not name:
         c["state"] = "failed"
         return {"ok": False, "message": f"Not applied: {why}"}
-    code, out = run("tracker.py", "apply", name)
+    try:
+        with card_moves_allowed(name):                 # #124 F3: only this Approve makes a card-only move
+            code, out = run("tracker.py", "apply", name)
+    except (OSError, ValueError) as e:                 # the marker couldn't be written: nothing applied
+        code, out = 1, f"the approval couldn't be recorded ({type(e).__name__})"
     if code:                                            # validation failed: nothing written, and nothing left in staging
         (paths.STAGING / name).unlink(missing_ok=True)
         c["state"] = "failed"
@@ -4392,7 +4496,7 @@ def edit_apply(c):
     held = re.search(r"held (\d+)", out)
     held = int(held.group(1)) if held else 0
     ids = edit_ids(name)
-    msg = f"Applied: {', '.join(ids) if ids else 'the change'}." + (
+    msg = (c.get("done") if c.get("done") and not ids else f"Applied: {', '.join(ids) if ids else 'the change'}.") + (
         f" {held} item{'s' if held != 1 else ''} changed meanwhile and wait{'s' if held == 1 else ''} in Review." if held else "")
     if debuglog:
         debuglog.info("ask", f"change card {c['id']} approved: {', '.join(ids) or 'none'} written, {held} held")
@@ -4402,21 +4506,16 @@ def edit_apply(c):
 def edit_answer(handler, req, how):
     """POST /api/edit/approve | reject | stage {card}: Alan's answer on a change card, used once."""
     c = EDITS.get(str(req.get("card") or ""))
-    if not c or c["state"] != "pending":
-        return handler.send(200, {"ok": False, "message": "That card has been answered already, or a later change replaced it: "
-                                                          "ask creaite again."})
-    if c["expires"] < time.time():
-        c["state"] = "expired"
-        c.pop("_data", None)
-        return handler.send(200, {"ok": False, "message": "That card has expired (30 minutes): nothing was changed; ask creaite again."})
-    if how == "reject":
-        c["state"] = "rejected"
-        c.pop("_data", None)
-        return handler.send(200, {"ok": True, "message": "Rejected: nothing was staged or changed."})
+    early = edit_early(c, how)
+    if early:
+        return handler.send(200, early)
     if not LOCK.acquire(blocking=False):
         return handler.send(200, {"ok": False, "busy": True, "message": "Another job is writing just now, so it can't be applied "
-                                                                        "at once: Stage for review, or try again in a moment."})
+                                  "at once: " + ("try again in a moment." if c.get("kind") in NO_STAGE else
+                                                 "Stage for review, or try again in a moment.")})
     try:
+        if how == "approve" and c.get("kind") in NO_STAGE:
+            return handler.send(200, note_card_apply(c))
         if how == "approve" and not c["valid"]:
             return handler.send(200, {"ok": False, "message": "This change has problems (listed on the card): it can't be applied."})
         clash = pending_clash(json.loads(c["_data"])) if how == "approve" else []
@@ -4432,6 +4531,57 @@ def edit_answer(handler, req, how):
                                                               "you approve it there." if name else f"Not staged: {why}"})
     finally:
         LOCK.release()
+
+
+def edit_early(c, how):
+    """The answer to a card that is answered before LOCK is needed (gone, expired, rejected, a note's move staged), or None."""
+    if not c or c["state"] != "pending":
+        return {"ok": False, "message": "That card has been answered already, or a later change replaced it: ask creaite again."}
+    if c["expires"] < time.time():
+        c["state"] = "expired"
+        c.pop("_data", None)
+        return {"ok": False, "message": "That card has expired (30 minutes): nothing was changed; ask creaite again."}
+    if how == "reject":
+        c["state"] = "rejected"
+        c.pop("_data", None)
+        return {"ok": True, "message": "Rejected: nothing was staged or changed."}
+    if how == "stage" and c.get("kind") in NO_STAGE:      # #124: only Approve moves a note, on this card, within its 30 minutes
+        return {"ok": False, "message": "A note's move can't be staged for review: Approve or Reject it here."}
+    return None
+
+
+def note_card_apply(c):
+    """#124: Approve on a note's card (LOCK held). NOTES_LOCK is taken after LOCK, never the other way round (no notes route waits
+    for LOCK), so no save, draft or rename lands while the note is checked and moved. A Delete note card moves only the note Alan
+    confirmed: when the file has changed since, or typing is waiting in a draft, nothing moves and the card stays."""
+    import notes
+    with NOTES_LOCK:
+        if not c["valid"]:
+            return {"ok": False, "message": "This change has problems (listed on the card): it can't be applied."}
+        why = note_changed(notes, c.get("_note"))
+        if why:
+            return {"ok": False, "stale": True, "message": why}
+        c["state"] = "approved"                                          # used once, before anything runs
+        res = edit_apply(c)
+        if res.get("ok") and c.get("_note"):
+            notes.drop_draft(c["_note"]["path"])                         # nothing is left under the old path
+    if res.get("ok"):
+        notes_reindex()
+    return res
+
+
+def note_changed(notes, note):
+    """Why a Delete note card can't move the note now (it changed after Alan confirmed, or typing waits in a draft), or None."""
+    if not note:
+        return None
+    p = paths.resolve(note["path"])
+    try:
+        now = notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")) if p.is_file() and not p.is_symlink() else None
+    except OSError:  # a note that can't be read now isn't the one confirmed
+        now = None
+    if now != note["sha"] or notes.read_draft(note["path"]):
+        return "Not deleted: the note changed after you confirmed. Delete it again to confirm the new version."
+    return None
 
 
 def edit_pending_route(handler, req):
@@ -4498,7 +4648,13 @@ def move_back_route(handler, req):
     spec, why = archive.back_spec(path)
     if not spec:
         return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
-    card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    fc, done = spec["file_changes"], None
+    if fc["archive"] == "notes_back":                  # #124 L4: the answer names the note, and the name it comes back under
+        op = fc["file_ops"][0]
+        a, b = Path(archive.archived_moves(kind="notes").get(op["from"]) or op["to"]).stem, Path(op["to"]).stem
+        done = f"Moved \u201c{b}\u201d back to its notes folder." if a == b else \
+            f"Moved \u201c{a}\u201d back to its notes folder as \u201c{b}\u201d (a note has its old name)."
+    card, why = server_edit_card(fc["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"), done=done)
     if not card:
         return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
     return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
@@ -6618,7 +6774,10 @@ def notes_draft_route(handler, req):
     if body is False:
         return handler.send(400, {"ok": False, "message": "That note is too long to save."})
     at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
+    with NOTES_LOCK:                                    # #124: never beside a Delete note's check and move
+        if not _p.is_file():
+            return handler.send(404, {"ok": False, "message": "That note isn't there any more."})
+        notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
     return handler.send(200, {"ok": True, "at": at})
 
 
@@ -6807,6 +6966,53 @@ def notes_rename_route(handler, req):
 DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
                      "/api/notes/rename": notes_rename_route})
 # ===== end BL-301 B gaps =====
+
+# ===== #124: Delete note (Alan, 15-10-2026: the confirm box AND the one approval card) =====
+# POST /api/notes/delete {path, base}   after Alan's confirm box in the Notes tab: the note's move into its own engagement's (or
+#                                        the portfolio's) _Archive goes on the approval card in ask creaite; nothing moves here.
+# archive.note_delete_spec builds the move (never the page): a `move` of kind "notes", the BL-09 guard exception, so only
+# tracker.py apply makes it, on Approve (server_edit_card: bound to this snapshot, used once, 30 minutes); Reject moves nothing.
+# Undo (tracker.py undo) and Files › Archived's Move back ("notes_back") bring it back, never onto a file that is there. As with
+# the rename, never while ask creaite has read outside content, or for a note that isn't only Alan's: the note must be ordinary
+# as a change, as filechange.py judges it now. The note must be saved (`base`, the text's fingerprint) with no typing waiting.
+# A confidential note is deleted the same way: only its title is read, for the card, and nothing is sent anywhere.
+def notes_delete_route(handler, req):
+    """Put a note's move into the archive on the approval card, after the confirm box."""
+    import archive
+    import filechange
+    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str):
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, _code, p, rel = t
+    with NOTES_LOCK:
+        if str(req.get("base") or "") != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
+            return handler.send(200, {"ok": False, "message": "Not deleted: the note changed since it was saved. Open it again "
+                                      "and try once more."})
+        if notes.read_draft(rel):
+            return handler.send(200, {"ok": False, "message": "Not deleted: the note has typing not yet saved. Save it first."})
+        if filechange.verdict("edit", rel)[0] != "ordinary":
+            return handler.send(200, {"ok": False, "wait": True, "message": "Not deleted: moving this note needs more than the "
+                                      "card now (ask creaite has read outside content, or the file isn't only yours). Try again "
+                                      "when the chat has finished."})
+        spec, why = archive.note_delete_spec(rel)
+        if not spec:
+            return handler.send(200, {"ok": False, "message": f"Not deleted: {why}."})
+        sha = notes.text_sha(p.read_text(encoding="utf-8", errors="ignore"))             # M1: the version Alan confirmed
+        title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
+        card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"),
+                                     note={"path": rel, "sha": sha}, done=f"Moved \u201c{title}\u201d to the archive.")
+    if not card:
+        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+    if debuglog:
+        debuglog.info("notes", f"delete note on card {card['card']}: {len(card['lines'])} line(s), valid {card['valid']}")
+    return handler.send(200, {"ok": True, "card": card, "message": "On the approval card in ask creaite: the note moves only when "
+                              "you approve it there."})
+
+
+DRAFT_ROUTES.update({"/api/notes/delete": notes_delete_route})
+# ===== end #124 =====
 
 # ===== Debug log (BL-102 part 2, stage A) =====
 # What the live server does is recorded through log.py. It is installed by wrapping the code above, so that code is left

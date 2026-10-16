@@ -241,10 +241,10 @@ def cmd_preview(spec_file, write=False):
         return 1
     if not write:
         return 0
-    if (spec.get("file_changes") or {}).get("archive") == "reports_back" and \
-            Path(os.path.realpath(spec_file)).parent != Path(os.path.realpath(paths.GUARD)):
-        print("Not staged: an archived file is moved back from Files (Move back) on the approval card, never staged here.")
-        return 1                                  # BL-331: only the live server's card (its snapshot in system/guard/) stages one
+    why = server_card_only(spec, spec_file)
+    if why:
+        print(why)
+        return 1
     stamp, out, n = f"{datetime.now():%Y-%m-%d-%H%M%S}", None, 1
     while out is None or out.exists():    # two proposals in one second must not overwrite each other
         out = paths.STAGING / f"proposed-{stamp}{f'-{n}' if n > 1 else ''}-edit.json"
@@ -253,6 +253,20 @@ def cmd_preview(spec_file, write=False):
     print(f"Staged and approved: {paths.rel(out)}. It'll be written at your next apply.")
     paths.consume_draft(spec_file)                                            # BL-118: the spec has done its job
     return 0
+
+
+SERVER_CARD_ONLY = {                              # BL-331, #124: staged only from the live server's card (its snapshot in system/guard/)
+    "reports_back": "Not staged: an archived file is moved back from Files (Move back) on the approval card, never staged here.",
+    "notes": "Not staged: a note is deleted from the Notes tab (Delete note) on the approval card, never staged here.",
+    "notes_back": "Not staged: a deleted note is moved back from Files (Move back) on the approval card, never staged here."}
+
+
+def server_card_only(spec, spec_file):
+    """Why this spec can't be staged here (a move only the live server's card stages), or None."""
+    why = SERVER_CARD_ONLY.get((spec.get("file_changes") or {}).get("archive"))
+    if why and Path(os.path.realpath(spec_file)).parent != Path(os.path.realpath(paths.GUARD)):
+        return why
+    return None
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
