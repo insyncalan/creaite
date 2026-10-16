@@ -1255,18 +1255,7 @@ class Handler(BaseHTTPRequestHandler):
             p.unlink(missing_ok=True)
             return self.send(200, {"ok": True})
         if op == "upload":
-            import base64
-            try:
-                raw = base64.b64decode(req.get("data", ""), validate=True)
-            except ValueError:
-                return self.send(400, {"ok": False, "message": "Bad image data"})
-            if len(raw) > UPLOAD_LIMIT:
-                return self.send(413, {"ok": False, "message": "Images can be 2 MB at most"})
-            if not (raw.startswith(b"\x89PNG\r\n\x1a\n") or raw.startswith(b"\xff\xd8\xff")):
-                return self.send(415, {"ok": False, "message": "Only PNG or JPEG images"})
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_bytes(raw)
-            return self.send(200, {"ok": True})
+            return self.fs_upload(p, req)
         clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
         if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
             return self.send(200, {"ok": False, "message": clash})
@@ -1280,6 +1269,21 @@ class Handler(BaseHTTPRequestHandler):
             import minutes_record                                                            # moves its minutes record's row too
             with LOCK:
                 minutes_record.follow(p)
+        return self.send(200, {"ok": True})
+
+    def fs_upload(self, p, req):
+        """The upload op of /api/fs: a PNG or JPEG of at most UPLOAD_LIMIT bytes, written at `p`."""
+        import base64
+        try:
+            raw = base64.b64decode(req.get("data", ""), validate=True)
+        except ValueError:
+            return self.send(400, {"ok": False, "message": "Bad image data"})
+        if len(raw) > UPLOAD_LIMIT:
+            return self.send(413, {"ok": False, "message": "Images can be 2 MB at most"})
+        if not (raw.startswith(b"\x89PNG\r\n\x1a\n") or raw.startswith(b"\xff\xd8\xff")):
+            return self.send(415, {"ok": False, "message": "Only PNG or JPEG images"})
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(raw)
         return self.send(200, {"ok": True})
 
     def apply(self, req):

@@ -8821,6 +8821,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       if (v5) sessionStorage.setItem(KEY, JSON.stringify(v5));
       else sessionStorage.removeItem(KEY);
     } catch (e4) {
+      return;
     }
   }
   async function watchCard(n4, card) {
