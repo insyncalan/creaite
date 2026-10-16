@@ -16,12 +16,14 @@ import { RailMore } from "./components/sidebar/RailMore.jsx";
 import { RailNav } from "./components/sidebar/RailNav.jsx";
 import { RailToggle } from "./components/sidebar/RailToggle.jsx";
 import { $, addHTML, html, ic, ICONS } from "./core/dom.js";
+import { P } from "./core/data.js";
 import { go } from "./core/nav.js";
 import { MAC, S } from "./core/page.js";
 import { writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railItem, railMoreOpen, railNarrow, railNorm, setRailView } from "./stores/rail.js";
 import { row, SETSECTIONS } from "./settings.js";
+import { WTABS, workTabGo } from "./work.js";
 
 export { RAIL_DEF, RAIL_ITEMS, railItem, railNorm };   /* the store's, on the page for the tests and ⌘K */
 
@@ -70,7 +72,17 @@ export function bootRail0007() {
   });
   const onGo = (/** @type {string} */ id) => go(id);
   render(h(RailToggle, { onToggle: railToggle, keyName: MAC ? "⌘\\" : "Ctrl+\\" }), $("#railTogBox"));
-  render(h(RailNav, { onGo }), $("#railMain"));
+  /* #139: Projects and Work open a list on hover (the active projects, the Work lists); a pick opens it, the icon alone still goes to the page */
+  const flyouts = {
+    projects: () => { const a = P.filter(p => p.active !== false && !p.archived);
+      return a.length ? a.map(p => ({ id: p.code, name: p.name, health: p.health || "" })) : [{ id: "-", note: "No active projects" }]; },
+    work: () => WTABS.map(t => ({ id: t.id, name: t.label })),
+  };
+  const onFly = (/** @type {string} */ id, /** @type {string} */ pick) => {
+    if (id === "projects") go("cockpit", pick);
+    else if (id === "work") { if (shared.VIEW !== "work") go("work"); if (shared.WT !== pick) workTabGo(pick); }
+  };
+  render(h(RailNav, { onGo, flyouts, onFly }), $("#railMain"));
   render(h(RailMore, { onGo, onCustomise: railCustomise }), $("#railFoot"));
   addHTML(document.body, "beforeend", html`<div id="railCustBox"></div>`);
   render(h(CustomiseSidebar, { onSave: railSave, onClose: railCustClosed }), $("#railCustBox"));

@@ -34,7 +34,8 @@ window.SB = (() => {
   /** every visible opener in the region, in document order (a disabled one says why and opens nothing: left out) */
   const openers = region => { const roots = [...document.querySelectorAll(region)];      /* every match: the shell is ".rail,header.bar" */
     L = (roots.length ? roots : [document]).flatMap(root => [...root.querySelectorAll("[aria-haspopup]:not([aria-haspopup=false])")]).filter(el => vis(el) && !el.disabled
-      && el.getAttribute("aria-disabled") !== "true" && !el.closest(".ddmenu.on,[role=menu],[role=listbox]"));
+      && el.getAttribute("aria-disabled") !== "true" && !el.closest(".ddmenu.on,[role=menu],[role=listbox]")
+      && !el.matches("#railMain [data-v]"));   /* #139: the rail's Projects and Work open a list on hover or →/↓; Enter goes to the page (test_shared_behaviour's `rail`) */
     return L.map((el, i) => ({ i, sig: sig(el), name: name(el), kind: el.getAttribute("aria-haspopup"), role: el.getAttribute("role") || el.tagName.toLowerCase() })); };
   /** what is open: visible popups, ignoring the page's permanent regions and what was already showing when the opener
       took focus (the test has closed every popup by then): the dialog a screen is (the Prep popup, the milestone editor)

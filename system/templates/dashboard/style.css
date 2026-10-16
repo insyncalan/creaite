@@ -1755,6 +1755,14 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail #railMoreMenu button.nv{justify-content:flex-start;padding:0 8px} .rail #railMoreMenu .rl{display:inline}
 .rail #railMoreMenu .badge{position:static;margin-left:auto;min-width:18px;height:18px;font-size:var(--fs-xs);line-height:18px;padding:0 4px}
 .rail #railMoreMenu button[aria-current="page"]::before{left:-6px}
+/* #139: the hover flyouts of Projects and Work, beside the rail (collapsed or not), above the page and below dialogs and the peek (--z-menu);
+   24px rows, at most about 360px tall, scrolling inside; the health sits at the right edge as its shape and its word */
+.rail .railfly{position:fixed;z-index:var(--z-menu);width:max-content;min-width:200px;max-width:320px;max-height:360px;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px;display:grid;gap:0;align-content:start}
+.rail .railfly button{height:24px;width:100%;padding:0 8px;gap:12px;justify-content:flex-start;color:var(--ink);border-radius:var(--r-sm);white-space:nowrap}
+.rail .railfly button:hover,.rail .railfly button:focus-visible{background:var(--sunk)}
+.rail .railfly .health{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)} .rail .railfly .health svg{width:14px;height:14px}
+.rail .railfly .mnote{padding:2px 8px;color:var(--muted)}
+@media (forced-colors:active){.rail .railfly{border:1px solid CanvasText}.rail .railfly button:hover,.rail .railfly button:focus-visible{outline:2px solid Highlight}}
 .railsep{height:1px;background:var(--line);margin:4px 2px}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
 @media (max-width:480px){ :root.railicons{--rail-w:48px} .rail.collapsed{padding:10px 4px} .rail.collapsed button[aria-current="page"]::before{left:-4px} }

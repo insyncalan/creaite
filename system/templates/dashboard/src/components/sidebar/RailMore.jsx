@@ -7,9 +7,10 @@
    click away closes. Hidden when More is empty.
    Its items stay in the page while it is closed, so their badges (#inboxBadge …) are always there. */
 import { effect } from "@preact/signals";
+import { tipHide } from "../../core/dom.js";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { railCfg, railCollapsed, railMoreOpen, railMoreWaiting } from "../../stores/rail.js";
-import { MenuPanel } from "../Menu.jsx";
+import { MenuPanel, useHoverMenu } from "../Menu.jsx";
 import { RailButton } from "./RailButton.jsx";
 import { RailIcon } from "./RailIcon.jsx";
 
@@ -21,6 +22,7 @@ export function RailMore({ onGo, onCustomise }) {
   const [at, setAt] = useState(/** @type {Record<string, string>} */ ({}));
   const open = railMoreOpen.value, collapsed = railCollapsed.value, more = railCfg.value.more;
   const bd = useRef(/** @type {HTMLSpanElement | null} */ (null));
+  const h = useHoverMenu({ hover: true, open, setOpen: v => { railMoreOpen.value = v; }, btn });   /* #139: the one hover behaviour of the rail's flyouts */
   /* its name, tooltip and badge follow what waits inside at once (a synchronous effect, as RailButton's) */
   useLayoutEffect(() => effect(() => {
     const b = btn.current, s = bd.current; if (!b || !s) return;
@@ -32,10 +34,11 @@ export function RailMore({ onGo, onCustomise }) {
   }), [more.length > 0]);
 
   /** @param {boolean} focusBack */
-  const close = focusBack => { railMoreOpen.value = false; if (focusBack) btn.current?.focus(); };
+  const close = focusBack => h.close(focusBack ? "esc" : "pick");
   /* placed beside the button, kept in the window: above it (expanded) or to the right of the rail (collapsed) */
   useLayoutEffect(() => {
     if (!open || !btn.current) return;
+    tipHide();
     const r = btn.current.getBoundingClientRect(), rail = btn.current.closest(".rail")?.getBoundingClientRect() || r;
     setAt(collapsed ? { left: `${rail.right + 8}px`, bottom: `${Math.max(8, innerHeight - r.bottom)}px` }
       : { left: `${r.left}px`, bottom: `${Math.max(8, innerHeight - r.top + 6)}px` });
@@ -45,16 +48,23 @@ export function RailMore({ onGo, onCustomise }) {
   /** @param {string} id */
   const go = id => { close(false); onGo(id); };
   return (
-    <div class="railmore">
+    <div class="railmore" onMouseEnter={h.pointIn} onMouseLeave={h.pointOut}>
       <button type="button" class="nv" id="railMore" ref={btn} aria-haspopup="menu" aria-expanded={open ? "true" : "false"}
         aria-controls="railMoreMenu"
-        onClick={() => { railMoreOpen.value = !open; }}
-        onKeyDown={e => { if (e.key === "ArrowUp" && !open) { e.preventDefault(); railMoreOpen.value = true; } }}>
+        onClick={e => {
+          if (open && h.byMouse.current && e.detail > 0 && Date.now() - h.openedAt.current < 400) { h.noFocus.current = false; h.bump(n => n + 1); return; }   /* a click as the pointer arrives is "open it" */
+          h.byMouse.current = e.detail > 0; h.noFocus.current = false; if (open) h.close("pick"); else railMoreOpen.value = true;
+        }}
+        onKeyDown={e => {
+          if ((e.key === "ArrowUp" || e.key === "ArrowRight") && !open) { e.preventDefault(); h.byMouse.current = false; h.noFocus.current = false; railMoreOpen.value = true; }
+          else if ((e.key === "ArrowUp" || e.key === "ArrowRight") && open) { e.preventDefault(); h.byMouse.current = false; h.noFocus.current = false; h.bump(n => n + 1); }
+        }}>
         <RailIcon name="more" />
         <span class="rl">More</span>
         <span class="badge" id="railMoreBadge" ref={bd} style="display:none" aria-hidden="true"></span>
       </button>
-      <MenuPanel bare id="railMoreMenu" label="More" hidden={!open} style={at} anchor={btn.current} onClose={how => close(how === "esc")}>
+      <MenuPanel bare id="railMoreMenu" label="More" hidden={!open} style={at} anchor={btn.current} autoFocus={!h.noFocus.current} focusKey={h.noFocus.current}
+        onClose={how => close(how === "esc")}>
         {more.map(id => <RailButton key={id} id={id} inMenu onGo={go} />)}
         <div role="separator" class="railsep"></div>
         <button type="button" class="nv" role="menuitem" id="railCustBtn" aria-haspopup="dialog"
