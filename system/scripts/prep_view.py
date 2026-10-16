@@ -23,6 +23,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402
+import linktext  # noqa: E402  (#121: a link in Alan's notes and questions is a link on the page)
 import prep_page  # noqa: E402
 import prep_shape  # noqa: E402
 
@@ -553,7 +554,7 @@ def _outline_html(mo):
 
 def _line_html(ln, port):
     srcs = " · ".join(_src_html(s, port) for s in ln.get("sources") or [])
-    return f"<li>{esc(ln['text'])}{f' <span class=src>— {srcs}</span>' if srcs else ''}</li>"
+    return f"<li>{linktext.html(ln['text'])}{f' <span class=src>— {srcs}</span>' if srcs else ''}</li>"
 
 
 def _reading_html(reading):
@@ -612,7 +613,7 @@ def _notes_html(mo, port):
         doc = prep_page.DOC_TAG if "documents" in n["source_text"].lower() else ""
         lis.append(f'<li>{esc(n["text"])} <span class="src">— {src}{", " + esc(n["date_shown"]) if n["date"] else ""}</span>{doc}</li>')
     body = f"<ul>{''.join(lis)}</ul>" if lis else '<p class="empty">Nothing found.</p>'
-    qs = ("<ul>" + "".join(f"<li>{esc(q)}</li>" for q in mo["questions"]) + "</ul>") if mo["questions"] else \
+    qs = ("<ul>" + "".join(f"<li>{linktext.html(q)}</li>" for q in mo["questions"]) + "</ul>") if mo["questions"] else \
         '<p class="empty">Nothing found.</p>'
     about = f"<p>{esc(mo['about'])}</p>" if mo["about"] else '<p class="empty">Nothing found.</p>'
     return (f'<details open><summary><h2>What this meeting is about</h2></summary>{about}</details>\n'

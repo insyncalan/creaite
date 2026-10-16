@@ -73,6 +73,7 @@ except ImportError:
         info = debug = warn = error = exception = staticmethod(lambda *a, **k: None)
         rule = staticmethod(lambda text, *a: "")
         main = staticmethod(lambda script, fn, *a: fn(*a))
+import linktext  # noqa: E402  (#121: links in plain text show as their words)
 import tracker  # noqa: E402
 import docx_tools  # noqa: E402
 
@@ -217,7 +218,11 @@ def update_parts(item):
     except Exception as e:  # noqa: BLE001  unexpected: logged by name only (BL-102), and the line still shows the change
         debuglog.debug("review", f"update_parts {item_id}: {type(e).__name__} ignored")
     # ===== end BL-228 =====
-    fmt = lambda f, x: (tracker.shown(x) if f in tracker.DATE_FIELDS else str(x)) if x not in (None, "") else "—"  # noqa: E731
+    def fmt(f, x):
+        """One value as the line shows it: a date as DD-MM-YYYY, a link as its words, nothing as a dash."""
+        if x in (None, ""):
+            return "—"
+        return tracker.shown(x) if f in tracker.DATE_FIELDS else linktext.words(str(x))
     changes = "; ".join(f"{UPDATE_LABELS.get(f, f)} {fmt(f, row.get(f))} → {fmt(f, c)}" for f, c in (item.get("changes") or {}).items())
     return f"{item_id} {row.get('description') or row.get('decision') or ''}".strip(), changes
 
@@ -233,7 +238,7 @@ def describe(item):
     changes = item.get("changes") or {}
     if item.get("op") == "update" and item.get("table") in ("actions", "raid", "decisions", "promises") and "why" in item:     # BL-65
         return "Update", update_text(item), changes.get("owner", ""), tracker.shown(changes.get("due_date")) or ""
-    shown = ", ".join(f"{k} → {tracker.shown(c) if k in tracker.DATE_FIELDS else c}" for k, c in changes.items())
+    shown = ", ".join(f"{k} → {tracker.shown(c) if k in tracker.DATE_FIELDS else linktext.words(str(c))}" for k, c in changes.items())
     kind = {"cancel": "Cancel", "recode": "Recode"}.get(item.get("op"), "Change")
     return kind, f"{item.get('id')}: {shown or item.get('confirm', 'cancel')}", changes.get("owner", ""), \
         tracker.shown(changes.get("due_date")) or ""
@@ -272,7 +277,7 @@ def detail(item):
     elif item.get("op") == "new" and item.get("table") == "raid":
         pr = tracker.priority(v.get("impact"), v.get("likelihood"))
         parts = [f"Impact {v.get('impact') or '—'} × Likelihood {v.get('likelihood') or '—'} → {pr or 'priority not set'}",
-                 f"Response: {v['response_action']}" if v.get("response_action") else "No response yet",
+                 f"Response: {linktext.words(v['response_action'])}" if v.get("response_action") else "No response yet",
                  v.get("workstream") or ""]
     elif item.get("op") == "new" and item.get("table") == "decisions":
         parts = decision_detail(v)
@@ -552,10 +557,12 @@ def minutes_differences(data, block):
 
 
 def draft_lines(path):
-    """The text lines of a Word draft, with tracked changes accepted."""
+    """The text lines of a Word draft, with tracked changes accepted. A hyperlink is followed by its address in brackets (#121), so the
+    client-report checks that read these lines judge the address as they judge the words."""
     parts = docx_tools.read_parts(path)
     xml = next(raw.decode("utf-8") for info, raw in parts if info.filename == "word/document.xml")
-    return docx_tools.story_text(docx_tools.accept_xml(xml)[0]).splitlines()
+    rels = next((raw.decode("utf-8") for info, raw in parts if info.filename == "word/_rels/document.xml.rels"), "")
+    return docx_tools.story_text(docx_tools.show_links(docx_tools.accept_xml(xml)[0], rels)).splitlines()
 
 
 def squash(t):

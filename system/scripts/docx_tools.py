@@ -43,6 +43,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths  # noqa: E402,F401  (locations and bundled libraries, as every script does)
+import linktext  # noqa: E402  (#121: links in plain text)
 
 PARA = re.compile(r"<w:p(?: [^>]*)?>.*?</w:p>|<w:p(?: [^>]*)?/>", re.S)
 ROW = re.compile(r"<w:tr(?: [^>]*)?>.*?</w:tr>", re.S)
@@ -430,6 +431,77 @@ def esc(s):
     return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+# ===== #121: a link in a text value is a real Word hyperlink =====
+# A value holding `[words](address)` is filled with the words marked by control characters (\x01 index \x02 words \x03: none can occur in
+# Word text), and finish_links turns each mark into a <w:hyperlink> run once the whole part is filled, adding the relationship to the rels.
+# Only an address linktext.valid_address accepts is ever marked; anything else stays the literal characters.
+REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+LINKS = []                                          # the addresses of the marks of the fill in progress
+MARK = re.compile("\x01(\\d+)\x02([^\x01\x02\x03]*)\x03")
+RUN = re.compile(r"(<w:r(?: [^>]*)?>)(<w:rPr>.*?</w:rPr>)?(<w:t(?: [^>]*)?>)([^<]*\x01[^<]*)(</w:t>)(</w:r>)", re.S)
+# the run properties that follow <w:u> in the schema, and those that follow <w:color>
+RPR_AFTER_U = "effect|bdr|shd|fitText|vertAlign|rtl|cs|em|lang|eastAsianLayout|specVanish|oMath"
+RPR_AFTER_COLOR = r"<w:(?:spacing|w|kern|position|sz|szCs|highlight|u|" + RPR_AFTER_U + r")\b"
+RPR_AFTER_U = r"<w:(?:" + RPR_AFTER_U + r")\b"
+
+
+def esc_links(value):
+    """A value escaped for Word XML, its links marked for finish_links (a value with none is escaped as always)."""
+    text = re.sub("[\x01-\x03]", "", str(value))
+    if "](" not in text:
+        return esc(text)
+    segs = linktext.segments(text)
+    if not any(h for _, h in segs):
+        return esc(text)
+    out = []
+    for t, h in segs:
+        if h:
+            LINKS.append(h)
+            out.append(f"\x01{len(LINKS) - 1}\x02{esc(t)}\x03")
+        else:
+            out.append(esc(t))
+    return "".join(out)
+
+
+def link_rpr(rpr):
+    """A run's properties in the hyperlink look (blue, underlined), in the order Word's schema wants them."""
+    rpr = re.sub(r"<w:(?:color|u)\b[^>]*/>", "", rpr or "<w:rPr></w:rPr>")
+    m = re.search(RPR_AFTER_COLOR, rpr)
+    at = m.start() if m else rpr.rindex("</w:rPr>")
+    rpr = rpr[:at] + '<w:color w:val="0563C1"/>' + rpr[at:]
+    m = re.search(RPR_AFTER_U, rpr)
+    at = m.start() if m else rpr.rindex("</w:rPr>")
+    return rpr[:at] + '<w:u w:val="single"/>' + rpr[at:]
+
+
+def finish_links(xml, rels):
+    """Turn the marks in a filled part into hyperlinks. `rels` collects (relationship id, address) for the document's rels part (None: the
+    part has no rels to add to, and a mark is left as its plain words). A mark inside a run of more than plain text is left as its words."""
+    def hyperlink(m, rpr):
+        """One mark as a <w:hyperlink> run, its relationship recorded."""
+        rid = f"rIdCreaiteLink{len(rels) + 1}"
+        rels.append((rid, LINKS[int(m.group(1))]))
+        return (f'<w:hyperlink r:id="{rid}" w:history="1"><w:r>{link_rpr(rpr)}'
+                f'<w:t xml:space="preserve">{m.group(2)}</w:t></w:r></w:hyperlink>')
+
+    def run(m):
+        """One text run split at its marks: plain runs in the run's own look, a hyperlink for each mark."""
+        if rels is None:
+            return m.group(0)
+        rpr = m.group(2) or ""
+        out, at, text = "", 0, m.group(4)
+
+        def plain(t):
+            """The run's look with some of its text (nothing for an empty piece)."""
+            return f'<w:r>{rpr}<w:t xml:space="preserve">{t}</w:t></w:r>' if t else ""
+        for k in MARK.finditer(text):
+            out += plain(text[at:k.start()]) + hyperlink(k, rpr)
+            at = k.end()
+        return out + plain(text[at:])
+    xml = RUN.sub(run, xml)
+    return MARK.sub(lambda k: k.group(2), xml).replace("\x01", "").replace("\x02", "").replace("\x03", "")
+
+
 def unesc(s):
     """Word XML text back to plain text."""
     return s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&apos;", "'").replace("&amp;", "&")
@@ -456,7 +528,7 @@ def replace_in(xml, values):
     """Replace each {{NAME}} in the XML's text runs with its value, escaped; a placeholder not in `values` is left."""
     def sub(m):
         """One text run with its placeholders filled."""
-        text = re.sub(r"\{\{(\w+)\}\}", lambda p: esc(values[p.group(1)]) if p.group(1) in values else p.group(0),
+        text = re.sub(r"\{\{(\w+)\}\}", lambda p: esc_links(values[p.group(1)]) if p.group(1) in values else p.group(0),
                       m.group(2))
         return m.group(1) + text + m.group(3)
     return TEXT.sub(sub, xml)
@@ -572,6 +644,36 @@ def _fill_paragraph_lists(xml, values):
 # ===== end BL-229 (fill_xml) =====
 
 
+def fill_story(name, raw, values, link_rels):
+    """One story part filled: (its bytes, the {{PLACEHOLDERS}} left in it). The document's links become hyperlinks, listed in `link_rels`."""
+    xml = finish_links(fill_xml(raw.decode("utf-8"), values), link_rels if name == "word/document.xml" else None)
+    if name == "word/document.xml" and link_rels and "xmlns:r=" not in xml[:2000]:
+        xml = xml.replace("<w:document ", f'<w:document xmlns:r="{REL_NS}" ', 1)
+    left = set(re.findall(r"\{\{(\w+)\}\}", "".join(t for _, t, _ in TEXT.findall(xml))))
+    return xml.encode("utf-8"), left
+
+
+def add_relationships(parts, media, link_rels):
+    """The parts with the pictures (`media`) and hyperlinks (`link_rels`) added to the document's relationships and the picture types to
+    the content types; the pictures themselves follow the parts."""
+    image, hyper = f"{REL_NS}/image", f"{REL_NS}/hyperlink"
+    out_parts = []
+    for info, raw in parts:
+        if info.filename == "word/_rels/document.xml.rels":
+            raw = raw.decode("utf-8").replace("</Relationships>", "".join(
+                f'<Relationship Id="{rid}" Type="{image}" Target="{name[5:]}"/>' for name, _, rid in media)
+                + "".join(f'<Relationship Id="{rid}" Type="{hyper}" Target="{esc(href)}" TargetMode="External"/>'
+                          for rid, href in link_rels) + "</Relationships>").encode("utf-8")
+        elif info.filename == "[Content_Types].xml":
+            ct = raw.decode("utf-8")
+            for ext, mime in (("png", "image/png"), ("jpg", "image/jpeg"), ("jpeg", "image/jpeg")):
+                if media and any(name.endswith("." + ext) for name, _, _ in media) and f'Extension="{ext}"' not in ct:
+                    ct = ct.replace("<Default ", f'<Default Extension="{ext}" ContentType="{mime}"/><Default ', 1)
+            raw = ct.encode("utf-8")
+        out_parts.append((info, raw))
+    return out_parts + [(zipfile.ZipInfo(name), data) for name, data, _ in media]
+
+
 def cmd_fill(template, values_file, out):
     """The fill command: fill a template's {{PLACEHOLDERS}} from values.json (text, lists, Markdown, images, topic groups, table rows) and
     write out.docx. Returns 1, writing nothing, if any is left unfilled."""
@@ -598,31 +700,18 @@ def cmd_fill(template, values_file, out):
             values[key] = prepared
     parts = []
     left = set()
+    LINKS.clear()
+    link_rels = []                              # (relationship id, address) of the hyperlinks made (#121)
     for info, raw in read_parts(template):
         if STORY.match(info.filename):
-            xml = fill_xml(raw.decode("utf-8"), values)
-            left |= set(re.findall(r"\{\{(\w+)\}\}", "".join(t for _, t, _ in TEXT.findall(xml))))
-            raw = xml.encode("utf-8")
+            raw, unfilled = fill_story(info.filename, raw, values, link_rels)
+            left |= unfilled
         parts.append((info, raw))
     if left:
         print("Not filled: " + ", ".join(sorted(left)) + ". Nothing was written.")
         return 1
-    if media:
-        rels = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
-        out_parts = []
-        for info, raw in parts:
-            if info.filename == "word/_rels/document.xml.rels":
-                raw = raw.decode("utf-8").replace("</Relationships>", "".join(
-                    f'<Relationship Id="{rid}" Type="{rels}" Target="{name[5:]}"/>' for name, _, rid in media)
-                    + "</Relationships>").encode("utf-8")
-            elif info.filename == "[Content_Types].xml":
-                ct = raw.decode("utf-8")
-                for ext, mime in (("png", "image/png"), ("jpg", "image/jpeg"), ("jpeg", "image/jpeg")):
-                    if any(name.endswith("." + ext) for name, _, _ in media) and f'Extension="{ext}"' not in ct:
-                        ct = ct.replace("<Default ", f'<Default Extension="{ext}" ContentType="{mime}"/><Default ', 1)
-                raw = ct.encode("utf-8")
-            out_parts.append((info, raw))
-        parts = out_parts + [(zipfile.ZipInfo(name), data) for name, data, _ in media]
+    if media or link_rels:
+        parts = add_relationships(parts, media, link_rels)
     Path(out).parent.mkdir(parents=True, exist_ok=True)
     write_parts(parts, out)
     print(f"Wrote {out}")
@@ -695,12 +784,29 @@ def story_text(xml):
     return "\n".join(lines)
 
 
+def show_links(xml, rels):
+    """A story part with each hyperlink followed by its address in brackets ("the plan (https://…)"), so a text preview of a report shows
+    where a link goes (#121). `rels` is the document's relationships part as text."""
+    where = {m.group(1): unesc(m.group(2))
+             for m in re.finditer(r'<Relationship\b[^>]*?\bId="([^"]+)"[^>]*?\bTarget="([^"]*)"[^>]*?/>', rels or "")}
+
+    def address(m):
+        """The hyperlink with its address after its words (a link the rels do not know is left as it is)."""
+        if m.group(2) not in where:
+            return m.group(0)
+        shown = esc(re.sub("^mailto:", "", where[m.group(2)], flags=re.I))
+        return m.group(1) + f'<w:r><w:t xml:space="preserve"> ({shown})</w:t></w:r>' + m.group(3)
+    return re.sub(r'(<w:hyperlink\b[^>]*?\br:id="([^"]+)"[^>]*>.*?)(</w:hyperlink>)', address, xml, flags=re.S)
+
+
 def cmd_text(path):
-    """The text command: print the document's body as plain text, tracked changes accepted."""
-    for info, raw in read_parts(path):
+    """The text command: print the document's body as plain text, tracked changes accepted, a hyperlink followed by its address."""
+    parts = read_parts(path)
+    rels = next((raw.decode("utf-8") for info, raw in parts if info.filename == "word/_rels/document.xml.rels"), "")
+    for info, raw in parts:
         if info.filename == "word/document.xml":
             xml, _ = accept_xml(raw.decode("utf-8"))
-            print(story_text(xml))
+            print(story_text(show_links(xml, rels)))
     return 0
 
 
