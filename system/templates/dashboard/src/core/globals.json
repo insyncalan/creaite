@@ -212,6 +212,7 @@
    "curDrop",
    "curObj",
    "cxPeople",
+   "cxPerson",
    "cxReview",
    "dateHint",
    "dayList",

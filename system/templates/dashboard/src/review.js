@@ -15,10 +15,10 @@ import { go } from "./core/nav.js";
 import { D, DDATE, fd, fdText, isMe, MAC, nowStamp, OPENST, prio, reduced, revIco, S, store, TODAY, toIso, who } from "./core/page.js";
 import { api, apply, applyNow, applySoon, conflictChoice, editProposal, hideSnack, needVault, oneLine, refreshAll, refreshItems, reloadData, renderBadge, reviewViaServer, snack, toDb, undoApply, viaServer } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
+import { deBarred, deItems, deMe, draftStat, openDraftEmail, shRvHtml } from "./drafts.js";
 import { kb } from "./intake.js";
 import { withdrawDecision } from "./meetings.js";
-import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkDow, pkFollowRev, PKK, pkStatuses, pkWho, REC } from "./panel.js";
+import { drawPanel, drSame, learnable, learnSignal, msChoices, nextId, NODRAFT_MSG, openProposal, openRecord, pkCid, pkDow, pkFollowRev, PKK, pkStatuses, pkWho, REC } from "./panel.js";
 import { closePanel, pkOn } from "./projects.js";
 import { nm, PERS, personLink, row, unknownOwner } from "./settings.js";
 import { conflictHtml, isConflict, kindLabel, pkAdd, plur, revGroupTitle } from "./today.js";
@@ -553,6 +553,10 @@ if(shared.CUR&&pkOn()) drawPanel();
 export let CXKEYAT=-1e9;   /* BL-316: the menu itself is components/review/ContextMenu.jsx (the Menu block's MenuPanel) */
 /* ---- what was right-clicked ---- */
 export function cxTarget(t){ if(!t||!t.closest) return null;
+  const pa=t.closest("a[data-person]");   /* v2.3.0 #154: a linked name (not Alan's own, not in a field or the rail) gets the person menu; the row's own menu is the fallback */
+  if(pa&&!t.closest("input,textarea,select,.rail,dialog,.cxmenu")&&!isMe(pa.dataset.person||"")&&pa.dataset.person){
+    const row=pa.closest("[data-row]"), op=pa.closest("[data-open]"), id=row?row.dataset.row:op?String(op.dataset.open).split(":")[1]:pa.closest("#panel")&&shared.CUR&&shared.CUR.mode==="record"?pkCid():"";
+    return {person:pa.dataset.person,only:id||"",el:pa}; }
   if(t.closest("input,textarea,select,[contenteditable=true],[contenteditable=plaintext-only],.rail,#panel,#chat,dialog,.cxmenu,.pkpop,td.editing")) return null;
   const a=t.closest("a[href]"); if(a&&!/^#/.test(a.getAttribute("href")||"")) return null;        /* a real link keeps the browser's menu */
   const tr=t.closest("#reviewBody tr[data-n]"); if(tr){ const r=REV.find(x=>x.n===+tr.dataset.n); return r&&!r.done?{rev:r,el:tr}:null; }
@@ -562,12 +566,23 @@ export function cxTarget(t){ if(!t||!t.closest) return null;
   const o=t.closest("[data-open]"); if(o){ const [k,id]=String(o.dataset.open).split(":"); if(PKK.includes(k)&&REC(k,id)) return {k,id,el:o}; }
   return null; }
 export function cxShow(c,x,y){ const from=document.activeElement&&document.activeElement!==document.body?document.activeElement:c.el;
+  if(c.person){ openContextMenu(cxPerson(c.person,c.only),x,y,{label:c.person,from}); return; }
   if(c.gone){ openContextMenu(cxGone(c.gone,c.el),x,y,{label:"Rejected proposal",from}); return; }   /* BL-315 */
   if(c.rev){ const n=c.rev.n; if(!(RHL.has(n)&&RHL.size>=2)){ rvOnly(n); shared.RSEL=+c.el.dataset.ri; rvPaint(); } else { shared.RSEL=+c.el.dataset.ri; rvPaint(); }
     const L=RHL.size>=2?rvSel():[c.rev]; openContextMenu(L.length>1?cxReviewMany(L):cxReview(c.rev,c.el),x,y,{label:L.length>1?`${L.length} proposals`:"Proposal",from}); return; }
   let ids=[[c.k,c.id]];
   if(c.row){ if(HL.has(c.id)&&HL.size>=2) ids=[...HL.keys()].map(id=>[kOfId(id),id]).filter(([k,id])=>k&&REC(k,id)); else { hlOnly(c.k,c.id); } }
   openContextMenu(ids.length>1?cxWorkMany(ids):cxWork(c.k,c.id),x,y,{label:ids.length>1?`${ids.length} items`:c.id,from}); }
+/* v2.3.0 #154: the menu on a linked person's name. Draft email opens the person page's own popup (openDraftEmail), with the item the
+   click came from as the starting selection (only) when the person has it among their emailable items; no email on record: it is
+   greyed with the reason, and Add details opens the person's page at its details. No counts, no modes. */
+export function cxPerson(name,only){ const x=PERS().find(y=>y.name===name), p=x&&x.p, email=(p&&p.email)||"", first=String(name).split(/\s+/)[0],
+    starts=only&&x&&deItems(x).some(i=>i.id===only&&!deBarred(i))?only:undefined, /** @type {any[]} */ out=[];
+  out.push({label:"Draft email",icon:"mail",disabled:!email,hint:email?"":"No email on record: add details first",run:()=>openDraftEmail(name,"update",starts)},
+    {label:`Open ${first}'s page`,icon:"user",run:()=>go("person",name)});
+  if(email) out.push({label:"Copy email address",icon:"copy",run:()=>cxCopy(email,"the email address")});
+  if(!p) out.push({label:"Add details",icon:"pencil",run:()=>{ go("person",name); setTimeout(()=>{ const b=$("#ppEdit"); if(b) b.click(); },120); }});
+  return out; }
 /* the focused row for Shift+F10 and the context-menu key: the focused element's item, or the list's cursor row */
 export function cxCursor(){ const a=document.activeElement; let c=a&&a!==document.body?cxTarget(a):null; if(c) return c;
   if(a&&a!==document.body&&a.closest&&a.closest("input,textarea,select,[contenteditable],.rail,#chat,dialog,#panel")) return null;
