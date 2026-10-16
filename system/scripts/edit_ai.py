@@ -165,7 +165,6 @@ def client_ids(con, code):
 # #123 review: a client reply's IDs and the word VIP are matched after normalising, so a look-alike, a zero-width character, a
 # non-breaking hyphen, lower case or a missing space can't slip an item past the check (client_leak.text_findings matches IDs
 # the same way since #127).
-INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
 LOOK_ALIKE = str.maketrans({**{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
                             **{c: "I" for c in "\u0399\u0406\u04c0\u01c0\u0131\u03b9\u0456"},
                             **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"},
@@ -180,10 +179,28 @@ VIP_LOOSE = re.compile(rf"(?<![a-z0-9])v{_VIP_GAP}i{_VIP_GAP}p(?:{_VIP_GAP}s)?(?
 NO_PROJECT, UNCHECKED, REGISTER = "no project", "the check couldn't run", "the people register couldn't be read"
 
 
-def normal(text):
-    """Text as the client check matches it: NFKC, invisible characters gone, dashes and look-alike letters made plain."""
+# #127 round 4: characters Word shows as nothing that aren't format characters (Unicode category Cf, all dropped by unseen): the
+# combining grapheme joiner, variation selectors, Mongolian free variation selectors, Khmer inherent vowels, Hangul fillers and the
+# unassigned U+2065 among the invisible operators.
+SHOWN_AS_NOTHING = frozenset([0x034F, 0x115F, 0x2065, 0x1160, 0x17B4, 0x17B5, 0x180B, 0x180C, 0x180D, 0x180F, 0x3164, 0xFFA0]
+                             + list(range(0xFE00, 0xFE10)) + list(range(0xE0100, 0xE01F0)))
+
+
+def unseen(text):
+    """Text without the characters Word shows as nothing: every format character (category Cf: zero-width, direction marks and
+    isolates, tags, the soft hyphen, the interlinear annotation marks) and SHOWN_AS_NOTHING (#127 round 4)."""
     import unicodedata
-    t = INVISIBLE.sub("", unicodedata.normalize("NFKC", text or "")).translate(LOOK_ALIKE)
+    t = text or ""
+    if t.isascii():
+        return t
+    return "".join(c for c in t if ord(c) not in SHOWN_AS_NOTHING and unicodedata.category(c) != "Cf")
+
+
+def normal(text):
+    """Text as the client check matches it: NFKC, invisible characters gone (unseen, before and after NFKC, which can make a
+    filler of a compatibility one), dashes and look-alike letters made plain."""
+    import unicodedata
+    t = unseen(unicodedata.normalize("NFKC", unseen(text))).translate(LOOK_ALIKE)
     return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 

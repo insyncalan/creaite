@@ -2397,7 +2397,10 @@ def carries(text, phrase, n=RUN):
 
 def internal_findings(con, code, text, original=""):
     """What a client section's draft holds that only the internal record has: the tracker's health reason, or an internal-only
-    marker, when the section's own words did not already hold it."""
+    marker, when the section's own words did not already hold it. Both are read as the ID check reads text (edit_ai.normal: an
+    invisible character or a look-alike dash hides neither; #127 round 4)."""
+    import edit_ai
+    text, original = edit_ai.normal(text), edit_ai.normal(original)
     found = []
     row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
     reason = (row[0] if row else "") or ""
