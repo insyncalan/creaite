@@ -119,9 +119,12 @@ def drawing(rid, n, w_px, h_px, name):
 # (BL-63). Everything else is plain text.
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
-INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
+LABEL = r"((?:[^\[\]\n]|\[[^\[\]\n]{0,300}\]){1,500})"   # a link's words, one level of [brackets] in them; never crosses a "["
+CREAITE_SCHEME = r"(?i:creaite\s{0,5}(?::|%(?:25){0,4}3a|&#0{0,5}58;|&#x0{0,5}3a;|&colon;))"     # as the gate reads it, decoded
+INLINE = re.compile(r"\[" + LABEL + r"\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
                     r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)"
-                    r"|\[([^\]\n]+)\]\(\s{0,20}<?creaite:[^)\n]{0,500}\)")   # #127: a creaite: link is its words in Word, never Markdown
+                    r"|\[" + LABEL + r"\]\(\s{0,20}<?" + CREAITE_SCHEME + r"[^)\n]{0,500}\)")
+# #127: a creaite: link is its words in Word, never Markdown (any case, %- or entity-encoded scheme, client_leak.SCHEME's reading)
 ITEM_LINK = re.compile(r" ?\[([^\]\n]+)\]\(creaite:item/([A-Za-z0-9-]{3,30})\)")
 
 

@@ -644,10 +644,18 @@ def client_findings(block):
     one-pager) by its text, with the same checks (#127: client_leak.plain_findings, not the wording check alone)."""
     import client_leak
     import creaite_doc
+    import sqlite3
     draft = paths.resolve(block["draft"])
-    if creaite_doc.is_doc(draft):
-        return client_leak.findings(creaite_doc.read(draft))
-    return client_leak.plain_findings(tracker.connect(), block["project"], "\n".join(draft_lines(draft)))
+    con = tracker.connect()
+    try:
+        if creaite_doc.is_doc(draft):
+            return client_leak.findings(creaite_doc.read(draft), con)
+        return client_leak.plain_findings(con, block["project"], "\n".join(draft_lines(draft)))
+    except sqlite3.Error as e:                       # BL-228: a label check that cannot run is a finding (fails closed), not a crash
+        failure = label_check_failure(con, e, block["project"])
+        if failure:
+            return failure
+        raise
 
 
 def client_block(block):
