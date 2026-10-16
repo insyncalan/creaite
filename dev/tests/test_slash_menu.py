@@ -46,12 +46,11 @@ class Slash(LiveBrowserCase):
         b.eval(f"(()=>{{ const i=document.getElementById('nnTitle'); i.value={title!r}; i.dispatchEvent(new Event('input',{{bubbles:true}})); }})()")
         b.eval("document.querySelector('#newNoteDlg input[value=\"blank\"]').click()")
         b.click("#nnMake")
-        b.wait("!!document.querySelector('.nbody.ProseMirror')", 15)
+        b.wait("!!document.querySelector('.nbody.ProseMirror') && !document.getElementById('newNoteDlg').open", 15)          # the dialog has closed (it hands focus back to its opener as it does), so nothing takes focus from the editor later
         if body:
             b.eval(f"document.querySelector('.nbody').cxed.editor.commands.setContent({body!r}, {{contentType:'markdown'}})")
         if focus:
-            b.eval("document.querySelector('.nbody').cxed.focus('end')")
-            b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+            b.wait("(()=>{ const e=document.querySelector('.nbody'); if(document.activeElement!==e) e.cxed.focus('end'); return document.activeElement===e; })()", 10)
 
     def open_current(self, state=STATE):
         b = self.b
