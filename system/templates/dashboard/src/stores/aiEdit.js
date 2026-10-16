@@ -6,6 +6,7 @@
      ⌥/ (Alt+/) opens its menu from the keyboard; ⌘A then the bar applies an option to the whole text.
    - aiRun(option, instruction): the selection goes to /api/edit/ai with the option, the place and the project's code (the server
      adds only the project's name, people and open item IDs; Claude has no tools). A confidential text asks once first (aiSend).
+     The client sheet also sends its report (`document`, #123), from which the server binds the client place itself.
    - The answer is a suggestion: it changes nothing until aiAccept(), which puts it in place as one transaction (⌘Z undoes it).
      aiDiscard(), aiRetry() and aiChanges() (Show changes: a word-by-word comparison). The notes under it are BL-106's plain-code
      check (edit_ai.py check): every date, number, name or item ID lost or added.
@@ -42,11 +43,13 @@ export const AI_PLACES = /** @type {Record<string, string[]>} */ ({
   line: ["rewrite", "shorter", "executive", "spelling", "custom"],
   report: ["shorter", "executive", "polish", "custom"],     // v2.1.0 P5: the A4 sheet, in a report (Find the source is the sheet's own item)
   minutes: ["shorter", "executive", "polish", "custom"],
+  client: ["shorter", "executive", "polish", "custom"],      // #123: the client sheet (client-visible facts only; the reply checked)
   readonly: [],                                              // a sheet that can't be edited: only Find the source
 });
 
 /** A place's own name for an option (v2.1.0 P5: the sheet's bar says "Shorten", as its mockup does). */
-const AI_NAMES = /** @type {Record<string, Record<string, string>>} */ ({ report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" } });
+const AI_NAMES = /** @type {Record<string, Record<string, string>>} */ ({ report: { shorter: "Shorten" }, minutes: { shorter: "Shorten" },
+  client: { shorter: "Shorten" } });
 
 /**
  * @typedef {import("../core/editor.js").EdHandle} AiHandle
@@ -192,8 +195,9 @@ async function ask(s) {
   if (shared.RUN || shared.GEN.run || shared.BUSY || shared.PREPRUN) { aiSug.value = { ...s, status: "failed", message: "ask creaite is busy; try again when it's finished" }; return; }
   const cur = { ...s, status: /** @type {"running"} */ ("running"), steps: 0 };
   aiSug.value = cur;
+  const doc = s.ai.document ? s.ai.document() : null;                 // #123: the client sheet names its report; the server binds the place
   const r = await draftAsk({ option: s.option, instruction: s.instruction, text: s.range.text, place: s.ai.place,
-    code: (s.ai.project && s.ai.project()) || "" }, { url: "/api/edit/ai", label: `${s.label}, with Claude`, status: () => {} });
+    code: (s.ai.project && s.ai.project()) || "", ...(doc ? { document: doc } : {}) }, { url: "/api/edit/ai", label: `${s.label}, with Claude`, status: () => {} });
   if (aiSug.value !== cur) return;                                     // discarded, or the editor closed, while it ran
   if (r.ok && r.text) { draftStat(AI_FEATURE, "offered"); aiSug.value = { ...cur, status: "ready", text: String(r.text), notes: r.notes || [] }; }
   else aiSug.value = { ...cur, status: "failed", message: r.message || "No suggestion came back" };

@@ -14,7 +14,8 @@ import drafts_fake  # noqa: E402
 from test_drafts_update import DraftCase  # noqa: E402
 
 WEEKLY = {"kind": "report-section", "report": "weekly", "code": "ABC", "section": "this_week", "heading": "This week",
-          "text": "The wave plan holds.", "action": "shorter"}
+          "text": "The wave plan holds.", "action": "shorter",
+          "document": {"kind": "weekly", "code": "ABC", "week_ending": ""}}      # #127: the report the section is in
 
 
 class Route(DraftCase):
@@ -28,6 +29,9 @@ class Route(DraftCase):
         self.assertEqual(d["section"], "this_week")
         self.assertEqual(d["action"], "shorter")
         self.assertTrue(d["text"].startswith("A fresh draft of the section"))
+        # #90 review F5: the reply's checks come back with it, for the page to show
+        self.assertIsInstance(d.get("notes"), list)
+        self.assertTrue(d.get("sentences") and all("unsourced" in x for x in d["sentences"]), d)
         p = drafts_fake.prompt(self.fake)
         self.assertIn("The wave plan holds.", p)
         self.assertIn("shorter, about half", p)

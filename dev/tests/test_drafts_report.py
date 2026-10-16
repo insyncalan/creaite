@@ -25,7 +25,9 @@ HEAD = "import sys, json; sys.path.insert(0, 'system/scripts')\nimport drafts\n"
 CLIENT_TEXT = "Phase two can start once the paperwork is signed."
 WEEKLY = {"kind": "report-section", "report": "weekly", "code": "ABC", "week_ending": "2026-10-09", "section": "summary",
           "heading": "Summary", "text": "UAT start has slipped two weeks.", "action": "polish"}
-CLIENT = {**WEEKLY, "report": "client", "text": CLIENT_TEXT}
+WEEKLY["document"] = {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"}   # #127: the audience comes from the report named
+CLIENT = {**WEEKLY, "report": "client", "text": CLIENT_TEXT,
+          "document": {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}}
 # the words of everything a client report must never draw on, in the fixture (test_reports.populate)
 INTERNAL_ONLY = ("Vendor exits the market", "Confirm tester names", "Absorb the phase one overrun", "Budget overrun on phase one")
 
@@ -89,7 +91,7 @@ class Weekly(ReportBase):
     def test_a_custom_action_needs_words_and_an_unknown_action_is_refused(self):
         self.assertIn("Say what you want", self.ctx({**WEEKLY, "action": "custom"})["refused"])
         self.assertIn("Choose Polish", self.ctx({**WEEKLY, "action": "rewrite"})["refused"])
-        self.assertIn("Say which report", self.ctx({**WEEKLY, "report": "other"})["refused"])
+        self.assertIn("Say which report", self.ctx({k: v for k, v in WEEKLY.items() if k != "document"})["refused"])
         self.assertIn("Not a project", self.ctx({**WEEKLY, "code": "ZZZ"})["refused"])
         self.assertIn("no words", self.ctx({**WEEKLY, "text": "  "})["nothing"])
 
@@ -187,23 +189,66 @@ class ClientSection(ReportBase):
         ok = py(self.v, f"print(json.dumps(drafts.result({CLIENT!r}, {ctx!r}, 'Testing could start late. [S1]')))")
         self.assertEqual(ok["text"], "Testing could start late.")
 
-    def test_the_client_health_difference_and_its_reason_never_reach_a_draft(self):
-        """meta.health_diff (the client's health that differs from the internal one, and Alan's reason) stays in the draft file: a
-        client ✦ draft is built from the tracker's facts and the section's words, never from the document's meta."""
-        reason = "ZEBRAREASON the sponsor must not hear how bad the vendor is"
-        flag = "ZEBRAFLAG-internal-red"
-        saved = py(self.v, "import report_doc, creaite_doc\nd = report_doc.client_doc('ABC')\n"
-                           f"d['meta'] = {{**(d.get('meta') or {{}}), 'health_diff': {{'client': 'On track', 'internal': {flag!r}, 'reason': {reason!r}}}}}\n"
-                           "r = report_doc.save_draft(d)\nprint(json.dumps({'path': r['path'], 'kept': bool(creaite_doc.read(r['path'])['meta'].get('health_diff'))}))")
-        self.assertTrue(saved["kept"], saved)                                             # the seed is real: it is in the draft file
-        ctx = self.ctx({**CLIENT, "path": saved["path"]})
+    REASON = "ZEBRAINTERNAL vendor is failing to deliver the build on time"
+
+    def set_health(self, health="Off track", reason=REASON):
+        """The tracker's internal health and its reason (a test vault: set directly, as the fixture's labels are)."""
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:
+            con.execute("UPDATE projects SET health = ?, health_reason = ? WHERE code = 'ABC'", (health, reason))
+            con.commit()
+
+    def result(self, req, ctx, reply):
+        return py(self.v, f"print(json.dumps(drafts.result({req!r}, {ctx!r}, {reply!r}), ensure_ascii=False))")
+
+    def test_the_internal_health_and_its_reason_never_reach_a_client_draft(self):
+        """#90 review F1: the tracker's internal health reason is in the weekly facts (the seed is real) and never in a client
+        section's prompt, sources or item; nor are the internal flag's "Health now" and "Changed since" lines."""
+        self.set_health()
+        weekly = self.ctx(WEEKLY)
+        self.assertIn("ZEBRAINTERNAL", weekly["prompt"])                                 # control: the internal sheet holds it
+        ctx = self.ctx(CLIENT)
         self.assertIn("prompt", ctx, ctx)
-        reply = "Testing could start late. [S1]"
-        got = py(self.v, f"print(json.dumps(drafts.result({CLIENT!r}, {ctx!r}, {reply!r})))")
-        for where in (everything(ctx), json.dumps(ctx), json.dumps(got)):
-            self.assertNotIn("ZEBRA", where)
-            self.assertNotIn(reason, where)
-            self.assertNotIn("health_diff", where)
+        for where in (everything(ctx), json.dumps(ctx, ensure_ascii=False)):
+            self.assertNotIn("ZEBRAINTERNAL", where)
+            self.assertNotIn("vendor is failing", where)
+            self.assertNotIn("Health now", where)
+            self.assertNotIn("Changed since the last status", where)
+        self.assertIn("Test licences are not yet ordered", ctx["prompt"])               # the client facts are still there
+
+    def test_a_client_reply_that_brings_in_the_internal_reason_or_marker_is_dropped(self):
+        self.set_health()
+        ctx = self.ctx(CLIENT)
+        for reply in (f"{self.REASON}. [S1]", "The vendor is failing to deliver the build, so testing waits. [S1]",
+                      "Testing could start late; this is internal only. [S1]"):
+            got = self.result(CLIENT, ctx, reply)
+            self.assertEqual(got["text"], "", reply)
+            self.assertIn("isn't client-safe", got["message"])
+            self.assertNotIn("ZEBRA", json.dumps(got))
+        ok = self.result(CLIENT, ctx, "Testing could start late. [S1]")
+        self.assertEqual(ok["text"], "Testing could start late.")
+        self.assertNotIn("ZEBRA", json.dumps(ok))
+        # the same words in the section as Alan wrote it are his, not the draft's: his own words may come back
+        own = {**CLIENT, "text": "The vendor is failing to deliver the build on time."}
+        ctx2 = self.ctx(own)
+        self.assertEqual(self.result(own, ctx2, "The vendor is failing to deliver the build on time. [S1]")["text"],
+                         "The vendor is failing to deliver the build on time.")
+
+    def test_the_client_facts_are_the_client_reports_locked_facts(self):
+        """#90 review F4: with the internal week approved, a client draft's facts are the locked meta.client_facts: a client wording
+        changed in the tracker since is not in them, and the prompt says which week they are locked to."""
+        before = self.ctx(CLIENT)
+        self.assertIn("no internal weekly report is approved", before["prompt"])
+        py(self.v, "import report_doc\nd = report_doc.weekly_doc('ABC')\n"
+                   "next(s for s in d['sections'] if s['id'] == 'health')['text'] = 'UAT start slipped two weeks.'\n"
+                   "r = report_doc.save_draft(d)\nreport_doc.stage_weekly(r['path'])\nprint(json.dumps(1))")
+        self.v.at("apply", script="tracker.py")
+        self.v.propose("later", [{"n": 1, "op": "update", "table": "decisions", "id": "ABC-D-007", "match": "strong", "flags": [],
+                                  "decision": "approved", "changes": {"client_message": "LIVEMARK the go-live moved"}}])
+        self.v.at("apply", script="tracker.py")
+        ctx = self.ctx(CLIENT)
+        self.assertIn("locked to the approved internal weekly report for week ending 09-10-2026", ctx["prompt"])
+        self.assertIn("Go-live remains on 20 November", ctx["prompt"])
+        self.assertNotIn("LIVEMARK", everything(ctx))
 
 
 def _minutes_vault_case():
@@ -237,13 +282,27 @@ def _minutes_vault_case():
             self.assertNotIn("SECRETLINE", text)
             self.assertNotIn("Internal-only row action", text)
 
-        def test_the_internal_version_keeps_them_and_says_so(self):
+        def test_the_internal_version_draws_on_the_distributed_facts_and_says_so(self):
+            """#90 review F3 (changed from "keeps them"): an internal-version draft's facts are the distributed version's, so no
+            Internal only row or withheld item can be laundered into a section that is distributed. A section with a line marked
+            Internal only is refused (a redraft would lose the mark); another section is drafted, from the distributed facts."""
             self.seed()
-            ctx = self.ctx(version="internal")
+            got = self.ctx(version="internal")
+            self.assertIn("marked Internal only", got["refused"])
+            self.assertNotIn("prompt", got)
+            # a section with no marked line: SECRETLINE is in the record but never in the facts
+            doc = self.js("import minutes_record\nprint(json.dumps(minutes_record.record_at(" + repr(M.DRAFT) + ")[1]))")
+            other = next(s["id"] for s in doc["sections"] if s.get("type") not in ("header", "table") and s["id"] != "summary"
+                         and str(s.get("text") or "").strip() not in ("", "None recorded."))
+            ctx = self.ctx(version="internal", section=other, text="Alan's internal words for this section.")
+            self.assertIn("prompt", ctx, ctx)
             text = everything(ctx)
-            for kept in ("SECRETLINE", "Sensitive action", "Sensitive decision"):
-                self.assertIn(kept, text)
+            for gone in self.GONE:
+                self.assertNotIn(gone, text)
+            self.assertIn("Alan's internal words for this section.", ctx["prompt"])          # the internal words are the page's
             self.assertIn("This is the internal version.", ctx["prompt"])
+            self.assertIn("distributed version's", ctx["prompt"])
+            self.assertEqual(ctx["extra"]["audience"], "internal")
 
         def test_other_versions_sections_and_paths_are_refused(self):
             self.seed()

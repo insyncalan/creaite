@@ -4,10 +4,14 @@ Nothing that isn't client-visible, is Sensitive or is partner-only can reach a c
 BL-338). The check reads a creaite document's data (creaite_doc.py), never a Word file:
   - item_problem: why one item may not appear for a client, or None (the tracker as it is now, and the item's labels);
   - make_safe: a copy of a client document with every row, tag, milestone and item that fails dropped, and what was dropped;
-  - findings: what is still wrong with a client document (items, and internal wording found in its text), for approve and export;
-  - text_findings: the wording check on any text, moved here from review.client_findings (which still reads the Word flow's drafts
-    through it until the Word drafts are retired).
-"""
+  - findings: what is still wrong with a client document (items, internal wording found in its text, the tracker's internal health
+    reason or an internal-only marker, and the name of someone who owns only items a client can't see), for approve and export:
+    the gate at the end, whatever route or place the text came through (#123);
+  - people: the names (and register aliases) of the owners of the items a client report may show, and of everyone else on the
+    project's items: the names check edit_ai.client_problems and findings share (#123);
+  - text_findings: the wording check on any text, moved here from review.client_findings; IDs found however written (#127);
+  - plain_findings: findings' checks on a text with no sections: review.client_findings reads a Word draft through it (#127).
+The names check fails closed: a people register that is missing or can't be read is a finding of its own (#127)."""
 import json
 import re
 import sys
@@ -136,8 +140,9 @@ def _memory_findings(code, low):
     return found
 
 
-def _label_findings(con, code, text, low):
-    """BL-94's floor: an item whose label excludes it from client output, found by its ID or its wording."""
+def _label_findings(con, code, text, low, ids):
+    """BL-94's floor: an item whose label excludes it from client output, found by its ID (`ids`: the text's, however written) or
+    its wording."""
     import tracker as t
     found = []
     for item_id, label in con.execute("SELECT il.item_id, il.label FROM item_labels il JOIN labels l ON l.name = il.label "
@@ -148,7 +153,7 @@ def _label_findings(con, code, text, low):
         row = con.execute(f"SELECT {col}, client_message FROM {table} WHERE id = ?", (item_id,)).fetchone() if col else None
         wordings = [row[0]] + [ln.split(":", 1)[1] for ln in (row[1] or "").splitlines() if ":" in ln and table != "decisions"] \
             + ([row[1]] if row and table == "decisions" else []) if row else []      # its own words, and its client wording
-        if re.search(rf"\b{re.escape(item_id)}\b", text):
+        if item_id in ids:
             found.append(f"{item_id} is labelled {label} but its ID appears")
         else:
             hit = next((w for w in wordings if len((w or "").strip()) >= 15 and squash(w).lower() in squash(low)), None)
@@ -157,21 +162,42 @@ def _label_findings(con, code, text, low):
     return found
 
 
-def text_findings(con, code, text):
+def _link_findings(con, text):
+    """({item IDs the text's work-item links name}, [findings for a work-item link creaite can't read, and for a creaite: link of
+    a kind a client report may not hold])."""
+    ids, unread = link_refs(con, text)
+    return ids, [f"a link to a work item creaite can't read: “{a[:40]}”" for a in unread] + \
+        [f"a creaite link a client can't open: “creaite:{k}”" for k in sorted(creaite_kinds(text) - LINK_KINDS)]
+
+
+def text_findings(con, code, text, skip=()):
     """Internal-only content in a client text: an item that isn't client-visible by its ID or wording, a memory line marked
     Client-safe: no, an item a label excludes, and the words confidential, restricted or documents/ (moved from
-    review.client_findings; its messages unchanged)."""
+    review.client_findings; its messages unchanged). #127: an ID is found however it is written (edit_ai.loose_ids: any case,
+    look-alike characters, spaces or dots), and so is any other item the tracker holds that a client report can't show (a
+    milestone or promise, or an item of another project); `skip`: items already found by the caller, not listed twice."""
+    import edit_ai
     low = text.lower()
-    found = []
+    ids, found = _link_findings(con, text)                     # #127: a work-item link's address counts as its ID
+    ids |= edit_ai.loose_ids(con, text)
+    seen = set(skip)
     for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
         for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
-            if re.search(rf"\b{re.escape(row[0])}\b", text):
+            if row[0] in ids:
+                seen.add(row[0])
                 found.append(f"{row[0]} isn't client-visible but its ID appears")
             elif len(row[1] or "") >= 15 and squash(row[1]).lower() in squash(low):
                 found.append(f"{row[0]} isn't client-visible but its wording appears: “{row[1][:80]}”")
+    blocking = blocking_labels(con)
+    for ref in sorted(ids - seen):                             # #127: milestones, promises and other projects' items
+        if not edit_ai.in_tracker(con, ref):
+            continue
+        why = f"{ref} belongs to another project" if ref.split("-")[0] != code else item_problem(con, ref, blocking)
+        if why:
+            found.append(f"{why}, but its ID appears")
     found += _memory_findings(code, low)
     try:                                                       # BL-94's floor
-        found += _label_findings(con, code, text, low)
+        found += _label_findings(con, code, text, low, ids)
     except Exception as e:  # noqa: BLE001  BL-228: fails closed; skipped only when the tables aren't there
         import review
         found.extend(review.label_check_failure(con, e, code))
@@ -181,11 +207,275 @@ def text_findings(con, code, text):
     return found
 
 
+OWNER_TABLES = ("actions", "raid", "decisions", "milestones")
+
+
+def person(owner):
+    """An owner's name without its organisation: "Jane Doe (Example Client Ltd)" is "Jane Doe"."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", owner or "").strip()
+
+
+def named(text, people):
+    """The people's names (or aliases) that the text holds, a name inside a longer one found counted once."""
+    low = (text or "").lower()
+    found = {p for p in people if p and len(p) > 2 and re.search(rf"\b{re.escape(p.lower())}\b", low)}
+    return {p for p in found if not any(p != q and p.lower() in q.lower() for q in found)}   # "Sara" inside "Sara Khan"
+
+
+REGISTER_UNREAD = ("the people register couldn't be read, so the names couldn't be checked: fix it in Settings › People "
+                   "(or say \"setup\"), then try again")
+
+
+class RegisterUnreadable(Exception):
+    """The people register is missing, can't be read or has no People table (#127: the names check fails closed)."""
+
+
+def register_aliases():
+    """{full name in lower case: [aliases]} from the people register (the same columns drafts.people_names reads). Raises
+    RegisterUnreadable when the register is missing, can't be read or has no People table (#127: fails closed, never {})."""
+    import propose
+    out = {}
+    try:
+        text = paths.PEOPLE_REGISTER.read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as e:
+        raise RegisterUnreadable(REGISTER_UNREAD) from e
+    if not propose.people_table(text.splitlines()):
+        raise RegisterUnreadable(REGISTER_UNREAD)
+    for line in text.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) >= 3 and cells[0] and not set(cells[0]) <= set("-: ") and cells[0].lower() not in ("name", "full name"):
+            out.setdefault(cells[0].lower(), []).extend(a.strip() for a in re.split(r"[;,]", cells[2]) if a.strip())
+    return out
+
+
+def project_owners(con, code):
+    """Every owner named on the project's items, open or not, without their organisation."""
+    out = set()
+    for table in OWNER_TABLES:
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        if "owner" in cols:
+            out |= {person(o) for (o,) in con.execute(f"SELECT DISTINCT owner FROM {table} WHERE project = ?", (code,))
+                    if o and o != "TBC"}
+    return sorted(out)
+
+
+OPEN_STATUS = {"actions": ("Open", "Delayed"), "raid": ("Open",), "decisions": ("Pending",), "milestones": ("Planned",)}
+
+
+def _owners(con, code, blocking):
+    """Yield (owner without organisation, whether a client report may show the item, whether it is open) for each of the project's
+    items with an owner."""
+    for table in OWNER_TABLES:
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})")]
+        if "owner" not in cols:
+            continue
+        for i, o, st in con.execute(f"SELECT id, owner, status FROM {table} WHERE project = ?", (code,)):
+            if o and o != "TBC":
+                yield person(o), not item_problem(con, i, blocking), st in OPEN_STATUS.get(table, ())
+
+
+def _tokens(names):
+    """Every word of the names, in lower case: "Jane Doe" gives "jane" and "doe"."""
+    return {w for n in names for w in re.findall(r"[\w'-]+", n.lower())}
+
+
+def people(con, code, blocking=None):
+    """(client, internal): the names and register aliases of the owners of the project's items a client report may show (any
+    status), and of the owners of its OPEN items a client report can't show who own none of those (#123 review M3: someone whose
+    only internal items are closed is neither). Alan's own name and short forms are left out (he is named in his client reports),
+    and so is an alias that is ambiguous (M2): one that is, or is a word of, a client-visible owner's name or alias, or Alan's; an
+    internal-only owner's full name is always kept."""
+    blocking = blocking_labels(con) if blocking is None else blocking
+    shown, other = set(), set()
+    for name, may_show, is_open in _owners(con, code, blocking):
+        if may_show:
+            shown.add(name)
+        elif is_open:
+            other.add(name)
+    aliases = register_aliases()
+    client = shown | {a for n in shown for a in aliases.get(n.lower(), [])}
+    keep = {x.lower() for x in client | alans_names()}
+    shared = keep | _tokens(client | alans_names())
+    full = {n for n in other - shown if n.lower() not in keep}
+    internal = full | {a for n in full for a in aliases.get(n.lower(), []) if a.lower() not in shared}
+    return client, internal
+
+
+def alans_names():
+    """Alan's own name and short forms (settings identity), or none when the settings can't be read."""
+    try:
+        ident = paths.load_settings().get("identity") or {}
+        return {ident.get("name") or ""} | set(ident.get("short_forms") or [])
+    except Exception:  # noqa: BLE001  no settings: nobody is left out
+        return set()
+
+
+def name_findings(con, code, text, blocking=None):
+    """The people a client text names who own only items a client report can't show (people's internal set); one finding saying
+    so when the people register can't be read (#127: fails closed)."""
+    try:
+        _, internal = people(con, code, blocking)
+    except RegisterUnreadable:
+        return [REGISTER_UNREAD]
+    return [f"{n} is named but owns only items a client report can't show" for n in sorted(named(text, internal))]
+
+
 def doc_text(doc):
-    """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values."""
+    """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values,
+    and (#127) every link address its shown data holds (address_text), which the words alone (creaite_doc._plain) leave out."""
     import creaite_doc
     clean = creaite_doc.clean(doc)
-    return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False)
+    raw = "\n".join(_strings(clean.get("sections") or []))
+    addresses = "\n".join([address_text(raw)] + [f"creaite:item/{a}" for a in item_links(raw)]).strip()   # (spaces in an ID too)
+    return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) \
+        + ("\n" + addresses if addresses else "")
+
+
+def _strings(x):
+    """Every string in a document's data (its sections: text, headings, cells, panes), as stored."""
+    if isinstance(x, str):
+        return [x]
+    if isinstance(x, dict):
+        return [t for v in x.values() for t in _strings(v)]
+    return [t for v in x for t in _strings(v)] if isinstance(x, list) else []
+
+
+# #127: link addresses. The gate reads the ADDRESS of every link (inline, image, reference definition, <auto>, an HTML href, a bare
+# https:, mailto: or creaite: one), fully %-decoded and entity-decoded (_decoded), because the words alone can say anything. Each
+# address is added to the text the checks read twice over: as decoded (so a creaite: address keeps its shape) and as plain words
+# ("mailto quentin marlow example com"), so the ID, names, wording and marker checks find what it holds. "Internal", kept narrow:
+# an address that holds an item a client may not see (any project's, however written), the name or alias of someone who owns only
+# such items, the tracker's health reason or an internal-only marker; and any creaite: link but a work item a client may see or a
+# person (creaite:item, creaite:person; a note or anything else in creaite is Alan's own). An ordinary https or mailto address to
+# anything else passes: there is no list of internal hosts.
+ADDRESS = re.compile(
+    r"\]\(\s{0,20}<?([^()<>\"\s]{0,2000}(?:\([^()<>\"\s]{0,200}\)[^()<>\"\s]{0,2000})?)"     # an inline link or image
+    r"|^[ \t]{0,3}\[[^\[\]\n]{1,300}\]:[ \t]{0,20}<?([^\s<>]{1,2000})"                       # a reference definition
+    r"|href[ \t]{0,5}=[ \t]{0,5}[\"']([^\"'<>]{0,2000})"                                     # an HTML link
+    r"|<([a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000})>"                                            # an <auto> link
+    r"|(?<![\w/%.-])((?:https?|mailto|creaite)[ \t]{0,5}(?::|%3a)[^\s<>()\[\]\"']{1,2000})",   # a bare address
+    re.I | re.M)
+CREAITE = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}([a-z]{1,20})(?=\s{0,5}[/\\?])", re.I)   # a creaite: link's kind
+SCHEME = re.compile(r"(?<![\w.%-])creaite\s{0,5}:", re.I)
+LINK_KINDS = {"item", "items", "person"}          # creaite links a client report may hold (when what they name is client-safe)
+ITEM_LINK = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}items?\s{0,5}(?:[/\\]|\?[a-z]{0,10}=)\s{0,5}"
+                       r"([^\s)>\]\"'<]{0,200}(?:[ \t]+[A-Za-z0-9][^\s)>\]\"'<]{0,200}){0,2})", re.I)
+
+
+def _decoded(text):
+    """Text with %-encoding undone until it stops changing (at most five times) and HTML entities undone, then normalised as the
+    ID check reads it (edit_ai.normal)."""
+    import edit_ai
+    import html
+    from urllib.parse import unquote
+    t = text or ""
+    for _ in range(5):
+        u = unquote(t)
+        if u == t:
+            break
+        t = u
+    return edit_ai.normal(html.unescape(t))
+
+
+SCHEME_GAP = re.compile(r"creaite[ \t\r\n]{0,5}:[ \t\r\n]{0,5}(?=/{0,2}[ \t\r\n]{0,5}[a-z]{1,20}[ \t\r\n]{0,5}[/\\?])", re.I)
+
+
+def link_addresses(text):
+    """Every link address a text holds, decoded (see ADDRESS); a creaite: address split by spaces or a line break is joined first."""
+    return [_decoded(next(g for g in m.groups() if g is not None)) for m in ADDRESS.finditer(SCHEME_GAP.sub("creaite:", text or ""))
+            if any(g for g in m.groups())]
+
+
+def address_text(text):
+    """The text's link addresses as the checks read them: each as plain words, and a creaite: or relative address (a path in the
+    vault, such as documents/…) also as decoded; an https or mailto address only as words, so an external page's path is not
+    read as one of creaite's own."""
+    out = []
+    for a in link_addresses(text):
+        if not re.match(r"(?:https?|mailto)\s{0,5}:", a, re.I):
+            out.append(a)
+        out.append(re.sub(r"[^0-9A-Za-z]+", " ", a).strip())
+    return "\n".join(out)
+
+
+def with_addresses(text):
+    """A text with its link addresses added (address_text): what a client check reads."""
+    extra = address_text(text)
+    return f"{text}\n{extra}" if extra else (text or "")
+
+
+def creaite_kinds(text):
+    """The kinds of creaite: link a text holds ("item", "person", "note", …), in lower case."""
+    return {m.group(1).lower() for m in CREAITE.finditer(_decoded(text))}
+
+
+def item_links(text):
+    """The address after creaite:item/ (or items/, //item/, item?id=, a backslash) of every work-item link in a text, decoded."""
+    return [m.group(1) for m in ITEM_LINK.finditer(_decoded(text))]
+
+
+def link_refs(con, text):
+    """({item IDs the text's work-item links name}, [addresses with no ID creaite can read]): each address read as edit_ai.loose_ids
+    reads a bare ID."""
+    import edit_ai
+    ids, unread = set(), []
+    for a in item_links(text):
+        got = edit_ai.loose_ids(con, a)
+        ids |= got
+        if not got:
+            unread.append(a)
+    return ids, unread
+
+
+def _link_ok(con, code, span, blocking):
+    """Whether a link (its whole Markdown or HTML, or a bare address) may stay in a client text: one that isn't a creaite: link,
+    or a creaite: link whose every item, read from the whole link, is this project's and one a client report may show. A creaite:
+    link that names no item (unreadable, or a person or a note) goes."""
+    import edit_ai
+    t = _decoded(span)
+    if not SCHEME.search(t):
+        return True
+    ids = edit_ai.loose_ids(con, t)
+    return bool(ids) and all(i.split("-")[0] == code and not item_problem(con, i, blocking) for i in ids)
+
+
+LINK_SPAN = re.compile(
+    r"<a\s[^<>]{0,2000}>[^<]{0,2000}</a\s{0,5}>|<a\s[^<>]{0,2000}>"                                     # an HTML link
+    r"|!?\[[^\[\]\n]{0,300}\]\(\s{0,20}(?:<[^<>\n]{0,2000}>|[^()\n]{0,2000}(?:\([^()\n]{0,200}\)[^()\n]{0,2000})?)"
+    r"(?:\s{1,20}\"[^\"\n]{0,300}\")?\s{0,20}\)"                                                           # an inline link or image
+    r"|^[ \t]{0,3}\[[^\[\]\n]{1,300}\]:[^\n]{0,2000}$"                                                     # a reference definition
+    r"|!?\[[^\[\]\n]{0,300}\]\[[^\[\]\n]{0,300}\]"                                                          # a reference link
+    r"|<[a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000}>",                                                          # an <auto> link
+    re.I | re.M)
+REF_DEF = re.compile(r"^[ \t]{0,3}\[([^\[\]\n]{1,300})\]:[ \t]{0,20}([^\n]{0,2000})$", re.M)
+LONG_TOKEN = 2000
+
+
+def drop_item_links(code, text, con=None):
+    """#127: a client text with every creaite: link that a client may not have taken out WHOLE, words and address: a link to an
+    item a client report may not show (not client-visible, Sensitive, partner-only or excluded by a label, another project's) or
+    one that names no item creaite can read (a person, a note), in any form (inline links and images, reference links and their
+    definitions, HTML links, <auto> and bare addresses, %- or entity-encoded, split by spaces or a line break). A link to an item
+    a client may see is kept as it is, words included; other links are left. Linear: every pattern is bounded, and a run of more
+    than LONG_TOKEN characters with no space that mentions creaite is dropped (fails closed). report.current_context uses it on
+    the Current state for the client audience (one helper, so a later filter can replace it)."""
+    import html
+    con = con or connect()
+    blocking = blocking_labels(con)
+    t = SCHEME_GAP.sub("creaite:", html.unescape(text or ""))
+    bad = {m.group(1).strip().lower() for m in REF_DEF.finditer(t) if not _link_ok(con, code, m.group(2), blocking)}
+
+    def keep(m):
+        """The span as it is, or "" when it is a link a client may not have."""
+        s = m.group(0)
+        ref = re.fullmatch(r"!?\[[^\[\]\n]*\]\[([^\[\]\n]*)\]|[ \t]*\[([^\[\]\n]+)\]:.*", s, re.S)
+        if ref:
+            return "" if (ref.group(1) or ref.group(2) or "").strip().lower() in bad else s
+        return s if _link_ok(con, code, s, blocking) else ""
+
+    t = LINK_SPAN.sub(keep, t)
+    return re.sub(r"\S+", lambda m: m.group(0) if "creaite" not in _decoded(m.group(0)[:LONG_TOKEN + 1]).lower() else (
+        "" if len(m.group(0)) > LONG_TOKEN or not _link_ok(con, code, m.group(0), blocking) else m.group(0)), t)
 
 
 def findings(doc, con=None):
@@ -195,5 +485,46 @@ def findings(doc, con=None):
         return []
     con = con or connect()
     blocking = blocking_labels(con)
-    found = [why for why in (item_problem(con, r, blocking) for r in sorted(refs(doc))) if why]
-    return found + text_findings(con, doc.get("project") or "", doc_text(doc))
+    code, text = doc.get("project") or "", doc_text(doc)
+    bad = {r: why for r, why in ((r, item_problem(con, r, blocking)) for r in sorted(refs(doc))) if why}
+    found = list(bad.values()) + text_findings(con, code, text, skip=bad)
+    found += [f"it holds {why}" for why in internal_findings(con, code, doc)]             # #123: the gate at the end, any route
+    return found + name_findings(con, code, text, blocking)
+
+
+HEALTH_FLAG = re.compile(r"\s*(?:ON TRACK|AT RISK|OFF TRACK)\b")      # a Word report's health line starts with its flag, in capitals
+
+
+def plain_findings(con, code, text):
+    """#127: the gate at the end for a client text with no sections (a Word client report or client-safe steerco one-pager, read by
+    review.client_findings): the same checks findings runs on a creaite document (items by ID, internal wording, the internal
+    health reason or an internal-only marker, and the names). As M1 lets the health reason stand in the health section, it may
+    stand in the report's own health line: the first line that starts with its health flag (report.py's HEALTH_LINE: "OFF TRACK
+    …"), never a line that only shares the reason's words; anywhere else, or in a report with no health line, it is found. A
+    marker is found anywhere."""
+    import drafts
+    lines = text.splitlines()
+    shown = next((i for i, ln in enumerate(lines) if HEALTH_FLAG.match(ln)), None)
+    text = with_addresses(text)                                # #127: every link address in the text, decoded
+    found = drafts.internal_findings(con, code, "\n".join(ln for i, ln in enumerate(lines) if i != shown))
+    if drafts.INTERNAL_MARK.search(text) and "an internal-only marker" not in found:
+        found.append("an internal-only marker")
+    return text_findings(con, code, text) + [f"it holds {why}" for why in found] + name_findings(con, code, text)
+
+
+def internal_findings(con, code, doc):
+    """drafts.internal_findings on a client document (#123 review M1). A client report shows internal health, so the tracker's
+    health reason may stand in the document's own shown health section (Match internal copies it there): it is checked on
+    everything else the document holds. An internal-only marker is found anywhere, the health section included."""
+    import creaite_doc
+    import drafts
+    shown = creaite_doc.sections_text(doc)
+    health_ids = {s.get("id") for s in doc.get("sections") or [] if s.get("type") == "health"}
+    health = "\n\n".join(t for i, _h, t in shown if i in health_ids)
+    clean = creaite_doc.clean(doc)
+    rest = "\n\n".join([clean.get("title") or ""] + [f"{h}\n\n{t}" if i not in health_ids else h for i, h, t in shown]) \
+        + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False)
+    found = drafts.internal_findings(con, code, rest)
+    if drafts.INTERNAL_MARK.search(health) and "an internal-only marker" not in found:
+        found.append("an internal-only marker")
+    return found
