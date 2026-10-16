@@ -2728,6 +2728,22 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .hfine{border-top:1px solid var(--line);padding:10px 0 0} .hfine summary{cursor:pointer;color:var(--muted);font-size:var(--fs-sm)}
 @media (max-width:560px){ .hrow{grid-template-columns:22px minmax(0,1fr)} .hrow .hact{grid-column:2} .setctl,.setticks{justify-content:flex-start} }
 @media (forced-colors: active){ .setdot{forced-color-adjust:none;background:Highlight} .hico{border:1px solid CanvasText} }
+/* ===== #98: the item peek's Client-visible switch (.pk-sw) and a milestone's Visible to client switch (.mv-sw) in forced colours.
+   Both were drawn from backgrounds only (a transparent or zero border), which the browser overrides there, so track and thumb
+   vanished. The track gets a 2px ButtonText border on Canvas, the thumb is ButtonText; on fills the track with Highlight and
+   the thumb (HighlightText) sits on the other side, so state is not shown by colour alone. Outside forced colours: unchanged. ===== */
+@media (forced-colors: active){
+  .pk-sw,.mv-sw{forced-color-adjust:none;box-sizing:border-box;background:Canvas;border:2px solid ButtonText}
+  .pk-sw::after,.mv-sw::after{forced-color-adjust:none;background:ButtonText;width:14px;height:14px;top:2px;left:2px}
+  .pk-sw::after{transform:none} .pk-sw[aria-checked="true"]::after{transform:translateX(16px)}
+  .mv-sw[aria-checked="true"]::after{left:20px}
+  .pk-sw[aria-checked="true"],.mv-sw[aria-checked="true"]{background:Highlight;border-color:Highlight}
+  .pk-sw[aria-checked="true"]::after,.mv-sw[aria-checked="true"]::after{background:HighlightText}
+  .pk-sw:focus-visible,.mv-sw:focus-visible{outline:2px solid Highlight;outline-offset:2px}
+  .pk-sw:disabled,.mv-sw:disabled,.pk-sw[aria-disabled="true"],.mv-sw[aria-disabled="true"]{border-color:GrayText}
+  .pk-sw:disabled::after,.mv-sw:disabled::after,.pk-sw[aria-disabled="true"]::after,.mv-sw[aria-disabled="true"]::after{background:GrayText}
+}
+/* ===== end #98 ===== */
 /* ===== end BL-320 ===== */
 /* ===== BL-286 D: Meetings › Prep (#prep=<key>), the prep page inside creaite, in the Briefing layout (components/prep/PrepPage.jsx).
    Tokens only. Three columns (outline, centre, context rail), one below 1000 px; nothing scrolls sideways at 320 px (BL-217). ===== */
