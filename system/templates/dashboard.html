@@ -49604,9 +49604,10 @@ ${d5.text}`);
       $("#pkApply").disabled = false;
     }
   }
-  async function pkUndoLast() {
+  async function pkUndoLast(only) {
     await shared.PKQ;
-    const s5 = shared.PKS[shared.PKS.length - 1];
+    const s5 = only || shared.PKS[shared.PKS.length - 1];
+    if (only && !shared.PKS.includes(only)) return;
     await (async () => {
       if (!s5) return;
       let ok2 = false;
@@ -49622,7 +49623,10 @@ ${d5.text}`);
       } catch (e4) {
         ok2 = false;
       }
-      shared.PKS.pop();
+      {
+        const i5 = shared.PKS.indexOf(s5);
+        if (i5 >= 0) shared.PKS.splice(i5, 1);
+      }
       if (!ok2) {
         pkPersist();
         refreshAll();
@@ -51524,17 +51528,22 @@ ${d5.text}`);
   }
   async function sentLog(entries, o5) {
     let ok2 = 0;
+    const mine = [];
     const via = o5.via || sentVia(), ch2 = o5.chases || SA().chases || {};
     for (const e4 of entries) {
       const x5 = REC(e4.k, e4.id), f5 = SENT_FIELD[e4.k];
       if (!x5 || !f5) continue;
       const conf = deBarred(deItem(e4.k, x5)), line = sentLine({ name: o5.name, via, mode: o5.mode, n: (ch2[e4.id] || {}).n, replyBy: o5.replyBy, need: e4.need, confidential: conf });
       const was = String(x5[f5] || "").trim();
-      if (await pkCommit(e4.k, e4.id, { [f5]: was ? line + "\n" + was : line }, "Latest update", was ? "…" : "none", line, { logNote: "Draft email: I sent it" })) ok2++;
+      const before = new Set(shared.PKS);
+      if (await pkCommit(e4.k, e4.id, { [f5]: was ? line + "\n" + was : line }, "Latest update", was ? "…" : "none", line, { logNote: "Draft email: I sent it" })) {
+        ok2++;
+        mine.push(...shared.PKS.filter((s5) => !before.has(s5) && s5.k === e4.k && s5.id === e4.id));
+      }
     }
     if (!ok2) return 0;
     snack(ok2 === 1 ? "Logged." : `Logged on ${plur(ok2, "item")}.`, async () => {
-      for (let i5 = 0; i5 < ok2; i5++) await pkUndoLast();
+      for (const s5 of mine.slice().reverse()) await pkUndoLast(s5);
     });
     return ok2;
   }
