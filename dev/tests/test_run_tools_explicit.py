@@ -44,8 +44,8 @@ TABLE = [
     ("narrow", "ToolSearch", False, "the draft-from-a-message run (`only`): Microsoft 365 reading only; ToolSearch reaches them"),
     ("search", "Read,Grep,Glob", True, "F4: no MCP at all"),
     ("edit-ai", "", True, "BL-301 D: no tools, no MCP"),
-    ("shape-closed", "", False, "BL-286: no tools (every reading MCP tool denied by name)"),
-    ("notes-find", "", False, "BL-301 E: no tools (every reading MCP tool denied by name)"),
+    ("shape-closed", "", True, "BL-286: no tools, no MCP (#126 review)"),
+    ("notes-find", "", True, "BL-301 E: no tools, no MCP (#126 review)"),
 ]
 DANGEROUS = ["EnterWorktree", "ExitWorktree", "RemoteTrigger", "Workflow", "Monitor", "PushNotification", "SendMessage",
              "CronCreate", "CronDelete", "CronList", "ScheduleWakeup", "DesignSync", "Artifact", "ArtifactComments", "ArtifactData",
@@ -73,6 +73,7 @@ RUNS = r'''
 import json, sys, time
 sys.path.insert(0, "system/scripts")
 import live_server as L
+L.NEUTRAL_CWD = None                                      # #126: this run makes its own neutral folder
 starts = [("ask", {}), ("confirmed", {"confirmed": "Close ABC-A-001"}), ("typed sweep", {"sweep": True}), ("sweep", {"kind": "sweep"}),
           ("prep", {"kind": "prep"}), ("generate", {"kind": "generate"}), ("check", {"kind": "check"}), ("load", {"kind": "load"}),
           ("narrow", {"kind": "generate", "only": L.ALERT_DRAFT_TOOLS}), ("search", {"kind": "search"}),
@@ -135,6 +136,9 @@ class Table(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        for c in cls.ctx.values():                         # #126: the neutral folder the run made
+            if os.path.basename(c["cwd"]).startswith("creaite-toolless-") and os.path.isdir(c["cwd"]):
+                os.rmdir(c["cwd"])
         cls.v.cleanup()
 
     def test_each_kind_names_its_built_ins(self):
@@ -192,6 +196,8 @@ class Table(unittest.TestCase):
             before = a[:a.index("--")]
             if kind in toolless:
                 self.assertEqual(flag(a, "--setting-sources"), "", kind)
+                self.assertEqual(before.count("--no-session-persistence"), 1, kind)   # never resumed: nothing saved
+                self.assertEqual(before.count("--strict-mcp-config"), 1, kind)        # no MCP server at all
                 self.assertEqual(c["no_memory"], "1", kind)
                 self.assertNotEqual(c["cwd"], self.vault, kind)
                 self.assertFalse(c["cwd"].startswith(self.vault + os.sep), kind)
@@ -201,6 +207,7 @@ class Table(unittest.TestCase):
             else:                                                          # the kinds with tools read the vault on purpose
                 self.assertEqual(c["cwd"], self.vault, kind)
                 self.assertNotIn("--setting-sources", before, kind)
+                self.assertNotIn("--no-session-persistence", before, kind)
                 self.assertIsNone(c["no_memory"], kind)
 
     def test_prompt_still_last(self):

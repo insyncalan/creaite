@@ -1991,7 +1991,7 @@ KIND_ARGS["sweep"] = ["--tools", ",".join(SWEEP_BUILTINS)]
 for _k in ("prep", "generate", "check", "load"):
     KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
 for _k in ("shape-closed", "notes-find"):
-    KIND_ARGS[_k] = list(NO_BUILTINS)
+    KIND_ARGS[_k] = NO_BUILTINS + ["--strict-mcp-config"]      # #126 review: no MCP server at all, like edit-ai
 # Belt and braces, in every run's --disallowedTools: F3's permissions.run_deny_extras() (the other connectors, whole server, and
 # the acting and writing built-ins no allow rule may grant) and every known built-in the run's own --tools doesn't name
 # (permissions.KNOWN_BUILTINS minus the kind's set), so a --tools list that drifts, or a CLI that ignores it, still can't reach
@@ -2011,7 +2011,8 @@ for _k in ("shape-closed", "notes-find"):
 # of its own outside the vault (NEUTRAL_CWD), with no setting sources (no user, project or local settings, so no CLAUDE.md) and
 # auto-memory off. A probe (Claude Code 2.1.288, 16-10-2026): --setting-sources "" removed both CLAUDE.md files but not the
 # auto-memory; CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 removed that. The kinds with tools keep the vault as their working folder.
-NO_CONTEXT_ARGS = ["--setting-sources", ""]
+# Review: --no-session-persistence (the run is never resumed, so its prompt isn't saved) and --strict-mcp-config for all three.
+NO_CONTEXT_ARGS = ["--setting-sources", "", "--no-session-persistence"]      # #126 review: never resumed, so nothing is saved
 NO_CONTEXT_ENV = {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
 NEUTRAL_CWD = None
 
