@@ -823,6 +823,25 @@ class Slash(LiveBrowserCase):
         b.pump(0.2)
         self.assertEqual(b.eval(heads), ["Text", "Lists", "Blocks", "Link", "Templates"], "the groups return with an empty query")
 
+    def test_n6_a_multi_word_query_matches_when_each_word_starts_a_word_of_the_name(self):
+        b = self.b
+        self.make_note("Words")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        for q, first in (("head 2", "h2"), ("bull l", "ul"), ("num l", "ol"), ("head", "h1")):
+            b.type(q)
+            b.pump(0.2)
+            self.assertEqual(self.rows()[0], first, q)
+            if " " in q:
+                self.assertEqual(self.rows(), [first], f"{q}: only that row")
+            for _ in q:
+                b.key("Backspace")
+        b.type("head 2")
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type("Two")
+        self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^## Two$")
+
     # ---- dark and forced colours -----------------------------------------------------------------------------------------
 
     def test_dark_and_forced_colours(self):

@@ -97,11 +97,15 @@ export function slashRows(profile, hostRows, schema, q = "") {
   const ql = q.trim().toLowerCase().replace(/\s+/g, " ");
   const avail = (ED_SLASH_ROWS[profile] || []).map(id => ED_SLASH[id]).filter(r => r && (!r.host || hostRows.includes(r.id)) && (!r.node || !schema || schema.nodes[r.node]));
   if (!ql) return avail;
+  const typed = ql.split(" ");
+  /** @param {string} name @returns {boolean} */
+  const inOrder = name => { const w = name.split(" "); let at = 0; return typed.every(t => { while (at < w.length && !w[at].startsWith(t)) at++; return at++ < w.length; }); };
   /** @param {SlashDef} r @returns {number} 0 best, 9 no match */
   const rank = r => {
     const name = r.name.toLowerCase(), ids = [r.id, ...(r.alias || [])];
     if (ids.includes(ql)) return 0;
     if (ids.some(x => x.startsWith(ql)) || name.startsWith(ql)) return 1;
+    if (typed.length > 1 && inOrder(name)) return 1;                 /* "head 2" is Heading 2, "bull l" is Bulleted list: each typed word starts a word of the name, in order */
     if (name.split(" ").some(w => w.startsWith(ql))) return 2;
     if (name.includes(ql) || r.desc.toLowerCase().includes(ql)) return 3;
     return 9;

@@ -24630,10 +24630,20 @@ ${s5}`;
     const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
     const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
     if (!ql2) return avail;
+    const typed2 = ql2.split(" ");
+    const inOrder = (name) => {
+      const w6 = name.split(" ");
+      let at2 = 0;
+      return typed2.every((t47) => {
+        while (at2 < w6.length && !w6[at2].startsWith(t47)) at2++;
+        return at2++ < w6.length;
+      });
+    };
     const rank = (r4) => {
       const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
       if (ids.includes(ql2)) return 0;
       if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
+      if (typed2.length > 1 && inOrder(name)) return 1;
       if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
       if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
       return 9;
