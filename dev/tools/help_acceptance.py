@@ -121,10 +121,10 @@ def main():
     # 4 settings paths
     rows = []; bad = 0
     for p in pages:
-        for m in re.finditer(r"Settings\s*›\s*([^\s›.,;:)]+(?: [^\s›.,;:)]+){0,3})(?:\s*›\s*([^.,;:)\n]{2,40}))?", "\n".join(p["lines"])):
+        for m in re.finditer(r"Settings\s*›\s*([^\s›.,;:)]+(?: [^\s›.,;:)]+){0,3})(?:\s*›\s*([^.,;:)\n]{2,40}))?", re.sub(r"\*\*", "", "\n".join(p["lines"]))):
             top = next((t for t in SETTINGS_TOP if m.group(1).startswith(t)), None)
             if not top: bad += 1; rows.append(f"- {p['title']}: “Settings › {m.group(1)}”: no such section")
-            elif m.group(2) and m.group(2).strip().lower() not in cat: rows.append(f"- {p['title']}: “… › {m.group(2).strip()}” not found in settings_catalogue.py (check by hand)")
+            elif m.group(2) and not any(w.lower() in cat for w in [m.group(2).strip(), " ".join(m.group(2).split()[:3])]): rows.append(f"- {p['title']}: “… › {m.group(2).strip()}” not found in settings_catalogue.py (check by hand)")
     section("Settings paths", rows, bad)
 
     # 5 links
