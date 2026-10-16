@@ -81,27 +81,29 @@ class LiveCurrentState(LiveBrowserCase):
             b.type(caption)
             b.wait(f"[...document.querySelectorAll('#curEd figure.cimg figcaption')].some(c=>c.textContent.includes({json.dumps(caption)}))", 5)   # #152: it was typed (a timeout says where the focus was)
 
-    def cancel_asks(self):
-        """Press Cancel on a changed editor and wait for the question. #152: on the macOS runner the question never came and the page
-        was left with the editor focused, as if the click had not reached the button (the card is drawn again whenever the page
-        refreshes, which replaces the button). The click is pressed again once if the button it pressed has been replaced; a
-        second miss fails with what the page saw."""
+    def cancel_asks(self, where=""):
+        """Press Cancel on a changed editor and wait for the question. #152: on the macOS runner the click landed on a DIV and the
+        question never came, with the button still in the page: the editor had laid out again between measuring the button and
+        pressing. So the press waits until the button has stopped moving and is the element at its own centre (click exact=True).
+        If the page still saw the click somewhere else, it is pressed once more; a click that reached the button and did nothing is
+        a real fault and fails at once. A failure says what was at the point, the button's rectangle, the viewport, theme and mode."""
         b = self.b
         b.eval("""window.__cl=[]; if(!window.__clOn){ window.__clOn=true;
             for(const t of ['mousedown','mouseup','click']) addEventListener(t,e=>{ const x=e.target&&e.target.closest?e.target.closest('[data-cure],[data-rc],[data-dis]'):null;
-                __cl.push(t+':'+(x?(x.dataset.cure||x.dataset.rc||x.dataset.dis):(e.target.tagName||'?'))); },true); }
-            window.__btn=document.querySelector('[data-cure="cancel"]')""")
+                __cl.push(t+':'+(x?(x.dataset.cure||x.dataset.rc||x.dataset.dis):(e.target.tagName||'?'))); },true); }""")
         up = "document.getElementById('discardBar').classList.contains('on')"
         for attempt in (1, 2):
-            b.click('[data-cure="cancel"]')
+            b.eval("window.__cl=[]")
+            b.click('[data-cure="cancel"]', exact=True)
             try:
                 b.wait(up, 3 if attempt == 1 else 5)
                 return
             except TimeoutError as e:
-                seen = b.eval("({events: __cl, buttonStillInPage: __btn.isConnected, editorOpen: !!document.getElementById('curEd'), dirty: !!(CURED && CURED.dirty)})")
-                if attempt == 2 or seen["buttonStillInPage"]:    # the button was there and the click did nothing: a real fault
-                    raise AssertionError(f"Cancel on a changed editor did not ask (attempt {attempt}): {seen}\n{e}")
-                b.eval("window.__cl=[]; window.__btn=document.querySelector('[data-cure=\"cancel\"]')")
+                seen = b.eval("({events: __cl, editorOpen: !!document.getElementById('curEd'), dirty: !!(CURED && CURED.dirty)})")
+                seen["now"] = b.hit_report('[data-cure="cancel"]')
+                reached = "click:cancel" in seen["events"]
+                if attempt == 2 or reached:                      # the button got the click and did nothing: a real fault
+                    raise AssertionError(f"Cancel on a changed editor did not ask (attempt {attempt}, {where}): {seen}\n{e}")
 
     def save(self):
         b = self.b
@@ -180,9 +182,10 @@ class LiveCurrentState(LiveBrowserCase):
                 b.eval(f"S.palette={json.dumps(pal)}; S.theme={json.dumps(mode)}; applyTheme()")
                 self.open_editor()
                 self.add_image(self.pic("small.png", png(60, 40, (9, 99, 9))), "Small")
+                b.wait("[...document.querySelectorAll('#curEd figure.cimg img')].every(i=>i.complete&&i.naturalWidth>0)", 5)   # #152: laid out at its size before anything is measured
                 for sel in ('[data-rc="image"]', '[data-rc="bold"]', "#curEd figure.cimg .cimgdel", '[data-cure="cancel"]', '[data-cure="save"]'):
                     b.click(sel) if sel in ('[data-rc="bold"]',) else self.assertTrue(b.box(sel), f"{sel} is not visible in {pal} {mode}")
-                self.cancel_asks()                                               # a change was made: asks first
+                self.cancel_asks(f"{pal} {mode}, 560x800")                          # a change was made: asks first
                 b.click('#discardBar [data-dis="go"]')
                 b.wait("!document.getElementById('curEd')", 3)
         self.assertEqual(b.errors, [])
