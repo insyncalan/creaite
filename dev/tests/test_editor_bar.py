@@ -96,7 +96,7 @@ class Bars(LiveBrowserCase):
         self.assertEqual(got["plain"], [])            # decision 2: plain fields keep plain text, no toolbar
         self.assertEqual(got["none"], [])
         self.assertEqual(sorted(got["names"]), ["capture", "current", "none", "notes", "plain"])
-        self.assertEqual(sorted(set(NOTES_ALL) - {"unlink"} - set(CURRENT)), sorted(["text", "task", "code", "note", "person", "item", "table"]))
+        self.assertEqual(sorted(set(NOTES_ALL) - {"unlink"} - set(CURRENT)), sorted(["text", "task", "code", "note", "person", "table"]))
 
     def test_notes_current_and_the_capture_drawer_draw_their_profile(self):
         b = self.b
