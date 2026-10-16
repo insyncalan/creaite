@@ -33535,6 +33535,7 @@ ${s5}`;
       const up2 = () => {
         h5.removeEventListener("pointermove", mv);
         h5.removeEventListener("pointerup", up2);
+        h5.removeEventListener("pointercancel", up2);
         document.body.classList.remove("resizing");
         store.set("creaite-colwidths", shared.RZ);
         if (after) after();
@@ -33835,15 +33836,38 @@ ${s5}`;
     <div class="bcm">${P42.includes("due") ? `<span class="bdue ${od2 ? "late" : ""}">${esc(due)}</span>` : ""}<span class="sp"></span>${extra}${P42.includes("pr") ? `<span class="bpri ${x5.pr === "Urgent" ? "prio-urgent" : ""}">${esc(x5.pr || "")}</span>` : ""}<button class="bmv" type="button" aria-haspopup="menu" aria-label="Move ${esc(x5.id)} to…" title="Move to…">⋯</button></div></div>`;
   }
   var bcKey = (t47, g5, key) => `${t47}|${g5}|${key}`;
-  var BW = store.get("creaite-boardw", {}), BW_MIN = 260, BW_MAX = 640, BW_DEF = 270;
+  var BW_MIN = 260, BW_MAX = 640, BW_DEF = 270;
+  var bwOk = (w6) => typeof w6 === "number" && Number.isFinite(w6) && w6 >= BW_MIN && w6 <= BW_MAX;
+  var bwClean = (raw2) => {
+    const out = {};
+    if (!raw2 || typeof raw2 !== "object" || Array.isArray(raw2)) return out;
+    Object.keys(raw2).forEach((b5) => {
+      const o5 = raw2[b5];
+      if (!o5 || typeof o5 !== "object" || Array.isArray(o5)) return;
+      const k5 = {};
+      Object.keys(o5).forEach((c5) => {
+        if (bwOk(o5[c5])) k5[c5] = Math.round(o5[c5]);
+      });
+      if (Object.keys(k5).length) out[b5] = k5;
+    });
+    return out;
+  };
+  var BW = bwClean(store.get("creaite-boardw", {}));
   var bwBoard = () => BCUR ? `${BCUR.t}|${BCUR.g}` : `${shared.WT}|${groupOf(shared.WT)}`;
-  var bwGet = (b5, key) => (BW[b5] || {})[key];
+  var bwGet = (b5, key) => {
+    const o5 = BW[b5];
+    if (!o5 || typeof o5 !== "object") return void 0;
+    const w6 = o5[key];
+    return bwOk(w6) ? w6 : void 0;
+  };
   var bwStyle = (b5, key) => {
     const w6 = bwGet(b5, key);
     return w6 ? ` style="flex-basis:${w6}px;width:${w6}px"` : "";
   };
   var bwHandle = (b5, key, label, w6) => `<span class="bcrz" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Resize ${esc(label)} column" aria-valuemin="${BW_MIN}" aria-valuemax="${BW_MAX}" aria-valuenow="${w6 || BW_DEF}"></span>`;
   function bwPut(b5, key, w6, save2) {
+    w6 = Number(w6);
+    if (!Number.isFinite(w6)) w6 = BW_DEF;
     w6 = Math.round(Math.max(BW_MIN, Math.min(BW_MAX, w6)));
     if (w6 === BW_DEF) {
       if (BW[b5]) {
@@ -33851,7 +33875,7 @@ ${s5}`;
         if (!Object.keys(BW[b5]).length) delete BW[b5];
       }
     } else {
-      BW[b5] = BW[b5] || {};
+      if (!BW[b5] || typeof BW[b5] !== "object") BW[b5] = {};
       BW[b5][key] = w6;
     }
     $$("#workBoard .bcol").forEach((c5) => {
@@ -34174,12 +34198,14 @@ ${s5}`;
       const mv = (ev) => bwPut(b5, key, w02 + ev.clientX - x02, false), up2 = () => {
         h5.removeEventListener("pointermove", mv);
         h5.removeEventListener("pointerup", up2);
+        h5.removeEventListener("pointercancel", up2);
         document.body.classList.remove("resizing");
         store.set("creaite-boardw", BW);
         BNOCLICK = performance.now();
       };
       h5.addEventListener("pointermove", mv);
       h5.addEventListener("pointerup", up2);
+      h5.addEventListener("pointercancel", up2);
     }, true);
     $("#workBoard").addEventListener("dblclick", (e4) => {
       const h5 = e4.target.closest && e4.target.closest(".bcrz");
