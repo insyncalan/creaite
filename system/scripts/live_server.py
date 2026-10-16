@@ -4471,8 +4471,8 @@ def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
 @contextlib.contextmanager
 def card_moves_allowed(name):
     """#124 F3: while the card's own proposal `name` (staged by edit_stage) is applied, one marker per move of a card-only kind
-    (reach.CARD_ONLY_MOVES) and (#128) per remove, write or copy of a note's file (tracker.card_marks), naming that file and its SHA-256, so tracker._op_move makes exactly these moves; removed
-    afterwards, whatever happens. LOCK is held, and NOTES_LOCK too for a note's card."""
+    (reach.CARD_ONLY_MOVES) and (#128) per remove, write or copy of a note's file (tracker.card_marks), naming that file and its
+    SHA-256, so tracker._op_move makes exactly these moves; removed afterwards, whatever happens. LOCK is held, and NOTES_LOCK too for a note's card."""
     import tracker
     clear_card_marks()
     f = paths.STAGING / name
