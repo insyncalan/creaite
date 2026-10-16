@@ -87,7 +87,7 @@ class Bars(LiveBrowserCase):
     def test_the_profile_table_says_what_each_profile_shows(self):
         b = self.b
         got = b.eval("(()=>{ const f=(p,h)=>profileTools(p,h).filter(t=>t!=='|').map(t=>t.id); "
-                     "return { notes:f('notes',['note','person','item','table','image']), notesBare:f('notes',[]), current:f('current',['image']), "
+                     "return { notes:f('notes',['note','person','item','table','image']), notesBare:f('notes',[]), current:f('current',['image','item']), "
                      "plain:f('plain',['image']), none:f('none',[]), capture:f('capture',[]), names:Object.keys(ED_PROFILES) }; })()")
         self.assertEqual(got["notes"], NOTES)
         self.assertEqual(got["notesBare"], ["m-heading", "b", "i", "s", "code", "m-list", "quote", "link", "undo", "redo"])      # no Insert menu without a host
@@ -111,7 +111,7 @@ class Bars(LiveBrowserCase):
         b.eval("closeCapture()")
         self.open_current()
         self.assertEqual(self.ids(".inplace .rtebar [data-nt]"), CURRENT)
-        self.assertEqual(b.eval("[...document.querySelectorAll('.inplace .rtebar [data-rc]')].length"), len(CURRENT) - 3)   # the old data-rc names stay (not h1 h2 h3)
+        self.assertEqual(b.eval("[...document.querySelectorAll('.inplace .rtebar [data-rc]')].length"), len(CURRENT) - 4)   # the old data-rc names stay (not h1 h2 h3, nor the work-item button, #122 C)
 
     def test_plain_hosts_have_no_toolbar_and_keep_plain_text(self):
         b = self.b
