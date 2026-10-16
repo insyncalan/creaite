@@ -362,10 +362,10 @@ class TodayBriefTests(PageTests):
             headline:document.getElementById("dayHead").tagName,
             overlap:[...document.querySelectorAll("#tBrief > .tsec")].filter(e=>!e.hidden).map((e,i,a)=>i&&e.getBoundingClientRect().top<a[i-1].getBoundingClientRect().bottom-0.5).filter(Boolean).length,
             listsHeight:[...document.querySelectorAll("#tBrief ol.bl")].every(o=>o.getBoundingClientRect().height>=[...o.children].reduce((h,c)=>h+c.getBoundingClientRect().height,0)-1)};""")
-        # BL-319: To decide first after the band, then BL-295's First thing and BL-210's Decisions needed; BL-125 A's two inside
+        # #168: First thing and BL-210's Decisions needed; BL-125 A's two inside
         # Your commitments; Resolved after the Week ahead (folded); Portfolio last (the hidden ones are in the page too)
-        self.assertEqual(o["heads"], ["To decide", "First thing", "Decisions needed", "Needs attention", "Your commitments", "You owe", "Waiting on",
-                                      "Week ahead", "Resolved", "Portfolio"])
+        self.assertEqual(o["heads"], ["First thing", "Decisions needed", "Needs attention", "Your commitments", "You owe", "Waiting on",
+                                      "Intake and Review", "Week ahead", "Resolved", "Portfolio"])
         self.assertTrue(o["bandFirst"])
         self.assertAlmostEqual(o["ratios"][0], 0.8, delta=0.005)                   # #113: the header's content in the 80% column (the band itself is full width: test_today_home)
         self.assertLessEqual(o["ratios"][1]*o["inner"], 980.5)                     # the sections at a 980px reading width, centred
@@ -537,7 +537,7 @@ class TodayHeadingTests(PageTests):
             for sig, count, height, text in v["rows"]:
                 self.assertEqual(sig, v["ref"], key)                                       # exactly the shared h2
                 self.assertEqual(sig[4], "none", key)                                      # no capitals
-                self.assertEqual(text[:1] + text[1:].lower(), text, key)                  # sentence case in the words themselves
+                self.assertEqual(text if text == "Intake and Review" else text[:1] + text[1:].lower(), text, key)   # #168: Review is the tab's name, as Alan wrote it                  # sentence case in the words themselves
                 self.assertIn(count, (None, "400"), key)                                   # the count beside it stays light
                 self.assertLess(height, 30, key)                                           # one line
 

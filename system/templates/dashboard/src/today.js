@@ -97,7 +97,6 @@ export function renderToday(){
   renderDay();   /* BL-293: the date or the day line too */
   const pend=REV.filter(r=>!r.done), mineOver=A.filter(x=>isMe(x.o)&&overdue(x)), mineSoon=A.filter(x=>isMe(x.o)&&soon(x)), off=P.filter(p=>p.health==="Off track");
   putHTML($("#briefText"),html`<b>${pend.length} proposal${pend.length===1?"":"s"}</b> need${pend.length===1?"s":""} your decision, ${raw(countLink(`${plur(mineOver.length,"overdue action")} of yours`,mineOver.length,"actions:overdue:",{o:["@me"]},`<b>${mineOver.length} of your actions</b>`))} ${mineOver.length===1?"is":"are"} overdue${off.length?html`, and <b>${andList(off.map(p=>p.name))}</b> ${off.length===1?"is":"are"} off track`:""}.`);
-  renderToDecide();   /* BL-319: To decide, first after the band */
   renderDn();   /* BL-210: Decisions needed, ahead of Needs attention */
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
   $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
@@ -112,6 +111,7 @@ export function renderToday(){
   $("#chgTitle").textContent=`${done.length} since ${longDate(LASTVISIT.slice(0,10))}`;   /* BL-319: folded to one line, the count in it */
   putHTML($("#chgList"),rc.html?raw(rc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing has been resolved since ${longDate(LASTVISIT.slice(0,10))}.</span></div></li>`);
   putHTML($("#chgMore"),html`${raw(rc.more)}${rc.more?" · ":""}<a class="s" href="#" data-go="activity">See all activity</a>`);
+  renderToDecide();   /* #168: Intake and Review, just above Week ahead (BL-319 had it first after the band) */
   renderWeek();   /* BL-319: day by day to next Monday, each row saying why it is there */
   putHTML($("#pfTbl"),raw(portfolioTable("pf",true))); mountStatusDots($("#pfTbl")); pfResize($("#pfTbl"));   /* BL-285; BL-256 */
   decorateWarnings($("#mineList"));   /* BL-49 */
@@ -399,8 +399,8 @@ if(viaServer()) suStatus().then(()=>{ if(shared.VIEW==="today") renderSetup(); }
 }
 /* ===== BL-319 (v1.9.2): Today as one home =====
    (dev/mockups/today-one-home-mockup.html, tab "Today, one home"). The day band stays exactly as BL-293 drew it, at full width;
-   under it, at a 980px reading width, the sections in order and unboxed: To decide, First thing, Decisions needed, Needs
-   attention, Your commitments (with You owe and Waiting on), Week ahead, Resolved (folded to one line) and Portfolio. Each
+   under it, at a 980px reading width, the sections in order and unboxed: First thing, Decisions needed, Needs
+   attention, Your commitments (with You owe and Waiting on), Intake and Review (#168, was To decide and first), Week ahead, Resolved (folded to one line) and Portfolio. Each
    row's actions are icons (IconButton, or tib for the rows still drawn as text), named on hover and to a screen reader,
    55% until the row is pointed at or tabbed into; nothing moves. Every change has Undo: an approval or a rejection the
    apply's Undo, a dismissed message its own, Mark done and Move the date the staged change's (Undo last). */
@@ -419,7 +419,7 @@ export const tdApprovable=r=>!!r&&!r.done&&!["draft","files"].includes(r.kind)&&
 const revSrc=r=>/-sweep(-\d+)?\.json$/.test(r.file)?"sweep":/-(dashboard|edit)(-\d+)?\.json$/.test(r.file)?"your edits":/-excel(-\d+)?\.json$/.test(r.file)?"Excel import"
   :REV.some(x=>x.file===r.file&&x.kind==="draft"&&x.ref==="meeting")?"minutes":"proposal";
 const tdTag=r=>r.kind==="draft"?(r.ref==="meeting"?"Minutes":"Report"):kindLabel(r)||"Proposal";
-/** To decide's rows, newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
+/** Intake and Review's rows (BL-319 called it To decide), newest first: proposals in Review, transcripts ready in Intake, messages from people Alan follows (never labelled) */
 export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */([]);
   REV.filter(r=>!r.done).forEach(r=>{ const at=revAt(r), ok=tdApprovable(r), t=String(r.rec&&r.rec.t||""), acts=[];
     if(ok) acts.push({id:"approve",icon:"check",label:"Approve and save",name:`Approve and save: ${t}`,primary:true});
@@ -533,8 +533,13 @@ export async function tdAct(row,act,btn){ tdFocusMark(row.key,act.id);
     menu(); await rjLoadGuesses(); if(rjGuesses.value!==was&&rjMenu.value&&rjMenu.value.anchor===btn) menu(); return; }   /* BL-316: open at once; again with the guesses when they arrive */
   if(act.id==="review") tdToReview(r.n); }
 export function tdOpen(row){ if(row.kind==="review") tdToReview(row.n); else if(row.kind==="transcript") go("inbox"); }
-export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return;
+const TDFOLD="creaite-intake-review-hidden";   /* #168: per viewer, this browser only (localStorage), as Week ahead's */
+let tdFoldWired=false;
+function wireTdFold(){ const f=/** @type {HTMLDetailsElement|null} */($("#tdFold")); if(!f||tdFoldWired) return; tdFoldWired=true;
+  f.open=store.get(TDFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(TDFOLD,!f.open)); }
+export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!sec||!body) return; wireTdFold();
   const L=toDecideRows(), total=REV.filter(r=>!r.done).length, n=L.filter(r=>r.kind!=="quiet").length; sec.hidden=!L.length;
+  { const nw=$("#tdNew"); if(nw) nw.hidden=!VIPS().length; }   /* #168: a folded heading still shows an unseen alert (BL-99); never the word that says who is followed (BL-288) */
   $("#nTd").textContent=n?String(n):"";                                          /* BL-334: a quiet line isn't counted */
   drawToDecide(body,{rows:L,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }

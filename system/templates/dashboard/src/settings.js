@@ -819,10 +819,10 @@ export const vipKind=n=>{ const ppl=VIPD().people||{}; return ppl[n]||ppl[person
 export const VIPKIND={mail:"Email",teams:"Teams",calendar:"Invite"}, BASETITLE=document.title;
 export function vipWhen(a){ const d=(a.sent||"").slice(0,10); return d===TODAY?`today ${a.sent.slice(11,16)}`:d?`${fd(d)} ${a.sent.slice(11,16)}`.trim():""; }
 /* BL-288: nothing says why a message is shown (who Alan follows is never labelled); BL-296: each has Create work item and
-   Dismiss (Undo in the message). BL-319: the messages are rows of Today's To decide (today.js toDecideRows), newest first with
+   Dismiss (Undo in the message). BL-319: the messages are rows of Today's Intake and Review (today.js toDecideRows), newest first with
    the proposals and transcripts; their two icons keep the data-alertdo buttons this file's handler runs. */
 export const ALERTWORD={mail:"email",teams:"Teams message",calendar:"invite"};
-/* after a row goes: focus to the same button on the row now in its place in To decide (or its first action), else To decide's heading */
+/* after a row goes: focus to the same button on the row now in its place in Intake and Review (or its first action), else its heading */
 export function alertFocus(id,what){ const vis=()=>$$("#tdList > li").filter(l=>!l.hidden), i=vis().findIndex(r=>r.dataset.td==="al"+id); return ()=>{
   const L=vis(), next=L[Math.min(Math.max(0,i),L.length-1)];
   const b=next&&(next.querySelector(`[data-alertdo="${what}"]`)||next.querySelector("[data-tdact]")); if(b){ /** @type {HTMLElement} */(b).focus(); return; }
@@ -834,14 +834,14 @@ export async function alertDismiss(id,cand){ if(!viaServer()){ snack("Dismiss ne
   else if(a) a.seen=r.at||nowStamp();
   await vipPoll(); vipBadge(); renderToday(); back();   /* BL-342 N1: the server's counts for the other cards on the same item */
   snack(it?"Item dismissed":"Message dismissed",async()=>{ const u=await api("/api/alerts/undo",{ids:[id],...c}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(it){ delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Intake and Review"); }); }
 /* BL-342: Handled on a thread's card (Dismiss's effect, recorded as handled) and Log on the matched item (one pending update for Review) */
 export async function alertHandled(id){ if(!viaServer()){ snack("Handled needs the live server"); return; }
   const r=await api("/api/alerts/handled",{ids:[id]}); if(!r.ok||!r.handled){ snack(r.message||"Not marked handled"); return; }
   const a=(VIPD().alerts||[]).find(x=>x.id===id), back=alertFocus(id,"handled");
   if(a){ a.seen=r.at||nowStamp(); a.state="handled"; } await vipPoll(); vipBadge(); renderToday(); back();
   snack("Marked handled",async()=>{ const u=await api("/api/alerts/undo",{ids:[id]}); if(!u.ok){ snack(u.message||"Not undone"); return; }
-    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in To decide"); }); }
+    if(a){ delete a.seen; a.state="open"; } VIPNOTED.add(id); await vipPoll(); vipBadge(); renderToday(); snack("Back in Intake and Review"); }); }
 /* BL-342 Part 2: Chase on a thread matched to an item that is waiting on someone else: BL-224's Draft email in Chase mode for that
    item's owner, the item ticked. Nothing is sent or written; the builder falls back to an update request when the item isn't past its date. */
 export function alertChase(id){ const a=(VIPD().alerts||[]).find(x=>x.id===id), m=a&&a.match, it=m&&m.id&&REC("actions",m.id);
@@ -913,7 +913,7 @@ export async function alertUnstage(d){ let ok=false;
   const a=(VIPD().alerts||[]).find(z=>z.id===d.al.id), it=a&&d.al.cand?(a.candidates||[]).find(/** @param {any} x */x=>x.n===d.al.cand):null;
   if(it){ delete it.made; delete it.dismissed; if(a) delete a.seen; } else if(a){ delete a.seen; delete a.made; }
   VIPNOTED.add(d.al.id); vipBadge(); await reloadData(); renderToday();
-  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in To decide`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
+  snack(u.ok?`Undone: the new ${d.word} is no longer staged, and the message is back in Intake and Review`:`Unstaged; the message wasn't put back: ${u.message||"try again"}`); }
 /* why Draft from the message can't run, or "" */
 export function alertDraftWhy(al){ return /^(private|confidential)$/i.test(al.marker||"")?`Not for a ${al.marker.toLowerCase()} message`:!draftOn("sharpen")?"Sharpen a vague action is off in Settings › Advanced › AI drafts":!viaServer()?"Drafting needs the live server":""; }
 /* the strip at the top of the peek: where it came from, the type, Draft from the message, Save and Cancel */

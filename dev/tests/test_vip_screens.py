@@ -131,7 +131,7 @@ class Screens(LiveBrowserCase):
           openDraftEmail('Sara Example'); out.email=document.getElementById('deDlg').outerHTML; document.getElementById('deDlg').close();
           out.rem=[...document.querySelectorAll('#attnList li.rem')].map(l=>l.textContent).join(' | ');
           return out; })()""")
-        self.assertEqual(o["head"], "To decide")
+        self.assertEqual(o["head"], "Intake and Review")
         self.assertEqual(o["rows"], 4)
         self.assertNotIn("VIP", o["first"])
         self.assertEqual(o["buttons"], [["Create work item from", "Make a work item"], ["Dismiss", "Dismiss"]])   # icons, named

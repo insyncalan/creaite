@@ -3,7 +3,7 @@
 Run: python3 dev/tests/test_today_home.py   (Chrome tier; skipped without Chrome)
 One class per Done-when point:
   Header      the header is BL-293's day band, exactly, at full width, with its arrows fixed at the top right;
-  ToDecide    To decide first after the band: Review, transcripts ready and messages, newest first, top five, "Open Review (n)";
+  ToDecide    Intake and Review (was To decide), just above Week ahead: Review, transcripts ready and messages, newest first, top five, "Open Review (n)";
               icon actions with Undo (approve and save; reject with a reason; never approve for a one-at-a-time item);
   Sections    every current section present, in order, unboxed; Resolved folded to one line; the Week ahead to next Monday
               with why each row is there, following dashboard.week_ahead_priorities; the Portfolio as it was;
@@ -86,11 +86,11 @@ class ToDecide(Home):
         b.eval("""SA().vip={people:{},alerts:[{id:'m1',who:'Tom Reid',subject:'Signed FDS',kind:'mail',sent:'2099-01-01T09:00',p:'ABC',link:'https://x/1'},
           {id:'m2',who:'Sam Lee',subject:'Shortlist',kind:'teams',sent:'2000-01-01T09:00',p:'ABC'},{id:'m3',who:'Sam Lee',subject:'Budget',kind:'mail',sent:'2000-01-01T08:00',p:''}]}""")
         self.today()
-        o = b.eval(f"""(()=>{{ const L={TD}; return {{first:[...document.querySelectorAll('#tBrief>.tsec:not(.setupsec)')].find(s=>!s.hidden).id,
+        o = b.eval(f"""(()=>{{ const L={TD}; return {{first:document.getElementById('tdSec').nextElementSibling.id,
           kinds:L.map(l=>l.className), msgs:L.filter(l=>l.classList.contains('td-message')).map(l=>l.dataset.td), shown:L.filter(l=>!l.hidden).length, all:L.length, pending:REV.filter(r=>!r.done).length,
           foot:document.querySelector('#tBrief .tdfoot').textContent, count:document.getElementById('nTd').textContent,
           tag:L[0].querySelector('.tdtag').textContent, text:document.getElementById('tdSec').textContent}}; }})()""")
-        self.assertEqual(o["first"], "tdSec")
+        self.assertEqual(o["first"], "weekSec")                          # #168: Intake and Review sits just above Week ahead
         self.assertIn("td-message", o["kinds"][0])                     # the newest first: the message (sent in 2099)
         self.assertEqual(o["tag"], "Message")
         self.assertNotIn("VIP", o["text"])                              # BL-288: never labelled
@@ -132,7 +132,7 @@ class ToDecide(Home):
         b.wait(f"REV.find(r=>r.n==={n}).done==='approved' || !REV.some(r=>r.n==={n}&&!r.done)", 20)
         b.wait(f"!document.querySelector('#tdList li[data-td=\"{key}\"]')")
         b.wait("document.getElementById('snack').classList.contains('on') && document.getElementById('snackU') && !document.getElementById('snackU').hidden", 20)
-        self.assertTrue(b.eval("document.activeElement.closest('#tdList')!==null || document.activeElement.id==='hTd'"))   # focus stays in To decide
+        self.assertTrue(b.eval("document.activeElement.closest('#tdList')!==null || document.activeElement.id==='hTd'"))   # focus stays in Intake and Review
         b.click("#snackU")                                              # Undo
         b.wait(f"REV.some(r=>r.n==={n}&&!r.done) || [...document.querySelectorAll('#tdList>li')].some(l=>l.dataset.td==='{key}')", 30)
 
@@ -170,7 +170,7 @@ class Sections(Home):
             inMine:['tOwe','tWait'].every(id=>document.getElementById('mineSec').contains(document.getElementById(id))),
             fold:!document.getElementById('resFold').open, sum:document.querySelector('#resFold>summary').getBoundingClientRect().height,
             pf:[...document.querySelectorAll('#pfTbl th')].map(t=>t.textContent), tip:!!document.querySelector('#pfTbl .pfname[data-tip]')}; })()""")
-        self.assertEqual(o["ids"], ["tdSec", "ftSec", "dnSec", "attnSec", "mineSec", "weekSec", "resSec", "pfSec"])
+        self.assertEqual(o["ids"], ["ftSec", "dnSec", "attnSec", "mineSec", "tdSec", "weekSec", "resSec", "pfSec"])
         self.assertEqual(o["boxed"], [])
         self.assertTrue(o["inMine"])                                    # You owe and Waiting on inside Your commitments
         self.assertTrue(o["fold"])
@@ -390,6 +390,8 @@ class Icons(Home):
         self.assertTrue(o["named"])
         self.assertEqual(o["op"], "0.55")
         sel = "#tdList>li:first-child .tacts button"
+        b.eval(f"document.querySelector('{sel}').scrollIntoView({{block:'center'}})")   # #168: lower on the page now, so focus must not scroll it
+        b.pump(0.3)
         before = b.eval(f"JSON.stringify(document.querySelector('{sel}').getBoundingClientRect())")
         b.eval(f"document.querySelector('{sel}').focus()")
         b.pump(0.3)
