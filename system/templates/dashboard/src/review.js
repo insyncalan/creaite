@@ -41,6 +41,7 @@ export function setDecision(data,r,v){ const bf={meeting:"minutes_decision",repo
     if(v==="rejected"&&w){ it.reject_reason=w.reason; if(w.dup) it.duplicate_of=w.dup; else delete it.duplicate_of; RVREASON.delete(r.n); } else if(v!=="rejected"){ delete it.reject_reason; delete it.duplicate_of; }
     if(it&&it.drafted&&(v==="approved"||v==="rejected")){ const f=Object.keys(it.changes||{})[0]; draftStat(it.drafted,v==="rejected"?"rejected":drSame((it.changes||{})[f],it.drafted_text)?"used":"edited"); }
     if(it&&it.suggested&&it.suggested.feature==="done"&&(v==="approved"||v==="rejected")) draftStat("done",v==="rejected"?"rejected":it.as_proposed?"edited":"used");   /* BL-218 */
+    if(it&&it.suggested&&it.suggested.feature==="promise"&&(v==="approved"||v==="rejected")) draftStat("promise",v==="rejected"?"rejected":it.as_proposed?"edited":"used");   /* BL-342 Part 5 */
     if(it&&it.looks_like&&v==="rejected"&&it.duplicate_of===it.looks_like.id) draftStat("repeat","used");   /* BL-221: rejected as its duplicate */ }
 export let decide = async function(n,v,written){ const tr=$(`#reviewBody tr[data-n="${n}"]`), was=REV.find(x=>x.n===n);
     const snap=tr&&shared.VIEW==="review"&&!reduced()?{g:{r:tr.getBoundingClientRect(),t:(tr.querySelector("td.title")||tr).textContent.trim()},rows:mSnapRows("#reviewBody tr[data-n]",e=>e.dataset.n)}:null;

@@ -236,6 +236,37 @@ def vip_vault():
     return v
 
 
+TZ = "+04:00"                     # BL-342 Part 3 B: the laptop's zone in the server tests (CREAITE_TZ_OFFSET)
+
+
+def zoned(found):
+    """A stand-in check's reply as the prompt asks for it: every time with the zone's offset (a bare time is dropped)."""
+    def one(m):
+        out = dict(m)
+        for k in ("last", "sent", "replied"):
+            t = str(out.get(k) or "")
+            if len(t) == 16 and t[10] in " T":
+                out[k] = f"{t[:10]}T{t[11:]}{TZ}"
+        return out
+    return [one(m) if isinstance(m, dict) else m for m in found]
+
+
+def fast_checks(v):
+    """Let a test's server check about every second: the vault's own copy of sweep.py gets a lower floor (the constant the
+    real one holds at 10 minutes; tests change the copy, never an environment variable)."""
+    f = v.root / "system/scripts/sweep.py"
+    text = f.read_text()
+    assert "VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240" in text
+    f.write_text(text.replace("VIP_MIN_MINUTES, VIP_MAX_MINUTES = 10, 240", "VIP_MIN_MINUTES, VIP_MAX_MINUTES = 0.01, 240"))
+
+
+def check_since(v, since="2026-10-08 07:00"):
+    """The window the first check reads from (vip.json's last_check), so a fixture's earlier messages are inside it."""
+    f = v.root / "system/staging/vip.json"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text(json.dumps({"last_check": since, "alerts": []}))
+
+
 def record(v, messages, how="sweep"):
     f = v.root / "system/staging/drafts/found.json"
     f.write_text(json.dumps(messages))
@@ -376,7 +407,7 @@ args = sys.argv[1:]
 log = Path(__file__).with_name("vip-calls.txt")
 log.write_text(log.read_text() + "x" if log.exists() else "x")
 assert "--allowedTools" in args and "Bash" not in args[args.index("--allowedTools") + 1]     # Microsoft 365 search only
-found = [{"kind": "mail", "from": "Mia Hale <mia@client.example>", "subject": "Steering pack", "sent": "2026-10-08 08:00",
+found = [{"kind": "mail", "from": "Mia Hale <mia@client.example>", "subject": "Steering pack", "sent": "2026-10-08T08:00+04:00",
           "link": "https://outlook.office365.com/owa/?ItemID=s1", "sensitivity": "normal", "gist": "Wants the steering pack today."}]
 print(json.dumps({"type": "result", "result": "Here they are: " + json.dumps(found)}))
 '''
@@ -393,13 +424,16 @@ class VipLiveTests(unittest.TestCase):
         v = vip_vault()
         try:
             settings(v, lambda d: d["vip"].__setitem__("check_minutes", 0.02))                # every ~1 s
+            fast_checks(v)
+            check_since(v)
             fake = v.root / "fake_vip.py"
             fake.write_text(FAKE_VIP_CLAUDE)
             fake.chmod(0o755)
             port = free_port()
             base = f"http://127.0.0.1:{port}"
             proc = subprocess.Popen([sys.executable, str(v.root / "system/scripts/live_server.py")], cwd=v.root,
-                                    env={**os.environ, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake)},
+                                    env={**os.environ, "CREAITE_PORT": str(port), "CREAITE_CLAUDE": str(fake),
+                                         "CREAITE_NOW": "2026-10-08 09:30", "CREAITE_TZ_OFFSET": TZ},
                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
                 for _ in range(100):

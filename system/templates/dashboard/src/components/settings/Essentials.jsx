@@ -105,9 +105,9 @@ function Essential({ row }) {
     case "vip.enabled": control = sw(); break;
     case "vip.check_minutes":
       control = (
-        <span class="setpair"><input type="number" {...named} min={5} step={5} value={val(k) ?? 30} style="width:80px"
+        <span class="setpair"><input type="number" {...named} min={10} max={240} step={5} value={val(k) ?? 30} style="width:80px"
           onChange={async e => { const el = /** @type {HTMLInputElement} */ (e.currentTarget), v = Math.round(Number(el.value));
-            if (!Number.isFinite(v) || v < 5) { snack("Use a number of minutes, 5 or more"); el.value = String(val(k) ?? 30); return; }
+            if (!Number.isFinite(v) || v < 10 || v > 240) { snack("Use a number of minutes from 10 to 240"); el.value = String(val(k) ?? 30); return; }
             if (!await save({ [k]: v })) el.value = String(val(k) ?? 30); }} /> <span class="sub">minutes</span></span>
       );
       break;

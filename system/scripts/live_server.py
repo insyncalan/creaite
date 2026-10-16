@@ -120,6 +120,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          repository), streamed, ending in a "draft" event with the filled form; /api/alerts/make {id, type,
                          values} stages the item as a pending proposal for Review, dismisses the message and records the
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
+- POST /api/alerts/handled {ids | id}: a thread's card is handled (Dismiss's effect; /api/alerts/undo puts it back);
+                         /api/alerts/log {id}: log the thread on its matched item, one pending update for Review (BL-342)
+- POST /api/alerts/close {id, undo}: "Looks done: close <ID>": one pending close of the thread's matched action for Review,
+                         or with undo the staged one taken back (BL-342 Part 3 B); nothing is applied
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
 - POST /api/prep/brief, /chips, /shape, /filter, /focus, /focus/save, /focus/clear, /view {key, …}: meeting prep, reimagined
@@ -3430,12 +3434,13 @@ def mark_interrupted():
 
 
 # ===== Sweep and alerts (BL-97, BL-99, BL-98) =====
-# BL-99: while the server runs, a VIP check looks for mail, Teams messages and invites from the VIP addresses since the
-# last check: on start-up, then every vip.check_minutes. It runs Claude headless with Microsoft 365 search tools only
-# (read-only), gets back a JSON list of references and gists, and sweep.py records the alerts (from a VIP only; never
-# ignored, never matched away; no message text). It skips while a sweep runs (the sweep records VIPs itself), when
-# VIP alerts are off or nobody is a VIP, and always in the development repository (sample data only). Its own
-# subprocess, so it never queues behind ask creaite. Routes: /api/vip (the unseen alerts), /api/vip/seen.
+# BL-99: while the server runs, a VIP check looks for mail and Teams messages from the VIP addresses since the last
+# check (BL-342 Part 3 B: calendar invites are left out, VIP_INVITES): on start-up, then every vip.check_minutes. It
+# runs Claude headless with Microsoft 365 search tools only (read-only), gets back a JSON list of references and gists,
+# and sweep.py records the alerts (from a VIP only; never ignored, never matched away; no message text). It skips while
+# a sweep runs (the sweep records VIPs itself), when VIP alerts are off or nobody is a VIP, and always in the
+# development repository (sample data only). Its own subprocess, so it never queues behind ask creaite. Routes:
+# /api/vip (the unseen alerts), /api/vip/seen.
 # The run reads outside content (mail, Teams) with no guard hook, so it has no vault tools at all. It is started with no
 # `--tools` flag (#116, 15-10-2026: under `--tools ""` the check reached no Microsoft 365 tool on laptop 1, so the flag is
 # gone) and every built-in tool but ToolSearch, and the other connectors (whole server, run_deny_extras(): #116 review M1),
@@ -3457,25 +3462,89 @@ VIP_BUILTIN_DENIES = [t for t in KNOWN_BUILTINS if t not in VIP_BUILTIN_ALLOWED]
 # BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
 # what these people sent since the last check, then reads each whole conversation it belongs to (everyone's messages and a
 # few earlier ones for context, the title, the people and the attachment names) and reports the outcome in its own words.
-VIP_PROMPT = ("creaite VIP check. Read-only: search Alan's Microsoft 365 for messages SENT BY these addresses since {since} "
-              "(local time): Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates. Addresses: "
-              "{addresses}. Then read each CONVERSATION one of those messages belongs to (the Teams chat, or the mail thread by "
-              "its conversation ID): everyone's messages since {since}, not only theirs, plus a few earlier ones for context; "
-              "its title, its participants and any attachment names. Read nothing else, change nothing, write nothing. Reply "
-              "with ONLY a JSON array, one object per conversation (never one per message): {{\"kind\": \"teams\"|\"mail\"|"
-              "\"calendar\", \"conversation\": \"the Teams chat ID or the mail conversation ID\", \"title\": \"the chat's "
-              "or thread's own title, or null when it has none (never a generic 'Group chat')\", \"from\": \"Name <address> of "
-              "the person above who wrote\", \"people\": [\"Name <address>\", …], \"last\": \"YYYY-MM-DD HH:MM of its last "
-              "message\", \"link\": \"the Microsoft 365 web link\", \"sensitivity\": \"normal|personal|private|"
+# BL-342 Part 3 B: still one call, on the default model. It also returns each thread's card fields (type, ask, due, owners),
+# its match to open work, its newest sender and Alan's newest reply, and a close suggestion; the probe's three rules (one
+# named time zone, no calendar invites, IDs copied exactly) are in the words. sweep.vip_clean checks every field before
+# anything is recorded. VIP_INVITES = True puts BL-334's invite sentence back (a reviewed one-line change, not a setting);
+# calendar search stays in VIP_TOOLS so that flip needs no tool change.
+VIP_INVITES = False
+VIP_SOURCES = {False: ("Outlook Inbox mail and Teams chats and channel messages. Leave out calendar invites, meeting "
+                       "requests, meeting updates and replies to them (accepted, declined, tentative, cancelled): they are "
+                       "not messages."),
+               True: "Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates."}
+VIP_KINDS = {False: '"teams"|"mail"', True: '"teams"|"mail"|"calendar"'}
+VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send nothing. Search Alan's Microsoft 365 for "
+              "messages SENT BY these addresses since {since} ({zone}): {sources} Addresses: {addresses}. For each mail "
+              "message found, call read_resource on it once to get its conversation ID. Then read each CONVERSATION one of "
+              "those messages belongs to (the Teams chat, or the mail thread by its conversation ID): everyone's messages "
+              "since {since}, not only theirs, plus a few earlier ones for context; its title, its participants and any "
+              "attachment names. Read nothing else. IDs: copy every ID exactly as the tool gave it, character for "
+              "character; never retype, shorten or guess one; give null if you do not have it. For mail, \"conversation\" "
+              "is the conversation ID from read_resource, never the message's internet message ID (the one that looks like "
+              "<…@…>). Times: give every time in {zone} as YYYY-MM-DDTHH:MM{offset}, never in any other zone. Reply with "
+              "ONLY a JSON array, one object per conversation (never one per message): {{\"kind\": {kinds}, "
+              "\"conversation\": \"the Teams chat ID or the mail conversation ID\", \"title\": \"the chat's or thread's own "
+              "title, or null when it has none (never a generic 'Group chat')\", \"from\": \"Name <address> of the person "
+              "above who wrote\", \"people\": [\"Name <address>\", …], \"last\": \"YYYY-MM-DDTHH:MM{offset} of its last "
+              "message\", \"last_from\": \"the address of whoever sent its newest message (anyone's, Alan's included)\", "
+              "\"replied\": \"YYYY-MM-DDTHH:MM{offset} of Alan's newest message in it after its last message from anyone "
+              "else, or null\", \"link\": \"the Microsoft 365 web link\", \"sensitivity\": \"normal|personal|private|"
               "confidential\", \"attachments\": [\"file names only\"], \"summary\": \"what the conversation came to, in one "
-              "or two lines of your own words, at most 300 characters, never quoted text\", \"items\": [{{\"type\": "
-              "\"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own words\", "
-              "\"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else null\"}}]}}. Report "
-              "the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a conversation with "
-              "nothing actionable has \"items\": []. For a private conversation give only \"summary\": \"private\" and no "
-              "items. A confidential one is summarised like any other, in your own words, with its sensitivity "
-              "\"confidential\" (it stays inside creaite, internal only, never quoted). Never use the word VIP in a gist, "
-              "a summary, an item or anywhere in the reply (BL-288). Reply [] if there are none.")
+              "or two lines of your own words, at most 300 characters, never quoted text\", \"type\": \"action\"|"
+              "\"decision\"|\"fyi\"|\"risk\" (the one thing Alan must do; fyi when it is for his information or files "
+              "only), \"ask\": \"what Alan must do, in your own words, at most 140 characters, or an empty string\", "
+              "\"due\": \"YYYY-MM-DD where stated or clearly implied, else null\", \"owners\": [\"the full names of those "
+              "named to act; you when the ask is of Alan\"], \"match\": {{\"id\": \"one ID from OPEN WORK for this "
+              "conversation's project, or null\", \"relation\": \"update\" (it moves that open action forward)|\"chase\" "
+              "(that action is owed to Alan by someone in the conversation, and Alan wrote last with no reply since)|"
+              "\"new\" (nothing in OPEN WORK matches), \"why\": \"your own words, at most 140 characters\"}}, \"items\": "
+              "[{{\"type\": \"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own "
+              "words\", \"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else "
+              "null\"}}]}}. Report the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a "
+              "conversation with nothing actionable has \"items\": []. OPEN WORK, each project's open actions by project "
+              "code: {open_work}. Replies: for each conversation you report and each OPEN conversation below, find Alan's "
+              "newest message in it after its time (mail: search Sent Items for its subject; Teams: his own message in that "
+              "chat) and give its time as \"replied\", or null. For an OPEN conversation with nothing new from anyone "
+              "else, give only {{\"conversation\": copied exactly as given below, \"kind\", \"replied\"}}, plus "
+              "\"closes\", \"promises\" and \"kept\" as below when they apply. OPEN: {open}. Finished work: when a conversation shows that the OPEN "
+              "WORK action you gave as its match is now finished, add \"closes\": {{\"id\": \"the same ID as match.id, "
+              "copied exactly\", \"evidence\": \"why it looks finished, in your own words, at most 100 characters; never "
+              "quote the message\"}}. Finished means one of two things only: Alan's own message delivers it (for example "
+              "he sends the document or gives the answer the action asked for), or the action's owner says in the "
+              "conversation that it is done. Only when match.relation is \"update\" or \"chase\"; never for \"new\" and "
+              "never for an ID you did not give as match.id. If the message only promises it, plans it, asks about it or "
+              "mentions it, or if you are unsure, leave \"closes\" out. An OPEN conversation's reply-only object may carry "
+              "\"closes\" too, for the action its card was matched to, when Alan's newest message delivers it. Never for a "
+              "private conversation. Alan's promises: in Alan's own message that you give as \"replied\" (or the newest "
+              "message, when it is his), look for a commitment he made in passing to someone else, such as 'I'll send the "
+              "revised plan by Friday'. For each, add to that conversation's \"promises\" list {{\"what\": \"what he will "
+              "do, verb first, in your own words, at most 100 characters; never quote\", \"to\": \"the full name of the "
+              "person he promised it to\", \"due\": \"YYYY-MM-DD in {zone}, worked out from the date of his message "
+              "('Friday' is the next Friday after it), or null when he gave no time\", \"at\": \"his message's time, "
+              "exactly as you gave it for replied or last, YYYY-MM-DDTHH:MM{offset}\"}}. At most 3 a conversation. Not a "
+              "promise: a question, a plan without a commitment, a promise made to Alan, a task someone formally gave him "
+              "(that is an action), or anything in OPEN PROMISES already. OPEN PROMISES, each project's open promises by "
+              "project code: {open_promises}. Promises kept: when a message in the conversation, from Alan or from the "
+              "person who made it, shows that one of OPEN PROMISES for this conversation's project has now been done, add "
+              "\"kept\": {{\"id\": \"the ID exactly as listed\", \"evidence\": \"why it looks kept, in your own "
+              "words, at most 100 characters; never quote\"}}. If unsure, leave it out. Never for a private conversation. "
+              "For a private conversation give only \"summary\": \"private\" and no items, type, "
+              "ask, due, owners, match, closes, promises or kept. A confidential one is summarised like any other, in your own words, "
+              "never quoted, with its sensitivity \"confidential\" and its type, ask, due, owners and match (it stays "
+              "inside creaite, internal only). Never use the word VIP in a gist, a summary, an item or anywhere in the "
+              "reply (BL-288). Reply [] if there is nothing to report.")
+
+
+def vip_prompt(since, vips, zone, parts):
+    """The check's prompt: VIP_PROMPT filled with the window in the laptop's zone, the addresses and the parts plain code
+    gives (sweep.vip_prompt_parts: the open cards, each project's open work and, BL-342 Part 5, its open promises)."""
+    import sweep
+    return VIP_PROMPT.format(since=sweep.zoned_out(since, zone) or since, zone=zone["zone"], offset=zone["offset"],
+                             sources=VIP_SOURCES[bool(VIP_INVITES)], kinds=VIP_KINDS[bool(VIP_INVITES)],
+                             addresses=", ".join(sorted(vips)), open=parts["open"], open_work=parts["open_work"],
+                             open_promises=parts["open_promises"])
+
+
 VIP_LOCK = threading.Lock()       # one check at a time
 VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never write at once
 VIP_STATUS = {"running": False, "last_error": None}
@@ -3494,7 +3563,8 @@ def vip_deny():
 
 
 def vip_check(how="check"):
-    """One VIP check. Returns a short note of what happened (also printed)."""
+    """One VIP check. Returns a short note of what happened (also printed). BL-342 Part 3 B: one call; its reply is checked
+    by sweep.vip_clean before it is recorded, and the debug log gets one line of counts, seconds and dollars (BL-102)."""
     import sweep
     if (paths.ROOT / ".creaite-dev").exists():
         return "skipped: development repository"
@@ -3509,32 +3579,75 @@ def vip_check(how="check"):
     try:
         st = sweep.vip_state()
         since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
-        prompt = VIP_PROMPT.format(since=since, addresses=", ".join(sorted(vips)))
+        zone = sweep.local_zone()                         # the laptop's own zone, read at each check (probe rule 1)
+        parts = sweep.vip_prompt_parts(st, zone)
+        prompt = vip_prompt(since, vips, zone, parts)
         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
                            "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
-        found, why = None, "no reply"
+        found, why, cost, began = None, "", None, time.monotonic()
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
-            why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
-            result = json.loads(r.stdout or "{}").get("result") or ""
-            m = re.search(r"\[.*\]", result, re.S)
-            found = json.loads(m.group(0)) if m else None
-            why = why if m else result or why
-        except (OSError, ValueError, subprocess.TimeoutExpired) as e:
-            why = str(e)
-        if not isinstance(found, list):
-            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {why[:160]}"
+            found, why, cost = vip_reply(r)
+        except subprocess.TimeoutExpired:
+            why = VIP_TIMED_OUT
+        except OSError:
+            why = VIP_NOT_STARTED
+        took = time.monotonic() - began
+        if not isinstance(found, list):                   # the reason shown is fixed words: never the model's or a tool's
+            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {vip_why(why)}"
             print(VIP_STATUS["last_error"], flush=True)
+            vip_debug(sweep.vip_check_line({}, [], took, cost, failed=True))
             return VIP_STATUS["last_error"]
         with VIP_WRITE:
-            new = sweep.vip_record(found, how)
+            # a sweep began during the call: it records these people itself (checked just before the write, review point 7)
+            if sweep_running():
+                vip_debug(f"check dropped: a sweep started during it, {took:.1f}s")
+                return "skipped: a sweep started during the check"
+            clean, counts = sweep.vip_clean(found, since, zone, sweep.vip_state()["alerts"], invites=bool(VIP_INVITES))
+            checked = {"offered": parts["offered"], "offered_promises": parts["offered_promises"], "counts": counts}
+            new = sweep.vip_record(clean, how, checked=checked)
         VIP_STATUS["last_error"] = None
+        vip_debug(sweep.vip_check_line(checked["counts"], new, took, cost))
         note = vip_note(new)
         print(f"{datetime.now():%H:%M:%S} {note}", flush=True)
         return note
     finally:
         VIP_STATUS["running"] = False
         VIP_LOCK.release()
+
+
+VIP_TIMED_OUT, VIP_NOT_STARTED = "it timed out", "claude couldn't be started"
+
+
+def vip_why(why):
+    """The fixed words a failed check shows (VIP_STATUS, /api/vip and the server's output): the two fixed reasons as they
+    are; anything else (the model's prose, a tool's or a parser's message) only counted, never shown."""
+    if why in (VIP_TIMED_OUT, VIP_NOT_STARTED):
+        return why
+    return f"its reply couldn't be used ({len(str(why or ''))} characters held back)"
+
+
+def vip_reply(r):
+    """(the reply's JSON array or None, why it didn't finish, its total_cost_usd or None) from a finished `claude -p` call.
+    A reply nested too deeply to read (RecursionError on Python 3.9) is an unfinished check, like one that isn't JSON."""
+    why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
+    try:
+        reply = json.loads(r.stdout or "{}")
+    except (ValueError, RecursionError) as e:
+        return None, type(e).__name__, None
+    reply = reply if isinstance(reply, dict) else {}
+    result, cost = str(reply.get("result") or ""), reply.get("total_cost_usd")
+    m = re.search(r"\[.*\]", result, re.S)
+    try:
+        return (json.loads(m.group(0)) if m else None), (why if m else result or why), cost
+    except (ValueError, RecursionError) as e:
+        return None, type(e).__name__, cost
+
+
+def vip_debug(line):
+    """One line in the debug log's vip area (BL-102): counts, seconds and dollars only."""
+    if debuglog is not None:
+        debuglog.info("vip", line)
 
 
 def vip_note(new):
@@ -3546,7 +3659,8 @@ def vip_note(new):
 
 
 def vip_timer():
-    """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it)."""
+    """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it).
+    Nothing in a check or in working out the wait can end the thread: a wait that can't be worked out is 30 minutes."""
     import sweep
     how = "start-up"
     while True:
@@ -3555,7 +3669,11 @@ def vip_timer():
         except Exception as e:  # noqa: BLE001  never stops the server
             print(f"Note: the VIP check failed: {e}", flush=True)
         how = "check"
-        time.sleep(max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds())))
+        try:
+            wait = max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds()))
+        except Exception:  # noqa: BLE001  a hand-edited setting never stops the timer
+            wait = 60 * 30.0
+        time.sleep(wait)
 
 
 def vip_wait_seconds():
@@ -3892,6 +4010,84 @@ SWEEP_ALERT_ROUTES.update({"/api/alerts/dismiss": alert_dismiss_route, "/api/ale
                            "/api/alerts/prefill": alert_prefill_route, "/api/alerts/draft": alert_draft_route,
                            "/api/alerts/make": alert_make_route})
 # ===== end BL-296 =====
+
+# ===== BL-342 (Part 1): Handled and Log on a thread's card (routes only; neither is a run) =====
+# /api/alerts/handled {ids | id}: the card settles as handled (Dismiss's effect, recorded as handled with a time; /api/alerts/undo
+# puts it back). /api/alerts/log {id}: stages one pending `update` for the matched item, as the dashboard's own proposal.
+
+def alert_handled_route(handler, req):
+    """POST /api/alerts/handled {ids | id}: a thread's card is handled: out of Needs attention, kept in the alert history."""
+    import sweep
+    ids = alert_ids(req)
+    if not ids:
+        return handler.send(400, {"ok": False, "message": "Which thread?"})
+    with VIP_WRITE:
+        done = sweep.vip_handled(ids)
+    n = len(done)
+    return handler.send(200, {"ok": True, "handled": n, "ids": done, "at": sweep.now().strftime("%Y-%m-%d %H:%M"),
+                              "message": f"Marked {n} thread{'s' if n != 1 else ''} handled." if n else "Nothing to mark handled."})
+
+
+def alert_log_route(handler, req):
+    """POST /api/alerts/log {id}: log the thread on its matched item: one pending update for Review (nothing is applied)."""
+    import sweep
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_log(str(req.get("id") or ""))
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True, **got,
+                              "message": f"Already logged on {got['id']}." if got["already"]
+                              else f"Staged an update on {got['id']} for Review."})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/handled": alert_handled_route, "/api/alerts/log": alert_log_route})
+# ===== end BL-342 =====
+
+# ===== BL-342 Part 3 B, step 9: "Looks done: close <ID>" on a thread's card (a route, not a run) =====
+# /api/alerts/close {id, undo}: stages one pending close of the card's matched action for Review (the same pending thread
+# proposal Log uses for that item), or with undo takes a staged one back while it is still pending. Nothing is applied.
+
+
+def alert_close_route(handler, req):
+    """POST /api/alerts/close {id, undo}: stage the card's close of its matched action for Review, or undo it."""
+    import sweep
+    aid = str(req.get("id") or "")
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_close_unstage(aid) if req.get("undo") else sweep.vip_close_stage(aid)
+            card = sweep.vip_find(aid) or {}
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "error": str(e), "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "closes": card.get("closes"),
+                              "message": f"Staged a close of {got['id']} for Review." if got["state"] == "staged"
+                              else f"Took the close of {got['id']} back out of Review."})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/close": alert_close_route})
+# ===== end BL-342 Part 3 B, step 9 =====
+
+# ===== BL-342 Part 5: "Add a promise" and "Looks kept: mark kept" on a thread's card (a route, not a run) =====
+# /api/alerts/promise {id, what: add | kept | dismiss, key, undo}: by the card's ID and the promise's key, stages one pending
+# new promise or one change of a promise to Done for Review, dismisses a promise (nothing staged), or with undo takes it back
+# while it is still pending. Nothing is applied.
+
+
+def alert_promise_route(handler, req):
+    """POST /api/alerts/promise {id, what, key, undo}: stage, undo or dismiss a card's promise or kept promise for Review."""
+    import sweep
+    aid = str(req.get("id") or "")
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_promise_action(aid, req.get("what"), req.get("key"), bool(req.get("undo")))
+            card = sweep.vip_find(aid) or {}
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "error": str(e), "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "promises": card.get("promises"), "kept": card.get("kept")})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/promise": alert_promise_route})
+# ===== end BL-342 Part 5 =====
 
 
 # ===== Chat and sweep (BL-108, BL-109, BL-110; sprint-chat-sweep) =====
