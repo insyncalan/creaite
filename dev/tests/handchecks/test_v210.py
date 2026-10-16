@@ -34,7 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hcbase
 import measure
 from hcbase import NOTES, SCREENS, HandcheckCase
-from live_browser import pin_page_clock
+from live_browser import TEST_PALETTES, pin_page_clock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "system" / "scripts"))
 import date_words
@@ -1959,7 +1959,7 @@ class Judgement(Seeded):
     once the screenshots are taken; the Results row says "judgement: on the screenshot sheet"."""
 
     def shots(self, n, screens, prepares=None, palettes=None):
-        palettes = palettes or measure.themes(self.b)[:2]
+        palettes = palettes or TEST_PALETTES
         total = 0
         for s in screens:
             total += self.sheet(n, s, palettes=palettes, widths=WIDTHS, prepare=(prepares or {}).get(s))
