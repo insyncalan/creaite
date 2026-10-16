@@ -81,13 +81,13 @@ export const railLabelsOn = signal(true);
 export const railWide = signal(true);
 /** Under 900px the rail is always collapsed (the pinned rail), so the page keeps its room. */
 export const railNarrow = signal(false);
-const KEY = "creaite-rail-collapsed";
+const RAIL_KEY = "creaite-rail-collapsed";
 /** This browser's choice (the wordmark toggle): true collapsed, false expanded, null none yet. */
 export const railUser = signal(/** @type {boolean | null} */ (null));
 /** Read the remembered choice (a private window or blocked storage: none). */
-export function railLoadUser() { try { const v = store.get(KEY, null); railUser.value = typeof v === "boolean" ? v : null; } catch (x) { railUser.value = null; } }
+export function railLoadUser() { try { const v = store.get(RAIL_KEY, null); railUser.value = typeof v === "boolean" ? v : null; } catch (x) { railUser.value = null; } }
 /** Remember the choice. @param {boolean} v */
-export function railSetUser(v) { railUser.value = v; try { store.set(KEY, v); } catch (x) { /* storage blocked: it holds for this page only */ } }
+export function railSetUser(v) { railUser.value = v; try { store.set(RAIL_KEY, v); } catch (x) { /* storage blocked: it holds for this page only */ } }
 /** Collapsed: by the wordmark; else by what was saved before (display "icons") or the window's width. */
 export const railCollapsed = computed(() => railNarrow.value
   || (railUser.value !== null ? railUser.value : railCfg.value.display === "icons" || !railWide.value));

@@ -15,6 +15,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { tipHide } from "../../core/dom.js";
 import { hoverAttach, menuGroup } from "../../core/hover.js";
 import { MenuPanel, menuItemsIn } from "../Menu.jsx";
+import { StatusDot } from "../StatusDot.jsx";
 import { railCounts, railItem, railMode, railView } from "../../stores/rail.js";
 import { RailIcon } from "./RailIcon.jsx";
 
@@ -27,8 +28,6 @@ import { RailIcon } from "./RailIcon.jsx";
 const attr = (el, k, v) => { if (v == null) el.removeAttribute(k); else if (el.getAttribute(k) !== v) el.setAttribute(k, v); };
 /** A count as the badge shows it: 99+ at most. @param {number} n */
 export const capCount = n => (n > 99 ? "99+" : String(n));
-/** A health word as a dot's colour class. @param {string} h */
-const hClass = h => /off/i.test(h) ? "bad" : /risk/i.test(h) ? "warn" : h ? "ok" : "none";
 
 /** @param {RailButtonProps} props */
 export function RailButton({ id, inMenu, onGo, fly, onFly }) {
@@ -89,7 +88,7 @@ export function RailButton({ id, inMenu, onGo, fly, onFly }) {
             <button key={x.id} type="button" role="menuitem" tabIndex={-1} class="fi" data-pick={x.id}
               onClick={() => { shut(false); onFly && onFly(id, x.id); }}>
               <span class="mname">{x.name}</span>
-              {x.health ? <span class="health"><i class={`hdot ${hClass(x.health)}`} aria-hidden="true"></i><span class="vh">{x.health}</span></span> : null}
+              {x.health ? <StatusDot health={x.health} /> : null}
               {x.count != null ? <span class="fcount">{x.count}</span> : null}
             </button>
           ))}

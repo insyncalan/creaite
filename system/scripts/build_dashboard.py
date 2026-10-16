@@ -1283,7 +1283,7 @@ def ui_settings(s):
             "boardClosedDays": g("work", "board", "closed_days", d=14),          # closed items shown in a board's Closed column
             "weekendDays": sorted(tracker.weekend_days(s)),                     # BL-181: Monday 0
             "rail": g("dashboard", "rail", d=None),               # BL-163 (sprint-rail): the left rail's order, hidden items and display
-            "railLabels": bool(g("dashboard", "rail_labels", d=True)),   # #156: Labels when collapsed (a label under each icon when the rail is collapsed)
+            "railLabels": bool(g("dashboard", "rail_labels", d=True)),   # #156: Labels when collapsed
             "listCap": g("dashboard", "project_list_cap", d=10),   # BL-48
             "genDays": g("dashboard", "generate_days", d=7)}       # BL-46    # BL-45: Alan's saved Work views
 

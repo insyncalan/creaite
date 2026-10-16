@@ -1771,8 +1771,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail .railfly button{height:32px;width:100%;padding:0 8px;gap:10px;justify-content:flex-start;color:var(--ink);border-radius:var(--r-sm);white-space:nowrap;font-size:var(--fs-sm)}
 .rail .railfly button:hover,.rail .railfly button:focus-visible{background:var(--accent-soft)}
 .rail .railfly .mname{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
-.rail .railfly .health{margin-left:auto;flex:none;display:inline-flex;align-items:center}
-.rail .railfly .hdot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block} .rail .railfly .hdot.ok{background:var(--ok)} .rail .railfly .hdot.warn{background:var(--warn)} .rail .railfly .hdot.bad{background:var(--bad)}
+.rail .railfly .health{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)} .rail .railfly .health svg{width:14px;height:14px}
 .rail .railfly .fcount{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)}
 .rail .railfly .mnote{padding:6px 8px;color:var(--muted)}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
@@ -2544,7 +2543,7 @@ a.seeall{margin-top:8px}
   .setcats button{border-left:2px solid Canvas} .setcats button[aria-selected="true"]{border-left-color:Highlight}
   .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight;border:2px solid Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
   .rail .railfly,#railMoreMenu{border:1px solid CanvasText} .rail .railfly button:hover,.rail .railfly button:focus-visible,#railMoreMenu button:focus-visible{outline:2px solid Highlight}
-  .rail .railfly .hdot,#railMoreMenu .rsw .sw{forced-color-adjust:none} .rail button.rtog:focus-visible{outline-color:Highlight}
+  #railMoreMenu .rsw .sw{forced-color-adjust:none} .rail button.rtog:focus-visible{outline-color:Highlight}
   #cmdkList button[aria-selected="true"],#cmdkList button:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   #cmdkIn:focus,#cmdkIn:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   .spark i,.chs .dot,.pkstage .dot,.ib .fcount,.rail .badge,.mv-mk.achieved{forced-color-adjust:none}

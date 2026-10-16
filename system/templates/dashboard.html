@@ -1781,8 +1781,7 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail .railfly button{height:32px;width:100%;padding:0 8px;gap:10px;justify-content:flex-start;color:var(--ink);border-radius:var(--r-sm);white-space:nowrap;font-size:var(--fs-sm)}
 .rail .railfly button:hover,.rail .railfly button:focus-visible{background:var(--accent-soft)}
 .rail .railfly .mname{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
-.rail .railfly .health{margin-left:auto;flex:none;display:inline-flex;align-items:center}
-.rail .railfly .hdot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block} .rail .railfly .hdot.ok{background:var(--ok)} .rail .railfly .hdot.warn{background:var(--warn)} .rail .railfly .hdot.bad{background:var(--bad)}
+.rail .railfly .health{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)} .rail .railfly .health svg{width:14px;height:14px}
 .rail .railfly .fcount{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)}
 .rail .railfly .mnote{padding:6px 8px;color:var(--muted)}
 /* under 480px the rail is 48px, as before BL-319, so a phone-width page keeps every pixel it had */
@@ -2554,7 +2553,7 @@ a.seeall{margin-top:8px}
   .setcats button{border-left:2px solid Canvas} .setcats button[aria-selected="true"]{border-left-color:Highlight}
   .rail button[aria-current="page"]{forced-color-adjust:none;color:Highlight;border:2px solid Highlight} .rail button[aria-current="page"]::before{forced-color-adjust:none;background:Highlight}
   .rail .railfly,#railMoreMenu{border:1px solid CanvasText} .rail .railfly button:hover,.rail .railfly button:focus-visible,#railMoreMenu button:focus-visible{outline:2px solid Highlight}
-  .rail .railfly .hdot,#railMoreMenu .rsw .sw{forced-color-adjust:none} .rail button.rtog:focus-visible{outline-color:Highlight}
+  #railMoreMenu .rsw .sw{forced-color-adjust:none} .rail button.rtog:focus-visible{outline-color:Highlight}
   #cmdkList button[aria-selected="true"],#cmdkList button:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   #cmdkIn:focus,#cmdkIn:focus-visible{outline:2px solid Highlight;outline-offset:-2px}
   .spark i,.chs .dot,.pkstage .dot,.ib .fcount,.rail .badge,.mv-mk.achieved{forced-color-adjust:none}
@@ -5457,6 +5456,7 @@ button.nchip{font:inherit;font-size:12px}
     setOpen: () => setOpen,
     setPTab: () => setPTab,
     setPalette: () => setPalette,
+    setRailCount: () => setRailCount,
     setResolve: () => setResolve,
     setRewrite: () => setRewrite,
     setRhythm: () => setRhythm,
@@ -24800,14 +24800,14 @@ ${s5}`;
   var railLabelsOn = y3(true);
   var railWide = y3(true);
   var railNarrow = y3(false);
-  var KEY = "creaite-rail-collapsed";
+  var RAIL_KEY = "creaite-rail-collapsed";
   var railUser = y3(
     /** @type {boolean | null} */
     null
   );
   function railLoadUser() {
     try {
-      const v5 = store.get(KEY, null);
+      const v5 = store.get(RAIL_KEY, null);
       railUser.value = typeof v5 === "boolean" ? v5 : null;
     } catch (x5) {
       railUser.value = null;
@@ -24816,7 +24816,7 @@ ${s5}`;
   function railSetUser(v5) {
     railUser.value = v5;
     try {
-      store.set(KEY, v5);
+      store.set(RAIL_KEY, v5);
     } catch (x5) {
     }
   }
@@ -53664,11 +53664,11 @@ ${d5.text}`);
       busy.value = false;
     }
   }
-  var KEY2 = "creaite.noteDelete";
+  var KEY = "creaite.noteDelete";
   function remember(v5) {
     try {
-      if (v5) sessionStorage.setItem(KEY2, JSON.stringify(v5));
-      else sessionStorage.removeItem(KEY2);
+      if (v5) sessionStorage.setItem(KEY, JSON.stringify(v5));
+      else sessionStorage.removeItem(KEY);
     } catch (e4) {
     }
   }
@@ -53708,7 +53708,7 @@ ${d5.text}`);
   function resumeDeleteNote(card) {
     let v5 = null;
     try {
-      v5 = JSON.parse(sessionStorage.getItem(KEY2) || "null");
+      v5 = JSON.parse(sessionStorage.getItem(KEY) || "null");
     } catch (e4) {
       v5 = null;
     }
@@ -54096,7 +54096,6 @@ ${d5.text}`);
     else if (el2.getAttribute(k5) !== v5) el2.setAttribute(k5, v5);
   };
   var capCount = (n4) => n4 > 99 ? "99+" : String(n4);
-  var hClass = (h5) => /off/i.test(h5) ? "bad" : /risk/i.test(h5) ? "warn" : h5 ? "ok" : "none";
   function RailButton({ id: id2, inMenu, onGo, fly, onFly }) {
     const it2 = railItem(id2), hasFly = !!fly && !inMenu;
     const btn = A2(
@@ -54229,10 +54228,7 @@ ${d5.text}`);
               },
               children: [
                 /* @__PURE__ */ u2("span", { class: "mname", children: x5.name }),
-                x5.health ? /* @__PURE__ */ u2("span", { class: "health", children: [
-                  /* @__PURE__ */ u2("i", { class: `hdot ${hClass(x5.health)}`, "aria-hidden": "true" }),
-                  /* @__PURE__ */ u2("span", { class: "vh", children: x5.health })
-                ] }) : null,
+                x5.health ? /* @__PURE__ */ u2(StatusDot, { health: x5.health }) : null,
                 x5.count != null ? /* @__PURE__ */ u2("span", { class: "fcount", children: x5.count }) : null
               ]
             },
@@ -60483,8 +60479,10 @@ ${d5.text}`);
         "query",
         "quip",
         "quipNow",
+        "railLabelsOn",
         "railNorm",
         "railSave",
+        "railSetLabels",
         "raw",
         "rbDismiss",
         "rbDraw",
@@ -60560,6 +60558,7 @@ ${d5.text}`);
         "setOf",
         "setPTab",
         "setPalette",
+        "setRailCount",
         "setRhythm",
         "setRunning",
         "setSearch",

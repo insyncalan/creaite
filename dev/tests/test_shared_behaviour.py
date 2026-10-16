@@ -521,11 +521,42 @@ class SharedBehaviour(Driver, us.UiSweepCase):
             bad.append("Esc doesn't return focus to the control")
         return bad
 
+    def rail(self):
+        """#139: the rail's Projects and Work open a flyout on hover, and from the keyboard with → or ↓ (Enter keeps going to
+        the page, as the icon always did, so the Enter script can't drive them): the list opens with focus in it and
+        aria-expanded true; ↓ ↑ move inside it; Esc closes it with focus back on the button."""
+        b = self.b
+        self.goto("today")
+        b.eval(PROBE + ";true")
+        bad = []
+        for v in ("work", "projects"):
+            sel = f"#railMain [data-v={v}]"
+            b.eval(f"document.querySelector('{sel}').focus()")
+            self.press("ArrowRight", 0.5)
+            self.seen.append({"ids": [f"railFly-{v}", "railFly-"], "labels": [], "classes": []})
+            if b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')") != "true":
+                bad.append(f"{v}: → opens nothing")
+                continue
+            if not b.eval(f"!!document.activeElement.closest('#railFly-{v}')"):
+                bad.append(f"{v}: focus stays outside the list")
+            first = b.eval("document.activeElement.textContent")
+            self.press("ArrowDown")
+            self.press("ArrowUp")
+            if b.eval("document.activeElement.textContent") != first or not b.eval(f"!!document.activeElement.closest('#railFly-{v}')"):
+                bad.append(f"{v}: ↓ ↑ take focus out of the list")
+            self.press("Escape", 0.4)
+            if b.eval(f"document.querySelector('{sel}').getAttribute('aria-expanded')") != "false":
+                bad.append(f"{v}: Esc leaves it open")
+            elif not b.eval(f"document.activeElement===document.querySelector('{sel}')"):
+                bad.append(f"{v}: Esc doesn't return focus to the button")
+        return bad
+
     # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the
     # script, its name in the report and the expected-failures list, its area, what it opens).
     KEYED = (("today", "cmdk", "cmdk dialog#cmdk", "Shell", "⌘K", "Search or jump to"),
              ("archive-ask", "parch", "parch dialog#parchDlg", "Settings", "Archive ABC", "Archive a project with open items"),
-             ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"))
+             ("notes", "ndel", "ndel dialog#noteDelDlg", "Core", "Delete note…", "Delete note?"),
+             ("today", "rail", "rail menu#railFly", "Shell", "→ on Projects, Work", "Rail flyouts"))
 
     def keyed_dialogs(self, only, report, found):
         for screen, script, sig, area, how, label in self.KEYED:
@@ -548,7 +579,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
                 if bad:
                     found.add((screen_area(name), f"keys: {name} {o['sig']} “{o['name']}”: {'; '.join(bad)}"))
         self.keyed_dialogs(only, report, found)
-        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel"})
+        msg = judge("keys", found, set(only) | {"cmdk", "parch", "ndel", "rail"})
         if os.environ.get("SB_ONLY"):
             self.assertFalse(msg, "\n".join(msg))
             return                                   # only some screens: what they didn't reach isn't a finding

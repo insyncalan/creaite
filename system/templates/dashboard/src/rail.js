@@ -24,12 +24,12 @@ import { go } from "./core/nav.js";
 import { MAC, S } from "./core/page.js";
 import { writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railItem, railLabelled, railLabelsOn, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailView } from "./stores/rail.js";
+import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railItem, railLabelled, railLabelsOn, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailCount, setRailView } from "./stores/rail.js";
 import { row, SETSECTIONS } from "./settings.js";
 import { WTABS, workTabGo } from "./work.js";
 import { healthCount } from "./stores/settings.js";
 
-export { RAIL_DEF, RAIL_ITEMS, healthCount, railItem, railLabelsOn, railNorm };   /* the stores', on the page for the tests and ⌘K */
+export { RAIL_DEF, RAIL_ITEMS, healthCount, railItem, railLabelsOn, railNorm, setRailCount };   /* the stores', on the page for the tests and ⌘K */
 
 /** Where Customise was opened from: focus goes back there when it closes. */
 export let RAILOPENER = /** @type {HTMLElement | null} */ (null);
