@@ -10,11 +10,12 @@ import { DDATE, fd, TODAY, toIso } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
 import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNotes, noteBodyFrom, noteCur, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading,
-  noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
+  noteHeld, noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
   useStaleDraft } from "../../stores/notes.js";
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { FindUpdates } from "./FindUpdates.jsx";
+import { askDeleteNote, DeleteNoteDialog } from "./DeleteNote.jsx";
 import { Dialog } from "../Dialog.jsx";
 import { Icon } from "../Icon.jsx";
 import { Menu } from "../Menu.jsx";
@@ -194,8 +195,9 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
           <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
             items={[{ id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
               { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-              { id: "file", name: "Show the file", line: n.path, icon: "folder" }]}
-            onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else onOpenFile(n.path); }} />
+              { id: "file", name: "Show the file", line: n.path, icon: "folder" },
+              { id: "sep", sep: true }, { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }]}
+            onPick={id => { if (id === "pin") noteMeta({ pinned: !pinned }, true); else if (id === "conf") noteMeta({ confidential: !conf }, true); else if (id === "del") askDeleteNote(); else onOpenFile(n.path); }} />
         </div>
       </div>
       {cur.stale ? (
@@ -207,7 +209,9 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
       {noteSave.value.state === "conflict" ? (
         <div class="nstale" role="alert"><span>{noteSave.value.msg}</span>
           <button type="button" class="btn sm" onClick={() => openNote(cur.path)}>Open the file's version</button></div>) : null}
-      <NoteEditor key={`${cur.path}|${cur.load}`} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
+      {noteHeld.value === cur.path ? (
+        <div class="nstale nheld" role="status"><span>Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card.</span></div>) : null}
+      <NoteEditor key={`${cur.path}|${cur.load}`} readOnly={noteHeld.value === cur.path} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
         noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} restored={!!cur.restored} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
         onHoverLine={l => { if (noteFind.value && fuHover.value !== l) fuHover.value = l; }}
         onOpenItem={onOpenItem} onOpenNote={t => { const hit = noteByTitle(code, t); if (hit) onOpen(hit.path); else onNew(t); }} />
@@ -299,6 +303,7 @@ export function NotesPage({ code, onGo, onOpenItem, onOpenFile, onAddressChange 
         <NoteDoc code={code} onOpen={openPath} onOpenItem={onOpenItem} onNew={t => setDlg(t)} onOpenFile={onOpenFile} />
         <NoteSide code={code} onOpen={openPath} onOpenItem={onOpenItem} />
       </div>
+      <DeleteNoteDialog />
       <NewNote code={code} open={dlg !== null} title={dlg || ""} onClose={() => setDlg(null)} onMade={() => { setDlg(null); onAddressChange(); }} />
     </div>);
 }

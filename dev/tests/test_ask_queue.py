@@ -20,7 +20,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys, time
 args = sys.argv[1:]
-message = args[args.index("-p") + 1].split("\n")[0]
+message = args[args.index("--") + 1].split("\n")[0]
 session = args[args.index("--resume") + 1] if "--resume" in args else "sess-" + os.urandom(4).hex()
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": session})
@@ -110,11 +110,13 @@ class AskQueue(LiveBrowserCase):
         self.send("quick keep")
         self.send("quick drop")
         self.send("quick fix")
-        b.wait("document.querySelectorAll('#chQueue .chqitem').length===3", 10)
+        # wait for the queue's own words, not only its length: the list is drawn again as the server confirms each change
+        QT = "[...document.querySelectorAll('#chQueue .chqitem .chqtext')].map(e=>e.textContent).join('|')"
+        b.wait(f"{QT}==='quick keep|quick drop|quick fix'", 20)
         b.eval("document.querySelectorAll('#chQueue [data-qrm]')[1].click()")
-        b.wait("document.querySelectorAll('#chQueue .chqitem').length===2", 10)
+        b.wait(f"{QT}==='quick keep|quick fix'", 20)
         b.eval("document.querySelectorAll('#chQueue [data-qedit]')[1].click()")
-        b.wait("document.querySelectorAll('#chQueue .chqitem').length===1", 10)
+        b.wait(f"{QT}==='quick keep'", 20)
         self.assertEqual(b.eval("$('#chIn').value"), "quick fix")                             # back in the box to change
         self.assertEqual(self.queued(), ["quick keep"])
         b.eval("$('#chIn').value=''")

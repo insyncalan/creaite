@@ -64,6 +64,7 @@ class Case(LiveBrowserCase):
 
     def open(self, id_, k="actions"):
         b = self.b
+        b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)       # BL-327: the page's own data reload has finished redrawing
         b.eval(f"WT={k!r}; go('work')")
         b.eval(f"openRecord({k!r},{id_!r})")
         b.wait(f"CUR&&CUR.id==={id_!r}&&document.getElementById('panel').classList.contains('peek')")
@@ -71,6 +72,7 @@ class Case(LiveBrowserCase):
 
     def open_ms(self):
         b = self.b
+        b.wait("PULSE.reloads===0 && !PULSE.busy && !EVS.timer", 30)       # BL-327: the page's own data reload has finished redrawing
         b.eval("mvOpenPage('ABC','plan')")
         b.wait("VIEW==='milestones'&&document.querySelector('#v-milestones .mv-card')")
         b.eval(f"mvEdOpen({self.ms!r})")
@@ -88,7 +90,7 @@ class Case(LiveBrowserCase):
         else:
             b.click("#pkSneakBtn" if b.eval("!!document.getElementById('pkSneakBtn')&&!document.getElementById('pkSneakBtn').hidden"
                                             "&&document.getElementById('panel').classList.contains('on')") else "#mvSneakBtn")
-        b.wait("document.activeElement&&document.activeElement.id==='spIn'")
+        b.wait("document.activeElement&&document.activeElement.id==='spIn'", 30)
 
     def say(self, text, wait="#spCard"):
         """Type the words and wait for the card the server's reading draws."""

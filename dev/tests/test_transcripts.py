@@ -82,7 +82,7 @@ from pathlib import Path
 args = sys.argv[1:]
 here = Path(__file__).resolve().parent
 (here / "fake_seen.json").write_text(json.dumps({"allowed": args[args.index("--allowedTools") + 1].split(","),
-    "disallowed": args[args.index("--disallowedTools") + 1].split(","), "prompt": args[args.index("-p") + 1]}))
+    "disallowed": args[args.index("--disallowedTools") + 1].split(","), "prompt": args[args.index("--") + 1]}))
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-t"})
 for n, step in enumerate(json.loads((here / "stub_script.json").read_text())):

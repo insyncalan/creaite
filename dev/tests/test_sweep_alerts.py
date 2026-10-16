@@ -554,7 +554,7 @@ FAKE_PREP_CLAUDE = r'''#!/usr/bin/env python3
 import json, sys, time
 from pathlib import Path
 args = sys.argv[1:]
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 allowed = args[args.index("--allowedTools") + 1]
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-p"})

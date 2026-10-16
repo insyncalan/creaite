@@ -2986,6 +2986,9 @@ button.nchip{font:inherit;font-size:12px}
 .nntopt.on{border-color:var(--accent);background:var(--accent-soft)} .nntopt span{display:grid} .nntopt small{color:var(--muted);font-size:11px}
 .nnws{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .nnfoot{display:flex;gap:8px;justify-content:flex-end}
+/* #124 Delete note: the … menu's last item in red, and its confirm box */
+.nmorewrap [role=menuitem].bad b,.nmorewrap [role=menuitem].bad .i{color:var(--bad)}
+#noteDelDlg{width:min(480px,calc(100vw - 32px))} .ndelbox{display:grid;gap:10px} .ndelbox h2{margin:0;font-size:16px;overflow-wrap:anywhere} .ndelbox p{margin:0}
 @media (max-width:1100px){.nsplit,.nsplit.finding{grid-template-columns:220px minmax(0,1fr)}.nsplit.collapsed,.nsplit.finding.collapsed{grid-template-columns:40px minmax(0,1fr)}.nside{position:static}.nctx,.nside{grid-column:1/-1}}
 @media (max-width:700px){.nsplit,.nsplit.collapsed,.nsplit.finding,.nsplit.finding.collapsed{grid-template-columns:minmax(0,1fr)}.nlist{position:static}.ndoc{padding:14px}.nntpl,.nnws{grid-template-columns:1fr}}
 /* ===== end BL-301 B ===== */
@@ -3721,6 +3724,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     DayCurve: () => DayCurve,
     DayMeetings: () => DayMeetings,
     DayTabs: () => DayTabs,
+    DeleteNoteDialog: () => DeleteNoteDialog,
     Dialog: () => Dialog,
     EASE: () => EASE,
     EBAREA: () => EBAREA,
@@ -4169,6 +4173,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     approveGroup: () => approveGroup,
     askChangesHtml: () => askChangesHtml,
     askClaude: () => askClaude,
+    askDeleteNote: () => askDeleteNote,
     askDiscard: () => askDiscard,
     askFinished: () => askFinished,
     askLive: () => askLive,
@@ -4631,6 +4636,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     defaultHeading: () => defaultHeading,
     defaultView: () => defaultView,
     defs: () => defs,
+    deleteNote: () => deleteNote,
     deleteView: () => deleteView,
     depFormDraw: () => depFormDraw,
     depHash: () => depHash,
@@ -5156,12 +5162,15 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     noteBodyFrom: () => noteBodyFrom,
     noteCodeOf: () => noteCodeOf,
     noteCur: () => noteCur,
+    noteDeleting: () => noteDeleting,
     noteDirty: () => noteDirty,
     noteFind: () => noteFind,
     noteFindP: () => noteFindP,
     noteFlash: () => noteFlash,
     noteFlush: () => noteFlush,
     noteFlushOnExit: () => noteFlushOnExit,
+    noteGone: () => noteGone,
+    noteHeld: () => noteHeld,
     noteImageSrc: () => noteImageSrc,
     noteLines: () => noteLines,
     noteLoading: () => noteLoading,
@@ -5611,6 +5620,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     resolvePerson: () => resolvePerson,
     resolver: () => resolver,
     restoreNav: () => restoreNav,
+    resumeDeleteNote: () => resumeDeleteNote,
     retryOffer: () => retryOffer,
     revAt: () => revAt,
     revDetail: () => revDetail,
@@ -5772,6 +5782,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     selDay: () => selDay,
     send: () => send,
     sendQueued: () => sendQueued,
+    serverCardFlow: () => serverCardFlow,
     serverSeams: () => serverSeams,
     setAgendaInvited: () => setAgendaInvited,
     setAgendaStyle: () => setAgendaStyle,
@@ -5908,6 +5919,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     undatedRecount: () => undatedRecount,
     undatedWork: () => undatedWork,
     undoApply: () => undoApply,
+    undoWords: () => undoWords,
     uniq: () => uniq,
     unknownOwner: () => unknownOwner,
     unmountChase: () => unmountChase,
@@ -7313,8 +7325,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     const scrim = (e4) => {
       const d5 = ref.current;
       if (!d5 || e4.target !== d5) return;
-      const busy = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
-      if (busy) return;
+      const busy2 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
+      if (busy2) return;
       const r4 = d5.getBoundingClientRect();
       if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) {
         if (owned) {
@@ -8385,6 +8397,527 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     return { code: m5[1], week: /^\d{4}-\d{2}-\d{2}$/.test(kv.w || "") ? kv.w : "" };
   }
 
+  // stores/notes.js
+  var IDLE_MS = 3e4;
+  var DRAFT_MS = 1e3;
+  var LIST_KEY = "creaite-notes-list-open";
+  var notesCode = y3(
+    /** @type {string | null} */
+    null
+  );
+  var notesList = y3(
+    /** @type {NoteSummary[]} */
+    []
+  );
+  var notesQuery = y3("");
+  var noteCur = y3(
+    /** @type {OpenNote | null} */
+    null
+  );
+  var noteSave = y3(
+    /** @type {SaveState} */
+    { state: "" }
+  );
+  var noteLoading = y3(false);
+  var notesMsg = y3("");
+  var noteHeld = y3(
+    /** @type {string | null} */
+    null
+  );
+  var notesListOpen = y3((() => {
+    try {
+      return localStorage.getItem(LIST_KEY) !== "0";
+    } catch (e4) {
+      return true;
+    }
+  })());
+  function toggleNotesList(show) {
+    const v5 = show === void 0 ? !notesListOpen.value : show;
+    notesListOpen.value = v5;
+    try {
+      localStorage.setItem(LIST_KEY, v5 ? "1" : "0");
+    } catch (e4) {
+    }
+  }
+  function allNotes() {
+    const d5 = (
+      /** @type {any} */
+      D
+    );
+    if (!d5.notes) d5.notes = {};
+    return d5.notes;
+  }
+  function notesMentioning(id2) {
+    const out = [];
+    for (const [code, L3] of Object.entries(allNotes())) for (const n4 of L3 || []) if ((n4.items || []).includes(id2)) out.push({ code, note: n4 });
+    return out;
+  }
+  function keepSummary(code, n4) {
+    const all = allNotes(), L3 = (all[code] || []).filter((x5) => x5.path !== n4.path);
+    all[code] = sortNotes([n4, ...L3]);
+    if (notesCode.value === code) notesList.value = all[code];
+  }
+  var sortNotes = (L3) => [...L3].sort((a5, b5) => Number(b5.pinned) - Number(a5.pinned) || String(b5.mod || b5.updated).localeCompare(String(a5.mod || a5.updated)));
+  async function loadNotes(code) {
+    if (notesCode.value !== code) {
+      notesQuery.value = "";
+    }
+    notesCode.value = code;
+    notesList.value = sortNotes(allNotes()[code] || []);
+    if (!viaServer()) return;
+    const r4 = await api("/api/notes/list", { code });
+    if (r4 && r4.ok && notesCode.value === code) {
+      allNotes()[code] = r4.notes;
+      notesList.value = sortNotes(r4.notes);
+    }
+  }
+  var ses = { getBody: null, changes: {}, dirty: false, draftT: null, idleT: null, busy: null };
+  function noteBodyFrom(f5) {
+    ses.getBody = f5;
+  }
+  var loads = 0;
+  var clock = () => (/* @__PURE__ */ new Date()).toTimeString().slice(0, 5);
+  async function openNote(path) {
+    await noteFlush();
+    if (!noteCur.value || noteCur.value.path !== path) {
+      noteFind.value = false;
+      noteFindP.value = 0;
+      noteMarks.value = { markers: {}, hover: 0 };
+    }
+    if (!viaServer()) {
+      notesMsg.value = "Opening a note needs the live server.";
+      return false;
+    }
+    noteLoading.value = true;
+    const r4 = await api("/api/notes/get", { path });
+    noteLoading.value = false;
+    if (!r4 || !r4.ok) {
+      notesMsg.value = oneLine(r4 && r4.message || "That note couldn't be opened.");
+      return false;
+    }
+    notesMsg.value = "";
+    ses.changes = {};
+    ses.dirty = false;
+    const cur = {
+      path: r4.note.path,
+      code: r4.code,
+      note: r4.note,
+      body: r4.body,
+      meta: r4.meta || {},
+      base: r4.base,
+      stale: null,
+      load: ++loads,
+      images: r4.images || {},
+      sent: Array.isArray(r4.sent) ? r4.sent : []
+    };
+    const d5 = r4.draft;
+    if (d5 && !d5.stale && (d5.body !== null && d5.body !== void 0 && d5.body !== r4.body || Object.keys(d5.changes || {}).length)) {
+      cur.body = d5.body ?? r4.body;
+      cur.restored = true;
+      ses.changes = { ...d5.changes || {} };
+      ses.dirty = true;
+      cur.meta = { ...cur.meta, ...ses.changes };
+    } else if (d5 && d5.stale && d5.body !== null && d5.body !== void 0 && d5.body !== r4.body) cur.stale = { body: d5.body, at: d5.at };
+    noteCur.value = cur;
+    noteSave.value = cur.restored ? { state: "draft", msg: "Restored what you typed before; it saves in a moment." } : { state: "" };
+    if (cur.restored) idleSoon();
+    return true;
+  }
+  function useStaleDraft() {
+    const c5 = noteCur.value;
+    if (!c5 || !c5.stale) return;
+    noteCur.value = { ...c5, body: c5.stale.body, stale: null, restored: true, load: ++loads };
+    ses.dirty = true;
+    noteSave.value = { state: "draft", msg: "Your draft is back; it saves in a moment." };
+    idleSoon();
+  }
+  function dropStaleDraft() {
+    const c5 = noteCur.value;
+    if (c5) noteCur.value = { ...c5, stale: null };
+  }
+  async function closeNote() {
+    await noteFlush();
+    noteCur.value = null;
+    noteSave.value = { state: "" };
+  }
+  function noteGone(path) {
+    if (noteHeld.value === path) noteHeld.value = null;
+    if (!noteCur.value || noteCur.value.path !== path) return;
+    clearTimeout(ses.draftT);
+    clearTimeout(ses.idleT);
+    ses.dirty = false;
+    ses.changes = {};
+    noteCur.value = null;
+    noteSave.value = { state: "" };
+  }
+  function idleSoon() {
+    clearTimeout(ses.idleT);
+    ses.idleT = setTimeout(() => {
+      noteFlush();
+    }, IDLE_MS);
+  }
+  function noteTyped() {
+    if (!noteCur.value) return;
+    ses.dirty = true;
+    if (noteSave.value.state !== "conflict") noteSave.value = { state: "typing" };
+    clearTimeout(ses.draftT);
+    ses.draftT = setTimeout(keepDraft, DRAFT_MS);
+    idleSoon();
+  }
+  function noteMeta(changes, now) {
+    const c5 = noteCur.value;
+    if (!c5) return;
+    if (noteHeld.value === c5.path) {
+      notesMsg.value = "This note waits on the approval card to be deleted: answer the card first.";
+      return;
+    }
+    ses.changes = { ...ses.changes, ...changes };
+    noteCur.value = { ...c5, meta: { ...c5.meta, ...changes } };
+    if (now) {
+      ses.dirty = true;
+      noteFlush();
+    } else noteTyped();
+  }
+  var body = () => {
+    try {
+      return ses.getBody ? ses.getBody() : null;
+    } catch (e4) {
+      return null;
+    }
+  };
+  async function keepDraft() {
+    const c5 = noteCur.value;
+    if (!c5 || !ses.dirty || !viaServer()) return;
+    const r4 = await api("/api/notes/draft", { path: c5.path, body: body(), changes: ses.changes, base: c5.base });
+    if (r4 && r4.ok && noteSave.value.state === "typing") noteSave.value = { state: "draft", msg: "Draft kept" };
+  }
+  async function noteFlush() {
+    clearTimeout(ses.draftT);
+    clearTimeout(ses.idleT);
+    if (ses.busy) await ses.busy;
+    const c5 = noteCur.value;
+    if (!c5 || !ses.dirty) return true;
+    if (!viaServer()) {
+      noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." };
+      return false;
+    }
+    const sent = { ...ses.changes }, b5 = body(), oldTitle = c5.note.title;
+    noteSave.value = { state: "saving" };
+    ses.busy = api("/api/notes/save", { path: c5.path, body: b5, changes: sent, base: c5.base });
+    const r4 = await ses.busy;
+    ses.busy = null;
+    if (r4 && r4.ok) {
+      ses.dirty = false;
+      for (const k5 of Object.keys(sent)) if (ses.changes[k5] === sent[k5]) delete ses.changes[k5];
+      const now = noteCur.value;
+      if (now && now.path === c5.path) noteCur.value = { ...now, note: r4.note, base: r4.base, body: b5 ?? now.body, restored: false };
+      keepSummary(c5.code, r4.note);
+      noteSave.value = { state: "saved", at: clock() };
+      if (sent.title !== void 0 && !r4.unchanged) await renameToTitle(c5.code, r4.note.path, r4.base, oldTitle);
+      return true;
+    }
+    if (r4 && r4.conflict) {
+      noteSave.value = { state: "conflict", msg: oneLine(r4.message) };
+      keepDraft();
+      return false;
+    }
+    if (r4 && r4.wait) {
+      noteSave.value = { state: "wait", msg: oneLine(r4.message) };
+      keepDraft();
+      idleSoon();
+      return false;
+    }
+    noteSave.value = { state: "error", msg: oneLine(r4 && r4.message || "Not saved.") };
+    keepDraft();
+    return false;
+  }
+  function noteFlushOnExit() {
+    const c5 = noteCur.value;
+    if (!c5 || !ses.dirty || !viaServer()) return;
+    try {
+      fetch("/api/notes/save", {
+        method: "POST",
+        keepalive: true,
+        headers: { "Content-Type": "application/json", "X-Creaite-Token": (
+          /** @type {any} */
+          D.token || ""
+        ) },
+        body: JSON.stringify({ path: c5.path, body: body(), changes: ses.changes, base: c5.base })
+      });
+      ses.dirty = false;
+    } catch (e4) {
+    }
+  }
+  async function createNote(code, o5) {
+    await noteFlush();
+    if (!viaServer()) {
+      notesMsg.value = "Making a note needs the live server.";
+      return null;
+    }
+    const r4 = await api("/api/notes/new", { code, ...o5 });
+    if (!r4 || !r4.ok) {
+      notesMsg.value = oneLine(r4 && r4.message || "The note wasn't made.");
+      return null;
+    }
+    keepSummary(code, r4.note);
+    ses.changes = {};
+    ses.dirty = false;
+    noteCur.value = { path: r4.note.path, code, note: r4.note, body: r4.body, meta: r4.meta || {}, base: r4.base, stale: null, load: ++loads, images: {} };
+    noteSave.value = { state: "saved", at: clock() };
+    return r4.note;
+  }
+  var noteDirty = () => ses.dirty;
+  var noteFind = y3(false);
+  var noteFindP = y3(0);
+  var noteMarks = y3(
+    /** @type {{markers: Record<number, number>, hover: number}} */
+    { markers: {}, hover: 0 }
+  );
+  function noteSetSent(path, sent) {
+    const c5 = noteCur.value;
+    if (c5 && c5.path === path && Array.isArray(sent)) noteCur.value = { ...c5, sent };
+  }
+  var noteFlash = y3(
+    /** @type {{path: string, line: number}} */
+    { path: "", line: 0 }
+  );
+  var LIST_ITEM = /^(?:[-*+]|\d{1,3}[.)])\s/;
+  function noteLines(md2) {
+    const out = [], buf = (
+      /** @type {string[]} */
+      []
+    );
+    const flush = () => {
+      if (buf.length) {
+        out.push(buf.join("\n"));
+        buf.length = 0;
+      }
+    };
+    for (const ln2 of String(md2 || "").split("\n").concat([""])) {
+      if (!ln2.trim()) flush();
+      else if (buf.length && LIST_ITEM.test(ln2) && LIST_ITEM.test(buf[0])) {
+        flush();
+        buf.push(ln2);
+      } else buf.push(ln2);
+    }
+    return out;
+  }
+  var noteRenamed = y3(
+    /** @type {{from: string, to: string} | null} */
+    null
+  );
+  var noteImageSrc = (ref) => (noteCur.value && noteCur.value.images || {})[ref] || null;
+  async function addNoteImage(file) {
+    const c5 = noteCur.value;
+    if (!c5) return null;
+    if (!/^image\/(png|jpeg)$/.test(file.type)) {
+      notesMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`;
+      return null;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      notesMsg.value = `${file.name} is over 2 MB: pictures can be 2 MB at most.`;
+      return null;
+    }
+    if (!viaServer()) {
+      notesMsg.value = "Adding a picture needs the live server.";
+      return null;
+    }
+    const src = await new Promise((res) => {
+      const fr2 = new FileReader();
+      fr2.onload = () => res(String(fr2.result || ""));
+      fr2.onerror = () => res("");
+      fr2.readAsDataURL(file);
+    });
+    const r4 = src ? await api("/api/notes/image", { path: c5.path, name: file.name, data: src.slice(src.indexOf(",") + 1) }) : null;
+    if (!r4 || !r4.ok) {
+      notesMsg.value = oneLine(r4 && r4.message || `${file.name} couldn't be added.`);
+      return null;
+    }
+    notesMsg.value = "";
+    const now = noteCur.value;
+    if (now) {
+      if (!now.images) now.images = {};
+      now.images[r4.ref] = src;
+    }
+    return (
+      /** @type {string} */
+      r4.ref
+    );
+  }
+  async function renameToTitle(code, path, base, old) {
+    const r4 = await api("/api/notes/rename", { path, base, old });
+    if (!r4 || !r4.ok) {
+      if (r4 && r4.message) notesMsg.value = oneLine(r4.message);
+      return;
+    }
+    if (!r4.renamed) return;
+    const all = allNotes();
+    all[code] = (all[code] || []).filter((x5) => x5.path !== r4.from);
+    keepSummary(code, r4.note);
+    const now = noteCur.value;
+    if (now && now.path === r4.from) noteCur.value = { ...now, path: r4.note.path, note: r4.note, base: r4.base };
+    noteRenamed.value = { from: r4.from, to: r4.note.path };
+    const changed = (r4.relinked || []).length, listed = (
+      /** @type {{title: string, why: string}[]} */
+      r4.listed || []
+    );
+    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed ? ` ${changed === 1 ? "One link" : `${changed} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
+    const refresh = async (cc2) => {
+      const L3 = await api("/api/notes/list", { code: cc2 });
+      if (L3 && L3.ok) {
+        all[cc2] = L3.notes;
+        if (notesCode.value === cc2) notesList.value = sortNotes(L3.notes);
+      }
+    };
+    if (changed) {
+      for (const cc2 of Object.keys(all)) if ((all[cc2] || []).some((x5) => (r4.relinked || []).includes(x5.path))) refresh(cc2);
+    }
+  }
+
+  // components/notes/DeleteNote.jsx
+  var noteDeleting = y3(
+    /** @type {{path: string, title: string, code: string} | null} */
+    null
+  );
+  var busy = y3(false);
+  function askDeleteNote() {
+    const c5 = noteCur.value;
+    if (!c5) return;
+    if (!viaServer()) {
+      snack("Deleting a note needs the live server");
+      return;
+    }
+    const more = (
+      /** @type {HTMLElement | null} */
+      document.querySelector(".nmorewrap .nmore")
+    );
+    if (more) more.focus();
+    noteDeleting.value = { path: c5.path, title: c5.note.title, code: c5.code };
+  }
+  async function deleteNote(n4) {
+    busy.value = true;
+    try {
+      if (!await noteFlush()) {
+        noteDeleting.value = null;
+        notesMsg.value = "Not deleted: the note isn't saved yet (the line in its header says why).";
+        return false;
+      }
+      const cur = noteCur.value;
+      const r4 = await api("/api/notes/delete", { path: n4.path, base: cur && cur.path === n4.path ? cur.base : "" });
+      noteDeleting.value = null;
+      if (!r4 || !r4.ok || !r4.card) {
+        snack(oneLine(r4 && r4.message || "Not deleted."));
+        return false;
+      }
+      snack(oneLine(r4.message));
+      return await watchCard(n4, r4.card);
+    } finally {
+      busy.value = false;
+    }
+  }
+  var KEY = "creaite.noteDelete";
+  function remember(v5) {
+    try {
+      if (v5) sessionStorage.setItem(KEY, JSON.stringify(v5));
+      else sessionStorage.removeItem(KEY);
+    } catch (e4) {
+    }
+  }
+  async function watchCard(n4, card) {
+    remember({ ...n4, card: card.card });
+    const unhold = () => {
+      if (noteHeld.value === n4.path) noteHeld.value = null;
+    };
+    noteHeld.value = n4.path;
+    const left = Date.parse(card.expires || "") - Date.now();
+    const t47 = setTimeout(unhold, Number.isFinite(left) && left > 0 ? left : 30 * 6e4);
+    let done;
+    try {
+      done = await serverCardFlow(card, { onStale: unhold });
+    } finally {
+      clearTimeout(t47);
+      unhold();
+      remember(null);
+    }
+    if (!done) return false;
+    if (noteCur.value && noteCur.value.path === n4.path) {
+      noteGone(n4.path);
+      navWrite(false);
+    }
+    await loadNotes(notesCode.value || n4.code);
+    const id2 = done.apply;
+    snack(`Moved “${n4.title}” to the archive`, id2 ? async () => {
+      const u5 = await api("/api/undo", { apply_id: id2 });
+      snack(undoWords(u5, n4.title));
+      if (u5 && u5.ok) {
+        await reloadData();
+        await loadNotes(notesCode.value || n4.code);
+      }
+    } : null);
+    return true;
+  }
+  function resumeDeleteNote(card) {
+    let v5 = null;
+    try {
+      v5 = JSON.parse(sessionStorage.getItem(KEY) || "null");
+    } catch (e4) {
+      v5 = null;
+    }
+    if (!v5 || v5.card !== card.card || !v5.path) return false;
+    watchCard({ path: v5.path, title: v5.title, code: v5.code }, card);
+    return true;
+  }
+  function renamedTo(s5) {
+    const tail = s5.slice(s5.lastIndexOf("/") + 1);
+    const at2 = [];
+    for (let i5 = tail.indexOf(" as "); i5 >= 0; i5 = tail.indexOf(" as ", i5 + 1)) at2.push(i5);
+    for (const i5 of at2) {
+      const from = tail.slice(0, i5), name = tail.slice(i5 + 4), dot = from.lastIndexOf(".");
+      const stem = dot > 0 ? from.slice(0, dot) : from, ext = dot > 0 ? from.slice(dot) : "";
+      if (name.startsWith(stem + "-") && name.endsWith(ext) && /^\d+$/.test(name.slice(stem.length + 1, name.length - ext.length))) return name;
+    }
+    return at2.length ? tail.slice(at2[at2.length - 1] + 4) : tail;
+  }
+  function undoWords(u5, title) {
+    if (!u5 || !u5.ok) return oneLine(u5 && u5.message || "Not undone");
+    const moves = (
+      /** @type {string[]} */
+      u5.moves || []
+    );
+    const TOOK = ": a note took its name";
+    const took = moves.find((m5) => m5.startsWith("restored ") && m5.endsWith(TOOK));
+    if (took) return `Restored “${title}” as ${renamedTo(took.slice(9, took.length - TOOK.length))}: a note has its old name`;
+    if (moves.some((m5) => m5.startsWith("skipped moving ") && m5.endsWith(" back: it isn't there"))) return "Not restored: the archived note is no longer there";
+    if (moves.some((m5) => m5.startsWith("skipped moving ") && m5.endsWith(" is there again"))) return "Not restored: a note with that name exists";
+    if (moves.length) return "Undo did not restore the note: see Files › Archived";
+    return `“${title}” is back in its notes folder`;
+  }
+  function DeleteNoteDialog() {
+    const n4 = noteDeleting.value;
+    const where2 = n4 && n4.code === "_portfolio" ? "the portfolio's archive" : "this project's archive";
+    return /* @__PURE__ */ u2(Dialog, { open: !!n4, onClose: () => {
+      if (!busy.value) noteDeleting.value = null;
+    }, labelledBy: "ndelH", describedBy: "ndelP", id: "noteDelDlg", focus: "#ndelCancel", class: "ndel", children: n4 ? /* @__PURE__ */ u2("div", { class: "ndelbox", children: [
+      /* @__PURE__ */ u2("h2", { id: "ndelH", children: [
+        "Delete “",
+        n4.title,
+        "”?"
+      ] }),
+      /* @__PURE__ */ u2("p", { id: "ndelP", children: [
+        "It moves to ",
+        where2,
+        ", not away for good. Restore it any time from Files › Archived. Anything that links to it shows the link as missing until it is restored."
+      ] }),
+      /* @__PURE__ */ u2("p", { class: "sub", children: "The move then waits on the approval card in ask creaite: nothing moves until you approve it there." }),
+      /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "ndelCancel", onClick: () => {
+          noteDeleting.value = null;
+        }, disabled: busy.value, children: "Cancel" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "ndelGo", disabled: busy.value, onClick: () => deleteNote(n4), children: busy.value ? "Working…" : "Delete note" })
+      ] })
+    ] }) : null });
+  }
+
   // components/Menu.jsx
   var menuItemsIn = (box) => box ? (
     /** @type {HTMLElement[]} */
@@ -9297,7 +9830,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
   var N2 = 0;
   var rowId = () => "ss" + ++N2;
   function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const reset = async () => {
       setBusy(true);
       const r4 = await resetSettings(keys);
@@ -9328,7 +9861,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
           {
             type: "button",
             class: "mini setreset",
-            disabled: busy,
+            disabled: busy2,
             "aria-label": `Reset ${label} to its default`,
             title: "Back to the default",
             onClick: reset,
@@ -9654,20 +10187,20 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     return !!r4.ok;
   }
   function FixButton({ f: f5, label }) {
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     return /* @__PURE__ */ u2(
       "button",
       {
         type: "button",
         class: "btn primary",
-        disabled: busy || !viaServer(),
+        disabled: busy2 || !viaServer(),
         "aria-label": `${f5.button}: ${label}`,
         onClick: async () => {
           setBusy(true);
           await runHealthFix(f5);
           setBusy(false);
         },
-        children: busy ? "Working…" : f5.button
+        children: busy2 ? "Working…" : f5.button
       }
     );
   }
@@ -9681,7 +10214,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       /** @type {{zip:string, day:string, lines:PlanLine[]}|null} */
       null
     );
-    const [busy, setBusy] = d2(false), [done, setDone] = d2(
+    const [busy2, setBusy] = d2(false), [done, setDone] = d2(
       /** @type {string[]} */
       []
     );
@@ -9716,7 +10249,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     return /* @__PURE__ */ u2("div", { class: "hrestore", id: "backupRestore", children: [
       /* @__PURE__ */ u2("h3", { class: "hsub", children: "Restore from a backup" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched." }),
-      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy || !viaServer(), onClick: list, children: "Choose a backup…" }),
+      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy2 || !viaServer(), onClick: list, children: "Choose a backup…" }),
       zips && !plan && (zips.length ? /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Backups", children: zips.map((z4) => /* @__PURE__ */ u2("li", { class: "hrow", "data-zip": z4.name, children: [
         /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
         /* @__PURE__ */ u2("div", { class: "hbody", children: [
@@ -9727,7 +10260,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
             mbOf(z4.size)
           ] })
         ] }),
-        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
+        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
       ] })) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "There are no backups yet: one is made each day." })),
       plan && /* @__PURE__ */ u2("div", { class: "card hconfirm", role: "group", "aria-label": "Confirm the restore", id: "backupConfirm", children: [
         /* @__PURE__ */ u2("div", { class: "t", children: [
@@ -9742,8 +10275,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
           l6.what
         ] })) }),
         /* @__PURE__ */ u2("div", { class: "hact", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy, onClick: restore, children: busy ? "Restoring…" : "Restore" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy, onClick: () => setPlan(null), children: "Cancel" })
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy2, onClick: restore, children: busy2 ? "Restoring…" : "Restore" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: () => setPlan(null), children: "Cancel" })
         ] })
       ] }),
       done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
@@ -9781,16 +10314,16 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     ] });
   }
   function Health() {
-    const res = healthResult.value, busy = healthBusy.value, err = healthError.value;
+    const res = healthResult.value, busy2 = healthBusy.value, err = healthError.value;
     h2(() => {
-      if (!res && !busy && viaServer()) checkHealth();
+      if (!res && !busy2 && viaServer()) checkHealth();
     }, []);
     const n4 = res ? res.problems.length : 0, alone = res && res.standalone ? res.standalone : [];
     return /* @__PURE__ */ u2("div", { class: "card wide", id: "healthCard", children: [
       /* @__PURE__ */ u2("div", { class: "hhead", children: [
         /* @__PURE__ */ u2("h2", { children: "Health" }),
-        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy2 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy2 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
       ] }),
       !viaServer() && !res && /* @__PURE__ */ u2("p", { class: "sub", children: "The health check needs the live server." }),
       err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
@@ -27063,7 +27596,7 @@ ${s5}`;
       /** @type {{text: string, ok: boolean, applyId?: any}|null} */
       null
     );
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const [closing, setClosing] = d2("");
     const [draft, setDraft] = d2(
       /** @type {SneakDraft|null} */
@@ -27157,7 +27690,7 @@ ${s5}`;
       input.current?.focus();
     }
     async function make(r5, note) {
-      if (busy) return;
+      if (busy2) return;
       let rr2 = r5;
       if (note && note.trim()) {
         const t210 = `${text.trim().replace(/[.,;]+$/, "")}, add an update: ${note.trim()}`;
@@ -27169,7 +27702,7 @@ ${s5}`;
         rr2 = n4;
       }
       if (!rr2.stage) return;
-      remember(text);
+      remember2(text);
       setBusy(true);
       const res = await acts2.commit(rr2.stage, rr2.item, { by: rr2.by, said: said(rr2) });
       setBusy(false);
@@ -27202,7 +27735,7 @@ ${s5}`;
         return;
       }
       const f5 = (DRAFTS[c5.kind] || DRAFTS.client)(c5.request), feature = c5.kind === "sneak-update" ? "update" : c5.kind;
-      remember(text);
+      remember2(text);
       const mine = { field: f5.field, kind: c5.kind, feature, was: acts2.current(f5.field), d: null, status: "Drafting with Claude…", item };
       setDraft(mine);
       input.current?.focus();
@@ -27221,7 +27754,7 @@ ${s5}`;
     }
     async function useDraft() {
       const d5 = draftRef.current;
-      if (!d5 || !d5.d || busy) return;
+      if (!d5 || !d5.d || busy2) return;
       const it2 = d5.item, text2 = String(d5.d.text || "").trim();
       const stage = {
         label: `${it2.id} ${DRAFTS[d5.kind] ? DRAFTS[d5.kind](d5.kind === "thinking" ? { field: d5.field } : {}).word.toLowerCase() : d5.field} drafted (Sneak peek)`,
@@ -27250,7 +27783,7 @@ ${s5}`;
       setDone({ text: "Kept yours.", ok: true });
       input.current?.focus();
     }
-    function remember(t47) {
+    function remember2(t47) {
       t47 = t47.trim();
       if (!t47) return;
       const i5 = SNEAK_HIST.indexOf(t47);
@@ -27271,16 +27804,16 @@ ${s5}`;
       if (!r5 || !r5.ok || r5.refused || r5.choices) return;
       const task = r5.task;
       if (task && task.kind === "facts") {
-        remember(t47);
+        remember2(t47);
         return;
       }
       if (task && task.kind === "goto") {
-        remember(t47);
+        remember2(t47);
         acts2.go(task, r5.item);
         return;
       }
       if (task && task.kind === "chase") {
-        remember(t47);
+        remember2(t47);
         acts2.chase(task.pane || {});
         return;
       }
@@ -27364,7 +27897,7 @@ ${s5}`;
     };
     const r4 = reply;
     const out = [];
-    if (draft) out.push(/* @__PURE__ */ u2(DraftCard, { d: draft, busy, onUse: useDraft, onKeep: keepMine }, "draft"));
+    if (draft) out.push(/* @__PURE__ */ u2(DraftCard, { d: draft, busy: busy2, onUse: useDraft, onKeep: keepMine }, "draft"));
     else if (r4 && text.trim()) {
       if (r4.understood && r4.understood.length && r4.ok) out.push(/* @__PURE__ */ u2(
         Understood,
@@ -27384,7 +27917,7 @@ ${s5}`;
           r: r4,
           id: id2,
           shown: shown2,
-          busy,
+          busy: busy2,
           flash,
           closing,
           setClosing,
@@ -27409,7 +27942,7 @@ ${s5}`;
       done.text,
       done.ok && done.applyId != null ? /* @__PURE__ */ u2(S2, { children: [
         " ",
-        /* @__PURE__ */ u2("button", { type: "button", id: "spUndo", disabled: busy, onClick: undo, children: "Undo" })
+        /* @__PURE__ */ u2("button", { type: "button", id: "spUndo", disabled: busy2, onClick: undo, children: "Undo" })
       ] }) : null
     ] }, "done"));
     return /* @__PURE__ */ u2("div", { class: "sp-box", id: "spBox", role: "dialog", "aria-label": "Sneak peek: change this item in words", onKeyDown: onKey, children: [
@@ -27485,7 +28018,7 @@ ${s5}`;
     const uniq2 = [...new Set(L3)];
     return uniq2.length ? `Changed ${uniq2.length > 1 ? uniq2.slice(0, -1).join(", ") + " and " + uniq2[uniq2.length - 1] : uniq2[0]}.` : r4.stage ? r4.stage.label + "." : "Changed.";
   }
-  function DraftCard({ d: d5, busy, onUse, onKeep }) {
+  function DraftCard({ d: d5, busy: busy2, onUse, onKeep }) {
     const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
     if (!d5.d) return /* @__PURE__ */ u2("div", { class: "sp-card", role: "status", children: /* @__PURE__ */ u2("div", { class: "sp-head", children: [
       /* @__PURE__ */ u2(SneakIcon, { shapes: SNEAK_ICON, size: 15 }),
@@ -27514,14 +28047,14 @@ ${s5}`;
       /* @__PURE__ */ u2("div", { class: "sp-acts", children: [
         /* @__PURE__ */ u2("span", { class: "sub", children: "Nothing changes until you choose." }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "spKeep", onClick: onKeep, children: "Keep mine" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spUse", disabled: busy, onClick: onUse, children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spUse", disabled: busy2, onClick: onUse, children: [
           "Use this ",
           /* @__PURE__ */ u2("kbd", { children: "⏎" })
         ] })
       ] })
     ] });
   }
-  function Card({ r: r4, id: id2, text, shown: shown2, busy, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
+  function Card({ r: r4, id: id2, text, shown: shown2, busy: busy2, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
     if (!r4.ok) return /* @__PURE__ */ u2("div", { class: "sp-card warn", role: "alert", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: r4.message || "That couldn't be read." }) });
     if (r4.refused) {
       const btn = POINT[r4.refused.point_to], to2 = r4.refused.point_to;
@@ -27709,7 +28242,7 @@ ${s5}`;
           " or click"
         ] }) : /* @__PURE__ */ u2("span", { class: "sub", children: "You can undo it." }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: onNot, children: "Not now" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spMake", disabled: busy, onClick: onMake, children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spMake", disabled: busy2, onClick: onMake, children: [
           okWord,
           " ",
           /* @__PURE__ */ u2("kbd", { children: conf ? `${MOD}⏎` : "⏎" })
@@ -33366,9 +33899,9 @@ ${s5}`;
   function dayShape(ev, first, day) {
     const timed = ev.filter((e4) => !e4.all_day), n4 = timed.length, name = first ? `, ${first}` : "", today = !day || day === TODAY;
     if (!n4) return today ? `No meetings today${name}. The day is yours.` : `No meetings on ${longDay(day).split(" ")[0]}${name}.${day > TODAY ? " The day is yours." : ""}`;
-    const busy = timed.map((e4) => [mins(e4.start), mins(e4.end)]).sort((a6, b6) => a6[0] - b6[0]), gaps = [];
+    const busy2 = timed.map((e4) => [mins(e4.start), mins(e4.end)]).sort((a6, b6) => a6[0] - b6[0]), gaps = [];
     let t47 = 8 * 60;
-    busy.forEach(([a6, b6]) => {
+    busy2.forEach(([a6, b6]) => {
       if (a6 > t47) gaps.push([t47, Math.min(a6, 18 * 60)]);
       t47 = Math.max(t47, b6);
     });
@@ -33376,7 +33909,7 @@ ${s5}`;
     const nw2 = today ? nowMins() : 0;
     gaps.forEach((g5) => g5[0] = Math.max(g5[0], nw2));
     const big = gaps.filter((g5) => g5[1] - g5[0] >= 60).sort((a6, b6) => b6[1] - b6[0] - (a6[1] - a6[0]))[0], cnt = `${n4 <= 10 ? NUMW[n4] : n4} meeting${n4 === 1 ? "" : "s"}${name}`;
-    if (today && n4 > 1 && nowMins() >= busy[busy.length - 1][1]) return `${cnt}, and they're all behind you.`;
+    if (today && n4 > 1 && nowMins() >= busy2[busy2.length - 1][1]) return `${cnt}, and they're all behind you.`;
     if (!big) return gaps.some((g5) => g5[1] - g5[0] >= 30) ? `${cnt}, with only short gaps between them.` : `${cnt}, back to back.`;
     const [a5, b5] = big, c5 = (a5 + b5) / 2;
     const part = b5 - a5 >= 240 ? c5 < 13 * 60 ? "the morning" : "the afternoon" : a5 >= 17 * 60 - 1 ? "the evening" : c5 < 10 * 60 ? "the early morning" : c5 < 12 * 60 ? "the late morning" : c5 < 13.5 * 60 ? "lunchtime" : c5 < 15.5 * 60 ? "the early afternoon" : "the late afternoon";
@@ -37733,16 +38266,16 @@ ${s5}`;
       if (!m5 || !mtgCanPick(m5)) MSEL.delete(id2);
     });
     $("#mtgRead").textContent = mt2.fetched ? `Calendar read ${fdText(mt2.fetched)}` : "";
-    const busy = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
-    $("#mtgGo").disabled = !MSEL.size || busy || !viaServer();
+    const busy2 = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
+    $("#mtgGo").disabled = !MSEL.size || busy2 || !viaServer();
     $("#mtgGo").textContent = MSEL.size ? `Process ${MSEL.size} selected` : "Process selected";
-    $("#mtgGo").title = !viaServer() ? "Needs the live server" : busy ? "ask creaite is busy; try again when it's finished" : "";
-    const ld2 = L3.filter((m5) => MSEL.has(m5.id) && mtgLoadable(m5)).length, offTx = !ld2 || busy || !viaServer(), why = !viaServer() ? "Needs the live server" : busy ? "ask creaite is busy; try again when it's finished" : ld2 ? "" : "Tick meetings that have a transcript";
+    $("#mtgGo").title = !viaServer() ? "Needs the live server" : busy2 ? "ask creaite is busy; try again when it's finished" : "";
+    const ld2 = L3.filter((m5) => MSEL.has(m5.id) && mtgLoadable(m5)).length, offTx = !ld2 || busy2 || !viaServer(), why = !viaServer() ? "Needs the live server" : busy2 ? "ask creaite is busy; try again when it's finished" : ld2 ? "" : "Tick meetings that have a transcript";
     $("#mtgLoad").disabled = offTx;
     $("#mtgLoad").title = why;
     $("#mtgLoad").textContent = ld2 ? `Load ${ld2} into inbox` : "Load into inbox";
     $("#mtgTx").disabled = !L3.some((m5) => mtgHasTx(m5) && mtgCanPick(m5));
-    $("#mtgRefresh").disabled = busy || !viaServer();
+    $("#mtgRefresh").disabled = busy2 || !viaServer();
     $("#mtgRefresh").title = !viaServer() ? "Needs the live server" : "";
     if (!mt2.fetched) {
       putHTML($("#mtgBody"), html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now.</div>`);
@@ -38142,7 +38675,7 @@ ${s5}`;
     if (shared.FSEL.quick === "inbox") L3 = FILES.filter((f5) => f5.p === "inbox");
     if (shared.FSEL.quick === "archived") L3 = farch().slice();
     L3 = L3.filter((f5) => (!q5 || f5.n.toLowerCase().includes(q5)) && (t47 === "All" || f5.type === t47) && (!fr2 || f5.date >= fr2) && (!to2 || f5.date <= to2)).sort((a5, b5) => (b5.date || "0").localeCompare(a5.date || "0"));
-    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.path}" class="${shared.FSELFILE === f5.path ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
+    putHTML($("#filesTbl"), html`<table><thead><tr><th>Name</th><th>Location</th><th>Date</th><th>Size</th><th></th></tr></thead><tbody>${L3.length ? L3.map((f5) => html`<tr data-fp="${f5.at || f5.path}"${f5.at ? html` data-hp="${f5.path}"` : ""} class="${shared.FSELFILE === (f5.at || f5.path) ? "sel" : ""}"><td><span class="ftype">${f5.type}</span><a href="#" data-openfile="${f5.at || f5.path}">${f5.n}</a>${FNEW.has(f5.path) && html` <span class="tag new">New</span>`}${f5.archived && html` <span class="tag">Archived</span>`}</td><td class="x">${f5.p === "inbox" ? "Intake" : `${fpName(f5.p)} › ${f5.f}${f5.sub ? " › " + f5.sub : ""}`}</td><td style="white-space:nowrap">${f5.date ? fd(f5.date) : "—"}</td><td class="x">${f5.kb >= 1e3 ? (f5.kb / 1e3).toFixed(1) + " MB" : f5.kb + " KB"}</td><td style="text-align:right">${f5.archived ? html`<button class="mini" data-moveback="${f5.at || f5.path}" aria-label="Move back ${f5.n}">Move back</button>` : raw(ibtn("folderopen", "Open folder", html`data-openfile="${f5.path.slice(0, f5.path.lastIndexOf("/") + 1)}"`, "sm"))}</td></tr>`) : html`<tr><td colspan="5"><div class="empty">No files match. Clear the filters.</div></td></tr>`}</tbody></table>`);
     filesStatus(L3.length);
   }
   function bootFiles0068() {
@@ -39262,7 +39795,7 @@ ${s5}`;
     ] });
   }
   function Notes() {
-    const drafted = shapeDrafted.value, busy = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
+    const drafted = shapeDrafted.value, busy2 = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
     if (!drafted && !SHAPE_SECTIONS.some(([k5]) => (texts[k5] || "").trim())) return null;
     const now = notesNow(), edited = new Set(editedSections()), why = draftWhyNot("shape");
     const ai2 = {
@@ -39285,10 +39818,10 @@ ${s5}`;
             type: "button",
             class: "btn shsm",
             "data-shregen": "1",
-            "aria-disabled": why || busy ? "true" : void 0,
+            "aria-disabled": why || busy2 ? "true" : void 0,
             "data-tip": why || "Draft again; the sections you edited are kept",
             onClick: () => {
-              if (!why && !busy) runShape();
+              if (!why && !busy2) runShape();
             },
             children: [
               /* @__PURE__ */ u2(Icon, { name: "refresh" }),
@@ -39296,8 +39829,8 @@ ${s5}`;
             ]
           }
         ),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-shdiscard": "1", disabled: !!busy, onClick: discardShape, children: "Discard" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shaccept": "1", disabled: !!busy || !shapeReading.value, onClick: () => {
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-shdiscard": "1", disabled: !!busy2, onClick: discardShape, children: "Discard" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shaccept": "1", disabled: !!busy2 || !shapeReading.value, onClick: () => {
           acceptShape();
         }, children: "Accept" })
       ] }),
@@ -39421,7 +39954,7 @@ ${s5}`;
       if (on2 && shapeFilter.value) previewFilter();
     }, [popupRev.value]);
     if (!on2) return null;
-    const busy = shapeBusy.value, why = draftWhyNot("shape"), conf = shapeConfidential.value;
+    const busy2 = shapeBusy.value, why = draftWhyNot("shape"), conf = shapeConfidential.value;
     const chips = shapeChips.value.filter((c5) => !shapeUsed.value.includes(c5.label));
     const hasDraft = !!shapeDrafted.value;
     return /* @__PURE__ */ u2("section", { class: "shape", "aria-labelledby": "shapeH", children: [
@@ -39464,10 +39997,10 @@ ${s5}`;
               type: "button",
               class: "btn primary",
               "data-shrun": "1",
-              "aria-disabled": why || busy ? "true" : void 0,
+              "aria-disabled": why || busy2 ? "true" : void 0,
               "data-tip": why || (hasDraft ? "Draft the notes again from the text; the sections you edited are kept" : "creaite reads the text and drafts the notes, each line cited"),
               onClick: () => {
-                if (!why && !busy) runShape();
+                if (!why && !busy2) runShape();
               },
               children: [
                 /* @__PURE__ */ u2(Icon, { name: "spark" }),
@@ -39476,7 +40009,7 @@ ${s5}`;
             }
           )
         ] }),
-        busy === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
+        busy2 === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
           /* @__PURE__ */ u2("span", { class: "spin", "aria-hidden": "true" }),
           /* @__PURE__ */ u2("span", { children: [
             "Shaping the meeting",
@@ -39485,7 +40018,7 @@ ${s5}`;
           ] }),
           /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-drstop": true, children: "Stop" })
         ] }) : null,
-        shapeMsg.value && !busy ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
+        shapeMsg.value && !busy2 ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
         !viaServer() ? /* @__PURE__ */ u2("p", { class: "wnote", children: "Shaping needs the live server." }) : null,
         /* @__PURE__ */ u2(ReadAs, {})
       ] }),
@@ -44535,7 +45068,7 @@ ${pre}**Current state title:** ${title}`);
       { ...start || {} }
     );
     const [said2, setSaid] = d2({ text: "", ok: true });
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const [polishing, setPolishing] = d2(false);
     const [card, setCard2] = d2(
       /** @type {PolishCard | null} */
@@ -44877,7 +45410,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "ch-acts", children: [
         /* @__PURE__ */ u2("span", { class: `ch-said${said2.ok ? "" : " fail"}`, role: "status", "aria-live": "polite", children: said2.text }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chCopyText", onClick: copyText, children: "Copy as text" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy2, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "chCopyHtml", onClick: copyOutlook, children: "Copy for Outlook" })
       ] })
     ] });
@@ -50592,365 +51125,6 @@ ${d5.text}`);
     return el2;
   }
 
-  // stores/notes.js
-  var IDLE_MS = 3e4;
-  var DRAFT_MS = 1e3;
-  var LIST_KEY = "creaite-notes-list-open";
-  var notesCode = y3(
-    /** @type {string | null} */
-    null
-  );
-  var notesList = y3(
-    /** @type {NoteSummary[]} */
-    []
-  );
-  var notesQuery = y3("");
-  var noteCur = y3(
-    /** @type {OpenNote | null} */
-    null
-  );
-  var noteSave = y3(
-    /** @type {SaveState} */
-    { state: "" }
-  );
-  var noteLoading = y3(false);
-  var notesMsg = y3("");
-  var notesListOpen = y3((() => {
-    try {
-      return localStorage.getItem(LIST_KEY) !== "0";
-    } catch (e4) {
-      return true;
-    }
-  })());
-  function toggleNotesList(show) {
-    const v5 = show === void 0 ? !notesListOpen.value : show;
-    notesListOpen.value = v5;
-    try {
-      localStorage.setItem(LIST_KEY, v5 ? "1" : "0");
-    } catch (e4) {
-    }
-  }
-  function allNotes() {
-    const d5 = (
-      /** @type {any} */
-      D
-    );
-    if (!d5.notes) d5.notes = {};
-    return d5.notes;
-  }
-  function notesMentioning(id2) {
-    const out = [];
-    for (const [code, L3] of Object.entries(allNotes())) for (const n4 of L3 || []) if ((n4.items || []).includes(id2)) out.push({ code, note: n4 });
-    return out;
-  }
-  function keepSummary(code, n4) {
-    const all = allNotes(), L3 = (all[code] || []).filter((x5) => x5.path !== n4.path);
-    all[code] = sortNotes([n4, ...L3]);
-    if (notesCode.value === code) notesList.value = all[code];
-  }
-  var sortNotes = (L3) => [...L3].sort((a5, b5) => Number(b5.pinned) - Number(a5.pinned) || String(b5.mod || b5.updated).localeCompare(String(a5.mod || a5.updated)));
-  async function loadNotes(code) {
-    if (notesCode.value !== code) {
-      notesQuery.value = "";
-    }
-    notesCode.value = code;
-    notesList.value = sortNotes(allNotes()[code] || []);
-    if (!viaServer()) return;
-    const r4 = await api("/api/notes/list", { code });
-    if (r4 && r4.ok && notesCode.value === code) {
-      allNotes()[code] = r4.notes;
-      notesList.value = sortNotes(r4.notes);
-    }
-  }
-  var ses = { getBody: null, changes: {}, dirty: false, draftT: null, idleT: null, busy: null };
-  function noteBodyFrom(f5) {
-    ses.getBody = f5;
-  }
-  var loads = 0;
-  var clock = () => (/* @__PURE__ */ new Date()).toTimeString().slice(0, 5);
-  async function openNote(path) {
-    await noteFlush();
-    if (!noteCur.value || noteCur.value.path !== path) {
-      noteFind.value = false;
-      noteFindP.value = 0;
-      noteMarks.value = { markers: {}, hover: 0 };
-    }
-    if (!viaServer()) {
-      notesMsg.value = "Opening a note needs the live server.";
-      return false;
-    }
-    noteLoading.value = true;
-    const r4 = await api("/api/notes/get", { path });
-    noteLoading.value = false;
-    if (!r4 || !r4.ok) {
-      notesMsg.value = oneLine(r4 && r4.message || "That note couldn't be opened.");
-      return false;
-    }
-    notesMsg.value = "";
-    ses.changes = {};
-    ses.dirty = false;
-    const cur = {
-      path: r4.note.path,
-      code: r4.code,
-      note: r4.note,
-      body: r4.body,
-      meta: r4.meta || {},
-      base: r4.base,
-      stale: null,
-      load: ++loads,
-      images: r4.images || {},
-      sent: Array.isArray(r4.sent) ? r4.sent : []
-    };
-    const d5 = r4.draft;
-    if (d5 && !d5.stale && (d5.body !== null && d5.body !== void 0 && d5.body !== r4.body || Object.keys(d5.changes || {}).length)) {
-      cur.body = d5.body ?? r4.body;
-      cur.restored = true;
-      ses.changes = { ...d5.changes || {} };
-      ses.dirty = true;
-      cur.meta = { ...cur.meta, ...ses.changes };
-    } else if (d5 && d5.stale && d5.body !== null && d5.body !== void 0 && d5.body !== r4.body) cur.stale = { body: d5.body, at: d5.at };
-    noteCur.value = cur;
-    noteSave.value = cur.restored ? { state: "draft", msg: "Restored what you typed before; it saves in a moment." } : { state: "" };
-    if (cur.restored) idleSoon();
-    return true;
-  }
-  function useStaleDraft() {
-    const c5 = noteCur.value;
-    if (!c5 || !c5.stale) return;
-    noteCur.value = { ...c5, body: c5.stale.body, stale: null, restored: true, load: ++loads };
-    ses.dirty = true;
-    noteSave.value = { state: "draft", msg: "Your draft is back; it saves in a moment." };
-    idleSoon();
-  }
-  function dropStaleDraft() {
-    const c5 = noteCur.value;
-    if (c5) noteCur.value = { ...c5, stale: null };
-  }
-  async function closeNote() {
-    await noteFlush();
-    noteCur.value = null;
-    noteSave.value = { state: "" };
-  }
-  function idleSoon() {
-    clearTimeout(ses.idleT);
-    ses.idleT = setTimeout(() => {
-      noteFlush();
-    }, IDLE_MS);
-  }
-  function noteTyped() {
-    if (!noteCur.value) return;
-    ses.dirty = true;
-    if (noteSave.value.state !== "conflict") noteSave.value = { state: "typing" };
-    clearTimeout(ses.draftT);
-    ses.draftT = setTimeout(keepDraft, DRAFT_MS);
-    idleSoon();
-  }
-  function noteMeta(changes, now) {
-    const c5 = noteCur.value;
-    if (!c5) return;
-    ses.changes = { ...ses.changes, ...changes };
-    noteCur.value = { ...c5, meta: { ...c5.meta, ...changes } };
-    if (now) {
-      ses.dirty = true;
-      noteFlush();
-    } else noteTyped();
-  }
-  var body = () => {
-    try {
-      return ses.getBody ? ses.getBody() : null;
-    } catch (e4) {
-      return null;
-    }
-  };
-  async function keepDraft() {
-    const c5 = noteCur.value;
-    if (!c5 || !ses.dirty || !viaServer()) return;
-    const r4 = await api("/api/notes/draft", { path: c5.path, body: body(), changes: ses.changes, base: c5.base });
-    if (r4 && r4.ok && noteSave.value.state === "typing") noteSave.value = { state: "draft", msg: "Draft kept" };
-  }
-  async function noteFlush() {
-    clearTimeout(ses.draftT);
-    clearTimeout(ses.idleT);
-    if (ses.busy) await ses.busy;
-    const c5 = noteCur.value;
-    if (!c5 || !ses.dirty) return true;
-    if (!viaServer()) {
-      noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." };
-      return false;
-    }
-    const sent = { ...ses.changes }, b5 = body(), oldTitle = c5.note.title;
-    noteSave.value = { state: "saving" };
-    ses.busy = api("/api/notes/save", { path: c5.path, body: b5, changes: sent, base: c5.base });
-    const r4 = await ses.busy;
-    ses.busy = null;
-    if (r4 && r4.ok) {
-      ses.dirty = false;
-      for (const k5 of Object.keys(sent)) if (ses.changes[k5] === sent[k5]) delete ses.changes[k5];
-      const now = noteCur.value;
-      if (now && now.path === c5.path) noteCur.value = { ...now, note: r4.note, base: r4.base, body: b5 ?? now.body, restored: false };
-      keepSummary(c5.code, r4.note);
-      noteSave.value = { state: "saved", at: clock() };
-      if (sent.title !== void 0 && !r4.unchanged) await renameToTitle(c5.code, r4.note.path, r4.base, oldTitle);
-      return true;
-    }
-    if (r4 && r4.conflict) {
-      noteSave.value = { state: "conflict", msg: oneLine(r4.message) };
-      keepDraft();
-      return false;
-    }
-    if (r4 && r4.wait) {
-      noteSave.value = { state: "wait", msg: oneLine(r4.message) };
-      keepDraft();
-      idleSoon();
-      return false;
-    }
-    noteSave.value = { state: "error", msg: oneLine(r4 && r4.message || "Not saved.") };
-    keepDraft();
-    return false;
-  }
-  function noteFlushOnExit() {
-    const c5 = noteCur.value;
-    if (!c5 || !ses.dirty || !viaServer()) return;
-    try {
-      fetch("/api/notes/save", {
-        method: "POST",
-        keepalive: true,
-        headers: { "Content-Type": "application/json", "X-Creaite-Token": (
-          /** @type {any} */
-          D.token || ""
-        ) },
-        body: JSON.stringify({ path: c5.path, body: body(), changes: ses.changes, base: c5.base })
-      });
-      ses.dirty = false;
-    } catch (e4) {
-    }
-  }
-  async function createNote(code, o5) {
-    await noteFlush();
-    if (!viaServer()) {
-      notesMsg.value = "Making a note needs the live server.";
-      return null;
-    }
-    const r4 = await api("/api/notes/new", { code, ...o5 });
-    if (!r4 || !r4.ok) {
-      notesMsg.value = oneLine(r4 && r4.message || "The note wasn't made.");
-      return null;
-    }
-    keepSummary(code, r4.note);
-    ses.changes = {};
-    ses.dirty = false;
-    noteCur.value = { path: r4.note.path, code, note: r4.note, body: r4.body, meta: r4.meta || {}, base: r4.base, stale: null, load: ++loads, images: {} };
-    noteSave.value = { state: "saved", at: clock() };
-    return r4.note;
-  }
-  var noteDirty = () => ses.dirty;
-  var noteFind = y3(false);
-  var noteFindP = y3(0);
-  var noteMarks = y3(
-    /** @type {{markers: Record<number, number>, hover: number}} */
-    { markers: {}, hover: 0 }
-  );
-  function noteSetSent(path, sent) {
-    const c5 = noteCur.value;
-    if (c5 && c5.path === path && Array.isArray(sent)) noteCur.value = { ...c5, sent };
-  }
-  var noteFlash = y3(
-    /** @type {{path: string, line: number}} */
-    { path: "", line: 0 }
-  );
-  var LIST_ITEM = /^(?:[-*+]|\d{1,3}[.)])\s/;
-  function noteLines(md2) {
-    const out = [], buf = (
-      /** @type {string[]} */
-      []
-    );
-    const flush = () => {
-      if (buf.length) {
-        out.push(buf.join("\n"));
-        buf.length = 0;
-      }
-    };
-    for (const ln2 of String(md2 || "").split("\n").concat([""])) {
-      if (!ln2.trim()) flush();
-      else if (buf.length && LIST_ITEM.test(ln2) && LIST_ITEM.test(buf[0])) {
-        flush();
-        buf.push(ln2);
-      } else buf.push(ln2);
-    }
-    return out;
-  }
-  var noteRenamed = y3(
-    /** @type {{from: string, to: string} | null} */
-    null
-  );
-  var noteImageSrc = (ref) => (noteCur.value && noteCur.value.images || {})[ref] || null;
-  async function addNoteImage(file) {
-    const c5 = noteCur.value;
-    if (!c5) return null;
-    if (!/^image\/(png|jpeg)$/.test(file.type)) {
-      notesMsg.value = `${file.name} can't be added: only PNG or JPEG pictures.`;
-      return null;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      notesMsg.value = `${file.name} is over 2 MB: pictures can be 2 MB at most.`;
-      return null;
-    }
-    if (!viaServer()) {
-      notesMsg.value = "Adding a picture needs the live server.";
-      return null;
-    }
-    const src = await new Promise((res) => {
-      const fr2 = new FileReader();
-      fr2.onload = () => res(String(fr2.result || ""));
-      fr2.onerror = () => res("");
-      fr2.readAsDataURL(file);
-    });
-    const r4 = src ? await api("/api/notes/image", { path: c5.path, name: file.name, data: src.slice(src.indexOf(",") + 1) }) : null;
-    if (!r4 || !r4.ok) {
-      notesMsg.value = oneLine(r4 && r4.message || `${file.name} couldn't be added.`);
-      return null;
-    }
-    notesMsg.value = "";
-    const now = noteCur.value;
-    if (now) {
-      if (!now.images) now.images = {};
-      now.images[r4.ref] = src;
-    }
-    return (
-      /** @type {string} */
-      r4.ref
-    );
-  }
-  async function renameToTitle(code, path, base, old) {
-    const r4 = await api("/api/notes/rename", { path, base, old });
-    if (!r4 || !r4.ok) {
-      if (r4 && r4.message) notesMsg.value = oneLine(r4.message);
-      return;
-    }
-    if (!r4.renamed) return;
-    const all = allNotes();
-    all[code] = (all[code] || []).filter((x5) => x5.path !== r4.from);
-    keepSummary(code, r4.note);
-    const now = noteCur.value;
-    if (now && now.path === r4.from) noteCur.value = { ...now, path: r4.note.path, note: r4.note, base: r4.base };
-    noteRenamed.value = { from: r4.from, to: r4.note.path };
-    const changed = (r4.relinked || []).length, listed = (
-      /** @type {{title: string, why: string}[]} */
-      r4.listed || []
-    );
-    notesMsg.value = `Renamed the file to ${r4.note.file}.` + (changed ? ` ${changed === 1 ? "One link" : `${changed} links`} to it changed.` : "") + (listed.length ? ` Not changed, fix by hand: ${listed.map((x5) => `${x5.title} (${x5.why})`).join("; ")}.` : "");
-    const refresh = async (cc2) => {
-      const L3 = await api("/api/notes/list", { code: cc2 });
-      if (L3 && L3.ok) {
-        all[cc2] = L3.notes;
-        if (notesCode.value === cc2) notesList.value = sortNotes(L3.notes);
-      }
-    };
-    if (changed) {
-      for (const cc2 of Object.keys(all)) if ((all[cc2] || []).some((x5) => (r4.relinked || []).includes(x5.path))) refresh(cc2);
-    }
-  }
-
   // stores/findUpdates.js
   var fuPath = y3("");
   var fuState = y3("idle");
@@ -51635,7 +51809,7 @@ ${d5.text}`);
     ["undo", "↶", "Undo (⌘Z)"],
     ["redo", "↷", "Redo (⌘⇧Z)"]
   ];
-  function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage }) {
+  function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -51917,6 +52091,10 @@ ${d5.text}`);
         lineState.current.doc = null;
       };
     }, [loadKey]);
+    h2(() => {
+      const h5 = ed3.current;
+      if (h5 && h5.editor) h5.editor.setEditable(!readOnly);
+    }, [readOnly, loadKey]);
     h2(() => {
       const h5 = ed3.current, el2 = box.current;
       if (!h5 || !el2 || !path || flashAt.path !== path || !flashAt.line || flashDone.current === flashAt) return;
@@ -52314,11 +52492,14 @@ ${d5.text}`);
               items: [
                 { id: "pin", name: pinned ? "Unpin" : "Pin", line: pinned ? "Take it off the top of the list" : "Keep it at the top of the list", icon: "flag" },
                 { id: "conf", name: conf ? "Not confidential" : "Mark confidential", line: conf ? "Prep pages and Claude may read it again" : "Kept out of Prep pages; asks before its text goes to Claude", icon: "shield" },
-                { id: "file", name: "Show the file", line: n4.path, icon: "folder" }
+                { id: "file", name: "Show the file", line: n4.path, icon: "folder" },
+                { id: "sep", sep: true },
+                { id: "del", name: "Delete note…", line: "Moves it to the archive; restore it from Files", icon: "trash", cls: "bad" }
               ],
               onPick: (id2) => {
                 if (id2 === "pin") noteMeta({ pinned: !pinned }, true);
                 else if (id2 === "conf") noteMeta({ confidential: !conf }, true);
+                else if (id2 === "del") askDeleteNote();
                 else onOpenFile(n4.path);
               }
             }
@@ -52338,9 +52519,11 @@ ${d5.text}`);
         /* @__PURE__ */ u2("span", { children: noteSave.value.msg }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => openNote(cur.path), children: "Open the file's version" })
       ] }) : null,
+      noteHeld.value === cur.path ? /* @__PURE__ */ u2("div", { class: "nstale nheld", role: "status", children: /* @__PURE__ */ u2("span", { children: "Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card." }) }) : null,
       /* @__PURE__ */ u2(
         NoteEditor,
         {
+          readOnly: noteHeld.value === cur.path,
           loadKey: `${cur.path}|${cur.load}`,
           markdown: cur.body,
           code,
@@ -52429,7 +52612,7 @@ ${d5.text}`);
     ] });
   }
   function NewNote({ code, open: open2, title, onClose, onMade }) {
-    const [tpl, setTpl] = d2("blank"), [t47, setT] = d2(title), [day, setDay] = d2(fd(TODAY)), [who2, setWho] = d2(""), [busy, setBusy] = d2(false);
+    const [tpl, setTpl] = d2("blank"), [t47, setT] = d2(title), [day, setDay] = d2(fd(TODAY)), [who2, setWho] = d2(""), [busy2, setBusy] = d2(false);
     h2(() => {
       if (open2) {
         setT(title);
@@ -52440,7 +52623,7 @@ ${d5.text}`);
     }, [open2, title]);
     const bad = tpl === "working-session" && day && !DDATE.test(day);
     const make = async () => {
-      if (busy || bad) return;
+      if (busy2 || bad) return;
       setBusy(true);
       const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: toIso(day), with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
       setBusy(false);
@@ -52490,7 +52673,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("p", { class: "sub", children: "Saved in the project's notes folder, named by its title. Internal: never in a client report." }),
       /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: onClose, children: "Cancel" }),
-        /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", id: "nnMake", disabled: busy || !!bad || !viaServer(), children: busy ? "Making…" : "Make the note" })
+        /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", id: "nnMake", disabled: busy2 || !!bad || !viaServer(), children: busy2 ? "Making…" : "Make the note" })
       ] })
     ] }) });
   }
@@ -52544,6 +52727,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2(NoteDoc, { code, onOpen: openPath2, onOpenItem, onNew: (t47) => setDlg(t47), onOpenFile }),
         /* @__PURE__ */ u2(NoteSide, { code, onOpen: openPath2, onOpenItem })
       ] }),
+      /* @__PURE__ */ u2(DeleteNoteDialog, {}),
       /* @__PURE__ */ u2(NewNote, { code, open: dlg !== null, title: dlg || "", onClose: () => setDlg(null), onMade: () => {
         setDlg(null);
         onAddressChange();
@@ -52556,7 +52740,7 @@ ${d5.text}`);
     for (const [code, L3] of Object.entries(allNotes())) if ((L3 || []).some((n4) => n4.path === path)) return code;
     return null;
   }
-  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path));
+  var isNotePath = (path) => !!path && (noteCodeOf(path) !== null || /\/(08 Notes|notes)\/[^/]+\.md$/i.test(path) && !/\/_Archive\//.test(path));
   var notesCodeOk = (code) => code === "_portfolio" || P3.some((p6) => p6.code === code);
   function renderNotes(code) {
     const el2 = $("#v-notes");
@@ -53558,7 +53742,7 @@ ${d5.text}`);
       null
     );
     const [pending, setPending] = d2(false);
-    const [busy, setBusy] = d2(false);
+    const [busy2, setBusy] = d2(false);
     const [said2, setSaid] = d2("");
     const attached = A2(""), ctl = A2(
       /** @type {AbortController | null} */
@@ -53745,7 +53929,7 @@ ${d5.text}`);
       };
     };
     const close = async () => {
-      if (busy) return;
+      if (busy2) return;
       if (!viaServer()) {
         snack("Closing the day needs the live server");
         return;
@@ -53883,7 +54067,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("footer", { class: "cdfoot", children: [
           /* @__PURE__ */ u2("span", { class: "left", children: sweeping ? "The sweep only proposes; closing now closes when it finishes." : `${step2 + 1} of 4` }),
           step2 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-cdback": "1", onClick: () => move(-1), children: "Back" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-dcnot": "1", onClick: notYet, children: "Not yet" }),
-          step2 < 3 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
+          step2 < 3 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
         ] })
       ] })
     ] }) });
@@ -54441,7 +54625,7 @@ ${d5.text}`);
       return b5;
     }));
   }
-  async function editFlow(c5) {
+  async function editFlow(c5, o5 = {}) {
     if (!c5.card) {
       addEl("msg a info", html`${`The change wasn't put on a card: ${c5.refused}.`}`);
       return;
@@ -54449,7 +54633,8 @@ ${d5.text}`);
     if (document.querySelector(`#chLog [data-ecard="${CSS.escape(c5.card)}"]`)) return;
     const d5 = addEl("confirm-wrap", raw(editCardHtml(c5))), acts2 = d5.querySelector(".acts");
     chatScroll();
-    edActs(acts2, !c5.valid ? ["reject"] : (c5.clash || []).length ? ["reject", "stage"] : ["reject", "approve"]);
+    const later2 = c5.stage === false ? "approve" : "stage";
+    edActs(acts2, !c5.valid ? ["reject"] : (c5.clash || []).length ? ["reject", later2] : ["reject", "approve"]);
     for (; ; ) {
       const how = await new Promise((res) => acts2.querySelectorAll("[data-ed]").forEach((b5) => b5.onclick = () => res(b5.dataset.ed)));
       acts2.textContent = "Working…";
@@ -54467,7 +54652,13 @@ ${d5.text}`);
       }
       if (r4.busy || (r4.clash || []).length) {
         addEl("msg a info", html`${r4.message}`);
-        edActs(acts2, ["reject", "stage"]);
+        edActs(acts2, ["reject", later2]);
+        continue;
+      }
+      if (r4.stale) {
+        addEl("msg a info", html`${oneLine(r4.message)}`);
+        if (o5.onStale) o5.onStale(r4);
+        edActs(acts2, ["reject"]);
         continue;
       }
       acts2.textContent = "Not applied";
@@ -54484,7 +54675,14 @@ ${d5.text}`);
       await loadChat(r4.card.chat, true);
     }
     openChat();
+    if (resumeDeleteNote(r4.card)) return;
     editFlow(r4.card);
+  }
+  async function serverCardFlow(card, o5 = {}) {
+    openChat();
+    const m5 = await editFlow(card, o5);
+    const b5 = m5 && m5.querySelector ? m5.querySelector("[data-edundo]") : null;
+    return b5 ? { apply: +b5.dataset.edundo || null } : null;
   }
   function fieldCardHtml(c5) {
     const n4 = (c5.items || []).length;
@@ -61127,7 +61325,7 @@ ${d5.text}`);
     const [group, setGroup] = d2(true), [own, setOwn] = d2(
       /** @type {number[]} */
       []
-    ), [err, setErr] = d2(""), [busy, setBusy] = d2(false);
+    ), [err, setErr] = d2(""), [busy2, setBusy] = d2(false);
     const close = () => {
       approveOpen.value = false;
       setErr("");
@@ -61230,7 +61428,7 @@ ${d5.text}`);
       err ? /* @__PURE__ */ u2("p", { class: "mnap-err", role: "alert", children: err }) : null,
       /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: close, children: "Cancel" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy, onClick: go3, children: busy ? "Approving…" : "Approve the minutes" })
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: go3, children: busy2 ? "Approving…" : "Approve the minutes" })
       ] })
     ] }) });
   }
@@ -61941,7 +62139,7 @@ ${d5.text}`);
     ] });
   }
   function OwnerPicker({ owner, label, n: n4, field, check, onPick }) {
-    const [open2, setOpen2] = d2(false), [q5, setQ] = d2(""), [remember, setRemember] = d2(true);
+    const [open2, setOpen2] = d2(false), [q5, setQ] = d2(""), [remember2, setRemember] = d2(true);
     const btn = A2(
       /** @type {HTMLButtonElement|null} */
       null
@@ -61952,7 +62150,7 @@ ${d5.text}`);
     const pick = async (name) => {
       if (!await onPick(name)) return;
       setOpen2(false);
-      if (unknown && remember && name !== owner) regAddAlias(name, owner);
+      if (unknown && remember2 && name !== owner) regAddAlias(name, owner);
     };
     return /* @__PURE__ */ u2("span", { class: "mnpopw", children: [
       /* @__PURE__ */ u2(
@@ -61993,7 +62191,7 @@ ${d5.text}`);
         ),
         /* @__PURE__ */ u2("div", { role: "listbox", "aria-label": "People in the register", children: shown2.length ? shown2.map((p6) => /* @__PURE__ */ u2("button", { type: "button", role: "option", class: "pkopt", "aria-selected": p6 === owner ? "true" : "false", onClick: () => pick(p6), children: p6 }, p6)) : /* @__PURE__ */ u2("p", { class: "sub", children: "No match in the people register." }) }),
         unknown ? /* @__PURE__ */ u2("label", { class: "mnremember", children: [
-          /* @__PURE__ */ u2("input", { type: "checkbox", checked: remember, onChange: (e4) => setRemember(
+          /* @__PURE__ */ u2("input", { type: "checkbox", checked: remember2, onChange: (e4) => setRemember(
             /** @type {HTMLInputElement} */
             e4.currentTarget.checked
           ) }),
@@ -64724,6 +64922,7 @@ ${d5.text}`);
         "applyMotion",
         "applyTheme",
         "applyView",
+        "askDeleteNote",
         "askLive",
         "askPerson",
         "askWorking",
@@ -64863,6 +65062,7 @@ ${d5.text}`);
         "invitees",
         "isMe",
         "isMin",
+        "isNotePath",
         "itemDatePicker",
         "items",
         "jobLive",
@@ -65023,6 +65223,7 @@ ${d5.text}`);
         "reattach",
         "reduced",
         "refreshAll",
+        "refreshFiles",
         "refreshRecords",
         "regAddAlias",
         "regSetHidden",
@@ -65124,6 +65325,7 @@ ${d5.text}`);
         "typing",
         "undatedCard",
         "undoApply",
+        "undoWords",
         "updReview",
         "validate",
         "viaServer",

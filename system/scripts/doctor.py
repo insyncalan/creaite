@@ -233,6 +233,14 @@ def extraction_scope():
     return not bad, "; ".join(bad) or "minutes and transcripts only"
 
 
+def notes_folder_own():
+    """#124: the notes folder is its own: never the same as, inside or around a meeting, report, Steerco, agendas or images
+    folder (Delete note moves the notes folder's files into _Archive). The check is paths.notes_folder_clash (#128)."""
+    bad = paths.notes_folder_clash()
+    return (False, f"locations.folders.notes ({paths.folder_name('notes')}) is also the {', '.join(bad)} folder or holds it: "
+                   "give notes a folder of their own") if bad else (True, f"notes in {paths.folder_name('notes')}, a folder of their own")
+
+
 def projects_root():
     """Check the projects folder is reachable and of a kind creaite can use (BL-85)."""
     if not paths.external():
@@ -285,8 +293,30 @@ def mapped_folders():
                   + ". A missing one is made when creaite files something into it; a read-only one needs its sharing or permissions fixed.")
 
 
+def other_connector_rules():
+    """F3 follow-up: the allow rules in .claude/settings.local.json and ~/.claude/settings.json (read only; it is outside the vault)
+    that permissions.connector_problem refuses: another connector, a Microsoft 365 action, a built-in that acts outside the laptop.
+    Claude Code applies both files to ask creaite's runs as well."""
+    import permissions
+    found = []
+    for name, f in ((".claude/settings.local.json", permissions.LOCAL_SETTINGS),
+                    ("~/.claude/settings.json", Path.home() / ".claude" / "settings.json")):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue                                            # missing or unreadable: the permission-file check reports it
+        perms = data.get("permissions") if isinstance(data, dict) else None
+        allow = perms.get("allow") if isinstance(perms, dict) else None
+        for rule in allow if isinstance(allow, list) else []:
+            why = permissions.connector_problem(rule)
+            if why:
+                found.append(f"{rule} in {name} ({why})")
+    return found
+
+
 def assistant_permissions():
-    """BL-93, BL-96: flag a rule in .claude/settings.json broader than creaite's own, and a missing projects-root folder."""
+    """BL-93, BL-96: flag a rule in .claude/settings.json broader than creaite's own (F3: and a connector or acting built-in
+    allowed in settings.local.json or ~/.claude/settings.json), and a missing projects-root folder."""
     try:
         perms = json.loads(paths.CLAUDE_SETTINGS.read_text(encoding="utf-8")).get("permissions") or {}
     except (OSError, ValueError) as e:
@@ -297,8 +327,8 @@ def assistant_permissions():
     broad = []
     import permissions
     for rule in perms.get("allow") or []:
-        if str(rule).startswith("mcp__claude_ai_Microsoft_365"):          # Sprint 4b: reading is allowed, actions are not
-            why = permissions.m365_problem(rule)
+        why = permissions.connector_problem(rule)    # Sprint 4b: reading is allowed, actions are not; F3: no other connector
+        if why is not None:                          # or built-in that acts outside the laptop
             if why:
                 broad.append(f"{rule} ({why})")
             continue
@@ -316,6 +346,7 @@ def assistant_permissions():
             broad.append(f"{rule} ({permissions.rule_refusal(rule)})")
     if str(perms.get("defaultMode") or "") in ("bypassPermissions", "acceptEdits"):
         broad.append(f"defaultMode {perms['defaultMode']}")
+    broad += other_connector_rules()
     root = str(paths.locations().get("projects_root") or "").strip().rstrip("/")
     dirs = [str(d).rstrip("/") for d in perms.get("additionalDirectories") or []]
     wide = [d for d in dirs if d != root and d not in ("", ".")]
@@ -772,6 +803,7 @@ def run_checks():
     check("Projects folder reachable", projects_root)
     check("Projects folders present", project_folders_present)
     check("Mapped folders can be filed into", mapped_folders)
+    check("Notes have a folder of their own", notes_folder_own)       # #124
     check("Assistant permissions", assistant_permissions)
     check("ask creaite's reach and guard", assistant_guard)
     check("Vault is local, not synced", vault_not_synced)

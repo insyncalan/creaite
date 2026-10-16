@@ -2976,6 +2976,9 @@ button.nchip{font:inherit;font-size:12px}
 .nntopt.on{border-color:var(--accent);background:var(--accent-soft)} .nntopt span{display:grid} .nntopt small{color:var(--muted);font-size:11px}
 .nnws{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .nnfoot{display:flex;gap:8px;justify-content:flex-end}
+/* #124 Delete note: the … menu's last item in red, and its confirm box */
+.nmorewrap [role=menuitem].bad b,.nmorewrap [role=menuitem].bad .i{color:var(--bad)}
+#noteDelDlg{width:min(480px,calc(100vw - 32px))} .ndelbox{display:grid;gap:10px} .ndelbox h2{margin:0;font-size:16px;overflow-wrap:anywhere} .ndelbox p{margin:0}
 @media (max-width:1100px){.nsplit,.nsplit.finding{grid-template-columns:220px minmax(0,1fr)}.nsplit.collapsed,.nsplit.finding.collapsed{grid-template-columns:40px minmax(0,1fr)}.nside{position:static}.nctx,.nside{grid-column:1/-1}}
 @media (max-width:700px){.nsplit,.nsplit.collapsed,.nsplit.finding,.nsplit.finding.collapsed{grid-template-columns:minmax(0,1fr)}.nlist{position:static}.ndoc{padding:14px}.nntpl,.nnws{grid-template-columns:1fr}}
 /* ===== end BL-301 B ===== */

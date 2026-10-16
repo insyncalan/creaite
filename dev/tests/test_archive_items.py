@@ -149,7 +149,7 @@ class ArchiveItems(unittest.TestCase):
         p = self.v.propose("edit", [{"n": 1, "op": "update", "table": "actions", "id": aid,
                                      "changes": {"latest_update": "Checked again"}, "decision": "approved",
                                      "match": "strong", "flags": []}])
-        self.run_at(DAY, "apply", str(p), script="tracker.py")
+        self.run_at(DAY, "apply", str(p), script="tracker.py", env={"CREAITE_STAMP_DAY": DAY[:10]})   # the edit's stamp is the pinned day, not the real one
         self.assertEqual(self.archived()["Closed on the boundary"], 0)
         self.run_at("2026-10-15 09:00", "daily")                     # the next day: edited within six months, so it stays live
         self.assertEqual(self.archived()["Closed on the boundary"], 0)

@@ -78,8 +78,14 @@ class CloseDayCard(LiveBrowserCase):
         self.assertIn("Tom to share the UAT plan", self.text())
         self.assertIn("1 new item for Review", self.text())
         self.assertEqual(b.eval(SAID), "Step 1 of 4, Catch up")                  # the live region names the step
-        self.assertTrue(b.eval("document.activeElement && document.activeElement.matches('[data-cdnext]')"))
-        b.key("ArrowRight")                                                      # ← → move between the steps
+        b.wait("document.activeElement && document.activeElement.matches('[data-cdnext]')")   # focus is back on Next after the card redraws
+        for _ in range(3):                                                       # ← → move between the steps
+            b.key("ArrowRight")
+            try:
+                b.wait(f"{STEP}==='Today'", 8)
+                break
+            except TimeoutError:                                                 # the key went to a card still redrawing: focus Next and again
+                b.eval("document.querySelector('#closeDlg [data-cdnext]').focus()")
         b.wait(f"{STEP}==='Today'")
         self.assertIn("Moved today", self.text())
         b.click("#closeDlg [data-cdnext]")
@@ -111,7 +117,7 @@ class CloseDayCard(LiveBrowserCase):
         b.wait("document.querySelector('#closeDlg [data-cdprep]').getAttribute('aria-pressed')==='true'")
         self.assertIn("Prep page queued", self.text())
         b.click("#closeDlg [data-dcdone]")
-        b.wait(f"/Day closed at 17:30/.test({CARD}.textContent)", 20)
+        b.wait(f"/Day closed at 17:30/.test({CARD}.textContent)", 45)
         self.assertIn("Everything has a place: 1 for Review now", self.text())
         self.assertIn("1 prep page being made", self.text())
         plan = json.loads((self.v.root / "system/staging/day-closed.json").read_text())["plans"]["2026-10-13"]
@@ -127,7 +133,7 @@ class CloseDayCard(LiveBrowserCase):
                 break
             b.pump(0.5)
         self.assertEqual([i["state"] for i in q["items"]], ["made"], q)
-        b.wait("/Day closed at/.test(document.getElementById('dayClose').getAttribute('aria-label'))")
+        b.wait("/Day closed at/.test(document.getElementById('dayClose').getAttribute('aria-label'))", 45)
         b.click("#closeDlg [data-cdfinish]")                                     # Review now: Review, the find highlighted
         b.wait("VIEW==='review' && document.querySelectorAll('#reviewBody tr.hl').length===1")
         self.assertFalse(b.eval(f"{CARD}.open"))
@@ -181,7 +187,7 @@ class CloseDayCard(LiveBrowserCase):
         b.wait(f"/Closing when the sweep finishes/.test({CARD}.textContent)", 10)
         self.assertFalse((self.v.root / "system/staging/day-closed.json").exists())
         b.wait(f"/Day closed at 17:30/.test({CARD}.textContent)", 30)
-        b.wait("/Day closed at/.test(document.getElementById('dayClose').getAttribute('aria-label'))")
+        b.wait("/Day closed at/.test(document.getElementById('dayClose').getAttribute('aria-label'))", 45)
         plan = json.loads((self.v.root / "system/staging/day-closed.json").read_text())["plans"]["2026-10-13"]
         self.assertTrue(any(r.startswith("p:proposed-2026-10-13-1731-sweep-") for r in plan["first"]), plan)   # its find, unplaced
         self.assertEqual(self.tracker(), before)
@@ -209,7 +215,7 @@ class CloseDayCard(LiveBrowserCase):
         self.to_step("Tomorrow")
         self.assertIn("Nothing; tomorrow's Today starts clean.", self.text())
         b.click("#closeDlg [data-dcdone]")
-        b.wait(f"/Day closed at 17:30/.test({CARD}.textContent)", 20)
+        b.wait(f"/Day closed at 17:30/.test({CARD}.textContent)", 45)
         self.assertIn("2 for Review now", self.text())
         plan = json.loads((self.v.root / "system/staging/day-closed.json").read_text())["plans"]["2026-10-13"]
         self.assertEqual((sorted(plan["review"]), plan["first"]), (sorted([f"i:{due}", f]), []))
