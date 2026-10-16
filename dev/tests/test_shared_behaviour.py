@@ -105,8 +105,8 @@ SCREENS["clientreport"] = ("(()=>{ if(!window.__crReady){ window.__crReady=1; co
                            "go('clientreport',{code:'ABC',week:'2026-10-09'}); })()", "document.querySelector('#v-clientreport [data-crcheck]:not([disabled])')", "#v-clientreport")
 EXTRA = ("clientreport", "weekly-logos")     # screens of this test alone: test_ui_sweep's own list (its goldens) doesn't get them
 # The minutes' Approve popup is the screen here (test_ui_sweep's "minutes-approve", for the sizes): the minutes sheet behind it
-# is inert and is the "minutes" screen's. The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
-ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove"}   # the shell's own controls, not the page inside it
+# is inert and is the "minutes" screen's (likewise the deadline popover, whose button is the "minutes" screen's). The popup has no aria-haspopup opener inside it, so mnapp (KEYED) drives it.
+ONLY = {"shell": ".rail,header.bar", "minutes-approve": "#mnApprove", "minutes-deadline": ".mnpop"}   # the shell's own controls, not the page inside it
 # Still on the screen (settle goes back when not): its ready test, except where that test is a popup being open.
 ON_SCREEN = {"work-display": "VIEW==='work'"}
 # Controls whose choices are what the list shows, never a saved change: the filter bars and Work's views. The Undo check
