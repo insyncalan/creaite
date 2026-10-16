@@ -4,6 +4,8 @@ The memory of Jarvis, the Head of Product and Delivery (HOPD): every decision, t
 
 | Date | Who | Decision | Reason |
 |---|---|---|---|
+| 16-10-2026 | Alan | Portfolio health bars (#162): marks are option B "height is health" (tall green On track, medium amber At risk, short red stub Off track, thin line no update); window 6 weeks, not 8; legend is a ? button on the column header; the tooltip shows the week's reason when stored. | Alan answered directly; #162 moves to Ready. |
+| 16-10-2026 | Jarvis | Rail (#156/#139): first-state rule uses a 1200px threshold (no chat overlap); under 900px the rail is always collapsed; Enter on a flyout item goes to the page, an arrow opens the flyout. | Team Stark's four rail questions; within the charter, desktop-only. |
 | 16-10-2026 | Alan | Today's Intake and Review (#168, renamed from To decide) sits just above Week ahead, after First thing, Decisions needed, Needs attention and Your commitments; it folds like Week ahead. | Alan answered directly; #168 moves to Ready. |
 | 16-10-2026 | Alan | Work board resize (#144): option 2, each column resizes on its own (confirmed after the Product Manager's mockup); the built work-144-cols stands (limits 260 to 640 px, reset 270, remembered per tab and grouping). | Alan chose from the mockup; matches the earlier "144 as recommended". |
 | 16-10-2026 | Alan | Help (#158) Phase B now also has a first-visit tip: a quiet "Press ? for help" line on each screen, shown once (reverses the "no first-visit tip" part of the earlier row). | Alan: "add the first visit tip also"; the Product Manager designs it. |
