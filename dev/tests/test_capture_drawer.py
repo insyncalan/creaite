@@ -482,6 +482,45 @@ class Drawer(LiveBrowserCase):
             b.wait("document.getElementById('capDrawer').hidden", 5)
         b.resize(1400, 900)
 
+    # ----- #134: the selection bar (Improve, Structure, Ask) on the drawer's text -----
+    def select_drawer_text(self):
+        b = self.b
+        self.open()
+        b.type("Rough point one")
+        b.key("Enter")
+        b.type("Rough point two")
+        b.key("a", META)
+        b.wait("document.querySelector('#aiLayer .aispark')")
+        b.click("#aiLayer .aispark")
+        b.wait("document.querySelector('#aiLayer .aibar')")
+
+    def test_the_drawer_has_the_selection_bar_with_the_notes_options_and_no_make_into(self):
+        b = self.b
+        for width in (1400, 900):
+            b.resize(width, 900)
+            self.select_drawer_text()
+            groups = b.eval("[...document.querySelectorAll('#aiLayer .aibar .aiai button[aria-haspopup]')].map(x=>x.dataset.tip.slice(4))")
+            self.assertEqual(groups, ["improve", "structure"], f"{width}: the notes place's groups, and no Make into (a draft has no lines for Find updates)")
+            self.assertTrue(b.eval("!!document.querySelector('#aiLayer .aibar [data-ai=custom]')"), "Ask is there")
+            self.assertFalse(b.eval("!!document.querySelector('#aiLayer .aibar [data-ai=fu-line]')"))
+            bar = b.eval("(r=>({l:r.left,r:r.right,t:r.top,vw:innerWidth}))(document.querySelector('#aiLayer .aibar').getBoundingClientRect())")
+            self.assertGreaterEqual(bar["l"], 0)
+            self.assertLessEqual(bar["r"], bar["vw"], f"{width}: inside the window")
+            b.key("Escape")
+            b.key("Escape")
+            b.wait("document.getElementById('capDrawer').hidden", 5)
+        b.resize(1400, 900)
+
+    def test_a_confidential_draft_asks_once_before_its_text_goes_to_claude(self):
+        b = self.b
+        self.select_drawer_text()
+        b.eval("document.getElementById('capConf').click()")
+        b.pump(0.2)
+        b.click('#aiLayer .aibar button[data-tip="AI: improve"]')
+        b.click("#aiLayer .aibar [data-ai=rewrite]")
+        b.wait("document.querySelector('#aiLayer .aisug')")
+        self.assertIn("confidential", b.eval("document.querySelector('#aiLayer .aisug').textContent").lower())
+
     def test_the_drawers_rows_are_the_notes_rows_it_can_do(self):
         b = self.b
         self.open()

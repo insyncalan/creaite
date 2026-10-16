@@ -24713,7 +24713,7 @@ ${s5}`;
       if (!aiRunAction(id2)) aiRun(id2, "", { h: bar.h, ai: bar.ai });
     };
     const groups = (AI_GROUPS[place2] || AI_GROUPS.plain).map(([name, ids]) => [name, ids.map((id2) => ({ id: id2, name: AI_OPTIONS[id2][0], line: AI_OPTIONS[id2][1] }))]);
-    const into = aiActionsFor(place2).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
+    const into = (bar.ai.actions === false ? [] : aiActionsFor(place2)).map((a5) => ({ id: a5.id, name: a5.name, line: a5.line, icon: a5.icon }));
     if (into.length) groups.push(["Make into", into]);
     const move = (e4) => {
       const t47 = (
@@ -26498,10 +26498,11 @@ ${s5}`;
     h2(() => {
       const el2 = box.current;
       if (!el2) return void 0;
+      const ai2 = { place: "notes", project: () => capNote.value.code || "", confidential: () => !!capNote.value.confidential, key: () => `cap:${capNote.value.id}`, actions: false };
       ed2 = creaiteEditor(
         el2,
         /** @type {any} */
-        { features: "notes", markdown: capNote.value.body }
+        { features: "notes", markdown: capNote.value.body, ai: ai2 }
       );
       if (capOpen.value) ed2.focus("end");
       const slashOff = attachSlash(ed2, { profile: "notes", host: {} });

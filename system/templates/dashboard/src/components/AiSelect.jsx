@@ -84,7 +84,7 @@ export function AiBar({ bar }) {
   /** @type {[string, {id: string, name: string, line?: string, icon?: string}[]][]} */
   const groups = (AI_GROUPS[place] || AI_GROUPS.plain).map(([name, ids]) =>
     [name, ids.map(id => ({ id, name: AI_OPTIONS[id][0], line: AI_OPTIONS[id][1] }))]);
-  const into = aiActionsFor(place).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
+  const into = (bar.ai.actions === false ? [] : aiActionsFor(place)).map(a => ({ id: a.id, name: a.name, line: a.line, icon: a.icon }));
   if (into.length) groups.push(["Make into", into]);
   /** ← → move along the bar's buttons (a menu's own keys are the menu's). @param {KeyboardEvent} e */
   const move = e => {

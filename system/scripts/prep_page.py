@@ -630,6 +630,11 @@ HEALTH_ICON = {"On track": "✔", "At risk": "▲", "Off track": "✖"}       # 
 HEALTH_CLASS = {"On track": "ok", "At risk": "warnh", "Off track": "bad"}
 
 
+def task_glyph(text):
+    """#134: a checklist item's "[ ] " / "[x] " as the box Word shows (☐ / ☑)."""
+    return re.sub(r"^\[([ xX])\]\s+", lambda m: "☑ " if m.group(1) in "xX" else "☐ ", text)
+
+
 def md_blocks(md):
     """Current state (Markdown) as [("p", text) | ("ul", [items]) | ("ol", [items])]. Pictures are dropped, links keep their text,
     a heading becomes a bold paragraph. Nothing else is understood."""
@@ -658,7 +663,7 @@ def md_blocks(md):
             if para or (lst and lst[0] != kind):
                 flush()
             lst = lst or (kind, [])
-            lst[1].append(re.sub(r"^\[([ xX])\]\s+", lambda m: "☑ " if m.group(1) in "xX" else "☐ ", (bullet or number).group(1).strip()))   # #134: a checklist item
+            lst[1].append(task_glyph((bullet or number).group(1).strip()))
         elif head:
             flush()
             blocks.append(("p", f"**{head.group(1).strip().strip('*')}**"))
