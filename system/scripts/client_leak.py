@@ -332,15 +332,19 @@ def findings(doc, con=None):
     return found + name_findings(con, code, text, blocking)
 
 
+HEALTH_FLAG = re.compile(r"\s*(?:ON TRACK|AT RISK|OFF TRACK)\b")      # a Word report's health line starts with its flag, in capitals
+
+
 def plain_findings(con, code, text):
     """#127: the gate at the end for a client text with no sections (a Word client report or client-safe steerco one-pager, read by
     review.client_findings): the same checks findings runs on a creaite document (items by ID, internal wording, the internal
     health reason or an internal-only marker, and the names). As M1 lets the health reason stand in the health section, it may
-    stand in the first line that holds it (the report's own health line); anywhere else it is found. A marker is found anywhere."""
+    stand in the report's own health line: the first line that starts with its health flag (report.py's HEALTH_LINE: "OFF TRACK
+    …"), never a line that only shares the reason's words; anywhere else, or in a report with no health line, it is found. A
+    marker is found anywhere."""
     import drafts
-    row = con.execute("SELECT health_reason FROM projects WHERE code = ?", (code,)).fetchone()
-    reason, lines = ((row[0] if row else "") or "").strip(), text.splitlines()
-    shown = next((i for i, ln in enumerate(lines) if reason and drafts.carries(ln, reason)), None)
+    lines = text.splitlines()
+    shown = next((i for i, ln in enumerate(lines) if HEALTH_FLAG.match(ln)), None)
     found = drafts.internal_findings(con, code, "\n".join(ln for i, ln in enumerate(lines) if i != shown))
     if drafts.INTERNAL_MARK.search(text) and "an internal-only marker" not in found:
         found.append("an internal-only marker")

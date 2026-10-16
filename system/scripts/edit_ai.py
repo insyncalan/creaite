@@ -168,7 +168,11 @@ def client_ids(con, code):
 INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
 LOOK_ALIKE = str.maketrans({**{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
                             **{c: "I" for c in "\u0399\u0406\u04c0\u01c0\u0131\u03b9\u0456"},
-                            **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"}})
+                            **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"},
+                            # #127 review: the other Cyrillic and Greek letters that look Latin (a project code's "АВС")
+                            **dict(zip("\u0410\u0412\u0415\u041a\u041c\u041d\u041e\u0421\u0422\u0425\u0430\u0435\u043e\u0441\u0445"
+                                       "\u0391\u0392\u0395\u0396\u0397\u039a\u039c\u039d\u039f\u03a4\u03a5\u03a7\u03bf",
+                                       "ABEKMHOCTXaeocxABEZHKMNOTYXo"))})
 # Between the letters: up to two marks (dots, dashes, underscores; zero-width characters are already gone), each run allowed one
 # space after it ("V. I. P."), but never a bare space ("Phase V IP telephony" isn't VIP; #123 review L).
 _VIP_GAP = r"(?:[^\w\s]{1,2}\s?|_{1,2})?"
@@ -179,20 +183,24 @@ NO_PROJECT, UNCHECKED, REGISTER = "no project", "the check couldn't run", "the p
 def normal(text):
     """Text as the client check matches it: NFKC, invisible characters gone, dashes and look-alike letters made plain."""
     import unicodedata
-    return INVISIBLE.sub("", unicodedata.normalize("NFKC", text or "")).translate(LOOK_ALIKE)
+    t = INVISIBLE.sub("", unicodedata.normalize("NFKC", text or "")).translate(LOOK_ALIKE)
+    return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 
 def loose_ids(con, text):
     """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
-    any case, with spaces, dots or dashes for its hyphens, or run on to a word before it ("seeABC-A-004"). A loose match counts only
-    when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when there is no ABC-100); it fails closed, so an
-    ID the tracker can't be asked about counts."""
+    any case, with spaces, dots, dashes, underscores, slashes, colons or brackets for its hyphens ("ABC (A) 004"), or run on to a
+    word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
+    ("ABC-A-OO4"), always as a whole number ("ABC-A-40" is ABC-A-040, never ABC-A-004), and not one a slash, colon or dot continues
+    ("ABC A 10/09"). A loose match counts only when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when
+    there is no ABC-100); it fails closed, so an ID the tracker can't be asked about counts."""
     t = normal(text)
     out = set(ID_RE.findall(t))
-    up = t.upper()
+    up, sep = t.upper(), r"[\s_.\-/:()]*"
     for (c,) in con.execute("SELECT code FROM projects"):
-        for m in re.finditer(rf"{re.escape(c)}[\s_.\-]*(?:([A-Z])[\s_.\-]*)?(\d{{3}})(?!\d)", up):
-            ref = f"{c}-{m.group(1)}-{m.group(2)}" if m.group(1) else f"{c}-{m.group(2)}"
+        for m in re.finditer(rf"{re.escape(c)}{sep}(?:([A-NP-Z]){sep}([0-9O]{{1,3}})|([0-9O]{{3}}))(?![0-9O]|[/:.]\d)", up):
+            num = (m.group(2) or m.group(3)).replace("O", "0").zfill(3)
+            ref = f"{c}-{m.group(1)}-{num}" if m.group(1) else f"{c}-{num}"
             if ref not in out and in_tracker(con, ref):
                 out.add(ref)
     return out

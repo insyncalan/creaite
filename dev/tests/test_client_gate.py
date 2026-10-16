@@ -136,6 +136,27 @@ class TextFindingsMatchesEveryId(Base):
     def test_a_client_visible_id_and_a_code_with_a_number_still_pass(self):
         self.assertEqual(self.findings("Progress continues (ABC-006); ABC 100 users are ready."), [])
 
+    def test_more_ways_of_writing_an_id_are_found(self):
+        """#127 review: other separators, brackets, O for zero, no zero padding, Cyrillic and Greek look-alikes in the code, an
+        underscore, and Arabic-Indic digits, all through edit_ai's one normaliser."""
+        why = f"{INTERNAL_ID} isn't client-visible but its ID appears"
+        for written in ("ABC/A/004", "ABC:A:004", "ABC (A) 004", "ABC-A-OO4", "abc-a-o04", "ABC-A-4", "ABC A 04",
+                        "\u0410\u0412\u0421-\u0410-004", "\u0391\u0392C-A-004", "ABC_A_004", "abc_a_004",
+                        "ABC-A-\u0660\u0660\u0664"):
+            self.assertIn(why, self.text(f"Progress continues ({written})."), written)   # the raw text (a doc's text is tidied)
+
+    def test_whole_numbers_dates_and_ordinary_text_are_not_ids(self):
+        for text in ("Progress continues (ABC-A-40).", "Progress continues (ABC-A-041).",       # never ABC-A-004
+                     "Progress continues (ABC-A-0041).", "ABC A 4/10 is the review day.", "ABC A 4.5 is the release.",
+                     "ABC goes live on 2026-10-09, signed 09/10/2026.", "ABC A 10/09 is the review day.",
+                     "The A/B test ran; ABC A/B results are in.", "ABC at 10:30 on 04/11."):
+            self.assertEqual(self.findings(text), [], text)
+            self.assertEqual(self.text(text), [], text)
+
+    def text(self, text):
+        """client_leak.text_findings on a raw text, as review (Word), edit_ai and the ✦ call it."""
+        return self.py(f"print(json.dumps(client_leak.text_findings(client_leak.connect(), 'ABC', {text!r})))")
+
 
 class WordDraftsGetTheWholeGate(Base):
     """Part 2: a Word client report (cx-client-report) and the client-safe steerco one-pager are checked at approval with
@@ -193,6 +214,39 @@ class WordDraftsGetTheWholeGate(Base):
         R.edit_docx(draft, f" See {MILESTONE_ID}.", "")                    # control: the clean report is approved from Excel
         got = self.py(code)
         self.assertEqual((got["n"], got["decision"]), (1, "approved"), got)
+
+    def test_excel_cannot_approve_a_client_safe_steerco_one_pager_that_holds_a_marker(self):
+        f = self.v.root / "system/staging/drafts/steerco.json"
+        f.write_text(json.dumps({"code": "ABC", "version": "client", "summary": ["Phase two is being prepared."], "force": True}))
+        self.v.at("steerco-stage", str(f), script="report.py")
+        prop = sorted((self.v.root / "system/staging").glob("proposed-2*-steerco*.json"))[-1]
+        block = json.loads(prop.read_text())["report"]
+        self.assertEqual((block["kind"], block["version"]), ("steerco", "client"))
+        draft = self.v.root / block["draft"]
+        self.assertEqual(self.word_findings(block), [])                     # its own health line is allowed (M1)
+        R.edit_docx(draft, "Phase two is being prepared.", f"Phase two is being prepared. See {MILESTONE_ID}.")
+        code = ("import excel_sync\nfrom openpyxl import Workbook\n"
+                "w = Workbook(); ws = w.active; ws.title = 'Review'\nws.append(['File'] + ['x'] * 10)\n"
+                f"ws.append([{prop.name!r}, 'report'] + [''] * 7 + ['Approve', None])\n"
+                "notes = []\nn = excel_sync.apply_review_decisions(w, notes)\n"
+                f"d = json.load(open('system/staging/{prop.name}'))\n"
+                "print(json.dumps({'n': n, 'notes': notes, 'decision': d['report'].get('report_decision')}))")
+        got = self.py(code)
+        self.assertEqual((got["n"], got["decision"]), (0, "pending"), got)
+        R.edit_docx(draft, f" See {MILESTONE_ID}.", "")                    # control: the clean one-pager is approved from Excel
+        self.assertEqual(self.py(code)["decision"], "approved")
+
+    def test_the_health_reason_is_allowed_only_on_the_reports_own_health_line(self):
+        prop, draft = self.stage()
+        block = json.loads(prop.read_text())["report"]
+        self.assertEqual(self.word_findings(block), [])                     # on the flagged health line: allowed
+        R.edit_docx(draft, REASON, "Delivery is behind plan")               # a health line without the reason, which then
+        R.edit_docx(draft, "Phase two is being prepared.", f"Phase two is being prepared. The {REASON}.")   # sits in the summary
+        self.assertIn("it holds the internal health reason", self.word_findings(block))
+        R.edit_docx(draft, "OFF TRACK", "")                                 # no health line at all: the reason has nowhere to stand
+        R.edit_docx(draft, f"Phase two is being prepared. The {REASON}.", "Phase two is being prepared.")
+        R.edit_docx(draft, "Delivery is behind plan", REASON)
+        self.assertIn("it holds the internal health reason", self.word_findings(block))
 
     def test_cx_document_refuses_a_client_audience(self):
         spec = {"title": "Open actions", "sections": [{"heading": "Actions", "paragraphs": ["A list."]}]}
