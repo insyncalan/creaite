@@ -97,9 +97,9 @@ export function attachSlash(h, { profile, host }) {
   const draw = () => {
     render(st ? <SlashList state={st} id={id} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
     const dom = /** @type {HTMLElement} */ (view.dom);
-    if (st) { opened = true; dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-expanded", "true"); dom.setAttribute("aria-controls", id);
+    if (st) { opened = true; dom.setAttribute("aria-haspopup", "listbox"); dom.setAttribute("aria-controls", id);
       if (st.rows[st.i]) dom.setAttribute("aria-activedescendant", `${id}-${st.i}`); else dom.removeAttribute("aria-activedescendant"); }
-    else { dom.removeAttribute("aria-haspopup"); dom.removeAttribute("aria-controls"); dom.removeAttribute("aria-activedescendant"); if (opened) dom.setAttribute("aria-expanded", "false"); }
+    else { dom.removeAttribute("aria-haspopup"); dom.removeAttribute("aria-controls"); dom.removeAttribute("aria-activedescendant"); }
   };
   const close = () => { if (!st) return; st = null; draw(); };
   /** Open, narrow or close the menu from what is at the caret. */
