@@ -237,6 +237,7 @@ def client_problems(code, text, original=""):
     except (Exception, SystemExit):  # noqa: BLE001
         return [UNCHECKED]
     try:
+        text, original = client_leak.with_addresses(text), client_leak.with_addresses(original)   # #127: link addresses too
         blocking = client_leak.blocking_labels(con)
         found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(loose_ids(con, text))) if why]
         found += client_leak.text_findings(con, code, text or "")

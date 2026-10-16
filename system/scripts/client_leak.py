@@ -162,6 +162,14 @@ def _label_findings(con, code, text, low, ids):
     return found
 
 
+def _link_findings(con, text):
+    """({item IDs the text's work-item links name}, [findings for a work-item link creaite can't read, and for a creaite: link of
+    a kind a client report may not hold])."""
+    ids, unread = link_refs(con, text)
+    return ids, [f"a link to a work item creaite can't read: “{a[:40]}”" for a in unread] + \
+        [f"a creaite link a client can't open: “creaite:{k}”" for k in sorted(creaite_kinds(text) - LINK_KINDS)]
+
+
 def text_findings(con, code, text, skip=()):
     """Internal-only content in a client text: an item that isn't client-visible by its ID or wording, a memory line marked
     Client-safe: no, an item a label excludes, and the words confidential, restricted or documents/ (moved from
@@ -170,9 +178,9 @@ def text_findings(con, code, text, skip=()):
     milestone or promise, or an item of another project); `skip`: items already found by the caller, not listed twice."""
     import edit_ai
     low = text.lower()
-    ids, unread = link_refs(con, text)                         # #127: a work-item link's address counts as its ID
+    ids, found = _link_findings(con, text)                     # #127: a work-item link's address counts as its ID
     ids |= edit_ai.loose_ids(con, text)
-    found, seen = [f"a link to a work item creaite can't read: “{a[:40]}”" for a in unread], set(skip)
+    seen = set(skip)
     for table, col in (("raid", "description"), ("decisions", "decision"), ("actions", "description")):
         for row in con.execute(f"SELECT id, {col} FROM {table} WHERE project = ? AND client_visible = 0", (code,)):
             if row[0] in ids:
@@ -314,12 +322,13 @@ def name_findings(con, code, text, blocking=None):
 
 def doc_text(doc):
     """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values,
-    and (#127) the address of every work-item link its shown text holds, which the words alone (creaite_doc._plain) leave out."""
+    and (#127) every link address its shown data holds (address_text), which the words alone (creaite_doc._plain) leave out."""
     import creaite_doc
     clean = creaite_doc.clean(doc)
-    links = [f"creaite:item/{a}" for t in _strings(clean.get("sections") or []) for a in item_links(t)]
+    raw = "\n".join(_strings(clean.get("sections") or []))
+    addresses = "\n".join([address_text(raw)] + [f"creaite:item/{a}" for a in item_links(raw)]).strip()   # (spaces in an ID too)
     return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) \
-        + ("\n" + "\n".join(links) if links else "")
+        + ("\n" + addresses if addresses else "")
 
 
 def _strings(x):
@@ -331,21 +340,77 @@ def _strings(x):
     return [t for v in x for t in _strings(v)] if isinstance(x, list) else []
 
 
-# #127: a work-item link, [words](creaite:item/ABC-A-001), in any of its Markdown forms (a title, <angle brackets>, a reference
-# definition, an image, a bare or <auto> link), with its address URL-decoded and normalised (edit_ai.normal): the address is what
-# names the item, whatever its words say. The ID part may hold up to two spaces ("abc a 001"); a title in quotes is never part of it.
-ITEM_LINK = re.compile(r"(?<![\w.%-])creaite\s*:\s*item\s*/\s*([^\s)>\]\"'<]*(?:[ \t]+[A-Za-z0-9][^\s)>\]\"'<]*){0,2})", re.I)
+# #127: link addresses. The gate reads the ADDRESS of every link (inline, image, reference definition, <auto>, an HTML href, a bare
+# https:, mailto: or creaite: one), fully %-decoded and entity-decoded (_decoded), because the words alone can say anything. Each
+# address is added to the text the checks read twice over: as decoded (so a creaite: address keeps its shape) and as plain words
+# ("mailto quentin marlow example com"), so the ID, names, wording and marker checks find what it holds. "Internal", kept narrow:
+# an address that holds an item a client may not see (any project's, however written), the name or alias of someone who owns only
+# such items, the tracker's health reason or an internal-only marker; and any creaite: link but a work item a client may see or a
+# person (creaite:item, creaite:person; a note or anything else in creaite is Alan's own). An ordinary https or mailto address to
+# anything else passes: there is no list of internal hosts.
+ADDRESS = re.compile(
+    r"\]\(\s{0,20}<?([^()<>\"\s]{0,2000}(?:\([^()<>\"\s]{0,200}\)[^()<>\"\s]{0,2000})?)"     # an inline link or image
+    r"|^[ \t]{0,3}\[[^\[\]\n]{1,300}\]:[ \t]{0,20}<?([^\s<>]{1,2000})"                       # a reference definition
+    r"|href[ \t]{0,5}=[ \t]{0,5}[\"']([^\"'<>]{0,2000})"                                     # an HTML link
+    r"|<([a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000})>"                                            # an <auto> link
+    r"|(?<![\w/%.-])((?:https?|mailto|creaite)[ \t]{0,5}(?::|%3a)[^\s<>()\[\]\"']{1,2000})",   # a bare address
+    re.I | re.M)
+CREAITE = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}([a-z]{1,20})(?=\s{0,5}[/\\?])", re.I)   # a creaite: link's kind
+SCHEME = re.compile(r"(?<![\w.%-])creaite\s{0,5}:", re.I)
+LINK_KINDS = {"item", "items", "person"}          # creaite links a client report may hold (when what they name is client-safe)
+ITEM_LINK = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}items?\s{0,5}(?:[/\\]|\?[a-z]{0,10}=)\s{0,5}"
+                       r"([^\s)>\]\"'<]{0,200}(?:[ \t]+[A-Za-z0-9][^\s)>\]\"'<]{0,200}){0,2})", re.I)
 
 
 def _decoded(text):
-    """Text with %-encoding undone (twice, for a doubly encoded address) and normalised as the ID check reads it."""
+    """Text with %-encoding undone until it stops changing (at most five times) and HTML entities undone, then normalised as the
+    ID check reads it (edit_ai.normal)."""
     import edit_ai
+    import html
     from urllib.parse import unquote
-    return edit_ai.normal(unquote(unquote(text or "")))
+    t = text or ""
+    for _ in range(5):
+        u = unquote(t)
+        if u == t:
+            break
+        t = u
+    return edit_ai.normal(html.unescape(t))
+
+
+SCHEME_GAP = re.compile(r"creaite[ \t\r\n]{0,5}:[ \t\r\n]{0,5}(?=/{0,2}[ \t\r\n]{0,5}[a-z]{1,20}[ \t\r\n]{0,5}[/\\?])", re.I)
+
+
+def link_addresses(text):
+    """Every link address a text holds, decoded (see ADDRESS); a creaite: address split by spaces or a line break is joined first."""
+    return [_decoded(next(g for g in m.groups() if g is not None)) for m in ADDRESS.finditer(SCHEME_GAP.sub("creaite:", text or ""))
+            if any(g for g in m.groups())]
+
+
+def address_text(text):
+    """The text's link addresses as the checks read them: each as plain words, and a creaite: or relative address (a path in the
+    vault, such as documents/…) also as decoded; an https or mailto address only as words, so an external page's path is not
+    read as one of creaite's own."""
+    out = []
+    for a in link_addresses(text):
+        if not re.match(r"(?:https?|mailto)\s{0,5}:", a, re.I):
+            out.append(a)
+        out.append(re.sub(r"[^0-9A-Za-z]+", " ", a).strip())
+    return "\n".join(out)
+
+
+def with_addresses(text):
+    """A text with its link addresses added (address_text): what a client check reads."""
+    extra = address_text(text)
+    return f"{text}\n{extra}" if extra else (text or "")
+
+
+def creaite_kinds(text):
+    """The kinds of creaite: link a text holds ("item", "person", "note", …), in lower case."""
+    return {m.group(1).lower() for m in CREAITE.finditer(_decoded(text))}
 
 
 def item_links(text):
-    """The address after creaite:item/ of every work-item link in a text, decoded and normalised."""
+    """The address after creaite:item/ (or items/, //item/, item?id=, a backslash) of every work-item link in a text, decoded."""
     return [m.group(1) for m in ITEM_LINK.finditer(_decoded(text))]
 
 
@@ -362,32 +427,55 @@ def link_refs(con, text):
     return ids, unread
 
 
-def _link_ok(con, code, target, blocking):
-    """Whether a link's target may stay in a client text: not a work-item link, or one whose every item a client report may show."""
-    if not item_links(target):
+def _link_ok(con, code, span, blocking):
+    """Whether a link (its whole Markdown or HTML, or a bare address) may stay in a client text: one that isn't a creaite: link,
+    or a creaite: link whose every item, read from the whole link, is this project's and one a client report may show. A creaite:
+    link that names no item (unreadable, or a person or a note) goes."""
+    import edit_ai
+    t = _decoded(span)
+    if not SCHEME.search(t):
         return True
-    ids, unread = link_refs(con, target)
-    return not unread and all(i.split("-")[0] == code and not item_problem(con, i, blocking) for i in ids)
+    ids = edit_ai.loose_ids(con, t)
+    return bool(ids) and all(i.split("-")[0] == code and not item_problem(con, i, blocking) for i in ids)
 
 
-INLINE_LINK = re.compile(r"!?\[[^\]\n]*\]\(\s*(<[^>\n]*>|[^)\n]*?)(?:\s+\"[^\"\n]*\")?\s*\)")
-REF_DEF = re.compile(r"^[ \t]*\[([^\]\n]+)\]:[ \t]*(\S.*?)[ \t]*$", re.M)
-BARE = re.compile(r"<?\S*creaite\S*>?", re.I)
+LINK_SPAN = re.compile(
+    r"<a\s[^<>]{0,2000}>[^<]{0,2000}</a\s{0,5}>|<a\s[^<>]{0,2000}>"                                     # an HTML link
+    r"|!?\[[^\[\]\n]{0,300}\]\(\s{0,20}(?:<[^<>\n]{0,2000}>|[^()\n]{0,2000}(?:\([^()\n]{0,200}\)[^()\n]{0,2000})?)"
+    r"(?:\s{1,20}\"[^\"\n]{0,300}\")?\s{0,20}\)"                                                           # an inline link or image
+    r"|^[ \t]{0,3}\[[^\[\]\n]{1,300}\]:[^\n]{0,2000}$"                                                     # a reference definition
+    r"|!?\[[^\[\]\n]{0,300}\]\[[^\[\]\n]{0,300}\]"                                                          # a reference link
+    r"|<[a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000}>",                                                          # an <auto> link
+    re.I | re.M)
+REF_DEF = re.compile(r"^[ \t]{0,3}\[([^\[\]\n]{1,300})\]:[ \t]{0,20}([^\n]{0,2000})$", re.M)
+LONG_TOKEN = 2000
 
 
 def drop_item_links(code, text, con=None):
-    """#127: a client text with every work-item link to an item a client report may not show (not client-visible, Sensitive,
-    partner-only or excluded by a label, another project's, or an address creaite can't read) taken out WHOLE, its words and its
-    address: inline links and images, reference links and their definitions, <auto> and bare addresses. A link to an item a
-    client may see is kept as it is, words included. report.current_context uses it on the Current state for the client audience
-    (one helper, so a later filter can replace it)."""
+    """#127: a client text with every creaite: link that a client may not have taken out WHOLE, words and address: a link to an
+    item a client report may not show (not client-visible, Sensitive, partner-only or excluded by a label, another project's) or
+    one that names no item creaite can read (a person, a note), in any form (inline links and images, reference links and their
+    definitions, HTML links, <auto> and bare addresses, %- or entity-encoded, split by spaces or a line break). A link to an item
+    a client may see is kept as it is, words included; other links are left. Linear: every pattern is bounded, and a run of more
+    than LONG_TOKEN characters with no space that mentions creaite is dropped (fails closed). report.current_context uses it on
+    the Current state for the client audience (one helper, so a later filter can replace it)."""
+    import html
     con = con or connect()
     blocking = blocking_labels(con)
-    t = INLINE_LINK.sub(lambda m: m.group(0) if _link_ok(con, code, m.group(1), blocking) else "", text or "")
+    t = SCHEME_GAP.sub("creaite:", html.unescape(text or ""))
     bad = {m.group(1).strip().lower() for m in REF_DEF.finditer(t) if not _link_ok(con, code, m.group(2), blocking)}
-    t = REF_DEF.sub(lambda m: "" if m.group(1).strip().lower() in bad else m.group(0), t)
-    t = re.sub(r"!?\[[^\]\n]*\]\[([^\]\n]*)\]", lambda m: "" if m.group(1).strip().lower() in bad else m.group(0), t)
-    return BARE.sub(lambda m: m.group(0) if _link_ok(con, code, m.group(0), blocking) else "", t)
+
+    def keep(m):
+        """The span as it is, or "" when it is a link a client may not have."""
+        s = m.group(0)
+        ref = re.fullmatch(r"!?\[[^\[\]\n]*\]\[([^\[\]\n]*)\]|[ \t]*\[([^\[\]\n]+)\]:.*", s, re.S)
+        if ref:
+            return "" if (ref.group(1) or ref.group(2) or "").strip().lower() in bad else s
+        return s if _link_ok(con, code, s, blocking) else ""
+
+    t = LINK_SPAN.sub(keep, t)
+    return re.sub(r"\S+", lambda m: m.group(0) if "creaite" not in _decoded(m.group(0)[:LONG_TOKEN + 1]).lower() else (
+        "" if len(m.group(0)) > LONG_TOKEN or not _link_ok(con, code, m.group(0), blocking) else m.group(0)), t)
 
 
 def findings(doc, con=None):
@@ -417,6 +505,7 @@ def plain_findings(con, code, text):
     import drafts
     lines = text.splitlines()
     shown = next((i for i, ln in enumerate(lines) if HEALTH_FLAG.match(ln)), None)
+    text = with_addresses(text)                                # #127: every link address in the text, decoded
     found = drafts.internal_findings(con, code, "\n".join(ln for i, ln in enumerate(lines) if i != shown))
     if drafts.INTERNAL_MARK.search(text) and "an internal-only marker" not in found:
         found.append("an internal-only marker")

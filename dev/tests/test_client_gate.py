@@ -248,6 +248,13 @@ class WordDraftsGetTheWholeGate(Base):
         R.edit_docx(draft, "Delivery is behind plan", REASON)
         self.assertIn("it holds the internal health reason", self.word_findings(block))
 
+    def test_a_flag_in_the_middle_of_an_earlier_line_takes_no_allowance(self):
+        prop, draft = self.stage()
+        block = json.loads(prop.read_text())["report"]
+        R.edit_docx(draft, REASON, "Delivery is behind plan")               # the real health line no longer holds the reason
+        R.edit_docx(draft, "Not yet reviewed.", f"Not yet reviewed. Was OFF TRACK: {REASON}.")   # an earlier line, flag mid-line
+        self.assertIn("it holds the internal health reason", self.word_findings(block))
+
     def test_cx_document_refuses_a_client_audience(self):
         spec = {"title": "Open actions", "sections": [{"heading": "Actions", "paragraphs": ["A list."]}]}
         f = self.v.root / "system/staging/drafts/adhoc.json"
@@ -268,7 +275,18 @@ LINK_VARIANTS = (                                   # #127: step C's link shape,
     ("encoded address", "[the vendor thing](creaite%3Aitem%2FABC-A-001)"),
     ("reference", "See [the vendor thing][1].\n\n[1]: creaite:item/ABC-A-001"),
     ("image", "![the vendor thing](creaite:item/ABC-A-001)"),
-    ("auto link", "<creaite:item/ABC-A-001>"))
+    ("auto link", "<creaite:item/ABC-A-001>"),
+    # the review of 21d54d1 (findings 3 and the survivors): each must go whole and be found by the document gate
+    ("double encoding", "[the vendor thing](creaite:item/ABC%252DA%252D001)"),
+    ("triple encoding", "[the vendor thing](creaite%25253Aitem%25252FABC-A-001)"),
+    ("triple-encoded ID", "[the vendor thing](creaite:item/ABC%25252DA%25252D001)"),
+    ("upper-case scheme, spaced ID", "[the vendor thing](CREAITE:ITEM/abc a 001)"),
+    ("line break in the address", "[the vendor thing](creaite:\nitem/ABC-A-001)"),
+    ("HTML link", '<a href="creaite&#58;item/ABCA001">the vendor thing</a>'),
+    ("two slashes", "[the vendor thing](creaite://item/ABC-A-001)"),
+    ("items", "[the vendor thing](creaite:items/ABC-A-001)"),
+    ("query", "[the vendor thing](creaite:item?id=ABC-A-001)"),
+    ("backslash", "[the vendor thing](creaite:item\\ABC-A-001)"))
 ITEM = "ABC-A-001"
 SAFE_LINK = "[the signed paperwork](creaite:item/ABC-A-002)"        # client-visible: kept, words and all
 
@@ -291,9 +309,51 @@ class WorkItemLinks(Base):
                           ("[a promise](creaite:item/abc-p-001)", "ABC-P-001 isn't an item"),
                           ("[odd](creaite:item/nothing-here)", "a link to a work item creaite can't read")):
             self.assertTrue(any(f.startswith(why) for f in self.findings(f"Progress. {link}")), link)
-        for ok in (SAFE_LINK, "[Example](https://example.com/item/123)", "See creaite:note/7, creaite:items and creaite: item list.",
+        for ok in (SAFE_LINK, "[Example](https://example.com/item/123)", "See creaite:items and the creaite: item list.",
                    "[the plan](https://example.com/creaite/item/7)"):
             self.assertEqual(self.findings(f"Progress continues. {ok}"), [], ok)
+
+    def test_every_other_link_address_is_read_too(self):
+        """Review finding 1: an https, mailto, creaite:person or relative address is read (decoded) by the ID, names and wording
+        checks. Internal means: it holds an item a client may not see, the name of someone who owns only such items, or a vault
+        path (documents/); or it is a creaite: link other than an item or a person. Ordinary external links pass."""
+        for link, why in (("[the vendor thing](https://intranet.example.com/items/ABC-A-001)", f"{ITEM} isn't client-visible"),
+                          ("[the auditor](mailto:quentin.marlow@example.com)", f"{PERSON} is named"),
+                          ("[the auditor](creaite:person/Quentin%20Marlow)", f"{PERSON} is named"),
+                          ("[the auditor](https://intranet.example.com/people/Quentin-Marlow)", f"{PERSON} is named"),
+                          ("[a note](creaite:note/7)", "a creaite link a client can't open"),
+                          ("[the plan](documents/Plan%20v2.pdf)", "contains “documents/”"),
+                          ("[ref][2]\n\n[2]: https://intranet.example.com/x?item=abc-a-001", f"{ITEM} isn't client-visible"),
+                          ("<https://intranet.example.com/items/ABC-A-001>", f"{ITEM} isn't client-visible"),
+                          ("![chart](https://intranet.example.com/ABC-A-001.png)", f"{ITEM} isn't client-visible")):
+            got = self.findings(f"Progress. {link}")
+            self.assertTrue(any(f.startswith(why) for f in got), (link, got))
+        for ok in ("[Example](https://example.com/a_(b))", "[the client site](https://client.example.com/documents/plan.pdf)",
+                   "[Jane](creaite:person/Jane%20Doe)", "[help](mailto:help@example.com)", "Mail help@example.com today.",
+                   "[w](https://example.com/?q=a%20b)"):
+            self.assertEqual(self.findings(f"Progress continues. {ok}"), [], ok)
+
+    def test_a_link_in_the_current_state_panes_is_found_at_approve_and_export(self):
+        self.approve_week()
+        link = "Build is two weeks behind. [the vendor thing](creaite:item/ABC-A-001)"
+        for pane in (0, 1):
+            put = ("cs = next(s for s in d['sections'] if s['id'] == 'current_state')\n"
+                   "cs['panes'] = (cs['panes'] + [{'title': '', 'text': ''}])[:2]\n"
+                   f"cs['panes'][{pane}]['text'] = {link!r}\n")
+            exp = self.py("import client_check\nd = report_doc.client_doc('ABC')\n" + put
+                          + "print(json.dumps(client_check.left_out(d)['findings']))")
+            self.assertTrue(any(ITEM in f for f in exp), (pane, exp))
+            got = self.py("d = report_doc.client_doc('ABC')\n" + put + "r = report_doc.save_draft(d)\ntry:\n"
+                          "    report_doc.stage_client(r['path'])\n    print(json.dumps('staged'))\n"
+                          "except BaseException as e:\n    print(json.dumps(str(e)))")
+            self.assertIn(ITEM, got, pane)
+
+    def test_word_shows_a_creaite_links_words_never_its_markdown(self):
+        text = "See [the signed paperwork](creaite:item/ABC-A-002) and [Jane](creaite:person/Jane%20Doe); [site](https://example.com/a)."
+        got = self.py("import docx_tools\n"
+                      f"print(json.dumps([docx_tools.plain({text!r}), [r[4] for r in docx_tools.md_runs({text!r})]]))")
+        self.assertEqual(got[0], "See the signed paperwork and Jane; site (https://example.com/a).")
+        self.assertEqual([u for u in got[1] if u], ["https://example.com/a"])    # control: an https link stays a hyperlink
 
     def test_a_link_in_a_table_cell_or_a_heading_is_found(self):
         got = self.py("d = report_doc.client_doc('ABC')\n"
@@ -350,10 +410,35 @@ class WorkItemLinks(Base):
         client, internal = ctx("client"), ctx("internal")
         self.assertIn("the vendor thing", internal)                         # control: the marker is in the internal context
         current = client[client.index("## Current state now"):]
-        for gone in ("the vendor thing", "Internal vendor thing", "ABC-A-001", "ABC%2DA%2D001", "abc a 001", "[1]:"):
+        for gone in ("the vendor thing", "Internal vendor thing", "ABC-A-001", "ABC%2DA%2D001", "abc a 001", "[1]:", "A-001", "<a "):
             self.assertNotIn(gone, current, gone)
         self.assertIn(SAFE_LINK, current)                                  # a client-visible link stays, with its words
         self.assertIn("Build is two weeks behind.", current)
+
+    def test_the_right_pane_is_filtered_too(self):
+        marker = "<!-- creaite: second pane -->"                          # docx_tools.PANE_MARKER
+        memory = self.v.root / R.ABC / "CLAUDE.md"
+        text = memory.read_text(encoding="utf-8")
+        right = f"\n\n{marker}\n\nRight: [the vendor thing](creaite:item/ABC-A-001) and {SAFE_LINK}.\n\n"
+        memory.write_text(text.replace("![Delivery plan](images/plan.png)\n", "![Delivery plan](images/plan.png)" + right),
+                          encoding="utf-8")
+        client = self.py("import report\nprint(json.dumps(report.current_context('ABC', audience='client')))")
+        internal = self.py("import report\nprint(json.dumps(report.current_context('ABC', audience='internal')))")
+        self.assertIn("right pane", internal)
+        self.assertIn("the vendor thing", internal[internal.index("right pane"):])        # control: the marker is there
+        tail = client[client.index("right pane"):]
+        self.assertNotIn("the vendor thing", tail)
+        self.assertIn(SAFE_LINK, tail)
+
+    def test_the_filter_and_the_gate_are_linear(self):
+        """Review finding 4: 100 KB of one long token takes well under a second (the old patterns took tens of seconds)."""
+        code = ("import time\nout = {}\nfor name, s in (('[', '[' * 100000), ('](', '](' * 50000), ('creaite', 'creaite' * 15000),"
+                " ('[a](', '[a](' * 25000), ('[a](creaite:', '[a](creaite:' * 9000)):\n"
+                "    t0 = time.time(); client_leak.drop_item_links('ABC', s)\n"
+                "    client_leak.text_findings(client_leak.connect(), 'ABC', client_leak.with_addresses(s)); out[name] = time.time() - t0\n"
+                "print(json.dumps(out))")
+        for name, took in self.py(code).items():
+            self.assertLess(took, 1.0, name)
 
     def test_the_filter_takes_each_link_out_whole(self):
         for name, link in LINK_VARIANTS + (("other project", "[the other ledger](creaite:item/DEF-A-001)"),):
@@ -363,7 +448,12 @@ class WorkItemLinks(Base):
             self.assertNotIn("[1]", got, name)                              # a reference link's definition goes too
             self.assertNotIn("creaite", got.lower().replace("creaite:item/abc-a-002", ""), name)
             self.assertTrue(got.startswith("Before.") and "After." in got, (name, got))
-        for ok in (SAFE_LINK, "[Example](https://example.com/item/123)", "creaite is the tool; creaite:note/7"):
+            for remnant in ("A-001", "001)", "<a ", "href"):
+                self.assertNotIn(remnant, got, (name, remnant))
+        for name, link in (("unreadable", "[odd](creaite:item/nothing-here)"), ("a person", "[the auditor](creaite:person/Quentin)")):
+            got = self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {'Before. ' + link + ' After.'!r})))")
+            self.assertEqual(got, "Before.  After.", name)                   # a creaite: link naming no item goes too
+        for ok in (SAFE_LINK, "[Example](https://example.com/item/123)", "[Example](https://example.com/a_(b))", "creaite is the tool."):
             self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {ok!r})))"), ok)
 
 
