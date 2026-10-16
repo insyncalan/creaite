@@ -440,6 +440,16 @@ class RefineDialog(DraftCase):
         self.assertEqual(self.shown(), V1)
         self.assertEqual(self.vers(), "")
 
+    def test_a_client_safe_draft_is_not_offered_a_refine_and_says_why(self):
+        b = self.b
+        self.pick("#genAud", "Client-safe")
+        self.first(draft(V1, audience="client"))
+        self.assertTrue(b.eval("!document.getElementById('genRefineHost').hidden"))
+        self.assertEqual(b.eval("document.querySelector('#genRefineHost .drnote').textContent"), "Steer it further is not available for a Client-safe draft yet.")
+        self.assertEqual(b.eval("!!document.getElementById('genRefineNote')||!!document.getElementById('genRefineGo')"), False)     # no box, no button
+        self.assertEqual(b.eval("document.querySelectorAll('#genDlg [data-rstart]').length"), 0)
+        self.assertEqual(b.errors, [])
+
     def test_text_is_readable_in_light_and_dark(self):
         b = self.b
         self.first(draft(V1))
@@ -534,6 +544,14 @@ class RefineEditor(DraftCase):
         self.assertGreaterEqual(b.eval("document.getElementById('curRefineNote').getBoundingClientRect().height"), 60)
         self.assertEqual(b.eval("document.getElementById('curVers').textContent"), "")                                      # version 1: no bar yet
         self.assertEqual(b.eval("document.querySelector('.curacts [data-cure=save]').classList.contains('primary')"), True)    # Save stays the editor's primary
+
+    def test_a_client_safe_current_state_draft_is_not_offered_a_refine_and_says_why(self):
+        b = self.b
+        b.eval("genDraft('ABC','Falcon is on track. {F1}','',{audience:'client',length:'standard',from:'2026-10-02',to:'2026-10-09',note:''})")
+        b.wait("document.getElementById('curEd')&&document.getElementById('curRefine')", 30)
+        self.assertEqual(b.eval("document.querySelector('#curRefine .drnote').textContent"), "Steer it further is not available for a Client-safe draft yet.")
+        self.assertEqual(b.eval("!!document.getElementById('curRefineNote')||!!document.getElementById('curRefineGo')"), False)
+        self.assertEqual(b.errors, [])
 
     def test_the_starters_append_only(self):
         b = self.b
@@ -707,6 +725,76 @@ class RefineEditor(DraftCase):
         self.assertEqual(b.eval("document.getElementById('curRefineNote').value"), "Shorter")
 
 
+# ── the server rules, in plain code (no browser) ──
+class RefineRules(unittest.TestCase):
+    """drafts.py's refine: the sentences kept by position, the character cap, the Client-safe refusal, the first draft unchanged."""
+    SRC = [{"ref": "S1", "id": "F1", "text": "x"}]
+
+    def build(self, **req):
+        import sqlite3
+        from unittest import mock
+        import status_facts
+        con = sqlite3.connect(":memory:")
+        con.execute("CREATE TABLE projects (code TEXT)")
+        con.execute("INSERT INTO projects VALUES ('ABC')")
+        sheet = {"name": "Example", "start": "2026-10-01", "end": "2026-10-08", "parts": [{"title": "Position", "lines": [{"fid": "F1", "text": "UAT is late."}]}]}
+        try:
+            with mock.patch.object(status_facts, "facts", return_value=sheet) as facts, mock.patch.object(status_facts, "settings", return_value={"length_words": {}}):
+                got = drafts.build_status_form(con, {"code": "ABC", "form": "email", "audience": "internal", **req})
+        finally:
+            con.close()
+        return got, facts
+
+    def test_an_unsourced_sentence_is_removed_at_its_own_place_not_the_first_equal_text(self):
+        reply = "We are escalating it this week. [S1]\nescalating it this week.\nLast one. [S1]"
+        kept, gone = drafts.refine_keep_sourced(reply, self.SRC)
+        self.assertEqual((kept, gone), ("We are escalating it this week. [S1]\nLast one. [S1]", 1))
+
+    def test_the_first_the_middle_and_the_last_unsourced_sentence_each_go_with_one_break(self):
+        for reply, want in (("Bad.\nA. [S1]\nB. [S1]", "A. [S1]\nB. [S1]"), ("A. [S1]\nBad.\nB. [S1]", "A. [S1]\nB. [S1]"),
+                            ("A. [S1]\nB. [S1]\nBad.", "A. [S1]\nB. [S1]"), ("A. [S1] Bad one. B. [S1]", "A. [S1] B. [S1]")):
+            self.assertEqual(drafts.refine_keep_sourced(reply, self.SRC), (want, 1), reply)
+
+    def test_a_repeated_unsourced_sentence_is_counted_and_removed_each_time(self):
+        kept, gone = drafts.refine_keep_sourced("Bad.\nA. [S1]\nBad.", self.SRC)
+        self.assertEqual((kept, gone), ("A. [S1]", 2))
+
+    def test_the_parsed_text_and_sentences_agree_after_the_filter(self):
+        ctx = {"sources": self.SRC, "extra": {"form": "email", "audience": "steering", "words": 120, "lines": 1, "refine": True}}
+        got = drafts.parse_status_form("We are escalating it this week. [S1]\nescalating it this week.", ctx)
+        self.assertEqual(got["text"], "We are escalating it this week.")
+        self.assertEqual([x["text"] for x in got["sentences"]], ["We are escalating it this week."])
+        self.assertEqual(got["length_notes"], ["1 sentence has no source, so it was left out of this version."])
+
+    def test_a_previous_version_of_exactly_1500_characters_is_taken_and_1501_is_refused_not_cut(self):
+        got, _ = self.build(text="x" * drafts.REFINE_TEXT_MAX, note="Shorter")
+        self.assertIn("x" * drafts.REFINE_TEXT_MAX, got.values["note"])
+        with self.assertRaises(drafts.Refused) as why:
+            self.build(text="x" * (drafts.REFINE_TEXT_MAX + 1), note="Shorter")
+        self.assertIn("1500", str(why.exception))
+
+    def test_a_client_safe_refine_is_refused_before_any_facts_are_built(self):
+        from unittest import mock
+        with mock.patch.object(drafts, "REFINE_NOT_CLIENT", "STOP"), self.assertRaises(drafts.Refused) as why:
+            self.build(audience="client", text="UAT is late.", note="Shorter")
+        self.assertEqual(str(why.exception), "STOP")
+        got, facts = self.build(audience="client")                                                                              # a first Client-safe draft is as before
+        facts.assert_called_once()
+        self.assertNotIn("REFINEMENT", got.values["note"])
+
+    def test_a_first_draft_prompt_is_unchanged_and_a_refine_names_the_previous_version(self):
+        first, _ = self.build(note="Lead with risks")
+        self.assertEqual(first.values["note"], "Alan's steer: Lead with risks\n")
+        self.assertFalse(first.extra["refine"])
+        refined, _ = self.build(text="UAT is late.", note="Shorter")
+        self.assertIn("--- PREVIOUS VERSION ---\nUAT is late.", refined.values["note"])
+        self.assertTrue(refined.extra["refine"])
+
+    def test_current_is_a_form_for_a_refine(self):
+        got, _ = self.build(form="current", text="Falcon is off track.", note="Shorter")
+        self.assertEqual(got.values["form_name"], "Current state")
+
+
 # ── confidentiality: the real server and the stand-in Claude ──
 NEEDS_SERVER = unittest.skipUnless(hasattr(drafts, "refine_note"), "drafts.py has no refine support yet (#110 B needs it)")
 
@@ -720,7 +808,8 @@ def client_world(v):
 
 @NEEDS_SERVER
 class RefineConfidentiality(DraftCase):
-    """A refine draws on exactly the same sources and audience as the first draft: an instruction can't bring in what the facts don't hold."""
+    """A refine draws on exactly the same sources and audience as the first draft: an instruction can't bring in what the facts don't hold.
+    The Client-safe audience is not offered a refine yet (follow-up C2), so the server refuses it before any sheet is built."""
     width, height = 1400, 900
 
     @classmethod
@@ -740,25 +829,22 @@ class RefineConfidentiality(DraftCase):
         self.assertIsNone(got)
         return next(e for e in events if e["type"] == "draft")
 
-    def test_add_the_internal_risks_on_a_client_safe_draft_adds_nothing_internal(self):
-        first = self.ask(form="email", audience="client")
+    def refused(self, **body):
+        """The reason a /api/draft request was refused: the run never starts, so no model is asked."""
+        before = Path(str(self.fake) + ".prompt").read_text(encoding="utf-8") if Path(str(self.fake) + ".prompt").exists() else ""
+        got, events = self.draft({"kind": "status-form", "code": "ABC", **body})
+        self.assertFalse([e for e in events if e["type"] == "draft"])
+        after = Path(str(self.fake) + ".prompt").read_text(encoding="utf-8") if Path(str(self.fake) + ".prompt").exists() else ""
+        self.assertEqual(before, after)
+        return json.dumps(got) + json.dumps(events)
+
+    def test_a_client_safe_refine_is_refused_with_a_plain_message_and_no_model_is_asked(self):
+        first = self.ask(form="email", audience="client")                                                                       # a first draft is as before
         self.assertTrue(first["text"])
-        prompt = self.prompt()
-        for word in ("renegotiate", "Confidential", "supplier"):
-            self.assertNotIn(word, prompt)
-        refined = self.ask(form="email", audience="client", text=first["text"], note="Add the internal risks.")
-        prompt = self.prompt()
-        self.assertIn("THIS IS A REFINEMENT", prompt)
-        self.assertIn("Alan's change: Add the internal risks.", prompt)
-        self.assertIn(first["text"], prompt)                                                                                    # the previous version
-        self.assertIn("Health now: Off track", prompt)                                                                          # the same client facts
-        for word in ("renegotiate", "Confidential", "supplier"):
-            self.assertNotIn(word, prompt)                                                                                      # nothing internal is in what the model is given
-        self.assertNotIn("supplier", refined["text"])                                                                           # the stand-in tried to add one: left out
-        self.assertNotIn("supplier", json.dumps(refined["sentences"]))
-        self.assertTrue(all(not s["unsourced"] for s in refined["sentences"]))
-        self.assertTrue(any("left out of this version" in n for n in refined["length_notes"]))
-        self.assertEqual(refined["audience"], "client")
+        why = self.refused(form="email", audience="client", text=first["text"], note="Add the internal risks.")
+        self.assertIn(drafts.REFINE_NOT_CLIENT, why)
+        self.assertNotIn("THIS IS A REFINEMENT", self.prompt())
+        self.assertNotIn("Health now", why)                                                                                     # and nothing of the sheet
 
     def test_a_steering_committee_refine_holds_the_same_rule(self):
         first = self.ask(form="three", audience="steering")

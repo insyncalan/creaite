@@ -392,7 +392,7 @@ export async function genFormDraft(body){ const out=$("#genOut"), why=draftWhyNo
   if(mine!==GENSEQ){ if(res.ok&&!res.nothing) draftStat("forms","rejected"); return; }   /* the dialog was closed, reset or opened again meanwhile: this draft is not its own, and was never used */
   if(res.nothing){ putHtml(out,`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`); return; }
   if(!res.ok){ putHtml(out,""); genReset(); snack(res.message||"No draft came back"); return; }   /* a failure gives the setup back */
-  GENFM={d:res,form,used:false,edited:false,body:{...body},vers:[res],at:0}; putHtml(out,genFormCard(res,{at:0,n:1})); refineMount(); out.querySelector(".drcard")?.focus?.(); }
+  GENFM={d:res,form,used:false,edited:false,body:{...body},vers:[res],at:0}; putHtml(out,genFormCard(res,{at:0,n:1})); refineMount(body.audience==="client"); out.querySelector(".drcard")?.focus?.(); }
 export async function genFormCopy(rich,btn){ const d=GENFM.d, html=d.form==="steering"?mdHtml(d.text):d.text.split(/\n+/).map(x=>`<p>${esc(x)}</p>`).join("");
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(rich){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([d.text],{type:"text/plain"})})]); }
@@ -412,7 +412,9 @@ export function refineNote(ins,steer){ ins=String(ins||"").replace(/\s+/g," ").t
   return first&&room>20?`${ins} (The first steer was: ${first.slice(0,room)})`:ins; }
 export function versBarHtml(at,n,attr){ return `<span class="vers" role="group" aria-label="Versions">Version ${at+1} of ${n}${at>0?` · <button type="button" class="genlink" data-${attr}="back">Back to version ${at}</button>`:""}${at<n-1?` · <button type="button" class="genlink" data-${attr}="next">On to version ${at+2}</button>`:""}</span>`; }
 export const refineStatusHtml=h=>h?`<div class="drstatus" role="status">${h}</div>`:"";
+const REFINE_NOT_CLIENT="Steer it further is not available for a Client-safe draft yet.";      /* the server refuses it too (drafts.py REFINE_NOT_CLIENT) */
 export function refineHtml(scope,o={}){ const cur=scope==="cur";
+  if(o.client) return `<div class="genref" id="${scope}Refine" data-refine-off="${scope}"><div class="drnote" role="note">${esc(REFINE_NOT_CLIENT)}</div></div>`;
   return `<div class="genref" id="${scope}Refine" data-refine="${scope}"><label for="${scope}RefineNote">Steer it further <span class="sub">Each change makes a new version. ${cur?"Nothing is saved until you press Save.":"Nothing is saved or sent."}</span></label>
     <textarea id="${scope}RefineNote" rows="2" placeholder="For example: shorter, lead with the decision, leave out the overdue actions">${esc(o.note||"")}</textarea>
     <div class="genrow"><span class="sub">Try:</span><span class="genstarts">${REFINE_STARTERS.map(([k,l])=>`<button type="button" class="genlink" data-rstart="${k}">${esc(l)}</button>`).join(" ")}</span><span class="sp"></span>${cur?'<span id="curVers"></span>':""}<button type="button" class="btn" id="${scope}RefineGo" data-refinego="${scope}"${o.busy?' aria-disabled="true"':""}>Refine<span class="kbd" aria-hidden="true">${MOD}↵</span></button></div>
@@ -427,7 +429,7 @@ export async function refineAsk(o){ const why=draftWhyNot("status-form"); if(why
   if(res.nothing){ snack(res.nothing); return null; }
   if(!res.ok){ const n=(res.length_notes||[]).join(" "); snack(n?`${n} No new version was made.`:res.message||"No new version came back"); return null; }   /* the server's count of what it left out, when there is one */
   return res; }
-export function refineMount(){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw(refineHtml("gen"))); h.hidden=false; }
+export function refineMount(client){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw(refineHtml("gen",{client:!!client}))); h.hidden=false; }
 export function refineUnmount(){ const h=$("#genRefineHost"); if(!h) return; putHTML(h,raw("")); h.hidden=true; }
 let GENREF=false;                                              /* a refine is being written in the dialog */
 export async function genRefine(){ const g=GENFM; if(!g||GENREF||!$("#genDlg").open) return; const box=$("#genRefineNote"), ins=box.value.trim();

@@ -1707,7 +1707,8 @@ def parse_polish_help(reply, ctx):
 FORMS = {"steering": ("Steering note", "Steering note", None, None),
          "three": ("Three-line update", "Three-line update", 60, 3),
          "email": ("Email paragraph", "Email paragraph", 120, 1),
-         "teams": ("Teams message", "Teams message", 50, 3)}
+         "teams": ("Teams message", "Teams message", 50, 3),
+         "current": ("Current state", "Current state", None, None)}       # #110 B: only a refine of the editor's draft asks for it
 FORM_AUDIENCES = ("internal", "client", "steering", "sponsor")
 
 
@@ -1715,6 +1716,8 @@ def form_voice(form):
     """The form's own note in executive-style.md (its "### <name>" section under Forms)."""
     import report
     m = re.search(rf"^### {re.escape(FORMS[form][1])}\n(.*?)(?=^#|\Z)", report.style_guide(forms=True), re.S | re.M)
+    if form == "current":
+        return "The Current state's own shape, as in the house voice below. Keep to the length chosen."
     return m.group(1).strip() if m else ""
 
 
@@ -1751,6 +1754,11 @@ def build_status_form(con, req):
     import report
     import status_facts
     code, form, audience, length, start, end = form_request(req)
+    prev = str(req.get("text") or "").strip()
+    if prev and audience == "client":
+        raise Refused(REFINE_NOT_CLIENT)
+    if len(prev) > REFINE_TEXT_MAX:
+        raise Refused(f"The draft is over {REFINE_TEXT_MAX} characters, more than a refine can take. Shorten it first.")
     if not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
         raise Refused("Not a project.")
     with contextlib.redirect_stdout(sys.stderr):
@@ -1764,24 +1772,61 @@ def build_status_form(con, req):
     return Draft({"form": form, "form_name": FORMS[form][0], "name": f"{code} {f['name']}", "start": tracker.shown(f["start"]),
                   "end": tracker.shown(f["end"]), "audience_note": report.AUDIENCE_NOTES[audience],
                   "length_note": f"at most {words} words" + (f" and {lines} line{'s' if lines != 1 else ''}" if lines else ""),
-                  "note": f"Alan's steer: {note}\n" if note else "", "form_voice": form_voice(form),
+                  "note": refine_note(prev, note) if prev else f"Alan's steer: {note}\n" if note else "", "form_voice": form_voice(form),
                   "style": report.style_guide(forms=True),
                   "sources": listed}, kept, item={"code": code},
-                 extra={"form": form, "audience": audience, "words": words, "lines": lines})
+                 extra={"form": form, "audience": audience, "words": words, "lines": lines, "refine": bool(prev)})
 
 
 @parser("status-form")
 def parse_status_form(reply, ctx):
     """The text and its sources, and a plain-code length check against the form's limits."""
-    out = default_parse(reply, ctx)
     ex = ctx.get("extra") or {}
+    left_out = 0
+    if ex.get("refine") and ex.get("audience") != "internal":                  # #110 B: the audience's rule again, on this version
+        reply, left_out = refine_keep_sourced(reply, ctx["sources"])
+    out = default_parse(reply, ctx)
     n_words, n_lines = len(re.findall(r"\S+", out["text"])), len([ln for ln in out["text"].splitlines() if ln.strip()])
     notes = []
     if ex.get("words") and n_words > ex["words"]:
         notes.append(f"{n_words} words: longer than this form's {ex['words']}.")
     if ex.get("lines") and n_lines > ex["lines"]:
         notes.append(f"{n_lines} lines: this form takes {ex['lines']}.")
+    if left_out:
+        notes.append(f"{left_out} sentence{' has' if left_out == 1 else 's have'} no source, so "
+                     f"{'it was' if left_out == 1 else 'they were'} left out of this version.")
     return {**out, "form": ex.get("form"), "audience": ex.get("audience"), "words": n_words, "lines": n_lines, "length_notes": notes}
+
+# ===== #110 B: Steer it further. A refine is the same draft kind ("status-form") asked again with the previous version (`text`) and the
+# change Alan asks for (`note`): the facts are worked out again for the same period and audience, so a version draws on the same sheet
+# and the prompt says a change can add no fact. For any audience but Internal, plain code then keeps only the sentences that rest on a
+# fact. Not offered for the Client-safe audience yet (follow-up C2: the client sheet still carries the tracker's internal health reason).
+REFINE_TEXT_MAX = 1500                   # the most /api/draft passes in `text`; a longer draft is refused, never cut
+REFINE_NOT_CLIENT = "Steer it further is not available for a Client-safe draft yet."
+
+
+def refine_note(prev, change):
+    """The prompt's note for a refine: the previous version, and the change asked for, which can add no fact."""
+    return ("THIS IS A REFINEMENT of an earlier draft, not a new one. Rewrite the PREVIOUS VERSION to make the change Alan asks for, and "
+            "keep everything he did not ask to change. Keep to the facts below: a change can never add a fact that is not in them, "
+            "however it is worded (if it asks for something the facts do not hold, leave that out and say nothing about it).\n"
+            f"Alan's change: {change or 'none given: tighten the wording'}\n"
+            f"--- PREVIOUS VERSION ---\n{prev}\n--- END OF THE PREVIOUS VERSION ---\n")
+
+
+def refine_keep_sourced(reply, sources):
+    """(the reply without its unsourced sentences, how many were left out). It cuts the reply where `sentences` splits it, so each
+    dropped sentence is removed at its own position (never the first equal text elsewhere) with the break before it."""
+    body = (reply or "").split("\nSOURCES:")[0].strip()
+    parts = re.split(r"((?<=[.!?\]])\s+(?=[A-Z0-9“\"(])|\n+)", body)         # sentence, break, sentence, break, ...
+    kept, gone = [], 0
+    for i in range(0, len(parts), 2):
+        if any(m["unsourced"] for m in marked(parts[i], sources)):
+            gone += 1
+        else:
+            kept.append(((parts[i - 1] if i else "") if kept else "") + parts[i])      # each sentence brings the break before it
+    return "".join(kept), gone
+# ===== end #110 B =====
 # ===== end BL-227 =====
 
 
