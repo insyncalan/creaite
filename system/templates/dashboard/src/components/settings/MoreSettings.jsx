@@ -3,11 +3,11 @@
    Advanced's own cards (`covered`, from settings.js), grouped as the catalogue groups them, each with its label, one line,
    its default and why, the "changed" dot and Reset. A setting changed only at set-up (folders, the port…) shows its value
    and why it is fixed, with no control. Development-only settings, when any exist, are their own group, Developer, last.
-   Saved with writeSettings (a backup and a log line); the page's search (label, line, reason or the old key) and Show changed
-   only narrow the rows. */
+   Saved with writeSettings (a backup and a log line); the page's search (label, line, reason or the old key) narrows the
+   rows. */
 import { useRef, useState } from "preact/hooks";
 import { snack } from "../../core/server.js";
-import { catalogue, changedOnly, query, saveSettings } from "../../stores/settings.js";
+import { catalogue, query, saveSettings } from "../../stores/settings.js";
 import { settingHasAll, settingWords } from "./Essentials.jsx";
 import { rowId, SettingRow } from "./SettingRow.jsx";
 
@@ -85,8 +85,8 @@ function One({ s }) {
 export function MoreSettings({ covered }) {
   const c = catalogue.value;
   if (!c) return null;
-  const w = settingWords(query.value), only = changedOnly.value;
-  const list = c.settings.filter(s => s.tier !== "essentials" && !covered(s.key) && (!only || s.changed)
+  const w = settingWords(query.value);
+  const list = c.settings.filter(s => s.tier !== "essentials" && !covered(s.key)
     && (!w.length || settingHasAll(`${s.group} ${s.label} ${s.line} ${s.reason} ${s.key}`, w)));
   if (!list.length) return null;
   const groupOf = s => s.tier === "developer" ? "Developer" : s.group;

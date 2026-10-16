@@ -2698,8 +2698,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .shshowall{margin:8px 0 0}
 @media (max-width:720px){ .shscope{grid-template-columns:minmax(0,1fr)} .readas .rl{grid-template-columns:minmax(0,1fr)} .shfocusbox,.shdraft{padding:12px} }
 /* ===== end BL-286 C ===== */
-/* ===== BL-320 (v1.9.2): Settings, calmer: the changed dot, Reset, Show changed only, Essentials' controls, Health ===== */
-.setchg{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted);margin:2px 2px 10px;cursor:pointer}
+/* ===== BL-320 (v1.9.2): Settings, calmer: the changed dot, Reset, Essentials' controls, Health ===== */
 .setdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .setctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .srow.chg>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -3620,7 +3619,7 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 <div id="actTools"></div><div class="wbulk" id="actBar" hidden></div><div class="tbl" id="actTbl"></div></div></section>
       <section class="view" id="v-settings" hidden><div class="wrapmax">
         <h1>Settings</h1>
-        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><label class="setchg"><input type="checkbox" id="setChanged"> Show changed only</label><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
+        <div class="setlayout"><div class="setside"><input type="search" id="setq" class="setq" placeholder="Search settings" aria-label="Search settings" autocomplete="off"><div class="tabhost" id="setcatsHost"></div><!-- BL-316: the categories (#setcats), the Tabs building block --><select id="setcatsel" class="setcatsel" aria-label="Settings category"></select></div>
         <div id="settingsBody"></div></div>
         <div class="card" style="margin-top:16px;display:flex;align-items:center;gap:14px"><div style="flex:1"><h2>Help and documentation</h2><div class="sub">Shortcuts, commands and how everything works. Also press <span class="kbd">?</span> anywhere.</div></div><button class="btn" data-go="help">Open help</button></div>
         <p class="sub">Settings save instantly to <code>system/config/settings.json</code>, with a backup and a log entry.</p>
@@ -3722,7 +3721,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
     CD_STEPS: () => CD_STEPS,
     CE_FIELDS: () => CE_FIELDS,
     CE_LABEL: () => CE_LABEL,
-    CHANGED: () => CHANGED,
     CHASE_ICON: () => CHASE_ICON,
     CHATFROM: () => CHATFROM,
     CHATK: () => CHATK,
@@ -9923,7 +9921,6 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
   var catalogue = y3(null);
   var catalogueError = y3("");
   var query = y3("");
-  var changedOnly = y3(false);
   var healthResult = y3(null);
   var healthBusy = y3(false);
   var healthError = y3("");
@@ -10336,8 +10333,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
       /* @__PURE__ */ u2("h2", { children: "Essentials" }),
       /* @__PURE__ */ u2("p", { class: "sub", role: "status", children: catalogueError.value || (SERVED ? "Reading your settings…" : "The Essentials need the live server: open creaite from it.") })
     ] });
-    const w6 = settingWords(query.value), only = changedOnly.value;
-    const rows2 = c5.essentials.filter((r4) => (!only || r4.changed) && (!w6.length || settingHasAll(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6)));
+    const w6 = settingWords(query.value);
+    const rows2 = c5.essentials.filter((r4) => !w6.length || settingHasAll(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
     if (!rows2.length) return null;
     const sections = [...new Set(rows2.map((r4) => r4.section))];
     return /* @__PURE__ */ u2("div", { class: "setstack", children: sections.map((s5) => /* @__PURE__ */ u2("div", { class: "card", "data-ess": s5, children: [
@@ -10747,8 +10744,8 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
   function MoreSettings({ covered: covered2 }) {
     const c5 = catalogue.value;
     if (!c5) return null;
-    const w6 = settingWords(query.value), only = changedOnly.value;
-    const list = c5.settings.filter((s5) => s5.tier !== "essentials" && !covered2(s5.key) && (!only || s5.changed) && (!w6.length || settingHasAll(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6)));
+    const w6 = settingWords(query.value);
+    const list = c5.settings.filter((s5) => s5.tier !== "essentials" && !covered2(s5.key) && (!w6.length || settingHasAll(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6)));
     if (!list.length) return null;
     const groupOf2 = (s5) => s5.tier === "developer" ? "Developer" : s5.group;
     const groups = [...c5.groups.filter((g5) => g5 !== "Developer"), "Developer"].filter((g5) => list.some((s5) => groupOf2(s5) === g5));
@@ -43701,7 +43698,6 @@ ${pre}**Current state title:** ${title}`);
   var SECT = null;
   shared.SCAT = "essentials";
   shared.SQ = "";
-  var CHANGED = false;
   var sw2 = (k5) => `<input type="checkbox" class="switch" data-k="${k5}" ${S[k5] ? "checked" : ""}>`;
   var tx2 = (k5, ph2) => `<input type="text" data-k="${k5}" value="${esc(S[k5])}" placeholder="${ph2 || ""}">`;
   var nm2 = (k5) => `<input type="number" data-k="${k5}" value="${S[k5]}" min="0" style="width:80px">`;
@@ -43779,7 +43775,7 @@ ${pre}**Current state title:** ${title}`);
   };
   var SETSECTIONS = [
     /* BL-320: a section with `mount` is a Preact component (dev/COMPONENTS.md), drawn into its own box; `match(words)` says
-       whether a search (or Show changed only) finds anything in it. */
+       whether a search finds anything in it. */
     {
       id: "essentials",
       cat: "essentials",
@@ -43788,7 +43784,7 @@ ${pre}**Current state title:** ${title}`);
       mount: (el2) => R(k(Essentials, null), el2),
       match: (w6) => {
         const c5 = catalogue.value;
-        return !!c5 && c5.essentials.some((r4) => (!CHANGED || r4.changed) && sqHas(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
+        return !!c5 && c5.essentials.some((r4) => sqHas(`${r4.section} ${r4.label} ${r4.line} ${r4.keys.join(" ")}`, w6));
       }
     },
     {
@@ -43916,7 +43912,7 @@ ${pre}**Current state title:** ${title}`);
       mount: (el2) => R(k(MoreSettings, { covered }), el2),
       match: (w6) => {
         const c5 = catalogue.value;
-        return !!c5 && c5.settings.some((s5) => s5.tier !== "essentials" && !covered(s5.key) && (!CHANGED || s5.changed) && sqHas(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6));
+        return !!c5 && c5.settings.some((s5) => s5.tier !== "essentials" && !covered(s5.key) && sqHas(`${s5.group} ${s5.label} ${s5.line} ${s5.reason} ${s5.key}`, w6));
       }
     }
   ];
@@ -44019,21 +44015,10 @@ ${pre}**Current state title:** ${title}`);
       renderSettings();
       snack(`${name}: back to its default`);
     });
-    const chg = (
-      /** @type {HTMLInputElement} */
-      $("#setChanged")
-    );
-    if (chg) chg.onchange = () => {
-      CHANGED = chg.checked;
-      changedOnly.value = CHANGED;
-      if (CHANGED && !catalogue.value && SERVED) loadCatalogue();
-      renderSettings();
-      $("#v-settings").scrollTop = 0;
-    };
     j3(() => {
       const c5 = catalogue.value;
       if (!c5 || shared.VIEW !== "settings") return;
-      if ((CHANGED || shared.SQ.trim()) && !$("#settingsBody").contains(document.activeElement)) renderSettings();
+      if (shared.SQ.trim() && !$("#settingsBody").contains(document.activeElement)) renderSettings();
       else setMark($("#settingsBody"));
     });
     if (SERVED && Date.now() - lastCheckAt() > 24 * 3600 * 1e3) window.setTimeout(() => {
@@ -44045,32 +44030,31 @@ ${pre}**Current state title:** ${title}`);
   var sqWords = () => shared.SQ.toLowerCase().split(/\s+/).filter(Boolean), sqHas = (txt, w6) => w6.every((x5) => txt.toLowerCase().includes(x5));
   var rowText = (r4) => (r4.classList.contains("srow") && r4.firstElementChild && r4.firstElementChild !== r4.lastElementChild ? r4.firstElementChild : r4).textContent;
   var SMATCH = /* @__PURE__ */ new Set();
-  var rowOK = (r4, w6) => sqHas(rowText(r4), w6) && (!CHANGED || r4.classList.contains("chg"));
+  var rowOK = (r4, w6) => sqHas(rowText(r4), w6);
   function setSearchSections() {
     const w6 = sqWords();
     SMATCH = /* @__PURE__ */ new Set();
     const t47 = document.createElement("div");
     return SETSECTIONS.filter((s5) => {
-      if (CHANGED && !["essentials", "advanced"].includes(catOf(s5))) return false;
       if (s5.mount) return s5.match(w6);
-      if (!CHANGED && sqHas(`${s5.title} ${catName(catOf(s5))} ${OLDCATS[s5.cat] || ""}`, w6)) {
+      if (sqHas(`${s5.title} ${catName(catOf(s5))} ${OLDCATS[s5.cat] || ""}`, w6)) {
         SMATCH.add(s5.id);
         return true;
       }
       putHTML(t47, raw(setCard(s5)));
       setMark(t47);
       const rows2 = [...t47.querySelectorAll(".srow,.igrow")];
-      return !CHANGED && sqHas(s5.kw, w6) || rows2.some((r4) => rowOK(r4, w6));
+      return sqHas(s5.kw, w6) || rows2.some((r4) => rowOK(r4, w6));
     });
   }
   function setApplySearch() {
-    if (!shared.SQ.trim() && !CHANGED) return;
+    if (!shared.SQ.trim()) return;
     const w6 = sqWords();
     $$("#settingsBody [data-sec]").forEach((c5) => {
       if (c5.hasAttribute("data-mount") || SMATCH.has(c5.dataset.sec)) return;
       const rows2 = [...c5.querySelectorAll(".srow,.igrow")], hit2 = rows2.filter((r4) => rowOK(r4, w6));
       rows2.forEach((r4) => {
-        r4.hidden = hit2.length || CHANGED ? !hit2.some((h5) => h5 === r4 || h5.contains(r4)) : false;
+        r4.hidden = hit2.length ? !hit2.some((h5) => h5 === r4 || h5.contains(r4)) : false;
       });
     });
   }
@@ -44081,14 +44065,8 @@ ${pre}**Current state title:** ${title}`);
   }
   function renderSettings() {
     if (!SETCATS.some((c5) => c5[0] === shared.SCAT)) shared.SCAT = "essentials";
-    const searching = !!shared.SQ.trim() || CHANGED;
+    const searching = !!shared.SQ.trim();
     query.value = shared.SQ.trim();
-    changedOnly.value = CHANGED;
-    const chg = (
-      /** @type {HTMLInputElement} */
-      $("#setChanged")
-    );
-    if (chg) chg.checked = CHANGED;
     if (SERVED && !catalogue.value) loadCatalogue();
     drawTabs($("#setcatsHost"), {
       id: "setcats",
@@ -44100,11 +44078,11 @@ ${pre}**Current state title:** ${title}`);
       selected: searching ? "" : shared.SCAT,
       onSelect: setOpen
     });
-    putHTML($("#setcatsel"), raw((searching ? `<option value="">${CHANGED && !shared.SQ.trim() ? "Changed settings" : "Search results"}</option>` : "") + SETCATS.map(([id2, t47]) => `<option value="${id2}" ${!searching && id2 === shared.SCAT ? "selected" : ""}>${esc(t47)}</option>`).join("")));
+    putHTML($("#setcatsel"), raw((searching ? `<option value="">Search results</option>` : "") + SETCATS.map(([id2, t47]) => `<option value="${id2}" ${!searching && id2 === shared.SCAT ? "selected" : ""}>${esc(t47)}</option>`).join("")));
     const secs = searching ? setSearchSections() : SETSECTIONS.filter((s5) => catOf(s5) === shared.SCAT);
     const head = (s5) => searching ? s5.mount && s5.id !== "more" ? "" : `<div class="setcrumb">${esc(catName(catOf(s5)))} › ${esc(s5.id === "more" ? OLDCATS.advanced : s5.title)}</div>` : shared.SCAT === "advanced" && OLDCATS[s5.cat === "advanced" ? "advanced" : s5.cat] && s5 === secs.find((x5) => x5.cat === s5.cat) ? `<h2 class="setgroup">${esc(OLDCATS[s5.cat])}</h2>` : "";
     setUnmount();
-    const none = CHANGED && !shared.SQ.trim() ? catalogue.value ? "Nothing is changed from its default." : "Reading your settings…" : `No settings match “${shared.SQ.trim()}”${CHANGED ? " among the changed ones" : ""}.`;
+    const none = `No settings match “${shared.SQ.trim()}”.`;
     putHTML($("#settingsBody"), !secs.length ? html`<p class="sub setnone" role="status">${none}</p>` : html`<div class="setstack">${raw(secs.map((s5) => head(s5) + setCard(s5)).join(""))}</div>`);
     secs.forEach((s5) => {
       if (s5.mount) {

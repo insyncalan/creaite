@@ -2688,8 +2688,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .shshowall{margin:8px 0 0}
 @media (max-width:720px){ .shscope{grid-template-columns:minmax(0,1fr)} .readas .rl{grid-template-columns:minmax(0,1fr)} .shfocusbox,.shdraft{padding:12px} }
 /* ===== end BL-286 C ===== */
-/* ===== BL-320 (v1.9.2): Settings, calmer: the changed dot, Reset, Show changed only, Essentials' controls, Health ===== */
-.setchg{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted);margin:2px 2px 10px;cursor:pointer}
+/* ===== BL-320 (v1.9.2): Settings, calmer: the changed dot, Reset, Essentials' controls, Health ===== */
 .setdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .setctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .srow.chg>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}

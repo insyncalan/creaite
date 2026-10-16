@@ -1,8 +1,7 @@
 """BL-320 (v1.9.2): Settings, calmer, with Health inside: the page side.
 
 Settings opens on Essentials (the catalogue's rows, each with its line), Advanced holds the rest (the older cards under their
-old names, then every remaining setting from the catalogue), a dot marks what differs from its default, Show changed only
-lists just those, Reset puts one back (through /api/settings/reset), and Health lists only what needs Alan, each with its
+old names, then every remaining setting from the catalogue), a dot marks what differs from its default, Reset puts one back (through /api/settings/reset), and Health lists only what needs Alan, each with its
 manual step (a Fix it button only where the fix is marked built), the rest folded into one line.
 
 Run: python3 dev/tests/test_settings_calmer.py   (needs Google Chrome; skipped otherwise)
@@ -244,23 +243,18 @@ class SettingsChanging(LiveBrowserCase):
         self.until(lambda: all(self.settings_file().get("drafting", {}).get(k.split(".")[1]) is False for k in keys))
         self.b.wait(f"!!{row}.querySelector('.setdot')")
 
-    def test_show_changed_only_and_reset_on_an_older_card(self):
+    def test_reset_on_an_older_card_and_no_show_changed_only(self):
+        """#102: the "Show changed only" switch is gone; the dot and Reset stay."""
         self.open("advanced")
         b = self.b
+        self.assertEqual(b.eval("document.getElementById('setChanged')"), None)
+        self.assertNotIn("Show changed only", b.eval("document.getElementById('v-settings').textContent"))
         b.eval("(()=>{ const e=document.querySelector('[data-k=boardClosedDays]'); e.value='21'; e.dispatchEvent(new Event('change',{bubbles:true})); })()")
         self.until(lambda: self.settings_file()["work"]["board"]["closed_days"] == 21)
         b.wait("!!document.querySelector('[data-k=boardClosedDays]').closest('.srow').querySelector('.setdot')")
-        b.eval("(()=>{ const c=document.getElementById('setChanged'); c.checked=true; c.dispatchEvent(new Event('change')); })()")
-        b.wait("document.querySelectorAll('#setcats [aria-selected=true]').length===0")
-        shown = "[...document.querySelectorAll('#settingsBody .srow')].filter(r=>!r.hidden&&r.offsetParent)"
-        self.assertIn("Board shows closed items from the last (days)", b.eval(f"{shown}.map(r=>r.querySelector('span[id]').textContent)"))
-        self.assertEqual(b.eval(f"{shown}.filter(r=>!r.querySelector('.setdot')).length"), 0, "only changed rows")
-        self.assertNotIn("Morning sweep from", b.eval(f"{shown}.map(r=>r.querySelector('span[id]').textContent)"))
         b.eval("document.querySelector('[data-k=boardClosedDays]').closest('.srow').querySelector('.setreset').click()")
         self.until(lambda: self.settings_file()["work"]["board"]["closed_days"] == 14)
-        b.wait("!document.querySelector('[data-k=boardClosedDays]')")       # gone from the changed list
-        b.eval("(()=>{ const c=document.getElementById('setChanged'); c.checked=false; c.dispatchEvent(new Event('change')); })()")
-        b.wait("document.querySelector('#setcats [aria-selected=true]').dataset.scat==='advanced'")
+        b.wait("!document.querySelector('[data-k=boardClosedDays]').closest('.srow').querySelector('.setdot')")
         self.assertEqual(b.eval("document.querySelector('[data-k=boardClosedDays]').value"), "14")
 
     def test_an_everything_else_setting_saves_with_its_limits(self):
