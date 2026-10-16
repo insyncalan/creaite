@@ -294,15 +294,47 @@ Or say: `note: Omar to send the paper by 20-10` (then Find updates on the note)
 
 Where: Today
 
-1. On **Today**, press **Prep** under the meeting, on today or any later day in the day line (tomorrow's meetings also have **Prep** in the Week ahead). A meeting worth preparing for shows **Prepare** instead. The popup's header gives the day and time, the title and chips for the project (press it to change the project; creaite remembers it for the series), the series (for example "Every 2 weeks · 6th meeting · last 29-09-2026") and who is invited. Under it, one line says what has changed since the last meeting ("3 decisions, 1 new risk, 2 actions now overdue"), and the invite is one line naming the organiser and the invitees (names from the people register; a name made from an address it doesn't know is underlined with dots); press it to read the invite. The brief then lists, in two columns, the project's open actions, risks without a response, recent decisions, the **decisions still needed** (who is asked, and by when) and any made decision whose **revisit date has come**, and early warnings, with what the invite is about first, each marked with why ("invite mentions the cut-over"). **Invite** shows what it read.
-2. Each line opens its item in the full peek, over the popup, so you can update it on the spot: edits are staged and applied as in Work, ↑ and ↓ step through the popup's items, and Esc brings the popup back. When a prep page has been made, an **Open** icon and **Prep page made** sit beside the meeting's **Prep** on Today; the icon goes straight to the page.
-3. For more, press **Open prep page** (needs the live server): Claude reads the invite, recent minutes, mail and Teams, documents and your notes (never one marked **Confidential**), and a page opens in a new tab with what the meeting is about, the urgent, overdue and due-soon items, the latest reporting and the recent reports, findings with their sources and questions to ask. It's saved in the project's Agendas folder, marked Internal; print it to take with you. **Open last prep page** brings it back.
-4. To run the meeting around one thing, press **Shape this meeting** (first in the popup's toolbar; needs the live server). Write the focus and what you want from the meeting in your own words in the box (drag its corner to make it bigger); a suggestion (an item the invite puts first, an overdue item, a milestone due, or what wasn't covered last time) adds itself to the text. Press **Shape**: Claude reads it read-only (progress and **Stop**, one run at a time) and first says how it read you: the focus items, the aim, and whether the page shows only the focus or the focus first. If it misread you, press **change**, correct it and **Regenerate**. Below are draft notes in four boxes, **Objective**, **Talking points**, **Ask** and **Carried over**, with each line's source under its box (an item opens its peek, a file opens in its app). Edit any box and drag it larger; **Regenerate** keeps every box you edited (**let creaite redraft it** gives one back). **What's in focus** lists the work items and documents linked to the focus, each with why ("blocks ABC-A-001", "same milestone", "cited in the same minutes"), as "n of N" of those listed; untick one to leave it off the page, and **Show everything instead** shows the rest after the focus. **Accept** saves it all for that meeting, and the prep page shows your notes; **Discard** throws the draft away. Nothing reaches the tracker and nothing is sent. A confidential meeting is shaped from your text and the tracker only.
-5. **Draft agenda** (at the right of the popup's toolbar; needs the live server) is a menu: choose **POAD** or **POAD lite** and it writes the invite text and a timed agenda for you to paste into the invite. creaite chooses the points from the same items, in order: the decisions that need the meeting, then overdue and urgent work, then milestones due, then what wasn't covered last time (at most six, timed from the meeting's length). Claude words the invite text around them: a **POAD** (Purpose, Objectives, Approach, Deliverables) or, with **POAD lite**, a short friendly paragraph. The one you used last is marked and remembered. **Include who's invited** (in the same menu) adds the attendee list to the text. Each sentence shows its sources. **Copy** puts it on the clipboard formatted, with plain text alongside; **Copy as plain text** copies just the text. **Save to Agendas** keeps it as a file in the project's Agendas folder (marked Internal unless you tick **Save it for attendees**), and the minutes' coverage reads it later. creaite never creates or changes an invite. For a confidential meeting Claude sees only its title and times.
-6. **The prep page inside creaite** (Today › Meetings › Prep): the same page, shown in creaite with its own address, so Back, reload and a bookmark bring it back. The header has the meeting's date, project, series ("Every week · 6th meeting") and who is invited, **Change focus**, **Refresh research** (researches again and saves a new Agendas page), **Draft agenda**, when it was **Saved to Agendas**, **Open the file** and **Print**, and three tabs: **Prep**, **Invite** (the organiser and invitees by name, then the invite's text) and **History** (the series). On **Prep**, an outline on the left jumps to each section; the middle has the focus and your notes, the work items in focus ("4 of 23", with why each is there), the researched notes with a link to each source, and the questions; the right has the latest reporting, dated and with its health, this series' earlier meetings (what each raised and what wasn't covered, with their minutes and prep pages), and every source as a link: a Word or Excel file opens in its own app, mail and Teams open by their web link when the sweep kept one, and an item opens its peek. Once a meeting has been shaped around a focus, its notes (Objective, Talking points, Ask, Carried over) can be edited in place and dragged larger; leaving a box saves it, and the Agendas page is updated. **Questions and asks** can be edited too, one a line, before or after shaping; your version is kept when the research is refreshed, and **Use creaite's questions** gives back the research's. Nothing reaches the tracker. Below 1000 pixels wide the page is one column.
-7. For a 1:1, see what a person owes on their page, or [ask them for an update](#ask-someone-for-an-update).
+1. On **Today**, press **Prep** under a meeting, today or any later day in the day line. Tomorrow's meetings also have **Prep** in the Week ahead. A meeting worth preparing for shows **Prepare** instead.
+2. The popup shows the project, the series and who is invited, what has changed since the last meeting, and a brief: open actions, risks without a response, recent decisions, decisions still needed, revisit dates that have come and early warnings. What the invite is about comes first, and each line says why it is there.
+3. Press a line to open its item over the popup and update it on the spot. Edits save at once, ↑ and ↓ step through the items, and [[Esc]] brings the popup back.
+4. For more, see [The prep page](#the-prep-page). To run the meeting around one thing, see [Shape the meeting around one thing](#shape-the-meeting-around-one-thing). For text to paste into the invite, see [Draft an agenda](#draft-an-agenda).
+5. For a 1:1, see what a person owes on their page, or [ask them for an update](#ask-someone-for-an-update).
 
 Or say: `what's open for ABC?` `prep for the ABC steering`
+
+## The prep page
+
+Where: Today › Prep
+
+1. Press **Open prep page** (it needs the live server). Claude reads the invite, recent minutes, mail and Teams, documents and your notes, never one marked **Confidential**. The page opens in creaite with its own address, so Back, reload and a bookmark bring it back.
+2. It shows what the meeting is about, the urgent, overdue and due-soon items, the latest reporting, researched notes with a link to each source, and questions to ask. Tabs: **Prep**, **Invite** and **History** (the series).
+3. **Refresh research** researches again. **Print** lets you take it with you. An icon beside **Prep** on Today goes straight to the last page.
+4. It is saved in the project's Agendas folder, marked Internal. Nothing reaches the tracker.
+
+Or say: `prep page for the ABC steering`
+
+## Shape the meeting around one thing
+
+Where: Today › Prep
+
+1. Press **Shape this meeting**, first in the popup's toolbar (it needs the live server). Write the focus and what you want from the meeting. A suggestion (an item the invite puts first, an overdue item, a milestone due, or what wasn't covered last time) adds itself to your text.
+2. Press **Shape**. Claude reads it read-only (**Stop** is there) and first says how it read you. If it misread you, press **change**, correct it and press **Regenerate**.
+3. Draft notes appear in four boxes: **Objective**, **Talking points**, **Ask** and **Carried over**, each with its sources. Edit any box. **Regenerate** keeps your edits, and **let creaite redraft it** gives one back.
+4. **What's in focus** lists the work items and documents linked to the focus, each with why. Untick one to leave it off the page, or press **Show everything instead** to show the rest after the focus.
+5. **Accept** saves it for that meeting and the prep page shows your notes. **Discard** throws the draft away. Nothing reaches the tracker and nothing is sent. A confidential meeting is shaped from your text and the tracker only.
+
+Or say: `prep for the ABC steering`
+
+## Draft an agenda
+
+Where: Today › Prep
+
+1. Press **Draft agenda**, at the right of the popup's toolbar (it needs the live server), and choose **POAD** (Purpose, Objectives, Approach, Deliverables) or **POAD lite**, a short friendly paragraph.
+2. creaite picks the points: the decisions that need the meeting, then overdue and urgent work, milestones due, and what wasn't covered last time (at most six, timed from the meeting's length). Claude words the invite text around them, and each sentence shows its sources. **Include who's invited** adds the attendee list.
+3. **Copy** puts it on the clipboard formatted; **Copy as plain text** copies just the words. **Save to Agendas** keeps it in the project's Agendas folder, marked Internal unless you tick **Save it for attendees**. The minutes' coverage reads it later.
+4. creaite never creates or changes an invite. For a confidential meeting Claude sees only its title and times.
+
+Or say: `prep for the ABC steering`
 
 ## Follow a meeting from invite to follow-up
 
