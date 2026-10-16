@@ -34330,6 +34330,21 @@ ${s5}`;
     return null;
   }
   var sneakIsOpen = () => !!SNK.at;
+  function sneakStillHosted() {
+    const at2 = SNK.at;
+    if (!at2) return true;
+    if (at2.where === "peek") return pkOn() && !!shared.CUR && shared.CUR.mode === "record" && shared.CUR.id === at2.id;
+    const mp2 = $("#mvPeek");
+    return !!mp2 && !mp2.hidden && !!shared.MV && shared.MV.peek === at2.id;
+  }
+  var HOSTWATCH = null;
+  function sneakWatch() {
+    if (typeof MutationObserver === "undefined") return;
+    if (!HOSTWATCH) HOSTWATCH = new MutationObserver(() => {
+      if (SNK.at && !sneakStillHosted()) sneakClose(false);
+    });
+    for (const e4 of [$("#panel"), $("#mvPeek")]) if (e4) HOSTWATCH.observe(e4, { attributes: true, attributeFilter: ["class", "hidden"] });
+  }
   var hostOf = (w6) => w6 === "ms" ? $("#mvSneak") : $("#pkSneak");
   var hintOf = (w6) => w6 === "ms" ? $("#mvSneakHint") : $("#pkSneakHint");
   var scrollOf = (w6) => w6 === "ms" ? $("#mvPeek .mv-pkbody") : $("#pkScroll");
@@ -34346,6 +34361,7 @@ ${s5}`;
     if (!host2 || !frame) return;
     SNK.at = at2;
     SNK.opener = document.activeElement;
+    sneakWatch();
     frame.classList.add("sp-open");
     host2.hidden = false;
     const hint = hintOf(at2.where);

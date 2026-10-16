@@ -71,6 +71,20 @@ export function sneakWhere() {
   return null;
 }
 export const sneakIsOpen = () => !!SNK.at;
+/** Sneak peek belongs to the peek or the milestone editor: whichever way that closes (an outside click, Esc, the close arrow, J or K,
+    the page changing), the box goes with it and nothing is left on screen (#151). Watches the two hosts' own open/closed state. */
+function sneakStillHosted() {
+  const at = SNK.at; if (!at) return true;
+  if (at.where === "peek") return pkOn() && !!shared.CUR && shared.CUR.mode === "record" && shared.CUR.id === at.id;
+  const mp = $("#mvPeek"); return !!mp && !mp.hidden && !!shared.MV && shared.MV.peek === at.id;
+}
+/** @type {MutationObserver|null} */
+let HOSTWATCH = null;
+function sneakWatch() {
+  if (typeof MutationObserver === "undefined") return;
+  if (!HOSTWATCH) HOSTWATCH = new MutationObserver(() => { if (SNK.at && !sneakStillHosted()) sneakClose(false); });
+  for (const e of [$("#panel"), $("#mvPeek")]) if (e) HOSTWATCH.observe(e, { attributes: true, attributeFilter: ["class", "hidden"] });
+}
 /** the host the box is drawn in, and the scroll area it floats over @param {"peek"|"ms"} w */
 const hostOf = w => w === "ms" ? $("#mvSneak") : $("#pkSneak");
 const hintOf = w => w === "ms" ? $("#mvSneakHint") : $("#pkSneakHint");
@@ -83,7 +97,7 @@ export function sneakOpen() {
   if (SNK.at && SNK.at.id === at.id && SNK.at.where === at.where) { $("#spIn")?.focus(); return; }
   if (SNK.at) sneakClose(false);
   const host = hostOf(at.where), frame = frameOf(at.where); if (!host || !frame) return;
-  SNK.at = at; SNK.opener = document.activeElement;
+  SNK.at = at; SNK.opener = document.activeElement; sneakWatch();
   frame.classList.add("sp-open"); host.hidden = false; const hint = hintOf(at.where); if (hint) hint.hidden = true;
   for (const b of [$("#pkSneakBtn"), $("#mvSneakBtn")]) if (b) b.setAttribute("aria-pressed", String(at.where === (b.id === "mvSneakBtn" ? "ms" : "peek")));
   mountSneak(host, at.id, back => sneakClose(back), acts(at));
