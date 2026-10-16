@@ -12,7 +12,7 @@
    Focus stays in the text; the editor carries aria-activedescendant for the screen reader, and the list is a listbox of groups
    of options. Nothing is written until a row is chosen. */
 import { render } from "preact";
-import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { slashRows } from "../core/editorProfiles.js";
 import { placeAtCaret } from "../core/caretPlace.js";
 
@@ -47,6 +47,7 @@ function SlashList({ state, id, view, pick, hover }) {
     return placeAtCaret(view, state.from, el);
   }, [state.rows.length, state.from, state.q]);
   const none = !state.rows.length;
+  const flat = !!state.q.trim();                       /* ranked by a query: no group headers (ranking splits a group into repeated ones); they come back when the query is empty */
   useEffect(() => { const on = box.current && box.current.querySelector(".r.on"); if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest" }); }, [state.i]);
   /** @type {{g: string, rows: {r: SlashDef, i: number}[]}[]} */
   const groups = [];
@@ -54,7 +55,13 @@ function SlashList({ state, id, view, pick, hover }) {
   return (
     <>
     <div ref={box} class="slashmenu" id={id} role="listbox" aria-label="Insert" onMouseDown={e => e.preventDefault()}>
-      {state.rows.length ? groups.map((g, gi) => (
+      {state.rows.length && flat ? state.rows.map((r, i) => (
+        <div key={r.id} id={`${id}-${i}`} role="option" data-slash={r.id} aria-selected={i === state.i ? "true" : "false"} class={`r${i === state.i ? " on" : ""}`}
+          onMouseMove={() => { if (i !== state.i) hover(i); }} onClick={() => pick(r)}>
+          <span class="ic" aria-hidden="true">{r.icon}</span>
+          <span class="tx"><span class="t">{r.name}</span><span class="d">{r.desc}</span></span>
+          {r.key ? <span class="k" aria-hidden="true">{r.key}</span> : null}
+        </div>)) : state.rows.length ? groups.map((g, gi) => (
         <div key={`${gi}-${g.g}`} role="group" aria-label={g.g}>
           <div class="g" aria-hidden="true">{g.g}</div>
           {g.rows.map(({ r, i }) => (

@@ -804,6 +804,25 @@ class Slash(LiveBrowserCase):
         self.assertIn("> ### Plain", lines)
         self.assertIn("> \t### Space tab is code", lines)
 
+    def test_n5_a_query_shows_a_flat_ranked_list_without_repeated_group_headers_and_the_groups_come_back(self):
+        b = self.b
+        self.make_note("Groups")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        heads = "[...document.querySelectorAll('.slashmenu .g')].map(g=>g.textContent)"
+        self.assertEqual(b.eval(heads), ["Text", "Lists", "Blocks", "Link", "Templates"], "no query: the groups")
+        self.assertEqual(b.eval("document.querySelectorAll('.slashmenu [role=group]').length"), 5)
+        b.type("b")
+        b.pump(0.2)
+        heads_now = b.eval(heads)
+        self.assertEqual(len(heads_now), len(set(heads_now)), f"no header repeats: {heads_now}")
+        self.assertGreater(len(self.rows()), 2)
+        self.assertEqual(b.eval("document.querySelectorAll('.slashmenu > [role=option]').length"), len(self.rows()), "the options are the listbox's own children, so the roles stay valid")
+        self.assertEqual(b.eval("document.querySelectorAll('.slashmenu [role=group]').length"), 0)
+        b.key("Backspace")
+        b.pump(0.2)
+        self.assertEqual(b.eval(heads), ["Text", "Lists", "Blocks", "Link", "Templates"], "the groups return with an empty query")
+
     # ---- dark and forced colours -----------------------------------------------------------------------------------------
 
     def test_dark_and_forced_colours(self):

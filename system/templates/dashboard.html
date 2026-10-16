@@ -25030,6 +25030,7 @@ ${s5}`;
       return placeAtCaret(view, state.from, el2);
     }, [state.rows.length, state.from, state.q]);
     const none = !state.rows.length;
+    const flat2 = !!state.q.trim();
     h2(() => {
       const on2 = box.current && box.current.querySelector(".r.on");
       if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest" });
@@ -25045,7 +25046,29 @@ ${s5}`;
     });
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2("div", { ref: box, class: "slashmenu", id: id2, role: "listbox", "aria-label": "Insert", onMouseDown: (e4) => e4.preventDefault(), children: [
-        state.rows.length ? groups.map((g5, gi2) => /* @__PURE__ */ u2("div", { role: "group", "aria-label": g5.g, children: [
+        state.rows.length && flat2 ? state.rows.map((r4, i5) => /* @__PURE__ */ u2(
+          "div",
+          {
+            id: `${id2}-${i5}`,
+            role: "option",
+            "data-slash": r4.id,
+            "aria-selected": i5 === state.i ? "true" : "false",
+            class: `r${i5 === state.i ? " on" : ""}`,
+            onMouseMove: () => {
+              if (i5 !== state.i) hover(i5);
+            },
+            onClick: () => pick(r4),
+            children: [
+              /* @__PURE__ */ u2("span", { class: "ic", "aria-hidden": "true", children: r4.icon }),
+              /* @__PURE__ */ u2("span", { class: "tx", children: [
+                /* @__PURE__ */ u2("span", { class: "t", children: r4.name }),
+                /* @__PURE__ */ u2("span", { class: "d", children: r4.desc })
+              ] }),
+              r4.key ? /* @__PURE__ */ u2("span", { class: "k", "aria-hidden": "true", children: r4.key }) : null
+            ]
+          },
+          r4.id
+        )) : state.rows.length ? groups.map((g5, gi2) => /* @__PURE__ */ u2("div", { role: "group", "aria-label": g5.g, children: [
           /* @__PURE__ */ u2("div", { class: "g", "aria-hidden": "true", children: g5.g }),
           g5.rows.map(({ r: r4, i: i5 }) => /* @__PURE__ */ u2(
             "div",
