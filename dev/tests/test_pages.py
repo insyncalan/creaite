@@ -173,10 +173,10 @@ def settle(b, js, timeout=10):
 
 def resize(b, width, height):
     """Resize, then wait until the page has the new size and the rail has followed it. The renderer takes the new viewport a
-    little after Chrome answers, and the rail starts collapsed below 1100px on the media query's change event, at the next frame;
+    little after Chrome answers, and the rail starts collapsed below 1200px on the media query's change event, at the next frame;
     under load a measurement taken at once saw the old size (two panes side by side at 700px)."""
     b.resize(width, height)
-    b.wait(f"innerWidth==={width} && innerHeight==={height} && document.documentElement.classList.contains('railicons')==={str(width < 1100).lower()}")
+    b.wait(f"innerWidth==={width} && innerHeight==={height} && document.documentElement.classList.contains('railicons')==={str(width < 1200).lower()}")
 
 
 class FilesLiveBase(LiveBrowserCase):

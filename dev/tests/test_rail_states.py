@@ -6,7 +6,7 @@ Run: python3 dev/tests/test_rail_states.py   (needs Google Chrome; skipped other
 Done when (the issue's list):
 - expanded 224px (names beside the icons); collapsed 76px with each name under its icon (Labels when collapsed on, the
   default) or 56px icons only (off); the setting is dashboard.rail_labels, saved to settings.json and kept across a reload; the
-  window's first state is expanded at 1100px and wider, collapsed below, and under 900px the rail stays collapsed;
+  window's first state is expanded at 1200px and wider, collapsed below, and under 900px the rail stays collapsed;
 - the wordmark is the toggle (aria-expanded, "Collapse the rail" / "Expand the rail", Enter and Space, "c_" when collapsed), no
   other toggle; icons only never opens the full rail on hover;
 - the current page is a tonal pill with a bold name, a thicker icon and the 3px bar (icon 3:1 on the pill, light and dark, and
@@ -224,9 +224,9 @@ class RailStates(LiveBrowserCase):
     # ── the first state by width, and under 900px ──
     def test_first_state_by_width_and_the_rail_stays_collapsed_under_900px(self):
         b = self.b
-        b.resize(1100, 800)
-        self.wait_w(224)                                                                       # 1100px and wider: expanded
-        b.resize(1099, 800)
+        b.resize(1200, 800)
+        self.wait_w(224)                                                                       # 1200px and wider: expanded
+        b.resize(1199, 800)
         self.wait_w(76)                                                                        # below: collapsed
         b.click("#railTog")                                                                    # and can be opened
         self.wait_w(224)

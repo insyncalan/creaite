@@ -87,7 +87,7 @@ export function bootRail0007() {
   railCfg.value = railNorm(S.rail);
   railLabelsOn.value = S.railLabels !== false; railLoadUser();
   const mq = matchMedia("(max-width:899px)"); railNarrow.value = mq.matches; mq.addEventListener("change", e => { railNarrow.value = e.matches; });
-  const mw = matchMedia("(min-width:1100px)"); railWide.value = mw.matches; mw.addEventListener("change", e => { railWide.value = e.matches; });
+  const mw = matchMedia("(min-width:1200px)"); railWide.value = mw.matches; mw.addEventListener("change", e => { railWide.value = e.matches; });
   effect(() => {        /* the shell follows the choice: the rail's width (--rail-w) and its look (collapsed, labels under the icons) */
     const c = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");
     document.documentElement.classList.toggle("railicons", c);

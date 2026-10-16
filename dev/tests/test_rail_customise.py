@@ -149,10 +149,10 @@ class Sidebar(LiveBrowserCase):
     def test_the_first_state_follows_the_width_and_under_900px_the_rail_stays_collapsed(self):
         b = self.b
         b.resize(1000, 800)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 1100px it starts collapsed (labels on)
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 1200px it starts collapsed (labels on)
         self.assertFalse(b.eval("document.getElementById('railTog').disabled"))            # and can be opened
-        b.resize(1150, 800)
-        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")        # 1100px and wider: expanded
+        b.resize(1250, 800)
+        b.wait("getComputedStyle(document.querySelector('.rail')).width==='224px'")        # 1200px and wider: expanded
         b.resize(800, 800)
         b.wait("getComputedStyle(document.querySelector('.rail')).width==='76px'")         # under 900px: always collapsed
         self.assertTrue(b.eval("document.getElementById('railTog').disabled"))

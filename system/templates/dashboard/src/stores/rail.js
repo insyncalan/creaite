@@ -14,7 +14,7 @@
 
    #156 (the rail's three states): expanded (224px, labels beside the icons), collapsed with labels (76px, each label under its
    icon; the setting dashboard.rail_labels, default on), collapsed icons only (56px). The wordmark toggles it, remembered in this
-   browser (localStorage). With no choice yet, the rail is expanded at 1100px and wider and collapsed below that; under 900px it
+   browser (localStorage). With no choice yet, the rail is expanded at 1200px and wider and collapsed below that; under 900px it
    is always collapsed. */
 import { computed, signal } from "@preact/signals";
 import { store } from "../core/page.js";
@@ -77,7 +77,7 @@ export const railMoreOpen = signal(false);
 export const railCustOpen = signal(false);
 /** The setting "Labels when collapsed" (dashboard.rail_labels, on by default). */
 export const railLabelsOn = signal(true);
-/** The window is 1100px wide or more: with no choice made yet the rail starts expanded. */
+/** The window is 1200px wide or more: with no choice made yet the rail starts expanded. */
 export const railWide = signal(true);
 /** Under 900px the rail is always collapsed (the pinned rail), so the page keeps its room. */
 export const railNarrow = signal(false);
