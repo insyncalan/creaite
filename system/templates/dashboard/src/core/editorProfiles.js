@@ -69,7 +69,7 @@ export const ED_SLASH = {
   h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", alias: ["h3", "heading3"], run: c => c.setHeading({ level: 3 }) },
   ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", alias: ["ul", "bullet", "bullets"], is: "bulletList", run: c => c.toggleBulletList() },
   ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", alias: ["ol", "num", "number", "numbered"], is: "orderedList", run: c => c.toggleOrderedList() },
-  task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "check", "checkbox"], is: "taskList", node: "taskList", run: c => c.toggleTaskList() },
+  task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "tick", "check", "checkbox"], is: "taskList", node: "taskList", run: c => c.toggleTaskList() },
   quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", alias: ["quote", "bq", "blockquote"], is: "blockquote", run: c => c.toggleBlockquote() },
   codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: c => c.toggleCodeBlock() },
   table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
@@ -88,6 +88,21 @@ export const ED_SLASH_ROWS = {
   current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
   plain: [], none: [],
 };
+/** How well a row matches a typed query: 0 an exact id or alias, 1 an id, alias or name that starts with it, 2 a word of the name, 3 anywhere in the name or description, 9 no match.
+    The `/` menu lets Enter pick a row without an arrow only at 0 or 1 (#122 B review H1: "Amber /Red" matches "numbered" at 3 and must stay text). @param {SlashDef} r @param {string} q @returns {number} */
+export function slashRank(r, q) {
+  const ql = q.trim().toLowerCase().replace(/\s+/g, " "), typed = ql.split(" ");
+  if (!ql) return 9;
+  const name = r.name.toLowerCase(), ids = [r.id, ...(r.alias || [])];
+  /** @param {string} nm @returns {boolean} */
+  const inOrder = nm => { const w = nm.split(" "); let at = 0; return typed.every(t => { while (at < w.length && !w[at].startsWith(t)) at++; return at++ < w.length; }); };
+  if (ids.includes(ql)) return 0;
+  if (ids.some(x => x.startsWith(ql)) || name.startsWith(ql)) return 1;
+  if (typed.length > 1 && inOrder(name)) return 1;                 /* "head 2" is Heading 2, "bull l" is Bulleted list: each typed word starts a word of the name, in order */
+  if (name.split(" ").some(w => w.startsWith(ql))) return 2;
+  if (name.includes(ql) || r.desc.toLowerCase().includes(ql)) return 3;
+  return 9;
+}
 /** The rows of a profile's `/` menu for a host that can do `hostRows` and an editor whose schema is `schema`, filtered and ranked by what is
     typed (BL-122 B review L3): a row matches its id or short alias (`h1`, `ul`, `ol`, `todo`, `bq`), its name (`heading 2`, one space allowed)
     or its description; best first: an exact id or alias, then a name or alias that starts with it, then a word of the name, then the rest
@@ -97,19 +112,7 @@ export function slashRows(profile, hostRows, schema, q = "") {
   const ql = q.trim().toLowerCase().replace(/\s+/g, " ");
   const avail = (ED_SLASH_ROWS[profile] || []).map(id => ED_SLASH[id]).filter(r => r && (!r.host || hostRows.includes(r.id)) && (!r.node || !schema || schema.nodes[r.node]));
   if (!ql) return avail;
-  const typed = ql.split(" ");
-  /** @param {string} name @returns {boolean} */
-  const inOrder = name => { const w = name.split(" "); let at = 0; return typed.every(t => { while (at < w.length && !w[at].startsWith(t)) at++; return at++ < w.length; }); };
-  /** @param {SlashDef} r @returns {number} 0 best, 9 no match */
-  const rank = r => {
-    const name = r.name.toLowerCase(), ids = [r.id, ...(r.alias || [])];
-    if (ids.includes(ql)) return 0;
-    if (ids.some(x => x.startsWith(ql)) || name.startsWith(ql)) return 1;
-    if (typed.length > 1 && inOrder(name)) return 1;                 /* "head 2" is Heading 2, "bull l" is Bulleted list: each typed word starts a word of the name, in order */
-    if (name.split(" ").some(w => w.startsWith(ql))) return 2;
-    if (name.includes(ql) || r.desc.toLowerCase().includes(ql)) return 3;
-    return 9;
-  };
+  const rank = r => slashRank(r, ql);
   return avail.map((r, i) => ({ r, i, k: rank(r) })).filter(x => x.k < 9).sort((a, b) => a.k - b.k || a.i - b.i).map(x => x.r);
 }
 

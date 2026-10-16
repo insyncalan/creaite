@@ -5479,6 +5479,7 @@ button.nchip{font:inherit;font-size:12px}
     shrinkImage: () => shrinkImage,
     sizeList: () => sizeList,
     sl: () => sl2,
+    slashRank: () => slashRank,
     slashRows: () => slashRows,
     sleep: () => sleep,
     slideDown: () => slideDown,
@@ -24626,28 +24627,30 @@ ${s5}`;
     plain: [],
     none: []
   };
-  function slashRows(profile, hostRows, schema, q5 = "") {
-    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
-    const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
-    if (!ql2) return avail;
-    const typed2 = ql2.split(" ");
-    const inOrder = (name) => {
-      const w6 = name.split(" ");
+  function slashRank(r4, q5) {
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " "), typed2 = ql2.split(" ");
+    if (!ql2) return 9;
+    const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
+    const inOrder = (nm3) => {
+      const w6 = nm3.split(" ");
       let at2 = 0;
       return typed2.every((t47) => {
         while (at2 < w6.length && !w6[at2].startsWith(t47)) at2++;
         return at2++ < w6.length;
       });
     };
-    const rank = (r4) => {
-      const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
-      if (ids.includes(ql2)) return 0;
-      if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
-      if (typed2.length > 1 && inOrder(name)) return 1;
-      if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
-      if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
-      return 9;
-    };
+    if (ids.includes(ql2)) return 0;
+    if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
+    if (typed2.length > 1 && inOrder(name)) return 1;
+    if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
+    if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
+    return 9;
+  }
+  function slashRows(profile, hostRows, schema, q5 = "") {
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
+    const avail = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
+    if (!ql2) return avail;
+    const rank = (r4) => slashRank(r4, ql2);
     return avail.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
   }
   function itemType(e4) {
@@ -25124,7 +25127,7 @@ ${s5}`;
     root.className = "slashroot";
     (el2.closest("dialog[open]") || document.body).appendChild(root);
     let st2 = null;
-    let dismissed = -1, opened = false;
+    let dismissed = -1, opened = false, typedSlash = false, moved = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -25156,19 +25159,25 @@ ${s5}`;
       draw2();
     };
     const look = () => {
+      const mayOpen = typedSlash;
+      typedSlash = false;
       if (editor.isDestroyed || view.composing) return;
       const a5 = slashAt(editor);
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
         return close();
       }
+      if (!st2 && !mayOpen) return;
+      if (st2 && st2.from !== a5.from && !mayOpen) return close();
       if (a5.q.endsWith(" ")) {
         const base = a5.q.trim().toLowerCase();
         if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close();
       }
       const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
       if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
+      const fresh = !st2 || st2.from !== a5.from;
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
+      if (fresh) moved = false;
       draw2();
     };
     const choose = (r4) => {
@@ -25195,14 +25204,16 @@ ${s5}`;
         e4.preventDefault();
         e4.stopPropagation();
         if (n4) {
+          moved = true;
           st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
           draw2();
         }
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
-        if (n4) {
+        const row2 = n4 ? st2.rows[st2.i] : null;
+        if (row2 && (moved || slashRank(row2, st2.q) <= 1)) {
           e4.preventDefault();
           e4.stopPropagation();
-          choose(st2.rows[st2.i]);
+          choose(row2);
         } else close();
       } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
         e4.preventDefault();
@@ -25217,9 +25228,16 @@ ${s5}`;
     const blur = () => setTimeout(() => {
       if (!el2.contains(document.activeElement)) close();
     }, 120);
-    const comp = () => look();
+    const comp = () => {
+      typedSlash = true;
+      look();
+    };
+    const before = (e4) => {
+      typedSlash = e4.inputType === "insertText" && e4.data === "/";
+    };
     editor.on("selectionUpdate", look);
     editor.on("update", look);
+    el2.addEventListener("beforeinput", before, true);
     el2.addEventListener("keydown", keys, true);
     el2.addEventListener("focusout", blur);
     el2.addEventListener("compositionend", comp);
@@ -25227,6 +25245,7 @@ ${s5}`;
       editor.off("destroy", off);
       editor.off("selectionUpdate", look);
       editor.off("update", look);
+      el2.removeEventListener("beforeinput", before, true);
       el2.removeEventListener("keydown", keys, true);
       el2.removeEventListener("focusout", blur);
       el2.removeEventListener("compositionend", comp);

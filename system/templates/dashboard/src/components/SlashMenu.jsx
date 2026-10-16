@@ -4,16 +4,16 @@
    same rows do the same wherever the profile is used. The rows a host does itself (its [[ @ # pickers, the table, the templates, the
    file input for a picture) are `host` callbacks: a row shows only if the host can do it.
 
-   Opens at the caret when a `/` is typed at the start of a line or after a space, in a paragraph (never in a code block or code,
+   Opens at the caret when a `/` is TYPED (not on a caret move, a paste or a saved note) at the start of a line or after a space, in a paragraph (never in a code block or code,
    a link, a heading, or inside a word or an address such as and/or or https://x). It is drawn position:fixed from the editor's own
    coordsAtPos (core/caretPlace.js): below the caret, above when there is no room, clamped to the window, moved again on scroll and
-   resize. Typing narrows it (name and description); ↑ ↓ move, Enter or Tab insert, Esc closes and leaves the text; a click on a row
+   resize. Typing narrows it (name and description); ↑ ↓ move, Enter or Tab insert a sure match (an id, alias or name prefix, or any row after an arrow key; otherwise they close the menu and act as ever), Esc closes and leaves the text; a click on a row
    inserts. The "/query" is removed and the row's block written in its place. A composition (IME) never opens it or is read by it.
    Focus stays in the text; the editor carries aria-activedescendant for the screen reader, and the list is a listbox of groups
    of options. Nothing is written until a row is chosen. */
 import { render } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
-import { slashRows } from "../core/editorProfiles.js";
+import { slashRows, slashRank } from "../core/editorProfiles.js";
 import { placeAtCaret } from "../core/caretPlace.js";
 
 /** @typedef {import("../core/editorProfiles.js").SlashDef} SlashDef */
@@ -93,7 +93,7 @@ export function attachSlash(h, { profile, host }) {
   (el.closest("dialog[open]") || document.body).appendChild(root);
   /** @type {SlashState|null} */
   let st = null;
-  let dismissed = -1, opened = false;
+  let dismissed = -1, opened = false, typedSlash = false, moved = false;          /* typedSlash: a "/" was just typed (the only thing that opens the menu); moved: an arrow key was pressed in this menu */
   const draw = () => {
     render(st ? <SlashList state={st} id={id} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
     const dom = /** @type {HTMLElement} */ (view.dom);
@@ -104,16 +104,21 @@ export function attachSlash(h, { profile, host }) {
   const close = () => { if (!st) return; st = null; draw(); };
   /** Open, narrow or close the menu from what is at the caret. */
   const look = () => {
+    const mayOpen = typedSlash; typedSlash = false;
     if (editor.isDestroyed || view.composing) return;
     const a = slashAt(editor);
     if (!a || a.from === dismissed) { if (!a) dismissed = -1; return close(); }
+    if (!st && !mayOpen) return;          /* a caret move, a paste or a saved note never opens it (#122 B review H1, M1); only a typed "/" does */
+    if (st && st.from !== a.from && !mayOpen) return close();
     if (a.q.endsWith(" ")) {          /* a trailing space closes the menu unless it can only be the first word of a longer row name ("heading ", "bulleted ") */
       const base = a.q.trim().toLowerCase();
       if (!slashRows(profile, hostRows, editor.schema).some(r => r.name.toLowerCase().startsWith(base + " "))) return close();
     }
     const rows = slashRows(profile, hostRows, editor.schema, a.q);
     if (!rows.length && (!a.q || a.q.includes(" "))) return close();         /* a phrase that names no row is just text: no "No match" nag */
+    const fresh = !st || st.from !== a.from;
     st = { ...a, rows, i: st && st.from === a.from ? Math.min(st.i, Math.max(0, rows.length - 1)) : 0 };
+    if (fresh) moved = false;
     draw();
   };
   /** @param {SlashDef} r */
@@ -130,18 +135,23 @@ export function attachSlash(h, { profile, host }) {
   const keys = e => {
     if (!st || e.isComposing || view.composing) return;
     const n = st.rows.length;
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); if (n) { st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); } }
-    else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) { if (n) { e.preventDefault(); e.stopPropagation(); choose(st.rows[st.i]); } else close(); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); if (n) { moved = true; st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); } }
+    else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+      const row = n ? st.rows[st.i] : null;          /* Enter or Tab picks a row only when it is a sure match (an id, an alias or a name prefix) or the user moved with the arrows; else the menu closes and the key is an ordinary Enter or Tab, so prose like "Amber /Red" keeps its text */
+      if (row && (moved || slashRank(row, st.q) <= 1)) { e.preventDefault(); e.stopPropagation(); choose(row); } else close(); }
     else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); }      /* ⌘↵ waits: the host's save (the capture drawer's Done) and the editor's own ⌘↵ must not fire under an open menu */
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dismissed = st.from; close(); }
   };
   const blur = () => setTimeout(() => { if (!el.contains(document.activeElement)) close(); }, 120);
-  const comp = () => look();          /* a composition ended: read the text it left */
+  const comp = () => { typedSlash = true; look(); };          /* a composition ended: read the text it left */
+  /** @param {InputEvent} e */
+  const before = e => { typedSlash = (e.inputType === "insertText" && e.data === "/") || e.inputType === "deleteContentBackward"; };          /* beforeinput runs before the transaction: a typed "/" or a Backspace arms it (never a paste, a drop or a caret move) */
   editor.on("selectionUpdate", look); editor.on("update", look);
+  el.addEventListener("beforeinput", before, true);
   el.addEventListener("keydown", keys, true); el.addEventListener("focusout", blur); el.addEventListener("compositionend", comp);
   const off = () => {
     editor.off("destroy", off);
-    editor.off("selectionUpdate", look); editor.off("update", look);
+    editor.off("selectionUpdate", look); editor.off("update", look); el.removeEventListener("beforeinput", before, true);
     el.removeEventListener("keydown", keys, true); el.removeEventListener("focusout", blur); el.removeEventListener("compositionend", comp);
     st = null; render(null, root); root.remove();
     if (!editor.isDestroyed) for (const a of ["aria-expanded", "aria-controls", "aria-activedescendant", "aria-haspopup"]) view.dom.removeAttribute(a);
