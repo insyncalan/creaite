@@ -830,7 +830,7 @@ class Slash(LiveBrowserCase):
         for q, first in (("head 2", "h2"), ("bull l", "ul"), ("num l", "ol"), ("head", "h1")):
             b.type(q)
             b.pump(0.2)
-            self.assertTrue(self.rows(), f"{q}: rows (text now {b.eval('document.querySelector(\'.nbody\').cxed.value()')!r})")
+            self.assertTrue(self.rows(), f"{q}: the menu has rows")
             self.assertEqual(self.rows()[0], first, q)
             if " " in q:
                 self.assertEqual(self.rows(), [first], f"{q}: only that row")

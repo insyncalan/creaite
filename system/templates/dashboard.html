@@ -24631,8 +24631,8 @@ ${s5}`;
     const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " "), typed2 = ql2.split(" ");
     if (!ql2) return 9;
     const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
-    const inOrder = (nm3) => {
-      const w6 = nm3.split(" ");
+    const inOrder = (name2) => {
+      const w6 = name2.split(" ");
       let at2 = 0;
       return typed2.every((t47) => {
         while (at2 < w6.length && !w6[at2].startsWith(t47)) at2++;

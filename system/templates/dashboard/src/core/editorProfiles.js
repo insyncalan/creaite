@@ -94,8 +94,8 @@ export function slashRank(r, q) {
   const ql = q.trim().toLowerCase().replace(/\s+/g, " "), typed = ql.split(" ");
   if (!ql) return 9;
   const name = r.name.toLowerCase(), ids = [r.id, ...(r.alias || [])];
-  /** @param {string} nm @returns {boolean} */
-  const inOrder = nm => { const w = nm.split(" "); let at = 0; return typed.every(t => { while (at < w.length && !w[at].startsWith(t)) at++; return at++ < w.length; }); };
+  /** @param {string} name @returns {boolean} */
+  const inOrder = name => { const w = name.split(" "); let at = 0; return typed.every(t => { while (at < w.length && !w[at].startsWith(t)) at++; return at++ < w.length; }); };
   if (ids.includes(ql)) return 0;
   if (ids.some(x => x.startsWith(ql)) || name.startsWith(ql)) return 1;
   if (typed.length > 1 && inOrder(name)) return 1;                 /* "head 2" is Heading 2, "bull l" is Bulleted list: each typed word starts a word of the name, in order */
