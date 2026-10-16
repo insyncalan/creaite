@@ -1859,6 +1859,8 @@ body:has(#chat.on) #panel.peek.pkwide{width:calc(100vw - var(--rail-w,72px) - va
 .pk-dl{font-size:var(--fs-xs);font-weight:500;color:var(--muted);margin:14px 0 2px}
 .pk-dlrow{display:flex;align-items:center;flex-wrap:wrap;margin:14px 0 2px} .pk-dlrow .pk-dl{margin:0} .pk-dldr:empty{display:none}   /* the label holds only its text; a Draft button sits beside it (#pkDescDr) */
 .pk-desc{padding:8px;margin:0 0 0 -8px;font-size:var(--fs-lg);line-height:22px;white-space:pre-wrap}
+/* #106: the Latest update grows with its text, like every autosizing box (core/fields.js autoGrow: 60% of the window, AG_CAP), then scrolls inside; the drag handle stays and a dragged height is kept (an inline height the CSS never overrides) */
+#pkDesc{max-height:60vh;overflow-y:auto;resize:vertical}
 @media (max-width:640px){.pk-prop+.pk-prop{border-left:0}}
 .pkpop{position:fixed;z-index:var(--z-pop);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:6px;min-width:210px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;font-size:var(--fs-md)}
 .pkpop input.pkq,.pkpop input.pkdt{width:100%;height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg);color:var(--ink);margin:0 0 6px;font:inherit}
