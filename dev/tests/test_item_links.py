@@ -153,6 +153,82 @@ class ItemLinks(LiveBrowserCase):
             b.wait("!!document.querySelector('#panel.on')", 5)
             self.assertIn(item["id"], b.eval("document.getElementById('panel').textContent"))
 
+    def test_slash_item_finds_the_row_by_its_aliases_and_the_one_space_query(self):
+        b = self.b
+        self.open_current()
+        b.type(" /")
+        b.wait("!!document.querySelector('.slashmenu')", 5)
+        for q in ("item", "work", "workitem", "issue", "action", "risk", "decision", "work item"):
+            b.type(q)
+            b.pump(0.1)
+            self.assertTrue(b.eval("[...document.querySelectorAll('.slashmenu [data-slash]')].some(o=>o.dataset.slash==='item')"), q)
+            for _ in q:
+                b.key("Backspace")
+        b.type("item")
+        b.key("Enter")
+        b.wait("!!" + PICK, 5)
+        self.assertEqual(b.eval("curEd.textContent.endsWith('#')"), True)
+
+    def test_command_enter_waits_while_the_item_list_is_open_in_current_state(self):
+        b = self.b
+        self.open_current()
+        b.type(" see #")
+        b.wait("!!" + PICK, 5)
+        b.key("Enter", modifiers=4 if b.is_mac() else 2)
+        b.pump(0.2)
+        self.assertTrue(b.eval("!!shared.CURED"), "no save while the list is open")
+        self.assertTrue(b.eval("!!" + PICK))
+        b.key("Escape")
+        b.wait(f"!{PICK}", 5)
+        self.assertTrue(b.eval("!!shared.CURED"))                                  # Esc closed the list, not the editor
+
+    def chip_text(self, root):
+        return self.b.eval(f"document.querySelector({root!r}+' .nchip').textContent")
+
+    def alt_click_case(self, root, ready):
+        b = self.b
+        item = self.an_item()
+        ready(item)
+        chip = f"{root} .nchip"
+        b.wait(f"!!document.querySelector({chip!r})", 5)
+        words = b.eval(f"document.querySelector({chip!r}).textContent")
+        # Alt-click: the caret goes inside the chip's text and the peek stays shut
+        b.eval("closePanel&&closePanel(true)")
+        b.click(chip, modifiers=1)
+        b.pump(0.3)
+        self.assertFalse(b.eval("!!document.querySelector('#panel.on')"), "Alt-click must not open the peek")
+        inside = b.eval(f"""(()=>{{ const c=document.querySelector({chip!r}), s=getSelection(); return !!(s.rangeCount && s.isCollapsed && c.contains(s.anchorNode)); }})()""")
+        self.assertTrue(inside, "Alt-click puts the caret inside the chip")
+        b.type("Z")                                                                # and typing there edits the chip's own words
+        self.assertIn("Z", b.eval(f"document.querySelector({chip!r}).textContent"))
+        self.assertNotEqual(b.eval(f"document.querySelector({chip!r}).textContent"), words)
+        b.key("Backspace")
+        b.pump(0.8)                                                                # past the double-click time, so it is a second click, not a double
+        # a plain click opens the peek
+        b.click(chip)
+        b.wait("!!document.querySelector('#panel.on')", 5)
+        self.assertIn(item["id"], b.eval("document.getElementById('panel').textContent"))
+        return item
+
+    def test_alt_click_edits_inside_a_chip_and_a_plain_click_opens_it_in_current_state(self):
+        b = self.b
+        self.open_current("### Top\n\nNothing yet.")
+
+        def ready(item):
+            b.eval(f"""(()=>{{ curEd.cxed.editor.commands.setContent('See [{item["id"]} · Action: {item["t"]}](creaite:item/{item["id"]}) now', {{contentType:'markdown'}}); }})()""")
+        self.alt_click_case("#curEd", ready)
+        # the plain click is the peek beside the text: the editor and its unsaved text stay, no discard question
+        self.assertTrue(b.eval("!!shared.CURED && !document.getElementById('discardBar').classList.contains('on')"))
+        self.assertTrue(b.eval("document.querySelector('#curEd .nchip')!==null"))
+
+    def test_alt_click_edits_inside_a_chip_and_a_plain_click_opens_it_in_notes(self):
+        b = self.b
+        self.make_note("Alt chip")
+
+        def ready(item):
+            b.eval(f"""(()=>{{ const e=document.querySelector('.nbody').cxed.editor; e.commands.setContent('See [{item["id"]} · Action: {item["t"]}](creaite:item/{item["id"]}) now', {{contentType:'markdown'}}); }})()""")
+        self.alt_click_case(".nbody", ready)
+
     def test_slash_work_item_row_opens_the_list_in_both_hosts(self):
         b = self.b
         self.make_note("Slash note")

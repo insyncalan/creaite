@@ -122,6 +122,16 @@ IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
                     r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)"
                     r"|\[([^\]\n]+)\]\(creaite:item/[A-Za-z0-9-]{3,30}\)")          # #122 C: a work-item link is its words (group 7)
+ITEM_LINK = re.compile(r" ?\[([^\]\n]+)\]\(creaite:item/([A-Za-z0-9-]{3,30})\)")
+
+
+def drop_item_links(text, keep):
+    """The text with every work-item link whose item `keep(id)` refuses taken out whole, its words and its address (a client report:
+    the address would otherwise stay in the stored text, and edited words may not name the item); a link `keep` allows stays, so
+    its words are read as they were. (#122 C, client path)"""
+    return ITEM_LINK.sub(lambda m: m.group(0) if keep(m.group(2)) else "", str(text or ""))
+
+
 MAX_LEVEL = 3
 HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
 HEADING = re.compile(r"^#{3,5} ")
