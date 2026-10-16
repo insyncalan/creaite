@@ -102,6 +102,7 @@ test_help_loop.py 18
 test_history_feed.py 11
 test_hold_peek.py 21
 test_hostile_text.py 76
+test_hub_retired.py 11
 test_icons.py 47
 test_insight.py 12
 test_instant_edits.py 67
@@ -110,7 +111,6 @@ test_live_server.py 28
 test_live_updates.py 402
 test_looks_like.py 32
 test_markdown_views.py 12
-test_hub_retired.py 11
 test_meetings.py 7
 test_milestone_states.py 145
 test_milestone_ui.py 67
@@ -192,6 +192,7 @@ test_settings_calmer.py 48
 test_settings_catalogue.py 14
 test_settings_page.py 89
 test_setup_dashboard.py 38
+test_shared_behaviour.py 1000
 test_sharpen.py 18
 test_side_panel_live.py 97
 test_smart_updates.py 61
