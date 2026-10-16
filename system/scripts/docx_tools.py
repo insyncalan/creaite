@@ -117,9 +117,12 @@ def drawing(rid, n, w_px, h_px, name):
 # (BL-63). Everything else is plain text.
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
-INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
+LABEL = r"((?:[^\[\]\n]|\[[^\[\]\n]{0,300}\]){1,500})"   # a link's words, one level of [brackets] in them; never crosses a "["
+CREAITE_SCHEME = r"(?i:creaite\s{0,5}(?::|%(?:25){0,4}3a|&#0{0,5}58;|&#x0{0,5}3a;|&colon;))"     # as the gate reads it, decoded
+INLINE = re.compile(r"\[" + LABEL + r"\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
                     r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)"
-                    r"|\[([^\]\n]+)\]\(\s{0,20}<?creaite:[^)\n]{0,500}\)")   # #127: a creaite: link is its words in Word, never Markdown
+                    r"|\[" + LABEL + r"\]\(\s{0,20}<?" + CREAITE_SCHEME + r"[^)\n]{0,500}\)")
+# #127: a creaite: link is its words in Word, never Markdown (any case, %- or entity-encoded scheme, client_leak.SCHEME's reading)
 MAX_LEVEL = 3
 # BL-89: Current state has two writing panes, one message. They are stored in the one `## Current state` section with this line
 # between them; a text without it is just the left pane. Every reader except the dashboard's editor sees one continuous

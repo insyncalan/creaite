@@ -322,22 +322,42 @@ def name_findings(con, code, text, blocking=None):
 
 def doc_text(doc):
     """Everything of a document that reaches its file or an export, as text: every shown section's words and the items' values,
-    and (#127) every link address its shown data holds (address_text), which the words alone (creaite_doc._plain) leave out."""
+    and (#127) every link address its shown data holds (address_text), which the words alone (creaite_doc._plain) leave out; and
+    (#127 review) the sections' and items' strings as stored (raw_text), so text that _plain deletes but Word shows (a link that
+    Markdown doesn't read as one, a title, an image's words) is checked too."""
     import creaite_doc
     clean = creaite_doc.clean(doc)
-    raw = "\n".join(_strings(clean.get("sections") or []))
-    addresses = "\n".join([address_text(raw)] + [f"creaite:item/{a}" for a in item_links(raw)]).strip()   # (spaces in an ID too)
+    raw = "\n".join(_strings(clean.get("sections") or []) + _strings(clean.get("items") or {}))
     return creaite_doc.search_text(clean) + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) \
-        + ("\n" + addresses if addresses else "")
+        + "\n" + raw_text(raw) + _addresses(raw)
+
+
+def _addresses(raw):
+    """The raw strings' link addresses (address_text) and work-item link addresses, on lines of their own, or ""."""
+    addresses = "\n".join([address_text(raw)] + [f"creaite:item/{a}" for a in item_links(raw)]).strip()   # (spaces in an ID too)
+    return "\n" + addresses if addresses else ""
+
+
+NOT_TEXT = ("ref", "milestones", "timeline")          # item references, checked as items (refs), not as words
 
 
 def _strings(x):
-    """Every string in a document's data (its sections: text, headings, cells, panes), as stored."""
+    """Every string in a document's data (its sections: text, headings, cells, panes; or its items), as stored, but its item
+    references (NOT_TEXT)."""
     if isinstance(x, str):
         return [x]
     if isinstance(x, dict):
-        return [t for v in x.values() for t in _strings(v)]
+        return [t for k, v in x.items() if k not in NOT_TEXT for t in _strings(v)]
     return [t for v in x for t in _strings(v)] if isinstance(x, list) else []
+
+
+WEB_ADDRESS = re.compile(r"(?<![\w/%.-])(?:https?|mailto)[ \t]{0,5}:[^\s<>()\[\]\"']{0,2000}", re.I)
+
+
+def raw_text(raw):
+    """Stored strings as the checks read them: as they are, but an https or mailto address as plain words (as address_text reads
+    it), so an external page's path is not read as one of creaite's own (documents/)."""
+    return WEB_ADDRESS.sub(lambda m: re.sub(r"[^0-9A-Za-z]+", " ", m.group(0)), raw or "")
 
 
 # #127: link addresses. The gate reads the ADDRESS of every link (inline, image, reference definition, <auto>, an HTML href, a bare
@@ -355,7 +375,7 @@ ADDRESS = re.compile(
     r"|<([a-z][a-z0-9+.-]{1,30}:[^<>\s]{1,2000})>"                                            # an <auto> link
     r"|(?<![\w/%.-])((?:https?|mailto|creaite)[ \t]{0,5}(?::|%3a)[^\s<>()\[\]\"']{1,2000})",   # a bare address
     re.I | re.M)
-CREAITE = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}([a-z]{1,20})(?=\s{0,5}[/\\?])", re.I)   # a creaite: link's kind
+CREAITE = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}([a-z]{1,20})(?=\s{0,5}[/\\?]\S)", re.I)   # a creaite: link's kind
 SCHEME = re.compile(r"(?<![\w.%-])creaite\s{0,5}:", re.I)
 LINK_KINDS = {"item", "items", "person"}          # creaite links a client report may hold (when what they name is client-safe)
 ITEM_LINK = re.compile(r"(?<![\w.%-])creaite\s{0,5}:\s{0,5}/{0,2}\s{0,5}items?\s{0,5}(?:[/\\]|\?[a-z]{0,10}=)\s{0,5}"
@@ -377,7 +397,7 @@ def _decoded(text):
     return edit_ai.normal(html.unescape(t))
 
 
-SCHEME_GAP = re.compile(r"creaite[ \t\r\n]{0,5}:[ \t\r\n]{0,5}(?=/{0,2}[ \t\r\n]{0,5}[a-z]{1,20}[ \t\r\n]{0,5}[/\\?])", re.I)
+SCHEME_GAP = re.compile(r"creaite[ \t\r\n]{0,5}:[ \t\r\n]{0,5}(?=/{0,2}[ \t\r\n]{0,5}[a-z]{1,20}[ \t\r\n]{0,5}[/\\?]\S)", re.I)
 
 
 def link_addresses(text):
@@ -449,6 +469,7 @@ LINK_SPAN = re.compile(
     re.I | re.M)
 REF_DEF = re.compile(r"^[ \t]{0,3}\[([^\[\]\n]{1,300})\]:[ \t]{0,20}([^\n]{0,2000})$", re.M)
 LONG_TOKEN = 2000
+LINKED = re.compile(r"creaite\s{0,5}:.", re.I | re.S)    # a word holding a creaite: scheme with something after it
 
 
 def drop_item_links(code, text, con=None):
@@ -474,8 +495,16 @@ def drop_item_links(code, text, con=None):
         return s if _link_ok(con, code, s, blocking) else ""
 
     t = LINK_SPAN.sub(keep, t)
-    return re.sub(r"\S+", lambda m: m.group(0) if "creaite" not in _decoded(m.group(0)[:LONG_TOKEN + 1]).lower() else (
-        "" if len(m.group(0)) > LONG_TOKEN or not _link_ok(con, code, m.group(0), blocking) else m.group(0)), t)
+
+    def token(m):
+        """A word as it is, or "" when it is (or may be: too long to read) a creaite: link a client may not have. A bare
+        "creaite:" with nothing after it is prose (#127 review), not a link."""
+        s = m.group(0)
+        low = _decoded(s[:LONG_TOKEN + 1]).lower()
+        if "creaite" not in low or (len(s) <= LONG_TOKEN and not LINKED.search(low)):
+            return s
+        return "" if len(s) > LONG_TOKEN or not _link_ok(con, code, s, blocking) else s
+    return re.sub(r"\S+", token, t)
 
 
 def findings(doc, con=None):
@@ -506,10 +535,20 @@ def plain_findings(con, code, text):
     lines = text.splitlines()
     shown = next((i for i, ln in enumerate(lines) if HEALTH_FLAG.match(ln)), None)
     text = with_addresses(text)                                # #127: every link address in the text, decoded
-    found = drafts.internal_findings(con, code, "\n".join(ln for i, ln in enumerate(lines) if i != shown))
+    found = drafts.internal_findings(con, code, with_addresses("\n".join(ln for i, ln in enumerate(lines) if i != shown)))
     if drafts.INTERNAL_MARK.search(text) and "an internal-only marker" not in found:
         found.append("an internal-only marker")
     return text_findings(con, code, text) + [f"it holds {why}" for why in found] + name_findings(con, code, text)
+
+
+def _raw_split(clean, health_ids):
+    """(the stored strings of everything but the health sections' words, of the health sections' words) of a cleaned document
+    (#127 review: as raw_text and the addresses read them)."""
+    sections = clean.get("sections") or []
+    health = [s for s in sections if s.get("id") in health_ids]
+    rest = _strings([s for s in sections if s.get("id") not in health_ids]) + [s.get("heading") or "" for s in health] \
+        + _strings(clean.get("items") or {})
+    return "\n".join(rest), "\n".join(_strings(health))
 
 
 def internal_findings(con, code, doc):
@@ -522,8 +561,10 @@ def internal_findings(con, code, doc):
     health_ids = {s.get("id") for s in doc.get("sections") or [] if s.get("type") == "health"}
     health = "\n\n".join(t for i, _h, t in shown if i in health_ids)
     clean = creaite_doc.clean(doc)
+    raw, health_raw = _raw_split(clean, health_ids)
     rest = "\n\n".join([clean.get("title") or ""] + [f"{h}\n\n{t}" if i not in health_ids else h for i, h, t in shown]) \
-        + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False)
+        + "\n" + json.dumps(clean.get("items") or {}, ensure_ascii=False) + "\n" + raw_text(raw) + _addresses(raw)
+    health += "\n" + raw_text(health_raw) + _addresses(health_raw)   # #127 review: the stored words and addresses too
     found = drafts.internal_findings(con, code, rest)
     if drafts.INTERNAL_MARK.search(health) and "an internal-only marker" not in found:
         found.append("an internal-only marker")

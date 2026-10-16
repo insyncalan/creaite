@@ -457,6 +457,100 @@ class WorkItemLinks(Base):
             self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {ok!r})))"), ok)
 
 
+ENCODED_REASON = "https://x.example.com/?r=ZEBRAINTERNAL%20vendor%20is%20failing%20to%20deliver"
+
+
+class TheReviewOf2a77459(Base):
+    """#127 review of 2a77459: what Word shows is what the gate reads; the health reason and a marker in a link address; linear
+    patterns; the scheme in any case; prose that mentions creaite: is not a link."""
+
+    def plain(self, text):
+        return self.py(f"print(json.dumps(client_leak.plain_findings(client_leak.connect(), 'ABC', {text!r})))")
+
+    def test_text_that_plain_words_delete_but_word_shows_is_found(self):
+        """Finding 1: _plain's link pattern crosses spaces and line breaks and drops a title and an image's words; the gate also
+        reads the stored strings."""
+        for text in (f"[t](https://x.example.com/a b {INTERNAL_ID})", f"[s](https://x.example.com/\n{INTERNAL_ID})",
+                     f'[x](https://e.example.org/ "{INTERNAL_ID}")', f"![{INTERNAL_ID} for {PERSON}](images/plan.png)",
+                     f"| A | B |\n|---|---|\n| [x](https://x.example.com/a | {INTERNAL_ID}) |"):
+            got = self.findings(f"Progress. {text}")
+            self.assertTrue(any(f.startswith(f"{INTERNAL_ID} isn't client-visible") for f in got), (text, got))
+        self.assertIn(f"{PERSON} is named but owns only items a client report can't show",
+                      self.findings(f"Progress. ![{PERSON}](images/plan.png)"))
+        for ok in ("[the client site](https://client.example.com/documents/plan.pdf)", "![Delivery plan](images/plan.png)",
+                   "[Example](https://example.com/a_(b))"):
+            self.assertEqual(self.findings(f"Progress continues. {ok}"), [], ok)      # control: stored words that are client-safe
+
+    def test_the_health_reason_and_a_marker_in_an_address_are_found_everywhere(self):
+        """Finding 2: on approve and export (findings) and the plain path (plain_findings)."""
+        for link, why in ((f"[s](https://x.example.com/{REASON.replace(' ', '-')})", "it holds the internal health reason"),
+                          ("[s](https://x.example.com/internal-only/page)", "it holds an internal-only marker"),
+                          (f"[s]({ENCODED_REASON})", "it holds the internal health reason")):
+            self.assertIn(why, self.findings(f"Progress. {link}"), link)
+            self.assertIn(why, self.plain(f"Progress. {link}"), link)
+        self.assertEqual(self.plain("Progress. [s](https://x.example.com/page)"), [])        # control
+        with closing(sqlite3.connect(self.v.root / "system/tracker.db")) as con:   # a test vault: set directly
+            con.execute("UPDATE actions SET client_message = ? WHERE id = 'ABC-A-002'",
+                        (R.CLIENT_MSG.replace("The signed statement of work.", f"The [signed]({ENCODED_REASON}) statement."),))
+            con.commit()
+        got = self.py("print(json.dumps(client_leak.findings(report_doc.client_doc('ABC'))))")
+        self.assertIn("it holds the internal health reason", got)
+
+    def test_an_encoded_marker_in_the_health_section_and_an_items_address_are_found(self):
+        marker = "[s](https://x.example.com/internal%2Donly/page)"            # only the decoded address says internal-only
+        got = self.py("d = report_doc.client_doc('ABC')\n"
+                      f"next(s for s in d['sections'] if s.get('type') == 'health')['text'] = 'Behind plan. ' + {marker!r}\n"
+                      "print(json.dumps(client_leak.findings(d)))")
+        self.assertIn("it holds an internal-only marker", got)
+        got = self.py("d = report_doc.client_doc('ABC')\nk = next(iter(d['items']))\n"
+                      f"d['items'][k]['title'] = 'UAT [start]({ENCODED_REASON})'\n"
+                      "print(json.dumps([k, client_leak.findings(d)]))")
+        self.assertIn("it holds the internal health reason", got[1], got[0])
+
+    def test_every_check_is_linear_on_brackets(self):
+        """Finding 3: creaite_doc._plain and docx_tools.md_runs took tens of seconds on 100 KB of "["."""
+        code = ("import time, docx_tools\ncon = client_leak.connect()\nout = {}\n"
+                "for name, s in (('[', '[' * 100000), ('[a](', '[a](' * 25000), ('![a](', '![a](' * 20000)):\n"
+                "    d = report_doc.client_doc('ABC')\n    next(x for x in d['sections'] if x['id'] == 'summary')['text'] = s\n"
+                "    for f, run in (('findings', lambda: client_leak.findings(d)), ('plain', lambda: client_leak.plain_findings(con, 'ABC', s)),"
+                " ('client_problems', lambda: edit_ai.client_problems('ABC', s)), ('md_runs', lambda: docx_tools.md_runs(s))):\n"
+                "        t0 = time.time(); run(); out[name + ' ' + f] = time.time() - t0\n"
+                "print(json.dumps(out))")
+        for name, took in self.py(code).items():
+            self.assertLess(took, 5.0, name)
+
+    def test_the_scheme_in_capitals_is_found_and_dropped(self):
+        link = f"[p](CREAITE:item/{INTERNAL_ID})"
+        self.assertTrue(any(f.startswith(f"{INTERNAL_ID} isn't client-visible") for f in self.findings(f"Progress. {link}")))
+        for link in (link, f"[p](CREAITE%3Aitem/{INTERNAL_ID})", f"[p](CREAITE:{INTERNAL_ID})"):   # (not case-folded on the way)
+            self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', 'Before. {link} After.')))"),
+                             "Before.  After.", link)
+
+    def test_a_creaite_person_link_split_by_a_line_break_is_read(self):
+        """SCHEME_GAP in link_addresses: without the join, the address of a split creaite:person link is only "creaite:"."""
+        self.assertIn(f"{PERSON} is named but owns only items a client report can't show",
+                      self.findings("Progress. [the auditor](creaite:\nperson/Quentin%20Marlow)"))
+
+    def test_prose_mentioning_creaite_is_not_a_link(self):
+        """Finding 6: ordinary prose passes and is kept; real creaite: links are still found and dropped."""
+        prose = "Text creaite: notes/ are kept"
+        self.assertEqual(self.findings(prose), [])
+        self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {prose!r})))"), prose)
+        for link in ("creaite:notes/7", "[n](creaite: note/7)", "[n](creaite:\nnote/7)", "creaite: notes/7"):
+            got = self.findings(f"Progress. {link}")
+            self.assertTrue(any(f.startswith("a creaite link a client can't open") for f in got), (link, got))
+            text = f"Before. {link} After."
+            self.assertEqual(self.py(f"print(json.dumps(client_leak.drop_item_links('ABC', {text!r})))").split(),
+                             ["Before.", "After."], link)
+
+    def test_word_shows_only_the_words_of_any_creaite_link(self):
+        """Finding 5: md_runs reads the scheme as the gate does (any case, encoded) and words with [brackets] in them."""
+        got = self.py("import docx_tools\nprint(json.dumps([docx_tools.plain(t) for t in ("
+                      "'See [p](CREAITE:item/ABC-A-002).', 'See [p](creaite%3Aitem/ABC-A-002).', 'See [p](creaite&#58;item/ABC-A-002).', "
+                      "'See [a [b] c](creaite:item/ABC-A-002).', 'See [a [b] c](https://example.com/x).')]))")
+        self.assertEqual(got, ["See p.", "See p.", "See p.", "See a [b] c.", "See a [b] c (https://example.com/x)."])
+
+
 class TheRegisterFailsClosed(Base):
     """Part 4: a people register that is missing, can't be decoded or has no People table makes every names check refuse, with a
     plain message; a readable one checks the names (the control)."""

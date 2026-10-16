@@ -288,10 +288,13 @@ def render(doc, editing=True):
 
 # ── Search ───────────────────────────────────────────────────────────────────
 
+LINK_ADDRESS = r"[^()]{0,2000}(?:\([^()]{0,200}\)[^()]{0,2000})?"     # a link's address, with at most one pair of brackets in it
+
+
 def _plain(md):
     """Markdown as plain words."""
     t = re.sub(r"!\[[^\]]*\]\([^)]*\)", "", str(md or ""))
-    t = re.sub(r"\[([^\]]+)\]\([^)]*\)", r"\1", t)
+    t = re.sub(r"\[([^\[\]]{1,2000})\]\(" + LINK_ADDRESS + r"\)", r"\1", t)   # #127 review: bounded, crossing no bracket: linear
     return re.sub(r"[*_`#>]+", "", t).strip()
 
 
