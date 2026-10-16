@@ -233,19 +233,10 @@ def extraction_scope():
     return not bad, "; ".join(bad) or "minutes and transcripts only"
 
 
-NOT_NOTES = ("minutes", "transcripts", "weekly_reports", "client_reports", "adhoc_documents", "steerco", "agendas", "images")
-
-
 def notes_folder_own():
     """#124: the notes folder is its own: never the same as, inside or around a meeting, report, Steerco, agendas or images
-    folder (Delete note moves the notes folder's files into _Archive)."""
-    from pathlib import PurePosixPath
-    def norm(kind):
-        """The kind's folder inside the engagement, lower case, without empty or "." parts."""
-        return PurePosixPath(*[x for x in paths.folder_name(kind).lower().split("/") if x not in ("", ".")])
-    n = norm("notes")
-    bad = [f"{k} ({paths.folder_name(k)})" for k in NOT_NOTES
-           if norm(k) == n or n in norm(k).parents or norm(k) in n.parents]
+    folder (Delete note moves the notes folder's files into _Archive). The check is paths.notes_folder_clash (#128)."""
+    bad = paths.notes_folder_clash()
     return (False, f"locations.folders.notes ({paths.folder_name('notes')}) is also the {', '.join(bad)} folder or holds it: "
                    "give notes a folder of their own") if bad else (True, f"notes in {paths.folder_name('notes')}, a folder of their own")
 

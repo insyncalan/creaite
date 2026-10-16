@@ -1255,6 +1255,9 @@ class Handler(BaseHTTPRequestHandler):
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_bytes(raw)
             return self.send(200, {"ok": True})
+        clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
+        if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
+            return self.send(200, {"ok": False, "message": clash})
         p.parent.mkdir(parents=True, exist_ok=True)
         if op == "append":
             with open(p, "a", encoding="utf-8") as f:
@@ -4437,6 +4440,24 @@ def edit_stage(c, how):
     return (Path(m.group(1)).name, None) if code == 0 and m else (None, out.strip() or "propose.py stage failed")
 
 
+def settings_notes_clash(p, text):
+    """#128: why the page's settings.json `text` can't be saved (paths.locations_change_problem: a notes folder shared with
+    another kind, a notes folder renamed while notes are under the old name, a skeleton that isn't a template folder; L3: text
+    that isn't a settings object, or a `locations` that isn't one, so the check can't run), or None."""
+    try:
+        new = json.loads(text)
+    except ValueError:
+        new = None
+    if not isinstance(new, dict) or not isinstance(new.get("locations", {}), dict):
+        return "Not saved: settings must be a JSON object, with locations an object."
+    try:
+        old = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):                         # no readable file: compared with the defaults
+        old = {}
+    old = old.get("locations") if isinstance(old, dict) and isinstance(old.get("locations"), dict) else {}
+    return paths.locations_change_problem(old, new.get("locations") or {})
+
+
 def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
     """#124 F3: remove the move markers in system/guard/ older than `older` seconds (a crash's leftovers; never used anyway)."""
     for m in paths.GUARD.glob("move-*") if paths.GUARD.is_dir() and not paths.GUARD.is_symlink() else []:
@@ -4450,15 +4471,13 @@ def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
 @contextlib.contextmanager
 def card_moves_allowed(name):
     """#124 F3: while the card's own proposal `name` (staged by edit_stage) is applied, one marker per move of a card-only kind
-    (reach.CARD_ONLY_MOVES), naming that file and its SHA-256, so tracker._op_move makes exactly these moves; removed
+    (reach.CARD_ONLY_MOVES) and (#128) per remove, write or copy of a note's file (tracker.card_marks), naming that file and its SHA-256, so tracker._op_move makes exactly these moves; removed
     afterwards, whatever happens. LOCK is held, and NOTES_LOCK too for a note's card."""
+    import tracker
     clear_card_marks()
     f = paths.STAGING / name
     raw = f.read_bytes()
-    fc = json.loads(raw.decode("utf-8")).get("file_changes") or {}
-    kind = fc.get("archive")
-    marks = [reach.card_move_marker(kind, op.get("from"), op.get("to")) for op in fc.get("file_ops") or []
-             if kind in reach.CARD_ONLY_MOVES and isinstance(op, dict) and op.get("op") == "move"]
+    marks = tracker.card_marks(json.loads(raw.decode("utf-8")))     # #128: a note's remove, write or copy on the card too
     body = json.dumps({"proposal": name, "sha256": hashlib.sha256(raw).hexdigest()}).encode("utf-8")
     if marks:
         paths.GUARD.mkdir(mode=0o700, parents=True, exist_ok=True)
