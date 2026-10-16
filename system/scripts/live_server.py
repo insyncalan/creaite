@@ -1850,7 +1850,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def search_get(self):
         """GET /api/search: grouped results for the text, with the chips understood in it (BL-07). Read only; if the index
-        is older than the newest indexed file it is rebuilt first (a derived table, under the same lock as tracker.py)."""
+        is older than the newest indexed file it is brought up to date first, outside LOCK, unless a build is already
+        running: then the index is searched as it stands and the answer says `indexing` (#95)."""
         from urllib.parse import parse_qs, urlparse
         q = parse_qs(urlparse(self.path).query)
         one = lambda k: (q.get(k) or [""])[0].strip()          # noqa: E731
@@ -1860,10 +1861,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"ok": False, "message": "Dates must be YYYY-MM-DD"})
         if len(one("q")) > 300:
             return self.send(400, {"ok": False, "message": "That search is too long"})
+        rebuilt, indexing = index_before_search(wait=False)       # #95: never under LOCK, never waiting for a running build
         with LOCK:
             res = vault_search.search(one("q"), many("project"), many("person"), many("kind"), dates["from"], dates["to"],
-                                      many("skip"), one("parse") != "0")
-        return self.send(200, {"ok": True, **res})
+                                      many("skip"), one("parse") != "0", refresh=False)
+        return self.send(200, {"ok": True, **res, "rebuilt": rebuilt, **({"indexing": True} if indexing else {})})
 
     def search_preview(self, req):
         """A meeting's text with the search words marked, for the page's preview (BL-07). Indexed files only."""
@@ -1882,6 +1884,7 @@ class Handler(BaseHTTPRequestHandler):
         args = [question] + [x for k in ("project", "person", "kind", "skip") for v in (req.get(k) or [])
                              for x in (f"--{k}", str(v))] + \
             [x for k in ("from", "to") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(req.get(k) or "")) for x in (f"--{k}", req[k])]
+        index_before_search(wait=True)          # #95: a running build is waited for outside LOCK, so the context finds it current
         with LOCK:
             rc, out = run("search.py", "context", *args, "--json")
         if rc:
@@ -3331,6 +3334,21 @@ def clear_starting_when_up(port, seconds=120):
         time.sleep(0.2)
     clear_starting()
 # ===== end BL-329 =====
+
+
+def index_before_search(wait):
+    """#95: bring the search index up to date before a search takes LOCK, so a search never holds LOCK while a build runs (a
+    full one can take half a minute). `wait` False: a build already running isn't waited for. (rebuilt, still indexing);
+    never raises (the index is derived: the search then reads it as it stands)."""
+    try:
+        import tracker
+        if not paths.DB.is_file() or not tracker.index_state()[0]:
+            return False, False
+        built = tracker.build_index(wait=wait)
+        return built is not None, built is None
+    except Exception as e:  # noqa: BLE001
+        swallowed("search index", e)
+        return False, False
 
 
 def startup_index():
