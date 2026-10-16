@@ -3027,6 +3027,7 @@ button.nchip{font:inherit;font-size:12px}
 .ntpick .r.none{color:var(--muted);cursor:default}
 /* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
 .slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashsr{position:fixed;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px}
 .slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
 .slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
 .slashmenu .r.on{background:var(--accent-soft)}
@@ -23214,8 +23215,8 @@ ${s5}`;
         comment = true;
         return line;
       }
-      const m5 = /^(\u200B*)(#{1,6})([ \t].*|)$/.exec(line);
-      return m5 ? to2(m5[1], m5[2].length, m5[3]) : line;
+      const m5 = /^((?:>[ \t]?)*)(\u200B*)(#{1,6})([ \t].*|)$/.exec(line);
+      return m5 ? m5[1] + to2(m5[2], m5[3].length, m5[4]) : line;
     }).join("\n");
   }
   var headsIn = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 > shift && n4 <= shift + 3 ? "#".repeat(n4 - shift) + rest : "​" + z4 + "#".repeat(n4) + rest) : md2;
@@ -24583,17 +24584,17 @@ ${s5}`;
     redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
   };
   var ED_SLASH = {
-    text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", run: (c5) => c5.setParagraph() },
-    h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", run: (c5) => c5.setHeading({ level: 1 }) },
-    h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", run: (c5) => c5.setHeading({ level: 2 }) },
-    h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", run: (c5) => c5.setHeading({ level: 3 }) },
-    ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", run: (c5) => c5.toggleBulletList() },
-    ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", run: (c5) => c5.toggleOrderedList() },
-    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", node: "taskList", run: (c5) => c5.toggleTaskList() },
-    quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", run: (c5) => c5.toggleBlockquote() },
-    codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
-    table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", host: true },
-    image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", host: true },
+    text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", alias: ["paragraph", "plain"], run: (c5) => c5.setParagraph() },
+    h1: { id: "h1", group: "Text", name: "Heading 1", desc: "Big section heading", icon: "H1", alias: ["h1", "heading1"], run: (c5) => c5.setHeading({ level: 1 }) },
+    h2: { id: "h2", group: "Text", name: "Heading 2", desc: "Medium section heading", icon: "H2", alias: ["h2", "heading2"], run: (c5) => c5.setHeading({ level: 2 }) },
+    h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", alias: ["h3", "heading3"], run: (c5) => c5.setHeading({ level: 3 }) },
+    ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", alias: ["ul", "bullet", "bullets"], is: "bulletList", run: (c5) => c5.toggleBulletList() },
+    ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", alias: ["ol", "num", "number", "numbered"], is: "orderedList", run: (c5) => c5.toggleOrderedList() },
+    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "check", "checkbox"], is: "taskList", node: "taskList", run: (c5) => c5.toggleTaskList() },
+    quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", alias: ["quote", "bq", "blockquote"], is: "blockquote", run: (c5) => c5.toggleBlockquote() },
+    codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
+    table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
+    image: { id: "image", group: "Blocks", name: "Image", desc: "PNG or JPEG, up to 2 MB", icon: "▣", alias: ["img", "picture", "photo"], host: true },
     item: { id: "item", group: "Link", name: "Work item", desc: "Link an action, risk, issue or decision", icon: "#", key: "#", host: true },
     person: { id: "person", group: "Link", name: "Person", desc: "Mention someone from the register", icon: "@", key: "@", host: true },
     note: { id: "note", group: "Link", name: "Note", desc: "Link to another note", icon: "[[", key: "[[", host: true },
@@ -24626,8 +24627,18 @@ ${s5}`;
     none: []
   };
   function slashRows(profile, hostRows, schema, q5 = "") {
-    const ql2 = q5.trim().toLowerCase();
-    return (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]) && (!ql2 || r4.name.toLowerCase().includes(ql2) || r4.desc.toLowerCase().includes(ql2) || ql2 === "h" && r4.id[0] === "h" && r4.id.length === 2));
+    const ql2 = q5.trim().toLowerCase().replace(/\s+/g, " ");
+    const rows2 = (ED_SLASH_ROWS[profile] || []).map((id2) => ED_SLASH[id2]).filter((r4) => r4 && (!r4.host || hostRows.includes(r4.id)) && (!r4.node || !schema || schema.nodes[r4.node]));
+    if (!ql2) return rows2;
+    const rank = (r4) => {
+      const name = r4.name.toLowerCase(), ids = [r4.id, ...r4.alias || []];
+      if (ids.includes(ql2)) return 0;
+      if (ids.some((x5) => x5.startsWith(ql2)) || name.startsWith(ql2)) return 1;
+      if (name.split(" ").some((w6) => w6.startsWith(ql2))) return 2;
+      if (name.includes(ql2) || r4.desc.toLowerCase().includes(ql2)) return 3;
+      return 9;
+    };
+    return rows2.map((r4, i5) => ({ r: r4, i: i5, k: rank(r4) })).filter((x5) => x5.k < 9).sort((a5, b5) => a5.k - b5.k || a5.i - b5.i).map((x5) => x5.r);
   }
   function itemType(e4) {
     return e4.isActive("taskItem") ? "taskItem" : "listItem";
@@ -24964,12 +24975,21 @@ ${s5}`;
       el2.dataset.side = up2 ? "above" : "below";
     };
     put2();
-    const on2 = () => put2();
+    let raf = 0, tm2 = 0;
+    const on2 = () => {
+      put2();
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
+      raf = requestAnimationFrame(put2);
+      tm2 = window.setTimeout(put2, 120);
+    };
     window.addEventListener("scroll", on2, true);
     window.addEventListener("resize", on2);
     const vv = window.visualViewport;
     if (vv) vv.addEventListener("resize", on2);
     return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(tm2);
       window.removeEventListener("scroll", on2, true);
       window.removeEventListener("resize", on2);
       if (vv) vv.removeEventListener("resize", on2);
@@ -24987,7 +25007,7 @@ ${s5}`;
       /** @param {any} m */
       (m6) => m6.type.name === "code" || m6.type.name === "link"
     )) return null;
-    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)\/([\w-]{0,20})$/.exec(before);
+    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)\/([\w-]{0,20}(?: [\w-]{0,20})?)$/.exec(before);
     if (!m5) return null;
     return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
   }
@@ -25001,6 +25021,7 @@ ${s5}`;
       if (!el2) return void 0;
       return placeAtCaret(view, state.from, el2);
     }, [state.rows.length, state.from, state.q]);
+    const none = !state.rows.length;
     h2(() => {
       const on2 = box.current && box.current.querySelector(".r.on");
       if (on2 && on2.scrollIntoView) on2.scrollIntoView({ block: "nearest" });
@@ -25014,34 +25035,37 @@ ${s5}`;
       }
       g5.rows.push({ r: r4, i: i5 });
     });
-    return /* @__PURE__ */ u2("div", { ref: box, class: "slashmenu", id: id2, role: "listbox", "aria-label": "Insert", onMouseDown: (e4) => e4.preventDefault(), children: [
-      state.rows.length ? groups.map((g5) => /* @__PURE__ */ u2("div", { role: "group", "aria-label": g5.g, children: [
-        /* @__PURE__ */ u2("div", { class: "g", "aria-hidden": "true", children: g5.g }),
-        g5.rows.map(({ r: r4, i: i5 }) => /* @__PURE__ */ u2(
-          "div",
-          {
-            id: `${id2}-${i5}`,
-            role: "option",
-            "data-slash": r4.id,
-            "aria-selected": i5 === state.i ? "true" : "false",
-            class: `r${i5 === state.i ? " on" : ""}`,
-            onMouseMove: () => {
-              if (i5 !== state.i) hover(i5);
+    return /* @__PURE__ */ u2(S2, { children: [
+      /* @__PURE__ */ u2("div", { ref: box, class: "slashmenu", id: id2, role: "listbox", "aria-label": "Insert", onMouseDown: (e4) => e4.preventDefault(), children: [
+        state.rows.length ? groups.map((g5, gi2) => /* @__PURE__ */ u2("div", { role: "group", "aria-label": g5.g, children: [
+          /* @__PURE__ */ u2("div", { class: "g", "aria-hidden": "true", children: g5.g }),
+          g5.rows.map(({ r: r4, i: i5 }) => /* @__PURE__ */ u2(
+            "div",
+            {
+              id: `${id2}-${i5}`,
+              role: "option",
+              "data-slash": r4.id,
+              "aria-selected": i5 === state.i ? "true" : "false",
+              class: `r${i5 === state.i ? " on" : ""}`,
+              onMouseMove: () => {
+                if (i5 !== state.i) hover(i5);
+              },
+              onClick: () => pick(r4),
+              children: [
+                /* @__PURE__ */ u2("span", { class: "ic", "aria-hidden": "true", children: r4.icon }),
+                /* @__PURE__ */ u2("span", { class: "tx", children: [
+                  /* @__PURE__ */ u2("span", { class: "t", children: r4.name }),
+                  /* @__PURE__ */ u2("span", { class: "d", children: r4.desc })
+                ] }),
+                r4.key ? /* @__PURE__ */ u2("span", { class: "k", "aria-hidden": "true", children: r4.key }) : null
+              ]
             },
-            onClick: () => pick(r4),
-            children: [
-              /* @__PURE__ */ u2("span", { class: "ic", "aria-hidden": "true", children: r4.icon }),
-              /* @__PURE__ */ u2("span", { class: "tx", children: [
-                /* @__PURE__ */ u2("span", { class: "t", children: r4.name }),
-                /* @__PURE__ */ u2("span", { class: "d", children: r4.desc })
-              ] }),
-              r4.key ? /* @__PURE__ */ u2("span", { class: "k", "aria-hidden": "true", children: r4.key }) : null
-            ]
-          },
-          r4.id
-        ))
-      ] }, g5.g)) : /* @__PURE__ */ u2("div", { class: "r none", role: "option", "aria-disabled": "true", "aria-selected": "false", children: "No match" }),
-      /* @__PURE__ */ u2("div", { class: "foot", "aria-hidden": "true", children: "↑↓ to move · Enter to insert · Esc to close" })
+            r4.id
+          ))
+        ] }, `${gi2}-${g5.g}`)) : /* @__PURE__ */ u2("div", { class: "r none", role: "option", "aria-disabled": "true", "aria-selected": "false", children: "No match" }),
+        /* @__PURE__ */ u2("div", { class: "foot", "aria-hidden": "true", children: "↑↓ to move · Enter to insert · Esc to close" })
+      ] }),
+      /* @__PURE__ */ u2("div", { class: "slashsr", role: "status", "aria-live": "polite", "aria-atomic": "true", children: none ? "No match" : `${state.rows.length} ${state.rows.length === 1 ? "option" : "options"}` })
     ] });
   }
   function attachSlash(h5, { profile, host: host2 }) {
@@ -25053,7 +25077,7 @@ ${s5}`;
     root.className = "slashroot";
     (el2.closest("dialog[open]") || document.body).appendChild(root);
     let st2 = null;
-    let dismissed = -1;
+    let dismissed = -1, opened = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -25066,15 +25090,17 @@ ${s5}`;
         view.dom
       );
       if (st2) {
+        opened = true;
         dom.setAttribute("aria-haspopup", "listbox");
         dom.setAttribute("aria-expanded", "true");
         dom.setAttribute("aria-controls", id2);
         if (st2.rows[st2.i]) dom.setAttribute("aria-activedescendant", `${id2}-${st2.i}`);
         else dom.removeAttribute("aria-activedescendant");
       } else {
-        dom.removeAttribute("aria-expanded");
+        dom.removeAttribute("aria-haspopup");
         dom.removeAttribute("aria-controls");
         dom.removeAttribute("aria-activedescendant");
+        if (opened) dom.setAttribute("aria-expanded", "false");
       }
     };
     const close = () => {
@@ -25090,7 +25116,7 @@ ${s5}`;
         return close();
       }
       const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
-      if (!rows2.length && !a5.q) return close();
+      if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
       draw2();
     };
@@ -25103,6 +25129,10 @@ ${s5}`;
         c5.run();
         const f5 = host2 && host2[r4.id];
         if (f5) f5();
+        return;
+      }
+      if (r4.is && editor.isActive(r4.is)) {
+        c5.run();
         return;
       }
       if (r4.run) r4.run(c5, editor).run();
@@ -42925,7 +42955,7 @@ ${s5}`;
     document.addEventListener("keydown", (e4) => {
       if (!(e4.target.classList && e4.target.classList.contains("rted") && e4.target.closest(".curpanes"))) return;
       const mod = e4.metaKey || e4.ctrlKey;
-      if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab")) return;
+      if (slashOn(e4.target) && (e4.key === "Escape" || e4.key === "Tab" || mod && e4.key === "Enter")) return;
       if (e4.key === "Escape") {
         e4.preventDefault();
         e4.stopPropagation();
