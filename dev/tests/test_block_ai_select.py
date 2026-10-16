@@ -36,6 +36,8 @@ class AiBlocks(LiveBrowserCase):
 
     def setUp(self):
         super().setUp()
+        self.b.eval("AI_PLACE_TABLE.plain.ai=true; AI_PLACE_TABLE.line.ai=true; true")     # v2.2.0's places, on for these tests
+        self.addCleanup(lambda: self.b and self.b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true"))
         self.b.eval(f"{MOUNT}({json.dumps(MANY)})")
         self.b.wait("!!document.querySelector('#aiMany.ProseMirror') && !!document.querySelector('#aiOne.ProseMirror')")
         self.addCleanup(lambda: self.b and self.b.eval(
@@ -45,6 +47,8 @@ class AiBlocks(LiveBrowserCase):
         b = self.b
         b.click(sel)
         b.key("a", META)
+        b.wait(f"document.querySelector('{LAYER} .aispark')")
+        b.click(f"{LAYER} .aispark")
         b.wait(f"document.querySelector('{LAYER} .aibar')")
 
     def sug(self, h, status, **more):
@@ -61,14 +65,17 @@ class AiBlocks(LiveBrowserCase):
         b = self.b
         self.select_all("#aiMany")
         self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aibar').getAttribute('role')"), "toolbar")
-        self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aibar').getAttribute('aria-label')"), "AI on the selected text")
+        self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aibar').getAttribute('aria-label')"), "AI and formatting on the selected text")
+        self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aispark').getAttribute('aria-label')"), "AI and formatting on the selected text")
+        self.assertEqual(b.eval(f"document.querySelector('{LAYER} .aispark').getAttribute('aria-expanded')"), "true")
         btn = f"{LAYER} .aibar button[aria-haspopup]"
         self.assertEqual(b.eval(f"document.querySelector('{btn}').getAttribute('aria-expanded')"), "false")
         b.click(btn)
         b.wait(f"document.querySelector('{LAYER} [role=menu]')")
         self.assertEqual(b.eval(f"[...document.querySelectorAll('{LAYER} [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
-                         ["rewrite", "shorter", "longer", "executive", "spelling", "custom"])
-        self.assertEqual(b.eval(f"document.querySelector('{LAYER} [role=menu]').getAttribute('aria-label')"), "AI on the selected text")
+                         ["rewrite", "shorter", "executive"])
+        self.assertEqual(b.eval(f"document.querySelector('{LAYER} [role=menu]').getAttribute('aria-label')"), "Improve")
+        self.assertEqual(b.eval(f"[...document.querySelectorAll('{LAYER} .aibar [role=group]')].map(e=>e.getAttribute('aria-label'))"), ["AI"])
         b.key("Escape")                                                           # the Menu block: Esc closes, focus to its button
         b.wait(f"!document.querySelector('{LAYER} [role=menu]')")
         self.assertTrue(b.eval(f"document.activeElement===document.querySelector('{btn}')"))
@@ -79,12 +86,14 @@ class AiBlocks(LiveBrowserCase):
         b.click(f"{LAYER} .aibar button[aria-haspopup]")
         b.wait(f"document.querySelector('{LAYER} [role=menu]')")
         self.assertEqual(b.eval(f"[...document.querySelectorAll('{LAYER} [role=menu] [data-ai]')].map(e=>e.dataset.ai)"),
-                         ["rewrite", "shorter", "executive", "spelling", "custom"])
+                         ["rewrite", "shorter", "executive"])
         b.key("Escape")
 
     def test_alt_slash_opens_the_menu_with_focus_in_it(self):
         b = self.b
-        self.select_all("#aiMany")
+        b.click("#aiMany")
+        b.key("a", META)
+        b.wait(f"document.querySelector('{LAYER} .aispark')")
         b.key("/", ALT)
         b.wait(f"document.querySelector('{LAYER} [role=menu]') && document.activeElement.closest('[role=menu]')")
         b.key("Escape")
@@ -92,9 +101,7 @@ class AiBlocks(LiveBrowserCase):
     def test_say_what_you_want_is_a_named_box_and_esc_goes_back_to_the_text(self):
         b = self.b
         self.select_all("#aiMany")
-        b.click(f"{LAYER} .aibar button[aria-haspopup]")
-        b.wait(f"document.querySelector('{LAYER} [role=menu]')")
-        b.click(f"{LAYER} [role=menu] [data-ai=custom]")
+        b.click(f"{LAYER} .aibar [data-ai=custom]")
         b.wait(f"document.activeElement && document.activeElement.matches('{LAYER} .aiask input')")
         self.assertEqual(b.eval("document.activeElement.getAttribute('aria-label')"), "Say what you want done with the selected text")
         self.assertEqual(b.eval("document.activeElement.maxLength"), 400)
@@ -108,10 +115,10 @@ class AiBlocks(LiveBrowserCase):
         b.eval("window.GOT=null; aiAction({id:'mkact', name:'Make this an action…', places:['plain'], run:(r,h,ai)=>{ GOT=[r.text, ai.place, h===AIM]; }})")
         self.addCleanup(lambda: self.b and self.b.eval("AI_ACTIONS.splice(AI_ACTIONS.findIndex(a=>a.id==='mkact'),1); true"))
         self.select_all("#aiMany")
-        b.click(f"{LAYER} .aibar button[aria-haspopup]")
+        b.click(f"{LAYER} .aibar button[data-tip='AI: make into']")
         b.wait(f"document.querySelector('{LAYER} [role=menu]')")
         ids = b.eval(f"[...document.querySelectorAll('{LAYER} [role=menu] [data-ai]')].map(e=>e.dataset.ai)")
-        self.assertEqual(ids[-2:], ["mkact", "custom"])
+        self.assertEqual(ids, ["mkact"])                                         # part E's items are the "Make into" group
         b.click(f"{LAYER} [role=menu] [data-ai=mkact]")
         b.wait("GOT")
         self.assertEqual(b.eval("GOT"), [MANY, "plain", True])
