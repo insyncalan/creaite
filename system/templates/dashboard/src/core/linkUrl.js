@@ -40,20 +40,35 @@ export function linkUrl(s) {
     if (!a || !a[1]) return null;                                        // "https:example.com", "https:///x": not an address
     const host = a[1];
     if (host.includes("@")) return null;                                 // a name and password before the host hides where it goes
-    if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host) && !/[\u0080-\uffff]/.test(host)) return null;
+    if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host)) return null;                      // ASCII only: an international name must be given as punycode (xn--), so a look-alike letter never passes
     try { const u = new URL(scheme + ":" + rest); if (u.protocol !== scheme + ":" || !u.hostname || u.username || u.password) return null; } catch (e) { return null; }
     return scheme + ":" + rest;
   }
-  if (scheme === "mailto") {
-    const mailbox = rest.split(/[?#]/)[0];
-    if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;      // one address (no list: it would hide the receivers)
-    return "mailto:" + rest;
-  }
+  if (scheme === "mailto") return mailtoOk(rest) ? "mailto:" + rest : null;
   return null;
 }
 
-/** A percent-decoding that never throws (a bad escape is left as it is). @param {string} s */
-function safeDecode(s) { try { return decodeURIComponent(s); } catch (e) { return s; } }
+/** The only parts of a mailto: address a link may carry besides the one mailbox (anything else, bcc and cc above all, adds receivers). */
+const MAIL_PARTS = ["subject", "body"];
+/** A percent-decoding that refuses: a bad escape (a stray % or bad UTF-8) gives null, never "left as written". @param {string} s @returns {string|null} */
+function strictDecode(s) {
+  if (/%(?![\da-f]{2})/i.test(s)) return null;
+  try { return decodeURIComponent(s); } catch (e) { return null; }
+}
+/** Whether what follows "mailto:" is exactly one mailbox, decoded the way a mail program does, and a query of subject and body only.
+    @param {string} rest */
+function mailtoOk(rest) {
+  if (rest.includes("#")) return false;
+  const q = rest.indexOf("?"), who = strictDecode(q < 0 ? rest : rest.slice(0, q));
+  if (who === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(who)) return false;     // one address (no list: it would hide the receivers)
+  if (q < 0) return true;
+  for (const part of rest.slice(q + 1).split("&")) {
+    if (!part) continue;
+    const eq = part.indexOf("="), key = strictDecode(eq < 0 ? part : part.slice(0, eq)), val = eq < 0 ? "" : strictDecode(part.slice(eq + 1));
+    if (key === null || val === null || !MAIL_PARTS.includes(key.toLowerCase())) return false;
+  }
+  return true;
+}
 
 /** Whether `s` is an address `linkUrl` accepts. @param {unknown} s @returns {boolean} */
 export const isLinkUrl = s => linkUrl(s) !== null;

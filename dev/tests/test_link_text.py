@@ -258,13 +258,16 @@ class Places(Seeded):
     def test_the_python_check_is_never_looser_than_the_dashboards(self):
         """The same cases as test_editor_links.py; the dashboard's side is compared in test_editor_links_plain.py (it needs Chrome)."""
         for a in ("https://example.com", "http://example.com/a?b=1&c=2#d", "https://example.com:8443/x", "https://sub.example.co.uk/a_(b)",
-                  "https://[2001:db8::1]/x", "mailto:pmo@example.com", "MAILTO:pmo@example.com?subject=Plan%20review", "HTTPS://Example.com/Path"):
+                  "https://[2001:db8::1]/x", "mailto:pmo@example.com", "MAILTO:pmo@example.com?subject=Plan%20review", "mailto:pmo@example.com?subject=Hi&body=Hello%20there", "https://xn--caf-dma.example/", "HTTPS://Example.com/Path"):
             self.assertIsNotNone(linktext.valid_address(a), a)
         for a in ["javascript:alert(1)", "JAVASCRIPT:alert(1)", "jav\tascript:alert(1)", "java&#x09;script:alert(1)", " javascript:alert(1)",
                   "​https://example.com", "data:text/html,x", "file:///etc/passwd", "blob:https://example.com/x", "about:blank", "ftp://example.com/x",
                   "tel:+441234567890", "creaite:item/ABC-A-001", "//evil.example/x", "\\\\evil.example\\x", "/relative", "example.com", "https://", "https:///x",
                   "https://user:pw@example.com", "https://bank.example@evil.example/", "https://exa mple.com", "https://example.com/\"x", "https://example.com/<x>",
-                  "https://example.com/`x`", "mailto:", "mailto:nobody", "mailto:a@example.com,b@example.com", "mailto:a@b@example.com", "", None, 5,
+                  "https://example.com/`x`", "mailto:pmo@example.com?bcc=x@evil.example", "mailto:pmo@example.com?subject=Hi&cc=x@evil.example", "mailto:pmo@example.com?to=x@evil.example",
+    "mailto:a%40evil.example%2Cb@good.example%zz", "mailto:a%40evil.example%2Cb@good.example", "mailto:pmo@example.com?%62cc=x@evil.example",
+    "mailto:pmo@example.com?subject=%zz", "mailto:pmo@example.com#frag", "https://\u0430pple.com", "https://\u00e9_!$&'()*+,;=.com/", "https://caf\u00e9.example/",
+    "mailto:", "mailto:nobody", "mailto:a@example.com,b@example.com", "mailto:a@b@example.com", "", None, 5,
                   "x" * 3000, "https://example.com/" + "x" * 2100]:
             self.assertIsNone(linktext.valid_address(a), a)
 

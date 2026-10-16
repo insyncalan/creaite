@@ -34,6 +34,8 @@ ACCEPT = {
     "https://[2001:db8::1]/x": "https://[2001:db8::1]/x",
     "mailto:pmo@example.com": "mailto:pmo@example.com",
     "MAILTO:pmo@example.com?subject=Plan%20review": "mailto:pmo@example.com?subject=Plan%20review",
+    "mailto:pmo@example.com?subject=Hi&body=Hello%20there": "mailto:pmo@example.com?subject=Hi&body=Hello%20there",
+    "https://xn--caf-dma.example/": "https://xn--caf-dma.example/",
 }
 REFUSE = [
     "javascript:alert(1)", "JAVASCRIPT:alert(1)", "JaVaScRiPt:alert(1)", "jav\tascript:alert(1)", "java\nscript:alert(1)",
@@ -45,6 +47,9 @@ REFUSE = [
     "https://", "https:", "https:example.com", "https:///x", "http://", "https://user@example.com", "https://user:pw@example.com",
     "https://bank.example@evil.example/", " https://example.com", "https://example.com ", "https://exa mple.com", "https://example.com/a b",
     "https://example.com/\"onmouseover=alert(1)", "https://example.com/<script>", "https://example.com/`x`", "https://exa%20mple.com",
+    "mailto:pmo@example.com?bcc=x@evil.example", "mailto:pmo@example.com?subject=Hi&cc=x@evil.example", "mailto:pmo@example.com?to=x@evil.example",
+    "mailto:a%40evil.example%2Cb@good.example%zz", "mailto:a%40evil.example%2Cb@good.example", "mailto:pmo@example.com?%62cc=x@evil.example",
+    "mailto:pmo@example.com?subject=%zz", "mailto:pmo@example.com#frag", "https://\u0430pple.com", "https://\u00e9_!$&'()*+,;=.com/", "https://caf\u00e9.example/",
     "mailto:", "mailto:nobody", "mailto:a@example.com,b@example.com", "mailto:a@b@example.com", "mailto: pmo@example.com",
     "", " ", None, 5, "x" * 3000, "https://example.com/" + "x" * 2100,
 ]
