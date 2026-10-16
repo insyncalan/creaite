@@ -56463,7 +56463,10 @@ ${d5.text}`);
         } else if (ev.type === "text") {
           spin.remove();
           grp = null;
-          replies.push(mWords(await sayMd(fdText(ev.text))));
+          {
+            const d5 = await sayMd(fdText(ev.text));
+            replies.push(live ? mWords(d5) : d5);
+          }
           claimsNote(ev.checked);
           spin = work();
         } else if (ev.type === "cant") {
