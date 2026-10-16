@@ -4764,6 +4764,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     cxLink: () => cxLink,
     cxList: () => cxList,
     cxPeople: () => cxPeople,
+    cxPerson: () => cxPerson,
     cxPk: () => cxPk,
     cxReview: () => cxReview,
     cxReviewFields: () => cxReviewFields,
@@ -39015,6 +39016,11 @@ ${s5}`;
   var CXKEYAT = -1e9;
   function cxTarget(t47) {
     if (!t47 || !t47.closest) return null;
+    const pa2 = t47.closest("a[data-person]");
+    if (pa2 && !t47.closest("input,textarea,select,.rail,dialog,.cxmenu") && !isMe(pa2.dataset.person || "") && pa2.dataset.person) {
+      const row3 = pa2.closest("[data-row]"), op2 = pa2.closest("[data-open]"), id2 = row3 ? row3.dataset.row : op2 ? String(op2.dataset.open).split(":")[1] : pa2.closest("#panel") && shared.CUR && shared.CUR.mode === "record" ? pkCid() : "";
+      return { person: pa2.dataset.person, only: id2 || "", el: pa2 };
+    }
     if (t47.closest("input,textarea,select,[contenteditable=true],[contenteditable=plaintext-only],.rail,#panel,#chat,dialog,.cxmenu,.pkpop,td.editing")) return null;
     const a5 = t47.closest("a[href]");
     if (a5 && !/^#/.test(a5.getAttribute("href") || "")) return null;
@@ -39042,6 +39048,10 @@ ${s5}`;
   }
   function cxShow(c5, x5, y5) {
     const from = document.activeElement && document.activeElement !== document.body ? document.activeElement : c5.el;
+    if (c5.person) {
+      openContextMenu(cxPerson(c5.person, c5.only), x5, y5, { label: c5.person, from });
+      return;
+    }
     if (c5.gone) {
       openContextMenu(cxGone(c5.gone, c5.el), x5, y5, { label: "Rejected proposal", from });
       return;
@@ -39068,6 +39078,22 @@ ${s5}`;
       }
     }
     openContextMenu(ids.length > 1 ? cxWorkMany(ids) : cxWork(c5.k, c5.id), x5, y5, { label: ids.length > 1 ? `${ids.length} items` : c5.id, from });
+  }
+  function cxPerson(name, only) {
+    const x5 = PERS().find((y5) => y5.name === name), p6 = x5 && x5.p, email = p6 && p6.email || "", first = String(name).split(/\s+/)[0], starts = only && x5 && deItems(x5).some((i5) => i5.id === only && !deBarred(i5)) ? only : void 0, out = [];
+    out.push(
+      { label: "Draft email", icon: "mail", disabled: !email, hint: email ? "" : "No email on record: add details first", run: () => openDraftEmail(name, "update", starts) },
+      { label: `Open ${first}'s page`, icon: "user", run: () => go2("person", name) }
+    );
+    if (email) out.push({ label: "Copy email address", icon: "copy", run: () => cxCopy(email, "the email address") });
+    if (!p6) out.push({ label: "Add details", icon: "pencil", run: () => {
+      go2("person", name);
+      setTimeout(() => {
+        const b5 = $("#ppEdit");
+        if (b5) b5.click();
+      }, 120);
+    } });
+    return out;
   }
   function cxCursor() {
     const a5 = document.activeElement;
@@ -67652,6 +67678,7 @@ ${d5.text}`);
         "curDrop",
         "curObj",
         "cxPeople",
+        "cxPerson",
         "cxReview",
         "dateHint",
         "dayList",
