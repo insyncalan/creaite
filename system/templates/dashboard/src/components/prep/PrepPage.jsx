@@ -141,7 +141,7 @@ function NoteBox({ sec, label, lines, onSave, ai }) {
   return (
     <div class="ppnote">
       <label id={`pp-n-${sec}-l`}>{label}</label>
-      <TextEditor id={`pp-n-${sec}`} cls="ppbox" rows={Math.max(2, lines.length + 1)} value={start} labelledBy={`pp-n-${sec}-l`} ai={ai}
+      <TextEditor id={`pp-n-${sec}`} cls="ppbox" rows={Math.max(2, lines.length + 1)} value={start} labelledBy={`pp-n-${sec}-l`} ai={ai} links
         onCommit={now => { if (now.trim() !== start.trim()) onSave(sec, now); }} />
       {cites.length ? <div class="ppcites">{cites.slice(0, 6).map((s, i) => <SourceLink key={i} s={s} cite />)}</div> : null}
     </div>
@@ -243,7 +243,7 @@ function QuestionsCard({ mo, saving }) {
     <section class="card pc" id="pp-questions" tabIndex={-1} aria-labelledby="pp-h-questions">
       <h2 id="pp-h-questions">Questions and asks</h2>
       <span class="vh" id="pp-q-l">Questions and asks, one a line</span>
-      <TextEditor id="pp-q" cls="ppbox" rows={Math.max(3, (mo.questions || []).length + 1)} value={start} placeholder="One question or ask a line" labelledBy="pp-q-l" ai={aiOf(mo)}
+      <TextEditor id="pp-q" cls="ppbox" rows={Math.max(3, (mo.questions || []).length + 1)} value={start} placeholder="One question or ask a line" labelledBy="pp-q-l" ai={aiOf(mo)} links
         onCommit={now => { if (now.trim() !== start.trim()) saveFocus({ questions: now.split("\n").map(x => x.trim()).filter(Boolean) }, "questions"); }} />
       <p class="sub ppstamp" role="status">{saving === "questions" ? "Saving…" : mo.questions_edited
         ? <>Your questions · <button type="button" class="linkbtn" onClick={() => saveFocus({ questions: null }, "questions")}>Use creaite's questions</button></>

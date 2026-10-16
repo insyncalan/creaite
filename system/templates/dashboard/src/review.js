@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
+import { linkHtml, linkWords } from "./core/linkText.js";
 import { drawFilterBar } from "./components/FilterBar.jsx";
 
 import { actHref } from "./activity.js";
@@ -68,9 +69,9 @@ export function revDetail(r){ const x=r.rec, w=t=>`<span class="h-warn">${t}</sp
     dueTxt=d=>{ if(!d) return w("No due date"); const n=Math.round((new Date(d)-new Date(TODAY))/864e5); return n<0?w(`${fd(d)} · ${-n} day${n===-1?"":"s"} overdue`):`${fd(d)} · ${n===0?"today":`in ${n} day${n===1?"":"s"}`}`; },
     who=o=>!o||o==="TBC"?w("No owner"):unknownOwner(o)?w(`${personLink(o,o)} (not in the people register)`):personLink(o,o), ms=x.ms?`Milestone ${esc(((D.milestone_names||{})[x.ms]||[x.ms])[0])}`:"", parts=
     r.kind==="actions"?[who(x.o),dueTxt(x.due),pc(x.pr||"Medium"),esc(x.ws||""),ms]:
-    r.kind==="raid"?[esc(x.type),who(x.o),x.imp&&x.lik?`${x.imp} × ${x.lik} → ${pc(prio(x.imp,x.lik))}`:w("Impact and likelihood not set"),x.resp?`Response: ${esc(x.resp)}`:w("No response yet"),x.due?dueTxt(x.due):"",ms]:
+    r.kind==="raid"?[esc(x.type),who(x.o),x.imp&&x.lik?`${x.imp} × ${x.lik} → ${pc(prio(x.imp,x.lik))}`:w("Impact and likelihood not set"),x.resp?`Response: ${linkHtml(x.resp)}`:w("No response yet"),x.due?dueTxt(x.due):"",ms]:
     r.kind==="decisions"?[x.by?`Made by ${personLink(x.by,x.by)}`:w("Made by not recorded"),x.date?fd(x.date):""]:
-    r.kind==="update"?(x.changes||[]).map(c=>`${esc(c.field)}: ${esc(fd(c.from==null||c.from===""?"—":String(c.from)))} → ${esc(fd(c.to==null||c.to===""?"—":String(c.to)))}`):
+    r.kind==="update"?(x.changes||[]).map(c=>`${esc(c.field)}: ${esc(fd(c.from==null||c.from===""?"—":linkWords(String(c.from))))} → ${esc(fd(c.to==null||c.to===""?"—":linkWords(String(c.to))))}`):
     r.kind==="draft"&&r.nodraft&&!r.done?[w("No Word draft was made for these minutes"),"Reject them and process the meeting again"]:[];   /* BL-260 */
   let h=(r.dn?dnHtml(r):"")+parts.filter(Boolean).join(" · ")+shRvHtml(r);
   if(r.kind==="update"&&r.rec&&r.rec.why) h=`${h} · <span class="sub">“${esc(r.rec.why)}”</span>`;   /* BL-65 */
