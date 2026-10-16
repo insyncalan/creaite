@@ -5950,7 +5950,12 @@ button.nchip{font:inherit;font-size:12px}
       b5.removeAttribute("title");
     });
   }
-  var PRESS = { key: null, el: null, sent: false };
+  var PRESS = { key: null, el: null, at: "", sent: false };
+  var rowPlace = (top, from) => {
+    const out = [];
+    for (let at2 = from; at2 && at2 !== top; at2 = at2.parentNode) out.push([...at2.parentNode.children].indexOf(at2));
+    return out.join(".");
+  };
   function bootLostClick() {
     document.addEventListener("mousedown", (e4) => {
       PRESS.key = null;
@@ -5961,6 +5966,7 @@ button.nchip{font:inherit;font-size:12px}
       if (r4) {
         PRESS.key = r4.dataset.row;
         PRESS.el = r4;
+        PRESS.at = rowPlace(r4, e4.target);
       }
     }, true);
     document.addEventListener("mouseup", (e4) => {
@@ -5971,23 +5977,26 @@ button.nchip{font:inherit;font-size:12px}
       PRESS.sent = true;
       const tgt = (
         /** @type {Element} */
-        e4.target
+        rowPlace(landed, e4.target) === PRESS.at ? e4.target : landed
       );
-      setTimeout(() => tgt.isConnected && tgt.dispatchEvent(new MouseEvent("click", {
-        bubbles: true,
-        cancelable: true,
-        view: window,
-        detail: e4.detail || 1,
-        clientX: e4.clientX,
-        clientY: e4.clientY,
-        screenX: e4.screenX,
-        screenY: e4.screenY,
-        ctrlKey: e4.ctrlKey,
-        shiftKey: e4.shiftKey,
-        altKey: e4.altKey,
-        metaKey: e4.metaKey,
-        button: 0
-      })), 0);
+      setTimeout(() => {
+        PRESS.sent = false;
+        if (tgt.isConnected) tgt.dispatchEvent(new MouseEvent("click", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          detail: e4.detail || 1,
+          clientX: e4.clientX,
+          clientY: e4.clientY,
+          screenX: e4.screenX,
+          screenY: e4.screenY,
+          ctrlKey: e4.ctrlKey,
+          shiftKey: e4.shiftKey,
+          altKey: e4.altKey,
+          metaKey: e4.metaKey,
+          button: 0
+        }));
+      }, 0);
     }, true);
     document.addEventListener("click", (e4) => {
       if (PRESS.sent && e4.isTrusted) {

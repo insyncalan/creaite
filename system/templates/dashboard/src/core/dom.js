@@ -131,17 +131,21 @@ export function tipUp(root){ const L=root.matches&&root.matches("button")?[root]
    at all when the pressed node has been replaced (a data refresh, BL-327, BL-253), so the row's handler never ran. The press
    remembers its row's key (data-row); at the release, if that node has gone and the element now under the pointer is the same
    row by key, the click is made there. A press on one row released on another is still no click on either. */
-const PRESS={key:null,el:null,sent:false};
+const PRESS={key:null,el:null,at:"",sent:false};
+/* where a node sits inside its row, as child positions: a press and a release at the same place in the row are one cell's click */
+const rowPlace=(top,from)=>{ const out=[]; for(let at=from;at&&at!==top;at=at.parentNode) out.push([...at.parentNode.children].indexOf(at)); return out.join("."); };
 export function bootLostClick(){
 document.addEventListener("mousedown",e=>{ PRESS.key=null; PRESS.el=null; PRESS.sent=false; if(e.button!==0||!e.target.closest) return;
-  const r=e.target.closest("[data-row]"); if(r){ PRESS.key=r.dataset.row; PRESS.el=r; } },true);
+  const r=e.target.closest("[data-row]"); if(r){ PRESS.key=r.dataset.row; PRESS.el=r; PRESS.at=rowPlace(r,e.target); } },true);
 document.addEventListener("mouseup",e=>{ const el=PRESS.el, key=PRESS.key;
   if(!e.isTrusted||e.button!==0||el==null||key==null||el.isConnected||!e.target.closest) return;
   const landed=e.target.closest("[data-row]"); if(!landed||landed.dataset.row!==key) return;
   PRESS.sent=true;
-  const tgt=/** @type {Element} */(e.target);
-  setTimeout(()=>tgt.isConnected&&tgt.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window,detail:e.detail||1,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
-    ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,button:0})),0); },true);
+  /* the same place in the row: that cell; another cell of the row: the row itself, as the browser does for two nodes it shares a parent with */
+  const tgt=/** @type {Element} */(rowPlace(landed,e.target)===PRESS.at?e.target:landed);
+  setTimeout(()=>{ PRESS.sent=false;   /* the browser's own click, if it sends one, comes with the release; a later trusted click (Enter, Space, a label) is a different click */
+    if(tgt.isConnected) tgt.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view:window,detail:e.detail||1,clientX:e.clientX,clientY:e.clientY,screenX:e.screenX,screenY:e.screenY,
+      ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,button:0})); },0); },true);
 document.addEventListener("click",e=>{ if(PRESS.sent&&e.isTrusted){ PRESS.sent=false; e.stopImmediatePropagation(); } },true);   /* a click the browser did send is not handled twice */
 }
 export function bootTooltips(){

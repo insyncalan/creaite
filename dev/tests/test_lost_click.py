@@ -4,7 +4,9 @@ Run: python3 dev/tests/test_lost_click.py   (needs Google Chrome; skipped otherw
 A real mouse press on a Work row, then the list is redrawn (as a data refresh does, BL-327's boot refresh, BL-253's events),
 then the real release. The browser sends the click to the nearest ancestor the two share when the pressed node has gone, so
 the row's handler used to see no row and the click was lost. The click must act on the row by its key (data-row).
-Also: a plain click still selects once, and a press on one row released on another is not a click on either.
+Also: a plain click still selects once (and is the browser's own click, not a made one), a press on one row released on another
+is not a click on either, a made click is delivered once even if the browser also sends one, and the click after it (Enter on a
+focused button) is not swallowed.
 """
 import sys
 import unittest
@@ -15,6 +17,13 @@ from live_browser import LiveBrowserCase  # noqa: E402
 
 ROW = '#workTbl tr[data-row="ABC-A-002"] td[data-f="due"]'   # a cell that stays clear of the collapsed rail at 900 px
 REDRAW = "renderWork()"
+# counts every click that reaches a handler registered after the page's own (so the swallow has already run): the row, or the probe button
+COUNT = """window.__clicks=[]; document.addEventListener("click",e=>{ if(e.target.closest&&(e.target.closest('[data-row="ABC-A-002"]')||e.target.closest("#probeBtn")))
+  window.__clicks.push((e.isTrusted?"trusted":"made")+":"+(e.target.id||(e.target.matches("tr")?"row":"cell"))); },true)"""
+PROBE = """(()=>{ const b=document.createElement("button"); b.id="probeBtn"; b.textContent="probe"; b.style.cssText="position:fixed;left:4px;bottom:4px;z-index:99999";
+  document.body.appendChild(b); b.focus(); return document.activeElement===b; })()"""
+HOLD = "window.__held=[]; window.__st=window.setTimeout; window.setTimeout=(f,t)=>{ window.__held.push(f); return 0 }"
+RELEASE_HELD = "window.setTimeout=window.__st; const h=window.__held; window.__held=[]; h.forEach(f=>f())"
 
 
 class LostClick(LiveBrowserCase):
@@ -60,15 +69,76 @@ class LostClick(LiveBrowserCase):
     def test_press_on_one_row_release_on_another_is_not_a_click(self):
         b = self.open_list()
         other_id = b.eval("[...document.querySelectorAll('#workTbl tr[data-row]')].map(r=>r.dataset.row).find(i=>i!=='ABC-A-002')")
-        other = '#workTbl tr[data-row="%s"] td[data-f="t"]' % other_id
+        other = '#workTbl tr[data-row="%s"] td[data-f="due"]' % other_id
         a, o = b.box(ROW), b.box(other)
+        # the release really is over the other row, at this width (not behind the rail or off the table)
+        self.assertEqual(b.eval("document.elementFromPoint(%f,%f).closest('[data-row]').dataset.row" % (o["x"], o["y"])), other_id)
+        self.assertNotEqual(a["y"], o["y"])
         b.call("Input.dispatchMouseEvent", type="mouseMoved", x=a["x"], y=a["y"], button="none")
         b.call("Input.dispatchMouseEvent", type="mousePressed", x=a["x"], y=a["y"], button="left", buttons=1, clickCount=1)
         b.call("Input.dispatchMouseEvent", type="mouseMoved", x=o["x"], y=o["y"], button="left", buttons=1)
         b.eval(REDRAW)
+        b.eval(COUNT)
         b.call("Input.dispatchMouseEvent", type="mouseReleased", x=o["x"], y=o["y"], button="left", buttons=0, clickCount=1)
         b.pump(0.1)
         self.assertEqual(b.eval("[...HL.keys()]"), [])
+        self.assertEqual(b.eval("window.__clicks"), [])
+
+    def test_plain_click_is_the_browsers_own_one_click(self):
+        b = self.open_list()
+        b.eval(COUNT)
+        b.click(ROW)
+        b.pump(0.1)
+        self.assertEqual(b.eval("window.__clicks"), ["trusted:cell"], "a click on a live row must reach its handlers once, as the browser sent it")
+
+    def test_a_click_made_for_a_lost_one_is_delivered_once_and_a_browser_click_with_it_is_swallowed(self):
+        b = self.open_list()
+        pos = b.box(ROW)
+        for kind in ("mouseMoved", "mousePressed"):
+            b.call("Input.dispatchMouseEvent", type=kind, x=pos["x"], y=pos["y"], button="left", buttons=1, clickCount=1)
+        b.eval("window.__old=document.querySelector(%r)" % ROW)
+        b.eval(REDRAW)
+        self.assertTrue(b.eval("!document.contains(window.__old)"))
+        b.eval(COUNT)
+        b.eval(HOLD)                 # keep the made click waiting, as if the browser's own click arrived first
+        b.call("Input.dispatchMouseEvent", type="mouseReleased", x=pos["x"], y=pos["y"], button="left", buttons=0, clickCount=1)
+        self.assertTrue(b.eval(PROBE))
+        b.key("Enter")               # a trusted click, standing in for one the browser sends with the release (Chrome here sends none)
+        self.assertEqual(b.eval("window.__clicks"), [], "the browser's click must be swallowed while a made one is due")
+        b.eval(RELEASE_HELD)
+        b.pump(0.1)
+        self.assertEqual(b.eval("window.__clicks"), ["made:cell"])
+        self.assertEqual(b.eval("[...HL.keys()]"), ["ABC-A-002"])
+
+    def test_the_click_after_a_made_one_is_not_swallowed(self):
+        """Enter on a focused button after a recovered lost click used to be swallowed (the flag was never cleared)."""
+        b = self.open_list()
+        self.assertTrue(self.press_redraw_release())
+        self.assertTrue(b.eval("HL.has('ABC-A-002')"))
+        b.eval(COUNT)
+        self.assertTrue(b.eval(PROBE))
+        b.key("Enter")
+        self.assertEqual(b.eval("window.__clicks"), ["trusted:probeBtn"], "Enter on a focused button was swallowed")
+        b.eval("window.__clicks=[]")
+        b.call("Input.dispatchKeyEvent", type="keyDown", key=" ", code="Space", windowsVirtualKeyCode=32, text=" ")
+        b.call("Input.dispatchKeyEvent", type="keyUp", key=" ", code="Space", windowsVirtualKeyCode=32)
+        b.pump(0.1)
+        self.assertEqual(b.eval("window.__clicks"), ["trusted:probeBtn"], "Space on a focused button was swallowed")
+
+    def test_press_on_one_cell_release_on_another_of_the_same_row_clicks_the_row(self):
+        b = self.open_list()
+        other = '#workTbl tr[data-row="ABC-A-002"] td[data-f="t"]'
+        a, o = b.box(ROW), b.box(other)
+        self.assertNotEqual(a["x"], o["x"])
+        self.assertEqual(b.eval("document.elementFromPoint(%f,%f).closest('[data-row]').dataset.row" % (o["x"], o["y"])), "ABC-A-002")
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=a["x"], y=a["y"], button="none")
+        b.call("Input.dispatchMouseEvent", type="mousePressed", x=a["x"], y=a["y"], button="left", buttons=1, clickCount=1)
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=o["x"], y=o["y"], button="left", buttons=1)
+        b.eval(REDRAW)
+        b.eval(COUNT)
+        b.call("Input.dispatchMouseEvent", type="mouseReleased", x=o["x"], y=o["y"], button="left", buttons=0, clickCount=1)
+        b.pump(0.1)
+        self.assertEqual(b.eval("window.__clicks"), ["made:row"], "the click should land on the row, where the browser would put it, not on the release cell")
 
 
 class LostClick900(LostClick):
