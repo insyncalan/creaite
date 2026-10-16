@@ -9936,6 +9936,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   }
 
   // components/Menu.jsx
+  var KB_OPEN = null;
   var menuItemsIn = (box) => box ? (
     /** @type {HTMLElement[]} */
     [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
@@ -10091,9 +10092,16 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     isOpen.current = open2;
     const close = (how) => {
       back2.current = how === "esc";
+      if (back2.current) btn.current?.focus({ preventScroll: true });
       setOpen2(false);
       if (hover && menuGroup.current === btn.current) menuGroup.close();
     };
+    const closeRef = A2(close);
+    closeRef.current = close;
+    const fold = A2(() => closeRef.current("esc")).current;
+    h2(() => () => {
+      if (KB_OPEN === fold) KB_OPEN = null;
+    }, []);
     h2(() => {
       const b5 = btn.current;
       if (!hover || !b5) return;
@@ -10104,6 +10112,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         isOpen: () => isOpen.current,
         open: () => {
           if (why || isOpen.current) return;
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = null;
           byPointer.current = true;
           tipHide();
           setOpen2(true);
@@ -10127,7 +10137,12 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       if (!open2) {
         e4.preventDefault();
         byPointer.current = false;
-        if (hover) menuGroup.release(btn.current);
+        if (hover) {
+          if (menuGroup.current && menuGroup.current !== btn.current) menuGroup.close();
+          if (KB_OPEN && KB_OPEN !== fold) KB_OPEN();
+          KB_OPEN = fold;
+          menuGroup.release(btn.current);
+        }
         setOpen2(true);
       } else if (byPointer.current) {
         e4.preventDefault();
