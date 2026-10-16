@@ -4,8 +4,9 @@
    (BL-301 D) is the bar over a selection, with the place the view named ("report" or "minutes"). In Show as exported the same text is
    drawn as creaite_doc.render draws it (paragraphs, lists, bold), never as an editor. Inline checks are claim marks on the first
    match of the check's quote; they are never saved. Text only through JSX. */
-import { useEffect, useRef } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { creaiteEditor, ED_QUIET } from "../../core/editor.js";
+import { EditorBar } from "../EditorBar.jsx";
 
 /** @typedef {{id: string, quote: string, note?: string, n?: number}} SheetCheckLike */
 
@@ -109,6 +110,17 @@ export function SheetEditor({ value, rich, label, onText, ai, checks = [], cls =
   useEffect(() => { if (ed.current && !ed.current.editor.isDestroyed) ed.current.editor.setEditable(editable); }, [editable]);
   const key = checks.map(c => `${c.id}:${c.quote}`).join("|");
   useEffect(() => { if (ed.current) paintChecks(ed.current, checks); }, [key]);
-  return <div ref={box} class={`sheet-ed${rich ? " sheet-rich" : " sheet-cell"} ${cls}`} role="textbox" aria-multiline={rich || multiline ? "true" : "false"}
+  /* #134: a rich field shows the one-line grouped toolbar (the "sheet" profile) above it while it is active. It sits outside the
+     measured field and takes no room (absolute), so heights and the saved text do not change when it appears. The # and picture
+     buttons need a host that has pickers; a sheet has none, so they are not drawn (a client sheet never offers an internal item). */
+  const [active, setActive] = useState(false);
+  const wrap = useRef(/** @type {HTMLDivElement|null} */ (null));
+  const field = <div ref={box} class={`sheet-ed${rich ? " sheet-rich" : " sheet-cell"} ${cls}`} role="textbox" aria-multiline={rich || multiline ? "true" : "false"}
     aria-label={label} data-ph={placeholder} spellcheck />;
+  if (!rich) return field;
+  return <div ref={wrap} class="sheet-edwrap" onFocusIn={() => setActive(true)}
+    onFocusOut={e => { const to = /** @type {Node|null} */ (e.relatedTarget); if (!to || !wrap.current || !wrap.current.contains(to)) setActive(false); }}>
+    {active && editable ? <EditorBar profile="sheet" handle={() => ed.current} cls="sheet-rtebar" label={`Formatting: ${label}`} /> : null}
+    {field}
+  </div>;
 }

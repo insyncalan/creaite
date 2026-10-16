@@ -10,7 +10,10 @@
               show it), no table, and no [[ @ (notes and people are Notes'); `#` work-item links are there (#122 step C: stored as plain Markdown, drawn as a chip).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
               selection bar (#117) and links (v2.2.0), never headings or checklists.
-   - none:    a host that sets its own frame (the report sheets) and draws nothing.
+   - sheet:   the report sheets' rich text (weekly and client, #134): Current state's editor with the one-line grouped bar (Heading and List
+              menus, B I S, quote, link, undo, redo) shown above the active field. No Insert menu: a sheet has no # or picture host, and a client
+              sheet never offers an internal item. No checklist until the editor has one (v2.2.0).
+   - none:    a host that draws no bar (a table cell on a sheet).
 
    The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
    says it can do it, so the capture drawer, which has no pickers yet, shows the shared buttons alone.
@@ -66,6 +69,8 @@ export const ED_TOOLS = {
 export const ED_MENUS = {
   heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map(x => x === "|" ? x : ED_TOOLS[x]) },
   list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map(x => x === "|" ? x : ED_TOOLS[x]) },
+  /* #134: the report sheets' List menu: a sheet's field is Current state's, which has no checklist until the editor does (v2.2.0) */
+  listsheet: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "|", "indent", "outdent"].map(x => x === "|" ? x : ED_TOOLS[x]) },
   insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map(x => ED_TOOLS[x]) },
 };
 /** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, node?: string, is?: string, alias?: string[],
@@ -141,6 +146,8 @@ export const ED_PROFILES = {
       "undo", "redo"] },
   current: { tip: "Current state",
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"] },
+  sheet: { tip: "A report sheet's text: Current state's editor, one line, grouped (#134)",
+    tools: ["m:heading", "|", "b", "i", "s", "|", "m:listsheet", "quote", "|", "link", "|", "undo", "redo"] },
   plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
   none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
 };

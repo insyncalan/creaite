@@ -3620,6 +3620,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
 #tBrief .wkl>li:hover .tacts,#tBrief .wkl>li:focus-within .tacts{opacity:1}
 @media (hover:none) and (pointer:coarse){ #tBrief .wkl .tacts{opacity:1} }
 @media (forced-colors:active){ .wkdot{forced-color-adjust:none;background:CanvasText} .wkdot.u,.wkdot.h{background:Highlight} .wkl{border-color:CanvasText} #tBrief .wkl>li.wkrow{border-color:GrayText} .wkchip{border-color:LinkText;color:LinkText} .wkchip.made{border-color:GrayText;color:GrayText} }
+
+/* ===== #134 ===== the report sheet's one-line grouped toolbar: above the active rich field, outside it, taking no room */
+.sheet-edwrap{position:relative}
+.sheet-edwrap>.sheet-rtebar{position:absolute;left:0;bottom:100%;margin-bottom:4px;z-index:var(--z-raised);width:max-content;max-width:100%;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);box-shadow:var(--shadow-pop,0 6px 18px rgba(0,0,0,.18))}
 </style>
 </head>
 <body>
@@ -11792,6 +11796,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   var ED_MENUS = {
     heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
     list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    /* #134: the report sheets' List menu: a sheet's field is Current state's, which has no checklist until the editor does (v2.2.0) */
+    listsheet: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
     insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map((x5) => ED_TOOLS[x5]) }
   };
   var ED_SLASH = {
@@ -11901,6 +11907,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     current: {
       tip: "Current state",
       tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "item", "|", "undo", "redo"]
+    },
+    sheet: {
+      tip: "A report sheet's text: Current state's editor, one line, grouped (#134)",
+      tools: ["m:heading", "|", "b", "i", "s", "|", "m:listsheet", "quote", "|", "link", "|", "undo", "redo"]
     },
     plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
     none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
@@ -60880,7 +60890,12 @@ ${d5.text}`);
     h2(() => {
       if (ed3.current) paintChecks(ed3.current, checks);
     }, [key]);
-    return /* @__PURE__ */ u2(
+    const [active, setActive] = d2(false);
+    const wrap = A2(
+      /** @type {HTMLDivElement|null} */
+      null
+    );
+    const field = /* @__PURE__ */ u2(
       "div",
       {
         ref: box,
@@ -60890,6 +60905,26 @@ ${d5.text}`);
         "aria-label": label,
         "data-ph": placeholder,
         spellcheck: true
+      }
+    );
+    if (!rich) return field;
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        ref: wrap,
+        class: "sheet-edwrap",
+        onFocusIn: () => setActive(true),
+        onFocusOut: (e4) => {
+          const to2 = (
+            /** @type {Node|null} */
+            e4.relatedTarget
+          );
+          if (!to2 || !wrap.current || !wrap.current.contains(to2)) setActive(false);
+        },
+        children: [
+          active && editable ? /* @__PURE__ */ u2(EditorBar, { profile: "sheet", handle: () => ed3.current, cls: "sheet-rtebar", label: `Formatting: ${label}` }) : null,
+          field
+        ]
       }
     );
   }
