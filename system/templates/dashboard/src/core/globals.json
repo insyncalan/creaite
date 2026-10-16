@@ -139,6 +139,7 @@
    "applyMotion",
    "applyTheme",
    "applyView",
+   "askDeleteNote",
    "askLive",
    "askPerson",
    "askWorking",

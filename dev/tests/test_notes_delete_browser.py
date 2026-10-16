@@ -53,6 +53,10 @@ class NotesDeleteBrowser(LiveBrowserCase):
         b.click(".nmorewrap [role=menu] .bad")
         b.wait("document.getElementById('noteDelDlg').open")
 
+    def on_more(self):
+        self.b.pump(0.2)
+        return self.b.eval("document.activeElement===document.querySelector('.nmorewrap .nmore')")
+
     def card(self):
         return self.b.eval("[...document.querySelectorAll('#chLog .edcard')].map(c=>c.querySelector('b').textContent)")
 
@@ -72,9 +76,11 @@ class NotesDeleteBrowser(LiveBrowserCase):
         b.click("#ndelCancel")
         b.wait("!document.getElementById('noteDelDlg').open")
         self.assertEqual(self.card(), [])                                                  # Cancel: nothing asked for
+        self.assertTrue(self.on_more(), "Cancel returns focus to the … button")
         self.open_box()
         b.key("Escape")
         b.wait("!document.getElementById('noteDelDlg').open")
+        self.assertTrue(self.on_more(), "Esc returns focus to the … button")
         self.assertEqual(self.card(), [])
         self.assertTrue(f.is_file())
         self.open_box()

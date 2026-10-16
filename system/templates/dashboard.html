@@ -53281,6 +53281,11 @@ ${d5.text}`);
       snack("Deleting a note needs the live server");
       return;
     }
+    const more = (
+      /** @type {HTMLElement | null} */
+      document.querySelector(".nmorewrap .nmore")
+    );
+    if (more) more.focus();
     noteDeleting.value = { path: c5.path, title: c5.note.title, code: c5.code };
   }
   async function deleteNote(n4) {
@@ -59572,6 +59577,7 @@ ${d5.text}`);
         "applyMotion",
         "applyTheme",
         "applyView",
+        "askDeleteNote",
         "askLive",
         "askPerson",
         "askWorking",

@@ -497,7 +497,7 @@ class SharedBehaviour(Driver, us.UiSweepCase):
 
     def ndel(self):
         """#124: Delete note... in the note's ... menu opens #noteDelDlg (a menu item, not an aria-haspopup control): Enter on the
-        item opens it with focus in it (Cancel); Esc closes it and focus is back on the ... button. Nothing is deleted."""
+        item opens it with focus in it (Cancel); Esc closes it and focus is back on the ... button (the opener is set by askDeleteNote). Nothing is deleted."""
         b = self.b
         self.goto("notes")
         _note_made(b)
@@ -517,8 +517,8 @@ class SharedBehaviour(Driver, us.UiSweepCase):
         self.press("Escape", 0.4)
         if b.eval("document.getElementById('noteDelDlg').open"):
             bad.append("Esc leaves it open")
-        # Not yet checked: where focus lands after Esc. The dialog's opener is the menu item, which has gone with the closed menu,
-        # so focus falls to the page (Dialog.jsx only restores a connected opener). Reported to Jarvis (16-10-2026) for a decision.
+        if not b.eval("document.activeElement === document.querySelector('.nmorewrap .nmore')"):
+            bad.append("Esc doesn't return focus to the control")
         return bad
 
     # The dialogs no aria-haspopup control opens, each driven by its own script: (the screen that must be in the run, the

@@ -26,6 +26,10 @@ export function askDeleteNote() {
   const c = noteCur.value;
   if (!c) return;
   if (!viaServer()) { snack("Deleting a note needs the live server"); return; }
+  /* The menu item that was used goes with the closed menu, so make the … button the dialog's recorded opener: Esc and Cancel
+     then return focus to it (Dialog.jsx restores only an opener that is still connected). */
+  const more = /** @type {HTMLElement | null} */ (document.querySelector(".nmorewrap .nmore"));
+  if (more) more.focus();
   noteDeleting.value = { path: c.path, title: c.note.title, code: c.code };
 }
 
