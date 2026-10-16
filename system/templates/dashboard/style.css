@@ -3555,3 +3555,45 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 #panel.pover.on .pin{width:100%}
 body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
 @media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}
+/* ===== #132: Settings › Essentials › AI models (components/settings/AiModels.jsx) ===== */
+.aimodels .hsub{margin-top:20px} .aimodels>.hsub:first-of-type{margin-top:12px}
+.aiprov{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:8px 0 0}
+.aiprovi{display:flex}
+.aicard{flex:1;display:flex;flex-direction:column;gap:6px;min-height:140px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.aicard h4{margin:0;display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:var(--fs-md)}
+.aicard p{margin:0} .aicard.soon{background:var(--sunk);color:var(--muted)}
+.aicard .tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-pill);white-space:nowrap}
+.aicard .tag.aiok{color:var(--ok);border-color:var(--ok)} .aicard .tag.aisoon{border-style:dashed}
+.aimodels-list{font-size:var(--fs-xs);color:var(--muted)} .aisp{flex:1}
+.aiact{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.aihowbox{margin:8px 0 10px;padding:10px 16px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--sunk);font-size:var(--fs-sm)}
+.aihowbox ol{margin:4px 0 0;padding-left:20px} .aihowbox li{margin:2px 0}
+.aijobs{border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+.aijob{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,280px);gap:12px;padding:10px 12px;border-top:1px solid var(--line);align-items:start}
+.aijob:first-child{border-top:0}
+.ainm{font-weight:600;font-size:var(--fs-md)} .aijobwhat small,.aihint{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.aijob details summary{cursor:pointer;color:var(--accent);font-size:var(--fs-xs);margin-top:4px}
+.aijob details ul{margin:4px 0 0;padding-left:18px;font-size:var(--fs-xs);color:var(--muted)}
+.aineeds{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.aineeds .tag{display:inline-flex;align-items:center;height:20px;padding:0 8px;border:1px solid var(--line);border-radius:var(--r-pill)}
+.aineeds .aihint{flex-basis:100%}
+.aipick select{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);font-size:var(--ctl-fs)}
+.airules{margin:8px 0 0;padding-left:18px;font-size:var(--fs-xs);color:var(--muted)} .airules li{margin:2px 0}
+.ailimit{margin:4px 0 0;padding:0;border:0;min-width:0}
+.ailim{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.ailim:first-of-type{border-top:0} .ailim input{margin-top:4px} .ailim small{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.ailim.off{color:var(--muted)}
+.aidlg h2{margin:0 0 6px} .aidlg .sub{margin:0 0 10px}
+.aidlg input[type=password]{width:100%;height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--sunk);color:var(--ink);font-size:var(--ctl-fs);margin-bottom:8px}
+.aidlg input[aria-invalid=true]{border-color:var(--bad)}
+.aierr{color:var(--bad);font-size:var(--fs-sm);margin:-4px 0 8px}
+.aiwarn{background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px;font-size:var(--fs-sm);margin:0 0 10px}
+.aihow2{font-size:var(--fs-sm);margin:0 0 8px}
+.aiticks{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r-md);margin:0 0 10px}
+.aiticks label{display:flex;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line);font-size:var(--fs-sm)}
+.aiticks label:first-child{border-top:0}
+.airow{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.aidlg .spin{display:inline-block;vertical-align:-2px;margin-right:6px}
+@media (max-width:900px){ .aiprov{grid-template-columns:repeat(2,minmax(0,1fr))} .aijob{grid-template-columns:minmax(0,1fr)} }
+@media (max-width:560px){ .aiprov{grid-template-columns:minmax(0,1fr)} }
+/* ===== end #132 ===== */

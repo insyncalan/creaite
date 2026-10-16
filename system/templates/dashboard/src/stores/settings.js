@@ -117,3 +117,35 @@ export function startSettingsStore() {
   if (c && typeof c.n === "number") healthCount.value = c.n;
   effect(() => showHealthCount(healthCount.value));
 }
+
+/* ===== #132: Settings › Essentials › AI models =====
+   aiState is /api/ai/state's answer (providers.py): the provider cards, the four kinds of job with their model lists, the
+   limit, and the fixed rules' words; null until it is read. Every change goes through its own /api/ai/… route, which saves
+   with a backup and a log line and answers the new state. A key is sent only to /api/ai/test and is never kept here. */
+/** @typedef {{id:string, name:string, blurb:string, billing:string, how:string[], status:string, auth:(string|null),
+     models:string[], found:{id:string, label:string, offered:boolean}[]}} AiProvider */
+/** @typedef {{id:string, label:string, recommended:boolean, weaker:boolean, accepted:boolean}} AiOption */
+/** @typedef {{id:string, name:string, line:string, needs:string[], tools:boolean, features:string[], warn:string,
+     recommended:string, recommended_label:string, value:string, options:AiOption[], tools_only:boolean}} AiJob */
+/** @typedef {{id:string, label:string, line:string, enabled:boolean}} AiLimit */
+/** @typedef {{providers:AiProvider[], line:string, jobs:AiJob[], more_hint:boolean, how:string[], rules:string[],
+     key_warning:string, built:boolean, on_limit:string, limits:AiLimit[]}} AiState */
+/** @type {import("@preact/signals").Signal<AiState|null>} */
+export const aiState = signal(null);
+export const aiError = signal("");
+
+/** Read the AI models section from the live server. */
+export async function loadAi() {
+  const r = await api("/api/ai/state", {});
+  if (r.ok && r.providers) { aiState.value = /** @type {AiState} */ (r); aiError.value = ""; }
+  else aiError.value = r.message || "Couldn't read the AI models";
+  return !!r.ok;
+}
+
+/** One AI models change: the route's answer, and the new state when it sends one (the dots and Reset follow the catalogue).
+    @param {string} path @param {Record<string, any>} body */
+export async function aiCall(path, body) {
+  const r = await api(path, body);
+  if (r.providers) { aiState.value = /** @type {AiState} */ (r); if (catalogue.value) loadCatalogue(); }
+  return r;
+}

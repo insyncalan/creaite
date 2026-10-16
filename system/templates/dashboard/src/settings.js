@@ -12,6 +12,7 @@ import { effect } from "@preact/signals";
 import { h, render } from "preact";
 import { Essentials } from "./components/settings/Essentials.jsx";
 import { Health } from "./components/settings/Health.jsx";
+import { AiModels } from "./components/settings/AiModels.jsx";
 import { MoreSettings } from "./components/settings/MoreSettings.jsx";
 import { drawTabs } from "./components/Tabs.jsx";
 import { $, $$, addHTML, esc, html, ibtn, ic, putHTML, raw, swapHTML } from "./core/dom.js";
@@ -51,7 +52,7 @@ export const catOf=s=>CATOF[s.cat]||s.cat;
 /* Addresses: #settings/<category> opens that category; #settings/<section> (sweep, diagnostics…) opens the category the
    section is in and scrolls to it. The old STAB values (prefs, admin, people, projects) and a bare #settings still work:
    setting STAB picks a category the same way. */
-export const SETOLD={prefs:"essentials",admin:"people",general:"advanced",work:"advanced",capture:"advanced",system:"health"}, SETALIAS={diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"vip"};
+export const SETOLD={prefs:"essentials",admin:"people",general:"advanced",work:"advanced",capture:"advanced",system:"health"}, SETALIAS={"ai-models":"aimodels",models:"aimodels",diagnostics:"diag",updates:"version",backups:"live","live-server":"live","early-warnings":"warnings","ignore-rules":"sweep",follow:"vip"};
 export function setResolve(t){ t=String(t||"").toLowerCase(); if(SETCATS.some(c=>c[0]===t)) return {cat:t}; if(SETOLD[t]) return {cat:SETOLD[t]};
   const sec=SETSECTIONS.find(x=>x.id===(SETALIAS[t]||t)); return sec?{cat:catOf(sec),sec:sec.id}:null; }
 export let SECT=null; shared.SCAT="essentials"; shared.SQ="";                 /* the category, the section to scroll to, the search text */
@@ -104,6 +105,8 @@ export const SETSECTIONS=[
     whether a search finds anything in it. */
  {id:"essentials",cat:"essentials",title:"Essentials",kw:"essentials your day",
   mount:el=>render(h(Essentials,null),el),match:w=>{ const c=catalogue.value; return !!c&&c.essentials.some(r=>sqHas(`${r.section} ${r.label} ${r.line} ${r.keys.join(" ")}`,w)); }},
+ {id:"aimodels",cat:"essentials",title:"AI models",kw:"ai models providers claude openai api key connect model opus sonnet haiku limit",   /* #132 */
+  mount:el=>render(h(AiModels,null),el),match:w=>sqHas("ai models providers claude openai api key connect model opus sonnet haiku limit kind of job writing drafting quick edits tools guard",w)},
  {id:"you",cat:"general",title:"You",kw:"short forms email domains identity owner mine company",
   render:()=>row("Short forms",tx("short","Alan, AC"),"Comma-separated; also matched as you (your name is in Essentials)")
    +row("Own email domains",`<input type="text" data-k="ownDomains" value="${esc((S.ownDomains||[]).join(", "))}" placeholder="example.com">`,"Comma-separated; addresses at these domains count as inside your company, so Draft email warns about anyone outside")},
@@ -164,7 +167,7 @@ export const SETSECTIONS=[
    - A save on an older card rereads the catalogue (a moment later, once it is written); a save or a Reset anywhere brings
      the page's own copies up to date (setSynced). */
 export const ROWKEY={k:v=>SKEY[v],vipk:v=>"vip."+v,drsw:v=>"drafting."+v,wk:v=>"warnings."+v};
-export const COVERED_PREFIX=["warnings.","dashboard.rail."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities"];
+export const COVERED_PREFIX=["warnings.","dashboard.rail.","ai."], COVERED_KEYS=["logging.level","sweep.ignore","vip.notify","reminders.dismissed_forever","dashboard.week_ahead_priorities"];
 export const covered=k=>Object.values(SKEY).includes(k)||COVERED_KEYS.includes(k)||COVERED_PREFIX.some(p=>k.startsWith(p));
 /** The settings a row of an older card holds, from its controls' data attributes. @param {Element} r */
 export function rowKeys(r){ const out=[]; r.querySelectorAll("input,select,textarea").forEach(el=>{ const d=/** @type {HTMLElement} */(el).dataset;
