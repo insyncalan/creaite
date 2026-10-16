@@ -458,6 +458,8 @@ class SettingsPage(LiveBrowserCase):
             self.b.wait("document.querySelectorAll('#settingsBody [data-sec]').length>0")
             if cat in ("essentials", "advanced"):
                 self.b.wait("!!document.querySelector('#settingsBody [data-keys]')")
+            if cat == "essentials":                                         # #132: AI models reads its own state
+                self.b.wait("!!document.querySelector('#aiModels [data-keys]')")
             for key in set(self.b.eval(self.COLLECT)):
                 seen.setdefault(key, []).append(cat)
         # AI drafts: one switch in Essentials, each kind's own in Advanced (BL-320)
