@@ -61,11 +61,11 @@ WATCH = r'''(()=>{ window.SEEN={working:0,mw:0,typed:0};
 
 # Sampled on every frame from the first line of the page: how much of each reply is there, and whether the log ever went empty
 # after it had content. A reply must be full length the first time it is seen and never shrink.
-SAMPLE = r'''(()=>{ window.FR={frames:[],maxlog:0,blank:0,mutations:0}; let first=true;
+SAMPLE = r'''(()=>{ window.FR={frames:[],maxlog:0,blank:0,mutations:0,nodes:new Set()}; let first=true;
   const go=()=>{ const log=document.getElementById("chLog"); if(!log){ requestAnimationFrame(go); return; }
     new MutationObserver(l=>{ FR.mutations+=l.length; }).observe(log,{childList:true,subtree:true,characterData:true});
     const tick=()=>{ const n=log.children.length, lens=[...log.querySelectorAll(".msg.a")].map(m=>m.textContent.length);
-      if(n<FR.maxlog) FR.blank++; FR.maxlog=Math.max(FR.maxlog,n); FR.frames.push([n,lens,log.querySelectorAll(".mw").length]); requestAnimationFrame(tick); };
+      log.querySelectorAll('.msg.a').forEach(m=>{ if(m.textContent.length>1000) FR.nodes.add(m); }); if(n<FR.maxlog) FR.blank++; FR.maxlog=Math.max(FR.maxlog,n); FR.frames.push([n,lens,log.querySelectorAll(".mw").length]); requestAnimationFrame(tick); };
     tick(); };
   document.addEventListener("DOMContentLoaded",go); })();'''
 
@@ -259,7 +259,7 @@ class AskReopen(LiveBrowserCase):
         allseen = [l for n, lens, mw in b.eval("FR.frames") for l in lens if l > 200]
         self.assertEqual(set(allseen), {full})
 
-    def test_opening_the_panel_during_the_load_does_not_draw_the_chat_twice(self):
+    def test_the_saved_chat_is_drawn_once_even_if_the_panel_is_opened_during_the_load(self):
         b = self.b
         b.eval("openChat()")
         b.eval("$('#chIn').value='long j'; send()", wait=False)
@@ -271,6 +271,7 @@ class AskReopen(LiveBrowserCase):
         self.assertEqual(b.eval("FR.blank"), 0)
         draws = b.eval("FR.frames.filter((x,i,a)=>i&&a[i-1][1].length&&x[1].length&&JSON.stringify(x[1])!==JSON.stringify(a[i-1][1])).length")
         self.assertEqual(draws, 0, "the saved reply changed after it was first shown")
+        self.assertEqual(b.eval("FR.nodes.size"), 1, "the saved chat was drawn more than once")
 
     def test_the_scroll_position_is_kept_across_close_and_open(self):
         b = self.b
