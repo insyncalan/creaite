@@ -139,7 +139,7 @@ Open this folder in the Code tab of the Claude desktop app and work through the 
 > - **BL-31:** Current state edited full width, in a stretchable box, with the panel widened to 640px while editing.
 > - **BL-32:** History is a dropdown of the 10 most recent chats over the current chat; starting an 11th deletes the oldest.
 > - **BL-34:** "Run report now" at the top of a report reminder's menu sends its command to Ask creaite (greyed out without the live server).
-> - **BL-33:** a Stop button in place of Send while a request runs (Esc too); read-only requests stop at once, a confirmed write after its running step; the live server ends `claude -p` on Stop or when the page goes away; the stopped exchange is kept, marked.
+> - **BL-33:** a Stop button in place of Send while a request runs (Esc too) (Esc removed, #130); read-only requests stop at once, a confirmed write after its running step; the live server ends `claude -p` on Stop or when the page goes away; the stopped exchange is kept, marked.
 
 **Check:** the tests pass; each works in the live dashboard.
 
