@@ -185,6 +185,7 @@ class FilesLiveBase(LiveBrowserCase):
     @classmethod
     def load(cls, v):
         populate(v)
+        (v.root / DEFAULT_REPORTS / f"{d(-15)} Client report.docx").unlink()     # populate's own report is dated from today: leave the fixed dates below the newest
         for name in ("2026-10-02 Weekly report.docx", "2026-10-09 Client report.docx", "Ad hoc risk register.xlsx"):
             touch(v.root / DEFAULT_REPORTS / name)
         touch(v.root / DEFAULT_REPORTS / "Steerco" / "Steerco pack.pptx")

@@ -185,6 +185,7 @@ class Vaulted(unittest.TestCase):
             action(34, description="Medium, no date", priority="Medium", source=src)])
         cls.v.run("apply")
         reports = cls.v.root / ABC / "reports"
+        (reports / f"{d(-15)} Client report.docx").unlink()          # populate's own report is dated from today: leave the fixed dates below the newest
         (reports / "Steerco").mkdir(parents=True, exist_ok=True)
         for name in ("2026-10-02 Weekly report - Example Programme.docx", "2026-10-09 Weekly report - Example Programme.docx",
                      "2026-10-01 Client report - Example Programme.docx", "2026-10-08 Ad hoc actions register.docx",
@@ -272,6 +273,7 @@ class PrepPopup(LiveBrowserCase):
     def load(cls, v):
         prep_world(v)
         reports = v.root / ABC / "reports"
+        (reports / f"{d(-15)} Client report.docx").unlink()          # populate's own report is dated from today: leave the fixed dates below the newest
         (reports / "Steerco").mkdir(parents=True, exist_ok=True)
         for name in ("2026-10-09 Weekly report - Example Programme.docx", "2026-10-01 Client report - Example Programme.docx",
                      "Steerco/2026-09-30 Example Programme Steerco one-pager.docx"):

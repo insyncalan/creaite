@@ -11,8 +11,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from test_tracker import action  # noqa: E402
+from test_dashboard import _today, stamped_apply  # noqa: E402
 
-TODAY = date.today()
+TODAY = _today()        # CREAITE_NOW's day when it is set, as test_dashboard's sample data uses
 DUE_SOON = 7
 
 
@@ -87,7 +88,7 @@ def load(v):
                                  "source": SOURCES[i % len(SOURCES)],
                                  **({"client_visible": 1, "client_message": CM} if i % 3 == 0 else {})}})
     v.propose("rich", items)
-    v.run("apply")
+    stamped_apply(v)
 
 
 # ── the oracle ──
