@@ -2,6 +2,22 @@
 
 Everything that waited on Alan, with the Product Manager's recommendation, one line each. Drafted overnight on 16-10-2026. **Alan answered on 17-10-2026 (relayed by Jarvis; the decisions are Jarvis's to record in HEAD-LOG once Alan confirms them directly).** Each entry now ends with its status: Decided, Parked (kept, not now), Skipped (dropped) or Pending.
 
+
+## Overnight, 17-10-2026 (added after the first list): needs Alan
+
+Everything below is guarded or release-gating, so only Alan decides. One line each, with the Product Manager's recommendation.
+
+A. **F1, the v2.1.0 publish decision (decide this first).** The Opus review found that the new wildcard expansion in the guard (reach.py) has no real time limit and can hang the guard hook. Jarvis put the publish on hold; Tests are green on f9e9934b. Team Cap is building a guarded fix on v210-guard-f1. Options: (1) approve the fix, wait for a fresh Tests run, then publish; (2) publish f9e9934b as it is; (3) publish without A5/A6. Recommend (1): a hung guard hook blocks every ask creaite run, and the fix is small and has its own tests; (2) is the fallback if the delay matters more to you.
+B. **v2.1.0 side bar: the Reports item has no icon** (RailIcon.jsx lacks "filetext"; one table entry fixes it). It shows on every page of the release candidate. Recommend: fix it in the same v210-guard-f1 run, so it is one fresh Tests run; if you publish f9e9934b as is, it ships and goes in 2.1.1.
+C. **#117, the combined edit_ai.py (guarded diff, nothing applied).** Team Stark's branch edit-ai-proposal 4762f76f merges the 2.1.0 side (the client-gated report, minutes and read-only places) with the selection bar's additions. Their claim: no client-gated place sees anything new, and the built prompts for every report and minutes option are byte-identical to the base, pinned by a new test. Recommend: approve, after Jarvis or an Opus review confirms the byte-identical claim on the diff.
+D. **#119, the notes autosave server half (guarded diff, nothing applied).** Branch notes-119-proposal: removes the draft route, a save can name its editing session, filechange keeps one backup per session (a session ends after five idle minutes); +22/-48 in live_server.py. Recommend: approve. You already accepted losing up to two seconds on a crash, and the backup limit stops autosave flooding the backups.
+E. **#146, one line in live_server.py SAFE_SETTINGS:** add sweep.max_lookback_days beside sweep.first_run_lookback_days so ask creaite can change your three-day cap. Recommend: yes; it is a plain number. Skip it only if you do not want ask creaite to change it.
+F. **#158, Help word budget.** Help is now 23,260 words (33,506 at the start) against your 14,791 target. The pages left are at the floor: cutting more drops true facts. Recommend: relax the target to about 22,000 for 2.2.0 and finish trimming the big Reference pages in 2.2.1. Also: two stale passages in the 2.1.0 Help still describe the retired meeting page; a patch (help-210-patch bbeeafde) is ready for Jarvis to cherry-pick.
+
+Reviews I posted on the board overnight (no decision needed): #162 and #168 match your decisions; #156 and #111 piece A match their designs (with the Reports icon and a few missing pictures noted); #134 is a first slice only (the sheet toolbar, narrower than designed); #119's page half matches.
+
+---
+
 ## Decide first (they unblock work)
 
 1. **Private projects (my four questions, asked 16-10-2026, unanswered).** (a) Which meaning: personal (not for the employer), confidential work, or hidden from onlookers? Recommend personal. (b) Should ask creaite and search see Private projects? Recommend no, unless inside that project. (c) Should they appear in Today and the digest? Recommend no by default, with a switch. (d) Where do their files live? Recommend a local folder outside the company OneDrive, left out of the offsite backup zip. Then I write it up with a mockup. **Status: Parked.**
