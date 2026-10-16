@@ -48,9 +48,9 @@ export function scrubNow(editor, quiet) {
 /** Whether the range holds one of creaite's own links (a work item or a person): those are not web links and a web link must not
     replace them. @param {any} doc @param {number} from @param {number} to */
 export function internalIn(doc, from, to) {
-  let hit = false;
-  doc.nodesBetween(from, to, (/** @type {any} */ n) => { if (n.isText && n.marks.some((/** @type {any} */ m) => m.type.name === "link" && isInternalHref(m.attrs.href))) hit = true; return !hit; });
-  return hit;
+  let found = false;
+  doc.nodesBetween(from, to, (/** @type {any} */ n) => { if (n.isText && n.marks.some((/** @type {any} */ m) => m.type.name === "link" && isInternalHref(m.attrs.href))) found = true; return !found; });
+  return found;
 }
 
 /** The link at the cursor (or the whole selection), if it is a web or mail one:

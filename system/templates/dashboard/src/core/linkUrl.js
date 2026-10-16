@@ -40,8 +40,8 @@ export function linkUrl(s) {
     return scheme + ":" + rest;
   }
   if (scheme === "mailto") {
-    const who = rest.split(/[?#]/)[0];
-    if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(who))) return null;      // one address (no list: it would hide who gets it)
+    const mailbox = rest.split(/[?#]/)[0];
+    if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;      // one address (no list: it would hide who gets it)
     return "mailto:" + rest;
   }
   return null;

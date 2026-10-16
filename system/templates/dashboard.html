@@ -7856,8 +7856,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
       return scheme + ":" + rest;
     }
     if (scheme === "mailto") {
-      const who2 = rest.split(/[?#]/)[0];
-      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(who2))) return null;
+      const mailbox = rest.split(/[?#]/)[0];
+      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;
       return "mailto:" + rest;
     }
     return null;
@@ -23338,12 +23338,12 @@ ${s5}`;
     return true;
   }
   function internalIn(doc, from, to2) {
-    let hit2 = false;
+    let found = false;
     doc.nodesBetween(from, to2, (n4) => {
-      if (n4.isText && n4.marks.some((m5) => m5.type.name === "link" && isInternalHref(m5.attrs.href))) hit2 = true;
-      return !hit2;
+      if (n4.isText && n4.marks.some((m5) => m5.type.name === "link" && isInternalHref(m5.attrs.href))) found = true;
+      return !found;
     });
-    return hit2;
+    return found;
   }
   function linkAt(editor) {
     const { state } = editor, type = state.schema.marks.link, { selection: sel } = state;
