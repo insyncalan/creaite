@@ -1,4 +1,4 @@
-"""BL-298 (v19-draft-chase): the Draft chase pane in the work-item peek, in Chrome, against the real live server
+"""BL-298 (v19-draft-chase): the Draft email pane in the work-item peek, in Chrome, against the real live server
 (/api/chase/pane and /api/chases, drafts.py: no model call). From the mockup (dev/mockups/draft-chase-mockup.html): the
 envelope left of Copy link (key C) on an open item only; the pane inside the peek, Back and Esc returning to the item; the three
 modes (someone else's item: a chase; Alan's own: a request for help with a recipient he picks; a pending decision); the controls
@@ -74,7 +74,7 @@ class ChaseCase(LiveBrowserCase):
         b.pump(0.2)
 
     def chase(self, id_, k="actions"):
-        """Open the item, then its Draft chase with the envelope; wait for the drafted email."""
+        """Open the item, then its Draft email with the envelope; wait for the drafted email."""
         self.open(id_, k)
         self.b.click("#pkChaseBtn")
         self.b.wait("document.querySelector('#chSubj')", timeout=20)
@@ -101,7 +101,7 @@ class TheIcon(ChaseCase):
         o = b.eval("(()=>{ const c=document.getElementById('pkChaseBtn'); return {next:c.nextElementSibling.id, hidden:c.hidden,"
                    " label:c.getAttribute('aria-label'), key:c.dataset.key, pressed:c.getAttribute('aria-pressed'),"
                    " icon:c.querySelector('svg').dataset.icn}; })()")
-        self.assertEqual(o, {"next": "pkLink", "hidden": False, "label": "Draft chase", "key": "C", "pressed": "false", "icon": "chase"})
+        self.assertEqual(o, {"next": "pkLink", "hidden": False, "label": "Draft email", "key": "C", "pressed": "false", "icon": "chase"})
 
     def test_shown_for_open_items_and_a_pending_decision_hidden_otherwise(self):
         b = self.b
@@ -450,26 +450,27 @@ class Polish(ChaseCase):
 
 
 class ISentIt(ChaseCase):
+    """v2.3.0 #153: I sent it records the chase (chases.json), stages a dated Latest update and returns to the item. The staging,
+    the Undo and the wording are tested in test_sent_it_person_menu.py; here only the record and the step up."""
     shared_server = True
 
     def test_it_records_the_chase_and_the_next_one_steps_up(self):
         b = self.b
         self.chase(self.theirs)
         b.click("#chSent")
-        b.wait("document.querySelector('.ch-said').textContent.startsWith('Recorded')")
+        b.wait("document.getElementById('pkChase').hidden")                          # back on the open item
         recs = json.loads((self.v.root / "system/staging/chases.json").read_text())["chases"]
         self.assertEqual([(r["ids"], r["mode"]) for r in recs], [([self.theirs], "chase")])
         self.assertEqual(sorted(recs[0]), ["date", "ids", "mode"])                    # references only, never text
-        day = "-".join(reversed(recs[0]["date"].split("-")))
-        self.assertEqual(b.eval("document.querySelector('.ch-said').textContent"),
-                         f"Recorded: chased Sara on {day}. The next one will be a second reminder.")
-        b.wait("document.getElementById('chSubj').textContent.startsWith('[ABC] Second reminder')")
-        self.assertEqual(b.eval("[...document.querySelectorAll('[data-tone]')].map(x=>x.getAttribute('aria-pressed'))"), ["false", "true", "false"])
         self.assertEqual(b.eval(f"SA().chases[{self.theirs!r}].n"), 1)
+        self.assertTrue(b.eval("!document.getElementById('pkScroll').hidden"))
+        b.click("#pkChaseBtn")
+        b.wait("document.getElementById('chSubj')&&document.getElementById('chSubj').textContent.startsWith('[ABC] Second reminder')")
+        self.assertEqual(b.eval("[...document.querySelectorAll('[data-tone]')].map(x=>x.getAttribute('aria-pressed'))"), ["false", "true", "false"])
         # Alan's own item is recorded as help
         self.chase(self.mine)
         b.click("#chSent")
-        b.wait("document.querySelector('.ch-said').textContent.startsWith('Recorded')")
+        b.wait("document.getElementById('pkChase').hidden")
         recs = json.loads((self.v.root / "system/staging/chases.json").read_text())["chases"]
         self.assertEqual((recs[-1]["ids"], recs[-1]["mode"]), ([self.mine], "help"))
         self.assertTrue(re.fullmatch(r"\d{4}-\d{2}-\d{2}", recs[-1]["date"]))

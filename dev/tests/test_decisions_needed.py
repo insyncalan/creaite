@@ -101,7 +101,7 @@ class DecisionsNeeded(Base):
         mine, sara, omar = rows
         self.assertIn("Yours", mine[1])
         self.assertEqual(mine[2], ["Record the decision", "Open"])                                      # BL-319: icons, named
-        self.assertEqual((sara[2], omar[2]), (["Draft a chase", "Open"], ["Draft a chase", "Open"]))
+        self.assertEqual((sara[2], omar[2]), (["Draft email", "Open"], ["Draft email", "Open"]))
         self.assertIn("from Sara Example", sara[1])
         self.assertIn("Example Programme", sara[1])                                                      # the project by name
         self.assertNotIn("ABC ·", sara[1])

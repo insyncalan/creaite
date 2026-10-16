@@ -542,12 +542,12 @@ export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */
 export function workActs(k,x){ const mine=isMe(x.o), owner=!!(x.o&&x.o!=="TBC"), t=x.t||x.id, L=[];
   if(k==="actions"){ if(mine) L.push({id:"done",icon:"done",label:"Mark done",name:`Mark done: ${t}`,primary:true});
-    else if(owner) L.push({id:"chase",icon:"chasemail",label:"Draft a chase",name:`Draft a chase to ${who(x.o)}: ${t}`,primary:true});
+    else if(owner) L.push({id:"chase",icon:"chasemail",label:"Draft email",name:`Draft email to ${who(x.o)}: ${t}`,primary:true});
     L.push({id:"move",icon:"calmove",label:"Move the date",name:`Move the date: ${t}`,haspopup:"dialog"}); }
   else if(k==="raid"){ L.push({id:"update",icon:"pencil",label:"Write an update",name:`Write an update: ${t}`,primary:true});
-    if(!mine&&owner) L.push({id:"chase",icon:"chasemail",label:"Draft a chase",name:`Draft a chase to ${who(x.o)}: ${t}`}); }
+    if(!mine&&owner) L.push({id:"chase",icon:"chasemail",label:"Draft email",name:`Draft email to ${who(x.o)}: ${t}`}); }
   else if(k==="decisions"){ if(mine) L.push({id:"decide",icon:"flag",label:"Record the decision",name:`Record the decision: ${t}`,primary:true});
-    else if(owner) L.push({id:"chase",icon:"chasemail",label:"Draft a chase",name:`Draft a chase to ${who(x.o)}: ${t}`,primary:true}); }
+    else if(owner) L.push({id:"chase",icon:"chasemail",label:"Draft email",name:`Draft email to ${who(x.o)}: ${t}`,primary:true}); }
   else if(k==="milestone") L.push({id:"open",icon:"external",label:"Open the project",name:`Open ${pName(x.p)}, for ${t}`});
   return L; }
 /** the same actions as icon buttons in a text-drawn row (Your commitments) */
