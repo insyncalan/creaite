@@ -27,34 +27,38 @@ Only this first comment is dropped: a comment anywhere else would show on the pa
 
 **Claude drafts. You approve. creaite keeps the record.**
 
-creaite reads your meetings, mail and Teams, proposes the actions, decisions, risks and issues it finds, and keeps them in one tracker once you approve. Everything stays in one folder on your laptop.
+creaite reads your meetings, mail and Teams, proposes the actions, decisions, risks and issues it finds, and keeps them in one tracker once you approve. The tracker, the engine and your history stay in one folder on your Mac.
 
 ## The loop
 
 Every piece of work follows the same five steps. Only step 3 needs you, and nothing reaches the tracker without it.
 
 1. **Material arrives** (In):
-   - Meetings picked from your calendar (Intake › Calendar import)
+   - Meetings you pick from your calendar (Intake › Calendar import)
    - Transcripts and minutes you drop in (Upload files)
-   - Notes from a call or your own thinking (a note, [[⌘⇧N]]), turned into items with Find updates
+   - A note from a call or your own thinking ([[⌘⇧N]]), turned into items with Find updates
    - The daily mail and Teams sweep
-2. **Claude drafts** (Propose): Draft Word minutes, plus proposed new items and updates to open ones, each citing its source. It matches every item to a project and owner.
-3. **Review** (You) {you: The only gate}: In Review, approve, edit or reject each proposal. Routine items can be approved in bulk; minutes, new decisions and new risks are approved one at a time.
-4. **Apply** (Record): Apply writes what you approved to the tracker and files the minutes in the project folder. Every apply can be undone.
-5. **See and report** (Out): The dashboard updates at once. Weekly and client reports are drafted in Word from the tracker, and you approve them before they're filed.
+2. **Claude drafts** (Propose): Draft minutes and proposed items, each citing its source and matched to a project and owner.
+3. **Review** (You) {you: The only gate}: In Review, approve, edit or reject each proposal. Routine items can be approved together; minutes, new decisions and new risks one at a time.
+4. **Apply** (Record): Approved items go into the tracker and the minutes are filed. Edits you make yourself save at once; **Apply** is for what Claude proposed, and can be undone.
+5. **See and report** (Out): The dashboard updates at once. Weekly and client reports are drafted from the tracker, and you approve them before they are filed.
 
-The next meeting starts the loop again. When a meeting discusses an item that's still open, Claude proposes an update to it, never a duplicate.
+The next meeting starts the loop again. When it discusses an open item, Claude proposes an update to it, never a duplicate.
 
 ## Your first hour
 
 *Once*
 
-About an hour, most of it telling creaite about your projects and the people on them.
+About an hour, mostly telling creaite about your projects and the people on them. Three words first: the **vault** is creaite's folder on your Mac, the **launcher** is the creaite app that opens it, and the **live server** is the small program behind the page, which the launcher starts for you.
 
-1. **Install**: Download **creaite-{version}.zip** from the release, not "Source code". Run `python3 ~/Downloads/creaite-{version}.zip` and choose a folder outside OneDrive and iCloud.
-2. **Say "setup"**: Open the folder in Claude Code, connect Microsoft 365, and say ``setup``. It asks before each step: git, your name and role, projects, people, a memory file for each project, and the **creaite** launcher (say yes).
-3. **Open creaite**: double-click the **creaite** app in your Applications folder (or `creaite.command` in the vault). It starts the live server and opens creaite in its own Chrome window. If you have no launcher yet: in Terminal, `system/scripts/run live_server.py`, then open the address it prints in Chrome or Edge, not Safari.
-4. **First sweep**: Let setup run the first sweep over the last 14 days, or press **Run the first sweep** on Today. Then open Review and approve what's right. Until set-up is done, Today shows a short checklist of these steps, each with its button. **Settings › Health › Set-up** runs the health check and rebuilds the views from the page, and says how to do the two things it can't (connect Microsoft 365, make the launcher), with **Copy** and **Check again**.
+1. **Install**: Download **creaite-{version}.zip** from the release, not "Source code", and run it with Python 3 as the release page shows. Choose a folder outside OneDrive and iCloud.
+2. **Say "setup"**: Open the folder in Claude Code, connect Microsoft 365, and say ``setup``. It asks before each step: your name, projects, people and the launcher (say yes).
+3. **Open creaite**: Double-click the **creaite** app. It starts the live server and opens creaite in its own Chrome window.
+4. **First sweep**: Let setup run it, or press **Run the first sweep** on Today. Then open **Review** and approve what's right. Until set-up is done, Today shows a checklist of these steps. **Settings › Health › Set-up** runs the health check.
+
+No launcher yet? In Terminal run the command below, then open the address it prints in Chrome or Edge, not Safari.
+
+[start command]
 
 ## Every day
 
@@ -64,25 +68,25 @@ About an hour, most of it telling creaite about your projects and the people on 
 
 - **First session after 07:00**: **It catches up.** creaite backs up the tracker, runs the mail and Teams sweep if it's due, and lists reminders and what's waiting.
 - **After a meeting**: **Bring it in.** On Intake, pick the meeting in Calendar import or drop its transcript in Upload files, then process it into minutes and proposals.
-- **Whenever it suits**: **Review and apply.** Clear Review in minutes. Then check Today for what's overdue, due and changed.
-- **Friday from 12:00**: **Report.** A reminder to run the ``weekly report``. Client reports come on each project's own schedule.
+- **Whenever it suits**: **Review.** Clear Review in minutes, then check Today for what's overdue, due and changed. In the evening, [Close the day](#close-the-day).
+- **Friday from 12:00**: **Report.** A reminder to run the ``weekly report``. Client reports follow each project's own schedule.
 
 ## Where things are
 
 *The dashboard*
 
-Every edit you make on the dashboard is written as a proposal and applied at once, with Undo.
+Your edits save at once, with Undo.
 
-- **Today**: A morning brief: your meetings, what needs attention, your commitments, what was resolved, the week ahead
-- **Intake**: Two ways in: Calendar import and Upload files (a note is [[⌘⇧N]], from any page)
-- **Projects**: Current state, health checked against evidence, milestones, early warnings, and each project's Notes
-- **Work**: Every action, risk, issue and decision, with filters and saved views
-- **People**: Each person's open work, Draft email, and handover
-- **Review**: Proposals grouped by project, nested under their minutes
-- **Files**: Minutes, transcripts, documents and reports, with search that answers with sources
-- **Settings** (the gear): Sweep time, reminders, health rules, registers, themes
+- **Today**: your meetings, what needs attention, your commitments, the week ahead
+- **Intake** (under **More**): Calendar import and Upload files
+- **Projects**: each project's state, health with its evidence, milestones and notes
+- **Work**: every action, risk, issue and decision, with filters and saved views
+- **People**: each person's open work, Draft email and handover
+- **Review**: Claude's proposals, grouped by project
+- **Files** (under **More**): minutes, transcripts and reports, with search that answers with sources
+- **Settings** (under **More**): sweep time, reminders, health rules, registers, themes. **Activity**, also under **More**, lists every change, with Undo.
 
-Keys: [[⌘K]] search or jump anywhere · [[⌘J]] ask creaite, the assistant · [[J]]/[[K]], [[A]], [[R]] move, approve and reject in Review
+Keys: [[⌘K]] search or jump anywhere · [[⌘J]] ask creaite · [[J]]/[[K]], [[A]], [[R]] move, approve and reject in Review
 
 ## Say this
 
@@ -90,32 +94,32 @@ Keys: [[⌘K]] search or jump anywhere · [[⌘J]] ask creaite, the assistant ·
 
 **Say this in Claude Code or ask creaite**
 
-Plain English works. These are the phrases each skill listens for.
+Plain English works. **ABC** stands for your own project code.
 
 | Say | What happens |
 |---|---|
-| `process new minutes` | Transcripts become draft Word minutes and proposed items in Review. |
-| `sweep` | Outlook and Teams since the last sweep become proposals. It also runs by itself each morning. |
+| `process new minutes` | Transcripts become draft minutes and proposed items in Review. |
+| `sweep` | Outlook and Teams since the last sweep become proposals. It also runs each morning. |
 | `review` · `apply` | Go through what's pending, then write the approved items to the tracker. `undo last apply` reverses it. |
-| `mark ABC-A-003 done` | Any change in plain words, shown before → after, then applied. |
-| `weekly report` | Health with reasons, an update, and a Word report for each project, filed when you approve. |
-| `client report ABC` | A client-safe Word report. Only items marked client-visible appear in it. |
-| `actions register for ABC` | A one-off branded Word document from the tracker. |
+| `mark ABC-A-003 done` | Any change in plain words, shown before → after. |
+| `weekly report` | Health with reasons and a Word report for each project, filed when you approve. |
+| `client report ABC` | A client-safe Word report. Only items marked client-visible appear. |
+| `actions register for ABC` | A one-off Word document from the tracker. |
 | `how is ABC going?` | An answer from the project's memory, the tracker and the files, with sources. |
-| `setup` · `update creaite` | Health check and repair. Install a new release, shown first, with your data kept. |
+| `setup` · `update creaite` | Health check and repair. Install a new release, shown first. |
 
 ## Four rules
 
 *Never bends*
 
-- **Local only**: All project data stays in the vault folder on your laptop. Never cloud folders, never shared.
-- **You approve every write**: Claude proposes; nothing reaches the tracker until you approve and apply. Scheduled runs only propose.
-- **A source on every row**: Every item names the meeting, email or chat it came from, so you can always check it.
-- **Client-safe by default**: Client reports show only what you've marked client-visible. Confidential material stays out.
+- **Your data stays yours**: The tracker, engine and history stay on this laptop. Project files and one daily backup zip may sit in your company OneDrive. Nothing goes to any other service.
+- **You approve every change**: Nothing reaches the tracker until you approve. Scheduled runs only propose.
+- **Every item has a source**: The meeting, email or chat it came from is always shown.
+- **Clients see only what you mark**: Client reports show only items marked client-visible. Confidential material stays out.
 
 ---
 
-Dates are shown DD-MM-YYYY. Keep the live server running while you use the dashboard. If it stops, a red alert appears across the top with the command to start it and **Check again**, and your edits wait until it's back; while it runs there is nothing to see. When mail and Teams were last swept, and when the data was built, are in Settings › Health › Live server and backups.
+Dates are shown DD-MM-YYYY. Keep the live server running while you use the dashboard. If it stops, a red alert appears across the top with the command to start it and **Check again**, and your edits wait until it's back. When mail and Teams were last swept is in Settings › Health › Live server and backups.
 [How-to: step-by-step for common jobs ›](#how-do-i)
 
 # How do I…
