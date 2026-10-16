@@ -56054,15 +56054,16 @@ ${d5.text}`);
     if (!viaServer()) return;
     queueLoad();
     shared.REATT = true;
-    let r4;
+    let run = null;
     try {
-      r4 = await api("/api/ask/running");
+      const r4 = await api("/api/ask/running");
+      if (r4.ok && r4.run) run = r4.run;
+      else if (shared.ASKCHAT && !$("#chLog").children.length && !ATTACHED) await loadChat(shared.ASKCHAT, true);
     } finally {
       shared.REATT = false;
     }
-    if (r4.ok && r4.run) attachRun(r4.run);
+    if (run) attachRun(run);
     else {
-      if (shared.ASKCHAT && !$("#chLog").children.length && !ATTACHED) await loadChat(shared.ASKCHAT, true);
       pendingCard();
       pendingEdit();
     }

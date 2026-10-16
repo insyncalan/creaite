@@ -604,8 +604,10 @@ export async function attachDraw(run){ if(shared.SHOWN&&shared.SHOWN.run===run.i
   if(!has){ const d=addEl("msg u",html`${run.message}`,run.started||undefined); if(run.plain) runAsk(d); }
   shared.SHOWN={run:run.id,seq:after}; return after; }
 /* ===== end BL-262 ===== */
-export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.REATT=true; let r; try{ r=await api("/api/ask/running"); } finally{ shared.REATT=false; }   /* #148: openChat leaves the first draw of the log to this */
-  if(r.ok&&r.run) attachRun(r.run); else { if(shared.ASKCHAT&&!$("#chLog").children.length&&!ATTACHED) await loadChat(shared.ASKCHAT,true);   /* #148: the saved chat is drawn before the panel is opened, so opening it shows it whole at once */ pendingCard(); pendingEdit(); } }   /* BL-257: the queue comes back too; BL-258: a change card too */   /* BL-141: a card still waiting comes back */
+export async function reattach(){ if(!viaServer()) return; queueLoad(); shared.REATT=true; let run=null;   /* #148: openChat leaves the first draw of the log to this, until it is done */
+  try{ const r=await api("/api/ask/running"); if(r.ok&&r.run) run=r.run; else if(shared.ASKCHAT&&!$("#chLog").children.length&&!ATTACHED) await loadChat(shared.ASKCHAT,true); }   /* the saved chat is drawn before the panel is opened, so opening it shows it whole at once */
+  finally{ shared.REATT=false; }
+  if(run) attachRun(run); else { pendingCard(); pendingEdit(); } }
 /* ===== BL-139 (sprint-final) =====
    A small badge fixed at the bottom right shows that ask creaite is working and, afterwards, that it has finished. It follows
    every run the run engine makes: a chat message, Process selected, a transcript check or load, a sweep or calendar refresh, a

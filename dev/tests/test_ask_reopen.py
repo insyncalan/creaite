@@ -364,5 +364,21 @@ class AskReopen(LiveBrowserCase):
         self.assertEqual(b.eval("SEEN.mw"), 0, "a finished run replayed slowly faded its words in")
 
 
+    def test_opening_the_panel_while_the_saved_chat_loads_asks_for_it_once(self):
+        b = self.b
+        b.eval("openChat()")
+        b.eval("$('#chIn').value='big p'; send()", wait=False)
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDp'))", 20)
+        b.wait("!RUN", 20)
+        b.call("Page.addScriptToEvaluateOnNewDocument", source="""(()=>{ window.__asks=0; const f=window.fetch; window.fetch=function(u,o){ if(String(u)==="/api/chat"){ __asks++;
+          return new Promise(r=>setTimeout(r,700)).then(()=>f.apply(this,arguments)); } return f.apply(this,arguments); }; })();""")
+        self.sample_reload()
+        b.eval("openChat()")                        # while the history is still on its way
+        b.wait("[...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('ENDp'))", 20)
+        b.pump(1.2)
+        self.assertEqual(b.eval("__asks"), 1, "the saved chat was asked for twice")
+        self.assertEqual(b.eval("FR.nodes.size"), 1, "the saved reply was drawn twice")
+
+
 if __name__ == "__main__":
     unittest.main()
