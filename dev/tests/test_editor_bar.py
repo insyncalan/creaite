@@ -24,7 +24,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 META, SHIFT, CTRL = 4, 8, 2
 NOTES = ["h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent", "indent", "quote", "link", "unlink", "clear",
          "note", "person", "item", "table", "image", "undo", "redo"]
-CURRENT = ["h1", "h2", "h3", "b", "i", "s", "ul", "ol", "outdent", "indent", "quote", "image", "link", "unlink", "clear", "undo", "redo"]
+CURRENT = ["h1", "h2", "h3", "b", "i", "s", "ul", "ol", "outdent", "indent", "quote", "image", "link", "unlink", "clear", "item", "undo", "redo"]
 SHARED = [t for t in NOTES if t not in ("note", "person", "item", "table", "image")]      # the capture drawer: no pickers yet
 PROBE = ("### Delivery\n\nPlain **bold** and ~~struck~~ with [a link](https://example.com/plan) and [mail](mailto:pmo@example.com).\n\n"
          "- one\n  - nested\n- two\n\n1. first\n2. second\n\n#### Risks\n\n> a quote\n\n<!-- # inside a comment -->\n\n"

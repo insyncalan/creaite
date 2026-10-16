@@ -4608,7 +4608,7 @@ button.nchip{font:inherit;font-size:12px}
     itemDatePicker: () => itemDatePicker,
     itemLate: () => itemLate,
     itemTable: () => itemTable,
-    itemText: () => itemText2,
+    itemText: () => itemText,
     items: () => items,
     itemsMove: () => itemsMove,
     itemsWord: () => itemsWord,
@@ -25177,41 +25177,41 @@ ${s5}`;
     return null;
   }
   function designation(id2) {
-    const hit2 = itemOf(id2);
-    if (!hit2) return "";
+    const found = itemOf(id2);
+    if (!found) return "";
     const x5 = (
       /** @type {any} */
-      hit2.x
+      found.x
     );
-    return hit2.k === "actions" ? "Action" : hit2.k === "raid" ? String(x5.type || "Risk") : "Decision";
+    return found.k === "actions" ? "Action" : found.k === "raid" ? String(x5.type || "Risk") : "Decision";
   }
-  function itemText(id2) {
-    const hit2 = itemOf(id2), t47 = hit2 ? String(
+  function itemWords(id2) {
+    const found = itemOf(id2), t47 = found ? String(
       /** @type {any} */
-      hit2.x.t || ""
+      found.x.t || ""
     ).replace(/\s+/g, " ").replace(/[[\]]/g, (m5) => m5 === "[" ? "(" : ")").trim() : "";
     const d5 = designation(id2);
     return d5 ? `${id2} · ${d5}${t47 ? `: ${t47}` : ""}` : id2;
   }
   function itemContent(id2) {
-    return [{ type: "text", text: itemText(id2), marks: [{ type: "link", attrs: { href: `creaite:item/${id2}` } }] }, { type: "text", text: " " }];
+    return [{ type: "text", text: itemWords(id2), marks: [{ type: "link", attrs: { href: `creaite:item/${id2}` } }] }, { type: "text", text: " " }];
   }
   function itemState(id2) {
-    const hit2 = itemOf(id2);
-    if (!hit2) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
+    const found = itemOf(id2);
+    if (!found) return { tone: "off", words: "not in the tracker", title: `${id2}: not in the tracker` };
     const x5 = (
       /** @type {any} */
-      hit2.x
-    ), st2 = String(x5.st || ""), open2 = /^(Open|Delayed|Pending|Proposed)$/i.test(st2);
-    let tone = open2 ? "warn" : "ok", words = st2;
-    if (hit2.k === "actions") {
-      if (open2 && x5.due && x5.due < TODAY) {
+      found.x
+    ), st2 = String(x5.st || ""), isOpen = /^(Open|Delayed|Pending|Proposed)$/i.test(st2);
+    let tone = isOpen ? "warn" : "ok", words = st2;
+    if (found.k === "actions") {
+      if (isOpen && x5.due && x5.due < TODAY) {
         tone = "bad";
         words = `${st2}, overdue ${fd(x5.due)}`;
-      } else if (open2 && x5.due) words = `${st2}, due ${fd(x5.due)}`;
+      } else if (isOpen && x5.due) words = `${st2}, due ${fd(x5.due)}`;
       if (x5.o) words += ` · ${x5.o}`;
-    } else if (hit2.k === "raid") {
-      if (open2 && x5.pr === "Urgent") tone = "bad";
+    } else if (found.k === "raid") {
+      if (isOpen && x5.pr === "Urgent") tone = "bad";
       words = `${x5.type || "Risk"} · ${st2}${x5.pr ? ` · ${x5.pr}` : ""}`;
     } else words = `Decision · ${st2}`;
     return { tone, words, title: `${id2} · ${x5.t || ""} · ${words}` };
@@ -25219,16 +25219,16 @@ ${s5}`;
   function itemOptions(code, q5) {
     const ql2 = q5.toLowerCase(), L3 = [];
     for (
-      const [rows2, icon] of
+      const [table, icon] of
       /** @type {[any[], string][]} */
       [[A4, "check"], [R3, "alert"], [DEC, "flag"]]
     )
-      for (const x5 of rows2) {
+      for (const x5 of table) {
         if (code !== "_portfolio" && x5.p !== code) continue;
         if (ql2 && !(x5.id.toLowerCase().includes(ql2) || String(x5.t || "").toLowerCase().includes(ql2) || designation(x5.id).toLowerCase().includes(ql2))) continue;
-        L3.push({ id: x5.id, label: itemText(x5.id), icon, open: /^(Open|Delayed|Pending)$/i.test(x5.st || "") });
+        L3.push({ id: x5.id, label: itemWords(x5.id), icon, live: /^(Open|Delayed|Pending)$/i.test(x5.st || "") });
       }
-    return L3.sort((a5, b5) => Number(!!b5.open) - Number(!!a5.open)).slice(0, 8);
+    return L3.sort((a5, b5) => Number(!!b5.live) - Number(!!a5.live)).slice(0, 8);
   }
   function itemChip(node, pos) {
     const link = node.marks.find((m5) => m5.type.name === "link"), im2 = link ? ITEM_HREF.exec(String(link.attrs.href || "")) : null;
@@ -58690,7 +58690,7 @@ ${d5.text}`);
 
   // activity.js
   var ID_RE = /^([A-Z][A-Z0-9]{2,6}(?:-[AMD])?-\d{3}|[A-Z][A-Z0-9]{2,6})(?=[\s·:])/;
-  function itemText2(id2) {
+  function itemText(id2) {
     const x5 = A4.find((a5) => a5.id === id2) || R3.find((r4) => r4.id === id2) || DEC.find((d5) => d5.id === id2);
     if (x5) return x5.t;
     const m5 = (D.milestone_names || {})[id2];
@@ -58712,7 +58712,7 @@ ${d5.text}`);
       const m5 = String(a5.what).match(ID_RE);
       if (!m5) return html`${String(a5.what ?? "")}`;
       id2 = m5[1];
-      text = itemText2(id2);
+      text = itemText(id2);
       change = a5.what.slice(id2.length).replace(/^[\s·:]+/, "");
     }
     if (!text) return html`${String(a5.what ?? "")}`;
@@ -58721,7 +58721,7 @@ ${d5.text}`);
     if (kind === "proj") return html`<a href="#" class="hlink" data-proj="${id2}">${pName(id2)}</a> — ${ch2}`;
     const upd = id2.match(/^(\d{4}-\d{2}-\d{2})\|([A-Z][A-Z0-9]{2,6})$/);
     if (upd) return html`<a href="#" class="hlink" data-proj="${upd[2]}">${pName(upd[2])}</a> · weekly update, week ending ${fd(upd[1])} — ${ch2}`;
-    const link = kind === "ms" ? html`<a href="${actHref(kind, id2)}" class="hlink" data-ms="${id2}">${id2}</a>` : kind && itemText2(id2) ? html`<a href="${actHref(kind, id2)}" class="hlink" data-open="${kind}:${id2}">${id2}</a>` : String(id2 ?? "");
+    const link = kind === "ms" ? html`<a href="${actHref(kind, id2)}" class="hlink" data-ms="${id2}">${id2}</a>` : kind && itemText(id2) ? html`<a href="${actHref(kind, id2)}" class="hlink" data-open="${kind}:${id2}">${id2}</a>` : String(id2 ?? "");
     return html`${link} · <span title="${text}">${short}</span> — ${ch2}`;
   }
   var ACTKINDS = [
@@ -58917,7 +58917,7 @@ ${d5.text}`);
     if (d5.why) return `<li class="skip"><b>${esc(d5.id || "#" + d5.rowid)}</b> · ${esc(f5)} · skipped: ${esc(d5.why)}</li>`;
     if (d5.change === "removed") return `<li><b>${esc(d5.id)}</b> · removed (that change created it)</li>`;
     if (d5.change === "put back") return `<li><b>${esc(d5.id)}</b> · put back</li>`;
-    const t47 = itemText2(d5.id);
+    const t47 = itemText(d5.id);
     return `<li><b>${esc(d5.id)}</b>${t47 ? ` <span class="sub">${esc(t47.length > 60 ? t47.slice(0, 59) + "…" : t47)}</span>` : ""} · ${esc(f5)} ${esc(val2(d5.from))} → ${esc(val2(d5.to))}</li>`;
   }
   function actConfirm(ids, plan) {
@@ -60637,6 +60637,7 @@ ${d5.text}`);
         "csHead",
         "csSave",
         "csTitle",
+        "curBar",
         "curDrop",
         "curObj",
         "cxPeople",
@@ -60651,6 +60652,7 @@ ${d5.text}`);
         "decPending",
         "decide",
         "defs",
+        "designation",
         "diagHook",
         "dispOpen",
         "dispReset",

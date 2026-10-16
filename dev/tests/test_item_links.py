@@ -76,7 +76,7 @@ class ItemLinks(LiveBrowserCase):
     def check_rows(self, root):
         b = self.b
         b.type("see #")
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
         rows = self.rows()
         self.assertTrue(rows)
         for r in rows:
@@ -109,7 +109,7 @@ class ItemLinks(LiveBrowserCase):
         b = self.b
         self.open_current()
         b.type("x #")
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
         self.assertEqual(b.eval("document.querySelector('#ntpick [aria-selected=true]').id"), "ntpick-0")
         b.key("ArrowDown")
         self.assertEqual(b.eval("document.querySelector('#ntpick [aria-selected=true]').id"), "ntpick-1")
@@ -121,14 +121,14 @@ class ItemLinks(LiveBrowserCase):
         self.assertTrue(b.eval("!!shared.CURED"))                                  # Esc closed the list, not the editor
         b.type("1")
         b.pump(0.1)
-        self.assertFalse(b.eval(f"!!{PICK}"))                                      # a dismissed "#" stays closed while it is typed on
+        self.assertFalse(b.eval("!!" + PICK))                                      # a dismissed "#" stays closed while it is typed on
 
     def test_no_match_closes_the_list_and_leaves_text_alone(self):
         b = self.b
         self.open_current()
         b.type("see #zzzzqq")
         b.pump(0.15)
-        self.assertFalse(b.eval(f"!!{PICK}"))
+        self.assertFalse(b.eval("!!" + PICK))
         self.assertTrue(b.eval("curEd.textContent.endsWith('see #zzzzqq')"))
 
     # ---- inserting ----------------------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ class ItemLinks(LiveBrowserCase):
         b.type("old [" + item["id"] + "](creaite:item/" + item["id"] + ") and new ")
         b.eval(f"""(()=>{{ const e=document.querySelector('.nbody').cxed.editor; e.commands.setContent('Old [{item["id"]}](creaite:item/{item["id"]}) here', {{contentType:'markdown'}}); e.commands.focus('end'); }})()""")
         b.type(" and #" + item["id"][-3:])
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
         b.key("Enter")
         b.wait("document.querySelectorAll('.nbody .nchip').length===2", 5)
         md = b.eval("document.querySelector('.nbody').cxed.value()")
@@ -150,7 +150,7 @@ class ItemLinks(LiveBrowserCase):
         for i in (0, 1):
             b.eval("closePanel&&closePanel(true)")
             b.click(f".nbody p a:nth-of-type({i + 1})")
-            b.wait(f"!!document.querySelector('#panel.on')", 5)
+            b.wait("!!document.querySelector('#panel.on')", 5)
             self.assertIn(item["id"], b.eval("document.getElementById('panel').textContent"))
 
     def test_slash_work_item_row_opens_the_list_in_both_hosts(self):
@@ -158,21 +158,21 @@ class ItemLinks(LiveBrowserCase):
         self.make_note("Slash note")
         b.type("/work")
         b.key("Enter")
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
         self.assertEqual(b.eval("document.querySelector('.nbody').textContent"), "#")
         b.key("Escape")
         self.open_current()
         b.type(" /work")
         b.wait("!!document.querySelector('.slashmenu')", 5)
         b.key("Enter")
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
         self.assertEqual(b.eval("curEd.textContent.endsWith('#')"), True)
 
     def test_current_state_toolbar_has_the_item_button(self):
         b = self.b
         self.open_current()
         b.click('#curBar [data-nt="item"]') if b.eval("!!document.querySelector('#curBar [data-nt=item]')") else self.fail("no item button")
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
 
     # ---- Current state: storage, read view, Word -----------------------------------------------------------------------
 
@@ -181,7 +181,7 @@ class ItemLinks(LiveBrowserCase):
         item = self.an_item()
         self.open_current("### Top\n\nSee the plan.")
         b.type(" Depends on #" + item["id"][-3:])
-        b.wait(f"!!{PICK}", 5)
+        b.wait("!!" + PICK, 5)
         b.key("Enter")
         b.wait("document.querySelectorAll('#curEd .nchip').length===1", 5)
         md = b.eval("curEd.cxed.value()")
@@ -231,7 +231,7 @@ class ItemLinks(LiveBrowserCase):
         state = "### Heading\n\n#tag at the start\n\n#### Second\n\nplain # text"
         self.open_current(state)
         self.assertEqual(b.eval("curEd.cxed.value()"), state)
-        self.assertFalse(b.eval(f"!!{PICK}"))
+        self.assertFalse(b.eval("!!" + PICK))
         b.click('[data-cure="cancel"]')
 
     def test_plain_hosts_have_no_item_list(self):
@@ -241,7 +241,7 @@ class ItemLinks(LiveBrowserCase):
         b.eval("(()=>{ const e=[...document.querySelectorAll('#panel .ProseMirror')].find(x=>x.cxed); e.cxed.focus('end'); })()")
         b.type(" #")
         b.pump(0.2)
-        self.assertFalse(b.eval(f"!!{PICK}"))
+        self.assertFalse(b.eval("!!" + PICK))
 
 
 if __name__ == "__main__":

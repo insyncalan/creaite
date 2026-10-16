@@ -114,7 +114,8 @@ def drawing(rid, n, w_px, h_px, name):
 # ── Markdown (BL-22, BL-47): the subset Current state uses ────────────────────
 # Paragraphs, "### ", "#### " and "##### " headings (the editor's Heading 1 to 3, #122), "> " quotes, "- " and "1. " lists
 # nested two spaces per level, **bold**, *italic*
-# (or _italic_), ~~strikethrough~~ and [links](https://…) (a work-item link, [ABC-A-012 · Action: title](creaite:item/ABC-A-012), is its words); an image is a line of its own, ![caption](images/x.png)
+# (or _italic_), ~~strikethrough~~ and [links](https://…); a work-item link, [ABC-A-012 · Action: title](creaite:item/ABC-A-012), is
+# its words; an image is a line of its own, ![caption](images/x.png)
 # (BL-63). Everything else is plain text.
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
