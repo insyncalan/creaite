@@ -5,7 +5,7 @@
    (action tick, risk triangle, milestone diamond), the title with who and the project (a link) under it, one quiet "why" word
    on the right ("due", "due over the weekend", "needed by", "at risk", "on track"), and its actions (Done, Move date, Chase,
    Open) only when the row is pointed at or has focus. A meeting row is tinted, shows its time and one quiet Prep chip ("Prep
-   page made" once saved). Above the days, ONE QUIET LINE when other people's work is overdue ("4 items owned by others are
+   page made" once saved). Above the days, ONE QUIET LINE when other people's work is overdue ("4 actions owned by others are
    overdue. See them in Work"); overdue work no longer leads the list. A group's "+n more" is a [data-more] button that
    today.js's handler opens. Urgent work with no date leads; "Further ahead" (the two weeks after) follows, as before. today.js
    builds the groups from D.week (weekGroups) and does the actions (weekAct); the links keep their data- attributes
@@ -72,7 +72,7 @@ export function WeekAhead(props) {
   const { groups, empty, others } = props;
   return (
     <>
-      {others && others.n ? <p class="wkpoint">{others.n === 1 ? "1 item owned by others is overdue." : `${others.n} items owned by others are overdue.`}{" "}
+      {others && others.n ? <p class="wkpoint">{others.n === 1 ? "1 action owned by others is overdue." : `${others.n} actions owned by others are overdue.`}{" "}
         <a href="#" class="cntl" data-nav={others.nav}>See them in Work</a></p> : null}
       {!groups.length ? <p class="none">{empty}</p> : groups.map(g => {
         const more = g.rows.length - g.cap;

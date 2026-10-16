@@ -593,8 +593,8 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
     group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
-/** The open actions and RAID items that are overdue and owned by others (milestones have no owner, so are not counted): the quiet line above the days (#112) and its Work address. */
-export function othersOverdue(){ const n=[...A,...R].filter(x=>overdue(x)&&!isMe(x.o)).length;
+/** The open actions that are overdue and owned by others (RAID items, decisions and milestones are not counted, so the count is exactly the Actions tab's list at the address): the quiet line above the days (#112). */
+export function othersOverdue(){ const n=[...A].filter(x=>overdue(x)&&!isMe(x.o)).length;
   return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
 const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
 let weekFoldWired=false;
