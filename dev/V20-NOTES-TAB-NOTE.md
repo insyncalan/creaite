@@ -86,3 +86,7 @@ Team 1, 14-10-2026. Branch `v20-notes-tab` from `origin/v20-base` (parts A and t
    as tabs later?
 2. A click on a note link or item chip opens it (⌥-click edits inside it). Keep, or open only on ⌘-click?
 3. BL-323: note drafts sit in `system/staging/drafts/notes/` (in the backup zip as proposed); decision pending, unchanged here.
+
+## #119 (v2.2.0): autosave, no draft step (page half)
+
+The page writes a note about 2 s after the last key (`AUTOSAVE_MS`, `stores/notes.js`) and sends an editing-session id with every save. It no longer posts drafts; the "Use my typing / Keep the file" prompt is gone, and typing that could not be saved is held in the page with a banner (Copy my text, a confirmed discard), a refusal to switch away and a `beforeunload` guard. The save line reads "Saved 14:02" / "Editing" / "Saving…" / "Not saved" / "Changed outside creaite". Built on #124's lock, held state and Delete note; focus mode and the closing rules are #136. The server half (one backup per session in `filechange.py`, the route's `session`, removing `/api/notes/draft`) touches guard files and waits for Alan's approval. Tests: `dev/tests/test_notes_autosave_page.py`, `test_notes_tab_browser.py`.

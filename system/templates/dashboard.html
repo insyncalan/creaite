@@ -3771,6 +3771,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     APPLYT: () => APPLYT,
     ASKVK: () => ASKVK,
     ATTACHED: () => ATTACHED,
+    AUTOSAVE_MS: () => AUTOSAVE_MS,
     AiBar: () => AiBar,
     AiLayer: () => AiLayer,
     AiMenu: () => AiMenu,
@@ -3859,7 +3860,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     DRAFTK: () => DRAFTK,
     DRAFTKIND: () => DRAFTKIND,
     DRAFTT: () => DRAFTT,
-    DRAFT_MS: () => DRAFT_MS,
     DRAGCOL: () => DRAGCOL,
     DRPEND: () => DRPEND,
     DRRUN: () => DRRUN,
@@ -3925,7 +3925,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     HRANK: () => HRANK,
     HTABS: () => HTABS,
     ICONS: () => ICONS,
-    IDLE_MS: () => IDLE_MS,
     ID_RE: () => ID_RE,
     IGEDIT: () => IGEDIT,
     IGF: () => IGF,
@@ -4125,6 +4124,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     SENDI: () => SENDI,
     SENDIMG: () => SENDIMG,
     SERVED: () => SERVED,
+    SESSION_IDLE_MS: () => SESSION_IDLE_MS,
     SESSK: () => SESSK,
     SETALIAS: () => SETALIAS,
     SETCATS: () => SETCATS,
@@ -4879,7 +4879,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     drawWorkFilters: () => drawWorkFilters,
     drawWorkTabs: () => drawWorkTabs,
     drawWsMgr: () => drawWsMgr,
-    dropStaleDraft: () => dropStaleDraft,
     dueBucket: () => dueBucket,
     dueField: () => dueField,
     dueKey: () => dueKey,
@@ -5334,9 +5333,14 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     norm: () => norm,
     noteBodyFrom: () => noteBodyFrom,
     noteCodeOf: () => noteCodeOf,
+    noteCopyText: () => noteCopyText,
     noteCur: () => noteCur,
     noteDeleting: () => noteDeleting,
     noteDirty: () => noteDirty,
+    noteDiscardAsk: () => noteDiscardAsk,
+    noteDiscardCancel: () => noteDiscardCancel,
+    noteDiscardNow: () => noteDiscardNow,
+    noteDiscarding: () => noteDiscarding,
     noteFind: () => noteFind,
     noteFindP: () => noteFindP,
     noteFlash: () => noteFlash,
@@ -5353,7 +5357,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     noteRenamed: () => noteRenamed,
     noteSave: () => noteSave,
     noteSetSent: () => noteSetSent,
+    noteText: () => noteText,
     noteTyped: () => noteTyped,
+    noteUnsavedAtExit: () => noteUnsavedAtExit,
     notesCode: () => notesCode,
     notesCodeOk: () => notesCodeOk,
     notesHtml: () => notesHtml,
@@ -6115,7 +6121,6 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     updateView: () => updateView,
     uploadedFiles: () => uploadedFiles,
     useCount: () => useCount,
-    useStaleDraft: () => useStaleDraft,
     vagueWhy: () => vagueWhy,
     validate: () => validate,
     vaultConnect: () => vaultConnect,
@@ -8673,8 +8678,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   }
 
   // stores/notes.js
-  var IDLE_MS = 3e4;
-  var DRAFT_MS = 1e3;
+  var AUTOSAVE_MS = 2e3;
+  var SESSION_IDLE_MS = 3e5;
+  var CONFLICT_MSG = "This note was changed outside creaite since you opened it, so it wasn't saved.";
+  var WAIT_RETRY_MS = 1e4;
   var LIST_KEY = "creaite-notes-list-open";
   var notesCode = y3(
     /** @type {string | null} */
@@ -8746,14 +8753,38 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       notesList.value = sortNotes(r4.notes);
     }
   }
-  var ses = { getBody: null, changes: {}, dirty: false, draftT: null, idleT: null, busy: null };
+  var ses = { getBody: null, changes: {}, dirty: false, rev: 0, saveT: null, busy: null, sid: "", sidAt: 0, renameOld: null, released: false };
   function noteBodyFrom(f5) {
     ses.getBody = f5;
   }
   var loads = 0;
   var clock = () => (/* @__PURE__ */ new Date()).toTimeString().slice(0, 5);
-  async function openNote(path) {
-    await noteFlush();
+  function newSid() {
+    try {
+      if (crypto && crypto.randomUUID) return crypto.randomUUID();
+    } catch (e4) {
+    }
+    return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  }
+  function newSession() {
+    ses.sid = newSid();
+    ses.sidAt = Date.now();
+    ses.renameOld = null;
+  }
+  function sessionId() {
+    const now = Date.now();
+    if (!ses.sid || now - ses.sidAt > SESSION_IDLE_MS) ses.sid = newSid();
+    ses.sidAt = now;
+    return ses.sid;
+  }
+  async function mayLeave() {
+    if (await noteFlush() || ses.released || !noteCur.value) return true;
+    notesMsg.value = notSavedMsg();
+    return false;
+  }
+  var notSavedMsg = () => `${noteSave.value.msg || "The note isn't saved."} It stays open so your typing isn't lost: copy it, or discard it.`;
+  async function openNote(path, discard2 = false) {
+    if (!discard2 && !await mayLeave()) return false;
     if (!noteCur.value || noteCur.value.path !== path) {
       noteFind.value = false;
       noteFindP.value = 0;
@@ -8763,6 +8794,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       notesMsg.value = "Opening a note needs the live server.";
       return false;
     }
+    const rev = ses.rev;
     noteLoading.value = true;
     const r4 = await api("/api/notes/get", { path });
     noteLoading.value = false;
@@ -8770,9 +8802,13 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       notesMsg.value = oneLine(r4 && r4.message || "That note couldn't be opened.");
       return false;
     }
+    if (!discard2 && noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {
+      notesMsg.value = "You typed in this note while the other one was opening, so it stays open. Try again once it has saved.";
+      return false;
+    }
     notesMsg.value = "";
-    ses.changes = {};
-    ses.dirty = false;
+    resetTyping();
+    newSession();
     const cur = {
       path: r4.note.path,
       code: r4.code,
@@ -8780,64 +8816,58 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       body: r4.body,
       meta: r4.meta || {},
       base: r4.base,
-      stale: null,
       load: ++loads,
       images: r4.images || {},
       sent: Array.isArray(r4.sent) ? r4.sent : []
     };
-    const d5 = r4.draft;
-    if (d5 && !d5.stale && (d5.body !== null && d5.body !== void 0 && d5.body !== r4.body || Object.keys(d5.changes || {}).length)) {
-      cur.body = d5.body ?? r4.body;
-      cur.restored = true;
-      ses.changes = { ...d5.changes || {} };
-      ses.dirty = true;
-      cur.meta = { ...cur.meta, ...ses.changes };
-    } else if (d5 && d5.stale && d5.body !== null && d5.body !== void 0 && d5.body !== r4.body) cur.stale = { body: d5.body, at: d5.at };
     noteCur.value = cur;
-    noteSave.value = cur.restored ? { state: "draft", msg: "Restored what you typed before; it saves in a moment." } : { state: "" };
-    if (cur.restored) idleSoon();
+    noteSave.value = { state: "" };
     return true;
   }
-  function useStaleDraft() {
-    const c5 = noteCur.value;
-    if (!c5 || !c5.stale) return;
-    noteCur.value = { ...c5, body: c5.stale.body, stale: null, restored: true, load: ++loads };
-    ses.dirty = true;
-    noteSave.value = { state: "draft", msg: "Your draft is back; it saves in a moment." };
-    idleSoon();
+  function giveUpTyping() {
+    clearTimeout(ses.saveT);
+    ses.dirty = false;
+    ses.changes = {};
+    ses.released = true;
+    ses.rev++;
   }
-  function dropStaleDraft() {
-    const c5 = noteCur.value;
-    if (c5) noteCur.value = { ...c5, stale: null };
+  function resetTyping() {
+    clearTimeout(ses.saveT);
+    ses.changes = {};
+    ses.dirty = false;
+    ses.released = false;
+    ses.rev++;
+    noteDiscarding.value = false;
   }
   async function closeNote() {
-    await noteFlush();
+    if (!await mayLeave()) return false;
+    resetTyping();
     noteCur.value = null;
     noteSave.value = { state: "" };
+    return true;
   }
   function noteGone(path) {
     if (noteHeld.value === path) noteHeld.value = null;
     if (!noteCur.value || noteCur.value.path !== path) return;
-    clearTimeout(ses.draftT);
-    clearTimeout(ses.idleT);
-    ses.dirty = false;
-    ses.changes = {};
+    resetTyping();
+    ses.renameOld = null;
     noteCur.value = null;
     noteSave.value = { state: "" };
   }
-  function idleSoon() {
-    clearTimeout(ses.idleT);
-    ses.idleT = setTimeout(() => {
-      noteFlush();
-    }, IDLE_MS);
+  function saveSoon(ms2 = AUTOSAVE_MS) {
+    clearTimeout(ses.saveT);
+    ses.saveT = setTimeout(() => {
+      noteFlush(false);
+    }, ms2);
   }
   function noteTyped() {
     if (!noteCur.value) return;
     ses.dirty = true;
-    if (noteSave.value.state !== "conflict") noteSave.value = { state: "typing" };
-    clearTimeout(ses.draftT);
-    ses.draftT = setTimeout(keepDraft, DRAFT_MS);
-    idleSoon();
+    ses.released = false;
+    ses.rev++;
+    if (noteSave.value.state === "conflict") return;
+    noteSave.value = { state: "typing" };
+    saveSoon();
   }
   function noteMeta(changes, now) {
     const c5 = noteCur.value;
@@ -8850,6 +8880,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     noteCur.value = { ...c5, meta: { ...c5.meta, ...changes } };
     if (now) {
       ses.dirty = true;
+      ses.released = false;
+      ses.rev++;
       noteFlush();
     } else noteTyped();
   }
@@ -8860,88 +8892,167 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       return null;
     }
   };
-  async function keepDraft() {
-    const c5 = noteCur.value;
-    if (!c5 || !ses.dirty || !viaServer()) return;
-    const r4 = await api("/api/notes/draft", { path: c5.path, body: body(), changes: ses.changes, base: c5.base });
-    if (r4 && r4.ok && noteSave.value.state === "typing") noteSave.value = { state: "draft", msg: "Draft kept" };
+  function noteText() {
+    const c5 = noteCur.value, b5 = body();
+    return b5 ?? (c5 ? c5.body : "") ?? "";
   }
-  async function noteFlush() {
-    clearTimeout(ses.draftT);
-    clearTimeout(ses.idleT);
-    if (ses.busy) await ses.busy;
+  async function noteFlush(final = true) {
+    clearTimeout(ses.saveT);
+    while (ses.busy) await ses.busy;
     const c5 = noteCur.value;
-    if (!c5 || !ses.dirty) return true;
+    if (!c5) return true;
+    if (!ses.dirty) return final ? settleAndRecheck() : true;
     if (!viaServer()) {
       noteSave.value = { state: "error", msg: "Not saved: the live server isn't running. Your typing is still here." };
       return false;
     }
-    const sent = { ...ses.changes }, b5 = body(), oldTitle = c5.note.title;
+    const sent = { ...ses.changes }, b5 = body(), rev = ses.rev, oldTitle = c5.note.title;
     noteSave.value = { state: "saving" };
-    ses.busy = api("/api/notes/save", { path: c5.path, body: b5, changes: sent, base: c5.base });
-    const r4 = await ses.busy;
-    ses.busy = null;
+    ses.busy = api("/api/notes/save", { path: c5.path, body: b5, changes: sent, base: c5.base, session: sessionId() }).catch(() => null);
+    let r4;
+    try {
+      r4 = await ses.busy;
+    } finally {
+      ses.busy = null;
+    }
     if (r4 && r4.ok) {
-      ses.dirty = false;
+      if (ses.rev === rev) ses.dirty = false;
       for (const k5 of Object.keys(sent)) if (ses.changes[k5] === sent[k5]) delete ses.changes[k5];
       const now = noteCur.value;
-      if (now && now.path === c5.path) noteCur.value = { ...now, note: r4.note, base: r4.base, body: b5 ?? now.body, restored: false };
+      if (now && now.path === c5.path) noteCur.value = { ...now, note: r4.note, base: r4.base, body: b5 ?? now.body };
       keepSummary(c5.code, r4.note);
-      noteSave.value = { state: "saved", at: clock() };
-      if (sent.title !== void 0 && !r4.unchanged) await renameToTitle(c5.code, r4.note.path, r4.base, oldTitle);
-      return true;
+      noteSave.value = ses.dirty ? { state: "typing" } : { state: "saved", at: clock() };
+      if (ses.dirty) saveSoon();
+      if (sent.title !== void 0 && !r4.unchanged && ses.renameOld === null) ses.renameOld = oldTitle;
+      if (final && ses.dirty) return noteFlush(true);
+      return final ? settleAndRecheck() : true;
     }
     if (r4 && r4.conflict) {
-      noteSave.value = { state: "conflict", msg: oneLine(r4.message) };
-      keepDraft();
+      noteSave.value = { state: "conflict", msg: CONFLICT_MSG };
       return false;
     }
     if (r4 && r4.wait) {
       noteSave.value = { state: "wait", msg: oneLine(r4.message) };
-      keepDraft();
-      idleSoon();
+      saveSoon(WAIT_RETRY_MS);
       return false;
     }
     noteSave.value = { state: "error", msg: oneLine(r4 && r4.message || "Not saved.") };
-    keepDraft();
     return false;
   }
+  async function settleAndRecheck() {
+    await settleRename();
+    return ses.dirty ? noteFlush(true) : true;
+  }
+  async function settleRename() {
+    const c5 = noteCur.value, old = ses.renameOld;
+    if (!c5 || old === null || ses.dirty) return;
+    ses.renameOld = null;
+    ses.busy = renameToTitle(c5.code, c5.path, c5.base, old).catch(() => {
+      notesMsg.value = "The file could not be renamed for the new title.";
+    });
+    try {
+      await ses.busy;
+    } finally {
+      ses.busy = null;
+    }
+  }
+  var KEEPALIVE_MAX = 6e4;
   function noteFlushOnExit() {
     const c5 = noteCur.value;
     if (!c5 || !ses.dirty || !viaServer()) return;
+    const rev = ses.rev;
     try {
+      const text = JSON.stringify({ path: c5.path, body: body(), changes: ses.changes, base: c5.base, session: sessionId() });
       fetch("/api/notes/save", {
         method: "POST",
-        keepalive: true,
+        keepalive: text.length <= KEEPALIVE_MAX,
         headers: { "Content-Type": "application/json", "X-Creaite-Token": (
           /** @type {any} */
           D.token || ""
         ) },
-        body: JSON.stringify({ path: c5.path, body: body(), changes: ses.changes, base: c5.base })
+        body: text
+      }).then((r4) => r4.json()).then((r4) => {
+        if (!r4 || !r4.ok) return;
+        const now = noteCur.value;
+        if (now && now.path === c5.path) noteCur.value = { ...now, base: r4.base, note: r4.note };
+        if (ses.rev === rev) ses.dirty = false;
+      }).catch(() => {
       });
-      ses.dirty = false;
     } catch (e4) {
     }
   }
+  function noteUnsavedAtExit() {
+    return ses.dirty && ["conflict", "error", "wait"].includes(noteSave.value.state);
+  }
   async function createNote(code, o5) {
-    await noteFlush();
+    if (!await mayLeave()) return null;
     if (!viaServer()) {
       notesMsg.value = "Making a note needs the live server.";
       return null;
     }
+    const rev = ses.rev;
     const r4 = await api("/api/notes/new", { code, ...o5 });
     if (!r4 || !r4.ok) {
       notesMsg.value = oneLine(r4 && r4.message || "The note wasn't made.");
       return null;
     }
     keepSummary(code, r4.note);
-    ses.changes = {};
-    ses.dirty = false;
-    noteCur.value = { path: r4.note.path, code, note: r4.note, body: r4.body, meta: r4.meta || {}, base: r4.base, stale: null, load: ++loads, images: {} };
+    if (noteCur.value && (ses.rev !== rev || ses.dirty) && !ses.released) {
+      notesMsg.value = `The note ${r4.note.title} was made (it is in the list), but you typed in this one meanwhile, so it stays open.`;
+      return null;
+    }
+    resetTyping();
+    newSession();
+    noteCur.value = { path: r4.note.path, code, note: r4.note, body: r4.body, meta: r4.meta || {}, base: r4.base, load: ++loads, images: {} };
     noteSave.value = { state: "saved", at: clock() };
     return r4.note;
   }
   var noteDirty = () => ses.dirty;
+  var noteDiscarding = y3(false);
+  async function noteCopyText() {
+    const t47 = noteText();
+    let ok2 = false;
+    try {
+      await navigator.clipboard.writeText(t47);
+      ok2 = true;
+    } catch (e4) {
+    }
+    if (!ok2) {
+      try {
+        const ta2 = document.createElement("textarea");
+        ta2.value = t47;
+        ta2.setAttribute("readonly", "");
+        ta2.style.cssText = "position:fixed;left:-9999px;top:0";
+        document.body.appendChild(ta2);
+        ta2.select();
+        ok2 = document.execCommand("copy");
+        ta2.remove();
+      } catch (e4) {
+        ok2 = false;
+      }
+    }
+    if (ok2) ses.released = true;
+    return ok2;
+  }
+  function noteDiscardAsk() {
+    noteDiscarding.value = true;
+  }
+  function noteDiscardCancel() {
+    noteDiscarding.value = false;
+  }
+  async function noteDiscardNow() {
+    const c5 = noteCur.value;
+    noteDiscarding.value = false;
+    if (!c5) return;
+    giveUpTyping();
+    const ok2 = await openNote(c5.path, true);
+    if (!ok2) {
+      resetTyping();
+      noteCur.value = null;
+      noteSave.value = { state: "" };
+      notesMsg.value = "That note couldn't be opened again, so it was closed. What you typed was discarded.";
+    }
+  }
   var noteFind = y3(false);
   var noteFindP = y3(0);
   var noteMarks = y3(
@@ -54066,7 +54177,7 @@ ${d5.text}`);
       return Z.node(pos, pos + size, a5);
     });
   }
-  function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, restored, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
+  function NoteEditor({ markdown, code, label, loadKey, noteTitles, onInput, onBody, onOpenNote, onOpenItem, toolbarExtra, path, onHoverLine, imageSrc, onImage, readOnly }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -54300,7 +54411,7 @@ ${d5.text}`);
       };
       el2.addEventListener("mouseover", over);
       el2.addEventListener("mouseleave", out);
-      onBody(() => h5.touched() || restored ? h5.value() : null);
+      onBody(() => h5.touched() ? h5.value() : null);
       return () => {
         el2.removeEventListener("input", input);
         el2.removeEventListener("blur", blur);
@@ -54655,8 +54766,29 @@ ${d5.text}`);
   }
   function SaveLine() {
     const s5 = noteSave.value;
-    const text = s5.state === "saved" ? `Saved${s5.at ? ` ${s5.at}` : ""}` : s5.state === "saving" ? "Saving…" : s5.state === "typing" ? "Editing" : s5.state === "draft" ? s5.msg || "Draft kept" : s5.msg || "";
-    return /* @__PURE__ */ u2("span", { class: `nsave ${s5.state}`, id: "noteSave", role: "status", "aria-live": "polite", children: text });
+    const text = s5.state === "saved" ? `Saved${s5.at ? ` ${s5.at}` : ""}` : s5.state === "saving" ? "Saving…" : s5.state === "typing" ? "Editing" : s5.state === "conflict" ? "Changed outside creaite" : s5.state === "wait" || s5.state === "error" ? "Not saved" : "";
+    return /* @__PURE__ */ u2("span", { class: `nsave ${s5.state}`, id: "noteSave", "data-save": s5.state || void 0, role: "status", "aria-live": "polite", children: text });
+  }
+  function UnsavedBanner({ conflict }) {
+    const st2 = noteSave.value;
+    return /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", "data-nbanner": st2.state, children: [
+      /* @__PURE__ */ u2("span", { children: st2.msg }),
+      noteDiscarding.value ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("span", { "data-ndiscardq": true, children: [
+          conflict ? "Show the file's version?" : "Discard what you typed?",
+          " What you typed here goes, unless you copied it."
+        ] }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ndiscardno": true, onClick: noteDiscardCancel, children: "Keep editing" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", "data-ndiscardyes": true, onClick: () => {
+          noteDiscardNow();
+        }, children: conflict ? "Open the file's version" : "Discard my typing" })
+      ] }) : /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ncopy": true, onClick: () => {
+          noteCopyText().then((ok2) => snack(ok2 ? "Your text is copied" : "It couldn't be copied: select it in the note instead"));
+        }, children: "Copy my text" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", "data-ndiscard": true, onClick: noteDiscardAsk, children: conflict ? "Open the file's version" : "Discard my typing" })
+      ] })
+    ] });
   }
   function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
     const cur = noteCur.value;
@@ -54684,7 +54816,10 @@ ${d5.text}`);
               onInput: (e4) => noteMeta({ title: (
                 /** @type {HTMLInputElement} */
                 e4.target.value
-              ) })
+              ) }),
+              onBlur: () => {
+                noteFlush();
+              }
             }
           ),
           /* @__PURE__ */ u2(SaveLine, {}),
@@ -54721,36 +54856,23 @@ ${d5.text}`);
           m5.date || n4.kind === "Working session" ? /* @__PURE__ */ u2(WorkingSession, { date: String(m5.date || ""), people: (
             /** @type {string[]} */
             m5.with || []
-          ) }, `ws|${cur.path}|${cur.load}`) : null
+          ) }, `ws|${cur.load}`) : null
         ] }),
         /* @__PURE__ */ u2(NoteTags, { tags })
       ] }),
-      cur.stale ? /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", children: [
-        /* @__PURE__ */ u2("span", { children: [
-          "This note changed outside creaite after you last typed in it. Your unsaved typing from ",
-          fd(cur.stale.at.slice(0, 16)),
-          " is kept."
-        ] }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: useStaleDraft, children: "Use my typing" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: dropStaleDraft, children: "Keep the file" })
-      ] }) : null,
-      noteSave.value.state === "conflict" ? /* @__PURE__ */ u2("div", { class: "nstale", role: "alert", children: [
-        /* @__PURE__ */ u2("span", { children: noteSave.value.msg }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: () => openNote(cur.path), children: "Open the file's version" })
-      ] }) : null,
+      ["conflict", "error", "wait"].includes(noteSave.value.state) ? /* @__PURE__ */ u2(UnsavedBanner, { conflict: noteSave.value.state === "conflict" }) : null,
       noteHeld.value === cur.path ? /* @__PURE__ */ u2("div", { class: "nstale nheld", role: "status", children: /* @__PURE__ */ u2("span", { children: "Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card." }) }) : null,
       /* @__PURE__ */ u2(
         NoteEditor,
         {
           readOnly: noteHeld.value === cur.path,
-          loadKey: `${cur.path}|${cur.load}`,
+          loadKey: `n${cur.load}`,
           markdown: cur.body,
           code,
           label: `${n4.title}, the note`,
           noteTitles: () => titlesFor(code),
           onInput: noteTyped,
           onBody: noteBodyFrom,
-          restored: !!cur.restored,
           path: cur.path,
           imageSrc: noteImageSrc,
           onImage: addNoteImage,
@@ -54764,7 +54886,7 @@ ${d5.text}`);
             else onNew(t47);
           }
         },
-        `${cur.path}|${cur.load}`
+        `n${cur.load}`
       )
     ] });
   }
@@ -55018,6 +55140,14 @@ ${d5.text}`);
       { id: id2 }
     ) : null, host2);
   }
+  function bootUnloadGuard() {
+    window.addEventListener("beforeunload", (e4) => {
+      if (noteUnsavedAtExit()) {
+        e4.preventDefault();
+        e4.returnValue = "";
+      }
+    });
+  }
   function bootNotes() {
     document.addEventListener("keydown", (e4) => {
       if (shared.VIEW === "notes" && (e4.metaKey || e4.ctrlKey) && e4.key === "\\") {
@@ -55051,8 +55181,9 @@ ${d5.text}`);
     };
     window.addEventListener("pagehide", noteFlushOnExit);
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "hidden") noteFlush();
+      if (document.visibilityState === "hidden") noteFlush(false);
     });
+    bootUnloadGuard();
   }
 
   // components/sidebar/RailIcon.jsx
@@ -67028,6 +67159,7 @@ ${d5.text}`);
         "ACTKINDS",
         "AI_ACTIONS",
         "AI_PLACES",
+        "AUTOSAVE_MS",
         "AiBar",
         "AiSuggestion",
         "Asks",
@@ -67212,6 +67344,7 @@ ${d5.text}`);
         "closeDialog",
         "closeDisp",
         "closeMenu",
+        "closeNote",
         "closePanel",
         "closePicker",
         "comboboxOpen",
@@ -67379,11 +67512,17 @@ ${d5.text}`);
         "nm",
         "norm",
         "noteCur",
+        "noteDirty",
         "noteFind",
         "noteFindP",
         "noteFlush",
+        "noteFlushOnExit",
+        "noteGone",
         "noteMeta",
         "noteSave",
+        "noteUnsavedAtExit",
+        "notesList",
+        "notesMsg",
         "nowHM",
         "nowIso",
         "open",
@@ -67402,6 +67541,7 @@ ${d5.text}`);
         "openMilestone",
         "openNew",
         "openNewMilestone",
+        "openNote",
         "openPath",
         "openPicker",
         "openPopover",

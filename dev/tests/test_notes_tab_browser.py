@@ -2,7 +2,7 @@
 
 Run: python3 dev/tests/test_notes_tab_browser.py   (needs Google Chrome; skipped otherwise)
 
-Done when (BL-301 B): a note is created, edited and autosaved through filechange.py (undoable) in the notes folder; the list
+Done when (BL-301 B, #119): a note is created, edited and autosaved (about 2 s after the last key; no draft step) through filechange.py (undoable) in the notes folder; the list
 collapses and stays collapsed after a reload; links, backlinks and item chips work; the peek says which notes mention an item.
 Also: the project page's tabs, keyboard and screen-reader names, and nothing scrolls sideways at 320 px.
 """
@@ -43,7 +43,7 @@ class NotesTab(LiveBrowserCase):
         self.b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         self.b.type(text)
 
-    def test_tabs_and_a_note_made_typed_and_saved_once(self):
+    def test_tabs_and_a_note_made_typed_and_saved_by_itself(self):
         b = self.b
         b.eval("go('cockpit','ABC')")
         b.wait("!!document.querySelector('#cockTabs [role=tab]')")
@@ -59,14 +59,13 @@ class NotesTab(LiveBrowserCase):
         self.assertIn("## Role and influence", f.read_text())
         n = len(self.log())
         self.type_end("Sara signs off security.")
-        b.wait("noteSave.value.state==='draft'", 10)
-        self.assertNotIn("Sara signs off", f.read_text())                                # a draft only, while typing
-        b.eval("go('today')")                                                             # leaving ends the session
-        for _ in range(100):
+        self.assertNotIn("Sara signs off", f.read_text())                                # not yet: the file follows about 2 s after the last key
+        for _ in range(100):                                                              # then it is written by itself: no leaving, no draft step
             if "Sara signs off security." in f.read_text():
                 break
             b.pump(0.1)
         self.assertIn("Sara signs off security.", f.read_text())
+        b.wait("noteSave.value.state==='saved'", 10)
         for _ in range(50):                                                               # the log line follows the file by a moment
             edits = [e for e in self.log()[n:] if e.get("op") == "edit"]
             if edits:
@@ -75,6 +74,9 @@ class NotesTab(LiveBrowserCase):
         self.assertEqual(len(edits), 1)
         self.assertEqual(edits[0]["via"], "dashboard")
         self.assertIn("updated:", f.read_text())
+        b.eval("go('today')")                                                             # leaving with nothing new writes nothing more
+        b.pump(0.5)
+        self.assertEqual(len([e for e in self.log()[n:] if e.get("op") == "edit"]), 1)
 
     def test_list_collapses_and_stays_collapsed(self):
         b = self.b

@@ -1,7 +1,8 @@
 // @ts-check
 /* NotesPage (BL-301 B): a project's Notes tab (#notes=ABC), or the portfolio's notes (#notes=_portfolio, under Portfolio).
    Left: the list (search, Pinned, Recent), collapsible with « and » or ⌘\ (remembered per browser; the note widens). Centre: the
-   open note, editable at once (NoteEditor), with its title, tags and flags in the header and "Saved" when the file is written.
+   open note, editable at once (NoteEditor), with its title, tags and flags in the header and "Saved" when the file is written
+   (it saves by itself about two seconds after the last key, #119).
    Right: Mentioned in (notes that link here), Linked work (the items it mentions, live) and People. "+ New note" makes one from
    a template (Blank, Stakeholder, Lessons learned, Working session). Text only through JSX. */
 import { useEffect, useState } from "preact/hooks";
@@ -9,9 +10,9 @@ import { P, pName } from "../../core/data.js";
 import { fd, readDate, TODAY } from "../../core/page.js";
 import { snack, viaServer } from "../../core/server.js";
 import { shared } from "../../core/state.js";
-import { addNoteImage, allNotes, closeNote, createNote, dropStaleDraft, loadNotes, noteBodyFrom, noteCur, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading,
-  noteHeld, noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList, notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList,
-  useStaleDraft } from "../../stores/notes.js";
+import { addNoteImage, allNotes, closeNote, createNote, loadNotes, noteBodyFrom, noteCopyText, noteCur, noteDiscardAsk, noteDiscardCancel, noteDiscardNow,
+  noteDiscarding, noteFind, noteFindP, noteFlush, noteImageSrc, noteLoading, noteHeld, noteMarks, noteMeta, noteRenamed, noteSave, notesCode, notesList,
+  notesListOpen, notesMsg, notesQuery, noteTyped, openNote, toggleNotesList } from "../../stores/notes.js";
 import { fuHover, fuPath } from "../../stores/findUpdates.js";
 import { aiAction } from "../../stores/aiEdit.js";
 import { FindUpdates } from "./FindUpdates.jsx";
@@ -157,15 +158,34 @@ function NoteSide({ code, onOpen, onOpenItem }) {
     onMarks={(markers, hover) => { noteMarks.value = { markers, hover }; }} /></div>;
 }
 
-/** The save state, as the header says it. */
+/** The save state, as the header says it (#119): "Saved 14:02" once the file is written, "Editing" from the first key, "Saving…"
+    while it goes, "Not saved" when it couldn't be, and a short word for a file that changed outside creaite. The reason is in the
+    banner below. */
 function SaveLine() {
   const s = noteSave.value;
   const text = s.state === "saved" ? `Saved${s.at ? ` ${s.at}` : ""}` : s.state === "saving" ? "Saving…" : s.state === "typing" ? "Editing" :
-    s.state === "draft" ? (s.msg || "Draft kept") : s.msg || "";
-  return <span class={`nsave ${s.state}`} id="noteSave" role="status" aria-live="polite">{text}</span>;
+    s.state === "conflict" ? "Changed outside creaite" : s.state === "wait" || s.state === "error" ? "Not saved" : "";
+  return <span class={`nsave ${s.state}`} id="noteSave" data-save={s.state || undefined} role="status" aria-live="polite">{text}</span>;
 }
 
-/** The open note: header, body, the stale-draft question. @param {{code: string, onOpen: (path: string) => void,
+/** Typing that could not be saved (the file changed outside creaite, an error, a wait): nothing keeps it but the page, so the note
+    stays open, the reason is said, and the text can be copied. Discarding it asks first. @param {{conflict: boolean}} props */
+function UnsavedBanner({ conflict }) {
+  const st = noteSave.value;
+  return (
+    <div class="nstale" role="alert" data-nbanner={st.state}><span>{st.msg}</span>
+      {noteDiscarding.value ? <>
+        <span data-ndiscardq>{conflict ? "Show the file's version?" : "Discard what you typed?"} What you typed here goes, unless you copied it.</span>
+        <button type="button" class="btn sm" data-ndiscardno onClick={noteDiscardCancel}>Keep editing</button>
+        <button type="button" class="btn sm primary" data-ndiscardyes onClick={() => { noteDiscardNow(); }}>{conflict ? "Open the file's version" : "Discard my typing"}</button>
+      </> : <>
+        <button type="button" class="btn sm" data-ncopy onClick={() => { noteCopyText().then(ok => snack(ok ? "Your text is copied" : "It couldn't be copied: select it in the note instead")); }}>Copy my text</button>
+        <button type="button" class="btn sm" data-ndiscard onClick={noteDiscardAsk}>{conflict ? "Open the file's version" : "Discard my typing"}</button>
+      </>}
+    </div>);
+}
+
+/** The open note: header, body, the unsaved-typing banner. @param {{code: string, onOpen: (path: string) => void,
     onOpenItem: (id: string) => void, onNew: (title: string) => void, onOpenFile: (path: string) => void}} props */
 function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
   const cur = noteCur.value;
@@ -184,7 +204,7 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
       <div class="nhead">
         <div class="trow">
           <input class="ntitle" id="noteTitle" aria-label="Title" value={String(m.title ?? n.title)} maxLength={160}
-            onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} />
+            onInput={e => noteMeta({ title: /** @type {HTMLInputElement} */ (e.target).value })} onBlur={() => { noteFlush(); }} />
           <SaveLine />
           <span class="nslot" id="noteFindSlot" data-slot="find-updates"><FindButton /></span>
           <Menu label="More" btnCls="ib sm bd nmore" menuLabel="Note" left={false} cls="nmorewrap"
@@ -196,23 +216,15 @@ function NoteDoc({ code, onOpen, onOpenItem, onNew, onOpenFile }) {
         </div>
         <div class="meta props">
           {created ? <span>Created {fd(created)}</span> : null}
-          {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.path}|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
+          {m.date || n.kind === "Working session" ? <WorkingSession key={`ws|${cur.load}`} date={String(m.date || "")} people={/** @type {string[]} */ (m.with || [])} /> : null}
         </div>
         <NoteTags tags={tags} />
       </div>
-      {cur.stale ? (
-        <div class="nstale" role="alert">
-          <span>This note changed outside creaite after you last typed in it. Your unsaved typing from {fd(cur.stale.at.slice(0, 16))} is kept.</span>
-          <button type="button" class="btn sm" onClick={useStaleDraft}>Use my typing</button>
-          <button type="button" class="btn sm" onClick={dropStaleDraft}>Keep the file</button>
-        </div>) : null}
-      {noteSave.value.state === "conflict" ? (
-        <div class="nstale" role="alert"><span>{noteSave.value.msg}</span>
-          <button type="button" class="btn sm" onClick={() => openNote(cur.path)}>Open the file's version</button></div>) : null}
+      {["conflict", "error", "wait"].includes(noteSave.value.state) ? <UnsavedBanner conflict={noteSave.value.state === "conflict"} /> : null}
       {noteHeld.value === cur.path ? (
         <div class="nstale nheld" role="status"><span>Waiting on the approval card in ask creaite to move this note to the archive. It can't be changed until you answer the card.</span></div>) : null}
-      <NoteEditor key={`${cur.path}|${cur.load}`} readOnly={noteHeld.value === cur.path} loadKey={`${cur.path}|${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
-        noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} restored={!!cur.restored} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
+      <NoteEditor key={`n${cur.load}`} readOnly={noteHeld.value === cur.path} loadKey={`n${cur.load}`} markdown={cur.body} code={code} label={`${n.title}, the note`}
+        noteTitles={() => titlesFor(code)} onInput={noteTyped} onBody={noteBodyFrom} path={cur.path} imageSrc={noteImageSrc} onImage={addNoteImage}
         onHoverLine={l => { if (noteFind.value && fuHover.value !== l) fuHover.value = l; }}
         onOpenItem={onOpenItem} onOpenNote={t => { const hit = noteByTitle(code, t); if (hit) onOpen(hit.path); else onNew(t); }} />
     </article>);
