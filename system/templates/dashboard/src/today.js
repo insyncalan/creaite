@@ -19,17 +19,17 @@ import { $, $$, addHTML, esc, html, ic, putHTML, raw, swapHTML } from "./core/do
 import { mDots } from "./core/motion.js";
 import { countLink, go, jumpLink, navBlocked, openWork, pLink } from "./core/nav.js";
 import { anim, copied, D, DATE, days, fd, fdText, health, isMe, reduced, rel, S, slideDown, store, TODAY, VAULT_PATH, who } from "./core/page.js";
-import { api, oneLine, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
+import { api, oneLine, onceFor, reviewViaServer, snack, viaServer, writeSettings, z2 } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { rjGuesses, rjMenu } from "./stores/rejects.js";
 import { selDay } from "./stores/today.js";
 import { draftBtn } from "./drafts.js";
 import { checkMeeting, MRUN, MSEL, MTG, mtgHasTx, processMeetings, refreshCalendar } from "./intake.js";
-import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, hubFor, hubLink, prepOpen, prepPageOf, renderDn } from "./meetings.js";
+import { decAsked, decLate, decLateWords, decPending, decRank, decShort, dnChase, dnDecide, prepOpen, prepPageOf, renderDn } from "./meetings.js";
 import { decorateWarnings, openPrep, prepKey, prepOf, undatedWork, WARNS } from "./projects.js";
 import { chaseCan, chaseOpen, openRecord, pkCommit, pkUndoLast, REC } from "./panel.js";
 import { decide, draftOn, RHL, rjLoadGuesses, rjMenuFor, routineKid } from "./review.js";
-import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPS, vipWhen } from "./settings.js";
+import { nm, row, SA, SETSECTIONS, VIPKIND, VIPQ, VIPR, VIPS, vipWhen } from "./settings.js";
 import { applyFilters, applyView, clearAllFilters, colResizer, isStale, items, rvPaint, syncView } from "./work.js";
 /* ======================= Today ======================= */
 export const dismissedF=()=>store.get("creaite-dismiss",[]), dismissedS=()=>{ try{ return JSON.parse(sessionStorage.getItem("creaite-dismiss-s")||"[]"); }catch(e){ return []; } };
@@ -56,7 +56,7 @@ export function revGroupTitle(file,items){ const w=file.match(/^proposed-(\d{4}-
 export function attentionItems(){ const out=/** @type {any[]} */([]);   /* BL-319 (Alan, 14-10-2026): proposals are To decide's alone, so Needs attention has no per-meeting groups (nor their Approve n routine); a followed person's messages lead To decide too (BL-288) */
   if(S.remindersOn){ const hide=[...dismissedF(),...dismissedS()];
     REMINDERS.filter(r=>!hide.includes(r.id)).forEach(r=>out.push({reminder:r.id,html:n=>tl(n,
-      tLink(r.id.startsWith("client:")?`data-cock="${r.id.split(":")[1]}"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:'data-go="projects"',esc(longText(r.text))),
+      tLink(r.id.startsWith("client:")?`data-cock="${r.id.split(":")[1]}"`:r.id.startsWith("revisit:")?`data-open="decisions:${r.id.split(":")[1]}"`:r.id.startsWith("weekly:")?'data-go="reports"':'data-go="projects"',esc(longText(r.text))),
       `${remBody(r)}${RUNNING.has(r.id)?' <span class="tag">Running…</span>':""}${r.vip?` ${r.vip} message${r.vip===1?"":"s"} about it not yet seen: check ${r.vip===1?"it":"them"} first.`:""}`,
       `${remBtn(r)}<span class="rm"><button class="dots" type="button" aria-label="Options: ${esc(r.text)}" aria-haspopup="menu" aria-expanded="false">…</button></span>`,
       `class="rem" data-id="${r.id}"`)})); }
@@ -176,7 +176,7 @@ const isConf=e=>String((e&&e.sensitivity)||"").toLowerCase()==="confidential";
 /** One day's meetings for the band, from the page's calendar where it has the day (today always), else from D.days. */
 export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=dayList().find(d=>d.date===iso), srv=(rec&&rec.meetings)||[];
   const extra=m=>({...m,page:m.prep?((SA().prep_pages||{})[m.prep.key]||m.prep.page||null):null,pageWhen:m.prep?((prepPageOf(m,iso)||{}).when||m.prep.page_at_shown||""):"",
-    hub:m.private||m.confidential||shared.LOADING?null:hubFor({eid:m.id,day:iso,start:m.start,title:m.title})||null,running:m.id?DAYRUN.get(m.id):undefined});
+    running:m.id?DAYRUN.get(m.id):undefined});
   if(raw){ const timed=raw.filter(e=>!e.all_day);
     return {known:true, allDay:raw.filter(e=>e.all_day).map(e=>({title:e.private?"Busy":e.title??"",p:e.private||isConf(e)?null:e.p||null})),
       meetings:timed.map((e,i)=>{ const priv=!!e.private, s=srv.find(m=>m.start===e.start&&(priv?m.private:m.title===e.title)), conf=!!(s&&s.confidential)||isConf(e);
@@ -353,7 +353,8 @@ if(shared.VIEW==="today") renderSetup();
    outside the vault by launch.py, which no allow list runs. Settings › System › Set-up holds them all; the first-run checklist's
    Connect Microsoft 365 row has Copy and Check again. Nothing here is a new permission. */
 export const SU={status:null,health:null,confirm:false,busy:""};
-export async function suStatus(){ if(!viaServer()) return null; const r=await api("/api/setup/status",{}); if(r&&r.ok){ SU.status=r; if(r.swept&&(!D.last_sweep||D.last_sweep==="never")) D.last_sweep=r.swept; } return SU.status; }
+const suRead=onceFor(2000,async()=>{ const r=await api("/api/setup/status",{}); if(r&&r.ok){ SU.status=r; if(r.swept&&(!D.last_sweep||D.last_sweep==="never")) D.last_sweep=r.swept; } return SU.status; });   /* #96: one read for callers that arrive together */
+export async function suStatus(force){ if(!viaServer()) return null; return suRead(force); }
 export async function suCopy(text,btn){ try{ if(!navigator.clipboard) throw 0; await navigator.clipboard.writeText(text); copied(btn); snack("Copied"); }catch(e){ prompt("Copy this:",text); } }
 export const suCmd=(text,id,check)=>`<div class="sucmd"><code>${esc(text)}</code><button type="button" class="mini" data-sucopy="${id}">Copy</button>${check?`<button type="button" class="mini" data-sucheck="${id}" ${viaServer()?"":'disabled title="Needs the live server"'}>Check again</button>`:""}</div>`;
 export const suText=id=>id==="m365"?SU_M365:id==="launch"?SU_LAUNCH():SU_SETUP;
@@ -374,7 +375,7 @@ export function suCardHtml(){ const st=SU.status||{}, live=viaServer(), off=live
    ${st.launcher?"":suCmd(SU_LAUNCH(),"launch",true)}
    ${row("The rest of set-up","","Your name and role, the projects folder, git and the optional schedules are a conversation: in Claude Code say")}${suCmd(SU_SETUP,"setup")}</div>`; }
 export function suRedraw(){ const c=$("#suCard"); if(c) swapHTML(c,raw(suCardHtml())); }
-export async function suCheck(what,btn){ if(btn) btn.disabled=true; const r=await suStatus(); if(btn&&btn.isConnected) btn.disabled=false;
+export async function suCheck(what,btn){ if(btn) btn.disabled=true; const r=await suStatus(true); if(btn&&btn.isConnected) btn.disabled=false;
   if(!r){ snack("Checking needs the live server"); return; }
   if(what==="m365") snack(r.swept?`Microsoft 365 is connected: the sweep last read your mail ${fd(String(r.swept).slice(0,10))}`:"Not confirmed yet: the first sweep confirms it, as it reads your mail");
   else snack(r.launcher?`The launcher is made: ${r.launcher}`:"No launcher yet: paste the command into Terminal, then check again");
@@ -439,11 +440,15 @@ export function toDecideRows(){ const live=viaServer(), tdl=/** @type {any[]} */
       acts:[{id:"make",icon:"plus",label:"Make a work item",name:`Create work item from: ${name}`,data:{alertdo:"make",id:a.id}},
             {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${name}`,data:{alertdo:"dismiss",id:a.id}}]}); });
   VIPQ().forEach(a=>tdl.push(quietRow(a)));                                     /* BL-334: nothing for Alan: one quiet line */
-  return tdl.map((x,i)=>({x,i})).sort((a,b)=>b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
+  VIPR().forEach(a=>tdl.push(repliedRow(a)));                                   /* BL-342: he answered: one quiet line */
+  /* BL-342: a card past its due date first (oldest due first), then everything newest first as before */
+  return tdl.map((x,i)=>({x,i})).sort((a,b)=>(a.x.overdue?0:1)-(b.x.overdue?0:1)||(a.x.overdue&&b.x.overdue?a.x.due.localeCompare(b.x.due):0)||b.x.at.localeCompare(a.x.at)||a.i-b.i).map(o=>o.x); }
 /* ----- BL-334: a conversation, not a message. One card per conversation: its own title (or the people in it), where it is,
    "updated HH:MM", Claude's summary, then each candidate item with Create work item and Dismiss (Dismiss stages nothing). A
    conversation with nothing for Alan is one quiet line with no buttons. Never labelled (BL-288). ----- */
 const CTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",risk:"Risk"});
+/** BL-342: the one thing a thread asks of Alan, as its chip says it */
+export const CARDTYPE=/** @type {Record<string,string>} */({action:"Action",decision:"Decision",fyi:"FYI / file",risk:"Risk"});
 /** "Confidential" on a confidential conversation's card or message (Alan, 15-10-2026, plan #17): its summary is shown like any
     other, internal only; never the word that says how the sender is followed (BL-288) @param {any} a */
 export const confMark=a=>a.confidential||a.marker==="confidential"?"Confidential":"";
@@ -452,14 +457,56 @@ const convAt=a=>String(a.last||a.sent||"").replace("T"," ").slice(0,16);
    without that time falls back to when it was recorded */
 const convWhen=a=>String(a.last||a.updated||"").replace("T"," ").slice(0,16);
 const convMeta=a=>[`${VIPKIND[a.kind]||"Message"}${convWhen(a)?" · updated "+whenWords(convWhen(a)):""}`,a.p&&a.p!=="_portfolio"?pName(a.p):"no project",
-  a.found==="start-up"?"found on start-up":""].filter(Boolean).join(" · ");
+  a.found==="start-up"?"found on start-up":"",a.match&&a.match.logged?`Logged on ${a.match.id}${a.match.logged.state==="applied"?"":", staged for Review"}`:""].filter(Boolean).join(" · ");
+/** BL-342 Part 2: how a thread relates to open work */
+const RELCHIP=/** @type {Record<string,string>} */({new:"New",update:"Update",chase:"Chase"});
+/** BL-342: a card's due date as the row shows it, and whether it is past @param {any} a */
+const cardDue=a=>a.due?{text:`due ${longDay(a.due)}`,over:a.due<TODAY}:null;
 /** @param {any} a */
 export function convRow(a){ const t=String(a.title||a.subject||"Conversation");
   const cands=(a.candidates||[]).filter(/** @param {any} c */c=>!c.made&&!c.dismissed).map(/** @param {any} c */c=>({key:`c${c.n}`,tag:CTYPE[c.type]||"Item",t:String(c.text||""),
     sub:[c.owner||"",c.due?`due ${fd(c.due)}`:""].filter(Boolean).join(" · "),
     acts:[{id:"make",icon:"plus",label:"Create work item",name:`Create work item: ${c.text}`,data:{alertdo:"make",id:a.id,cand:String(c.n),ctype:c.type}},
           {id:"dismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss: ${c.text}`,data:{alertdo:"dismiss",id:a.id,cand:String(c.n)}}]}));
-  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts:[]}; }
+  /* BL-342: the type chip, the ask, the due date and the owners; Handled on every card, Log on the matched item when there is one */
+  const due=cardDue(a), name=`${a.who??""}, ${t}`, acts=[{id:"handled",icon:"done",label:"Handled",name:`Handled: ${name}`,data:{alertdo:"handled",id:a.id}}];
+  const m=a.match&&a.match.id&&a.match.relation!=="new"?String(a.match.id):"";
+  if(m&&!(a.match&&a.match.logged)) acts.push({id:"log",icon:"filetext",label:`Log on ${m}`,name:`Log on ${m}: ${t}`,data:{alertdo:"log",id:a.id}});
+  /* BL-342 Part 2: the New / Update / Chase chip with the matched item, the count of other threads on it, and Chase for its owner */
+  const mt=a.match&&a.match.relation?a.match:null, rel=mt?RELCHIP[mt.relation]||"":"", others=mt&&mt.id&&mt.count>1?mt.count-1:0;
+  if(mt&&mt.relation==="chase"&&mt.id) acts.push({id:"chase",icon:"chasemail",label:"Chase",name:`Chase the owner of ${mt.id}: ${t}`,data:{alertdo:"chase",id:a.id}});
+  /* BL-342 Part 3 B, step 9: "Looks done: close ABC-A-007" beside Log, when the check offered a close the code kept; once
+     staged, "Staged for Review" with Undo. Hidden on a private card, a New match or an item no longer open. */
+  const cl=cardClose(a,mt);
+  if(cl&&!cl.staged) acts.push({id:"close",icon:"checks",label:`Looks done: close ${cl.id}`,name:`Stage a close of ${cl.id} for Review`,data:{alertdo:"close",id:a.id}});
+  /* BL-342 Part 5: a promise of the project that looks kept: "Looks kept: mark kept" beside Log; once staged, Staged for Review with Undo */
+  const kp=cardKept(a);
+  if(kp&&!kp.staged) acts.push({id:"kept",icon:"checks",label:"Looks kept: mark kept",name:`Stage ${kp.id} as kept for Review`,data:{alertdo:"kept",id:a.id}});
+  const files=a.type==="fyi"&&(a.attachments||[]).length?`Files: ${(a.attachments||[]).slice(0,4).join(", ")}${a.attachments.length>4?` and ${a.attachments.length-4} more`:""}`:"";
+  return {key:"al"+a.id,kind:"message",id:a.id,at:convAt(a),tag:CARDTYPE[a.type]||"Message",tone:"warn",t,link:a.link||"",mark:confMark(a),meta:convMeta(a),summary:String(a.summary||""),cands,acts,
+    rel,relId:mt&&mt.id&&mt.relation!=="new"?String(mt.id):"",relT:mt&&mt.id&&mt.relation!=="new"?String(mt.t||""):"",relWhy:mt?String(mt.why||""):"",
+    count:others?`also on ${others} other thread${others===1?"":"s"}`:"",ask:String(a.ask||""),due:a.due||"",overdue:!!(due&&due.over),dueText:due?due.text:"",owners:(a.owners||[]).join(", "),files,
+    closeWhy:cl?`Looks done: ${confMark(a)?"the thread shows it finished":String(cl.evidence||"").replace(/\.$/,"")}`:"",closeStaged:cl&&cl.staged?String(cl.id):"",closeCard:cl?a.id:"",
+    proms:cardPromises(a),keptWhy:kp?`Looks kept: ${kp.id}, ${confMark(a)?"the thread shows it done":String(kp.evidence||"").replace(/\.$/,"")}`:"",keptStaged:kp&&kp.staged?String(kp.id):"",keptCard:kp?a.id:""}; }
+/** BL-342 Part 5: the promises Alan made in his own messages in the thread, each with Add a promise and Dismiss (by the card's ID
+    and the promise's key, never its position or words); a staged one says so, with Undo. None on a private card. @param {any} a */
+export function cardPromises(a){ if(a.marker==="private") return [];
+  return (a.promises||[]).filter(/** @param {any} p */p=>p&&p.key&&(p.state==="offered"||p.state==="staged")).map(/** @param {any} p */p=>({key:`p${p.key}`,pkey:String(p.key),card:String(a.id),tag:"Promise",
+    t:`You promised ${p.to||"someone"}: ${p.what||""}`,sub:p.due?`by ${fd(p.due)}`:"no date given",staged:p.state==="staged",
+    acts:p.state==="staged"?[]:[{id:"padd",icon:"plus",label:"Add a promise",name:`Add a promise: ${p.what||""}`,data:{alertdo:"promise",id:a.id,pkey:String(p.key)}},
+      {id:"pdismiss",icon:"dismiss",label:"Dismiss",name:`Dismiss the promise: ${p.what||""}`,data:{alertdo:"promisedismiss",id:a.id,pkey:String(p.key)}}]})); }
+/** BL-342 Part 5: the card's kept promise, when it may be shown: not private and the promise still open (the server marks
+    open: false once it isn't) @param {any} a */
+export function cardKept(a){ const k=a.kept; return k&&k.id&&a.marker!=="private"&&k.open!==false?k:null; }
+/** BL-342 Part 3 B: the card's close suggestion, when it may be shown: not private, matched (not New) to that same action, and the
+    action still open in the page data @param {any} a @param {any} mt */
+export function cardClose(a,mt){ const c=a.closes;
+  if(!c||!c.id||a.marker==="private"||!mt||mt.relation==="new"||mt.id!==c.id) return null;
+  const it=A.find(x=>x.id===c.id); return it&&open(it)?c:null; }
+/** "Mia Hale with Omar Ali: you replied 14:02" @param {any} a */
+export function repliedRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
+  return {key:"al"+a.id,kind:"quiet",id:a.id,at:String(a.replied_at||convAt(a)),tag:"Replied",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: you replied ${whenWords(String(a.replied_at||""))}`,
+    link:a.link||"",meta:convMeta(a),acts:[]}; }
 /** "Mia Hale with Omar Ali: nothing for you" @param {any} a */
 export function quietRow(a){ const others=(a.people||[]).filter(/** @param {string} p */p=>p!==a.who);
   return {key:"al"+a.id,kind:"quiet",id:a.id,at:convAt(a),tag:"",tone:"",t:`${a.who||""}${others.length?" with "+others.slice(0,3).join(", "):""}: nothing for you`,
@@ -493,7 +540,6 @@ export function renderToDecide(){ const sec=$("#tdSec"), body=$("#tdBody"); if(!
   drawToDecide(body,{rows:L,total,cap:TDCAP,open:EXPAND.has("td"),onAct:tdAct,onOpen:tdOpen,onReview:()=>go("review"),blocked:why=>snack(why)});
   requestAnimationFrame(tdFocusAfter); }
 /* ----- the Week ahead (BL-72, BL-127, BL-235; BL-319: to next Monday, why each row is there, its icon action) ----- */
-const PRWORD=a=>!a.length?"Work of every priority":a.length===1?`${a[0]} work`:`${a.slice(0,-1).join(", ")} and ${a[a.length-1]} work`;   /* what dashboard.week_ahead_priorities lists */
 /** the actions a piece of work offers (Week ahead, Your commitments): the main one first */
 export function workActs(k,x){ const mine=isMe(x.o), owner=!!(x.o&&x.o!=="TBC"), t=x.t||x.id, L=[];
   if(k==="actions"){ if(mine) L.push({id:"done",icon:"done",label:"Mark done",name:`Mark done: ${t}`,primary:true});
@@ -535,10 +581,10 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
   const item=(i,key,further,undated=false)=>({key,kind:i.kind,tag:tagOf(i),tone:toneOf(i),t:i.t||i.id,open:i.kind==="milestone"?{cock:i.p}:{open:`${i.kind}:${i.id}`},
     who:whoOf(i),p:i.p||"",pname:i.p?pName(i.p):"",why:whyOf(i,further,undated),whyTone:i.od?"bad":i.kind==="milestone"&&i.slip?"warn":"",
     acts:workActs(i.kind,i).map(a=>({...a,data:{k:i.kind,id:i.id,...(i.kind==="milestone"?{p:i.p}:{})}}))});
-  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null, hub=hubFor({eid:e.id,day,start:e.start,title:e.title});
+  const meeting=(e,day)=>{ const can=day!==TODAY&&!!prepOf(e,day), pg=can?prepPageOf(e,day):null;
     return {key:`m${day}${e.start}${e.title}`,kind:"meeting",tag:"Meeting",tone:e.plan?"acc":"",t:`${e.start} ${e.title??""}`,
       open:can?{prepday:day,start:e.start||"",title:e.title||""}:undefined,who:e.where||"",p:e.p||"",pname:e.p?pName(e.p):"",
-      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,hub:hub||undefined,
+      why:e.plan?`worth preparing: ${e.plan}`:"in your calendar",whyTone:"",prepgo:pg?{key:pg.key,day,when:pg.when,live}:undefined,
       acts:can?[{id:"prep",icon:"filetext",label:"Make a prep page",name:`Prepare for ${e.title??"the meeting"}`,primary:!!e.plan,data:{prepday:day,start:e.start||"",title:e.title||""}}]:[]}; };
   const group=(key,title,L,note)=>{ if(L.length) out.push({key,title,note:note||"",rows:L,cap:6,open:EXPAND.has(key)}); };
   group("wkund","Urgent, with no date",(W.undated||[]).map((i,n)=>item(i,`u${n}${i.id}`,false,true)));
@@ -546,9 +592,13 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
     group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i,first)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
-export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return;
+const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
+let weekFoldWired=false;
+function wireWeekFold(){ const f=$("#weekFold"); if(!f||weekFoldWired) return; weekFoldWired=true;
+  f.open=store.get(WEEKFOLD,false)!==true; f.addEventListener("toggle",()=>store.set(WEEKFOLD,!f.open)); }
+export function renderWeek(){ const W=D.week, host=$("#weekList"); if(!host) return; wireWeekFold();
   $("#weekTo").textContent=W?`to ${longDay(W.to)}`:"";
-  drawWeekAhead(host,{note:W?`${PRWORD(S.weekPrios||[])}, every milestone and decision, and meetings`:"",groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
+  drawWeekAhead(host,{groups:weekGroups(),empty:`Nothing is due or booked until ${W?longDay(W.to):"next Monday"}.`,
     onAct:(r,a,btn)=>{ if(a.data&&a.data.id) workAct(a.data.k,a.data.id,a.id,btn); },blocked:why=>snack(why)}); }
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootToday319(){

@@ -95,6 +95,16 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
 - POST /api/current/sources {src, text}: a saved sentence's source rows and quoted lines, read only; /api/current/evidence
                          {code, …} keeps a saved Current state's sentence links in system/staging/evidence/ (hashes and IDs only)
 - POST /api/meeting/carry {key, point}: carry an agenda point to the series' next meeting (minutes.py carry, carried.json)
+- POST /api/minutes/draft {file | path}: the minutes view (v2.1.0 P4, BL-338): a meeting's minutes record, its versions, the
+                         transcript's turns and the approve popup's plan (minutes_record.view); read only
+- POST /api/minutes/save {path, doc, base_version} | {path, op, base_version}: save the page as a new version (over filed
+                         minutes is refused, Alan 15-10-2026: no approval, no card; code 3), or one row or coverage change (op:
+                         remove, restore, update, keep_new, edit, deadline, cover, uncover) to the record and its proposal
+- POST /api/minutes/approve {file, group, own}: Approve minutes: the minutes and the ticked items in one apply (review.py
+                         approve_minutes, through tracker.py apply); unticked items wait in Review
+- POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (read only)
+- POST /api/minutes/export {path, format, file_beside, version}: HTML, Word or PDF through creaite_doc.export (P2), opened once
+                         made; version "distributed" exports the distributed version (approved minutes only; never overwriting)
 - POST /api/day/close    {choices, prep}: close the day: the time and BL-295's plan (First thing tomorrow, Review now: references
                          only) in system/staging/day-closed.json, and the prep pages queued; waits for a running catch-up sweep
 - POST /api/day/card, /api/day/catchup {force}, /catchup/status, /catchup/skip, /api/day/prep {op, keys}: Close the day as a
@@ -110,6 +120,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          repository), streamed, ending in a "draft" event with the filled form; /api/alerts/make {id, type,
                          values} stages the item as a pending proposal for Review, dismisses the message and records the
                          made proposal (its ID once applied) on the alert. Nothing these return says "VIP" (BL-288)
+- POST /api/alerts/handled {ids | id}: a thread's card is handled (Dismiss's effect; /api/alerts/undo puts it back);
+                         /api/alerts/log {id}: log the thread on its matched item, one pending update for Review (BL-342)
+- POST /api/alerts/close {id, undo}: "Looks done: close <ID>": one pending close of the thread's matched action for Review,
+                         or with undo the staged one taken back (BL-342 Part 3 B); nothing is applied
 - POST /api/prep/page {key}: research a meeting's prep page with Claude, read-only, streamed; /api/prep/build {run} writes it
                          into the project's Agendas folder (the server's own write); /api/prep/open {path} one creaite wrote (BL-98)
 - POST /api/prep/brief, /chips, /shape, /filter, /focus, /focus/save, /focus/clear, /view {key, …}: meeting prep, reimagined
@@ -132,9 +146,10 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          a reject instead (review.py; BL-315)
 - POST /api/draft {kind, …}: an AI draft (drafts.py context, then Claude, streamed; nothing reaches the tracker); /api/draft/stat
                          {feature, event, n} counts what was done with one; /api/drafts each feature and its counts (BL-219 on)
-- POST /api/edit/ai {option, text, code, place, instruction}: AI on selected text (BL-301 D): edit_ai.py's prompt (the text, the
-                         option, the project's name, people and open item IDs only), Claude with no tools at all (kind "edit-ai"),
-                         streamed; the "draft" event is the suggestion and its check. Nothing is written
+- POST /api/edit/ai {option, text, code, place, instruction, document?}: AI on selected text (BL-301 D): edit_ai.py's prompt
+                         (the text, the option, the project's name, people and open item IDs only), Claude with no tools at all
+                         (kind "edit-ai"), streamed; the "draft" event is the suggestion and its check. Nothing is written. The
+                         place is edit_ai.py's: a client report `document` binds the client place (#123); other keys are a 400
 - POST /api/agenda/save {key, parts, agenda, attendees}: write a drafted agenda into the Agendas folder, never overwriting (BL-223)
 - POST /api/email/followup {key, eid, day, start, title, files}: a follow-up email's attendees and summary, nothing sent;
                          /api/chases {ids, mode} records a chase Alan says he sent (system/staging/chases.json, IDs only;
@@ -142,6 +157,8 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          /api/chase/pane {id, …} BL-298's Draft chase pane: mode, recipient, suggestions, defaults, draft
 - POST /api/log/error    a page script error, short and redacted, into the debug log; /api/diagnostics {report}: Settings ›
                          Diagnostics' errors, or the plain-text report to paste (BL-102)
+- POST /api/report/draft, /save, /approve, /check, /export, /logo: the weekly and client reports
+                         (report_server.py; /check and /logo are read only)
 - POST /api/settings/catalogue  every setting: group, Essentials or Advanced, label, line, reason, default, value, changed,
                          resettable, last changed; the Essentials rows; counts (BL-320, settings_catalogue.py). Read only
 - POST /api/settings/reset {key | keys}: put settings back to their defaults, saved as the page's own settings save is (a backup,
@@ -1243,18 +1260,7 @@ class Handler(BaseHTTPRequestHandler):
             p.unlink(missing_ok=True)
             return self.send(200, {"ok": True})
         if op == "upload":
-            import base64
-            try:
-                raw = base64.b64decode(req.get("data", ""), validate=True)
-            except ValueError:
-                return self.send(400, {"ok": False, "message": "Bad image data"})
-            if len(raw) > UPLOAD_LIMIT:
-                return self.send(413, {"ok": False, "message": "Images can be 2 MB at most"})
-            if not (raw.startswith(b"\x89PNG\r\n\x1a\n") or raw.startswith(b"\xff\xd8\xff")):
-                return self.send(415, {"ok": False, "message": "Only PNG or JPEG images"})
-            p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_bytes(raw)
-            return self.send(200, {"ok": True})
+            return self.fs_upload(p, req)
         clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
         if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
             return self.send(200, {"ok": False, "message": clash})
@@ -1264,6 +1270,25 @@ class Handler(BaseHTTPRequestHandler):
                 f.write(req.get("text", ""))
         else:                                      # a reader (the page, a script) never sees a half-written file
             paths.write_text_atomic(p, req.get("text", ""))
+        if op == "write" and re.fullmatch(r"system/staging/proposed-[^/]+\.json", rel):     # v2.1.0 P4: an item edited in Review
+            import minutes_record                                                            # moves its minutes record's row too
+            with LOCK:
+                minutes_record.follow(p)
+        return self.send(200, {"ok": True})
+
+    def fs_upload(self, p, req):
+        """The upload op of /api/fs: a PNG or JPEG of at most UPLOAD_LIMIT bytes, written at `p`."""
+        import base64
+        try:
+            raw = base64.b64decode(req.get("data", ""), validate=True)
+        except ValueError:
+            return self.send(400, {"ok": False, "message": "Bad image data"})
+        if len(raw) > UPLOAD_LIMIT:
+            return self.send(413, {"ok": False, "message": "Images can be 2 MB at most"})
+        if not (raw.startswith(b"\x89PNG\r\n\x1a\n") or raw.startswith(b"\xff\xd8\xff")):
+            return self.send(415, {"ok": False, "message": "Only PNG or JPEG images"})
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_bytes(raw)
         return self.send(200, {"ok": True})
 
     def apply(self, req):
@@ -1830,7 +1855,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def search_get(self):
         """GET /api/search: grouped results for the text, with the chips understood in it (BL-07). Read only; if the index
-        is older than the newest indexed file it is rebuilt first (a derived table, under the same lock as tracker.py)."""
+        is older than the newest indexed file it is brought up to date first, outside LOCK, unless a build is already
+        running: then the index is searched as it stands and the answer says `indexing` (#95)."""
         from urllib.parse import parse_qs, urlparse
         q = parse_qs(urlparse(self.path).query)
         one = lambda k: (q.get(k) or [""])[0].strip()          # noqa: E731
@@ -1840,10 +1866,11 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(400, {"ok": False, "message": "Dates must be YYYY-MM-DD"})
         if len(one("q")) > 300:
             return self.send(400, {"ok": False, "message": "That search is too long"})
+        rebuilt, indexing = index_before_search(wait=False)       # #95: never under LOCK, never waiting for a running build
         with LOCK:
             res = vault_search.search(one("q"), many("project"), many("person"), many("kind"), dates["from"], dates["to"],
-                                      many("skip"), one("parse") != "0")
-        return self.send(200, {"ok": True, **res})
+                                      many("skip"), one("parse") != "0", refresh=False)
+        return self.send(200, {"ok": True, **res, "rebuilt": rebuilt, **({"indexing": True} if indexing else {})})
 
     def search_preview(self, req):
         """A meeting's text with the search words marked, for the page's preview (BL-07). Indexed files only."""
@@ -1862,6 +1889,7 @@ class Handler(BaseHTTPRequestHandler):
         args = [question] + [x for k in ("project", "person", "kind", "skip") for v in (req.get(k) or [])
                              for x in (f"--{k}", str(v))] + \
             [x for k in ("from", "to") if re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(req.get(k) or "")) for x in (f"--{k}", req[k])]
+        index_before_search(wait=True)          # #95: a running build is waited for outside LOCK, so the context finds it current
         with LOCK:
             rc, out = run("search.py", "context", *args, "--json")
         if rc:
@@ -3207,16 +3235,20 @@ def main():
     """Start the live server on 127.0.0.1 (live_mode.port, or CREAITE_PORT) and serve until stopped; ends any run on the
     way out. At start: clears a stale run mark and change requests (BL-141), recovers lifted deny rules (BL-96), and starts
     the search index, the VIP check and, when launched, the close watcher (BL-07, BL-99, BL-86)."""
-    port = int(os.environ.get("CREAITE_PORT") or paths.load_settings().get("live_mode", {}).get("port", 8765))
+    port = start_port()                                   # #93: a reason in the debug log if it can't be read
     import launch as launcher
     # ===== BL-329 (v194-one-server): this vault's server already there (or starting) is left be, and this one exits 0 =====
     if held_by_this_vault(port):
         return already_running(port)
     try:
         httpd = LocalServer(("127.0.0.1", port), Handler)
+    except OverflowError:                                 # #93: a port out of range; it stops as it always did
+        start_stopped("error", f"port {port} is out of range")
+        raise
     except OSError as e:
         if held_by_this_vault(port):
             return already_running(port)
+        start_stopped("warn", port_taken(port, e))        # #93: the reason, then the same exit and message
         sys.exit(f"Can't use port {port} ({e.strerror}). Is the live server already running? "
                  f"Change live_mode.port in settings.json if another app uses it.")
     note_server(port)
@@ -3263,17 +3295,64 @@ def held_by_this_vault(port):
     """True if another of this vault's servers is starting or answers on the port (waiting up to 20 s for it to answer)."""
     import launch as launcher
     other = launcher.server_starting(port)
-    if not other and launcher.health(port) != "this":
+    seen = None if other else launcher.health(port)
+    START_SEEN.update(mark=other and other[0], answer=seen)      # #93: what was seen, for the log line only
+    if not other and seen != "this":
         return False
-    return launcher.wait_for_server(port, pid=other and other[0]) == "this"
+    seen = launcher.wait_for_server(port, pid=other and other[0])
+    START_SEEN["answer"] = seen
+    return seen == "this"
 
 
 def already_running(port):
     """This vault's server already holds the port: say so and exit 0 (not a warning)."""
     print(f"The live server is already running on port {port}: this one stops.", flush=True)
     if debuglog is not None:
-        debuglog.info("server", f"already running on port {port}: this start exits")
+        how = (f"this vault's server, pid {START_SEEN['mark']}, is running or starting" if START_SEEN.get("mark")
+               else "this vault's server answers on it")
+        debuglog.info("server", f"already running on port {port} ({how}): this start exits")
     return 0
+
+
+# ===== #93: why a start stopped, in the debug log (ids, ports and counts only) =====
+START_SEEN = {}            # what held_by_this_vault saw: the pid in the starting mark or live-server.json, and what answered
+
+
+def start_stopped(level, why):
+    """One debug-log line saying why this start stops; the exit and what is printed stay as they were."""
+    if debuglog is not None:
+        getattr(debuglog, level)("server", f"start stopped: {why}")
+
+
+def start_port():
+    """The port to listen on (CREAITE_PORT, else live_mode.port, else 8765). An unreadable settings.json or a port that
+    isn't a whole number is logged, then raised as before."""
+    raw = os.environ.get("CREAITE_PORT")
+    if not raw:
+        try:
+            raw = paths.load_settings().get("live_mode", {}).get("port", 8765)
+        except (OSError, ValueError, AttributeError) as e:
+            start_stopped("error", f"settings.json can't be read ({type(e).__name__})")
+            raise
+    try:
+        return int(raw)
+    except (ValueError, TypeError) as e:
+        start_stopped("error", f"the port isn't a whole number ({type(e).__name__})")
+        raise
+
+
+def port_taken(port, e):
+    """Why the port can't be used: the error's code, and whether another vault's creaite server or another program holds it."""
+    import errno
+    code = errno.errorcode.get(e.errno, "error") if e.errno else type(e).__name__
+    if START_SEEN.get("answer") == "other":
+        held = "another vault's creaite server answers on it"
+    elif code == "EADDRINUSE":
+        held = "held by another program, or a creaite server that doesn't answer"
+    else:
+        held = "not this vault's server"
+    return f"can't use port {port} ({code}): {held}"
+# ===== end #93 =====
 
 
 def note_server(port):
@@ -3313,6 +3392,21 @@ def clear_starting_when_up(port, seconds=120):
 # ===== end BL-329 =====
 
 
+def index_before_search(wait):
+    """#95: bring the search index up to date before a search takes LOCK, so a search never holds LOCK while a build runs (a
+    full one can take half a minute). `wait` False: a build already running isn't waited for. (rebuilt, still indexing);
+    never raises (the index is derived: the search then reads it as it stands)."""
+    try:
+        import tracker
+        if not paths.DB.is_file() or not tracker.index_state()[0]:
+            return False, False
+        built = tracker.build_index(wait=wait)
+        return built is not None, built is None
+    except Exception as e:  # noqa: BLE001
+        swallowed("search index", e)
+        return False, False
+
+
 def startup_index():
     """Bring the search index up to date once, in the background, when the server starts (BL-07), and run any apply's slow
     steps left owed when the server last stopped (BL-327). The index is incremental, so this reads only what changed, and it
@@ -3341,12 +3435,13 @@ def mark_interrupted():
 
 
 # ===== Sweep and alerts (BL-97, BL-99, BL-98) =====
-# BL-99: while the server runs, a VIP check looks for mail, Teams messages and invites from the VIP addresses since the
-# last check: on start-up, then every vip.check_minutes. It runs Claude headless with Microsoft 365 search tools only
-# (read-only), gets back a JSON list of references and gists, and sweep.py records the alerts (from a VIP only; never
-# ignored, never matched away; no message text). It skips while a sweep runs (the sweep records VIPs itself), when
-# VIP alerts are off or nobody is a VIP, and always in the development repository (sample data only). Its own
-# subprocess, so it never queues behind ask creaite. Routes: /api/vip (the unseen alerts), /api/vip/seen.
+# BL-99: while the server runs, a VIP check looks for mail and Teams messages from the VIP addresses since the last
+# check (BL-342 Part 3 B: calendar invites are left out, VIP_INVITES): on start-up, then every vip.check_minutes. It
+# runs Claude headless with Microsoft 365 search tools only (read-only), gets back a JSON list of references and gists,
+# and sweep.py records the alerts (from a VIP only; never ignored, never matched away; no message text). It skips while
+# a sweep runs (the sweep records VIPs itself), when VIP alerts are off or nobody is a VIP, and always in the
+# development repository (sample data only). Its own subprocess, so it never queues behind ask creaite. Routes:
+# /api/vip (the unseen alerts), /api/vip/seen.
 # The run reads outside content (mail, Teams) with no guard hook, so it has no vault tools at all. It is started with no
 # `--tools` flag (#116, 15-10-2026: under `--tools ""` the check reached no Microsoft 365 tool on laptop 1, so the flag is
 # gone) and every built-in tool but ToolSearch, and the other connectors (whole server, run_deny_extras(): #116 review M1),
@@ -3368,25 +3463,90 @@ VIP_BUILTIN_DENIES = [t for t in KNOWN_BUILTINS if t not in VIP_BUILTIN_ALLOWED]
 # BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
 # what these people sent since the last check, then reads each whole conversation it belongs to (everyone's messages and a
 # few earlier ones for context, the title, the people and the attachment names) and reports the outcome in its own words.
-VIP_PROMPT = ("creaite VIP check. Read-only: search Alan's Microsoft 365 for messages SENT BY these addresses since {since} "
-              "(local time): Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates. Addresses: "
-              "{addresses}. Then read each CONVERSATION one of those messages belongs to (the Teams chat, or the mail thread by "
-              "its conversation ID): everyone's messages since {since}, not only theirs, plus a few earlier ones for context; "
-              "its title, its participants and any attachment names. Read nothing else, change nothing, write nothing. Reply "
-              "with ONLY a JSON array, one object per conversation (never one per message): {{\"kind\": \"teams\"|\"mail\"|"
-              "\"calendar\", \"conversation\": \"the Teams chat ID or the mail conversation ID\", \"title\": \"the chat's "
-              "or thread's own title, or null when it has none (never a generic 'Group chat')\", \"from\": \"Name <address> of "
-              "the person above who wrote\", \"people\": [\"Name <address>\", …], \"last\": \"YYYY-MM-DD HH:MM of its last "
-              "message\", \"link\": \"the Microsoft 365 web link\", \"sensitivity\": \"normal|personal|private|"
+# BL-342 Part 3 B: still one call, on the default model. It also returns each thread's card fields (type, ask, due, owners),
+# its match to open work, its newest sender and Alan's newest reply, and a close suggestion; the probe's three rules (one
+# named time zone, no calendar invites, IDs copied exactly) are in the words. sweep.vip_clean checks every field before
+# anything is recorded. VIP_INVITES = True puts BL-334's invite sentence back (a reviewed one-line change, not a setting);
+# calendar search stays in VIP_TOOLS so that flip needs no tool change.
+VIP_INVITES = False
+VIP_SOURCES = {False: ("Outlook Inbox mail and Teams chats and channel messages. Leave out calendar invites, meeting "
+                       "requests, meeting updates and replies to them (accepted, declined, tentative, cancelled): they are "
+                       "not messages."),
+               True: "Outlook Inbox mail, Teams chats and channel messages, and calendar invites or updates."}
+VIP_KINDS = {False: '"teams"|"mail"', True: '"teams"|"mail"|"calendar"'}
+VIP_PROMPT = ("creaite VIP check. Read-only: change nothing, write nothing, send nothing. Search Alan's Microsoft 365 for "
+              "messages SENT BY these addresses since {since} ({zone}): {sources} Addresses: {addresses}. For each mail "
+              "message found, call read_resource on it once to get its conversation ID. Then read each CONVERSATION one of "
+              "those messages belongs to (the Teams chat, or the mail thread by its conversation ID): everyone's messages "
+              "since {since}, not only theirs, plus a few earlier ones for context; its title, its participants and any "
+              "attachment names. Read nothing else. IDs: copy every ID exactly as the tool gave it, character for "
+              "character; never retype, shorten or guess one; give null if you do not have it. For mail, \"conversation\" "
+              "is the conversation ID from read_resource, never the message's internet message ID (the one that looks like "
+              "<…@…>). Times: give every time in {zone} as YYYY-MM-DDTHH:MM{offset}, never in any other zone. Reply with "
+              "ONLY a JSON array, one object per conversation (never one per message): {{\"kind\": {kinds}, "
+              "\"conversation\": \"the Teams chat ID or the mail conversation ID\", \"title\": \"the chat's or thread's own "
+              "title, or null when it has none (never a generic 'Group chat')\", \"from\": \"Name <address> of the person "
+              "above who wrote\", \"people\": [\"Name <address>\", …], \"last\": \"YYYY-MM-DDTHH:MM{offset} of its last "
+              "message\", \"last_from\": \"the address of whoever sent its newest message (anyone's, Alan's included)\", "
+              "\"replied\": \"YYYY-MM-DDTHH:MM{offset} of Alan's newest message in it after its last message from anyone "
+              "else, or null\", \"link\": \"the Microsoft 365 web link\", \"sensitivity\": \"normal|personal|private|"
               "confidential\", \"attachments\": [\"file names only\"], \"summary\": \"what the conversation came to, in one "
-              "or two lines of your own words, at most 300 characters, never quoted text\", \"items\": [{{\"type\": "
-              "\"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own words\", "
-              "\"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else null\"}}]}}. Report "
-              "the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a conversation with "
-              "nothing actionable has \"items\": []. For a private conversation give only \"summary\": \"private\" and no "
-              "items. A confidential one is summarised like any other, in your own words, with its sensitivity "
-              "\"confidential\" (it stays inside creaite, internal only, never quoted). Never use the word VIP in a gist, "
-              "a summary, an item or anywhere in the reply (BL-288). Reply [] if there are none.")
+              "or two lines of your own words, at most 300 characters, never quoted text\", \"type\": \"action\"|"
+              "\"decision\"|\"fyi\"|\"risk\" (the one thing Alan must do; fyi when it is for his information or files "
+              "only), \"ask\": \"what Alan must do, in your own words, at most 140 characters, or an empty string\", "
+              "\"due\": \"YYYY-MM-DD where stated or clearly implied, else null\", \"owners\": [\"the full names of those "
+              "named to act; you when the ask is of Alan\"], \"match\": {{\"id\": \"one ID from OPEN WORK for this "
+              "conversation's project, or null\", \"relation\": \"update\" (it moves that open action forward)|\"chase\" "
+              "(that action is owed to Alan by someone in the conversation, and Alan wrote last with no reply since)|"
+              "\"new\" (nothing in OPEN WORK matches), \"why\": \"your own words, at most 140 characters\"}}, \"items\": "
+              "[{{\"type\": \"action\"|\"decision\"|\"risk\", \"text\": \"the item, verb-first for an action, in your own "
+              "words\", \"owner\": \"full name where stated, else null\", \"due\": \"YYYY-MM-DD where stated, else "
+              "null\"}}]}}. Report the outcome, not the to and fro: greetings, thanks and chatter are never an item, and a "
+              "conversation with nothing actionable has \"items\": []. OPEN WORK, each project's open actions by project "
+              "code: {open_work}. Replies: for each conversation you report and each OPEN conversation below, find Alan's "
+              "newest message in it after its time (mail: search Sent Items for its subject; Teams: his own message in that "
+              "chat) and give its time as \"replied\", or null. For an OPEN conversation with nothing new from anyone "
+              "else, give only {{\"conversation\": copied exactly as given below, \"kind\", \"replied\"}}, plus "
+              "\"closes\", \"promises\" and \"kept\" as below when they apply. OPEN: {open}. "
+              "Finished work: when a conversation shows that the OPEN "
+              "WORK action you gave as its match is now finished, add \"closes\": {{\"id\": \"the same ID as match.id, "
+              "copied exactly\", \"evidence\": \"why it looks finished, in your own words, at most 100 characters; never "
+              "quote the message\"}}. Finished means one of two things only: Alan's own message delivers it (for example "
+              "he sends the document or gives the answer the action asked for), or the action's owner says in the "
+              "conversation that it is done. Only when match.relation is \"update\" or \"chase\"; never for \"new\" and "
+              "never for an ID you did not give as match.id. If the message only promises it, plans it, asks about it or "
+              "mentions it, or if you are unsure, leave \"closes\" out. An OPEN conversation's reply-only object may carry "
+              "\"closes\" too, for the action its card was matched to, when Alan's newest message delivers it. Never for a "
+              "private conversation. Alan's promises: in Alan's own message that you give as \"replied\" (or the newest "
+              "message, when it is his), look for a commitment he made in passing to someone else, such as 'I'll send the "
+              "revised plan by Friday'. For each, add to that conversation's \"promises\" list {{\"what\": \"what he will "
+              "do, verb first, in your own words, at most 100 characters; never quote\", \"to\": \"the full name of the "
+              "person he promised it to\", \"due\": \"YYYY-MM-DD in {zone}, worked out from the date of his message "
+              "('Friday' is the next Friday after it), or null when he gave no time\", \"at\": \"his message's time, "
+              "exactly as you gave it for replied or last, YYYY-MM-DDTHH:MM{offset}\"}}. At most 3 a conversation. Not a "
+              "promise: a question, a plan without a commitment, a promise made to Alan, a task someone formally gave him "
+              "(that is an action), or anything in OPEN PROMISES already. OPEN PROMISES, each project's open promises by "
+              "project code: {open_promises}. Promises kept: when a message in the conversation, from Alan or from the "
+              "person who made it, shows that one of OPEN PROMISES for this conversation's project has now been done, add "
+              "\"kept\": {{\"id\": \"the ID exactly as listed\", \"evidence\": \"why it looks kept, in your own "
+              "words, at most 100 characters; never quote\"}}. If unsure, leave it out. Never for a private conversation. "
+              "For a private conversation give only \"summary\": \"private\" and no items, type, "
+              "ask, due, owners, match, closes, promises or kept. A confidential one is summarised like any other, in your own words, "
+              "never quoted, with its sensitivity \"confidential\" and its type, ask, due, owners and match (it stays "
+              "inside creaite, internal only). Never use the word VIP in a gist, a summary, an item or anywhere in the "
+              "reply (BL-288). Reply [] if there is nothing to report.")
+
+
+def vip_prompt(since, vips, zone, parts):
+    """The check's prompt: VIP_PROMPT filled with the window in the laptop's zone, the addresses and the parts plain code
+    gives (sweep.vip_prompt_parts: the open cards, each project's open work and, BL-342 Part 5, its open promises)."""
+    import sweep
+    return VIP_PROMPT.format(since=sweep.zoned_out(since, zone) or since, zone=zone["zone"], offset=zone["offset"],
+                             sources=VIP_SOURCES[bool(VIP_INVITES)], kinds=VIP_KINDS[bool(VIP_INVITES)],
+                             addresses=", ".join(sorted(vips)), open=parts["open"], open_work=parts["open_work"],
+                             open_promises=parts["open_promises"])
+
+
 VIP_LOCK = threading.Lock()       # one check at a time
 VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never write at once
 VIP_STATUS = {"running": False, "last_error": None}
@@ -3405,7 +3565,8 @@ def vip_deny():
 
 
 def vip_check(how="check"):
-    """One VIP check. Returns a short note of what happened (also printed)."""
+    """One VIP check. Returns a short note of what happened (also printed). BL-342 Part 3 B: one call; its reply is checked
+    by sweep.vip_clean before it is recorded, and the debug log gets one line of counts, seconds and dollars (BL-102)."""
     import sweep
     if (paths.ROOT / ".creaite-dev").exists():
         return "skipped: development repository"
@@ -3420,32 +3581,75 @@ def vip_check(how="check"):
     try:
         st = sweep.vip_state()
         since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
-        prompt = VIP_PROMPT.format(since=since, addresses=", ".join(sorted(vips)))
+        zone = sweep.local_zone()                         # the laptop's own zone, read at each check (probe rule 1)
+        parts = sweep.vip_prompt_parts(st, zone)
+        prompt = vip_prompt(since, vips, zone, parts)
         cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
                            "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
-        found, why = None, "no reply"
+        found, why, cost, began = None, "", None, time.monotonic()
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
-            why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
-            result = json.loads(r.stdout or "{}").get("result") or ""
-            m = re.search(r"\[.*\]", result, re.S)
-            found = json.loads(m.group(0)) if m else None
-            why = why if m else result or why
-        except (OSError, ValueError, subprocess.TimeoutExpired) as e:
-            why = str(e)
-        if not isinstance(found, list):
-            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {why[:160]}"
+            found, why, cost = vip_reply(r)
+        except subprocess.TimeoutExpired:
+            why = VIP_TIMED_OUT
+        except OSError:
+            why = VIP_NOT_STARTED
+        took = time.monotonic() - began
+        if not isinstance(found, list):                   # the reason shown is fixed words: never the model's or a tool's
+            VIP_STATUS["last_error"] = f"{datetime.now():%H:%M} the VIP check didn't finish: {vip_why(why)}"
             print(VIP_STATUS["last_error"], flush=True)
+            vip_debug(sweep.vip_check_line({}, [], took, cost, failed=True))
             return VIP_STATUS["last_error"]
         with VIP_WRITE:
-            new = sweep.vip_record(found, how)
+            # a sweep began during the call: it records these people itself (checked just before the write, review point 7)
+            if sweep_running():
+                vip_debug(f"check dropped: a sweep started during it, {took:.1f}s")
+                return "skipped: a sweep started during the check"
+            clean, counts = sweep.vip_clean(found, since, zone, sweep.vip_state()["alerts"], invites=bool(VIP_INVITES))
+            checked = {"offered": parts["offered"], "offered_promises": parts["offered_promises"], "counts": counts}
+            new = sweep.vip_record(clean, how, checked=checked)
         VIP_STATUS["last_error"] = None
+        vip_debug(sweep.vip_check_line(checked["counts"], new, took, cost))
         note = vip_note(new)
         print(f"{datetime.now():%H:%M:%S} {note}", flush=True)
         return note
     finally:
         VIP_STATUS["running"] = False
         VIP_LOCK.release()
+
+
+VIP_TIMED_OUT, VIP_NOT_STARTED = "it timed out", "claude couldn't be started"
+
+
+def vip_why(why):
+    """The fixed words a failed check shows (VIP_STATUS, /api/vip and the server's output): the two fixed reasons as they
+    are; anything else (the model's prose, a tool's or a parser's message) only counted, never shown."""
+    if why in (VIP_TIMED_OUT, VIP_NOT_STARTED):
+        return why
+    return f"its reply couldn't be used ({len(str(why or ''))} characters held back)"
+
+
+def vip_reply(r):
+    """(the reply's JSON array or None, why it didn't finish, its total_cost_usd or None) from a finished `claude -p` call.
+    A reply nested too deeply to read (RecursionError on Python 3.9) is an unfinished check, like one that isn't JSON."""
+    why = (r.stderr.strip().splitlines() or [r.stdout.strip() or "no reply"])[-1]
+    try:
+        reply = json.loads(r.stdout or "{}")
+    except (ValueError, RecursionError) as e:
+        return None, type(e).__name__, None
+    reply = reply if isinstance(reply, dict) else {}
+    result, cost = str(reply.get("result") or ""), reply.get("total_cost_usd")
+    m = re.search(r"\[.*\]", result, re.S)
+    try:
+        return (json.loads(m.group(0)) if m else None), (why if m else result or why), cost
+    except (ValueError, RecursionError) as e:
+        return None, type(e).__name__, cost
+
+
+def vip_debug(line):
+    """One line in the debug log's vip area (BL-102): counts, seconds and dollars only."""
+    if debuglog is not None:
+        debuglog.info("vip", line)
 
 
 def vip_note(new):
@@ -3457,7 +3661,8 @@ def vip_note(new):
 
 
 def vip_timer():
-    """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it)."""
+    """The VIP check on start-up, then every vip.check_minutes while the server runs (a daemon thread: it stops with it).
+    Nothing in a check or in working out the wait can end the thread: a wait that can't be worked out is 30 minutes."""
     import sweep
     how = "start-up"
     while True:
@@ -3466,7 +3671,11 @@ def vip_timer():
         except Exception as e:  # noqa: BLE001  never stops the server
             print(f"Note: the VIP check failed: {e}", flush=True)
         how = "check"
-        time.sleep(max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds())))
+        try:
+            wait = max(1.0, min(60 * float(sweep.vip_settings().get("check_minutes") or 30), vip_wait_seconds()))
+        except Exception:  # noqa: BLE001  a hand-edited setting never stops the timer
+            wait = 60 * 30.0
+        time.sleep(wait)
 
 
 def vip_wait_seconds():
@@ -3803,6 +4012,84 @@ SWEEP_ALERT_ROUTES.update({"/api/alerts/dismiss": alert_dismiss_route, "/api/ale
                            "/api/alerts/prefill": alert_prefill_route, "/api/alerts/draft": alert_draft_route,
                            "/api/alerts/make": alert_make_route})
 # ===== end BL-296 =====
+
+# ===== BL-342 (Part 1): Handled and Log on a thread's card (routes only; neither is a run) =====
+# /api/alerts/handled {ids | id}: the card settles as handled (Dismiss's effect, recorded as handled with a time; /api/alerts/undo
+# puts it back). /api/alerts/log {id}: stages one pending `update` for the matched item, as the dashboard's own proposal.
+
+def alert_handled_route(handler, req):
+    """POST /api/alerts/handled {ids | id}: a thread's card is handled: out of Needs attention, kept in the alert history."""
+    import sweep
+    ids = alert_ids(req)
+    if not ids:
+        return handler.send(400, {"ok": False, "message": "Which thread?"})
+    with VIP_WRITE:
+        done = sweep.vip_handled(ids)
+    n = len(done)
+    return handler.send(200, {"ok": True, "handled": n, "ids": done, "at": sweep.now().strftime("%Y-%m-%d %H:%M"),
+                              "message": f"Marked {n} thread{'s' if n != 1 else ''} handled." if n else "Nothing to mark handled."})
+
+
+def alert_log_route(handler, req):
+    """POST /api/alerts/log {id}: log the thread on its matched item: one pending update for Review (nothing is applied)."""
+    import sweep
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_log(str(req.get("id") or ""))
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, {"ok": True, **got,
+                              "message": f"Already logged on {got['id']}." if got["already"]
+                              else f"Staged an update on {got['id']} for Review."})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/handled": alert_handled_route, "/api/alerts/log": alert_log_route})
+# ===== end BL-342 =====
+
+# ===== BL-342 Part 3 B, step 9: "Looks done: close <ID>" on a thread's card (a route, not a run) =====
+# /api/alerts/close {id, undo}: stages one pending close of the card's matched action for Review (the same pending thread
+# proposal Log uses for that item), or with undo takes a staged one back while it is still pending. Nothing is applied.
+
+
+def alert_close_route(handler, req):
+    """POST /api/alerts/close {id, undo}: stage the card's close of its matched action for Review, or undo it."""
+    import sweep
+    aid = str(req.get("id") or "")
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_close_unstage(aid) if req.get("undo") else sweep.vip_close_stage(aid)
+            card = sweep.vip_find(aid) or {}
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "error": str(e), "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "closes": card.get("closes"),
+                              "message": f"Staged a close of {got['id']} for Review." if got["state"] == "staged"
+                              else f"Took the close of {got['id']} back out of Review."})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/close": alert_close_route})
+# ===== end BL-342 Part 3 B, step 9 =====
+
+# ===== BL-342 Part 5: "Add a promise" and "Looks kept: mark kept" on a thread's card (a route, not a run) =====
+# /api/alerts/promise {id, what: add | kept | dismiss, key, undo}: by the card's ID and the promise's key, stages one pending
+# new promise or one change of a promise to Done for Review, dismisses a promise (nothing staged), or with undo takes it back
+# while it is still pending. Nothing is applied.
+
+
+def alert_promise_route(handler, req):
+    """POST /api/alerts/promise {id, what, key, undo}: stage, undo or dismiss a card's promise or kept promise for Review."""
+    import sweep
+    aid = str(req.get("id") or "")
+    try:
+        with LOCK, VIP_WRITE:
+            got = sweep.vip_promise_action(aid, req.get("what"), req.get("key"), bool(req.get("undo")))
+            card = sweep.vip_find(aid) or {}
+    except (LookupError, ValueError) as e:
+        return handler.send(200, {"ok": False, "error": str(e), "message": str(e)})
+    return handler.send(200, {"ok": True, **got, "promises": card.get("promises"), "kept": card.get("kept")})
+
+
+SWEEP_ALERT_ROUTES.update({"/api/alerts/promise": alert_promise_route})
+# ===== end BL-342 Part 5 =====
 
 
 # ===== Chat and sweep (BL-108, BL-109, BL-110; sprint-chat-sweep) =====
@@ -5160,6 +5447,89 @@ def review_assign_route(handler, req):
 
 
 REVIEW_WORK_ROUTES = {"/api/review/assign": review_assign_route}
+
+
+# ===== v2.1.0 P4 (BL-338) ===== the minutes view's four routes. The work is minutes_record.py's (view, change, save_page, export) and
+# review.py's (approve_minutes: one apply through tracker.py apply, the one writer); every save goes through creaite_doc.save
+# (filechange.py). Saving over filed minutes is refused (Alan, 15-10-2026): filed minutes are the record people were sent, so a
+# save from this page never changes them. It is sensitive under reach.py, this server never passes an approver here and there is
+# no card path, so such a save answers creaite_doc's code 3 (needs approval), nothing changes and the unsaved copy creaite_doc
+# left in drafts/ is removed (minutes_record.save_record). Nothing here sends anything.
+def minutes_draft_route(handler, req):
+    """POST /api/minutes/draft {file | path}: the minutes view's record, versions, transcript turns and approve plan."""
+    import minutes_record
+    try:
+        return handler.send(200, minutes_record.view(req.get("file"), req.get("path")))
+    except minutes_record.RecordError as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+
+
+def minutes_save_route(handler, req):
+    """POST /api/minutes/save {path, doc | op, base_version}: a new version of the page, or one row or coverage change."""
+    import minutes_record
+    base = req.get("base_version")
+    base = base if isinstance(base, int) else None
+    with LOCK:
+        try:
+            if isinstance(req.get("op"), dict):
+                minutes_record.record_at(req.get("path"))
+                out = minutes_record.change(req["path"], req["op"], base_version=base)
+            else:
+                out = minutes_record.save_page(req.get("path"), req.get("doc"), base_version=base)
+        except minutes_record.RecordError as e:
+            return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, out)
+
+
+def minutes_approve_route(handler, req):
+    """POST /api/minutes/approve {file, group, own}: the minutes and the ticked items in one apply."""
+    import review
+    own = [n for n in req.get("own") or [] if isinstance(n, int)]
+    with LOCK:
+        out = review.approve_minutes(str(req.get("file") or ""), group=req.get("group", True) is not False, own=own)
+    return handler.send(200, out)
+
+
+def open_made(rel):
+    """Open a file creaite just made in its default viewer; with CREAITE_NO_LAUNCH (the tests) only say where it is."""
+    target = str(paths.resolve(rel))
+    if os.environ.get("CREAITE_NO_LAUNCH"):
+        return False
+    subprocess.Popen(["open", target] if sys.platform == "darwin" else ["xdg-open", target])
+    return True
+
+
+def minutes_export_route(handler, req):
+    """POST /api/minutes/export {path, format, file_beside, version}: export the minutes (or, with version "distributed", their
+    distributed version), then open the export (P2's creaite_doc.export)."""
+    import minutes_record
+    with LOCK:
+        try:
+            out = minutes_record.export(req.get("path"), req.get("format"), req.get("file_beside", True) is not False,
+                                        version=str(req.get("version") or "internal"))
+        except minutes_record.RecordError as e:
+            return handler.send(200, {"ok": False, "message": str(e)})
+    if out.get("ok") and out.get("path"):
+        out["launched"] = open_made(out["path"])
+    return handler.send(200, out)
+
+
+def minutes_followup_route(handler, req):
+    """POST /api/minutes/followup {path, version}: the follow-up email's content from the version shown (followup_facts); the
+    distributed version goes through distributed_of: no Internal only, Sensitive, partner-only or excluded content. Read only."""
+    import minutes_record
+    try:
+        out = minutes_record.followup_facts(req.get("path"), str(req.get("version") or "internal"))
+    except minutes_record.RecordError as e:
+        return handler.send(200, {"ok": False, "message": str(e)})
+    return handler.send(200, out)
+
+
+MINUTES_ROUTES = {"/api/minutes/followup": minutes_followup_route,
+                  "/api/minutes/draft": minutes_draft_route, "/api/minutes/save": minutes_save_route,
+                  "/api/minutes/approve": minutes_approve_route, "/api/minutes/export": minutes_export_route}
+REVIEW_WORK_ROUTES.update(MINUTES_ROUTES)        # dispatched with Review's work, so do_POST gains no branch
+# ===== end v2.1.0 P4 =====
 # ===== end BL-200 =====
 
 
@@ -5370,12 +5740,29 @@ class DraftJob:
         return {"status": None, "files": [], "message": ""}
 
 
+def section_request(req):
+    """#90: the keys the ✦ on a report or minutes section sends (kinds "report-section" and "minutes-section"): known keys, short
+    strings, the section's words and its panes, each cut to a size."""
+    keep = {k: req[k] for k in ("report", "week_ending", "section", "action", "heading", "version")
+            if isinstance(req.get(k), str) and len(req[k]) <= 80}
+    keep.update({k: req[k][:n] for k, n in (("path", 300), ("instruction", 400), ("text", 6000)) if isinstance(req.get(k), str)})
+    if isinstance(req.get("panes"), list):
+        keep["panes"] = [{"title": str(x.get("title") or "")[:60], "text": str(x.get("text") or "")[:6000]}
+                         for x in req["panes"][:6] if isinstance(x, dict)]
+    if "document" in req:          # #127: the report a section is in, from which drafts.py binds the audience (checked there)
+        d = req["document"]
+        ok = isinstance(d, dict) and len(d) <= 4 and all(isinstance(v, str) and len(v) <= 120 for v in d.values())
+        keep["document"] = dict(d) if ok else "not a report"
+    return keep
+
+
 def draft_request(req):
     """The request as drafts.py takes it: known keys, short strings and short lists only."""
     keep = {}
     for k in ("kind", "id", "field", "code", "to", "fc"):
         if isinstance(req.get(k), str) and len(req[k]) <= 80:
             keep[k] = req[k]
+    keep.update(section_request(req))
     if isinstance(req.get("title"), str):                  # BL-220 (sprint-drafts-extraction): the words Sharpen rewords
         keep["title"] = req["title"][:300]
     if isinstance(req.get("ids"), list):
@@ -5443,7 +5830,8 @@ def drafts_state_route(handler, req):
 DRAFT_ROUTES = {"/api/draft": draft_route, "/api/draft/stat": draft_stat_route, "/api/drafts": drafts_state_route}
 # ===== end AI drafts =====
 
-# ===== BL-301 D (v20-ai-select) ===== POST /api/edit/ai {option, text, code, place, instruction?, run?}: a suggestion for selected text.
+# ===== BL-301 D (v20-ai-select) ===== POST /api/edit/ai {option, text, code, place, instruction?, run?, document?}: a suggestion
+# for selected text.
 # edit_ai.py builds the prompt (the text, the option, the project's name, people and open item IDs; nothing else), Claude runs
 # through the run engine as the toolless kind "edit-ai" (one run at a time, progress, Stop), and the reply is parsed and checked by
 # edit_ai.py (BL-106's plain-code check). The last event before "done" is "draft" {text, notes}. Nothing is written; the debug log
@@ -5456,17 +5844,31 @@ class EditJob(DraftJob):
     quiet = True                                            # the page shows the suggestion, not the reply as it streams
 
 
+EDIT_AI_KEYS = {"option", "code", "place", "text", "instruction", "run", "document"}
+EDIT_AI_DOC_KEYS = {"kind", "code", "week_ending", "client"}     # #123: the client sheet's report; edit_ai.bound_place checks it
+
+
 def edit_ai_request(req):
-    """The request as edit_ai.py takes it: known keys, sizes capped (edit_ai.py checks them again)."""
+    """The request as edit_ai.py takes it: known keys only (None for any other key, or a document that isn't a small object of
+    strings), sizes capped (edit_ai.py checks them again). The place is edit_ai.py's to decide from the document (#123)."""
+    if not isinstance(req, dict) or set(req) - EDIT_AI_KEYS:
+        return None
     body = {k: str(req.get(k) or "")[:40] for k in ("option", "code", "place")}
     body["text"] = str(req.get("text") or "")[:12001]
     body["instruction"] = str(req.get("instruction") or "")[:401]
+    d = req.get("document")
+    if d is not None:
+        if not isinstance(d, dict) or set(d) - EDIT_AI_DOC_KEYS or any(not isinstance(x, str) for x in d.values()):
+            return None
+        body["document"] = {k: x[:120] for k, x in d.items()}
     return body
 
 
 def edit_ai_route(handler, req):
     """POST /api/edit/ai: one suggestion on the selected text, from a run with no tools (BL-301 D)."""
-    body = edit_ai_request(req if isinstance(req, dict) else {})
+    body = edit_ai_request(req)
+    if body is None:
+        return handler.send(400, {"ok": False, "message": "That request isn't one creaite knows."})
     busy = current_run()
     if busy and not busy.done:
         return handler.send(409, {"ok": False, "busy": True, "message": "ask creaite is busy; try again when it's finished."})
@@ -6345,6 +6747,8 @@ def sneak_read_route(handler, req):
 
 
 DRAFT_ROUTES["/api/sneak/read"] = sneak_read_route
+import report_server  # noqa: E402  v2.1.0 P3 (BL-335, BL-336): the report routes, given this server's own lock and runner
+DRAFT_ROUTES.update(report_server.routes(LOCK, run, latest_apply))   # /api/report/draft, save, approve, export, logo
 # ===== end BL-322 =====
 
 # ===== BL-227 (sprint-drafts-writing) ===== one set of facts, many forms. /api/current/generate takes `form`: "current" (or none) is
@@ -6352,6 +6756,7 @@ DRAFT_ROUTES["/api/sneak/read"] = sneak_read_route
 # "status-form" on the same run engine, shown with Copy and never saved. The audiences gain "steering" and "sponsor" (internal
 # wording with nothing sensitive), for Generate's Current state too.
 DRAFT_KINDS |= {"status-form"}
+DRAFT_KINDS |= {"report-section", "minutes-section"}      # #90: the ✦ on the weekly, client and minutes sheets
 _generate_before_forms = Handler.generate
 _exec_options_before_forms = Handler.exec_options
 
@@ -7241,12 +7646,42 @@ def log_route(handler):
 
 # ===== BL-269 (sprint-live-updates) =====
 STALE_SEEN = []           # short fingerprints of the old tokens already logged, newest last (a page each)
+STALE_HOUR = {"start": None, "pages": set(), "over": 0, "repeats": 0}   # #93: this hour's stale pages and repeat requests
+STALE_HOUR_LOCK = threading.Lock()                            # #93: the counters only; requests run in threads
+STALE_HOUR_CAP = 1000                                         # fingerprints kept a window; past it a request counts as a page
+
+
+def count_stale(key, now=None):
+    """#93: count one stale request (key: the token's fingerprint, never the token). When it comes an hour or more after the
+    window began, the closed window's line is returned (and a new window starts with this request); else None. Nothing stale,
+    no window, no line. Emitted from the next stale request, not a timer: no new thread, and a page that stays stale keeps
+    asking, so its hour is reported; a quiet tail is already shown by each page's own info line."""
+    now = time.time() if now is None else now
+    line = None
+    with STALE_HOUR_LOCK:
+        h = STALE_HOUR
+        if h["start"] is not None and now - h["start"] >= 3600:
+            line = (f"stale pages in the hour from {datetime.fromtimestamp(h['start']):%H:%M}: "
+                    f"{len(h['pages']) + h['over']} pages, {h['repeats']} repeat requests")
+            h.update(start=None, pages=set(), over=0, repeats=0)
+        if h["start"] is None:
+            h["start"] = now
+        if key in h["pages"]:
+            h["repeats"] += 1
+        elif len(h["pages"]) < STALE_HOUR_CAP:
+            h["pages"].add(key)
+        else:
+            h["over"] += 1
+    return line
 
 
 def log_stale(handler, line):
     """A request from a page opened before a restart: one info line per page (its old token), the repeats at debug level
     only. Such a page stops asking once it knows (BL-269); an older page that doesn't can no longer fill the log with WARNs."""
     key = hashlib.sha256((handler.headers.get("X-Creaite-Token") or "").encode()).hexdigest()[:12]
+    hourly = count_stale(key)                                     # #93: the hourly count, before this request's own line
+    if hourly:
+        debuglog.info("server", hourly)
     if key in STALE_SEEN:
         return debuglog.debug("server", f"{line} stale page again")
     STALE_SEEN.append(key)

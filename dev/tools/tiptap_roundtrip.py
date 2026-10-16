@@ -99,6 +99,23 @@ NOTES_CONSTRUCTS = (
 )
 
 
+EDITOR_JS = REPO / "system" / "templates" / "dashboard" / "src" / "core" / "editor.js"
+PROFILES_JS = REPO / "system" / "templates" / "dashboard" / "src" / "core" / "editorProfiles.js"
+HEADS_BLOCK = re.compile(r"/\*HEADS-BEGIN\*/(.*?)/\*HEADS-END\*/", re.S)
+# Current state's stored heading levels (#122): the page's editor loads it through headsIn and saves it through headsOut
+# (core/editor.js), so the gate runs the same two functions around the editor. HEAD_SHIFT is read from editorProfiles.js.
+HEAD_SHIFT = int(re.search(r"export const HEAD_SHIFT\s*=\s*(\d+)", PROFILES_JS.read_text(encoding="utf-8")).group(1))
+
+
+def heads_js(path=EDITOR_JS):
+    """The page's own headsIn and headsOut (core/editor.js, between its HEADS-BEGIN and HEADS-END markers: mapHeads and the
+    two exports) as a classic script that sets window.CxHeads = {headsIn, headsOut}. The same code the dashboard ships."""
+    m = HEADS_BLOCK.search(Path(path).read_text(encoding="utf-8"))
+    if not m:
+        raise ValueError(f"{label(path)}: no HEADS-BEGIN / HEADS-END block")
+    return "(()=>{" + re.sub(r"\bexport\s+", "", m.group(1)) + "window.CxHeads={headsIn,headsOut};})();"
+
+
 @dataclass
 class Case:
     """One text for the gate: its group, where it came from, the text and the editor's feature set. With `html`, the
@@ -112,6 +129,7 @@ class Case:
     script: bool = False        # the notes gate: `text` is JavaScript typing into `editor` (the stable group)
     contains: tuple = ()        # the stable group: forms the first save must hold
     unfaithful: bool = False    # the stable group: a known loss, which the writer must report (faithful: false)
+    shift: int = 0              # Current state's headShift (#122): the text goes through headsIn, the editor, headsOut
 
     @property
     def wanted(self):
@@ -131,7 +149,7 @@ def _panes(source, folder):
     """The Current state cases of one project folder: each non-empty pane of what the dashboard's editor receives."""
     current = build_dashboard.memory(folder)["current"]
     left, right = docx_tools.split_panes(current)
-    return [Case("current", f"{source} ({name} pane)", text) for name, text in (("left", left), ("right", right)) if text]
+    return [Case("current", f"{source} ({name} pane)", text, shift=HEAD_SHIFT) for name, text in (("left", left), ("right", right)) if text]
 
 
 def _demo_memory(p):
@@ -224,7 +242,7 @@ def minutes_cases(sources=MINUTES_SOURCES):
 
 def construct_cases():
     """One case per Markdown form creaite stores, in md_normalise's canonical form."""
-    return ([Case("constructs", name, docx_tools.md_normalise(text)) for name, text in CONSTRUCTS]
+    return ([Case("constructs", name, docx_tools.md_normalise(text), shift=HEAD_SHIFT) for name, text in CONSTRUCTS]
             + [Case("constructs", f"{name} (notes)", text, "notes") for name, text in NOTES_CONSTRUCTS])
 
 
@@ -284,7 +302,7 @@ def vault_cases(vault):
                 current = build_dashboard.memory(folder)["current"]
             except Exception as e:                  # an unreadable file: its message could quote the text
                 raise RuntimeError(f"--vault: {code}: CLAUDE.md could not be read ({type(e).__name__})") from None
-            out += [Case("current", f"{code} pane {n}", text)
+            out += [Case("current", f"{code} pane {n}", text, shift=HEAD_SHIFT)
                     for n, text in enumerate(docx_tools.split_panes(current), 1) if text]
     return out
 
@@ -362,6 +380,18 @@ def vendored_js(path=tiptap.VENDOR / tiptap.MODULE):
     return "(()=>{" + text[:m.start()] + f"window.CreaiteTiptap={{{names}}};}})();"
 
 
+def _round_trip_group(b, texts, features, html, shift, mode):
+    """The page's roundTripAll for `texts`; with `shift` (Current state) each text goes in through headsIn and what the editor
+    wrote comes out through headsOut, as the dashboard's editor loads and saves it."""
+    if shift:
+        texts = b.eval(f"{json.dumps(texts)}.map(t=>CxHeads.headsIn(t,{shift}))")
+    got = b.eval(f"CreaiteTiptap.roundTripAll({json.dumps(texts)}, {json.dumps(features)}, {json.dumps(mode)}, {json.dumps(html)})")
+    if shift:
+        outs = b.eval(f"{json.dumps([r.get('out') for r in got])}.map(t=>typeof t==='string'?CxHeads.headsOut(t,{shift}):t)")
+        got = [{**r, "out": o} for r, o in zip(got, outs)]
+    return got
+
+
 def run(cases, bundle_js, mode="exact", pinned=None):
     """[(case, out, error)] for each case: the text the editor gives back (or the error), from one headless Chrome page
     that loads `bundle_js` (it must set window.CreaiteTiptap.roundTripAll(texts, features, mode)). `mode`: "exact"
@@ -370,7 +400,7 @@ def run(cases, bundle_js, mode="exact", pinned=None):
     results = [None] * len(cases)
     with tempfile.TemporaryDirectory() as tmp:
         page = Path(tmp) / "roundtrip.html"
-        page.write_text(PAGE.format(js=bundle_js.replace("</script", "<\\/script")), encoding="utf-8")
+        page.write_text(PAGE.format(js=heads_js() + "\n" + bundle_js.replace("</script", "<\\/script")), encoding="utf-8")
         with cdp.Browser() as b:
             b.goto(page.as_uri(), wait_for="!!window.CreaiteTiptap")
             if pinned is not None:
@@ -380,10 +410,9 @@ def run(cases, bundle_js, mode="exact", pinned=None):
                                        "on the new version and re-check dev/tiptap/source.js and writer.js")
             for i, result in _run_stable(b, cases, [i for i, c in enumerate(cases) if c.script], mode):
                 results[i] = result
-            for features, html in sorted({(c.features, c.html) for c in cases if not c.script}):
-                idx = [i for i, c in enumerate(cases) if (c.features, c.html) == (features, html) and not c.script]
-                got = b.eval(f"CreaiteTiptap.roundTripAll({json.dumps([cases[i].text for i in idx])}, "
-                             f"{json.dumps(features)}, {json.dumps(mode)}, {json.dumps(html)})")
+            for features, html, shift in sorted({(c.features, c.html, c.shift) for c in cases if not c.script}):
+                idx = [i for i, c in enumerate(cases) if (c.features, c.html, c.shift) == (features, html, shift) and not c.script]
+                got = _round_trip_group(b, [cases[i].text for i in idx], features, html, shift, mode)
                 for i, r in zip(idx, got):
                     unfaithful = r.get("faithful") is False and UNFAITHFUL   # the writer's own check (exact only)
                     results[i] = (cases[i], r.get("out"), r.get("error") or unfaithful or None)

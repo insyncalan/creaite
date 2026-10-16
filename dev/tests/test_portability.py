@@ -754,5 +754,23 @@ class LauncherArchitecture(unittest.TestCase):
 # ===== end BL-248 =====
 
 
+# ===== v2.1.0 hand check 1: every script takes its locations from paths.py =====
+class ScriptsImportPaths(unittest.TestCase):
+    """client_check.py once lacked `import paths`: doctor failed ("Scripts take locations from paths.py") and so did
+    update.py new-vault, which runs doctor on the new vault."""
+
+    def test_every_script_imports_paths(self):
+        import doctor
+        ok, msg = doctor.scripts_use_paths()
+        self.assertTrue(ok, msg)
+
+    def test_client_check_imports_paths(self):
+        text = (REPO / "system/scripts/client_check.py").read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^import paths\b")
+
+
+# ===== end v2.1.0 hand check 1 =====
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,5 +1,5 @@
 """v1.8.0: BL-294 (on-track milestones are green in every theme), BL-299 (On track, not "On plan") and BL-300 (Top risks and
-issues: at most five lines each).
+issues: at most two lines each, #107).
 
 Run: python3 dev/tests/test_milestone_words.py   (the BL-300 part needs Google Chrome; skipped otherwise)
 """
@@ -98,7 +98,7 @@ LONG = " ".join(f"Step {i}: agree the data-sharing terms with the client's secur
 
 @unittest.skipUnless(CHROME, "needs Google Chrome")
 class TopRisks(LiveBrowserCase):
-    """BL-300: the text under each top risk or issue is cut at five lines with a quiet More and its full text as a tooltip."""
+    """BL-300: the text under each top risk or issue is cut at two lines with a quiet More and its full text as a tooltip."""
     shared_server = True
 
     @classmethod
@@ -119,12 +119,12 @@ class TopRisks(LiveBrowserCase):
         self.b.eval("go('cockpit','ABC')")
         self.b.wait("document.querySelector('#v-cockpit .rkrow')")
 
-    def test_long_text_is_cut_at_five_lines(self):
+    def test_long_text_is_cut_at_two_lines(self):
         self.open_cockpit()
         rows = self.rows()
         long = next(r for r in rows if r["text"] == LONG)
-        self.assertEqual((long["cut"], long["more"], long["title"], long["clamp"]), (True, True, LONG, "5"))
-        self.assertLessEqual(long["lines"], 5)
+        self.assertEqual((long["cut"], long["more"], long["title"], long["clamp"]), (True, True, LONG, "2"))
+        self.assertLessEqual(long["lines"], 2)
         short = [r for r in rows if r["text"] != LONG]
         self.assertTrue(short)
         for r in short:                                       # short text is unchanged: no More, no tooltip
@@ -136,7 +136,7 @@ class TopRisks(LiveBrowserCase):
         self.open_cockpit()
         long = next(r for r in self.rows() if r["text"] == LONG)
         self.assertTrue(long["cut"] and long["more"])
-        self.assertLessEqual(long["lines"], 5)
+        self.assertLessEqual(long["lines"], 2)
         self.b.eval(f"document.querySelector('#v-cockpit .rkrow[data-open=\"{long['id']}\"]').focus()")
         self.b.key("Enter")
         self.b.wait("document.getElementById('panel').classList.contains('on')")

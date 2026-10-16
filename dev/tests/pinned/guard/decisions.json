@@ -2865,8 +2865,8 @@
    "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
   ],
   "held | notes | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
-   true,
-   ""
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
   ],
   "held | notes | Bash | {\"command\": \"python3 system/scripts/tracker.py read ABC\"}": [
    true,
@@ -2989,8 +2989,8 @@
    "ask creaite runs only creaite's own scripts, one at a time, exactly `python3 system/scripts/<name>.py …`; file changes go through filechange.py"
   ],
   "prep | notes | Bash | {\"command\": \"python3 system/scripts/report.py adhoc <HOME>/.ssh/id_rsa\"}": [
-   true,
-   ""
+   false,
+   "<HOME>/.ssh/id_rsa: it holds secrets (keys, passwords, sign-ins)"
   ],
   "prep | notes | Bash | {\"command\": \"python3 system/scripts/tracker.py read ABC\"}": [
    true,

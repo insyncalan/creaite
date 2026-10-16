@@ -529,6 +529,23 @@ def cmd_import():
     return 0
 
 
+def decide_block(data, n, decision, fname, notes):
+    """A Review sheet decision on a proposal's minutes, report or file changes block: 1 when it was recorded, else 0. A client
+    report (or client-safe one-pager) that Review's client check stops is left pending, with a note (#127: Excel never files
+    around the check)."""
+    block = data.get(n)
+    field = {"meeting": "minutes_decision", "report": "report_decision"}.get(n, "file_changes_decision")
+    if not (block and block.get(field, "pending") == "pending" and decision):
+        return 0
+    if n == "report" and decision == "approved" and block.get("draft") and review.client_block(block) and \
+            review.client_findings(block):
+        notes.append(f"Review: {fname}'s client report may hold internal content, so it wasn't approved: approve it in Review, "
+                     "which lists what was found")
+        return 0
+    block[field], block["decided_in"] = decision, "excel"
+    return 1
+
+
 def apply_review_decisions(wb, notes):
     """Copy Approve / Reject / Edit from the Review sheet into the pending proposal files."""
     if "Review" not in wb.sheetnames:
@@ -549,11 +566,7 @@ def apply_review_decisions(wb, notes):
         for n, choice, note in decisions:
             decision = {"approve": "approved", "reject": "rejected"}.get(choice)
             if n in ("meeting", "report", "file_changes"):
-                block = data.get(n)
-                field = {"meeting": "minutes_decision", "report": "report_decision"}.get(n, "file_changes_decision")
-                if block and block.get(field, "pending") == "pending" and decision:
-                    block[field], block["decided_in"] = decision, "excel"
-                    count += 1
+                count += decide_block(data, n, decision, fname, notes)
                 continue
             item = next((i for i in data.get("items", []) if i.get("n") == n), None)
             if not item or item.get("decision") != "pending" or item.get("applied"):

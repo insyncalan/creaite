@@ -169,8 +169,8 @@ class PdfTests(Base):
         self.py("tracker.build_index()")
         stamp = self.v.root / "system/search/index-built.json"
         old = json.loads(stamp.read_text(encoding="utf-8"))
-        self.assertEqual(old.get("readers"), 3)                                                 # BL-275 after BL-276's 2
-        for before in (2, None):                                                                # an index from 1.9.0 to 1.9.2, or 1.8
+        self.assertEqual(old.get("readers"), 4)                                                 # v2.1.0 P1 after BL-275's 3
+        for before in (3, 2, None):                                                                # an index from 1.9.0 to 1.9.2, or 1.8
             if before is None:
                 old.pop("readers")
             else:

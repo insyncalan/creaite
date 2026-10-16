@@ -85,12 +85,18 @@ def parse(text):
     return meta, body[1:] if body.startswith("\n") else body
 
 
+def _item(x):
+    """One list item on one line: commas and every kind of whitespace (newlines too) become a single space, so an item can never
+    close the front matter early or add a key."""
+    return re.sub(r"\s+", " ", str(x).replace(",", " ")).strip()
+
+
 def _written(v):
     """One front-matter value as it is written."""
     if isinstance(v, bool):
         return "true" if v else "false"
     if isinstance(v, (list, tuple)):
-        return "[" + ", ".join(str(x).replace(",", " ").strip() for x in v if str(x).strip()) + "]"
+        return "[" + ", ".join(i for i in (_item(x) for x in v) if i) + "]"
     text = str(v if v is not None else "").replace("\n", " ").strip()
     return f'"{text}"' if text[:1] in "[\"'" or text.lower() in ("true", "false") else text
 
@@ -431,7 +437,7 @@ def clean_changes(changes):
             out[k] = bool(v)
         elif k in LISTS:
             vals = v if isinstance(v, list) else str(v or "").split(",")
-            out[k] = [str(x).replace(",", " ").strip()[:60] for x in vals if str(x).strip()][:20]
+            out[k] = [i[:60].strip() for i in (_item(x) for x in vals) if i][:20]
         elif k == "date":
             if v and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(v)):
                 continue

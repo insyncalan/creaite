@@ -7,7 +7,7 @@
 import { P, pName } from "../../core/data.js";
 import { fd, TODAY } from "../../core/page.js";
 import { snack } from "../../core/server.js";
-import { choosePrep, hubFor } from "../../meetings.js";
+import { choosePrep } from "../../meetings.js";
 import { popupRev, prepNow } from "../../stores/prepPopup.js";
 import { longDay, pkAdd } from "../../today.js";
 import { Icon } from "../Icon.jsx";
@@ -48,7 +48,6 @@ export function PrepHead() {
   const series = brief && brief.series ? brief.series.text
     : [cadence(m.invite && m.invite.recurrence), m.last ? `last ${fd(m.last)}` : ""].filter(Boolean).join(" · ");
   const inv = conf ? [] : invitees(m, brief);
-  const hub = hubFor({ eid: e.id, day, start: e.start, title: e.title });
   const name = code === "_portfolio" ? "Portfolio (all projects)" : code ? pName(code) : "";
 
   /** @param {MouseEvent} ev */
@@ -82,7 +81,6 @@ export function PrepHead() {
               <span aria-hidden="true">{`${inv.length} invited`}</span>
             </span>
           ) : null}
-          {hub ? <a href={`#meeting=${hub}`} class="linkbtn mhlink" data-meeting={hub} data-tip="Everything about this meeting, from invite to follow-up">Meeting page</a> : null}
         </div>
       </div>
       <button type="button" class="iconbtn" id="prepClose" aria-label="Close"><Icon name="x" /></button>

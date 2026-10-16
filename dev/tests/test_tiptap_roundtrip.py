@@ -83,6 +83,34 @@ class RunnerTest(unittest.TestCase):
         self.assertEqual(lines[2], "FAIL [minutes] err  error: boom")
         self.assertEqual(lines[-1], "round-trip: current 1/2 pass, minutes 0/1 pass, constructs 0/1 pass; 3 failed")
 
+    def test_current_state_goes_through_the_pages_heading_mapping(self):
+        """#122 review M3: a Current state case (shift 2) is loaded through headsIn and saved through headsOut, the page's own
+        functions from core/editor.js. The fake page just echoes, so a case passes only when the mapping is reversible: a stray
+        `# ` line (which the old mapping turned into `###`) and the three stored levels come back as they went in."""
+        stray = "### Top\n\n# Stray level one\n\n#### Mid\n\n## Stray two\n\n##### Low\n\n###### Six\n\n<!--\n# in a comment\n-->\n\n```\n# code\n```"
+        cases = [gate.Case("current", "stray", stray, shift=gate.HEAD_SHIFT), gate.Case("current", "levels", "### A\n\n#### B\n\n##### C", shift=gate.HEAD_SHIFT)]
+        self.assertEqual(gate.HEAD_SHIFT, 2)
+        for case, out, error in gate.run(cases, FAKE_BUNDLE):
+            self.assertIsNone(error)
+            self.assertEqual(out, case.text, case.source)
+        # a page that rewrites what it was given (an editor reading `# ` as a heading) is caught: no mapping is a failure to see
+        reads_hash_as_heading = FAKE_BUNDLE.replace('return { out: mode === "exact" ? t : t.replace(/&/g, "&amp;") };',
+                                                    'return { out: t.replace(/^#/gm, "##") };')
+        (_, out, _), = gate.run([cases[1]], reads_hash_as_heading)
+        self.assertNotEqual(out, cases[1].text)
+
+    def test_the_gates_mapping_is_the_pages_code(self):
+        """heads_js() is the text between HEADS-BEGIN and HEADS-END in core/editor.js (not a copy), and it works."""
+        js = gate.heads_js()
+        self.assertIn("mapHeads", js)
+        self.assertIn("headsOut", js)
+        self.assertEqual(gate.HEADS_BLOCK.search(gate.EDITOR_JS.read_text(encoding="utf-8")).group(1).count("export"), 2)
+        with cdp.Browser() as b:
+            b.goto("about:blank")
+            b.eval(js)
+            self.assertEqual(b.eval("CxHeads.headsIn('### a\\n# b\\n## c\\n###### d',2)"), "# a\n\u200b# b\n\u200b## c\n\u200b###### d")
+            self.assertEqual(b.eval("CxHeads.headsOut('# a\\n\\u200b# b\\n## c\\n#### d',2)"), "### a\n# b\n#### c\n##### d")
+
     def test_mode_is_passed_through(self):
         """The exact writer is the default; the mode reaches the page's roundTripAll."""
         self.assertEqual(gate.run([gate.Case("current", "amp", "Q&A")], FAKE_BUNDLE)[0][1], "Q&A")

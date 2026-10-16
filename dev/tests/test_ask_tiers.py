@@ -14,6 +14,7 @@ import sys
 import tempfile
 import time
 import unittest
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
 import urllib.request
 from pathlib import Path
 
@@ -25,7 +26,6 @@ from test_tracker import Vault  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "system/scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 # Extra scenarios for the stand-in: one Sensitive and one High-risk change on one card; a settings file edited with and without a
 # permission key changed.
@@ -254,7 +254,7 @@ SCRIPT = r"""
     const lum=c=>{ const v=c.match(/[\d.]+/g).slice(0,3).map(x=>{ x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4); }); return .2126*v[0]+.7152*v[1]+.0722*v[2]; };
     const ratio=(a,b)=>{ const x=lum(a), y=lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
     out.contrast={}; out.distinct={}; const root=document.documentElement;
-    for(const pal of THEMES.map(t=>t.id)) for(const mode of ["light","dark"]){
+    for(const pal of TEST_PALETTES) for(const mode of ["light","dark"]){
       root.setAttribute("data-palette",pal); root.setAttribute("data-theme",mode); await wait(30);
       const surf=getComputedStyle(card).backgroundColor, bands=[];
       for(const li of card.querySelectorAll("li.chgtier")){ const band=getComputedStyle(li).backgroundColor, tag=getComputedStyle(li.querySelector(".tag")); bands.push(band);
@@ -275,7 +275,7 @@ SCRIPT = r"""
   }catch(e){ out.errors.push(String(e&&e.stack||e)); }
   const pre=document.createElement("pre"); pre.id="result"; pre.textContent=JSON.stringify(out); document.body.appendChild(pre); })();
 </script>
-"""
+""".replace("TEST_PALETTES", TEST_PALETTES_JS)
 
 
 @unittest.skipUnless(admin.CHROME.exists(), "Google Chrome not installed")
@@ -351,8 +351,7 @@ class CardPageTests(unittest.TestCase):
         self.assertEqual(rows.get("Created ~/Documents/plan.md"), ["sensitive", "Sensitive", "alert"], self.r["activity"])
 
     def test_both_tiers_are_readable_and_distinct_in_every_theme(self):
-        themes = re.findall(r'\{id:"', re.search(r"const THEMES=\[(.*?)\];", readable_page(), re.S).group(1))
-        self.assertEqual(len(self.r["contrast"]), 2 * 2 * len(themes))
+        self.assertEqual(len(self.r["contrast"]), 2 * 2 * len(TEST_PALETTES))
         for name, c in self.r["contrast"].items():
             self.assertGreaterEqual(c["text"], 4.5, name)
             self.assertGreaterEqual(c["edge"], 3.0, name)

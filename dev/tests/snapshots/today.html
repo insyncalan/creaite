@@ -211,7 +211,7 @@
 <li class="rem" data-id="weekly:2026-10-02:ABC">
 <span class="n">1</span>
 <div class="tb">
-<a class="t" href="#" data-go="projects">Example Programme weekly report for week ending Friday 2nd October is due</a>
+<a class="t" href="#" data-go="reports">Example Programme weekly report for week ending Friday 2nd October is due</a>
 </div>
 <span class="rmgo tacts">
 <button type="button" class="ib sm pri" aria-label="Draft weekly report: Example Programme weekly report for week ending 02-10-2026 is due" data-tip="Draft weekly report" data-d="run">
@@ -230,7 +230,7 @@
 <li class="rem" data-id="weekly:2026-10-02:DEF">
 <span class="n">2</span>
 <div class="tb">
-<a class="t" href="#" data-go="projects">Digital Enablement weekly report for week ending Friday 2nd October is due</a>
+<a class="t" href="#" data-go="reports">Digital Enablement weekly report for week ending Friday 2nd October is due</a>
 </div>
 <span class="rmgo tacts">
 <button type="button" class="ib sm pri" aria-label="Draft weekly report: Digital Enablement weekly report for week ending 02-10-2026 is due" data-tip="Draft weekly report" data-d="run">
@@ -353,11 +353,13 @@
 </div>
 </section>
 <!-- BL-125 A: You owe and Waiting on, inside Your commitments (BL-319) -->
-<section class="tsec" id="weekSec" aria-labelledby="hWeek">
+<section class="tsec tres" id="weekSec" aria-labelledby="hWeek">
+<details id="weekFold" open="">
+<summary>
 <h2 class="th" id="hWeek">Week ahead <span class="cnt" id="weekTo">to Monday 12th October</span>
 </h2>
+</summary>
 <div id="weekList">
-<p class="wknote">Work of every priority, every milestone and decision, and meetings</p>
 <div class="wkday" data-day="wkund">
 <h3 class="wkdh" id="wkd-wkund">Urgent, with no date</h3>
 <ol class="bl wklist" aria-labelledby="wkd-wkund">
@@ -415,7 +417,9 @@
 </ol>
 </div>
 </div>
+</details>
 </section>
+<!-- #105: folds like Resolved; open unless hidden, and remembered in this browser -->
 <section class="tsec tres" id="resSec" aria-labelledby="hRes">
 <details id="resFold">
 <summary>

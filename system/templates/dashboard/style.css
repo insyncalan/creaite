@@ -602,7 +602,6 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dm .acts .lk:disabled{color:var(--day-muted);cursor:default}
 .dm .acts .lk.open{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:var(--r-sm);color:var(--day-muted)}
 .dm .acts .lk.open:hover:not(:disabled){color:var(--accent);background:var(--surface)} .dm .acts .lk.open svg{width:14px;height:14px}
-.dm .acts .mhlink{padding:0 2px}
 .dm .acts button:focus-visible,.dm .acts a:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
 .dayaway{margin:14px 0 0;font-size:var(--fs-sm);color:var(--day-muted);font-style:italic}
 @media (max-width:640px){ .daytabs .dy:not([aria-selected="true"]){letter-spacing:.04em;padding:4px 4px} }
@@ -682,24 +681,52 @@ a.rowid{font-variant-numeric:tabular-nums;color:inherit;text-decoration:underlin
 .msrow{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);flex-wrap:wrap}.msrow .msn{flex:1;min-width:12ch}
 .prog{display:inline-block;width:80px;height:6px;background:var(--sunk);border-radius:var(--r-sm);overflow:hidden;vertical-align:middle}.prog i{display:block;height:100%;background:var(--accent)}
 .curcard p{margin:0 0 8px}.curcard ul,.curcard ol,.rted ul,.rted ol{margin:0 0 8px;padding-left:24px}
-.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.curtext h3,.rted h3{font-size:var(--fs-lg);margin:12px 0 6px}
+/* #122: Current state's three heading levels are stored ### #### ##### (the editor's Heading 1 to 3); read view h3 h4 h5 */
+.curpanes .rted h1{font-size:var(--fs-lg);margin:12px 0 6px} .curpanes .rted h2,.curtext h4{font-size:var(--fs-md);font-weight:600;margin:10px 0 4px} .curpanes .rted h3,.curtext h5{font-size:var(--fs-md);font-weight:600;font-style:italic;margin:8px 0 4px} .curtext h4,.curtext h5{margin-top:8px} .curtext blockquote,.rted blockquote{margin:0 0 8px;padding:2px 0 2px 12px;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
 .curtext ul ul,.curtext ol ol,.curtext ul ol,.curtext ol ul,.rted ul ul,.rted ol ol,.rted ul ol,.rted ol ul{margin:2px 0} .curtext a,.rted a{color:inherit;text-decoration:underline}
-.rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px}
+.curbar{display:contents} .rte.inplace .rtebar{flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:var(--z-raised);border-radius:var(--r-md) var(--r-md) 0 0} .rtesep{width:1px;background:var(--line);margin:4px 4px} .rtegrp{display:inline-flex;gap:2px;flex:none}   /* a group (and the divider before it) wraps as one: no divider ends a line */
 .rtelink{display:inline-flex;gap:4px;align-items:center;margin-left:6px} .rtelink[hidden]{display:none} .rtelink input{height:26px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;width:220px;background:var(--bg);color:var(--ink)}
 .curcard.editing{outline:2px solid var(--line)} .curacts{display:flex;gap:8px;align-items:center;margin-top:10px}
 #inPrev{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 16px;width:min(820px,94vw);max-height:84vh;background:var(--surface);color:var(--ink)} #inPrevText{white-space:pre-wrap;font:var(--fs-sm)/1.5 ui-monospace,Menlo,monospace;max-height:64vh;overflow:auto;margin:0;padding:10px;background:var(--sunk);border-radius:var(--r-md)} #inPrevMd{max-height:64vh;overflow:auto;padding:10px 14px;background:var(--sunk);border-radius:var(--r-md);font-size:var(--fs-sm)} /* BL-196 */
-#genDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:16px 20px;width:min(460px,92vw);background:var(--surface);color:var(--ink)} #genDlg fieldset{border:0;padding:0;margin:0 0 12px} #genDlg legend{font-weight:500;margin-bottom:6px}
-#genDlg textarea{width:100%;border:1px solid var(--line);border-radius:var(--r-md);padding:6px 8px;background:var(--bg);color:var(--ink);margin:4px 0 8px} .genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
+/* #110 (part A): Generate is 736px wide (460 x 1.6), 92vw at most; the body scrolls and the footer stays in view. Four quiet settings in one strip
+   (a hairline and the sunk ground show only on hover or focus), Steer it as the body, Draw on a line, ordinary 32px buttons. */
+#genDlg{border:1px solid var(--line);border-radius:var(--r-lg);padding:0;width:min(736px,92vw);max-height:calc(100vh - 32px);background:var(--surface);color:var(--ink)}
+#genDlg[open]{display:flex;flex-direction:column;overflow:hidden} #genForm{display:flex;flex-direction:column;min-height:0;flex:1}
+.genbody{overflow:auto;min-height:0;padding:20px 24px 4px} .genfoot{display:flex;align-items:center;gap:8px;padding:12px 24px 16px;border-top:1px solid var(--line)} .genfoot .sub{flex:1}
+#genGo .kbd{margin-left:4px} #genGo[aria-disabled="true"]{opacity:.55;cursor:default}
+.genstrip{display:grid;grid-template-columns:1fr 1.25fr 1.3fr .8fr;gap:0 16px;margin-top:16px;padding:12px 0 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.genf{min-width:0} .genf label{display:block;font:500 var(--fs-xs)/16px var(--mono,var(--font));letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.genq{display:flex;align-items:center;justify-content:space-between;gap:4px;width:calc(100% + 8px);margin-left:-8px;height:var(--ctl-h);border:1px solid transparent;border-radius:var(--ctl-r);background:transparent;color:var(--ink);font:500 var(--fs-md)/18px var(--font);padding:0 8px;cursor:pointer;text-align:left}
+.genq:focus-visible{outline-offset:0} .genq .gv{overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .genq svg{width:14px;height:14px;flex:none;color:var(--muted)}
+.genq:not([aria-disabled="true"]):hover,.genq:focus-visible,.genq[aria-expanded="true"]{border-color:var(--line);background:var(--sunk)} .genq[aria-disabled="true"]{opacity:.55;cursor:default}
+#genCustom{padding:8px 0 0} #genCustom[hidden]{display:none} #genCustom input{width:132px;height:var(--ctl-h);border-radius:var(--ctl-r);background:var(--sunk)}
+.genhint{margin:8px 0 0;min-height:20px}
+.gensteer{margin-top:16px} .gensteer label{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:600;margin-bottom:4px} .gensteer label .sub{font-weight:400}
+#genDlg textarea{display:block;width:100%;min-height:148px;border:1px solid var(--line);border-radius:var(--r-md);padding:8px 12px;background:var(--sunk);color:var(--ink);margin:0;resize:vertical;font:inherit;line-height:1.5} #genDlg textarea:focus-visible{background:var(--surface)}
+.genstart{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-top:6px} #genStart{display:flex;gap:12px;flex-wrap:wrap}
+.genlink{border:0;background:none;color:var(--accent);font:var(--fs-sm)/18px var(--font);padding:2px 0;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.gendraw{margin-top:12px;font-size:var(--fs-sm);color:var(--muted)} .gendrawb{border:0;background:none;color:var(--ink);font:500 var(--fs-sm)/18px var(--font);padding:2px 0;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+#genSrcNames{margin-left:6px} .gendrawb:hover{color:var(--accent)} .gendrawb svg{width:14px;height:14px;transform:rotate(-90deg)} .gendrawb[aria-expanded="true"] svg{transform:none}
+#genSrc{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;margin:8px 0 0 20px} #genSrc[hidden]{display:none} #genSrc label{display:flex;gap:8px;align-items:center;color:var(--ink);min-height:28px} #genSrc.off{opacity:.55}
+.genoff{margin-top:8px;background:var(--warn-soft);color:var(--warn);border-radius:var(--r-md);padding:8px 12px} .genoff[hidden]{display:none}
+.gensum{display:flex;align-items:center;gap:12px;margin-top:16px;padding:8px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--muted);font-size:var(--fs-sm)} .gensum[hidden]{display:none} .gensum b{color:var(--ink);font-weight:500}
+.genlink:focus-visible,.gendrawb:focus-visible{border-radius:var(--r-sm)}
+.genstatus{display:flex;gap:8px;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:-4px 0 8px}
 .gensrc{margin-top:10px;font-size:var(--fs-sm);color:var(--muted)} .gensrc summary{cursor:pointer}
 /* ===== Executive Current state (BL-106) ===== */
 .gennotes{margin-top:8px;font-size:var(--fs-sm);color:var(--muted)} .gennotes ul,.genrewrite .rwnotes{margin:4px 0 6px;padding-left:16px} .gennotes li,.genrewrite .rwnotes li{color:var(--warn)} .oknote{color:var(--ok)}
 .genrewrite{margin-top:10px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md)} .genrewrite .rwhead{margin-bottom:6px} .genrewrite .rwbody{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:4px 10px;margin-bottom:6px}
-.gensrc .factblk ul{margin:2px 0 6px;padding-left:16px} #genDlg fieldset .sub{margin-top:4px}
+.gensrc .factblk ul{margin:2px 0 6px;padding-left:16px}
 .evidence{grid-column:1/-1;font-size:var(--fs-sm);color:var(--muted);padding:8px 10px;border-radius:var(--r-md);background:var(--sunk)} .evidence.warn{color:var(--ink);border-left:3px solid var(--warn)}
 .dropzone{border:2px dashed var(--line);border-radius:var(--r-lg);padding:24px;text-align:center;color:var(--muted);cursor:pointer} .dropzone.over,.dropzone:focus-visible{border-color:var(--ink);color:var(--ink);background:var(--sunk)}
 .discardbar{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:var(--z-pop);display:none;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:10px 14px;box-shadow:var(--shadow-md)} .discardbar.on{display:flex}
 .rte{border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)} .rte:focus-within{border-color:var(--accent,var(--ink))}
 .rtebar{display:flex;gap:2px;padding:4px;border-bottom:1px solid var(--line)} .rtebar button{border:0;background:none;color:var(--muted);padding:4px 8px;border-radius:var(--r-md);cursor:pointer;font:inherit;font-size:var(--fs-sm)} .rtebar button:hover{background:var(--sunk);color:var(--ink)}
+/* #122: the shared formatting bar's states and targets (components/EditorBar.jsx): 24px at least, pressed = in force at the cursor */
+.rtebar button{min-width:28px;min-height:26px} .rtebar button[aria-pressed=true]{background:var(--accent-soft);color:var(--ink)} .rtebar button[aria-disabled=true]{opacity:.4;cursor:default}
+.rtebar button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+@media (forced-colors:active){.rtebar button[aria-pressed=true]{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar button[aria-disabled=true]{opacity:1;color:GrayText} .rtesep{background:CanvasText}}
 .rted{min-height:320px;height:360px;max-height:none;resize:vertical;overflow:auto;padding:10px 12px;outline:none;line-height:1.5} .rted p,.rted div{margin:0 0 8px}
 .cockfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:16px;border-top:1px solid var(--line)}
 .ev{color:var(--muted);font-size:var(--fs-xs);white-space:nowrap} .ev b{color:var(--ink);font-weight:500} .ev b.bad{color:var(--bad)}
@@ -801,7 +828,7 @@ body:has(#chat.on) .panel.on.pwide{margin-right:var(--chatw,420px)}
 .tl .today{position:absolute;top:8px;bottom:0;width:1px;background:var(--accent)} .tl .today span{position:absolute;top:-8px;left:4px;font-size:var(--fs-xs);color:var(--accent)}
 .mini-list>div{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-sm)} .mini-list>div:first-child{border-top:0}
 /* BL-300: Top risks and issues: at most five lines under each item, ending in an ellipsis; a cut one says More */
-.rk-txt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:5;line-clamp:5;overflow:hidden;overflow-wrap:anywhere}
+.rk-txt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere}
 .rk-more{display:block;font-size:var(--fs-xs);color:var(--muted);text-decoration:underline;text-underline-offset:2px;margin-top:1px}
 .rkrow:hover .rk-more,.rkrow:focus-visible .rk-more{color:var(--ink)}
 .files{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
@@ -994,6 +1021,13 @@ tr.wgh .wgtog{border:0;background:none;color:var(--muted);cursor:pointer;font:in
 .rvtools{flex-wrap:wrap} #rvQ{height:var(--ctl-h);border:1px solid var(--line);border-radius:var(--ctl-r);padding:0 10px;background:var(--surface);color:var(--ink);min-width:200px;font-size:var(--ctl-fs)}
 .rvdisp{position:relative} .rvbar .rvsplit{font-size:var(--fs-sm);color:var(--muted)} .rvwhy{text-decoration:underline dotted;cursor:help} .rvbar .rvset{display:inline-flex;gap:8px;flex-wrap:wrap}
 .rvbar select,.rvbar .dwrap input{height:30px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink);padding:0 8px;font:inherit;font-size:var(--fs-sm)} .rvbar .dwrap input{width:116px} .rvbar select:disabled,.rvbar input:disabled{opacity:.55;cursor:not-allowed}
+/* #114: the multi-select bar floats at the bottom edge, in Review's column, under the peek and the dialogs (--z-menu < --z-panel); fixed, so the list never moves */
+.rvbar{position:fixed;bottom:16px;left:var(--rvl,50%);width:var(--rvw,min(1100px,94vw));box-sizing:border-box;margin:0;z-index:var(--z-menu);box-shadow:var(--shadow-md);max-height:40vh;overflow:auto}
+body:has(#v-review.rvfloat:not([hidden])) .snack{bottom:calc(var(--rvh,0px) + 28px)}   /* the toast sits above the floating bar, not on it */
+@media (max-width:1000px){.rvbar{padding-right:44px} .rvbar #rvClear{position:absolute;top:8px;right:8px}}   /* the clear X stays on the first row */
+#v-review.rvfloat{padding-bottom:calc(40px + var(--rvh,0px) + 16px);scroll-padding-bottom:calc(var(--rvh,0px) + 32px)}
+.rvbar .btn,.rvbar .linkbtn,.rvbar select,.rvbar .dbtn{min-height:24px}
+@media (forced-colors:active){.rvbar{border:1px solid CanvasText}}
 .rvresult{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:6px 0;font-size:var(--fs-sm)} .rvresult:empty{display:none} .rvlearn{padding:10px 14px;border:1px solid var(--accent);border-radius:var(--r-md);background:color-mix(in srgb,var(--accent) 8%,var(--surface));display:grid;gap:6px}
 .rgroup h2 .rgtick{margin-right:6px;vertical-align:-2px} .rgroup h2 .rgc{font-weight:400;font-size:var(--fs-sm);margin-left:6px}
 .tag.stale{background:color-mix(in srgb,var(--warn) 18%,var(--surface));color:var(--ink)}
@@ -1844,6 +1878,8 @@ body:has(#chat.on) #panel.peek.pkwide{width:calc(100vw - var(--rail-w,72px) - va
 .pk-dl{font-size:var(--fs-xs);font-weight:500;color:var(--muted);margin:14px 0 2px}
 .pk-dlrow{display:flex;align-items:center;flex-wrap:wrap;margin:14px 0 2px} .pk-dlrow .pk-dl{margin:0} .pk-dldr:empty{display:none}   /* the label holds only its text; a Draft button sits beside it (#pkDescDr) */
 .pk-desc{padding:8px;margin:0 0 0 -8px;font-size:var(--fs-lg);line-height:22px;white-space:pre-wrap}
+/* #106: the Latest update grows with its text, like every autosizing box (core/fields.js autoGrow: 60% of the window, AG_CAP), then scrolls inside; the drag handle stays and a dragged height is kept (an inline height the CSS never overrides) */
+#pkDesc{max-height:60vh;overflow-y:auto;resize:vertical}
 @media (max-width:640px){.pk-prop+.pk-prop{border-left:0}}
 .pkpop{position:fixed;z-index:var(--z-pop);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:6px;min-width:210px;max-width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;font-size:var(--fs-md)}
 .pkpop input.pkq,.pkpop input.pkdt{width:100%;height:32px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 10px;background:var(--bg);color:var(--ink);margin:0 0 6px;font:inherit}
@@ -2298,7 +2334,7 @@ body:has(#chat.on) .mv-peek{--pkr:max(0px,min(var(--chatw,420px),calc(100vw - va
 .drbtn svg{width:14px;height:14px;flex:none} .drbtn:hover{background:var(--accent-soft)} .drbtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .drbtn[aria-disabled="true"]{color:var(--faint);cursor:default;background:var(--surface)}
 /* BL-290: a switched-off draft greys its controls, never hides them: Generate's other forms, Draft email's tone chips */
-#genFormKind .vchip[aria-disabled="true"],.detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
+.detone .vchip:disabled{opacity:.45;cursor:default} .detone.off>.sub{color:var(--faint)}
 .drcard{margin:8px 0 4px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:var(--r-md);background:var(--sunk);padding:10px 12px;font-size:var(--fs-md);color:var(--ink)}
 .drhead{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px} .drhead svg{width:16px;height:16px;color:var(--accent);flex:none} .drhead .sub{font-size:var(--fs-xs)}
 .drtext{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:8px 10px;white-space:pre-wrap;line-height:1.5}
@@ -2370,17 +2406,9 @@ body:has(#chat.on) .evpanel{right:min(var(--chatw,420px),calc(100vw - var(--rail
 .evkeep{display:flex;gap:6px;margin-top:8px} .evkeep input{flex:1;min-width:0}
 .evlost{margin-top:8px;font-size:var(--fs-sm)}
 #curText .claim:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
-/* ===== BL-209 (sprint-insight) ===== the meeting hub's strip: each step says its state in words and a mark, never colour alone */
-.mhstrip{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 16px;padding:0}
-.mhstrip li{flex:1 1 120px;min-width:110px;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface)}
-.mhstrip .mhl{font-weight:600;font-size:var(--fs-sm)} .mhstrip .mht{font-size:var(--fs-xs);color:var(--muted)}
-.mhstrip .mhdot{font-size:var(--fs-sm);line-height:1;color:var(--muted)}
-.mhstrip .mh-done .mhdot{color:var(--ok)} .mhstrip .mh-current{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
-.mhstrip .mh-current .mhdot{color:var(--accent)} .mhstrip .mh-skip{opacity:.7;border-style:dashed}
-.mhgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px;align-items:start}
-.mhgrid .card{margin:0} .mhnext .btn{margin-top:4px}
-.mhitems,.mhcov,.mhfiles{list-style:none;margin:8px 0 0;padding:0} .mhitems li,.mhcov li,.mhfiles li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
-.mhitem.you{font-weight:500} .tag.ok{color:var(--ok);font-weight:500}
+/* ===== BL-209 (sprint-insight) ===== (v2.1.0 P10: the hub page and its strip are gone; Review's Coverage list keeps these two rules) */
+.mhcov{list-style:none;margin:8px 0 0;padding:0} .mhcov li{padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-md)}
+.tag.ok{color:var(--ok);font-weight:500}
 .mhlink{margin-left:6px;font-size:var(--fs-xs)}
 /* ===== BL-205 (sprint-insight) ===== ⌘K's change: marked Change, and its preview with the sign as well as the colour */
 #cmdkList button.ckchg{font-weight:600}
@@ -2598,7 +2626,6 @@ dialog#prepDlg[open]{display:flex;flex-direction:column}
 .prepmeta .avs{display:inline-flex}
 .prepmeta .av{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--sunk);color:var(--muted);font-size:var(--fs-2xs);font-weight:700;border:2px solid var(--surface);margin-left:-6px}
 .prepmeta .av:first-child{margin-left:0}
-.prepmeta .mhlink{font-size:var(--fs-xs)}
 .preptb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 20px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg)}
 .preptb .sp{flex:1}
 .preptb .btn{min-height:32px}
@@ -2692,8 +2719,7 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .shshowall{margin:8px 0 0}
 @media (max-width:720px){ .shscope{grid-template-columns:minmax(0,1fr)} .readas .rl{grid-template-columns:minmax(0,1fr)} .shfocusbox,.shdraft{padding:12px} }
 /* ===== end BL-286 C ===== */
-/* ===== BL-320 (v1.9.2): Settings, calmer: the changed dot, Reset, Show changed only, Essentials' controls, Health ===== */
-.setchg{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);color:var(--muted);margin:2px 2px 10px;cursor:pointer}
+/* ===== BL-320 (v1.9.2): Settings, calmer: the changed dot, Reset, Essentials' controls, Health ===== */
 .setdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 .setctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .srow.chg>div:last-child{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
@@ -2721,6 +2747,22 @@ dialog#prepDlg.pknm{position:fixed;inset:0;margin:auto;height:fit-content;z-inde
 .hfine{border-top:1px solid var(--line);padding:10px 0 0} .hfine summary{cursor:pointer;color:var(--muted);font-size:var(--fs-sm)}
 @media (max-width:560px){ .hrow{grid-template-columns:22px minmax(0,1fr)} .hrow .hact{grid-column:2} .setctl,.setticks{justify-content:flex-start} }
 @media (forced-colors: active){ .setdot{forced-color-adjust:none;background:Highlight} .hico{border:1px solid CanvasText} }
+/* ===== #98: the item peek's Client-visible switch (.pk-sw) and a milestone's Visible to client switch (.mv-sw) in forced colours.
+   Both were drawn from backgrounds only (a transparent or zero border), which the browser overrides there, so track and thumb
+   vanished. The track gets a 2px ButtonText border on Canvas, the thumb is ButtonText; on fills the track with Highlight and
+   the thumb (HighlightText) sits on the other side, so state is not shown by colour alone. Outside forced colours: unchanged. ===== */
+@media (forced-colors: active){
+  .pk-sw,.mv-sw{forced-color-adjust:none;box-sizing:border-box;background:Canvas;border:2px solid ButtonText}
+  .pk-sw::after,.mv-sw::after{forced-color-adjust:none;background:ButtonText;width:14px;height:14px;top:2px;left:2px}
+  .pk-sw::after{transform:none} .pk-sw[aria-checked="true"]::after{transform:translateX(16px)}
+  .mv-sw[aria-checked="true"]::after{left:20px}
+  .pk-sw[aria-checked="true"],.mv-sw[aria-checked="true"]{background:Highlight;border-color:Highlight}
+  .pk-sw[aria-checked="true"]::after,.mv-sw[aria-checked="true"]::after{background:HighlightText}
+  .pk-sw:focus-visible,.mv-sw:focus-visible{outline:2px solid Highlight;outline-offset:2px}
+  .pk-sw:disabled,.mv-sw:disabled,.pk-sw[aria-disabled="true"],.mv-sw[aria-disabled="true"]{border-color:GrayText}
+  .pk-sw:disabled::after,.mv-sw:disabled::after,.pk-sw[aria-disabled="true"]::after,.mv-sw[aria-disabled="true"]::after{background:GrayText}
+}
+/* ===== end #98 ===== */
 /* ===== end BL-320 ===== */
 /* ===== BL-286 D: Meetings › Prep (#prep=<key>), the prep page inside creaite, in the Briefing layout (components/prep/PrepPage.jsx).
    Tokens only. Three columns (outline, centre, context rail), one below 1000 px; nothing scrolls sideways at 320 px (BL-217). ===== */
@@ -2812,7 +2854,8 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
    Row actions are icons (.ib.sm, 28px; BL-216's 24px targets inside), 55% until the row is pointed at or tabbed into, so
    nothing moves; a window without hover shows them at full strength. Colours are the theme's tokens, so dark mode and every
    palette follow. */
-.dayband .bandin{min-width:0}
+.dayband .bandin{min-width:0;width:80%;margin:0 auto}   /* #113 (Alan, 15-10-2026): the header's CONTENT sits in the 80% centred column again (BL-72's .col80; BL-319 had dropped it in 04c87566), the band stays full width */
+@media (max-width:640px){.dayband .bandin{width:100%}}
 .thome{max-width:980px;margin:0 auto}
 #tBrief .th{margin:0 0 8px}   /* BL-325 (Alan, 14-10-2026): the headings are the shared h2, sentence case; BL-319 set the spacing only */
 #tBrief .th3{margin-top:20px;font:600 var(--fs-sm)/20px var(--font)}   /* You owe, Waiting on: the same sub-heading as a person's Promises card (#ppPromises h3) */
@@ -2822,8 +2865,25 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .tdcand{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-top:1px solid var(--line)}
 .tdcand .ct{flex:1;min-width:0;font-size:var(--fs-sm);line-height:20px;overflow-wrap:anywhere}
 .tdcand .cs{color:var(--day-muted,var(--muted))}
+/* BL-342 Part 5: a staged promise says so in place of its buttons, with Undo */
+.tdcand .tdstaged{flex:none;margin-left:auto;font-size:var(--fs-sm);line-height:20px;color:var(--day-ink,var(--ink))}
 .tdctag{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font-size:var(--fs-xs);font-weight:500}
 .tdmark{vertical-align:2px;height:18px}
+/* BL-342: a thread card's ask, owners and due date (an overdue one in the warning colour, and said in words) */
+#tBrief .tdrow .tb p.tdask,#tBrief .tdrow .tb p.tdwho,#tBrief .tdrow .tb p.tdfiles{margin-top:4px;font-size:var(--fs-sm)}
+#tBrief .tdrow .tb p.tdrel{margin-top:4px;font-size:var(--fs-sm);display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.tdrelchip{font-weight:600}
+.tdrel-new{background:var(--sunk);color:var(--ink)}
+.tdrel-update{background:var(--accent-soft);color:var(--ink)}
+.tdrel-chase{background:var(--warn-soft);color:var(--ink)}
+.tdrelitem{color:var(--day-ink,var(--ink))}
+.tdwhy{flex-basis:100%;color:var(--day-muted,var(--muted));font-size:var(--fs-xs)}
+/* BL-342 Part 3 B: why the matched action looks done, and its staged close with Undo */
+#tBrief .tdrow .tb p.tddone,#tBrief .tdrow .tb p.tdstaged{margin-top:4px;font-size:var(--fs-sm)}
+#tBrief .tdrow .tb p.tdstaged{color:var(--day-ink,var(--ink))}
+.tdlab{display:inline-block;margin-right:6px;color:var(--day-muted,var(--muted));font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.tddue{color:var(--day-muted,var(--muted))}
+.tdover{color:var(--bad);font-weight:600}
 #tBrief .tdrow.td-quiet .tb .t{font-weight:400;color:var(--day-muted,var(--muted))}
 #tBrief ol.bl>li{min-height:44px;padding:8px 0;align-items:flex-start}
 #tBrief .tacts{display:flex;align-items:center;gap:2px;flex:none;margin-left:auto;opacity:.55;transition:opacity var(--d1)}
@@ -2884,7 +2944,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .captitle{min-height:32px;border:1px solid var(--line);border-radius:8px;padding:4px 10px;background:var(--surface);color:var(--ink);font:600 14px/22px var(--font);width:100%;box-sizing:border-box}
 .capbody{flex:1 0 180px;min-height:180px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;line-height:20px;overflow:auto;cursor:text;background:var(--surface)}
 .capbody:focus-within,.capbody:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 2px var(--accent-soft)}
-.capbody p{margin:0 0 6px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
+.capbody p{margin:0 0 6px} .capbody h1{font-size:16px;margin:12px 0 4px} .capbody h2,.capbody h3{font-size:14px;margin:10px 0 4px} .capbody ul,.capbody ol{margin:0 0 6px;padding-left:20px}
 .capbody.blank::before{content:attr(data-ph);color:var(--faint);float:left;height:0;pointer-events:none}
 .capfoot{display:flex;flex-wrap:wrap;align-items:center;gap:8px} .capfoot .btn{min-height:28px} .capfoot .btn.ai{color:var(--accent);border-color:var(--accent)}
 .capfoot .btn[aria-disabled="true"]{opacity:.55}
@@ -2933,29 +2993,66 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nnone{margin:8px 4px}
 .ndoc{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 24px;min-width:0;position:relative}
 .ndoc.empty h2{font-size:16px;margin:0 0 6px}
-.nhead .ntitle{width:100%;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0 0 4px}
+.nhead .ntitle{flex:1;min-width:0;font:600 20px/1.3 var(--font);border:0;border-bottom:1px solid transparent;background:none;color:var(--ink);padding:2px 0;margin:0}
 .nhead .ntitle:hover{border-bottom-color:var(--line)} .nhead .ntitle:focus{outline:none;border-bottom-color:var(--accent)}
-.nhead .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted);margin-bottom:12px}
-.nhead .meta .sp{flex:1}
-.nhead .tag{border:1px solid var(--line);border-radius:999px;padding:0 8px;min-height:20px;display:inline-flex;align-items:center;font-size:11px}
+/* #115: the title row (focus, title, Saved, Find updates, more), one line of properties, one line of tags */
+.nhead .trow{display:flex;align-items:center;gap:8px;min-width:0}
+.nhead .meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:var(--fs-sm);color:var(--muted);margin:6px 0 0}
+.nhead .meta .nk{font:500 var(--fs-xs) var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-right:6px}
+.nhead .nprop{display:inline-flex;align-items:center;position:relative}
+.nhead .ndwrap{display:inline-flex;gap:6px}
+.nhead .nin{height:28px;border:1px dashed var(--line);border-radius:var(--r-pill);padding:0 10px;background:none;color:var(--ink);font-size:var(--fs-sm)}
+.nhead .nin:focus{outline:none;border-style:solid;border-color:var(--accent)} .nhead .nin[aria-invalid="true"]{border-color:var(--bad)}
+.nhead .nin.date{width:140px} .nhead .nin.who{width:min(280px,100%)}
+.nhead .ndbtn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);width:28px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:pointer;padding:0}
+.nhead .ndbtn:hover{background:var(--sunk);color:var(--ink)} .nhead .ndbtn svg.i{width:16px;height:16px}
+.nhead .dpop{position:absolute;top:34px;left:0;z-index:var(--z-pop);width:292px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:10px 12px 12px;text-align:left}
+.nhead .dpop .typed{margin:0 0 8px;font-size:var(--fs-xs);color:var(--muted);min-height:20px} .nhead .dpop .typed b{color:var(--ink);font-weight:600} .nhead .dpop .typed.bad{color:var(--bad)}
+.nhead .dpop .mh{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.nhead .dpop .mh button{border:0;background:none;width:28px;height:28px;border-radius:var(--r-sm);cursor:pointer;color:var(--muted);font-size:var(--fs-lg)} .nhead .dpop .mh button:hover{background:var(--sunk)}
+.nhead .dpop .g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.nhead .dpop .dn{font:500 var(--fs-2xs) var(--mono);color:var(--faint);padding:4px 0;text-transform:uppercase}
+.nhead .dpop .g button{height:32px;border:0;border-radius:var(--r-md);background:none;cursor:pointer;font-size:var(--fs-sm);color:var(--ink)} .nhead .dpop .g button:hover{background:var(--sunk)}
+.nhead .dpop .g button.o{color:var(--faint)} .nhead .dpop .g button.t{box-shadow:inset 0 0 0 1px var(--accent)} .nhead .dpop .g button.s{background:var(--accent);color:var(--accent-ink)}
+.nhead .dpop .foot{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.nhead .dpop .foot button{border:0;background:none;color:var(--accent);font-size:var(--fs-xs);cursor:pointer;text-decoration:underline;text-underline-offset:2px;padding:2px 4px;min-height:24px}
+.nhead .dpop button:focus-visible,.nhead .ndbtn:focus-visible,.nhead .chip .x:focus-visible,.nhead .addl:focus-visible,.nhead .sugg button:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:1px}
+.nlabels{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.nhead .tag{border:1px solid var(--line);border-radius:var(--r-pill);padding:0 10px;min-height:24px;display:inline-flex;align-items:center;font-size:var(--fs-xs);color:var(--muted)}
 .nhead .tag.int{border-color:var(--warn);color:var(--warn)}
-.ntags input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:90px;max-width:220px}
-.nsave{font-size:12px;color:var(--muted)} .nsave.saved{color:var(--ok)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
+.nlabels .chip{display:inline-flex;align-items:center;gap:2px;height:24px;border:1px solid var(--line);border-radius:var(--r-pill);padding:0 4px 0 10px;font-size:var(--fs-xs);background:var(--sunk);color:var(--ink)}
+.nlabels .chip .t{border:0;background:none;color:inherit;font:inherit;padding:0;min-width:2ch;max-width:24ch;border-radius:var(--r-sm);cursor:text}
+.nlabels .chip .t:focus{outline:none;box-shadow:0 0 0 2px var(--accent-soft);background:var(--surface)}
+.nlabels .chip .x{border:0;background:none;color:var(--faint);width:24px;height:24px;border-radius:50%;cursor:pointer;line-height:1;padding:0;font-size:var(--fs-md)} .nlabels .chip .x:hover{background:var(--line);color:var(--ink)}
+.nhead .addl{height:24px;border:1px dashed var(--line);border-radius:var(--r-pill);background:none;color:var(--muted);padding:0 10px;font-size:var(--fs-xs);cursor:pointer} .nhead .addl:hover{border-color:var(--accent);color:var(--accent)}
+.nhead .addin{height:24px;width:140px;border:1px solid var(--accent);border-radius:var(--r-pill);padding:0 10px;font-size:var(--fs-xs);background:var(--surface);color:var(--ink)} .nhead .addin:focus{outline:none}
+.nlabels .sugg{color:var(--faint);font-size:var(--fs-xs)} .nlabels .sugg button{border:0;background:none;color:var(--accent);cursor:pointer;font-size:var(--fs-xs);padding:0 4px;min-height:24px}
+/* the list's quiet collapse control, at the right edge of the NOTES header */
+.nlist .lhead .sp{flex:1}
+.nlist .lhead .col{border:0;background:none;color:var(--faint);opacity:.75;width:var(--ctl-h-sm);height:var(--ctl-h-sm)} .nlist .lhead .col:hover,.nlist .lhead .col:focus-visible{background:var(--sunk);color:var(--ink);opacity:1}
+.nsave{font-size:var(--fs-xs);color:var(--muted);white-space:nowrap} .nsave.saved{color:var(--muted)} .nsave.conflict,.nsave.error,.nsave.wait{color:var(--warn)}
 .nslot:empty{display:none}
 .nmore .nch{display:none} .nmore>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .nmore::before{content:"⋯";font-size:16px;line-height:1}
 .nmorewrap .ddmenu{right:0;left:auto}
 .nstale{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--warn-soft);color:var(--ink);font-size:13px}
 .ned{position:relative}
-.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:1}
+.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:nowrap;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1}
 .ndoc:focus-within .ned .nbar{visibility:visible}
-.ned .nbar button{min-width:28px;min-height:26px}
+.ned .nbar button,.capbar button{min-width:26px;min-height:26px;padding:4px 5px} .capbar{flex-wrap:wrap;margin-bottom:6px}
 .ned .nbody{min-height:280px;height:auto;resize:none;overflow:visible;padding:4px 0;max-width:72ch;position:relative}
-.ned .nbody h2{font-size:15px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;margin:14px 0 4px}
-.ned .nbody ul[data-type=taskList]{list-style:none;padding-left:2px}
-.ned .nbody ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
-.ned .nbody ul[data-type=taskList] li>label{flex:none;margin-top:2px}
-.ned .nbody ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+.ned .nbody h1{font-size:19px;margin:18px 0 6px} .ned .nbody h2{font-size:16px;margin:16px 0 4px} .ned .nbody h3{font-size:14px;font-weight:600;margin:14px 0 4px}
+/* #122: the aligned checklist, for every rich editor that takes one. The 18px box is centred on the first line of text: the label is
+   one line tall (1lh) and centres the box, whose 26px element (a 4px invisible border round the 18px box) is the click target. */
+.ProseMirror ul[data-type=taskList]{list-style:none;padding-left:2px}
+.ProseMirror ul[data-type=taskList] li{display:flex;gap:8px;align-items:flex-start}
+.ProseMirror ul[data-type=taskList] li>label{flex:none;display:flex;align-items:center;height:1lh;min-height:1lh;margin:0}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:26px;height:26px;margin:0 -4px}
+.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]:checked::after{left:6px;top:2px}
+.ProseMirror ul[data-type=taskList] li>div{flex:1;min-width:0}
+.ProseMirror ul[data-type=taskList] li>div>p{margin:0}
+.ProseMirror ul[data-type=taskList] li[data-checked=true]>div{color:var(--muted);text-decoration:line-through}
+@media (forced-colors:active){.ProseMirror ul[data-type=taskList] li>label input[type=checkbox]{width:24px;height:24px;margin:0}}   /* the native box scales to the 24px target (BL-325) */
 .ned .nbody table{border-collapse:collapse;margin:8px 0;max-width:100%} .ned .nbody td,.ned .nbody th{border:1px solid var(--line);padding:4px 8px;min-width:60px;vertical-align:top}
 .ned .nbody a{color:var(--accent)}
 .wl{color:var(--accent);text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;cursor:pointer}
@@ -2966,12 +3063,33 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nchip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--muted);flex:none}
 .nchip.bad::before{background:var(--bad)} .nchip.warn::before{background:var(--warn)} .nchip.ok::before{background:var(--ok)}
 button.nchip{font:inherit;font-size:12px}
-.ntpick{position:absolute;z-index:5;width:300px;max-width:calc(100% - 8px);background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px;overflow:hidden}
+/* #122 C: a chip in an editor carries the whole 'ID · Designation: title', so it flows and wraps with the text (Notes and Current state) */
+.rted .nchip{display:inline;white-space:normal;padding:0 6px;box-decoration-break:clone;-webkit-box-decoration-break:clone;line-height:1.5}
+.rted .nchip::before{display:inline-block;vertical-align:middle;margin:-2px 5px 0 0}
+.rted a .nchip,.rted .nchip a{color:var(--ink);text-decoration:none}
+.itemref{white-space:normal}
+.ntpick.items{width:440px} .ntpick.items .r .l{flex:1;min-width:0}
+.ntpick{position:fixed;z-index:220;width:300px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow-pop);font-size:13px}
 .ntpick .h{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
 .ntpick .r{display:flex;gap:8px;align-items:center;padding:6px 10px;min-height:28px;cursor:pointer}
 .ntpick .r.on{background:var(--accent-soft)} .ntpick .r .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ntpick .r small{color:var(--faint);margin-left:auto;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
 .ntpick .r.none{color:var(--muted);cursor:default}
+/* #122 B: the / menu, drawn by components/SlashMenu.jsx at the caret (position and flip set in core/caretPlace.js); rows 32px, tiles 24px */
+.slashmenu{position:fixed;z-index:220;width:340px;max-width:calc(100vw - 16px);max-height:360px;overflow-y:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:4px;font-size:13px;color:var(--ink)}
+.slashsr{position:fixed;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;margin:-1px}
+.slashmenu .g{font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:8px 8px 4px}
+.slashmenu .r{display:flex;gap:10px;align-items:center;min-height:32px;padding:3px 8px;border-radius:7px;cursor:pointer}
+.slashmenu .r.on{background:var(--accent-soft)}
+.slashmenu .ic{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:var(--surface);display:grid;place-items:center;flex:none;font:600 11px var(--font);color:var(--ink)}
+.slashmenu .r.on .ic{border-color:var(--accent)}
+.slashmenu .tx{display:flex;flex-direction:column;min-width:0}
+.slashmenu .t{font-weight:500;line-height:1.25}
+.slashmenu .d{color:var(--muted);font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slashmenu .k{margin-left:auto;font:500 11px var(--mono);color:var(--faint)}
+.slashmenu .r.none{color:var(--muted);cursor:default;padding:8px}
+.slashmenu .foot{position:sticky;bottom:-4px;background:var(--surface);border-top:1px solid var(--line);margin:4px -4px -4px;padding:6px 12px;font-size:11px;color:var(--faint)}
+@media (forced-colors:active){.slashmenu{border-color:CanvasText}.slashmenu .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}.slashmenu .r.on .d,.slashmenu .r.on .k{color:HighlightText}.slashmenu .ic{border-color:CanvasText}.ntpick .r.on{background:Highlight;color:HighlightText;forced-color-adjust:none}}
 .nctx{display:flex;flex-direction:column;gap:12px;min-width:0}
 .nctx .box{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px}
 .nctx .box h2{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
@@ -3038,13 +3156,6 @@ button.nchip{font:inherit;font-size:12px}
 @media (max-width:420px){.fu-fields{grid-template-columns:1fr}}
 /* ===== end BL-301 E ===== */
 /* ===== BL-301 B gaps (v20-notes-gaps): a Working session's date and attendees in the header; pictures ===== */
-.nws{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
-.nwsf{display:inline-flex;gap:4px;align-items:center;min-width:0}
-.nws input{height:24px;border:1px dashed var(--line);border-radius:999px;padding:0 8px;background:none;color:var(--ink);font-size:11px;min-width:0}
-.nws .nwsdate{width:96px} .nws .nwswith{width:200px;max-width:100%}
-.nws input:focus{outline:none;border-style:solid;border-color:var(--accent)}
-.nws input[aria-invalid="true"]{border-color:var(--bad)}
-.nwsbad{color:var(--bad);font-size:11px}
 .nbody figure.cimg img{max-width:100%;height:auto}
 /* ===== end BL-301 B gaps ===== */
 /* ===== BL-301 D (v20-ai-select): AI on selected text: the bar over a selection and the suggestion (components/AiSelect.jsx) ===== */
@@ -3063,3 +3174,384 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+/* ===== v2.1.0 P5 (BL-335, BL-338): the A4 sheet (components/report/Sheet.jsx). The chrome (bar, handles, pop-ups) uses the page's
+   tokens; the page itself is a document, the same in every theme as it exports (creaite_doc.CSS: paper, ink, rules), so it has
+   its own tokens. Body 14px and tables 12.5px are the export's type sizes (contract 4.1) and so off the app's scale on purpose. ===== */
+:root{--paper:#FFFFFF; --paper-ink:#1D2433; --paper-rule:#D6D9E0; --paper-sunk:#F3F4F7; --paper-mute:#555B66; --paper-link:#0B6E7F}
+.sheet-root{display:flex;flex-direction:column;min-height:0;flex:1;min-width:0}
+.sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.sheet-zoom{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 4px;height:var(--ctl-h)}
+.sheet-zoom .btn{border:0;min-width:26px}
+.sheet-zv{min-width:44px;text-align:center;font-size:var(--fs-xs);font-variant-numeric:tabular-nums}
+.sheet-tog{display:inline-flex;gap:6px;align-items:center;font-size:var(--fs-xs)}
+.sheet-status{font-size:var(--fs-xs);color:var(--muted)}
+.sheet-checks{background:var(--warn-soft);color:var(--warn);border-radius:var(--r-pill);padding:2px 8px;font-size:var(--fs-xs)}
+.sheet-barr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.sheet-note{margin:8px 16px 0;padding:8px 12px;border-radius:var(--r-md);background:var(--warn-soft);color:var(--warn);font-size:var(--fs-sm);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sheet-removed{background:var(--sunk);color:var(--ink)}
+.sheet-area{flex:1;min-height:0;display:flex;background:var(--sunk)}
+.sheet-area.sheet-split>.sheet-scroll{flex:1 1 0;min-width:0}
+.sheet-area.sheet-split>.sheet-scroll+.sheet-scroll{border-left:1px solid var(--line)}
+.sheet-scroll{flex:1;min-width:0;min-height:0;overflow:auto;overflow-anchor:none;padding:20px 16px 48px}
+.sheet-one,.sheet-pair{margin:0 auto;display:flex;gap:16px;justify-content:center;align-items:flex-start}
+.sheet-fit{position:relative;flex:none}
+.sheet-a4{position:absolute;left:0;top:0;width:210mm;transform-origin:0 0}
+.sheet-a4 .page{position:relative;box-sizing:border-box;width:210mm;min-height:297mm;padding:16mm;background:var(--paper);color:var(--paper-ink);
+  font:14px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;box-shadow:var(--shadow-md)}
+.sheet-a4 .page header.doc{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--paper-ink);margin-bottom:14px}
+.sheet-a4 .page header.doc h1{font-size:20px;margin:0 0 6px;color:var(--paper-ink)}
+.sheet-a4 .page header.doc .sub{color:var(--paper-mute);font-size:12.5px}
+.sheet-a4 .page section{position:relative;margin:0 0 16px;break-inside:avoid-page}
+.sheet-a4 .page section h2{font-size:15px;margin:0 0 6px;border-bottom:1px solid var(--paper-rule);padding-bottom:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--paper-ink)}
+.sheet-a4 .page h3{font-size:14px;margin:6px 0 4px}
+.sheet-a4 .page p{margin:0 0 8px}
+.sheet-a4 .page ul,.sheet-a4 .page ol{margin:0 0 8px;padding-left:20px}
+.sheet-a4 .page table{border-collapse:collapse;width:100%;font-size:12.5px}
+.sheet-a4 .page th,.sheet-a4 .page td{border:1px solid var(--paper-rule);padding:4px 6px;text-align:left;vertical-align:top}
+.sheet-a4 .page th{background:var(--paper-sunk);color:var(--paper-ink);font:inherit;font-weight:600;text-transform:none;letter-spacing:normal}
+.sheet-a4 .page .figures{display:flex;flex-wrap:wrap;gap:10px}
+.sheet-a4 .page .figure{position:relative;border:1px solid var(--paper-rule);border-radius:var(--r-md);padding:6px 30px 6px 10px;min-width:110px}
+.sheet-a4 .page .figure b{display:block;font-size:18px}
+.sheet-a4 .page .panes{display:flex;gap:14px}.sheet-a4 .page .panes>div{flex:1;min-width:0}
+.sheet-a4 .page .flag{font-weight:700}
+.sheet-a4 .page .sheet-md>:last-child{margin-bottom:0}
+.sheet-a4 .page .linkbtn{color:var(--paper-link);font-size:inherit}
+.sheet-break{position:absolute;left:0;right:0;border-top:1px dashed var(--paper-rule);pointer-events:none;z-index:var(--z-raised)}
+.sheet-break span{position:absolute;right:6px;top:2px;font-size:var(--fs-2xs);color:var(--paper-mute);white-space:nowrap}
+/* the one editor on the page: no box until it is hovered or has the focus */
+.sheet-ed{min-height:1.5em;border-radius:var(--r-sm);outline:none}
+.sheet-ed.ProseMirror{white-space:pre-wrap}
+.sheet-ed p{margin:0 0 8px} .sheet-ed p:last-child{margin-bottom:0}
+.sheet-a4 .page .sheet-ed:hover{background:var(--paper-sunk)}
+.sheet-a4 .page .sheet-ed:focus-within{background:var(--paper);box-shadow:0 0 0 2px var(--accent)}
+.sheet-ed.blank::before{content:attr(data-ph);color:var(--paper-mute);float:left;height:0;pointer-events:none}
+.sheet-a4 .page .claim{text-decoration:underline wavy var(--warn);text-underline-offset:3px;cursor:pointer}
+/* section chrome (editing only) */
+.sheet-handle{position:absolute;left:-44px;top:-2px;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .15s}
+.sheet-a4 .page section:hover>.sheet-handle,.sheet-a4 .page section:focus-within>.sheet-handle{opacity:1}
+.sheet-grip,.sheet-hbtn{width:28px;height:24px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:grab;border-radius:var(--r-sm);padding:0;font-size:var(--fs-xs);line-height:1}
+.sheet-hbtn{cursor:pointer}
+.sheet-handle .dd{display:block}
+.sheet-a4 .page .sheet-h{font:inherit;font-weight:700;color:inherit;border:0;background:none;padding:0 2px;min-width:8ch;max-width:100%;border-radius:var(--r-sm)}
+.sheet-a4 .page .sheet-h:hover{background:var(--paper-sunk)} .sheet-a4 .page .sheet-h:focus{background:var(--paper);box-shadow:0 0 0 2px var(--accent);outline:none}
+.sheet-reset,.sheet-untag{border:0;background:none;color:var(--paper-link);font-size:var(--fs-xs);font-weight:400;cursor:pointer;padding:0;text-decoration:underline}
+.sheet-untag{margin-left:auto}
+.sheet-spark{--spk:max(24px,calc(24.5px / var(--sc,1)));border:0;background:none;color:var(--paper-link);cursor:pointer;width:var(--spk);height:var(--spk);margin:calc((24px - var(--spk)) / 2);   /* 24 px on screen whatever the page's zoom; its footprint stays 24 */
+  display:inline-grid;place-items:center;padding:0;border-radius:var(--r-sm)}
+.sheet-spark:hover{background:var(--paper-sunk)}
+.sheet-diff{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-pill);padding:0 6px}
+.sheet-match{font-size:var(--fs-xs);font-weight:400;color:var(--paper-mute);margin-left:auto}
+.sheet-hidden{margin:0 0 16px;padding:4px 8px;border:1px dashed var(--paper-rule);font-size:var(--fs-xs);color:var(--paper-mute)}
+.sheet-over-above{box-shadow:0 -3px 0 var(--accent)} .sheet-over-below{box-shadow:0 3px 0 var(--accent)}
+.sheet-dragging{opacity:.4}
+.sheet-extra{margin:0 0 16px}
+.sheet-count{font-size:var(--fs-xs);color:var(--paper-mute);margin-top:4px}
+.sheet-a4 .page td.eyec,.sheet-a4 .page th.eyec{width:28px;padding:2px;border-left:0;border-top:0;border-bottom:0;background:none}
+.sheet-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sheet-a4 .page .eye{border:0;background:none;color:var(--paper-mute);cursor:pointer;width:22px;height:20px;padding:0}
+.sheet-a4 .page .eye[aria-pressed="false"]{opacity:.5}
+.sheet-a4 .page .sheet-figeye{position:absolute;top:2px;right:2px}
+.sheet-rowoff td:not(.eyec),.sheet-figoff{opacity:.4}
+.sheet-tags{display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:4px;vertical-align:baseline}
+.sheet-tagw{display:inline-flex;align-items:center}
+.sheet-tag{color:var(--paper-ink);background:var(--paper-sunk);border-color:var(--paper-rule);font-size:var(--fs-2xs);padding:0 6px;min-height:20px;cursor:pointer}
+.sheet-tagx{border:0;background:none;color:var(--paper-mute);cursor:pointer;font-size:var(--fs-2xs);opacity:0;padding:0 2px}
+.sheet-tagw:hover .sheet-tagx,.sheet-tagx:focus-visible{opacity:1}
+.sheet-redraft{margin:6px 0;padding:8px 12px;border:1px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:var(--r-md);font-size:var(--fs-sm)}
+.sheet-redraft .page{display:none}
+.sheet-rdh{display:flex;gap:6px;align-items:center;font-weight:600;margin-bottom:4px}
+.sheet-rdb{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.sheet-srcs{display:flex;gap:4px;flex-wrap:wrap}
+.sheet-rdnotes{margin:4px 0 6px;padding-left:18px;font-size:13px} .sheet-rdnotes li{color:var(--warn)}   /* #90 review F5: the reply's checks */
+.sheet-pop,.sheet-found{position:fixed;z-index:var(--z-pop);width:320px;max-width:calc(100vw - 16px);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);padding:12px;font-size:var(--fs-sm)}
+.sheet-pop p,.sheet-found p{margin:0 0 6px} .sheet-found ul{margin:0 0 6px;padding-left:16px}
+.sheet-pops{display:flex;gap:6px;flex-wrap:wrap}
+.sheet-exported .sheet-handle{display:none}
+/* ===== v2.1.0 P7 (BL-338): the minutes view (#minutes=<path>, components/minutes/), on P5's Sheet (components/report/Sheet.jsx).
+   Tokens only. The sheet and the transcript pane side by side, each scrolling on its own;
+   the pane goes under the sheet below 900 px; nothing scrolls sideways at 320 px (BL-217). ===== */
+#v-minutes{padding:0}
+#v-minutes:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.mnview{display:flex;flex-direction:column;min-height:0;flex:1}
+.mnhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.mnhead .crumb{font-size:12px;color:var(--muted)} .mnhead .crumb a{color:var(--muted)} .mnhead .crumb a:hover{color:var(--accent)}
+.mnhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600;overflow-wrap:anywhere}
+.mnmeta{margin:0;font-size:13px}
+.mnerr{color:var(--bad);margin:16px 24px}
+.mnwrap{display:flex;flex:1;min-height:0}
+.mnsheet{flex:1;min-width:0;display:flex;flex-direction:column}
+/* the minutes' own controls sit on the A4 paper, which stays white in dark mode: they take the paper's tokens there */
+#v-minutes .sheet-a4 .page{--ink:var(--paper-ink);--bg:var(--paper);--surface:var(--paper);--sunk:var(--paper-sunk);--muted:var(--paper-mute);--line:var(--paper-rule);--accent:var(--paper-link)}
+.mnbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.mnlines p,.mnlines li{margin:0 0 4px}
+.mnlines ul{margin:0 0 6px;padding-left:20px}
+.mntopic{font-size:14px;margin:8px 0 2px}
+.mnflag{font-size:11px;letter-spacing:.03em;color:var(--accent)}
+.mntext{cursor:text}
+.mnedbtn{font-size:12px;min-height:24px;min-width:24px}
+.mnedit{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.mntagw{display:inline-flex;align-items:center;margin-left:6px;vertical-align:baseline}
+.mntag{border:1px solid var(--line);background:var(--sunk);color:var(--muted);border-radius:999px;font:11px/16px var(--mono,monospace);padding:2px 7px;min-height:24px;cursor:pointer}
+.mntag:hover,.mntag:focus-visible{color:var(--accent);border-color:var(--accent)}
+.mntagx{border:0;background:none;color:var(--muted);cursor:pointer;min-width:24px;min-height:24px;opacity:0;font-size:11px}
+.mntagw:hover .mntagx,.mntagx:focus-visible{opacity:1}
+.mncheck{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline wavy var(--warn);text-underline-offset:3px}
+.btn.mncheck{text-decoration:underline wavy var(--warn)}
+.mnbar .mncheck,.mndoes .mnid{min-height:24px}
+.mnio{border:1px dashed var(--line);background:none;color:var(--muted);border-radius:999px;font-size:11px;padding:2px 8px;min-height:24px;margin-left:6px;cursor:pointer}
+.mnio.on{border-style:solid;border-color:var(--ink);color:var(--ink)}
+.mnheld{margin-left:6px;font-size:11px}
+.mnline.internal,.mnrow.internal td{background:var(--sunk)}
+.mnpopw{position:relative;display:inline-block}
+.pkpop.mnpop{position:absolute;top:calc(100% + 4px);left:0;min-width:240px}
+.pkpop.mnpop.flip{left:auto;right:0}
+.pkpop.mnpop.wide{width:min(340px,calc(100vw - 32px));max-width:min(340px,calc(100vw - 32px));padding:10px 12px}
+.pkpop.mnpop.mndl{width:min(290px,calc(100vw - 32px))}
+.mndl-l{display:block;font-size:12px;color:var(--muted);margin:0 0 4px}
+.mndl-said{min-height:28px;font-size:13px;display:flex;align-items:center} .mndl-said.bad{color:var(--bad);font-size:12px}
+.mndl-said .btn{margin-left:8px}
+.pkday.wk{color:var(--muted)}
+.mnck-note{margin:0 0 4px;font-weight:500} .mnck-last{margin:0 0 8px;font-size:12.5px}
+.mnck-acts{display:flex;flex-wrap:wrap;gap:6px}
+.mnchanges{margin:4px 0 0;padding-left:18px;font-size:13px}
+.mnremember{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:6px}
+.mncell{width:100%;font:inherit;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 4px;resize:vertical;field-sizing:content;min-height:24px}
+.mncell:hover,.mncell:focus{border-color:var(--line);background:var(--bg)}
+.mnbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;font-size:12px}
+.mndoes{display:inline-flex;gap:6px;align-items:center;color:var(--muted)} .mndoes.new .mndoes-t{color:var(--accent)}
+.mnlooks{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--warn)}
+.mnrow.kept td{color:var(--muted)}
+.mntype{font:inherit;font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;min-height:24px}
+.mndue{white-space:nowrap}
+.sheet-extra .mncov{border:1px dashed var(--line);border-radius:6px;padding:10px 12px;margin:0 0 18px;background:var(--bg)}
+.mncov-h{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline} .mncov-h h2{border:0!important;margin:0!important}
+.mncov-l,.mncov-ms{list-style:none;margin:6px 0 0;padding:0}
+.mncov-l li,.mncov-ms li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:4px 0}
+.mnverdict{font-size:11px;font-weight:600;border-radius:999px;padding:2px 8px;background:var(--sunk);color:var(--muted)}
+.mnverdict.ok{background:var(--ok-soft);color:var(--ok)} .mnverdict.warn{background:var(--warn-soft);color:var(--warn)} .mnverdict.bad{background:var(--bad-soft);color:var(--bad)}
+.mncov-p{flex:1;min-width:120px} .mncov-done{color:var(--muted);font-size:12px}
+.mncov-line{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:4px}
+.mnpane{width:340px;flex:none;border-left:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;min-height:0}
+.mnpane-h{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line)} .mnpane-h h2{font-size:14px;margin:0}
+.mnpane-q{padding:8px 12px;display:flex;gap:8px;align-items:center} .mnpane-q input{margin:0;flex:1;min-width:0;height:32px;border:1px solid var(--line);border-radius:6px;padding:0 10px;background:var(--bg);color:var(--ink);font:inherit}
+.mnturns{list-style:none;margin:0;padding:0 12px 24px;overflow:auto;flex:1;min-height:0;position:relative}
+.mnturns li{padding:6px 8px;border-radius:6px;margin:0 0 2px;font-size:13px;line-height:1.45}
+.mnturns li.on{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.mnturns li.dim{opacity:.5}
+.mnwho{display:block;font-weight:600;font-size:12px} .mntime{font-weight:400;color:var(--muted);font-family:var(--mono,monospace)}
+.mnturns mark{background:var(--warn-soft);color:inherit}
+.mnpane-none{padding:12px}
+dialog.mnapprove{width:min(784px,calc(100vw - 32px));max-width:calc(100vw - 32px);border:1px solid var(--line);border-radius:10px;padding:0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-pop)}
+.mnap{padding:18px 22px;max-height:calc(100vh - 64px);overflow:auto}
+.mnap h2{margin:0 0 6px;font-size:18px}
+.mnap fieldset{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:8px 12px} .mnap legend{font-weight:600;padding:0 4px}
+.mnap ul{margin:6px 0 0;padding-left:20px;font-size:13px}
+.mnap-all,.mnap-one{display:flex;gap:8px;align-items:flex-start;padding:4px 0;cursor:pointer}
+.mnap-ck{background:var(--warn-soft);border-radius:8px;padding:8px 12px;margin:10px 0;font-size:13px}
+.mnap-err{color:var(--bad)}
+.mnap-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+@media (max-width:900px){ .mnwrap{flex-direction:column;overflow:auto} .mnsheet{flex:none} .mnsheet .sheet-area{min-height:60vh}
+  .mnpane{width:auto;border-left:0;border-top:1px solid var(--line)} .mnturns{max-height:50vh} }
+@media (max-width:480px){ .mnhead{padding:12px 16px 8px} }
+/* ===== end v2.1.0 P7 ===== */
+/* ===== v2.1.0 P6 (BL-335): the weekly report view (#weekly=<code>&week=<Friday>, components/report/weekly/), on P5's sheet
+   (components/report/Sheet.jsx). The page is a fixed light sheet in the firm's brand, the same in both
+   themes, as it exports (the mockup "Weekly report redesign"); everything around it follows the theme. ===== */
+:root{--rp-paper:#F8F8FF; --rp-ink:#1E1F1E; --rp-grey:#5E6270; --rp-rule:#D9DCE6; --rp-soft:#ECEDF4; --rp-green:#91FF01; --rp-red:#C0392B;
+  --rp-amber:#D68910; --rp-ok:#2E7D32; --rp-blue:#2C6FAA; --rp-white:#FFFFFF}
+#v-weekly{padding:0}
+#v-weekly:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.wrview{display:flex;flex-direction:column;min-height:0;flex:1}
+.wrhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.wrhead .crumb{font-size:12px;color:var(--muted)} .wrhead .crumb a{color:var(--muted)} .wrhead .crumb a:hover{color:var(--accent)}
+.wrhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600}
+.wrmeta{margin:0;font-size:13px}
+.wr-err{color:var(--bad);margin:16px 24px}
+.wrsheet{flex:1;min-height:0;display:flex;flex-direction:column}
+.wrsheet .sheet-stub{display:flex;flex-direction:column;flex:1;min-height:0}
+.wrsheet .sheet-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);background:var(--surface)}
+.wrsheet .sheet-bar>.sub{font-size:12px;color:var(--muted)}
+.wr-barr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.wrsheet .sheet-scroll{flex:1;min-height:0;overflow:auto;padding:24px 16px 64px;background:var(--sunk)}
+.wrsheet .sheet-one{max-width:100%}
+.wrsheet .page{position:relative;background:var(--rp-paper);color:var(--rp-ink);font:14px/1.5 "Helvetica Neue",Helvetica,Arial,sans-serif;box-shadow:var(--shadow-card);padding:30px 48px 26px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px;row-gap:22px;overflow-wrap:anywhere}
+.wrsheet .page>*{grid-column:1/-1;min-width:0;margin:0}
+.wrsheet .page>section[data-id=this_week]{grid-column:1}
+.wrsheet .page>section[data-id=this_week]+section[data-id=next_week]{grid-column:2}
+.wrsheet .page>section[data-id=this_week]:has(+ section[data-id=next_week]){grid-column:1}
+.wrsheet .page h2{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;margin:0 0 8px;color:var(--rp-grey);font-weight:600;display:flex;gap:8px;align-items:center;border:0;padding:0}
+.wrsheet .page h2::before{content:"";width:7px;height:7px;background:var(--rp-green);flex:none}
+.wrsheet .page section[data-id=header]>h2,.wrsheet .page section[data-id=health]>h2{display:none}
+.wrsheet .page p{margin:0 0 8px} .wrsheet .page ul{margin:0;padding-left:16px} .wrsheet .page li{margin:0 0 4px}
+.wrsheet .sheet-hidden{color:var(--rp-grey);font-size:12px;border:1px dashed var(--rp-rule);padding:6px 10px}
+.wrsheet .linkbtn,.wr-link{border:0;background:none;color:var(--rp-blue);cursor:pointer;padding:0;font:inherit;font-size:12px;min-height:24px}
+.wrsheet .linkbtn{text-decoration:underline dotted;text-underline-offset:3px;color:inherit;font-size:inherit}
+.wrsheet .chip{border:1px solid var(--rp-blue);background:none;color:var(--rp-blue);font-size:9.5px;font-weight:600;padding:0 4px;margin-left:3px;cursor:pointer;height:auto;border-radius:0}
+.wr-hd{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end;border-bottom:1px solid var(--rp-rule);padding-bottom:12px}
+.wr-eb{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--rp-grey)}
+.wr-pn{font-size:26px;font-weight:600;letter-spacing:-.01em;line-height:1.1;margin:2px 0 1px}
+.wr-wk{font-size:13px;color:var(--rp-grey)}
+.wr-logos{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.wr-logo{display:inline-flex;align-items:center;gap:12px} .wr-logo img{height:24px;width:auto;display:block}
+.wr-lsep{width:1px;height:22px;background:var(--rp-rule)}
+.wr-health{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 22px;align-items:start;background:var(--rp-soft);padding:16px 18px}
+.wr-hcol{display:grid;gap:3px;width:120px}
+.wr-flag{font-weight:700;font-size:13px;letter-spacing:.08em;color:var(--rp-white);padding:9px 0;text-align:center;background:var(--rp-grey)}
+.wr-flag.a{background:var(--rp-amber)} .wr-flag.g{background:var(--rp-ok)} .wr-flag.r{background:var(--rp-red)}
+.wr-trend{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:2px;height:9px}
+.wr-trend i{display:block;background:var(--rp-rule)} .wr-trend i.g{background:var(--rp-ok)} .wr-trend i.a{background:var(--rp-amber)} .wr-trend i.r{background:var(--rp-red)}
+.wr-tlbl{font-size:9.5px;color:var(--rp-grey);letter-spacing:.06em;text-transform:uppercase;display:flex;justify-content:space-between}
+.wr-chg{margin-top:6px}
+.wrsheet .page .btn{background:var(--rp-white);color:var(--rp-ink);border:1px solid var(--rp-rule)} .wrsheet .page .btn:hover{background:var(--rp-soft)}
+.wr-why .wr-rich>p:first-child>span:first-child>b:first-child{display:block;font-size:16px;line-height:1.35;margin-bottom:6px}
+.wr-last{font-size:12px;color:var(--rp-grey);margin-top:4px}
+.wr-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));border-top:1px solid var(--rp-rule);border-bottom:1px solid var(--rp-rule)}
+.wr-stat{padding:12px 12px 12px 14px;display:grid;gap:2px;position:relative;align-content:start}
+.wr-stat:first-child{padding-left:0} .wr-stat+.wr-stat{border-left:1px solid var(--rp-rule)}
+.wr-stat[draggable=true]{cursor:grab} .wr-stat.dragging{opacity:.4} .wr-stat.off{opacity:.4}
+.wr-stat .n{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere} .wr-stat .n.r{color:var(--rp-red)}
+.wr-stat .c{font-size:12px;color:var(--rp-grey)}
+.wr-seye{position:absolute;top:2px;right:2px}
+.wr-eye{border:0;background:none;cursor:pointer;color:var(--rp-grey);font-size:13px;padding:0;min-width:24px;min-height:24px}
+.wr-eye:hover{color:var(--rp-ink)}
+.wr-count{font-size:11px;color:var(--rp-grey);margin-top:6px}
+.wr-rich{min-width:0} .wr-rich.wr-edit{cursor:text;border-radius:2px;min-height:20px} .wr-rich.wr-edit:hover{background:rgba(44,111,170,.07)}
+.wr-rich.wr-edit:focus-visible{outline:2px solid var(--rp-blue);outline-offset:1px}
+.wr-inl{display:inline-block;vertical-align:baseline} .wr-inl p{display:inline;margin:0}
+.wrsheet .page .sheet-text{width:100%;min-height:48px;field-sizing:content;font:inherit;color:var(--rp-ink);background:var(--rp-white);border:1px solid var(--rp-blue);border-radius:2px;padding:4px 6px;resize:vertical}
+.wr-tlwrap{border:1px solid var(--rp-rule);background:var(--rp-white);overflow-x:auto;overflow-y:hidden;height:104px;min-height:80px;max-height:320px;resize:vertical;position:relative}
+.wr-tl{display:block;max-width:none}
+.wr-tlline{stroke:var(--rp-rule);stroke-width:2} .wr-tltx,.wr-tlnow{font-size:10px;fill:var(--rp-grey)} .wr-tlnow{fill:var(--rp-ink)}
+.wr-tltoday{stroke:var(--rp-ink);stroke-dasharray:3 3} .wr-tllab{font-size:10.5px;fill:var(--rp-ink)}
+.wr-ms circle{stroke-width:2} .wr-ms.g circle{stroke:var(--rp-ok)} .wr-ms.a circle{stroke:var(--rp-amber)} .wr-ms.r circle{stroke:var(--rp-red)} .wr-ms.n circle{stroke:var(--rp-grey)}
+.wr-ms circle.fill{fill:var(--rp-ok)} .wr-ms.a circle.fill{fill:var(--rp-amber)} .wr-ms.r circle.fill{fill:var(--rp-red)} .wr-ms circle.hollow{fill:var(--rp-paper)}
+.wr-ms .wr-slip{stroke:var(--rp-red);stroke-width:2} .wr-ms circle.wr-slipc{fill:none;stroke:var(--rp-red);stroke-dasharray:3 2}
+.wr-tlgrab{font-size:10.5px;color:var(--rp-grey);text-align:right;margin-top:2px}
+.wr-tbl{min-width:0;margin-top:8px}
+table.wr-r{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:fixed}
+table.wr-r th{background:none;font-family:inherit;position:static;text-align:left;font-weight:600;color:var(--rp-grey);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px 6px 0;border-bottom:1px solid var(--rp-ink)}
+table.wr-r td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rp-rule);vertical-align:top;overflow-wrap:anywhere}
+table.wr-r .num{font-variant-numeric:tabular-nums} table.wr-r .eyec{width:28px;padding-right:0}
+table.wr-r tr.hidrow td{opacity:.38} table.wr-r tr.hidrow td.eyec{opacity:1}
+.wr-st{font-weight:700;font-size:10px;letter-spacing:.05em;padding:2px 6px;color:var(--rp-white);white-space:nowrap;background:var(--rp-grey)}
+.wr-st.g{background:var(--rp-ok)} .wr-st.a{background:var(--rp-amber)} .wr-st.r{background:var(--rp-red)}
+.sheet-a4 .late{color:var(--rp-red);font-weight:600}   /* on the fixed light sheet only: unscoped it overrode Today's .late (var(--bad)) and failed contrast in dark themes */
+.wr-src{font-size:11px;color:var(--rp-grey);margin-top:2px}
+.wr-decs{list-style:none;padding:0!important;display:grid;gap:8px} .wr-decs li{margin:0;padding-left:12px;border-left:2px solid var(--rp-rule)}
+.wr-meta{color:var(--rp-grey);font-size:12.5px}
+.wr-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px} .wr-two.single{grid-template-columns:minmax(0,1fr)}
+.wr-panet{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--rp-grey);font-weight:600;margin-bottom:4px}
+.wrsheet .page .sub{color:var(--rp-grey)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+/* ===== end v2.1.0 P6 ===== */
+/* ===== v2.1.0 P8 (BL-336): the client view of the week's report (#client-report=CODE/week/client, components/report/ClientView.jsx),
+   on the A4 sheet (Sheet.jsx). Tokens only. The sheet fills the view; Side by side puts the internal page
+   beside the client's; desktop only (Alan, 15-10-2026). ===== */
+#v-clientreport{padding:0}
+#v-clientreport:not([hidden]){display:flex;flex-direction:column;overflow:hidden}
+.crview{display:flex;flex-direction:column;min-height:0;flex:1}
+.crhead{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 24px 10px}
+.crhead .crumb{font-size:12px;color:var(--muted)} .crhead .crumb a{color:var(--muted)} .crhead .crumb a:hover{color:var(--accent)}
+.crhead h1{font-size:22px;line-height:28px;margin:4px 0 2px;font-weight:600;overflow-wrap:anywhere}
+.crmeta{margin:0;font-size:13px}
+.crsheet{flex:1;min-width:0;min-height:0;display:flex;flex-direction:column}
+.crbarr{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-left:auto}
+.crbarr .tag{border:1px solid currentColor;border-radius:var(--r-pill);padding:1px 8px}
+.crnote{font-size:12px;color:var(--warn)}
+.crhealth{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 20px;background:var(--paper-sunk);padding:14px 16px;position:relative}
+.crhcol{display:grid;gap:4px;align-content:start}
+.crflag{font:inherit;font-weight:700;font-size:13px;letter-spacing:.08em;text-align:center;padding:8px 0;border:1px solid currentColor;border-radius:var(--r-sm);background:var(--paper);color:var(--paper-ink);min-height:36px}
+button.crflag{cursor:pointer} button.crflag:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.crflag.g{color:#1E6B3A;background:#E3F4E8} .crflag.a{color:#7A4F00;background:#FBEFD2} .crflag.r{color:#9B1F23;background:#FBE3E3}
+.crdif{font-size:11px;font-weight:600;color:var(--paper-link);border:1px solid currentColor;border-radius:var(--r-pill);padding:0 7px;text-align:center;line-height:18px}
+.crwhy{min-width:0}
+.crpop{position:absolute;z-index:10;top:56px;left:16px;width:min(340px,calc(100% - 32px));background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop);padding:12px;display:grid;gap:8px;font-size:13px}
+.cropts{display:flex;gap:6px}
+.cropts button{flex:1;min-height:32px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);cursor:pointer;font:inherit;font-size:12px}
+.cropts button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.crpop textarea{min-height:56px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--surface);color:var(--ink);width:100%;font:inherit}
+.crpopacts{display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap}
+.crmatch{display:flex;gap:8px;align-items:center;font-size:12px;margin:0 0 6px}
+.crmstate{font-weight:600} .crmstate.matching{color:#1E6B3A} .crmstate.edited{color:var(--paper-link)}
+.crheader{display:grid;gap:2px}
+.crlogos{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:12px}
+.crtable{width:100%;border-collapse:collapse;font-size:12.5px;table-layout:auto}
+.crtable th{text-align:left;color:var(--paper-mute);font-weight:600;border-bottom:1px solid var(--paper-ink);padding:5px 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase}
+.crtable td{vertical-align:top;border-bottom:1px solid var(--paper-rule);padding:6px}
+.creye{width:30px;padding-left:0}
+.creyebtn{border:0;background:none;color:var(--paper-mute);cursor:pointer;min-width:24px;min-height:24px;font-size:13px}
+.creyebtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+tr.crhid td{color:var(--paper-mute)} tr.crhid .creye{color:var(--paper-ink)}
+.crlk{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;color:var(--paper-mute);border:1px solid var(--paper-rule);border-radius:var(--r-sm);padding:0 5px;text-transform:uppercase;letter-spacing:.04em}
+.crlk.lock{color:#9B1F23;border-color:#9B1F23} .crlk.ok{color:#1E6B3A;border-color:#1E6B3A}
+.crcount{font-size:11px;color:var(--paper-mute);margin-top:6px}
+.crstate{font-weight:600;font-size:11px;letter-spacing:.04em;text-transform:uppercase}
+.crnot{margin-top:10px;border:1px dashed var(--paper-rule);border-radius:6px;padding:8px 10px;font-size:12.5px}
+.crnoth{font-weight:600;color:var(--paper-mute);margin-bottom:4px;display:flex;gap:10px;align-items:center}
+.crnot ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.crdlg{width:min(520px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);padding:18px 20px;box-shadow:var(--shadow-pop)}
+.crdlg::backdrop{background:var(--scrim)}
+.crdlg h2{font-size:16px;margin:0 0 10px}
+.crleft{margin:0 0 8px;padding-left:18px;font-size:13px;display:grid;gap:6px}
+.crbad{color:var(--bad);font-size:13px;margin:6px 0} .crbad ul{margin:4px 0 0;padding-left:18px}
+.crdacts{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+#v-clientreport .sheet-a4 .page .btn{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-clientreport .sheet-a4 .page .btn:hover:not(:disabled){background:var(--paper-sunk)}
+#v-clientreport .sheet-a4 .page .btn:disabled{opacity:.5}
+#v-clientreport .sheet-a4 .page .crpop textarea{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-clientreport .sheet-a4 .page .sub,#v-clientreport .sheet-a4 .page .crheader .sub{color:var(--paper-mute)}
+#v-clientreport .sheet-a4 .page .crpop{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-clientreport .sheet-a4 .page .cropts button{background:var(--paper);color:var(--paper-ink);border-color:var(--paper-rule)}
+#v-clientreport .sheet-a4 .page .cropts button[aria-pressed="true"]{border-color:var(--paper-link);background:var(--paper-sunk)}
+/* ===== end v2.1.0 P8 ===== */
+/* ===== BL-337 (v2.1.0 P9) ===== Reports, the reporting space and the cockpit's Reporting card (components/reporting/) */
+.rp .chip{display:inline-flex;align-items:center;gap:4px;min-height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font:500 var(--fs-xs)/16px var(--font);white-space:nowrap}
+.rp .chip.ok,.rp-cockcard .chip.ok{background:var(--ok-soft);color:var(--ok)} .rp .chip.warn,.rp-cockcard .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.rp .chip.plan,.rp-cockcard .chip.plan{background:var(--accent-soft);color:var(--accent)}
+.rp-cockcard .chip{display:inline-flex;align-items:center;min-height:20px;padding:0 8px;border-radius:var(--r-pill);background:var(--sunk);color:var(--muted);font:500 var(--fs-xs)/16px var(--font);white-space:nowrap}
+.rp .btn.sm,.rp-cockcard .btn.sm{height:var(--ctl-h-sm);padding:0 10px;font-size:var(--fs-xs);text-decoration:none;color:inherit} .rp .btn.primary,.rp-cockcard .btn.primary{color:var(--accent-ink)}
+.rp-both{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;border:1px dashed var(--accent);border-radius:var(--r-md);padding:10px 14px;background:var(--accent-soft);margin-bottom:16px}
+.rp-both a.btn{text-decoration:none}
+.rp-both.solid{border-style:solid}
+.rp-tbl{overflow-x:auto} .rp-tbl td{vertical-align:top} .rp-cl{display:grid;gap:4px}
+.rp-grow{flex:1}
+.rp-space{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.rp-space{grid-template-columns:minmax(0,1fr)}}
+.rp-weeks{display:grid;gap:4px;align-content:start}
+.rp-wk{display:grid;gap:4px;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:var(--r-md);padding:8px 10px;cursor:pointer;font:inherit;color:var(--ink)}
+.rp-wk[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)} .rp-wk .l{font-weight:600;font-size:var(--fs-sm)} .rp-wk .s{display:flex;gap:4px;flex-wrap:wrap}
+.rp-main{display:grid;gap:12px;min-width:0}
+.rp-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px} @media (max-width:700px){.rp-pair{grid-template-columns:minmax(0,1fr)}}
+.rp-card{border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;display:grid;gap:10px;background:var(--surface);align-content:start;min-width:0}
+.rp-card .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap} .rp-card .top b{font-size:var(--fs-lg)}
+.rp-card .acts,.rp-cockcard .acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.rp-thumb{height:150px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--sunk);padding:10px 12px;display:grid;gap:6px;align-content:start}
+.rp-thumb i{display:block;height:8px;border-radius:2px;background:var(--line-strong)}
+.rp-thumb .rp-flag{height:18px;width:60px} .rp-flag[data-kind="internal"]{background:var(--warn)} .rp-flag[data-kind="client"]{background:var(--ok)}
+i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:80%} i.w85{width:85%} i.w90{width:90%} i.tall{height:26px}
+.rp-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:var(--fs-sm)} .rp-kv span:nth-child(odd){color:var(--muted)}
+.rp-files h2{margin-bottom:8px} .rp-files>div{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-size:var(--fs-sm)} .rp-files>div:last-child{border-bottom:0}
+.rp-files .g{flex:1;min-width:0;overflow-wrap:anywhere}
+.rp-cockcard{display:grid;gap:8px} .rp-cockcard h2{margin:0;display:flex;gap:8px;align-items:center}
+.rp-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)} .rp-row .g{flex:1;min-width:180px}
+/* ===== end BL-337 ===== */
+
+/* ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: Heading, List and Insert are hover menus (components/EditorBar.jsx) */
+.rtemenu{display:inline-flex;flex:none} .rtebar .rtemb{display:inline-flex;align-items:center;gap:2px} .rtebar .rtemb .nch{width:12px;height:12px;display:inline-block}
+.rtebar .rtemb[aria-expanded=true]{background:var(--sunk);color:var(--ink)}
+.rtebar .rtepop{top:100%;margin-top:2px;width:auto;min-width:190px;padding:4px;text-align:left}
+.rtebar .rtepop button{white-space:nowrap;min-width:0;min-height:28px;padding:6px 10px;color:var(--ink);gap:6px;align-items:center;text-align:left}
+.rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:var(--sunk);outline-offset:-2px}
+.rtebar .rtepop [role=menuitemradio]::before{content:"";display:inline-block;width:1em;flex:none;text-align:center}
+.rtebar .rtepop [role=menuitemradio][aria-checked=true]::before{content:"\2713"}
+.rtebar .rtepop .last{margin-left:auto;padding-left:16px;color:var(--faint)}
+.rtebar .rtepop [aria-disabled=true]{opacity:.4;cursor:default}
+.nbar .rtelink{position:absolute;top:calc(100% + 4px);left:8px;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:var(--z-menu)} .nbar .rtelink[hidden]{display:none}
+@media (forced-colors:active){.rtebar .rtepop{border:1px solid CanvasText} .rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar .rtepop [aria-disabled=true]{opacity:1;color:GrayText}}
+
+/* ===== #109 (ux) ===== the project health form sits over the page like the other peeks, so the cockpit behind it keeps its width.
+   Only the health form (class pover, set by drawPanel); the milestone, rebaseline and new-milestone forms keep their side panel. */
+#panel.pover.on{position:fixed;top:0;bottom:0;right:0;z-index:var(--z-panel);margin:0!important;width:min(max(420px,50vw),calc(100vw - var(--rail-w,72px)));box-shadow:var(--shadow-side)}
+#panel.pover.on .pin{width:100%}
+body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
+@media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}

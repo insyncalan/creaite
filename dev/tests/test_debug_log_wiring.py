@@ -568,7 +568,8 @@ class DashboardDiagnostics(LiveBrowserCase):
         self.raise_in_page("listed error")
         self.assertTrue(self.log_has("listed error"))
         self.b.eval("go('settings','system')")
-        self.b.wait("!!document.getElementById('diagCard')")
+        self.b.wait("!!document.getElementById('diagCard') && DIAG.loaded")   # #96: the errors banner has come in, so the button stays where it is
+        time.sleep(0.3)
         self.b.click("#diagRefresh")
         self.b.wait("document.getElementById('diagList').textContent.includes('listed error')")
         self.assertIn("dashboard", self.b.eval("document.getElementById('diagList').textContent"))

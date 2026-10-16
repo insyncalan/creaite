@@ -1,0 +1,491 @@
+exit 0
+{
+ "approved_at": null,
+ "audience": "internal",
+ "based_on": null,
+ "client": null,
+ "date": "2026-10-09",
+ "format": "creaite-doc",
+ "items": {
+  "ABC-005": {
+   "archived": 0,
+   "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+   "client_visible": 0,
+   "closed": null,
+   "description": "Vendor exits the market before go-live",
+   "due_date": null,
+   "id": "ABC-005",
+   "impact": "High",
+   "likelihood": "High",
+   "milestone": null,
+   "owner": "TBC",
+   "priority": "Urgent",
+   "project": "ABC",
+   "raised": "2026-10-01",
+   "response_action": null,
+   "source": "projects/ABC Example Programme/minutes/2026-10-06 Steering.docx — Action Items",
+   "status": "Open",
+   "table": "raid",
+   "title": "Vendor exits the market before go-live",
+   "type": "Risk",
+   "updated_at": "<TS>",
+   "workstream": null
+  },
+  "ABC-006": {
+   "archived": 0,
+   "client_message": "What it is: Test licences are not yet ordered.\nWhat it means for you: Testing could start late.\nWhat is being done: Purchase order raised this week.",
+   "client_visible": 1,
+   "closed": null,
+   "description": "Test licences not ordered",
+   "due_date": null,
+   "id": "ABC-006",
+   "impact": "Medium",
+   "likelihood": "High",
+   "milestone": null,
+   "owner": "TBC",
+   "priority": "High",
+   "project": "ABC",
+   "raised": "2026-10-05",
+   "response_action": null,
+   "source": "projects/ABC Example Programme/minutes/2026-10-06 Steering.docx — Action Items",
+   "status": "Open",
+   "table": "raid",
+   "title": "Test licences not ordered",
+   "type": "Issue",
+   "updated_at": "<TS>",
+   "workstream": null
+  },
+  "ABC-A-001": {
+   "archived": 0,
+   "client_message": "What it is: \nWhat it means for you: \nWhat is being done: ",
+   "client_visible": 0,
+   "closed": null,
+   "description": "Escalate data access to the client CIO",
+   "due_date": "2026-09-25",
+   "id": "ABC-A-001",
+   "latest_update": null,
+   "milestone": null,
+   "owner": "Alan Carter",
+   "priority": "Medium",
+   "project": "ABC",
+   "raised": "2026-09-20",
+   "source": "projects/ABC Example Programme/minutes/2026-10-06 Steering.docx — Action Items",
+   "status": "Open",
+   "table": "actions",
+   "title": "Escalate data access to the client CIO",
+   "updated_at": "<TS>",
+   "workstream": null
+  },
+  "ABC-D-007": {
+   "archived": 0,
+   "client_message": "Go-live remains on 20 November.",
+   "client_visible": 1,
+   "date": "2026-10-06",
+   "decision": "Go-live stays on 20 November",
+   "id": "ABC-D-007",
+   "made_by": "Steering committee",
+   "needed_by": null,
+   "options": null,
+   "project": "ABC",
+   "reasoning": null,
+   "replaces": null,
+   "revisit": null,
+   "source": "projects/ABC Example Programme/minutes/2026-10-06 Steering.docx — Action Items",
+   "status": "Made",
+   "table": "decisions",
+   "title": "Go-live stays on 20 November",
+   "updated_at": "<TS>"
+  },
+  "ABC-D-008": {
+   "archived": 0,
+   "client_message": "",
+   "client_visible": 0,
+   "date": "2026-10-07",
+   "decision": "Absorb the phase one overrun internally",
+   "id": "ABC-D-008",
+   "made_by": "Alan Carter",
+   "needed_by": null,
+   "options": null,
+   "project": "ABC",
+   "reasoning": null,
+   "replaces": null,
+   "revisit": null,
+   "source": "projects/ABC Example Programme/minutes/2026-10-06 Steering.docx — Action Items",
+   "status": "Made",
+   "table": "decisions",
+   "title": "Absorb the phase one overrun internally",
+   "updated_at": "<TS>"
+  },
+  "ABC-M-001": {
+   "actual_date": null,
+   "archived": 0,
+   "baseline_date": "2026-10-20",
+   "client_message": null,
+   "client_visible": 0,
+   "description": null,
+   "due_date": "2026-11-03",
+   "forecast_date": "2026-11-03",
+   "id": "ABC-M-001",
+   "internal_note": null,
+   "name": "UAT start",
+   "owner": null,
+   "percent_complete": null,
+   "project": "ABC",
+   "sort_order": 0,
+   "source": "s",
+   "state": null,
+   "state_reason": null,
+   "state_set": 0,
+   "status": "Planned",
+   "table": "milestones",
+   "title": "UAT start",
+   "updated_at": "<TS>"
+  }
+ },
+ "kind": "weekly",
+ "layout": {
+  "glance": [
+   "next_milestone",
+   "overdue",
+   "high_risks",
+   "decisions_needed"
+  ],
+  "headings": {},
+  "hidden": [],
+  "logos": [
+   "firm",
+   "client",
+   "partner"
+  ],
+  "milestones": null,
+  "order": [
+   "header",
+   "health",
+   "glance",
+   "summary",
+   "milestones",
+   "asks",
+   "this_week",
+   "next_week",
+   "decisions",
+   "risks",
+   "overdue",
+   "current_state"
+  ],
+  "rows": {
+   "risks": {
+    "top": 5
+   }
+  }
+ },
+ "meta": {
+  "blocked": 0,
+  "flow": "4 opened, 0 closed; 1 overdue, the same as last week; the oldest open action is 19 days old",
+  "key_changes": "",
+  "quiet_week": false,
+  "reasons": [
+   "1 action overdue by more than 7 days (ABC-A-001)",
+   "open Urgent risk or issue (ABC-005)",
+   "UAT start moved 14 days"
+  ],
+  "suggested_health": "At risk",
+  "week_start": "2026-10-05"
+ },
+ "project": "ABC",
+ "project_name": "Example Programme",
+ "saved_at": null,
+ "schema": 1,
+ "sections": [
+  {
+   "data": {
+    "client": "Example Client Ltd",
+    "label": "Weekly report · Internal",
+    "logos": [],
+    "week_ending": "2026-10-09"
+   },
+   "default_heading": "Weekly report",
+   "heading": "Weekly report",
+   "hidden": false,
+   "id": "header",
+   "text": "",
+   "type": "header"
+  },
+  {
+   "data": {
+    "flag": "At risk",
+    "last_week": null,
+    "reasons": [
+     "1 action overdue by more than 7 days (ABC-A-001)",
+     "open Urgent risk or issue (ABC-005)",
+     "UAT start moved 14 days"
+    ],
+    "suggested": "At risk",
+    "trend": []
+   },
+   "default_heading": "Health",
+   "heading": "Health",
+   "hidden": false,
+   "id": "health",
+   "text": "",
+   "type": "health"
+  },
+  {
+   "default_heading": "At a glance",
+   "figures": [
+    {
+     "key": "next_milestone",
+     "label": "Next milestone",
+     "note": "03-11-2026, moved 14 days",
+     "shown": true,
+     "value": "UAT start"
+    },
+    {
+     "key": "overdue",
+     "label": "Overdue actions",
+     "note": "",
+     "shown": true,
+     "value": "1"
+    },
+    {
+     "key": "high_risks",
+     "label": "High risks open",
+     "note": "",
+     "shown": true,
+     "value": "2"
+    },
+    {
+     "key": "decisions_needed",
+     "label": "Decisions needed",
+     "note": "",
+     "shown": true,
+     "value": "0"
+    }
+   ],
+   "heading": "At a glance",
+   "hidden": false,
+   "id": "glance",
+   "type": "figures"
+  },
+  {
+   "default_heading": "Summary",
+   "heading": "Summary",
+   "hidden": false,
+   "id": "summary",
+   "text": "",
+   "type": "text"
+  },
+  {
+   "data": {
+    "milestones": [
+     "ABC-M-001"
+    ],
+    "timeline": [
+     "ABC-M-001"
+    ]
+   },
+   "default_heading": "Milestones",
+   "heading": "Milestones",
+   "hidden": false,
+   "id": "milestones",
+   "text": "",
+   "type": "timeline"
+  },
+  {
+   "columns": [
+    {
+     "key": "ask",
+     "label": "Ask"
+    },
+    {
+     "key": "from",
+     "label": "From"
+    },
+    {
+     "key": "by",
+     "label": "By"
+    },
+    {
+     "key": "why",
+     "label": "Why it matters"
+    }
+   ],
+   "default_heading": "What we need from people",
+   "heading": "What we need from people",
+   "hidden": false,
+   "id": "asks",
+   "rows": [],
+   "type": "table"
+  },
+  {
+   "default_heading": "This week",
+   "heading": "This week",
+   "hidden": false,
+   "id": "this_week",
+   "tags": [],
+   "text": "- Flow: 4 opened, 0 closed; 1 overdue, the same as last week; the oldest open action is 19 days old.",
+   "type": "text"
+  },
+  {
+   "default_heading": "Next week",
+   "heading": "Next week",
+   "hidden": false,
+   "id": "next_week",
+   "tags": [],
+   "text": "",
+   "type": "text"
+  },
+  {
+   "columns": [
+    {
+     "key": "decision",
+     "label": "Decision"
+    },
+    {
+     "key": "by",
+     "label": "Made by"
+    },
+    {
+     "key": "date",
+     "label": "Date"
+    },
+    {
+     "key": "source",
+     "label": "Source"
+    }
+   ],
+   "default_heading": "Decisions made this week",
+   "heading": "Decisions made this week",
+   "hidden": false,
+   "id": "decisions",
+   "rows": [
+    {
+     "cells": {
+      "by": "Steering committee",
+      "date": "06-10-2026",
+      "decision": "Go-live stays on 20 November",
+      "source": "2026-10-06 Steering"
+     },
+     "ref": "ABC-D-007",
+     "shown": true
+    },
+    {
+     "cells": {
+      "by": "Alan Carter",
+      "date": "07-10-2026",
+      "decision": "Absorb the phase one overrun internally",
+      "source": "2026-10-06 Steering"
+     },
+     "ref": "ABC-D-008",
+     "shown": true
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "columns": [
+    {
+     "key": "id",
+     "label": "ID"
+    },
+    {
+     "key": "risk",
+     "label": "Risk or issue"
+    },
+    {
+     "key": "priority",
+     "label": "Priority"
+    },
+    {
+     "key": "owner",
+     "label": "Owner"
+    }
+   ],
+   "default_heading": "Risks and issues",
+   "heading": "Risks and issues",
+   "hidden": false,
+   "id": "risks",
+   "rows": [
+    {
+     "cells": {
+      "id": "ABC-005",
+      "owner": "TBC",
+      "priority": "Urgent",
+      "risk": "Risk: Vendor exits the market before go-live"
+     },
+     "ref": "ABC-005",
+     "shown": true
+    },
+    {
+     "cells": {
+      "id": "ABC-006",
+      "owner": "TBC",
+      "priority": "High",
+      "risk": "Issue: Test licences not ordered"
+     },
+     "ref": "ABC-006",
+     "shown": true
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "columns": [
+    {
+     "key": "id",
+     "label": "ID"
+    },
+    {
+     "key": "action",
+     "label": "Action"
+    },
+    {
+     "key": "owner",
+     "label": "Owner"
+    },
+    {
+     "key": "due",
+     "label": "Due"
+    }
+   ],
+   "default_heading": "Overdue actions",
+   "heading": "Overdue actions",
+   "hidden": false,
+   "id": "overdue",
+   "rows": [
+    {
+     "cells": {
+      "action": "Escalate data access to the client CIO",
+      "due": "25-09-2026",
+      "id": "ABC-A-001",
+      "owner": "Alan Carter"
+     },
+     "ref": "ABC-A-001",
+     "shown": true
+    }
+   ],
+   "type": "table"
+  },
+  {
+   "default_heading": "Current state",
+   "heading": "Current state",
+   "hidden": false,
+   "id": "current_state",
+   "panes": [
+    {
+     "text": "Build is two weeks behind.\n\n![Delivery plan](images/plan.png)",
+     "title": ""
+    }
+   ],
+   "type": "panes"
+  }
+ ],
+ "sources": [
+  {
+   "label": "creaite tracker, week ending 09-10-2026",
+   "ref": "tracker"
+  }
+ ],
+ "state": "draft",
+ "title": "Weekly report",
+ "version": 0
+}

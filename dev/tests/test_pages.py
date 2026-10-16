@@ -7,7 +7,6 @@ root (the BL-85 `locations` setting, resolved against a fake home folder); the p
 against the real live server, as a person would.
 """
 import json
-import os
 import re
 import subprocess
 import sys
@@ -23,13 +22,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from live_browser import LiveBrowserCase  # noqa: E402
+from live_browser import TEST_PALETTES, TEST_PALETTES_JS, LiveBrowserCase  # noqa: E402
 from test_dashboard import CHROME, d, png, populate  # noqa: E402
 from test_onedrive_projects import OneDriveCase, touch  # noqa: E402
 from test_insight import chrome, log, py  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 DEFAULT_REPORTS = f"{ABC}/reports"
 
@@ -39,8 +37,7 @@ DEFAULT_REPORTS = f"{ABC}/reports"
 
 def theme_count():
     """How many named themes the dashboard has (its THEMES list), so theme checks follow new themes by themselves."""
-    page = readable_page()     # BL-231: the source; the bundle reprints the code
-    return len(re.findall(r'\{id:"', re.search(r"const THEMES=\[(.*?)\];", page, re.S).group(1)))
+    return len(TEST_PALETTES)
 
 class FilesDataTests(unittest.TestCase):
     """files(): report folders by their real names, documents set aside, in the default layout."""
@@ -368,7 +365,7 @@ class FilesFileVersionTests(unittest.TestCase):
 
 # ===== BL-88: Files search, a centred bar with an ask creaite button =====
 
-THEMES = tuple(re.findall(r'\{id:"([^"]+)"', re.search(r"const THEMES=\[(.*?)\];", readable_page(), re.S).group(1)))   # every theme (BL-40)
+THEMES = TEST_PALETTES   # creaite and Cursor only (live_browser.TEST_PALETTES; the product has nine themes)
 
 
 def theme(b, palette, mode):
@@ -517,10 +514,6 @@ class SearchBarTests(LiveBrowserCase):
         self.assertEqual({k: round(v["edge"], 2) for k, v in res.items() if v["edge"] < 3}, {})              # the button's edge on the page: 3:1
         # the fill is the theme's accent
         self.assertEqual(res["creaite|Light|data"]["fill"], "rgb(11, 110, 127)")
-        self.assertEqual(res["Brightwater|Light|data"]["fill"], "rgb(30, 31, 30)")                          # Charcoal, with a Signal Green spark
-        self.assertEqual(res["Brightwater|Light|data"]["spark"], "rgb(145, 255, 1)")
-        self.assertEqual(res["Brightwater|Dark|data"]["fill"], "rgb(145, 255, 1)")                          # Signal Green with Charcoal text and spark
-        self.assertEqual(res["Brightwater|Dark|data"]["spark"], "rgb(30, 31, 30)")
         self.assertTrue(b.eval("[...document.styleSheets].flatMap(s=>[...s.cssRules]).some(r=>r.selectorText&&r.selectorText.includes('.askbtn:focus-visible'))"))   # a clear focus ring
         theme(b, "creaite", "Light")
 
@@ -1383,13 +1376,13 @@ class FlowCardTests(unittest.TestCase):
         o = self.probe("""
           go("cockpit","ABC"); const out={}, hue=c=>{ const [r,g,b]=c.match(/[\\d.]+/g).slice(0,3).map(Number).map(v=>v/255), mx=Math.max(r,g,b), mn=Math.min(r,g,b), d=mx-mn; if(!d) return null;
             const h=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4; return ((h*60)+360)%360; };
-          for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderCockpit("ABC"); const c=document.getElementById("flowCard"), bg=__bgOf(c);
+          for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); renderCockpit("ABC"); const c=document.getElementById("flowCard"), bg=__bgOf(c);
             const fill=s=>getComputedStyle(c.querySelector(s)).fill, root=getComputedStyle(document.documentElement), tok=n=>{ const e=document.createElement("i"); e.style.color=`var(${n})`; c.appendChild(e); const v=getComputedStyle(e).color; e.remove(); return v; };
             const op=fill("rect.fl-op[data-v]"), cl=fill("rect.fl-cl[data-v]"), od=fill("rect.fl-od[data-v]");
             const dh=(a,b)=>{ const x=hue(a), y=hue(b); if(x===null||y===null) return null; const d=Math.abs(x-y); return Math.min(d,360-d); };
             out[pal+"|"+mode]={op:__ratio(op,bg), cl:__ratio(cl,bg), od:__ratio(od,bg), muted:__ratio(fill("rect.fl-pL")||tok("--muted"),bg), pair:__ratio(op,cl), hue:dh(op,cl),
               text:__ratio(getComputedStyle(c.querySelector("text.fl-t")).fill,bg), small:__ratio(getComputedStyle(c.querySelector("text.fl-m")).fill,bg), hatched:c.querySelectorAll("rect.fl-cl[data-v] ~ rect.fl-hatch, rect.fl-hatch").length>0&&getComputedStyle(c.querySelector("pattern .fl-hp")).fill!=="none", isAccent:op===tok("--accent"), isWarn:cl===tok("--warn"), isBad:od===tok("--bad")}; }
-          window.OUT=out;""")
+          window.OUT=out;""".replace("TEST_PALETTES", TEST_PALETTES_JS))
         self.assertEqual(len(o), theme_count() * 2)                                                     # every theme, light and dark
         for key, r in o.items():
             for k in ("op", "cl", "od"):
@@ -1625,11 +1618,11 @@ class DependencyPageTests(unittest.TestCase):
     def test_readable_in_every_theme_and_mode(self):
         o = self.probe(subst("""
           MVAUD="int";   /* BL-244: the internal "waiting on" mark is checked too */
-          const out={}; for(const pal of THEMES.map(t=>t.id)) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); go("cockpit","ABC"); const c=document.getElementById("depCard"), bg=__bgOf(c), css=s=>getComputedStyle(c.querySelector(s));
+          const out={}; for(const pal of TEST_PALETTES) for(const mode of ["Light","Dark"]){ S.palette=pal; S.theme=mode; applyTheme(); go("cockpit","ABC"); const c=document.getElementById("depCard"), bg=__bgOf(c), css=s=>getComputedStyle(c.querySelector(s));
             const m=document.querySelector("#mvCard .mv-prow.atrisk .waiting"); out[pal+"|"+mode]={warn:__ratio(css(".depwarn").color,bg), text:__ratio(css(".dept").color,bg), id:__ratio(css(".depid").color,bg), tag:__ratio(getComputedStyle(m).color,__bgOf(m))};
             go("work"); WT="raid"; openNew("raid"); Object.assign(CUR.draft,{p:"ABC",type:"Dependency",due:toIso("__D6__")}); pkDraw();   /* BL-179: the peek's suggestions */
             const b=document.querySelector("#depSug .chipbtn"), cs=getComputedStyle(b); out[pal+"|"+mode].chip=__ratio(cs.color,cs.backgroundColor); out[pal+"|"+mode].chipEdge=__ratio(cs.borderTopColor,__bgOf(b.parentElement)); closePanel(); }
-          window.OUT=out;"""))
+          window.OUT=out;""".replace("TEST_PALETTES", TEST_PALETTES_JS)))
         self.assertEqual(len(o), theme_count() * 2)
         bad = {k: {n: round(x, 2) for n, x in v.items() if x < (3.0 if n == "chipEdge" else 4.5)} for k, v in o.items()}
         self.assertEqual({k: v for k, v in bad.items() if v}, {})

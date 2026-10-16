@@ -102,14 +102,15 @@ def log(fix_id, ok, code=None):
         FIX_LOG.parent.mkdir(parents=True, exist_ok=True)
         with open(FIX_LOG, "a", encoding="utf-8") as fh:
             fh.write(json.dumps({"at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "fix": fix_id, "ok": bool(ok),
-                                 "code": code}) + "\n")
+                                 "code": code, **({"card": True} if (FIXES.get(fix_id) or {}).get("card") else {})}) + "\n")
     except OSError:  # the fix's own answer still reaches the page; the debug log below says it ran
         pass
     try:
         import log as debuglog
     except ImportError:  # BL-228: the debug log is optional
         return
-    debuglog.info("health", f"fix {fix_id}: {'done' if ok else 'failed'}" + ("" if code is None else f" (exit {code})"))
+    state = "failed" if not ok else ("on the approval card, waiting for you" if (FIXES.get(fix_id) or {}).get("card") else "done")
+    debuglog.info("health", f"fix {fix_id}: {state}" + ("" if code is None else f" (exit {code})"))
 
 
 def run_fix(fix_id, runner):

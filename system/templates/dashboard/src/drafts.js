@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { openDialog } from "./components/Dialog.jsx";
+import { closePicker } from "./components/Picker.jsx";
 import { makeDraftEmailDialog } from "./components/dialogs/PageDialogs.jsx";
 import { drawCk, rbEnd, rbStart } from "./ask.js";
 import { drawChips } from "./components/Chip.jsx";
@@ -12,9 +13,9 @@ import { CALI, closeCal, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { HUB, putHtml } from "./meetings.js";
+import { putHtml } from "./meetings.js";
 import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
-import { DRAFTKIND, GEN_AUD, GEN_FORMS } from "./projects.js";
+import { DRAFTKIND, GEN_AUD, GEN_AUDNOTE, GEN_FORMS, genSummary } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
 import { PERS, personPool, renderPerson, row, SA, SETSECTIONS } from "./settings.js";
 import { plur } from "./today.js";
@@ -57,10 +58,10 @@ export function deRowHtml(i,o){ const C=DE_COLOURS, e=esc, d=deDue(i.due,o.today
   const what=i.k==="raid"?`<b style="font-weight:bold;">${e(i.type||"Risk")}:</b> ${e(i.t)}<br><span style="color:${C.muted};">Response: ${e(String(i.resp||"").trim()||"none recorded yet")}</span>`:i.k==="decisions"?`<b style="font-weight:bold;">Decision needed:</b> ${e(i.t)}`:e(i.t);
   const upd=o.includeUpdate&&String(i.upd||"").trim()?`<br><span style="color:${C.muted};">Latest update: ${e(i.upd)}</span>`:"";
   const ch=o.chased&&o.chased[i.id]?`<br><span style="color:${C.muted};">${e(deChasedWords(o.chased[i.id]))}</span>`:"";
-  return `<tr style="vertical-align:top;">${deTd(e(i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`<span style="color:${colour};${strong}">${e(d.date)}</span>${d.words?`<br><span style="color:${colour};${strong}">${e(d.words)}</span>`:""}`,"white-space:nowrap;")}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
+  return `<tr style="vertical-align:top;">${deTd(e(i.noid?"":i.id),"white-space:nowrap;")}${deTd(what+upd+ch)}${deTd(`<span style="color:${colour};${strong}">${e(d.date)}</span>${d.words?`<br><span style="color:${colour};${strong}">${e(d.words)}</span>`:""}`,"white-space:nowrap;")}${deTd(i.pr==="Urgent"?`<b style="font-weight:bold;">Urgent</b>`:e(i.pr||""),"white-space:nowrap;")}</tr>`; }
 export function deTableHtml(list,o){ return `<table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;${DE_FONT}color:${DE_COLOURS.ink};"><tr style="vertical-align:top;">${deTh("ID","9%")}${deTh("Item")}${deTh("Due","18%")}${deTh("Priority","10%")}</tr>${list.map(i=>deRowHtml(i,o)).join("")}</table>`; }
-export function deTextRows(list,o){ const w=Math.max(...list.map(i=>i.id.length)), out=[], pad="".padEnd(w);
-  list.forEach(i=>{ const d=deDue(i.due,o.today,o.dueSoon??7); out.push(`  ${i.id.padEnd(w)}  ${i.k==="raid"?`${i.type||"Risk"}: `:i.k==="decisions"?"Decision needed: ":""}${i.t}  |  ${d.date}${d.words?` (${d.words})`:""}  |  ${i.pr||""}`);
+export function deTextRows(list,o){ const w=Math.max(...list.map(i=>(i.noid?"":i.id).length)), out=[], pad="".padEnd(w);
+  list.forEach(i=>{ const d=deDue(i.due,o.today,o.dueSoon??7); out.push(`  ${(i.noid?"":i.id).padEnd(w)}  ${i.k==="raid"?`${i.type||"Risk"}: `:i.k==="decisions"?"Decision needed: ":""}${i.t}  |  ${d.date}${d.words?` (${d.words})`:""}  |  ${i.pr||""}`);
     if(i.k==="raid") out.push(`  ${pad}  Response: ${String(i.resp||"").trim()||"none recorded yet"}`);
     if(o.includeUpdate&&String(i.upd||"").trim()) out.push(`  ${pad}  Latest update: ${i.upd}`);
     if(o.chased&&o.chased[i.id]) out.push(`  ${pad}  ${deChasedWords(o.chased[i.id])}`); });
@@ -97,20 +98,21 @@ export function deChase(o){ const e=esc, today=o.today, first=o.first||String(o.
 /* Follow-up: the actions grouped by owner, the lead recipient's own first, then the other attendees', then the rest */
 export function deOwners(acts,o){ const names=[o.lead,...(o.attendees||[]).map(a=>a.name)].filter(Boolean), all=[...new Set(acts.map(i=>i.o||"No owner"))];
   return [...names.filter(n=>all.includes(n)).filter((n,i,a)=>a.indexOf(n)===i),...all.filter(n=>!names.includes(n)).sort()]; }
+export const DE_INTERNAL="Internal: not for distribution.";
 export function deFollowup(o){ const e=esc, today=o.today, items=dePicked(o), acts=items.filter(i=>i.k==="actions"), decs=items.filter(i=>i.k==="decisions"), codes=[...new Set(items.map(i=>i.p).concat(o.codes||[]))].sort();
   const att=o.attendees||[], first=att.length===1?String(att[0].name).split(/\s+/)[0]:"all";
   const when=o.day?` on ${new Date(o.day+"T12:00:00").toLocaleDateString("en-GB",{weekday:"long"})} ${fd(o.day)}`:"";
   const open=o.cover||`Thank you for your time at the ${o.title||"meeting"}${when}. Here is a short summary, the decisions we made and the actions we agreed.`;
   const ask=`Please let me know if I have missed or misrecorded anything.${deReplyBy(o.replyBy)} ${DE_THANKS}`, [endH,endT]=deClose(o), owners=deOwners(acts,o), mine=n=>acts.filter(i=>(i.o||"No owner")===n).sort((a,b)=>deSort(a,b,today));
-  const html=`<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${deP(e(deGreeting(o.now,first)))}${deP(e(open))}`
+  const html=`<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${o.internal?deP(`<b style="font-weight:bold;">${DE_INTERNAL}</b>`):""}${deP(e(deGreeting(o.now,first)))}${deP(e(open))}`
     +(o.summary?deHead("Summary")+deP(e(o.summary)):"")+(decs.length?deHead("Decisions")+decs.map(d=>deP(`• ${e(d.t)}${d.by?` <span style="color:${DE_COLOURS.muted};">(${e(d.by)})</span>`:""}`,"margin:0 0 4px 0;")).join(""):"")
     +(acts.length?deHead("Actions")+owners.map(n=>deP(`<b style="font-weight:bold;">${e(n)}</b>`,"margin:10px 0 4px 0;")+deTableHtml(mine(n),o)).join(""):"")+`${deP(e(ask),"margin-top:16px;")}${endH}</div>`;
-  const lines=[deGreeting(o.now,first),"",open,""];
+  const lines=[...(o.internal?[DE_INTERNAL,""]:[]),deGreeting(o.now,first),"",open,""];
   if(o.summary) lines.push("Summary",o.summary,"");
   if(decs.length) lines.push("Decisions",...decs.map(d=>`  • ${d.t}${d.by?` (${d.by})`:""}`),"");
   if(acts.length){ lines.push("Actions"); owners.forEach(n=>lines.push(n,...deTextRows(mine(n),o),"")); }
   lines.push(ask,...endT);
-  return {to:att.map(a=>a.email).filter(Boolean).join("; "),subject:`${codes.join(" / ")}${codes.length?" · ":""}${o.title||"Meeting"}: follow-up and actions`,html,text:lines.join("\n"),items}; }
+  return {to:att.map(a=>a.email).filter(Boolean).join("; "),subject:`${o.internal?"[Internal] ":""}${codes.join(" / ")}${codes.length?" · ":""}${o.title||"Meeting"}: follow-up and actions`,html,text:lines.join("\n"),items}; }
 /* The popup. Opening, copying and changing it write nothing; the only record is "I sent it" in Chase (system/staging/chases.json,
    item IDs, the date and the mode, through the live server). Nothing is sent and no Outlook draft is made. */
 shared.DE=null;   /* {mode, name, email, items, picked:Set, includeUpdate, replyBy, edited, subjEdited, outside, cover, polish; followup: token, title, day, attendees, lead, summary, note} */
@@ -133,7 +135,7 @@ export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=titl
 export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().find(y=>y.name===name); if(!x) return;
   const all=deItems(x), ok=all.filter(i=>!deBarred(i)), email=(x.p&&x.p.email)||"", chase=ok.filter(deOverdue);
   if(!ok.length){ snack(`Nothing open for ${name}, so no email is needed`); return; }
-  if(mode==="chase"&&(!chase.length||deMe(name))) mode="update";
+  if(mode==="chase"&&(!chase.length||deMe(name)||(only&&!chase.some(i=>i.id===only)))) mode="update";   /* BL-342 N3: a thread's Chase on an item not past its date opens the update email */
   const items=mode==="chase"?chase:ok, outside=deOutside(email), picked=deDefaults(items,outside);
   if(only&&!items.some(i=>i.id===only)){ snack(ok.some(i=>i.id===only)?`${only} isn't past its date yet, so it isn't in a chase`:`${only} is marked confidential or restricted, so it can't go in an email`); return; }
   if(only) [...picked].forEach(k=>{ if(!k.endsWith(":"+only)) picked.delete(k); });
@@ -141,19 +143,32 @@ export function openDraftEmail(name,mode="update",only){ (()=>{ const x=PERS().f
   deShow(`Draft email: ${name}`); })();
  }   /* BL-288: the note about a followed person is dropped (Alan) */
 /* from a meeting's page (and Review): the follow-up, with what the meeting produced that is in the tracker */
-export function openFollowup(t){ const m=HUB()[t]; if(!m){ snack("That meeting isn't in creaite's records any more"); return; }
+export function openFollowup(t){ const m=(D.hub||{})[t]; if(!m){ snack("That meeting isn't in creaite's records any more"); return; }
   const all=(m.items||[]).filter(x=>x.id&&(x.k==="actions"||x.k==="decisions")).map(x=>REC(x.k,x.id)&&deItem(x.k,REC(x.k,x.id))).filter(Boolean), ok=all.filter(i=>!deBarred(i));
   if(!ok.length){ snack("The meeting has no actions or decisions in the tracker yet: approve and apply them first"); return; }
   shared.DE={mode:"followup",token:t,title:m.title,day:m.day,codes:m.p||[],items:ok,left:all.length-ok.length,attendees:[],lead:"",summary:"",note:viaServer()?"Reading the attendees and the minutes' summary…":"The attendees and the minutes' summary need the live server.",
     picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:true,cover:"",polish:null};
   shared.DE.picked=deDefaults(ok,true); deShow(`Follow-up: ${m.title}`); if(viaServer()) deFollowFacts(shared.DE,m); }
+/* v2.1.0 P7: from the minutes view's Export menu, for the version shown ("internal" or "distributed"). The server builds the content
+   (minutes_record.followup_facts: the distributed version through distributed_of, so no Internal only, Sensitive, partner-only or
+   excluded content reaches the draft); the Internal version is marked Internal. The same popup, builder and Polish as the meeting's. */
+export async function openMinutesFollowup(path,version){ const r=await api("/api/minutes/followup",{path,version});
+  if(!r||!r.ok){ snack(oneLine((r&&r.message)||"")||"Couldn't read the minutes for the email"); return; }
+  const all=(r.items||[]).map(x=>({...x,p:(r.codes||[])[0]||"",due:x.due||null,pr:"",client:version==="distributed",noid:/^@/.test(x.id),by:x.by||"",o:x.o||x.by||""})), ok=all.filter(i=>!deBarred(i));
+  if(!ok.length){ snack(version==="distributed"?"The distributed version has no actions or decisions to put in an email":"The minutes have no actions or decisions to put in an email"); return; }
+  const outside=version==="distributed"?deOutsideAll(r.attendees||[]):false;
+  const de={mode:"followup",token:"",title:r.title,day:r.day,codes:r.codes||[],items:ok,left:all.length-ok.length,attendees:r.attendees||[],lead:"",summary:r.summary||"",
+    note:version==="distributed"?`From the Distributed version${r.left_out?`: ${r.left_out} withheld item${r.left_out===1?"":"s"} and every Internal only line left out`:": Internal only lines are left out"}.`:"From the Internal version: the email is marked Internal.",
+    picked:new Set(),includeUpdate:false,replyBy:"",edited:false,subjEdited:false,outside:false,cover:"",polish:null,internal:version!=="distributed",version};
+  shared.DE=de; const owners=new Set(ok.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=new Set(ok.map(i=>i.k+":"+i.id));
+  deShow(`${version==="distributed"?"Distributed":"Internal"} follow-up: ${r.title}`); }
 export async function deFollowFacts(de,m){ const r=await api("/api/email/followup",{key:m.key,eid:m.eid||"",day:m.day,start:m.start,title:m.title,files:[...(m.files||[]),...(m.draft?[m.draft]:[])]});
   if(shared.DE!==de) return; if(!r.ok){ de.note=oneLine(r.message)||"Couldn't read the attendees and the summary"; drawDraftEmail(true); return; }
   de.attendees=r.attendees||[]; de.summary=r.summary||""; de.note=r.note||""; de.outside=deOutsideAll(de.attendees);
   const owners=new Set(de.items.map(i=>i.o)); de.lead=(de.attendees.find(a=>owners.has(a.name))||{}).name||""; de.picked=deDefaults(de.items,de.outside); drawDraftEmail(true); }
 export function deBuild(){ return draftEmail({mode:shared.DE.mode,name:shared.DE.name,email:shared.DE.email,items:shared.DE.items,picked:shared.DE.picked,includeUpdate:shared.DE.includeUpdate,replyBy:shared.DE.replyBy,now:new Date(),today:TODAY,dueSoon:S.dueSoon,
   names:Object.fromEntries(P.map(p=>[p.code,p.name])),from:String(S.me||"").split(/\s+/)[0],cover:shared.DE.cover,chased:SA().chases||{},
-  title:shared.DE.title,day:shared.DE.day,codes:shared.DE.codes,attendees:shared.DE.attendees,lead:shared.DE.lead,summary:shared.DE.summary}); }
+  title:shared.DE.title,day:shared.DE.day,codes:shared.DE.codes,attendees:shared.DE.attendees,lead:shared.DE.lead,summary:shared.DE.summary,internal:!!shared.DE.internal}); }
 /* the parts of the popup that differ by mode */
 export function deModesHtml(){ if(shared.DE.mode==="followup") return "";
   return `<div class="demodes" role="group" aria-label="Kind of email"><button type="button" class="vchip" data-demode="update" aria-pressed="${shared.DE.mode==="update"}">Update request</button><button type="button" class="vchip" data-demode="chase" aria-pressed="${shared.DE.mode==="chase"}" ${shared.DE.canChase?"":'disabled data-tip="Nothing of theirs is overdue"'}>Chase overdue items</button></div>`; }
@@ -171,7 +186,7 @@ export function dePolishHtml(){ const tone=shared.DE.tone||"neutral", off=!draft
   return `<div class="detone${off?" off":""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm","neutral","firm"].map(t=>`<button type="button" class="vchip" data-detone="${t}" aria-pressed="${tone===t}"${off?" disabled":""}>${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}${draftBtn("polish","Polish","Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched",'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish?shared.DE.polish.html:""}</div>`; }
 /* redraw the whole popup (first: build it) or just the preview and subject */
 export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(shared.DE.items.map(i=>i.p))].sort();
-  if(first){ const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${esc(i.id)} · ${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
+  if(first){ const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${i.noid?"":esc(i.id)+" · "}${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
     const outsideNote=shared.DE.mode==="followup"?(shared.DE.attendees.length?"An attendee's address is outside your own domains":"There are no attendee addresses on record"):shared.DE.email?"This address is outside your own domains":"There's no email address on record";
     putHtml($("#deBody"),`${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>
@@ -351,12 +366,27 @@ export let GENFM=null;                                         /* the form draft
 export const GEN_FIXEDLEN={three:"Three lines, at most 60 words",email:"One paragraph, at most 120 words",teams:"At most 50 words"};
 /* BL-290: with Forms off the other forms are greyed (aria-disabled, saying why) and a remembered one falls back to Current state */
 export function genFormOptions(){ const off=!draftOn("forms"); if(off&&shared.GEN.form!=="current") shared.GEN.form="current";
-  const cur=shared.GEN.form==="current", why=off?draftWhyNot("status-form"):"";
-  putHtml($("#genFormKind"),GEN_FORMS.map(([k,l])=>`<button type="button" class="vchip" data-gf="${k}" aria-pressed="${shared.GEN.form===k}"${why&&k!=="current"?` aria-disabled="true" data-tip="${esc(why)}"`:""}>${l}</button>`).join(""));
-  $("#genFormNote").textContent=cur?`Into the editor, for you to edit and save.${why?` The other forms: ${why[0].toLowerCase()+why.slice(1)}.`:""}`:"Shown here to copy; never saved.";
-  $$("#genLen [data-gl]").forEach(b=>{ b.disabled=!!GEN_FIXEDLEN[shared.GEN.form]; }); $("#genLen").title=GEN_FIXEDLEN[shared.GEN.form]||"";
-  const h=$("#genDlg h2"); if(h) h.textContent=cur?"Generate current state":`Write a ${GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1].toLowerCase()}`;
-  $("#genGo").textContent=cur?"Generate":"Write it"; if(!GENFM||GENFM.form!==shared.GEN.form) putHtml($("#genOut"),""); }
+  const cur=shared.GEN.form==="current", why=off?draftWhyNot("status-form"):"", fx=GEN_FIXEDLEN[shared.GEN.form]||"", len=$("#genLen");
+  /* #110: one hint line under the strip follows the Form and the Audience (was a note under each) */
+  $("#genHint").textContent=`${cur?`Into the editor, for you to edit and save.${why?` The other forms: ${why[0].toLowerCase()+why.slice(1)}.`:""}`:"Shown here to copy; never saved."} ${GEN_AUDNOTE[shared.GEN.aud]||""}`.trim();
+  if(fx) len.setAttribute("aria-disabled","true"); else len.removeAttribute("aria-disabled"); len.title=fx;   /* Length dims for a form that fixes it, with the reason on hover */
+  const h=$("#genDlg h2"); if(h) h.textContent=cur?"Generate current state":`Write ${/^[aeiou]/i.test(GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1])?"an":"a"} ${GEN_FORMS.find(x=>x[0]===shared.GEN.form)[1].toLowerCase().replace(/^teams/,"Teams")}`;
+  genFooter(); if(!GENFM||GENFM.form!==shared.GEN.form) putHtml($("#genOut"),""); }
+/* #110: after a draft starts the setup folds to one summary line with Change settings; the footer is then Close and a plain Generate again
+   (Copy on the card is the one primary). The DOM is the state: the summary line shows while it is folded. */
+export const genFolded=()=>!$("#genSum").hidden;
+function genFooter(){ const fold=genFolded(), cur=shared.GEN.form==="current";
+  $("#genGoT").textContent=fold?"Generate again":cur?"Generate":"Write it"; $("#genGo").classList.toggle("primary",!fold); $("#genCancel").textContent=fold?"Close":"Cancel"; }
+export function genFold(){ const [form,...rest]=genSummary(), el=$("#genSumTxt"), b=document.createElement("b"); b.textContent=form;
+  el.replaceChildren(b,document.createTextNode(` · ${rest.join(" · ")}`)); $("#genSum").hidden=false;
+  if($("#genSetup").contains(document.activeElement)) $("#genChange").focus();      /* focus never drops to the page behind the dialog when the setup folds */
+  $("#genSetup").hidden=true; genFooter(); }
+/* back to a new dialog: setup showing, no draft (an unused one counts as rejected), Draw on folded, not busy. Change settings, Discard, closing and opening do this */
+export function genReset(){ GENSEQ++;                      /* a draft still being written belongs to the dialog as it was: it is stopped and its result is never shown */
+  if(GENCALL&&DRRUN){ const r=DRRUN; api("/api/ask/stop",{run:r.id}).then(x=>{ if(!x.ok) r.ctl.abort(); }); }
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),"");
+  $("#genSetup").hidden=false; $("#genSum").hidden=true; genBusy(false); genFooter(); }
+function genBusy(on){ if(on) $("#genGo").setAttribute("aria-disabled","true"); else $("#genGo").removeAttribute("aria-disabled"); }
 export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[])[1]||"Status", aud=(GEN_AUD.find(x=>x[0]===d.audience)||[])[1]||"", loose=d.unsourced||0;
   return `<div class="drcard" role="region" aria-label="${esc(name)}" tabindex="-1"><div class="drhead">${ic("spark")}<b>${esc(name)}</b><span class="sub">${esc(aud)} · not saved: copy it where you need it</span></div>
     ${genFormText(d)}${loose?`<div class="drnote">${loose} sentence${loose===1?" has":"s have"} no source: check ${loose===1?"it":"them"} before you use it.</div>`:""}
@@ -367,11 +397,15 @@ export function genFormCard(d){ const name=(GEN_FORMS.find(x=>x[0]===d.form)||[]
 export function genFormText(d){ const src=d.sources||[], lines=d.form==="steering"||d.form==="three", fmt=t=>esc(t.replace(/^[-*]\s+/,"• ")).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>");
   const one=x=>x.unsourced?`<mark class="drloose">${fmt(x.text)}</mark><span class="drtag" role="note">no source</span>`:`<span>${fmt(x.text)}</span>${x.refs.map(r=>`<sup class="drref" data-tip="${esc((src.find(y=>y.ref===r)||{}).text||r)}">${esc(r)}</sup>`).join("")}`;
   return `<div class="drtext">${(d.sentences||[]).map(one).join(lines?"<br>":" ")}</div>`; }
+let GENSEQ=0, GENCALL=false;                                   /* which dialog session a draft belongs to; a form draft is being written */
 export async function genFormDraft(body){ const out=$("#genOut"), why=draftWhyNot("status-form"); if(why){ snack(why); return; }
-  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form;
-  const res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:"")});
+  if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; const form=shared.GEN.form, mine=++GENSEQ;
+  genFold(); genBusy(true);                                  /* #110: the setup folds to its summary while it is written; Generate again waits */
+  let res; GENCALL=true; try{ res=await draftAsk({kind:"status-form",...body,form},{label:"Writing it from the facts",status:h=>{ if(mine===GENSEQ) putHtml(out,h?`<div class="drstatus" role="status">${h}</div>`:""); }}); }
+  finally{ GENCALL=false; if(mine===GENSEQ) genBusy(false); }
+  if(mine!==GENSEQ){ if(res.ok&&!res.nothing) draftStat("forms","rejected"); return; }   /* the dialog was closed, reset or opened again meanwhile: this draft is not its own, and was never used */
   if(res.nothing){ putHtml(out,`<div class="drnone" role="status">${ic("spark")}<span>${esc(res.nothing)}</span></div>`); return; }
-  if(!res.ok){ putHtml(out,""); snack(res.message||"No draft came back"); return; }
+  if(!res.ok){ putHtml(out,""); genReset(); snack(res.message||"No draft came back"); return; }   /* a failure gives the setup back */
   GENFM={d:res,form,used:false}; putHtml(out,genFormCard(res)); out.querySelector(".drcard")?.focus?.(); }
 export async function genFormCopy(rich,btn){ const d=GENFM.d, html=d.form==="steering"?mdHtml(d.text):d.text.split(/\n+/).map(x=>`<p>${esc(x)}</p>`).join("");
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
@@ -386,14 +420,17 @@ export function bootDrafts0202(){
 DRAFTFEATURES.push(["forms","Write the status in other forms","Generate's Form: a steering note, a three-line update, an email paragraph or a Teams message"]);
 Object.assign(DRAFTKIND,{"status-form":"forms"});
 $("#genDlg").addEventListener("click",e=>{ const b=e.target.closest("[data-gfdo]"); if(!b||!GENFM) return; e.preventDefault();
-  if(b.dataset.gfdo==="discard"){ if(!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),""); return; }
+  if(b.dataset.gfdo==="discard"){ genReset(); $("#genDays").focus(); return; }
   genFormCopy(b.dataset.gfdo==="rich",b); });
-$("#genDlg").addEventListener("close",()=>{ if(GENFM&&!GENFM.used) draftStat("forms","rejected"); GENFM=null; putHtml($("#genOut"),""); });
+$("#genDlg").addEventListener("close",()=>{ closePicker("owner",false); genReset(); });
 }
 /* ===== BL-224 (sprint-drafts-writing) ===== Polish the wording's switch and kind (the email modes are in the Draft email block, above) */
 /* ===== end BL-224 ===== */
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootDrafts0203(){
+Object.assign(DRAFTKIND,{"report-section":"report-section","minutes-section":"minutes-section"});   /* #90: the sheet's ✦ */
+DRAFTFEATURES.push(["report-section","Redraft a report section","The weekly or client report's ✦, and Polish, Shorter, Executive or your own words on one section, from the week's facts (a client report: client-visible facts only)"],
+  ["minutes-section","Redraft a minutes section","The minutes' ✦, and Polish, Shorter, Executive or your own words on one section (the distributed version: nothing marked Internal only or withheld)"]);
 Object.assign(DRAFTKIND,{polish:"email","polish-help":"email"});   /* BL-298: the chase pane's Polish for Alan's own item */
 DRAFTFEATURES.push(["email","Polish the email wording","Draft email's opening paragraph reworded in a warm, neutral or firm tone; the table, subject and addresses are untouched"]);
 }

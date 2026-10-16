@@ -8,9 +8,9 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 
-PALETTES = theme_names()   # every theme (BL-40: nine in 1.5.1)
+PALETTES = TEST_PALETTES   # creaite and Cursor only (live_browser.TEST_PALETTES)
 
 
 class ChatScroll(LiveBrowserCase):

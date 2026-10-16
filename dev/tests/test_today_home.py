@@ -55,6 +55,20 @@ class Header(LiveBrowserCase):
         self.assertEqual(o["first"], o["later"])                         # the arrows never move between days (BL-321)
         self.assertEqual(o["next"], "tBrief")
 
+    def test_the_headers_content_is_80_percent_centred_and_the_band_full_width_at_1400_and_900(self):
+        """#113 (regression, BL-319 04c87566 dropped .col80): the band spans the whole view; its content is 80% of the band's
+        inner width, centred; below 640px it is full width."""
+        b = self.b
+        for w in (1400, 900):
+            b.resize(w, 1000)
+            o = b.eval("""(()=>{ const v=document.getElementById('v-today'), band=document.querySelector('#v-today .dayband'), c=document.querySelector('#v-today .bandin'),
+              r=e=>e.getBoundingClientRect(), cs=getComputedStyle(band), inner=r(band).width-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+              return {band:Math.round(r(band).width), view:v.clientWidth, ratio:r(c).width/inner,
+                offL:r(c).left-r(band).left-parseFloat(cs.paddingLeft), offR:r(band).right-parseFloat(cs.paddingRight)-r(c).right}; })()""")
+            self.assertEqual(o["band"], o["view"], w)                      # the coloured band at full width
+            self.assertAlmostEqual(o["ratio"], 0.8, delta=0.005, msg=w)    # the content in 80% of it
+            self.assertAlmostEqual(o["offL"], o["offR"], delta=1.5, msg=w) # centred
+
 
 class Home(LiveBrowserCase):
     """The sample vault (populate): six proposals, reminders, an overdue action of Alan's."""
@@ -165,6 +179,28 @@ class Sections(Home):
         b.click("#resFold>summary")
         b.wait("document.getElementById('resFold').open")
 
+    def test_the_week_ahead_folds_like_resolved_and_is_remembered(self):
+        """#105: the Week ahead hides and shows like Resolved, the choice survives a reload, Resolved is as before."""
+        b = self.b
+        self.today()
+        b.eval("localStorage.removeItem('creaite-week-ahead-hidden')")
+        self.today()
+        self.assertTrue(b.eval("document.getElementById('weekFold').open"))        # shown until hidden
+        b.click("#weekFold>summary")
+        b.wait("!document.getElementById('weekFold').open")
+        self.assertEqual(b.eval("localStorage.getItem('creaite-week-ahead-hidden')"), "true")
+        b.eval("document.querySelector('#weekFold>summary').focus()")
+        self.assertTrue(b.eval("document.activeElement.tagName==='SUMMARY'"))      # reachable by keyboard like Resolved's
+        b.reload("typeof go==='function' && LIVE")
+        self.today()
+        self.assertFalse(b.eval("document.getElementById('weekFold').open"))       # still hidden after a reload
+        self.assertFalse(b.eval("document.getElementById('resFold').open"))        # Resolved untouched: folded
+        b.click("#resFold>summary")
+        b.wait("document.getElementById('resFold').open")
+        b.click("#weekFold>summary")
+        b.wait("document.getElementById('weekFold').open")
+        self.assertEqual(b.eval("localStorage.getItem('creaite-week-ahead-hidden')"), "false")
+
     def test_the_week_ahead_says_why_and_follows_the_setting(self):
         b = self.b
         self.today()
@@ -172,13 +208,13 @@ class Sections(Home):
             {kind:"decisions",id:"ABC-D-009",p:"ABC",t:"Pick a vendor",o:"Omar Ali"},{kind:"raid",id:"ABC-R-009",p:"ABC",t:"A risk",o:"Omar Ali",type:"Risk",pr:"Urgent",od:3},
             {kind:"milestone",id:"ABC-M-001",p:"ABC",t:"UAT",slip:true}]}],undated:[],further:[]};
           S.weekPrios=["Urgent"]; renderToday(); const out={rows:[...document.querySelectorAll('#weekList li.wkrow')].map(l=>[l.querySelector('.wktag').textContent,l.querySelector('.wkwhy').textContent,[...l.querySelectorAll('.tacts button')].map(x=>x.dataset.tip)]),
-            note:document.querySelector('#weekList .wknote').textContent};
-          S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelector('#weekList .wknote').textContent; S.weekPrios=was; return out; })()""")
+            note:document.querySelectorAll('#weekList .wknote').length};
+          S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelectorAll('#weekList .wknote').length; out.text=document.getElementById('weekList').textContent; S.weekPrios=was; return out; })()""")
         self.assertEqual(o["rows"], [["Decision", "needed by", ["Draft a chase"]],
                                      ["Risk · Urgent", "3 days overdue", ["Write an update", "Draft a chase"]],
                                      ["Milestone", "due · at risk", ["Open the project"]]])
-        self.assertEqual(o["note"], "Urgent work, every milestone and decision, and meetings")     # the setting, never hard-coded
-        self.assertEqual(o["note2"], "Urgent and High work, every milestone and decision, and meetings")
+        self.assertEqual((o["note"], o["note2"]), (0, 0))                # #104: the "Urgent work, every milestone and decision, and meetings" note is gone
+        self.assertNotIn("every milestone and decision", o["text"])
 
 
 class NoFileNames(Home):

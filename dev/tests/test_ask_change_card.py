@@ -21,7 +21,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys
@@ -255,7 +255,7 @@ class ChangeCardBrowser(LiveBrowserCase):
         self.assertEqual(b.eval("[...document.querySelectorAll('#chLog .edcard [data-ed]')].map(x=>x.textContent)"), ["Reject", "Approve"])
         self.assertEqual(b.eval("A.find(x=>x.id==='ABC-A-001').st"), "Open")
         bad = []
-        for palette in theme_names():                                                      # the before and after read in every theme
+        for palette in TEST_PALETTES:                                                      # the before and after read in every theme
             for mode in ("light", "dark"):
                 b.eval(f"document.documentElement.dataset.palette='{palette}'; document.documentElement.dataset.theme='{mode}'")
                 bad += [f"{palette} {mode} {x}" for x in b.eval(CONTRAST) if x]

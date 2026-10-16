@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 
 # The page's clock, stepped by the test: Date.now() reads window.T.
 CLOCK = "window.T=1e12; Date.now=()=>window.T;"
@@ -71,7 +71,7 @@ class Dots(LiveBrowserCase):
         b = self.b
         b.eval("openChat(); window.W=working()")
         failures, colours = [], {}
-        for palette in theme_names():
+        for palette in TEST_PALETTES:
             for mode in ("light", "dark"):
                 b.eval(f"document.documentElement.dataset.palette='{palette}'; document.documentElement.dataset.theme='{mode}'")
                 dots = b.eval(RATIO)
@@ -80,7 +80,7 @@ class Dots(LiveBrowserCase):
                 self.assertEqual(len(set(colours[(palette, mode)])), 3, (palette, mode, dots))     # three shades
                 failures += [f"{palette} {mode} dot {i + 1}: {d['r']:.2f}" for i, d in enumerate(dots) if d["r"] < 3]
         self.assertEqual(failures, [])
-        self.assertGreater(len(set(colours.values())), len(theme_names()))       # they follow the theme
+        self.assertGreater(len(set(colours.values())), len(TEST_PALETTES))       # they follow the theme
         accent = b.eval("(()=>{ const t=document.createElement('i'); t.style.background='var(--accent)'; document.body.append(t); const c=getComputedStyle(t).backgroundColor; t.remove(); return c; })()")
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#chLog .mdots i')).backgroundColor"), accent)
         self.assertEqual(b.eval("getComputedStyle(document.querySelector('#chLog .mdots i')).animationName"), "mwave")   # unchanged

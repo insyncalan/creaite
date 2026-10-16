@@ -17,8 +17,8 @@ import { wheelRef } from "./wheel.js";
 /** @typedef {{key: string, page?: string | null, page_at_shown?: string}} PrepRef */
 /** @typedef {{start: string, end: string, title: string, private?: boolean, confidential?: boolean, id?: string | null,
     p?: string | null, where?: string, organiser?: string | boolean | null, follow?: Follow, prep?: PrepRef | null,
-    plan?: string | null, ix?: number | null, hub?: string | null, page?: string | null, pageWhen?: string, running?: string}} DayMeeting
-    `ix`: the meeting's place in today's calendar (the Prep link's data-prep, as before); `hub`: its meeting page; `page`:
+    plan?: string | null, ix?: number | null, page?: string | null, pageWhen?: string, running?: string}} DayMeeting
+    `ix`: the meeting's place in today's calendar (the Prep link's data-prep, as before); `page`:
     its newest prep page; `running`: a check or a process under way ("Checking…"). */
 /** @typedef {{title: string, p?: string | null}} AllDay */
 /** @typedef {{prep: (m: DayMeeting) => void, open: (path: string) => void, process: (m: DayMeeting) => void,
@@ -102,7 +102,7 @@ export function DayMeetings(props) {
             <div class="tm">{e.start} – {e.end}</div>
             <div class="tt">{e.title ?? ""}{!hidden && e.p ? <> <Proj code={e.p} name={acts.name} /></> : null}</div>
             {wh ? <div class="wh">{wh}</div> : null}
-            {acts2 || (e.hub && !hidden) || (acts.note && !e.private) ? <div class="acts">{acts2}{e.hub && !hidden ? <a href={`#meeting=${e.hub}`} class="linkbtn mhlink" data-meeting={e.hub} title="Everything about this meeting, from invite to follow-up">Meeting</a> : null}
+            {acts2 || (acts.note && !e.private) ? <div class="acts">{acts2}
               {acts.note && !e.private ? <button type="button" class="linkbtn mnote" aria-label={`Note for this meeting: ${e.title ?? ""}`} data-tip="Note for this meeting"
                 onClick={() => acts.note && acts.note(e, day)}>Note</button> : null}</div> : null}
           </div>);

@@ -22,7 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from test_dashboard import png  # noqa: E402
-from live_browser import LiveBrowserCase, theme_names  # noqa: E402
+from live_browser import TEST_PALETTES, LiveBrowserCase  # noqa: E402
 
 # a real 16 x 12 JPEG (made with sips), so the browser can decode what the server accepts
 JPEG = base64.b64decode(
@@ -152,7 +152,7 @@ class LiveCurrentState(LiveBrowserCase):
     def test_the_editor_can_be_used_in_every_theme_and_mode_in_a_small_window(self):
         b = self.b
         b.resize(560, 800)
-        for pal in theme_names():
+        for pal in TEST_PALETTES:
             for mode in ("Light", "Dark"):
                 b.eval(f"S.palette={json.dumps(pal)}; S.theme={json.dumps(mode)}; applyTheme()")
                 self.open_editor()

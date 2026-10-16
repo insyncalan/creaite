@@ -2513,13 +2513,15 @@ def sweep_alerts(settings):
     seen (Today's VIP block) and the VIP settings."""
     import sweep                                    # read only: the rules and the alerts as sweep.py keeps them
     st, vs = sweep.vip_state(), sweep.vip_settings()
+    sweep.promises_refresh(st["alerts"])           # BL-342 Part 5: a kept promise no longer open is hidden (not saved here)
     import prep_page
     return {"ignore": sweep.ignore_rules(),
             "prep_pages": prep_page.latest(),                  # BL-98: Open last prep page
             "agendas_shared": paths.external(),                # projects in OneDrive: warn before the first page there
             "vip": {"enabled": vs.get("enabled", True), "notify": vs.get("notify", True),
                     "check_minutes": vs.get("check_minutes", 30), "last_check": st["last_check"],
-                    "alerts": [a for a in st["alerts"] if not a.get("seen")],
+                    "alerts": [{k: v for k, v in a.items() if k not in ("keys", "ids")}     # BL-342: the card's keys stay in vip.json
+                               for a in sweep.vip_sort([a for a in st["alerts"] if not a.get("seen")])],
                     "people": {v["name"]: v["kind"] for v in propose.vip_people()}}}
 
 
@@ -3024,7 +3026,10 @@ def _review_queue_with_done(con):
         if r.get("kind") != "update" or not r.get("file"):
             continue
         sg = (staged_items(cache, r["file"]).get(r.get("ref")) or {}).get("suggested") or {}
-        if sg.get("feature") == "done":
+        closing_thread = sg.get("feature") == "thread" and isinstance(sg.get("done"), dict)
+        if closing_thread:
+            sg = sg["done"]                                          # BL-342: a thread card's close, staged on Alan's click
+        if sg.get("feature") == "done" or closing_thread:
             ev = sg.get("evidence") or {}
             r["dn"] = {"strength": sg.get("strength") or "Maybe done", "ev": extraction.evidence_line(ev)[:400],
                        "reason": str(sg.get("reason") or "")[:200], "src": str(ev.get("source") or "")[:500]}

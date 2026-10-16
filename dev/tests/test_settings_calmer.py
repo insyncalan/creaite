@@ -1,8 +1,7 @@
 """BL-320 (v1.9.2): Settings, calmer, with Health inside: the page side.
 
 Settings opens on Essentials (the catalogue's rows, each with its line), Advanced holds the rest (the older cards under their
-old names, then every remaining setting from the catalogue), a dot marks what differs from its default, Show changed only
-lists just those, Reset puts one back (through /api/settings/reset), and Health lists only what needs Alan, each with its
+old names, then every remaining setting from the catalogue), a dot marks what differs from its default, Reset puts one back (through /api/settings/reset), and Health lists only what needs Alan, each with its
 manual step (a Fix it button only where the fix is marked built), the rest folded into one line.
 
 Run: python3 dev/tests/test_settings_calmer.py   (needs Google Chrome; skipped otherwise)
@@ -47,6 +46,7 @@ def stub_health(b, answer, fixes=None):
     b.eval(f"""(()=>{{ const real=window.api, ans={json.dumps(answer)}; window.__fix=[]; window.__opened=[]; window.open=(u)=>{{ __opened.push(u); }};
       window.api=async(p,body)=>{{ if(p==='/api/health') return JSON.parse(JSON.stringify(ans));
         if(p.startsWith('/api/health/fix/')){{ __fix.push([p, body===undefined?null:body]); const id=p.slice(16);
+          if(id==='old_archive') return {{ok:true,fix:id,card:true,message:'Shown on the approval card in ask creaite: nothing moves until you approve it.'}};
           return id==='m365'?{{ok:true,fix:id,message:'Opening the connector page',url:'https://claude.ai/settings/connectors'}}:{{ok:true,fix:id,message:'Done'}}; }}
         return real(p,body); }}; }})()""")
 
@@ -176,6 +176,34 @@ class SettingsReading(LiveBrowserCase):
         self.assertEqual(self.b.eval("__fix[0]"), ["/api/health/fix/launcher", None])     # the route names the fix; no body
         self.b.wait("document.getElementById('snackT').textContent==='Done'")
 
+    def test_a_card_fix_says_it_is_waiting_on_the_approval_card_not_done(self):
+        """#94: a fix that only raises the approval card (old_archive) is never "Done": the snack and the row say it waits for Alan,
+        and the row keeps saying so until a check no longer reports the problem."""
+        ans = json.loads(json.dumps(HEALTH))
+        ans["problems"][0]["fix"].update({"built": True, "id": "old_archive", "button": "Fix it",
+                                          "does": "Show the renames on the approval card."})
+        stub_health(self.b, ans)
+        self.open("health")
+        row = "document.querySelector('#healthCard .hrow[data-check=launcher_vault]')"
+        self.b.wait(f"!!{row}.querySelector('.btn.primary')")
+        self.assertFalse(self.b.eval(f"!!{row}.querySelector('.hwait')"))
+        self.b.eval(f"{row}.querySelector('.btn.primary').click()")
+        self.b.wait("__fix.length===1")
+        self.assertEqual(self.b.eval("__fix[0]"), ["/api/health/fix/old_archive", None])
+        self.b.wait("document.getElementById('snackT').textContent.startsWith('On the approval card, waiting for you')")
+        self.assertNotIn("Done", self.b.eval("document.getElementById('snackT').textContent"))
+        self.b.wait(f"!!{row}.querySelector('.hwait')")
+        self.assertEqual(self.b.eval(f"{row}.querySelector('.hwait').textContent"), "On the approval card, waiting for you.")
+        # the check runs again after the click and still reports the problem: the row keeps saying so
+        self.b.eval(f"{row}.closest('#healthCard').querySelector('#healthCheck').click()")
+        self.b.wait("!document.getElementById('healthCheck').disabled")
+        self.assertTrue(self.b.eval(f"!!{row}.querySelector('.hwait')"))
+        # once the problem is gone from the check, nothing is left waiting
+        ans["problems"] = []
+        stub_health(self.b, ans)
+        self.b.eval("document.getElementById('healthCheck').click()")
+        self.b.wait("!document.querySelector('#healthCard .hwait') && !document.querySelector('#healthCard .hrow[data-check=launcher_vault]')")
+
     def test_the_standalone_fixes_and_microsoft_365_opens_its_page(self):
         stub_health(self.b, HEALTH)
         self.open("health")
@@ -244,23 +272,18 @@ class SettingsChanging(LiveBrowserCase):
         self.until(lambda: all(self.settings_file().get("drafting", {}).get(k.split(".")[1]) is False for k in keys))
         self.b.wait(f"!!{row}.querySelector('.setdot')")
 
-    def test_show_changed_only_and_reset_on_an_older_card(self):
+    def test_reset_on_an_older_card_and_no_show_changed_only(self):
+        """#102: the "Show changed only" switch is gone; the dot and Reset stay."""
         self.open("advanced")
         b = self.b
+        self.assertEqual(b.eval("document.getElementById('setChanged')"), None)
+        self.assertNotIn("Show changed only", b.eval("document.getElementById('v-settings').textContent"))
         b.eval("(()=>{ const e=document.querySelector('[data-k=boardClosedDays]'); e.value='21'; e.dispatchEvent(new Event('change',{bubbles:true})); })()")
         self.until(lambda: self.settings_file()["work"]["board"]["closed_days"] == 21)
         b.wait("!!document.querySelector('[data-k=boardClosedDays]').closest('.srow').querySelector('.setdot')")
-        b.eval("(()=>{ const c=document.getElementById('setChanged'); c.checked=true; c.dispatchEvent(new Event('change')); })()")
-        b.wait("document.querySelectorAll('#setcats [aria-selected=true]').length===0")
-        shown = "[...document.querySelectorAll('#settingsBody .srow')].filter(r=>!r.hidden&&r.offsetParent)"
-        self.assertIn("Board shows closed items from the last (days)", b.eval(f"{shown}.map(r=>r.querySelector('span[id]').textContent)"))
-        self.assertEqual(b.eval(f"{shown}.filter(r=>!r.querySelector('.setdot')).length"), 0, "only changed rows")
-        self.assertNotIn("Morning sweep from", b.eval(f"{shown}.map(r=>r.querySelector('span[id]').textContent)"))
         b.eval("document.querySelector('[data-k=boardClosedDays]').closest('.srow').querySelector('.setreset').click()")
         self.until(lambda: self.settings_file()["work"]["board"]["closed_days"] == 14)
-        b.wait("!document.querySelector('[data-k=boardClosedDays]')")       # gone from the changed list
-        b.eval("(()=>{ const c=document.getElementById('setChanged'); c.checked=false; c.dispatchEvent(new Event('change')); })()")
-        b.wait("document.querySelector('#setcats [aria-selected=true]').dataset.scat==='advanced'")
+        b.wait("!document.querySelector('[data-k=boardClosedDays]').closest('.srow').querySelector('.setdot')")
         self.assertEqual(b.eval("document.querySelector('[data-k=boardClosedDays]').value"), "14")
 
     def test_an_everything_else_setting_saves_with_its_limits(self):

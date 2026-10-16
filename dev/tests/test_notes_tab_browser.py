@@ -101,7 +101,7 @@ class NotesTab(LiveBrowserCase):
         self.assertEqual(b.eval("document.querySelector('.nbody').getAttribute('aria-activedescendant')"),
                          b.eval("document.querySelector('#ntpick [aria-selected=true]').id"))
         b.key("Enter")
-        b.type(" and #" + item[:5])
+        b.type(" and #" + item)                                                             # the whole ID: Enter picks an exact ID without an arrow (a prefix shared by several items does not)
         b.wait(f"!!document.querySelector('#ntpick [role=option]')&&document.querySelector('#ntpick').textContent.includes({json.dumps(item)})")
         b.key("Enter")
         b.wait(f"!!document.querySelector('.nbody .nchip[data-item={json.dumps(item)}]')")
@@ -110,7 +110,7 @@ class NotesTab(LiveBrowserCase):
         b.wait("noteSave.value.state==='saved'", 15)
         text = (self.notes_dir() / "Linking note.md").read_text()
         self.assertIn("[[Target note]]", text)
-        self.assertIn(f"[{item}](creaite:item/{item})", text)
+        self.assertRegex(text, rf"\[{item} · (Action|Risk|Issue|Assumption|Dependency|Decision): [^\]]*\]\(creaite:item/{item}\)")      # #122 C: 'ID · Designation: title'; the address is unchanged
         self.assertIn(item, b.eval("document.querySelector('.nctx').textContent"))           # Linked work
         b.click(".nlist .ni:not(.on)")                                                       # open Target note
         b.wait("noteCur.value&&noteCur.value.note.title==='Target note'")
