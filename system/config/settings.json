@@ -98,6 +98,7 @@
     "files_show_inbox": true,
     "files_show_portfolio": true,
     "files_show_documents": false,
+    "rail_labels": true,
     "undated_grace_days": 3,
     "flow_weeks": 8,
     "auto_apply": true,

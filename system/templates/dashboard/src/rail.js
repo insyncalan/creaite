@@ -1,9 +1,13 @@
 // @ts-check
 /* rail.js: the sidebar (BL-163, BL-191; BL-319 part 6). The items, the saved choice and the signals are in
    stores/rail.js; the sidebar is drawn by the components in components/sidebar/ (dev/COMPONENTS.md), mounted here into
-   the shell's containers: the collapse toggle (#railTogBox, before the wordmark), the pages (#railMain), More
+   the shell's containers: the pages (#railMain), More
    (#railFoot) and Customise sidebar (#railCustBox, a modal dialog). Old code reaches the sidebar only through the store
    (setRailView, setRailCount), never its DOM.
+
+   #156: three states (expanded 224px; collapsed with labels under the icons 76px; collapsed icons only 56px). The wordmark is the
+   toggle (#railTog, in the shell: "creaite_" expanded, "c_" collapsed), as is ⌘\; the choice is this browser's (stores/rail.js).
+   Labels when collapsed is dashboard.rail_labels (Settings › Essentials, More's menu, Customise sidebar).
 
    The choice is settings.json's dashboard.rail = {order, more, hidden, display}, written through writeSettings (a backup
    and a log line); a write that fails is put back. display "icons" is the collapsed sidebar, the 56px rail of icons; the
@@ -14,16 +18,18 @@ import { h, render } from "preact";
 import { CustomiseSidebar } from "./components/sidebar/CustomiseSidebar.jsx";
 import { RailMore } from "./components/sidebar/RailMore.jsx";
 import { RailNav } from "./components/sidebar/RailNav.jsx";
-import { RailToggle } from "./components/sidebar/RailToggle.jsx";
 import { $, addHTML, html, ic, ICONS } from "./core/dom.js";
+import { A, DEC, open, P, R } from "./core/data.js";
 import { go } from "./core/nav.js";
 import { MAC, S } from "./core/page.js";
 import { writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
-import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railItem, railMoreOpen, railNarrow, railNorm, setRailView } from "./stores/rail.js";
+import { RAIL_DEF, RAIL_ITEMS, railCfg, railCollapsed, railCustOpen, railItem, railLabelled, railLabelsOn, railLoadUser, railMoreOpen, railNarrow, railNorm, railSetUser, railWide, setRailView } from "./stores/rail.js";
 import { row, SETSECTIONS } from "./settings.js";
+import { WTABS, workTabGo } from "./work.js";
+import { healthCount } from "./stores/settings.js";
 
-export { RAIL_DEF, RAIL_ITEMS, railItem, railNorm };   /* the store's, on the page for the tests and ⌘K */
+export { RAIL_DEF, RAIL_ITEMS, healthCount, railItem, railLabelsOn, railNorm };   /* the stores', on the page for the tests and ⌘K */
 
 /** Where Customise was opened from: focus goes back there when it closes. */
 export let RAILOPENER = /** @type {HTMLElement | null} */ (null);
@@ -36,8 +42,25 @@ export async function railSave(cfg) {
   if (!ok) { railCfg.value = was; S.rail = was; }
   return ok;
 }
-/** Collapse or expand the sidebar (the toggle, ⌘\ and ⌘K), remembered in dashboard.rail's display. */
-export function railToggle() { if (!railNarrow.value) railSave({ ...railCfg.value, display: railCollapsed.value ? "titles" : "icons" }); }
+/** Collapse or expand the sidebar (the wordmark, ⌘\\ and ⌘K), remembered in this browser. Under 900px it stays collapsed. */
+export function railToggle() { if (!railNarrow.value) railSetUser(!railCollapsed.value); }
+/** Labels when collapsed (More's switch, Customise sidebar and Settings › Essentials), saved to dashboard.rail_labels.
+    @param {boolean} on */
+export async function railSetLabels(on) {
+  const was = railLabelsOn.value; railLabelsOn.value = on; S.railLabels = on;
+  if (!await writeSettings({ "dashboard.rail_labels": on })) { railLabelsOn.value = was; S.railLabels = was; return false; }
+  return true;
+}
+/** Done in Customise sidebar: the lists and Icons only (display), then the labels setting. Turning Icons only on, or off, also
+    collapses or expands the sidebar, as it did.
+    @param {any} cfg @param {boolean} labels */
+export async function railDone(cfg, labels) {
+  const icons = cfg.display === "icons", was = railCfg.value.display === "icons";
+  const ok = await railSave(cfg);
+  if (ok && icons !== was && !railNarrow.value) railSetUser(icons);
+  if (labels !== railLabelsOn.value) await railSetLabels(labels);
+  return ok;
+}
 /** Open Customise sidebar; focus goes back to `opener` (or the current page's button) when it closes.
     @param {Element | null} [opener] */
 export function railCustomise(opener) {
@@ -62,18 +85,42 @@ export function bootRail0007() {
     arrowdown: '<path d="M12 5v14M19 12l-7 7-7-7"/>', more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>' });
   Object.defineProperty(shared, "RAILCFG", { configurable: true, enumerable: true, get: () => railCfg.value, set: v => { railCfg.value = railNorm(v); } });
   railCfg.value = railNorm(S.rail);
-  const mq = matchMedia("(max-width:1199px)"); railNarrow.value = mq.matches; mq.addEventListener("change", e => { railNarrow.value = e.matches; });
-  effect(() => {        /* the shell follows the choice: the rail's width (--rail-w) and its icons-only look */
-    const c = railCollapsed.value, nav = $(".rail");
+  railLabelsOn.value = S.railLabels !== false; railLoadUser();
+  const mq = matchMedia("(max-width:899px)"); railNarrow.value = mq.matches; mq.addEventListener("change", e => { railNarrow.value = e.matches; });
+  const mw = matchMedia("(min-width:1100px)"); railWide.value = mw.matches; mw.addEventListener("change", e => { railWide.value = e.matches; });
+  effect(() => {        /* the shell follows the choice: the rail's width (--rail-w) and its look (collapsed, labels under the icons) */
+    const c = railCollapsed.value, lab = railLabelled.value, nav = $(".rail");
     document.documentElement.classList.toggle("railicons", c);
-    if (nav) { nav.classList.toggle("icons", c); nav.classList.toggle("collapsed", c); }
+    document.documentElement.classList.toggle("raillabels", lab);
+    if (nav) { nav.classList.toggle("icons", c && !lab); nav.classList.toggle("collapsed", c); nav.classList.toggle("labelled", lab); }
   });
+  const tog = /** @type {HTMLButtonElement | null} */ ($("#railTog"));
+  if (tog) {          /* the wordmark is the toggle; its name says what it will do */
+    effect(() => {
+      const c = railCollapsed.value, what = c ? "Expand the rail" : "Collapse the rail";
+      tog.setAttribute("aria-expanded", c ? "false" : "true"); tog.setAttribute("aria-label", what);
+      tog.setAttribute("data-key", MAC ? "⌘\\" : "Ctrl+\\");
+      tog.disabled = railNarrow.value;
+    });
+    tog.addEventListener("click", railToggle);
+  }
   const onGo = (/** @type {string} */ id) => go(id);
-  render(h(RailToggle, { onToggle: railToggle, keyName: MAC ? "⌘\\" : "Ctrl+\\" }), $("#railTogBox"));
-  render(h(RailNav, { onGo }), $("#railMain"));
-  render(h(RailMore, { onGo, onCustomise: railCustomise }), $("#railFoot"));
+  /* #139: Projects and Work open a list on hover (the active projects by name with their health, the Work lists with their open counts);
+     a pick opens it, the icon alone still goes to the page */
+  const flyouts = {
+    projects: () => { const a = P.filter(p => p.active !== false && !p.archived);
+      return a.length ? a.map(p => ({ id: p.code, name: p.name, health: p.health || "" })) : [{ id: "-", note: "No active projects" }]; },
+    work: () => { const n = { actions: A.filter(open).length, raid: R.filter(open).length, decisions: DEC.filter(open).length };
+      return WTABS.map(t => ({ id: t.id, name: t.label, count: t.id === "all" ? n.actions + n.raid + n.decisions : n[t.id] })); },
+  };
+  const onFly = (/** @type {string} */ id, /** @type {string} */ pick) => {
+    if (id === "projects") go("cockpit", pick);
+    else if (id === "work") { if (shared.VIEW !== "work") go("work"); if (shared.WT !== pick) workTabGo(pick); }
+  };
+  render(h(RailNav, { onGo, flyouts, onFly }), $("#railMain"));
+  render(h(RailMore, { onGo, onCustomise: railCustomise, onLabels: railSetLabels, onHealth: () => go("settings", "health"), onHelp: () => go("help") }), $("#railFoot"));
   addHTML(document.body, "beforeend", html`<div id="railCustBox"></div>`);
-  render(h(CustomiseSidebar, { onSave: railSave, onClose: railCustClosed }), $("#railCustBox"));
+  render(h(CustomiseSidebar, { onSave: railDone, onClose: railCustClosed }), $("#railCustBox"));
   document.addEventListener("click", e => { const t = /** @type {Element} */ (e.target); if (t.closest && t.closest("[data-railcust]")) railCustomise(t.closest("[data-railcust]")); });
   /* BL-191: a right-click anywhere on the sidebar (or the context-menu key, Shift+F10, on a focused page) opens Customise */
   document.addEventListener("contextmenu", e => { const t = /** @type {Element} */ (e.target); const nav = t.closest && t.closest(".rail"); if (!nav) return; e.preventDefault();

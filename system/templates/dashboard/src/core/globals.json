@@ -261,6 +261,7 @@
    "handle",
    "hashOf",
    "health",
+   "healthCount",
    "healthEvidence",
    "healthFacts",
    "helpGo",

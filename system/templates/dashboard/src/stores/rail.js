@@ -8,8 +8,16 @@
    - order: the pages in the sidebar, top to bottom; Today is always first;
    - more: the pages in More, at the bottom (BL-319: Intake, Files, Activity, Settings by default);
    - hidden: kept for the shape older versions wrote; a page it names now goes into More, so nothing is ever lost;
-   - display: "titles", or "icons" (collapsed: the 56px rail of icons). The collapse toggle and ⌘\ write it. */
+   - display: "titles", or "icons". "icons" is what older versions saved for the collapsed rail of icons only; it still works
+     (#156): it means Labels when collapsed OFF, and the rail starts collapsed in a browser that has not chosen yet. Nothing
+     writes it any more except the Customise sidebar dialog's "Icons only".
+
+   #156 (the rail's three states): expanded (224px, labels beside the icons), collapsed with labels (76px, each label under its
+   icon; the setting dashboard.rail_labels, default on), collapsed icons only (56px). The wordmark toggles it, remembered in this
+   browser (localStorage). With no choice yet, the rail is expanded at 1100px and wider and collapsed below that; under 900px it
+   is always collapsed. */
 import { computed, signal } from "@preact/signals";
+import { store } from "../core/page.js";
 
 /** @typedef {{id: string, title: string, icon: string, badge?: string, group: "top"|"more", fixed?: boolean}} RailItem */
 /** @typedef {{order: string[], more: string[], hidden: string[], display: "titles"|"icons"}} RailCfg */
@@ -67,11 +75,26 @@ export const railCounts = signal(/** @type {Record<string, RailCount>} */ ({}));
 export const railMoreOpen = signal(false);
 /** Whether Customise sidebar is open. */
 export const railCustOpen = signal(false);
-/** A window under 1200px wide always shows the rail of icons (the toggle is hidden there), so the 212px sidebar never
-    squeezes the page, the side peek or the top bar on a smaller screen. */
+/** The setting "Labels when collapsed" (dashboard.rail_labels, on by default). */
+export const railLabelsOn = signal(true);
+/** The window is 1100px wide or more: with no choice made yet the rail starts expanded. */
+export const railWide = signal(true);
+/** Under 900px the rail is always collapsed (the pinned rail), so the page keeps its room. */
 export const railNarrow = signal(false);
-/** Collapsed: the 56px rail of icons. */
-export const railCollapsed = computed(() => railNarrow.value || railCfg.value.display === "icons");
+const KEY = "creaite-rail-collapsed";
+/** This browser's choice (the wordmark toggle): true collapsed, false expanded, null none yet. */
+export const railUser = signal(/** @type {boolean | null} */ (null));
+/** Read the remembered choice (a private window or blocked storage: none). */
+export function railLoadUser() { try { const v = store.get(KEY, null); railUser.value = typeof v === "boolean" ? v : null; } catch (x) { railUser.value = null; } }
+/** Remember the choice. @param {boolean} v */
+export function railSetUser(v) { railUser.value = v; try { store.set(KEY, v); } catch (x) { /* storage blocked: it holds for this page only */ } }
+/** Collapsed: by the wordmark; else by what was saved before (display "icons") or the window's width. */
+export const railCollapsed = computed(() => railNarrow.value
+  || (railUser.value !== null ? railUser.value : railCfg.value.display === "icons" || !railWide.value));
+/** Collapsed with each label under its icon (76px). */
+export const railLabelled = computed(() => railCollapsed.value && railLabelsOn.value && railCfg.value.display !== "icons");
+/** "expanded", "labels" or "icons". */
+export const railMode = computed(() => !railCollapsed.value ? "expanded" : railLabelled.value ? "labels" : "icons");
 /** What waits inside More: [title, count] for each page in More with a count. */
 export const railMoreWaiting = computed(() => railCfg.value.more
   .map(id => /** @type {[string, number]} */ ([railItem(id).title, (railCounts.value[id] || { n: 0 }).n]))
