@@ -14,7 +14,8 @@ import drafts_fake  # noqa: E402
 from test_drafts_update import DraftCase  # noqa: E402
 
 WEEKLY = {"kind": "report-section", "report": "weekly", "code": "ABC", "section": "this_week", "heading": "This week",
-          "text": "The wave plan holds.", "action": "shorter"}
+          "text": "The wave plan holds.", "action": "shorter",
+          "document": {"kind": "weekly", "code": "ABC", "week_ending": ""}}      # #127: the report the section is in
 
 
 class Route(DraftCase):

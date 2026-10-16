@@ -118,7 +118,8 @@ def drawing(rid, n, w_px, h_px, name):
 LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
-                    r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)")
+                    r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)"
+                    r"|\[([^\]\n]+)\]\(\s{0,20}<?creaite:[^)\n]{0,500}\)")   # #127: a creaite: link is its words in Word, never Markdown
 MAX_LEVEL = 3
 # BL-89: Current state has two writing panes, one message. They are stored in the one `## Current state` section with this line
 # between them; a text without it is just the left pane. Every reader except the dashboard's editor sees one continuous
@@ -275,7 +276,9 @@ def md_runs(text):
     for m in INLINE.finditer(text):
         if m.start() > at:
             out.append((text[at:m.start()], False, False, False, None))
-        if m.group(1) is not None:
+        if m.group(7) is not None:                         # #127: a creaite: link (an item, a person): its words only
+            out.append((m.group(7), False, False, False, None))
+        elif m.group(1) is not None:
             out.append((m.group(1), False, False, False, m.group(2)))
         elif m.group(3) is not None:
             out.append((m.group(3), True, False, False, None))

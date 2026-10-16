@@ -2227,24 +2227,34 @@ def section_shape(panes):
 
 def report_request(con, req):
     """(code, is it a client report, the week ending, action, task, the section's words, its panes) for a report section, or the
-    refusal. A client section that already holds wording a client mustn't see is refused: nothing is sent to a draft."""
-    import client_leak
+    refusal. #127: the audience is bound on the server from the report the request names (`document`, checked by
+    edit_ai.document_audience as /api/edit/ai's place is), never from what the page claims; no report named is refused. A client
+    section that already holds something a client mustn't see is refused (edit_ai.client_problems): nothing is sent to a draft."""
+    import edit_ai
     import report_doc
-    code, which = str(req.get("code") or ""), req.get("report")
-    if which not in ("weekly", "client"):
-        raise Refused("Say which report: weekly or client.")
+    code = str(req.get("code") or "")
     if not con.execute("SELECT 1 FROM projects WHERE code = ?", (code,)).fetchone():
         raise Refused("Not a project.")
     action, task = section_task(req)
     try:
-        fri = report_doc.friday(req.get("week_ending") or None)
+        audience = edit_ai.document_audience(req, code, ("client", "weekly"))
+    except edit_ai.Refused as e:
+        raise Refused(str(e).replace("sent to Claude", "sent to a draft")) from None
+    if audience is None:
+        raise Refused("Say which report: the page didn't name it, so nothing was sent to a draft. Reload the page and try again.")
+    try:
+        fri = report_doc.friday(req["document"].get("week_ending") or None)
     except ValueError:
         raise Refused("The week ending must be a date.") from None
     current, panes = section_current(req)
     if not current.strip():
         raise Nothing("This section has no words to redraft.")
-    client = which == "client"
-    if client and (VIP_RE.search(current) or client_leak.text_findings(con, code, current)):
+    client = audience == "client"
+    bad = edit_ai.client_problems(code, current, current) if client else []
+    if bad == [edit_ai.REGISTER]:
+        raise Refused("The people register couldn't be read, so the names couldn't be checked and nothing was sent to a draft. "
+                      "Fix it in Settings › People, then try again.")
+    if bad:
         raise Refused("This section already holds wording that isn't client-safe. Fix it first; nothing was sent to a draft.")
     return code, client, fri, action, task, current, panes
 
@@ -2407,16 +2417,12 @@ def parse_section(reply, ctx):
     dropped = {**out, "text": "", "sentences": []}
     if VIP_RE.search(text):
         return {**dropped, "message": "The draft named something private, so it was dropped. Try again."}
-    if ex.get("audience") == "client":
-        import client_leak
-        con = ro()
-        try:
-            bad = client_leak.text_findings(con, ex.get("code") or "", text) + internal_findings(con, ex.get("code") or "", text,
-                                                                                                    ex.get("original") or "")
-        finally:
-            con.close()
+    if ex.get("audience") == "client":                    # #127: the client place's whole check (items however written, names)
+        bad = edit_ai.client_problems(ex.get("code") or "", text, ex.get("original") or "")
         if bad:
-            return {**dropped, "message": "The draft was dropped: it held wording that isn't client-safe."}
+            return {**dropped, "message": "The draft was dropped: " + (
+                "the people register couldn't be read, so its names couldn't be checked." if bad == [edit_ai.REGISTER] else
+                "it held wording that isn't client-safe.")}
     elif secret(text) and not secret(ex.get("original")):
         return {**dropped, "message": "The draft was dropped: it brought in something marked confidential."}
     out["notes"] = edit_ai.check(ex.get("original") or "", text, ex.get("people") or [])

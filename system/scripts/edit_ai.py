@@ -163,36 +163,44 @@ def client_ids(con, code):
 
 
 # #123 review: a client reply's IDs and the word VIP are matched after normalising, so a look-alike, a zero-width character, a
-# non-breaking hyphen, lower case or a missing space can't slip an item past the check (only here: client_leak.text_findings
-# still matches IDs exactly).
+# non-breaking hyphen, lower case or a missing space can't slip an item past the check (client_leak.text_findings matches IDs
+# the same way since #127).
 INVISIBLE = re.compile("[\u00ad\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]")
 LOOK_ALIKE = str.maketrans({**{c: "-" for c in "\u2010\u2011\u2012\u2013\u2014\u2015\u2212\ufe58\ufe63\uff0d"},
                             **{c: "I" for c in "\u0399\u0406\u04c0\u01c0\u0131\u03b9\u0456"},
-                            **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"}})
+                            **{c: "V" for c in "\u0474\u0475\u03bd"}, **{c: "P" for c in "\u03a1\u0420\u03c1\u0440"},
+                            # #127 review: the other Cyrillic and Greek letters that look Latin (a project code's "АВС")
+                            **dict(zip("\u0410\u0412\u0415\u041a\u041c\u041d\u041e\u0421\u0422\u0425\u0430\u0435\u043e\u0441\u0445"
+                                       "\u0391\u0392\u0395\u0396\u0397\u039a\u039c\u039d\u039f\u03a4\u03a5\u03a7\u03bf",
+                                       "ABEKMHOCTXaeocxABEZHKMNOTYXo"))})
 # Between the letters: up to two marks (dots, dashes, underscores; zero-width characters are already gone), each run allowed one
 # space after it ("V. I. P."), but never a bare space ("Phase V IP telephony" isn't VIP; #123 review L).
 _VIP_GAP = r"(?:[^\w\s]{1,2}\s?|_{1,2})?"
 VIP_LOOSE = re.compile(rf"(?<![a-z0-9])v{_VIP_GAP}i{_VIP_GAP}p(?:{_VIP_GAP}s)?(?![a-z0-9])", re.I)
-NO_PROJECT, UNCHECKED = "no project", "the check couldn't run"
+NO_PROJECT, UNCHECKED, REGISTER = "no project", "the check couldn't run", "the people register couldn't be read"
 
 
 def normal(text):
     """Text as the client check matches it: NFKC, invisible characters gone, dashes and look-alike letters made plain."""
     import unicodedata
-    return INVISIBLE.sub("", unicodedata.normalize("NFKC", text or "")).translate(LOOK_ALIKE)
+    t = INVISIBLE.sub("", unicodedata.normalize("NFKC", text or "")).translate(LOOK_ALIKE)
+    return re.sub(r"\d", lambda m: str(unicodedata.decimal(m.group(), 0)), t)      # #127 review: any script's digits, as 0-9
 
 
 def loose_ids(con, text):
     """Every item ID a text holds, however it is written: the strict form anywhere, and for each of the tracker's project codes,
-    any case, with spaces, dots or dashes for its hyphens, or run on to a word before it ("seeABC-A-004"). A loose match counts only
-    when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when there is no ABC-100); it fails closed, so an
-    ID the tracker can't be asked about counts."""
+    any case, with spaces, dots, dashes, underscores, slashes, colons or brackets for its hyphens ("ABC (A) 004"), or run on to a
+    word before it ("seeABC-A-004"); with a letter part, the number may also drop its zeros ("ABC-A-4") or write them as O
+    ("ABC-A-OO4"), always as a whole number ("ABC-A-40" is ABC-A-040, never ABC-A-004), and not one a slash, colon or dot continues
+    ("ABC A 10/09"). A loose match counts only when the tracker holds that ID (#123 review L: "ABC 100 users" isn't ABC-100 when
+    there is no ABC-100); it fails closed, so an ID the tracker can't be asked about counts."""
     t = normal(text)
     out = set(ID_RE.findall(t))
-    up = t.upper()
+    up, sep = t.upper(), r"[\s_.\-/:()]*"
     for (c,) in con.execute("SELECT code FROM projects"):
-        for m in re.finditer(rf"{re.escape(c)}[\s_.\-]*(?:([A-Z])[\s_.\-]*)?(\d{{3}})(?!\d)", up):
-            ref = f"{c}-{m.group(1)}-{m.group(2)}" if m.group(1) else f"{c}-{m.group(2)}"
+        for m in re.finditer(rf"{re.escape(c)}{sep}(?:([A-NP-Z]){sep}([0-9O]{{1,3}})|([0-9O]{{3}}))(?![0-9O]|[/:.]\d)", up):
+            num = (m.group(2) or m.group(3)).replace("O", "0").zfill(3)
+            ref = f"{c}-{m.group(1)}-{num}" if m.group(1) else f"{c}-{num}"
             if ref not in out and in_tracker(con, ref):
                 out.add(ref)
     return out
@@ -216,7 +224,7 @@ def client_problems(code, text, original=""):
     report may not show (however its ID is written), internal wording (client_leak.text_findings), the tracker's internal health
     reason or an internal-only marker the original didn't hold (drafts.internal_findings), a person neither the original nor the
     client-visible items (and their aliases) name, or the word VIP however it is written. Fails closed: no project is NO_PROJECT,
-    and a tracker or a check that can't be read is UNCHECKED."""
+    a people register that can't be read is REGISTER (#127), and a tracker or a check that can't be read is UNCHECKED."""
     import client_leak
     import drafts
     import tracker
@@ -229,6 +237,7 @@ def client_problems(code, text, original=""):
     except (Exception, SystemExit):  # noqa: BLE001
         return [UNCHECKED]
     try:
+        text, original = client_leak.with_addresses(text), client_leak.with_addresses(original)   # #127: link addresses too
         blocking = client_leak.blocking_labels(con)
         found = [why for why in (client_leak.item_problem(con, i, blocking) for i in sorted(loose_ids(con, text))) if why]
         found += client_leak.text_findings(con, code, text or "")
@@ -236,6 +245,8 @@ def client_problems(code, text, original=""):
         known = _register_names() + client_leak.project_owners(con, code)
         allowed = names(original, known) | client_leak.people(con, code, blocking)[0]
         found += [f"{n} isn't named in the text" for n in sorted(names(text, known) - allowed)]
+    except client_leak.RegisterUnreadable:                # #127: fails closed, with its own message
+        found = [REGISTER]
     except (Exception, SystemExit):  # noqa: BLE001  fails closed
         found = [UNCHECKED]
     finally:
@@ -248,6 +259,11 @@ def refusal(found, suggestion=False):
     if found == [NO_PROJECT]:
         return ("The suggestion was dropped: there's no project to check it against." if suggestion else
                 "There's no project to check this text against, so nothing was sent to Claude.")
+    if REGISTER in found:
+        return ("The suggestion was dropped: the people register couldn't be read, so its names couldn't be checked. Fix it in "
+                "Settings › People, then try again." if suggestion else
+                "The people register couldn't be read, so the names couldn't be checked and nothing was sent to Claude. Fix it in "
+                "Settings › People, then try again.")
     if UNCHECKED in found:
         return ("The suggestion was dropped: creaite couldn't check it against the tracker. Try again." if suggestion else
                 "creaite couldn't check this text against the tracker, so nothing was sent to Claude. Try again.")
@@ -256,6 +272,7 @@ def refusal(found, suggestion=False):
 
 
 DOC_KEYS = ("kind", "code", "week_ending", "client")
+REPORT_AUDIENCE = {"client": "client", "weekly": "internal"}     # a report's kind gives its audience (report_doc.KINDS)
 
 
 NOT_CLIENT = "That isn't a client report creaite can check, so nothing was sent to Claude."
@@ -265,39 +282,51 @@ def bound_place(req, code, claimed):
     """The place a request gets (#123): the client place for a request naming its client report (checked here, never trusted),
     else the place it claims. Refuses, failing closed, the client place without a document and any document that isn't a client
     report of this project that creaite can find and read."""
-    d = req.get("document")
-    if d is None or d == "" or d == {}:
+    if document_audience(req, code) is None:
         if claimed in CLIENT_PLACES:
             raise Refused("The client report wasn't named, so nothing was sent to Claude. Reload the page and try again.")
         return claimed
-    if not isinstance(d, dict) or set(d) - set(DOC_KEYS) or any(not isinstance(d.get(k, ""), str) for k in DOC_KEYS) \
-            or d.get("kind") != "client":
-        raise Refused(NOT_CLIENT)
-    if not code or d.get("code") != code:
-        raise Refused("The client report and the project don't agree, so nothing was sent to Claude.")
-    try:
-        ok = _client_report_found(code, d)
-    except (Exception, SystemExit):  # noqa: BLE001  fails closed: an unknown project or date, an unreadable file
-        ok = False
-    if not ok:
-        raise Refused(NOT_CLIENT)
     return "client"
 
 
-def _client_report_found(code, d):
-    """Whether the document names a client report of this project creaite knows (report_server.target: the project is in the
-    tracker and the date is one), and, when it is saved, whether it reads as that project's client-audience document. Raises
-    on anything it can't read."""
+def document_audience(req, code, kinds=("client",)):
+    """The audience ("client" or "internal") of the report a request names as `document` {kind, code, week_ending, client}, or
+    None when it names none (#123; #127: the ✦ on a report section shares it). Plain code decides it from the report itself, never
+    from what the page claims: the kind must be one of `kinds`, the project this one, and the report one creaite knows; when it is
+    saved, its file must read as that kind, project and audience. Refuses anything else, failing closed."""
+    d = req.get("document")
+    if d is None or d == "" or d == {}:
+        return None
+    what = "client report" if tuple(kinds) == ("client",) else "report"
+    if not isinstance(d, dict) or set(d) - set(DOC_KEYS) or any(not isinstance(d.get(k, ""), str) for k in DOC_KEYS) \
+            or d.get("kind") not in kinds or d.get("kind") not in REPORT_AUDIENCE:
+        raise Refused(f"That isn't a {what} creaite can check, so nothing was sent to Claude.")
+    if not code or d.get("code") != code:
+        raise Refused(f"The {what} and the project don't agree, so nothing was sent to Claude.")
+    try:
+        ok = _report_found(code, d)
+    except (Exception, SystemExit):  # noqa: BLE001  fails closed: an unknown project or date, an unreadable file
+        ok = False
+    if not ok:
+        raise Refused(f"That isn't a {what} creaite can check, so nothing was sent to Claude.")
+    return REPORT_AUDIENCE[d["kind"]]
+
+
+def _report_found(code, d):
+    """Whether the document names a report of its kind of this project creaite knows (report_server.target: the project is in the
+    tracker and the date is one), and, when it is saved, whether it reads as that project's report of that kind and audience.
+    Raises on anything it can't read."""
     import creaite_doc
     import report_doc
     import report_server
-    ask = {"kind": "client", "code": code, "week_ending": d.get("week_ending") or None, "client": d.get("client") or None}
+    ask = {"kind": d.get("kind"), "code": code, "week_ending": d.get("week_ending") or None, "client": d.get("client") or None}
     kind, dcode, fri, client = report_server.target(ask)
     state, path = report_doc.where(kind, dcode, fri, client)
     if not state:                                         # not saved yet: the draft route builds it from the tracker
         return True
     doc = creaite_doc.read(path)
-    return isinstance(doc, dict) and doc.get("kind") == "client" and doc.get("audience") == "client" and doc.get("project") == code
+    return isinstance(doc, dict) and doc.get("kind") == kind and (doc.get("audience") or "internal") == REPORT_AUDIENCE[kind] \
+        and doc.get("project") == code
 
 
 def request(req):

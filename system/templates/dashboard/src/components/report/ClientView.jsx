@@ -103,7 +103,9 @@ export function ClientView() {
              (`document`), and the server binds the client place from it (edit_ai.bound_place), whatever place a page claims. */
           ai={{ place: "client", project: () => doc.project, confidential: () => false,
             document: () => ({ kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" }) }}
-          onRedraft={side ? undefined : redrafter(() => ({ report: "client", code: doc.project, week_ending: doc.date }), "report")}
+          /* #127: the ✦ names this report too; the server binds the audience from it, never from a claim */
+          onRedraft={side ? undefined : redrafter(() => ({ code: doc.project,
+            document: { kind: "client", code: doc.project, week_ending: doc.date, client: doc.client || "" } }), "report")}
           onEvent={ev => { if (ev.type === "reload" && a) loadClientReport(a); else countRedraft(ev, "report"); }}
           toolbar={<ClientBar doc={doc} note={note} setNote={setNote} />} />
       </div>

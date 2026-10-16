@@ -25,7 +25,9 @@ HEAD = "import sys, json; sys.path.insert(0, 'system/scripts')\nimport drafts\n"
 CLIENT_TEXT = "Phase two can start once the paperwork is signed."
 WEEKLY = {"kind": "report-section", "report": "weekly", "code": "ABC", "week_ending": "2026-10-09", "section": "summary",
           "heading": "Summary", "text": "UAT start has slipped two weeks.", "action": "polish"}
-CLIENT = {**WEEKLY, "report": "client", "text": CLIENT_TEXT}
+WEEKLY["document"] = {"kind": "weekly", "code": "ABC", "week_ending": "2026-10-09"}   # #127: the audience comes from the report named
+CLIENT = {**WEEKLY, "report": "client", "text": CLIENT_TEXT,
+          "document": {"kind": "client", "code": "ABC", "week_ending": "2026-10-09", "client": ""}}
 # the words of everything a client report must never draw on, in the fixture (test_reports.populate)
 INTERNAL_ONLY = ("Vendor exits the market", "Confirm tester names", "Absorb the phase one overrun", "Budget overrun on phase one")
 
@@ -89,7 +91,7 @@ class Weekly(ReportBase):
     def test_a_custom_action_needs_words_and_an_unknown_action_is_refused(self):
         self.assertIn("Say what you want", self.ctx({**WEEKLY, "action": "custom"})["refused"])
         self.assertIn("Choose Polish", self.ctx({**WEEKLY, "action": "rewrite"})["refused"])
-        self.assertIn("Say which report", self.ctx({**WEEKLY, "report": "other"})["refused"])
+        self.assertIn("Say which report", self.ctx({k: v for k, v in WEEKLY.items() if k != "document"})["refused"])
         self.assertIn("Not a project", self.ctx({**WEEKLY, "code": "ZZZ"})["refused"])
         self.assertIn("no words", self.ctx({**WEEKLY, "text": "  "})["nothing"])
 
