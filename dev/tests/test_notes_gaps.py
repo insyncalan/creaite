@@ -30,7 +30,6 @@ class NotesGaps(test_notes_tab.NotesServer):
     test_3_changed_outside_is_never_overwritten = None
     test_4_list_portfolio_and_refusals = None
     test_5_dashboard_data_and_files = None
-    test_6_saves_in_one_editing_session_keep_one_backup = None
 
     def new(self, title, **kw):
         r = self.post("/api/notes/new", {"code": "ABC", "template": kw.pop("template", "blank"), "title": title, **kw})
