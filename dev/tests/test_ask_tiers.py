@@ -26,7 +26,6 @@ from test_tracker import Vault  # noqa: E402
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "system/scripts"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 # Extra scenarios for the stand-in: one Sensitive and one High-risk change on one card; a settings file edited with and without a
 # permission key changed.

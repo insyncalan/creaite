@@ -25,7 +25,6 @@ from test_live_server import free_port  # noqa: E402
 from test_onedrive_projects import touch  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 NOTE = "projects/ABC Example Programme/notes/today.md"
 TRANSCRIPT = "projects/ABC Example Programme/transcripts/2026-10-01 Steering.vtt"

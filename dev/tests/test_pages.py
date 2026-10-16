@@ -7,7 +7,6 @@ root (the BL-85 `locations` setting, resolved against a fake home folder); the p
 against the real live server, as a person would.
 """
 import json
-import os
 import re
 import subprocess
 import sys
@@ -29,7 +28,6 @@ from test_onedrive_projects import OneDriveCase, touch  # noqa: E402
 from test_insight import chrome, log, py  # noqa: E402
 from test_tracker import ABC, Vault, action  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 DEFAULT_REPORTS = f"{ABC}/reports"
 

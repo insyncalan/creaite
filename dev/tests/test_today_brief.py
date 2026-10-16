@@ -15,7 +15,6 @@ from live_browser import TEST_PALETTES, TEST_PALETTES_JS  # noqa: E402
 from test_dashboard import CHROME, populate  # noqa: E402
 from test_tracker import Vault  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import build_dashboard as bd  # noqa: E402
@@ -329,7 +328,6 @@ class WeekAheadDataTests(unittest.TestCase):
         finally:
             v.cleanup()
         import json
-        import re
         data = json.loads(re.search(r'<script type="application/json" id="data">(.*?)</script>', html, re.S).group(1))
         w = data["week"]
         self.assertEqual(w["from"], date.today().isoformat())

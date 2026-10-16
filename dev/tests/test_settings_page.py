@@ -7,7 +7,6 @@ The real live server in a throwaway vault with fictional data, and the real dash
 """
 import json
 import os
-import re
 import sys
 import time
 import unittest
@@ -19,7 +18,6 @@ from live_browser import TEST_PALETTES, TEST_PALETTES_JS, LiveBrowserCase  # noq
 from test_dashboard import populate  # noqa: E402
 from test_tracker import action  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
-from split_dashboard import readable_page  # noqa: E402
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "system" / "scripts"))
 import settings_catalogue  # noqa: E402
 
