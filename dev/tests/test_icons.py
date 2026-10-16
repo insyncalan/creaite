@@ -270,7 +270,7 @@ class TheRest(LiveBrowserCase):
         self.assertEqual(b.eval("$('#chSend').dataset.key"), "Enter")
         b.eval("setRunning(true)")
         self.assertEqual(self.named("#chSend")[0], ["Stop", "Stop", "", "stop"])
-        self.assertEqual(b.eval("$('#chSend').dataset.key"), "Esc")
+        self.assertIsNone(b.eval("$('#chSend').dataset.key"))               # #130: Esc never stops a run, so Stop shows no key
         r = b.eval("(()=>{ const r=$('#chSend').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })()")
         self.assertEqual(r, [32, 32])                                        # the same round button, not a second Stop
         b.eval("setRunning(false)")
