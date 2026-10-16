@@ -502,6 +502,30 @@ def is_note(p) -> bool:
         return p.parent == folder(area[0], "notes").resolve()
     except (LookupError, OSError):          # a project without a folder: no notes
         return False
+
+
+NOT_NOTES = ("minutes", "transcripts", "weekly_reports", "client_reports", "adhoc_documents", "steerco", "agendas", "images")
+
+
+def notes_folder_clash(folders=None) -> list:
+    """#124, #128: the kinds whose folder is the notes folder, inside it or around it (case and NFC ignored, "" and "." parts left
+    out), as "kind (folder)"; [] when notes have a folder of their own. folders: a locations.folders mapping to check (default:
+    the one in use). doctor flags a clash; propose.py setting and the page's settings save refuse one."""
+    import unicodedata
+    from pathlib import PurePosixPath
+
+    given = None if folders is None else {**LOCATION_DEFAULTS["folders"], **folders}     # as locations() fills a saved one
+
+    def name(kind):
+        """The kind's folder as mapped."""
+        return folder_name(kind) if given is None else str(given.get(kind) or DEFAULT_FOLDERS[kind])
+
+    def norm(kind):
+        """The kind's folder inside the engagement, folded, without empty or "." parts."""
+        n = unicodedata.normalize("NFC", name(kind)).casefold().replace("\\", "/")
+        return PurePosixPath(*[x for x in n.split("/") if x not in ("", ".")])
+    n = norm("notes")
+    return [f"{k} ({name(k)})" for k in NOT_NOTES if norm(k) == n or n in norm(k).parents or norm(k) in n.parents]
 # ===== end BL-301 =====
 
 

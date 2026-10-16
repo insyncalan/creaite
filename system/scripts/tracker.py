@@ -1522,6 +1522,9 @@ def run_file_ops(apply_id, blk, field, ops, done, prop=None):
         if fop["op"] == "move":
             _op_move(apply_id, fop, blk, done, prop)
         else:
+            why = card_op_problem(fop, blk, prop)      # #128: a note's file only with the card's marker
+            if why:
+                raise Invalid(why)
             FILE_OPS[fop["op"]](apply_id, fop, blk, done)
 
 
@@ -1881,10 +1884,130 @@ def card_move_problem(fop, blk, prop):
     reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256 of the bytes load() read from it (so
     of what is applied). Checked only by the apply, never by check_move (propose.py check runs that for the card's preview)."""
     import reach
-    import stat
-    if blk.get("archive") not in reach.CARD_ONLY_MOVES:
+    kind = blk.get("archive")
+    if kind not in ("notes", "notes_back") and any(in_notes_folder(fop.get(k)) for k in ("from", "to")):
+        return f"move: {fop.get('from')} is in a notes folder: a note is moved only by Delete note or Move back"   # #128
+    if kind not in reach.CARD_ONLY_MOVES:
         return None
-    m = reach.card_move_marker(blk.get("archive"), fop.get("from"), fop.get("to"))
+    if card_marker_ok(reach.card_move_marker(kind, fop.get("from"), fop.get("to")), prop):
+        return None
+    return f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
+
+
+# ===== #128: a note's file is removed, written or copied by an apply only with the card's marker =====
+# The Notes tab changes notes through filechange.py, never through an apply. A remove, a write, or a copy whose source is at or
+# below any project's or the portfolio's notes folder (paths.folder(code, "notes")) runs in tracker.py apply only with the marker
+# live_server.card_moves_allowed writes on Approve of the card's own proposal (reach.card_move_marker("file-<op>", path, "")),
+# bound to that proposal's bytes as a move's is. A proposal written into staging by hand is refused.
+NOTE_FILE_OPS = ("remove", "write", "copy")
+
+
+def _folded(p):
+    """A path as text for comparing: NFC and case-folded (macOS's file system ignores both)."""
+    import unicodedata
+    return unicodedata.normalize("NFC", str(p)).casefold()
+
+
+def _below(p, folder):
+    p, folder = _folded(p), _folded(folder).rstrip(os.sep)
+    return p == folder or p.startswith(folder + os.sep)
+
+
+def notes_folders():
+    """Every notes folder (each project's and the portfolio's), as written and as its real path."""
+    out = []
+    for code, _ in paths.project_folders():
+        try:
+            f = paths.folder(code, "notes")
+        except (LookupError, OSError):            # a project without a folder has no notes
+            continue
+        out += [os.path.normpath(os.path.abspath(f)), os.path.realpath(f)]
+    return out
+
+
+def in_notes_folder(rel, links=False):
+    """#128: whether stored path `rel` is at or below a notes folder: as written (.. taken out), with every symlink followed, and
+    with all but the last followed; and, below the projects folder, whether its second folder level is the notes folder's name
+    (an engagement not in the register too). links: also a file whose other hard link is in a notes folder (a write changes both)."""
+    if not isinstance(rel, str) or not rel:
+        return False
+    try:
+        p = paths.resolve(rel, archived=False)
+    except (LookupError, OSError, ValueError):    # not a path creaite can place: nothing to guard
+        return False
+    seen = {os.path.normpath(os.path.abspath(p)), os.path.realpath(p), os.path.join(os.path.realpath(p.parent), p.name)}
+    folders = notes_folders()
+    if any(_below(c, f) for c in seen for f in folders) or any(_named_notes(c) for c in seen):
+        return True
+    return links and _hard_linked_note(p, folders)
+
+
+def _named_notes(c):
+    """#128: real or written path `c` is below the projects folder with the notes folder's name at its second level."""
+    name = [_folded(x) for x in Path(paths.folder_name("notes")).parts if x not in ("", ".")]
+    for r in {os.path.normpath(os.path.abspath(paths.projects_root())), os.path.realpath(paths.projects_root())}:
+        if _below(c, r) and _folded(c) != _folded(r):
+            parts = [_folded(x) for x in Path(c).parts[len(Path(r).parts):]]
+            if not name or parts[1:1 + len(name)] == name:
+                return True
+    return False
+
+
+def _hard_linked_note(p, folders):
+    """#128: file `p` has another hard link, and one of them is in a notes folder."""
+    try:
+        st = os.stat(p)
+    except OSError:                               # nothing there: no link to anything
+        return False
+    if st.st_nlink < 2:
+        return False
+    for f in {os.path.realpath(f) for f in folders}:
+        for d, _, names in os.walk(f):
+            if any(os.path.samestat(st, os.lstat(os.path.join(d, n))) for n in names):
+                return True
+    return False
+
+
+def notes_op_target(fop, blk):
+    """#128: the stored path a remove or write changes, or a copy reads, when it is in a notes folder; else None."""
+    op = fop.get("op")
+    rel = fop.get("path") if op in ("remove", "write") else op_source(fop, blk) if op == "copy" else None
+    return rel if op in NOTE_FILE_OPS and in_notes_folder(rel, links=op != "copy") else None
+
+
+def card_op_problem(fop, blk, prop):
+    """#124 F3, #128: why this file operation can't be applied here without the card's marker, or None."""
+    import reach
+    if fop.get("op") == "move":
+        return card_move_problem(fop, blk, prop)
+    rel = notes_op_target(fop, blk)
+    if rel is None or card_marker_ok(reach.card_move_marker(f"file-{fop['op']}", rel, ""), prop):
+        return None
+    return (f"{fop['op']}: {rel} is in a notes folder: a note is changed through the Notes tab, or by Approve on the live "
+            "server's approval card")
+
+
+def card_marks(data):
+    """#124 F3, #128: the markers Approve on the card writes for proposal `data`: one per card-only move and per note's file op."""
+    import reach
+    out = []
+    for blk, _ in blocks(data):
+        for fop in blk.get("file_ops") or []:
+            if not isinstance(fop, dict):
+                continue
+            if fop.get("op") == "move":
+                if blk.get("archive") in reach.CARD_ONLY_MOVES:
+                    out.append(reach.card_move_marker(blk.get("archive"), fop.get("from"), fop.get("to")))
+            elif notes_op_target(fop, blk):
+                out.append(reach.card_move_marker(f"file-{fop['op']}", notes_op_target(fop, blk), ""))
+    return out
+# ===== end #128 =====
+
+
+def card_marker_ok(m, prop):
+    """#124 F3: whether marker `m` is the live server's, fresh, for proposal file `prop` as the apply loaded it."""
+    import reach
+    import stat
     try:
         if m.parent.is_symlink():                 # only the vault's own system/guard
             raise OSError("system/guard is a symlink")
@@ -1900,7 +2023,7 @@ def card_move_problem(fop, blk, prop):
             and got.get("sha256") == (READ_SHA.get(str(prop)) or file_hash(prop))     # the bytes that were loaded and applied
     except (OSError, ValueError):                 # no marker, a symlink, unreadable: refused
         ok = False
-    return None if ok else f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
+    return ok
 
 
 def _op_move(apply_id, fop, blk, done, prop=None):
@@ -2237,12 +2360,13 @@ def minutes_draft_problems(p, data):
 
 def card_move_problems(p, data):
     """#124 F3: the apply's dry run: each undone move of a card-only kind in proposal `p` that has no marker from the live
-    server's Approve (card_move_problem). Only the apply runs this, never propose.py check (the card's preview and stage)."""
+    server's Approve (card_move_problem), and (#128) each remove, write or copy of a note's file without one (card_op_problem).
+    Only the apply runs this, never propose.py check (the card's preview and stage)."""
     out = []
     for blk, field in blocks(data):
         if blk.get(field) in ("approved", "rejected") and not blk.get("applied"):
-            out += [f"{p.name} {field}: {why}" for fop in selected_ops(blk, field) if fop.get("op") == "move"
-                    for why in [card_move_problem(fop, blk, p)] if why]
+            out += [f"{p.name} {field}: {why}" for fop in selected_ops(blk, field) if isinstance(fop, dict)
+                    for why in [card_op_problem(fop, blk, p)] if why]          # #128: a note's file ops too
     return out
 
 

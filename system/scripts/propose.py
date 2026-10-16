@@ -1410,6 +1410,12 @@ def cmd_setting(key, raw):
     if re.fullmatch(r"\d{2}:\d{2}", str(old)) and not re.fullmatch(r"\d{2}:\d{2}", str(value)):
         sys.exit("Times are 24-hour HH:MM.")
     node[parts[-1]] = value
+    folders = (data.get("locations") or {}).get("folders")
+    clash = paths.notes_folder_clash(folders if isinstance(folders, dict) else {}) \
+        if key == "locations" or key.startswith("locations.folders") else []
+    if clash:                                     # #128: Delete note moves the notes folder's files; nothing else may share it
+        sys.exit(f"Not saved: the notes folder would also be the {', '.join(clash)} folder or hold it: give notes a folder of "
+                 "their own.")
     paths.BACKUPS.mkdir(parents=True, exist_ok=True)
     shutil.copy2(paths.SETTINGS, paths.free_path(paths.BACKUPS, f"settings-{datetime.now():%Y-%m-%d-%H%M%S}", ".json"))   # BL-266
     paths.write_text_atomic(paths.SETTINGS, json.dumps(data, indent=2, ensure_ascii=False) + "\n")

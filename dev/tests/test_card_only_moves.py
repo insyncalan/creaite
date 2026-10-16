@@ -16,7 +16,7 @@ reach.CARD_MOVE_SECONDS old). What is covered:
 - a marker for another move, a stale one, one in the future, a symlink, a folder, one naming another proposal or another
   version of it, and no proposal at all never unlock the move;
 - Undo still brings a note back (no marker needed); "reports" (BL-03), "archive", "restore" and "rename" (BL-09) are not card
-  only and need no marker;
+  only and need no marker, but never move a file in a notes folder (#128);
 - reach.CARD_ONLY_MOVES are propose.SERVER_CARD_ONLY's kinds; the page and ask creaite can't write system/guard/move-*.
 Everything is fictional and temporary.
 """
@@ -184,6 +184,8 @@ class CardOnly(CardOnlyMoves):
             "put('not json'); m.write_text('not json'); out['garbled'] = p()\n"
             "m.unlink()\n"
             "out['free'] = {k: tracker.card_move_problem(fop, {'archive': k}, None) for k in ('reports', 'archive', 'restore', 'rename')}\n"
+            "mins = {'op': 'move', 'from': src.replace('/notes/', '/minutes/'), 'to': dst.replace('/notes/', '/minutes/')}\n"
+            "out['free_elsewhere'] = {k: tracker.card_move_problem(mins, {'archive': k}, None) for k in ('reports', 'archive', 'restore', 'rename')}\n"
             "prop.unlink(); other.unlink()\n"
             "print(json.dumps(out))")
         self.assertIn(REFUSED, got["none"])
@@ -191,7 +193,9 @@ class CardOnly(CardOnlyMoves):
         for k in ("no_proposal", "other_proposal", "bound_elsewhere", "other_version", "other_move", "other_kind", "stale",
                   "future", "symlink", "folder", "garbled"):
             self.assertIn(REFUSED, got[k] or "", k)
-        self.assertEqual(got["free"], {"reports": None, "archive": None, "restore": None, "rename": None})
+        self.assertEqual(got["free_elsewhere"], {"reports": None, "archive": None, "restore": None, "rename": None})
+        for k, why in got["free"].items():                                            # #128: never a note, by any other kind
+            self.assertIn("is in a notes folder: a note is moved only by Delete note or Move back", why or "", k)
 
     def test_g_a_leftover_never_stops_a_full_apply(self):
         """An Approve that stopped before its apply finished (a crash) leaves an approved card-only proposal in staging with no
