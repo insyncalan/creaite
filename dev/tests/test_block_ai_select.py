@@ -36,8 +36,6 @@ class AiBlocks(LiveBrowserCase):
 
     def setUp(self):
         super().setUp()
-        self.b.eval("AI_PLACE_TABLE.plain.ai=true; AI_PLACE_TABLE.line.ai=true; true")     # v2.2.0's places, on for these tests
-        self.addCleanup(lambda: self.b and self.b.eval("AI_PLACE_TABLE.plain.ai=false; AI_PLACE_TABLE.line.ai=false; true"))
         self.b.eval(f"{MOUNT}({json.dumps(MANY)})")
         self.b.wait("!!document.querySelector('#aiMany.ProseMirror') && !!document.querySelector('#aiOne.ProseMirror')")
         self.addCleanup(lambda: self.b and self.b.eval(

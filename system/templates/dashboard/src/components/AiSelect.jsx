@@ -1,6 +1,6 @@
 // @ts-check
 /* AiSelect (BL-301 D, v20-ai-select; #117): AI on selected text, in every editor whose place the place table (stores/aiEdit.js
-   AI_PLACE_TABLE) switches on: v2.1.0 Notes and Current state; the Email draft and the plain fields are built and off. Three pieces,
+   AI_PLACE_TABLE) switches on: Notes and Current state (v2.1.0), the plain fields and the Email draft (v2.2.0, #133: Improve, Tone and Ask only). Three pieces,
    drawn in one layer (#aiLayer, on the body, fixed, so they sit over whatever page the editor is on), each placed with
    core/caretPlace.js placeAtCaret, the placement the `/` menu has:
    - the sparkle in the margin beside a non-empty selection (AiSpark); a click opens the bar under the selection, Esc or a click

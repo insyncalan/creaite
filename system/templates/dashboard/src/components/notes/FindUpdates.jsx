@@ -55,7 +55,10 @@ function Field({ row, f }) {
   const id = `fuf-${row.key}-${f.f}`, v = valueOf(row, f);
   const [bad, setBad] = useState("");
   if (f.kind === "text") {
-    return <TextEditor id={id} value={v} multiline={false} rows={1} cls="fu-in fu-ed" labelledBy={`${id}-l`}
+    /* #133: a title, a decision or a memory line is a sentence: the plain profile's bar (place "line"). A person's name, role and
+       organisation are keys and short labels: no bar. */
+    const ai = f.part === "person" ? undefined : { place: "line", project: () => (row.item && ((row.item.values && row.item.values.project) || row.item.project)) || "" };
+    return <TextEditor id={id} value={v} multiline={false} rows={1} cls="fu-in fu-ed" labelledBy={`${id}-l`} ai={ai}
       onCommit={t => { if (t.trim() !== v) fuEdit(row.key, f, t.trim()); }} />;
   }
   if (f.kind === "enum") {

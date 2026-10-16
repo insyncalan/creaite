@@ -9,6 +9,7 @@
               show it), no table, and no [[ @ # (item links come with the shared chips, #122 step C).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
               selection bar (#117) and links (v2.2.0), never headings or checklists.
+   - email:   Draft email's preview (#133): the email as styled HTML on the editor's Email feature set (core/editor.js). No toolbar and no `/` menu.
    - none:    a host that sets its own frame (the report sheets) and draws nothing.
 
    The tools a host does itself (it owns the pickers and the file input) are `host: true`: the bar shows one only when the host
@@ -86,7 +87,7 @@ export const ED_SLASH_ROWS = {
   notes: ["text", "h1", "h2", "h3", "ul", "ol", "task", "quote", "codeblock", "table", "image", "item", "person", "note",
     "tpl:stakeholder", "tpl:lessons-learned", "tpl:working-session"],
   current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
-  plain: [], none: [],
+  plain: [], email: [], none: [],
 };
 /** The rows of a profile's `/` menu for a host that can do `hostRows` and an editor whose schema is `schema`, filtered and ranked by what is
     typed (BL-122 B review L3): a row matches its id or short alias (`h1`, `ul`, `ol`, `todo`, `bq`), its name (`heading 2`, one space allowed)
@@ -125,7 +126,8 @@ export const ED_PROFILES = {
       "note", "person", "item", "table", "image", "|", "undo", "redo"] },
   current: { tip: "Current state",
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"] },
-  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+  plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar (the selection bar: Improve and Ask, #133)", tools: [] },
+  email: { tip: "Draft email's preview: Outlook HTML, no toolbar (the selection bar: Improve, Tone and Ask, #133)", tools: [] },
   none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
 };
 

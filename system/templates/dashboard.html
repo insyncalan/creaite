@@ -4293,6 +4293,7 @@ button.nchip{font:inherit;font-size:12px}
     deGreeting: () => deGreeting,
     deHead: () => deHead,
     deHost: () => deHost,
+    deHtml: () => deHtml,
     deIsoDays: () => deIsoDays,
     deItem: () => deItem,
     deItems: () => deItems,
@@ -4308,6 +4309,8 @@ button.nchip{font:inherit;font-size:12px}
     dePolish: () => dePolish,
     dePolishDo: () => dePolishDo,
     dePolishHtml: () => dePolishHtml,
+    dePrevDrop: () => dePrevDrop,
+    dePrevPut: () => dePrevPut,
     deRank: () => deRank,
     deReplyBy: () => deReplyBy,
     deRowHtml: () => deRowHtml,
@@ -4431,6 +4434,7 @@ button.nchip{font:inherit;font-size:12px}
     ebState: () => ebState,
     edActs: () => edActs,
     edClaim: () => edClaim,
+    edEmailHtml: () => edEmailHtml,
     edLine: () => edLine,
     edOf: () => edOf,
     edRange: () => edRange,
@@ -7806,337 +7810,6 @@ button.nchip{font:inherit;font-size:12px}
       const { key, ...props } = p6;
       return /* @__PURE__ */ u2(Chip, { ...props }, key ?? i5);
     }) }), host2);
-  }
-
-  // components/Menu.jsx
-  var menuItemsIn = (box) => box ? (
-    /** @type {HTMLElement[]} */
-    [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
-  ) : [];
-  function menuMove(e4, items2) {
-    const L3 = items2, i5 = L3.indexOf(
-      /** @type {HTMLElement} */
-      document.activeElement
-    );
-    let to2 = null;
-    if (e4.key === "ArrowDown") to2 = L3[(i5 + 1) % L3.length];
-    else if (e4.key === "ArrowUp") to2 = L3[(i5 < 0 ? 0 : i5 + L3.length - 1) % L3.length];
-    else if (e4.key === "Home") to2 = L3[0];
-    else if (e4.key === "End") to2 = L3[L3.length - 1];
-    else return false;
-    e4.preventDefault();
-    e4.stopPropagation();
-    to2?.focus({ preventScroll: true });
-    return true;
-  }
-  var dataAttrs = (
-    /** @param {Record<string, string> | undefined} d */
-    (d5) => Object.fromEntries(Object.entries(d5 || {}).map(([k5, v5]) => [`data-${k5}`, v5]))
-  );
-  function MenuPanel({ label, id: id2, cls, bare, style, hidden, anchor, onClose, onKey, autoFocus = true, focusKey, boxRef, children }) {
-    const own = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    ), box = boxRef || own;
-    const closeRef = A2(onClose);
-    closeRef.current = onClose;
-    _2(() => {
-      if (hidden || !autoFocus) return;
-      tipHide();
-      (menuItemsIn(box.current)[0] || box.current)?.focus({ preventScroll: true });
-    }, [hidden, focusKey]);
-    h2(() => {
-      if (hidden) return;
-      const away = (e4) => {
-        const t47 = (
-          /** @type {Node} */
-          e4.target
-        );
-        if (!box.current?.contains(t47) && !(anchor && anchor.contains(t47))) closeRef.current("away");
-      };
-      document.addEventListener("pointerdown", away, true);
-      document.addEventListener("click", away, true);
-      return () => {
-        document.removeEventListener("pointerdown", away, true);
-        document.removeEventListener("click", away, true);
-      };
-    }, [hidden, anchor]);
-    const keys = (e4) => {
-      if (onKey) onKey(e4);
-      if (e4.defaultPrevented) return;
-      const field = (
-        /** @type {Element} */
-        e4.target.matches("input,textarea,select")
-      );
-      if (!field && menuMove(e4, menuItemsIn(box.current))) return;
-      if (e4.key === "Escape") {
-        e4.preventDefault();
-        e4.stopPropagation();
-        onClose("esc");
-      } else if (e4.key === "Tab") onClose("tab");
-    };
-    return /* @__PURE__ */ u2(
-      "div",
-      {
-        class: `${bare ? "" : "ddmenu newmenu on "}${cls || ""}`.trim(),
-        id: id2,
-        role: "menu",
-        "aria-label": label,
-        ref: box,
-        tabIndex: -1,
-        hidden,
-        style,
-        onKeyDown: keys,
-        children
-      }
-    );
-  }
-  function MenuItems({ items: items2, onPick }) {
-    return /* @__PURE__ */ u2(S2, { children: items2.map((it2, i5) => it2.sep ? /* @__PURE__ */ u2("hr", { role: "separator" }, `s${i5}`) : it2.head ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: it2.head }, `h${i5}`) : it2.note ? /* @__PURE__ */ u2("div", { class: "sub mnote", role: "presentation", children: it2.note }, `n${i5}`) : /* @__PURE__ */ u2(
-      "button",
-      {
-        type: "button",
-        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
-        tabIndex: -1,
-        class: it2.cls,
-        "data-tip": it2.tip,
-        "aria-checked": it2.checked === void 0 ? void 0 : it2.checked ? "true" : "false",
-        "aria-disabled": it2.disabled ? "true" : void 0,
-        ...dataAttrs(it2.data),
-        onClick: () => onPick(it2),
-        children: [
-          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
-          it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
-            /* @__PURE__ */ u2("b", { children: [
-              it2.name,
-              it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
-                " · ",
-                it2.mark
-              ] }) : null
-            ] }),
-            it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
-          ] }) : /* @__PURE__ */ u2(S2, { children: [
-            it2.name,
-            it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
-              " · ",
-              it2.mark
-            ] }) : null
-          ] })
-        ]
-      },
-      it2.id
-    )) });
-  }
-  var HOVER_OPEN = null;
-  var HOVER_GRACE = 220;
-  function Menu({
-    label,
-    items: items2,
-    onPick,
-    icon,
-    tip,
-    why,
-    onBlocked,
-    cls,
-    btnCls,
-    menuLabel,
-    left,
-    data,
-    id: id2,
-    ariaLabel,
-    chevron = true,
-    labelCls,
-    menuId,
-    menuCls,
-    hidden,
-    hover
-  }) {
-    const [open2, setOpen2] = d2(false), [, bump] = d2(0);
-    const btn = A2(
-      /** @type {HTMLButtonElement | null} */
-      null
-    );
-    const back2 = A2(false);
-    const byMouse = A2(false), noFocus = A2(false), timer2 = A2(0);
-    const close = (how) => {
-      back2.current = how === "esc";
-      clearTimeout(timer2.current);
-      if (HOVER_OPEN === fold) HOVER_OPEN = null;
-      setOpen2(false);
-    };
-    const closeRef = A2(close);
-    closeRef.current = close;
-    const fold = A2(() => closeRef.current("away")).current;
-    const pointIn = () => {
-      if (!hover || why) return;
-      clearTimeout(timer2.current);
-      if (open2) return;
-      if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
-      HOVER_OPEN = fold;
-      byMouse.current = true;
-      noFocus.current = true;
-      setOpen2(true);
-    };
-    const pointOut = () => {
-      if (hover && byMouse.current) {
-        clearTimeout(timer2.current);
-        timer2.current = window.setTimeout(fold, HOVER_GRACE);
-      }
-    };
-    h2(() => () => {
-      clearTimeout(timer2.current);
-      if (HOVER_OPEN === fold) HOVER_OPEN = null;
-    }, []);
-    _2(() => {
-      if (!hover || !open2) return;
-      const b5 = btn.current, m5 = (
-        /** @type {HTMLElement | null} */
-        b5?.parentElement?.querySelector("[role=menu]")
-      );
-      if (!b5 || !m5) return;
-      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
-      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
-    }, [open2]);
-    h2(() => {
-      if (!open2 && back2.current) {
-        back2.current = false;
-        btn.current?.focus();
-      }
-    }, [open2]);
-    const pick = (it2) => {
-      if (it2.disabled) return;
-      if (it2.checked === void 0 || it2.radio) close("pick");
-      onPick(it2.id);
-    };
-    const onBtnKey = (e4) => {
-      if (e4.key === "ArrowDown" && !why && !open2) {
-        e4.preventDefault();
-        byMouse.current = false;
-        noFocus.current = false;
-        setOpen2(true);
-      }
-    };
-    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, onMouseEnter: pointIn, onMouseLeave: pointOut, children: [
-      /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: btnCls || "btn",
-          id: id2,
-          ref: btn,
-          hidden,
-          "aria-haspopup": "menu",
-          "aria-expanded": open2 ? "true" : "false",
-          "aria-label": ariaLabel,
-          "aria-disabled": why ? "true" : void 0,
-          "data-tip": why || tip,
-          ...dataAttrs(data),
-          onKeyDown: onBtnKey,
-          onClick: (e4) => {
-            e4.preventDefault();
-            if (why) {
-              onBlocked && onBlocked();
-              return;
-            }
-            if (open2 && byMouse.current && e4.detail > 0) {
-              noFocus.current = false;
-              bump((n4) => n4 + 1);
-              return;
-            }
-            byMouse.current = hover && e4.detail > 0;
-            noFocus.current = false;
-            if (open2) close("pick");
-            else setOpen2(true);
-          },
-          children: [
-            icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
-            /* @__PURE__ */ u2("span", { class: labelCls, children: label }),
-            chevron ? /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" }) : null
-          ]
-        }
-      ),
-      open2 ? /* @__PURE__ */ u2(
-        MenuPanel,
-        {
-          label: menuLabel || ariaLabel || label,
-          id: menuId,
-          cls: `${left ? "left " : ""}${menuCls || ""}`,
-          anchor: btn.current,
-          onClose: close,
-          autoFocus: !noFocus.current,
-          focusKey: noFocus.current,
-          children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
-        }
-      ) : null
-    ] });
-  }
-  function mountMenu(box, props) {
-    R(/* @__PURE__ */ u2(Menu, { ...props }), box);
-  }
-  function mountMenuPanel(box, props, items2, field) {
-    R(/* @__PURE__ */ u2(MenuPanel, { ...props, children: [
-      field ? /* @__PURE__ */ u2("input", { type: "text", "aria-label": "Type here" }) : null,
-      /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: () => {
-      } })
-    ] }), box);
-  }
-  var POP = null;
-  function PopMenu({ anchor, props }) {
-    const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
-    const wrap = A2(
-      /** @type {HTMLDivElement | null} */
-      null
-    );
-    _2(() => {
-      const el2 = (
-        /** @type {HTMLElement | null} */
-        wrap.current?.firstElementChild || null
-      );
-      if (!el2) return;
-      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
-      const r4 = at2 ? { left: at2.x, right: at2.x, top: at2.y, bottom: at2.y } : anchor && anchor.isConnected ? anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
-      let top = r4.bottom + (at2 ? 0 : 4);
-      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
-      const left = align === "right" ? r4.right - w6 : r4.left;
-      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
-      el2.style.left = `${Math.max(8, Math.min(left, innerWidth - w6 - 8))}px`;
-    });
-    const pick = (it2) => {
-      if (it2.disabled) return;
-      if (it2.checked === void 0) closeMenu("pick");
-      onPick(it2.id);
-    };
-    return /* @__PURE__ */ u2("div", { ref: wrap, children: /* @__PURE__ */ u2(MenuPanel, { label, id: id2, cls: `pop${cls ? " " + cls : ""}`, anchor, onClose: closeMenu, focusKey: loading2, children: loading2 ? /* @__PURE__ */ u2("div", { class: "msk", "aria-hidden": "true", children: [
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", {}),
-      /* @__PURE__ */ u2("i", {})
-    ] }) : /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick }) }) });
-  }
-  function openMenu(anchor, props) {
-    if (POP && POP.anchor !== anchor) closeMenu("away");
-    if (!POP) {
-      const host2 = document.createElement("div");
-      host2.className = "pophost";
-      document.body.appendChild(host2);
-      POP = { host: host2, anchor, props };
-      if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
-    }
-    POP.props = props;
-    R(/* @__PURE__ */ u2(PopMenu, { anchor, props }), POP.host);
-  }
-  function closeMenu(how = "away") {
-    const p6 = POP;
-    if (!p6) return;
-    POP = null;
-    R(null, p6.host);
-    p6.host.remove();
-    const a5 = p6.anchor;
-    if (a5 && a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
-    if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
-    if (p6.props.onClose) p6.props.onClose(how);
-  }
-  function menuOpenFor(anchor) {
-    return !!POP && (anchor === void 0 || POP.anchor === anchor);
   }
 
   // ../../vendor/tiptap/tiptap.module.js
@@ -23293,6 +22966,71 @@ ${s5}`;
   var headsIn = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 > shift && n4 <= shift + 3 ? "#".repeat(n4 - shift) + rest : "​" + z4 + "#".repeat(n4) + rest) : md2;
   var headsOut = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 !== "" ? z4.slice(1) + "#".repeat(n4) + rest : "#".repeat(Math.min(n4, 3) + shift) + rest) : md2;
   var headsSafe = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 <= shift ? "#".repeat(n4 + shift) + rest : z4 + "#".repeat(n4) + rest) : md2;
+  var EMAIL_ATTRS = ["style", "align", "cellpadding", "cellspacing", "border", "width", "valign", "bgcolor"];
+  var EmailStyles = j3.create({
+    name: "emailStyles",
+    addGlobalAttributes() {
+      return [{
+        types: ["paragraph", "table", "tableRow", "tableCell", "tableHeader"],
+        attributes: Object.fromEntries(EMAIL_ATTRS.map((a5) => [a5, {
+          default: null,
+          parseHTML: (el2) => el2.getAttribute(a5),
+          renderHTML: (v5) => v5[a5] == null ? {} : a5 === "style" ? { style: v5.style, "data-cx-style": v5.style } : { [a5]: v5[a5] }
+        }]))
+      }];
+    }
+  });
+  var EmailSpan = de.create({
+    name: "emailSpan",
+    inclusive: false,
+    addAttributes() {
+      return { style: { default: null, parseHTML: (el2) => el2.getAttribute("style"), renderHTML: (a5) => a5.style ? { style: a5.style, "data-cx-style": a5.style } : {} } };
+    },
+    parseHTML() {
+      return [{ tag: "span[style]" }];
+    },
+    renderHTML({ HTMLAttributes }) {
+      return ["span", HTMLAttributes, 0];
+    }
+  });
+  var emailSet = (list) => list.filter((x5) => x5 && ["starterKit", "bold", "italic", "link", "hardBreak", "tableKit", "table"].includes(x5.name)).map((x5) => x5.name === "starterKit" ? x5.configure({
+    heading: false,
+    blockquote: false,
+    codeBlock: false,
+    horizontalRule: false,
+    strike: false,
+    code: false,
+    bold: false,
+    italic: false,
+    link: false,
+    hardBreak: false,
+    bulletList: false,
+    orderedList: false,
+    listItem: false,
+    listKeymap: false,
+    trailingNode: false
+  }) : x5).concat([EmailStyles, EmailSpan]);
+  function edEmailHtml(editor) {
+    try {
+      editor.view.domObserver.flush();
+    } catch (e4) {
+    }
+    const t47 = new DOMParser().parseFromString(editor.getHTML(), "text/html").body;
+    t47.querySelectorAll("[data-cx-style]").forEach((e4) => {
+      e4.setAttribute("style", e4.getAttribute("data-cx-style"));
+      e4.removeAttribute("data-cx-style");
+    });
+    t47.querySelectorAll("colgroup").forEach((e4) => e4.remove());
+    t47.querySelectorAll('[colspan="1"],[rowspan="1"]').forEach((e4) => {
+      if (e4.getAttribute("colspan") === "1") e4.removeAttribute("colspan");
+      if (e4.getAttribute("rowspan") === "1") e4.removeAttribute("rowspan");
+    });
+    t47.querySelectorAll("td,th").forEach((c5) => {
+      const k5 = c5.children;
+      if (k5.length === 1 && k5[0].tagName === "P" && !k5[0].getAttribute("style") && c5.childNodes.length === 1) k5[0].replaceWith(...k5[0].childNodes);
+    });
+    return t47.innerHTML;
+  }
   var plainDoc = (t47) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => l6 ? { type: "paragraph", content: [{ type: "text", text: l6 }] } : { type: "paragraph" }) });
   var plainText = (doc) => {
     const L3 = [];
@@ -23302,7 +23040,7 @@ ${s5}`;
     return L3.join("\n");
   };
   function creaiteEditor(el2, o5 = {}) {
-    const features = o5.features || "current", plain = features === "plain", multiline = o5.multiline !== false, headShift = plain ? 0 : o5.headShift | 0;
+    const features = o5.features || "current", plain = features === "plain", email = features === "email", multiline = o5.multiline !== false, headShift = plain || email ? 0 : o5.headShift | 0;
     if (
       /** @type {any} */
       el2.cxed
@@ -23314,6 +23052,10 @@ ${s5}`;
         orig = String(v5 ?? "");
         return { json: plainDoc(orig) };
       }
+      if (email) {
+        orig = String(v5 ?? o5.html ?? "");
+        return { html: orig };
+      }
       if (o5.html !== void 0 && v5 === void 0) {
         orig = null;
         return { html: o5.html };
@@ -23322,7 +23064,7 @@ ${s5}`;
       env = B1(orig);
       return { markdown: headsIn(env.inner, headShift) };
     };
-    const content = load2(plain ? o5.text : o5.markdown);
+    const content = load2(plain ? o5.text : email ? o5.html : o5.markdown);
     const props = {
       ...o5.editorProps || {},
       handleKeyDown: (view, e4) => {
@@ -23336,13 +23078,14 @@ ${s5}`;
       ...plain ? { transformPastedText: (t47) => multiline ? t47.replace(/\r\n?/g, "\n") : t47.replace(/\s*[\r\n]+\s*/g, " ") } : {}
     };
     const editor = Np({ mount: el2 }, {
-      features,
+      features: email ? "notes" : features,
       ...content,
       injectCSS: false,
       editorProps: props,
-      extensions: (list) => {
+      extensions: (email0) => {
+        const list = email ? emailSet(email0) : email0;
         const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
-        return [...out, ...plain ? [] : [ClaimMark], ...o5.extensions || []];
+        return [...out, ...plain || email ? [] : [ClaimMark], ...o5.extensions || []];
       }
     });
     const blank2 = () => {
@@ -23365,10 +23108,17 @@ ${s5}`;
       value: () => {
         if (!touched && orig !== null) return orig;
         if (plain) return plainText(editor.state.doc);
+        if (email) return edEmailHtml(editor);
         const md2 = headsOut(_1(editor, dropClaims(editor.getJSON())).markdown, headShift);
         return env ? H1(env, md2) : md2;
       },
       setValue: (v5) => {
+        if (email) {
+          try {
+            editor.view.domObserver.flush();
+          } catch (e4) {
+          }
+        }
         const c5 = load2(v5);
         editor.chain().setMeta(ED_QUIET, true).setMeta("addToHistory", false).setContent(c5.json ?? c5.html ?? c5.markdown, { emitUpdate: false, ...c5.markdown !== void 0 ? { contentType: "markdown" } : {} }).run();
         touched = false;
@@ -23458,6 +23208,12 @@ ${s5}`;
       const text2 = doc.textBetween(from, to2, "\n");
       return text2.trim() ? { from, to: to2, text: text2, inline: false } : null;
     }
+    if (h5.features === "email") {
+      const $a2 = doc.resolve(from), $b2 = doc.resolve(to2);
+      if (!$a2.sameParent($b2) || !$a2.parent.isTextblock) return null;
+      const text2 = doc.textBetween(from, to2, "\n", "\n");
+      return text2.trim() ? { from, to: to2, text: text2, inline: true } : null;
+    }
     const $f2 = doc.resolve(from), $t2 = doc.resolve(to2);
     if ($f2.sameParent($t2) && $f2.parent.isTextblock) {
       const cut = $f2.parent.cut($f2.parentOffset, $t2.parentOffset);
@@ -23480,7 +23236,14 @@ ${s5}`;
     if (!now || now.text !== r4.text) return false;
     let content;
     if (h5.multiline === false) text = String(text).replace(/\s*[\r\n]+\s*/g, " ").trim();
-    if (h5.features === "plain") {
+    if (h5.features === "email") {
+      const L3 = String(text).replace(/\r\n?/g, "\n").trim().split(/\s*\n\s*/).filter(Boolean);
+      content = [];
+      L3.forEach((l6, i5) => {
+        if (i5) content.push({ type: "hardBreak" });
+        content.push({ type: "text", text: l6 });
+      });
+    } else if (h5.features === "plain") {
       const L3 = String(text).replace(/\r\n?/g, "\n").split("\n");
       content = L3.length === 1 ? L3[0] ? [{ type: "text", text: L3[0] }] : [] : plainDoc(L3.join("\n")).content;
     } else {
@@ -23555,6 +23318,337 @@ ${s5}`;
     else if (kind === "task") c5.toggleTaskList();
     else if (kind === "quote") c5.toggleBlockquote();
     return c5.run();
+  }
+
+  // components/Menu.jsx
+  var menuItemsIn = (box) => box ? (
+    /** @type {HTMLElement[]} */
+    [...box.querySelectorAll("[role^=menuitem]")].filter((b5) => b5.getAttribute("aria-disabled") !== "true")
+  ) : [];
+  function menuMove(e4, items2) {
+    const L3 = items2, i5 = L3.indexOf(
+      /** @type {HTMLElement} */
+      document.activeElement
+    );
+    let to2 = null;
+    if (e4.key === "ArrowDown") to2 = L3[(i5 + 1) % L3.length];
+    else if (e4.key === "ArrowUp") to2 = L3[(i5 < 0 ? 0 : i5 + L3.length - 1) % L3.length];
+    else if (e4.key === "Home") to2 = L3[0];
+    else if (e4.key === "End") to2 = L3[L3.length - 1];
+    else return false;
+    e4.preventDefault();
+    e4.stopPropagation();
+    to2?.focus({ preventScroll: true });
+    return true;
+  }
+  var dataAttrs = (
+    /** @param {Record<string, string> | undefined} d */
+    (d5) => Object.fromEntries(Object.entries(d5 || {}).map(([k5, v5]) => [`data-${k5}`, v5]))
+  );
+  function MenuPanel({ label, id: id2, cls, bare, style, hidden, anchor, onClose, onKey, autoFocus = true, focusKey, boxRef, children }) {
+    const own = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    ), box = boxRef || own;
+    const closeRef = A2(onClose);
+    closeRef.current = onClose;
+    _2(() => {
+      if (hidden || !autoFocus) return;
+      tipHide();
+      (menuItemsIn(box.current)[0] || box.current)?.focus({ preventScroll: true });
+    }, [hidden, focusKey]);
+    h2(() => {
+      if (hidden) return;
+      const away = (e4) => {
+        const t47 = (
+          /** @type {Node} */
+          e4.target
+        );
+        if (!box.current?.contains(t47) && !(anchor && anchor.contains(t47))) closeRef.current("away");
+      };
+      document.addEventListener("pointerdown", away, true);
+      document.addEventListener("click", away, true);
+      return () => {
+        document.removeEventListener("pointerdown", away, true);
+        document.removeEventListener("click", away, true);
+      };
+    }, [hidden, anchor]);
+    const keys = (e4) => {
+      if (onKey) onKey(e4);
+      if (e4.defaultPrevented) return;
+      const field = (
+        /** @type {Element} */
+        e4.target.matches("input,textarea,select")
+      );
+      if (!field && menuMove(e4, menuItemsIn(box.current))) return;
+      if (e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        onClose("esc");
+      } else if (e4.key === "Tab") onClose("tab");
+    };
+    return /* @__PURE__ */ u2(
+      "div",
+      {
+        class: `${bare ? "" : "ddmenu newmenu on "}${cls || ""}`.trim(),
+        id: id2,
+        role: "menu",
+        "aria-label": label,
+        ref: box,
+        tabIndex: -1,
+        hidden,
+        style,
+        onKeyDown: keys,
+        children
+      }
+    );
+  }
+  function MenuItems({ items: items2, onPick }) {
+    return /* @__PURE__ */ u2(S2, { children: items2.map((it2, i5) => it2.sep ? /* @__PURE__ */ u2("hr", { role: "separator" }, `s${i5}`) : it2.head ? /* @__PURE__ */ u2("div", { class: "fsec2", role: "presentation", children: it2.head }, `h${i5}`) : it2.note ? /* @__PURE__ */ u2("div", { class: "sub mnote", role: "presentation", children: it2.note }, `n${i5}`) : /* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
+        tabIndex: -1,
+        class: it2.cls,
+        "data-tip": it2.tip,
+        "aria-checked": it2.checked === void 0 ? void 0 : it2.checked ? "true" : "false",
+        "aria-disabled": it2.disabled ? "true" : void 0,
+        ...dataAttrs(it2.data),
+        onClick: () => onPick(it2),
+        children: [
+          it2.icon || it2.radio && it2.checked ? /* @__PURE__ */ u2(Icon, { name: it2.checked ? "check" : it2.icon || "check" }) : null,
+          it2.icon || it2.line ? /* @__PURE__ */ u2("span", { children: [
+            /* @__PURE__ */ u2("b", { children: [
+              it2.name,
+              it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
+                " · ",
+                it2.mark
+              ] }) : null
+            ] }),
+            it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
+          ] }) : /* @__PURE__ */ u2(S2, { children: [
+            it2.name,
+            it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
+              " · ",
+              it2.mark
+            ] }) : null
+          ] })
+        ]
+      },
+      it2.id
+    )) });
+  }
+  var HOVER_OPEN = null;
+  var HOVER_GRACE = 220;
+  function Menu({
+    label,
+    items: items2,
+    onPick,
+    icon,
+    tip,
+    why,
+    onBlocked,
+    cls,
+    btnCls,
+    menuLabel,
+    left,
+    data,
+    id: id2,
+    ariaLabel,
+    chevron = true,
+    labelCls,
+    menuId,
+    menuCls,
+    hidden,
+    hover
+  }) {
+    const [open2, setOpen2] = d2(false), [, bump] = d2(0);
+    const btn = A2(
+      /** @type {HTMLButtonElement | null} */
+      null
+    );
+    const back2 = A2(false);
+    const byMouse = A2(false), noFocus = A2(false), timer2 = A2(0);
+    const close = (how) => {
+      back2.current = how === "esc";
+      clearTimeout(timer2.current);
+      if (HOVER_OPEN === fold) HOVER_OPEN = null;
+      setOpen2(false);
+    };
+    const closeRef = A2(close);
+    closeRef.current = close;
+    const fold = A2(() => closeRef.current("away")).current;
+    const pointIn = () => {
+      if (!hover || why) return;
+      clearTimeout(timer2.current);
+      if (open2) return;
+      if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
+      HOVER_OPEN = fold;
+      byMouse.current = true;
+      noFocus.current = true;
+      setOpen2(true);
+    };
+    const pointOut = () => {
+      if (hover && byMouse.current) {
+        clearTimeout(timer2.current);
+        timer2.current = window.setTimeout(fold, HOVER_GRACE);
+      }
+    };
+    h2(() => () => {
+      clearTimeout(timer2.current);
+      if (HOVER_OPEN === fold) HOVER_OPEN = null;
+    }, []);
+    _2(() => {
+      if (!hover || !open2) return;
+      const b5 = btn.current, m5 = (
+        /** @type {HTMLElement | null} */
+        b5?.parentElement?.querySelector("[role=menu]")
+      );
+      if (!b5 || !m5) return;
+      const r4 = m5.getBoundingClientRect(), t47 = b5.getBoundingClientRect();
+      if (r4.bottom > window.innerHeight - 4 && t47.top - 8 > r4.height) m5.classList.add("up");
+    }, [open2]);
+    h2(() => {
+      if (!open2 && back2.current) {
+        back2.current = false;
+        btn.current?.focus();
+      }
+    }, [open2]);
+    const pick = (it2) => {
+      if (it2.disabled) return;
+      if (it2.checked === void 0 || it2.radio) close("pick");
+      onPick(it2.id);
+    };
+    const onBtnKey = (e4) => {
+      if (e4.key === "ArrowDown" && !why && !open2) {
+        e4.preventDefault();
+        byMouse.current = false;
+        noFocus.current = false;
+        setOpen2(true);
+      }
+    };
+    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, onMouseEnter: pointIn, onMouseLeave: pointOut, children: [
+      /* @__PURE__ */ u2(
+        "button",
+        {
+          type: "button",
+          class: btnCls || "btn",
+          id: id2,
+          ref: btn,
+          hidden,
+          "aria-haspopup": "menu",
+          "aria-expanded": open2 ? "true" : "false",
+          "aria-label": ariaLabel,
+          "aria-disabled": why ? "true" : void 0,
+          "data-tip": why || tip,
+          ...dataAttrs(data),
+          onKeyDown: onBtnKey,
+          onClick: (e4) => {
+            e4.preventDefault();
+            if (why) {
+              onBlocked && onBlocked();
+              return;
+            }
+            if (open2 && byMouse.current && e4.detail > 0) {
+              noFocus.current = false;
+              bump((n4) => n4 + 1);
+              return;
+            }
+            byMouse.current = hover && e4.detail > 0;
+            noFocus.current = false;
+            if (open2) close("pick");
+            else setOpen2(true);
+          },
+          children: [
+            icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
+            /* @__PURE__ */ u2("span", { class: labelCls, children: label }),
+            chevron ? /* @__PURE__ */ u2(Icon, { name: "chevdown", cls: "nch" }) : null
+          ]
+        }
+      ),
+      open2 ? /* @__PURE__ */ u2(
+        MenuPanel,
+        {
+          label: menuLabel || ariaLabel || label,
+          id: menuId,
+          cls: `${left ? "left " : ""}${menuCls || ""}`,
+          anchor: btn.current,
+          onClose: close,
+          autoFocus: !noFocus.current,
+          focusKey: noFocus.current,
+          children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
+        }
+      ) : null
+    ] });
+  }
+  function mountMenu(box, props) {
+    R(/* @__PURE__ */ u2(Menu, { ...props }), box);
+  }
+  function mountMenuPanel(box, props, items2, field) {
+    R(/* @__PURE__ */ u2(MenuPanel, { ...props, children: [
+      field ? /* @__PURE__ */ u2("input", { type: "text", "aria-label": "Type here" }) : null,
+      /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: () => {
+      } })
+    ] }), box);
+  }
+  var POP = null;
+  function PopMenu({ anchor, props }) {
+    const { label, items: items2, onPick, id: id2, cls, align, at: at2, loading: loading2 } = props;
+    const wrap = A2(
+      /** @type {HTMLDivElement | null} */
+      null
+    );
+    _2(() => {
+      const el2 = (
+        /** @type {HTMLElement | null} */
+        wrap.current?.firstElementChild || null
+      );
+      if (!el2) return;
+      const w6 = el2.offsetWidth, h5 = el2.offsetHeight;
+      const r4 = at2 ? { left: at2.x, right: at2.x, top: at2.y, bottom: at2.y } : anchor && anchor.isConnected ? anchor.getBoundingClientRect() : { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 3, bottom: innerHeight / 3 };
+      let top = r4.bottom + (at2 ? 0 : 4);
+      if (top + h5 > innerHeight - 8) top = Math.max(8, r4.top - h5 - 4);
+      const left = align === "right" ? r4.right - w6 : r4.left;
+      el2.style.top = `${Math.max(8, Math.min(top, innerHeight - h5 - 8))}px`;
+      el2.style.left = `${Math.max(8, Math.min(left, innerWidth - w6 - 8))}px`;
+    });
+    const pick = (it2) => {
+      if (it2.disabled) return;
+      if (it2.checked === void 0) closeMenu("pick");
+      onPick(it2.id);
+    };
+    return /* @__PURE__ */ u2("div", { ref: wrap, children: /* @__PURE__ */ u2(MenuPanel, { label, id: id2, cls: `pop${cls ? " " + cls : ""}`, anchor, onClose: closeMenu, focusKey: loading2, children: loading2 ? /* @__PURE__ */ u2("div", { class: "msk", "aria-hidden": "true", children: [
+      /* @__PURE__ */ u2("i", {}),
+      /* @__PURE__ */ u2("i", {}),
+      /* @__PURE__ */ u2("i", {})
+    ] }) : /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick }) }) });
+  }
+  function openMenu(anchor, props) {
+    if (POP && POP.anchor !== anchor) closeMenu("away");
+    if (!POP) {
+      const host2 = document.createElement("div");
+      host2.className = "pophost";
+      document.body.appendChild(host2);
+      POP = { host: host2, anchor, props };
+      if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
+    }
+    POP.props = props;
+    R(/* @__PURE__ */ u2(PopMenu, { anchor, props }), POP.host);
+  }
+  function closeMenu(how = "away") {
+    const p6 = POP;
+    if (!p6) return;
+    POP = null;
+    R(null, p6.host);
+    p6.host.remove();
+    const a5 = p6.anchor;
+    if (a5 && a5.hasAttribute("aria-haspopup")) a5.setAttribute("aria-expanded", "false");
+    if ((how === "esc" || how === "tab") && a5 && a5.isConnected) a5.focus({ preventScroll: true });
+    if (p6.props.onClose) p6.props.onClose(how);
+  }
+  function menuOpenFor(anchor) {
+    return !!POP && (anchor === void 0 || POP.anchor === anchor);
   }
 
   // core/caretPlace.js
@@ -24357,9 +24451,9 @@ ${s5}`;
   var AI_PLACE_TABLE = {
     notes: { ai: true, turnInto: true, formatNotes: true, improveOnly: false },
     current: { ai: true, turnInto: false, formatNotes: true, improveOnly: false },
-    email: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
-    plain: { ai: false, turnInto: false, formatNotes: false, improveOnly: true },
-    line: { ai: false, turnInto: false, formatNotes: false, improveOnly: true }
+    email: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    plain: { ai: true, turnInto: false, formatNotes: false, improveOnly: true },
+    line: { ai: true, turnInto: false, formatNotes: false, improveOnly: true }
   };
   var aiPlaceOn = (place2) => !!(AI_PLACE_TABLE[place2] && AI_PLACE_TABLE[place2].ai);
   var aiBar = y3(null);
@@ -24411,8 +24505,12 @@ ${s5}`;
     }
     aiHome(h5);
     const was = aiBar.value, range = edSelection(h5);
+    if (!range && h5.features === "email") {
+      if (was && was.h === h5 && !barBusy()) aiBar.value = null;
+      return;
+    }
     const shown2 = !!(was && was.h === h5 && was.shown && Date.now() < keepOpenUntil);
-    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" };
+    aiBar.value = { h: h5, ai: ai2, from: s5.from, to: s5.to, shown: shown2, multi: !!range && !range.inline && h5.features !== "plain" && h5.features !== "email" };
   }
   function aiToggle(on2) {
     const b5 = aiBar.value;
@@ -25031,6 +25129,7 @@ ${s5}`;
     ],
     current: ["text", "h1", "h2", "h3", "ul", "ol", "quote", "image"],
     plain: [],
+    email: [],
     none: []
   };
   function slashRows(profile, hostRows, schema, q5 = "") {
@@ -25098,7 +25197,8 @@ ${s5}`;
       tip: "Current state",
       tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"]
     },
-    plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
+    plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar (the selection bar: Improve and Ask, #133)", tools: [] },
+    email: { tip: "Draft email's preview: Outlook HTML, no toolbar (the selection bar: Improve, Tone and Ask, #133)", tools: [] },
     none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
   };
   function profileTools(profile, hostTools = []) {
@@ -44749,6 +44849,7 @@ ${pre}**Current state title:** ${title}`);
     d5.addEventListener("close", () => {
       if (d5.open) return;
       closeCal();
+      dePrevDrop();
       if (shared.DE && shared.DE.polish) draftStat("email", "rejected");
       shared.DE = null;
     });
@@ -44891,6 +44992,7 @@ ${pre}**Current state title:** ${title}`);
   function drawDraftEmail(first) {
     const em2 = deBuild(), codes = [...new Set(shared.DE.items.map((i5) => i5.p))].sort();
     if (first) {
+      dePrevDrop();
       const row2 = (i5) => {
         const w6 = deDue(i5.due, TODAY, S.dueSoon), c5 = (SA().chases || {})[i5.id];
         return `<label class="it"><input type="checkbox" data-deit="${i5.k}:${esc(i5.id)}" ${shared.DE.picked.has(i5.k + ":" + i5.id) ? "checked" : ""}><span>${esc(i5.id)} · ${esc(i5.t.length > 70 ? i5.t.slice(0, 69) + "…" : i5.t)}</span>${shared.DE.outside && !i5.client ? '<span class="tag">internal</span>' : ""}<span class="sub">${esc(w6.date)}${w6.words ? " · " + w6.words : ""}${shared.DE.mode === "chase" && c5 ? " · " + esc(deChasedWords(c5)) : ""}</span></label>`;
@@ -44909,15 +45011,39 @@ ${pre}**Current state title:** ${title}`);
       if (shared.DE.includeUpdate && $("#deUpd")) $("#deUpd").checked = true;
       if (shared.DE.replyBy) $("#deReply").value = fd(shared.DE.replyBy);
     }
-    putHtml($("#dePrev"), em2.html);
+    dePrevPut(em2.html);
     shared.DE.edited = false;
     $("#deNote").hidden = true;
     if (!shared.DE.subjEdited) $("#deSubj").value = em2.subject;
   }
+  function dePrevPut(html2) {
+    const el2 = $("#dePrev");
+    if (!el2) return;
+    shared.DE.built = html2;
+    if (el2.cxed && !el2.cxed.editor.isDestroyed) {
+      el2.cxed.setValue(html2);
+      return;
+    }
+    creaiteEditor(el2, { features: "email", html: html2, ai: { place: "email", project: () => {
+      const d5 = shared.DE;
+      return d5 && (d5.items && d5.items[0] && d5.items[0].p || d5.codes && d5.codes[0]) || "";
+    } } });
+  }
+  function dePrevDrop() {
+    const el2 = $("#dePrev");
+    if (el2 && el2.cxed) el2.cxed.destroy();
+  }
+  function deHtml() {
+    const el2 = $("#dePrev");
+    if (shared.DE.edited && el2 && el2.cxed && !el2.cxed.editor.isDestroyed) return `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${edEmailHtml(el2.cxed.editor)}</div>`;
+    const t47 = document.createElement("div");
+    putHtml(t47, shared.DE.built || "");
+    return t47.innerHTML;
+  }
   function deOptionsChanged() {
     if (!shared.DE.edited) {
       const em2 = deBuild();
-      putHtml($("#dePrev"), em2.html);
+      dePrevPut(em2.html);
       if (!shared.DE.subjEdited) $("#deSubj").value = em2.subject;
       return;
     }
@@ -44955,7 +45081,7 @@ ${pre}**Current state title:** ${title}`);
     }
   }
   async function deCopyEmail(withHtml, btn) {
-    const prev = $("#dePrev"), html2 = prev.innerHTML, text = shared.DE.edited ? prev.innerText : deBuild().text;
+    const prev = $("#dePrev"), html2 = deHtml(), text = shared.DE.edited ? prev.innerText : deBuild().text;
     try {
       if (!navigator.clipboard) throw new Error("no clipboard");
       if (withHtml) {
@@ -45088,10 +45214,10 @@ ${pre}**Current state title:** ${title}`);
       if (!shared.DE) return;
       const t47 = e4.target;
       if (t47.closest("#deRedraw")) {
-        shared.DE.edited = false;
         shared.DE.subjEdited = false;
         const em2 = deBuild();
-        putHtml($("#dePrev"), em2.html);
+        dePrevPut(em2.html);
+        shared.DE.edited = false;
         $("#deSubj").value = em2.subject;
         $("#deNote").hidden = true;
         return;
@@ -52788,6 +52914,7 @@ ${d5.text}`);
     const id2 = `fuf-${row2.key}-${f5.f}`, v5 = valueOf(row2, f5);
     const [bad, setBad] = d2("");
     if (f5.kind === "text") {
+      const ai2 = f5.part === "person" ? void 0 : { place: "line", project: () => row2.item && (row2.item.values && row2.item.values.project || row2.item.project) || "" };
       return /* @__PURE__ */ u2(
         TextEditor,
         {
@@ -52797,6 +52924,7 @@ ${d5.text}`);
           rows: 1,
           cls: "fu-in fu-ed",
           labelledBy: `${id2}-l`,
+          ai: ai2,
           onCommit: (t47) => {
             if (t47.trim() !== v5) fuEdit(row2.key, f5, t47.trim());
           }
@@ -60739,6 +60867,7 @@ ${d5.text}`);
         "Peek",
         "PrepPage",
         "PrepPopup",
+        "PrepShape",
         "QUIPS",
         "R",
         "RAIL_ITEMS",
@@ -60861,6 +60990,7 @@ ${d5.text}`);
         "dayList",
         "days",
         "dcIcon",
+        "deBuild",
         "deCopyText",
         "dePolish",
         "deSent",
@@ -61062,6 +61192,7 @@ ${d5.text}`);
         "pkCommit",
         "pkDescL",
         "pkDraw",
+        "pkEdMount",
         "pkFeed",
         "pkLast",
         "pkNote",
@@ -61070,6 +61201,7 @@ ${d5.text}`);
         "pkOwner",
         "pkPropSave",
         "pkQuiet",
+        "pkRev",
         "pkSetDate",
         "pkSetStatus",
         "pkUndoLast",
@@ -61088,6 +61220,7 @@ ${d5.text}`);
         "projPeople",
         "publish",
         "pulseCheck",
+        "putHtml",
         "query",
         "quip",
         "quipNow",

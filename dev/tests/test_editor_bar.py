@@ -76,13 +76,14 @@ class Bars(LiveBrowserCase):
         b = self.b
         got = b.eval("(()=>{ const f=(p,h)=>profileTools(p,h).filter(t=>t!=='|').map(t=>t.id); "
                      "return { notes:f('notes',['note','person','item','table','image']), notesBare:f('notes',[]), current:f('current',['image']), "
-                     "plain:f('plain',['image']), none:f('none',[]), names:Object.keys(ED_PROFILES) }; })()")
+                     "plain:f('plain',['image']), email:f('email',['image']), none:f('none',[]), names:Object.keys(ED_PROFILES) }; })()")
         self.assertEqual(got["notes"], NOTES)
         self.assertEqual(got["notesBare"], SHARED)
         self.assertEqual(got["current"], CURRENT)
         self.assertEqual(got["plain"], [])            # decision 2: plain fields keep plain text, no toolbar
+        self.assertEqual(got["email"], [])            # #133: Draft email's preview is the editor's Email feature set, with no toolbar
         self.assertEqual(got["none"], [])
-        self.assertEqual(sorted(got["names"]), ["current", "none", "notes", "plain"])
+        self.assertEqual(sorted(got["names"]), ["current", "email", "none", "notes", "plain"])
         self.assertEqual(sorted(set(NOTES) - set(CURRENT)), sorted(["task", "code", "note", "person", "item", "table"]))
 
     def test_notes_current_and_the_capture_drawer_draw_their_profile(self):

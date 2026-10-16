@@ -8,6 +8,7 @@ import { drawCk, rbEnd, rbStart } from "./ask.js";
 import { drawChips } from "./components/Chip.jsx";
 import { A, open, P, pName, soon, wsFor } from "./core/data.js";
 import { $, $$, addHTML, esc, html, ic, ICONS, putHTML, raw } from "./core/dom.js";
+import { creaiteEditor, edEmailHtml } from "./core/editor.js";
 import { CALI, closeCal, parseWhen } from "./core/fields.js";
 import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.js";
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
@@ -126,7 +127,7 @@ export const deOverdue=i=>!!i.due&&i.due<TODAY;
 export const deDefaults=(items,outside)=>new Set(items.filter(i=>!outside||i.client).map(i=>i.k+":"+i.id));
 export const deMe=n=>String(n||"").trim().toLowerCase()===String(S.me||"").trim().toLowerCase();
 export function deDlgEl(){ let d=$("#deDlg"); if(d) return d;
-  d=makeDraftEmailDialog(); d.addEventListener("click",e=>{ if(e.target.closest("#deClose")) d.close(); });   /* a click on the scrim is the Dialog's: it closes when nothing is typed */ d.addEventListener("close",()=>{ if(d.open) return; closeCal(); if(shared.DE&&shared.DE.polish) draftStat("email","rejected"); shared.DE=null; }); return d; }   /* the close event is queued: a popup opened again meanwhile keeps its email */
+  d=makeDraftEmailDialog(); d.addEventListener("click",e=>{ if(e.target.closest("#deClose")) d.close(); });   /* a click on the scrim is the Dialog's: it closes when nothing is typed */ d.addEventListener("close",()=>{ if(d.open) return; closeCal(); dePrevDrop(); if(shared.DE&&shared.DE.polish) draftStat("email","rejected"); shared.DE=null; }); return d; }   /* the close event is queued: a popup opened again meanwhile keeps its email */
 export function deShow(title){ const d=deDlgEl(); $("#deTitle").textContent=title; drawDraftEmail(true); openDialog(d); }
 /* from a person's page: an update request, or a chase of their overdue items */
 /* only (BL-210, Decisions needed): one item's ID; it alone starts ticked (if the outside-address rule allows), the rest are offered unticked */
@@ -171,7 +172,7 @@ export function dePolishHtml(){ const tone=shared.DE.tone||"neutral", off=!draft
   return `<div class="detone${off?" off":""}"><span class="sub">Polish the wording of the opening paragraph:</span>${["warm","neutral","firm"].map(t=>`<button type="button" class="vchip" data-detone="${t}" aria-pressed="${tone===t}"${off?" disabled":""}>${t[0].toUpperCase()+t.slice(1)}</button>`).join("")}${draftBtn("polish","Polish","Reword the opening paragraph only, in this tone; the table, subject and addresses are never touched",'data-depolish="1"')}</div><div id="dePolish" class="depolish">${shared.DE.polish?shared.DE.polish.html:""}</div>`; }
 /* redraw the whole popup (first: build it) or just the preview and subject */
 export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(shared.DE.items.map(i=>i.p))].sort();
-  if(first){ const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${esc(i.id)} · ${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
+  if(first){ dePrevDrop(); const row=i=>{ const w=deDue(i.due,TODAY,S.dueSoon), c=(SA().chases||{})[i.id]; return `<label class="it"><input type="checkbox" data-deit="${i.k}:${esc(i.id)}" ${shared.DE.picked.has(i.k+":"+i.id)?"checked":""}><span>${esc(i.id)} · ${esc(i.t.length>70?i.t.slice(0,69)+"…":i.t)}</span>${shared.DE.outside&&!i.client?'<span class="tag">internal</span>':""}<span class="sub">${esc(w.date)}${w.words?" · "+w.words:""}${shared.DE.mode==="chase"&&c?" · "+esc(deChasedWords(c)):""}</span></label>`; };
     const outsideNote=shared.DE.mode==="followup"?(shared.DE.attendees.length?"An attendee's address is outside your own domains":"There are no attendee addresses on record"):shared.DE.email?"This address is outside your own domains":"There's no email address on record";
     putHtml($("#deBody"),`${deModesHtml()}<div class="derow"><label>To</label>${deToHtml()}</div>
       <div class="derow"><label for="deSubj">Subject</label><input type="text" id="deSubj"><button class="mini" id="deCopySubj">Copy</button></div>
@@ -183,9 +184,26 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
       <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Record that you sent this chase (the items and today's date only), so the next one steps up">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
     $("#deDone").onclick=()=>$("#deDlg").close(); if(shared.DE.includeUpdate&&$("#deUpd")) $("#deUpd").checked=true; if(shared.DE.replyBy) $("#deReply").value=fd(shared.DE.replyBy); }
-  putHtml($("#dePrev"),em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
+  dePrevPut(em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
+/* ===== #133 ===== the preview is a host of the shared editor (core/editor.js, features "email"): the same selection bar as the other editors
+   (Improve: Rewrite, Shorter, Longer; Tone: More formal, Warmer; Ask…), on text inside one paragraph or cell, so the table and the colours
+   are never reshaped. The builder (draftEmail) stays the source (BL-83): the preview shows what it built, `shared.DE.built` is that HTML,
+   and what is copied is that HTML until the email is edited, then the editor's document in the same wrapper (deHtml). */
+/** Put the builder's HTML in the preview: a new editor on first use, else quietly into the one there (not an edit). @param {string} html */
+export function dePrevPut(html){ const el=$("#dePrev"); if(!el) return; shared.DE.built=html;
+  if(el.cxed&&!el.cxed.editor.isDestroyed){ el.cxed.setValue(html); return; }
+  creaiteEditor(el,{ features:"email", html, ai:{ place:"email", project:()=>{ const d=shared.DE; return (d&&((d.items&&d.items[0]&&d.items[0].p)||(d.codes&&d.codes[0])))||""; } } }); }
+/** End the preview's editor (the popup is redrawn or closed), and with it the selection bar over it. */
+export function dePrevDrop(){ const el=$("#dePrev"); if(el&&el.cxed) el.cxed.destroy(); }
+/** The HTML Copy email puts on the clipboard. An unedited email is the builder's HTML as the browser holds it (what the preview's own
+    innerHTML always was: a table with its body, attributes as the parser writes them), byte for byte; an edited one is the editor's document
+    inside the builder's wrapper, each cell's lone paragraph unwrapped and every inline style kept. */
+export function deHtml(){ const el=$("#dePrev");
+  if(shared.DE.edited&&el&&el.cxed&&!el.cxed.editor.isDestroyed) return `<div style="${DE_FONT}color:${DE_COLOURS.ink};background:${DE_COLOURS.white};">${edEmailHtml(el.cxed.editor)}</div>`;
+  const t=document.createElement("div"); putHtml(t,shared.DE.built||""); return t.innerHTML; }
+/* ===== end #133 ===== */
 /* an option changed: redraw the email, unless the person has edited it, in which case ask first (their edits would be lost) */
-export function deOptionsChanged(){ if(!shared.DE.edited){ const em=deBuild(); putHtml($("#dePrev"),em.html); if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; return; }
+export function deOptionsChanged(){ if(!shared.DE.edited){ const em=deBuild(); dePrevPut(em.html); if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; return; }
   const n=$("#deNote"); n.hidden=false; putHtml(n,'You\'ve edited the email, so it hasn\'t changed with your last choice. <button class="mini" id="deRedraw">Redraw it (your edits are lost)</button>'); }
 export function deSay(btn,msg,ok){ $("#deMsg").textContent=msg; if(ok&&btn) copied(btn); }   /* BL-136: the drawn tick and "Copied" */
 /* when the browser refuses the clipboard, select what to copy and say so, never fail silently */
@@ -193,7 +211,7 @@ export function deSelect(id){ const el=$("#"+id); if(!el) return; if(el.select){
 export async function deCopyText(text,btn,selectId){ try{ if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error("no clipboard"); await navigator.clipboard.writeText(text); deSay(btn,"Copied",true); }
   catch(err){ deSelect(selectId); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
 /* what is on screen is what is copied: the preview's own HTML (with any edits) and its text, together, so Outlook pastes the table and the colours */
-export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=prev.innerHTML, text=shared.DE.edited?prev.innerText:deBuild().text;
+export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=deHtml(), text=shared.DE.edited?prev.innerText:deBuild().text;
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(withHtml){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); }
     else await navigator.clipboard.writeText(text);
@@ -240,7 +258,7 @@ document.addEventListener("change",e=>{ if(!shared.DE) return; const t=e.target;
   else if(t.id==="deUpd"){ shared.DE.includeUpdate=t.checked; deOptionsChanged(); }
   else if(t.id==="deLead"){ shared.DE.lead=t.value; deOptionsChanged(); } });
 document.addEventListener("click",e=>{ if(!shared.DE) return; const t=e.target;
-  if(t.closest("#deRedraw")){ shared.DE.edited=false; shared.DE.subjEdited=false; const em=deBuild(); putHtml($("#dePrev"),em.html); $("#deSubj").value=em.subject; $("#deNote").hidden=true; return; }
+  if(t.closest("#deRedraw")){ shared.DE.subjEdited=false; const em=deBuild(); dePrevPut(em.html); shared.DE.edited=false; $("#deSubj").value=em.subject; $("#deNote").hidden=true; return; }
   const md=t.closest("[data-demode]"); if(md&&!md.disabled&&md.dataset.demode!==shared.DE.mode){ openDraftEmail(shared.DE.name,md.dataset.demode,shared.DE.only); return; }
   const tn=t.closest("[data-detone]"); if(tn){ shared.DE.tone=tn.dataset.detone; $$("[data-detone]").forEach(x=>x.setAttribute("aria-pressed",x===tn)); return; }
   if(t.closest("[data-depolish]")){ dePolish(); return; }

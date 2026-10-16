@@ -236,9 +236,9 @@ class Bar117(LiveBrowserCase):
         b = self.b
         want = {"notes": dict(ai=True, turnInto=True, formatNotes=True, improveOnly=False),
                 "current": dict(ai=True, turnInto=False, formatNotes=True, improveOnly=False),
-                "email": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True),
-                "plain": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True),
-                "line": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True)}
+                "email": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),       # v2.2.0 (#133): switched on
+                "plain": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True),
+                "line": dict(ai=True, turnInto=False, formatNotes=False, improveOnly=True)}
         self.assertEqual(b.eval("AI_PLACE_TABLE"), want)
         self.assertEqual(b.eval("Object.keys(AI_PLACE_TABLE)"), list(want))
         self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want))                     # the page, edit_ai.py and the groups list the same
@@ -261,21 +261,18 @@ class Bar117(LiveBrowserCase):
                 self.assertIsNone(b.eval("AIE.el.getAttribute('data-aibar')"))
             b.eval(CLEAN)
 
-    def test_off_places_switch_on_without_rework_and_list_improve_only(self):
-        """v2.2.0 is flipping the flag: with `ai` on, the email and plain places offer their Improve (and Tone) groups and Ask…, no Turn into."""
+    def test_the_plain_and_email_places_list_improve_only(self):
+        """Since v2.2.0 (#133) the email, plain and line places are on: they offer their Improve (and Tone) group and Ask…, no Turn into."""
         b = self.b
-        self.addCleanup(lambda: self.b and self.b.eval("for(const p of ['email','plain','line']) AI_PLACE_TABLE[p].ai=false; true"))
         want = {"email": [("improve", ["rewrite", "shorter", "longer"]), ("tone", ["formal", "warmer"])],
                 "plain": [("improve", ["rewrite", "shorter", "executive"])], "line": [("improve", ["rewrite", "shorter", "executive"])]}
         for place, groups in want.items():
-            b.eval(f"AI_PLACE_TABLE.{place}.ai=true")
             self.mount(place, "Some plain text\nOn two lines" if place != "line" else "A one line title")
             self.select_all()
             self.assertEqual(self.groups(), groups, place)
             self.assertFalse(b.eval(f"!!document.querySelector('{LAYER} .aifmt, {LAYER} [data-ai=notes]')"), place)
             self.assertTrue(b.eval(f"!!document.querySelector('{LAYER} [data-ai=custom]')"), place)
             b.eval(CLEAN)
-            b.eval(f"AI_PLACE_TABLE.{place}.ai=false")
 
     # ---- option sets per place ---------------------------------------------------------------------------------------------
     def test_notes_offers_turn_into_apart_from_the_ai_zone_and_current_does_not(self):
