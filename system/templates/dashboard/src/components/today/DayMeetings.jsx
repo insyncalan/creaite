@@ -9,7 +9,7 @@
    no Prepare (Alan, 13-10-2026). Off today, one quiet line says that everything below is as of today. */
 import { Fragment, render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
-import { CARD_CLOSE, CARD_OPEN } from "../../core/hovertime.js";
+import { CARD_CLOSE, CARD_OPEN } from "../../core/hover.js";
 import { Chip } from "../Chip.jsx";
 import { minsOf } from "./DayCurve.jsx";
 import { wheelRef } from "./wheel.js";

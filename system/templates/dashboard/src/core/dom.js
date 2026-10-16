@@ -2,6 +2,7 @@
 /* core/dom.js (BL-231 step 2b): the DOM helpers, escaping (`html`), the icons and the one tooltip.
    Moved from script/ unchanged, apart from `export`, `shared.` for the shared state (state.js) and the steps that ran at load,
    which are now boot…() functions called by src/main.js in today's order. Pieces: 0002-core.js, 0003-bl-228-d-sprint-escaping.js, 0004-bl-158-sprint-icons.js */
+import { TIP_CLOSE, TIP_NEXT, TIP_OPEN } from "./hover.js";   /* #143: the one hover standard's tooltip delays */
 /* ======================= core ======================= */
 /* BL-303: an optional root, so a lookup inside a popup or panel searches only there (the page when it is left out). */
 /** @param {string} s @param {ParentNode} [root] @returns {any} */
@@ -134,8 +135,8 @@ export function bootTooltips(){
 paintIcons();
 document.addEventListener("mouseover",e=>{ const t=e.target; if(!t.closest) return; if(t.closest("#tip")){ clearTimeout(TIP.hide); return; }
   const el=t.closest("[data-tip]"); if(el&&el===TIP.el){ clearTimeout(TIP.hide); return; }
-  if(el){ tipShow(el,TIP.el?0:250); return; }   /* moving from one icon to the next, the tooltip follows at once */
-  clearTimeout(TIP.show); if(TIP.el){ clearTimeout(TIP.hide); TIP.hide=setTimeout(tipHide,120); } });
+  if(el){ tipShow(el,TIP.el?TIP_NEXT:TIP_OPEN); return; }   /* #143: the first after TIP_OPEN, the next while one shows after TIP_NEXT */
+  clearTimeout(TIP.show); if(TIP.el){ clearTimeout(TIP.hide); TIP.hide=setTimeout(tipHide,TIP_CLOSE); } });
 document.addEventListener("mouseleave",tipHide);
 document.addEventListener("focusin",e=>{ const el=e.target.closest&&e.target.closest("[data-tip]"); if(el&&e.target.matches(":focus-visible")) tipShow(el,0); else if(TIP.el) tipHide(); });
 document.addEventListener("focusout",e=>{ if(TIP.el&&(e.target===TIP.el||TIP.el.contains(e.target))) tipHide(); });
