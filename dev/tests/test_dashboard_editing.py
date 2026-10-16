@@ -92,9 +92,9 @@ SCRIPT = r"""
     go("cockpit","ABC"); const ck=q=>ckItems(q).map(i=>`${i.g}|${i.l}`);
     out.ck=[ck("").filter(x=>x.startsWith("Go to|")),ck("overdue").filter(x=>x.startsWith("Views|")),ck("current state").filter(x=>x.startsWith("Actions|")),
       ck("uat start").filter(x=>x.startsWith("Milestones|")),ck("steering").filter(x=>x.startsWith("Files|")),ck("recording").filter(x=>x.startsWith("Intake|"))];
-    // BL-44: the health panel opens on the right of the project page
+    // BL-44: the health panel opens on the right of the project page; #109: over the page (pover), against its right edge, not beside it
     go("cockpit","ABC"); openProject("ABC","health"); const pr=document.getElementById("panel").getBoundingClientRect(), vr=document.getElementById("v-cockpit").getBoundingClientRect();
-    out.panelRight=[pr.left>=vr.right-2, Math.abs(pr.top-vr.top)<40]; closePanel();
+    out.panelRight=[pr.right>=vr.right-2&&document.getElementById("panel").classList.contains("pover"), pr.top<=vr.top+2]; closePanel();
     // BL-52: health better than the evidence needs a new reason (checked here, not saved)
     openProject("ABC","health"); const hsel=document.getElementById("f_health"); hsel.value="On track"; hsel.dispatchEvent(new Event("change"));
     out.evidence=document.getElementById("hEvidence").textContent; set("f_reason",P.find(p=>p.code==="ABC").reason||"");
