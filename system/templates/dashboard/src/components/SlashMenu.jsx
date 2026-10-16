@@ -7,7 +7,7 @@
    Opens at the caret when a `/` is TYPED (not on a caret move, a paste or a saved note) at the start of a line or after a space, in a paragraph (never in a code block or code,
    a link, a heading, or inside a word or an address such as and/or or https://x). It is drawn position:fixed from the editor's own
    coordsAtPos (core/caretPlace.js): below the caret, above when there is no room, clamped to the window, moved again on scroll and
-   resize. Typing narrows it (name and description); ↑ ↓ move, Enter or Tab insert a sure match (an id, alias or name prefix, or any row after an arrow key; otherwise they close the menu and act as ever), Esc closes and leaves the text; a click on a row
+   resize. Typing narrows it (name and description); ↑ ↓ move, Enter or Tab insert a sure match (an exact id or alias, or a name prefix at the start of a line or of three letters, or any row after an arrow key; otherwise they close the menu and act as ever), Esc closes and leaves the text; a click on a row
    inserts. The "/query" is removed and the row's block written in its place. A composition (IME) never opens it or is read by it.
    Focus stays in the text; the editor carries aria-activedescendant for the screen reader, and the list is a listbox of groups
    of options. Nothing is written until a row is chosen. */
@@ -137,15 +137,16 @@ export function attachSlash(h, { profile, host }) {
     const n = st.rows.length;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); if (n) { moved = true; st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); } }
     else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
-      const row = n ? st.rows[st.i] : null;          /* Enter or Tab picks a row only when it is a sure match (an id, an alias or a name prefix) or the user moved with the arrows; else the menu closes and the key is an ordinary Enter or Tab, so prose like "Amber /Red" keeps its text */
-      if (row && (moved || slashRank(row, st.q) <= 1)) { e.preventDefault(); e.stopPropagation(); choose(row); } else close(); }
+      const row = n ? st.rows[st.i] : null;          /* Enter or Tab picks a row only when it is a sure match (an exact id or alias; a name prefix too at the start of a line or of three letters) or the user moved with the arrows; else the menu closes and the key is an ordinary Enter or Tab, so prose like "Amber /Red" keeps its text */
+      const rank = row ? slashRank(row, st.q) : 9, lead = editor.state.doc.resolve(st.from).parentOffset === 0;          /* a name prefix is sure at the start of a line, or after text once it is three letters: "yes /no" and "w /o" are prose, not Note and Numbered list */
+      if (row && (moved || rank === 0 || (rank === 1 && (lead || st.q.trim().length >= 3)))) { e.preventDefault(); e.stopPropagation(); choose(row); } else close(); }
     else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); }      /* ⌘↵ waits: the host's save (the capture drawer's Done) and the editor's own ⌘↵ must not fire under an open menu */
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dismissed = st.from; close(); }
   };
   const blur = () => setTimeout(() => { if (!el.contains(document.activeElement)) close(); }, 120);
   const comp = () => { typedSlash = true; look(); };          /* a composition ended: read the text it left */
   /** @param {InputEvent} e */
-  const before = e => { typedSlash = (e.inputType === "insertText" && e.data === "/") || e.inputType === "deleteContentBackward"; };          /* beforeinput runs before the transaction: a typed "/" or a Backspace arms it (never a paste, a drop or a caret move) */
+  const before = e => { typedSlash = e.inputType === "insertText" || e.inputType.startsWith("deleteContent"); };          /* beforeinput runs before the transaction: typing or deleting arms it (never a paste, a drop or a caret move) */
   editor.on("selectionUpdate", look); editor.on("update", look);
   el.addEventListener("beforeinput", before, true);
   el.addEventListener("keydown", keys, true); el.addEventListener("focusout", blur); el.addEventListener("compositionend", comp);

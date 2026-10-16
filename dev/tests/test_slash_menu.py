@@ -831,6 +831,7 @@ class Slash(LiveBrowserCase):
         for q, first in (("head 2", "h2"), ("bull l", "ul"), ("num l", "ol"), ("head", "h1")):
             b.type(q)
             b.pump(0.2)
+            self.assertTrue(self.rows(), f"{q}: rows (text now {b.eval('document.querySelector(\'.nbody\').cxed.value()')!r})")
             self.assertEqual(self.rows()[0], first, q)
             if " " in q:
                 self.assertEqual(self.rows(), [first], f"{q}: only that row")
@@ -841,6 +842,119 @@ class Slash(LiveBrowserCase):
         b.wait(f"!{MENU}", 5)
         b.type("Two")
         self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^## Two$")
+
+    # ---- review fixes (editor-122b5): H1 / M1 ---------------------------------------------------------------------------
+
+    STUCK = ("RAG: Amber /Red", "yes /no", "ratio 1 /2", "and /or", "x, /x", "A /", "in/out /in", "w /o", "price /kg", "Q3 /Q4", "see /docs")
+
+    def test_h1_a_word_stuck_to_a_slash_stays_exactly_as_typed_when_enter_is_pressed_in_notes(self):
+        b = self.b
+        for line in self.STUCK:
+            self.make_note("Stuck")
+            b.type(line)
+            b.pump(0.2)
+            b.key("Enter")
+            b.pump(0.2)
+            md = b.eval("document.querySelector('.nbody').cxed.value()")
+            self.assertEqual(md.strip(), line, f"{line!r} keeps its text")
+            self.assertEqual(b.eval(f"!!{MENU}"), False, f"{line!r}: the menu is closed")
+            self.assertEqual(b.eval("document.querySelector('.nbody').cxed.editor.state.doc.childCount"), 2, f"{line!r}: Enter made a new line")
+
+    def test_h1_a_word_stuck_to_a_slash_stays_as_typed_in_current_state(self):
+        b = self.b
+        self.open_current()
+        for line in self.STUCK:
+            b.key("Enter")
+            b.type(line)
+            b.pump(0.2)
+            b.key("Enter")
+            b.pump(0.2)
+            self.assertEqual(b.eval(f"!!{MENU}"), False, f"{line!r}: the menu is closed")
+            self.assertIn(line, b.eval("edValue(curEd)").split("\n"), f"{line!r} keeps its text")
+
+    def test_h1_a_saved_note_with_a_stuck_slash_opens_no_menu_on_a_caret_move_and_enter_loses_nothing(self):
+        b = self.b
+        self.make_note("Saved", "RAG: Amber /Red", focus=False)
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")
+        b.wait("document.activeElement===document.querySelector('.nbody')", 5)
+        b.pump(0.3)
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "focusing at the end opens nothing")
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.setTextSelection(3)")
+        b.eval("document.querySelector('.nbody').cxed.editor.commands.setTextSelection(15)")
+        b.pump(0.3)
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "moving the caret opens nothing")
+        b.key("ArrowRight"); b.key("End")
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelector('.nbody').cxed.value()").strip(), "RAG: Amber /Red")
+        self.assertEqual(b.eval(f"!!{MENU}"), False)
+
+    def test_h1_a_click_after_the_text_of_a_saved_note_then_enter_loses_nothing(self):
+        b = self.b
+        self.make_note("Clicked", "Status: Amber /Red", focus=False)
+        b.eval("(()=>{ const e=document.querySelector('.nbody').cxed.editor, v=e.view, c=v.coordsAtPos(e.state.doc.content.size-1); window.__pt=[c.right+40, (c.top+c.bottom)/2]; })()")
+        x, y = b.eval("window.__pt")
+        for kind in ("mouseMoved", "mousePressed", "mouseReleased"):
+            b.call("Input.dispatchMouseEvent", type=kind, x=x, y=y, button="left", clickCount=1)
+        b.pump(0.3)
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "a click opens nothing")
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelector('.nbody').cxed.value()").strip(), "Status: Amber /Red")
+
+    def test_m1_a_paste_with_a_slash_does_not_open_the_menu_in_notes_or_current_state(self):
+        b = self.b
+        paste = """(()=>{ const el=document.querySelector(%r), dt=new DataTransfer(); dt.setData('text/plain', 'see /h'); el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true})); })()"""
+        self.make_note("Paste")
+        b.eval(paste % ".nbody")
+        b.pump(0.3)
+        self.assertIn("see /h", b.eval("document.querySelector('.nbody').cxed.value()"), "the paste landed")
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "Notes: a paste opens nothing")
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelector('.nbody').cxed.value()").strip(), "see /h")
+        self.open_current()
+        b.eval(paste % "#curEd")
+        b.pump(0.3)
+        self.assertIn("see /h", b.eval("edValue(curEd)"), "the paste landed")
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "Current state: a paste opens nothing")
+
+    def test_h1_a_bare_slash_with_no_arrow_key_closes_on_enter_and_acts_as_a_new_line_but_an_arrow_then_enter_picks(self):
+        b = self.b
+        self.make_note("Bare enter")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertEqual(b.eval(f"!!{MENU}"), False)
+        self.assertEqual(b.eval("document.querySelector('.nbody').cxed.value()").strip(), "/")
+        self.assertEqual(b.eval("document.querySelector('.nbody').cxed.editor.state.doc.childCount"), 2)
+        self.make_note("Bare arrow")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        b.key("ArrowDown")
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type("Big")
+        self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^# Big$", "the second row (Heading 1) after one arrow")
+
+    def test_h1_a_weak_match_picks_only_after_an_arrow_key_and_a_sure_match_picks_at_once(self):
+        b = self.b
+        self.make_note("Weak")
+        b.type("A /Red")
+        b.wait(f"!!{MENU}", 5)
+        self.assertEqual(self.rows()[0], "ol", "numbered matches 'red' in its name")
+        b.key("ArrowDown"); b.key("ArrowUp")
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"1\. ", "an arrow key makes the pick deliberate")
+        self.make_note("Sure")
+        b.type("/h1")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type("Top")
+        self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^# Top$")
 
     def test_a11y_the_live_region_goes_in_empty_and_then_says_how_many_options(self):
         b = self.b

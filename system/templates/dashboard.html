@@ -24591,7 +24591,7 @@ ${s5}`;
     h3: { id: "h3", group: "Text", name: "Heading 3", desc: "Small section heading", icon: "H3", alias: ["h3", "heading3"], run: (c5) => c5.setHeading({ level: 3 }) },
     ul: { id: "ul", group: "Lists", name: "Bulleted list", desc: "A simple list", icon: "•", alias: ["ul", "bullet", "bullets"], is: "bulletList", run: (c5) => c5.toggleBulletList() },
     ol: { id: "ol", group: "Lists", name: "Numbered list", desc: "A list with numbers", icon: "1.", alias: ["ol", "num", "number", "numbered"], is: "orderedList", run: (c5) => c5.toggleOrderedList() },
-    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "check", "checkbox"], is: "taskList", node: "taskList", run: (c5) => c5.toggleTaskList() },
+    task: { id: "task", group: "Lists", name: "Checklist", desc: "Tick things off", icon: "☑", alias: ["todo", "tick", "check", "checkbox"], is: "taskList", node: "taskList", run: (c5) => c5.toggleTaskList() },
     quote: { id: "quote", group: "Blocks", name: "Quote", desc: "Set a passage apart", icon: "❝", alias: ["quote", "bq", "blockquote"], is: "blockquote", run: (c5) => c5.toggleBlockquote() },
     codeblock: { id: "codeblock", group: "Blocks", name: "Code", desc: "Fixed-width text", icon: "</>", alias: ["code"], node: "codeBlock", run: (c5) => c5.toggleCodeBlock() },
     table: { id: "table", group: "Blocks", name: "Table", desc: "Rows and columns", icon: "▦", alias: ["table"], host: true },
@@ -25210,7 +25210,8 @@ ${s5}`;
         }
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
         const row2 = n4 ? st2.rows[st2.i] : null;
-        if (row2 && (moved || slashRank(row2, st2.q) <= 1)) {
+        const rank = row2 ? slashRank(row2, st2.q) : 9, lead = editor.state.doc.resolve(st2.from).parentOffset === 0;
+        if (row2 && (moved || rank === 0 || rank === 1 && (lead || st2.q.trim().length >= 3))) {
           e4.preventDefault();
           e4.stopPropagation();
           choose(row2);
@@ -25233,7 +25234,7 @@ ${s5}`;
       look();
     };
     const before = (e4) => {
-      typedSlash = e4.inputType === "insertText" && e4.data === "/";
+      typedSlash = e4.inputType === "insertText" || e4.inputType.startsWith("deleteContent");
     };
     editor.on("selectionUpdate", look);
     editor.on("update", look);
