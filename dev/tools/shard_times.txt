@@ -110,7 +110,7 @@ test_live_server.py 28
 test_live_updates.py 402
 test_looks_like.py 32
 test_markdown_views.py 12
-test_meeting_hub.py 11
+test_hub_retired.py 11
 test_meetings.py 7
 test_milestone_states.py 145
 test_milestone_ui.py 67
