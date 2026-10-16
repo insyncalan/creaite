@@ -347,5 +347,51 @@ class HoverCard(LiveBrowserCase):
         self.scenario()
 
 
+class HoverTouch(LiveBrowserCase):
+    """#160 (review finding 3): a touch pointer, or a device that cannot hover, keeps today's tap behaviour: nothing opens."""
+    shared_server = True
+    reduced_motion = True
+
+    def fire(self, pointer_type):
+        self.b.eval(CARD_FIXTURE)
+        self.b.eval("window.HC.log.length=0")
+        self.b.eval(f"""(()=>{{ const t=document.getElementById('ct'); const o={{bubbles:true,pointerType:{pointer_type!r}}};
+          t.dispatchEvent(new PointerEvent('pointerover',o)); t.dispatchEvent(new PointerEvent('pointerenter',o)); }})()""")
+        self.b.pump(1.0)                                   # past CARD_OPEN 600
+        return self.b.eval("HC.log.length")
+
+    def test_a_touch_pointer_opens_nothing(self):
+        self.assertEqual(self.fire("touch"), 0)
+
+    def test_a_device_that_cannot_hover_opens_nothing(self):
+        self.b.eval("window.__mm=window.matchMedia; window.matchMedia=q=>({matches:/hover: hover/.test(q)?false:window.__mm(q).matches,media:q,addEventListener(){},removeEventListener(){}})")
+        try:
+            self.assertEqual(self.fire("mouse"), 0)
+        finally:
+            self.b.eval("window.matchMedia=window.__mm")
+
+    def test_a_mouse_still_opens_it(self):
+        self.assertEqual(self.fire("mouse"), 1)
+
+
+class NoHardCodedHoverDelays(unittest.TestCase):
+    """#160: the hover delays live in core/hover.js only (no HOVER_GRACE, no timer of its own near a hover handler)."""
+
+    def test_source(self):
+        import re
+        from pathlib import Path
+        src = Path(__file__).resolve().parents[2] / "system/templates/dashboard/src"
+        bad = []
+        for f in src.rglob("*"):
+            if f.suffix not in (".js", ".jsx") or f.name == "hover.js":
+                continue
+            t = f.read_text(encoding="utf-8")
+            if "HOVER_GRACE" in t or "useHoverMenu" in t:
+                bad.append(f"{f.name}: HOVER_GRACE/useHoverMenu")
+            for m in re.finditer(r"(pointerenter|mouseenter|onMouseEnter|onPointerEnter|pointerover|mouseover)[^\n]*setTimeout\([^\n]*,\s*\d{2,4}\s*\)", t):
+                bad.append(f"{f.name}: {m.group(0)[:80]}")
+        self.assertEqual(bad, [])
+
+
 if __name__ == "__main__":
     unittest.main()
