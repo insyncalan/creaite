@@ -44,6 +44,18 @@ def free_port():
         return s.getsockname()[1]
 
 
+
+def machine_slowdown():
+    """How much slower than a quiet machine this one is right now: wall time over processor time for a fixed piece of work
+    (never below 1). The apply's 2.5 s budget is for a quiet machine; it is scaled by this, so load alone cannot fail it while
+    an apply that waits for the slow steps (many seconds) still does."""
+    wall, cpu = time.monotonic(), time.process_time()
+    n = 0
+    while time.process_time() - cpu < 0.15:
+        n += sum(range(2000))
+    return max(1.0, (time.monotonic() - wall) / (time.process_time() - cpu))
+
+
 class IndexTests(unittest.TestCase):
     def setUp(self):
         self.v = Vault()
@@ -297,11 +309,12 @@ class LiveTimingTests(unittest.TestCase):
         time.sleep(0.05)
         put(self.v, f"{ABC}/documents/Note 05.md", "Changed just before the save: aardvarks")
         self.v.propose("timed", [action(60, description="Timed live save")])
+        slow = machine_slowdown()      # 1.0 on a quiet machine; a shared CI runner under load runs several times slower
         t0 = time.monotonic()
         r = self.post("/api/apply", {})
         took = time.monotonic() - t0
         self.assertTrue(r["ok"], r)
-        self.assertLess(took, 2.5, f"apply took {took:.2f}s")
+        self.assertLess(took, 2.5 * slow, f"apply took {took:.2f}s (budget 2.5 s x machine slowdown {slow:.1f})")
         self.assertIn("Timed live save", [a["description"] for a in self.v.rows("actions")])
         deadline, hits = time.monotonic() + 15, []
         while time.monotonic() < deadline:

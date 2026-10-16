@@ -24,7 +24,7 @@ from live_browser import LiveBrowserCase  # noqa: E402
 FAKE = r'''#!/usr/bin/env python3
 import json, os, sys, time
 args = sys.argv[1:]
-message = args[args.index("-p") + 1].split("\n")[0]
+message = args[args.index("--") + 1].split("\n")[0]
 session = args[args.index("--resume") + 1] if "--resume" in args else "sess-" + os.urandom(4).hex()
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": session})

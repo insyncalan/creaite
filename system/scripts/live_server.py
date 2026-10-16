@@ -162,6 +162,7 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          words with the Fix it each would offer (none built: guard decisions), the rest counted (BL-320)
 Standard library only. Never uses a skip-permissions mode.
 """
+import contextlib
 import hashlib
 import json
 import os
@@ -171,6 +172,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from datetime import date, datetime, timedelta
@@ -539,6 +541,11 @@ def claude_path():
             or str(Path.home() / ".local/bin/claude"))
 
 
+def prompt_last(cmd, prompt):
+    """A `claude -p` command with its prompt after `--` (#91): nothing in the prompt can be read as an option or a command."""
+    return cmd + ["--", prompt]
+
+
 def script_env():
     """The environment a script runs in from the server: BL-327, an apply leaves its index refresh and OneDrive copy to the
     server's background worker (tracker.after_apply), so the save answers as soon as the tracker and dashboard are done."""
@@ -614,6 +621,51 @@ def latest_apply():
         return None
     live = [a for a in json.loads(out) if not a["undone_at"]]
     return max((a["apply_id"] for a in live), default=None)
+
+
+# ===== #124: Undo of a Delete note (or a Move back), and a hand-staged one applied, never beside a note's save =====
+NOTE_MOVES = ("notes", "notes_back")
+
+
+def notes_lock_if(needed):
+    """NOTES_LOCK when a note is moved, else nothing; always taken after LOCK, never the other way round."""
+    return NOTES_LOCK if needed else contextlib.nullcontext()
+
+
+def _has_note_move(obj):
+    """Whether a proposal holds a file block (not yet applied) that moves a note: its "archive" is notes or notes_back."""
+    if isinstance(obj, dict):
+        if obj.get("archive") in NOTE_MOVES and not obj.get("applied"):
+            return True
+        return any(_has_note_move(v) for v in obj.values())
+    return isinstance(obj, list) and any(_has_note_move(v) for v in obj)
+
+
+def staged_note_move():
+    """Whether the apply would move a note (any staged proposal says so); an unreadable one counts, to be safe."""
+    for p in paths.STAGING.glob("proposed-*.json"):
+        try:
+            if _has_note_move(json.loads(p.read_text(encoding="utf-8"))):
+                return True
+        except (OSError, ValueError):
+            return True
+    return False
+
+
+def undo_note_move():
+    """Whether undoing the latest apply would move a note back (its file records hold a move of kind notes or notes_back); the
+    applies unreadable (a failed read, a bad record) count, to be safe."""
+    code, out = run("tracker.py", "read", "applies")
+    if code != 0:
+        return True
+    try:
+        live = [a for a in json.loads(out) if not a["undone_at"]]
+        last = max(live, key=lambda a: a["apply_id"], default=None)
+        recs = json.loads(last["file_ops"] or "[]") if last else []
+        return any(r.get("op") == "move" and r.get("kind") in NOTE_MOVES for r in recs)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return True
+# ===== end #124 =====
 
 
 def allowed(op, rel):
@@ -1215,6 +1267,9 @@ class Handler(BaseHTTPRequestHandler):
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_bytes(raw)
             return self.send(200, {"ok": True})
+        clash = settings_notes_clash(p, req.get("text", "")) if op == "write" and p == paths.SETTINGS else None
+        if clash:                                  # #128: a notes folder shared with minutes or reports is never saved
+            return self.send(200, {"ok": False, "message": clash})
         p.parent.mkdir(parents=True, exist_ok=True)
         if op == "append":
             with open(p, "a", encoding="utf-8") as f:
@@ -1229,7 +1284,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def apply(self, req):
         """POST /api/apply: tracker.py apply, which writes the database; {hold_peek} leaves the peek's staged proposals (BL-189)."""
-        with LOCK:
+        with LOCK, notes_lock_if(staged_note_move()):         # #124: LOCK, then NOTES_LOCK, as a note's card does
             # ===== BL-189 (sprint-milestones) ===== another apply (a cell edit, a bulk change, a Review approval, Settings' Apply)
             # sends hold_peek: the peek's staged proposals (build_dashboard.peek_staged, any window's) are left for the peek's own
             # Apply or ⌘↵, which sends nothing and applies everything decided, as before. tracker.py's rules are unchanged: it is
@@ -1249,7 +1304,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def undo(self, req):
         """POST /api/undo {apply_id}: tracker.py undo, only when that apply is still the latest."""
-        with LOCK:
+        with LOCK, notes_lock_if(undo_note_move()):           # #124: LOCK, then NOTES_LOCK, as a note's card does
             latest = latest_apply()
             if req.get("apply_id") is not None and req["apply_id"] != latest:
                 return self.send(200, {"ok": False, "message": "A later change has been applied since; undo that first "
@@ -1257,7 +1312,8 @@ class Handler(BaseHTTPRequestHandler):
             if latest is None:
                 return self.send(200, {"ok": False, "message": "Nothing to undo."})
             code, out = run("tracker.py", "undo")
-            return self.send(200, {"ok": code == 0, "message": out})
+            notes = [ln.strip() for ln in out.splitlines() if re.match(r"\s+(skipped moving|restored) ", ln)]     # #124 L3
+            return self.send(200, {"ok": code == 0, "message": out, "moves": notes})
 
     def review(self, req):
         """A decision on one proposal entry, through review.py so its checks run (drafts, conflicts)."""
@@ -1945,12 +2001,15 @@ PANEL_SWEEP_PROMPT = (
     "message's text. End with the sweep's one-line summary and \"n items staged for Review\".")
 PANEL_SWEEP_STEP = "Sweeping (stages proposals only)"
 # ===== end BL-309 =====
-KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools()]}
+# The file writers are denied by name too: an empty allow list doesn't stop the vault's .claude/settings.json allow rules (Edit
+# projects/**, Edit system/config/settings.json, Edit system/staging/**, Edit inbox/**) from applying. The run only replies.
+KIND_DENIES = {"shape-closed": ["Read", "Grep", "Glob", "Bash", "WebFetch", "WebSearch", *vault_permissions.m365_read_tools(),
+                                "Edit", "Write", "MultiEdit", "NotebookEdit"]}
 # ===== BL-301 D (v20-ai-select) ===== AI on selected text (/api/edit/ai): Claude sees only the prompt edit_ai.py builds (the selected
 # text, the option, the project's name, people and open item IDs). The run "edit-ai" has no tools at all: its allow list is empty,
 # Claude Code is started with no built-in tools (`--tools ""`) and no MCP servers (`--strict-mcp-config`), no --add-dir, and every
 # tool that reads, runs, writes or reaches out is denied as well, so it cannot read a file or mail, run anything or write.
-TOOLLESS_KINDS = ("edit-ai",)
+TOOLLESS_KINDS = ("edit-ai", "shape-closed", "notes-find")     # #126: no tools, no --add-dir, and no context but the prompt
 KIND_TOOLS["edit-ai"] = []
 KIND_DENIES["edit-ai"] = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent",
                           "Skill", *vault_permissions.m365_read_tools()]
@@ -1958,6 +2017,118 @@ KIND_ARGS = {"edit-ai": ["--tools", "", "--strict-mcp-config"]}
 KIND_PROMPTS["edit-ai"] = ("You are creaite's editor assistant (BL-301 D). You have no tools. Reply only with the suggestion the "
                            "message asks for, between its marker lines; never anything else.")
 # ===== end BL-301 D =====
+# Search's answer (kind "search", BL-07): the server gathers the passages and tracker rows (search.py context) and Claude answers
+# from them, reading more vault files if it needs to. It has no guard hook (Alan, #60: like ask creaite, so a confidential note
+# stays readable here), so the vault's .claude/settings.json allow rules (tracker.py, review.py, propose.py, filechange.py, Edit
+# projects/**, Edit system/config/settings.json) would apply to anything it may use: it is started with only the three reading
+# built-ins (`--tools "Read,Grep,Glob"`), and every tool that runs, writes, delegates or reaches the web is denied by name as well.
+# What it can do: Read, Grep and Glob in the vault and the projects root, nothing else. No Bash (a deny beats an allow, so a
+# narrow `tracker.py read` allow can't sit beside a Bash deny; the tracker rows come in the material). No Microsoft 365 either
+# (least privilege, Jarvis, 15-10-2026: its prompt already says never call it): the reading tools are neither allowed nor
+# available, denied by name like the rest. "Continue in ask creaite" carries on as a chat, with a chat's tools.
+SEARCH_TOOLS = ["Read", "Grep", "Glob"]
+KIND_TOOLS["search"] = list(SEARCH_TOOLS)
+KIND_DENIES["search"] = ["Bash", "Write", "Edit", "MultiEdit", "NotebookEdit", "WebFetch", "WebSearch", "Task", "Agent", "Skill",
+                         *vault_permissions.m365_read_tools()]
+KIND_ARGS["search"] = ["--tools", ",".join(SEARCH_TOOLS), "--strict-mcp-config"]    # F4 (#116 review): it uses no MCP at all
+# ===== F2 (#116 review, 15-10-2026): every run kind names its built-in tools =====
+# A run started with no --tools gets EVERY built-in tool in the installed Claude Code, including ones that run headless without
+# a permission prompt and that neither the guard hook nor a deny list looks at (EnterWorktree writes into .git and
+# .claude/worktrees/; RemoteTrigger, CronCreate, Monitor, SendMessage, Workflow…). So each kind has an explicit allow list of
+# built-ins (`--tools`), never a deny list of newer ones: a built-in a later CLI adds never appears in a run by itself. `--tools`
+# covers the built-in set only: the Microsoft 365 tools (MCP) stay loaded and are governed by --allowedTools and
+# --disallowedTools, as before. But with many MCP tools connected they are deferred behind the built-in ToolSearch, and
+# `--tools ""` removes it: Alan's live check on laptop 1 reached 0 Microsoft 365 tools that way (#116). So every kind that calls
+# an MCP tool lists ToolSearch, and only the kinds that need no MCP at all keep `--tools ""`. Kinds: a chat and a confirmed
+# request ("ask"), a sweep ("sweep": Close the day's, and a typed sweep), the held kinds creaite starts itself (Prep page, Current state, AI drafts, Shape, a transcript check or load), Search's answer,
+# the tool-less ones (AI on selected text, a closed meeting's Shape, Find updates in a note) and a narrowed run (`only`).
+# ToolSearch only loads deferred tools' schemas (the Microsoft 365 tools are deferred when it is there); it reads nothing.
+# A probe (Claude Code 2.1.300, 15-10-2026, `--tools ToolSearch --disallowedTools mcp__claude_ai_Todoist`): the Todoist server
+# connected but none of its tools was listed or reachable, and all 50 Microsoft 365 tools were: a whole-server deny entry works.
+# No Task (Agent) in a chat (#116 review, Jarvis): no skill, prompt or code uses a subagent, and its worktree and remote modes
+# write into .git and .claude/worktrees/ or start a cloud agent, out of the guard hook's sight.
+CHAT_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]
+SWEEP_BUILTINS = ["Read", "Grep", "Glob", "Bash", "Write", "Edit", "Skill", "ToolSearch"]           # cx-sweep, its drafts' files
+HELD_BUILTINS = ["Read", "Grep", "Glob", "Bash", "ToolSearch"]       # read files and creaite's read scripts; the server writes
+NO_BUILTINS = ["--tools", ""]                                         # none at all: only for a kind that uses no MCP tool
+NARROW_BUILTINS = ["--tools", "ToolSearch"]     # a narrowed run (`only`: Microsoft 365 reading only) needs ToolSearch to reach them
+KIND_ARGS["ask"] = ["--tools", ",".join(CHAT_BUILTINS)]
+KIND_ARGS["sweep"] = ["--tools", ",".join(SWEEP_BUILTINS)]
+for _k in ("prep", "generate", "check", "load"):
+    KIND_ARGS[_k] = ["--tools", ",".join(HELD_BUILTINS)]
+for _k in ("shape-closed", "notes-find"):
+    KIND_ARGS[_k] = NO_BUILTINS + ["--strict-mcp-config"]      # #126 review: no MCP server at all, like edit-ai
+# Belt and braces, in every run's --disallowedTools: F3's permissions.run_deny_extras() (the other connectors, whole server, and
+# the acting and writing built-ins no allow rule may grant) and every known built-in the run's own --tools doesn't name
+# (permissions.KNOWN_BUILTINS minus the kind's set), so a --tools list that drifts, or a CLI that ignores it, still can't reach
+# them. No list of names is kept here: KNOWN_BUILTINS is the one list (Jarvis, 15-10-2026). The VIP check's vip_deny() takes
+# run_deny_extras() too (#116 review M1), so every claude -p launch denies the other connectors by name.
+# Task and Agent (#116 review L1): no kind's --tools names them, so they are in NEVER_BUILTINS and denied by name in every run
+# (a chat, a sweep, the held kinds, Search, the tool-less kinds, a narrowed run) and in the VIP check: no subagent, local or remote.
+# Maintenance (#116 review L4): when Claude Code adds a built-in, run `claude -p --output-format stream-json --verbose "hi"` with
+# no --tools, take the init event's "tools" (the non-mcp__ names), add any new name to permissions.KNOWN_BUILTINS and to the
+# 2.1.300 copy in dev/tests/test_vip_tools_pinned.py (it is then denied here unless a kind's --tools names it); when a new
+# connector appears in the same init event (an mcp__<server>__ prefix other than Microsoft 365), add its server name to
+# permissions.NON_M365_MCP_DENY. Neither list updates itself: no test can see a built-in or a connector the CLI adds later.
+
+# ===== #126 (16-10-2026): a tool-less run sees only its prompt =====
+# Started in the vault, a run loads the vault's CLAUDE.md (Alan's notes), ~/.claude/CLAUDE.md and the project's auto-memory as
+# context. A tool-less run (TOOLLESS_KINDS) is meant to see only the text and facts it is given, so it starts in an empty folder
+# of its own outside the vault (NEUTRAL_CWD), with no setting sources (no user, project or local settings, so no CLAUDE.md) and
+# auto-memory off. A probe (Claude Code 2.1.288, 16-10-2026): --setting-sources "" removed both CLAUDE.md files but not the
+# auto-memory; CLAUDE_CODE_DISABLE_AUTO_MEMORY=1 removed that. The kinds with tools keep the vault as their working folder.
+# Review: --no-session-persistence (the run is never resumed, so its prompt isn't saved) and --strict-mcp-config for all three.
+NO_CONTEXT_ARGS = ["--setting-sources", "", "--no-session-persistence"]      # #126 review: never resumed, so nothing is saved
+NO_CONTEXT_ARGS += ["--model", "sonnet"]     # #126 (Jarvis, Alan): with no settings files, the model is named here, not the default
+NO_CONTEXT_ENV = {"CLAUDE_CODE_DISABLE_AUTO_MEMORY": "1"}
+NEUTRAL_CWD = None
+
+
+def neutral_cwd():
+    """#126: a tool-less run's working folder: an empty folder of its own outside the vault, made again if it has gone or isn't
+    empty."""
+    global NEUTRAL_CWD
+    if not NEUTRAL_CWD or not os.path.isdir(NEUTRAL_CWD) or os.listdir(NEUTRAL_CWD):
+        NEUTRAL_CWD = tempfile.mkdtemp(prefix="creaite-toolless-")
+    return NEUTRAL_CWD
+
+
+def launch_context(policy):
+    """#126: a run's extra arguments, extra environment and working folder: none and the vault for a kind with tools."""
+    if policy in TOOLLESS_KINDS:
+        return list(NO_CONTEXT_ARGS), dict(NO_CONTEXT_ENV), neutral_cwd()
+    return [], {}, paths.ROOT
+# ===== end #126 =====
+
+
+def run_args(policy, confirmed=None, only=None):
+    """A run's built-in tools (`--tools`, and `--strict-mcp-config` where it has no MCP): its kind's own entry in KIND_ARGS; only
+    ToolSearch for a narrowed run (`only`: Microsoft 365 reading only); none for a kind with no entry (fail closed)."""
+    if only is not None and policy not in GUARDED_KINDS and not confirmed:
+        return list(NARROW_BUILTINS)
+    return list(KIND_ARGS.get(policy, NO_BUILTINS))
+
+
+def run_builtins(policy, confirmed=None, only=None):
+    """The built-in tools a run's --tools names."""
+    return [t for t in run_args(policy, confirmed, only)[1].split(",") if t]
+
+
+def builtin_denies(policy, confirmed=None, only=None):
+    """F2: what every run denies by name besides its kind's own list: run_deny_extras() and each known built-in its --tools
+    doesn't name, once each."""
+    allowed = run_builtins(policy, confirmed, only)
+    out = []
+    for t in vault_permissions.run_deny_extras() + [b for b in vault_permissions.KNOWN_BUILTINS if b not in allowed]:
+        if t not in out:
+            out.append(t)
+    return out
+
+
+# The built-ins no kind names at all (derived, never written out): denied in every run.
+NEVER_BUILTINS = [b for b in vault_permissions.KNOWN_BUILTINS
+                  if not any(b in a[1].split(",") for a in [*KIND_ARGS.values(), NARROW_BUILTINS])]
+# ===== end F2 =====
 
 
 def run_prompt(kind, confirmed):
@@ -1990,6 +2161,7 @@ def run_policy(kind, confirmed, only=None):
     deny = deny_tools() + KIND_DENIES.get(kind, []) + (never_denies() if guarded else [])   # BL-286: a closed run
     if only is not None and not guarded and not confirmed:
         tools, deny = list(only), deny + [t for t in ONLY_DENIES if t not in deny]
+    deny = deny + [t for t in builtin_denies(kind, confirmed, only) if t not in deny]   # F2: other connectors, unneeded built-ins
     return tools, deny, guarded
 
 
@@ -2002,6 +2174,19 @@ def held_run(kind, confirmed, only, sweep, tools):
     tools, and not a narrowed run (`only`: Microsoft 365 reading only, no files). Search's answer (kind "search") is treated like ask
     creaite (Alan, 15-10-2026, #60)."""
     return kind not in LIKE_ASK and not sweep and not confirmed and only is None and bool(tools) and kind not in TOOLLESS_KINDS
+
+
+# A run in mode "held" (Prep page, Current state's draft and rewrite, the AI drafts, Shape the meeting, a transcript check or load)
+# reads outside content and writes nothing itself: the server writes the page, the draft, the proposals and the transcript from
+# its reply or its tool results. So it is started with the file writers denied by name: the vault's .claude/settings.json allow
+# rules (Edit projects/**, Edit system/config/settings.json, Edit system/staging/**, Edit inbox/**) can't apply in it. Not a
+# guarded run with --held 1 (Close the day's sweep writes its input files in system/staging/drafts/, under the hook's "sweep" mode).
+HELD_DENIES = ["Edit", "Write", "MultiEdit", "NotebookEdit"]
+
+
+def held_deny(deny, held, guarded):
+    """A run's deny list, with HELD_DENIES added for a run in mode "held" (held and not guarded)."""
+    return deny + [t for t in HELD_DENIES if t not in deny] if held and not guarded else deny
 
 
 def guard_args(run_id, mode, held, session):
@@ -2021,19 +2206,23 @@ class Run:
                  sweep=False, lines=None, closer=None):
         policy = "sweep" if sweep else kind               # BL-309: a typed sweep is a chat run under the "sweep" mode's rules
         tools, deny, guarded = run_policy(policy, None if sweep else confirmed, only)
+        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
+        deny = held_deny(deny, held, guarded)                   # and, in mode "held", no file writes at all
         prompt = PANEL_SWEEP_PROMPT if sweep else run_prompt(kind, confirmed)
         self.images = list(images)
         said = message + "".join(f"\nThe user attached an image: {paths.rel(ask_image_file(i))}; read it" for i in self.images)
-        cmd = [claude_path(), "-p", said, "--output-format", "stream-json", "--verbose",
+        cmd = [claude_path(), "-p", "--output-format", "stream-json", "--verbose",
                "--allowedTools", ",".join(tools), "--disallowedTools", ",".join(deny),
-               "--append-system-prompt", prompt] + KIND_ARGS.get(policy, [])        # BL-301 D: "edit-ai" has no tools at all
+               "--append-system-prompt", prompt] + run_args(policy, confirmed, only)   # F2: every kind names its built-ins
+        more, more_env, cwd = launch_context(policy)            # #126: a tool-less run: no CLAUDE.md, settings or auto-memory
+        cmd += more
         for d in ([] if policy in TOOLLESS_KINDS else reach_dirs() if guarded else extra_dirs()):
             cmd += ["--add-dir", d]
-        held = held_run(kind, confirmed, only, sweep, tools)    # #60: a run creaite starts itself
         cmd += guard_args(run_id, guard_mode(policy, None if sweep else confirmed) if guarded else None, held, session)
         self.guarded = guarded
         if session:
             cmd += ["--resume", session]
+        cmd = prompt_last(cmd, said)                            # #91: the prompt last, after `--`
         self.id, self.message, self.session, self.chat, self.confirmed = run_id, message, session, chat, confirmed
         self.sweep = bool(sweep)                                # BL-309
         self.kind = kind          # "ask" (a chat), "generate" (a Current state draft), "prep" (a Prep page, BL-98), "check" or "load" (a meeting's transcript, BL-42 phase 3): only "ask" is chat history
@@ -2048,7 +2237,8 @@ class Run:
         try:
             env = run_env(kind if held else None)                                      # BL-248; #60: a held run's kind
             env.update(CREAITE_RUN_ID=run_id, CREAITE_SERVER_PID=str(os.getpid()))     # BL-328: a sweep's lock names its run
-            self.proc = subprocess.Popen(cmd, cwd=paths.ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            env.update(more_env)                                                       # #126
+            self.proc = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                          bufsize=1, env=env)
         except OSError:
             if guarded:
@@ -3059,6 +3249,7 @@ def main():
     mark_interrupted()
     vault_permissions.recover()                          # BL-96: deny entries left lifted by a run that never finished
     reach.RUN_FILE.unlink(missing_ok=True)                # BL-141: no run is in progress at start; old requests make no card
+    clear_card_marks(0)                                  # #124 F3: no Approve is in progress at start
     for f in (paths.STAGING / "changes").glob("*.json") if (paths.STAGING / "changes").is_dir() else []:
         f.unlink(missing_ok=True)
     if LAUNCHED:
@@ -3172,9 +3363,24 @@ def mark_interrupted():
 # ignored, never matched away; no message text). It skips while a sweep runs (the sweep records VIPs itself), when
 # VIP alerts are off or nobody is a VIP, and always in the development repository (sample data only). Its own
 # subprocess, so it never queues behind ask creaite. Routes: /api/vip (the unseen alerts), /api/vip/seen.
+# The run reads outside content (mail, Teams) with no guard hook, so it has no vault tools at all. It is started with no
+# `--tools` flag (#116, 15-10-2026: under `--tools ""` the check reached no Microsoft 365 tool on laptop 1, so the flag is
+# gone) and every built-in tool but ToolSearch, and the other connectors (whole server, run_deny_extras(): #116 review M1),
+# denied by name in --disallowedTools (vip_deny()). A deny beats the vault's
+# .claude/settings.json allow rules (tracker.py, review.py, propose.py, Edit projects/**), so none of them can apply, and a
+# denied tool is removed from the run altogether. ToolSearch stays: with many MCP tools connected, Claude Code defers them
+# behind it (probed on 2.1.300: with ToolSearch the Microsoft 365 tools are listed as deferred), and it does one thing only:
+# it returns the schemas of deferred tools by name or keyword so they can be called. It reads no file, runs nothing and
+# reaches no network; a tool it loads is still governed by --allowedTools and --disallowedTools (a denied tool is never in
+# its list). What the run can do: the four Microsoft 365 reading tools in VIP_TOOLS. Nothing else.
 
 VIP_TOOLS = ["mcp__claude_ai_Microsoft_365__outlook_email_search", "mcp__claude_ai_Microsoft_365__chat_message_search",
              "mcp__claude_ai_Microsoft_365__outlook_calendar_search", "mcp__claude_ai_Microsoft_365__read_resource"]
+# Every built-in tool name Claude Code is known to have: permissions.KNOWN_BUILTINS, the one list (Jarvis, 15-10-2026), kept
+# under this name for the VIP check and its tests.
+KNOWN_BUILTINS = list(vault_permissions.KNOWN_BUILTINS)
+VIP_BUILTIN_ALLOWED = ["ToolSearch"]       # loads deferred tools' schemas only; reads, runs and writes nothing
+VIP_BUILTIN_DENIES = [t for t in KNOWN_BUILTINS if t not in VIP_BUILTIN_ALLOWED]
 # BL-334: the unit is the conversation, not the message. The same read-only tools (VIP_TOOLS, unchanged): the check finds
 # what these people sent since the last check, then reads each whole conversation it belongs to (everyone's messages and a
 # few earlier ones for context, the title, the people and the attachment names) and reports the outcome in its own words.
@@ -3202,6 +3408,18 @@ VIP_WRITE = threading.Lock()      # vip.json: a check's record and a Seen never 
 VIP_STATUS = {"running": False, "last_error": None}
 
 
+def vip_deny():
+    """The VIP check's deny list: DENY_TOOLS (Microsoft 365 actions included), F3's permissions.run_deny_extras() (the other
+    connectors, whole server, and the acting and writing built-ins; #116 review M1: the check reads outside content with no guard
+    hook, so an allow rule a settings file gained for Todoist or the like can't apply in it) and every built-in tool but
+    ToolSearch, by name; once each."""
+    out = list(DENY_TOOLS)
+    for t in vault_permissions.run_deny_extras() + VIP_BUILTIN_DENIES:
+        if t not in out:
+            out.append(t)
+    return out
+
+
 def vip_check(how="check"):
     """One VIP check. Returns a short note of what happened (also printed)."""
     import sweep
@@ -3219,8 +3437,8 @@ def vip_check(how="check"):
         st = sweep.vip_state()
         since = st["last_check"] or (sweep.last_sweep() or sweep.now()).strftime("%Y-%m-%d %H:%M")
         prompt = VIP_PROMPT.format(since=since, addresses=", ".join(sorted(vips)))
-        cmd = [claude_path(), "-p", prompt, "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
-               "--disallowedTools", ",".join(DENY_TOOLS)]
+        cmd = prompt_last([claude_path(), "-p", "--output-format", "json", "--allowedTools", ",".join(VIP_TOOLS),
+                           "--disallowedTools", ",".join(vip_deny())], prompt)            # #91: after `--`; no --tools (#116)
         found, why = None, "no reply"
         try:
             r = subprocess.run(cmd, cwd=paths.ROOT, capture_output=True, text=True, timeout=300, env=run_env())   # BL-248
@@ -4141,6 +4359,11 @@ def edit_spec(data):
     return spec, None
 
 
+PAGE_ONLY = {"reports_back": "an archived file is moved back from Files (Move back), never from ask creaite",       # BL-331
+             "notes": "a note is deleted from the Notes tab (Delete note), never from ask creaite",              # #124
+             "notes_back": "a deleted note is moved back from Files (Move back), never from ask creaite"}
+
+
 def build_edit_card(run, final):
     """Gather a CHANGE line's spec into one card and emit it ("editcard"); the card's ID, or None."""
     m = re.search(EDIT_LINE, final, re.M)
@@ -4150,8 +4373,8 @@ def build_edit_card(run, final):
     src = edit_spec_file(m.group(1))
     data = src.read_bytes() if src else None
     spec, why = edit_spec(data) if data is not None else (None, "the change file isn't a .json file in system/staging/drafts/")
-    if spec and (spec.get("file_changes") or {}).get("archive") == "reports_back":      # BL-331: Files' Move back only
-        spec, why = None, "an archived file is moved back from Files (Move back), never from ask creaite"
+    if spec and (spec.get("file_changes") or {}).get("archive") in PAGE_ONLY:      # BL-331, #124: the page's own actions only
+        spec, why = None, PAGE_ONLY[spec["file_changes"]["archive"]]
     if not spec:
         run.emit("editcard", card=None, title=title, refused=why)
         return None
@@ -4173,14 +4396,19 @@ def build_edit_card(run, final):
 def edit_public(c):
     """What the page sees of a change card: never the snapshot or its fingerprint."""
     return {"card": c["id"], "run": c["run"], "chat": c["chat"], "title": c["title"], "state": c["state"], "valid": c["valid"],
-            "clash": c["clash"], "lines": c["lines"], "problems": c["problems"],
+            "clash": c["clash"], "lines": c["lines"], "problems": c["problems"], "stage": c.get("kind") not in NO_STAGE,
             "expires": datetime.fromtimestamp(c["expires"]).isoformat(timespec="seconds")}
 
 
+# #124: a note's move has no Stage for review: it is made only by Approve on this card, inside its 30 minutes (Jarvis, 16-10-2026)
+NO_STAGE = ("notes", "notes_back")
+
+
 # ===== BL-09: a change the server itself prepared (Health's rename of zz Archive folders) goes on the same card =====
-def server_edit_card(title, data):
+def server_edit_card(title, data, note=None, done=None):
     """Put a spec this server made itself (never the model's) on a change card, as build_edit_card does for a CHANGE line; the
-    card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending)."""
+    card's public view, or None with the reason. The page shows it in ask creaite (GET it with /api/edit/pending). #124: `note`
+    ({path, sha}) is the note as Alan confirmed it, checked again on Approve; `done` is what Approve answers once it is moved."""
     spec, why = edit_spec(data)
     if not spec:
         return None, why
@@ -4193,7 +4421,8 @@ def server_edit_card(title, data):
                    "expires": time.time() + CARD_LIFE, "state": "pending", "valid": code == 0, "clash": pending_clash(spec),
                    "lines": [ln for ln in lines if not ln.startswith("Problem (")],
                    "problems": [ln for ln in lines if ln.startswith("Problem (")], "_data": data,
-                   "_fingerprint": hashlib.sha256(data).hexdigest()}
+                   "_fingerprint": hashlib.sha256(data).hexdigest(), "kind": (spec.get("file_changes") or {}).get("archive"),
+                   "_note": note, "done": done}
     return edit_public(EDITS[card]), None
 # ===== end BL-09 =====
 
@@ -4227,13 +4456,75 @@ def edit_stage(c, how):
     return (Path(m.group(1)).name, None) if code == 0 and m else (None, out.strip() or "propose.py stage failed")
 
 
+def settings_notes_clash(p, text):
+    """#128: why the page's settings.json `text` can't be saved (paths.locations_change_problem: a notes folder shared with
+    another kind, a notes folder renamed while notes are under the old name, a skeleton that isn't a template folder; L3: text
+    that isn't a settings object, or a `locations` that isn't one, so the check can't run), or None."""
+    try:
+        new = json.loads(text)
+    except ValueError:
+        new = None
+    if not isinstance(new, dict) or not isinstance(new.get("locations", {}), dict):
+        return "Not saved: settings must be a JSON object, with locations an object."
+    try:
+        old = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError):                         # no readable file: compared with the defaults
+        old = {}
+    old = old.get("locations") if isinstance(old, dict) and isinstance(old.get("locations"), dict) else {}
+    return paths.locations_change_problem(old, new.get("locations") or {})
+
+
+def clear_card_marks(older=reach.CARD_MOVE_SECONDS):
+    """#124 F3: remove the move markers in system/guard/ older than `older` seconds (a crash's leftovers; never used anyway)."""
+    for m in paths.GUARD.glob("move-*") if paths.GUARD.is_dir() and not paths.GUARD.is_symlink() else []:
+        try:
+            if time.time() - m.lstat().st_mtime >= older:
+                m.unlink()
+        except OSError:                                # gone meanwhile, or can't be removed: tracker ignores a stale one
+            pass
+
+
+@contextlib.contextmanager
+def card_moves_allowed(name):
+    """#124 F3: while the card's own proposal `name` (staged by edit_stage) is applied, one marker per move of a card-only kind
+    (reach.CARD_ONLY_MOVES) and (#128) per remove, write or copy of a note's file (tracker.card_marks), naming that file and its
+    SHA-256, so tracker._op_move makes exactly these moves; removed afterwards, whatever happens. LOCK is held, and
+    NOTES_LOCK too for a note's card."""
+    import tracker
+    clear_card_marks()
+    f = paths.STAGING / name
+    raw = f.read_bytes()
+    marks = tracker.card_marks(json.loads(raw.decode("utf-8")))     # #128: a note's remove, write or copy on the card too
+    body = json.dumps({"proposal": name, "sha256": hashlib.sha256(raw).hexdigest()}).encode("utf-8")
+    if marks:
+        paths.GUARD.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if paths.GUARD.is_symlink():                   # the markers only ever in the vault's own system/guard
+            raise OSError("system/guard is a symlink")
+    try:
+        for m in marks:
+            m.unlink(missing_ok=True)
+            fd = os.open(m, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+            try:
+                os.write(fd, body)
+            finally:
+                os.close(fd)
+        yield
+    finally:
+        for m in marks:
+            m.unlink(missing_ok=True)
+
+
 def edit_apply(c):
     """Approve: stage the snapshot and apply only that proposal (LOCK held). The answer for the page."""
     name, why = edit_stage(c, "approve")
     if not name:
         c["state"] = "failed"
         return {"ok": False, "message": f"Not applied: {why}"}
-    code, out = run("tracker.py", "apply", name)
+    try:
+        with card_moves_allowed(name):                 # #124 F3: only this Approve makes a card-only move
+            code, out = run("tracker.py", "apply", name)
+    except (OSError, ValueError) as e:                 # the marker couldn't be written: nothing applied
+        code, out = 1, f"the approval couldn't be recorded ({type(e).__name__})"
     if code:                                            # validation failed: nothing written, and nothing left in staging
         (paths.STAGING / name).unlink(missing_ok=True)
         c["state"] = "failed"
@@ -4241,7 +4532,7 @@ def edit_apply(c):
     held = re.search(r"held (\d+)", out)
     held = int(held.group(1)) if held else 0
     ids = edit_ids(name)
-    msg = f"Applied: {', '.join(ids) if ids else 'the change'}." + (
+    msg = (c.get("done") if c.get("done") and not ids else f"Applied: {', '.join(ids) if ids else 'the change'}.") + (
         f" {held} item{'s' if held != 1 else ''} changed meanwhile and wait{'s' if held == 1 else ''} in Review." if held else "")
     if debuglog:
         debuglog.info("ask", f"change card {c['id']} approved: {', '.join(ids) or 'none'} written, {held} held")
@@ -4251,21 +4542,16 @@ def edit_apply(c):
 def edit_answer(handler, req, how):
     """POST /api/edit/approve | reject | stage {card}: Alan's answer on a change card, used once."""
     c = EDITS.get(str(req.get("card") or ""))
-    if not c or c["state"] != "pending":
-        return handler.send(200, {"ok": False, "message": "That card has been answered already, or a later change replaced it: "
-                                                          "ask creaite again."})
-    if c["expires"] < time.time():
-        c["state"] = "expired"
-        c.pop("_data", None)
-        return handler.send(200, {"ok": False, "message": "That card has expired (30 minutes): nothing was changed; ask creaite again."})
-    if how == "reject":
-        c["state"] = "rejected"
-        c.pop("_data", None)
-        return handler.send(200, {"ok": True, "message": "Rejected: nothing was staged or changed."})
+    early = edit_early(c, how)
+    if early:
+        return handler.send(200, early)
     if not LOCK.acquire(blocking=False):
         return handler.send(200, {"ok": False, "busy": True, "message": "Another job is writing just now, so it can't be applied "
-                                                                        "at once: Stage for review, or try again in a moment."})
+                                  "at once: " + ("try again in a moment." if c.get("kind") in NO_STAGE else
+                                                 "Stage for review, or try again in a moment.")})
     try:
+        if how == "approve" and c.get("kind") in NO_STAGE:
+            return handler.send(200, note_card_apply(c))
         if how == "approve" and not c["valid"]:
             return handler.send(200, {"ok": False, "message": "This change has problems (listed on the card): it can't be applied."})
         clash = pending_clash(json.loads(c["_data"])) if how == "approve" else []
@@ -4281,6 +4567,57 @@ def edit_answer(handler, req, how):
                                                               "you approve it there." if name else f"Not staged: {why}"})
     finally:
         LOCK.release()
+
+
+def edit_early(c, how):
+    """The answer to a card that is answered before LOCK is needed (gone, expired, rejected, a note's move staged), or None."""
+    if not c or c["state"] != "pending":
+        return {"ok": False, "message": "That card has been answered already, or a later change replaced it: ask creaite again."}
+    if c["expires"] < time.time():
+        c["state"] = "expired"
+        c.pop("_data", None)
+        return {"ok": False, "message": "That card has expired (30 minutes): nothing was changed; ask creaite again."}
+    if how == "reject":
+        c["state"] = "rejected"
+        c.pop("_data", None)
+        return {"ok": True, "message": "Rejected: nothing was staged or changed."}
+    if how == "stage" and c.get("kind") in NO_STAGE:      # #124: only Approve moves a note, on this card, within its 30 minutes
+        return {"ok": False, "message": "A note's move can't be staged for review: Approve or Reject it here."}
+    return None
+
+
+def note_card_apply(c):
+    """#124: Approve on a note's card (LOCK held). NOTES_LOCK is taken after LOCK, never the other way round (no notes route waits
+    for LOCK), so no save, draft or rename lands while the note is checked and moved. A Delete note card moves only the note Alan
+    confirmed: when the file has changed since, or typing is waiting in a draft, nothing moves and the card stays."""
+    import notes
+    with NOTES_LOCK:
+        if not c["valid"]:
+            return {"ok": False, "message": "This change has problems (listed on the card): it can't be applied."}
+        why = note_changed(notes, c.get("_note"))
+        if why:
+            return {"ok": False, "stale": True, "message": why}
+        c["state"] = "approved"                                          # used once, before anything runs
+        res = edit_apply(c)
+        if res.get("ok") and c.get("_note"):
+            notes.drop_draft(c["_note"]["path"])                         # nothing is left under the old path
+    if res.get("ok"):
+        notes_reindex()
+    return res
+
+
+def note_changed(notes, note):
+    """Why a Delete note card can't move the note now (it changed after Alan confirmed, or typing waits in a draft), or None."""
+    if not note:
+        return None
+    p = paths.resolve(note["path"])
+    try:
+        now = notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")) if p.is_file() and not p.is_symlink() else None
+    except OSError:  # a note that can't be read now isn't the one confirmed
+        now = None
+    if now != note["sha"] or notes.read_draft(note["path"]):
+        return "Not deleted: the note changed after you confirmed. Delete it again to confirm the new version."
+    return None
 
 
 def edit_pending_route(handler, req):
@@ -4347,7 +4684,13 @@ def move_back_route(handler, req):
     spec, why = archive.back_spec(path)
     if not spec:
         return handler.send(200, {"ok": False, "message": f"Not moved back: {why}."})
-    card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"))
+    fc, done = spec["file_changes"], None
+    if fc["archive"] == "notes_back":                  # #124 L4: the answer names the note, and the name it comes back under
+        op = fc["file_ops"][0]
+        a, b = Path(archive.archived_moves(kind="notes").get(op["from"]) or op["to"]).stem, Path(op["to"]).stem
+        done = f"Moved \u201c{b}\u201d back to its notes folder." if a == b else \
+            f"Moved \u201c{a}\u201d back to its notes folder as \u201c{b}\u201d (a note has its old name)."
+    card, why = server_edit_card(fc["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"), done=done)
     if not card:
         return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
     return handler.send(200, {"ok": True, "card": True, "message": "On the approval card in ask creaite: nothing moves until you approve it."})
@@ -6566,7 +6909,10 @@ def notes_draft_route(handler, req):
     if body is False:
         return handler.send(400, {"ok": False, "message": "That note is too long to save."})
     at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
+    with NOTES_LOCK:                                    # #124: never beside a Delete note's check and move
+        if not _p.is_file():
+            return handler.send(404, {"ok": False, "message": "That note isn't there any more."})
+        notes.save_draft(rel, body, notes.clean_changes(req.get("changes")), str(req.get("base") or ""), at)
     return handler.send(200, {"ok": True, "at": at})
 
 
@@ -6756,6 +7102,53 @@ DRAFT_ROUTES.update({"/api/notes/image": notes_image_route,
                      "/api/notes/rename": notes_rename_route})
 # ===== end BL-301 B gaps =====
 
+# ===== #124: Delete note (Alan, 15-10-2026: the confirm box AND the one approval card) =====
+# POST /api/notes/delete {path, base}   after Alan's confirm box in the Notes tab: the note's move into its own engagement's (or
+#                                        the portfolio's) _Archive goes on the approval card in ask creaite; nothing moves here.
+# archive.note_delete_spec builds the move (never the page): a `move` of kind "notes", the BL-09 guard exception, so only
+# tracker.py apply makes it, on Approve (server_edit_card: bound to this snapshot, used once, 30 minutes); Reject moves nothing.
+# Undo (tracker.py undo) and Files › Archived's Move back ("notes_back") bring it back, never onto a file that is there. As with
+# the rename, never while ask creaite has read outside content, or for a note that isn't only Alan's: the note must be ordinary
+# as a change, as filechange.py judges it now. The note must be saved (`base`, the text's fingerprint) with no typing waiting.
+# A confidential note is deleted the same way: only its title is read, for the card, and nothing is sent anywhere.
+def notes_delete_route(handler, req):
+    """Put a note's move into the archive on the approval card, after the confirm box."""
+    import archive
+    import filechange
+    if set(req) - {"path", "base"} or not isinstance(req.get("path"), str):
+        return handler.send(400, {"ok": False, "message": "Bad request"})
+    t = notes_target(handler, req)
+    if not t:
+        return None
+    notes, _code, p, rel = t
+    with NOTES_LOCK:
+        if str(req.get("base") or "") != notes.text_sha(p.read_text(encoding="utf-8", errors="ignore")):
+            return handler.send(200, {"ok": False, "message": "Not deleted: the note changed since it was saved. Open it again "
+                                      "and try once more."})
+        if notes.read_draft(rel):
+            return handler.send(200, {"ok": False, "message": "Not deleted: the note has typing not yet saved. Save it first."})
+        if filechange.verdict("edit", rel)[0] != "ordinary":
+            return handler.send(200, {"ok": False, "wait": True, "message": "Not deleted: moving this note needs more than the "
+                                      "card now (ask creaite has read outside content, or the file isn't only yours). Try again "
+                                      "when the chat has finished."})
+        spec, why = archive.note_delete_spec(rel)
+        if not spec:
+            return handler.send(200, {"ok": False, "message": f"Not deleted: {why}."})
+        sha = notes.text_sha(p.read_text(encoding="utf-8", errors="ignore"))             # M1: the version Alan confirmed
+        title = str(notes.read(p)[0].get("title") or p.stem).replace("\n", " ").strip()[:160]
+        card, why = server_edit_card(spec["file_changes"]["title"], json.dumps(spec, ensure_ascii=False).encode("utf-8"),
+                                     note={"path": rel, "sha": sha}, done=f"Moved \u201c{title}\u201d to the archive.")
+    if not card:
+        return handler.send(200, {"ok": False, "message": f"It couldn't go on the approval card: {why}"})
+    if debuglog:
+        debuglog.info("notes", f"delete note on card {card['card']}: {len(card['lines'])} line(s), valid {card['valid']}")
+    return handler.send(200, {"ok": True, "card": card, "message": "On the approval card in ask creaite: the note moves only when "
+                              "you approve it there."})
+
+
+DRAFT_ROUTES.update({"/api/notes/delete": notes_delete_route})
+# ===== end #124 =====
+
 # ===== Debug log (BL-102 part 2, stage A) =====
 # What the live server does is recorded through log.py. It is installed by wrapping the code above, so that code is left
 # as it is. Nothing from a request body, a prompt or a reply is ever logged: only routes, status codes, times, run IDs,
@@ -6785,7 +7178,7 @@ def swallowed(where, e):
 #                                          notes-sent.json records the lines (fingerprints and IDs, never text).
 #   /api/notes/undo {path, apply_id}       Undo: tracker.py undo of that apply when it is still the latest; its lines are new again.
 KIND_TOOLS["notes-find"] = []
-KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])
+KIND_DENIES["notes-find"] = list(KIND_DENIES["shape-closed"])           # every reading tool and every file writer: it only replies
 
 
 class FindJob:

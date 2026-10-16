@@ -93,6 +93,7 @@ export * from "./sneak.js";
 export * from "./notes.js";   /* BL-301 B: the Notes tab */
 export * from "./stores/notes.js";
 export * from "./components/notes/FindUpdates.jsx";   /* BL-301 E: Find updates, the panel beside a note */
+export * from "./components/notes/DeleteNote.jsx";   /* #124: Delete note, its confirm box and the card */
 export * from "./stores/findUpdates.js";
 export * from "./stores/reporting.js";   /* BL-337: Reports and the reporting space */
 export * from "./components/reporting/ReportingSpace.jsx";

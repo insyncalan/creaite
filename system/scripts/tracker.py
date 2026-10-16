@@ -1187,9 +1187,15 @@ def milestone_events(con, ids=None):
 
 # ── Proposals ─────────────────────────────────────────────────────────────────
 
-def load(p):
-    """A proposal file's JSON."""
-    return json.loads(Path(p).read_text(encoding="utf-8"))
+READ_SHA = {}    # #124 F3: the SHA-256 of the bytes the apply loaded each proposal from (the card's marker is checked against it)
+
+
+def load(p, bind=False):
+    """A proposal file's JSON. bind: the apply's own read, whose bytes the card's marker must match (#124 F3)."""
+    raw = Path(p).read_bytes()
+    if bind:
+        READ_SHA[str(p)] = hashlib.sha256(raw).hexdigest()
+    return json.loads(raw.decode("utf-8"))
 
 
 def raised_for(values, created):
@@ -1507,17 +1513,27 @@ def stash(apply_id, src):
     return paths.rel(dest)
 
 
-def run_file_ops(apply_id, blk, field, ops, done, data=None):
-    """Run ops in order, appending an undo record for each to `done`. BL-229: each operation is its own function."""
+def run_file_ops(apply_id, blk, field, ops, done, data=None, prop=None):
+    """Run ops in order, appending an undo record for each to `done`. BL-229: each operation is its own function. prop: the
+    proposal file being applied (a move checks the live server's marker against it, #124 F3)."""
     _stamp_approved(apply_id, blk, field, done, data)
     for fop in ops:
         check_file_op(fop, blk)
-        FILE_OPS[fop["op"]](apply_id, fop, blk, done)
+        if fop["op"] == "move":
+            _op_move(apply_id, fop, blk, done, prop)
+        else:
+            why = card_op_problem(fop, blk, prop)      # #128: a note's file only with the card's marker
+            if why:
+                raise Invalid(why)
+            FILE_OPS[fop["op"]](apply_id, fop, blk, done)
 
 
 def _stamp_approved(apply_id, blk, field, done, data=None):
     """An approved draft (minutes or a report) says who approved it and when, before it is filed."""
     approved_by = (paths.load_settings().get("identity", {}).get("name") or "Alan").split()[0]
+    why = draft_problem(blk, field)                   # #128 F3
+    if why:
+        raise Invalid(why)
     if field in ("minutes_decision", "report_decision") and blk.get(field) == "approved" and blk.get("draft"):
         draft = paths.resolve(blk["draft"])
         if draft.exists():
@@ -1885,7 +1901,8 @@ def hide_archived(con, settings=None):
 
 # ===== BL-09: the `move` file operation (archive, restore, and renaming an old zz Archive folder) =====
 # {"op": "move", "from": "projects/<folder>", "to": "projects/_Archive/<folder>"} in a file block whose "archive" says which kind
-# of move it is ("archive", "restore" or "rename"; one file: "reports", BL-03, and its reverse "reports_back", BL-331).
+# of move it is ("archive", "restore" or "rename"; one file: "reports", BL-03, and its reverse "reports_back", BL-331; one note:
+# "notes", #124's Delete note, and its reverse "notes_back").
 # reach.archive_move_problem is the one exception to _Archive's never rule: only this apply calls it. The paths are stored paths,
 # never mapped into _Archive (paths.resolve(…, archived=False)). Undo moves the
 # folder back, and removes the _Archive folder this move made if it is empty again.
@@ -1903,40 +1920,298 @@ def check_move(fop, blk):
     problem = reach.archive_move_problem(src, dst, kind)
     if problem:
         raise Invalid(f"move: {problem}")
-    if kind == "reports_back":                    # BL-331: only a file an archive moved there, back to where it came from
-        import archive
-        if archive.archived_moves().get(src) != dst:
+    if kind in ("reports_back", "notes_back"):   # BL-331, #124: only a file an archive (or Delete note) moved there, back
+        import archive                            # to where it came from
+        was = archive.archived_moves(kind=kind[:-len("_back")]).get(src)
+        if was != dst and not (kind == "notes_back" and was and reach.NOTES_BACK_RENAMES and _renamed_back(was, dst)):
             raise Invalid(f"move: {src} isn't a file the archive moved there, so it isn't moved back")
 
 
-def _op_move(apply_id, fop, blk, done):
+def _renamed_back(was, dst):
+    """#124: dst is the deleted note's old stored path `was` with only the -2, -3… a taken name gets (reach.NOTES_BACK_RENAMES)."""
+    import reach
+    a, b = Path(str(was)), Path(str(dst))
+    return a.parent == b.parent and reach._note_name(a.name, b.name)
+
+
+def card_move_problem(fop, blk, prop):
+    """#124 F3: why this move can't be applied here, or None. A move only the live server's card makes (reach.CARD_ONLY_MOVES)
+    needs the marker the server writes on Approve (reach.card_move_marker): a regular file (never a symlink), under
+    reach.CARD_MOVE_SECONDS old, naming the proposal file being applied and the SHA-256 of the bytes load() read from it (so
+    of what is applied). Checked only by the apply, never by check_move (propose.py check runs that for the card's preview)."""
+    import reach
+    kind = blk.get("archive")
+    if kind not in ("notes", "notes_back") and any(in_notes_folder(fop.get(k)) for k in ("from", "to")):
+        return f"move: {fop.get('from')} " + (_clash_why() or "is in a notes folder: a note is moved only by Delete note or Move back")
+    if kind not in reach.CARD_ONLY_MOVES:
+        return None
+    if card_marker_ok(reach.card_move_marker(kind, fop.get("from"), fop.get("to")), prop):
+        return None
+    return f"move: {fop.get('from')} is moved only by Approve on the live server's approval card"
+
+
+# ===== #128: a note's file is removed, written or copied by an apply only with the card's marker =====
+# The Notes tab changes notes through filechange.py, never through an apply. A remove, a write, or a copy whose source is at or
+# below any project's or the portfolio's notes folder (paths.folder(code, "notes")) runs in tracker.py apply only with the marker
+# live_server.card_moves_allowed writes on Approve of the card's own proposal (reach.card_move_marker("file-<op>", path, "")),
+# bound to that proposal's bytes as a move's is. A proposal written into staging by hand is refused.
+NOTE_FILE_OPS = ("remove", "write", "copy")
+
+
+def _folded(p):
+    """A path as text for comparing: NFC and case-folded (macOS's file system ignores both)."""
+    import unicodedata
+    return unicodedata.normalize("NFC", str(p)).casefold()
+
+
+def _below(p, folder):
+    p, folder = _folded(p), _folded(folder).rstrip(os.sep)
+    return p == folder or p.startswith(folder + os.sep)
+
+
+def notes_folders():
+    """Every notes folder (each project's and the portfolio's), as written and as its real path."""
+    out = []
+    for code, _ in paths.project_folders():
+        try:
+            f = paths.folder(code, "notes")
+        except (LookupError, OSError):            # a project without a folder has no notes
+            continue
+        out += [os.path.normpath(os.path.abspath(f)), os.path.realpath(f)]
+    return out
+
+
+def _clash_why():
+    """#128: the refusal's reason when locations.folders.notes shares a folder with another kind (a hand-edited mapping), or ""."""
+    clash = paths.notes_folder_clash()
+    return (f"is refused: locations.folders.notes is also the {', '.join(clash)} folder or holds it: give notes a folder of "
+            "their own") if clash else ""
+
+
+def in_notes_folder(rel, links=False, archived=False):
+    """#128: whether stored path `rel` is at or below a notes folder: as written (.. taken out), with every symlink followed, and
+    with all but the last followed; and, below the projects folder, whether its second folder level is the notes folder's name
+    (an engagement not in the register too; never the skeleton or _Templates). links: also a file whose other hard link is in a
+    notes folder (a write changes both; a copy reads it). archived: also an engagement's _Archive/<notes folder> (deleted notes)
+    and an archived engagement's notes folder (_Archive/<engagement>/<notes folder>), for a copy's source."""
+    if not isinstance(rel, str) or not rel:
+        return False
+    try:
+        p = paths.resolve(rel, archived=False)
+    except (LookupError, OSError, ValueError):    # not a path creaite can place: nothing to guard
+        return False
+    seen = {os.path.normpath(os.path.abspath(p)), os.path.realpath(p), os.path.join(os.path.realpath(p.parent), p.name)}
+    folders = notes_folders()
+    if any(_below(c, f) for c in seen for f in folders) or any(_named_notes(c, archived) for c in seen):
+        return True
+    return links and _hard_linked_note(p, folders)
+
+
+def _named_notes(c, archived=False):
+    """#128: real or written path `c` is below the projects folder in a notes folder by name, in one of paths.NOTES_SHAPES
+    (<engagement>/<notes folder>; archived: also below an engagement's _Archive, an archived engagement, or both). The
+    skeleton's top folder and _Templates are not engagements. paths.notes_places lists the same shapes for the rename check."""
+    name = [_folded(x) for x in Path(paths.folder_name("notes")).parts if x not in ("", ".")]
+    for r in {os.path.normpath(os.path.abspath(paths.projects_root())), os.path.realpath(paths.projects_root())}:
+        if not _below(c, r) or _folded(c) == _folded(r):
+            continue
+        parts = [_folded(x) for x in Path(c).parts[len(Path(r).parts):]]
+        if not name or paths.notes_shape(parts, name, archived):
+            return True
+    return False
+
+
+def _hard_linked_note(p, folders):
+    """#128: file `p` has another hard link, and one of them is in a notes folder."""
+    try:
+        st = os.stat(p)
+    except OSError:                               # nothing there: no link to anything
+        return False
+    if st.st_nlink < 2:
+        return False
+    for f in {os.path.realpath(f) for f in folders}:
+        for d, _, names in os.walk(f):
+            if any(os.path.samestat(st, os.lstat(os.path.join(d, n))) for n in names):
+                return True
+    return False
+
+
+def notes_op_target(fop, blk):
+    """#128: the stored path a remove or write changes, or a copy reads, when it is in a notes folder; else None."""
+    op = fop.get("op")
+    rel = fop.get("path") if op in ("remove", "write") else op_source(fop, blk) if op == "copy" else None
+    return rel if op in NOTE_FILE_OPS and in_notes_folder(rel, links=op != "remove", archived=op == "copy") else None
+
+
+def card_op_problem(fop, blk, prop):
+    """#124 F3, #128: why this file operation can't be applied here without the card's marker, or None."""
+    import reach
+    if fop.get("op") == "move":
+        return card_move_problem(fop, blk, prop)
+    rel = notes_op_target(fop, blk)
+    if rel is None or card_marker_ok(reach.card_move_marker(f"file-{fop['op']}", rel, ""), prop):
+        return None
+    return f"{fop['op']}: {rel} " + (_clash_why() or "is in a notes folder: a note is changed through the Notes tab, or by Approve "
+                                                     "on the live server's approval card")
+
+
+def draft_problem(blk, field):
+    """#128 F3: an approved minutes or report draft is stamped in place: never one in a notes folder."""
+    d = blk.get("draft")
+    if field in ("minutes_decision", "report_decision") and blk.get(field) == "approved" and d and in_notes_folder(d, links=True):
+        return f"draft: {d} " + (_clash_why() or "is in a notes folder: a draft is never stamped there")
+    return None
+
+
+def card_marks(data):
+    """#124 F3, #128: the markers Approve on the card writes for proposal `data`: one per card-only move and per note's file op."""
+    import reach
+    out = []
+    for blk, _ in blocks(data):
+        for fop in blk.get("file_ops") or []:
+            if not isinstance(fop, dict):
+                continue
+            if fop.get("op") == "move":
+                if blk.get("archive") in reach.CARD_ONLY_MOVES:
+                    out.append(reach.card_move_marker(blk.get("archive"), fop.get("from"), fop.get("to")))
+            elif notes_op_target(fop, blk):
+                out.append(reach.card_move_marker(f"file-{fop['op']}", notes_op_target(fop, blk), ""))
+    return out
+# ===== end #128 =====
+
+
+def card_marker_ok(m, prop):
+    """#124 F3: whether marker `m` is the live server's, fresh, for proposal file `prop` as the apply loaded it."""
+    import reach
+    import stat
+    try:
+        if m.parent.is_symlink():                 # only the vault's own system/guard
+            raise OSError("system/guard is a symlink")
+        fd = os.open(m, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            st = os.fstat(fd)
+            age = time.time() - st.st_mtime
+            ok = stat.S_ISREG(st.st_mode) and -5 <= age < reach.CARD_MOVE_SECONDS
+            got = json.loads(os.read(fd, 4096).decode("utf-8")) if ok else None
+        finally:
+            os.close(fd)
+        ok = ok and isinstance(got, dict) and prop is not None and got.get("proposal") == Path(prop).name \
+            and got.get("sha256") == (READ_SHA.get(str(prop)) or file_hash(prop))     # the bytes that were loaded and applied
+    except (OSError, ValueError):                 # no marker, a symlink, unreadable: refused
+        ok = False
+    return ok
+
+
+def _op_move(apply_id, fop, blk, done, prop=None):
+    why = card_move_problem(fop, blk, prop)       # #124 F3: before anything is made or moved
+    if why:
+        raise Invalid(why)
     a, b = paths.resolve(fop["from"], archived=False), paths.resolve(fop["to"], archived=False)
     made = b.parent
     while not made.parent.exists():               # BL-03: the highest folder this move makes (_Archive/04 Reporting/Weekly)
         made = made.parent
     made = made if not made.exists() else None
     b.parent.mkdir(parents=True, exist_ok=True)
-    os.rename(a, b)
+    try:
+        _move(a, b, blk.get("archive"))
+    except FileExistsError:                       # #124: taken between the check and the move: the apply rolls back
+        raise Invalid(f"move: {fop['to']} already exists; a folder move never overwrites") from None
+    except SymlinkMove:                           # #124 F1: a symlink put there after the check: never followed, never moved
+        raise Invalid(f"move: {fop['from']} is a symlink; a file move never follows one") from None
     done.append({"op": "move", "from": fop["from"], "to": fop["to"], "made": paths.rel(made) if made else None,
                  "kind": blk.get("archive")})
+
+
+class SymlinkMove(OSError):
+    """#124 F1: a one-file move (reach.FILE_MOVES) found a symlink where the file was: it is never followed and never moved."""
+
+
+def _move(a, b, kind):
+    """#124: move a to b, never over a file at b (FileExistsError). os.rename replaces a file on macOS and Linux, so one file
+    (reach.FILE_MOVES) moves by os.link, which refuses a name that is taken, then os.unlink; where hard links aren't supported
+    it falls back to a check and os.rename. A folder (BL-09) moves by os.rename as before (it never replaces a folder that
+    isn't empty). F1: a one-file move never follows a symlink: `a` is a symlink (SymlinkMove) is refused before the link, the
+    link itself never follows one (follow_symlinks=False where the platform has it), and a link that isn't `a` itself (a
+    symlink swapped in at the last moment, where it hasn't) is removed and refused. A symlink at `b` is a taken name."""
+    import reach
+    if kind not in reach.FILE_MOVES:
+        os.rename(a, b)
+        return
+    if os.path.islink(a):
+        raise SymlinkMove(str(a))
+    try:
+        if os.link in os.supports_follow_symlinks:
+            os.link(a, b, follow_symlinks=False)
+        else:
+            os.link(a, b)
+    except FileExistsError:
+        raise
+    except OSError:                               # a file system without hard links: the check, then the move
+        if os.path.lexists(b):
+            raise FileExistsError(str(b)) from None
+        if os.path.islink(a):
+            raise SymlinkMove(str(a)) from None
+        os.rename(a, b)
+        return
+    try:
+        same = not os.path.islink(a) and os.path.samestat(os.lstat(a), os.lstat(b))
+    except OSError:
+        same = False
+    if not same:                                  # what was linked isn't the file at a: never kept
+        os.unlink(b)
+        raise SymlinkMove(str(a))
+    try:
+        os.unlink(a)
+    except OSError:
+        os.unlink(b)                              # never two names for one file: as it was, and the caller is told
+        raise
+
+
+def _move_back(b, a, kind, renames):
+    """#124: move b back to a, never over a file; with renames, a name taken (before or between the check and the move) gives
+    the next free one. Where it went, or None when it stayed."""
+    a.parent.mkdir(parents=True, exist_ok=True)
+    want = a
+    for _ in range(50):
+        if renames and a.exists():
+            a = paths.free_path(want.parent, want.stem, want.suffix)
+        try:
+            _move(b, a, kind)
+            return a
+        except FileExistsError:
+            if not renames:
+                return None
+    return None
 
 
 def _reverse_move(rec, report):
     import reach
     a, b = paths.resolve(rec["from"], archived=False), paths.resolve(rec["to"], archived=False)
-    want = b.is_file() if rec.get("kind") in reach.FILE_MOVES else b.is_dir()   # BL-03, BL-331 move one file; BL-09 a folder
+    kind = rec.get("kind")
+    want = b.is_file() if kind in reach.FILE_MOVES else b.is_dir()   # BL-03, BL-331 move one file; BL-09 a folder
+    renames = kind == "notes" and reach.NOTES_BACK_RENAMES      # #124: a new note took the name: back as <name>-2.md
     if not want:
         report.append(f"skipped moving {rec['to']} back: it isn't there")
-    elif a.exists():
+        return
+    if a.exists() and not renames:
         report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
-    else:
-        a.parent.mkdir(parents=True, exist_ok=True)
-        os.rename(b, a)
-        made = paths.resolve(rec["made"], archived=False) if rec.get("made") else None
-        here = b.parent
-        while made is not None and here.is_dir() and not any(here.iterdir()) and (here == made or made in here.parents):
-            here.rmdir()                          # the folders this move made, once they are empty again
-            here = here.parent
+        return
+    old = a
+    try:
+        a = _move_back(b, a, kind, renames)
+    except SymlinkMove:                           # #124 F1: an archived symlink (_move refuses it): never followed, never moved
+        report.append(f"skipped moving {rec['to']} back: it is a symlink now")
+        return
+    if a is None:                                 # whatever took the name is left as it is
+        report.append(f"skipped moving {rec['to']} back: {rec['from']} is there again")
+        return
+    if a != old:
+        report.append(f"restored {rec['from']} as {a.name}: a note took its name")
+    made = paths.resolve(rec["made"], archived=False) if rec.get("made") else None
+    here = b.parent
+    while made is not None and here.is_dir() and not any(here.iterdir()) and (here == made or made in here.parents):
+        here.rmdir()                              # the folders this move made, once they are empty again
+        here = here.parent
 # ===== end BL-09 =====
 
 
@@ -2056,6 +2331,8 @@ def cmd_apply(args):
     (BL-111). Then moves finished proposals to applied/ and rebuilds the dashboard, Excel export and search index.
     """
     work = _load_work(args)
+    if not args:                       # #124 F3: a full apply leaves a card-only move a crash left behind, and says so
+        work = _skip_card_leftovers(work)
     if not work:
         print("Nothing to apply: no decided items.")
         return 0
@@ -2080,7 +2357,7 @@ def cmd_apply(args):
             via = via_for(p, data)
             for item in data.get("items", []):
                 _apply_item(con, p, data, item, held, apply_id, via, summary)
-            _apply_blocks(data, apply_id, summary, file_records)
+            _apply_blocks(data, apply_id, summary, file_records, p)
         con.execute("UPDATE applies SET file_ops = ? WHERE apply_id = ?", (json.dumps(file_records), apply_id))
         con.execute("COMMIT")
     except Exception as e:
@@ -2099,7 +2376,7 @@ def _load_work(args):
         props = sorted(p.resolve() for p in paths.STAGING.glob("proposed-*.json"))
     work = []
     for p in props:
-        data = load(p)
+        data = load(p, bind=True)
         for n, d in fill_raised(data):   # BL-26; kept in the proposal when it's saved after apply
             print(f"{p.name} item {n}: Raised set to {shown(d)} (source or staging date)")
         items, blks = decided(data)
@@ -2124,6 +2401,7 @@ def _validate_work(con, work):
             else:
                 held[(p, n)] = (kind, reason)
         blocked += _file_op_problems(p, data, written)
+        blocked += card_move_problems(p, data)         # #124 F3: here too, so a refusal comes before the backup
         blocked += archive_problems(p, data)           # BL-09: an archive or restore comes with its own folder move
         blocked += minutes_draft_problems(p, data)     # BL-260 point 4: minutes with no draft are never filed
     for p, data in work:                                                   # BL-133 stage B: a rejection's reason and duplicate
@@ -2154,6 +2432,34 @@ def minutes_draft_problems(p, data):
     debuglog.warn("tracker", f"minutes approval refused in {p.name}: no draft minutes")
     return [f"{p.name} minutes: {NO_DRAFT_MSG} ({blk.get('title') or blk.get('key') or 'untitled'})."]
 # ===== end BL-260 point 4 =====
+
+
+def card_move_problems(p, data):
+    """#124 F3: the apply's dry run: each undone move of a card-only kind in proposal `p` that has no marker from the live
+    server's Approve (card_move_problem), and (#128) each remove, write or copy of a note's file without one (card_op_problem).
+    Only the apply runs this, never propose.py check (the card's preview and stage)."""
+    out = []
+    for blk, field in blocks(data):
+        if blk.get(field) in ("approved", "rejected") and not blk.get("applied"):
+            out += [f"{p.name} {field}: {why}" for fop in selected_ops(blk, field) if isinstance(fop, dict)
+                    for why in [card_op_problem(fop, blk, p)] if why]          # #128: a note's file ops too
+            out += [f"{p.name} {field}: {why}" for why in [draft_problem(blk, field)] if why]
+    return out
+
+
+def _skip_card_leftovers(work):
+    """#124 F3: a full apply (no names) leaves out a proposal with a card-only move and no marker (an Approve that stopped
+    before its apply finished left it in staging), so the rest still applies. A proposal named on the command line is refused
+    instead (the dry run)."""
+    keep = []
+    for p, data in work:
+        why = card_move_problems(p, data)
+        if why:
+            debuglog.warn("tracker", f"apply: left {p.name} in staging: a card-only move with no approval card")
+            print(f"Left in staging, not applied: {why[0]}. Delete note or Move back again, or remove {p.name}.")
+        else:
+            keep.append((p, data))
+    return keep
 
 
 def _file_op_problems(p, data, written):
@@ -2354,14 +2660,15 @@ def _apply_item(con, p, data, item, held, apply_id, via, summary):
         _write_approved(con, p, item, apply_id, via, summary)
 
 
-def _apply_blocks(data, apply_id, summary, file_records):
-    """The proposal's decided file blocks (minutes, reports): their file operations, and the processed.txt lines."""
+def _apply_blocks(data, apply_id, summary, file_records, prop=None):
+    """The proposal's decided file blocks (minutes, reports): their file operations, and the processed.txt lines. prop: the
+    proposal file (#124 F3)."""
     processed = []
     for blk, field in blocks(data):
         if blk.get("applied") or blk.get(field) not in ("approved", "rejected"):
             continue
         ops = selected_ops(blk, field)
-        run_file_ops(apply_id, blk, field, ops, file_records, data)
+        run_file_ops(apply_id, blk, field, ops, file_records, data, prop)
         if ops:
             summary["filed"] += 1
         if field == "minutes_decision" and blk.get("key"):

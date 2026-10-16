@@ -96,6 +96,19 @@ class MoveBack(unittest.TestCase):
         f.write_text(json.dumps(spec), encoding="utf-8")
         return self.run_at("stage", str(f), script="propose.py", ok=False)
 
+    def apply_as_card(self, staged):
+        """tracker.py apply of the card's own proposal (the stage's output names it) inside the markers the live server writes on
+        Approve (live_server.card_moves_allowed, #124 F3), as edit_apply does; asserts it applied and left no marker behind."""
+        name = Path(re.search(r"Staged and approved: (\S+\.json)", staged.stdout).group(1)).name
+        code, out, left = self.py(
+            "import os, subprocess, live_server as ls, paths\n"
+            f"with ls.card_moves_allowed({name!r}):\n"
+            f"    r = subprocess.run([sys.executable, 'system/scripts/tracker.py', 'apply', {name!r}], capture_output=True, text=True)\n"
+            "print(json.dumps([r.returncode, r.stdout + r.stderr, sorted(f.name for f in paths.GUARD.glob('move-*'))]))")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(left, [])
+        return out
+
     def where(self, stored):
         """[where the stored path opens, ask creaite's read verdict, the files the search index reads]."""
         return self.py(f"import paths, reach, tracker; print(json.dumps([str(paths.resolve({stored!r})), "
@@ -130,7 +143,7 @@ class MoveBack(unittest.TestCase):
         r = self.stage_from_guard(spec)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn(f"Move file {self.base}/_Archive/{DUE[0]} → {stored}", r.stdout)
-        self.run_at("apply", script="tracker.py")
+        self.apply_as_card(r)                                                 # #124 F3: as Approve on the card applies it
         self.assertTrue((self.abc / DUE[0]).is_file())
         self.assertFalse((self.abc / "_Archive" / DUE[0]).exists())
         o = self.where(stored)
@@ -154,8 +167,9 @@ class MoveBack(unittest.TestCase):
 
     def test_a_moved_back_file_is_never_offered_again(self):
         stored = f"{self.base}/{DUE[1]}"
-        self.assertEqual(self.stage_from_guard(self.spec(stored)[0]).returncode, 0)
-        self.run_at("apply", script="tracker.py")
+        r = self.stage_from_guard(self.spec(stored)[0])
+        self.assertEqual(r.returncode, 0)
+        self.apply_as_card(r)
         self.assertTrue((self.abc / DUE[1]).is_file())
         touch(self.abc / "minutes/2025-08-01 Another old one.md")             # a new old file is still offered
         r = self.run_at("reports", script="archive.py")
@@ -172,8 +186,9 @@ class MoveBack(unittest.TestCase):
         stored = f"projects/_portfolio/{PORTFOLIO}"
         spec, why = self.spec(stored)
         self.assertIsNone(why)
-        self.assertEqual(self.stage_from_guard(spec).returncode, 0)
-        self.run_at("apply", script="tracker.py")
+        r = self.stage_from_guard(spec)
+        self.assertEqual(r.returncode, 0)
+        self.apply_as_card(r)
         pf = self.v.root / "projects/_portfolio"
         self.assertTrue((pf / PORTFOLIO).is_file())
         self.assertFalse((pf / "_Archive" / PORTFOLIO).exists())
@@ -189,7 +204,7 @@ class MoveBack(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("already exists", r.stdout)
         self.v.propose("taken", [], file_changes={**spec["file_changes"], "file_changes_decision": "approved"})
-        r = self.run_at("apply", script="tracker.py", ok=False)
+        r = self.run_at("apply", "proposed-taken.json", script="tracker.py", ok=False)   # named: a full apply leaves it (#124 F3)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("never overwrites", r.stdout)
         self.assertEqual((self.abc / DUE[1]).read_text(), "a newer file with the same name\n")    # never overwritten
@@ -206,7 +221,7 @@ class MoveBack(unittest.TestCase):
         fc = {"title": "x", "archive": "reports_back", "file_changes_decision": "approved",
               "file_ops": [{"op": "move", "from": f"{self.base}/_Archive/{name}", "to": stored}]}
         self.v.propose("hand", [], file_changes=fc)
-        r = self.run_at("apply", script="tracker.py", ok=False)
+        r = self.run_at("apply", "proposed-hand.json", script="tracker.py", ok=False)    # named: a full apply leaves it (#124 F3)
         self.assertIn("isn't a file the archive moved there", r.stdout)
         self.assertTrue((self.abc / "_Archive" / name).is_file())
         self.assertEqual(self.spec(f"{self.base}/../x/{name}")[1], "that isn't a stored project path")

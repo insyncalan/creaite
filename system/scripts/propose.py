@@ -241,10 +241,10 @@ def cmd_preview(spec_file, write=False):
         return 1
     if not write:
         return 0
-    if (spec.get("file_changes") or {}).get("archive") == "reports_back" and \
-            Path(os.path.realpath(spec_file)).parent != Path(os.path.realpath(paths.GUARD)):
-        print("Not staged: an archived file is moved back from Files (Move back) on the approval card, never staged here.")
-        return 1                                  # BL-331: only the live server's card (its snapshot in system/guard/) stages one
+    why = server_card_only(spec, spec_file)
+    if why:
+        print(why)
+        return 1
     stamp, out, n = f"{datetime.now():%Y-%m-%d-%H%M%S}", None, 1
     while out is None or out.exists():    # two proposals in one second must not overwrite each other
         out = paths.STAGING / f"proposed-{stamp}{f'-{n}' if n > 1 else ''}-edit.json"
@@ -253,6 +253,20 @@ def cmd_preview(spec_file, write=False):
     print(f"Staged and approved: {paths.rel(out)}. It'll be written at your next apply.")
     paths.consume_draft(spec_file)                                            # BL-118: the spec has done its job
     return 0
+
+
+SERVER_CARD_ONLY = {                              # BL-331, #124: staged only from the live server's card (its snapshot in system/guard/)
+    "reports_back": "Not staged: an archived file is moved back from Files (Move back) on the approval card, never staged here.",
+    "notes": "Not staged: a note is deleted from the Notes tab (Delete note) on the approval card, never staged here.",
+    "notes_back": "Not staged: a deleted note is moved back from Files (Move back) on the approval card, never staged here."}
+
+
+def server_card_only(spec, spec_file):
+    """Why this spec can't be staged here (a move only the live server's card stages), or None."""
+    why = SERVER_CARD_ONLY.get((spec.get("file_changes") or {}).get("archive"))
+    if why and Path(os.path.realpath(spec_file)).parent != Path(os.path.realpath(paths.GUARD)):
+        return why
+    return None
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
@@ -1395,7 +1409,11 @@ def cmd_setting(key, raw):
         sys.exit(f"{key} expects a {type(old).__name__} (now {json.dumps(old)}).")
     if re.fullmatch(r"\d{2}:\d{2}", str(old)) and not re.fullmatch(r"\d{2}:\d{2}", str(value)):
         sys.exit("Times are 24-hour HH:MM.")
+    was = json.loads(text).get("locations") or {}
     node[parts[-1]] = value
+    why = notes_setting_problem(key, was, data)
+    if why:
+        sys.exit(why)
     paths.BACKUPS.mkdir(parents=True, exist_ok=True)
     shutil.copy2(paths.SETTINGS, paths.free_path(paths.BACKUPS, f"settings-{datetime.now():%Y-%m-%d-%H%M%S}", ".json"))   # BL-266
     paths.write_text_atomic(paths.SETTINGS, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
@@ -1404,6 +1422,15 @@ def cmd_setting(key, raw):
                 + "\n")
     print(f"{key}: {json.dumps(old)} → {json.dumps(value)} (saved, with a backup and a log line)")
     return 0
+
+
+def notes_setting_problem(key, was, data):
+    """#128: why a change to `key` can't be saved (paths.locations_change_problem: the notes folder shared with another kind,
+    renamed while notes are under the old name, or a skeleton that isn't a template folder of its own), or None."""
+    if not (key == "locations" or key.startswith("locations.")):
+        return None
+    loc = data.get("locations")
+    return paths.locations_change_problem(was if isinstance(was, dict) else {}, loc if loc is not None else {})
 
 
 # ===== Recode a project (BL-111) =====

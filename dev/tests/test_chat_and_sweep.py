@@ -470,7 +470,7 @@ class StaticDashboard(unittest.TestCase):
 FAKE_CLAUDE = r"""#!/usr/bin/env python3
 import json, sys, time
 args = sys.argv[1:]
-message = args[args.index("-p") + 1]
+message = args[args.index("--") + 1]
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-md-1"})
 text = message[5:] if message.startswith("ECHO:") else "plain reply"
@@ -688,8 +688,12 @@ class ChatTimes(FakeClaudeCase):
         s, a, d = (datetime.fromisoformat(x) for x in (you["at"], reply["at"], reply["done_at"]))
         self.assertTrue(s <= a < d)
         self.assertGreaterEqual((d - a).total_seconds(), 2)
-        self.assertEqual(self.b.eval("[...document.querySelectorAll('#chLog time.mtime')].map(t=>t.dateTime)"),
-                         [you["at"], reply["done_at"]])
+        shown = self.b.eval("[...document.querySelectorAll('#chLog time.mtime')].map(t=>t.dateTime)")
+        self.assertEqual(shown[1], reply["done_at"])
+        # Alan's bubble is stamped by the page when he sends; the server stamps the same message when it arrives, which on a loaded
+        # machine can be a second or more later. Never earlier, and never far.
+        gap = (datetime.fromisoformat(you["at"]) - datetime.fromisoformat(shown[0])).total_seconds()
+        self.assertTrue(0 <= gap <= 5, f"the page stamped {shown[0]}, the server {you['at']}")
 
     def test_a_reloaded_chat_over_two_days_shows_earlier_times_and_dividers(self):
         today, yesterday = datetime.now().date(), datetime.now().date() - timedelta(days=1)

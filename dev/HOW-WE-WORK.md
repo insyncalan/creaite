@@ -56,6 +56,28 @@ The target is half the cost per shipped item. Most of the cost is long contexts 
 - **Flaky-test fixes get a stress gate:** the brief says to run the test at least five times under load (`run_tests.py --stress`, or five runs at `-j 6`) and report every failure. A fix that passes once isn't proved: on #87 Phase B two replays of the same timing fix left a second race that a five-run stress caught.
 - **Docs briefs list the decisions to record and ban run meta-text:** the brief lists each decision the text must record (Alan's rulings on the issues) and tells the agent to write nothing about the run itself: no "this replay", "this base" or status notes on how the doc was made. The review round checks file names and routes against the code: on #87 Phase B Haiku docs missed a decision, leaked run wording and got one file name wrong.
 
+### Spend limits (Alan, 16-10-2026)
+
+The account hit its monthly limit overnight (Team Cap lost 2h40; Team Stark's agents died mid-run) after a night of Opus reviews and long browser suites. To stay inside it:
+
+- **Opus is for guard and client-safe work only,** built and independently reviewed: the files listed above, plus anything that decides what reaches a client (`client_leak.py`, the client place in `edit_ai.py`, the client gate). Everything else, including reviews of editor, page and test code, runs on Sonnet; Haiku runs suites and checks.
+- **At most three Opus agents run at once across both teams** (two for one team). A lead that wants a fourth waits.
+- **One independent review per item, and only a delta re-review after fixes,** and a delta re-review only for guard or client-safe items. Other items get one review round (Alan's earlier limit) and their fixes are checked by their own tests.
+- **Long suites run once.** `test_shared_behaviour` (about 11 minutes) and the browser suites run once per branch, on the final tip, never after every small commit; an agent runs the tests for the files it changed plus the guard pins (`test_guard_pinned`, `test_reach`, the tool-pin tests), and the sharded CI run on the exact commit is the full suite.
+- **Every agent brief states its stopping point:** the files, the tests to run, and "do not re-run what already passed". An agent that has not finished in its budget stops and reports.
+- **A 429 means stop.** Leads and agents do not retry in a loop; they save the work, post that they stopped, and wait. Jarvis tells Alan.
+- **Each lead posts the day's agent count by model** (Opus, Sonnet, Haiku) in its last update, so the spend is visible.
+
+### Context hygiene (Alan, 16-10-2026)
+
+A lead session that runs for a day re-reads, and re-caches, everything it has said and been told on every turn; long reports between sessions make that worse. To keep it small:
+
+- **Reports between sessions are short:** the answer first, at most about 15 lines (what changed, the commit or branch, what needs a decision). The detail goes on the issue and is linked, never pasted into a message. A reviewer's tables and per-test lists belong in the issue comment.
+- **Compact or restart at item boundaries:** when an item lands or a release is cut, a lead runs `/compact` (or restarts from a written handover) rather than carrying the whole day. A session that has been up for a day without a compact is a cost to look at first.
+- **Agents are the unit of work:** one agent per item with its own fresh context, a brief that names the files, the tests and the stopping point; the lead keeps only the result and the commit.
+- **Do not paste what the repo already holds:** point at a file and line instead of quoting it; say "see #n" for a decision already logged in HEAD-LOG.
+- **Each lead says its context size** (the status line's percentage, or "compacted at hh:mm") in its last update of the day, with the agent count by model.
+
 ## Rules
 
 - **Pull requests close plan items:** put `closes insyncalan/creaite-plan#N` in the description.
@@ -64,3 +86,4 @@ The target is half the cost per shipped item. Most of the cost is long contexts 
 - **Cutting a release:** set VERSION, then run `python3 dev/tools/build_guides.py` and `python3 dev/tools/run_tests.py test_help`, and commit them together; then merge to main and publish. `build_release.py` refuses a stale guide.
 - **Hand checks:** every hand check names the automated test that covers it (`file::test`), or is marked `judgement` (on the screenshot sheet) or `live only`, with the reason. `just handchecks vX.Y.Z` runs them (BL-341).
 - **Notes:** a note for an item lives on its issue. Notes for shipped releases are in `dev/archive/notes/<release>/`.
+- **CI (#89):** iterate with `python3 dev/tools/run_tests.py --changed`; the full suite runs only on release branches and on main, never from your own push. Never dispatch a Tests run on a commit a push run already covers: check `gh run list --workflow tests.yml` first. The Linux jobs run the suite in 3 shards (`--shard I/3`; Python 3.14 all files, 3.9 the non-browser files); macOS runs on release branches only; the release workflow skips its repeat suite when a successful "Tests" run exists for the exact commit. `run_tests.py` starts the files that failed last time first and stops a shard after 8 failed files (`--max-fail 8`). The result to wait for is the "Tests passed" job.

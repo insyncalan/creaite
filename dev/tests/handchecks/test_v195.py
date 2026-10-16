@@ -1369,7 +1369,7 @@ Claude Code runs it (the command in --settings, the call as JSON on standard inp
 beside this file (tool, input, exit, stderr). Nothing here decides what is refused."""
 import json, os, subprocess, sys
 args = sys.argv[1:]
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 out = lambda o: print(json.dumps(o), flush=True)
 if p.startswith("creaite VIP check"):
     out({"type": "result", "result": "[]", "session_id": "sess-vip"})

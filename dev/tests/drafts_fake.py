@@ -10,7 +10,7 @@ from test_dashboard import d, populate  # noqa: E402
 FAKE = r'''#!/usr/bin/env python3
 import json, re, sys
 args = sys.argv[1:]
-p = args[args.index("-p") + 1]
+p = args[args.index("--") + 1]
 open(__file__ + ".prompt", "w", encoding="utf-8").write(p)
 out = lambda o: print(json.dumps(o), flush=True)
 out({"type": "system", "subtype": "init", "session_id": "sess-d"})
