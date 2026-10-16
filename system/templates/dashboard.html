@@ -4444,6 +4444,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     bootCountLinks: () => bootCountLinks,
     bootData: () => bootData,
     bootDateWords: () => bootDateWords,
+    bootDayRoll: () => bootDayRoll,
     bootDebugLog: () => bootDebugLog,
     bootDevTag: () => bootDevTag,
     bootDialogs: () => bootDialogs,
@@ -4774,6 +4775,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     dayList: () => dayList,
     dayPrep: () => dayPrep,
     dayProcess: () => dayProcess,
+    dayRollBlocked: () => dayRollBlocked,
     dayShape: () => dayShape,
     dayShown: () => dayShown,
     daySlide: () => daySlide,
@@ -5902,6 +5904,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     rjWith: () => rjWith,
     rkClamp: () => rkClamp,
     rkText: () => rkText,
+    rollDay: () => rollDay,
+    rollWeekStart: () => rollWeekStart,
     routineKid: () => routineKid,
     row: () => row,
     rowCounts: () => rowCounts,
@@ -6041,6 +6045,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     setSearchSections: () => setSearchSections,
     setSplit: () => setSplit,
     setSynced: () => setSynced,
+    setToday: () => setToday,
     setUnmount: () => setUnmount,
     setupShown: () => setupShown,
     setupSteps: () => setupSteps,
@@ -6638,10 +6643,19 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   // core/page.js
   var D = JSON.parse(document.getElementById("data").textContent);
   shared.LOADING = true;
-  var TODAY = (() => {
+  var dayNow = () => {
     const d5 = /* @__PURE__ */ new Date(), z4 = (n4) => String(n4).padStart(2, "0");
     return `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`;
-  })(), DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
+  };
+  var TODAY = dayNow();
+  var setToday = () => {
+    const n4 = dayNow();
+    if (n4 === TODAY) return null;
+    const was = TODAY;
+    TODAY = n4;
+    return was;
+  };
+  var DATE = /^\d{4}-\d{2}-\d{2}$/, DDATE = /^\d{2}-\d{2}-\d{4}$/;
   var fd = (iso2) => iso2 && DATE.test(iso2.slice(0, 10)) ? `${iso2.slice(8, 10)}-${iso2.slice(5, 7)}-${iso2.slice(0, 4)}${iso2.length > 10 ? iso2.slice(10) : ""}` : iso2 || "";
   var toIso = (dd2) => DDATE.test(dd2) ? `${dd2.slice(6, 10)}-${dd2.slice(3, 5)}-${dd2.slice(0, 2)}` : dd2;
   function readDate(text, today = TODAY) {
@@ -7633,8 +7647,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     const scrim = (e4) => {
       const d5 = ref.current;
       if (!d5 || e4.target !== d5) return;
-      const busy2 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
-      if (busy2) return;
+      const busy3 = typeof dirty2 === "function" ? dirty2() : dirty2 === void 0 ? !owned && !!TYPED.get(d5) : dirty2;
+      if (busy3) return;
       const r4 = d5.getBoundingClientRect();
       if (e4.clientX < r4.left || e4.clientX > r4.right || e4.clientY < r4.top || e4.clientY > r4.bottom) {
         if (owned) {
@@ -10649,7 +10663,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   var N2 = 0;
   var rowId = () => "ss" + ++N2;
   function SettingRow({ id: id2, label, line, note, changed, keys, resettable = true, fixedWhy = "", saved = false, children }) {
-    const [busy2, setBusy] = d2(false);
+    const [busy3, setBusy] = d2(false);
     const reset = async () => {
       setBusy(true);
       const r4 = await resetSettings(keys);
@@ -10680,7 +10694,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
           {
             type: "button",
             class: "mini setreset",
-            disabled: busy2,
+            disabled: busy3,
             "aria-label": `Reset ${label} to its default`,
             title: "Back to the default",
             onClick: reset,
@@ -11011,20 +11025,20 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     return !!r4.ok;
   }
   function FixButton({ f: f5, label }) {
-    const [busy2, setBusy] = d2(false);
+    const [busy3, setBusy] = d2(false);
     return /* @__PURE__ */ u2(
       "button",
       {
         type: "button",
         class: "btn primary",
-        disabled: busy2 || !viaServer(),
+        disabled: busy3 || !viaServer(),
         "aria-label": `${f5.button}: ${label}`,
         onClick: async () => {
           setBusy(true);
           await runHealthFix(f5);
           setBusy(false);
         },
-        children: busy2 ? "Working…" : f5.button
+        children: busy3 ? "Working…" : f5.button
       }
     );
   }
@@ -11038,7 +11052,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
       /** @type {{zip:string, day:string, lines:PlanLine[]}|null} */
       null
     );
-    const [busy2, setBusy] = d2(false), [done, setDone] = d2(
+    const [busy3, setBusy] = d2(false), [done, setDone] = d2(
       /** @type {string[]} */
       []
     );
@@ -11073,7 +11087,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     return /* @__PURE__ */ u2("div", { class: "hrestore", id: "backupRestore", children: [
       /* @__PURE__ */ u2("h3", { class: "hsub", children: "Restore from a backup" }),
       /* @__PURE__ */ u2("p", { class: "sub", children: "Puts this vault back as it was in a daily backup: the database, settings, staging and history. The current database and every file it replaces are kept first. Project files are never touched." }),
-      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy2 || !viaServer(), onClick: list, children: "Choose a backup…" }),
+      !zips && /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "backupList", disabled: busy3 || !viaServer(), onClick: list, children: "Choose a backup…" }),
       zips && !plan && (zips.length ? /* @__PURE__ */ u2("ul", { class: "hlist", "aria-label": "Backups", children: zips.map((z4) => /* @__PURE__ */ u2("li", { class: "hrow", "data-zip": z4.name, children: [
         /* @__PURE__ */ u2("span", { class: "hico", "aria-hidden": "true" }),
         /* @__PURE__ */ u2("div", { class: "hbody", children: [
@@ -11084,7 +11098,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
             mbOf(z4.size)
           ] })
         ] }),
-        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
+        /* @__PURE__ */ u2("div", { class: "hact", children: /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy3, "aria-label": `Preview the backup of ${fd(z4.day)}`, onClick: () => preview(z4), children: "Preview" }) })
       ] })) }) : /* @__PURE__ */ u2("p", { class: "sub", children: "There are no backups yet: one is made each day." })),
       plan && /* @__PURE__ */ u2("div", { class: "card hconfirm", role: "group", "aria-label": "Confirm the restore", id: "backupConfirm", children: [
         /* @__PURE__ */ u2("div", { class: "t", children: [
@@ -11099,8 +11113,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
           l6.what
         ] })) }),
         /* @__PURE__ */ u2("div", { class: "hact", children: [
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy2, onClick: restore, children: busy2 ? "Restoring…" : "Restore" }),
-          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy2, onClick: () => setPlan(null), children: "Cancel" })
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn danger", id: "backupRestoreGo", disabled: busy3, onClick: restore, children: busy3 ? "Restoring…" : "Restore" }),
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", disabled: busy3, onClick: () => setPlan(null), children: "Cancel" })
         ] })
       ] }),
       done.length > 0 && /* @__PURE__ */ u2("ul", { class: "hsteps", "aria-label": "What was restored", children: done.map((d5) => /* @__PURE__ */ u2("li", { children: d5 })) })
@@ -11142,16 +11156,16 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     ] });
   }
   function Health() {
-    const res = healthResult.value, busy2 = healthBusy.value, err = healthError.value;
+    const res = healthResult.value, busy3 = healthBusy.value, err = healthError.value;
     h2(() => {
-      if (!res && !busy2 && viaServer()) checkHealth();
+      if (!res && !busy3 && viaServer()) checkHealth();
     }, []);
     const n4 = res ? res.problems.length : 0, alone = res && res.standalone ? res.standalone : [];
     return /* @__PURE__ */ u2("div", { class: "card wide", id: "healthCard", children: [
       /* @__PURE__ */ u2("div", { class: "hhead", children: [
         /* @__PURE__ */ u2("h2", { children: "Health" }),
-        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy2 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy2 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
+        /* @__PURE__ */ u2("span", { class: "sub", role: "status", children: busy3 ? "Checking… (a few seconds)" : res ? `Checked ${fd(res.checked)}` : "" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "healthCheck", disabled: busy3 || !viaServer(), onClick: () => checkHealth(), children: "Check again" })
       ] }),
       !viaServer() && !res && /* @__PURE__ */ u2("p", { class: "sub", children: "The health check needs the live server." }),
       err && /* @__PURE__ */ u2("p", { class: "sub hbad", role: "alert", children: err }),
@@ -29107,7 +29121,7 @@ ${s5}`;
       /** @type {{text: string, ok: boolean, applyId?: any}|null} */
       null
     );
-    const [busy2, setBusy] = d2(false);
+    const [busy3, setBusy] = d2(false);
     const [closing, setClosing] = d2("");
     const [draft, setDraft] = d2(
       /** @type {SneakDraft|null} */
@@ -29201,7 +29215,7 @@ ${s5}`;
       input.current?.focus();
     }
     async function make(r5, note) {
-      if (busy2) return;
+      if (busy3) return;
       let rr2 = r5;
       if (note && note.trim()) {
         const t210 = `${text.trim().replace(/[.,;]+$/, "")}, add an update: ${note.trim()}`;
@@ -29265,7 +29279,7 @@ ${s5}`;
     }
     async function useDraft() {
       const d5 = draftRef.current;
-      if (!d5 || !d5.d || busy2) return;
+      if (!d5 || !d5.d || busy3) return;
       const it2 = d5.item, text2 = String(d5.d.text || "").trim();
       const stage = {
         label: `${it2.id} ${DRAFTS[d5.kind] ? DRAFTS[d5.kind](d5.kind === "thinking" ? { field: d5.field } : {}).word.toLowerCase() : d5.field} drafted (Sneak peek)`,
@@ -29408,7 +29422,7 @@ ${s5}`;
     };
     const r4 = reply;
     const out = [];
-    if (draft) out.push(/* @__PURE__ */ u2(DraftCard, { d: draft, busy: busy2, onUse: useDraft, onKeep: keepMine }, "draft"));
+    if (draft) out.push(/* @__PURE__ */ u2(DraftCard, { d: draft, busy: busy3, onUse: useDraft, onKeep: keepMine }, "draft"));
     else if (r4 && text.trim()) {
       if (r4.understood && r4.understood.length && r4.ok) out.push(/* @__PURE__ */ u2(
         Understood,
@@ -29428,7 +29442,7 @@ ${s5}`;
           r: r4,
           id: id2,
           shown: shown2,
-          busy: busy2,
+          busy: busy3,
           flash,
           closing,
           setClosing,
@@ -29453,7 +29467,7 @@ ${s5}`;
       done.text,
       done.ok && done.applyId != null ? /* @__PURE__ */ u2(S2, { children: [
         " ",
-        /* @__PURE__ */ u2("button", { type: "button", id: "spUndo", disabled: busy2, onClick: undo, children: "Undo" })
+        /* @__PURE__ */ u2("button", { type: "button", id: "spUndo", disabled: busy3, onClick: undo, children: "Undo" })
       ] }) : null
     ] }, "done"));
     return /* @__PURE__ */ u2("div", { class: "sp-box", id: "spBox", role: "dialog", "aria-label": "Sneak peek: change this item in words", onKeyDown: onKey, children: [
@@ -29529,7 +29543,7 @@ ${s5}`;
     const uniq2 = [...new Set(L3)];
     return uniq2.length ? `Changed ${uniq2.length > 1 ? uniq2.slice(0, -1).join(", ") + " and " + uniq2[uniq2.length - 1] : uniq2[0]}.` : r4.stage ? r4.stage.label + "." : "Changed.";
   }
-  function DraftCard({ d: d5, busy: busy2, onUse, onKeep }) {
+  function DraftCard({ d: d5, busy: busy3, onUse, onKeep }) {
     const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
     if (!d5.d) return /* @__PURE__ */ u2("div", { class: "sp-card", role: "status", children: /* @__PURE__ */ u2("div", { class: "sp-head", children: [
       /* @__PURE__ */ u2(SneakIcon, { shapes: SNEAK_ICON, size: 15 }),
@@ -29558,14 +29572,14 @@ ${s5}`;
       /* @__PURE__ */ u2("div", { class: "sp-acts", children: [
         /* @__PURE__ */ u2("span", { class: "sub", children: "Nothing changes until you choose." }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", id: "spKeep", onClick: onKeep, children: "Keep mine" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spUse", disabled: busy2, onClick: onUse, children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spUse", disabled: busy3, onClick: onUse, children: [
           "Use this ",
           /* @__PURE__ */ u2("kbd", { children: "⏎" })
         ] })
       ] })
     ] });
   }
-  function Card({ r: r4, id: id2, text, shown: shown2, busy: busy2, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
+  function Card({ r: r4, id: id2, text, shown: shown2, busy: busy3, flash, closing, setClosing, onMake, onNot, onPick, onClaude, acts: acts2 }) {
     if (!r4.ok) return /* @__PURE__ */ u2("div", { class: "sp-card warn", role: "alert", children: /* @__PURE__ */ u2("div", { class: "sp-msg", children: r4.message || "That couldn't be read." }) });
     if (r4.refused) {
       const btn = POINT[r4.refused.point_to], to2 = r4.refused.point_to;
@@ -29753,7 +29767,7 @@ ${s5}`;
           " or click"
         ] }) : /* @__PURE__ */ u2("span", { class: "sub", children: "You can undo it." }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn sm", onClick: onNot, children: "Not now" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spMake", disabled: busy2, onClick: onMake, children: [
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn sm primary", id: "spMake", disabled: busy3, onClick: onMake, children: [
           okWord,
           " ",
           /* @__PURE__ */ u2("kbd", { children: conf ? `${MOD}⏎` : "⏎" })
@@ -35615,9 +35629,9 @@ ${s5}`;
   function dayShape(ev, first, day) {
     const timed = ev.filter((e4) => !e4.all_day), n4 = timed.length, name = first ? `, ${first}` : "", today = !day || day === TODAY;
     if (!n4) return today ? `No meetings today${name}. The day is yours.` : `No meetings on ${longDay(day).split(" ")[0]}${name}.${day > TODAY ? " The day is yours." : ""}`;
-    const busy2 = timed.map((e4) => [mins(e4.start), mins(e4.end)]).sort((a6, b6) => a6[0] - b6[0]), gaps = [];
+    const busy3 = timed.map((e4) => [mins(e4.start), mins(e4.end)]).sort((a6, b6) => a6[0] - b6[0]), gaps = [];
     let t47 = 8 * 60;
-    busy2.forEach(([a6, b6]) => {
+    busy3.forEach(([a6, b6]) => {
       if (a6 > t47) gaps.push([t47, Math.min(a6, 18 * 60)]);
       t47 = Math.max(t47, b6);
     });
@@ -35625,7 +35639,7 @@ ${s5}`;
     const nw2 = today ? nowMins() : 0;
     gaps.forEach((g5) => g5[0] = Math.max(g5[0], nw2));
     const big = gaps.filter((g5) => g5[1] - g5[0] >= 60).sort((a6, b6) => b6[1] - b6[0] - (a6[1] - a6[0]))[0], cnt = `${n4 <= 10 ? NUMW[n4] : n4} meeting${n4 === 1 ? "" : "s"}${name}`;
-    if (today && n4 > 1 && nowMins() >= busy2[busy2.length - 1][1]) return `${cnt}, and they're all behind you.`;
+    if (today && n4 > 1 && nowMins() >= busy3[busy3.length - 1][1]) return `${cnt}, and they're all behind you.`;
     if (!big) return gaps.some((g5) => g5[1] - g5[0] >= 30) ? `${cnt}, with only short gaps between them.` : `${cnt}, back to back.`;
     const [a5, b5] = big, c5 = (a5 + b5) / 2;
     const part = b5 - a5 >= 240 ? c5 < 13 * 60 ? "the morning" : "the afternoon" : a5 >= 17 * 60 - 1 ? "the evening" : c5 < 10 * 60 ? "the early morning" : c5 < 12 * 60 ? "the late morning" : c5 < 13.5 * 60 ? "lunchtime" : c5 < 15.5 * 60 ? "the early afternoon" : "the late afternoon";
@@ -40130,16 +40144,16 @@ ${s5}`;
       if (!m5 || !mtgCanPick(m5)) MSEL.delete(id2);
     });
     $("#mtgRead").textContent = mt2.fetched ? `Calendar read ${fdText(mt2.fetched)}` : "";
-    const busy2 = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
-    $("#mtgGo").disabled = !MSEL.size || busy2 || !viaServer();
+    const busy3 = !!shared.RUN || typeof shared.BUSY !== "undefined" && shared.BUSY;
+    $("#mtgGo").disabled = !MSEL.size || busy3 || !viaServer();
     $("#mtgGo").textContent = MSEL.size ? `Process ${MSEL.size} selected` : "Process selected";
-    $("#mtgGo").title = !viaServer() ? "Needs the live server" : busy2 ? "ask creaite is busy; try again when it's finished" : "";
-    const ld2 = L3.filter((m5) => MSEL.has(m5.id) && mtgLoadable(m5)).length, offTx = !ld2 || busy2 || !viaServer(), why = !viaServer() ? "Needs the live server" : busy2 ? "ask creaite is busy; try again when it's finished" : ld2 ? "" : "Tick meetings that have a transcript";
+    $("#mtgGo").title = !viaServer() ? "Needs the live server" : busy3 ? "ask creaite is busy; try again when it's finished" : "";
+    const ld2 = L3.filter((m5) => MSEL.has(m5.id) && mtgLoadable(m5)).length, offTx = !ld2 || busy3 || !viaServer(), why = !viaServer() ? "Needs the live server" : busy3 ? "ask creaite is busy; try again when it's finished" : ld2 ? "" : "Tick meetings that have a transcript";
     $("#mtgLoad").disabled = offTx;
     $("#mtgLoad").title = why;
     $("#mtgLoad").textContent = ld2 ? `Load ${ld2} into inbox` : "Load into inbox";
     $("#mtgTx").disabled = !L3.some((m5) => mtgHasTx(m5) && mtgCanPick(m5));
-    $("#mtgRefresh").disabled = busy2 || !viaServer();
+    $("#mtgRefresh").disabled = busy3 || !viaServer();
     $("#mtgRefresh").title = !viaServer() ? "Needs the live server" : "";
     if (!mt2.fetched) {
       putHTML($("#mtgBody"), html`<div class="empty">No calendar yet: it comes in with the sweep. Refresh reads it now.</div>`);
@@ -41659,7 +41673,7 @@ ${s5}`;
     ] });
   }
   function Notes() {
-    const drafted = shapeDrafted.value, busy2 = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
+    const drafted = shapeDrafted.value, busy3 = shapeBusy.value, texts = shapeText.value, checks = shapeChecks.value;
     if (!drafted && !SHAPE_SECTIONS.some(([k5]) => (texts[k5] || "").trim())) return null;
     const now = notesNow(), edited = new Set(editedSections()), why = draftWhyNot("shape");
     const ai2 = {
@@ -41682,10 +41696,10 @@ ${s5}`;
             type: "button",
             class: "btn shsm",
             "data-shregen": "1",
-            "aria-disabled": why || busy2 ? "true" : void 0,
+            "aria-disabled": why || busy3 ? "true" : void 0,
             "data-tip": why || "Draft again; the sections you edited are kept",
             onClick: () => {
-              if (!why && !busy2) runShape();
+              if (!why && !busy3) runShape();
             },
             children: [
               /* @__PURE__ */ u2(Icon, { name: "refresh" }),
@@ -41693,8 +41707,8 @@ ${s5}`;
             ]
           }
         ),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-shdiscard": "1", disabled: !!busy2, onClick: discardShape, children: "Discard" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shaccept": "1", disabled: !!busy2 || !shapeReading.value, onClick: () => {
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn shsm", "data-shdiscard": "1", disabled: !!busy3, onClick: discardShape, children: "Discard" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary shsm", "data-shaccept": "1", disabled: !!busy3 || !shapeReading.value, onClick: () => {
           acceptShape();
         }, children: "Accept" })
       ] }),
@@ -41818,7 +41832,7 @@ ${s5}`;
       if (on2 && shapeFilter.value) previewFilter();
     }, [popupRev.value]);
     if (!on2) return null;
-    const busy2 = shapeBusy.value, why = draftWhyNot("shape"), conf = shapeConfidential.value;
+    const busy3 = shapeBusy.value, why = draftWhyNot("shape"), conf = shapeConfidential.value;
     const chips = shapeChips.value.filter((c5) => !shapeUsed.value.includes(c5.label));
     const hasDraft = !!shapeDrafted.value;
     return /* @__PURE__ */ u2("section", { class: "shape", "aria-labelledby": "shapeH", children: [
@@ -41861,10 +41875,10 @@ ${s5}`;
               type: "button",
               class: "btn primary",
               "data-shrun": "1",
-              "aria-disabled": why || busy2 ? "true" : void 0,
+              "aria-disabled": why || busy3 ? "true" : void 0,
               "data-tip": why || (hasDraft ? "Draft the notes again from the text; the sections you edited are kept" : "creaite reads the text and drafts the notes, each line cited"),
               onClick: () => {
-                if (!why && !busy2) runShape();
+                if (!why && !busy3) runShape();
               },
               children: [
                 /* @__PURE__ */ u2(Icon, { name: "spark" }),
@@ -41873,7 +41887,7 @@ ${s5}`;
             }
           )
         ] }),
-        busy2 === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
+        busy3 === "shape" ? /* @__PURE__ */ u2("div", { class: "shrun", role: "status", children: [
           /* @__PURE__ */ u2("span", { class: "spin", "aria-hidden": "true" }),
           /* @__PURE__ */ u2("span", { children: [
             "Shaping the meeting",
@@ -41882,7 +41896,7 @@ ${s5}`;
           ] }),
           /* @__PURE__ */ u2("button", { type: "button", class: "mini", "data-drstop": true, children: "Stop" })
         ] }) : null,
-        shapeMsg.value && !busy2 ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
+        shapeMsg.value && !busy3 ? /* @__PURE__ */ u2("p", { class: "wnote", role: "status", children: shapeMsg.value }) : null,
         !viaServer() ? /* @__PURE__ */ u2("p", { class: "wnote", children: "Shaping needs the live server." }) : null,
         /* @__PURE__ */ u2(ReadAs, {})
       ] }),
@@ -47097,7 +47111,7 @@ ${pre}**Current state title:** ${title}`);
       { ...start || {} }
     );
     const [said2, setSaid] = d2({ text: "", ok: true });
-    const [busy2, setBusy] = d2(false);
+    const [busy3, setBusy] = d2(false);
     const [polishing, setPolishing] = d2(false);
     const [card, setCard2] = d2(
       /** @type {PolishCard | null} */
@@ -47439,7 +47453,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("div", { class: "ch-acts", children: [
         /* @__PURE__ */ u2("span", { class: `ch-said${said2.ok ? "" : " fail"}`, role: "status", "aria-live": "polite", children: said2.text }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chCopyText", onClick: copyText, children: "Copy as text" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy2, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn", id: "chSent", disabled: busy3, "data-tip": "Record that you sent it (the item and today's date only), so the next one steps up", onClick: sentIt, children: "I sent it" }),
         /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "chCopyHtml", onClick: copyOutlook, children: "Copy for Outlook" })
       ] })
     ] });
@@ -54957,7 +54971,7 @@ ${d5.text}`);
     ] });
   }
   function NewNote({ code, open: open2, title, onClose, onMade }) {
-    const [tpl, setTpl] = d2("blank"), [t47, setT] = d2(title), [day, setDay] = d2(fd(TODAY)), [who2, setWho] = d2(""), [busy2, setBusy] = d2(false);
+    const [tpl, setTpl] = d2("blank"), [t47, setT] = d2(title), [day, setDay] = d2(fd(TODAY)), [who2, setWho] = d2(""), [busy3, setBusy] = d2(false);
     h2(() => {
       if (open2) {
         setT(title);
@@ -54968,7 +54982,7 @@ ${d5.text}`);
     }, [open2, title]);
     const bad = tpl === "working-session" && day.trim() && !readDate(day);
     const make = async () => {
-      if (busy2 || bad) return;
+      if (busy3 || bad) return;
       setBusy(true);
       const made = await createNote(code, { template: tpl, title: t47.trim(), ...tpl === "working-session" ? { date: readDate(day) || TODAY, with: who2.split(",").map((x5) => x5.trim()).filter(Boolean) } : {} });
       setBusy(false);
@@ -55018,7 +55032,7 @@ ${d5.text}`);
       /* @__PURE__ */ u2("p", { class: "sub", children: "Saved in the project's notes folder, named by its title. Internal: never in a client report." }),
       /* @__PURE__ */ u2("div", { class: "nnfoot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: onClose, children: "Cancel" }),
-        /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", id: "nnMake", disabled: busy2 || !!bad || !viaServer(), children: busy2 ? "Making…" : "Make the note" })
+        /* @__PURE__ */ u2("button", { type: "submit", class: "btn primary", id: "nnMake", disabled: busy3 || !!bad || !viaServer(), children: busy3 ? "Making…" : "Make the note" })
       ] })
     ] }) });
   }
@@ -56085,7 +56099,7 @@ ${d5.text}`);
       null
     );
     const [pending, setPending] = d2(false);
-    const [busy2, setBusy] = d2(false);
+    const [busy3, setBusy] = d2(false);
     const [said2, setSaid] = d2("");
     const attached = A2(""), ctl = A2(
       /** @type {AbortController | null} */
@@ -56272,7 +56286,7 @@ ${d5.text}`);
       };
     };
     const close = async () => {
-      if (busy2) return;
+      if (busy3) return;
       if (!viaServer()) {
         snack("Closing the day needs the live server");
         return;
@@ -56410,7 +56424,7 @@ ${d5.text}`);
         /* @__PURE__ */ u2("footer", { class: "cdfoot", children: [
           /* @__PURE__ */ u2("span", { class: "left", children: sweeping ? "The sweep only proposes; closing now closes when it finishes." : `${step2 + 1} of 4` }),
           step2 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-cdback": "1", onClick: () => move(-1), children: "Back" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn", "data-dcnot": "1", onClick: notYet, children: "Not yet" }),
-          step2 < 3 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy2, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
+          step2 < 3 ? /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-cdnext": "1", onClick: () => move(1), children: "Next" }) : /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "data-dcdone": "1", "data-cdnext": "1", disabled: busy3, onClick: close, children: day.closed ? "Close it again" : "Close the day" })
         ] })
       ] })
     ] }) });
@@ -63668,7 +63682,7 @@ ${d5.text}`);
     const [group, setGroup] = d2(true), [own, setOwn] = d2(
       /** @type {number[]} */
       []
-    ), [err, setErr] = d2(""), [busy2, setBusy] = d2(false);
+    ), [err, setErr] = d2(""), [busy3, setBusy] = d2(false);
     const close = () => {
       approveOpen.value = false;
       setErr("");
@@ -63771,7 +63785,7 @@ ${d5.text}`);
       err ? /* @__PURE__ */ u2("p", { class: "mnap-err", role: "alert", children: err }) : null,
       /* @__PURE__ */ u2("div", { class: "mnap-foot", children: [
         /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: close, children: "Cancel" }),
-        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy2, onClick: go3, children: busy2 ? "Approving…" : "Approve the minutes" })
+        /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", id: "mnApproveGo", disabled: busy3, onClick: go3, children: busy3 ? "Approving…" : "Approve the minutes" })
       ] })
     ] }) });
   }
@@ -67089,11 +67103,15 @@ ${d5.text}`);
   var fpName = (c5) => c5 === "_portfolio" ? "Portfolio" : pName(c5);
   var LASTVISIT = store.get("creaite-lastvisit", D.data_at);
   var SWEPT = D.last_sweep || "never";
-  var WEEKSTART = (() => {
+  var weekStart = () => {
     const d5 = new Date(TODAY);
     d5.setDate(d5.getDate() - (d5.getDay() + 6) % 7);
     return d5.toISOString().slice(0, 10);
-  })();
+  };
+  var WEEKSTART = weekStart();
+  var rollWeekStart = () => {
+    WEEKSTART = weekStart();
+  };
   var PEOPLE = D.people || { added: [], hidden: [] }, REGD = D.people_register || { exists: false, path: "projects/_portfolio/people-register.md", people: [], template: "" }, WSL = store.get("creaite-ws", D.workstreams || { added: [], hidden: [] });
   shared.REG = REGD.people.map((p6) => ({ ...p6, extra: {} }));
   var saveWs = () => {
@@ -67133,6 +67151,44 @@ ${d5.text}`);
       });
       shared.ACT.forEach((a5) => a5.what = fdText(a5.what));
     })();
+  }
+
+  // core/dayroll.js
+  var warnedFor = "";
+  var busy2 = false;
+  var dayRollBlocked = () => !!(shared.EDITING && shared.CUR || shared.CURED && shared.CURED.dirty || pkNewPending() || PK.dirty || noteDirty());
+  var dayOf = () => {
+    const d5 = /* @__PURE__ */ new Date(), z4 = (n4) => String(n4).padStart(2, "0");
+    return `${d5.getFullYear()}-${z4(d5.getMonth() + 1)}-${z4(d5.getDate())}`;
+  };
+  async function rollDay() {
+    if (busy2 || dayOf() === TODAY) return "same";
+    if (dayRollBlocked()) {
+      const day = dayOf();
+      if (warnedFor !== day) {
+        warnedFor = day;
+        snack("It's a new day: reload");
+      }
+      return "blocked";
+    }
+    busy2 = true;
+    try {
+      const was = setToday();
+      if (!was) return "same";
+      rollWeekStart();
+      if (selDay.value === was) selDay.value = "";
+      if (SERVED) await reloadData();
+      else refreshAll();
+      return "rolled";
+    } finally {
+      busy2 = false;
+    }
+  }
+  function bootDayRoll() {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") rollDay();
+    });
+    setInterval(rollDay, 6e4);
   }
 
   // core/globals.json
@@ -67353,6 +67409,7 @@ ${d5.text}`);
         "cxReview",
         "dateHint",
         "dayList",
+        "dayShown",
         "days",
         "dcIcon",
         "deCopyText",
@@ -67886,6 +67943,11 @@ ${d5.text}`);
         put(n4, { get: () => page[n4], set });
       }
     }
+    for (const n4 of ["TODAY", "WEEKSTART"]) {
+      seams.add(n4);
+      put(n4, { get: () => page[n4], set: () => {
+      } });
+    }
     const skip = /* @__PURE__ */ new Set([...globals_default.names.live, ...globals_default.names.not_on_window, ...seams]);
     for (const n4 of globals_default.names.tests) if (n4 in page && !skip.has(n4)) put(n4, { value: page[n4], writable: true });
   }
@@ -68063,6 +68125,7 @@ ${d5.text}`);
   bootReview0209();
   bootReview0315();
   bootNotes();
+  bootDayRoll();
   bootPageRefresh();
   return __toCommonJS(main_exports);
 })();

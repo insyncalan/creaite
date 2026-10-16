@@ -14,7 +14,9 @@ export const pName=c=>(P.find(p=>p.code===c)||{}).name||c;
 export const fpName=c=>c==="_portfolio"?"Portfolio":pName(c);
 export const LASTVISIT=store.get("creaite-lastvisit",D.data_at); 
 export const SWEPT=D.last_sweep||"never";
-export const WEEKSTART=(()=>{ const d=new Date(TODAY); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d.toISOString().slice(0,10); })();
+const weekStart=()=>{ const d=new Date(TODAY); d.setDate(d.getDate()-((d.getDay()+6)%7)); return d.toISOString().slice(0,10); };
+export let WEEKSTART=weekStart();   /* #171: a live binding; rollWeekStart() re-reads it when the day rolls */
+export const rollWeekStart=()=>{ WEEKSTART=weekStart(); };
 export const PEOPLE=D.people||{added:[],hidden:[]}, REGD=D.people_register||{exists:false,path:"projects/_portfolio/people-register.md",people:[],template:""}, WSL=store.get("creaite-ws",D.workstreams||{added:[],hidden:[]});
 shared.REG=REGD.people.map(p=>({...p,extra:{}}));   /* BL-55: the people register; PEOPLE is only the old settings.json lists, until "setup" moves them */
 export const saveWs=()=>{ store.set("creaite-ws",WSL); writeSettings({"workstreams.added":WSL.added,"workstreams.hidden":WSL.hidden}); };

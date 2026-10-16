@@ -23,6 +23,7 @@ export function publish(page) {
     if (!key.endsWith("Seams")) continue;
     for (const [n, set] of Object.entries(setters)) { seams.add(n); put(n, { get: () => page[n], set }); }
   }
+  for (const n of ["TODAY", "WEEKSTART"]) { seams.add(n); put(n, { get: () => page[n], set: () => {} }); }   /* #171: live, so window.TODAY follows the day roll */
   const skip = new Set([...G.names.live, ...G.names.not_on_window, ...seams]);
   for (const n of G.names.tests) if (n in page && !skip.has(n)) put(n, { value: page[n], writable: true });
 }
