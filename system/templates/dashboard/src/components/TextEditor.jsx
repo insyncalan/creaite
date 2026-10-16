@@ -9,17 +9,17 @@ import { creaiteEditor } from "../core/editor.js";
 /**
  * @typedef {{id: string, value: string, cls?: string, rows?: number, multiline?: boolean, placeholder?: string,
  *   labelledBy?: string, describedBy?: string, onInput?: (text: string) => void, onCommit?: (text: string) => void,
- *   ai?: import("../core/editor.js").EdAi}} Props
+ *   ai?: import("../core/editor.js").EdAi, links?: boolean}} Props
  */
 /** A plain-text box on the one editor. @param {Props} props */
-export function TextEditor({ id, value, cls, rows = 2, multiline = true, placeholder, labelledBy, describedBy, onInput, onCommit, ai }) {
+export function TextEditor({ id, value, cls, rows = 2, multiline = true, placeholder, labelledBy, describedBy, onInput, onCommit, ai, links = false }) {
   const box = useRef(/** @type {HTMLDivElement|null} */ (null));
   const ed = useRef(/** @type {import("../core/editor.js").EdHandle|null} */ (null));
   const on = useRef({ onInput, onCommit });
   on.current = { onInput, onCommit };
   useEffect(() => {
     const el = box.current;
-    const h = creaiteEditor(el, { features: "plain", text: value, multiline, prop: "value", ...(ai ? { ai } : {}) });   // BL-301 D
+    const h = creaiteEditor(el, { features: "plain", text: value, multiline, prop: "value", ...(links ? { links: true } : {}), ...(ai ? { ai } : {}) });   // BL-301 D
     ed.current = h;
     const blur = () => { if (on.current.onCommit) on.current.onCommit(h.value()); };
     const input = () => { if (on.current.onInput) on.current.onInput(h.value()); };

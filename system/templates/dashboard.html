@@ -3132,6 +3132,16 @@ button.nchip{font:inherit;font-size:12px}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
 /* #120: the link popover (components/LinkPopover.jsx): a small dialog under the words, fixed so nothing it sits in can move it */
+/* #121: the Link button in a plain field's corner, and a link in plain text (a field being edited, a table, the peek, a report preview) */
+.linkcorner{position:fixed;z-index:218;width:22px;height:22px;display:grid;place-items:center;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--muted);cursor:pointer;opacity:.85}
+.linkcorner:hover,.linkcorner:focus-visible{background:var(--accent-soft);color:var(--ink);opacity:1}
+.linkcorner:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.linkcorner[hidden]{display:none}
+.linkcorner .i{width:14px;height:14px}
+a.tlink{color:var(--accent);text-decoration:underline;text-underline-offset:2px;cursor:pointer;overflow-wrap:anywhere}
+a.tlink:hover{text-decoration-thickness:2px}
+a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-radius:2px}
+@media (forced-colors:active){.linkcorner{border-color:CanvasText}a.tlink{color:LinkText}}
 .linkpop{position:fixed;z-index:221;width:320px;max-width:calc(100vw - 16px);background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-pop,0 8px 24px rgba(0,0,0,.18));padding:10px;display:flex;flex-direction:column;gap:6px;font-size:var(--fs-sm);color:var(--ink)}
 .linkpop label{font:500 11px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
 .linkpop input{height:30px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 8px;background:var(--bg);color:var(--ink);font:inherit;width:100%;box-sizing:border-box}
@@ -4316,6 +4326,7 @@ button.nchip{font:inherit;font-size:12px}
     deIsoDays: () => deIsoDays,
     deItem: () => deItem,
     deItems: () => deItems,
+    deLinks: () => deLinks,
     deMe: () => deMe,
     deModesHtml: () => deModesHtml,
     deOptionsChanged: () => deOptionsChanged,
@@ -4571,6 +4582,7 @@ button.nchip{font:inherit;font-size:12px}
     grpToggle: () => grpToggle,
     handOver: () => handOver,
     handle: () => handle,
+    hasLink: () => hasLink,
     hashOf: () => hashOf,
     headsIn: () => headsIn,
     headsOut: () => headsOut,
@@ -4671,7 +4683,12 @@ button.nchip{font:inherit;font-size:12px}
     linesFrom: () => linesFrom,
     linkAt: () => linkAt,
     linkGuard: () => linkGuard,
+    linkHtml: () => linkHtml,
+    linkSegments: () => linkSegments,
     linkUrl: () => linkUrl,
+    linkWithAddress: () => linkWithAddress,
+    linkWords: () => linkWords,
+    linkWrite: () => linkWrite,
     listBody: () => listBody,
     listGroupOf: () => listGroupOf,
     listHtml: () => listHtml,
@@ -7812,6 +7829,98 @@ button.nchip{font:inherit;font-size:12px}
       if (PICK && !(PICK.el && PICK.el.contains(t47)) && !PICK.anchor.contains(t47)) closePicker("away");
     }, true);
     addEventListener("resize", () => closePicker("away"));
+  }
+
+  // core/linkUrl.js
+  var LINK_MAX = 2048;
+  var INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+  function hasBad(s5) {
+    for (let i5 = 0; i5 < s5.length; i5++) {
+      const c5 = s5.charCodeAt(i5);
+      if (c5 <= 32 || c5 >= 127 && c5 <= 160) return true;
+    }
+    return INVISIBLE.test(s5);
+  }
+  var ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
+  function linkUrl(s5) {
+    if (typeof s5 !== "string" || !s5 || s5.length > LINK_MAX) return null;
+    if (hasBad(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
+    const m5 = /^([a-z][a-z\d+.-]*):/i.exec(s5);
+    if (!m5) return null;
+    const scheme = m5[1].toLowerCase(), rest = s5.slice(m5[0].length);
+    if (scheme === "http" || scheme === "https") {
+      const a5 = /^\/\/([^/?#]*)/.exec(rest);
+      if (!a5 || !a5[1]) return null;
+      const host2 = a5[1];
+      if (host2.includes("@")) return null;
+      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2) && !/[\u0080-\uffff]/.test(host2)) return null;
+      try {
+        const u5 = new URL(scheme + ":" + rest);
+        if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
+      } catch (e4) {
+        return null;
+      }
+      return scheme + ":" + rest;
+    }
+    if (scheme === "mailto") {
+      const mailbox = rest.split(/[?#]/)[0];
+      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;
+      return "mailto:" + rest;
+    }
+    return null;
+  }
+  function safeDecode(s5) {
+    try {
+      return decodeURIComponent(s5);
+    } catch (e4) {
+      return s5;
+    }
+  }
+  var isLinkUrl = (s5) => linkUrl(s5) !== null;
+  function typedLinkUrl(s5) {
+    if (typeof s5 !== "string") return null;
+    const t47 = s5.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
+    if (!t47) return null;
+    if (/^[a-z][a-z\d+.-]*:/i.test(t47) && !/^[^/?#@\s]+\.[^/?#@\s]+:\d/.test(t47)) return linkUrl(t47);
+    if (t47.startsWith("//") || t47.startsWith("\\")) return null;
+    if (/^[^\s@/?#:]+@[^\s@/?#:]+\.[^\s@/?#:]+$/.test(t47)) return linkUrl("mailto:" + t47);
+    if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
+    return null;
+  }
+  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
+  var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
+
+  // core/linkText.js
+  var LINK = /\[((?:[^[\]\\\n]|\\[[\]\\])+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/g;
+  var unwords = (s5) => s5.replace(/\\([[\]\\])/g, "$1");
+  function linkSegments(text) {
+    const s5 = typeof text === "string" ? text : text == null ? "" : String(text);
+    const out = [];
+    let at2 = 0, plain = "";
+    for (const m5 of s5.matchAll(LINK)) {
+      const href = linkUrl(m5[2]);
+      if (!href || m5.index == null) continue;
+      plain += s5.slice(at2, m5.index);
+      if (plain) out.push({ t: plain });
+      plain = "";
+      out.push({ t: unwords(m5[1]), href });
+      at2 = m5.index + m5[0].length;
+    }
+    plain += s5.slice(at2);
+    if (plain) out.push({ t: plain });
+    return out;
+  }
+  var hasLink = (text) => typeof text === "string" && text.includes("](") && linkSegments(text).some((x5) => x5.href);
+  var linkWords = (text) => typeof text === "string" && !text.includes("](") ? text : linkSegments(text).map((x5) => x5.t).join("");
+  var linkWithAddress = (text) => linkSegments(text).map((x5) => x5.href ? `${x5.t} (${x5.href.replace(/^mailto:/i, "")})` : x5.t).join("");
+  function linkHtml(text) {
+    return linkSegments(text).map((x5) => x5.href ? `<a class="tlink" href="${esc(x5.href)}" target="_blank" rel="noopener noreferrer">${esc(x5.t)}</a>` : esc(x5.t)).join("");
+  }
+  function linkWrite(words, href) {
+    const a5 = linkUrl(href);
+    if (!a5 || !words) return null;
+    const addr = /^(?:[^()\s]|\([^()\s]*\))+$/.test(a5) ? a5 : a5.replace(/\(/g, "%28").replace(/\)/g, "%29");
+    return `[${words.replace(/[[\]\\]/g, "\\$&")}](${addr})`;
   }
 
   // components/Chip.jsx
@@ -23204,65 +23313,6 @@ ${s5}`;
     });
   }
 
-  // core/linkUrl.js
-  var LINK_MAX = 2048;
-  var INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
-  function hasBad(s5) {
-    for (let i5 = 0; i5 < s5.length; i5++) {
-      const c5 = s5.charCodeAt(i5);
-      if (c5 <= 32 || c5 >= 127 && c5 <= 160) return true;
-    }
-    return INVISIBLE.test(s5);
-  }
-  var ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
-  function linkUrl(s5) {
-    if (typeof s5 !== "string" || !s5 || s5.length > LINK_MAX) return null;
-    if (hasBad(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
-    const m5 = /^([a-z][a-z\d+.-]*):/i.exec(s5);
-    if (!m5) return null;
-    const scheme = m5[1].toLowerCase(), rest = s5.slice(m5[0].length);
-    if (scheme === "http" || scheme === "https") {
-      const a5 = /^\/\/([^/?#]*)/.exec(rest);
-      if (!a5 || !a5[1]) return null;
-      const host2 = a5[1];
-      if (host2.includes("@")) return null;
-      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2) && !/[\u0080-\uffff]/.test(host2)) return null;
-      try {
-        const u5 = new URL(scheme + ":" + rest);
-        if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
-      } catch (e4) {
-        return null;
-      }
-      return scheme + ":" + rest;
-    }
-    if (scheme === "mailto") {
-      const mailbox = rest.split(/[?#]/)[0];
-      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;
-      return "mailto:" + rest;
-    }
-    return null;
-  }
-  function safeDecode(s5) {
-    try {
-      return decodeURIComponent(s5);
-    } catch (e4) {
-      return s5;
-    }
-  }
-  var isLinkUrl = (s5) => linkUrl(s5) !== null;
-  function typedLinkUrl(s5) {
-    if (typeof s5 !== "string") return null;
-    const t47 = s5.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
-    if (!t47) return null;
-    if (/^[a-z][a-z\d+.-]*:/i.test(t47) && !/^[^/?#@\s]+\.[^/?#@\s]+:\d/.test(t47)) return linkUrl(t47);
-    if (t47.startsWith("//") || t47.startsWith("\\")) return null;
-    if (/^[^\s@/?#:]+@[^\s@/?#:]+\.[^\s@/?#:]+$/.test(t47)) return linkUrl("mailto:" + t47);
-    if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
-    return null;
-  }
-  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
-  var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
-
   // core/editorLink.js
   function scrubTr(tr2, doc) {
     let n4 = 0;
@@ -23497,16 +23547,48 @@ ${s5}`;
   var headsIn = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 > shift && n4 <= shift + 3 ? "#".repeat(n4 - shift) + rest : "​" + z4 + "#".repeat(n4) + rest) : md2;
   var headsOut = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 !== "" ? z4.slice(1) + "#".repeat(n4) + rest : "#".repeat(Math.min(n4, 3) + shift) + rest) : md2;
   var headsSafe = (md2, shift) => shift ? mapHeads(md2, (z4, n4, rest) => z4 === "" && n4 <= shift ? "#".repeat(n4 + shift) + rest : z4 + "#".repeat(n4) + rest) : md2;
-  var plainDoc = (t47) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => l6 ? { type: "paragraph", content: [{ type: "text", text: l6 }] } : { type: "paragraph" }) });
+  var plainDoc = (t47, links) => ({ type: "doc", content: String(t47 ?? "").split("\n").map((l6) => {
+    if (!l6) return { type: "paragraph" };
+    if (!links) return { type: "paragraph", content: [{ type: "text", text: l6 }] };
+    const segs = linkSegments(l6).map((x5) => x5.href ? { type: "text", text: x5.t, marks: [{ type: "link", attrs: { href: x5.href } }] } : { type: "text", text: x5.t });
+    return segs.length ? { type: "paragraph", content: segs } : { type: "paragraph" };
+  }) });
   var plainText = (doc) => {
     const L3 = [];
     doc.forEach((p6) => {
-      L3.push(p6.textContent);
+      let line = "";
+      p6.forEach((c5) => {
+        const m5 = c5.isText && c5.marks.find((x5) => x5.type.name === "link");
+        const w6 = m5 ? linkWrite(c5.text, m5.attrs.href) : null;
+        line += w6 ?? c5.textContent;
+      });
+      L3.push(line);
     });
     return L3.join("\n");
   };
+  var PlainLink = de.create({
+    name: "link",
+    inclusive: false,
+    excludes: "link",
+    addAttributes() {
+      return { href: { default: null } };
+    },
+    parseHTML() {
+      return [{ tag: "a[href]", getAttrs: (el2) => {
+        const h5 = (
+          /** @type {HTMLElement} */
+          el2.getAttribute("href")
+        );
+        return isLinkUrl(h5) ? { href: h5 } : false;
+      } }];
+    },
+    renderHTML({ HTMLAttributes }) {
+      const h5 = HTMLAttributes.href;
+      return ["a", isLinkUrl(h5) ? { class: "tlink", href: h5, target: "_blank", rel: "noopener noreferrer" } : { class: "tlink" }, 0];
+    }
+  });
   function creaiteEditor(el2, o5 = {}) {
-    const features = o5.features || "current", plain = features === "plain", multiline = o5.multiline !== false, headShift = plain ? 0 : o5.headShift | 0;
+    const features = o5.features || "current", plain = features === "plain", links = !plain || !!o5.links, multiline = o5.multiline !== false, headShift = plain ? 0 : o5.headShift | 0;
     if (
       /** @type {any} */
       el2.cxed
@@ -23516,7 +23598,7 @@ ${s5}`;
       touched = false;
       if (plain) {
         orig = String(v5 ?? "");
-        return { json: plainDoc(orig) };
+        return { json: plainDoc(orig, links) };
       }
       if (o5.html !== void 0 && v5 === void 0) {
         orig = null;
@@ -23537,7 +23619,7 @@ ${s5}`;
         );
         return f5 ? f5(view, e4) : false;
       },
-      ...plain ? {} : { handlePaste: (view, e4) => {
+      ...links ? { handlePaste: (view, e4) => {
         if (pasteLink(
           editor,
           /** @type {ClipboardEvent} */
@@ -23551,7 +23633,7 @@ ${s5}`;
           (o5.editorProps || {}).handlePaste
         );
         return f5 ? f5(view, e4) : false;
-      } },
+      } } : {},
       ...plain ? { transformPastedText: (t47) => multiline ? t47.replace(/\r\n?/g, "\n") : t47.replace(/\s*[\r\n]+\s*/g, " ") } : {}
     };
     const editor = Np({ mount: el2 }, {
@@ -23561,10 +23643,10 @@ ${s5}`;
       editorProps: props,
       extensions: (list) => {
         const out = list.map((x5) => x5 && x5.name === "image" ? x5.extend({ addNodeView: () => figureView(o5.imageSrc) }) : x5 && x5.name === "link" ? x5.extend({ inclusive: false }) : x5 && x5.name === "starterKit" && headShift ? x5.configure({ heading: { levels: [1, 2, 3] } }) : x5);
-        return [...out, ...plain ? [] : [ClaimMark, j3.create({ name: "cxLinkGuard", addProseMirrorPlugins: () => [linkGuard(ED_QUIET)] })], ...o5.extensions || []];
+        return [...out, ...plain ? links ? [PlainLink] : [] : [ClaimMark], ...links ? [j3.create({ name: "cxLinkGuard", addProseMirrorPlugins: () => [linkGuard(ED_QUIET)] })] : [], ...o5.extensions || []];
       }
     });
-    if (!plain) scrubNow(editor, ED_QUIET);
+    if (links) scrubNow(editor, ED_QUIET);
     const blank2 = () => {
       el2.classList.toggle("blank", editor.isEmpty);
     };
@@ -23580,6 +23662,7 @@ ${s5}`;
       el: el2,
       editor,
       features,
+      links,
       multiline,
       headShift,
       value: () => {
@@ -23613,7 +23696,7 @@ ${s5}`;
       }
     };
     el2.cxed = h5;
-    if (!plain && ED_HOOKS.link) ED_HOOKS.link.attach(h5);
+    if (links && ED_HOOKS.link) ED_HOOKS.link.attach(h5);
     if (o5.ai && ED_HOOKS.ai) ED_HOOKS.ai(h5, o5.ai);
     if (o5.prop && plain) {
       const proto = o5.prop === "textContent" ? Object.getOwnPropertyDescriptor(Node.prototype, "textContent") : null;
@@ -25525,7 +25608,10 @@ ${s5}`;
     const open2 = linkUrl(p6.href);
     return /* @__PURE__ */ u2("div", { class: "linkpop form", ref: box, role: "dialog", "aria-label": "Link", "aria-describedby": `${id2}-err`, onKeyDown: key, onMouseDown: (e4) => {
       if (!/** @type {Element} */
-      e4.target.closest("input")) e4.stopPropagation();
+      e4.target.closest("input")) {
+        e4.stopPropagation();
+        e4.preventDefault();
+      }
     }, children: [
       /* @__PURE__ */ u2("label", { for: `${id2}-t`, children: "Text" }),
       /* @__PURE__ */ u2(
@@ -25588,7 +25674,10 @@ ${s5}`;
         closePop(true);
       }
     };
-    return /* @__PURE__ */ u2("div", { class: "linkpop view", role: "dialog", "aria-label": "Link", onKeyDown: key, onMouseDown: (e4) => e4.stopPropagation(), children: [
+    return /* @__PURE__ */ u2("div", { class: "linkpop view", role: "dialog", "aria-label": "Link", onKeyDown: key, onMouseDown: (e4) => {
+      e4.stopPropagation();
+      e4.preventDefault();
+    }, children: [
       /* @__PURE__ */ u2("span", { class: "linkaddr", title: p6.href, children: p6.href.replace(/^mailto:/i, "") }),
       open2 ? /* @__PURE__ */ u2("a", { class: "linkopen", "data-lk": "open", href: open2, target: "_blank", rel: "noopener noreferrer", children: "Open ↗" }) : null,
       /* @__PURE__ */ u2("button", { type: "button", "data-lk": "edit", onClick: () => {
@@ -25615,6 +25704,72 @@ ${s5}`;
     if (pop && pop.mode === "view" && pop.h === h5 && pop.from === l6.from && pop.to === l6.to && pop.href === l6.href) return;
     pop = { mode: "view", h: h5, from: l6.from, to: l6.to, href: l6.href };
     drawLink();
+  }
+  var cornerRoot = null;
+  var cornerOn = null;
+  function hideCorner(h5) {
+    if (!cornerOn || h5 && cornerOn.h !== h5) return;
+    cornerOn.off();
+    cornerOn = null;
+    if (cornerRoot) R(null, cornerRoot);
+  }
+  function showCorner(h5) {
+    if (cornerOn && cornerOn.h === h5) return;
+    hideCorner();
+    if (!cornerRoot) {
+      cornerRoot = document.createElement("div");
+      cornerRoot.className = "linkcornerroot";
+    }
+    const host2 = (
+      /** @type {HTMLElement} */
+      h5.el.closest("dialog[open]") || document.body
+    );
+    if (cornerRoot.parentElement !== host2) host2.appendChild(cornerRoot);
+    const root2 = cornerRoot;
+    R(/* @__PURE__ */ u2(
+      "button",
+      {
+        type: "button",
+        class: "linkcorner",
+        "data-lk": "corner",
+        "aria-label": "Add or edit a link (⌘⇧K)",
+        "data-tip": "Add or edit a link (⌘⇧K)",
+        "aria-keyshortcuts": "Meta+Shift+K Control+Shift+K",
+        onMouseDown: (e4) => {
+          e4.preventDefault();
+          e4.stopPropagation();
+        },
+        onClick: (e4) => {
+          e4.preventDefault();
+          e4.stopPropagation();
+          h5.focus();
+          openLinkForm(h5);
+        },
+        children: /* @__PURE__ */ u2(Icon, { name: "link", size: 14 })
+      }
+    ), root2);
+    const b5 = (
+      /** @type {HTMLElement|null} */
+      root2.firstElementChild
+    );
+    const put2 = () => {
+      if (!b5 || !h5.el.isConnected) return;
+      const r4 = h5.el.getBoundingClientRect(), vh2 = window.innerHeight, vw2 = document.documentElement.clientWidth;
+      b5.style.position = "fixed";
+      b5.style.left = `${Math.max(4, Math.min(r4.right - 26, vw2 - 30))}px`;
+      b5.style.top = `${Math.max(r4.top + 3, 4)}px`;
+      b5.hidden = r4.bottom < 8 || r4.top > vh2 - 8 || r4.height < 12;
+    };
+    put2();
+    window.addEventListener("scroll", put2, true);
+    window.addEventListener("resize", put2);
+    const ro2 = typeof ResizeObserver === "function" ? new ResizeObserver(put2) : null;
+    if (ro2) ro2.observe(h5.el);
+    cornerOn = { h: h5, off: () => {
+      window.removeEventListener("scroll", put2, true);
+      window.removeEventListener("resize", put2);
+      if (ro2) ro2.disconnect();
+    } };
   }
   function attachLink(h5) {
     const el2 = h5.el, ed3 = h5.editor;
@@ -25681,13 +25836,33 @@ ${s5}`;
     el2.addEventListener("keyup", keyup);
     el2.addEventListener("focusout", blur);
     ed3.on("selectionUpdate", sel);
+    if (h5.features === "plain") {
+      const inField = () => el2.contains(document.activeElement);
+      el2.addEventListener("focusin", () => showCorner(h5));
+      el2.addEventListener("focusout", () => setTimeout(() => {
+        if (!inField() && !(root && root.contains(document.activeElement))) hideCorner(h5);
+      }, 0));
+      if (inField()) showCorner(h5);
+    }
     const destroy = h5.destroy;
     h5.destroy = () => {
       if (pop && pop.h === h5) closePop();
+      hideCorner(h5);
       destroy();
     };
   }
   function bootLinkPopover() {
+    document.addEventListener("click", (e4) => {
+      const a5 = (
+        /** @type {Element|null} */
+        e4.target && /** @type {Element} */
+        e4.target.closest ? (
+          /** @type {Element} */
+          e4.target.closest("a.tlink")
+        ) : null
+      );
+      if (a5 && !a5.closest(".ProseMirror, [contenteditable=true]")) e4.stopPropagation();
+    }, true);
     ED_HOOKS.link = { attach: attachLink, toast: (m5, undo) => snack(m5, undo), open: (h5) => {
       openLinkForm(h5);
     } };
@@ -28692,7 +28867,7 @@ ${s5}`;
     const mine = [...mineOver, ...mineSoon].sort((a5, b5) => a5.due.localeCompare(b5.due)), mc2 = capped(mine.map((x5, i5) => tl2(
       i5 + 1,
       tLink(html`data-open="actions:${x5.id}"`, html`${x5.t ?? ""}`),
-      html`${raw(dueWords(x5.due))} on ${x5.p ? raw(projLink(x5.p)) : "no project"}${x5.pr === "Urgent" ? ", marked Urgent" : ""}${x5.upd ? `. Latest: ${x5.upd.length > 140 ? x5.upd.slice(0, 139) + "…" : x5.upd}` : ""}.`,
+      html`${raw(dueWords(x5.due))} on ${x5.p ? raw(projLink(x5.p)) : "no project"}${x5.pr === "Urgent" ? ", marked Urgent" : ""}${x5.upd ? `. Latest: ${linkWords(x5.upd).length > 140 ? linkWords(x5.upd).slice(0, 139) + "…" : linkWords(x5.upd)}` : ""}.`,
       itemActs("actions", x5)
     )), S.listCap || 10, "mine");
     putHTML($("#nMine"), raw(mine.length ? countLink(`${plur(mine.length, "action")} of yours due or overdue`, mine.length, "actions:open:", { st: ["Open", "Delayed"], due: ["overdue", "soon"], o: ["@me"] }) : ""));
@@ -32982,7 +33157,7 @@ ${s5}`;
       if (!d5) return w6("No due date");
       const n4 = Math.round((new Date(d5) - new Date(TODAY)) / 864e5);
       return n4 < 0 ? w6(`${fd(d5)} · ${-n4} day${n4 === -1 ? "" : "s"} overdue`) : `${fd(d5)} · ${n4 === 0 ? "today" : `in ${n4} day${n4 === 1 ? "" : "s"}`}`;
-    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${esc(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : String(c5.from)))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : String(c5.to)))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : [];
+    }, who2 = (o5) => !o5 || o5 === "TBC" ? w6("No owner") : unknownOwner(o5) ? w6(`${personLink(o5, o5)} (not in the people register)`) : personLink(o5, o5), ms2 = x5.ms ? `Milestone ${esc(((D.milestone_names || {})[x5.ms] || [x5.ms])[0])}` : "", parts = r4.kind === "actions" ? [who2(x5.o), dueTxt(x5.due), pc2(x5.pr || "Medium"), esc(x5.ws || ""), ms2] : r4.kind === "raid" ? [esc(x5.type), who2(x5.o), x5.imp && x5.lik ? `${x5.imp} × ${x5.lik} → ${pc2(prio(x5.imp, x5.lik))}` : w6("Impact and likelihood not set"), x5.resp ? `Response: ${linkHtml(x5.resp)}` : w6("No response yet"), x5.due ? dueTxt(x5.due) : "", ms2] : r4.kind === "decisions" ? [x5.by ? `Made by ${personLink(x5.by, x5.by)}` : w6("Made by not recorded"), x5.date ? fd(x5.date) : ""] : r4.kind === "update" ? (x5.changes || []).map((c5) => `${esc(c5.field)}: ${esc(fd(c5.from == null || c5.from === "" ? "—" : linkWords(String(c5.from))))} → ${esc(fd(c5.to == null || c5.to === "" ? "—" : linkWords(String(c5.to))))}`) : r4.kind === "draft" && r4.nodraft && !r4.done ? [w6("No Word draft was made for these minutes"), "Reject them and process the meeting again"] : [];
     let h5 = (r4.dn ? dnHtml(r4) : "") + parts.filter(Boolean).join(" · ") + shRvHtml(r4);
     if (r4.kind === "update" && r4.rec && r4.rec.why) h5 = `${h5} · <span class="sub">“${esc(r4.rec.why)}”</span>`;
     if (!shared.LOADING) {
@@ -35013,7 +35188,7 @@ ${s5}`;
   } };
 
   // core/keys.js
-  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer";
+  var OPENERS = "[data-person],#inPrev,[data-gen],#genDlg,[data-nav],[data-proj],[data-psw],#projSw,#runBadge,[data-row],[data-open],[data-revopen],[data-appr],#reviewBody tr,#askBtn,[data-ask],[data-edcur],[data-edproj],[data-ms],[data-msnew],#newBtn,[role=menu],[data-gowork],.snack,.cal,.combo-list,dialog,[data-mg],#chat,#pkStage,.pkpop,#tip,#capDrawer,.linkpop,.linkcorner";
   function bootCopyCommand() {
     document.addEventListener("click", (e4) => {
       const b5 = e4.target.closest("[data-copycmd]");
@@ -38209,7 +38384,7 @@ ${s5}`;
     return items().filter((x5) => passes(x5, k5) && hit(d5, x5, one)).length;
   };
   var DEFSORT = { actions: (a5, b5) => overdue(b5) - overdue(a5) || (a5.due || "9").localeCompare(b5.due || "9"), raid: (a5, b5) => PRIOS.indexOf(a5.pr) - PRIOS.indexOf(b5.pr), decisions: (a5, b5) => a5.st === "Pending" !== (b5.st === "Pending") ? a5.st === "Pending" ? -1 : 1 : a5.st === "Pending" ? (a5.due || "9").localeCompare(b5.due || "9") : b5.date.localeCompare(a5.date) };
-  var SORTKEY = { t: (x5) => x5.t.toLowerCase(), o: (x5) => who(x5.o).toLowerCase(), due: (x5) => x5.due || "9999", pr: (x5) => PRIOS.indexOf(x5.pr), st: (x5) => x5.st, ws: (x5) => (x5.ws || "").toLowerCase(), type: (x5) => x5.type, resp: (x5) => (x5.resp || "").toLowerCase(), by: (x5) => (x5.by || "").toLowerCase(), date: (x5) => x5.date, id: (x5) => x5.id, src: (x5) => srcKind(x5), upd: (x5) => x5.upd_at || "", raised: (x5) => x5.raised || "" };
+  var SORTKEY = { t: (x5) => x5.t.toLowerCase(), o: (x5) => who(x5.o).toLowerCase(), due: (x5) => x5.due || "9999", pr: (x5) => PRIOS.indexOf(x5.pr), st: (x5) => x5.st, ws: (x5) => (x5.ws || "").toLowerCase(), type: (x5) => x5.type, resp: (x5) => linkWords(x5.resp || "").toLowerCase(), by: (x5) => (x5.by || "").toLowerCase(), date: (x5) => x5.date, id: (x5) => x5.id, src: (x5) => srcKind(x5), upd: (x5) => x5.upd_at || "", raised: (x5) => x5.raised || "" };
   function rows(t47 = shared.WT, L3 = items().filter((x5) => passes(x5)), s5 = SORT[t47], def = DEFSORT[t47]) {
     if (!s5) return L3.sort(def);
     if (s5.col === "_def") {
@@ -38458,7 +38633,7 @@ ${s5}`;
     if (t47 === "decisions" && k5 === "due") return `<td data-f="due" class="${decLate(x5) ? "late" : ""}" style="white-space:nowrap">${x5.due ? fd(x5.due) : "—"}<div class="x">${x5.st === "Pending" && x5.due ? rel(x5.due) : ""}</div></td>`;
     const h5 = (() => {
       if (k5 === "t") {
-        const sub = t47 === "actions" ? `${x5.ws ? esc(x5.ws) : ""}${x5.upd ? ` · ${esc(x5.upd)}` : ""}` : t47 === "raid" ? `${x5.type}${x5.ws ? " · " + esc(x5.ws) : ""}${x5.type === "Dependency" && x5.st === "Open" && !x5.ms ? " · not attached" : ""}` : "";
+        const sub = t47 === "actions" ? `${x5.ws ? esc(x5.ws) : ""}${x5.upd ? ` · ${linkHtml(x5.upd)}` : ""}` : t47 === "raid" ? `${x5.type}${x5.ws ? " · " + esc(x5.ws) : ""}${x5.type === "Dependency" && x5.st === "Open" && !x5.ms ? " · not attached" : ""}` : "";
         return `<td class="title" data-f="t">${ico(kindOf(t47, x5))}${esc(x5.t)}${cmTag(x5)}${x5.ar ? ' <span class="tag">Archived</span>' : ""}<div class="x"><a href="#" class="rowid" data-rid="${x5.id}" title="Open ${x5.id}">${x5.id}</a> · ${pLink(x5.p)}${sub}</div></td>`;
       }
       if (k5 === "o") return `<td data-f="o">${personLink(x5.o)}</td>`;
@@ -38466,7 +38641,7 @@ ${s5}`;
       if (k5 === "pr") return `<td data-f="${t47 === "raid" ? "imp" : "pr"}" class="${x5.pr === "Urgent" ? "prio-urgent" : ""}">${x5.pr}</td>`;
       if (k5 === "st") return `<td data-f="st">${x5.st}</td>`;
       if (k5 === "ws") return `<td data-f="ws">${esc(x5.ws || "—")}</td>`;
-      if (k5 === "resp") return `<td data-f="resp" class="x">${x5.resp ? esc(x5.resp) : '<span class="tag bad">None yet</span>'}</td>`;
+      if (k5 === "resp") return `<td data-f="resp" class="x">${x5.resp ? linkHtml(x5.resp) : '<span class="tag bad">None yet</span>'}</td>`;
       if (k5 === "by") return `<td data-f="by">${personLink(x5.by, x5.by)}</td>`;
       if (k5 === "date") return `<td data-f="date" style="white-space:nowrap">${fd(x5.date)}</td>`;
       if (k5 === "id") return `<td class="x idc" style="white-space:nowrap">${x5.id}</td>`;
@@ -42554,7 +42729,7 @@ ${s5}`;
   }
 
   // components/TextEditor.jsx
-  function TextEditor({ id: id2, value, cls, rows: rows2 = 2, multiline = true, placeholder, labelledBy, describedBy, onInput, onCommit, ai: ai2 }) {
+  function TextEditor({ id: id2, value, cls, rows: rows2 = 2, multiline = true, placeholder, labelledBy, describedBy, onInput, onCommit, ai: ai2, links = false }) {
     const box = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -42567,7 +42742,7 @@ ${s5}`;
     on2.current = { onInput, onCommit };
     h2(() => {
       const el2 = box.current;
-      const h5 = creaiteEditor(el2, { features: "plain", text: value, multiline, prop: "value", ...ai2 ? { ai: ai2 } : {} });
+      const h5 = creaiteEditor(el2, { features: "plain", text: value, multiline, prop: "value", ...links ? { links: true } : {}, ...ai2 ? { ai: ai2 } : {} });
       ed3.current = h5;
       const blur = () => {
         if (on2.current.onCommit) on2.current.onCommit(h5.value());
@@ -42795,6 +42970,7 @@ ${s5}`;
               value: texts[k5] || "",
               labelledBy: `shN-${k5}-l`,
               ai: ai2,
+              links: true,
               describedBy: lines.length ? `shC-${k5}` : void 0,
               onInput: (t47) => {
                 shapeText.value = { ...shapeText.value, [k5]: t47 };
@@ -43019,7 +43195,7 @@ ${s5}`;
      <div class="card"><h2><a href="#" class="hlink" data-nav="actions:dueor:${raw(code)}">Actions due or overdue</a>${acts2.length ? html` <span class="sub">· ${acts2.length}</span>` : ""}</h2><div class="mini-list">${raw(acts2.slice(0, S.listCap || 10).map((x5) => `<div data-open="actions:${x5.id}" style="cursor:pointer"><span class="${overdue(x5) ? "late" : ""}" style="display:inline-block;width:110px">${rel(x5.due)}</span>${ico("action")}${esc(x5.t)} <span class="sub">— ${esc(who(x5.o))}</span></div>`).join("") || '<div class="sub">Nothing due in the next ' + S.dueSoon + " days.</div>")}</div>${acts2.length > (S.listCap || 10) ? html`<a href="#" class="seeall" data-nav="actions:dueor:${raw(code)}">+${raw(acts2.length - (S.listCap || 10))} more — see all ›</a> ` : ""}${raw(seeAll(nOpenA, `${pName(code)} open action`, "actions:open:" + code))}</div>
      ${raw(undatedCard(code))}
    </div><div style="display:grid;gap:16px;align-content:start">
-     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"}">${r4.pr}</span> <span class="sub">${r4.type}</span> ${esc(r4.t)}<div class="sub rk-txt">${esc(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
+     <div class="card"><h2><a href="#" class="hlink" data-nav="raid:open:${raw(code)}">Top risks and issues</a></h2><div class="mini-list">${raw(risks.map((r4) => `<div class="rkrow" data-open="raid:${r4.id}" tabindex="0" style="cursor:pointer">${ico(r4.type)}<span class="${r4.pr === "Urgent" ? "prio-urgent" : "tag"}">${r4.pr}</span> <span class="sub">${r4.type}</span> ${esc(r4.t)}<div class="sub rk-txt">${linkHtml(rkText(r4))}</div></div>`).join("") || '<div class="sub">No open risks or issues.</div>')}</div>${raw(seeAll(nOpenR, `${pName(code)} open RAID item`, "raid:open:" + code))}</div>
      <div class="card"><h2><a href="#" class="hlink" data-nav="decisions:all:${raw(code)}">Recent decisions</a></h2><div class="mini-list">${raw(dec.map((d5) => `<div data-open="decisions:${d5.id}" style="cursor:pointer">${ico("decision")}${esc(d5.t)}<div class="sub">${fd(d5.date)} — ${esc(d5.by)}</div></div>`).join("") || '<div class="sub">None yet.</div>')}</div>${raw(seeAll(nDec, `${pName(code)} decision`, "decisions:all:" + code))}</div>
      ${raw(depsCard(code))}
      ${cv ? html`<div class="card"><h2>Client messaging</h2><div class="sub">${raw(cv)} client-visible item${cv === 1 ? "" : "s"} still need client messaging before the next client report.</div></div>` : ""}
@@ -45169,10 +45345,11 @@ ${pre}**Current state title:** ${title}`);
   var deTimes = (n4) => n4 === 1 ? "once" : n4 === 2 ? "twice" : `${n4} times`;
   var deChasedWords = (c5) => `Chased ${fd(c5.last)}, ${deTimes(c5.n)}`;
   var deReplyBy = (r4) => r4 ? ` It would be helpful to hear back by ${(/* @__PURE__ */ new Date(r4 + "T12:00:00")).toLocaleDateString("en-GB", { weekday: "long" })} ${fd(r4)}.` : "";
+  var deLinks = (t47) => linkSegments(t47).map((x5) => x5.href ? `<a href="${esc(x5.href)}" target="_blank" rel="noopener noreferrer" style="color:${DE_COLOURS.link || "#0b5cad"};text-decoration:underline;">${esc(x5.t)}</a>` : esc(x5.t)).join("");
   function deRowHtml(i5, o5) {
     const C5 = DE_COLOURS, e4 = esc, d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7), colour = d5.level === "over" ? C5.red : d5.level === "soon" ? C5.amber : C5.ink, strong = d5.level === "over" ? "font-weight:bold;" : "";
-    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${e4(String(i5.resp || "").trim() || "none recorded yet")}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
-    const upd = o5.includeUpdate && String(i5.upd || "").trim() ? `<br><span style="color:${C5.muted};">Latest update: ${e4(i5.upd)}</span>` : "";
+    const what = i5.k === "raid" ? `<b style="font-weight:bold;">${e4(i5.type || "Risk")}:</b> ${e4(i5.t)}<br><span style="color:${C5.muted};">Response: ${String(i5.resp || "").trim() ? deLinks(String(i5.resp).trim()) : "none recorded yet"}</span>` : i5.k === "decisions" ? `<b style="font-weight:bold;">Decision needed:</b> ${e4(i5.t)}` : e4(i5.t);
+    const upd = o5.includeUpdate && String(i5.upd || "").trim() ? `<br><span style="color:${C5.muted};">Latest update: ${deLinks(i5.upd)}</span>` : "";
     const ch2 = o5.chased && o5.chased[i5.id] ? `<br><span style="color:${C5.muted};">${e4(deChasedWords(o5.chased[i5.id]))}</span>` : "";
     return `<tr style="vertical-align:top;">${deTd(e4(i5.id), "white-space:nowrap;")}${deTd(what + upd + ch2)}${deTd(`<span style="color:${colour};${strong}">${e4(d5.date)}</span>${d5.words ? `<br><span style="color:${colour};${strong}">${e4(d5.words)}</span>` : ""}`, "white-space:nowrap;")}${deTd(i5.pr === "Urgent" ? `<b style="font-weight:bold;">Urgent</b>` : e4(i5.pr || ""), "white-space:nowrap;")}</tr>`;
   }
@@ -45184,8 +45361,8 @@ ${pre}**Current state title:** ${title}`);
     list.forEach((i5) => {
       const d5 = deDue(i5.due, o5.today, o5.dueSoon ?? 7);
       out.push(`  ${i5.id.padEnd(w6)}  ${i5.k === "raid" ? `${i5.type || "Risk"}: ` : i5.k === "decisions" ? "Decision needed: " : ""}${i5.t}  |  ${d5.date}${d5.words ? ` (${d5.words})` : ""}  |  ${i5.pr || ""}`);
-      if (i5.k === "raid") out.push(`  ${pad}  Response: ${String(i5.resp || "").trim() || "none recorded yet"}`);
-      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad}  Latest update: ${i5.upd}`);
+      if (i5.k === "raid") out.push(`  ${pad}  Response: ${linkWithAddress(String(i5.resp || "").trim()) || "none recorded yet"}`);
+      if (o5.includeUpdate && String(i5.upd || "").trim()) out.push(`  ${pad}  Latest update: ${linkWithAddress(i5.upd)}`);
       if (o5.chased && o5.chased[i5.id]) out.push(`  ${pad}  ${deChasedWords(o5.chased[i5.id])}`);
     });
     return out;
@@ -47771,7 +47948,7 @@ ${d5.text}`);
     window.addEventListener("keydown", (e4) => {
       if (e4.key !== "Escape" || !pkOn() || shared.EDITING) return;
       const a5 = document.activeElement;
-      if (document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box")) return;
+      if (document.querySelector("dialog:modal") || shared.CAL || comboboxOpen() || a5 && a5.closest && a5.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop")) return;
       if (a5 && a5.closest && a5.closest("#chat")) {
         if (shared.RUN) return;
         e4.preventDefault();
@@ -48563,6 +48740,8 @@ ${d5.text}`);
         text: el2.textContent,
         multiline: !!el2.dataset.pkml,
         prop: "textContent",
+        links: !!el2.dataset.pkml,
+        /* #121: links in the longer text fields (update, response, reasoning, options, client messaging); not in the title or the one-line fields (keys and short labels) */
         ...el2.dataset.pkml || el2.id === "pkTitle" ? { ai: { place: el2.dataset.pkml ? "plain" : "line", project: () => {
           const x5 = shared.CUR && pkX(shared.CUR.k, pkCid());
           return x5 && x5.p || "";
@@ -48660,7 +48839,7 @@ ${d5.text}`);
     return out;
   }
   var pkShort = (s5, n4 = 60) => {
-    s5 = String(s5 ?? "").replace(/\s+/g, " ").trim();
+    s5 = linkWords(String(s5 ?? "")).replace(/\s+/g, " ").trim();
     return !s5 ? "empty" : s5.length > n4 ? s5.slice(0, n4 - 1) + "…" : s5;
   };
   function pkFeed(x5, k5) {
@@ -50540,6 +50719,7 @@ ${d5.text}`);
           value: start,
           labelledBy: `pp-n-${sec}-l`,
           ai: ai2,
+          links: true,
           onCommit: (now) => {
             if (now.trim() !== start.trim()) onSave(sec, now);
           }
@@ -50694,6 +50874,7 @@ ${d5.text}`);
           placeholder: "One question or ask a line",
           labelledBy: "pp-q-l",
           ai: aiOf(mo2),
+          links: true,
           onCommit: (now) => {
             if (now.trim() !== start.trim()) saveFocus({ questions: now.split("\n").map((x5) => x5.trim()).filter(Boolean) }, "questions");
           }
@@ -53320,6 +53501,7 @@ ${d5.text}`);
           rows: 1,
           cls: "fu-in fu-ed",
           labelledBy: `${id2}-l`,
+          links: true,
           onCommit: (t47) => {
             if (t47.trim() !== v5) fuEdit(row2.key, f5, t47.trim());
           }
@@ -53482,12 +53664,12 @@ ${d5.text}`);
                   (row2.change || []).map((c5) => /* @__PURE__ */ u2("span", { class: "fu-ch", children: [
                     c5.label,
                     " ",
-                    /* @__PURE__ */ u2("s", { children: c5.from || "—" }),
+                    /* @__PURE__ */ u2("s", { children: linkWords(c5.from) || "—" }),
                     " ",
                     /* @__PURE__ */ u2("span", { "aria-hidden": "true", children: "→" }),
                     /* @__PURE__ */ u2("span", { class: "vh", children: " to " }),
                     " ",
-                    c5.to
+                    linkWords(c5.to)
                   ] }, c5.f))
                 ]
               }
@@ -61386,7 +61568,9 @@ ${d5.text}`);
         "dcIcon",
         "deCopyText",
         "dePolish",
+        "deRowHtml",
         "deSent",
+        "deTextRows",
         "decPending",
         "decide",
         "defs",
@@ -61479,7 +61663,12 @@ ${d5.text}`);
         "kindLabel",
         "laneDrop",
         "layoutOf",
+        "linkHtml",
+        "linkSegments",
         "linkUrl",
+        "linkWithAddress",
+        "linkWords",
+        "linkWrite",
         "loadChat",
         "loadPrep",
         "loadTab",
@@ -61597,6 +61786,7 @@ ${d5.text}`);
         "pkQuiet",
         "pkSetDate",
         "pkSetStatus",
+        "pkShort",
         "pkUndoLast",
         "pkWsAddOK",
         "portfolioTable",
@@ -61690,6 +61880,7 @@ ${d5.text}`);
         "setChatWidth",
         "setLayout",
         "setLive",
+        "setMark",
         "setOf",
         "setPTab",
         "setPalette",

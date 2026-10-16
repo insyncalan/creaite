@@ -3,6 +3,7 @@
    Unchanged apart from `export`, `shared.` for the shared state (core/state.js) and the load-time steps, now in
    boot…() functions that src/main.js calls in today's order. */
 import { dcIcon, openChat, say, send } from "./ask.js";
+import { linkWords as lw } from "./core/linkText.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { openDatePicker } from "./components/Picker.jsx";
 import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
@@ -103,7 +104,7 @@ export function renderToday(){
   const att=attentionItems(), ac=capped(att.map((x,i)=>x.html(i+1)),5,"attn");
   $("#nAttn").textContent=att.length?String(att.length):""; putHTML($("#attnList"),ac.html?raw(ac.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing needs your attention.</span></div></li>`); putHTML($("#attnMore"),raw(ac.more));
   const mine=[...mineOver,...mineSoon].sort((a,b)=>a.due.localeCompare(b.due)), mc=capped(mine.map((x,i)=>tl(i+1,tLink(html`data-open="actions:${x.id}"`,html`${x.t??""}`),
-    html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${x.upd.length>140?x.upd.slice(0,139)+"…":x.upd}`:""}.`,itemActs("actions",x))),S.listCap||10,"mine");
+    html`${raw(dueWords(x.due))} on ${x.p?raw(projLink(x.p)):"no project"}${x.pr==="Urgent"?", marked Urgent":""}${x.upd?`. Latest: ${lw(x.upd).length>140?lw(x.upd).slice(0,139)+"…":lw(x.upd)}`:""}.`,itemActs("actions",x))),S.listCap||10,"mine");
   putHTML($("#nMine"),raw(mine.length?countLink(`${plur(mine.length,"action")} of yours due or overdue`,mine.length,"actions:open:",{st:["Open","Delayed"],due:["overdue","soon"],o:["@me"]}):""));   /* BL-190 */ putHTML($("#mineList"),mc.html?raw(mc.html):html`<li><span class="n"></span><div class="tb"><span class="none">Nothing due from you this week.</span></div></li>`); putHTML($("#mineMore"),raw(mc.more));
   renderPromises();   /* BL-125 A: You owe and Waiting on */
   /* Resolved: items closed since the last visit, from the change log */
