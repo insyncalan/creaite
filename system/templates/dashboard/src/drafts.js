@@ -234,13 +234,14 @@ export function sentLine(o){ const d=fd(o.today||TODAY), via=o.via==="message"?"
 /** Stage the line on each item (queued in order, each to its own item by ID, so reordering or unticking changes nothing) and offer
     one Undo for the batch. Returns how many were staged.
     @param {{k:string,id:string,need?:string}[]} entries @param {{name:string,mode:string,replyBy?:string,via?:string,chases?:any}} o */
-export async function sentLog(entries,o){ let ok=0; const via=o.via||sentVia(), ch=o.chases||SA().chases||{};
+export async function sentLog(entries,o){ let ok=0; const mine=[];   /* the staged entries this press made: Undo removes exactly these */ const via=o.via||sentVia(), ch=o.chases||SA().chases||{};
   for(const e of entries){ const x=REC(e.k,e.id), f=SENT_FIELD[e.k]; if(!x||!f) continue;
     const conf=deBarred(deItem(e.k,x)), line=sentLine({name:o.name,via,mode:o.mode,n:(ch[e.id]||{}).n,replyBy:o.replyBy,need:e.need,confidential:conf});
     const was=String(x[f]||"").trim();
-    if(await pkCommit(e.k,e.id,{[f]:was?line+"\n"+was:line},"Latest update",was?"…":"none",line,{logNote:"Draft email: I sent it"})) ok++; }
+    const before=new Set(shared.PKS);
+    if(await pkCommit(e.k,e.id,{[f]:was?line+"\n"+was:line},"Latest update",was?"…":"none",line,{logNote:"Draft email: I sent it"})){ ok++; mine.push(...shared.PKS.filter(s=>!before.has(s)&&s.k===e.k&&s.id===e.id)); } }
   if(!ok) return 0;
-  snack(ok===1?"Logged.":`Logged on ${plur(ok,"item")}.`,async()=>{ for(let i=0;i<ok;i++) await pkUndoLast(); });   /* the toast's own Undo button */
+  snack(ok===1?"Logged.":`Logged on ${plur(ok,"item")}.`,async()=>{ for(const s of mine.slice().reverse()) await pkUndoLast(s); });   /* the toast's own Undo button */
   return ok; }
 /* "I sent it" in the popup, update and chase modes: one record, then a Latest update on each ticked item */
 export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase needs the live server"); return; }
