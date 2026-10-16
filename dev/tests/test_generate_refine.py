@@ -773,6 +773,43 @@ class RefineRules(unittest.TestCase):
             self.build(text="x" * 1501, note="Shorter")
         self.assertIn("1500", str(why.exception))
 
+    def test_the_previous_version_is_stripped_before_it_is_counted_and_used(self):
+        got, _ = self.build(text="  \n" + "x" * 1500 + " \n ", note="Shorter")                                                  # padding does not count towards the 1500
+        self.assertIn("--- PREVIOUS VERSION ---\n" + "x" * 1500 + "\n--- END OF THE PREVIOUS VERSION ---", got.values["note"])
+        self.assertTrue(got.extra["refine"])
+        blank, _ = self.build(text=" \n  ", note="Lead with risks")                                                           # only white space is no previous version
+        self.assertFalse(blank.extra["refine"])
+        self.assertEqual(blank.values["note"], "Alan's steer: Lead with risks\n")
+
+    def test_the_refine_prompt_says_a_change_can_never_add_a_fact(self):
+        got, _ = self.build(text="UAT is late.", note="Add the internal risks.")
+        self.assertIn("a change can never add a fact that is not in them", got.values["note"])
+        self.assertIn("THIS IS A REFINEMENT", got.values["note"])
+
+    def test_an_unknown_source_reference_is_not_a_source(self):
+        kept, gone = drafts.refine_keep_sourced("Made up. [S9]\nTrue. [S1]\nBoth. [S1, S9]", self.SRC)
+        self.assertEqual((kept, gone), ("True. [S1]\nBoth. [S1, S9]", 1))                                                      # one good reference is enough; none is not
+
+    def test_the_filter_cuts_where_sentences_cuts(self):
+        """The filter splits a reply by its own copy of the pattern: it must agree with `sentences` (digits, decimals, dates, abbreviations)."""
+        import random
+        bits = ["UAT is late", "Q3 2026. Next steps agreed", "The fee is 3.5 percent", "2026-10-09 is the date", "Dr. Smith agreed", "e.g. Falcon",
+                "v2.1 is out", "It is 10.30. 12 people came", "\"Quoted.\" Then more", "Done (really.) (Next)", "- a bullet", "!", "Why? 3 reasons",
+                "ok. 4. five", "Wait... Then", "Cost [S1] first. 2 more"]
+        rng, bad = random.Random(7), []
+        for _ in range(200):
+            parts = []
+            for _ in range(rng.randint(1, 6)):
+                parts.append(rng.choice(bits) + rng.choice(["", ".", ". [S1]", " [S1]", "?", "! [S1]"]))
+                parts.append(rng.choice([" ", " ", "\n", "\n\n", "  "]))
+            reply = "".join(parts).strip()
+            for src in ([], self.SRC):
+                want = sum(1 for m in drafts.marked(reply, src) if m["unsourced"])
+                kept, gone = drafts.refine_keep_sourced(reply, src)
+                if gone != want or [m["text"] for m in drafts.marked(kept, src)] != [m["text"] for m in drafts.marked(reply, src) if not m["unsourced"]]:
+                    bad.append((reply, src, gone, want))
+        self.assertEqual(bad[:3], [])
+
     def test_a_client_safe_refine_is_refused_before_any_facts_are_built(self):
         from unittest import mock
         with mock.patch.object(drafts, "REFINE_NOT_CLIENT", "STOP"), self.assertRaises(drafts.Refused) as why:
