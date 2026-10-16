@@ -51516,15 +51516,15 @@ ${d5.text}`);
   var SENT_FIELD = { actions: "upd", raid: "resp", decisions: "why" };
   var sentVia = () => shared.SENTVIA === "message" ? "message" : "email";
   function sentLine(o5) {
-    const d5 = fd(o5.today || TODAY), via = o5.via === "message" ? "message" : "email", who2 = o5.name || "them", by2 = o5.replyBy ? `; reply asked for by ${fd(o5.replyBy)}` : "";
-    if (o5.confidential) return `${d5}: ${o5.mode === "update" ? "Emailed" : "Chased"} ${who2} by ${via}.`;
-    if (o5.mode === "update") return `${d5}: Emailed ${who2} by ${via} asking for an update.`;
+    const d5 = fd(o5.today || TODAY), via = o5.via === "message" ? "message" : "email", whom = o5.name || "them", by2 = o5.replyBy ? `; reply asked for by ${fd(o5.replyBy)}` : "";
+    if (o5.confidential) return `${d5}: ${o5.mode === "update" ? "Emailed" : "Chased"} ${whom} by ${via}.`;
+    if (o5.mode === "update") return `${d5}: Emailed ${whom} by ${via} asking for an update.`;
     if (o5.mode === "help") {
       const need = String(o5.need || "").replace(/\s+/g, " ").replace(/\s+done\.?$/i, "").replace(/\.$/, "").trim().slice(0, 80);
-      return `${d5}: Asked ${who2} by ${via} for ${need || "help"}.`;
+      return `${d5}: Asked ${whom} by ${via} for ${need || "help"}.`;
     }
-    if (o5.mode === "decision") return `${d5}: Asked ${who2} for a decision by ${via}${by2}.`;
-    return `${d5}: Chased ${who2} by ${via}${o5.n ? ` (reminder ${o5.n})` : ""}${by2}.`;
+    if (o5.mode === "decision") return `${d5}: Asked ${whom} for a decision by ${via}${by2}.`;
+    return `${d5}: Chased ${whom} by ${via}${o5.n ? ` (reminder ${o5.n})` : ""}${by2}.`;
   }
   async function sentLog(entries, o5) {
     let ok2 = 0;
