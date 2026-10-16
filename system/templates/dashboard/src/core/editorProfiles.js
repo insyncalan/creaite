@@ -4,7 +4,8 @@
    for a profile (components/EditorBar.jsx draws it) and the same buttons then show, and do the same, wherever that profile is
    used (Alan, 15-10-2026: "all editors should be consistent").
 
-   - notes:   Notes and the capture drawer. Headings 1 to 3, B I S code, lists, checklist, quote, link, [[ @ #, table, image.
+   - notes:   Notes. One line: Heading menu, B I S code, List menu, quote, Link, Insert menu, undo and redo (#122, Alan's final layout, 16-10-2026).
+   - capture: the capture drawer. The old flat shared buttons; no pickers yet.
    - current: Current state's two panes. The same, minus what its storage can't hold yet: no checklist (v2.2.0), no code (Word can't
               show it), no table, and no [[ @ # (item links come with the shared chips, #122 step C).
    - plain:   item fields, Prep notes, draft boxes. No toolbar at all: they store plain text (decision 2). They get the
@@ -25,12 +26,13 @@
 /** How many `#` Current state adds to the editor's heading level when it writes them (and takes off when it reads them). */
 export const HEAD_SHIFT = 2;
 
-/** @typedef {{id: string, label: string, name: string, tip?: string, keys?: string, rc?: string, host?: boolean,
-    run?: (c: any, e: any) => any, on?: (e: any) => boolean, can?: (e: any) => boolean}} ToolDef */
+/** @typedef {{id: string, label: string, name: string, tip?: string, keys?: string, rc?: string, host?: boolean, hint?: string, menu?: boolean,
+    items?: (ToolDef|"|")[], run?: (c: any, e: any) => any, on?: (e: any) => boolean, can?: (e: any) => boolean}} ToolDef */
 /** The tools. `run` gets a focused Tiptap chain (and the editor) and returns the chain; `on` says whether it is in force at the cursor (aria-pressed).
     `rc` is the name Current state's buttons have always carried in data-rc (kept so the tests and the dashboard spec still find them).
     @type {Record<string, ToolDef>} */
 export const ED_TOOLS = {
+  text: { id: "text", label: "T", name: "Text", tip: "Plain text (also clears a heading)", run: c => c.setParagraph(), on: e => !e.isActive("heading") },
   h1: { id: "h1", label: "H1", name: "Heading 1", run: c => c.toggleHeading({ level: 1 }), on: e => e.isActive("heading", { level: 1 }) },
   h2: { id: "h2", label: "H2", name: "Heading 2", run: c => c.toggleHeading({ level: 2 }), on: e => e.isActive("heading", { level: 2 }) },
   h3: { id: "h3", label: "H3", name: "Heading 3", run: c => c.toggleHeading({ level: 3 }), on: e => e.isActive("heading", { level: 3 }) },
@@ -41,9 +43,9 @@ export const ED_TOOLS = {
   ul: { id: "ul", label: "•", name: "Bulleted list", rc: "insertUnorderedList", run: c => c.toggleBulletList(), on: e => e.isActive("bulletList") },
   ol: { id: "ol", label: "1.", name: "Numbered list", rc: "insertOrderedList", run: c => c.toggleOrderedList(), on: e => e.isActive("orderedList") },
   task: { id: "task", label: "☑", name: "Checklist", run: c => c.toggleTaskList(), on: e => e.isActive("taskList") },
-  outdent: { id: "outdent", keys: "Shift+Tab", label: "⇤", name: "Outdent", tip: "Outdent (⇧Tab)", rc: "outdent", run: (c, e) => c.liftListItem(itemType(e)),
+  outdent: { id: "outdent", keys: "Shift+Tab", hint: "⇧Tab", label: "⇤", name: "Outdent", tip: "Outdent (⇧Tab)", rc: "outdent", run: (c, e) => c.liftListItem(itemType(e)),
     can: e => e.isActive("listItem") || e.isActive("taskItem") },
-  indent: { id: "indent", keys: "Tab", label: "⇥", name: "Indent", tip: "Indent: a nested list (Tab)", rc: "indent", run: (c, e) => c.sinkListItem(itemType(e)),
+  indent: { id: "indent", keys: "Tab", hint: "Tab", label: "⇥", name: "Indent", tip: "Indent: a nested list (Tab)", rc: "indent", run: (c, e) => c.sinkListItem(itemType(e)),
     can: e => e.isActive("listItem") || e.isActive("taskItem") },
   quote: { id: "quote", label: "❝", name: "Quote", rc: "formatBlock:blockquote", run: c => c.toggleBlockquote(), on: e => e.isActive("blockquote") },
   link: { id: "link", keys: "Meta+Shift+K Control+Shift+K", label: "Link", name: "Link", tip: "Add or edit a link (⌘⇧K)", rc: "link", on: e => e.isActive("link") },
@@ -53,9 +55,18 @@ export const ED_TOOLS = {
   person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
   item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
   table: { id: "table", label: "▦", name: "Table", host: true },
-  image: { id: "image", label: "Image", name: "Add a picture", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
+  image: { id: "image", label: "Image", name: "Add a picture", hint: "PNG or JPEG, 2 MB", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
   undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: c => c.undo() },
   redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: c => c.redo() },
+};
+/** ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: related tools sit in hover menus. A menu is a profile entry
+    "m:<key>"; its items are the tools above (a host tool only if the host can do it; a menu left with none is not drawn). Items that show a
+    state (Text, Headings, the lists) are radios, ticked when in force; Indent, Outdent, Clear formatting and the inserts are plain items.
+    @type {Record<string, ToolDef>} */
+export const ED_MENUS = {
+  heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map(x => x === "|" ? x : ED_TOOLS[x]) },
+  list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map(x => x === "|" ? x : ED_TOOLS[x]) },
+  insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map(x => ED_TOOLS[x]) },
 };
 /** @typedef {{id: string, group: string, name: string, desc: string, icon: string, key?: string, host?: boolean, node?: string, is?: string, alias?: string[],
     run?: (c: any, e: any) => any}} SlashDef */
@@ -123,23 +134,36 @@ function itemType(e) { return e.isActive("taskItem") ? "taskItem" : "listItem"; 
 /** Each profile's toolbar, in order ("|" is a divider). What a profile leaves out is left out on purpose (see the top).
     @type {Record<string, Profile>} */
 export const ED_PROFILES = {
-  notes: { tip: "Notes and the capture drawer",
+  notes: { tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
+    tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"] },
+  capture: { tip: "The capture drawer: the shared buttons, flat (no pickers yet)",
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "code", "|", "ul", "ol", "task", "outdent", "indent", "quote", "|", "link", "unlink", "clear", "|",
-      "note", "person", "item", "table", "image", "|", "undo", "redo"] },
+      "undo", "redo"] },
   current: { tip: "Current state",
     tools: ["h1", "h2", "h3", "|", "b", "i", "s", "|", "ul", "ol", "outdent", "indent", "quote", "image", "|", "link", "unlink", "clear", "|", "undo", "redo"] },
   plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
   none: { tip: "a host that draws its own frame (the report sheets)", tools: [] },
 };
 
+/** A menu with the items the host can do, dividers tidied; null when none is left. @param {ToolDef|undefined} m @param {string[]} hostTools @returns {ToolDef|null} */
+function menuFor(m, hostTools) {
+  if (!m) return null;
+  const list = /** @type {(ToolDef|"|")[]} */ ((m.items || []).filter(x => x === "|" || !x.host || hostTools.includes(x.id)));
+  while (list.length && list[0] === "|") list.shift();
+  while (list.length && list[list.length - 1] === "|") list.pop();
+  return list.some(x => x !== "|") ? { ...m, items: list } : null;
+}
+
 /** The tools a profile shows, with the dividers tidied (none first, last or doubled), for a host that can do `hostTools`.
     @param {string} profile @param {string[]} [hostTools] @returns {(ToolDef|"|")[]} */
 export function profileTools(profile, hostTools = []) {
-  const want = (ED_PROFILES[profile] || ED_PROFILES.none).tools.filter(id => id === "|" || (ED_TOOLS[id] && (!ED_TOOLS[id].host || hostTools.includes(id))));
   /** @type {(ToolDef|"|")[]} */
   const out = [];
-  for (const id of want) {
-    if (id === "|") { if (out.length && out[out.length - 1] !== "|") out.push("|"); } else out.push(ED_TOOLS[id]);
+  for (const id of (ED_PROFILES[profile] || ED_PROFILES.none).tools) {
+    if (id === "|") { if (out.length && out[out.length - 1] !== "|") out.push("|"); continue; }
+    if (id.startsWith("m:")) { const m = menuFor(ED_MENUS[id.slice(2)], hostTools); if (m) out.push(m); continue; }
+    const t = ED_TOOLS[id];
+    if (t && (!t.host || hostTools.includes(id))) out.push(t);
   }
   while (out.length && out[out.length - 1] === "|") out.pop();
   return out;

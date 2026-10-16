@@ -375,7 +375,10 @@ class Slash(LiveBrowserCase):
         self.assertEqual(b.eval(f"!!{MENU}"), False)
         b.click(".nbar [data-nt=code]")
         b.key("Enter")
-        b.click(".nbar [data-nt=h2]")                     # a heading
+        b.click(".nbar [data-nt=m-heading]")              # a heading (#122: Heading 2 is in the Heading menu)
+        b.wait("!!document.querySelector('.nbar [role=menu] [data-cmd=h2]')", 5)
+        b.click(".nbar [role=menu] [data-cmd=h2]")
+        b.wait("!document.querySelector('.nbar [role=menu]')", 5)
         b.type("/")
         b.pump(0.2)
         self.assertEqual(b.eval(f"!!{MENU}"), False)

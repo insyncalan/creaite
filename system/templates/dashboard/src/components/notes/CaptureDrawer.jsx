@@ -243,7 +243,7 @@ export function CaptureDrawer() {
         <span>Confidential</span>
         {n.confidential ? <span class="sub">Kept out of prep pages and client reports; Claude reads it only if you say yes</span> : null}
       </label>
-      <EditorBar profile="notes" cls="capbar" handle={() => ed} />
+      <EditorBar profile="capture" cls="capbar" handle={() => ed} />
       <div ref={box} id="capBody" class="capbody" role="textbox" aria-multiline="true" aria-label="Note" aria-describedby="capSaved"
         data-ph="Type the note: what was said, what you think, who to follow up…" spellcheck />
       <div class="capfoot">

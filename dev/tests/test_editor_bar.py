@@ -22,10 +22,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from live_browser import LiveBrowserCase  # noqa: E402
 
 META, SHIFT, CTRL = 4, 8, 2
-NOTES = ["h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent", "indent", "quote", "link", "unlink", "clear",
-         "note", "person", "item", "table", "image", "undo", "redo"]
+# #122 final layout: Notes is one line of controls; Heading, List and Insert are hover menus whose items are listed beside them
+NOTES = ["m-heading", "b", "i", "s", "code", "m-list", "quote", "link", "m-insert", "undo", "redo"]
+NOTES_MENUS = {"m-heading": ["text", "h1", "h2", "h3", "clear"], "m-list": ["ul", "ol", "task", "indent", "outdent"],
+               "m-insert": ["note", "person", "item", "table", "image"]}
+NOTES_ALL = ["text", "h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent", "indent", "quote", "link", "clear",
+             "note", "person", "item", "table", "image", "undo", "redo"]      # everything the old 23 buttons did, bar Unlink (now the link form's Remove link)
 CURRENT = ["h1", "h2", "h3", "b", "i", "s", "ul", "ol", "outdent", "indent", "quote", "image", "link", "unlink", "clear", "undo", "redo"]
-SHARED = [t for t in NOTES if t not in ("note", "person", "item", "table", "image")]      # the capture drawer: no pickers yet
+SHARED = ["h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent", "indent", "quote", "link", "unlink", "clear", "undo", "redo"]      # the capture drawer: flat, no pickers yet
 PROBE = ("### Delivery\n\nPlain **bold** and ~~struck~~ with [a link](https://example.com/plan) and [mail](mailto:pmo@example.com).\n\n"
          "- one\n  - nested\n- two\n\n1. first\n2. second\n\n#### Risks\n\n> a quote\n\n<!-- # inside a comment -->\n\n"
          "##### Detail\n\n# Stray level one\n\nLast line.")
@@ -44,6 +48,14 @@ class Bars(LiveBrowserCase):
 
     def ids(self, sel):
         return self.b.eval(f"[...document.querySelectorAll({sel!r})].map(b=>b.dataset.nt)")
+
+    def pick(self, menu, cmd):
+        """Open a bar menu with the pointer and click one item (what a person does)."""
+        b = self.b
+        b.click(f".nbar [data-nt={menu}]")
+        b.wait(f"!!document.querySelector('.nbar [role=menu] [data-cmd={cmd}]')", 5)
+        b.click(f".nbar [role=menu] [data-cmd={cmd}]")
+        b.wait("!document.querySelector('.nbar [role=menu]')", 5)
 
     def make_note(self, title="Bar test"):
         b = self.b
@@ -76,20 +88,22 @@ class Bars(LiveBrowserCase):
         b = self.b
         got = b.eval("(()=>{ const f=(p,h)=>profileTools(p,h).filter(t=>t!=='|').map(t=>t.id); "
                      "return { notes:f('notes',['note','person','item','table','image']), notesBare:f('notes',[]), current:f('current',['image']), "
-                     "plain:f('plain',['image']), none:f('none',[]), names:Object.keys(ED_PROFILES) }; })()")
+                     "plain:f('plain',['image']), none:f('none',[]), capture:f('capture',[]), names:Object.keys(ED_PROFILES) }; })()")
         self.assertEqual(got["notes"], NOTES)
-        self.assertEqual(got["notesBare"], SHARED)
+        self.assertEqual(got["notesBare"], ["m-heading", "b", "i", "s", "code", "m-list", "quote", "link", "undo", "redo"])      # no Insert menu without a host
+        self.assertEqual(got["capture"], SHARED)
         self.assertEqual(got["current"], CURRENT)
         self.assertEqual(got["plain"], [])            # decision 2: plain fields keep plain text, no toolbar
         self.assertEqual(got["none"], [])
-        self.assertEqual(sorted(got["names"]), ["current", "none", "notes", "plain"])
-        self.assertEqual(sorted(set(NOTES) - set(CURRENT)), sorted(["task", "code", "note", "person", "item", "table"]))
+        self.assertEqual(sorted(got["names"]), ["capture", "current", "none", "notes", "plain"])
+        self.assertEqual(sorted(set(NOTES_ALL) - {"unlink"} - set(CURRENT)), sorted(["text", "task", "code", "note", "person", "item", "table"]))
 
     def test_notes_current_and_the_capture_drawer_draw_their_profile(self):
         b = self.b
         self.make_note()
         self.assertEqual(self.ids(".nbar [data-nt]"), NOTES)
         self.assertEqual(b.eval("document.querySelectorAll('.nbar').length"), 1)
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [data-nt=unlink]').length"), 0)         # Unlink is the link form's Remove link
         self.assertEqual(b.eval("document.querySelector('.nbar').getAttribute('role')"), "toolbar")
         b.eval("openCapture()")
         b.wait("!document.getElementById('capDrawer').hidden && !!document.querySelector('#capBody.ProseMirror')", 10)
@@ -123,7 +137,7 @@ class Bars(LiveBrowserCase):
         self.make_note("Headings")
         for n in (1, 2, 3):
             b.type(f"Head {n}")
-            b.click(f".nbar [data-nt=h{n}]")
+            self.pick("m-heading", f"h{n}")
             b.eval("document.querySelector('.nbody').cxed.focus('end')")
             b.key("Enter")
             b.key("Enter")                  # a heading ends with Enter; a second makes sure the next line is a paragraph
@@ -139,34 +153,36 @@ class Bars(LiveBrowserCase):
         b.key("b", self.mod())
         b.type("bold")
         b.wait("document.querySelector('.nbar [data-nt=b]').getAttribute('aria-pressed')==='true'", 5)
-        self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=unlink]').getAttribute('aria-disabled')"), "true")
-        b.click(".nbar [data-nt=ul]")
-        b.wait("document.querySelector('.nbar [data-nt=ul]').getAttribute('aria-pressed')==='true'", 5)
-        self.assertIsNone(b.eval("document.querySelector('.nbar [data-nt=indent]').getAttribute('aria-disabled')"))
+        self.pick("m-list", "ul")
+        b.click(".nbar [data-nt=m-list]")
+        b.wait("!!document.querySelector('.nbar [role=menu] [data-cmd=ul]')", 5)
+        self.assertEqual(b.eval("document.querySelector('.nbar [data-cmd=ul]').getAttribute('aria-checked')"), "true")
+        self.assertIsNone(b.eval("document.querySelector('.nbar [data-cmd=indent]').getAttribute('aria-disabled')"))
+        b.key("Escape")
 
     def test_keyboard_flow_roving_tabindex_arrows_home_end_and_escape(self):
         b = self.b
         self.make_note("Keys")
         self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).length"), 1)
         b.eval("document.querySelector('.nbar button[tabindex=\"0\"]').focus()")
-        self.assertEqual(b.eval("document.activeElement.dataset.nt"), "h1")
+        self.assertEqual(b.eval("document.activeElement.dataset.nt"), "m-heading")
         b.key("ArrowRight")
-        b.wait("document.activeElement.dataset.nt==='h2'", 5)
+        b.wait("document.activeElement.dataset.nt==='b'", 5)
         b.key("End")
         b.wait(f"document.activeElement.dataset.nt==={NOTES[-1]!r}", 5)
         b.key("ArrowRight")                                              # wraps, as Menu does
-        b.wait("document.activeElement.dataset.nt==='h1'", 5)
+        b.wait("document.activeElement.dataset.nt==='m-heading'", 5)
         b.key("ArrowLeft")
         b.wait(f"document.activeElement.dataset.nt==={NOTES[-1]!r}", 5)
         b.key("Home")
-        b.wait("document.activeElement.dataset.nt==='h1'", 5)
-        self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"), ["h1"])
+        b.wait("document.activeElement.dataset.nt==='m-heading'", 5)
+        self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"), ["m-heading"])
         b.key("Escape")
         b.wait("document.activeElement===document.querySelector('.nbody')", 5)
         # Enter on a focused button runs it (a click with no mouse) and the cursor goes back to the text
-        b.eval("document.querySelector('.nbar [data-nt=ul]').focus()")
+        b.eval("document.querySelector('.nbar [data-nt=quote]').focus()")
         b.key("Enter")
-        b.wait("document.querySelector('.nbody ul')", 5)
+        b.wait("document.querySelector('.nbody blockquote')", 5)
 
     def test_shortcut_hints_are_announced_the_tab_stop_follows_a_click_and_composing_is_left_alone(self):
         b = self.b
@@ -175,8 +191,7 @@ class Bars(LiveBrowserCase):
         self.assertEqual(keys["b"], "Meta+B Control+B")
         self.assertEqual(keys["s"], "Meta+Shift+X Control+Shift+X")
         self.assertEqual(keys["link"], "Meta+Shift+K Control+Shift+K")
-        self.assertEqual(keys["indent"], "Tab")
-        self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=h1]').getAttribute('aria-keyshortcuts')"), None)
+        self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-keyshortcuts')"), None)
         b.type("word")
         b.click(".nbar [data-nt=i]")
         self.assertEqual(b.eval("[...document.querySelectorAll('.nbar button[data-nt]')].filter(x=>x.tabIndex===0).map(x=>x.dataset.nt)"), ["i"])
@@ -323,8 +338,10 @@ class Bars(LiveBrowserCase):
         self.make_note("Colours")
         b.type("x")
         b.click(".nbar [data-nt=b]")
-        probe = ("(()=>{ const s=n=>{ const e=document.querySelector('.nbar [data-nt='+n+']'), c=getComputedStyle(e); "
-                 "return [c.backgroundColor,c.color,c.opacity]; }; return { on:s('b'), off:s('i'), dis:s('unlink') }; })()")
+        b.click(".nbar [data-nt=m-list]")                                  # outside a list, Indent is greyed
+        b.wait("!!document.querySelector('.nbar [data-cmd=indent]')", 5)
+        probe = ("(()=>{ const s=n=>{ const e=document.querySelector('.nbar [data-nt='+n+'],.nbar [data-cmd='+n+']'), c=getComputedStyle(e); "
+                 "return [c.backgroundColor,c.color,c.opacity]; }; return { on:s('b'), off:s('i'), dis:s('indent') }; })()")
         b.eval("document.documentElement.dataset.theme='dark'")
         got = b.eval(probe)
         self.assertNotEqual(got["on"][0], got["off"][0])                  # pressed shows in dark

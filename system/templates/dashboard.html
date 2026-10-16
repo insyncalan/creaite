@@ -2993,7 +2993,7 @@ a.ppsrc:hover .nm,a.ppsrc:focus-visible .nm{text-decoration:underline;color:var(
 .nmorewrap .ddmenu{right:0;left:auto}
 .nstale{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;padding:8px 12px;border-radius:8px;background:var(--warn-soft);color:var(--ink);font-size:13px}
 .ned{position:relative}
-.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:wrap;position:sticky;top:0;background:var(--surface);z-index:1}
+.ned .nbar{visibility:hidden;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;flex-wrap:nowrap;align-items:center;position:sticky;top:0;background:var(--surface);z-index:1}
 .ndoc:focus-within .ned .nbar{visibility:visible}
 .ned .nbar button,.capbar button{min-width:26px;min-height:26px;padding:4px 5px} .capbar{flex-wrap:wrap;margin-bottom:6px}
 .ned .nbody{min-height:280px;height:auto;resize:none;overflow:visible;padding:4px 0;max-width:72ch;position:relative}
@@ -3121,6 +3121,19 @@ button.nchip{font:inherit;font-size:12px}
 .aisug .aist{display:flex;gap:8px;align-items:center;margin:6px 0}
 .curacts .curai{display:inline-flex}
 /* ===== end BL-301 D ===== */
+
+/* ===== #122 (final layout, Alan 16-10-2026) ===== the Notes bar is one line: Heading, List and Insert are hover menus (components/EditorBar.jsx) */
+.rtemenu{display:inline-flex;flex:none} .rtebar .rtemb{display:inline-flex;align-items:center;gap:2px} .rtebar .rtemb .nch{width:12px;height:12px;display:inline-block}
+.rtebar .rtemb[aria-expanded=true]{background:var(--sunk);color:var(--ink)}
+.rtebar .rtepop{top:100%;margin-top:2px;width:auto;min-width:190px;padding:4px;text-align:left}
+.rtebar .rtepop button{white-space:nowrap;min-width:0;min-height:28px;padding:6px 10px;color:var(--ink);gap:6px;align-items:center;text-align:left}
+.rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:var(--sunk);outline-offset:-2px}
+.rtebar .rtepop [role=menuitemradio]::before{content:"";display:inline-block;width:1em;flex:none;text-align:center}
+.rtebar .rtepop [role=menuitemradio][aria-checked=true]::before{content:"\2713"}
+.rtebar .rtepop .last{margin-left:auto;padding-left:16px;color:var(--faint)}
+.rtebar .rtepop [aria-disabled=true]{opacity:.4;cursor:default}
+.nbar .rtelink{position:absolute;top:calc(100% + 4px);left:8px;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:var(--shadow-md);z-index:var(--z-menu)} .nbar .rtelink[hidden]{display:none}
+@media (forced-colors:active){.rtebar .rtepop{border:1px solid CanvasText} .rtebar .rtepop button:hover,.rtebar .rtepop button:focus-visible{background:Highlight;color:HighlightText;forced-color-adjust:none} .rtebar .rtepop [aria-disabled=true]{opacity:1;color:GrayText}}
 </style>
 </head>
 <body>
@@ -3421,6 +3434,7 @@ button.nchip{font:inherit;font-size:12px}
     EBAREA: () => EBAREA,
     EBKEY: () => EBKEY,
     ED_HOOKS: () => ED_HOOKS,
+    ED_MENUS: () => ED_MENUS,
     ED_PROFILES: () => ED_PROFILES,
     ED_QUIET: () => ED_QUIET,
     ED_SLASH: () => ED_SLASH,
@@ -7877,7 +7891,7 @@ button.nchip{font:inherit;font-size:12px}
       "button",
       {
         type: "button",
-        role: it2.checked === void 0 ? "menuitem" : "menuitemcheckbox",
+        role: it2.checked === void 0 ? "menuitem" : it2.radio ? "menuitemradio" : "menuitemcheckbox",
         tabIndex: -1,
         class: it2.cls,
         "data-tip": it2.tip,
@@ -7908,6 +7922,8 @@ button.nchip{font:inherit;font-size:12px}
       it2.id
     )) });
   }
+  var HOVER_OPEN = null;
+  var HOVER_GRACE = 220;
   function Menu({
     label,
     items: items2,
@@ -7927,18 +7943,46 @@ button.nchip{font:inherit;font-size:12px}
     labelCls,
     menuId,
     menuCls,
-    hidden
+    hidden,
+    hover
   }) {
-    const [open2, setOpen2] = d2(false);
+    const [open2, setOpen2] = d2(false), [, bump] = d2(0);
     const btn = A2(
       /** @type {HTMLButtonElement | null} */
       null
     );
     const back2 = A2(false);
+    const byMouse = A2(false), noFocus = A2(false), timer2 = A2(0);
     const close = (how) => {
       back2.current = how === "esc";
+      if (back2.current) btn.current?.focus({ preventScroll: true });
+      clearTimeout(timer2.current);
+      if (HOVER_OPEN === fold) HOVER_OPEN = null;
       setOpen2(false);
     };
+    const closeRef = A2(close);
+    closeRef.current = close;
+    const fold = A2(() => closeRef.current("away")).current;
+    const pointIn = () => {
+      if (!hover || why) return;
+      clearTimeout(timer2.current);
+      if (open2) return;
+      if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
+      HOVER_OPEN = fold;
+      byMouse.current = true;
+      noFocus.current = true;
+      setOpen2(true);
+    };
+    const pointOut = () => {
+      if (hover && byMouse.current) {
+        clearTimeout(timer2.current);
+        timer2.current = window.setTimeout(fold, HOVER_GRACE);
+      }
+    };
+    h2(() => () => {
+      clearTimeout(timer2.current);
+      if (HOVER_OPEN === fold) HOVER_OPEN = null;
+    }, []);
     h2(() => {
       if (!open2 && back2.current) {
         back2.current = false;
@@ -7947,16 +7991,18 @@ button.nchip{font:inherit;font-size:12px}
     }, [open2]);
     const pick = (it2) => {
       if (it2.disabled) return;
-      if (it2.checked === void 0) close("pick");
+      if (it2.checked === void 0 || it2.radio) close("pick");
       onPick(it2.id);
     };
     const onBtnKey = (e4) => {
       if (e4.key === "ArrowDown" && !why && !open2) {
         e4.preventDefault();
+        byMouse.current = false;
+        noFocus.current = false;
         setOpen2(true);
       }
     };
-    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
+    return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, onMouseEnter: pointIn, onMouseLeave: pointOut, children: [
       /* @__PURE__ */ u2(
         "button",
         {
@@ -7978,7 +8024,15 @@ button.nchip{font:inherit;font-size:12px}
               onBlocked && onBlocked();
               return;
             }
-            setOpen2(!open2);
+            if (open2 && byMouse.current && e4.detail > 0) {
+              noFocus.current = false;
+              bump((n4) => n4 + 1);
+              return;
+            }
+            byMouse.current = hover && e4.detail > 0;
+            noFocus.current = false;
+            if (open2) close("pick");
+            else setOpen2(true);
           },
           children: [
             icon ? /* @__PURE__ */ u2(Icon, { name: icon }) : null,
@@ -7995,6 +8049,8 @@ button.nchip{font:inherit;font-size:12px}
           cls: `${left ? "left " : ""}${menuCls || ""}`,
           anchor: btn.current,
           onClose: close,
+          autoFocus: !noFocus.current,
+          focusKey: noFocus.current,
           children: /* @__PURE__ */ u2(MenuItems, { items: items2, onPick: pick })
         }
       ) : null
@@ -24542,6 +24598,7 @@ ${s5}`;
   // core/editorProfiles.js
   var HEAD_SHIFT = 2;
   var ED_TOOLS = {
+    text: { id: "text", label: "T", name: "Text", tip: "Plain text (also clears a heading)", run: (c5) => c5.setParagraph(), on: (e4) => !e4.isActive("heading") },
     h1: { id: "h1", label: "H1", name: "Heading 1", run: (c5) => c5.toggleHeading({ level: 1 }), on: (e4) => e4.isActive("heading", { level: 1 }) },
     h2: { id: "h2", label: "H2", name: "Heading 2", run: (c5) => c5.toggleHeading({ level: 2 }), on: (e4) => e4.isActive("heading", { level: 2 }) },
     h3: { id: "h3", label: "H3", name: "Heading 3", run: (c5) => c5.toggleHeading({ level: 3 }), on: (e4) => e4.isActive("heading", { level: 3 }) },
@@ -24555,6 +24612,7 @@ ${s5}`;
     outdent: {
       id: "outdent",
       keys: "Shift+Tab",
+      hint: "⇧Tab",
       label: "⇤",
       name: "Outdent",
       tip: "Outdent (⇧Tab)",
@@ -24565,6 +24623,7 @@ ${s5}`;
     indent: {
       id: "indent",
       keys: "Tab",
+      hint: "Tab",
       label: "⇥",
       name: "Indent",
       tip: "Indent: a nested list (Tab)",
@@ -24580,9 +24639,14 @@ ${s5}`;
     person: { id: "person", label: "@", name: "Mention a person", tip: "Mention a person (@)", host: true },
     item: { id: "item", label: "#ID", name: "Link a work item", tip: "Link a work item (#)", host: true },
     table: { id: "table", label: "▦", name: "Table", host: true },
-    image: { id: "image", label: "Image", name: "Add a picture", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
+    image: { id: "image", label: "Image", name: "Add a picture", hint: "PNG or JPEG, 2 MB", tip: "Add a picture here (PNG or JPEG, up to 2 MB)", rc: "image", host: true },
     undo: { id: "undo", keys: "Meta+Z Control+Z", label: "↶", name: "Undo", tip: "Undo (⌘Z)", rc: "undo", run: (c5) => c5.undo() },
     redo: { id: "redo", keys: "Meta+Shift+Z Control+Shift+Z", label: "↷", name: "Redo", tip: "Redo (⌘⇧Z)", rc: "redo", run: (c5) => c5.redo() }
+  };
+  var ED_MENUS = {
+    heading: { id: "m-heading", menu: true, label: "Heading", name: "Heading", tip: "Heading, plain text, clear formatting", items: ["text", "h1", "h2", "h3", "|", "clear"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    list: { id: "m-list", menu: true, label: "List", name: "List", tip: "Lists and indent", items: ["ul", "ol", "task", "|", "indent", "outdent"].map((x5) => x5 === "|" ? x5 : ED_TOOLS[x5]) },
+    insert: { id: "m-insert", menu: true, label: "Insert", name: "Insert", tip: "Insert a link, mention, table or picture", items: ["note", "person", "item", "table", "image"].map((x5) => ED_TOOLS[x5]) }
   };
   var ED_SLASH = {
     text: { id: "text", group: "Text", name: "Text", desc: "Plain paragraph", icon: "T", alias: ["paragraph", "plain"], run: (c5) => c5.setParagraph() },
@@ -24658,7 +24722,11 @@ ${s5}`;
   }
   var ED_PROFILES = {
     notes: {
-      tip: "Notes and the capture drawer",
+      tip: "Notes: one line, grouped into hover menus (Heading, List, Insert)",
+      tools: ["m:heading", "|", "b", "i", "s", "code", "|", "m:list", "quote", "|", "link", "m:insert", "|", "undo", "redo"]
+    },
+    capture: {
+      tip: "The capture drawer: the shared buttons, flat (no pickers yet)",
       tools: [
         "h1",
         "h2",
@@ -24680,12 +24748,6 @@ ${s5}`;
         "unlink",
         "clear",
         "|",
-        "note",
-        "person",
-        "item",
-        "table",
-        "image",
-        "|",
         "undo",
         "redo"
       ]
@@ -24697,13 +24759,30 @@ ${s5}`;
     plain: { tip: "item fields, Prep notes, draft boxes: plain text, no toolbar", tools: [] },
     none: { tip: "a host that draws its own frame (the report sheets)", tools: [] }
   };
+  function menuFor(m5, hostTools) {
+    if (!m5) return null;
+    const list = (
+      /** @type {(ToolDef|"|")[]} */
+      (m5.items || []).filter((x5) => x5 === "|" || !x5.host || hostTools.includes(x5.id))
+    );
+    while (list.length && list[0] === "|") list.shift();
+    while (list.length && list[list.length - 1] === "|") list.pop();
+    return list.some((x5) => x5 !== "|") ? { ...m5, items: list } : null;
+  }
   function profileTools(profile, hostTools = []) {
-    const want = (ED_PROFILES[profile] || ED_PROFILES.none).tools.filter((id2) => id2 === "|" || ED_TOOLS[id2] && (!ED_TOOLS[id2].host || hostTools.includes(id2)));
     const out = [];
-    for (const id2 of want) {
+    for (const id2 of (ED_PROFILES[profile] || ED_PROFILES.none).tools) {
       if (id2 === "|") {
         if (out.length && out[out.length - 1] !== "|") out.push("|");
-      } else out.push(ED_TOOLS[id2]);
+        continue;
+      }
+      if (id2.startsWith("m:")) {
+        const m5 = menuFor(ED_MENUS[id2.slice(2)], hostTools);
+        if (m5) out.push(m5);
+        continue;
+      }
+      const t47 = ED_TOOLS[id2];
+      if (t47 && (!t47.host || hostTools.includes(id2))) out.push(t47);
     }
     while (out.length && out[out.length - 1] === "|") out.pop();
     return out;
@@ -24761,10 +24840,11 @@ ${s5}`;
       null
     );
     const [link, setLink] = d2(
-      /** @type {{from: number, to: number, url: string}|null} */
+      /** @type {{from: number, to: number, url: string, has?: boolean}|null} */
       null
     );
     const [cur, setCur] = d2(0);
+    const [, tick] = d2(0);
     const tools = profileTools(profile, Object.keys(host2 || {}));
     const buttons = (
       /** @type {import("../core/editorProfiles.js").ToolDef[]} */
@@ -24773,6 +24853,7 @@ ${s5}`;
     const refresh = () => {
       const root = bar.current, h5 = handle2();
       if (!root || !h5 || h5.editor.isDestroyed) return;
+      tick((n4) => n4 + 1);
       for (
         const b5 of
         /** @type {NodeListOf<HTMLElement>} */
@@ -24791,7 +24872,7 @@ ${s5}`;
       const h5 = handle2();
       if (!h5) return;
       const s5 = h5.editor.state.selection;
-      setLink({ from: s5.from, to: s5.to, url: h5.editor.getAttributes("link").href || "" });
+      setLink({ from: s5.from, to: s5.to, url: h5.editor.getAttributes("link").href || "", has: h5.editor.isActive("link") });
     };
     h2(() => {
       const me2 = { handle: handle2, link: openLink };
@@ -24830,6 +24911,11 @@ ${s5}`;
       runTool(h5, id2);
       refresh();
     };
+    const removeLink = () => {
+      const h5 = handle2(), l6 = link;
+      setLink(null);
+      if (h5 && l6) h5.editor.chain().focus().setTextSelection({ from: l6.from, to: l6.to }).extendMarkRange("link").unsetLink().run();
+    };
     const finish = (add) => {
       const h5 = handle2(), l6 = link;
       setLink(null);
@@ -24864,6 +24950,7 @@ ${s5}`;
         t47.closest ? t47.closest("button[data-nt]") : null
       );
       if (!b5) return;
+      if (e4.key === "ArrowDown") tick((n4) => n4 + 1);
       const i5 = buttons.findIndex((x5) => x5.id === b5.dataset.nt);
       let to2 = -1;
       if (e4.key === "ArrowRight") to2 = (i5 + 1) % buttons.length;
@@ -24886,7 +24973,30 @@ ${s5}`;
         if (n4) n4.focus();
       });
     };
+    h2(() => {
+      const root = bar.current;
+      if (!root) return;
+      for (
+        const n4 of
+        /** @type {NodeListOf<HTMLElement>} */
+        root.querySelectorAll("button[data-nt]")
+      ) n4.tabIndex = buttons[cur] && buttons[cur].id === n4.dataset.nt ? 0 : -1;
+    });
     if (!buttons.length) return null;
+    const menuItems = (m5) => {
+      const e4 = handle2()?.editor, live = e4 && !e4.isDestroyed;
+      return (
+        /** @type {any[]} */
+        (m5.items || []).map((x5, i5) => x5 === "|" ? { id: `sep${i5}`, sep: true } : {
+          id: x5.id,
+          name: x5.name,
+          ...x5.hint ? { mark: x5.hint } : {},
+          data: { cmd: x5.id },
+          ...x5.on ? { radio: true, checked: !!(live && x5.on(e4)) } : {},
+          ...x5.can && !(live && x5.can(e4)) ? { disabled: true } : {}
+        })
+      );
+    };
     const groups = tools.reduce(
       (out, t47) => {
         if (t47 === "|") out.push([]);
@@ -24906,15 +25016,28 @@ ${s5}`;
         "data-profile": profile,
         onKeyDown: keys,
         onMouseDown: (e4) => {
+          const el2 = (
+            /** @type {Element} */
+            e4.target
+          );
+          if (el2.closest("[role^=menuitem]")) {
+            e4.preventDefault();
+            return;
+          }
           const b5 = (
             /** @type {HTMLElement|null} */
-            /** @type {Element} */
-            e4.target.closest("button[data-nt]")
+            el2.closest("button[data-nt]")
           );
           if (!b5) return;
           e4.preventDefault();
           if (e4.button === 0) setCur(Math.max(0, buttons.findIndex((x5) => x5.id === b5.dataset.nt)));
-          if (e4.button === 0 && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+          if (e4.button === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+        },
+        onMouseOver: (e4) => {
+          if (
+            /** @type {Element} */
+            e4.target.closest(".rtemenu")
+          ) tick((n4) => n4 + 1);
         },
         onClick: (e4) => {
           const b5 = (
@@ -24922,12 +25045,28 @@ ${s5}`;
             /** @type {Element} */
             e4.target.closest("button[data-nt]")
           );
-          if (b5 && e4.detail === 0 && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
+          if (b5 && e4.detail === 0 && !b5.hasAttribute("aria-haspopup") && b5.getAttribute("aria-disabled") !== "true") run(b5.dataset.nt || "");
         },
         children: [
           groups.map((g5, gi2) => /* @__PURE__ */ u2("span", { class: "rtegrp", children: [
             gi2 > 0 && /* @__PURE__ */ u2("span", { class: "rtesep", "aria-hidden": "true" }),
-            g5.map((t47) => /* @__PURE__ */ u2(
+            g5.map((t47) => t47.menu ? /* @__PURE__ */ u2(
+              Menu,
+              {
+                hover: true,
+                left: true,
+                cls: "rtemenu",
+                btnCls: "rtemb",
+                label: t47.label,
+                ariaLabel: t47.name,
+                menuLabel: t47.name,
+                menuCls: "rtepop",
+                data: { nt: t47.id },
+                items: menuItems(t47),
+                onPick: (id2) => run(id2)
+              },
+              t47.id
+            ) : /* @__PURE__ */ u2(
               "button",
               {
                 type: "button",
@@ -24949,6 +25088,7 @@ ${s5}`;
               e4.currentTarget.value
             ) }) }),
             /* @__PURE__ */ u2("button", { type: "button", "data-rl": "add", onClick: () => finish(true), children: "Add" }),
+            link && link.has ? /* @__PURE__ */ u2("button", { type: "button", "data-rl": "remove", onClick: removeLink, children: "Remove link" }) : null,
             /* @__PURE__ */ u2("button", { type: "button", "data-rl": "cancel", onClick: () => finish(false), children: "Cancel" })
           ] }),
           extra
@@ -26275,7 +26415,7 @@ ${s5}`;
         /* @__PURE__ */ u2("span", { children: "Confidential" }),
         n4.confidential ? /* @__PURE__ */ u2("span", { class: "sub", children: "Kept out of prep pages and client reports; Claude reads it only if you say yes" }) : null
       ] }),
-      /* @__PURE__ */ u2(EditorBar, { profile: "notes", cls: "capbar", handle: () => ed2 }),
+      /* @__PURE__ */ u2(EditorBar, { profile: "capture", cls: "capbar", handle: () => ed2 }),
       /* @__PURE__ */ u2(
         "div",
         {

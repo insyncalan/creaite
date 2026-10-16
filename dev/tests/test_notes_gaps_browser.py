@@ -36,9 +36,11 @@ class NotesGapsBrowser(LiveBrowserCase):
     def test_image_button_files_a_picture_in_images(self):
         b = self.b
         self.make("With a picture")
-        self.assertTrue(b.eval("!!document.querySelector('.nbar [data-nt=image]')"))
-        self.assertEqual(b.eval("document.querySelector('.nbar [data-nt=image]').getAttribute('aria-label')"),
-                         "Add a picture here (PNG or JPEG, up to 2 MB)")
+        b.eval("document.querySelector('.nbody').cxed.focus('end')")      # (the bar shows while the cursor is in the note)
+        b.click(".nbar [data-nt=m-insert]")                    # #122: the picture is an item of the Insert menu
+        b.wait("!!document.querySelector('.nbar [role=menu] [data-cmd=image]')", 5)
+        self.assertEqual(b.eval("document.querySelector('.nbar [data-cmd=image]').textContent"), "Add a picture · PNG or JPEG, 2 MB")
+        b.key("Escape")
         b.eval(PICK)
         b.wait("!!document.querySelector('.nbody figure.cimg img[src^=\"data:image/png\"]')", 15)
         pics = list((self.notes_dir() / "_images").glob("*-org-chart.png"))
