@@ -23206,11 +23206,18 @@ ${s5}`;
 
   // core/linkUrl.js
   var LINK_MAX = 2048;
-  var BAD_CHARS = /[\u0000-\u0020\u007f-\u00a0\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+  var INVISIBLE = /[\u00ad\u061c\u115f\u1160\u1680\u180e\u2000-\u200f\u2028-\u202f\u205f-\u206f\u3000\u3164\ufeff\uffa0\ufff9-\ufffb]/;
+  function hasBad(s5) {
+    for (let i5 = 0; i5 < s5.length; i5++) {
+      const c5 = s5.charCodeAt(i5);
+      if (c5 <= 32 || c5 >= 127 && c5 <= 160) return true;
+    }
+    return INVISIBLE.test(s5);
+  }
   var ENTITY = /&(?:#\d|#x[\da-f]|[a-z][a-z\d]*;)/i;
   function linkUrl(s5) {
     if (typeof s5 !== "string" || !s5 || s5.length > LINK_MAX) return null;
-    if (BAD_CHARS.test(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
+    if (hasBad(s5) || ENTITY.test(s5) || /[\\<>"`]/.test(s5)) return null;
     const m5 = /^([a-z][a-z\d+.-]*):/i.exec(s5);
     if (!m5) return null;
     const scheme = m5[1].toLowerCase(), rest = s5.slice(m5[0].length);
@@ -23219,7 +23226,7 @@ ${s5}`;
       if (!a5 || !a5[1]) return null;
       const host2 = a5[1];
       if (host2.includes("@")) return null;
-      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2) && !/[^\x00-\x7f]/.test(host2)) return null;
+      if (!/^(?:[a-z\d](?:[a-z\d-]*[a-z\d])?|\[[\da-f:.]+\])(?:\.[a-z\d](?:[a-z\d-]*[a-z\d])?)*(?::\d{1,5})?$/i.test(host2) && !/[\u0080-\uffff]/.test(host2)) return null;
       try {
         const u5 = new URL(scheme + ":" + rest);
         if (u5.protocol !== scheme + ":" || !u5.hostname || u5.username || u5.password) return null;
@@ -23229,8 +23236,8 @@ ${s5}`;
       return scheme + ":" + rest;
     }
     if (scheme === "mailto") {
-      const who2 = rest.split(/[?#]/)[0];
-      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(who2))) return null;
+      const mailbox = rest.split(/[?#]/)[0];
+      if (!/^[^@\s,;]+@[^@\s,;]+$/.test(safeDecode(mailbox))) return null;
       return "mailto:" + rest;
     }
     return null;
@@ -23253,7 +23260,7 @@ ${s5}`;
     if (/^(?:[a-z\d-]+\.)+[a-z]{2,}(?::\d{1,5})?(?:[/?#]\S*)?$/i.test(t47)) return linkUrl("https://" + t47);
     return null;
   }
-  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !BAD_CHARS.test(s5);
+  var isInternalHref = (s5) => typeof s5 === "string" && /^creaite:(?:item|person)\/[^\s<>"`\\]+$/.test(s5) && !hasBad(s5);
   var keepHref = (s5) => isLinkUrl(s5) || isInternalHref(s5);
 
   // core/editorLink.js
@@ -23288,12 +23295,12 @@ ${s5}`;
     return true;
   }
   function internalIn(doc, from, to2) {
-    let hit2 = false;
+    let found = false;
     doc.nodesBetween(from, to2, (n4) => {
-      if (n4.isText && n4.marks.some((m5) => m5.type.name === "link" && isInternalHref(m5.attrs.href))) hit2 = true;
-      return !hit2;
+      if (n4.isText && n4.marks.some((m5) => m5.type.name === "link" && isInternalHref(m5.attrs.href))) found = true;
+      return !found;
     });
-    return hit2;
+    return found;
   }
   function linkAt(editor) {
     const { state } = editor, type = state.schema.marks.link, { selection: sel } = state;
@@ -25345,7 +25352,7 @@ ${s5}`;
   ), unplace = (
     /** @type {(() => void)|null} */
     null
-  ), seq = 0, formKey = 0;
+  ), linkSeq = 0, formKey = 0;
   function home(h5) {
     if (!root) {
       root = document.createElement("div");
@@ -25379,7 +25386,7 @@ ${s5}`;
       ed3.chain().focus().setTextSelection(Math.min(p6.to, ed3.state.doc.content.size)).run();
     }
   }
-  function draw() {
+  function drawLink() {
     const p6 = pop;
     if (!p6 || p6.h.editor.isDestroyed) {
       closePop();
@@ -25400,27 +25407,43 @@ ${s5}`;
   function openLinkForm(h5) {
     const ed3 = h5.editor;
     if (!h5 || ed3.isDestroyed) return false;
-    const sel = ed3.state.selection, $f2 = sel.$from;
+    const sel = ed3.state.selection;
+    let $f2 = sel.$from, a5 = sel.from, z4 = sel.to;
+    if (!sel.empty && !sel.node && !$f2.parent.isTextblock) {
+      let x5 = -1, y5 = -1;
+      ed3.state.doc.nodesBetween(sel.from, sel.to, (n4, pos) => {
+        if (n4.isTextblock && n4.content.size) {
+          if (x5 < 0) x5 = pos + 1;
+          y5 = pos + n4.nodeSize - 1;
+        }
+        return !n4.isTextblock;
+      });
+      if (x5 >= 0) {
+        a5 = x5;
+        z4 = y5;
+        $f2 = ed3.state.doc.resolve(x5);
+      }
+    }
     if (sel.node || !$f2 || !$f2.parent.isTextblock || $f2.parent.type.spec.code) {
       snack("Put the cursor in some text to add a link");
       return false;
     }
     if (!ed3.state.schema.marks.link) return false;
-    if (internalIn(ed3.state.doc, sel.from, sel.to) || sel.empty && $f2.marks().some((m5) => m5.type.name === "link") && !linkAt(ed3)) {
+    if (internalIn(ed3.state.doc, a5, z4) || sel.empty && $f2.marks().some((m5) => m5.type.name === "link") && !linkAt(ed3)) {
       snack("A work item or person link can't also be a web link");
       return false;
     }
-    const have = linkAt(ed3), from = have ? have.from : sel.from, to2 = have ? have.to : sel.to;
-    const whole = !$f2.sameParent(sel.$to);
+    const have = linkAt(ed3), from = have ? have.from : a5, to2 = have ? have.to : z4;
+    const whole = !$f2.sameParent(ed3.state.doc.resolve(z4));
     const text = have ? have.text : ed3.state.doc.textBetween(from, to2);
     if (aiBar.value && aiBar.value.h === /** @type {any} */
     h5) aiBar.value = null;
     pop = { mode: "form", h: h5, from, to: to2, href: have ? have.href : "", text, existing: !!have, whole, key: ++formKey };
-    draw();
+    drawLink();
     return true;
   }
   function LinkForm({ p: p6 }) {
-    const id2 = A2(`linkpop-${++seq}`).current;
+    const id2 = A2(`linkpop-${++linkSeq}`).current;
     const box = A2(
       /** @type {HTMLDivElement|null} */
       null
@@ -25591,7 +25614,7 @@ ${s5}`;
     if (pop && pop.mode === "form") return;
     if (pop && pop.mode === "view" && pop.h === h5 && pop.from === l6.from && pop.to === l6.to && pop.href === l6.href) return;
     pop = { mode: "view", h: h5, from: l6.from, to: l6.to, href: l6.href };
-    draw();
+    drawLink();
   }
   function attachLink(h5) {
     const el2 = h5.el, ed3 = h5.editor;
@@ -25977,11 +26000,11 @@ ${s5}`;
     (el2.closest("dialog[open]") || document.body).appendChild(root2);
     let st2 = null;
     let dismissed = -1, opened = false;
-    const draw3 = () => {
+    const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(SlashList, { state: st2, id: id2, view, pick: choose, hover: (i5) => {
         if (st2) {
           st2 = { ...st2, i: i5 };
-          draw3();
+          draw2();
         }
       } }) : null, root2);
       const dom = (
@@ -26005,7 +26028,7 @@ ${s5}`;
     const close = () => {
       if (!st2) return;
       st2 = null;
-      draw3();
+      draw2();
     };
     const look2 = () => {
       if (editor.isDestroyed || view.composing) return;
@@ -26021,7 +26044,7 @@ ${s5}`;
       const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
       if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();
       st2 = { ...a5, rows: rows2, i: st2 && st2.from === a5.from ? Math.min(st2.i, Math.max(0, rows2.length - 1)) : 0 };
-      draw3();
+      draw2();
     };
     const choose = (r4) => {
       const s5 = st2;
@@ -26057,7 +26080,7 @@ ${s5}`;
         e4.stopPropagation();
         if (n4) {
           st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
-          draw3();
+          draw2();
         }
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
         if (n4) {
@@ -26826,7 +26849,7 @@ ${s5}`;
   var timer = 0, opener = (
     /** @type {Element|null} */
     null
-  ), seq2 = 0;
+  ), seq = 0;
   var where = (code) => code && code !== "_portfolio" ? pName(code) : "Unfiled";
   var hasText = (n4) => !!(n4.title.trim() || n4.body.trim());
   var typed = (n4) => hasText(n4) && `${n4.title}\0${n4.body}` !== (n4.loaded ?? "\0");
@@ -26851,8 +26874,8 @@ ${s5}`;
   async function guess() {
     const n4 = capNote.value;
     if (!viaServer() || n4.chosen || n4.how === "meeting" || !(n4.title.trim() || n4.body.trim())) return;
-    const mine = ++seq2, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
-    if (mine !== seq2 || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
+    const mine = ++seq, r4 = await api("/api/notes/capture/guess", { title: n4.title, body: n4.body });
+    if (mine !== seq || !r4.ok || capNote.value.id !== n4.id || capNote.value.chosen) return;
     const code = r4.code && P4.some((p6) => p6.code === r4.code) ? r4.code : "";
     patchNote({ code, how: "guess", reason: r4.reason || "" });
   }
@@ -29757,7 +29780,7 @@ ${s5}`;
     return tl2(n4, title, waiting ? String(html`From ${raw(promWho(x5.by))} on ${raw(projLink(x5.p))}: ${raw(promDue(x5))}${promQuiet(x5)}.`) : String(html`To ${raw(promWho(x5.to))} on ${raw(projLink(x5.p))}: ${raw(promDue(x5))}.`));
   }
   function renderPromises() {
-    const draw3 = (sec, key, L3, waiting) => {
+    const draw2 = (sec, key, L3, waiting) => {
       const el2 = $("#" + sec);
       if (!el2) return;
       el2.hidden = !L3.length;
@@ -29767,8 +29790,8 @@ ${s5}`;
       putHTML($(`#${key}List`), raw(c5.html));
       putHTML($(`#${key}More`), raw(c5.more));
     };
-    draw3("tOwe", "owe", promOwe(), false);
-    draw3("tWait", "wait", promWaiting(), true);
+    draw2("tOwe", "owe", promOwe(), false);
+    draw2("tWait", "wait", promWaiting(), true);
   }
   function personPromises(name, same2) {
     const L3 = PROMS(), theirs = L3.filter((x5) => same2(x5.by) === name && isMe(x5.to)).sort((a5, b5) => b5.od - a5.od || (a5.due || "9999").localeCompare(b5.due || "9999")), yours = L3.filter((x5) => isMe(x5.by) && same2(x5.to) === name).sort((a5, b5) => (a5.due || "9999").localeCompare(b5.due || "9999"));
@@ -32536,7 +32559,7 @@ ${s5}`;
     null
   );
   var SEQ = 0;
-  var draw2 = () => {
+  var draw = () => {
     if (HOST) R(/* @__PURE__ */ u2(ContextMenus, {}), HOST);
   };
   var shown = (items2, q5) => {
@@ -32546,13 +32569,13 @@ ${s5}`;
   function closeFrom(i5) {
     if (LV.length > i5) {
       LV = LV.slice(0, i5);
-      draw2();
+      draw();
     }
   }
   function closeContextMenu(ret = false) {
     if (!LV.length) return;
     LV = [];
-    draw2();
+    draw();
     const f5 = FROM, o5 = OWNER;
     FROM = null;
     OWNER = null;
@@ -32589,7 +32612,7 @@ ${s5}`;
     OWNER = anchor;
     if (anchor && anchor.hasAttribute("aria-haspopup")) anchor.setAttribute("aria-expanded", "true");
     LV = [{ items: items2, label: label || "Actions", search: !!search, q: "", key: ++SEQ, x: x5, y: y5, anchor, pi: -1 }];
-    draw2();
+    draw();
   }
   function openContextMenu(items2, x5, y5, o5 = {}) {
     open0(items2, x5, y5, null, o5);
@@ -32603,7 +32626,7 @@ ${s5}`;
     if (it2.sub) {
       const sub = typeof it2.sub === "function" ? it2.sub() : it2.sub;
       LV = [...LV.slice(0, i5 + 1), { items: sub, label: it2.label || "", search: !!it2.search, q: "", key: ++SEQ, x: 0, y: 0, anchor: null, pi: ci2 }];
-      draw2();
+      draw();
       btn?.focus({ preventScroll: true });
       focusLevel(i5 + 1);
       return;
@@ -32754,7 +32777,7 @@ ${s5}`;
             lv2.q = /** @type {HTMLInputElement} */
             e4.target.value;
             closeFrom(i5 + 1);
-            draw2();
+            draw();
           },
           onKeyDown: fieldKeys
         }
@@ -35292,7 +35315,7 @@ ${s5}`;
     const input = A2(
       /** @type {HTMLInputElement|null} */
       null
-    ), seq3 = A2(0), timer2 = A2(0);
+    ), seq2 = A2(0), timer2 = A2(0);
     const draftRef = A2(
       /** @type {SneakDraft|null} */
       null
@@ -35308,7 +35331,7 @@ ${s5}`;
       if (d5 && d5.d) draftStat(d5.feature, "rejected");
     }, []);
     async function read(t47, pk2) {
-      const n4 = ++seq3.current;
+      const n4 = ++seq2.current;
       if (!t47.trim()) {
         setReply(null);
         return null;
@@ -35326,12 +35349,12 @@ ${s5}`;
         /** @type {SneakReply} */
         await api("/api/sneak/read", body2)
       );
-      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq3.current; i5++) {
+      for (let i5 = 0; i5 < 4 && r5 && r5.busy && n4 === seq2.current; i5++) {
         await new Promise((res) => setTimeout(res, 300));
         r5 = /** @type {SneakReply} */
         await api("/api/sneak/read", body2);
       }
-      if (n4 !== seq3.current) return null;
+      if (n4 !== seq2.current) return null;
       setReply(r5);
       return r5;
     }
@@ -35355,7 +35378,7 @@ ${s5}`;
         setDraft(null);
       }
       if (t47.trim().length < 2) {
-        seq3.current++;
+        seq2.current++;
         setReply(null);
         return;
       }
@@ -35392,7 +35415,7 @@ ${s5}`;
         setDone({ text: res.message || "Not changed.", ok: false });
         return;
       }
-      seq3.current++;
+      seq2.current++;
       setText("");
       setReply(null);
       setClosing("");
@@ -35451,7 +35474,7 @@ ${s5}`;
       }
       draftStat(d5.feature, "used");
       setDraft(null);
-      seq3.current++;
+      seq2.current++;
       setText("");
       setReply(null);
       const word = DRAFTS[d5.kind] ? DRAFTS[d5.kind]({ field: d5.field }).word : d5.field;
@@ -35605,7 +35628,7 @@ ${s5}`;
           setClosing,
           onMake: () => make(r4, closing),
           onNot: () => {
-            seq3.current++;
+            seq2.current++;
             setReply(null);
             setText("");
             setShown(false);
@@ -39980,16 +40003,16 @@ ${s5}`;
     };
     let row2 = V3.filter((v5) => !v5.more || v5.id === act), more = V3.filter((v5) => v5.more && v5.id !== act);
     VMORE.views = more;
-    const draw3 = () => {
+    const draw2 = () => {
       putHTML(el2, raw(row2.map(chip).join("") + (!shared.WVIEW && !WB[shared.WT] ? '<span class="vchip custom" aria-pressed="true">Custom</span>' : "") + (more.length ? `<span class="dd vmorewrap"><button class="vchip" type="button" id="vmore" aria-haspopup="menu" aria-expanded="false">More views (${more.length}) ▾</button></span>` : "")));
     };
-    draw3();
+    draw2();
     if (!el2.offsetParent) return;
     for (let n4 = 0; n4 < 40 && el2.scrollWidth > el2.clientWidth + 1; n4++) {
       const i5 = row2.map((v5) => v5.id !== act && !(VRENAME && v5.id === "saved:" + VRENAME)).lastIndexOf(true);
       if (i5 < 0) break;
       more.unshift(row2.splice(i5, 1)[0]);
-      draw3();
+      draw2();
     }
   }
   async function updateView() {
@@ -46162,7 +46185,7 @@ ${pre}**Current state title:** ${title}`);
     );
     const [anyOpen, setAnyOpen] = d2(false);
     const [anyQ, setAnyQ] = d2("");
-    const seq3 = A2(0), mail = A2(
+    const seq2 = A2(0), mail = A2(
       /** @type {HTMLDivElement | null} */
       null
     ), back2 = A2(
@@ -46187,10 +46210,10 @@ ${pre}**Current state title:** ${title}`);
         setErr("Draft chase needs the live server: start it, then try again.");
         return void 0;
       }
-      const n4 = ++seq3.current;
+      const n4 = ++seq2.current;
       const t47 = setTimeout(async () => {
         const r4 = await api("/api/chase/pane", { id: id2, hour: (/* @__PURE__ */ new Date()).getHours(), ...opts });
-        if (n4 !== seq3.current) return;
+        if (n4 !== seq2.current) return;
         if (!r4 || r4.ok === false) {
           setErr(r4 && r4.message || "The item couldn't be read.");
           return;
@@ -52493,7 +52516,7 @@ ${d5.text}`);
     box.style.left = Math.max(8, Math.min(r4.right - 252, innerWidth - 262)) + "px";
     box.style.top = (r4.bottom + 310 > innerHeight ? Math.max(8, r4.top - 310) : r4.bottom + 4) + "px";
     const pad = (n4) => String(n4).padStart(2, "0"), isoOf2 = (d5) => `${d5.getFullYear()}-${pad(d5.getMonth() + 1)}-${pad(d5.getDate())}`;
-    const draw3 = (focus) => {
+    const draw2 = (focus) => {
       const f5 = new Date(y5, m5, 1), st2 = (f5.getDay() + 6) % 7, dn2 = new Date(y5, m5 + 1, 0).getDate();
       let g5 = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].map((d5) => `<span>${d5}</span>`).join("") + "<span></span>".repeat(st2);
       for (let d5 = 1; d5 <= dn2; d5++) {
@@ -52512,9 +52535,9 @@ ${d5.text}`);
       cur = iso;
       y5 = +iso.slice(0, 4);
       m5 = +iso.slice(5, 7) - 1;
-      draw3(true);
+      draw2(true);
     };
-    draw3(true);
+    draw2(true);
     box.addEventListener("click", (e4) => {
       e4.stopPropagation();
       const b5 = e4.target.closest("button");
@@ -52532,7 +52555,7 @@ ${d5.text}`);
         cur = `${y5}-${pad(m5 + 1)}-${pad(Math.min(+cur.slice(8, 10), new Date(y5, m5 + 1, 0).getDate()))}`;
         if (max && cur > max) cur = max;
         if (min && cur < min) cur = min;
-        draw3(false);
+        draw2(false);
         return;
       }
       if ("v" in b5.dataset) {
@@ -56410,15 +56433,15 @@ ${d5.text}`);
       $("#vsChips").textContent = "";
       return;
     }
-    const seq3 = ++SRCH.seq;
+    const seq2 = ++SRCH.seq;
     $("#vsNote").textContent = "Searching…";
     try {
       const res = await searchFetch(q5, SRCH.skip);
-      if (seq3 !== SRCH.seq) return;
+      if (seq2 !== SRCH.seq) return;
       SRCH.res = res;
       vsRender();
     } catch (e4) {
-      if (seq3 === SRCH.seq) {
+      if (seq2 === SRCH.seq) {
         $("#vsNote").textContent = oneLine(e4.message);
       }
     }
@@ -57409,11 +57432,11 @@ ${d5.text}`);
     log.querySelectorAll(".mday").forEach((x5) => x5.remove());
     const msgs = [...log.children].filter((e4) => e4.classList.contains("msg"));
     if (!msgs.length) return;
-    const seq3 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
-    if (head) seq3.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
-    if (!seq3.length || !head && new Set(seq3.map((x5) => x5.day)).size < 2) return;
+    const seq2 = msgs.filter((e4) => e4.dataset.day).map((e4) => ({ el: e4, day: e4.dataset.day })), head = !!CHSTARTED && CHSTARTED.chat === shared.ASKCHAT && !msgs[0].dataset.day;
+    if (head) seq2.unshift({ el: log.firstElementChild, day: CHSTARTED.started.slice(0, 10) });
+    if (!seq2.length || !head && new Set(seq2.map((x5) => x5.day)).size < 2) return;
     let prev = null;
-    seq3.forEach((x5) => {
+    seq2.forEach((x5) => {
       if (x5.day === prev) return;
       prev = x5.day;
       const m5 = document.createElement("div");
