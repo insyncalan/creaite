@@ -237,6 +237,14 @@ class Browser:
             self.pump(every)
         raise TimeoutError(f"timed out waiting for: {js}\npage errors: {self.errors[-3:]}\n{self._where()}")
 
+    def frames(self, n=2, timeout=5):
+        """Wait for `n` rendered frames (requestAnimationFrame), so what the page does on its next frame has been done.
+        #152: a fixed pause is not that: a slow runner can take longer than any pause. A timeout says no frame came, with the page state."""
+        ok = self.eval("new Promise(res=>{ let k=%d; const f=()=>{ if(--k<=0) res(true); else requestAnimationFrame(f); };"
+                       " requestAnimationFrame(f); setTimeout(()=>res(false), %d); })" % (n, int(timeout * 1000)))
+        if not ok:
+            raise TimeoutError(f"no animation frame in {timeout}s (waiting for {n})\npage errors: {self.errors[-3:]}\n{self._where()}")
+
     WHERE_JS = """(()=>{ const a=document.activeElement, s=getSelection();
       const name=a?a.tagName+(a.id?'#'+a.id:'')+(a.className?'.'+String(a.className).split(' ')[0]:''):null;
       return {platform:navigator.platform, hasFocus:document.hasFocus(), visibility:document.visibilityState, active:name,
