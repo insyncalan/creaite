@@ -68,7 +68,7 @@ WATCH = r'''(()=>{ window.SEEN={working:0,mw:0,typed:0};
 SAMPLE = r'''(()=>{ window.FR={frames:[],maxlog:0,blank:0,mutations:0,nodes:new Set()}; let first=true;
   const go=()=>{ const log=document.getElementById("chLog"); if(!log){ requestAnimationFrame(go); return; }
     new MutationObserver(l=>{ FR.mutations+=l.length; }).observe(log,{childList:true,subtree:true,characterData:true});
-    const tick=()=>{ const n=log.children.length, lens=[...log.querySelectorAll(".msg.a")].map(m=>m.textContent.length);
+    const tick=()=>{ const n=[...log.children].filter(c=>!c.matches('.step.working')).length, lens=[...log.querySelectorAll(".msg.a")].map(m=>m.textContent.length);
       log.querySelectorAll('.msg.a').forEach(m=>{ if(m.textContent.length>1000) FR.nodes.add(m); }); if(n<FR.maxlog) FR.blank++; FR.maxlog=Math.max(FR.maxlog,n); FR.frames.push([n,lens,log.querySelectorAll(".mw").length]); requestAnimationFrame(tick); };
     tick(); };
   document.addEventListener("DOMContentLoaded",go); })();'''
