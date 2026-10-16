@@ -28244,7 +28244,7 @@ ${s5}`;
     const n4 = capNote.value;
     if (typed(n4)) {
       keep();
-      snack("Note kept as a draft: ⌘⇧N to carry on");
+      snack("Note kept: ⌘⇧N to carry on");
     }
     capOpen.value = false;
     const back2 = opener;
@@ -28378,7 +28378,7 @@ ${s5}`;
         /* @__PURE__ */ u2("h2", { id: "capH", children: meeting ? "Note for this meeting" : "New note" }),
         /* @__PURE__ */ u2("span", { class: "sp" }),
         typed(n4) ? /* @__PURE__ */ u2("button", { type: "button", class: "linkbtn capdiscard", onClick: () => discard(), children: "Discard" }) : null,
-        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close", name: "Close the note (the draft is kept)", onClick: () => closeCapture() })
+        /* @__PURE__ */ u2(IconButton, { icon: "x", label: "Close", name: "Close the note (what you typed is kept)", onClick: () => closeCapture() })
       ] }),
       /* @__PURE__ */ u2("div", { class: "capwhere", children: [
         /* @__PURE__ */ u2("label", { for: "capProj", children: "Project" }),
@@ -28465,7 +28465,7 @@ ${s5}`;
         }
       ),
       /* @__PURE__ */ u2("div", { class: "capfoot", children: [
-        /* @__PURE__ */ u2("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Draft saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need the live server") }),
+        /* @__PURE__ */ u2("span", { class: "sub", id: "capSaved", role: "status", "aria-live": "polite", children: capMsg.value || (n4.saved ? `Saved ${capWhen(n4.saved)}` : live ? "Saved as you type" : "Notes need the live server") }),
         /* @__PURE__ */ u2("span", { class: "sp" }),
         /* @__PURE__ */ u2(
           "button",
@@ -28498,11 +28498,11 @@ ${s5}`;
       drafts.length || recent.notes.length ? /* @__PURE__ */ u2("div", { class: "caprecent", "aria-labelledby": "capRecentH", role: "region", children: [
         /* @__PURE__ */ u2("h3", { id: "capRecentH", children: "Recent notes" }),
         /* @__PURE__ */ u2("ul", { children: [
-          drafts.map((d5) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("button", { type: "button", class: "caprow", onClick: () => resume(d5), "aria-label": `Carry on with the draft ${d5.title || "Untitled"}`, children: [
+          drafts.map((d5) => /* @__PURE__ */ u2("li", { children: /* @__PURE__ */ u2("button", { type: "button", class: "caprow", onClick: () => resume(d5), "aria-label": `Carry on with the unfinished note ${d5.title || "Untitled"}`, children: [
             /* @__PURE__ */ u2("b", { children: d5.title || (d5.body || "").trim().split("\n")[0].slice(0, 60) || "Untitled" }),
             /* @__PURE__ */ u2("span", { class: "sp" }),
             /* @__PURE__ */ u2("span", { class: "sub", children: [
-              "Draft · ",
+              "Unfinished · ",
               where(d5.code),
               " · ",
               capWhen(d5.at)
@@ -55339,7 +55339,7 @@ ${d5.text}`);
   }
   function SaveLine() {
     const s5 = noteSave.value;
-    const text = s5.state === "saved" ? `Saved${s5.at ? ` ${s5.at}` : ""}` : s5.state === "saving" || s5.state === "typing" ? "Saving…" : s5.state === "conflict" ? "Changed outside creaite" : s5.state === "wait" || s5.state === "error" ? "Not saved" : "";
+    const text = s5.state === "saved" ? `Saved${s5.at ? ` ${s5.at}` : ""}` : s5.state === "typing" ? "Editing" : s5.state === "saving" ? "Saving…" : s5.state === "conflict" ? "Changed outside creaite" : s5.state === "wait" || s5.state === "error" ? "Not saved" : "";
     return /* @__PURE__ */ u2("span", { class: `nsave ${s5.state}`, id: "noteSave", "data-save": s5.state || void 0, role: "status", "aria-live": "polite", children: text });
   }
   noteEscLayers.push(() => {

@@ -159,11 +159,11 @@ function NoteSide({ code, onOpen, onOpenItem }) {
     onMarks={(markers, hover) => { noteMarks.value = { markers, hover }; }} /></div>;
 }
 
-/** The save state, as the header says it (#119): "Saved 14:02" once the file is written, "Saving…" from the first key until it is,
+/** The save state, as the header says it (#119): "Saved 14:02" once the file is written, "Editing" while typing, "Saving…" as it is written,
     "Not saved" when it couldn't be, and a short word for a file that changed outside creaite. The reason is in the banner below. */
 function SaveLine() {
   const s = noteSave.value;
-  const text = s.state === "saved" ? `Saved${s.at ? ` ${s.at}` : ""}` : s.state === "saving" || s.state === "typing" ? "Saving…" :
+  const text = s.state === "saved" ? `Saved${s.at ? ` ${s.at}` : ""}` : s.state === "typing" ? "Editing" : s.state === "saving" ? "Saving…" :
     s.state === "conflict" ? "Changed outside creaite" : s.state === "wait" || s.state === "error" ? "Not saved" : "";
   return <span class={`nsave ${s.state}`} id="noteSave" data-save={s.state || undefined} role="status" aria-live="polite">{text}</span>;
 }

@@ -4,13 +4,13 @@ A real browser against the real live server over a throwaway vault.
 Run: python3 dev/tests/test_notes_autosave_page.py   (needs Google Chrome; skipped otherwise)
 
 Autosave (stores/notes.js):
-  - the file is written about 2 s after the last key, not before; a further key moves it; no draft, no "Draft kept" or "Editing";
+  - the file is written about 2 s after the last key, not before; a further key moves it; no draft, no "Draft kept"; "Editing" while typing;
   - nothing is sent when nothing changed; leaving, switching notes and a property toggle write at once; typing carries on undisturbed
     while a save is on its way;
   - every save of an editing session carries the same session id (also the keepalive save as the page goes), a new open or 5 minutes
     idle a new one, and the server keeps ONE backup for the session; a title is saved at once but the file is renamed only when the
     title field is left;
-  - the save line reads "Saved 14:02", "Saving…", "Not saved" or "Changed outside creaite".
+  - the save line reads "Saved 14:02", "Editing", "Saving…", "Not saved" or "Changed outside creaite".
 Closing rules (focus mode, the same live element):
   - Esc, a click on the scrim and the leave icon do the same thing: flush, then close, with no question when it saved;
   - a save that fails or a file changed outside creaite keeps the note open with the three-button dialog (Keep editing, Copy my text
@@ -109,7 +109,7 @@ class AutosavePage(LiveBrowserCase):
         b.type(" and more")                                                           # one burst: the save follows its last key
         t_key = time.monotonic()
         self.assertNotIn("first words", f.read_text(), "straight after the last key: not yet")
-        self.assertEqual(self.line(), "Saving…")
+        self.assertEqual(self.line(), "Editing")
         self.wait_text(f, "first words and more", 15)
         dt = time.monotonic() - t_key
         self.assertGreater(dt, 1.6, "about 2 s after the last key, never sooner (a slow machine only makes it later)")
@@ -124,7 +124,7 @@ class AutosavePage(LiveBrowserCase):
             b.pump(0.1)
         self.assertEqual(len(self.edits(n)), 1)
         page = b.eval("document.body.innerText")
-        for word in ("Draft kept", "Editing", "Use my typing", "Keep the file"):
+        for word in ("Draft kept", "Use my typing", "Keep the file"):
             self.assertNotIn(word, page)
 
     def test_nothing_is_sent_when_nothing_changed(self):
