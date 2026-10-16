@@ -43,7 +43,7 @@ NO_TIMER = """(()=>{ const st=window.setTimeout.bind(window); window.setTimeout=
 CLIP = "(()=>{ window.__clip=null; Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async t=>{ window.__clip=t; }}}); return true; })()"
 
 
-# page names these tests use: AUTOSAVE_MS noteFlushOnExit notesList noteDirty closeNote openNote noteGone noteUnsavedAtExit
+# page names these tests use: AUTOSAVE_MS noteFlushOnExit notesList noteDirty closeNote openNote noteGone noteUnsavedAtExit createNote
 class AutosavePage(LiveBrowserCase):
     width, height = 1400, 1000
     log, notes_dir, make, type_end = (notes_tab_browser.NotesTab.log, notes_tab_browser.NotesTab.notes_dir, notes_tab_browser.NotesTab.make,
@@ -469,6 +469,9 @@ class AutosavePage(LiveBrowserCase):
         b.wait("noteSave.value.state==='error'", 15)
         self.assertEqual(b.eval(f"openNote({json.dumps(other)})"), False, "refused while the text is at risk")
         self.assertIn("stays open", b.eval("notesMsg.value"))
+        self.assertIsNone(b.eval("createNote('ABC',{template:'blank',title:'Not over it'})"), "nor is a new note made over it")
+        self.assertFalse((self.notes_dir() / "Not over it.md").exists(), "refused before anything is made")
+        self.assertEqual(b.eval("noteCur.value.note.title"), "Stuck")
         b.click("[data-ncopy]")                                                       # a successful copy releases it
         b.wait("window.__clip!==null", 5)
         self.assertIn("irreplaceable", b.eval("window.__clip"))
