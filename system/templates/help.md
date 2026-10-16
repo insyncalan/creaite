@@ -237,6 +237,26 @@ Where: ⌘K, anywhere
 
 Or say: `move ABC-A-002 to fri` `Omar owns the SOW action`
 
+## Find a person's open work
+
+Where: People
+
+1. Open **People** and select the name. **With work** lists everyone who has an open item, you first.
+2. Their page shows the actions, risks and issues they own, grouped by project, and the decisions you are waiting on from them.
+3. **See all actions in Work** opens Work filtered to them. Or press [[⌘K]] and type their name.
+
+Or say: `what's open for Omar?`
+
+## See what changed on a project
+
+Where: Activity · a project's page
+
+1. Open **Activity**. It lists every change, newest first. Search by project, words, a person or a date, or use the **Kind** menu to narrow it.
+2. On the project's page, **Flow** shows what opened, closed and went overdue each week, and how its milestones have moved.
+3. Press **Undo** on any change in Activity to reverse it.
+
+Or say: `how is ABC going?`
+
 ### Meetings
 
 ## Turn a meeting into minutes
@@ -347,6 +367,19 @@ Where: Today · Intake · Files · Review · an item's source
 5. **Draft the follow-up email** (under What it produced) opens the follow-up: the attendees as **To** (from the invite, or the people register), a short thanks, the minutes' own summary paragraph, the decisions, and the actions grouped by owner. **Lead with** puts one person's actions first. Copy it into Outlook; nothing is sent.
 
 Or say: `prep for the ABC steering` `process Tuesday's ABC steering`
+
+## Why isn't my meeting in Intake?
+
+Where: Intake › Calendar import
+
+1. **The meeting isn't listed.** Calendar import lists meetings from Monday of this week to now. Press **Refresh** to read your calendar again. A private meeting is never listed.
+2. **It is greyed and can't be ticked.** It hasn't ended yet, and becomes selectable by itself once it has.
+3. **It says Not transcribed.** Transcription wasn't on, or the transcript isn't ready: one can appear hours after the meeting. Press **Check again** on its row.
+4. **It says No transcript or No access.** An in-person meeting, or one with no Teams link, has no transcript, and **No access** means it can't be read. If you have the transcript, drop it in **Upload files**.
+5. **You set it aside.** **Clear day** and a row's × hide a meeting. **Cleared (n)** under the list shows it, with **Restore**.
+6. **Nothing is listed at all.** The calendar arrives with the sweep. Press **Refresh** or run `sweep`, and check Microsoft 365 is connected in Settings › Health.
+
+Or say: `refresh calendar` `sweep`
 
 ### Keeping it right
 
@@ -564,24 +597,20 @@ Or say: `change project ABC's code to XYZ, Example Plus`
 
 Where: Settings › People and projects › People · Today
 
-VIP is private to you. creaite never shows the word beside a person and never writes it, or who is one, into anything: reports, the steerco one-pager, prep pages, minutes, drafts, Review or the Excel export. VIPs still work, unlabelled.
+VIP is private to you. creaite never shows the word beside a person and never writes it, or who is one, into anything: reports, the steerco one-pager, prep pages, minutes, drafts, Review or the Excel export. They still work, unlabelled.
 
-1. In **Settings › People and projects › People**, press **Edit** on the person and set **VIP** (Management, Client or Yes). Give every address they write from in **Email**, separated by commas. Apart from this Help, that field, the register's VIP column and **Settings › Advanced › VIP alerts** are the only places the word appears.
-2. Anything they send by mail or Teams is a row of **To decide** on **Today** (calendar invites from them no longer make a card), marked only **Message**, newest first with what waits in Review, with a count on Today in the left bar and a plain count in the window title ("(2) creaite"), even when it names no project or an ignore rule would skip it. The browser notification shows only the sender's name. Open the message from its link.
-   - **One card per conversation:** creaite reads the whole Teams chat or mail thread (everyone's messages, its title, the people and the attachment names), not each message on its own. The card has the chat's or thread's own title (or the people in it), where it is from, **updated HH:MM**, a one- or two-line summary of what it came to, and the candidate items: actions (with an owner and due date where stated), decisions and risks. When the conversation carries on, the same card is updated. creaite waits up to 15 minutes for a conversation to go quiet, so the card covers the whole exchange. The project is matched from the title first, then the people, the attachment names and what was said.
-   - **Looks done:** when the thread shows the work item it matches is finished (you sent what it asked for, or its owner says it is done), the card says why and offers **Looks done: close ABC-A-007**. One click stages the close for **Review**, where you approve it on its own; nothing is closed until you do. **Undo** on the card takes it back while it waits in Review. A confidential thread says only that the thread shows it finished. It follows **Spot items that are probably done** in Settings › Advanced › AI drafts.
-   - **Your promises:** when your own message in the thread makes a commitment in passing ("I'll send the revised plan by Friday"), the card shows **You promised Sara Example: Send the revised plan · by 16-10-2026** with **Add a promise** and **Dismiss**. Add a promise stages it for **Review** (You owe, once approved); Dismiss stages nothing. Only your own promises are offered, never ones made to you. When the thread shows one of the project's open promises kept, the card says **Looks kept: ABC-P-012** and offers **Looks kept: mark kept**, which stages it as done for Review, approved on its own. **Undo** on the card takes either back while it waits in Review; nothing is added or marked kept until you approve it. A confidential thread's promise is staged as "Follow up on a confidential thread", for you to reword in Review; a private one offers none. Activity › Quality counts how many you add, change or reject.
-   - **Nothing for you:** a conversation of greetings and chatter is one quiet line ("Mia Hale with Omar Ali: nothing for you"), with no buttons and no count.
-   - Each candidate item has its own **Create work item** (the +, filled from the item: its words, owner and due date) and **Dismiss** (nothing is staged or sent). The card goes once each item is made or dismissed. Nothing goes to Review unless you make it, and the sweep doesn't propose the same conversation again unless new messages came after the summary.
-3. On each message (a private or confidential conversation shows only a neutral line, and these work on the whole card):
-   - **Dismiss** (the crossed-out eye) when you've dealt with it; **Undo** in the message at the foot of the page puts it back.
-   - **Make a work item** (the +) opens a new item beside it, filled from the message: the subject as the title, its project (or **Choose a project** when it has none), you as owner, no due date, and the message as its source with its link. **Action**, **Risk**, **Issue** or **Decision** switches the type. **Draft from the message** reads that one message (read only) and suggests a sharper title and any date it states; it follows **Sharpen a vague action** in Settings › Advanced › AI drafts and is never offered for a private or confidential message. **Save** (⌘↵) stages it, applies it as usual and dismisses the message; **Cancel** (or Esc) leaves the message as it was.
+1. In **Settings › People and projects › People**, press **Edit** on the person and set **VIP** (Management, Client or Yes). Give every address they write from in **Email**, separated by commas. Apart from this page, that field, the register's VIP column and **Settings › Advanced › VIP alerts** are the only places the word appears.
+2. Anything they send by mail or Teams is a row of **Intake and Review** on **Today**, marked only **Message**, newest first, with a count on Today in the left bar and in the window title. It shows even when it names no project or an ignore rule would skip it. The browser notification shows only the sender's name. Their calendar invites don't make a card.
+   - **One card per conversation:** creaite reads the whole Teams chat or mail thread, not each message. The card has the conversation's own title, where it is from, **updated HH:MM**, a one- or two-line summary and the candidate items: actions, decisions and risks. When the conversation carries on, the same card updates. creaite waits up to 15 minutes for a conversation to go quiet. The project is matched from the title first, then the people, the attachment names and what was said.
+   - **Looks done:** when the thread shows the matching work item is finished, the card offers **Looks done: close ABC-A-007**. One click stages the close for Review, where you approve it on its own. **Undo** on the card takes it back while it waits.
+   - **Your promises:** when your own message makes a commitment in passing, the card shows **You promised Sara Example: Send the revised plan · by 16-10-2026** with **Add a promise** and **Dismiss**. Only your own promises are offered. When the thread shows an open promise kept, it offers **Looks kept: mark kept**. Nothing is added or marked until you approve it in Review.
+   - **Nothing for you:** a conversation of greetings and chatter is one quiet line, with no buttons and no count.
+   - Each candidate item has **Create work item** (the +, filled from the item) and **Dismiss**. The card goes once each is made or dismissed, and the sweep doesn't propose the same conversation again unless new messages came after the summary.
+3. On a message (a private or confidential conversation shows only a neutral line): **Dismiss** (the crossed-out eye) has **Undo**. **Make a work item** (the +) opens a new item filled from the message: the subject as its title, its project (or **Choose a project**), you as owner, no due date, and the message as its source. **Action**, **Risk**, **Issue** or **Decision** switches the type, and **Draft from the message** suggests a sharper title and any date (never for a private or confidential message). **Save** ([[⌘↵]]) makes it and dismisses the message, and **Cancel** leaves it.
 
-   What they ask for is also proposed as usual, first in **Review**, with no label. In **Work**, the funnel's **People I follow** filter (Owned by someone I follow, or Not followed) shows only their items; an overdue item one of them owns is an early warning, and the weekly report may list it in help needed without saying why.
+What they ask for is also proposed as usual, first in Review, with no label. In Work, the funnel's **People I follow** filter shows only their items. The early warning for an overdue item one of them owns is **Overdue item owned by someone you follow closely** in Settings › Advanced › Early warnings.
 
 Or say: `make Mia Hale a VIP` `mark the VIP alerts seen`
-
-The early warning for an overdue item one of them owns is **Overdue item owned by someone you follow closely** in Settings › Advanced › Early warnings. The Draft email no longer adds a note when it goes to one of them.
 
 ## Keep noise out of the sweep
 
@@ -614,6 +643,35 @@ Where: Settings › Health › creaite version · Claude Code
 
 Or say: `update creaite`
 
+## Archive a project
+
+Where: Settings › People and projects › Projects and register
+
+1. Press **Archive** beside the project. A finished project's folder moves to _Archive, and the project and its items leave Work, Today, the Excel export, the reminders and project matching.
+2. If it has open items they are listed first. Choose **Cancel them all and archive**, or **Stop**.
+3. The change waits on the approval card in ask creaite until you **Approve**. **Undo** reverses it.
+4. To bring one back, press **Show archived projects**, then **Restore**. A restored folder whose name is taken gets a number, and an archived code is never reused.
+
+Or say: `archive project ABC` `restore project ABC`
+
+## What the words mean
+
+Where: Help · when a word is new
+
+1. Find the word below. Each page uses it the same way.
+2. **Proposal**: something Claude suggests, which waits in Review until you approve it.
+3. **Tracker**: the record of your actions, risks, issues, decisions and milestones, kept on your Mac.
+4. **Vault**: creaite's folder on your Mac.
+5. **Sweep**: the check of Outlook and Teams since the last one, which turns what it finds into proposals.
+6. **Live server**: the small program behind the dashboard. The launcher starts it, and changes apply straight away while it runs.
+7. **Staged**: saved to wait for **Apply**. With **Save my changes at once** on, your own edits don't wait.
+8. **Applied**: written to the tracker. Every apply can be undone.
+9. **Peek**: an item opened over the page.
+10. **RAID**: risks, assumptions, issues and dependencies.
+11. **POAD**: Purpose, Objectives, Approach, Deliverables, the shape of an agenda.
+
+Or say: `what does staged mean?`
+
 ## Fix a stopped server and other problems
 
 Where: Bottom of the left bar · Claude Code
@@ -628,7 +686,7 @@ Or say: `health check` `setup`
 ---
 
 Press [[?]] on the dashboard for the full help. Dates are shown DD-MM-YYYY.
-Nothing reaches the tracker until you approve it, and all project data stays in the vault folder on your laptop.
+Nothing reaches the tracker until you approve it, and the tracker and engine stay on your laptop.
 [First day: how creaite works ›](#start-here)
 
 # Reference
@@ -799,20 +857,19 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 - The brief reads what creaite already holds, so it shows without the live server. Nothing on it is sent.
 
 ## Capture a note
-- **[[⌘⇧N]] from any page** (or ⌘K "New note") opens the note drawer at the right, without leaving the page. It replaces Intake's Quick capture: notes are saved in the project's `08 Notes` folder, not `minutes/`, and become tracker changes through **Find updates** on the note rather than a trip through Review. Quick notes saved before v2.0.0 stay in `minutes/`, and cx-minutes still processes them.
-- **The project** is guessed from the project register with the rules the minutes use: a code (`ABC`, `[ABC]`) or a Teams channel; the project's name, an alias or client name, a stakeholder listed under that project only, a sender or a client domain, or two keywords. One keyword isn't enough, a Shared name never counts, a word in a project's Exclude column rules it out, and signals for two projects ask you to choose. The reason is shown beside the project; changing the project makes it yours. No guess is **Unfiled** (the portfolio's notes folder).
-- **Type the slash key for the same menu as Notes** (headings, lists, checklist, quote, code); short names work (`h1`, `ul`, `ol`, `todo`, `bq`). Esc closes the menu first and a second Esc closes the drawer; [[⌘↵]] waits while the menu is open.
-- **Saved as you type:** the text is kept as a draft in `system/staging/drafts/notes/` a moment after each pause ("Draft saved 10:42"). **Done** ([[⌘↵]]) writes the note through filechange.py: backed up, logged in Activity › What ask creaite changed, and undoable. A taken name gets a number. Closing the drawer keeps the draft; **Discard** drops it.
-- **Done and find updates** saves the note and opens it on its project's Notes tab with the Find updates panel beside it.
-- **Recent notes** at the foot: drafts not yet saved first, then the newest notes; a click carries on with a draft or opens the note.
-- **Note for this meeting** (Today, under any meeting but a private one): the Working session template, with the meeting's title, its date and who was invited (from the saved calendar; a confidential meeting gives only its title and date), and the project Prep matched.
-- In ask creaite, a message starting **note:** saves a note the same way: the project guessed (Unfiled if nothing names one) and the note's title from its first line. It is saved by creaite, not by Claude. Needs the live server.
+- **[[⌘⇧N]] from any page** (or ⌘K "New note") opens the note drawer at the right, without leaving the page. Notes are saved in the project's Notes folder and become tracker changes through **Find updates** on the note, not through Review.
+- **The project** is guessed from the register with the rules the minutes use: a code or a Teams channel; the project's name, an alias or client name; a stakeholder listed under that project only; a sender or client domain; or two keywords. One keyword isn't enough, a shared name never counts, a word in a project's Exclude column rules it out, and signals for two projects ask you to choose. The reason shows beside the project, and changing it makes it yours. No guess is **Unfiled**.
+- Type [[/]] for the same menu as Notes (headings, lists, checklist, quote, code); short names work (`h1`, `ul`, `ol`, `todo`, `bq`). [[Esc]] closes the menu first, then the drawer.
+- **Saved as you type:** the text is kept as a draft a moment after each pause ("Draft saved 10:42"). **Done** ([[⌘↵]]) writes the note, backed up, and **Activity › What ask creaite changed** can undo it. A taken name gets a number. Closing the drawer keeps the draft, and **Discard** drops it.
+- **Done and find updates** saves the note and opens it on its project's Notes tab with Find updates beside it. **Recent notes** at the foot list drafts not yet saved first, then the newest notes.
+- **Note for this meeting** (on Today, under any meeting but a private one) starts the Working session template with the meeting's title, date and who was invited. A confidential meeting gives only its title and date.
+- In ask creaite, a message starting `note:` saves a note the same way. It needs the live server.
 
 ## Updates from meetings
-- When cx-minutes processes a meeting matched to a project, that project's **open items are expected** in it, whether or not you opened its prep brief. For the ones the transcript (or a quick note) actually discusses, it proposes an **update** instead of a new item: a status, a new due date, a response to a risk or issue, or a latest update. Items not discussed are left alone.
-- In Review the updates sit under the meeting's minutes beside its new items, labelled **Update**. Each shows the item's ID and text, every changed field as before → after, and what was said. An update that **closes** an item is approved on its own: “Approve routine” and “Approve all from these minutes” skip it.
-- **Probably done:** a meeting passage (and, from the sweep, a mail you sent, a reply or a Teams message) that shows an open item finished (an action, a RAID item, or a promise kept: the person who made it counts as its owner) becomes a closing update marked **Looks done** or **Maybe done**, with the words that show it. It must come from the item's owner or you, or name the owner; the item must be in its own project and raised before. Teams counts a little less than mail. Settings › Advanced › AI drafts › **Spot items that are probably done** turns it off.
-- It never changes an owner, title or project (use Review or cx-edit), and never proposes an open item again as a new one. Raising an open item again is still counted, so repeated risks show up in the early warnings. If you change an item before approving, the update is held as a conflict instead of overwriting your change.
+- When Claude processes a meeting matched to a project, that project's **open items are expected** in it. For the ones the transcript (or a quick note) discusses, it proposes an **update** instead of a new item: a status, a new due date, a response to a risk or issue, or a latest update. Items not discussed are left alone.
+- In Review the updates sit under the meeting's minutes, labelled **Update**, with the item's ID, each changed field as before → after and what was said. An update that **closes** an item is approved on its own: **Approve routine** and **Approve all from these minutes** skip it.
+- **Probably done:** a passage in a meeting (or, from the sweep, a mail you sent, a reply or a Teams message) that shows an open item finished becomes a closing update marked **Looks done** or **Maybe done**, with the words that show it. It must come from the item's owner or you, or name the owner. Teams counts a little less than mail. **Settings › Advanced › AI drafts › Spot items that are probably done** turns it off.
+- It never changes an owner, title or project (use Review or ask creaite), and never proposes an open item again as new. Raising an open item again is still counted, so repeated risks show up in the early warnings. If you change an item before approving, the update is held as a conflict instead of overwriting your change.
 
 ## Find updates in a note
 - **✦ Find updates** on a note reads the lines that are new or changed since you last ran it and opens a panel **beside the note**, in place of its right-hand column, until you close it (Close, or Esc). Each line that gave a change gets a numbered marker, and its rows carry the same number; pointing at either highlights the other.
@@ -904,13 +961,13 @@ Where: Reports › a project › the client report · address `#client-report=`
 - **The milestone editor** opens beside the page (in the item panel's place, clear of ask creaite): each change saves on its own with Undo; every date is a calendar pick (weekends muted; arrows, Page Up and Page Down, Enter, Esc). A click outside closes it, except on another milestone (it switches), while a calendar or the people list is open (the first click closes only that), or while a change waits for its reason (it shakes and says so). **Progress** is set by hand, never worked out from actions. **Cancel this milestone** keeps its history and hides it everywhere.
 
 ## Activity
-- Every change, newest first: when, what changed and by whom. Undo reverses a change not yet applied, or the latest apply (its row has **Undo**).
-- **Quality** (the second tab): what you approved as proposed, approved after an edit and rejected over the last four weeks, by source (minutes, sweep mail, sweep Teams, dashboard) and by type, the reasons given, the fields your edits change most, and how each kind of AI draft was used. Every figure is a count out of its total ("11 of 192"); a group under 10 isn't rated yet. A line says what moved since the four weeks before. It counts extraction and drafts, never a person, and stays internal: no report or export reads it.
-- **What kind of change:** each line starts with the item's icon (action, risk, issue, assumption, dependency, decision, milestone, project, weekly update, file); point at it for its name.
-- **Search and filters:** the list shows the newest 300 changes; the box at the top (press **/** while Activity is open) looks through every change read (the newest 2,000) and narrows the list as you type, by the item's ID or words, the project's name, who made the change, the change itself ("owner", "Closed") or the date; it shows "12 of 340" and **Clear**. The type buttons and the **From** and **to** dates narrow it further (dates take words, such as "yesterday" or "15-10"). The search is kept in the address, so it is still there when you close an item or go Back.
-- **Undo several older changes:** tick the lines (or click one, ⌘-click to add, Shift-click for a range, **Esc** to clear), then **Undo n** in the bar. creaite shows what will happen first: each field goes back to what it was before, **only where it still holds the value that change gave it**; anything changed since is listed as skipped and left as it is, and a new item is removed only if nothing has been added to it since. Over 25 changes it asks again. It is one new apply, shown as "Undid 3 changes" with its own **Undo**, and the lines it put back read **undone**. Ticking every line of the latest apply simply undoes that apply.
-- **Item IDs are links:** click a work item's ID to see it in the side panel without leaving Activity (Esc closes it); a milestone opens on its Milestones page with its editor open (Back returns), and a project name opens the project's page. Cmd-click (Ctrl-click) opens the item in a new tab.
-- **What ask creaite changed** (below the list): every file ask creaite created, changed, moved or deleted in the last seven days, including the ones you approved on its card, with its tier (**Ordinary**: made at once; **Sensitive** or **High-risk**: approved on the card), why and **Undo** (refused if the file has changed since, so nothing you did is lost).
+- Every change, newest first: when, what changed and by whom. **Undo** reverses a change not yet applied, or the latest apply.
+- **Quality** (the second tab) counts what you approved as proposed, approved after an edit and rejected over the last four weeks, by source and by type, with the reasons given, the fields your edits change most and how each kind of AI draft was used. Every figure is a count out of its total ("11 of 192"), and a group under 10 isn't rated yet. It counts extraction and drafts, never a person, and no report or export reads it.
+- Each line starts with the item's icon (action, risk, issue, assumption, dependency, decision, milestone, project, weekly update, file); point at it for its name.
+- **Search and filters:** the list shows the newest 300 changes. The box at the top (press **/**) looks through the newest 2,000 and narrows the list as you type, by an item's ID or words, the project, who made the change, the change itself or the date. It shows "12 of 340" and **Clear**. The type buttons and the **From** and **to** dates narrow it further, and dates take words such as "yesterday" or "15-10". The search stays in the address.
+- **Undo several older changes:** tick the lines (click, ⌘-click, Shift-click; [[Esc]] clears), then press **Undo n**. creaite shows what will happen first: each field goes back to what it was, only where it still holds the value that change gave it. Anything changed since is skipped. Over 25 changes it asks again. It is one new apply, "Undid 3 changes", with its own **Undo**.
+- **Item IDs are links:** click a work item's ID to see it in the side panel ([[Esc]] closes it). A milestone opens on its page, and a project name opens the project. ⌘-click opens the item in a new tab.
+- **What ask creaite changed** (below the list): every file ask creaite created, changed, moved or deleted in the last seven days, with its tier (**Ordinary**, **Sensitive** or **High-risk**), why and **Undo**. Undo is refused if the file has changed since, so nothing you did is lost.
 
 ## People
 - **People** in the rail has two tabs. **With work** (where it opens) lists everyone with an open action, an open risk or issue, or a decision waiting on them, with their counts and how many are overdue. You are first. **Nothing assigned** lists the other people creaite knows: those in the people register and anyone whose items are all closed. A made or withdrawn decision is history, not work. People move between the tabs by themselves, and each tab sorts on its own. Counts only: there are no scores or ratings.
@@ -931,13 +988,13 @@ Where: Reports › a project › the client report · address `#client-report=`
 - They're in the Excel export too, on the Workstreams sheet, editable like the others.
 
 ## Search
-- **Search the vault** at the top of Files finds anything: tracker items (actions, risks, issues, decisions, milestones), meetings (minutes and transcripts), notes, reports and documents, in groups of up to 20. Results appear as you type. It needs the live server.
-- It understands what you type. A project code (ABC), a person's name, alias or email, a type (risks, decisions, minutes, reports…) and a date (today, last week, last month, since 01-09-2026, in September) become **chips**; select × on a chip to drop it. The other words are what it looks for. “slip” finds “slipped”, and the last word matches as a prefix.
-- A result opens where it belongs: an item in its panel, a meeting in a preview scrolled to the match, a report or document in its own app. Documents are labelled “Document · internal”.
-- **⌘K** has a “Search the vault…” row once you've typed three characters, with the top five results beneath the jump list. **Esc** clears the box and brings the file list back.
-- **ask creaite:** next to the search bar, a button with the creaite spark. It is dimmed until you type, available for any text, and highlighted with a small ↵ when what you type reads like a question (it ends in “?” or starts with what, why, how, when, who, did, has or is): then Enter asks, and for any other text Enter just searches. While an answer is written the button reads "Answering…" with **Stop**; one runs at a time. The server gathers the best passages and tracker rows first; Claude then answers from them in a few lines, citing the file and section or the item ID for every point, as links you can open. If your files don't answer, it says so. **Continue in ask creaite** carries the question and answer into the assistant. Search answers aren't kept as chats unless you continue them. Documents are used and labelled internal.
-- **Summaries and tags:** when cx-minutes processes a meeting, and when a weekly or client report is staged, Claude writes a two-line summary and three to eight topic tags for it once (kept in `system/search/`). Search matches them, so you can find a meeting by what it was about, and a filter-only search shows the summary. Ask cx-setup (“setup”) to fill them in for meetings and reports you already have; it asks first.
-- **What it reads:** the text of Word, PowerPoint and Excel files, transcripts, text files, PDFs (including those exported from Word or PowerPoint), creaite's own report and minutes pages (every section they show, never what you hid) and emails saved as .eml (sender, recipients, date, subject, body and the attachments' names, not their contents; drag a message from Outlook to Finder to save one). A scanned or password-protected PDF, and any other file, is found by its name only.
+- **Search the vault** at the top of Files finds tracker items, meetings (minutes and transcripts), notes, reports and documents, in groups of up to 20, as you type. It needs the live server.
+- It understands what you type. A project code, a person's name, alias or email, a type (risks, decisions, minutes, reports…) and a date (today, last week, since 01-09-2026, in September) become **chips**, and × drops one. The other words are what it looks for: "slip" finds "slipped", and the last word matches as a prefix.
+- A result opens where it belongs: an item in its panel, a meeting in a preview scrolled to the match, a report or document in its own app. Documents are labelled "Document · internal".
+- [[⌘K]] has a "Search the vault…" row once you've typed three characters, with the top five results. [[Esc]] clears the box and brings the file list back.
+- **ask creaite** (the spark button beside the search bar) is dimmed until you type. It is highlighted with a small ↵ when what you type reads like a question (it ends in "?" or starts with what, why, how, when, who, did, has or is), and then Enter asks; for any other text Enter just searches. Claude answers in a few lines from the best passages and tracker rows, citing the file and section or the item ID for every point, as links. If your files don't answer, it says so. **Stop** cancels, and **Continue in ask creaite** carries the question on. Search answers aren't kept as chats unless you continue them.
+- **Summaries and tags:** when minutes are processed, and when a weekly or client report is made, Claude writes a two-line summary and three to eight topic tags for it once. Search matches them, so you can find a meeting by what it was about. Say `setup` to fill them in for meetings and reports you already have; it asks first.
+- **What it reads:** the text of Word, PowerPoint and Excel files, transcripts, text files, PDFs, creaite's own report and minutes pages (never what you hid) and emails saved as .eml (sender, recipients, date, subject, body and attachment names; drag a message from Outlook to Finder to save one). A scanned or password-protected PDF, and any other file, is found by its name only.
 - The index is rebuilt after every apply, when the live server starts, and when a search finds it older than the newest file.
 
 ### Settings and housekeeping
@@ -1004,11 +1061,12 @@ The dashboard runs from the live server on this Mac. Start it in Terminal with:
 
 [start command]
 
-- Leave the Terminal window open while you work; close it (or press Ctrl+C) to stop the server. Or open creaite with the launcher (see Open creaite as an app), which starts and stops it for you.
-- If the server stops, a red alert appears at the top; saves are held and applied when it's back.
-- The database is backed up at the first session of each day and before every apply, in `system/backups/`.
-- Each day creaite also makes a closed **backup zip** of what rebuilds the vault: the day's database backup, your settings (`system/config/` and `.claude/settings.local.json`), your `CLAUDE.md`, staging (proposals and drafts, never ask creaite's chats or their images, nor who you follow), the vault's git history and the flow history, with a manifest. If your projects live in OneDrive the zip is copied there (`_Portfolio/99 System/creaite backups`, made the first time; written whole so OneDrive never syncs half a file). That zip is the only thing besides your project files that leaves the laptop. If OneDrive can't be reached nothing stops: the copy is made the next day it can be, and Health warns after two days. To rebuild a vault, use **Settings › Health › Restore from a backup** (choose a backup, **Preview** shows what it will replace, then **Restore**), or say **restore creaite from backup** in Claude Code. Either keeps the current database and every file it replaces first, and never touches a project file.
-- **Old backups tidy themselves away** once a day: every daily backup for 30 days, then the Monday's for a year, then the first of each month for good; apply and undo copies 14 days; dashboard snapshots 30 days, then one a month; the installed release and the two before it; the last three update backups; file-change backups 90 days. Only creaite's own files, never the newest of each, and it can't be undone. The numbers are in Settings › Advanced › Safety. Once a week creaite checks it could restore: the newest backup and zip open, match their manifest and their history reads. Settings › Health shows the last copy, check and tidy-up. `99 System` is creaite's own folder: it is never listed, searched or read. The live database never leaves the laptop. Doctor shows the last copy's date. If an earlier version put copies in `_Portfolio/creaite backups`, they stay there; doctor tells you when they can be removed.
+- Leave the Terminal window open while you work, and close it to stop the server. Or open creaite with the launcher (see Open creaite as an app), which starts and stops it for you.
+- If the server stops, a red alert appears at the top. Saves are held and applied when it's back.
+- The tracker is backed up at the first session of each day and before every apply.
+- Each day creaite also makes a closed **backup zip** of what rebuilds the vault: the day's tracker backup, your settings, your own notes file for Claude, the proposals and drafts waiting (never ask creaite's chats or their images, nor who you follow), the vault's history and the flow history, with a manifest. If your projects live in OneDrive the zip is copied there, written whole so OneDrive never syncs half a file. That zip is the only thing besides your project files that leaves the laptop. If OneDrive can't be reached, the copy is made the next day it can be, and Health warns after two days.
+- To rebuild a vault, use **Settings › Health › Restore from a backup**: choose a backup, **Preview** shows what it will replace, then **Restore**. Or say `restore creaite from backup` in Claude Code. Either keeps the current database and every file it replaces first, and never touches a project file.
+- **Old backups tidy themselves away** once a day: every daily backup for 30 days, then the Monday's for a year, then the first of each month for good, and the other copies for shorter times. Only creaite's own files go, never the newest of each, and it can't be undone. The numbers are in **Settings › Advanced › Safety**. Once a week creaite checks that it could restore. **Settings › Health** shows the last copy, check and tidy-up. The live database never leaves the laptop.
 
 ## Troubleshooting
 - Red alert at the top (and a hollow red dot under Settings): start the live server (see Live server and backups). Saves are held until it's back.
