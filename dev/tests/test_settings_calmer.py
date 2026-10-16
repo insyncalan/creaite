@@ -46,6 +46,7 @@ def stub_health(b, answer, fixes=None):
     b.eval(f"""(()=>{{ const real=window.api, ans={json.dumps(answer)}; window.__fix=[]; window.__opened=[]; window.open=(u)=>{{ __opened.push(u); }};
       window.api=async(p,body)=>{{ if(p==='/api/health') return JSON.parse(JSON.stringify(ans));
         if(p.startsWith('/api/health/fix/')){{ __fix.push([p, body===undefined?null:body]); const id=p.slice(16);
+          if(id==='old_archive') return {{ok:true,fix:id,card:true,message:'Shown on the approval card in ask creaite: nothing moves until you approve it.'}};
           return id==='m365'?{{ok:true,fix:id,message:'Opening the connector page',url:'https://claude.ai/settings/connectors'}}:{{ok:true,fix:id,message:'Done'}}; }}
         return real(p,body); }}; }})()""")
 
@@ -174,6 +175,34 @@ class SettingsReading(LiveBrowserCase):
         self.b.wait("__fix.length===1")
         self.assertEqual(self.b.eval("__fix[0]"), ["/api/health/fix/launcher", None])     # the route names the fix; no body
         self.b.wait("document.getElementById('snackT').textContent==='Done'")
+
+    def test_a_card_fix_says_it_is_waiting_on_the_approval_card_not_done(self):
+        """#94: a fix that only raises the approval card (old_archive) is never "Done": the snack and the row say it waits for Alan,
+        and the row keeps saying so until a check no longer reports the problem."""
+        ans = json.loads(json.dumps(HEALTH))
+        ans["problems"][0]["fix"].update({"built": True, "id": "old_archive", "button": "Fix it",
+                                          "does": "Show the renames on the approval card."})
+        stub_health(self.b, ans)
+        self.open("health")
+        row = "document.querySelector('#healthCard .hrow[data-check=launcher_vault]')"
+        self.b.wait(f"!!{row}.querySelector('.btn.primary')")
+        self.assertFalse(self.b.eval(f"!!{row}.querySelector('.hwait')"))
+        self.b.eval(f"{row}.querySelector('.btn.primary').click()")
+        self.b.wait("__fix.length===1")
+        self.assertEqual(self.b.eval("__fix[0]"), ["/api/health/fix/old_archive", None])
+        self.b.wait("document.getElementById('snackT').textContent.startsWith('On the approval card, waiting for you')")
+        self.assertNotIn("Done", self.b.eval("document.getElementById('snackT').textContent"))
+        self.b.wait(f"!!{row}.querySelector('.hwait')")
+        self.assertEqual(self.b.eval(f"{row}.querySelector('.hwait').textContent"), "On the approval card, waiting for you.")
+        # the check runs again after the click and still reports the problem: the row keeps saying so
+        self.b.eval(f"{row}.closest('#healthCard').querySelector('#healthCheck').click()")
+        self.b.wait("!document.getElementById('healthCheck').disabled")
+        self.assertTrue(self.b.eval(f"!!{row}.querySelector('.hwait')"))
+        # once the problem is gone from the check, nothing is left waiting
+        ans["problems"] = []
+        stub_health(self.b, ans)
+        self.b.eval("document.getElementById('healthCheck').click()")
+        self.b.wait("!document.querySelector('#healthCard .hwait') && !document.querySelector('#healthCard .hrow[data-check=launcher_vault]')")
 
     def test_the_standalone_fixes_and_microsoft_365_opens_its_page(self):
         stub_health(self.b, HEALTH)
