@@ -75,6 +75,8 @@ class AutosavePage(LiveBrowserCase):
         b = self.b
         b.click("#noteExpand")
         b.wait("noteFocus.value&&!!document.querySelector('.ndoc.nfocus')&&document.activeElement===document.querySelector('.nbody')", 5)
+        b.call("Input.dispatchMouseEvent", type="mouseMoved", x=700, y=500)       # the pointer leaves the expand icon, so its hover tip (#143) is not what the first Esc closes
+        b.pump(0.4)
 
     def trigger(self, how):
         b = self.b
@@ -842,6 +844,7 @@ class AutosavePage(LiveBrowserCase):
         b.eval("closePanel&&closePanel(true)")
         b.resize(900, 800)
         b.wait("document.documentElement.clientWidth<=900")
+        b.pump(1.0)
         self.focus_on()
         w = b.eval("document.querySelector('.ndoc.nfocus').getBoundingClientRect().width")
         self.assertGreater(w, 0.94 * 900)
