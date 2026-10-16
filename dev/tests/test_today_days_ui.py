@@ -86,7 +86,7 @@ class DayLine(TodayFixture):
         b.click('#todayDate [data-tab="2026-10-16"]')
         self.assertEqual(b.eval(f"{TABS}[0].textContent"), "Tue 13 October")
         self.assertEqual(b.eval(f"getComputedStyle({TABS}[0]).fontSize"), "10px")                  # still 10px when another day is chosen
-        self.assertEqual(b.eval(f"getComputedStyle({SEL}).fontSize"), "10.5px")
+        self.assertEqual(b.eval(f"getComputedStyle({SEL}).fontSize"), "10px")
 
     def test_click_another_day_then_today_s_tab_is_short_with_its_dot_and_only_the_band_changes(self):
         b = self.b

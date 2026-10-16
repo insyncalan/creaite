@@ -575,7 +575,7 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-2xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}   /* #140: 10px (was 12) */
 .daytabs .dy:hover{color:var(--day-ink)}
 .daytabs .dy.today{color:var(--accent)}
-.daytabs .dy[aria-selected="true"]:not(.today){font-size:10.5px;line-height:1.14}   /* #140: the chosen day 10.5px; today is written short and stays 10px like the other dates */
+.daytabs .dy[aria-selected="true"]:not(.today){font-size:10px;line-height:1.14}   /* #140 (Alan): the chosen day is 10px too, so every date on the line is one size; today stays accent-coloured */
 .daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;letter-spacing:.12em;cursor:default}
 .daytabs .dy[aria-selected="true"]:not(.today){color:var(--day-ink)}
 .daytabs .dy.today:not([aria-selected="true"])::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle}
