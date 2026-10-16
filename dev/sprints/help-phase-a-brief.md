@@ -16,7 +16,7 @@ Product Manager, 16-10-2026, for Team Stark (Haiku writes, a second agent review
 
 - Write to someone who started today. Short sentences. One job per page. Steps start with a verb and name the button in bold.
 - Plain words: say "save" and "approve", not "stage" or "apply" unless the page is about applying; say "Claude", not "cx-minutes"; say "the live server" only after the glossary or Start here has explained it.
-- Banned in reader text: `cx-`, `BL-` numbers, `/api/`, `.json`, `staging`, file paths under `system/`, "Alan", "Alan's decision". The only code-style text is the phrases in "Or say:" and the Say this table, and keys as [[K]].
+- Banned in reader text: `cx-`, `BL-` numbers, `/api/`, `.json`, `staging`, file paths under `system/`, "Alan", "Alan's decision", and the old section name "To decide" (renamed Intake and Review by #168). The only code-style text is the phrases in "Or say:" and the Say this table, and keys as [[K]].
 - Every "Settings › …" path must exist: check each against `system/scripts/settings_catalogue.py` (Essentials, People and projects, Advanced, Health).
 - Dates shown DD-MM-YYYY in examples; people and projects are the fictional demo ones (Example Programme, Falcon Data Platform, Sara Example).
 - Keep the renderer conventions in the comment at the top of help.md (the three H1 parts, ### groups, Where:, numbered steps, Or say:).
@@ -26,14 +26,15 @@ Product Manager, 16-10-2026, for Team Stark (Haiku writes, a second agent review
 ## Order of work
 
 1. **Batch 1, now (no dependencies):** Start here (6 pages); every How do I… page marked Keep, Trim, Edit, Rewrite or Split without a WAIT; the new pages Archive a project, Why isn't my meeting in Intake, See what changed on a project, Find a person's open work, Glossary; Reference: Keyboard shortcuts, Opening the dashboard, Working with lists, How saving works, Early warnings, Meeting prep, Updates from meetings, Review, Intake, Files, Milestones, Activity, Workstreams, Search, Settings, Client messaging, Dates, Sources, What ask creaite can and can't do, Commands for Claude, Updating creaite, Open creaite as an app, Live server and backups, Troubleshooting.
-2. **Batch 2, after the review round on batch 1:** the pages marked WAIT. Each waits for the named item to be on main, or is checked against it: Notes and Capture a note and Find updates (#115, #117, #122), Where creaite can draft for you and AI drafts (#117), Chase someone for an update (#153, #154), Today and the Week ahead page (#112), Customise the side bar and What the icons mean (#139, #156), Project page and Update a project's state (#133, #134).
+2. **Batch 2, after the review round on batch 1 (Jarvis, 16-10-2026: no page waits for a cut):** the pages marked WAIT. Write each against what is built today, and add a short "Changes in v2.x" line list at the foot of the page's working notes (not the reader text) for each later item, so only a sentence waits, never a page: Notes and Capture a note and Find updates (#115, #122 in v2.1.0; #117, autosave #119 and focus mode #136 in v2.2.0: say what exists today), Where creaite can draft for you and AI drafts (#117), Chase someone for an update (#153, #154, v2.3.0: merge the two pages for today's behaviour), Today and the Week ahead page (#138, #140, #147, #150, #168 and #105, not #112, which is an idea), Customise the side bar and What the icons mean (#139, #156), Project page and Update a project's state (#133, #134).
 3. **Review round (L, mandatory):** a second agent compares every rewritten page with the old text and the code, page by page: nothing true is lost, every route, button name and file name exists (the identity check from HOW-WE-WORK), no banned word, every internal link resolves, the page is within its budget. Report the count of pages changed and any fact removed on purpose.
 4. **Finish:** rebuild the guides, run `test_help`, add the tests listed under Tests, commit, hand Jarvis the branch.
 
 ## Tests (Phase A adds them, so Phase B and later releases stay clean)
 
 - Word budget per page and in total (the numbers above, a small margin).
-- Banned words in reader text, with an allow-list for "Or say" commands.
+- Banned words in reader text, with an allow-list for "Or say" commands. Include "To decide".
+- A check that no page says to press Esc twice (#161 makes it one press).
 - Every "Settings › …" path exists in the settings catalogue.
 - Every [text](#id) link resolves to a page id or a redirect.
 - Every page has a "Checked against X.Y.Z" line, which the release step sets.
@@ -96,7 +97,7 @@ Targets are for the finished page. "→" rows are the pages a split makes. "WAIT
 | How do I… | Undo a mistake | 102 | 90 | Keep |  |
 | How do I… | Update creaite | 111 | 90 | Keep |  |
 | How do I… | Fix a stopped server and other problems | 256 | 220 | Rewrite as a table by symptom | Absorbs Troubleshooting (Reference). |
-| How do I… | NEW Week ahead | – | 130 | New | WAIT for #112. |
+| How do I… | NEW Week ahead | – | 130 | New | WAIT for #138, #140, #147, #150, #168. |
 | How do I… | NEW Customise the side bar | – | 100 | New | WAIT for #156. |
 | How do I… | NEW Archive a project | – | 100 | New | From the Settings reference. |
 | How do I… | NEW Why isn't my meeting in Intake? | – | 130 | New | Symptom table. |
@@ -108,7 +109,7 @@ Targets are for the finished page. "→" rows are the pages a split makes. "WAIT
 | Reference | Opening the dashboard | 97 | 60 | Trim |  |
 | Reference | Working with lists | 2257 | 390 | Rewrite | Delete the 320 px, narrow-window and high-contrast promises. |
 | Reference | How saving works | 467 | 170 | Trim | Move the motion paragraph to Settings. |
-| Reference | Today | 1497 | 340 | Rewrite | WAIT for #112 (Week ahead, day band). |
+| Reference | Today | 1497 | 340 | Rewrite | WAIT for #138, #140, #147, #150, #168 (Week ahead, day band, Intake and Review). |
 | Reference | Project page | 1963 | 390 | Rewrite | WAIT for #133/#134 (Current state editor). |
 | Reference | Notes (with Capture a note and Find updates folded in) | 1659 | 410 | Merge three pages into one | WAIT for #115/#117/#122. |
 | Reference | Early warnings | 294 | 220 | Trim |  |
