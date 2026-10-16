@@ -1,0 +1,78 @@
+--- a/dev/tests/test_ai_117.py
++++ b/dev/tests/test_ai_117.py
+@@ -84,7 +84,7 @@
+         return json.loads(r.stdout)
+ 
+     def test_places_options_and_the_room_for_a_client_place(self):
+-        self.assertEqual(sorted(edit_ai.PLACES), ["current", "email", "line", "notes", "plain"])
++        self.assertEqual(sorted(edit_ai.PLACES), ["current", "email", "line", "minutes", "notes", "plain", "readonly", "report"])
+         self.assertEqual(set(edit_ai.PLACES), set(edit_ai.FORMATS))             # a new place (`client`) is one entry in each of these
+         self.assertEqual(set(edit_ai.PLACES), set(edit_ai.FORMAT_RULES))
+         self.assertEqual(edit_ai.PLACES["notes"], ["notes", "rewrite", "shorter", "longer", "executive", "format", "checklist", "summary", "custom"])
+@@ -115,6 +115,8 @@
+ 
+     def test_every_option_but_ask_fixes_spelling_and_grammar(self):
+         for place, ids in edit_ai.PLACES.items():
++            if place in edit_ai.SHEET_PLACES:                                   # the sheet's prompts stay as shipped (below)
++                continue
+             for opt in ids:
+                 if opt == "custom":
+                     continue
+@@ -123,6 +125,35 @@
+                 self.assertIn("Also correct any spelling, grammar and punctuation, in British English", p, (place, opt))
+         p = self.ctx({"option": "custom", "instruction": "Make it louder", "text": "x", "place": "notes"})["prompt"]
+         self.assertNotIn("spelling, grammar", p)                                # Ask… does only what was asked
++
++    def test_the_sheets_places_stay_exactly_as_v210_shipped(self):
++        """Safety (#117 merged onto v2.1.0): the A4 sheet's places ("report" is the client report's) keep their shipped option sets,
++        format, Markdown rule and prompt; #117 adds no option, no spelling sentence and no format rule to them."""
++        self.assertEqual(edit_ai.SHEET_PLACES, ("report", "minutes", "readonly"))
++        self.assertEqual(edit_ai.PLACES["report"], ["shorter", "executive", "polish", "custom"])
++        self.assertEqual(edit_ai.PLACES["minutes"], edit_ai.PLACES["report"])
++        self.assertEqual(edit_ai.PLACES["readonly"], [])
++        self.assertEqual({p: edit_ai.FORMATS[p] for p in edit_ai.SHEET_PLACES},
++                         {"report": "markdown", "minutes": "markdown", "readonly": "plain"})
++        shipped = ('The text is Markdown. Reply in Markdown, using only bold, italic, "- " bullets, numbered lists, "### " '
++                   'sub-headings, quotes, links. Keep any link, image or HTML comment exactly as it is.')
++        self.assertEqual(edit_ai.FORMAT_RULES["report"], shipped)
++        self.assertEqual(edit_ai.FORMAT_RULES["minutes"], shipped)
++        self.assertEqual(edit_ai.FORMAT_RULES["readonly"], edit_ai.FORMAT_RULES["plain"])
++        self.assertEqual(edit_ai.OPTIONS["polish"][2][:17], "Polish the text: ")
++        for place in ("report", "minutes"):
++            for opt in edit_ai.PLACES[place]:
++                body = {"option": opt, "text": "UAT slipped two weeks.", "place": place, "code": "ABC"}
++                if opt == "custom":
++                    body["instruction"] = "Tighten it"
++                p = self.ctx(body)["prompt"]
++                self.assertNotIn("Also correct any spelling", p, (place, opt))   # no #117 sentence on the sheet
++                self.assertIn(shipped, p, (place, opt))
++                self.assertNotIn("task items", p, (place, opt))
++            for opt in ("notes", "rewrite", "longer", "format", "checklist", "summary", "formal", "warmer"):
++                self.assertIn("offered", self.ctx({"option": opt, "text": "One\n\nTwo", "place": place})["refused"], (place, opt))
++        self.assertIn("offered", self.ctx({"option": "shorter", "text": "x", "place": "readonly"})["refused"])
++        self.assertEqual(edit_ai.relevel("## x", "report"), "## x")             # no heading shift on the sheet
+ 
+     def test_format_notes_needs_two_or_more_paragraphs_and_a_place_that_has_it(self):
+         self.assertIn("two or more", self.ctx({"option": "notes", "text": "One paragraph only.", "place": "notes"})["refused"])
+@@ -239,11 +270,16 @@
+                 "email": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True),
+                 "plain": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True),
+                 "line": dict(ai=False, turnInto=False, formatNotes=False, improveOnly=True)}
+-        self.assertEqual(b.eval("AI_PLACE_TABLE"), want)
+-        self.assertEqual(b.eval("Object.keys(AI_PLACE_TABLE)"), list(want))
+-        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want))                     # the page, edit_ai.py and the groups list the same
+-        self.assertEqual(set(b.eval("Object.keys(AI_GROUPS)")), set(want))
+-        self.assertEqual(set(edit_ai.PLACES), set(want))
++        sheet = {"report", "minutes", "readonly"}
++        self.assertEqual({k: v for k, v in b.eval("AI_PLACE_TABLE").items() if k not in sheet}, want)
++        self.assertEqual([k for k in b.eval("Object.keys(AI_PLACE_TABLE)") if k not in sheet], list(want))
++        self.assertEqual(set(b.eval("Object.keys(AI_PLACES)")), set(want) | sheet)             # the page, edit_ai.py and the groups list the same
++        self.assertEqual(set(b.eval("Object.keys(AI_GROUPS)")), set(want) | sheet)
++        self.assertEqual(set(edit_ai.PLACES), set(want) | sheet)
++        self.assertEqual(b.eval("Object.keys(AI_PLACE_TABLE).filter(p=>['report','minutes','readonly'].includes(p))"),
++                         ["report", "minutes", "readonly"])                    # the sheet's places stay on, with no Turn into or Format notes
++        for p in ("report", "minutes", "readonly"):
++            self.assertEqual(b.eval(f"AI_PLACE_TABLE.{p}"), dict(ai=True, turnInto=False, formatNotes=False, improveOnly=False), p)
+         for place, row in want.items():
+             self.assertEqual(b.eval(f"aiPlaceOn({json.dumps(place)})"), row["ai"], place)
+         for place, row in want.items():
