@@ -298,6 +298,22 @@ class WeekendRule(unittest.TestCase):
         self.assertEqual(self.rec(date(2026, 10, 17), weekend={6})["date"], "2026-10-17")                # Saturday made a working day
         self.assertEqual(self.rec(date(2026, 10, 15))["date"], "2026-10-15")
 
+    def test_a_project_with_only_a_next_milestone_date_and_no_milestone_rows_builds_its_days(self):
+        """The fallback milestone row has six elements, with no state: planned_days and week_ahead must not read past it."""
+        import build_dashboard
+        proj = {"ms": [["Go live", "2026-10-17", "", None, None, None]]}
+        self.assertEqual(build_dashboard.planned_days({"projects": [proj]}, []), {"2026-10-17"})
+        v = Vault()
+        try:
+            world(v)
+            out = py(v, "import sqlite3, build_dashboard; c = sqlite3.connect('system/tracker.db'); c.execute('DELETE FROM milestones'); "
+                        "c.execute(\"UPDATE projects SET next_milestone='Go live', milestone_date='2026-10-17' WHERE code='ABC'\"); c.commit(); c.close(); "
+                        "d = build_dashboard.collect(); print(json.dumps([[x['date'] for x in d['days']['days']], bool(d.get('week'))]))")
+        finally:
+            v.cleanup()
+        self.assertIn("2026-10-17", out[0])                      # the Saturday, planned by the milestone
+        self.assertTrue(out[1])
+
     def test_the_planned_days_are_open_actions_raid_items_and_milestones(self):
         import build_dashboard
         items = [{"due": "2026-10-17"}, {"due": None}]

@@ -280,6 +280,32 @@ class DayLine(TodayFixture):
         self.assertEqual(b.eval(f"{TABS}.map(t=>t.dataset.tab)")[0], "2026-10-12")
         self.assertTrue(b.eval("document.querySelector('.dayedge.l').disabled"))
 
+    def test_147_the_icon_works_from_the_keyboard_enter_opens_arrows_move_escape_closes_and_returns_focus(self):
+        b = self.b
+        b.eval("D.days.days.unshift({...D.days.days[0], date:'2026-10-11', dow:'Sunday', short:'Sun 11', long:'Sunday 11th October', meetings:[], all_day:[]}); renderDay()")
+        b.wait("document.querySelector('#todayDate .dypastbtn')")
+        b.eval("document.querySelector('#todayDate .dypastbtn').focus()")
+        b.key("Enter")
+        b.wait("document.querySelector('#todayDate [role=menu]')")
+        items = "[...document.querySelectorAll('#todayDate [role=menuitem]')]"
+        self.assertGreaterEqual(b.eval(f"{items}.length"), 2)
+        first = b.eval(f"{items}.indexOf(document.activeElement)")
+        self.assertEqual(first, 0)                                                                       # focus lands on the first item
+        b.key("ArrowDown")
+        self.assertEqual(b.eval(f"{items}.indexOf(document.activeElement)"), 1)
+        b.key("ArrowUp")
+        self.assertEqual(b.eval(f"{items}.indexOf(document.activeElement)"), 0)
+        b.key("Escape")
+        b.wait("!document.querySelector('#todayDate [role=menu]')")
+        self.assertTrue(b.eval("document.activeElement.classList.contains('dypastbtn')"))                # focus back on the history icon
+
+    def test_a_synthesised_day_follows_the_weekend_setting(self):
+        b = self.b
+        self.assertEqual(b.eval("[S.weekendDays, synthDay('2026-10-16').weekend, synthDay('2026-10-17').weekend, synthDay('2026-10-18').weekend]"),
+                         [[5, 6], False, True, True])
+        b.eval("S.weekendDays=[4,5]")                                                                      # Friday and Saturday
+        self.assertEqual(b.eval("[synthDay('2026-10-16').weekend, synthDay('2026-10-17').weekend, synthDay('2026-10-18').weekend]"), [True, True, False])
+
     def test_147_the_icon_opens_on_hover_and_there_is_none_without_past_days(self):
         b = self.b
         r = b.eval("(()=>{ const e=document.querySelector('#todayDate .dypastbtn').getBoundingClientRect(); return [e.left+e.width/2, e.top+e.height/2]; })()")

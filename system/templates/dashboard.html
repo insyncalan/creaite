@@ -35677,7 +35677,7 @@ ${s5}`;
   var WDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   function synthDay(iso2) {
     const d5 = /* @__PURE__ */ new Date(iso2 + "T12:00:00"), dow2 = WDAYS[d5.getDay()];
-    return { date: iso2, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso2), today: iso2 === TODAY, past: iso2 < TODAY, weekend: d5.getDay() % 6 === 0, week: 0, meetings: [], all_day: [] };
+    return { date: iso2, dow: dow2, short: `${dow2.slice(0, 3)} ${d5.getDate()}`, long: longDay(iso2), today: iso2 === TODAY, past: iso2 < TODAY, weekend: wkDays().has((d5.getDay() + 6) % 7), week: 0, meetings: [], all_day: [] };
   }
   function dayList() {
     if (!D.calendar) return [];
@@ -36696,7 +36696,7 @@ ${s5}`;
     return out;
   }
   function othersOverdue() {
-    const n4 = A4.filter((x5) => overdue(x5) && !isMe(x5.o)).length;
+    const n4 = [...A4, ...R3].filter((x5) => overdue(x5) && !isMe(x5.o)).length;
     return { n: n4, nav: navOf("actions:open:", { st: ["Open", "Delayed"], due: ["overdue"], "!o": ["@me"] }) };
   }
   var WEEKFOLD = "creaite-week-ahead-hidden";
@@ -67701,6 +67701,7 @@ ${d5.text}`);
         "swept",
         "switchProject",
         "syncView",
+        "synthDay",
         "tabId",
         "tabTitle",
         "tdApprovable",

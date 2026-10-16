@@ -1673,7 +1673,7 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
                             "pr": r.get("pr")})
     for p in projects:
         for m in p["ms"]:
-            if m[1] and m[2] != "done" and m[6] not in ("Done", "Cancelled") and \
+            if m[1] and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled")) and \
                     today.isoformat() <= m[1] <= days[-1].isoformat():
                 land(m[1], {"kind": "milestone", "id": m[3], "p": p["code"], "t": m[0], "slip": m[2] == "slip"})
     for d in decisions:                # BL-319: decisions needed in the window
@@ -1693,7 +1693,7 @@ def week_ahead(today, actions, raid, projects, file_list, settings, cal, decisio
                for k, x in open_items if x["due"] and end < x["due"] <= horizon
                and x.get("pr") in ("Urgent", "High") and (shown is None or x.get("pr") in shown)]
     further += [{"date": m[1], "kind": "milestone", "id": m[3], "p": p["code"], "t": m[0]} for p in projects for m in p["ms"]
-                if m[1] and m[2] != "done" and m[6] not in ("Done", "Cancelled") and end < m[1] <= horizon]
+                if m[1] and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled")) and end < m[1] <= horizon]
     further.sort(key=lambda i: (i["date"], i["kind"] != "milestone"))
     return {"from": today.isoformat(), "to": end, "days": [out[d.isoformat()] for d in keep],
             "undated": undated, "further": further, "further_to": horizon}
@@ -2379,7 +2379,7 @@ def planned_days(d, items):
     due = {x["due"] for x in items if x.get("due")}
     for p in d.get("projects") or []:
         for m in p.get("ms") or []:
-            if m[1] and m[2] != "done" and m[6] not in ("Done", "Cancelled"):
+            if m[1] and m[2] != "done" and (len(m) < 7 or m[6] not in ("Done", "Cancelled")):
                 due.add(m[1])
     return due
 

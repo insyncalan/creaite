@@ -5,7 +5,7 @@
 import { dcIcon, openChat, say, send } from "./ask.js";
 import { closeMenu, menuOpenFor, openMenu } from "./components/Menu.jsx";
 import { openDatePicker } from "./components/Picker.jsx";
-import { parseWhen, weekendNote, WK, wkAsk } from "./core/fields.js";
+import { parseWhen, weekendNote, WK, wkAsk, wkDays } from "./core/fields.js";
 import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
@@ -166,7 +166,7 @@ export function renderDay(){ const cal=D.calendar, first=(S.me||"").split(" ")[0
    chosen day lives in memory only (stores/today.js), so a reload opens on today. Today's meetings still come from the
    calendar as the page holds it (D.calendar), with what the server worked out for each (its follow-up, Prep and plan). */
 const WDAYS=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:d.getDay()%6===0,week:0,meetings:[],all_day:[]}; }
+export function synthDay(iso){ const d=new Date(iso+"T12:00:00"), dow=WDAYS[d.getDay()]; return {date:iso,dow,short:`${dow.slice(0,3)} ${d.getDate()}`,long:longDay(iso),today:iso===TODAY,past:iso<TODAY,weekend:wkDays().has((d.getDay()+6)%7),week:0,meetings:[],all_day:[]}; }
 /** The days the line offers: the server's, with today added when the calendar holds nothing for it. */
 export function dayList(){ if(!D.calendar) return []; const L=[...(((D.days||{}).days)||[])];
   if(!L.some(d=>d.date===TODAY)){ L.push(synthDay(TODAY)); L.sort((a,b)=>a.date.localeCompare(b.date)); } return L; }
@@ -593,8 +593,8 @@ export function weekGroups(){ const W=D.week; if(!W) return [];
     group("wk"+d.date,d.date===W.from?"Today":longDay(d.date),[...(d.meetings||[]).map(e=>meeting(e,d.date)),...(d.items||[]).filter(i=>!quiet(i)).map(i=>item(i,`${d.date}${i.kind}${i.id}`,false))]); });
   group("wkfur","Further ahead",(W.further||[]).map(i=>item(i,`f${i.date}${i.kind}${i.id}`,true)),W.further_to?` to ${longDay(W.further_to)}`:"");
   return out; }
-/** The open actions that are overdue and owned by others: the quiet line above the days (#112) and its Work address. */
-export function othersOverdue(){ const n=A.filter(x=>overdue(x)&&!isMe(x.o)).length;
+/** The open actions and RAID items that are overdue and owned by others (milestones have no owner, so are not counted): the quiet line above the days (#112) and its Work address. */
+export function othersOverdue(){ const n=[...A,...R].filter(x=>overdue(x)&&!isMe(x.o)).length;
   return {n,nav:navOf("actions:open:",{st:["Open","Delayed"],due:["overdue"],"!o":["@me"]})}; }
 const WEEKFOLD="creaite-week-ahead-hidden";   /* #105: per viewer, this browser only (localStorage) */
 let weekFoldWired=false;

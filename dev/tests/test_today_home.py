@@ -232,7 +232,7 @@ class WeekCalm(Header):
 
     def draw(self, extra=""):
         b = self.b
-        b.eval("""(()=>{ const x=A.filter(a=>a.id.startsWith('ZZZ')); x.forEach(a=>A.splice(A.indexOf(a),1)); })()""")
+        b.eval("""(()=>{ const x=A.filter(a=>a.id.startsWith('ZZZ')); x.forEach(a=>A.splice(A.indexOf(a),1)); R.filter(a=>a.id.startsWith('ZZZ')).forEach(a=>R.splice(R.indexOf(a),1)); })()""")
         b.eval("A.push({id:'ZZZ-A-001',p:'ABC',t:'Mine due soon',o:S.me,st:'Open',due:pkAdd(TODAY,1)})")
         b.eval(self.WEEK + extra + "; go('today'); renderToday()")
         b.wait("document.querySelector('#weekList .wkrow')")
@@ -263,8 +263,11 @@ class WeekCalm(Header):
     def test_quiet_overdue_line_counts_other_people_s_work_links_to_work_and_hides_at_zero(self):
         b = self.b
         self.draw("""; A.push({id:'ZZZ-A-010',p:'ABC',t:'Late theirs',o:'Omar Ali',st:'Open',due:pkAdd(TODAY,-3)},{id:'ZZZ-A-011',p:'ABC',t:'Late theirs 2',o:'Sara Khan',st:'Open',due:pkAdd(TODAY,-1)},
-          {id:'ZZZ-A-012',p:'ABC',t:'Late mine',o:S.me,st:'Open',due:pkAdd(TODAY,-2)},{id:'ZZZ-A-013',p:'ABC',t:'Closed late',o:'Omar Ali',st:'Closed',due:pkAdd(TODAY,-2)})""")
-        want = b.eval("A.filter(a=>!a.id.startsWith('ZZZ')&&a.st==='Open'&&a.due&&a.due<TODAY&&!isMe(a.o)).length") + 2
+          {id:'ZZZ-A-012',p:'ABC',t:'Late mine',o:S.me,st:'Open',due:pkAdd(TODAY,-2)},{id:'ZZZ-A-013',p:'ABC',t:'Closed late',o:'Omar Ali',st:'Closed',due:pkAdd(TODAY,-2)});
+          R.push({id:'ZZZ-R-010',p:'ABC',t:'Late risk theirs',o:'Omar Ali',st:'Open',due:pkAdd(TODAY,-4)},{id:'ZZZ-R-011',p:'ABC',t:'Late risk mine',o:S.me,st:'Open',due:pkAdd(TODAY,-4)},
+          {id:'ZZZ-R-012',p:'ABC',t:'Closed risk',o:'Omar Ali',st:'Closed',due:pkAdd(TODAY,-4)})""")
+        # actions and RAID items count (the two actions and one risk added here); a milestone has no owner and is never counted
+        want = b.eval("[...A,...R].filter(a=>!a.id.startsWith('ZZZ')&&a.st==='Open'&&a.due&&a.due<TODAY&&!isMe(a.o)).length") + 3
         o = b.eval("(()=>{ const p=document.querySelector('#weekList .wkpoint'); return {text:p.textContent, nav:p.querySelector('a').dataset.nav, first:document.querySelector('#weekList').firstElementChild===p}; })()")
         self.assertEqual(o["text"], f"{want} items owned by others are overdue. See them in Work")
         self.assertTrue(o["first"])                                                                            # above the days
@@ -273,7 +276,7 @@ class WeekCalm(Header):
         b.eval("document.querySelector('#weekList .wkpoint a').click()")
         b.wait("VIEW==='work'")
         self.assertEqual(b.eval("[...document.querySelectorAll('#v-work .chip, #v-work .fchip, #v-work [data-filter]')].length>=0"), True)
-        self.draw("""; A.splice(0,A.length,...A.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-A-00'))); renderToday()""")
+        self.draw("""; A.splice(0,A.length,...A.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-A-00'))); R.splice(0,R.length,...R.filter(a=>isMe(a.o)||a.id.startsWith('ZZZ-R-00'))); renderToday()""")
         self.assertEqual(b.eval("document.querySelectorAll('#weekList .wkpoint').length"), 0)                # hidden at zero
 
     def test_overdue_work_no_longer_leads_the_week(self):
