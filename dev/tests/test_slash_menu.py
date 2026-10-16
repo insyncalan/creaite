@@ -781,6 +781,27 @@ class Slash(LiveBrowserCase):
         self.assertNotIn("\n\n\n", md)
         self.assertRegex(md, r"(?s)^> one\n>\s*\n> two x\n>\s*\n> three$", "no split: still one quote")
 
+    def test_n3_quoted_headings_with_extra_indent_keep_their_level(self):
+        b = self.b
+        self.open_current(f"{STATE}\n\n>  ### Two spaces\n\n>\t### A tab\n\n>   ### Three spaces\n\n> >  ### Deep")
+        self.assertEqual(b.eval("curEd.querySelectorAll('blockquote h1').length"), 4, "all four are Heading 1 in the editor")
+        self.assertEqual(b.eval("curEd.querySelectorAll('blockquote h3').length"), 0)
+        for want in ("Two spaces", "A tab", "Three spaces", "Deep"):
+            line = next(l for l in b.eval("edValue(curEd)").split("\n") if l.endswith(want))
+            self.assertEqual(line.lstrip(">\t "), f"### {want}", f"{want}: still level three when stored (was {line!r})")
+        self.assertEqual(b.eval("edValue(curEd).includes('\\u200b')"), False)
+
+    def test_n3_other_lines_are_not_changed_by_the_wider_quote_pattern(self):
+        b = self.b
+        self.open_current()
+        b.eval("curEd.cxed.setValue(%r)" % "> \t### Space tab is code\n\n>     ### Five spaces is code\n\n> ### Plain")     # set directly: the page's own reading of the stored text would tidy the spaces
+        self.assertEqual(b.eval("curEd.querySelectorAll('blockquote h1').length"), 1, "only the plain one is a heading")
+        self.assertEqual(b.eval("curEd.querySelectorAll('blockquote pre').length"), 2)
+        self.assertIn("### Space tab is code", b.eval("curEd.querySelectorAll('blockquote pre')[0].textContent"), "code shows what was stored")
+        lines = b.eval("edValue(curEd)").split("\n")
+        self.assertIn("> ### Plain", lines)
+        self.assertIn("> \t### Space tab is code", lines)
+
     # ---- dark and forced colours -----------------------------------------------------------------------------------------
 
     def test_dark_and_forced_colours(self):

@@ -23215,7 +23215,7 @@ ${s5}`;
         comment = true;
         return line;
       }
-      const m5 = /^((?:>[ \t]?)*)(\u200B*)(#{1,6})([ \t].*|)$/.exec(line);
+      const m5 = /^((?:> {0,4}|>\t)*)(\u200B*)(#{1,6})([ \t].*|)$/.exec(line);
       return m5 ? m5[1] + to2(m5[2], m5[3].length, m5[4]) : line;
     }).join("\n");
   }

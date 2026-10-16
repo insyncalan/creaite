@@ -76,7 +76,7 @@ function mapHeads(md,to){ let fence=false, comment=false;
     if(comment){ if(line.includes("-->")) comment=false; return line; }
     if(/^\s*(```|~~~)/.test(line)){ fence=!fence; return line; } if(fence) return line;
     if(line.includes("<!--")&&!line.slice(line.indexOf("<!--")+4).includes("-->")){ comment=true; return line; }
-    const m=/^((?:>[ \t]?)*)(\u200B*)(#{1,6})([ \t].*|)$/.exec(line); return m?m[1]+to(m[2],m[3].length,m[4]):line; }).join("\n"); }   /* a heading in a quote (`> # x`, `> > # x`) is shifted too: the quote prefix stays as it is */
+    const m=/^((?:> {0,4}|>\t)*)(\u200B*)(#{1,6})([ \t].*|)$/.exec(line); return m?m[1]+to(m[2],m[3].length,m[4]):line; }).join("\n"); }   /* a heading in a quote (`> # x`, `> > # x`) is shifted too: the quote prefix stays as it is; after each `>` the editor reads a heading with up to four spaces or one tab (more is code, and is left alone) */
 /** A stored text into the editor's levels (headShift 2: `###` `####` `#####` become 1 2 3; other `#` lines stay literal text).
     @param {string} md @param {number} shift */
 export const headsIn=(md,shift)=>shift?mapHeads(md,(z,n,rest)=>z===""&&n>shift&&n<=shift+3?"#".repeat(n-shift)+rest:"\u200B"+z+"#".repeat(n)+rest):md;
