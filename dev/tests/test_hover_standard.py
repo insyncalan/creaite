@@ -138,7 +138,7 @@ class TooltipFullMotion(TooltipBase, LiveBrowserCase):
 MENU_FIXTURE = """(()=>{ document.getElementById('hmenus')?.remove(); const root=document.createElement('div'); root.id='hmenus';
   root.style.cssText='position:fixed;top:0;left:0;z-index:500;background:var(--surface)'; document.body.appendChild(root);
   window.HM={log:[],picked:[]};
-  [['m1',80],['m2',420]].forEach(([id,left])=>{ const box=document.createElement('div'); box.id=id; box.style.cssText=`position:fixed;top:80px;left:${left}px`; root.appendChild(box);
+  [['m1',380],['m2',720]].forEach(([id,left])=>{ const box=document.createElement('div'); box.id=id; box.style.cssText=`position:fixed;top:80px;left:${left}px`; root.appendChild(box);
     mountMenu(box,{label:'Menu '+id, hover:true, data:{hm:id}, items:[{id:'a',name:'First'},{id:'b',name:'Second'}], onPick:i=>HM.picked.push(id+i)});
     new MutationObserver(()=>{ const open=!!box.querySelector('[role=menu]'); if(open!==box._o){ box._o=open; HM.log.push({id,open,t:performance.now()}); } }).observe(box,{childList:true,subtree:true}); }); })()"""
 
@@ -288,7 +288,7 @@ class HoverMenu(LiveBrowserCase):
 
 CARD_FIXTURE = """(()=>{ document.getElementById('hcard')?.remove(); const root=document.createElement('div'); root.id='hcard';
   root.style.cssText='position:fixed;top:0;left:0;z-index:500'; document.body.appendChild(root);
-  root.innerHTML='<button id="ct" style="position:fixed;top:120px;left:120px">Trigger</button><div id="cc" tabindex="-1" style="position:fixed;top:170px;left:120px;width:240px;height:120px;background:var(--surface);border:1px solid var(--line);display:none">Card</div>';
+  root.innerHTML='<button id="ct" style="position:fixed;top:120px;left:380px">Trigger</button><div id="cc" tabindex="-1" style="position:fixed;top:170px;left:380px;width:240px;height:120px;background:var(--surface);border:1px solid var(--line);display:none">Card</div>';
   window.HC={log:[]}; const t=root.querySelector('#ct'), c=root.querySelector('#cc');
   hoverAttach(t,{group:cardGroup,panel:()=>c.style.display==='none'?null:c,open:()=>{ c.style.display='block'; HC.log.push({open:true,t:performance.now()}); },close:()=>{ c.style.display='none'; HC.log.push({open:false,t:performance.now()}); }}); })()"""
 
