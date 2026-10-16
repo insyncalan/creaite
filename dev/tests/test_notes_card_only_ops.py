@@ -339,9 +339,11 @@ class NotesMapping(OneDriveCase):
         os.symlink(out / "x.md", d / "x.md")                                     # only a symlinked file
         self.assertFalse(self.page_save(self.renamed())[1]["ok"])
         (d / "x.md").unlink()
+        (d / "Real.md").write_text("a real note\n")                               # a case-only change is the same folder,
+        self.assertEqual(self.page_save(self.renamed("08 NOTES"))[1], {"ok": True})   # saved with notes in it
+        (d / "Real.md").unlink()
         for f in (".DS_Store", "._Keep.md", "Icon\r"):                           # L3: Finder's own files
             (d / f).write_text("")
-        self.assertTrue(self.page_save(self.renamed("08 NOTES"))[1]["ok"])       # a case-only change is the same folder
         self.assertEqual(self.page_save(self.renamed())[1], {"ok": True})
 
     def test_i_copy_out_of_an_archived_engagement_needs_the_card(self):
