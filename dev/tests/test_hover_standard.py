@@ -9,7 +9,7 @@ Two parts:
 - the state machine on a fake clock, in Node (no real waiting): open delay, close grace, neighbour switch, Esc, move onto the card,
   focus open, the safe triangle. Skipped when Node is missing.
 - a real browser, against the real live server, at 1400 px and 900 px: the tooltip (timed in the page, with and without reduced
-  motion), a hover Menu (a real mouse) and a hover card (hoverAttach). Lower bounds are the delays; upper bounds are generous.
+  motion), a hover Menu (a real mouse) and a hover card (hoverAttach). Only lower bounds are asserted (the delays); the exact timings are the Node cases' job, on a fake clock, so a loaded machine cannot fail them.
 
 Run: python3 dev/tests/test_hover_standard.py   (Node for the first part, Google Chrome for the second; skipped otherwise)
 """
@@ -66,6 +66,12 @@ class StateMachine(unittest.TestCase):
                 with self.subTest(n):
                     self.case(n)
 
+    def test_release(self):
+        for n in self.results:
+            if n.startswith("release:"):
+                with self.subTest(n):
+                    self.case(n)
+
     def test_every_case_ran(self):
         self.assertGreaterEqual(len(self.results), 20)
 
@@ -98,12 +104,8 @@ class TooltipBase:
 
     def check(self, t):
         self.assertGreaterEqual(t["first"], 390, t)        # TIP_OPEN 400, no popup is instant
-        self.assertLessEqual(t["first"], 900, t)
         self.assertGreaterEqual(t["next"], 90, t)          # TIP_NEXT 100: no longer 0 between icons
-        self.assertLess(t["next"], t["first"], t)          # but quicker than the first
-        self.assertLessEqual(t["next"], 500, t)
         self.assertGreaterEqual(t["hide"], 140, t)         # TIP_CLOSE 150, was 120
-        self.assertLessEqual(t["hide"], 700, t)
         self.assertFalse(t["shownAt200"], t)               # was 250: still nothing at 200 ms
 
     def test_tooltip_delays_at_desktop_width(self):
@@ -176,7 +178,6 @@ class HoverMenu(LiveBrowserCase):
         self.stamp(); self.mouse(x, y)
         t = self.took("m1", True)
         self.assertGreaterEqual(t, 190, t)
-        self.assertLessEqual(t, 900, t)
         self.assertFalse(b.eval("!!document.querySelector('#m1 [role=menu]').contains(document.activeElement)"))
         # the pointer can move onto the list and it stays
         lx, ly = self.at("#m1 [role=menu] [role=menuitem]")
@@ -188,11 +189,10 @@ class HoverMenu(LiveBrowserCase):
         self.stamp(); self.mouse(x2, y2)
         t2 = self.took("m2", True)
         self.assertGreaterEqual(t2, 70, t2)
-        self.assertLessEqual(t2, 600, t2)
         self.assertFalse(self.is_open("m1"))
         # Esc closes at once, and it stays shut while the pointer stays
         self.stamp(); b.key("Escape")
-        self.assertLessEqual(self.took("m2", False), 300)
+        self.took("m2", False)                               # closes on the key (the Node cases prove 'at once' on a fake clock)
         b.pump(0.8)
         self.assertFalse(self.is_open("m2"))
         # leaving and coming back opens it again; leaving closes it after 300 ms
@@ -202,7 +202,6 @@ class HoverMenu(LiveBrowserCase):
         self.stamp(); self.mouse(900, 600)
         t3 = self.took("m2", False)
         self.assertGreaterEqual(t3, 290, t3)
-        self.assertLessEqual(t3, 1000, t3)
         # a click on a hover-opened menu keeps it and moves focus in; the keyboard opens one with focus inside
         self.mouse(x, y); self.took("m1", True)
         b.click(b1)
@@ -214,6 +213,58 @@ class HoverMenu(LiveBrowserCase):
         b.eval("document.querySelector('#m2 button[aria-haspopup]').focus()")
         b.key("ArrowDown")
         b.wait("document.querySelector('#m2 [role=menu]')&&document.querySelector('#m2 [role=menu]').contains(document.activeElement)", 2)
+
+    def hover_open_m1(self):
+        b = self.b
+        b.eval(MENU_FIXTURE)
+        b.wait("document.querySelector('#m1 button[aria-haspopup]')")
+        self.mouse(900, 600)
+        x, y = self.at("#m1 button[aria-haspopup]")
+        self.stamp(); self.mouse(x, y)
+        self.took("m1", True)
+        return x, y
+
+    def test_after_a_click_in_esc_is_the_menus_own_and_focus_goes_back_to_the_button(self):
+        b = self.b
+        self.hover_open_m1()
+        b.click("#m1 button[aria-haspopup]")                       # a click on the hover-opened menu moves focus in
+        b.wait("document.querySelector('#m1 [role=menu]').contains(document.activeElement)", 3)
+        b.key("Escape")
+        b.wait("!document.querySelector('#m1 [role=menu]')", 3)
+        b.wait("document.activeElement===document.querySelector('#m1 button[aria-haspopup]')", 3)
+
+    def test_after_a_click_in_the_pointer_drifting_off_does_not_close_it(self):
+        b = self.b
+        self.hover_open_m1()
+        b.click("#m1 button[aria-haspopup]")
+        b.wait("document.querySelector('#m1 [role=menu]').contains(document.activeElement)", 3)
+        self.mouse(900, 600)                                       # the mouse drifts away while the keys are in use
+        b.key("ArrowDown")
+        b.pump(0.9)                                                # well past the 300 ms grace
+        self.assertTrue(self.is_open("m1"))
+        self.assertTrue(b.eval("document.querySelector('#m1 [role=menu]').contains(document.activeElement)"))
+
+    def test_down_on_a_hover_opened_menu_moves_in_and_the_menu_stays_when_the_pointer_leaves(self):
+        b = self.b
+        self.hover_open_m1()
+        b.eval("document.querySelector('#m1 button[aria-haspopup]').focus()")
+        b.key("ArrowDown")
+        b.wait("document.querySelector('#m1 [role=menu]').contains(document.activeElement)", 3)
+        self.mouse(900, 600)
+        b.pump(0.9)
+        self.assertTrue(self.is_open("m1"))
+
+    def test_a_click_inside_the_hover_window_is_not_undone_by_the_late_hover_timer(self):
+        b = self.b
+        b.eval(MENU_FIXTURE)
+        b.wait("document.querySelector('#m1 button[aria-haspopup]')")
+        self.mouse(900, 600)
+        b.click("#m1 button[aria-haspopup]")                       # the pointer arrives and clicks well inside the 200 ms
+        b.wait("document.querySelector('#m1 [role=menu]')", 3)
+        b.pump(0.6)                                                # the pending hover open would have fired by now
+        self.assertTrue(b.eval("document.querySelector('#m1 [role=menu]').contains(document.activeElement)"))
+        b.click("#m1 button[aria-haspopup]")                       # so the next click closes it, not moves focus in
+        b.wait("!document.querySelector('#m1 [role=menu]')", 3)
 
     def test_menu_at_desktop_width(self):
         self.scenario()
@@ -251,7 +302,6 @@ class HoverCard(LiveBrowserCase):
         b.eval("window.T0=performance.now()"); self.mouse(tx, ty)
         t = self.took(True)
         self.assertGreaterEqual(t, 590, t)                 # CARD_OPEN 600: not at the menu's 200
-        self.assertLessEqual(t, 1500, t)
         cx, cy = self.at("#cc")                            # onto the card: it stays (hoverable, persistent)
         self.mouse(cx, cy)
         b.pump(0.8)
@@ -259,11 +309,10 @@ class HoverCard(LiveBrowserCase):
         b.eval("window.T0=performance.now()"); self.mouse(900, 600)   # off the card: closes after 300 ms
         t2 = self.took(False)
         self.assertGreaterEqual(t2, 290, t2)
-        self.assertLessEqual(t2, 1000, t2)
         # Esc dismisses at once and it stays shut until the pointer has left
         b.eval("window.T0=performance.now()"); self.mouse(tx, ty); self.took(True)
         b.eval("window.T0=performance.now()"); b.key("Escape")
-        self.assertLessEqual(self.took(False), 300)
+        self.took(False)
         b.pump(1.0)
         self.assertEqual(b.eval("document.getElementById('cc').style.display"), "none")
         # keyboard focus opens it with no delay

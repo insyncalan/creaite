@@ -124,6 +124,7 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   const back = useRef(false);
   const box = useRef(/** @type {HTMLDivElement | null} */ (null));
   const byPointer = useRef(false);                       // #143: opened by hovering, so focus stays where it was
+  const isOpen = useRef(false); isOpen.current = open;   // #143: a late hover timer must not act on a menu already open
 
   /** @param {MenuClose} how */
   const close = how => { back.current = how === "esc"; setOpen(false); if (hover && menuGroup.current === btn.current) menuGroup.close(); };
@@ -131,7 +132,7 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   useEffect(() => {
     const b = btn.current; if (!hover || !b) return;
     return hoverAttach(b, { group: menuGroup, focusOpens: false, panel: () => box.current,
-      open: () => { if (why) return; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
+      open: () => { if (why || isOpen.current) return; byPointer.current = true; tipHide(); setOpen(true); }, close: () => setOpen(false) });
   }, [hover, why]);
 
   useEffect(() => { if (!open && back.current) { back.current = false; btn.current?.focus(); } }, [open]);
@@ -144,7 +145,11 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   };
 
   /** @param {KeyboardEvent} e */
-  const onBtnKey = e => { if (e.key === "ArrowDown" && !why && !open) { e.preventDefault(); byPointer.current = false; setOpen(true); } };
+  const onBtnKey = e => {
+    if (e.key !== "ArrowDown" || why) return;
+    if (!open) { e.preventDefault(); byPointer.current = false; if (hover) menuGroup.release(btn.current); setOpen(true); }
+    else if (byPointer.current) { e.preventDefault(); byPointer.current = false; menuGroup.release(btn.current); menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); }   /* ↓ on a hover-opened menu moves in */
+  };
 
   return (
     <span class={`dd${cls ? " " + cls : ""}`}>
@@ -152,6 +157,7 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
         aria-expanded={open ? "true" : "false"} aria-label={ariaLabel} aria-disabled={why ? "true" : undefined}
         data-tip={why || tip} {...dataAttrs(data)} onKeyDown={onBtnKey}
         onClick={e => { e.preventDefault(); if (why) { onBlocked && onBlocked(); return; }
+          if (hover) menuGroup.release(btn.current);          /* a click is the keyboard's and the mouse's own: no pending hover open, no hover close */
           if (open && byPointer.current) { byPointer.current = false; menuItemsIn(box.current)[0]?.focus({ preventScroll: true }); return; }   /* a click on a hover-opened menu keeps it and moves in */
           byPointer.current = false; if (open) close("pick"); else setOpen(true); }}>
         {icon ? <Icon name={icon} /> : null}<span class={labelCls}>{label}</span>{chevron ? <Icon name="chevdown" cls="nch" /> : null}

@@ -118,6 +118,19 @@ const cases = {
     const c = clock(), g = H.hoverGroup("menu", c), a = spy(), b = spy();
     g.focus("a", a.h); g.focus("b", b.h); eq(a.isOpen, false, "a"); eq(b.isOpen, true, "b"); eq(g.current, "b", "current");
   },
+  "release: the keyboard has taken the menu, so the pointer leaving no longer closes it"() {
+    const c = clock(), g = H.hoverGroup("menu", c), a = spy();
+    g.enter("a", a.h); c.tick(200); g.release("a"); g.leave("a"); c.tick(5000);
+    eq(a.isOpen, true, "still open"); eq(a.closed, 0, "never closed"); eq(g.current, null, "the group let go");
+  },
+  "release: Esc is no longer the group's once released"() {
+    const c = clock(), g = H.hoverGroup("menu", c), a = spy();
+    g.enter("a", a.h); c.tick(200); g.release("a"); eq(g.dismiss(), false, "nothing for the group to dismiss"); eq(a.isOpen, true, "left open for the menu's own Esc");
+  },
+  "release: drops a hover open still waiting (a click came first)"() {
+    const c = clock(), g = H.hoverGroup("menu", c), a = spy();
+    g.enter("a", a.h); c.tick(100); g.release("a"); c.tick(2000); eq(a.opened, 0, "opened");
+  },
   "safe triangle geometry"() {
     const r = { left: 100, top: 0, right: 200, bottom: 100 }, [p, q, s] = H.safeTriangle({ x: 10, y: 10 }, r);
     eq(H.inTriangle({ x: 60, y: 30 }, p, q, s), true, "inside"); eq(H.inTriangle({ x: 60, y: 300 }, p, q, s), false, "outside");

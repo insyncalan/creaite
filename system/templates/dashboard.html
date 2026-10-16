@@ -5916,6 +5916,16 @@ button.nchip{font:inherit;font-size:12px}
         if (was != null) dismissed = was;
         return had;
       },
+      /** The keyboard has taken the popup (focus went into it, or a click or ↓ on its trigger): the group lets go without closing it,
+          so Esc, Tab and the arrows are the popup's own and the pointer drifting away no longer closes it. A wait to open is dropped.
+          @param {any} key */
+      release(key) {
+        if (wantKey === key) stopOpen();
+        if (cur && cur.key === key) {
+          stopClose();
+          cur = null;
+        }
+      },
       /** Close at once without the Esc rule (the trigger was removed, or the page changed). */
       close() {
         stopOpen();
@@ -5979,6 +5989,10 @@ button.nchip{font:inherit;font-size:12px}
       ), p6 = panel();
       if (!to2 || !trigger.contains(to2) && !(p6 && p6.contains(to2))) group.blur(trigger);
     };
+    const taken2 = (e4) => {
+      const p6 = panel();
+      if (group.current === trigger && p6 && e4.target instanceof Node && p6.contains(e4.target)) group.release(trigger);
+    };
     const key = (e4) => {
       if (e4.key === "Escape" && group.current === trigger && group.dismiss()) {
         e4.stopPropagation();
@@ -5989,7 +6003,9 @@ button.nchip{font:inherit;font-size:12px}
     trigger.addEventListener("focusin", focusin);
     trigger.addEventListener("focusout", focusout);
     document.addEventListener("keydown", key, true);
+    document.addEventListener("focusin", taken2, true);
     return () => {
+      document.removeEventListener("focusin", taken2, true);
       document.removeEventListener("pointerover", over, true);
       document.removeEventListener("pointerout", out, true);
       document.removeEventListener("pointermove", track, true);
@@ -8774,6 +8790,8 @@ button.nchip{font:inherit;font-size:12px}
       null
     );
     const byPointer = A2(false);
+    const isOpen = A2(false);
+    isOpen.current = open2;
     const close = (how) => {
       back2.current = how === "esc";
       setOpen2(false);
@@ -8787,7 +8805,7 @@ button.nchip{font:inherit;font-size:12px}
         focusOpens: false,
         panel: () => box.current,
         open: () => {
-          if (why) return;
+          if (why || isOpen.current) return;
           byPointer.current = true;
           tipHide();
           setOpen2(true);
@@ -8807,10 +8825,17 @@ button.nchip{font:inherit;font-size:12px}
       onPick(it2.id);
     };
     const onBtnKey = (e4) => {
-      if (e4.key === "ArrowDown" && !why && !open2) {
+      if (e4.key !== "ArrowDown" || why) return;
+      if (!open2) {
         e4.preventDefault();
         byPointer.current = false;
+        if (hover) menuGroup.release(btn.current);
         setOpen2(true);
+      } else if (byPointer.current) {
+        e4.preventDefault();
+        byPointer.current = false;
+        menuGroup.release(btn.current);
+        menuItemsIn(box.current)[0]?.focus({ preventScroll: true });
       }
     };
     return /* @__PURE__ */ u2("span", { class: `dd${cls ? " " + cls : ""}`, children: [
@@ -8835,6 +8860,7 @@ button.nchip{font:inherit;font-size:12px}
               onBlocked && onBlocked();
               return;
             }
+            if (hover) menuGroup.release(btn.current);
             if (open2 && byPointer.current) {
               byPointer.current = false;
               menuItemsIn(box.current)[0]?.focus({ preventScroll: true });

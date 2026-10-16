@@ -115,6 +115,13 @@ export function hoverGroup(kind, clock = {}) {
       if (was != null) dismissed = was;
       return had;
     },
+    /** The keyboard has taken the popup (focus went into it, or a click or ↓ on its trigger): the group lets go without closing it,
+        so Esc, Tab and the arrows are the popup's own and the pointer drifting away no longer closes it. A wait to open is dropped.
+        @param {any} key */
+    release(key) {
+      if (wantKey === key) stopOpen();
+      if (cur && cur.key === key) { stopClose(); cur = null; }
+    },
     /** Close at once without the Esc rule (the trigger was removed, or the page changed). */
     close() { stopOpen(); shut(); },
   };
@@ -166,12 +173,15 @@ export function hoverAttach(trigger, o) {
     const to = /** @type {Node | null} */ (e.relatedTarget), p = panel();
     if (!to || (!trigger.contains(to) && !(p && p.contains(to)))) group.blur(trigger);
   };
+  /** @param {FocusEvent} e */
+  const taken = e => { const p = panel(); if (group.current === trigger && p && e.target instanceof Node && p.contains(e.target)) group.release(trigger); };
   /** @param {KeyboardEvent} e */
   const key = e => { if (e.key === "Escape" && group.current === trigger && group.dismiss()) { e.stopPropagation(); } };
   document.addEventListener("pointerover", over, true); document.addEventListener("pointerout", out, true);
   trigger.addEventListener("focusin", focusin); trigger.addEventListener("focusout", focusout);
-  document.addEventListener("keydown", key, true);
+  document.addEventListener("keydown", key, true); document.addEventListener("focusin", taken, true);
   return () => {
+    document.removeEventListener("focusin", taken, true);
     document.removeEventListener("pointerover", over, true); document.removeEventListener("pointerout", out, true);
     document.removeEventListener("pointermove", track, true); document.removeEventListener("keydown", key, true);
     trigger.removeEventListener("focusin", focusin); trigger.removeEventListener("focusout", focusout);
