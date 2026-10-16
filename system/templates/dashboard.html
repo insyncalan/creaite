@@ -38665,7 +38665,7 @@ ${s5}`;
       { label: `Open ${first}'s page`, icon: "user", run: () => go2("person", name) }
     );
     if (email) out.push({ label: "Copy email address", icon: "copy", run: () => cxCopy(email, "the email address") });
-    if (!p6) out.push({ label: "Add details", icon: "pencil", run: () => {
+    if (!email) out.push({ label: "Add details", icon: "pencil", run: () => {
       go2("person", name);
       setTimeout(() => {
         const b5 = $("#ppEdit");
@@ -47134,7 +47134,7 @@ ${d5.text}`);
       const k5 = sentKindOf(id2);
       const who2 = pane.to.name || pane.to.first || "them";
       const done = k5 ? await sentLog([{ k: k5, id: id2, need: outcome }], { name: who2, mode, replyBy, via: viaRef.current, chases: r4.chases || {} }) : 0;
-      if (!done) say2(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be staged.`);
+      if (!done) snack(`Recorded: chased ${pane.to.first || who2} on ${fd(r4.record && r4.record.date || TODAY)}. The update couldn't be staged.`);
       dropPolish();
       onBack();
     }

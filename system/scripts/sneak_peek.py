@@ -37,7 +37,7 @@ NUM = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "s
 LEVELS = ("Urgent", "High", "Medium", "Low")
 MS_STATE_WORDS = {"achieved": "Achieved", "on track": "On track", "at risk": "At risk", "slipped": "Slipped",
                   "overdue": "Overdue", "late": "Overdue"}
-POINT = {"draft_chase": "Draft chase (C in the peek)", "ask": "ask creaite (one /), with this item attached",
+POINT = {"draft_chase": "Draft email (C in the peek)", "ask": "ask creaite (one /), with this item attached",
          "cx_edit": "cx-edit in Claude Code", "milestone_form": "the milestone form", "project_page": "the project page",
          "settings": "Settings", "people": "Settings › People"}
 

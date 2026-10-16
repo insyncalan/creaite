@@ -575,13 +575,13 @@ export function cxShow(c,x,y){ const from=document.activeElement&&document.activ
   openContextMenu(ids.length>1?cxWorkMany(ids):cxWork(c.k,c.id),x,y,{label:ids.length>1?`${ids.length} items`:c.id,from}); }
 /* v2.3.0 #154: the menu on a linked person's name. Draft email opens the person page's own popup (openDraftEmail), with the item the
    click came from as the starting selection (only) when the person has it among their emailable items; no email on record: it is
-   greyed with the reason, and Add details opens the person's page at its details. No counts, no modes. */
+   greyed with the reason, and Add details (for a name not on the register and for a registered person with no address) opens the person's page at its details. No counts, no modes. */
 export function cxPerson(name,only){ const x=PERS().find(y=>y.name===name), p=x&&x.p, email=(p&&p.email)||"", first=String(name).split(/\s+/)[0],
     starts=only&&x&&deItems(x).some(i=>i.id===only&&!deBarred(i))?only:undefined, /** @type {any[]} */ out=[];
   out.push({label:"Draft email",icon:"mail",disabled:!email,hint:email?"":"No email on record: add details first",run:()=>openDraftEmail(name,"update",starts)},
     {label:`Open ${first}'s page`,icon:"user",run:()=>go("person",name)});
   if(email) out.push({label:"Copy email address",icon:"copy",run:()=>cxCopy(email,"the email address")});
-  if(!p) out.push({label:"Add details",icon:"pencil",run:()=>{ go("person",name); setTimeout(()=>{ const b=$("#ppEdit"); if(b) b.click(); },120); }});
+  if(!email) out.push({label:"Add details",icon:"pencil",run:()=>{ go("person",name); setTimeout(()=>{ const b=$("#ppEdit"); if(b) b.click(); },120); }});
   return out; }
 /* the focused row for Shift+F10 and the context-menu key: the focused element's item, or the list's cursor row */
 export function cxCursor(){ const a=document.activeElement; let c=a&&a!==document.body?cxTarget(a):null; if(c) return c;
