@@ -41,6 +41,9 @@ def parse_pages(md):
                 break
             pages.append({"part": part, "title": None, "group": group, "lines": []}); cur = None
         elif cur is not None:
+            if line.strip() == "---":
+                cur = None          # a part's footer is not part of the last page
+                continue
             cur["lines"].append(line)
     return [p for p in pages if p["title"]]
 
