@@ -28,7 +28,7 @@ NOTES_MENUS = {"m-heading": ["text", "h1", "h2", "h3", "clear"], "m-list": ["ul"
                "m-insert": ["note", "person", "item", "table", "image"]}
 NOTES_ALL = ["text", "h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent", "indent", "quote", "link", "clear",
              "note", "person", "item", "table", "image", "undo", "redo"]      # everything the old 23 buttons did, bar Unlink (now the link form's Remove link)
-CURRENT = ["h1", "h2", "h3", "b", "i", "s", "ul", "ol", "outdent", "indent", "quote", "image", "link", "unlink", "clear", "undo", "redo"]
+CURRENT = ["h1", "h2", "h3", "b", "i", "s", "ul", "ol", "outdent", "indent", "quote", "image", "link", "unlink", "clear", "item", "undo", "redo"]
 SHARED = ["h1", "h2", "h3", "b", "i", "s", "code", "ul", "ol", "task", "outdent", "indent", "quote", "link", "unlink", "clear", "undo", "redo"]      # the capture drawer: flat, no pickers yet
 PROBE = ("### Delivery\n\nPlain **bold** and ~~struck~~ with [a link](https://example.com/plan) and [mail](mailto:pmo@example.com).\n\n"
          "- one\n  - nested\n- two\n\n1. first\n2. second\n\n#### Risks\n\n> a quote\n\n<!-- # inside a comment -->\n\n"

@@ -12,7 +12,7 @@ import { fd, TODAY } from "./page.js";
 
 export const ITEM_HREF = /^creaite:item\/(.+)$/;
 
-/** @typedef {{id: string, label: string, sub?: string, icon?: string, open?: boolean}} ItemOption */
+/** @typedef {{id: string, label: string, sub?: string, icon?: string, live?: boolean}} ItemOption */
 
 /** The tracker row for an ID and its kind ("actions", "raid", "decisions"), or null. @param {string} id */
 export function itemOf(id) {
@@ -24,33 +24,33 @@ export function itemOf(id) {
 /** The item's designation, in the dashboard's own words (core/page.js kindOf, capitalised): Action, Decision, or the RAID type
     (Risk, Issue, Assumption, Dependency). "" when the item is not in the tracker. @param {string} id */
 export function designation(id) {
-  const hit = itemOf(id);
-  if (!hit) return "";
-  const x = /** @type {any} */ (hit.x);
-  return hit.k === "actions" ? "Action" : hit.k === "raid" ? String(x.type || "Risk") : "Decision";
+  const found = itemOf(id);
+  if (!found) return "";
+  const x = /** @type {any} */ (found.x);
+  return found.k === "actions" ? "Action" : found.k === "raid" ? String(x.type || "Risk") : "Decision";
 }
 /** 'ID · Designation: title', on one line, with no square brackets (they would end the Markdown link early). @param {string} id */
-export function itemText(id) {
-  const hit = itemOf(id), t = hit ? String(/** @type {any} */ (hit.x).t || "").replace(/\s+/g, " ").replace(/[[\]]/g, m => (m === "[" ? "(" : ")")).trim() : "";
+export function itemWords(id) {
+  const found = itemOf(id), t = found ? String(/** @type {any} */ (found.x).t || "").replace(/\s+/g, " ").replace(/[[\]]/g, m => (m === "[" ? "(" : ")")).trim() : "";
   const d = designation(id);
   return d ? `${id} · ${d}${t ? `: ${t}` : ""}` : id;
 }
 /** The Tiptap content for a chosen item: the whole of 'ID · Designation: title' as one link, then a space. @param {string} id */
 export function itemContent(id) {
-  return [{ type: "text", text: itemText(id), marks: [{ type: "link", attrs: { href: `creaite:item/${id}` } }] }, { type: "text", text: " " }];
+  return [{ type: "text", text: itemWords(id), marks: [{ type: "link", attrs: { href: `creaite:item/${id}` } }] }, { type: "text", text: " " }];
 }
 /** An item's live state for its chip: the dot's tone ("bad", "warn", "ok", "off") and a few words.
     @param {string} id @returns {{tone: string, words: string, title: string}} */
 export function itemState(id) {
-  const hit = itemOf(id);
-  if (!hit) return { tone: "off", words: "not in the tracker", title: `${id}: not in the tracker` };
-  const x = /** @type {any} */ (hit.x), st = String(x.st || ""), open = /^(Open|Delayed|Pending|Proposed)$/i.test(st);
-  let tone = open ? "warn" : "ok", words = st;
-  if (hit.k === "actions") {
-    if (open && x.due && x.due < TODAY) { tone = "bad"; words = `${st}, overdue ${fd(x.due)}`; }
-    else if (open && x.due) words = `${st}, due ${fd(x.due)}`;
+  const found = itemOf(id);
+  if (!found) return { tone: "off", words: "not in the tracker", title: `${id}: not in the tracker` };
+  const x = /** @type {any} */ (found.x), st = String(x.st || ""), isOpen = /^(Open|Delayed|Pending|Proposed)$/i.test(st);
+  let tone = isOpen ? "warn" : "ok", words = st;
+  if (found.k === "actions") {
+    if (isOpen && x.due && x.due < TODAY) { tone = "bad"; words = `${st}, overdue ${fd(x.due)}`; }
+    else if (isOpen && x.due) words = `${st}, due ${fd(x.due)}`;
     if (x.o) words += ` · ${x.o}`;
-  } else if (hit.k === "raid") { if (open && x.pr === "Urgent") tone = "bad"; words = `${x.type || "Risk"} · ${st}${x.pr ? ` · ${x.pr}` : ""}`; }
+  } else if (found.k === "raid") { if (isOpen && x.pr === "Urgent") tone = "bad"; words = `${x.type || "Risk"} · ${st}${x.pr ? ` · ${x.pr}` : ""}`; }
   else words = `Decision · ${st}`;
   return { tone, words, title: `${id} · ${x.t || ""} · ${words}` };
 }
@@ -59,13 +59,13 @@ export function itemState(id) {
     against the ID, the designation or the title. Each row's words are 'ID · Designation: title'. @param {string} code @param {string} q @returns {ItemOption[]} */
 export function itemOptions(code, q) {
   const ql = q.toLowerCase(), L = [];
-  for (const [rows, icon] of /** @type {[any[], string][]} */ ([[A, "check"], [R, "alert"], [DEC, "flag"]]))
-    for (const x of rows) {
+  for (const [table, icon] of /** @type {[any[], string][]} */ ([[A, "check"], [R, "alert"], [DEC, "flag"]]))
+    for (const x of table) {
       if (code !== "_portfolio" && x.p !== code) continue;
       if (ql && !(x.id.toLowerCase().includes(ql) || String(x.t || "").toLowerCase().includes(ql) || designation(x.id).toLowerCase().includes(ql))) continue;
-      L.push({ id: x.id, label: itemText(x.id), icon, open: /^(Open|Delayed|Pending)$/i.test(x.st || "") });
+      L.push({ id: x.id, label: itemWords(x.id), icon, live: /^(Open|Delayed|Pending)$/i.test(x.st || "") });
     }
-  return L.sort((a, b) => Number(!!b.open) - Number(!!a.open)).slice(0, 8);
+  return L.sort((a, b) => Number(!!b.live) - Number(!!a.live)).slice(0, 8);
 }
 
 /** The chip decoration for one text node that carries an item link (or null): drawn only, never written. @param {any} node @param {number} pos */
