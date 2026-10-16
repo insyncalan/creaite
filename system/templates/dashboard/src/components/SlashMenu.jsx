@@ -20,6 +20,12 @@ import { placeAtCaret } from "../core/caretPlace.js";
 /** @typedef {{from: number, to: number, q: string, rows: SlashDef[], i: number}} SlashState */
 
 let slashSeq = 0;
+/** The name of the list the caret is in, the NEAREST one (a bullet list nested in a numbered one is a bullet list), else "". @param {any} editor */
+export function nearestList(editor) {
+  const $f = editor.state.selection.$from;
+  for (let d = $f.depth; d > 0; d--) { const n = $f.node(d).type.name; if (n === "bulletList" || n === "orderedList" || n === "taskList") return n; }
+  return "";
+}
 /** The text before the caret in a paragraph where a `/` menu may open, else null: the "/query" and where it starts. @param {any} editor */
 export function slashAt(editor) {
   const s = editor.state.selection;
@@ -107,7 +113,7 @@ export function attachSlash(h, { profile, host }) {
     close();
     const c = editor.chain().focus().deleteRange({ from: s.from, to: s.to });
     if (r.host) { c.run(); const f = host && host[r.id]; if (f) f(); return; }
-    if (r.is && editor.isActive(r.is)) { c.run(); return; }          /* already in that block: only the "/query" goes (a toggle would take the line OUT of the list or quote) */
+    if (r.is && (r.is === "blockquote" ? editor.isActive(r.is) : nearestList(editor) === r.is)) { c.run(); return; }          /* already in that block: only the "/query" goes (a toggle would take the line OUT of the list or quote) */
     if (r.run) r.run(c, editor).run();
   };
   /** @param {KeyboardEvent} e */

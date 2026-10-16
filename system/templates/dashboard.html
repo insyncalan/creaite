@@ -24998,6 +24998,14 @@ ${s5}`;
 
   // components/SlashMenu.jsx
   var slashSeq = 0;
+  function nearestList(editor) {
+    const $f2 = editor.state.selection.$from;
+    for (let d5 = $f2.depth; d5 > 0; d5--) {
+      const n4 = $f2.node(d5).type.name;
+      if (n4 === "bulletList" || n4 === "orderedList" || n4 === "taskList") return n4;
+    }
+    return "";
+  }
   function slashAt(editor) {
     const s5 = editor.state.selection;
     if (!s5.empty) return null;
@@ -25135,7 +25143,7 @@ ${s5}`;
         if (f5) f5();
         return;
       }
-      if (r4.is && editor.isActive(r4.is)) {
+      if (r4.is && (r4.is === "blockquote" ? editor.isActive(r4.is) : nearestList(editor) === r4.is)) {
         c5.run();
         return;
       }

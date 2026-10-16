@@ -759,6 +759,28 @@ class Slash(LiveBrowserCase):
             for _ in range(len(q) + 1):
                 b.key("Backspace")
 
+    def test_n2_a_list_row_in_a_nested_list_changes_that_nested_lists_type(self):
+        md = self.block("bull", "- one\n  1. two", ["Enter"], "three")
+        self.assertNotRegex(md, r"(?m)^\s+1\. ", "the nested numbered list is bulleted now")
+        self.assertRegex(md, r"(?m)^\s+- three$")
+        md = self.block("num", "1. one\n   - two", ["Enter"], "three")
+        self.assertNotRegex(md, r"(?m)^\s+- ", "the nested bulleted list is numbered now")
+        self.assertRegex(md, r"(?m)^\s+\d+\. three$")
+        md = self.block("tick", "- [ ] one\n  - two", ["Enter"], "three")
+        self.assertRegex(md, r"(?m)^\s+- \[ \] three$", "the nested list became a checklist")
+
+    def test_n2_the_original_split_cases_stay_one_list_one_checklist_and_one_quote(self):
+        md = self.block("bull", "- one\n  - two", ["Enter"], "three")
+        self.assertEqual(md, "- one\n  - two\n  - three")
+        md = self.block("tick", "- [ ] one\n  - [ ] two", ["Enter"], "three")
+        self.assertEqual(md, "- [ ] one\n  - [ ] two\n  - [ ] three")
+        md = self.block("quo", "> one", [], "x", lead=" ")
+        self.assertEqual(md, "> one x")
+        md = self.block("quo", "> one\n>\n> two\n>\n> three", ["ArrowUp", "End"], "x", lead=" ")
+        self.assertEqual(md.count("> one"), 1)
+        self.assertNotIn("\n\n\n", md)
+        self.assertRegex(md, r"(?s)^> one\n>\s*\n> two x\n>\s*\n> three$", "no split: still one quote")
+
     # ---- dark and forced colours -----------------------------------------------------------------------------------------
 
     def test_dark_and_forced_colours(self):
