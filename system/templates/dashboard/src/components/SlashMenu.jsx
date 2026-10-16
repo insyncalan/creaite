@@ -27,7 +27,7 @@ export function slashAt(editor) {
   const $f = s.$from;
   if ($f.parent.type.name !== "paragraph") return null;
   if ($f.marks().some(/** @param {any} m */ m => m.type.name === "code" || m.type.name === "link")) return null;
-  const before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), m = /(^|\s)\/([\w-]{0,20}(?: [\w-]{0,20})?)$/.exec(before);   /* one space is allowed: "/heading 2", "/bulleted list" */
+  const before = $f.parent.textBetween(0, $f.parentOffset, undefined, "￼"), m = /(^|\s)\/((?:[\w-]{1,20}(?: [\w-]{0,20})?)?)$/.exec(before);   /* one space is allowed, but only after a query character: "/heading 2", "/bulleted list"; "A / B" and "1 / 2" are prose */
   if (!m) return null;
   return { from: s.from - m[2].length - 1, to: s.from, q: m[2] };
 }
@@ -91,6 +91,10 @@ export function attachSlash(h, { profile, host }) {
     if (editor.isDestroyed || view.composing) return;
     const a = slashAt(editor);
     if (!a || a.from === dismissed) { if (!a) dismissed = -1; return close(); }
+    if (a.q.endsWith(" ")) {          /* a trailing space closes the menu unless it can only be the first word of a longer row name ("heading ", "bulleted ") */
+      const base = a.q.trim().toLowerCase();
+      if (!slashRows(profile, hostRows, editor.schema).some(r => r.name.toLowerCase().startsWith(base + " "))) return close();
+    }
     const rows = slashRows(profile, hostRows, editor.schema, a.q);
     if (!rows.length && (!a.q || a.q.includes(" "))) return close();         /* a phrase that names no row is just text: no "No match" nag */
     st = { ...a, rows, i: st && st.from === a.from ? Math.min(st.i, Math.max(0, rows.length - 1)) : 0 };

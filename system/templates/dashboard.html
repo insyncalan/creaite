@@ -25007,7 +25007,7 @@ ${s5}`;
       /** @param {any} m */
       (m6) => m6.type.name === "code" || m6.type.name === "link"
     )) return null;
-    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)\/([\w-]{0,20}(?: [\w-]{0,20})?)$/.exec(before);
+    const before = $f2.parent.textBetween(0, $f2.parentOffset, void 0, "￼"), m5 = /(^|\s)\/((?:[\w-]{1,20}(?: [\w-]{0,20})?)?)$/.exec(before);
     if (!m5) return null;
     return { from: s5.from - m5[2].length - 1, to: s5.from, q: m5[2] };
   }
@@ -25114,6 +25114,10 @@ ${s5}`;
       if (!a5 || a5.from === dismissed) {
         if (!a5) dismissed = -1;
         return close();
+      }
+      if (a5.q.endsWith(" ")) {
+        const base = a5.q.trim().toLowerCase();
+        if (!slashRows(profile, hostRows, editor.schema).some((r4) => r4.name.toLowerCase().startsWith(base + " "))) return close();
       }
       const rows2 = slashRows(profile, hostRows, editor.schema, a5.q);
       if (!rows2.length && (!a5.q || a5.q.includes(" "))) return close();

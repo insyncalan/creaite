@@ -681,6 +681,84 @@ class Slash(LiveBrowserCase):
         self.assertIn("- [ ] item", md)
         self.assertNotIn("/check", md)
 
+    # ---- review fixes (editor-122b4) ------------------------------------------------------------------------------------
+
+    def test_n1_prose_with_a_slash_and_spaces_stays_exactly_as_typed_when_enter_is_pressed(self):
+        b = self.b
+        for line in ("A / B", "1 / 2", "yes / no", "either / or"):
+            self.make_note("Prose")
+            b.type(line)
+            b.pump(0.2)
+            self.assertEqual(b.eval(f"!!{MENU}"), False, f"{line!r}: no menu open")
+            b.key("Enter")
+            b.pump(0.2)
+            self.assertEqual(b.eval("document.querySelector('.nbody').cxed.value()").strip(), line, f"{line!r} is untouched by Enter")
+            self.assertEqual(b.eval(f"!!{MENU}"), False)
+
+    def test_n1_prose_with_a_slash_in_current_state_stays_as_typed(self):
+        b = self.b
+        self.open_current()
+        b.key("Enter")
+        b.type("yes / no")
+        b.pump(0.2)
+        self.assertEqual(b.eval(f"!!{MENU}"), False)
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertIn("yes / no", b.eval("edValue(curEd)").split("\n"))
+
+    def test_n1_a_bare_slash_after_a_space_or_at_a_line_start_opens_all_rows_but_slash_space_does_not(self):
+        b = self.b
+        self.make_note("Bare")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        every = self.rows()
+        self.assertEqual(every[:len(NOTES_ROWS)], NOTES_ROWS, "all rows at a line start")
+        b.key("Escape")
+        b.key("Backspace")
+        b.type("word /")
+        b.wait(f"!!{MENU}", 5)
+        self.assertEqual(self.rows(), every, "all rows after a space")
+        b.type(" ")
+        b.pump(0.2)
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "slash then a space closes it")
+        b.key("Enter")
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelector('.nbody').cxed.value()").strip(), "word /")
+        b.type("/")
+        b.wait(f"!!{MENU}", 5)
+        self.assertEqual(self.rows(), every, "all rows at a line start again")
+
+    def test_n1_heading_two_still_writes_a_heading_and_a_trailing_space_after_a_complete_word_closes_the_menu(self):
+        b = self.b
+        self.make_note("Trailing")
+        b.type("/heading 2")
+        b.wait(f"!!{MENU}", 5)
+        b.key("Enter")
+        b.wait(f"!{MENU}", 5)
+        b.type("Two")
+        self.assertRegex(b.eval("document.querySelector('.nbody').cxed.value()"), r"(?m)^## Two$")
+        b.key("Enter")
+        b.key("Enter")
+        b.type("/h1 ")
+        b.pump(0.3)
+        self.assertEqual(b.eval(f"!!{MENU}"), False, "'/h1 ' closes the menu")
+        b.key("Enter")
+        b.pump(0.2)
+        md = b.eval("document.querySelector('.nbody').cxed.value()")
+        self.assertNotRegex(md, r"(?m)^# ", "Enter after '/h1 ' does not make a heading")
+        self.assertIn("/h1", md)
+
+    def test_n1_a_trailing_space_after_the_first_word_of_a_longer_row_name_keeps_the_menu(self):
+        b = self.b
+        self.make_note("Words")
+        for q, row in (("heading ", "h1"), ("bulleted ", "ul"), ("numbered ", "ol")):
+            b.type("/" + q)
+            b.pump(0.2)
+            self.assertEqual(b.eval(f"!!{MENU}"), True, q)
+            self.assertIn(row, self.rows(), q)
+            for _ in range(len(q) + 1):
+                b.key("Backspace")
+
     # ---- dark and forced colours -----------------------------------------------------------------------------------------
 
     def test_dark_and_forced_colours(self):
