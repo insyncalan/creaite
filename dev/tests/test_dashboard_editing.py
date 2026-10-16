@@ -182,12 +182,12 @@ SCRIPT = r"""
     out.chatW=[cw(),store.get("creaite-chat-width",null),grip.getAttribute("aria-label")];
     setChatWidth(5000,true); out.chatMax=[cw(),Math.round(innerWidth*0.7)];
     grip.dispatchEvent(new MouseEvent("dblclick",{bubbles:true})); out.chatReset=[cw(),store.get("creaite-chat-width",null)]; closeChat();
-    // 7a. Stop (BL-33): the Send button becomes Stop while a request runs; Esc stops it; what's shown is kept
+    // 7a. Stop (BL-33): the Send button becomes Stop while a request runs; the button stops it; what's shown is kept
     window.fetch=async(u,o)=>{ if(u==="/api/ask/stop") return new Response(JSON.stringify({ok:false}),{headers:{"Content-Type":"application/json"}});
       const body=new ReadableStream({start(c){ c.enqueue(new TextEncoder().encode(ev({type:"text",text:"Partial answer"}))); o.signal.addEventListener("abort",()=>c.error(new DOMException("Aborted","AbortError"))); }});
       return new Response(body,{status:200}); };
     BUSY=false; openChat(); await wait(50); const pAsk=askLive("Slow question",null); await until(()=>document.getElementById("chSend").getAttribute("aria-label")==="Stop"&&[...document.querySelectorAll("#chLog .msg")].some(m=>m.textContent==="Partial answer")); out.stopBtn=document.getElementById("chSend").getAttribute("aria-label");
-    document.getElementById("chIn").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true,cancelable:true})); await pAsk; await until(()=>document.getElementById("chSend").getAttribute("aria-label")==="Send"&&document.querySelector("#chLog .step.stopped")); window.fetch=realFetch;
+    document.getElementById("chSend").click(); await pAsk;   /* #130: the Stop button stops it; Esc never does (test_ask_reopen) */ await until(()=>document.getElementById("chSend").getAttribute("aria-label")==="Send"&&document.querySelector("#chLog .step.stopped")); window.fetch=realFetch;
     out.afterStop=[document.getElementById("chSend").getAttribute("aria-label"),[...document.querySelectorAll("#chLog .step.stopped")].length,
       [...document.querySelectorAll("#chLog .msg")].some(m=>m.textContent==="Partial answer"),document.getElementById("chat").classList.contains("on")];
     // 7a2. reattach (BL-37): earlier messages, the run's own question, then its replayed events; the run's

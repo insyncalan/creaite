@@ -55689,7 +55689,8 @@ ${d5.text}`);
     const b5 = $("#chSend");
     putHTML(b5, raw(on2 ? STOPI : SENDI));
     b5.dataset.tip = on2 ? "Stop" : "Send";
-    b5.dataset.key = on2 ? "Esc" : "Enter";
+    if (on2) delete b5.dataset.key;
+    else b5.dataset.key = "Enter";
     b5.setAttribute("aria-label", on2 ? "Stop" : "Send");
     b5.classList.toggle("stop", on2);
     if (TIP.el === b5) tipShow(b5, 0);
@@ -56703,12 +56704,6 @@ ${d5.text}`);
     $("#chSend").onclick = () => shared.RUN ? stopAsk() : send();
     $("#chIn").addEventListener("keydown", (e4) => {
       if (acKey(e4)) return;
-      if (e4.key === "Escape" && shared.RUN) {
-        e4.preventDefault();
-        e4.stopPropagation();
-        stopAsk();
-        return;
-      }
       if (e4.key === "Enter" && !e4.shiftKey) {
         e4.preventDefault();
         send();

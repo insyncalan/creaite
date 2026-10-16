@@ -563,7 +563,7 @@ Everything in creaite, by feature. For the short version see [Start here](#start
 | N | A new note too, when you aren't typing in a box: the same drawer. Use it in an ordinary Chrome tab, where Cmd/Ctrl + Shift + N opens an incognito window |
 | / / | With an item open (outside a text field): **Sneak peek**, change it in words (Esc closes it; ↑ brings back the last instruction) |
 | ? | This help, on the tab you used last (Start here, How do I… or Reference) |
-| Esc | Close the top thing: picker or calendar, an open item, ask creaite, palette. In a text field of an open item, puts the text back. In ask creaite's input, stops a running request (or closes the chat, leaving the item as it was); focus goes back to where you were before you opened it. The message at the foot of the page: hides it when you are on it, or when nothing else is open |
+| Esc | Close the top thing: picker or calendar, an open item, ask creaite, palette. In a text field of an open item, puts the text back. In ask creaite's input, closes the chat (leaving the item as it was); a running request carries on, and only its Stop button stops it; focus goes back to where you were before you opened it. The message at the foot of the page: hides it when you are on it, or when nothing else is open |
 | J / K | Next or previous row in Work and Review; on a Work board, the next or previous card, column by column. With an item open, the next or previous item |
 | C | With an open action, risk, issue or pending decision: **Draft chase** (Esc goes back to the item) |
 | Space | Work and Review: select the highlighted row (Shift + J extends the selection in Review) |
@@ -624,7 +624,7 @@ Point at any icon, or Tab to it, and its name shows in a tooltip, with its key w
 | Bent arrow | **Hand over** (with the word) | A person's page |
 | Spark | **Prep page** (with the word) | Meeting prep |
 | Calendar | **Choose a date** | Every date field |
-| Up arrow / square | **Send** (Enter) / **Stop** (Esc) | ask creaite |
+| Up arrow / square | **Send** (Enter) / **Stop** (click it; Esc only closes the panel and the request carries on) | ask creaite |
 | Moon / sun | Switch to the dark / light theme | Top bar |
 | Gear | **Settings** | In More, at the foot of the sidebar |
 | Triangle / shield | **Sensitive** / **High-risk** (with the word): how much a change on ask creaite's approval card matters | ask creaite's approval card; Activity › What ask creaite changed |

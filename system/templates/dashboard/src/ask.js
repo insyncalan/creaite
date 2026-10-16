@@ -533,11 +533,11 @@ export async function handle(q){ const m=/^note:\s*([\s\S]+)/i.exec(q);   /* "no
     const un=r.code==="_portfolio"; await say(`Saved the note “${r.title}” in ${un?"Unfiled":pName(r.code)}${r.reason?(un?`: ${r.reason}`:` (${r.reason})`):""}. Find updates on the note turns it into tracker changes.`); return; }
   if(!viaServer()){ await say(SERVED?"The live server isn't running, so I can't run this here. Start it again, or copy the request into Claude Code.":"This is the file version of the dashboard. Open the live dashboard (start the live server), or copy the request into Claude Code.",`<button class="mini" id="cpy">Copy command</button>`); const c=$("#cpy"); if(c){ c.id=""; c.onclick=()=>{ navigator.clipboard?.writeText(q); snack("Copied"); }; } return; }
   await askLive(q,null); }
-/* BL-33: a running request can be stopped (the Send button becomes Stop; Esc in the input). Read-only requests stop
+/* BL-33: a running request can be stopped (the Send button becomes Stop; #130: only that button stops it, Esc just closes the panel and the run carries on). Read-only requests stop
    at once; a confirmed write stops once the step running now has finished. What's shown so far is kept. */
 export let ATTACHED=null; shared.RUN=null;
 export const SENDI=ic("arrowup"), STOPI=ic("stop");   /* BL-161 */
-export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; b.dataset.key=on?"Esc":"Enter"; b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
+export function setRunning(on){ const b=$("#chSend"); putHTML(b,raw(on?STOPI:SENDI)); b.dataset.tip=on?"Stop":"Send"; if(on) delete b.dataset.key; else b.dataset.key="Enter";   /* #130: Esc never stops a run, so Stop shows no key */ b.setAttribute("aria-label",on?"Stop":"Send"); b.classList.toggle("stop",on); if(TIP.el===b) tipShow(b,0); }   /* BL-161: one round button, the arrow or the stop square */
 export async function stopAsk(){ if(!shared.RUN||shared.RUN.stopping) return; shared.RUN.stopping=true; const res=await api("/api/ask/stop",{run:shared.RUN.id});
   if(res.cleared){ queueDraw({items:[],held:false}); addEl("step stopped",`Stop cleared the queue: ${res.cleared} queued message${res.cleared===1?" was":"s were"} removed`); }   /* BL-257: and says so */
   if(!res.ok&&shared.RUN&&shared.RUN.ctl) shared.RUN.ctl.abort(); }   /* server unreachable or already finished: stop reading here */
@@ -852,7 +852,7 @@ $("#chIn").addEventListener("input",acUpdate);
 $("#chIn").addEventListener("blur",()=>setTimeout(acClose,120));
 $("#acMenu").addEventListener("mousedown",e=>{ const o=e.target.closest("[data-aci]"); if(o){ e.preventDefault(); acPick(+o.dataset.aci); } });
 $("#chSend").onclick=()=>shared.RUN?stopAsk():send();
-$("#chIn").addEventListener("keydown",e=>{ if(acKey(e)) return; if(e.key==="Escape"&&shared.RUN){ e.preventDefault(); e.stopPropagation(); stopAsk(); return; } if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
+$("#chIn").addEventListener("keydown",e=>{ if(acKey(e)) return; if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); send(); } });
 }
 /* ===== BL-145 (fix-chat-box) ===== the message box grows with what is typed. chFit() sets #chIn's height from its content,
    between one row and about half the panel's height (never more than half the window), and scrolls inside beyond that with the
