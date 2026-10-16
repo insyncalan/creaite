@@ -68,6 +68,37 @@ class Headings(unittest.TestCase):
         self.assertIn("<w:b/><w:i/>", runs[2])                          # the third level: bold italic
         self.assertNotIn("<w:b/>", runs[3])
 
+    # ----- #134: the checklist (Current state stores "- [ ] text" / "- [x] text"; Word shows a box glyph) -----
+    TASKS = "#### Next steps\n\n- [ ] Book the room\n- [x] Send the pack\n  - [ ] Nested step\n\n- an ordinary bullet\n\n##### Later\n\n1. numbered"
+
+    def test_a_checklist_is_kept_by_normalising_and_never_makes_a_level_two_line(self):
+        self.assertEqual(dt.md_normalise(self.TASKS), self.TASKS.replace("\n\n- an ordinary", "\n- an ordinary"))
+        self.assertEqual(dt.md_normalise(dt.md_normalise(self.TASKS)), dt.md_normalise(self.TASKS))
+        self.assertIsNone(re.search(r"(?m)^#{1,2} ", dt.md_normalise(self.TASKS)))
+
+    def test_word_shows_a_checklist_with_box_glyphs_and_no_brackets(self):
+        lines = dt.md_lines(self.TASKS)
+        self.assertEqual(lines, ["Next steps", "☐ Book the room", "☑ Send the pack", "☐ Nested step", "• an ordinary bullet", "Later", "1. numbered"])
+        para = '<w:p><w:r><w:rPr/><w:t>{{CURRENT}}</w:t></w:r></w:p>'
+        xml = dt.md_paras(para, "CURRENT", self.TASKS)
+        texts = [t for t in re.findall(r"<w:t[^>]*>(.*?)</w:t>", xml)]
+        self.assertIn("☐ ", texts)
+        self.assertIn("☑ ", texts)
+        self.assertIn("Book the room", texts)
+        self.assertNotIn("[ ]", xml)
+        self.assertNotIn("[x]", xml)
+        self.assertNotIn("#", xml)
+
+    def test_a_checklist_edited_in_word_comes_back_as_a_checklist(self):
+        back = dt.md_from_lines(dt.md_lines(self.TASKS))
+        self.assertIn("- [ ] Book the room\n- [x] Send the pack\n- [ ] Nested step", back)
+        self.assertEqual(dt.md_lines(back)[1:4], ["☐ Book the room", "☑ Send the pack", "☐ Nested step"])
+
+    def test_the_prep_page_shows_a_checklist_item_with_its_glyph(self):
+        import prep_page
+        blocks = prep_page.md_blocks("- [ ] one\n- [x] two\n- three")
+        self.assertEqual(blocks, [("ul", ["☐ one", "☑ two", "three"])])
+
 
 if __name__ == "__main__":
     unittest.main()

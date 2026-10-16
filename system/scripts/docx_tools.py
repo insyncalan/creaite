@@ -120,6 +120,8 @@ LIST_ITEM = re.compile(r"^( *)(?:([-*•])|(\d+)[.)])\s+(.*)$")
 IMAGE_LINE = re.compile(r"^\s*!\[([^\]\n]*)\]\(([^)\s]+)\)\s*$")
 INLINE = re.compile(r"\[([^\]\n]+)\]\(((?:https?://|mailto:)[^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~"
                     r"|(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)(?<!\s)_(?!\w)")
+TASK = re.compile(r"^\[([ xX])\]\s+")                # #134: a checklist item, "- [ ] text" / "- [x] text" (Current state's checklist)
+BOX = {" ": "☐ ", "x": "☑ "}                          # the glyphs Word shows for an unticked and a ticked item
 MAX_LEVEL = 3
 HEADS = {3: "h", 4: "h2", 5: "h3"}                  # Current state's three heading levels, by their number of #, as stored (#122)
 HEADING = re.compile(r"^#{3,5} ")
@@ -237,14 +239,21 @@ def md_blocks(text, panes=False):
     return blocks
 
 
+def task_split(text):
+    """(state, rest) of a checklist item's text: state " " or "x" and the text after "[ ] "; (None, text) for any other item."""
+    m = TASK.match(text or "")
+    return (m.group(1).lower(), text[m.end():]) if m else (None, text)
+
+
 def list_prefixes(items):
-    """The marker Word shows for each list item: "• " or "N. ", numbered per level."""
+    """The marker Word shows for each list item: "• ", "N. " (numbered per level) or, for a checklist item, "☐ " / "☑ "."""
     counters, kinds, out = [0] * (MAX_LEVEL + 1), [None] * (MAX_LEVEL + 1), []
     for level, ordered, _ in items:
         counters[level + 1:], kinds[level + 1:] = [0] * (MAX_LEVEL - level), [None] * (MAX_LEVEL - level)
         counters[level] = counters[level] + 1 if kinds[level] == ordered else 1
         kinds[level] = ordered
-        out.append(f"{counters[level]}. " if ordered else "• ")
+        box = None if ordered else task_split(items[len(out)][2])[0]
+        out.append(f"{counters[level]}. " if ordered else BOX[box] if box else "• ")
     return out
 
 
@@ -304,7 +313,7 @@ def md_lines(text):
     lines = []
     for kind, body in md_blocks(text):
         if kind == "list":
-            lines += [pre + plain(t) for pre, (_, _, t) in zip(list_prefixes(body), body)]
+            lines += [pre + plain(task_split(t)[1] if pre in BOX.values() else t) for pre, (_, _, t) in zip(list_prefixes(body), body)]
         elif kind == "img":
             continue          # the picture and its caption aren't text to compare (review.py leaves captions out too)
         else:
@@ -318,6 +327,7 @@ def md_from_lines(lines):
     out = []
     for line in lines:
         text = re.sub(r"^\s*•\s+", "- ", line.strip())
+        text = re.sub(r"^[☐☑]\s+", lambda m: "- [x] " if m.group().startswith("☑") else "- [ ] ", text)       # #134: a checklist item comes back as one
         kind = "ul" if text.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", text) else None
         last = out[-1].splitlines()[-1] if out else ""
         if kind and kind == ("ul" if last.startswith("- ") else "ol" if re.match(r"^\d+[.)] ", last) else None):
@@ -399,7 +409,7 @@ def md_paras(para, name, text):
         elif kind == "img":                 # images are filled as image entries (current_entries); a stray one shows its caption
             out += one("", body[0]) if body[0] else ""
         else:
-            out += "".join(one(pre, t, "list", level) for pre, (level, _, t) in zip(list_prefixes(body), body))
+            out += "".join(one(pre, task_split(t)[1] if pre in BOX.values() else t, "list", level) for pre, (level, _, t) in zip(list_prefixes(body), body))
     return out or replace_in(para, {name: NONE})
 
 

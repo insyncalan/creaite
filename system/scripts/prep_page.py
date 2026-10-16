@@ -658,7 +658,7 @@ def md_blocks(md):
             if para or (lst and lst[0] != kind):
                 flush()
             lst = lst or (kind, [])
-            lst[1].append((bullet or number).group(1).strip())
+            lst[1].append(re.sub(r"^\[([ xX])\]\s+", lambda m: "☑ " if m.group(1) in "xX" else "☐ ", (bullet or number).group(1).strip()))   # #134: a checklist item
         elif head:
             flush()
             blocks.append(("p", f"**{head.group(1).strip().strip('*')}**"))
