@@ -61,6 +61,8 @@ export function railNorm(c) {
 export const railCfg = signal(RAIL_DEF);
 /** The page the sidebar marks as current (the rail key: Projects for a project page, People for a person …). */
 export const railView = signal("today");
+/** Counts every navigation (go), so an open rail flyout folds whichever way it was opened. */
+export const railNav = signal(0);
 /** The counts on the badges, by page id: {n, label}. */
 export const railCounts = signal(/** @type {Record<string, RailCount>} */ ({}));
 /** Whether More's menu is open. */
@@ -78,7 +80,7 @@ export const railMoreWaiting = computed(() => railCfg.value.more
   .filter(x => x[1] > 0));
 
 /** @param {string} key the rail key of the page now shown */
-export function setRailView(key) { railView.value = key; }
+export function setRailView(key) { railView.value = key; railNav.value++; railMoreOpen.value = false; }   /* #139: every navigation folds any open flyout */
 /** Set the count on a page's badge (0 hides it); `label` is what a screen reader hears for it.
     @param {string} id @param {number} n @param {string} [label] */
 export function setRailCount(id, n, label) {

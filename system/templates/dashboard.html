@@ -1767,10 +1767,11 @@ svg.chev{transition:transform var(--d1) var(--out)} [aria-expanded="false"]>svg.
 .rail #railMoreMenu button[aria-current="page"]::before{left:-6px}
 /* #139: the hover flyouts of Projects and Work, beside the rail (collapsed or not), above the page and below dialogs and the peek (--z-menu);
    24px rows, at most about 360px tall, scrolling inside; the health sits at the right edge as its shape and its word */
-.rail .railfly{position:fixed;z-index:var(--z-menu);width:max-content;min-width:200px;max-width:320px;max-height:360px;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px;display:grid;gap:0;align-content:start}
+.rail .railfly{position:fixed;z-index:var(--z-menu);width:max-content;min-width:200px;max-width:320px;max-height:360px;overflow:auto;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-md);padding:4px;display:grid;grid-template-columns:minmax(0,1fr);gap:0;align-content:start}
 .rail .railfly button{height:24px;width:100%;padding:0 8px;gap:12px;justify-content:flex-start;color:var(--ink);border-radius:var(--r-sm);white-space:nowrap}
 .rail .railfly button:hover,.rail .railfly button:focus-visible{background:var(--sunk)}
-.rail .railfly .health{margin-left:auto;font-size:var(--fs-xs);color:var(--muted)} .rail .railfly .health svg{width:14px;height:14px}
+.rail .railfly .mname{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
+.rail .railfly .health{margin-left:auto;flex:none;font-size:var(--fs-xs);color:var(--muted)} .rail .railfly .health svg{width:14px;height:14px}
 .rail .railfly .mnote{padding:2px 8px;color:var(--muted)}
 @media (forced-colors:active){.rail .railfly{border:1px solid CanvasText}.rail .railfly button:hover,.rail .railfly button:focus-visible{outline:2px solid Highlight}}
 .railsep{height:1px;background:var(--line);margin:4px 2px}
@@ -7965,7 +7966,7 @@ button.nchip{font:inherit;font-size:12px}
             ] }),
             it2.line ? /* @__PURE__ */ u2("small", { children: it2.line }) : null
           ] }) : /* @__PURE__ */ u2(S2, { children: [
-            it2.name,
+            it2.health !== void 0 ? /* @__PURE__ */ u2("span", { class: "mname", title: it2.name, children: it2.name }) : it2.name,
             it2.mark ? /* @__PURE__ */ u2("span", { class: "last", children: [
               " · ",
               it2.mark
@@ -25788,6 +25789,7 @@ ${s5}`;
   }
   var railCfg = y3(RAIL_DEF);
   var railView = y3("today");
+  var railNav = y3(0);
   var railCounts = y3(
     /** @type {Record<string, RailCount>} */
     {}
@@ -25802,6 +25804,8 @@ ${s5}`;
   )).filter((x5) => x5[1] > 0));
   function setRailView(key) {
     railView.value = key;
+    railNav.value++;
+    railMoreOpen.value = false;
   }
   function setRailCount(id2, n4, label) {
     const was = railCounts.value[id2];
@@ -55073,6 +55077,14 @@ ${d5.text}`);
         attr(s5, "aria-label", c5.label);
       }
     }), [id2, inMenu, open2]);
+    const nav0 = A2(railNav.peek());
+    _2(() => j4(() => {
+      const n4 = railNav.value;
+      if (n4 !== nav0.current) {
+        nav0.current = n4;
+        if (open2) h5.close("away");
+      }
+    }), [open2]);
     _2(() => {
       const el2 = box.current, b5 = btn.current;
       if (!open2 || !el2 || !b5) return;
@@ -55082,6 +55094,12 @@ ${d5.text}`);
       el2.style.top = `${Math.round(Math.max(8, Math.min(r4.top - 4, innerHeight - el2.offsetHeight - 8)))}px`;
     }, [open2, railCollapsed.value]);
     const key = (e4) => {
+      if (hasFly && open2 && e4.key === "Escape") {
+        e4.preventDefault();
+        e4.stopPropagation();
+        h5.close("esc");
+        return;
+      }
       if (!hasFly || e4.key !== "ArrowRight" && e4.key !== "ArrowDown") return;
       e4.preventDefault();
       h5.byMouse.current = false;

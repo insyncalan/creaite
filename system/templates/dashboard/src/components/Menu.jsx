@@ -106,7 +106,7 @@ export function MenuItems({ items, onPick }) {
         {it.icon ? <Icon name={it.checked ? "check" : it.icon} /> : null}
         {it.icon || it.line
           ? <span><b>{it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</b>{it.line ? <small>{it.line}</small> : null}</span>
-          : <>{it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</>}
+          : <>{it.health !== undefined ? <span class="mname" title={it.name}>{it.name}</span> : it.name}{it.mark ? <span class="last"> · {it.mark}</span> : null}</>}
         {it.health !== undefined ? <StatusDot health={it.health} /> : null}
       </button>
     ))}</>;

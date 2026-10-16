@@ -10,7 +10,7 @@ import { effect } from "@preact/signals";
 import { useLayoutEffect, useRef, useState } from "preact/hooks";
 import { tipHide } from "../../core/dom.js";
 import { MenuItems, MenuPanel, useHoverMenu } from "../Menu.jsx";
-import { railCollapsed, railCounts, railItem, railView } from "../../stores/rail.js";
+import { railCollapsed, railCounts, railItem, railNav, railView } from "../../stores/rail.js";
 import { RailIcon } from "./RailIcon.jsx";
 
 /** @typedef {{id: string, inMenu?: boolean, onGo: (id: string) => void, fly?: () => import("../Menu.jsx").MenuItem[],
@@ -37,6 +37,9 @@ export function RailButton({ id, inMenu, onGo, fly, onFly }) {
     const s = bd.current;
     if (s) { if (s.textContent !== String(c.n)) s.textContent = String(c.n); s.style.display = c.n ? "" : "none"; attr(s, "aria-label", c.label); }
   }), [id, inMenu, open]);
+  /* #139: a navigation (go, ⌘K) folds the flyout, however it was opened */
+  const nav0 = useRef(railNav.peek());
+  useLayoutEffect(() => effect(() => { const n = railNav.value; if (n !== nav0.current) { nav0.current = n; if (open) h.close("away"); } }), [open]);
   /* the flyout sits beside the rail (to the right of it, collapsed or not), level with its button, kept inside the window */
   useLayoutEffect(() => {
     const el = box.current, b = btn.current; if (!open || !el || !b) return;
@@ -47,6 +50,7 @@ export function RailButton({ id, inMenu, onGo, fly, onFly }) {
   }, [open, railCollapsed.value]);
   /** @param {KeyboardEvent} e */
   const key = e => {
+    if (hasFly && open && e.key === "Escape") { e.preventDefault(); e.stopPropagation(); h.close("esc"); return; }
     if (!hasFly || (e.key !== "ArrowRight" && e.key !== "ArrowDown")) return;
     e.preventDefault(); h.byMouse.current = false; h.noFocus.current = false;
     if (open) h.bump(n => n + 1); else setOpen(true);   /* open: focus goes into it */

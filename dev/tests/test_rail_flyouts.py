@@ -250,6 +250,62 @@ class Flyouts(LiveBrowserCase):
             self.check_placement(v, True)
         self.b.resize(1400, 900)
 
+    # ── review fixes (#139b) ──
+    LONG = "Extraordinarily Long Demo Programme Name " * 2 + "Phase Two of the Enterprise Transformation Roll-out"
+
+    def check_long_name(self):
+        b = self.b
+        self.open_by_hover("projects")
+        r = b.eval(f"""(f=>{{ const q=f.getBoundingClientRect(); const rows=[...f.querySelectorAll('[role=menuitem]')];
+          const hs=rows.map(x=>x.querySelector('.health')); const nm=rows.map(x=>x.querySelector('.mname'));
+          const long=nm.find(n=>n&&n.textContent.length>=80);
+          return {{n:rows.length, hs:hs.length, out:hs.filter(h=>!h||h.getBoundingClientRect().right>q.right+0.5).length,
+            clipped:!!long&&long.scrollWidth>long.clientWidth, ell:long?getComputedStyle(long).textOverflow:'', title:long?long.title:'', w:q.width}}; }})(document.querySelector('{self.fly("projects")}'))""")
+        self.assertGreaterEqual(len(self.LONG), 80)
+        self.assertEqual((r["out"], r["hs"] == r["n"]), (0, True), r)           # every row's health stays inside the box
+        self.assertTrue(r["clipped"], r)
+        self.assertEqual(r["ell"], "ellipsis")
+        self.assertEqual(r["title"], self.LONG)                                   # the full name is the tooltip
+        self.assertLessEqual(r["w"], 321)
+        self.away()
+        self.b.wait("document.querySelector('#railMain [data-v=projects]').getAttribute('aria-expanded')==='false'", 3)
+
+    def test_a_long_project_name_is_cut_with_an_ellipsis_and_every_health_stays_inside(self):
+        self.seed()
+        self.b.eval(f"P.push({{code:'ZZL',name:{self.LONG!r},active:true,health:'At risk'}})")
+        self.check_long_name()                                                    # 1400 expanded
+        self.collapse()
+        self.check_long_name()                                                    # 1400 collapsed
+        self.b.resize(900, 700)
+        self.b.wait("document.querySelector('.rail').classList.contains('collapsed')", 5)
+        self.check_long_name()                                                    # 900
+        self.b.resize(1400, 900)
+
+    def test_esc_on_the_button_closes_a_hover_opened_flyout_and_keeps_focus_there(self):
+        b = self.b
+        self.open_by_hover("projects")
+        b.eval(f"document.querySelector('{self.btn('projects')}').focus()")
+        b.key("Escape")
+        b.wait(f"document.querySelector('{self.btn('projects')}').getAttribute('aria-expanded')==='false'", 5)
+        self.assertEqual(b.eval(f"document.activeElement===document.querySelector('{self.btn('projects')}')"), True)
+        self.assertEqual(b.eval(f"!!document.querySelector('{self.fly('projects')}')"), False)
+
+    def test_a_navigation_folds_an_open_flyout_by_keyboard_or_by_hover(self):
+        b = self.b
+        b.eval(f"document.querySelector('{self.btn('projects')}').focus()")
+        b.key("ArrowRight")
+        b.wait(f"document.activeElement.closest('{self.fly('projects')}')", 5)
+        b.eval("go('review')")
+        b.wait(f"!document.querySelector('{self.fly('projects')}')", 5)
+        self.assertEqual(self.expanded("projects"), "false")
+        self.open_by_hover("work")                                                # the pointer stays on the button
+        b.eval("go('people')")
+        b.wait(f"!document.querySelector('{self.fly('work')}')", 5)
+        self.assertEqual(self.expanded("work"), "false")
+        self.open_by_hover("more")
+        b.eval("go('review')")
+        b.wait("document.querySelector('#railMore').getAttribute('aria-expanded')==='false'", 5)
+
     def test_more_keeps_its_badge_and_tooltip(self):
         b = self.b
         self.collapse()
