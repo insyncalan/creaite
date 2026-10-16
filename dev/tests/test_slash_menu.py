@@ -516,6 +516,28 @@ class Slash(LiveBrowserCase):
         self.assertIn("> #### In the quote", lines, "stored shifted, never a line that would end the section")
         self.assertIn("> # Stray in a quote", lines)
 
+    def test_l6_the_menu_follows_the_caret_after_a_resize_in_current_state(self):
+        b = self.b
+        self.open_current()
+        b.key("Enter")
+        self.open_menu("#curEd")
+        for width in (900, 1400):
+            b.resize(width, 1000)
+            b.pump(0.8)
+            g = self.geometry("#curEd")
+            self.assertLessEqual(abs(g["menu"]["top"] - (g["caret"]["bottom"] + 4)), 4, f"{width}: {g}")
+            self.assertLessEqual(abs(g["menu"]["left"] - g["caret"]["left"]), 14, f"{width}: {g}")   # anchored at the slash, a character before the caret
+
+    def test_l6_the_menu_follows_the_caret_after_a_resize_in_notes(self):
+        b = self.b
+        self.make_note("Resize", LONG)
+        self.mid(20)
+        self.open_menu()
+        b.resize(900, 1000)
+        b.pump(0.8)
+        g = self.geometry()
+        self.assertLessEqual(abs(g["menu"]["top"] - (g["caret"]["bottom"] + 4)), 4, g)
+
     # ---- the Notes tab as it was ----------------------------------------------------------------------------------------
 
     def test_the_old_slash_behaviours_still_work_on_an_empty_line(self):

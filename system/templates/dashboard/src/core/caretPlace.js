@@ -25,8 +25,10 @@ export function placeAtCaret(view, pos, el, o = {}) {
     el.dataset.side = up ? "above" : "below";
   };
   put();
-  const on = () => put();
+  /* a resize or scroll moves the caret AFTER the layout settles (Current state reflows its panes): place now, again on the next frame and once more shortly after */
+  let raf = 0, tm = 0;
+  const on = () => { put(); cancelAnimationFrame(raf); clearTimeout(tm); raf = requestAnimationFrame(put); tm = window.setTimeout(put, 120); };
   window.addEventListener("scroll", on, true); window.addEventListener("resize", on);
   const vv = window.visualViewport; if (vv) vv.addEventListener("resize", on);
-  return () => { window.removeEventListener("scroll", on, true); window.removeEventListener("resize", on); if (vv) vv.removeEventListener("resize", on); };
+  return () => { cancelAnimationFrame(raf); clearTimeout(tm); window.removeEventListener("scroll", on, true); window.removeEventListener("resize", on); if (vv) vv.removeEventListener("resize", on); };
 }
