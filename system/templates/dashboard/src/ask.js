@@ -627,7 +627,8 @@ export function rbEnd(state){ if(RB.state!=="running") return; rbStop(); RB.took
     if(VIPD().notify===true&&"Notification" in window&&Notification.permission==="granted"){ try{ const n=new Notification(RBWORDS[RB.state],{body:RB.took?`${RB.state==="done"?"took":"after"} ${RB.took}`:"",tag:"creaite-run"}); n.onclick=()=>{ window.focus(); openChat(); n.close(); }; }catch(e){} } } }
 export function rbCancel(){ if(RB.state==="running"){ rbStop(); RB.state=""; rbDraw(); } }
 export function rbDismiss(){ if(RB.state&&RB.state!=="running"){ RB.state=""; rbDraw(); } rbUnmark(); }
-export function askWorking(on){ $("#askBtn").classList.toggle("working",on); }
+export function askWorking(on){ const b=$("#askBtn"); b.classList.toggle("working",on);
+  if(on){ b.setAttribute("aria-label","ask creaite (working)"); b.title="ask creaite (working)"; } else { b.removeAttribute("aria-label"); b.removeAttribute("title"); } }   /* #130: the dot alone is not a name; the plain name returns when the run ends */
 export function askFinished(o){ rbEnd(o||"done"); }
  
 /* the other runs: Generate and Make it executive, the Prep page and a search answer wrap their own functions */

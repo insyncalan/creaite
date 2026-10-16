@@ -55960,7 +55960,15 @@ ${d5.text}`);
     rbUnmark();
   }
   function askWorking(on2) {
-    $("#askBtn").classList.toggle("working", on2);
+    const b5 = $("#askBtn");
+    b5.classList.toggle("working", on2);
+    if (on2) {
+      b5.setAttribute("aria-label", "ask creaite (working)");
+      b5.title = "ask creaite (working)";
+    } else {
+      b5.removeAttribute("aria-label");
+      b5.removeAttribute("title");
+    }
   }
   function askFinished(o5) {
     rbEnd(o5 || "done");

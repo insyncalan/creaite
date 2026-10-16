@@ -235,6 +235,8 @@ class AskReopen(LiveBrowserCase):
         self.assertEqual(b.eval("STOPS"), 0, "Esc called /api/ask/stop")
         self.assertTrue(b.eval("!!RUN && !RUN.stopping"), "Esc stopped the run")
         self.assertTrue(b.eval("document.getElementById('askBtn').classList.contains('working')"), "the top-bar button shows no run while the panel is closed")
+        self.assertEqual(b.eval("[document.getElementById('askBtn').getAttribute('aria-label'), document.getElementById('askBtn').title]"),
+                         ["ask creaite (working)"] * 2, "the working state has no accessible name")
         self.assertEqual(self.post("/api/ask/running", {})["run"]["id"], run)           # the server is still running it
         b.eval("openChat()")                                                             # reopening shows it, still going
         self.assertTrue(b.eval("!!RUN && document.getElementById('chSend').getAttribute('aria-label')==='Stop'"))
@@ -242,6 +244,7 @@ class AskReopen(LiveBrowserCase):
         b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of %s'))" % name, 20)
         self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.stopped').length"), 0)
         b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)   # cleared when it ends
+        self.assertEqual(b.eval("[document.getElementById('askBtn').getAttribute('aria-label'), document.getElementById('askBtn').title]"), [None, ""])
         self.assertEqual(b.eval("STOPS"), 0)
 
     def test_esc_in_the_box_with_a_run_closes_the_panel_and_the_run_carries_on(self):
@@ -264,6 +267,28 @@ class AskReopen(LiveBrowserCase):
         self.release("g")
         b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of g'))", 20)
         b.wait("!document.getElementById('askBtn').classList.contains('working')", 10)
+
+    def esc_from(self, name, focus_js):
+        """Esc with focus somewhere other than the box: the panel closes, nothing is stopped, the run carries on."""
+        b = self.b
+        self.watch_stops()
+        self.start_gated(name)
+        b.eval(focus_js)
+        self.assertTrue(b.eval("document.getElementById('chat').contains(document.activeElement) && document.activeElement.id!=='chIn'"))
+        b.key("Escape")
+        b.wait(f"!{CHAT_ON}")
+        b.pump(0.6)
+        self.assertEqual(b.eval("STOPS"), 0, "Esc called /api/ask/stop")
+        self.assertTrue(b.eval("!!RUN && !RUN.stopping"))
+        self.release(name)
+        b.wait("!RUN && [...document.querySelectorAll('#chLog .msg.a')].some(m=>m.textContent.includes('Part two of %s'))" % name, 20)
+        self.assertEqual(b.eval("document.querySelectorAll('#chLog .step.stopped').length + STOPS"), 0)
+
+    def test_esc_with_focus_on_the_stop_button_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_from("j", "document.getElementById('chSend').focus()")
+
+    def test_esc_with_focus_in_the_panel_body_closes_the_panel_and_the_run_carries_on(self):
+        self.esc_from("k", "(()=>{ const l=document.getElementById('chLog'); l.tabIndex=-1; l.focus(); })()")
 
     def test_esc_with_no_run_closes_the_panel(self):
         b = self.b
