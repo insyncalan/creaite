@@ -389,7 +389,7 @@ window.addEventListener("keydown",e=>{ if(e.key!=="Escape"||!pkOn()||shared.EDIT
   if(document.querySelector("dialog:modal")||shared.CAL||comboboxOpen()||(a&&a.closest&&a.closest(".ddmenu.on,.keysmenu,[role=menu],#railPop,.cal,.combo,.pkpop,.sp-box,.linkpop"))) return;   /* #121: Esc in the link form is the form's own */   /* BL-322: Esc in Sneak peek closes the box only */   /* dialog:modal: BL-286 E's Prep popup is non-modal while the peek is over it */
   if(a&&a.closest&&a.closest("#chat")){ if(shared.RUN) return; e.preventDefault(); e.stopImmediatePropagation(); closeChat(); return; }
   if(a&&a.isContentEditable) return;
-  if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft chase goes back to the item first */
+  if(chaseIsOpen()){ e.preventDefault(); e.stopImmediatePropagation(); chaseClose(true); return; }   /* BL-298: Esc in Draft email goes back to the item first */
   if(HL.size&&(shared.VIEW==="work"||shared.VIEW==="mine"||shared.VIEW==="person")) return;   /* BL-122 first: Esc clears the highlight, the next Esc closes */
   e.preventDefault(); e.stopImmediatePropagation(); closePanel(); },true);
 /* opened before this block existed (an address with &item=…): draw it as the peek */
@@ -452,6 +452,8 @@ export function pkPopDone(anchor){ const f=anchor&&anchor.dataset?anchor.dataset
 export const PKMON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 export const pkDow=iso=>(new Date(iso+"T00:00:00Z").getUTCDay()+6)%7;
 /* ---- committing ---- */
+/* v2.3.0 #153: what More › Copy ID and title puts on the clipboard: the ID, two spaces, the item's own title */
+export const pkIdText=(id,x)=>`${id}  ${String((x&&x.t)||"").replace(/\s+/g," ").trim()}`.trimEnd();
 export const pkSame=(a,b)=>typeof b==="boolean"?!!a===b:String(a??"").trim()===String(b??"").trim();
 /* one change to one item: the fields that differ, written by pkWrite. Calls queue (PKQ), so changes are written in the order made. */
 shared.PKQ=Promise.resolve();
@@ -485,7 +487,7 @@ export async function pkWrite(k,id,P2,o){ const r=await (async()=>{
   const back=msg=>{ if(now){ ovDrop([now.ov]); for(const n in now.P2) if(pkSame(x&&x[n],now.P2[n])&&x) x[n]=now.was[n]; if(x&&k==="raid") x.pr=prio(x.imp,x.lik); ovReapply(); refreshAll(); }
     pkSaving("fail"); if(msg) snack(msg,now&&o.retry?()=>{ const r=o.retry; pkCommit(k,id,r.patch,r.label,r.from,r.to,{...r.o,now:undefined}); }:null,"Retry"); return false; };
   if(!x) return back(""); if(!await needVault()) return back("");
-  const first=!shared.PKS.some(s=>s.k===k&&s.id===id), item={op:"update",table:k,id,changes:toDb(k,P2)}; if(first&&x.updated_at) item.based_on=x.updated_at;
+  const first=!shared.PKS.some(s=>s.k===k&&s.id===id), item={op:"update",table:k,id,changes:toDb(k,P2)}; if(first&&x.updated_at) item.based_on=x.updated_at; if(o.logNote) item.note=o.logNote;   /* v2.3.0 #153: history only (Activity), like a milestone's reason */
   pkSaving("busy"); let name; const items=[...(o.pre||[]),item];   /* BL-187: a new workstream travels ahead of the item, in the same proposal */
   const prev=now?Object.fromEntries(Object.keys(P2).map(n=>[n,now.was[n]??""])):Object.fromEntries(Object.keys(P2).map(n=>[n,x[n]??""]));
   const meta={k,id,patch:P2,prev,label:o.label,from:o.from==null?"":String(o.from),to:o.to==null?"":String(o.to),at:nowStamp(),note:o.note||"",type:o.type||"act",ms:Date.now(),...(o.wsRow?{wsNew:o.wsRow.name,wsP:o.wsRow.p}:{})};   /* BL-188: what every window needs to show it */
@@ -560,13 +562,13 @@ document.addEventListener("focusout",e=>{ const el=e.target.closest&&e.target.cl
 window.addEventListener("keydown",e=>{ const el=e.target.closest&&e.target.closest("#panel [data-pkf][contenteditable]"); if(!el) return;
   if(e.key==="Escape"){ e.preventDefault(); e.stopImmediatePropagation(); el.textContent=el.dataset.orig??el.textContent; el.dataset.skip="1"; el.blur(); return; }
   if(e.key==="Enter"&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!el.dataset.pkml){ e.preventDefault(); el.blur(); } },true);
-/* More: mark done (or made), ask creaite about it, copy the ID */
+/* More: mark done (or made), ask creaite about it, copy the ID and title */
 $("#pkMore").onclick=()=>{ const x=curObj(), k=shared.CUR.k, id=pkCid(), b=$("#pkMore"); if(menuOpenFor(b)){ closeMenu(); return; }
   const can=k==="decisions"?x.st==="Pending":OPENST(x.st);   /* BL-316: the Menu block's menu (openMenu) */
-  openMenu(b,{label:"More",id:"pkMoreMenu",align:"right",items:[{id:"done",name:k==="decisions"?"Mark as made":"Mark done",icon:"check",disabled:!can,line:can?"":"Already complete"},{id:"ask",name:"ask creaite about this",icon:"chat"},{id:"id",name:"Copy ID",icon:"copy"}],
+  openMenu(b,{label:"More",id:"pkMoreMenu",align:"right",items:[{id:"done",name:k==="decisions"?"Mark as made":"Mark done",icon:"check",disabled:!can,line:can?"":"Already complete"},{id:"ask",name:"ask creaite about this",icon:"chat"},{id:"id",name:"Copy ID and title",icon:"copy"}],
     onPick:v=>{ if(v==="done") pkSetStatus(k,id,k==="decisions"?"Made":"Closed");
       if(v==="ask"){ openChat(); setTimeout(()=>{ const t=$("#chIn"); if(t&&!t.value.trim()){ t.value=`About ${id} (${x.t}): `; t.dispatchEvent(new Event("input",{bubbles:true})); t.focus(); } },60); }
-      if(v==="id"){ const done=()=>snack(`Copied ${id}`); if(navigator.clipboard) navigator.clipboard.writeText(id).then(done,()=>prompt("Copy this ID:",id)); else prompt("Copy this ID:",id); } }}); };
+      if(v==="id"){ const txt=pkIdText(id,x), done=()=>snack(`Copied ${id} and its title`); if(navigator.clipboard) navigator.clipboard.writeText(txt).then(done,()=>prompt("Copy this ID and title:",txt)); else prompt("Copy this ID and title:",txt); } }}); };   /* v2.3.0 #153: the ID, two spaces, the title */
 if(shared.CUR&&$("#panel").classList.contains("on")) drawPanel();
 }
 /* ===== BL-176 (sprint-peek) ===== staging. Each commit is its own proposal (Alan, 10-10-2026: edits to one item are not merged),
@@ -1304,7 +1306,7 @@ document.addEventListener("click",async e=>{ const b=e.target.closest("[data-drf
   if(!res.ok){ shared.DRF=null; drFcDraw(); snack(res.message||"No draft came back"); return; }
   mine.d=res; mine.html=draftCardHtml(res,{title:"Draft reason for the move",use:"Use this"}); drFcDraw(); },true);
 }
-/* ===== BL-298 (v19-draft-chase) ===== Draft chase from the peek. The envelope sits immediately left of Copy link in #pkBar (key C
+/* ===== BL-298 (v19-draft-chase) ===== Draft email from the peek. The envelope sits immediately left of Copy link in #pkBar (key C
    while the peek is open), shown for an open action, risk or issue and a pending decision, hidden for closed or cancelled items, a
    proposal and a new item. It opens the chase inside the peek: #pkChase takes #pkScroll's place, so the item stays beside Work, and
    Back (or Esc) returns to the item. The pane is a Preact component (components/peek/ChasePane.jsx); another item, a closed peek or
@@ -1323,7 +1325,7 @@ export function chaseDraw(x,k,fresh){ const b=$("#pkChaseBtn"); if(!b) return; b
 /* BL-231: what this block did at load, run in today's order by src/main.js */
 export function bootPanelChase(){
 ICONS.chase=CHASE_ICON.map(([tag,a])=>`<${tag}${Object.entries(a).map(([n,v])=>` ${n}="${v}"`).join("")}/>`).join("");   /* the icon's element data (ChasePane.jsx) as ic() takes it */
-addHTML($("#pkLink"),"beforebegin",raw(ibtn("chase","Draft chase",'id="pkChaseBtn" aria-pressed="false" hidden',"","C")));
+addHTML($("#pkLink"),"beforebegin",raw(ibtn("chase","Draft email",'id="pkChaseBtn" aria-pressed="false" hidden',"","C")));
 addHTML($("#pkScroll"),"afterend",html`<div class="pk-scroll pk-chase" id="pkChase" hidden></div>`);
 $("#pkChaseBtn").onclick=()=>chaseIsOpen()?chaseClose(true):chaseOpen();
 PKDRAW.push(chaseDraw);

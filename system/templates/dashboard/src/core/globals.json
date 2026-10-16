@@ -475,6 +475,7 @@
    "pkDraw",
    "pkEdMount",
    "pkFeed",
+   "pkIdText",
    "pkLast",
    "pkNote",
    "pkOn",

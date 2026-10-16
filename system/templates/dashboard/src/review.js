@@ -603,7 +603,7 @@ export function cxWork(k,id){ const x=REC(k,id), one=(patch,label)=>boardMove(k,
       {label:"Workstream",icon:"layers",sub:()=>cxList([...wsFor(x.p),["","None"]],x.ws||"",v=>one({ws:v}),"layers")},
       {label:"Milestone",icon:"flag",sub:()=>cxList(msChoices(x.p,x.ms),x.ms||"",v=>one({ms:v}),"flag")}); }
   out.push({sep:true},{label:"Copy ID",icon:"copy",run:()=>cxCopy(id,id)},{label:"Copy link",icon:"link",run:()=>cxCopy(cxLink(id),`the link to ${id}`)});
-  const who=k==="decisions"?null:pkWho(x.o); if(who&&PERS().some(p=>p.name===who)) { out.push({label:`Draft email to ${who}`,icon:"mail",run:()=>openDraftEmail(who)}); if(x.due&&x.due<TODAY&&OPENST(x.st)&&!deMe(who)) out.push({label:`Chase ${who}`,icon:"mail",run:()=>openDraftEmail(who,"chase")}); }   /* BL-224 */
+  const who=k==="decisions"?null:pkWho(x.o); if(who&&PERS().some(p=>p.name===who)) { out.push({label:"Draft email",icon:"mail",run:()=>openDraftEmail(who)}); if(x.due&&x.due<TODAY&&OPENST(x.st)&&!deMe(who)) out.push({label:`Chase ${who}`,icon:"mail",run:()=>openDraftEmail(who,"chase")}); }   /* BL-224 */
   return out; }
 /* ---- several highlighted: what applies to all of them ---- */
 export function cxWorkMany(ids){ const ks=new Set(ids.map(i=>i[0])), k=ids[0][0], xs=ids.map(([kk,id])=>REC(kk,id)), n=ids.length, all=ids.map(i=>i[1]);

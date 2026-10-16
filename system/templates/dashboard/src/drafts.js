@@ -16,7 +16,7 @@ import { copied, D, DDATE, fd, MOD, S, store, TODAY, toIso } from "./core/page.j
 import { api, OLDSERVER, oneLine, snack, status, viaServer, writeSettings } from "./core/server.js";
 import { shared } from "./core/state.js";
 import { putHtml } from "./meetings.js";
-import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, REC } from "./panel.js";
+import { curObj, mdHtml, msChoices, openProposal, pkCid, pkCommit, PKDRAW, PKDRBODY, PKDRBTN, PKDREXTRA, PKDRTITLE, PKFL, pkLabel, pkNewTitle, pkRev, pkUndoLast, REC } from "./panel.js";
 import { curRefine, curVersion, DRAFTKIND, GEN_AUD, GEN_AUDNOTE, GEN_FORMS, genSummary } from "./projects.js";
 import { draftOn, SPARKI } from "./review.js";
 import { PERS, personPool, renderPerson, row, SA, SETSECTIONS } from "./settings.js";
@@ -201,7 +201,7 @@ export function drawDraftEmail(first){ const em=deBuild(), codes=[...new Set(sha
       <div class="deopts">${shared.DE.mode==="followup"?"":'<label><input type="checkbox" id="deUpd"> Include latest update</label>'}<label>Please reply by <span class="dwrap"><input id="deReply" type="text" readonly data-pick data-min="today" size="10" aria-label="Reply by"><button type="button" class="dbtn" data-cal="deReply" aria-label="Choose a reply-by date">${CALI}</button></span></label></div>
       ${dePolishHtml()}<div id="deNote" class="denote" hidden></div>
       <div id="dePrev" contenteditable="true" role="textbox" aria-multiline="true" aria-label="The email, editable"></div>
-      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Record that you sent this chase (the items and today's date only), so the next one steps up">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
+      <div class="deacts"><button class="btn primary" id="deCopyHtml">Copy email</button><button class="btn" id="deCopyText">Copy as plain text</button>${shared.DE.mode==="chase"||shared.DE.mode==="update"?`<button class="btn" id="deSent" ${viaServer()?"":"disabled"} data-tip="Log that you sent it: a dated Latest update on each ticked item (the items, names and dates only, never the email)">I sent it</button>`:""}<span class="sp"></span><span class="sub" id="deMsg" aria-live="polite"></span><button class="btn" id="deDone">Close</button></div>`);
     $("#deDone").onclick=()=>$("#deDlg").close(); if(shared.DE.includeUpdate&&$("#deUpd")) $("#deUpd").checked=true; if(shared.DE.replyBy) $("#deReply").value=fd(shared.DE.replyBy); }
   dePrevPut(em.html); shared.DE.edited=false; $("#deNote").hidden=true; if(!shared.DE.subjEdited) $("#deSubj").value=em.subject; }
 /* ===== #133 ===== the preview is a host of the shared editor (core/editor.js, features "email"): the same selection bar as the other editors
@@ -235,24 +235,58 @@ export function deSelect(id){ const el=$("#"+id); if(!el) return; if(el.select){
 export async function deCopyText(text,btn,selectId){ try{ if(!navigator.clipboard||!navigator.clipboard.writeText) throw new Error("no clipboard"); await navigator.clipboard.writeText(text); deSay(btn,"Copied",true); }
   catch(err){ deSelect(selectId); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
 /* what is on screen is what is copied: the preview's own HTML (with any edits) and its text, together, so Outlook pastes the table and the colours */
-export async function deCopyEmail(withHtml,btn){ const prev=$("#dePrev"), html=deHtml(), text=shared.DE.edited?prev.innerText:deBuild().text;
+export async function deCopyEmail(withHtml,btn){ shared.SENTVIA=withHtml?"email":"message"; const prev=$("#dePrev"), html=deHtml(), text=shared.DE.edited?prev.innerText:deBuild().text;
   try{ if(!navigator.clipboard) throw new Error("no clipboard");
     if(withHtml){ if(typeof ClipboardItem==="undefined"||!navigator.clipboard.write) throw new Error("no rich clipboard"); await navigator.clipboard.write([new ClipboardItem({"text/html":new Blob([html],{type:"text/html"}),"text/plain":new Blob([text],{type:"text/plain"})})]); }
     else await navigator.clipboard.writeText(text);
     deSay(btn,withHtml?"Copied: paste it into Outlook":"Copied as plain text",true); }
   catch(err){ deSelect("dePrev"); deSay(null,`Your browser blocked copying: press ${MOD}C to copy`); } }
-/* "I sent it" (Chase): one record of the items picked and today's date; the next chase steps up and the person's page says so */
+/* ===== v2.3.0 #153 ===== "I sent it" logs the work. In the pane and in this popup it records the chase (chases.json: item IDs, the date and
+   the mode, as before) and stages a dated Latest update on each item through the peek's own staging (pkCommit: a proposal already
+   approved, source_run dashboard, applied with the others), with one Undo for the batch. A decision's text is its Reasoning, a
+   risk's its Response (pkUpdLabel). Never the email's text, only who, when, how and the reply-by date. */
+export const sentKindOf=id=>["actions","raid","decisions"].find(k=>REC(k,id));
+export const SENT_FIELD={actions:"upd",raid:"resp",decisions:"why"};
+/** how Alan sent it: "email" after Copy email / Copy for Outlook, "message" after Copy as text; email when neither. */
+export const sentVia=()=>shared.SENTVIA==="message"?"message":"email";
+/** The dated line for one item. mode: chase (others' item), update (asking for an update), help (Alan's own item), decision.
+    n is the reminder number once recorded; confidential items get the short form (who and how, no detail).
+    @param {{today?:string,name:string,via?:string,mode:string,n?:number,replyBy?:string,need?:string,confidential?:boolean}} o */
+export function sentLine(o){ const d=fd(o.today||TODAY), via=o.via==="message"?"message":"email", who=o.name||"them", by=o.replyBy?`; reply asked for by ${fd(o.replyBy)}`:"";
+  if(o.confidential) return `${d}: ${o.mode==="update"?"Emailed":"Chased"} ${who} by ${via}.`;
+  if(o.mode==="update") return `${d}: Emailed ${who} by ${via} asking for an update.`;
+  if(o.mode==="help"){ const need=String(o.need||"").replace(/\s+/g," ").replace(/\s+done\.?$/i,"").replace(/\.$/,"").trim().slice(0,80); return `${d}: Asked ${who} by ${via} for ${need||"help"}.`; }
+  if(o.mode==="decision") return `${d}: Asked ${who} for a decision by ${via}${by}.`;
+  return `${d}: Chased ${who} by ${via}${o.n?` (reminder ${o.n})`:""}${by}.`; }
+/** Stage the line on each item (queued in order, each to its own item by ID, so reordering or unticking changes nothing) and offer
+    one Undo for the batch. Returns how many were staged.
+    @param {{k:string,id:string,need?:string}[]} entries @param {{name:string,mode:string,replyBy?:string,via?:string,chases?:any}} o */
+export async function sentLog(entries,o){ let ok=0; const via=o.via||sentVia(), ch=o.chases||SA().chases||{};
+  for(const e of entries){ const x=REC(e.k,e.id), f=SENT_FIELD[e.k]; if(!x||!f) continue;
+    const conf=deBarred(deItem(e.k,x)), line=sentLine({name:o.name,via,mode:o.mode,n:(ch[e.id]||{}).n,replyBy:o.replyBy,need:e.need,confidential:conf});
+    const was=String(x[f]||"").trim();
+    if(await pkCommit(e.k,e.id,{[f]:was?line+"\n"+was:line},"Latest update",was?"…":"none",line,{logNote:"Draft email: I sent it"})) ok++; }
+  if(!ok) return 0;
+  snack(ok===1?"Logged.":`Logged on ${plur(ok,"item")}.`,async()=>{ for(let i=0;i<ok;i++) await pkUndoLast(); });   /* the toast's own Undo button */
+  return ok; }
+/* "I sent it" in the popup, update and chase modes: one record, then a Latest update on each ticked item */
 export async function deSent(btn){ if(!viaServer()){ snack("Recording a chase needs the live server"); return; }
-  const ids=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)).map(i=>i.id); if(!ids.length){ snack("Tick the items you chased"); return; }
-  btn.disabled=true; const r=await api("/api/chases",{ids,mode:"chase"}); btn.disabled=false;
-  if(!r.ok){ snack(oneLine(r.message)||"Not recorded"); return; }
-  SA().chases=r.chases||{}; deSay(btn,`Recorded: ${plur(ids.length,"item")} chased today`,true); if(shared.VIEW==="person"&&shared.PERSON) renderPerson(shared.PERSON); }
+  const picked=shared.DE.items.filter(i=>shared.DE.picked.has(i.k+":"+i.id)); if(!picked.length){ snack("Tick the items you sent it about"); return; }
+  if(btn.disabled) return;
+  const ids=picked.map(i=>i.id), mode=shared.DE.mode==="update"?"update":"chase", name=shared.DE.name, replyBy=shared.DE.replyBy;
+  btn.disabled=true; const r=await api("/api/chases",{ids,mode});
+  if(!r.ok){ btn.disabled=false; snack(oneLine(r.message)||"Not recorded"); return; }
+  SA().chases=r.chases||{}; const chases=SA().chases;
+  const n=await sentLog(picked.map(i=>({k:i.k,id:i.id})),{name,mode,replyBy,chases});
+  if(shared.DE&&shared.DE.name===name&&$("#deDlg")?.open) $("#deDlg").close();
+  if(!n) snack(`Recorded on ${plur(ids.length,"item")}`);
+  if(shared.VIEW==="person"&&shared.PERSON) renderPerson(shared.PERSON); }
 /* Polish the wording: the model rewords the opening paragraph only (the table, subject and addresses never go to it); its version is
    shown beside the original, and Use this puts it in the email */
 export function deCover(){ const b=draftEmail({...deBuildArgs(),cover:""}); return (b.text.split("\n")[2]||"").trim(); }
 export const deBuildArgs=()=>({mode:shared.DE.mode,name:shared.DE.name,email:shared.DE.email,items:shared.DE.items,picked:shared.DE.picked,includeUpdate:shared.DE.includeUpdate,replyBy:shared.DE.replyBy,now:new Date(),today:TODAY,dueSoon:S.dueSoon,
   names:{},from:"",chased:SA().chases||{},title:shared.DE.title,day:shared.DE.day,codes:shared.DE.codes,attendees:shared.DE.attendees,lead:shared.DE.lead,summary:shared.DE.summary});
-/* One Polish run for the Draft email and the Draft chase pane (BL-298): the kind's switch first (draftWhyNot; {ok:false, why} when
+/* One Polish run for the Draft email and the Draft email pane (BL-298): the kind's switch first (draftWhyNot; {ok:false, why} when
    it is off, with no run), then draftAsk. kind "polish" rewords the opening only; "polish-help" (Alan's own item in the pane) also
    suggests To get … done and What I need from you. */
 export async function polishAsk(body,o={}){ const why=draftWhyNot(body.kind); if(why) return {ok:false,why:true,message:why};

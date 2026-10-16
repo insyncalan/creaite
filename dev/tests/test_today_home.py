@@ -210,8 +210,8 @@ class Sections(Home):
           S.weekPrios=["Urgent"]; renderToday(); const out={rows:[...document.querySelectorAll('#weekList li.wkrow')].map(l=>[l.className.replace('wkrow ',''),(l.querySelector('.wkdot')||{className:'none'}).className.replace('wkdot','').trim(),l.querySelector('.wkwhy').textContent,[...l.querySelectorAll('.tacts button')].map(x=>x.dataset.tip)]),
             note:document.querySelectorAll('#weekList .wknote').length};
           S.weekPrios=["Urgent","High"]; renderToday(); out.note2=document.querySelectorAll('#weekList .wknote').length; out.text=document.getElementById('weekList').textContent; S.weekPrios=was; return out; })()""")
-        self.assertEqual(o["rows"], [["wk-decisions", "", "needed by", ["Draft a chase"]],
-                                     ["wk-raid", "u", "due", ["Write an update", "Draft a chase"]],          # #112: a red dot, not a tag; the why is one word
+        self.assertEqual(o["rows"], [["wk-decisions", "", "needed by", ["Draft email"]],
+                                     ["wk-raid", "u", "due", ["Write an update", "Draft email"]],          # #112: a red dot, not a tag; the why is one word
                                      ["wk-milestone", "", "at risk", ["Open the project"]]])
         self.assertEqual((o["note"], o["note2"]), (0, 0))                # #104: the "Urgent work, every milestone and decision, and meetings" note is gone
         self.assertNotIn("every milestone and decision", o["text"])
@@ -476,7 +476,7 @@ class Icons(Home):
         self.today()
         o = b.eval("""(()=>({dn:[...document.querySelectorAll('#dnList .tacts button')].map(x=>x.dataset.tip),
           rem:[...document.querySelectorAll('#attnList .rem .tacts button')].map(x=>x.dataset.tip)}))()""")
-        self.assertIn("Draft a chase", o["dn"])
+        self.assertIn("Draft email", o["dn"])
         self.assertIn("Open", o["dn"])
         self.assertTrue(o["rem"] and all(t.startswith(("Draft", "Run", "Needs", "Already")) for t in o["rem"]))
 
