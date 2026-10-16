@@ -26,8 +26,8 @@ import { aiCall, aiError, aiState, loadAi } from "../../stores/settings.js";
 /** @typedef {{provider:AiProvider, step:string, error:string, pending:string, models:{id:string,label:string}[],
      ticked:string[]}} Flow */
 
-let N = 0;
-const uid = (/** @type {string} */ p) => `${p}${++N}`;
+let AI_N = 0;
+const uid = (/** @type {string} */ p) => `${p}${++AI_N}`;
 
 /** The verb a greyed card's button shows. @param {AiProvider} p */
 const soonVerb = p => p.id === "local" ? "Set up" : "Connect";

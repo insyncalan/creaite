@@ -11232,8 +11232,8 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   }
 
   // components/settings/AiModels.jsx
-  var N3 = 0;
-  var uid = (p6) => `${p6}${++N3}`;
+  var AI_N = 0;
+  var uid = (p6) => `${p6}${++AI_N}`;
   var soonVerb = (p6) => p6.id === "local" ? "Set up" : "Connect";
   function ProviderCard({ p: p6, onConnect, onManage, onDisconnect, onSignIn }) {
     const [hid] = d2(() => uid("aip"));
@@ -18827,14 +18827,14 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         K2 && !(ie && t47.composing && K2.empty && (p6.start != p6.endB || t47.input.lastChromeDelete < Date.now() - 100) && (K2.head == b5 || K2.head == I2.mapping.map(x5) - 1) || ke && K2.empty && K2.head == b5) && I2.setSelection(K2);
       }
       return i5 && I2.setMeta("composition", i5), I2.scrollIntoView();
-    }, N4;
+    }, N3;
     if (k5) if (m5.pos == g5.pos) {
       ke && gt <= 11 && m5.parentOffset == 0 && (t47.domObserver.suppressSelectionUpdates(), setTimeout(() => rt(t47), 20));
       let A5 = S4(t47.state.tr.delete(b5, x5)), I2 = u5.resolve(p6.start).marksAcross(u5.resolve(p6.endA));
       I2 && A5.ensureMarks(I2), t47.dispatch(A5);
-    } else if (p6.endA == p6.endB && (N4 = ty(m5.parent.content.cut(m5.parentOffset, g5.parentOffset), y5.parent.content.cut(y5.parentOffset, p6.endA - y5.start())))) {
+    } else if (p6.endA == p6.endB && (N3 = ty(m5.parent.content.cut(m5.parentOffset, g5.parentOffset), y5.parent.content.cut(y5.parentOffset, p6.endA - y5.start())))) {
       let A5 = S4(t47.state.tr);
-      N4.type == "add" ? A5.addMark(b5, x5, N4.mark) : A5.removeMark(b5, x5, N4.mark), t47.dispatch(A5);
+      N3.type == "add" ? A5.addMark(b5, x5, N3.mark) : A5.removeMark(b5, x5, N3.mark), t47.dispatch(A5);
     } else if (m5.parent.child(m5.index()).isText && m5.index() == g5.index() - (g5.textOffset ? 0 : 1)) {
       let A5 = m5.parent.textBetween(m5.parentOffset, g5.parentOffset), I2 = () => S4(t47.state.tr.insertText(A5, b5, x5));
       t47.someProp("handleTextInput", (K2) => K2(t47, b5, x5, A5, I2)) || t47.dispatch(I2());
@@ -20095,10 +20095,10 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
         for (let I2 = l6.depth - k5; I2 >= l6.depth - 3; I2 -= 1) y5 = w5.from(l6.node(I2).copy(y5));
         let b5 = l6.indexAfter(-1) < l6.node(-2).childCount ? 1 : l6.indexAfter(-2) < l6.node(-3).childCount ? 2 : 3, x5 = { ...ss(d5, l6.node().type.name, l6.node().attrs), ...e4 }, S4 = ((f5 = o5.contentMatch.defaultType) === null || f5 === void 0 ? void 0 : f5.createAndFill(x5)) || void 0;
         y5 = y5.append(w5.from(o5.createAndFill(null, S4) || void 0));
-        let N4 = l6.before(l6.depth - (k5 - 1));
-        n4.replace(N4, l6.after(-b5), new M3(y5, 4 - k5, 0));
+        let N3 = l6.before(l6.depth - (k5 - 1));
+        n4.replace(N3, l6.after(-b5), new M3(y5, 4 - k5, 0));
         let A5 = -1;
-        n4.doc.nodesBetween(N4, n4.doc.content.size, (I2, K2) => {
+        n4.doc.nodesBetween(N3, n4.doc.content.size, (I2, K2) => {
           if (A5 > -1) return false;
           I2.isTextblock && I2.content.size === 0 && (A5 = K2 + 1);
         }), A5 > -1 && n4.setSelection(T5.near(n4.doc.resolve(A5))), n4.scrollIntoView();
@@ -20112,7 +20112,7 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
     if (s5) {
       let { selection: y5, storedMarks: k5 } = r4, { splittableMarks: b5 } = i5.extensionManager, x5 = k5 || y5.$to.parentOffset && y5.$from.marks();
       if (n4.split(l6.pos, 2, g5).scrollIntoView(), !x5 || !s5) return true;
-      let S4 = x5.filter((N4) => b5.includes(N4.type.name));
+      let S4 = x5.filter((N3) => b5.includes(N3.type.name));
       n4.ensureMarks(S4);
     }
     return true;
@@ -20147,9 +20147,9 @@ body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,
   var A0 = (t47, e4, n4, r4 = {}) => ({ editor: s5, tr: i5, state: o5, dispatch: l6, chain: a5, commands: c5, can: u5 }) => {
     let { extensions: d5, splittableMarks: f5 } = s5.extensionManager, h5 = Y(t47, o5.schema), p6 = Y(e4, o5.schema), { selection: m5, storedMarks: g5 } = o5, { $from: y5, $to: k5 } = m5, b5 = y5.blockRange(k5), x5 = g5 || m5.$to.parentOffset && m5.$from.marks();
     if (!b5) return false;
-    let S4 = us((Ne) => Ho(Ne.type.name, d5))(m5), N4 = m5.from === 0 && m5.to === o5.doc.content.size, A5 = o5.doc.content.content, I2 = A5.length === 1 ? A5[0] : null, K2 = N4 && I2 && Ho(I2.type.name, d5) ? { node: I2, pos: 0, depth: 0 } : null, Ce = S4 ?? K2, Nn = !!S4 && b5.depth >= 1 && b5.depth - S4.depth <= 1, On = !!K2;
+    let S4 = us((Ne) => Ho(Ne.type.name, d5))(m5), N3 = m5.from === 0 && m5.to === o5.doc.content.size, A5 = o5.doc.content.content, I2 = A5.length === 1 ? A5[0] : null, K2 = N3 && I2 && Ho(I2.type.name, d5) ? { node: I2, pos: 0, depth: 0 } : null, Ce = S4 ?? K2, Nn = !!S4 && b5.depth >= 1 && b5.depth - S4.depth <= 1, On = !!K2;
     if ((Nn || On) && Ce) {
-      if (Ce.node.type === h5) return N4 && On ? a5().command(({ tr: Ne, dispatch: Je }) => {
+      if (Ce.node.type === h5) return N3 && On ? a5().command(({ tr: Ne, dispatch: Je }) => {
         let Oe = T0(Ne);
         return Oe ? (Ne.setSelection(Oe), Je && Je(Ne), true) : false;
       }).liftListItem(p6).run() : c5.liftListItem(p6);
@@ -20777,9 +20777,9 @@ ${m5}`;
       let k5 = (m5 = (g5 = (y5 = f5.content) === null || y5 === void 0 ? void 0 : y5.size) !== null && g5 !== void 0 ? g5 : f5.nodeSize) !== null && m5 !== void 0 ? m5 : 0, b5 = Math.max(r4, h5), x5 = Math.min(s5, h5 + k5);
       if (b5 >= x5) return;
       let S4 = f5.isText ? f5.text || "" : f5.textBetween(b5 - h5, x5 - h5, void 0, "￼");
-      ok(S4, i5.find, o5).forEach((N4) => {
-        if (N4.index === void 0) return;
-        let A5 = b5 + N4.index + 1, I2 = A5 + N4[0].length, K2 = { from: n4.tr.mapping.map(A5), to: n4.tr.mapping.map(I2) }, Ce = i5.handler({ state: n4, range: K2, match: N4, commands: a5, chain: c5, can: u5, pasteEvent: o5, dropEvent: l6 });
+      ok(S4, i5.find, o5).forEach((N3) => {
+        if (N3.index === void 0) return;
+        let A5 = b5 + N3.index + 1, I2 = A5 + N3[0].length, K2 = { from: n4.tr.mapping.map(A5), to: n4.tr.mapping.map(I2) }, Ce = i5.handler({ state: n4, range: K2, match: N3, commands: a5, chain: c5, can: u5, pasteEvent: o5, dropEvent: l6 });
         d5.push(Ce);
       });
     }), d5.every((f5) => f5 !== null);
@@ -20836,8 +20836,8 @@ ${m5}`;
       if (y5) {
         let { text: x5 } = g5;
         typeof x5 == "string" ? x5 = x5 : x5 = Jo(w5.from(x5), f5.schema);
-        let { from: S4 } = g5, N4 = S4 + x5.length, A5 = ak(x5);
-        return a5({ rule: c5, state: f5, from: S4, to: { b: N4 }, pasteEvt: A5 });
+        let { from: S4 } = g5, N3 = S4 + x5.length, A5 = ak(x5);
+        return a5({ rule: c5, state: f5, from: S4, to: { b: N3 }, pasteEvt: A5 });
       }
       let k5 = d5.doc.content.findDiffStart(f5.doc.content), b5 = d5.doc.content.findDiffEnd(f5.doc.content);
       if (!(!tk(k5) || !b5 || k5 === b5.b)) return a5({ rule: c5, state: f5, from: k5, to: b5, pasteEvt: o5 });
@@ -22177,8 +22177,8 @@ ${n4}
     P4(k5, t47.numeric, b5);
     let x5 = Ee(Ss), S4 = Ee();
     P4(x5, e4, x5), P4(x5, n4, S4), P4(S4, e4, x5), P4(S4, n4, S4), C4(y5, We, x5), C4(b5, We, x5);
-    let N4 = C4(l6, Ut), A5 = C4(a5, Ut), I2 = C4(A5, We), K2 = C4(I2, We);
-    P4(l6, t47.domain, o5), C4(l6, je, g5), C4(l6, Re, m5), P4(a5, t47.domain, o5), C4(a5, je, g5), C4(a5, Re, m5), P4(N4, t47.domain, x5), C4(N4, We, x5), C4(N4, pr, x5), P4(K2, t47.domain, x5), P4(K2, e4, x5), C4(K2, We, x5);
+    let N3 = C4(l6, Ut), A5 = C4(a5, Ut), I2 = C4(A5, We), K2 = C4(I2, We);
+    P4(l6, t47.domain, o5), C4(l6, je, g5), C4(l6, Re, m5), P4(a5, t47.domain, o5), C4(a5, je, g5), C4(a5, Re, m5), P4(N3, t47.domain, x5), C4(N3, We, x5), C4(N3, pr, x5), P4(K2, t47.domain, x5), P4(K2, e4, x5), C4(K2, We, x5);
     let Ce = [[dr, fr], [Ms, vs], [Ts, As], [Es, Rs], [Ns, Os], [Is, Ds], [Ls, Ps], [zs, $s]];
     for (let Nn = 0; Nn < Ce.length; Nn++) {
       let [On, Ne] = Ce[Nn], Je = C4(x5, On);
@@ -24036,17 +24036,17 @@ ${u5}` : u5;
             let m5 = this.rules.other.nextBulletRegex(p6), g5 = this.rules.other.hrRegex(p6), y5 = this.rules.other.fencesBeginRegex(p6), k5 = this.rules.other.headingBeginRegex(p6), b5 = this.rules.other.htmlBeginRegex(p6), x5 = this.rules.other.blockquoteBeginRegex(p6);
             for (; t47; ) {
               let S4 = t47.split(`
-`, 1)[0], N4;
-              if (f5 = S4, this.options.pedantic ? (f5 = f5.replace(this.rules.other.listReplaceNesting, "  "), N4 = f5) : N4 = f5.replace(this.rules.other.tabCharGlobal, "    "), y5.test(f5) || k5.test(f5) || b5.test(f5) || x5.test(f5) || m5.test(f5) || g5.test(f5)) break;
-              if (N4.search(this.rules.other.nonSpaceChar) >= p6 || !f5.trim()) u5 += `
-` + N4.slice(p6);
+`, 1)[0], N3;
+              if (f5 = S4, this.options.pedantic ? (f5 = f5.replace(this.rules.other.listReplaceNesting, "  "), N3 = f5) : N3 = f5.replace(this.rules.other.tabCharGlobal, "    "), y5.test(f5) || k5.test(f5) || b5.test(f5) || x5.test(f5) || m5.test(f5) || g5.test(f5)) break;
+              if (N3.search(this.rules.other.nonSpaceChar) >= p6 || !f5.trim()) u5 += `
+` + N3.slice(p6);
               else {
                 if (h5 || d5.replace(this.rules.other.tabCharGlobal, "    ").search(this.rules.other.nonSpaceChar) >= 4 || y5.test(d5) || k5.test(d5) || g5.test(d5)) break;
                 u5 += `
 ` + f5;
               }
               h5 = !f5.trim(), c5 += S4 + `
-`, t47 = t47.substring(S4.length + 1), d5 = N4.slice(p6);
+`, t47 = t47.substring(S4.length + 1), d5 = N3.slice(p6);
             }
           }
           s5.loose || (o5 ? s5.loose = true : this.rules.other.doubleBlankLine.test(c5) && (o5 = true)), s5.items.push({ type: "list_item", raw: c5, task: !!this.options.gfm && this.rules.other.listIsTask.test(u5), loose: false, text: u5, tokens: [] }), s5.raw += c5;
@@ -25185,7 +25185,7 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
 `).trim()) {
             let k5 = p6.slice(1), b5 = k5.filter((x5) => x5.trim());
             if (b5.length > 0) {
-              let x5 = Math.min(...b5.map((N4) => N4.length - N4.trimStart().length)), S4 = k5.map((N4) => N4.trim() ? N4.slice(x5) : "").join(`
+              let x5 = Math.min(...b5.map((N3) => N3.length - N3.trimStart().length)), S4 = k5.map((N3) => N3.trim() ? N3.slice(x5) : "").join(`
 `).trim();
               S4 && (y5 = this.markedInstance.lexer(`${S4}
 `));
@@ -25405,8 +25405,8 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
         if (a5.type) if (a5.type === "text") {
           let d5 = this.encodeTextForMarkdown(a5.text || "", a5, e4), f5 = new Map((a5.marks || []).map((S4) => [S4.type, S4])), h5 = this.getMarksToOpenForSerialization(i5, f5, u5), p6 = Sh(f5, u5);
           if (d5.length > 0 && d5.trim().length === 0 && f5.size > 0) {
-            let S4 = new Set(p6.filter((N4) => !i5.has(N4)));
-            S4.size > 0 && (f5 = new Map(Array.from(f5).filter(([N4]) => !S4.has(N4))), h5 = this.getMarksToOpenForSerialization(i5, f5, u5), p6 = Sh(f5, u5));
+            let S4 = new Set(p6.filter((N3) => !i5.has(N3)));
+            S4.size > 0 && (f5 = new Map(Array.from(f5).filter(([N3]) => !S4.has(N3))), h5 = this.getMarksToOpenForSerialization(i5, f5, u5), p6 = Sh(f5, u5));
           }
           let m5 = p6.filter((S4) => i5.has(S4)), g5 = m5.length > 0 && h5.length > 0, y5 = "";
           if (p6.length > 0 && !g5) {
@@ -25415,7 +25415,7 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
           }
           g5 || p6.slice().reverse().forEach((S4) => {
             if (!i5.has(S4)) return;
-            let N4 = f5.get(S4), A5 = this.getMarkClosing(S4, N4, l6.get(S4));
+            let N3 = f5.get(S4), A5 = this.getMarkClosing(S4, N3, l6.get(S4));
             A5 && (d5 += A5), i5.has(S4) && (i5.delete(S4), l6.delete(S4));
           });
           let k5 = "";
@@ -25423,11 +25423,11 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
             let S4 = d5.match(/^(\s+)/);
             S4 && (k5 = S4[1], d5 = d5.slice(k5.length));
           }
-          h5.forEach(({ type: S4, mark: N4 }) => {
-            let A5 = o5.has(S4) ? "html" : "markdown", I2 = this.getMarkOpening(S4, N4, A5);
+          h5.forEach(({ type: S4, mark: N3 }) => {
+            let A5 = o5.has(S4) ? "html" : "markdown", I2 = this.getMarkOpening(S4, N3, A5);
             I2 && (d5 = I2 + d5), l6.set(S4, A5), o5.delete(S4);
-          }), g5 || h5.slice().reverse().forEach(({ type: S4, mark: N4 }) => {
-            i5.set(S4, N4);
+          }), g5 || h5.slice().reverse().forEach(({ type: S4, mark: N3 }) => {
+            i5.set(S4, N3);
           }), d5 = k5 + d5;
           let b5;
           if (g5) {
@@ -25435,7 +25435,7 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
             h5.forEach(({ type: I2 }) => {
               S4.has(I2) && this.getHtmlReopenTags(I2) && o5.add(I2);
             });
-            let N4 = Array.from(i5.keys()), A5 = m5.slice().sort((I2, K2) => N4.indexOf(K2) - N4.indexOf(I2));
+            let N3 = Array.from(i5.keys()), A5 = m5.slice().sort((I2, K2) => N3.indexOf(K2) - N3.indexOf(I2));
             b5 = [...h5.map((I2) => I2.type), ...A5];
           } else b5 = fx(i5, f5, u5, this.markSetsEqual.bind(this));
           let x5 = "";
@@ -25444,8 +25444,8 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
             S4 && (x5 = S4[1], d5 = d5.slice(0, -x5.length));
           }
           b5.forEach((S4) => {
-            var N4;
-            let A5 = (N4 = i5.get(S4)) !== null && N4 !== void 0 ? N4 : f5.get(S4), I2 = this.getMarkClosing(S4, A5, l6.get(S4));
+            var N3;
+            let A5 = (N3 = i5.get(S4)) !== null && N3 !== void 0 ? N3 : f5.get(S4), I2 = this.getMarkClosing(S4, A5, l6.get(S4));
             I2 && (d5 += I2), i5.delete(S4), l6.delete(S4);
           }), d5 += x5, d5 += y5, s5.push(d5);
         } else {
@@ -25696,10 +25696,10 @@ Please report this to https://github.com/markedjs/marked.`, t47) {
           let x5 = s5 + b5 * e4;
           for (let S4 = 0; S4 < g5; S4++) {
             r4[x5 + S4] == 0 ? r4[x5 + S4] = u5 : (i5 || (i5 = [])).push({ type: "collision", row: c5, pos: u5, n: g5 - S4 });
-            let N4 = k5 && k5[S4];
-            if (N4) {
+            let N3 = k5 && k5[S4];
+            if (N3) {
               let A5 = (x5 + S4) % e4 * 2, I2 = o5[A5];
-              I2 == null || I2 != N4 && o5[A5 + 1] == 1 ? (o5[A5] = N4, o5[A5 + 1] = 1) : I2 == N4 && o5[A5 + 1]++;
+              I2 == null || I2 != N3 && o5[A5 + 1] == 1 ? (o5[A5] = N3, o5[A5 + 1] = 1) : I2 == N3 && o5[A5 + 1]++;
             }
           }
         }
@@ -48186,8 +48186,8 @@ ${d5.text}`);
     return m5 ? `${m5[0]} (${id2})${m5[1] === "Cancelled" ? " (cancelled)" : ""}` : id2;
   };
   function msChoices(code, cur) {
-    const L3 = (P3.find((p6) => p6.code === code) || { ms: [] }).ms.filter((m5) => m5[3]).map((m5) => [m5[3], m5[0], m5[1]]), N4 = D.milestone_names || {};
-    if (cur && !L3.some((m5) => m5[0] === cur) && N4[cur]) L3.push([cur, N4[cur][0] + (N4[cur][1] === "Cancelled" ? " (cancelled)" : ""), N4[cur][2]]);
+    const L3 = (P3.find((p6) => p6.code === code) || { ms: [] }).ms.filter((m5) => m5[3]).map((m5) => [m5[3], m5[0], m5[1]]), N3 = D.milestone_names || {};
+    if (cur && !L3.some((m5) => m5[0] === cur) && N3[cur]) L3.push([cur, N3[cur][0] + (N3[cur][1] === "Cancelled" ? " (cancelled)" : ""), N3[cur][2]]);
     const dup = (n4) => L3.filter((m5) => m5[1].toLowerCase() === n4.toLowerCase()).length > 1;
     return [["", "None"], ...L3.map(([id2, n4, d5]) => [id2, dup(n4) && d5 ? `${n4} · ${fd(d5)}` : n4])];
   }

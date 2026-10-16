@@ -438,7 +438,8 @@ CATALOGUE = {
 }
 GROUP_ORDER = ("You", "Your day", "Saving and review", "People I follow", "Look and help", "Safety",
                "Sweep", "Reminders", "Review", "Health thresholds", "Early warnings", "Current state", "Work and views",
-               "Look and layout", "AI models", "AI drafts", "Close the day", "Reports and minutes", "Meeting prep and Intake", "Search", "Archiving",
+               "Look and layout", "AI models", "AI drafts", "Close the day", "Reports and minutes", "Meeting prep and Intake",
+               "Search", "Archiving",
                "Folders and OneDrive", "Live server and ask creaite", "Logging", "Help", "Legacy", "Developer")
 DEVELOPER_KEYS = ()       # development-only settings (library fetches, hand checks, the second laptop) when they exist
 
