@@ -7876,8 +7876,8 @@ a.tlink:focus-visible{outline:2px solid var(--focus);outline-offset:1px;border-r
   }
   function mailtoOk(rest) {
     if (rest.includes("#")) return false;
-    const q5 = rest.indexOf("?"), who2 = strictDecode(q5 < 0 ? rest : rest.slice(0, q5));
-    if (who2 === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(who2)) return false;
+    const q5 = rest.indexOf("?"), box = strictDecode(q5 < 0 ? rest : rest.slice(0, q5));
+    if (box === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(box)) return false;
     if (q5 < 0) return true;
     for (const part of rest.slice(q5 + 1).split("&")) {
       if (!part) continue;

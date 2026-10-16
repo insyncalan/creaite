@@ -59,8 +59,8 @@ function strictDecode(s) {
     @param {string} rest */
 function mailtoOk(rest) {
   if (rest.includes("#")) return false;
-  const q = rest.indexOf("?"), who = strictDecode(q < 0 ? rest : rest.slice(0, q));
-  if (who === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(who)) return false;     // one address (no list: it would hide the receivers)
+  const q = rest.indexOf("?"), box = strictDecode(q < 0 ? rest : rest.slice(0, q));
+  if (box === null || !/^[^@\s,;]+@[^@\s,;]+$/.test(box)) return false;     // one address (no list: it would hide the receivers)
   if (q < 0) return true;
   for (const part of rest.slice(q + 1).split("&")) {
     if (!part) continue;
