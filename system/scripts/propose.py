@@ -1430,7 +1430,7 @@ def notes_setting_problem(key, was, data):
     if not (key == "locations" or key.startswith("locations.")):
         return None
     loc = data.get("locations")
-    return paths.locations_change_problem(was if isinstance(was, dict) else {}, loc if isinstance(loc, dict) else {})
+    return paths.locations_change_problem(was if isinstance(was, dict) else {}, loc if loc is not None else {})
 
 
 # ===== Recode a project (BL-111) =====

@@ -544,10 +544,12 @@ def _arch_names() -> set:
     return {_fold(ARCHIVE), _fold(OLD_ARCHIVE)}
 
 
-def _not_engagement(name, loc=None) -> bool:
-    """A top folder that is never an engagement for the notes rules: _Templates, the skeleton's top folder."""
+def _exempt(parts, loc=None) -> bool:
+    """#128 D2: folded `parts` below the projects folder are in _Templates or in the skeleton itself (its exact path, never
+    the rest of its top folder): never an engagement's notes."""
     skel = str((loc if loc is not None else locations()).get("skeleton") or "_Templates/_Skeleton")
-    return _fold(name) in ("_templates", _fold(Path(skel).parts[0] if Path(skel).parts else ""))
+    sk = [_fold(x) for x in skel.replace("\\", "/").split("/") if x not in ("", ".")]
+    return bool(parts) and (parts[0] == "_templates" or (bool(sk) and parts[:len(sk)] == sk))
 
 
 def notes_shape(parts, name, archived=True, loc=None) -> bool:
@@ -557,7 +559,7 @@ def notes_shape(parts, name, archived=True, loc=None) -> bool:
     for shape in NOTES_SHAPES if archived else NOTES_SHAPES[:1]:
         head = parts[:len(shape)]
         if len(head) == len(shape) and all((x in arch) if s == "A" else (x not in arch) for s, x in zip(shape, head)) \
-                and not _not_engagement(head[0], loc) and parts[len(shape):len(shape) + len(name)] == name:
+                and not _exempt(parts, loc) and parts[len(shape):len(shape) + len(name)] == name:
             return True
     return False
 
@@ -568,17 +570,16 @@ def notes_places(root, name, loc=None) -> list:
     out = []
     for shape in NOTES_SHAPES:
         here = [Path(root)]
-        for i, s in enumerate(shape):
+        for s in shape:
             nxt = []
             for d in here:
                 try:
                     kids = [k for k in d.iterdir() if k.is_dir()]
                 except OSError:                   # gone or unreadable: nothing there to guard
                     continue
-                nxt += [k for k in kids if ((_fold(k.name) in arch) if s == "A" else (_fold(k.name) not in arch))
-                        and not (i == 0 and _not_engagement(k.name, loc))]
+                nxt += [k for k in kids if ((_fold(k.name) in arch) if s == "A" else (_fold(k.name) not in arch))]
             here = nxt
-        out += [d / name for d in here]
+        out += [d / name for d in here if not _exempt([_fold(x) for x in (d / name).relative_to(root).parts], loc)]
     return out
 
 
@@ -603,6 +604,10 @@ def _loc_root(loc) -> Path:
 
 
 def _loc_notes(loc) -> str:
+    """#128 D1: the notes folder's name in effect for `locations` value `loc`: `notes` in the vault's own layout (no
+    projects_root), else the mapped one (paths.folder_name's rule)."""
+    if not str((loc or {}).get("projects_root") or "").strip():
+        return DEFAULT_FOLDERS["notes"]
     folders = (loc or {}).get("folders")
     return str({**LOCATION_DEFAULTS["folders"], **(folders if isinstance(folders, dict) else {})}.get("notes")
                or DEFAULT_FOLDERS["notes"])
@@ -612,20 +617,34 @@ def notes_rename_problem(old, new):
     """#128 F1: why `locations` mapping `new` can't replace `old` (both whole `locations` values): the notes folder's name
     changes while a folder under the old name holds files, under the old root or the new one (notes_places: every engagement,
     registered or not, the portfolio, their _Archive and archived engagements), so those notes would lose the apply's guard.
-    A root change alone is allowed (the notes keep their name, so the guard follows them). The way to rename: move the
-    folders in Finder first, then change the setting."""
+    D1: the name compared is the one in effect (the vault's own layout uses `notes`), and a new projects folder that holds the
+    old one or sits inside it counts too (the notes would be at another depth); a move to an unrelated folder is saved. The
+    way to rename: move the folders in Finder first, then change the setting."""
     a, b = _loc_notes(old), _loc_notes(new)
-    if _fold(a.strip("/")) == _fold(b.strip("/")):
+    ro, rn = os.path.realpath(_loc_root(old)), os.path.realpath(_loc_root(new))
+    nested = ro != rn and (rn.startswith(ro.rstrip(os.sep) + os.sep) or ro.startswith(rn.rstrip(os.sep) + os.sep))
+    if _fold(a.strip("/")) == _fold(b.strip("/")) and not nested:
         return None
+    why = f"move the notes folders to “{b}” first" if not nested else "the new projects folder holds the old one or sits " \
+        "inside it, so the notes would lose their guard: move the notes out first"
     for root in dict.fromkeys([_loc_root(old), _loc_root(new)]):
         bases = notes_places(root, a, old) + notes_places(root, a, new)
         pf = root / str((new or {}).get("portfolio") or "_Portfolio")
         bases += [pf / a, pf / ARCHIVE / a, ROOT / "projects" / "_portfolio" / a]
         for d in dict.fromkeys(bases):
             if os.path.lexists(d) and _holds_files(d):
-                return (f"Not saved: notes are still in “{a}” ({d.parent.name}): move the notes folders to “{b}” first, then "
-                        "change the setting.")
+                return f"Not saved: notes are still in “{a}” ({d.parent.name}): {why}, then change the setting."
     return None
+
+
+def _engagement_top(top, new) -> bool:
+    """#128 L1, D2: folder `top` (below the projects folder) is _Archive, the portfolio, a registered engagement, or any
+    folder but _Templates that holds a notes folder (an engagement not in the register)."""
+    engagements = {_fold(x) for x in register_folders().values()} | {_fold(new.get("portfolio") or "_Portfolio")}
+    if _fold(top) in _arch_names() | engagements:
+        return True
+    d, name = _loc_root(new) / top, _loc_notes(new)
+    return _fold(top) != "_templates" and any((d / x / name).is_dir() for x in ("", ARCHIVE, OLD_ARCHIVE))
 
 
 def skeleton_problem(old, new):
@@ -635,14 +654,17 @@ def skeleton_problem(old, new):
         return None                               # left as it was (or the default)
     s = str(new.get("skeleton") or "")
     parts = [x for x in s.replace("\\", "/").split("/") if x not in ("", ".")]
-    engagements = {_fold(x) for x in register_folders().values()} | {_fold((new or {}).get("portfolio") or "_Portfolio")}
-    if not parts or ".." in parts or _fold(parts[0]) in _arch_names() | engagements:
+    if not parts or ".." in parts or _engagement_top(parts[0], new):
         return f"Not saved: locations.skeleton “{s}” isn't a template folder of its own (never “.”, _Archive, an engagement or the portfolio)."
     return None
+
+
 def locations_change_problem(old, new):
     """#128: why `locations` value `new` can't replace `old` (the page's settings save and propose.py setting), or None: the
     notes folder would share a folder with another kind, a renamed notes folder would leave notes unguarded, or the skeleton
     isn't a template folder of its own."""
+    if not isinstance(new, dict) or not isinstance(new.get("folders", {}), dict):          # D3, D4
+        return "Not saved: locations and locations.folders must be objects."
     nf, of = new.get("folders"), old.get("folders")
     clash = notes_folder_clash(nf if isinstance(nf, dict) else {}) if nf != of else []
     if clash:

@@ -249,6 +249,22 @@ class NoteOps(test_card_only_moves.CardOnlyMoves):
         self.assertEqual(doc.read_bytes(), before)
 
 
+    def test_h_the_vault_layout_to_an_outside_root_is_a_hidden_rename(self):
+        """D1 (c): projects_root set to the vault's own projects folder switches the notes name in effect from `notes` to
+        `08 Notes`: refused through the page's /api/fs while notes exist, and the note stays guarded."""
+        self.new("Vault note")
+        cfg = self.v.root / "system/config/settings.json"
+        before = cfg.read_text()
+        data = json.loads(before)
+        data.setdefault("locations", {})["projects_root"] = str(self.v.root / "projects")
+        r = self.post("/api/fs", {"op": "write", "path": "system/config/settings.json", "text": json.dumps(data)})
+        self.assertFalse(r["ok"], r)
+        self.assertIn("Not saved: notes are still in “notes”", r["message"])
+        self.assertEqual(cfg.read_text(), before)
+        rel = f"{ABC}/notes/Vault note.md"
+        self.refused_both_ways([{"op": "copy", "from": rel, "to": "inbox/Vault copy.md"}], f"copy: {rel} {IN_NOTES}", "vault")
+
+
 class NotesMapping(OneDriveCase):
     """locations.folders.notes must be a folder of its own (#124 doctor check, #128 refused where it is saved and used)."""
 
@@ -382,6 +398,71 @@ class NotesMapping(OneDriveCase):
         self.assertIn("Not saved: notes are still in “08 Notes”", r.stdout + r.stderr)
         self.assertNotIn("notes", json.loads(cfg.read_text())["locations"]["folders"])
 
+    def copy_refused(self, rel, tag):
+        """A hand-staged copy of `rel` out to inbox/ is refused by tracker.py apply (the guard holds)."""
+        p = self.v.root / "system/staging" / f"proposed-2026-10-16-{tag}.json"
+        p.write_text(json.dumps({"source_run": "dashboard", "items": [], "file_changes": {
+            "title": "by hand", "file_changes_decision": "approved",
+            "file_ops": [{"op": "copy", "from": rel, "to": f"inbox/{tag}.md"}]}}))
+        r = self.v.run("apply", p.name, ok=False)
+        p.unlink(missing_ok=True)
+        self.assertNotEqual(r.returncode, 0, r.stdout)
+        self.assertIn("is in a notes folder", r.stdout)
+        self.assertFalse((self.v.root / f"inbox/{tag}.md").exists())
+
+    def test_l_a_root_that_holds_or_sits_inside_the_old_one_is_a_rename(self):
+        """D1 (a), (b): the projects folder moved to its parent or into an engagement, while notes exist: refused, and the
+        note stays guarded. X7: a rename with the root set to an empty folder is refused (the old root is scanned)."""
+        eng = self.eng("ABC").name
+        touch(self.eng("ABC", "08 Notes", "K.md"), "kept\n")
+        rel = f"projects/{eng}/08 Notes/K.md"
+        cfg = self.v.root / "system/config/settings.json"
+        before = cfg.read_text()
+        for root in (str(self.root.parent), str(self.eng("ABC"))):
+            data = json.loads(cfg.read_text())
+            data["locations"]["projects_root"] = root
+            code, body = self.page_save(data)
+            self.assertFalse(body["ok"], root)
+            self.assertIn("the new projects folder holds the old one or sits inside it", body["message"])
+            self.assertEqual(cfg.read_text(), before)
+            self.copy_refused(rel, "d1")
+        empty = self.home / "Empty root"
+        empty.mkdir()
+        code, body = self.page_save(self.renamed(projects_root=str(empty)))    # X7: only the old root holds the notes
+        self.assertFalse(body["ok"], body)
+        self.assertIn("Not saved: notes are still in “08 Notes”", body["message"])
+        data = json.loads(cfg.read_text())
+        data["locations"]["projects_root"] = str(empty)                         # control: an unrelated folder is saved
+        self.assertEqual(self.page_save(data)[1], {"ok": True})
+
+    def test_m_a_skeleton_inside_an_unregistered_engagement(self):
+        """D2: a skeleton whose top folder holds a notes folder is refused (page and propose.py), and only the exact skeleton
+        path is exempt, so a mapping saved by hand still leaves the engagement's notes guarded. X9: a skeleton change in the
+        same save as a rename is scanned with the old skeleton's exemption too."""
+        touch(self.root / "Side Engagement" / "08 Notes" / "S.md", "side\n")
+        cfg = self.v.root / "system/config/settings.json"
+        data = json.loads(cfg.read_text())
+        data["locations"]["skeleton"] = "Side Engagement/Template"
+        code, body = self.page_save(data)
+        self.assertFalse(body["ok"], body)
+        self.assertIn("isn't a template folder of its own", body["message"])
+        r = self.v.run("setting", "locations.skeleton", "Side Engagement/T2", script="propose.py", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        for good in ("_Templates/_Skeleton", "_Templates/Engagement", "_Templates/New project", "_Skel"):
+            data["locations"]["skeleton"] = good
+            self.assertEqual(self.page_save(data)[1], {"ok": True}, good)
+        data["locations"]["skeleton"] = "Side Engagement/Template"            # saved by hand, past the refusals
+        cfg.write_text(json.dumps(data, indent=2))
+        self.copy_refused("projects/Side Engagement/08 Notes/S.md", "d2")
+        touch(self.root / "_Skel" / "08 Notes" / "N.md", "in the old skeleton's place\n")
+        got = self.py(
+            "import paths\n"
+            "old = paths.locations(); old['skeleton'] = '_Templates/_Skeleton'\n"
+            "new = {**old, 'skeleton': '_Skel', 'folders': {**old['folders'], 'notes': '09 Notes'}}\n"
+            "import os; os.remove(paths.projects_root() / 'Side Engagement' / '08 Notes' / 'S.md')\n"
+            "print(json.dumps(paths.notes_rename_problem(old, new)))")
+        self.assertIn("Not saved: notes are still in “08 Notes” (_Skel)", got or "")
+
     def test_k_the_skeleton_must_be_a_template_folder(self):
         cfg = self.v.root / "system/config/settings.json"
         for bad in (".", "", "_Archive", "_Archive/Skel", self.eng("ABC").name, "_Portfolio", "../x"):
@@ -396,6 +477,11 @@ class NotesMapping(OneDriveCase):
         data["locations"]["skeleton"] = "_Skel"
         self.assertEqual(self.page_save(data)[1], {"ok": True})
         self.assertEqual(self.page_save({"locations": []})[1]["ok"], False)     # L3: the check can't run: refused
+        data = json.loads(cfg.read_text())                                      # D3, D4: a value of the wrong type
+        self.assertFalse(self.page_save({**data, "locations": {**data["locations"], "folders": []}})[1]["ok"])
+        r = self.v.run("setting", "locations", '"x"', script="propose.py", ok=False)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("locations and locations.folders must be objects", r.stdout + r.stderr)
 
     def test_e_the_clash_check(self):
         got = self.py(
