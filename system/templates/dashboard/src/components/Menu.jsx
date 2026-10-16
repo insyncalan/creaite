@@ -127,7 +127,7 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
   const [open, setOpen] = useState(false), [, bump] = useState(0);
   const btn = useRef(/** @type {HTMLButtonElement | null} */ (null));
   const back = useRef(false);
-  const byMouse = useRef(false), noFocus = useRef(false), timer = useRef(0);
+  const byMouse = useRef(false), openedAt = useRef(0), noFocus = useRef(false), timer = useRef(0);
 
   /** @param {MenuClose} how */
   const close = how => { back.current = how === "esc"; if (back.current) btn.current?.focus({ preventScroll: true }); clearTimeout(timer.current); if (HOVER_OPEN === fold) HOVER_OPEN = null; setOpen(false); };
@@ -138,11 +138,12 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
     clearTimeout(timer.current);
     if (open) return;
     if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
-    HOVER_OPEN = fold; byMouse.current = true; noFocus.current = true; setOpen(true);
+    HOVER_OPEN = fold; byMouse.current = true; noFocus.current = true; openedAt.current = Date.now(); setOpen(true);
   };
   const pointOut = () => { if (hover && byMouse.current) { clearTimeout(timer.current); timer.current = window.setTimeout(fold, HOVER_GRACE); } };
   useEffect(() => () => { clearTimeout(timer.current); if (HOVER_OPEN === fold) HOVER_OPEN = null; }, []);
 
+  useEffect(() => { if (open && hover) { if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN(); HOVER_OPEN = fold; } }, [open]);   /* one hover-mode menu open at a time, however it was opened */
   useEffect(() => { if (!open && back.current) { back.current = false; btn.current?.focus(); } }, [open]);
 
   /** @param {MenuItem} it */
@@ -161,7 +162,7 @@ export function Menu({ label, items, onPick, icon, tip, why, onBlocked, cls, btn
         aria-expanded={open ? "true" : "false"} aria-label={ariaLabel} aria-disabled={why ? "true" : undefined}
         data-tip={why || tip} {...dataAttrs(data)} onKeyDown={onBtnKey}
         onClick={e => { e.preventDefault(); if (why) { onBlocked && onBlocked(); return; }
-          if (open && byMouse.current && e.detail > 0) { noFocus.current = false; bump(n => n + 1); return; }   /* a click on a menu the pointer opened keeps it open, focus in it */
+          if (open && byMouse.current && e.detail > 0 && Date.now() - openedAt.current < 400) { noFocus.current = false; bump(n => n + 1); return; }   /* a click as the pointer arrives is "open it": it stays open, focus in it; a later click toggles it shut */
           byMouse.current = hover && e.detail > 0; noFocus.current = false; if (open) close("pick"); else setOpen(true); }}>
         {icon ? <Icon name={icon} /> : null}<span class={labelCls}>{label}</span>{chevron ? <Icon name="chevdown" cls="nch" /> : null}
       </button>

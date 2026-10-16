@@ -29,9 +29,12 @@ export function designation(id) {
   const x = /** @type {any} */ (found.x);
   return found.k === "actions" ? "Action" : found.k === "raid" ? String(x.type || "Risk") : "Decision";
 }
+/** Markdown and HTML characters in a title would be read again as formatting inside the link on load (the chip would split, tags vanish), and
+    Word and the read view do not unescape a backslash, so each is swapped for its look-alike: a byte-for-byte round trip, the same words to the eye. */
+const NEUTRAL = /** @type {Record<string, string>} */ ({ "*": "∗", "`": "ˋ", "~": "∼", "<": "‹", ">": "›" });
 /** 'ID · Designation: title', on one line, with no square brackets (they would end the Markdown link early). @param {string} id */
 export function itemWords(id) {
-  const found = itemOf(id), t = found ? String(/** @type {any} */ (found.x).t || "").replace(/\s+/g, " ").replace(/[[\]]/g, m => (m === "[" ? "(" : ")")).trim() : "";
+  const found = itemOf(id), t = found ? String(/** @type {any} */ (found.x).t || "").replace(/\s+/g, " ").replace(/[[\]]/g, m => (m === "[" ? "(" : ")")).replace(/[*`~<>]/g, m => NEUTRAL[m]).trim() : "";
   const d = designation(id);
   return d ? `${id} · ${d}${t ? `: ${t}` : ""}` : id;
 }
@@ -90,4 +93,16 @@ export function chipClicked(e) {
   if (e.altKey) return "";
   const t = /** @type {Element} */ (e.target), c = t && t.closest ? t.closest("[data-item]") : null;
   return c ? c.getAttribute("data-item") || "" : "";
+}
+
+/** The one item Enter or Tab may pick for typed text, else null: the query is exactly an item's ID, or a prefix of exactly one ID with at least
+    three characters. Anything else (a number, a word, "A") is text, not a choice. @param {string} code @param {string} q @returns {string|null} */
+export function itemByQuery(code, q) {
+  const ql = q.toLowerCase(), ids = [];
+  for (const table of /** @type {any[][]} */ ([A, R, DEC])) for (const x of table) if (code === "_portfolio" || x.p === code) ids.push(String(x.id));
+  const exact = ids.filter(i => i.toLowerCase() === ql);
+  if (exact.length === 1) return exact[0];
+  if (ql.length < 3) return null;
+  const pre = ids.filter(i => i.toLowerCase().startsWith(ql));
+  return pre.length === 1 ? pre[0] : null;
 }

@@ -139,7 +139,7 @@ class ItemLinks(LiveBrowserCase):
         self.make_note("Chip")
         b.type("old [" + item["id"] + "](creaite:item/" + item["id"] + ") and new ")
         b.eval(f"""(()=>{{ const e=document.querySelector('.nbody').cxed.editor; e.commands.setContent('Old [{item["id"]}](creaite:item/{item["id"]}) here', {{contentType:'markdown'}}); e.commands.focus('end'); }})()""")
-        b.type(" and #" + item["id"][-3:])
+        b.type(" and #" + item["id"])
         b.wait("!!" + PICK, 5)
         b.key("Enter")
         b.wait("document.querySelectorAll('.nbody .nchip').length===2", 5)
@@ -256,7 +256,7 @@ class ItemLinks(LiveBrowserCase):
         b = self.b
         item = self.an_item()
         self.open_current("### Top\n\nSee the plan.")
-        b.type(" Depends on #" + item["id"][-3:])
+        b.type(" Depends on #" + item["id"])
         b.wait("!!" + PICK, 5)
         b.key("Enter")
         b.wait("document.querySelectorAll('#curEd .nchip').length===1", 5)
@@ -375,6 +375,83 @@ class ItemLinks(LiveBrowserCase):
             b.wait(f"!{PICK}", 5)
             self.assertTrue(text().endswith("issue #" + suffix), (name, text()))
             self.assertNotIn("creaite:item", b.eval(f"document.querySelector({sel!r}).cxed.value()"), name)
+
+    # ---- Enter and Tab pick only on a clear choice (editor-122c5, M1) -------------------------------------------------
+
+    def typed_then(self, text, key="Enter"):
+        b = self.b
+        b.type(text)
+        b.pump(0.15)
+        b.key(key)
+        b.pump(0.15)
+        self.assertFalse(b.eval("!!" + PICK), text)
+        return b
+
+    def check_stays_as_typed(self, ed, root):
+        b = self.b
+        for typed in ("Step #2", "issue #1", "see #A", "#"):
+            for key in ("Enter", "Tab"):
+                self.reset_to("", root)
+                self.typed_then(typed, key)
+                md = b.eval(f"document.querySelector({root!r}).cxed.value()")
+                self.assertNotIn("creaite:item", md, (typed, key, md))
+                self.assertIn(typed, md, (typed, key))
+        self.reset_to("", root)
+        b.type("Exact #" + self.an_item()["id"])
+        b.wait("!!" + PICK, 5)
+        b.key("Enter")                                             # an exact ID is a clear choice
+        b.wait("document.querySelectorAll(%r).length===1" % (root + " .nchip"), 5)
+        self.assertEqual(b.eval(f"document.querySelector({root!r}).cxed.value()").count("creaite:item/"), 1)
+        self.reset_to("", root)
+        b.type("Arrowed #")
+        b.wait("!!" + PICK, 5)
+        b.key("ArrowDown")                                         # an arrow key is a choice
+        b.key("Enter")
+        b.wait("document.querySelectorAll(%r).length===1" % (root + " .nchip"), 5)
+
+    def reset_to(self, text, root):
+        b = self.b
+        b.eval(f"document.querySelector({root!r}).cxed.setValue({text!r})")
+        b.eval(f"document.querySelector({root!r}).cxed.focus('end')")
+        b.wait(f"document.activeElement===document.querySelector({root!r})", 5)
+        b.pump(0.1)
+
+    def test_notes_enter_and_tab_keep_typed_text_unless_the_choice_is_clear(self):
+        self.make_note("Rank")
+        self.check_stays_as_typed("notes", ".nbody")
+
+    def test_current_state_enter_and_tab_keep_typed_text_unless_the_choice_is_clear(self):
+        self.open_current()
+        self.check_stays_as_typed("cur", "#curEd")
+
+    # ---- titles with Markdown characters (editor-122c5, M2) -----------------------------------------------------------
+
+    def test_a_title_with_markdown_characters_is_one_stable_chip(self):
+        b = self.b
+        item = self.an_item()
+        title = "Send *draft* to A_B_C & <i>x</i> `c` ~~s~~ **b**"
+        self.open_current("### Top\n\nSee.")
+        b.eval(f"(()=>{{ const x=A.find(a=>a.id=={item['id']!r}); x.t={title!r}; }})()")
+        b.type(" #" + item["id"])
+        b.wait("!!" + PICK, 5)
+        b.key("Enter")
+        b.wait("document.querySelectorAll('#curEd .nchip').length===1", 5)
+        md = b.eval("curEd.cxed.value()")
+        self.assertNotRegex(md, r"[*`~<>]", md)
+        words = re.search(r"\[([^\]]+)\]\(creaite:item/", md).group(1)
+        self.assertIn("A_B_C & ", words)
+        # reload the stored line into the editor: still one chip, the same value
+        b.eval(f"curEd.cxed.setValue({md!r})")
+        b.pump(0.2)
+        self.assertEqual(b.eval("document.querySelectorAll('#curEd .nchip').length"), 1)
+        self.assertEqual(b.eval("curEd.cxed.value()"), md)
+        self.assertEqual(b.eval("document.querySelector('#curEd .nchip').textContent"), words)
+        b.eval("curEd.cxed.focus('end')")
+        b.type("x")
+        b.key("Backspace")
+        self.assertEqual(b.eval("curEd.cxed.value()"), md)
+        import docx_tools
+        self.assertEqual(docx_tools.plain(re.search(r"\[[^\]]+\]\(creaite:item/[^)]+\)", md).group(0)), words)
 
     def test_slash_work_item_ranking_with_multi_word_queries(self):
         b = self.b

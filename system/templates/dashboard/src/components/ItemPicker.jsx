@@ -9,7 +9,7 @@
 import { render } from "preact";
 import { useEffect, useLayoutEffect, useRef } from "preact/hooks";
 import { placeAtCaret } from "../core/caretPlace.js";
-import { itemContent, itemOptions } from "../core/itemLink.js";
+import { itemByQuery, itemContent, itemOptions } from "../core/itemLink.js";
 import { Icon } from "./Icon.jsx";
 
 /** @typedef {import("../core/itemLink.js").ItemOption} ItemOption */
@@ -67,7 +67,7 @@ export function attachItemPick(h, { code }) {
   (el.closest("dialog[open]") || document.body).appendChild(root);
   /** @type {ItemState|null} */
   let st = null;
-  let dismissed = -1, opened = false, typed = false;          /* typed: text was just typed or deleted (or a # inserted by a command): the only thing that opens the list, as under the / menu */
+  let dismissed = -1, opened = false, typed = false, chosen = false;          /* typed: text was just typed or deleted (or a # inserted by a command), the only thing that opens the list, as under the / menu. chosen: Alan arrowed in the list or a command opened it, so Enter picks the row; else only an exact ID (or a unique 3+ character ID prefix) */
   const draw = () => {
     render(st ? <ItemList state={st} view={view} pick={choose} hover={i => { if (st) { st = { ...st, i }; draw(); } }} /> : null, root);
     const dom = /** @type {HTMLElement} */ (view.dom);
@@ -75,9 +75,9 @@ export function attachItemPick(h, { code }) {
       dom.setAttribute("aria-activedescendant", `ntpick-${st.i}`); }
     else { for (const a of ["aria-haspopup", "aria-controls", "aria-activedescendant"]) dom.removeAttribute(a); if (opened) dom.setAttribute("aria-expanded", "false"); }          /* as the / menu: "false" once it has been open */
   };
-  const close = () => { if (!st) return; st = null; draw(); };
+  const close = () => { chosen = false; if (!st) return; st = null; draw(); };
   const look = () => {
-    const mayOpen = typed || armed.delete(editor); typed = false;
+    const cmd = armed.delete(editor), mayOpen = typed || cmd; typed = false;
     if (editor.isDestroyed || view.composing) return;
     const a = hashAt(editor);
     if (!a || a.from === dismissed) { if (!a) dismissed = -1; return close(); }
@@ -85,6 +85,7 @@ export function attachItemPick(h, { code }) {
     if (st && st.from !== a.from && !mayOpen) return close();
     const opts = itemOptions(code(), a.q);
     if (!opts.length) return close();
+    if (cmd) chosen = true;
     st = { ...a, opts, i: st && st.from === a.from ? Math.min(st.i, opts.length - 1) : 0 };
     draw();
   };
@@ -99,8 +100,12 @@ export function attachItemPick(h, { code }) {
   const keys = e => {
     if (!st || e.defaultPrevented || e.isComposing || view.composing) return;          /* a key the / menu has just used (its row typed the #) is not ours */
     const n = st.opts.length;
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); }
-    else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); e.stopPropagation(); choose(st.opts[st.i]); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); e.stopPropagation(); chosen = true; st = { ...st, i: (st.i + (e.key === "ArrowDown" ? 1 : n - 1)) % n }; draw(); }
+    else if ((e.key === "Enter" || e.key === "Tab") && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+      const id = chosen ? st.opts[st.i].id : itemByQuery(code(), st.q), o = id && st.opts.find(x => x.id === id);
+      if (!o) { close(); return; }          /* typed text, no clear choice: the list closes and the key does its usual job (a newline, a tab) */
+      e.preventDefault(); e.stopPropagation(); choose(o);
+    }
     else if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); e.stopPropagation(); }      /* ⌘↵ waits, as under the / menu */
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); dismissed = st.from; close(); }
   };

@@ -200,6 +200,31 @@ class Toolbar(LiveBrowserCase):
         self.assertEqual(self.expanded("m-heading"), "true")      # not at once: it waits about 220 ms
         b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='false'", 3)
 
+    def test_a_click_on_an_open_menus_button_shuts_it_and_one_menu_is_open_at_a_time(self):
+        b = self.b
+        self.make_note("Toggle")
+        self.hover(".nbar [data-nt=m-list]")                      # opened by the pointer ...
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        b.eval("document.querySelector('.nbar [data-nt=m-heading]').focus()")      # ... the keyboard opening Heading closes it
+        b.key("ArrowDown")
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='false'", 5)
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        b.key("Escape")                                           # Esc still returns focus to the button
+        b.wait("document.activeElement===document.querySelector('.nbar [data-nt=m-heading]')", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        b.eval("document.querySelector('.nbar [data-nt=m-heading]').focus()")      # Heading open by the keyboard ...
+        b.key("ArrowDown")
+        b.wait("document.querySelector('.nbar [data-nt=m-heading]').getAttribute('aria-expanded')==='true'", 5)
+        self.away()
+        self.hover(".nbar [data-nt=m-list]")                      # ... pointing at List closes it
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='true'", 5)
+        self.assertEqual(self.expanded("m-heading"), "false")
+        self.assertEqual(b.eval("document.querySelectorAll('.nbar [role=menu]').length"), 1)
+        b.pump(0.5)
+        b.click(".nbar [data-nt=m-list]")                         # a click on the open menu's button toggles it shut (a second tap on touch)
+        b.wait("document.querySelector('.nbar [data-nt=m-list]').getAttribute('aria-expanded')==='false'", 5)
+
     def test_keyboard_opens_with_down_or_enter_and_esc_returns_focus(self):
         b = self.b
         self.make_note("Keys")

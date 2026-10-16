@@ -7959,7 +7959,7 @@ button.nchip{font:inherit;font-size:12px}
       null
     );
     const back2 = A2(false);
-    const byMouse = A2(false), noFocus = A2(false), timer2 = A2(0);
+    const byMouse = A2(false), openedAt = A2(0), noFocus = A2(false), timer2 = A2(0);
     const close = (how) => {
       back2.current = how === "esc";
       if (back2.current) btn.current?.focus({ preventScroll: true });
@@ -7978,6 +7978,7 @@ button.nchip{font:inherit;font-size:12px}
       HOVER_OPEN = fold;
       byMouse.current = true;
       noFocus.current = true;
+      openedAt.current = Date.now();
       setOpen2(true);
     };
     const pointOut = () => {
@@ -7990,6 +7991,12 @@ button.nchip{font:inherit;font-size:12px}
       clearTimeout(timer2.current);
       if (HOVER_OPEN === fold) HOVER_OPEN = null;
     }, []);
+    h2(() => {
+      if (open2 && hover) {
+        if (HOVER_OPEN && HOVER_OPEN !== fold) HOVER_OPEN();
+        HOVER_OPEN = fold;
+      }
+    }, [open2]);
     h2(() => {
       if (!open2 && back2.current) {
         back2.current = false;
@@ -8031,7 +8038,7 @@ button.nchip{font:inherit;font-size:12px}
               onBlocked && onBlocked();
               return;
             }
-            if (open2 && byMouse.current && e4.detail > 0) {
+            if (open2 && byMouse.current && e4.detail > 0 && Date.now() - openedAt.current < 400) {
               noFocus.current = false;
               bump((n4) => n4 + 1);
               return;
@@ -25426,11 +25433,15 @@ ${s5}`;
     );
     return found.k === "actions" ? "Action" : found.k === "raid" ? String(x5.type || "Risk") : "Decision";
   }
+  var NEUTRAL = (
+    /** @type {Record<string, string>} */
+    { "*": "∗", "`": "ˋ", "~": "∼", "<": "‹", ">": "›" }
+  );
   function itemWords(id2) {
     const found = itemOf(id2), t47 = found ? String(
       /** @type {any} */
       found.x.t || ""
-    ).replace(/\s+/g, " ").replace(/[[\]]/g, (m5) => m5 === "[" ? "(" : ")").trim() : "";
+    ).replace(/\s+/g, " ").replace(/[[\]]/g, (m5) => m5 === "[" ? "(" : ")").replace(/[*`~<>]/g, (m5) => NEUTRAL[m5]).trim() : "";
     const d5 = designation(id2);
     return d5 ? `${id2} · ${d5}${t47 ? `: ${t47}` : ""}` : id2;
   }
@@ -25500,6 +25511,19 @@ ${s5}`;
     ), c5 = t47 && t47.closest ? t47.closest("[data-item]") : null;
     return c5 ? c5.getAttribute("data-item") || "" : "";
   }
+  function itemByQuery(code, q5) {
+    const ql2 = q5.toLowerCase(), ids = [];
+    for (
+      const table of
+      /** @type {any[][]} */
+      [A4, R3, DEC]
+    ) for (const x5 of table) if (code === "_portfolio" || x5.p === code) ids.push(String(x5.id));
+    const exact = ids.filter((i5) => i5.toLowerCase() === ql2);
+    if (exact.length === 1) return exact[0];
+    if (ql2.length < 3) return null;
+    const pre = ids.filter((i5) => i5.toLowerCase().startsWith(ql2));
+    return pre.length === 1 ? pre[0] : null;
+  }
 
   // components/ItemPicker.jsx
   function hashAt(editor) {
@@ -25563,7 +25587,7 @@ ${s5}`;
     root.className = "itemrootpick";
     (el2.closest("dialog[open]") || document.body).appendChild(root);
     let st2 = null;
-    let dismissed = -1, opened = false, typed2 = false;
+    let dismissed = -1, opened = false, typed2 = false, chosen = false;
     const draw2 = () => {
       R(st2 ? /* @__PURE__ */ u2(ItemList, { state: st2, view, pick: choose, hover: (i5) => {
         if (st2) {
@@ -25587,12 +25611,13 @@ ${s5}`;
       }
     };
     const close = () => {
+      chosen = false;
       if (!st2) return;
       st2 = null;
       draw2();
     };
     const look = () => {
-      const mayOpen = typed2 || armed.delete(editor);
+      const cmd = armed.delete(editor), mayOpen = typed2 || cmd;
       typed2 = false;
       if (editor.isDestroyed || view.composing) return;
       const a5 = hashAt(editor);
@@ -25604,6 +25629,7 @@ ${s5}`;
       if (st2 && st2.from !== a5.from && !mayOpen) return close();
       const opts = itemOptions(code(), a5.q);
       if (!opts.length) return close();
+      if (cmd) chosen = true;
       st2 = { ...a5, opts, i: st2 && st2.from === a5.from ? Math.min(st2.i, opts.length - 1) : 0 };
       draw2();
     };
@@ -25619,12 +25645,18 @@ ${s5}`;
       if (e4.key === "ArrowDown" || e4.key === "ArrowUp") {
         e4.preventDefault();
         e4.stopPropagation();
+        chosen = true;
         st2 = { ...st2, i: (st2.i + (e4.key === "ArrowDown" ? 1 : n4 - 1)) % n4 };
         draw2();
       } else if ((e4.key === "Enter" || e4.key === "Tab") && !e4.shiftKey && !e4.metaKey && !e4.ctrlKey) {
+        const id2 = chosen ? st2.opts[st2.i].id : itemByQuery(code(), st2.q), o5 = id2 && st2.opts.find((x5) => x5.id === id2);
+        if (!o5) {
+          close();
+          return;
+        }
         e4.preventDefault();
         e4.stopPropagation();
-        choose(st2.opts[st2.i]);
+        choose(o5);
       } else if (e4.key === "Enter" && (e4.metaKey || e4.ctrlKey)) {
         e4.preventDefault();
         e4.stopPropagation();
