@@ -95,6 +95,19 @@ class PaneISentIt(SentCase):
         self.assertEqual(b.eval(f"REC('actions',{self.theirs!r}).upd"), "Plan in draft, waiting on the test environment dates")
         self.assertEqual(b.errors, [])
 
+    def test_zz_failed_staging_message_survives_the_pane_closing(self):
+        b = self.b
+        self.chase(self.theirs)
+        b.eval("window.__w=shared.VW.write; shared.VW.write=async()=>{ throw new Error('disk full') }")       # the staging write fails
+        try:
+            b.click("#chSent")
+            b.wait("document.getElementById('pkChase').hidden")
+            b.pump(0.6)
+            self.assertIn("couldn't be staged", b.eval("document.getElementById('snackT').textContent"))
+        finally:
+            b.eval("shared.VW.write=window.__w")
+        self.assertEqual(staged(self.v.root, self.theirs), [])
+
     def test_undo_leaves_a_proposal_staged_after_the_press(self):
         b = self.b
         self.chase(self.theirs)

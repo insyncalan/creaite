@@ -96,6 +96,14 @@ class PersonMenu(SentCase):
         self.assertIn("No email on record: add details first", b.eval(f'document.querySelector("{MENU}").textContent'))
         b.key("Escape")
 
+    def test_a_registered_person_without_an_email_also_gets_add_details(self):
+        b = self.b
+        b.eval("""REG.push({name:'Quiet Person',email:'',aliases:[],org:'',role:'',extra:{}}); openContextMenu(cxPerson('Quiet Person',''),200,200,{label:'Quiet Person'})""")
+        b.wait(f'!!document.querySelector("{MENU}")')
+        self.assertEqual(self.labels(), ["-Draft email", "Open Quiet's page", "Add details"])   # the hint's "add details" is on the menu
+        b.key("Escape")
+        b.eval("REG.pop()")
+
     def test_the_browsers_own_menu_stays_elsewhere_and_review_still_has_its_menu(self):
         b = self.b
         b.eval('go("work"); setLayout(WT,"list")')

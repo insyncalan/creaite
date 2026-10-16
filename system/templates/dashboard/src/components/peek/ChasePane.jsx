@@ -13,7 +13,7 @@
 import { render } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { fd, TODAY } from "../../core/page.js";
-import { api, viaServer } from "../../core/server.js";
+import { api, snack, viaServer } from "../../core/server.js";
 import { DE_COLOURS, DE_FONT, draftStat, draftWhyNot, POLISH_TONES, polishAsk, sentKindOf, sentLog } from "../../drafts.js";
 import { SA } from "../../settings.js";
 
@@ -235,7 +235,7 @@ export function ChasePane({ id, onBack, start }) {
     const k = sentKindOf(id);
     const who = pane.to.name || pane.to.first || "them";
     const done = k ? await sentLog([{ k, id, need: outcome }], { name: who, mode, replyBy, via: viaRef.current, chases: r.chases || {} }) : 0;
-    if (!done) say(`Recorded: chased ${pane.to.first || who} on ${fd((r.record && r.record.date) || TODAY)}. The update couldn't be staged.`);
+    if (!done) snack(`Recorded: chased ${pane.to.first || who} on ${fd((r.record && r.record.date) || TODAY)}. The update couldn't be staged.`);
     dropPolish();
     onBack();
   }
