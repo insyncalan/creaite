@@ -19,9 +19,10 @@ Commands:
                            sent, text, attachments}]}), as JSON with a hint (Looks done, Maybe done, Not done) and reasons:
                            plain code, for cx-sweep to judge. Read-only; the input file is removed once read
   calendar <calendar.json> save Alan's meetings for the dashboard's Today day view and the Inbox's Meetings
-                           (system/staging/calendar.json); days before the window start are dropped
-  calendar-window          the days the calendar should cover, as JSON: from the start of settings.json
-                           inbox.meetings_from ("monday" = Monday of this week, or a number of days back) to 7 days ahead
+                           (system/staging/calendar.json); days before the window start are dropped; past days already held are kept
+  calendar-window          the days a sweep reads from Outlook, as JSON: today to 7 days ahead (#146; past days already held are
+                           kept, not read again); keep_from is the start of the Calendar import window (settings.json
+                           inbox.meetings_from: "monday" = Monday of this week, or a number of days back)
   transcripts todo|record <facts.json>|show
                            BL-42 phase 3: which meetings in the Calendar import window to look up for a transcript, and keep what
                            was found (system/staging/transcripts.json: a status for each, never any text); see transcripts.py
@@ -579,6 +580,13 @@ def calendar_window(today=None):
     return start, today + timedelta(days=7)
 
 
+def calendar_fetch_window(today=None):
+    """(first day, last day) the sweep reads from Outlook (#146): today to 7 days ahead. Past meetings don't change, so the
+    days before today are not read again; calendar() keeps the ones the saved calendar already holds."""
+    today = today or now().date()
+    return today, today + timedelta(days=7)
+
+
 def calendar_span(today=None):
     """(first day, last day) the saved calendar holds now, as dates, or None without one (BL-293): calendar_window(), its last
     day cut to the fetch's own seven days ahead when the calendar was saved on an earlier day."""
@@ -665,6 +673,19 @@ def localise(spec_days, bad):
     return out
 
 
+def keep_held_past_days(days, start_day, today_day):
+    """#146: the past days (inside the window) the saved calendar already holds stay as they are; they win over the same day
+    in this save, because past meetings don't change and a sweep no longer reads them."""
+    try:
+        held = json.loads(paths.CALENDAR.read_text(encoding="utf-8")).get("days") or {}
+    except (OSError, ValueError, AttributeError):
+        held = {}
+    for day, rows in held.items():
+        if start_day <= str(day) < today_day and isinstance(rows, list):
+            days[day] = rows
+    return dict(sorted(days.items()))
+
+
 def calendar(spec_file):
     """Keep the day view's, the Inbox's and meeting prep's meetings: event ID, times, title, place, Teams or not, the
     organiser, and the invite's details for prep (BL-98, see invite_details). Ignored events (BL-97: private ones,
@@ -679,6 +700,7 @@ def calendar(spec_file):
     days, bad, ignored = {}, [], {}
     rules, vips = ignore_rules(), vip_addresses()                  # BL-97: ignored events are never saved
     start_day = calendar_window()[0].isoformat()
+    today_day = now().date().isoformat()
     for day, events in sorted(localise(spec.get("days"), bad).items()):     # BL-107: local times, local dates
         if day < start_day:              # before the window (BL-42): not kept
             continue
@@ -708,6 +730,7 @@ def calendar(spec_file):
                 row = {"id": str(ev["id"]).strip()[:512], **row}
             kept.append(row)
         days[day] = sorted(kept, key=lambda e: (not e["all_day"], e["start"]))
+    days = keep_held_past_days(days, start_day, today_day)
     paths.CALENDAR.write_text(json.dumps({"fetched": now().strftime("%Y-%m-%d %H:%M"), "days": days}, indent=1,
                                          ensure_ascii=False), encoding="utf-8")
     n = sum(len(v) for v in days.values())
@@ -1690,8 +1713,9 @@ def main(argv):
     if a.cmd == "calendar":
         return calendar(a.spec)
     if a.cmd == "calendar-window":
-        first, last = calendar_window()
-        print(json.dumps({"from": first.isoformat(), "to": last.isoformat()}))
+        first, last = calendar_fetch_window()
+        print(json.dumps({"from": first.isoformat(), "to": last.isoformat(),
+                          "keep_from": calendar_window()[0].isoformat()}))
         return 0
     if a.cmd == "ignore":
         return ignore_cmd(a.spec)

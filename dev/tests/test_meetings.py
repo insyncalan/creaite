@@ -55,7 +55,7 @@ class CalendarTests(unittest.TestCase):
         return sweep(self.v, "calendar", str(self.spec))
 
     def test_window_ids_teams_and_nothing_else(self):
-        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-05", "to": "2026-10-15"})
+        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout), {"from": "2026-10-08", "to": "2026-10-15", "keep_from": "2026-10-05"})   # #146: read from today
         out = self.calendar().stdout
         self.assertIn("Calendar saved: 4 meetings over 3 days", out)
         self.assertIn("Ignored 1: Anything marked private 1", out)                             # BL-97: the private 1:1
@@ -79,6 +79,7 @@ class CalendarTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d["sweep"]["ignore"][0]["on"] = False                                                 # the private rule off
         cfg.write_text(json.dumps(d))
+        (self.v.root / "system/staging/calendar.json").unlink()          # #146: past days already held are kept, so start afresh
         self.calendar()
         private = self.saved()["days"]["2026-10-05"][1]
         self.assertEqual(private, {"id": "ev-2", "start": "14:00", "end": "14:30", "all_day": False, "title": "Busy",
@@ -89,9 +90,23 @@ class CalendarTests(unittest.TestCase):
         d = json.loads(cfg.read_text())
         d["inbox"]["meetings_from"] = 7
         cfg.write_text(json.dumps(d))
-        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout)["from"], "2026-10-01")
+        self.assertEqual(json.loads(sweep(self.v, "calendar-window").stdout)["keep_from"], "2026-10-01")
         self.calendar()
         self.assertIn("2026-10-02", self.saved()["days"])
+
+    def test_past_days_already_held_are_kept_unchanged(self):
+        """#146: a sweep reads today forward; the past days the saved calendar holds are not replaced or lost."""
+        self.calendar()
+        before = self.saved()["days"]["2026-10-05"]
+        later = {"days": {"2026-10-05": [{"id": "x", "start": "08:00", "end": "08:30", "title": "Changed"}],
+                          "2026-10-08": [{"id": "ev-5", "start": "10:00", "end": "10:30", "title": "Today", "teams": True}]}}
+        self.spec.write_text(json.dumps(later))
+        sweep(self.v, "calendar", str(self.spec))
+        days = self.saved()["days"]
+        self.assertEqual(days["2026-10-05"], before)                      # unchanged
+        self.assertIn("2026-10-07", days)                                 # held past day not lost
+        self.assertEqual(days["2026-10-08"][0]["title"], "Today")
+        self.assertNotIn("2026-10-12", days)                              # future days are what the new read says
 
 
 def page_data(v):
