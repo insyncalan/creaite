@@ -2352,6 +2352,8 @@ def inbox_meetings(settings, projects, today):
 # No transcript, from processed.txt, the filed minutes, Review's drafts and transcripts.json, as Calendar import reads them); today
 # and later its Prep key, whether it is worth preparing for (the Week ahead's plan) and its prep page (BL-286's records). A
 # confidential meeting keeps only its title, times, event ID and those states; a private one is "Busy" with its times.
+# #138 (Alan, 16-10-2026): a weekend day (work.weekend_days) is in the line only when something is planned on it: a timed
+# meeting, or an open action, RAID item or milestone due that day. Today is always in it.
 TXWHY = {"none": "No transcript for this meeting", "not_transcribed": "Not transcribed yet", "no_access": "No access to the transcript"}
 
 
@@ -2378,6 +2380,7 @@ def calendar_days(d, now):
 
 def day_lookups(d, now):
     """What every day's meetings are looked up in, read once: projects, Calendar import's rows, filed minutes and prep pages."""
+    import tracker
     today, rows_ = now.date(), import_rows(d)
     items = [x for x in d.get("actions") or [] if x["st"] in ("Open", "Delayed")] + [x for x in d.get("raid") or [] if x["st"] == "Open"]
     projects = d.get("projects") or []
@@ -2385,7 +2388,18 @@ def day_lookups(d, now):
             "projects": projects, "remembered": (d.get("prep") or {}).get("series") or {},
             "names": {p["code"]: p["name"] for p in projects}, "hot": hot_projects([(None, x) for x in items], today),
             "by_id": {m["id"]: m for m in rows_ if m.get("id")}, "by_time": {(m["day"], m["start"], m["title"]): m for m in rows_},
-            "minutes": filed_minutes(d.get("files") or []), "pages": prep_pages_by_meeting()}
+            "minutes": filed_minutes(d.get("files") or []), "pages": prep_pages_by_meeting(),
+            "weekend": tracker.weekend_days(), "due": planned_days(d, items)}
+
+
+def planned_days(d, items):
+    """{YYYY-MM-DD} of the days an open action, RAID item or milestone is due (#138), so a weekend day with such work is planned."""
+    due = {x["due"] for x in items if x.get("due")}
+    for p in d.get("projects") or []:
+        for m in p.get("ms") or []:
+            if m[1] and m[2] != "done" and m[6] not in ("Done", "Cancelled"):
+                due.add(m[1])
+    return due
 
 
 def import_rows(d):
@@ -2421,16 +2435,17 @@ def prep_pages_by_meeting():
 
 
 def day_record(day, events, look):
-    """One day of the day line, or None for a weekend day without a timed meeting."""
+    """One day of the day line, or None for a weekend day with nothing planned: no timed meeting and no work due (#138).
+    Today is never left out."""
     events = [e for e in events if isinstance(e, dict)] if isinstance(events, list) else []
     timed = sorted((e for e in events if not e.get("all_day")), key=lambda e: (e.get("start") or "", e.get("title") or ""))
-    if day.weekday() >= 5 and not timed:
+    iso, weekend = day.isoformat(), day.weekday() in look["weekend"]
+    if weekend and not timed and iso != look["today"] and iso not in look["due"]:
         return None
-    iso = day.isoformat()
     year = "" if str(day.year) == look["today"][:4] else f" {day.year}"
     long_ = f"{DAYS[day.weekday()]} {ordinal(day.day)} {day.strftime('%B')}{year}"
     return {"date": iso, "date_shown": shown(iso), "dow": DAYS[day.weekday()], "short": f"{DAYS[day.weekday()][:3]} {day.day}",
-            "long": long_, "today": iso == look["today"], "past": iso < look["today"], "weekend": day.weekday() >= 5,
+            "long": long_, "today": iso == look["today"], "past": iso < look["today"], "weekend": weekend,
             "week": (day - look["monday"]).days // 7,
             "meetings": [day_meeting(e, iso, look) for e in timed],
             "all_day": ["Busy" if e.get("private") else str(e.get("title") or "")[:140] for e in events if e.get("all_day")]}

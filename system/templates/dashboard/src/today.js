@@ -10,7 +10,6 @@ import { mountStatusDots } from "./components/StatusDot.jsx";
 import { mountFirstThing } from "./components/closeday/FirstThing.jsx";
 import { drawDayCurve } from "./components/today/DayCurve.jsx";
 import { drawDayMeetings } from "./components/today/DayMeetings.jsx";
-import { openCapture } from "./components/notes/CaptureDrawer.jsx";
 import { drawDayTabs } from "./components/today/DayTabs.jsx";
 import { drawToDecide } from "./components/today/ToDecide.jsx";
 import { drawWeekAhead } from "./components/today/WeekAhead.jsx";
@@ -182,7 +181,7 @@ export function dayView(iso){ const raw=((D.calendar||{}).days||{})[iso], rec=da
       meetings:timed.map((e,i)=>{ const priv=!!e.private, s=srv.find(m=>m.start===e.start&&(priv?m.private:m.title===e.title)), conf=!!(s&&s.confidential)||isConf(e);
         const prep=priv?null:(s&&s.prep)||(iso>=TODAY&&prepOf(e,iso)?{key:prepKey(e,iso)}:null);
         return extra({start:e.start,end:e.end,title:e.title??"",private:priv,confidential:conf,id:e.id||(s&&s.id)||null,p:priv||conf?null:(s&&s.p)||e.p||null,
-          where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i}); })}; }
+          where:e.where||"",organiser:e.organiser,follow:s&&s.follow,prep,plan:conf?null:(s&&s.plan)||null,ix:i,attendees:conf||priv||!Array.isArray(e.attendees)?undefined:e.attendees.length}); })}; }
   if(rec&&iso!==TODAY) return {known:true,meetings:srv.map(m=>extra({...m,ix:null})),allDay:(rec.all_day||[]).map(t=>({title:t,p:null}))};
   return {known:false,meetings:[],allDay:[]}; }
 /** Show day `iso`, sliding the band in from its side. False when there is no day line. */
@@ -230,7 +229,7 @@ export async function dayProcess(m){ const row=MTG().find(x=>x.id===m.id); if(!r
 export async function dayCheck(m){ const row=MTG().find(x=>x.id===m.id)||{id:m.id,title:m.title,day:dayShown(),start:m.start};
   DAYRUN.set(m.id,"Checking…"); renderDay();
   try{ await checkMeeting(row); } finally{ DAYRUN.delete(m.id); if(shared.VIEW==="today") renderDay(); } }
-export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c),note:(m,day)=>{ openCapture({meeting:{day,start:m.start,title:m.title}}); }};   /* BL-301 C: Note for this meeting */
+export const DAYACTS={prep:m=>dayPrep(m),open:p=>{ prepOpen(p); },process:m=>{ dayProcess(m); },check:m=>{ dayCheck(m); },review:()=>go("review"),name:c=>pName(c)};   /* #140: no Note link on the band (BL-301 C's capture drawer opens from elsewhere) */
 /* ===== end BL-293 ===== */
 /* BL-270 (sprint-ui-sweep): the calendar's read time, when it is from an earlier day, is a footnote at the bottom right of Today */
 export function calFoot(cal){ const f=$("#calFoot"); if(!f) return; const old=!!(cal&&cal.fetched&&cal.fetched.slice(0,10)!==TODAY); f.hidden=!old;

@@ -582,14 +582,15 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dayband{position:relative;overscroll-behavior-x:none;touch-action:pan-y}
 .brief #todayDate{position:static;display:block}   /* not the menus' .dd: the edges sit on the band */
 .daytabs{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 4px;min-width:0;margin-left:-6px}
-.daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}
+.daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-2xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}   /* #140: 10px (was 12) */
 .daytabs .dy:hover{color:var(--day-ink)}
 .daytabs .dy.today{color:var(--accent)}
-.daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;font-size:var(--fs-xs);letter-spacing:.12em;cursor:default}
+.daytabs .dy[aria-selected="true"],.daytabs .dy.today{font-size:10.5px}   /* #140: today and the chosen day 10.5px */
+.daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;letter-spacing:.12em;cursor:default}
 .daytabs .dy[aria-selected="true"]:not(.today){color:var(--day-ink)}
 .daytabs .dy.today:not([aria-selected="true"])::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle}
 .daytabs .dy:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
-.daytabs .daysep{color:var(--day-rule);font-size:var(--fs-xs)}
+.daytabs .daysep{color:var(--day-rule);font-size:var(--fs-2xs)}
 .daytabs .daywk{font-size:var(--fs-2xs);line-height:1;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);padding:0 6px 0 10px;margin-left:4px;border-left:1px solid var(--day-rule);white-space:nowrap}   /* v1.9.5 check 6: no .7 fade; 10 px words need 4.5:1 */
 /* the arrows never move (Alan, 13-10-2026): both sit at the band's top right, a fixed place on every day, whatever the headline,
    the meetings or the day line's wrapping; the line keeps room for them. At an end the arrow stays, disabled and dimmed. */
@@ -3563,6 +3564,37 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 #panel.pover.on .pin{width:100%}
 body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
 @media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}
+
+/* ===== #140, #147 (Alan, 16-10-2026): the day band's meeting popup and the day line's history icon =====
+   A meeting's title is a quiet dotted link; pointing at it (after CARD_OPEN) or tabbing to it opens a popup under it. The popup
+   is the page's own card, whatever the band's tone (a past meeting's dimmed words do not reach into it). The day line's earlier
+   days wait behind one icon at its left. */
+.dm .tt{position:relative}
+.dm .dmti{border-bottom:1px dotted var(--day-muted);cursor:default}
+.dm .dmti:hover,.dm .dmti:focus-visible{color:var(--accent);border-bottom-color:var(--accent);outline:none}
+.dm .dmtw:focus-within .dmti{color:var(--accent)}
+.dmpop{position:absolute;left:0;top:calc(100% + 2px);z-index:var(--z-pop-over,30);width:330px;max-width:calc(100vw - 48px);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:12px 14px;text-align:left;font-size:var(--fs-sm);line-height:1.4;font-weight:400;letter-spacing:0;text-transform:none}
+.dm:last-child .dmpop{left:auto;right:0}
+.dm:first-child:last-child .dmpop{left:0;right:auto}
+.dm.past .dmpop,.dm.past .dmpop *{color:var(--ink)}
+.dm.past .dmpop .sub,.dm.past .dmpop .pm,.dm.past .dmpop small{color:var(--muted)}
+.dm.past .dmpop .btn.primary{color:var(--accent-ink,#fff)}
+.dm.past .dmpop .linkbtn{color:var(--accent)}
+.dmpop h4{font:700 var(--fs-lg)/1.25 var(--font);margin:0 0 2px;color:var(--ink)}
+.dmpop .pm{font-size:var(--fs-xs);color:var(--muted);margin:0 0 8px}
+.dmpop .agrow{display:flex;align-items:center;gap:8px;margin-top:6px}
+.dmpop .agrow .linkbtn{margin-left:auto}
+.dmpop .agnone{margin:8px 0 0}
+.dmpop .agsaved{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk)}
+.dmpop .agsaved .agw{flex:1;min-width:0} .dmpop .agsaved b{display:block;font-weight:500} .dmpop .agsaved small{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.dmpop .agok{color:var(--ok)}
+.dmpop button[aria-disabled="true"]{opacity:.55;cursor:default}
+.brief #todayDate:has(.dypast){display:flex;align-items:baseline;gap:2px}
+.dypast{margin-left:-6px} .dypast .dypastbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:24px;padding:0;border:0;background:none;border-radius:var(--r-sm);color:var(--day-muted);cursor:pointer;opacity:.7}
+.dypast .dypastbtn:hover,.dypast .dypastbtn[aria-expanded="true"]{opacity:1;color:var(--day-ink);background:color-mix(in srgb,var(--surface) 60%,transparent)} .dypast .dypastbtn:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px;opacity:1}
+.dypast .dypastbtn .i{width:14px;height:14px}
+.dypast .ddmenu{left:0;right:auto;top:30px;transform-origin:top left}
+.brief #todayDate:has(.dypast) .daytabs{margin-left:0}
 </style>
 </head>
 <body>
@@ -34822,8 +34854,13 @@ ${s5}`;
     R(props ? /* @__PURE__ */ u2(DayCurve, { ...props }, props.day) : null, host2);
   }
 
+  // core/hovertime.js
+  var CARD_OPEN = 600;
+  var CARD_CLOSE = 300;
+  var MENU_OPEN = 200;
+  var MENU_CLOSE = 300;
+
   // components/today/DayMeetings.jsx
-  var OpenIcon = () => /* @__PURE__ */ u2("svg", { width: "12", height: "12", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", children: /* @__PURE__ */ u2("path", { d: "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" }) });
   function Proj({ code, name }) {
     if (code === "_portfolio") return /* @__PURE__ */ u2("span", { class: "pcode", children: "Portfolio" });
     const n4 = name(code);
@@ -34869,37 +34906,134 @@ ${s5}`;
     ] });
     return /* @__PURE__ */ u2(Chip, { tone: "mute", tip: f5.why, children: "No transcript" });
   }
-  function PrepActs({ m: m5, day, isToday, live, acts: acts2 }) {
-    if (!m5.prep) return null;
-    const word = m5.plan ? "Prepare" : "Prep", byIx = isToday && m5.ix != null;
-    return /* @__PURE__ */ u2("span", { class: "prepline", children: [
-      /* @__PURE__ */ u2(
-        Chip,
-        {
-          tone: m5.plan ? "cta plan" : "cta",
-          className: "preplink",
-          name: `${word} for ${m5.title}`,
-          tip: m5.plan ? `Worth preparing for: ${m5.plan}` : void 0,
-          button: true,
-          ...byIx ? { "data-prep": String(m5.ix) } : { onClick: () => acts2.prep(m5) },
-          children: word
-        }
-      ),
-      m5.page ? /* @__PURE__ */ u2(
-        "button",
-        {
-          type: "button",
-          class: "ib prepgo",
-          "data-prepgo": m5.prep.key,
-          "data-prepgoday": day,
-          "aria-label": `Open the prep page for ${m5.title}`,
-          "aria-disabled": live ? void 0 : "true",
-          "data-tip": live ? `Prep page saved ${m5.pageWhen || ""}`.trim() : "Needs the live server",
-          children: /* @__PURE__ */ u2(OpenIcon, {})
-        }
-      ) : null,
-      m5.page ? /* @__PURE__ */ u2("span", { class: "tag ok prepmade", children: "Prep page made" }) : null
+  function PrepPopup({ m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc }) {
+    const p6 = m5.prep;
+    if (!p6) return null;
+    const when2 = isToday ? "Today" : dow2, bits = [
+      `${when2} ${m5.start}`,
+      m5.attendees ? `${m5.attendees} attending` : "",
+      !m5.confidential && m5.p ? m5.p === "_portfolio" ? "Portfolio" : acts2.name(m5.p) : "",
+      "Internal"
+    ].filter(Boolean);
+    const off = live ? void 0 : "Needs the live server";
+    return /* @__PURE__ */ u2("div", { class: "dmpop", role: "dialog", id: id2, "aria-label": `Prepare for ${m5.title}`, onKeyDown: (e4) => {
+      if (e4.key === "Escape") {
+        e4.stopPropagation();
+        onEsc();
+      }
+    }, children: [
+      /* @__PURE__ */ u2("h4", { children: m5.title }),
+      /* @__PURE__ */ u2("div", { class: "pm", children: bits.join(" · ") }),
+      m5.page ? /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("div", { class: "agsaved", children: [
+          /* @__PURE__ */ u2("span", { class: "agok", "aria-hidden": "true", children: "✓" }),
+          /* @__PURE__ */ u2("span", { class: "agw", children: [
+            /* @__PURE__ */ u2("b", { children: "Agenda saved" }),
+            /* @__PURE__ */ u2("small", { children: [
+              "Prep page made ",
+              m5.pageWhen || ""
+            ] })
+          ] }),
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "btn primary",
+              "data-prepgo": p6.key,
+              "data-prepgoday": day,
+              "aria-label": `Open the agenda for ${m5.title}`,
+              "aria-disabled": live ? void 0 : "true",
+              "data-tip": off,
+              children: "Open agenda"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ u2("div", { class: "agrow", children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn", onClick: () => acts2.prep(m5), children: "Prepare again" }),
+          /* @__PURE__ */ u2(
+            "button",
+            {
+              type: "button",
+              class: "linkbtn",
+              "aria-disabled": live ? void 0 : "true",
+              "data-tip": off || "Open the saved page in a new tab",
+              onClick: () => acts2.open(m5.page || ""),
+              children: "Open the file"
+            }
+          )
+        ] })
+      ] }) : /* @__PURE__ */ u2(S2, { children: [
+        /* @__PURE__ */ u2("div", { class: "agrow", children: [
+          /* @__PURE__ */ u2("button", { type: "button", class: "btn primary", "aria-label": `Prepare for ${m5.title}`, onClick: () => acts2.prep(m5), children: "Prepare" }),
+          m5.plan ? /* @__PURE__ */ u2("span", { class: "sub", children: [
+            "Worth preparing: ",
+            m5.plan
+          ] }) : null
+        ] }),
+        /* @__PURE__ */ u2("p", { class: "sub agnone", children: "No agenda saved yet. Prepare builds the prep page and saves it to the Agendas folder." })
+      ] })
     ] });
+  }
+  function Title({ m: m5, day, dow: dow2, isToday, live, acts: acts2 }) {
+    const [open2, setOpen2] = d2(false), timer2 = A2(0), box = A2(
+      /** @type {HTMLSpanElement | null} */
+      null
+    );
+    h2(() => () => clearTimeout(timer2.current), []);
+    if (m5.private || !m5.prep) return /* @__PURE__ */ u2(S2, { children: m5.title ?? "" });
+    const id2 = `dmpop-${day}-${m5.start}`.replace(/[^\w-]/g, "");
+    const later2 = (to2, ms2) => {
+      clearTimeout(timer2.current);
+      timer2.current = window.setTimeout(() => setOpen2(to2), ms2);
+    };
+    const shut = () => {
+      clearTimeout(timer2.current);
+      setOpen2(false);
+    };
+    return /* @__PURE__ */ u2(
+      "span",
+      {
+        class: "dmtw",
+        ref: box,
+        onMouseEnter: () => later2(true, CARD_OPEN),
+        onMouseLeave: () => later2(false, CARD_CLOSE),
+        onFocusIn: () => {
+          clearTimeout(timer2.current);
+          setOpen2(true);
+        },
+        onFocusOut: (e4) => {
+          const to2 = (
+            /** @type {Node | null} */
+            e4.relatedTarget
+          );
+          if (!to2 || !box.current || !box.current.contains(to2)) later2(false, 0);
+        },
+        children: [
+          /* @__PURE__ */ u2(
+            "span",
+            {
+              class: "dmti",
+              tabIndex: 0,
+              "aria-haspopup": "dialog",
+              "aria-expanded": open2 ? "true" : "false",
+              "aria-controls": open2 ? id2 : void 0,
+              onKeyDown: (e4) => {
+                if (e4.key === "Escape" && open2) {
+                  e4.stopPropagation();
+                  shut();
+                }
+              },
+              children: m5.title ?? ""
+            }
+          ),
+          open2 ? /* @__PURE__ */ u2(PrepPopup, { m: m5, day, dow: dow2, isToday, live, acts: acts2, id: id2, onEsc: () => {
+            shut();
+            const t47 = box.current && box.current.querySelector(".dmti");
+            if (t47) t47.focus();
+          } }) : null
+        ]
+      }
+    );
   }
   function DayMeetings(props) {
     const { day, dow: dow2, isToday, past, now, mode, live, calendar, lastRead, meetings, allDay, acts: acts2, onWheel } = props;
@@ -34916,7 +35050,7 @@ ${s5}`;
     return /* @__PURE__ */ u2(S2, { children: [
       meetings.length ? /* @__PURE__ */ u2("div", { class: "daymeets", ref, children: meetings.map((e4) => {
         const hidden = e4.private || e4.confidential, wh2 = hidden ? "" : [e4.where, e4.organiser === true ? "You organise" : e4.organiser ? `Organised by ${e4.organiser}` : ""].filter(Boolean).join(" · ");
-        const acts22 = e4.private ? null : past ? /* @__PURE__ */ u2(FollowUp, { m: e4, live, acts: acts2 }) : /* @__PURE__ */ u2(PrepActs, { m: e4, day, isToday, live, acts: acts2 });
+        const acts22 = e4.private || !past ? null : /* @__PURE__ */ u2(FollowUp, { m: e4, live, acts: acts2 });
         return /* @__PURE__ */ u2("div", { class: `dm ${st2(e4)}`, children: [
           /* @__PURE__ */ u2("div", { class: "tm", children: [
             e4.start,
@@ -34924,27 +35058,14 @@ ${s5}`;
             e4.end
           ] }),
           /* @__PURE__ */ u2("div", { class: "tt", children: [
-            e4.title ?? "",
+            /* @__PURE__ */ u2(Title, { m: e4, day, dow: dow2, isToday, live, acts: acts2 }),
             !hidden && e4.p ? /* @__PURE__ */ u2(S2, { children: [
               " ",
               /* @__PURE__ */ u2(Proj, { code: e4.p, name: acts2.name })
             ] }) : null
           ] }),
           wh2 ? /* @__PURE__ */ u2("div", { class: "wh", children: wh2 }) : null,
-          acts22 || acts2.note && !e4.private ? /* @__PURE__ */ u2("div", { class: "acts", children: [
-            acts22,
-            acts2.note && !e4.private ? /* @__PURE__ */ u2(
-              "button",
-              {
-                type: "button",
-                class: "linkbtn mnote",
-                "aria-label": `Note for this meeting: ${e4.title ?? ""}`,
-                "data-tip": "Note for this meeting",
-                onClick: () => acts2.note && acts2.note(e4, day),
-                children: "Note"
-              }
-            ) : null
-          ] }) : null
+          acts22 ? /* @__PURE__ */ u2("div", { class: "acts", children: acts22 }) : null
         ] });
       }) }) : null,
       allDay.length ? /* @__PURE__ */ u2("div", { class: "dayall", ref, children: [
@@ -34973,8 +35094,11 @@ ${s5}`;
   var Chevron = ({ d: d5 }) => /* @__PURE__ */ u2("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true", children: /* @__PURE__ */ u2("path", { d: d5 }) });
   function DayTabs({ days: days2, selected, onSelect, onStep }) {
     const i5 = days2.findIndex((d5) => d5.date === selected);
-    const items2 = days2.map((d5, k5) => {
-      const prev = days2[k5 - 1], on2 = d5.date === selected;
+    const today = (days2.find((d5) => d5.today) || { date: "" }).date;
+    const shown2 = days2.filter((d5) => !today || d5.date >= today || d5.date === selected);
+    const past = days2.filter((d5) => today && d5.date < today).reverse();
+    const items2 = shown2.map((d5, k5) => {
+      const prev = shown2[k5 - 1], on2 = d5.date === selected;
       const before = !prev ? null : (d5.week || 0) > (prev.week || 0) ? /* @__PURE__ */ u2("span", { class: "daywk", "aria-hidden": "true", children: d5.week === 1 ? "Next week" : "Later" }) : /* @__PURE__ */ u2("span", { class: "daysep", "aria-hidden": "true", children: "·" });
       return {
         id: d5.date,
@@ -34986,6 +35110,22 @@ ${s5}`;
       };
     });
     return /* @__PURE__ */ u2(S2, { children: [
+      past.length ? /* @__PURE__ */ u2(
+        Menu,
+        {
+          hover: true,
+          cls: "dypast",
+          btnCls: "dypastbtn",
+          icon: "history",
+          label: "Earlier days",
+          labelCls: "vh",
+          chevron: false,
+          menuLabel: "Earlier days",
+          tip: "Earlier days",
+          items: past.map((d5) => ({ id: d5.date, name: d5.long, mark: d5.date === selected ? "✓" : void 0 })),
+          onPick: onSelect
+        }
+      ) : null,
       /* @__PURE__ */ u2(Tabs, { items: items2, selected, onSelect, label: "Days in the calendar", className: "daytabs", tabClass: "dy", controls: "dayMeets" }),
       /* @__PURE__ */ u2("button", { type: "button", class: "dayedge l", "aria-label": "Previous day", disabled: i5 <= 0, onClick: () => onStep(-1), children: /* @__PURE__ */ u2(Chevron, { d: "M15 18l-6-6 6-6" }) }),
       /* @__PURE__ */ u2("button", { type: "button", class: "dayedge r", "aria-label": "Next day", disabled: i5 >= days2.length - 1, onClick: () => onStep(1), children: /* @__PURE__ */ u2(Chevron, { d: "M9 18l6-6-6-6" }) })
@@ -35539,7 +35679,8 @@ ${s5}`;
             follow: s5 && s5.follow,
             prep,
             plan: conf ? null : s5 && s5.plan || null,
-            ix: i5
+            ix: i5,
+            attendees: conf || priv || !Array.isArray(e4.attendees) ? void 0 : e4.attendees.length
           });
         })
       };
@@ -35662,9 +35803,7 @@ ${s5}`;
     dayProcess(m5);
   }, check: (m5) => {
     dayCheck(m5);
-  }, review: () => go2("review"), name: (c5) => pName(c5), note: (m5, day) => {
-    openCapture({ meeting: { day, start: m5.start, title: m5.title } });
-  } };
+  }, review: () => go2("review"), name: (c5) => pName(c5) };
   function calFoot(cal) {
     const f5 = $("#calFoot");
     if (!f5) return;
@@ -41296,14 +41435,14 @@ ${s5}`;
   }
 
   // components/prep/PrepPopup.jsx
-  function PrepPopup() {
+  function PrepPopup2() {
     return /* @__PURE__ */ u2(S2, { children: [
       /* @__PURE__ */ u2(PrepHead, {}),
       /* @__PURE__ */ u2(PrepToolbar, {})
     ] });
   }
   function mountPrepPopup(top, lead) {
-    R(/* @__PURE__ */ u2(PrepPopup, {}), top);
+    R(/* @__PURE__ */ u2(PrepPopup2, {}), top);
     R(/* @__PURE__ */ u2(PrepFacts, {}), lead);
   }
 

@@ -572,14 +572,15 @@ h2{font:500 var(--fs-lg)/22px var(--font);margin:0}   /* BL-325: the one section
 .dayband{position:relative;overscroll-behavior-x:none;touch-action:pan-y}
 .brief #todayDate{position:static;display:block}   /* not the menus' .dd: the edges sit on the band */
 .daytabs{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 4px;min-width:0;margin-left:-6px}
-.daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}
+.daytabs .dy{border:0;background:none;padding:4px 6px;min-height:24px;border-radius:var(--r-sm);cursor:pointer;font-family:inherit;font-weight:500;font-size:var(--fs-2xs);line-height:1.2;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);white-space:nowrap}   /* #140: 10px (was 12) */
 .daytabs .dy:hover{color:var(--day-ink)}
 .daytabs .dy.today{color:var(--accent)}
-.daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;font-size:var(--fs-xs);letter-spacing:.12em;cursor:default}
+.daytabs .dy[aria-selected="true"],.daytabs .dy.today{font-size:10.5px}   /* #140: today and the chosen day 10.5px */
+.daytabs .dy[aria-selected="true"]{color:var(--accent);font-weight:600;letter-spacing:.12em;cursor:default}
 .daytabs .dy[aria-selected="true"]:not(.today){color:var(--day-ink)}
 .daytabs .dy.today:not([aria-selected="true"])::after{content:"";display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle}
 .daytabs .dy:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px}
-.daytabs .daysep{color:var(--day-rule);font-size:var(--fs-xs)}
+.daytabs .daysep{color:var(--day-rule);font-size:var(--fs-2xs)}
 .daytabs .daywk{font-size:var(--fs-2xs);line-height:1;letter-spacing:.1em;text-transform:uppercase;color:var(--day-muted);padding:0 6px 0 10px;margin-left:4px;border-left:1px solid var(--day-rule);white-space:nowrap}   /* v1.9.5 check 6: no .7 fade; 10 px words need 4.5:1 */
 /* the arrows never move (Alan, 13-10-2026): both sit at the band's top right, a fixed place on every day, whatever the headline,
    the meetings or the day line's wrapping; the line keeps room for them. At an end the arrow stays, disabled and dimmed. */
@@ -3553,3 +3554,34 @@ i.w40{width:40%} i.w60{width:60%} i.w70{width:70%} i.w75{width:75%} i.w80{width:
 #panel.pover.on .pin{width:100%}
 body:has(#chat.on) #panel.pover.on{right:var(--chatw,420px);width:min(max(420px,calc((100vw - var(--chatw,420px))*.5)),calc(100vw - var(--rail-w,72px) - var(--chatw,420px)))}
 @media (max-width:600px){#panel.pover.on,body:has(#chat.on) #panel.pover.on{width:100vw;right:0}}
+
+/* ===== #140, #147 (Alan, 16-10-2026): the day band's meeting popup and the day line's history icon =====
+   A meeting's title is a quiet dotted link; pointing at it (after CARD_OPEN) or tabbing to it opens a popup under it. The popup
+   is the page's own card, whatever the band's tone (a past meeting's dimmed words do not reach into it). The day line's earlier
+   days wait behind one icon at its left. */
+.dm .tt{position:relative}
+.dm .dmti{border-bottom:1px dotted var(--day-muted);cursor:default}
+.dm .dmti:hover,.dm .dmti:focus-visible{color:var(--accent);border-bottom-color:var(--accent);outline:none}
+.dm .dmtw:focus-within .dmti{color:var(--accent)}
+.dmpop{position:absolute;left:0;top:calc(100% + 2px);z-index:var(--z-pop-over,30);width:330px;max-width:calc(100vw - 48px);box-sizing:border-box;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:var(--r-lg,12px);box-shadow:var(--shadow-md);padding:12px 14px;text-align:left;font-size:var(--fs-sm);line-height:1.4;font-weight:400;letter-spacing:0;text-transform:none}
+.dm:last-child .dmpop{left:auto;right:0}
+.dm:first-child:last-child .dmpop{left:0;right:auto}
+.dm.past .dmpop,.dm.past .dmpop *{color:var(--ink)}
+.dm.past .dmpop .sub,.dm.past .dmpop .pm,.dm.past .dmpop small{color:var(--muted)}
+.dm.past .dmpop .btn.primary{color:var(--accent-ink,#fff)}
+.dm.past .dmpop .linkbtn{color:var(--accent)}
+.dmpop h4{font:700 var(--fs-lg)/1.25 var(--font);margin:0 0 2px;color:var(--ink)}
+.dmpop .pm{font-size:var(--fs-xs);color:var(--muted);margin:0 0 8px}
+.dmpop .agrow{display:flex;align-items:center;gap:8px;margin-top:6px}
+.dmpop .agrow .linkbtn{margin-left:auto}
+.dmpop .agnone{margin:8px 0 0}
+.dmpop .agsaved{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--sunk)}
+.dmpop .agsaved .agw{flex:1;min-width:0} .dmpop .agsaved b{display:block;font-weight:500} .dmpop .agsaved small{display:block;color:var(--muted);font-size:var(--fs-xs)}
+.dmpop .agok{color:var(--ok)}
+.dmpop button[aria-disabled="true"]{opacity:.55;cursor:default}
+.brief #todayDate:has(.dypast){display:flex;align-items:baseline;gap:2px}
+.dypast{margin-left:-6px} .dypast .dypastbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:24px;padding:0;border:0;background:none;border-radius:var(--r-sm);color:var(--day-muted);cursor:pointer;opacity:.7}
+.dypast .dypastbtn:hover,.dypast .dypastbtn[aria-expanded="true"]{opacity:1;color:var(--day-ink);background:color-mix(in srgb,var(--surface) 60%,transparent)} .dypast .dypastbtn:focus-visible{outline:2px solid var(--focus,var(--accent));outline-offset:2px;opacity:1}
+.dypast .dypastbtn .i{width:14px;height:14px}
+.dypast .ddmenu{left:0;right:auto;top:30px;transform-origin:top left}
+.brief #todayDate:has(.dypast) .daytabs{margin-left:0}
