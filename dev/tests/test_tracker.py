@@ -66,6 +66,7 @@ def make_vault():
               "extraction.py", "quality.py",                       # sprint-drafts-extraction
               "claims.py",                                         # BL-314
               "settings_catalogue.py", "health.py",                # BL-320
+              "providers.py",                                      # #132: AI models
               "archive.py",                                        # BL-10, BL-03
               "notes.py",                                          # BL-301: the note format, read by search
               "capture.py",                                        # BL-301 C: the capture drawer's server side

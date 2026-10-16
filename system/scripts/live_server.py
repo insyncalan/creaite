@@ -165,6 +165,9 @@ Start (from the vault root):  python3 system/scripts/live_server.py      (stop w
                          settings.json, a settings-log.jsonl line each); refuses an unknown or set-up-only key (BL-320)
 - POST /api/health       Settings › Health: doctor's checks run read only (--read-only --json), only the problems in plain
                          words with the Fix it each would offer (none built: guard decisions), the rest counted (BL-320)
+- POST /api/ai/state, /test, /connect, /forget, /offer, /disconnect, /choose, /limit: Settings › Essentials › AI models (#132,
+                         providers.py): providers, the four kinds of job, the limit; a key only on /test, never logged or
+                         answered; the key store and provider call are not built yet (guarded), so a real vault refuses
 Standard library only. Never uses a skip-permissions mode.
 """
 import contextlib
@@ -5385,6 +5388,153 @@ SETTINGS_ROUTES = {"/api/settings/catalogue": settings_catalogue_route, "/api/se
                    "/api/health": health_route}
 SETUP_ROUTES.update(SETTINGS_ROUTES)          # dispatched with the set-up routes (do_POST stays as it is)
 # ===== end BL-320 =====
+# ===== #132 (ai-models-132): Settings › Essentials › AI models =====
+# The page's routes for the providers, the four kinds of job and the limit. providers.py holds the rules and the words; every
+# change is saved through settings_catalogue.save (a backup and a log line a key). A key comes in only on /api/ai/test, is
+# never logged, never answered and never put in an error: the answers carry provider ids, model ids and HTTP statuses only.
+# The key store and the provider call are providers.py's seams: not built yet (guarded, #132 part B), so a real vault answers
+# "not switched on yet" and no key is held; a test starts the server with CREAITE_FAKE_PROVIDERS=1. No run uses these
+# choices yet: wiring them into runs is the guarded part.
+def _ai_answer(handler, extra=None, code=200):
+    import providers
+    return handler.send(code, dict(providers.state(), ok=code == 200, **(extra or {})))
+
+
+def _ai_save(changes, what):
+    import settings_catalogue
+    if changes:
+        settings_catalogue.save(changes)
+    if debuglog is not None:
+        debuglog.info("ai-models", f"{what}: {', '.join(sorted(changes)) or 'nothing changed'}")
+
+
+def ai_state_route(handler, req):
+    """POST /api/ai/state: the providers, the four kinds of job with their lists, the limit."""
+    return _ai_answer(handler)
+
+
+def ai_test_route(handler, req):
+    """POST /api/ai/test {provider, key}: ask the provider which models the key can use. On success the key is held (in this
+    server's memory only) until Done (/api/ai/connect) or Cancel (/api/ai/forget); the answer is a one-time id and the
+    models. A refused key, an unreachable provider or the not-built store answer ok: false with plain words and a reason."""
+    import providers
+    provider, key = req.get("provider"), req.get("key")
+    bad = providers.check_key(provider, key)
+    if bad:
+        return handler.send(400, {"ok": False, "reason": "bad", "message": bad})
+    _store, lister = providers.backend()
+    name = providers.PROVIDERS[provider][0]
+    try:
+        ids = lister.models(provider, key.strip())
+    except providers.NotBuilt:
+        return handler.send(200, {"ok": False, "reason": "not_built", "message": providers.NOT_BUILT_WORDS})
+    except providers.KeyRefused as e:
+        if debuglog is not None:
+            debuglog.info("ai-models", f"{provider} key refused ({e.status})")
+        return handler.send(200, {"ok": False, "reason": "refused", "status": e.status,
+                                  "message": providers.refused_words(provider, e.status)})
+    except (ConnectionError, OSError, TimeoutError):
+        if debuglog is not None:
+            debuglog.info("ai-models", f"{provider} unreachable")
+        return handler.send(200, {"ok": False, "reason": "network",
+                                  "message": f"Couldn't reach {name}. Check the connection and try again."})
+    found = providers.found_models(provider, ids) if provider != "claude" else []
+    if provider != "claude" and not found:
+        return handler.send(200, {"ok": False, "reason": "no_models",
+                                  "message": f"{name} accepted the key, but it can't use any model that writes text."})
+    pid = providers.hold(provider, key.strip(), ids)
+    if debuglog is not None:
+        debuglog.info("ai-models", f"{provider} key tested: {len(found)} models")
+    return handler.send(200, {"ok": True, "pending": pid, "provider": provider,
+                              "models": [{"id": m["id"], "label": m["label"], "grade": m["grade"]} for m in found]})
+
+
+def ai_connect_route(handler, req):
+    """POST /api/ai/connect {pending, offered}: Done. The held key goes to the key store; the models and the ticked ones are
+    saved. Nothing else changes: the models now appear in the lists."""
+    import paths
+    import providers
+    held = providers.take(req.get("pending"))
+    if not held:
+        return handler.send(409, {"ok": False, "message": "That test has run out: test the key again."})
+    offered = req.get("offered") if isinstance(req.get("offered"), list) else []
+    store = providers.backend()[0]
+    try:
+        store.put(held["provider"], held["key"])
+    except providers.NotBuilt:
+        return handler.send(200, {"ok": False, "reason": "not_built", "message": providers.NOT_BUILT_WORDS})
+    _ai_save(providers.connect_changes(held["provider"], held["ids"], [str(x) for x in offered], paths.load_settings()),
+             f"{held['provider']} connected")
+    return _ai_answer(handler)
+
+
+def ai_forget_route(handler, req):
+    """POST /api/ai/forget {pending}: Cancel after a test; the held key is dropped."""
+    import providers
+    providers.forget(req.get("pending"))
+    return handler.send(200, {"ok": True})
+
+
+def ai_offer_route(handler, req):
+    """POST /api/ai/offer {provider, offered}: Manage. Which of a connected provider's models the lists offer."""
+    import paths
+    import providers
+    offered = req.get("offered") if isinstance(req.get("offered"), list) else []
+    try:
+        changes = providers.offer_changes(req.get("provider"), [str(x) for x in offered], paths.load_settings())
+    except providers.Refused as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    _ai_save(changes, f"{req.get('provider')} models offered")
+    return _ai_answer(handler, {"reset": sorted(k[8:] for k in changes if k.startswith("ai.jobs."))})
+
+
+def ai_disconnect_route(handler, req):
+    """POST /api/ai/disconnect {provider}: the key leaves the key store, the provider's models leave the lists, and anything
+    set to one of them goes back to its recommended model (`reset` names those kinds of job)."""
+    import paths
+    import providers
+    provider = req.get("provider")
+    if provider not in providers.PROVIDERS or not providers.PROVIDERS[provider][4]:
+        return handler.send(400, {"ok": False, "message": "That provider can't be disconnected."})
+    settings = paths.load_settings()
+    changes = providers.disconnect_changes(provider, settings)
+    providers.backend()[0].remove(provider)
+    if provider not in providers.saved_providers(settings):
+        changes.pop("ai.providers", None)
+    _ai_save(changes, f"{provider} disconnected")
+    return _ai_answer(handler, {"reset": sorted(k[8:] for k in changes if k.startswith("ai.jobs."))})
+
+
+def ai_choose_route(handler, req):
+    """POST /api/ai/choose {job, model, accept}: a kind of job's model. A weaker model than recommended needs accept (Use it
+    anyway) the first time: without it the answer is 409 {needs_accept}. A job that needs tools takes only a model that can."""
+    import providers
+    try:
+        changes = providers.choose(req.get("job"), req.get("model"), bool(req.get("accept")))
+    except providers.Refused as e:
+        if str(e) == "weaker":
+            return handler.send(409, {"ok": False, "needs_accept": True, "message": "A weaker model asks first."})
+        return handler.send(400, {"ok": False, "message": str(e)})
+    _ai_save(changes, f"{req.get('job')} model chosen")
+    return _ai_answer(handler)
+
+
+def ai_limit_route(handler, req):
+    """POST /api/ai/limit {mode}: what happens when a limit is reached."""
+    import providers
+    try:
+        changes = providers.set_limit(req.get("mode"))
+    except providers.Refused as e:
+        return handler.send(400, {"ok": False, "message": str(e)})
+    _ai_save(changes, "limit choice")
+    return _ai_answer(handler)
+
+
+AI_ROUTES = {"/api/ai/state": ai_state_route, "/api/ai/test": ai_test_route, "/api/ai/connect": ai_connect_route,
+             "/api/ai/forget": ai_forget_route, "/api/ai/offer": ai_offer_route, "/api/ai/disconnect": ai_disconnect_route,
+             "/api/ai/choose": ai_choose_route, "/api/ai/limit": ai_limit_route}
+SETUP_ROUTES.update(AI_ROUTES)                # dispatched with the set-up routes (do_POST stays as it is)
+# ===== end #132 =====
 # ===== BL-164 (sprint-rail): Activity's "undo several" =====
 # The page sends the change_log rowids it chose; tracker.py (the only writer) decides what can go back and does it as one
 # new apply. Token-protected like every route; one at a time with apply and undo (LOCK).
